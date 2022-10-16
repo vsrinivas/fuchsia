@@ -8,7 +8,6 @@ library zx;
 
 alias ConstFutexPtr = int32;
 alias Futex = int32;
-alias MutableUint32 = uint32;
 alias MutableVectorVoid = vector<byte>;
 alias VectorVoidU32Size = vector<byte>;
 type Clock = strict enum : uint32 {
@@ -56,7 +55,8 @@ protocol Selection {
         dev uint8;
         func uint8;
         offset uint8;
-        val MutableUint32;
+        @inout
+        val uint32;
         width usize;
         write bool;
     }) -> (struct {}) error status;

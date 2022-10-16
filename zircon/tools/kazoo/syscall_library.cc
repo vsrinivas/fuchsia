@@ -149,6 +149,7 @@ std::optional<Type> PrimitiveTypeFromName(std::string subtype) {
 }
 
 Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
+                  const std::map<std::string, std::string> attributes,
                   const rapidjson::Value* alias) {
   if (alias) {
     // If the "experimental_maybe_from_alias" field is non-null, then the source-level has used
@@ -181,26 +182,36 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
   }
 
   std::string kind = type["kind"].GetString();
+  std::optional<Type> typ;
   if (kind == "primitive") {
     const rapidjson::Value& subtype_value = type["subtype"];
     ZX_ASSERT(subtype_value.IsString());
     std::string subtype = subtype_value.GetString();
-    return PrimitiveTypeFromName(subtype).value();
+    typ = PrimitiveTypeFromName(subtype).value();
   } else if (kind == "identifier") {
     std::string id = type["identifier"].GetString();
-    return *library.TypeFromIdentifier(type["identifier"].GetString());
+    typ = library.TypeFromIdentifier(type["identifier"].GetString());
   } else if (kind == "handle") {
-    return Type(TypeHandle(type["subtype"].GetString()));
+    typ = Type(TypeHandle(type["subtype"].GetString()));
   } else if (kind == "vector") {
-    Type contained_type = TypeFromJson(library, type["element_type"], nullptr);
-    return Type(TypeVector(contained_type));
+    Type contained_type = TypeFromJson(library, type["element_type"], {}, nullptr);
+    typ = Type(TypeVector(contained_type));
   } else if (kind == "experimental_pointer") {
-    Type pointee_type = TypeFromJson(library, type["pointee_type"], nullptr);
-    return Type(TypePointer(pointee_type));
+    Type pointee_type = TypeFromJson(library, type["pointee_type"], {}, nullptr);
+    typ = Type(TypePointer(pointee_type));
   }
+  ZX_ASSERT_MSG(typ, "TODO: kind=%s", kind.c_str());
 
-  ZX_ASSERT_MSG(false, "TODO: kind=%s", kind.c_str());
-  return Type();
+  if (attributes.find("inout") != attributes.end()) {
+    if (typ->IsVector()) {
+      typ = Type(typ->DataAsVector(), Constness::kMutable);
+    } else if (typ->IsPointer()) {
+      typ = Type(typ->DataAsPointer(), Constness::kMutable);
+    } else {
+      typ = Type(TypePointer(*typ), Constness::kMutable);
+    }
+  }
+  return *typ;
 }
 
 }  // namespace
@@ -561,19 +572,20 @@ bool SyscallLibraryLoader::ExtractPayload(Struct& payload, const std::string& ty
           const auto* alias = arg.HasMember("experimental_maybe_from_alias")
                                   ? &arg["experimental_maybe_from_alias"]
                                   : nullptr;
-          strukt->members_.emplace_back(arg["name"].GetString(),
-                                        TypeFromJson(*library, arg["type"], alias),
-                                        std::map<std::string, std::string>{});
+          std::map<std::string, std::string> attributes;
           if (arg.HasMember("maybe_attributes")) {
             for (const auto& attrib : arg["maybe_attributes"].GetArray()) {
               const auto attrib_name = attrib["name"].GetString();
               const MaybeValue maybe_value = GetAttributeStandaloneArgValue(arg, attrib_name);
-              strukt->members_.back().attributes_[CamelToSnake(attrib_name)] =
+              attributes[CamelToSnake(attrib_name)] =
                   maybe_value.has_value() && maybe_value.value().get().IsString()
                       ? maybe_value.value().get().GetString()
                       : "";
             }
           }
+          Type typ = TypeFromJson(*library, arg["type"], attributes, alias);
+          strukt->members_.emplace_back(arg["name"].GetString(), std::move(typ),
+                                        std::move(attributes));
         }
         payload.id_ = type_name;
         return true;
@@ -746,7 +758,7 @@ bool SyscallLibraryLoader::LoadTables(const rapidjson::Document& document,
       const auto* alias = member.HasMember("experimental_maybe_from_alias")
                               ? &member["experimental_maybe_from_alias"]
                               : nullptr;
-      Type type = TypeFromJson(*library, member["type"], alias);
+      Type type = TypeFromJson(*library, member["type"], {}, alias);
       Required required = GetRequiredAttribute(member);
       std::string doc_attribute = GetDocAttribute(member);
       std::vector<std::string> description = GetCleanDocAttribute(doc_attribute);

@@ -906,7 +906,8 @@ protocol Channel {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
-        args MutableChannelCallEtcArgs;
+        @inout
+        args ChannelCallEtcArgs;
     }) -> (struct {
         actual_bytes uint32;
         actual_handles uint32;
@@ -915,7 +916,8 @@ protocol Channel {
     @internal
     CallEtcFinish(resource struct {
         deadline time;
-        args MutableChannelCallEtcArgs;
+        @inout
+        args ChannelCallEtcArgs;
     }) -> (struct {
         actual_bytes uint32;
         actual_handles uint32;
@@ -1064,7 +1066,8 @@ protocol Channel {
         handle handle:CHANNEL;
         options uint32;
         deadline time;
-        args MutableChannelCallEtcArgs;
+        @inout
+        args ChannelCallEtcArgs;
     }) -> (struct {
         actual_bytes uint32;
         actual_handles uint32;

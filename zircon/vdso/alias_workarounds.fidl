@@ -17,12 +17,6 @@ alias ConstFutexPtr = int32;
 // TODO(fidlc): const void*
 alias ConstVoidPtr = uint64;
 
-// TODO(fidlc): mutable<uint32>
-alias MutableUint32 = uint32;
-
-// TODO(fidlc): mutable<usize>
-alias Mutableusize = usize;
-
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<HandleDisposition>
 alias MutableVectorHandleDispositionU32Size = vector<HandleDisposition>;
@@ -30,12 +24,6 @@ alias MutableVectorHandleDispositionU32Size = vector<HandleDisposition>;
 // TODO(fidlc): uint32 size
 // TODO(fidlc): vector<HandleInfo>
 alias MutableVectorHandleInfoU32Size = vector<HandleInfo>;
-
-// TODO(fidlc): mutable<ChannelCallEtcArgs>
-alias MutableChannelCallEtcArgs = ChannelCallEtcArgs;
-
-// TODO(fidlc): mutable<vector<WaitItem>>
-alias MutableVectorWaitItem = vector<WaitItem>;
 
 // TODO(fidlc): uint32 size
 // TODO(fidlc): mutable<vector<handle>

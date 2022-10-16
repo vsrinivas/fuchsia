@@ -312,7 +312,8 @@ protocol Pci {
         dev uint8;
         func uint8;
         offset uint8;
-        val MutableUint32;
+        @inout
+        val uint32;
         width usize;
         write uint32;
     }) -> (struct {}) error status;

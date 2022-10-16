@@ -36,19 +36,9 @@ TEST(AliasWorkaround, Mappings) {
   // ConstVoidPtr
   CHECK_ARG("const void*", "c");
 
-  // MutableUint32
-  CHECK_ARG("uint32_t*", "e");
-
-  // MutableUsize
-  CHECK_ARG("size_t*", "f");
-
   // MutableVectorHandleDispositionU32Size
   CHECK_ARG("zx_handle_disposition_t*", "g");
   CHECK_ARG("uint32_t", "num_g");
-
-  // MutableVectorWaitItem
-  CHECK_ARG("zx_wait_item_t*", "h");
-  CHECK_ARG("size_t", "num_h");
 
   // MutableVectorHandleU32Size
   CHECK_ARG("zx_handle_t*", "i");
@@ -87,7 +77,7 @@ TEST(AliasWorkaround, Mappings) {
 
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 25u);
+  EXPECT_EQ(cur_arg, 21u);
 }
 
 }  // namespace

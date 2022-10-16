@@ -221,7 +221,8 @@ protocol Object {
     /// [`zx_object_wait_one()`]: object_wait_one.md
     @blocking
     WaitMany(resource struct {
-        items MutableVectorWaitItem;
+        @inout
+        items vector<WaitItem>;
         deadline time;
     }) -> (struct {}) error status;
 

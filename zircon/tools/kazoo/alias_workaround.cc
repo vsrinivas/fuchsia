@@ -15,14 +15,7 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypePointer(Type(TypeVoid{})), Constness::kConst);
     return true;
   }
-  if (name == "MutableUint32") {
-    *type = Type(TypePointer(Type(TypeUint32{})), Constness::kMutable);
-    return true;
-  }
-  if (name == "MutableUsize") {
-    *type = Type(TypePointer(Type(TypeUsize{})), Constness::kMutable);
-    return true;
-  }
+
   if (name == "MutableVectorHandleDispositionU32Size") {
     *type = Type(TypeVector(Type(*library.TypeFromIdentifier("zx/HandleDisposition")),
                             UseUint32ForVectorSizeTag{}),
@@ -33,15 +26,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(
         TypeVector(Type(*library.TypeFromIdentifier("zx/HandleInfo")), UseUint32ForVectorSizeTag{}),
         Constness::kMutable);
-    return true;
-  }
-  if (name == "MutableChannelCallEtcArgs") {
-    *type = Type(TypePointer(Type(*library.TypeFromIdentifier("zx/ChannelCallEtcArgs"))),
-                 Constness::kMutable);
-    return true;
-  }
-  if (name == "MutableVectorWaitItem") {
-    *type = Type(TypeVector(Type(*library.TypeFromIdentifier("zx/WaitItem"))), Constness::kMutable);
     return true;
   }
   if (name == "MutableVectorHandleU32Size") {
