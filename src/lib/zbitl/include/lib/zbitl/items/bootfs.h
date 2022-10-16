@@ -165,7 +165,10 @@ class Bootfs {
   const storage_type& storage() const { return storage_; }
 
   /// Gives a global view of a BOOTFS filesystem.
-  View root() const { return View(this); }
+  View root() const {
+    // The creation of a root directory view will never fail.
+    return View::Create(this, {}, /*dirent_start=*/sizeof(zbi_bootfs_header_t)).value();
+  }
 
  private:
   friend View;
@@ -178,6 +181,11 @@ class Bootfs {
       : storage_(std::move(storage)), dirents_(std::move(dirents)), capacity_(capacity) {}
 
   cpp20::span<const std::byte> dirents() const { return dirents_; }
+
+  const zbi_bootfs_dirent_t* DirentAt(uint32_t offset) const {
+    uint32_t offset_into_dir = offset - uint32_t{sizeof(zbi_bootfs_header_t)};
+    return reinterpret_cast<const zbi_bootfs_dirent_t*>(&dirents_[offset_into_dir]);
+  }
 
   storage_type storage_;
   Dirents dirents_;
@@ -228,10 +236,9 @@ class BootfsView {
     iterator& operator++() {  // prefix
       Assert(__func__);
       bootfs_->StartIteration();
-      // Add the NUL-terminator back to the name size when calculating dirent
-      // size.
-      uint32_t next_offset =
-          offset_ + static_cast<uint32_t>(ZBI_BOOTFS_DIRENT_SIZE(value_.name.size() + 1));
+      size_t name_size =
+          bootfs_->dir_prefix_.size() + value_.name.size() + 1;  // Include NUL-terminator.
+      uint32_t next_offset = offset_ + static_cast<uint32_t>(ZBI_BOOTFS_DIRENT_SIZE(name_size));
       Update(next_offset);
       return *this;
     }
@@ -263,11 +270,11 @@ class BootfsView {
     // BootfsView accesses iterator's private constructor.
     friend BootfsView;
 
-    iterator(BootfsView* bootfs, bool is_end) : bootfs_(bootfs) {
-      if (is_end) {
+    iterator(BootfsView* bootfs, uint32_t dirent_start) : bootfs_(bootfs) {
+      if (dirent_start >= bootfs->dir_end_offset()) {
         offset_ = bootfs_->dir_end_offset();
       } else {
-        Update(sizeof(zbi_bootfs_header_t));
+        Update(dirent_start);
       }
     }
 
@@ -289,10 +296,7 @@ class BootfsView {
         return;
       }
 
-      uint32_t offset_into_dir = dirent_offset - uint32_t{sizeof(zbi_bootfs_header_t)};
-      const auto* dirent = reinterpret_cast<const zbi_bootfs_dirent_t*>(
-          &(bootfs_->reader_->dirents()[offset_into_dir]));
-
+      const auto* dirent = bootfs_->reader_->DirentAt(dirent_offset);
       if (ZBI_BOOTFS_DIRENT_SIZE(dirent->name_len) > bootfs_->dir_end_offset() - dirent_offset) {
         Fail(kErrEntryExceedsDir);
         return;
@@ -316,6 +320,16 @@ class BootfsView {
         return;
       }
       filename.remove_suffix(1);  // Eat '\0'.
+
+      // The BOOTFS spec guarantees that directory entries are sorted by
+      // name, so the first entry outside of the directory marks the end.
+      if (!cpp20::starts_with(filename, bootfs_->dir_prefix_)) {
+        *this = bootfs_->end();
+        return;
+      }
+
+      // Relativize.
+      filename.remove_prefix(bootfs_->dir_prefix_.size());
 
       if (dirent->data_off % ZBI_BOOTFS_PAGE_SIZE) {
         Fail("file offset is not a multiple of ZBI_BOOTFS_PAGE_SIZE"sv, filename);
@@ -380,8 +394,15 @@ class BootfsView {
 
   BootfsView() = default;
 
-  BootfsView(const BootfsView&) = default;
-  BootfsView& operator=(const BootfsView&) = default;
+  BootfsView(const BootfsView& other) { *this = other; }
+  BootfsView& operator=(const BootfsView& other) {
+    reader_ = other.reader_;
+    dir_prefix_ = other.dir_prefix_;
+    begin_ = other.begin_;
+    begin_.bootfs_ = this;  // Ensure that the iterator points to this instance.
+    error_ = other.error_;
+    return *this;
+  }
 
   /// This is almost the same as the default move behavior.  But it also
   /// explicitly resets the moved-from error state to kUnused so that the
@@ -390,6 +411,9 @@ class BootfsView {
 
   BootfsView& operator=(BootfsView&& other) noexcept {
     reader_ = std::exchange(other.reader_, nullptr);
+    dir_prefix_ = std::exchange(other.dir_prefix_, {});
+    begin_ = std::exchange(other.begin_, {});
+    begin_.bootfs_ = this;
     error_ = std::exchange(other.error_, Unused{});
     return *this;
   }
@@ -425,13 +449,62 @@ class BootfsView {
   /// the last loop early, then call ignore_error() instead of take_error().
   void ignore_error() { static_cast<void>(take_error()); }
 
-  iterator begin() {
-    StartIteration();
-    // begin() == end() if there are no directory entries.
-    return {this, /*is_end=*/reader_->dirents().empty()};
+  /// The directory namespace that this view is limited to. There is no trailing
+  /// '/' and the value is empty if the namespace is the root one.
+  std::string_view directory() const {
+    if (dir_prefix_.empty()) {
+      return {};
+    }
+    return dir_prefix_.substr(0, dir_prefix_.size() - 1);
   }
 
-  iterator end() { return {this, /*is_end=*/true}; }
+  iterator begin() {
+    StartIteration();
+    return begin_;
+  }
+
+  iterator end() { return {this, /*dirent_start=*/dir_end_offset()}; }
+
+  /// Gives a subdirectory view of the current directory. BOOTFS filesystem.
+  /// The provided name is a relative path: it may be empty, which corresponds
+  /// to the current directory, and may optionally include a trailing forward
+  /// slash. This method does not affect the current error state.
+  fit::result<Error, BootfsView> subdir(std::string_view name) {
+    using namespace std::literals;
+
+    if (!name.empty() && name.back() == '/') {
+      name.remove_prefix(1);
+    }
+
+    BootfsView current_dir = *this;
+    if (name.empty()) {
+      return fit::ok(current_dir);
+    }
+    for (auto it = current_dir.begin(); it != current_dir.end(); ++it) {
+      if (it->name == name) {
+        return fit::error{Error{
+            .reason = "provided name is for a file, not a directory"sv,
+            .filename = name,
+            .entry_offset = it.dirent_offset(),
+        }};
+      }
+      if (cpp20::starts_with(it->name, name) && (it->name)[name.size()] == '/') {
+        // The subdirectory prefix is canonically accessed directly from the
+        // associated dirent.
+        const auto* dirent = reader_->DirentAt(it.dirent_offset());
+        std::string_view full_name{dirent->name, dirent->name_len};
+        size_t subdir_prefix_size = directory().size() + name.size() + 1;  // Include trailing '/'.
+        auto subdir_prefix = full_name.substr(0, subdir_prefix_size);
+
+        current_dir.ignore_error();
+        return Create(reader_, subdir_prefix, it.dirent_offset());
+      }
+    }
+    if (auto result = current_dir.take_error(); result.is_error()) {
+      return result.take_error();
+    }
+    return fit::error{Error{.reason = "unknown directory"sv, .filename = name}};
+  }
 
   /// Looks up a file by a decomposition of its path. If joining the parts with
   /// separators (i.e., '/') matches the path of an entry, an iterator pointing
@@ -471,7 +544,7 @@ class BootfsView {
   }
 
  private:
-  // For use of the private constructor.
+  // For use of Create().
   template <typename StorageType>
   friend class Bootfs;
 
@@ -480,7 +553,25 @@ class BootfsView {
   struct Taken {};
   using ErrorState = std::variant<Unused, NoError, Error, Taken>;
 
-  explicit BootfsView(const Bootfs<storage_type>* reader) : reader_(reader) {}
+  // Creates an error-free BootfsView object or returns an error.
+  static fit::result<Error, BootfsView> Create(const Bootfs<storage_type>* reader,
+                                               std::string_view directory, uint32_t dirent_start) {
+    // Note that the construction of the BootfsView object may have set
+    // internal error state (in its construction of the beginning iterator).
+    BootfsView bootfs(reader, directory, dirent_start);
+    if (auto result = bootfs.take_error(); result.is_error()) {
+      ZX_DEBUG_ASSERT_MSG(!directory.empty(), "the creation of a root directory should never fail");
+      return result.take_error();
+    }
+    return fit::ok(bootfs);
+  }
+
+  // Warning: this constructor may create internal error state.
+  BootfsView(const Bootfs<storage_type>* reader, std::string_view directory, uint32_t dirent_start)
+      : reader_(reader), dir_prefix_(directory), begin_(iterator(this, dirent_start)) {
+    // Per `dir_prefix_` documentation.
+    ZX_DEBUG_ASSERT(directory.empty() || directory.back() == '/');
+  }
 
   void StartIteration() {
     ZX_ASSERT_MSG(!std::holds_alternative<Error>(error_),
@@ -500,7 +591,7 @@ class BootfsView {
     ZX_ASSERT_MSG(reader_, "%s on default-constructed zbitl::BootfsView", func);
   }
 
-  bool HasPathParts(std::string_view path, cpp20::span<const std::string_view> parts) {
+  static bool HasPathParts(std::string_view path, cpp20::span<const std::string_view> parts) {
     for (size_t i = 0; i < parts.size(); ++i) {
       std::string_view part = parts[i];
 
@@ -531,6 +622,15 @@ class BootfsView {
   }
 
   const Bootfs<storage_type>* reader_;
+
+  // Represents the BOOTFS directory scope, given as a filename string prefix.
+  // This value must either be empty - in the case of the root directory - or
+  // include a trailing slash, which simplifies related arithmetic.
+  std::string_view dir_prefix_;
+
+  // The iterator pointing to the first file in the associated directory.
+  iterator begin_;
+
   ErrorState error_;
 };
 

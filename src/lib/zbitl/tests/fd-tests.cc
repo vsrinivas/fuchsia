@@ -31,4 +31,8 @@ TEST(ZbitlBootfsFdTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<FdTestTraits>());
 }
 
+TEST(ZbitlBootfsFdTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<FdTestTraits>());
+}
+
 }  // namespace

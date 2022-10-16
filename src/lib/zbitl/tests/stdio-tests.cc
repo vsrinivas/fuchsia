@@ -30,4 +30,8 @@ TEST(ZbitlBootfsStdioTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<StdioTestTraits>());
 }
 
+TEST(ZbitlBootfsStdioTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<StdioTestTraits>());
+}
+
 }  // namespace

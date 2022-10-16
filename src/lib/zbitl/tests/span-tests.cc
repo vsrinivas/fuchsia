@@ -44,6 +44,10 @@ TEST(ZbitlBootfsByteSpanTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<ByteSpanTestTraits>());
 }
 
+TEST(ZbitlBootfsByteSpanTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<ByteSpanTestTraits>());
+}
+
 TEST(ZbitlViewStringTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<StringTestTraits>());
 }
@@ -52,6 +56,10 @@ TEST_ITERATION(ZbitlViewStringTests, StringTestTraits)
 
 TEST(ZbitlBootfsStringTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<StringTestTraits>());
+}
+
+TEST(ZbitlBootfsStringTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<StringTestTraits>());
 }
 
 TEST(ZbitlViewStringTests, TooSmallForNextHeader) {

@@ -127,4 +127,87 @@ void TestBootfsIteration() {
   }
 }
 
+template <typename TestTraits>
+void TestBootfsSubdirectory() {
+  using namespace std::string_view_literals;
+  using Storage = typename TestTraits::storage_type;
+
+  typename TestTraits::Context context;
+  zbitl::Bootfs<Storage> reader;
+  ASSERT_NO_FATAL_FAILURE(CreateBootfs<TestTraits>(context, reader));
+
+  zbitl::BootfsView<Storage> root = reader.root();
+
+  {
+    auto result = root.subdir("nonexistent/directory"sv);
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ("unknown directory"sv, result.error_value().reason);
+  }
+
+  constexpr std::string_view kErrFileNotDir = "provided name is for a file, not a directory";
+  {
+    auto result = root.subdir("A.txt"sv);
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ(kErrFileNotDir, result.error_value().reason);
+  }
+  {
+    auto result = root.subdir("nested/B.txt"sv);
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ(kErrFileNotDir, result.error_value().reason);
+  }
+  {
+    auto result = root.subdir("nested/again/C.txt"sv);
+    ASSERT_TRUE(result.is_error());
+    EXPECT_EQ(kErrFileNotDir, result.error_value().reason);
+  }
+
+  {
+    auto result = root.subdir("nested"sv);
+    ASSERT_FALSE(result.is_error()) << BootfsErrorString(result.error_value());
+    auto subdir = std::move(result).value();
+
+    EXPECT_EQ("nested"sv, subdir.directory());
+
+    uint32_t idx = 0u;
+    for (auto it = subdir.begin(); it != subdir.end(); ++it) {
+      ASSERT_NO_FATAL_FAILURE(TestFind(subdir, {it->name}, it));
+      switch (idx++) {
+        case 0u:
+          EXPECT_EQ(it->name, "B.txt"sv);
+          break;
+        case 1u:
+          EXPECT_EQ(it->name, "again/C.txt"sv);
+          ASSERT_NO_FATAL_FAILURE(TestFind(subdir, {"again"sv, "C.txt"sv}, it));
+          break;
+      }
+    }
+    EXPECT_EQ(2u, idx) << "expected two files in the BOOTFS subdirectory";
+
+    auto take_result = subdir.take_error();
+    EXPECT_FALSE(take_result.is_error()) << BootfsErrorString(take_result.error_value());
+  }
+
+  {
+    auto result = root.subdir("nested/again"sv);
+    ASSERT_FALSE(result.is_error()) << BootfsErrorString(result.error_value());
+    auto subdir = std::move(result).value();
+
+    EXPECT_EQ("nested/again"sv, subdir.directory());
+
+    uint32_t idx = 0u;
+    for (auto it = subdir.begin(); it != subdir.end(); ++it) {
+      ASSERT_NO_FATAL_FAILURE(TestFind(subdir, {it->name}, it));
+      switch (idx++) {
+        case 0u:
+          EXPECT_EQ(it->name, "C.txt"sv);
+          break;
+      }
+    }
+    EXPECT_EQ(1u, idx) << "expected one files in the BOOTFS subdirectory";
+
+    auto take_result = subdir.take_error();
+    EXPECT_FALSE(take_result.is_error()) << BootfsErrorString(take_result.error_value());
+  }
+}
+
 #endif  // SRC_LIB_ZBITL_TESTS_BOOTFS_TESTS_H_

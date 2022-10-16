@@ -126,4 +126,8 @@ TEST(ZbitlBootfsFblByteArrayTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<FblByteArrayTestTraits>());
 }
 
+TEST(ZbitlBootfsFblByteArrayTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<FblByteArrayTestTraits>());
+}
+
 }  // namespace

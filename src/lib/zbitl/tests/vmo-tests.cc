@@ -367,6 +367,10 @@ TEST(ZbitlBootfsVmoTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<VmoTestTraits>());
 }
 
+TEST(ZbitlBootfsVmoTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<VmoTestTraits>());
+}
+
 TEST(ZbitlViewUnownedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<UnownedVmoTestTraits>());
 }
@@ -395,6 +399,10 @@ TEST(ZbitlImageUnownedVmoTests, Appending) {
 
 TEST(ZbitlBootfsUnownedVmoTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<UnownedVmoTestTraits>());
+}
+
+TEST(ZbitlBootfsUnownedVmoTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<UnownedVmoTestTraits>());
 }
 
 TEST(ZbitlViewMapUnownedVmoTests, DefaultConstructed) {
@@ -430,6 +438,10 @@ TEST(ZbitlBootfsMapUnownedVmoTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<MapUnownedVmoTestTraits>());
 }
 
+TEST(ZbitlBootfsMapUnownedVmoTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<MapUnownedVmoTestTraits>());
+}
+
 TEST(ZbitlViewMapOwnedVmoTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<MapOwnedVmoTestTraits>());
 }
@@ -458,6 +470,10 @@ TEST(ZbitlImageMapOwnedVmoTests, Appending) {
 
 TEST(ZbitlBootfsMapOwnedVmoTests, Iteration) {
   ASSERT_NO_FATAL_FAILURE(TestBootfsIteration<MapOwnedVmoTestTraits>());
+}
+
+TEST(ZbitlBootfsMapOwnedVmoTests, Subdirectory) {
+  ASSERT_NO_FATAL_FAILURE(TestBootfsSubdirectory<MapOwnedVmoTestTraits>());
 }
 
 }  // namespace

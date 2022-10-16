@@ -10,7 +10,8 @@
 // The payload (after decompression) of an item in BOOTFS format consists
 // of separate "file" images that are each aligned to ZBI_BOOTFS_PAGE_SIZE
 // bytes from the beginning of the item payload.  The first "file" consists
-// of a zbi_bootfs_header_t followed by directory entries.
+// of a zbi_bootfs_header_t followed by directory entries that are sorted
+// ascendingly by name.
 #define ZBI_BOOTFS_PAGE_SIZE (4096u)
 
 #define ZBI_BOOTFS_PAGE_ALIGN(size) \
