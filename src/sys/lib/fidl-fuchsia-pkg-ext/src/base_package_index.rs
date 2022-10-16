@@ -103,9 +103,9 @@ mod tests {
         },
         fuchsia_async as fasync,
         futures::prelude::*,
-        log::error,
         maplit::hashmap,
         std::sync::Arc,
+        tracing::error,
     };
 
     // The actual pkg-cache will fit as many items per chunk as possible.  Intentionally choose a

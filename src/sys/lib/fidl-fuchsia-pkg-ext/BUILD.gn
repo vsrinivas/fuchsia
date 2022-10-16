@@ -47,9 +47,9 @@ rustc_library("fidl-fuchsia-pkg-ext") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:assert_matches",
-    "//third_party/rust_crates:log",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:zerocopy",
   ]
 
