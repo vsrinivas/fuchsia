@@ -402,15 +402,9 @@ DpCapabilities::DpCapabilities() { dpcd_.fill(0); }
 
 DpCapabilities::Edp::Edp() { bytes.fill(0); }
 
-DpCapabilities::DpCapabilities(inspect::Node* parent_node) {
-  dpcd_.fill(0);
-  node_ = parent_node->CreateChild("dpcd-capabilities");
-}
-
 // static
-fpromise::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux,
-                                                      inspect::Node* parent_node) {
-  DpCapabilities caps(parent_node);
+fpromise::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux) {
+  DpCapabilities caps;
 
   if (!dp_aux->DpcdRead(dpcd::DPCD_CAP_START, caps.dpcd_.data(), caps.dpcd_.size())) {
     zxlogf(TRACE, "Failed to read dpcd capabilities");
@@ -444,8 +438,6 @@ fpromise::result<DpCapabilities> DpCapabilities::Read(DpcdChannel* dp_aux,
   }
 
   ZX_ASSERT(!caps.supported_link_rates_mbps_.empty());
-  caps.PublishInspect();
-
   return fpromise::ok(std::move(caps));
 }
 
@@ -544,24 +536,25 @@ bool DpCapabilities::ProcessSupportedLinkRates(DpcdChannel* dp_aux) {
   return true;
 }
 
-void DpCapabilities::PublishInspect() {
-  node_.RecordString("dpcd_revision", DpcdRevisionToString(dpcd_revision()));
-  node_.RecordUint("sink_count", sink_count());
-  node_.RecordUint("max_lane_count", max_lane_count());
+void DpCapabilities::PublishToInspect(inspect::Node* caps_node) const {
+  ZX_ASSERT(caps_node);
+  caps_node->RecordString("dpcd_revision", DpcdRevisionToString(dpcd_revision()));
+  caps_node->RecordUint("sink_count", sink_count());
+  caps_node->RecordUint("max_lane_count", max_lane_count());
 
   {
-    auto node = node_.CreateUintArray("supported_link_rates_mbps_per_lane",
-                                      supported_link_rates_mbps_.size());
-    for (size_t i = 0; i < supported_link_rates_mbps_.size(); ++i) {
-      node.Add(i, supported_link_rates_mbps_[i]);
+    auto node = caps_node->CreateUintArray("supported_link_rates_mbps_per_lane",
+                                           supported_link_rates_mbps().size());
+    for (size_t i = 0; i < supported_link_rates_mbps().size(); ++i) {
+      node.Add(i, supported_link_rates_mbps()[i]);
     }
-    node_.Record(std::move(node));
+    caps_node->Record(std::move(node));
   }
 
   {
-    std::string value =
-        edp_dpcd_.has_value() ? EdpDpcdRevisionToString(edp_dpcd_->revision) : "not supported";
-    node_.RecordString("edp_revision", std::move(value));
+    const std::string value =
+        edp_revision().has_value() ? EdpDpcdRevisionToString(*edp_revision()) : "not supported";
+    caps_node->RecordString("edp_revision", value);
   }
 }
 
@@ -1336,6 +1329,7 @@ DpDisplay::DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi
   }
 
   inspect_node_ = parent_node->CreateChild(fbl::StringPrintf("dp-display-%lu", id));
+  dp_capabilities_node_ = inspect_node_.CreateChild("dpcd-capabilities");
   dp_lane_count_inspect_ = inspect_node_.CreateUint("dp_lane_count", 0);
   dp_link_rate_mhz_inspect_ = inspect_node_.CreateUint("dp_link_rate_mhz", 0);
 }
@@ -1567,11 +1561,12 @@ bool DpDisplay::Query() {
   // general DP displays, the default power state is D0, so we don't have to
   // worry about AUX failures because of power saving mode.
   {
-    auto capabilities = DpCapabilities::Read(dp_aux_, &inspect_node_);
+    auto capabilities = DpCapabilities::Read(dp_aux_);
     if (capabilities.is_error()) {
       return false;
     }
 
+    capabilities.value().PublishToInspect(&dp_capabilities_node_);
     capabilities_ = capabilities.take_value();
   }
 

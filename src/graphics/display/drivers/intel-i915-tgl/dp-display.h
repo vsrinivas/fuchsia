@@ -61,25 +61,29 @@ class DpAux : public DpcdChannel {
       __TA_REQUIRES(lock_);
 };
 
-// DpCapabilities is a utility for reading and storing DisplayPort capabilities supported by the
-// display based on a copy of read-only DPCD capability registers. Data is also published to
+// DpCapabilities is a utility for reading and storing DisplayPort capabilities
+// supported by the display based on a copy of read-only DPCD capability
+// registers. Drivers can also use PublishToInspect() to publish the data to
 // inspect.
-struct DpCapabilities final {
+class DpCapabilities final {
  public:
   // Initializes the DPCD capability array with all zeros and the EDP DPCD capabilities as
   // non-present.
   DpCapabilities();
 
-  // Explicitly disallow copy (implicitly disallowed by the contained inspect::Node).
-  DpCapabilities(const DpCapabilities&) = delete;
-  DpCapabilities& operator=(const DpCapabilities&) = delete;
+  // Allow copy.
+  DpCapabilities(const DpCapabilities&) = default;
+  DpCapabilities& operator=(const DpCapabilities&) = default;
 
   // Allow move.
   DpCapabilities(DpCapabilities&&) = default;
   DpCapabilities& operator=(DpCapabilities&&) = default;
 
   // Read and parse DPCD capabilities. Clears any previously initialized content
-  static fpromise::result<DpCapabilities> Read(DpcdChannel* dp_aux, inspect::Node* parent_node);
+  static fpromise::result<DpCapabilities> Read(DpcdChannel* dp_aux);
+
+  // Publish the capabilities fields to inspect node `caps_node`.
+  void PublishToInspect(inspect::Node* caps_node) const;
 
   // Get the cached value of a DPCD register using its DPCD address.
   uint8_t dpcd_at(dpcd::Register address) const {
@@ -162,10 +166,8 @@ struct DpCapabilities final {
     bool backlight_aux_brightness = false;
   };
 
-  explicit DpCapabilities(inspect::Node* parent_node);
   bool ProcessEdp(DpcdChannel* dp_aux);
   bool ProcessSupportedLinkRates(DpcdChannel* dp_aux);
-  void PublishInspect();
 
   std::array<uint8_t, dpcd::DPCD_SUPPORTED_LINK_RATE_START - dpcd::DPCD_CAP_START> dpcd_;
   dpcd::SinkCount sink_count_;
@@ -174,8 +176,6 @@ struct DpCapabilities final {
   bool use_link_rate_table_ = false;
 
   std::optional<Edp> edp_dpcd_;
-
-  inspect::Node node_;
 };
 
 class DpDisplay : public DisplayDevice {
@@ -306,6 +306,7 @@ class DpDisplay : public DisplayDevice {
 
   // Debug
   inspect::Node inspect_node_;
+  inspect::Node dp_capabilities_node_;
   inspect::UintProperty dp_lane_count_inspect_;
   inspect::UintProperty dp_link_rate_mhz_inspect_;
 };
