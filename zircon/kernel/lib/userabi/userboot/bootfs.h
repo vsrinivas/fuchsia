@@ -23,24 +23,22 @@ class Bootfs {
   Bootfs(zx::unowned_vmar vmar_self, zx::vmo vmo, zx::resource vmex_resource, zx::debuglog log)
       : vmex_resource_(std::move(vmex_resource)), log_(std::move(log)) {
     zbitl::MapOwnedVmo mapvmo{std::move(vmo), /*writable=*/false, std::move(vmar_self)};
-    if (auto result = BootfsView::Create(std::move(mapvmo)); result.is_error()) {
+    if (auto result = BootfsReader::Create(std::move(mapvmo)); result.is_error()) {
       Fail(result.error_value());
     } else {
-      bootfs_ = std::move(result.value());
+      bootfs_reader_ = std::move(result.value());
     }
   }
 
   zx::vmo Open(std::string_view root, std::string_view filename, std::string_view purpose);
 
  private:
+  using BootfsReader = zbitl::Bootfs<zbitl::MapOwnedVmo>;
   using BootfsView = zbitl::BootfsView<zbitl::MapOwnedVmo>;
 
-  [[noreturn]] void Fail(const BootfsView::Error& error);
+  [[noreturn]] void Fail(const BootfsReader::Error& error);
 
-  // It will be asserted on destruction that bootfs_ does not hold an error. We
-  // take it as an invariant that bootfs_ never holds an error outside of calls
-  // to Open().
-  BootfsView bootfs_;
+  BootfsReader bootfs_reader_;
   zx::resource vmex_resource_;
   zx::debuglog log_;
 };

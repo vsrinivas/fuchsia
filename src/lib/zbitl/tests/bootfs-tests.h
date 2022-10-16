@@ -19,8 +19,8 @@
 #include "tests.h"
 
 template <typename TestTraits>
-void TestBootfsIteration() {
-  using namespace std::string_view_literals;
+void CreateBootfs(typename TestTraits::Context& context,
+                  zbitl::Bootfs<typename TestTraits::storage_type>& bootfs) {
   using Storage = typename TestTraits::storage_type;
 
   files::ScopedTempDir dir;
@@ -51,30 +51,46 @@ void TestBootfsIteration() {
     ASSERT_FALSE(result.is_error()) << ViewCopyErrorString(result.error_value());
   }
 
-  typename TestTraits::Context bootfs_context;
-  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(bootfs_fd), bootfs_size, &bootfs_context));
+  ASSERT_NO_FATAL_FAILURE(TestTraits::Create(std::move(bootfs_fd), bootfs_size, &context));
 
-  zbitl::BootfsView<Storage> bootfs;
   {
-    auto result = zbitl::BootfsView<Storage>::Create(bootfs_context.TakeStorage());
+    auto result = zbitl::Bootfs<Storage>::Create(context.TakeStorage());
     ASSERT_FALSE(result.is_error()) << BootfsErrorString(result.error_value());
     bootfs = std::move(result.value());
   }
 
-  auto test_find = [&bootfs](auto expected_it, std::initializer_list<std::string_view> path_parts) {
-    auto match = bootfs.find(path_parts);
-    auto result = bootfs.take_error();
-    ASSERT_FALSE(result.is_error()) << BootfsErrorString(result.error_value());
-    EXPECT_EQ(expected_it, match);
-  };
+  {
+    auto result = view.take_error();
+    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
+  }
+}
 
+template <typename BootfsView>
+void TestFind(BootfsView& bootfs, std::initializer_list<std::string_view> path_parts,
+              typename BootfsView::iterator expected_it) {
+  auto match = bootfs.find(path_parts);
+  auto result = bootfs.take_error();
+  ASSERT_FALSE(result.is_error()) << BootfsErrorString(result.error_value());
+  EXPECT_EQ(expected_it, match);
+}
+
+template <typename TestTraits>
+void TestBootfsIteration() {
+  using namespace std::string_view_literals;
+  using Storage = typename TestTraits::storage_type;
+
+  typename TestTraits::Context context;
+  zbitl::Bootfs<Storage> reader;
+  ASSERT_NO_FATAL_FAILURE(CreateBootfs<TestTraits>(context, reader));
+
+  auto bootfs = reader.root();
   uint32_t idx = 0;
   for (auto it = bootfs.begin(); it != bootfs.end(); ++it) {
     Bytes contents;
-    ASSERT_NO_FATAL_FAILURE(TestTraits::Read(bootfs.storage(), it->data, it->size, &contents));
+    ASSERT_NO_FATAL_FAILURE(TestTraits::Read(reader.storage(), it->data, it->size, &contents));
 
-    ASSERT_NO_FATAL_FAILURE(test_find(it, {it->name}));
-    ASSERT_NO_FATAL_FAILURE(test_find(it, {it->name}));
+    ASSERT_NO_FATAL_FAILURE(TestFind(bootfs, {it->name}, it));
+    ASSERT_NO_FATAL_FAILURE(TestFind(bootfs, {it->name}, it));
     switch (idx) {
       case 0:
         EXPECT_EQ(it->name, "A.txt"sv);
@@ -85,16 +101,16 @@ void TestBootfsIteration() {
         break;
       case 1:
         EXPECT_EQ(it->name, "nested/B.txt"sv);
-        ASSERT_NO_FATAL_FAILURE(test_find(it, {"nested"sv, "B.txt"sv}));
+        ASSERT_NO_FATAL_FAILURE(TestFind(bootfs, {"nested"sv, "B.txt"sv}, it));
         EXPECT_EQ(contents,
                   "Now we are engaged in a great civil war, testing whether that nation, "
                   "or any nation so conceived and so dedicated, can long endure.");
         break;
       case 2:
         EXPECT_EQ(it->name, "nested/again/C.txt"sv);
-        ASSERT_NO_FATAL_FAILURE(test_find(it, {"nested/again"sv, "C.txt"sv}));
-        ASSERT_NO_FATAL_FAILURE(test_find(it, {"nested"sv, "again/C.txt"sv}));
-        ASSERT_NO_FATAL_FAILURE(test_find(it, {"nested"sv, "again"sv, "C.txt"sv}));
+        ASSERT_NO_FATAL_FAILURE(TestFind(bootfs, {"nested/again"sv, "C.txt"sv}, it));
+        ASSERT_NO_FATAL_FAILURE(TestFind(bootfs, {"nested"sv, "again/C.txt"sv}, it));
+        ASSERT_NO_FATAL_FAILURE(TestFind(bootfs, {"nested"sv, "again"sv, "C.txt"sv}, it));
         EXPECT_EQ(contents, "We are met on a great battle-field of that war.");
         break;
       default:
@@ -104,11 +120,6 @@ void TestBootfsIteration() {
     ++idx;
   }
   EXPECT_EQ(3u, idx) << "we expect three files in the BOOTFS";
-
-  {
-    auto result = view.take_error();
-    EXPECT_FALSE(result.is_error()) << ViewErrorString(result.error_value());
-  }
 
   {
     auto result = bootfs.take_error();

@@ -49,7 +49,7 @@ class KernelStorage {
   auto data() const { return storage_.data(); }
 
   // Helper to decode data() as a BOOTFS image.
-  Bootfs GetBootfs() const;
+  Bootfs GetBootfs() const { return bootfs_reader_.root(); }
 
   void GetTimes(PhysBootTimes& times) {
     times.Set(PhysBootTimes::kDecompressStart, decompress_start_ts_);
@@ -57,9 +57,12 @@ class KernelStorage {
   }
 
  private:
+  using BootfsReader = zbitl::Bootfs<ktl::span<const ktl::byte>>;
+
   Allocation storage_;
   Zbi zbi_;
   Zbi::iterator item_;
+  BootfsReader bootfs_reader_;
   arch::EarlyTicks decompress_start_ts_, decompress_end_ts_;
 };
 

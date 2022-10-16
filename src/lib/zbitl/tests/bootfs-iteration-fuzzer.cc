@@ -8,6 +8,7 @@
 #include <zircon/boot/bootfs.h>
 
 #include <string>
+#include <string_view>
 
 #include <fuzzer/FuzzedDataProvider.h>
 
@@ -18,13 +19,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   const std::string filename = provider.ConsumeRandomLengthString();
   const std::string raw = provider.ConsumeRemainingBytesAsString();
 
-  zbitl::BootfsView<std::string_view> bootfs;
-  if (auto result = zbitl::BootfsView<std::string_view>::Create(raw); result.is_error()) {
+  zbitl::Bootfs<std::string_view> bootfs_reader;
+  if (auto result = zbitl::Bootfs<std::string_view>::Create(raw); result.is_error()) {
     return 0;
   } else {
-    bootfs = std::move(result).value();
+    bootfs_reader = std::move(result).value();
   }
 
+  auto bootfs = bootfs_reader.root();
   for (const auto& file : bootfs) {
     ZX_ASSERT(file.name.size() <= ZBI_BOOTFS_MAX_NAME_LEN);
     if (!file.name.empty()) {

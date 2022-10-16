@@ -25,20 +25,21 @@ constexpr const char* kMexecZbi = "testdata/mexec-child.zbi";
 
 namespace {
 
-using BootfsView = zbitl::BootfsView<zbitl::MapUnownedVmo>;
-
 // The bootfs VFS (rooted under '/boot') is hosted by component manager. These tests can be started
 // directly from userboot without starting component manager, so the bootfs VFS will not be
 // available. Instead, we can just read any files needed directly from the uncompressed bootfs VMO.
 zx_status_t GetFileFromBootfs(std::string_view path, zbitl::MapUnownedVmo bootfs, zx::vmo* vmo) {
-  BootfsView view;
-  if (auto result = BootfsView::Create(std::move(bootfs)); result.is_error()) {
+  using Bootfs = zbitl::Bootfs<zbitl::MapUnownedVmo>;
+
+  Bootfs reader;
+  if (auto result = Bootfs::Create(std::move(bootfs)); result.is_error()) {
     zbitl::PrintBootfsError(result.error_value());
     return ZX_ERR_INTERNAL;
   } else {
-    view = std::move(result).value();
+    reader = std::move(result).value();
   }
 
+  auto view = reader.root();
   auto file = view.find(path);
   if (auto result = view.take_error(); result.is_error()) {
     zbitl::PrintBootfsError(result.error_value());
@@ -48,8 +49,8 @@ zx_status_t GetFileFromBootfs(std::string_view path, zbitl::MapUnownedVmo bootfs
     return ZX_ERR_NOT_FOUND;
   }
 
-  return view.storage().vmo().create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE,
-                                           file->offset, file->size, vmo);
+  return reader.storage().vmo().create_child(ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE,
+                                             file->offset, file->size, vmo);
 }
 
 }  // namespace

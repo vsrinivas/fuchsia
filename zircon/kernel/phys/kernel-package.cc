@@ -103,15 +103,13 @@ void KernelStorage::Init(Zbi zbi) {
   debugf("%s: STORAGE_KERNEL decompressed %s -> %s\n", ProgramName(),
          pretty::FormattedBytes(item_->header->length).c_str(),
          pretty::FormattedBytes(storage_size).c_str());
-}
 
-KernelStorage::Bootfs KernelStorage::GetBootfs() const {
-  auto result = Bootfs::Create(data());
-  if (result.is_error()) {
+  if (auto result = BootfsReader::Create(data()); result.is_error()) {
     printf("%s: cannot open BOOTFS image from KERNEL_STORAGE item (%#zx bytes at %p): ",
            ProgramName(), data().size(), data().data());
     zbitl::PrintBootfsError(result.error_value());
     abort();
+  } else {
+    bootfs_reader_ = ktl::move(result).value();
   }
-  return ktl::move(result).value();
 }

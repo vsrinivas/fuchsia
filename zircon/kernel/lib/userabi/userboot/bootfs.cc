@@ -20,11 +20,12 @@ zx::vmo Bootfs::Open(std::string_view root, std::string_view filename, std::stri
          static_cast<int>(filename.size()), filename.data(),  //
          static_cast<int>(purpose.size()), purpose.data());
 
-  auto it = root.empty() ? bootfs_.find(filename) : bootfs_.find({root, filename});
-  if (auto result = bootfs_.take_error(); result.is_error()) {
+  BootfsView bootfs = bootfs_reader_.root();
+  auto it = root.empty() ? bootfs.find(filename) : bootfs.find({root, filename});
+  if (auto result = bootfs.take_error(); result.is_error()) {
     Fail(result.error_value());
   }
-  if (it == bootfs_.end()) {
+  if (it == bootfs.end()) {
     fail(log_, "failed to find '%.*s%s%.*s'",         //
          static_cast<int>(root.size()), root.data(),  //
          root.empty() ? "" : "/",                     //
@@ -33,7 +34,7 @@ zx::vmo Bootfs::Open(std::string_view root, std::string_view filename, std::stri
 
   // Clone a private, read-only snapshot of the file's subset of the bootfs VMO.
   zx::vmo file_vmo;
-  zx_status_t status = bootfs_.storage().vmo().create_child(
+  zx_status_t status = bootfs_reader_.storage().vmo().create_child(
       ZX_VMO_CHILD_SNAPSHOT | ZX_VMO_CHILD_NO_WRITE, it->offset, it->size, &file_vmo);
   check(log_, status, "zx_vmo_create_child failed");
 

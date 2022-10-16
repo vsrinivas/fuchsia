@@ -36,7 +36,7 @@ extern "C" uint64_t multiply_by_factor(uint64_t x);
 
 namespace {
 
-using BootfsView = zbitl::BootfsView<ktl::span<const ktl::byte>>;
+using Bootfs = zbitl::Bootfs<ktl::span<const ktl::byte>>;
 
 constexpr size_t kExpectedNumPatches = 2;
 
@@ -156,14 +156,15 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     abort();
   }
 
-  BootfsView bootfs;
-  if (auto result = BootfsView::Create(bootfs_buffer.data()); result.is_error()) {
+  Bootfs bootfs_reader;
+  if (auto result = Bootfs::Create(bootfs_buffer.data()); result.is_error()) {
     zbitl::PrintBootfsError(result.error_value());
     return 1;
   } else {
-    bootfs = ktl::move(result.value());
+    bootfs_reader = ktl::move(result.value());
   }
 
+  auto bootfs = bootfs_reader.root();
   code_patching::Patcher patcher;
   if (auto result = patcher.Init(ktl::move(bootfs), kNamespace); result.is_error()) {
     printf("FAILED: Could not initialize code_patching::Patcher: ");
