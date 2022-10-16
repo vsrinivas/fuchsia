@@ -62,6 +62,97 @@ ask authors to close any testing gaps that they identify as important.
 
 ![Gerrit screenshot showing line coverage](incremental.png)
 
+## Local coverage edit loop
+
+Note: Only component tests are supported at this time.
+
+You can view coverage from local edits in your browser or in VS Code. To demonstrate, we'll use our rust example tests //examples/rust:rust-examples.
+
+### Prepare your test environment
+
+First let's configure the build.
+
+```posix-terminal
+fx set core.x64 --variant coverage-rust --with //examples/rust:rust-examples
+fx build
+```
+
+Above we set --variant coverage-rust because our example is a Rust test. If you're working with a C/C++ test then you need to set --variant coverage instead.
+
+Let's start an emulator which will be your target device and then start an update server, we'll use two terminals for this step. If you already have a target device running, whether an emulator or real hardware, then you can skip this step.
+
+In your first terminal:
+
+```posix-terminal
+fx qemu -kN
+```
+
+Next, lets start a package server that you'll use to publish updates to your test package. If you already have a package server running then you can skip this step.
+
+In your second terminal:
+
+```posix-terminal
+fx serve
+```
+
+### View coverage in the browser
+
+In this workflow we will run our test and produce a coverage report which we can view in a browser.
+
+#### Execute your tests and export the coverage HTML report
+
+Note: add --variant coverage for cpp components.
+
+We execute our tests (in this case testing-lib-test) and generate an html report.
+
+```posix-terminal
+fx coverage --html-output-dir $HOME/fx_coverage testing-lib-test
+```
+
+### View coverage summary in the browser
+
+Open `$HOME/fx_coverage/index.html` with your browser. You should see a coverage summary page.
+
+![Coverage Report Screenshot](report_screenshot.png)
+
+### View coverage in VS Code
+
+Start this section only after you’ve prepared your test environment.
+
+Setup
+
+1. Install the [coverage-gutters] extension from Visual Studio Marketplace.
+1. Configure coverage-gutters by adding the following attributes to `[settings.json]`
+
+```json
+{
+  "coverage-gutters.coverageBaseDir": ".",
+  "coverage-gutters.showLineCoverage": true,
+  "coverage-gutters.coverageFileNames": [ "lcov.info" ]
+}
+```
+
+### Run test and view coverage
+
+First, lets execute the test and export the LCOV file, which VS Code will use to show coverage.
+
+```posix-terminal
+fx coverage --lcov-output-path $FUCHSIA_DIR/coverage.lcov testing-lib-test
+```
+
+### View coverage in VS Code
+
+1. Find the file you want to view coverage for.
+1. Right click the edit area of the file and select “Coverage Gutters: Display Coverage.”
+1. Covered lines are in green, and uncovered lines are in red.
+1. You can re-export LCOV and redo step 2 to see updated coverage (for some reason “watch” doesn’t work.)
+
+![Display Coverage](display_coverage.png)
+
+![VS Code Coverage](vscode_coverage.png)
+
+
+
 ## End-to-end (E2E) tests exclusion
 
 Only unit tests and hermetic integration tests are considered reliable sources
@@ -76,12 +167,12 @@ it, and expect certain behaviors.
 
 Because E2E tests exercise the system as a whole:
 
-*   They were observed to often trigger different code paths between runs,
-    making their coverage results flaky.
-*   They frequently time out on coverage builders, making the builders flaky.
-    E2E tests run considerably slower than unit tests and small integration
-    tests, usually take minutes to finish. And they run even slower on coverage
-    builders due to coverage overhead that slows down performance.
+- They were observed to often trigger different code paths between runs,
+  making their coverage results flaky.
+- They frequently time out on coverage builders, making the builders flaky.
+  E2E tests run considerably slower than unit tests and small integration
+  tests, usually take minutes to finish. And they run even slower on coverage
+  builders due to coverage overhead that slows down performance.
 
 ### How
 
@@ -105,13 +196,13 @@ infrequently:
 
 Currently, test coverage is collected only if:
 
-*   The code is written in C, C++, or Rust.
-*   The code runs on Fuchsia in usermode, or runs on the host.
-    Kernel coverage is not yet supported
-    ([tracking bug](https://fxbug.dev/34196)).
-*   The test runs on qemu. Testing on hardware is not yet supported.
-*   The test runs as part of the `core` product configuration.
-*   End-to-end (e2e) tests are [not supported](#end-to-end_e2e_tests_exclusion).
+- The code is written in C, C++, or Rust.
+- The code runs on Fuchsia in usermode, or runs on the host.
+  Kernel coverage is not yet supported
+  ([tracking bug](https://fxbug.dev/34196)).
+- The test runs on qemu. Testing on hardware is not yet supported.
+- The test runs as part of the `core` product configuration.
+- End-to-end (e2e) tests are [not supported](#end-to-end_e2e_tests_exclusion).
 
 On that last note, e2e tests exercise a lot of code throughout the system, but
 they do so in a manner that's inconsistent between runs (or "flaky"). To achieve
@@ -140,11 +231,11 @@ See also:
 
 Support for the following additional use cases is currently under development:
 
-*   Kernel code coverage.
-*   Coverage on product configurations other than `core`, for instance `bringup`
-    or `workstation_eng`.
-*   Coverage on hardware targets, that is collecting from tests that don't run
-    on qemu.
+- Kernel code coverage.
+- Coverage on product configurations other than `core`, for instance `bringup`
+  or `workstation_eng`.
+- Coverage on hardware targets, that is collecting from tests that don't run
+  on qemu.
 
 ## Troubleshooting
 
@@ -243,8 +334,8 @@ Lastly, on the coverage variant components may use the
 that make assumptions about precisely what capabilities components use. See
 for instance:
 
-*   [Issue 77206: Failing test on coverage builder: fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_integration_test.cmx][fxb77206]
-*   [Issue 89446: realm_builder_server_test fails on coverage variant][fxb89446]
+- [Issue 77206: Failing test on coverage builder: fuchsia-pkg://fuchsia.com/hub_integration_test#meta/hub_integration_test.cmx][fxb77206]
+- [Issue 89446: realm_builder_server_test fails on coverage variant][fxb89446]
 
 An immediate fix would be to disable your test under coverage (see the GN
 snippet above), at the immediate cost of not collecting coverage information
@@ -288,11 +379,11 @@ For more implementation details see
 Note that the instrumentation leads to increased binary size, increased memory
 usage, and slower test execution time. Some steps were taken to offset this:
 
-*   Tests in profile variants are afforded longer timeouts.
-*   Tests in profile variants are compiled with some optimizations.
-*   Coverage currently runs on emulators, where storage is less constrained.
-*   For incremental coverage, only sources affected by the change are
-    instrumented.
+- Tests in profile variants are afforded longer timeouts.
+- Tests in profile variants are compiled with some optimizations.
+- Coverage currently runs on emulators, where storage is less constrained.
+- For incremental coverage, only sources affected by the change are
+  instrumented.
 
 The profile runtime library on Fuchsia stores the profile data in a [VMO][vmo],
 and publishes a handle to the VMO using the
@@ -317,25 +408,25 @@ dashboards.
 
 Ongoing work:
 
-*   Performance and reliability improvements to the coverage runtime.
-*   Kernel support for source code coverage from ZBI tests.
-*   Custom coverage dashboards and alerts: build a dashboard for your team.
+- Performance and reliability improvements to the coverage runtime.
+- Kernel support for source code coverage from ZBI tests.
+- Custom coverage dashboards and alerts: build a dashboard for your team.
 
 Upcoming work:
 
-*   Out-of-tree support: coverage outside of Fuchsia CI/CQ.
+- Out-of-tree support: coverage outside of Fuchsia CI/CQ.
 
 Future work:
 
-*   Local workflow: run tests locally, produce a coverage report locally.
-*   IDE integration: see a coverage layer inside VS Code.
+- Local workflow: run tests locally, produce a coverage report locally.
+- IDE integration: see a coverage layer inside VS Code.
 
 ## Further reading
 
-*   [Code Coverage Best Practices][gtb-coverage-best]{:.external}
-*   [Measuring Coverage at Google][gtb-coverage-measure]{:.external}
-*   [Understand Your Coverage Data][gtb-coverage-understand]{:.external}
-*   [How Much Testing is Enough?][gtb-testing-enough]{:.external}
+- [Code Coverage Best Practices][gtb-coverage-best]{:.external}
+- [Measuring Coverage at Google][gtb-coverage-measure]{:.external}
+- [Understand Your Coverage Data][gtb-coverage-understand]{:.external}
+- [How Much Testing is Enough?][gtb-testing-enough]{:.external}
 
 [assert-no-deps]: https://gn.googlesource.com/gn/+/HEAD/docs/reference.md#var_assert_no_deps
 [cfv2]: /docs/concepts/components/v2/
@@ -343,6 +434,7 @@ Future work:
 [core_no_e2e_bundle]: https://cs.opensource.google/fuchsia/fuchsia/+/main:bundles/buildbot/BUILD.gn;l=53;drc=9e1506dfbe789637c709fcc4ad43896f5044f947
 [covargs]: /tools/debug/covargs/
 [coverage-dashboard]: https://analysis.chromium.org/coverage/p/fuchsia
+[coverage-gutters]: https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters
 [debugdata]: https://fuchsia.dev/reference/fidl/fuchsia.debugdata
 [flaky-policy]: /docs/development/testing/test_flake_policy.md
 [fuchsia-coverage-ci]: https://ci.chromium.org/p/fuchsia/builders/ci/fuchsia-coverage
@@ -361,5 +453,6 @@ Future work:
 [llvm-coverage-mapping-format]: https://llvm.org/docs/CoverageMappingFormat.html
 [llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [llvm-profdata]: https://llvm.org/docs/CommandGuide/llvm-profdata.html
+[settings.json]: https://marketplace.visualstudio.com/items?itemName=ryanluker.vscode-coverage-gutters
 [trf]: /docs/development/testing/components/test_runner_framework.md
 [vmo]: /docs/reference/kernel_objects/vm_object.md
