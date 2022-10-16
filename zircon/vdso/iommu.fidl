@@ -82,7 +82,8 @@ protocol Iommu {
     Create(resource struct {
         resource handle:RESOURCE;
         type uint32;
-        desc VectorVoid;
+        @voidptr
+        desc vector<byte>;
     }) -> (resource struct {
         out handle:IOMMU;
     }) error status;

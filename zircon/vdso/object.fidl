@@ -760,7 +760,8 @@ protocol Object {
         handle handle;
         property uint32;
     }) -> (struct {
-        value VectorVoid;
+        @voidptr
+        value vector<byte>;
     }) error status;
 
     /// ## Summary
@@ -807,7 +808,8 @@ protocol Object {
     SetProperty(resource struct {
         handle handle;
         property uint32;
-        value VectorVoid;
+        @voidptr
+        value vector<byte>;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -1939,7 +1941,8 @@ protocol Object {
         handle handle;
         topic uint32;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
         actual usize;
         avail usize;
     }) error status;

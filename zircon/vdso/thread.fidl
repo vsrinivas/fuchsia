@@ -328,7 +328,8 @@ protocol Thread {
         handle handle:THREAD;
         kind uint32;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 
     /// ## Summary
@@ -443,7 +444,8 @@ protocol Thread {
     WriteState(resource struct {
         handle handle:THREAD;
         kind uint32;
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 
     /// ## Summary

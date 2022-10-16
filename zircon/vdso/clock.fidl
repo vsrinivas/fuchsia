@@ -168,7 +168,8 @@ protocol Clockfuncs {
     /// [`zx_clock_update()`]: clock_update.md
     ClockCreate(struct {
         options uint64;
-        args ConstVoidPtr;
+        @voidptr
+        args experimental_pointer<byte>;
     }) -> (resource struct {
         out handle;
     }) error status;
@@ -294,7 +295,8 @@ protocol Clockfuncs {
         handle handle;
         options uint64;
     }) -> (struct {
-        details VoidPtr;
+        @voidptr
+        details experimental_pointer<byte>;
     }) error status;
 
     /// ## Summary
@@ -525,6 +527,7 @@ protocol Clockfuncs {
     ClockUpdate(resource struct {
         handle handle;
         options uint64;
-        args ConstVoidPtr;
+        @voidptr
+        args experimental_pointer<byte>;
     }) -> (struct {}) error status;
 };

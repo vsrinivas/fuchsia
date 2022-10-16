@@ -151,7 +151,8 @@ protocol Socket {
     Write(resource struct {
         handle handle:SOCKET;
         options uint32;
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {
         actual usize;
     }) error status;
@@ -235,7 +236,8 @@ protocol Socket {
         handle handle:SOCKET;
         options uint32;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
         actual usize;
     }) error status;
 

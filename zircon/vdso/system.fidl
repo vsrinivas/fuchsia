@@ -493,7 +493,9 @@ protocol System {
     SetPerformanceInfo(resource struct {
         resource handle:RESOURCE;
         topic uint32;
-        info ConstVoidPtr;
+        // TODO(joshuaseaton): vector<byte>
+        @voidptr
+        info experimental_pointer<byte>;
         count usize;
     }) -> (struct {}) error status;
 
@@ -591,7 +593,9 @@ protocol System {
         topic uint32;
         count usize;
     }) -> (resource struct {
-        info VoidPtr;
+        // TODO(joshuaseaton): vector<byte>
+        @voidptr
+        info experimental_pointer<byte>;
         output_count usize;
     }) error status;
 
@@ -710,7 +714,8 @@ protocol System {
     MexecPayloadGet(resource struct {
         resource handle:RESOURCE;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 
     /// ## Summary

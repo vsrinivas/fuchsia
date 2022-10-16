@@ -60,7 +60,8 @@ protocol Cache {
     /// **ZX_ERR_INVALID_ARGS** *options* is invalid.
     @vdsocall
     Flush(struct {
-        addr ConstVoidPtr;
+        @voidptr
+        addr experimental_pointer<byte>;
         size usize;
         options uint32;
     }) -> (struct {}) error status;

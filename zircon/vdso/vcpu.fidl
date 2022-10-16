@@ -371,7 +371,8 @@ protocol Vcpu {
         handle handle:VCPU;
         kind uint32;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 
     /// ## Summary
@@ -442,6 +443,7 @@ protocol Vcpu {
     WriteState(resource struct {
         handle handle:VCPU;
         kind uint32;
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 };

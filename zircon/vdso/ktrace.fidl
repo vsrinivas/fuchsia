@@ -53,7 +53,8 @@ protocol Ktrace {
         handle handle:RESOURCE;
         offset uint32;
     }) -> (struct {
-        data VectorVoid;
+        @voidptr
+        data vector<byte>;
         actual usize;
     }) error status;
 
@@ -100,7 +101,10 @@ protocol Ktrace {
         handle handle:RESOURCE;
         action uint32;
         options uint32;
-        ptr VoidPtr;
+
+        @inout
+        @voidptr
+        ptr experimental_pointer<byte>;
     }) -> (struct {}) error status;
 
     /// ## Summary

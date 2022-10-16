@@ -145,7 +145,8 @@ protocol Restricted {
     /// [`zx_restricted_read_state()`]: restricted_read_state.md
     @next
     WriteState(struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -207,6 +208,7 @@ protocol Restricted {
     /// [`zx_restricted_write_state()`]: restricted_write_state.md
     @next
     ReadState() -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 };

@@ -33,9 +33,6 @@ TEST(AliasWorkaround, Mappings) {
   // ConstFutexPtr
   CHECK_ARG("const zx_futex_t*", "b");
 
-  // ConstVoidPtr
-  CHECK_ARG("const void*", "c");
-
   // MutableVectorHandleDispositionU32Size
   CHECK_ARG("zx_handle_disposition_t*", "g");
   CHECK_ARG("uint32_t", "num_g");
@@ -64,20 +61,13 @@ TEST(AliasWorkaround, Mappings) {
   CHECK_ARG("const zx_paddr_t*", "n");
   CHECK_ARG("size_t", "num_n");
 
-  // VectorVoid
-  CHECK_ARG("const void*", "o");
-  CHECK_ARG("size_t", "o_size");
-
   // VectorVoidU32Size
   CHECK_ARG("const void*", "p");
   CHECK_ARG("uint32_t", "p_size");
 
-  // VoidPtr
-  CHECK_ARG("void*", "q");
-
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 21u);
+  EXPECT_EQ(cur_arg, 17u);
 }
 
 }  // namespace

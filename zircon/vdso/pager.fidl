@@ -572,7 +572,8 @@ protocol Pager {
         offset uint64;
         length uint64;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
         actual usize;
         avail usize;
     }) error status;
@@ -659,6 +660,7 @@ protocol Pager {
         pager_vmo handle:VMO;
         options uint32;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 };

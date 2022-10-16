@@ -4,7 +4,6 @@
 library zx;
 
 alias MutableVectorVoid = vector<byte>;
-alias VoidPtr = uint64;
 
 @transport("Syscall")
 protocol Rust {
@@ -50,7 +49,8 @@ protocol Rust {
         h uint64;
         i usize;
         j uintptr;
-        k VoidPtr;
+        @voidptr
+        k experimental_pointer<byte>;
         l time;
         m ticks;
     });

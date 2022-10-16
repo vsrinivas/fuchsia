@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 library zx;
 
-alias VoidPtr = uint64;
-
 @transport("Syscall")
 protocol Ovp {
     VoidPointerOut(resource struct {
         handle handle;
     }) -> (struct {
-        details VoidPtr;
+        @voidptr
+        details experimental_pointer<byte>;
     }) error status;
 };

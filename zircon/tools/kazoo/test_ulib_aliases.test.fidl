@@ -9,9 +9,3 @@ type Destination = strict enum : uint32 {
 
 /// Test doc comment on type alias.
 alias Alias = Destination;
-
-// Test aliasing a special type charptr.
-// This item should not occur in the library header output.
-alias ConstVoidPtr = uint64;
-
-alias AliasConstVoidPtr = ConstVoidPtr;

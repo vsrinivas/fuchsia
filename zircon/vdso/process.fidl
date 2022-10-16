@@ -416,7 +416,8 @@ protocol Process {
         handle handle:PROCESS;
         vaddr vaddr;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
         actual usize;
     }) error status;
 
@@ -498,7 +499,8 @@ protocol Process {
     WriteMemory(resource struct {
         handle handle:PROCESS;
         vaddr vaddr;
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {
         actual usize;
     }) error status;

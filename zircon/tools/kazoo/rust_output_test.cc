@@ -68,7 +68,7 @@ extern {
         h: u64,
         i: usize,
         j: usize,
-        k: *mut u8,
+        k: *const u8,
         l: zx_time_t,
         m: zx_ticks_t
         );

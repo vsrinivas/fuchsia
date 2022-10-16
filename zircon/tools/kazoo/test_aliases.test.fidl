@@ -15,7 +15,6 @@ type PortPacket = struct {};
 type WaitItem = struct {};
 
 alias ConstFutexPtr = int32;
-alias ConstVoidPtr = uint64;
 alias MutableVectorHandleDispositionU32Size = vector<HandleDisposition>;
 alias MutableVectorHandleU32Size = vector<handle>;
 alias MutableVectorVoid = vector<byte>;
@@ -23,15 +22,12 @@ alias MutableVectorVoidU32Size = vector<byte>;
 alias VectorHandleInfoU32Size = vector<HandleInfo>;
 alias VectorHandleU32Size = vector<handle>;
 alias VectorPaddr = vector<paddr>;
-alias VectorVoid = vector<byte>;
 alias VectorVoidU32Size = vector<byte>;
-alias VoidPtr = uint64;
 
 @transport("Syscall")
 protocol Aliases {
     SomeFunc(resource struct {
         b ConstFutexPtr;
-        c ConstVoidPtr;
         g MutableVectorHandleDispositionU32Size;
         i MutableVectorHandleU32Size;
         j MutableVectorVoid;
@@ -39,8 +35,6 @@ protocol Aliases {
         l VectorHandleInfoU32Size;
         m VectorHandleU32Size;
         n VectorPaddr;
-        o VectorVoid;
         p VectorVoidU32Size;
-        q VoidPtr;
     }) -> (struct {}) error status;
 };

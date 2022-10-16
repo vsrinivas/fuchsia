@@ -11,10 +11,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypePointer(Type(TypeZxBasicAlias("Futex"))), Constness::kConst);
     return true;
   }
-  if (name == "ConstVoidPtr") {
-    *type = Type(TypePointer(Type(TypeVoid{})), Constness::kConst);
-    return true;
-  }
 
   if (name == "MutableVectorHandleDispositionU32Size") {
     *type = Type(TypeVector(Type(*library.TypeFromIdentifier("zx/HandleDisposition")),
@@ -56,20 +52,12 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypeVector(Type(TypeZxBasicAlias("paddr"))), Constness::kConst);
     return true;
   }
-  if (name == "VectorVoid") {
-    *type = Type(TypeVector(Type(TypeVoid{})), Constness::kConst);
-    return true;
-  }
   if (name == "VectorIovec") {
     *type = Type(TypeVector(Type(TypeZxBasicAlias("Iovec"))), Constness::kConst);
     return true;
   }
   if (name == "VectorVoidU32Size") {
     *type = Type(TypeVector(Type(TypeVoid{}), UseUint32ForVectorSizeTag{}), Constness::kConst);
-    return true;
-  }
-  if (name == "VoidPtr") {
-    *type = Type(TypePointer(Type(TypeVoid{})), Constness::kMutable);
     return true;
   }
   return false;

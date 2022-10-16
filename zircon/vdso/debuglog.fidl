@@ -127,7 +127,8 @@ protocol Debuglog {
     Write(resource struct {
         handle handle:LOG;
         options uint32;
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -235,6 +236,7 @@ protocol Debuglog {
         handle handle:LOG;
         options uint32;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 };

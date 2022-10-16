@@ -148,7 +148,8 @@ protocol Fifo {
         handle handle:FIFO;
         elem_size usize;
     }) -> (struct {
-        data VectorVoid;
+        @voidptr
+        data vector<byte>;
         actual_count usize;
     }) error status;
 
@@ -223,7 +224,9 @@ protocol Fifo {
     Write(resource struct {
         handle handle:FIFO;
         elem_size usize;
-        data ConstVoidPtr;
+        // TODO(joshuaseaton): vector<byte>
+        @voidptr
+        data experimental_pointer<byte>;
         count usize;
     }) -> (struct {
         actual_count usize;

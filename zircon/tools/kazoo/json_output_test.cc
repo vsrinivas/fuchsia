@@ -461,6 +461,7 @@ TEST(JsonOutput, RustCases) {
           "type": "any",
           "is_array": true,
           "attributes": [
+            "IN"
           ]
         },
         {

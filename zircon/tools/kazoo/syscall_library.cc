@@ -202,6 +202,19 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
   }
   ZX_ASSERT_MSG(typ, "TODO: kind=%s", kind.c_str());
 
+  if (attributes.find("voidptr") != attributes.end()) {
+    ZX_ASSERT(typ->IsVector() || typ->IsPointer());
+    if (typ->IsVector()) {
+      const auto& contained_type = typ->DataAsVector().contained_type();
+      ZX_ASSERT(std::holds_alternative<TypeUint8>(contained_type.type_data()));
+      typ = Type(TypeVector(Type(TypeVoid{})));
+    } else {
+      const auto& pointee_type = typ->DataAsPointer().pointed_to_type();
+      ZX_ASSERT(std::holds_alternative<TypeUint8>(pointee_type.type_data()));
+      typ = Type(TypePointer(Type(TypeVoid{})));
+    }
+  }
+
   if (attributes.find("inout") != attributes.end()) {
     if (typ->IsVector()) {
       typ = Type(typ->DataAsVector(), Constness::kMutable);

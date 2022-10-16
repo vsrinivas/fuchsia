@@ -209,7 +209,8 @@ protocol Vmo {
         handle handle:VMO;
         offset uint64;
     }) -> (struct {
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
     }) error status;
 
     // TODO(scottmg): Same problem as Read() above.
@@ -288,7 +289,8 @@ protocol Vmo {
     @arg_reorder("handle, buffer, offset, buffer_size")
     Write(resource struct {
         handle handle:VMO;
-        buffer VectorVoid;
+        @voidptr
+        buffer vector<byte>;
         offset uint64;
     }) -> (struct {}) error status;
 
