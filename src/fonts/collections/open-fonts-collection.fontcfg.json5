@@ -323,6 +323,12 @@
         ///
         /// EMOJI
         "NotoColorEmoji.ttf",
+
+        ///
+        ///
+        /// SYMBOLS
+        "NotoSansSymbols-Regular.ttf",
+        "NotoSansSymbols2-Regular.ttf",
     ],
     settings: {
         cache_size_bytes: 8000000,

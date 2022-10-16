@@ -54,6 +54,8 @@ local_font_bundle("noto-sans-local") {
     "NotoSansHebrew-Regular.ttf",
     "NotoSansKannada-Regular.ttf",
     "NotoSansMalayalamUI-Regular.ttf",
+    "NotoSansSymbols-Regular.ttf",
+    "NotoSansSymbols2-Regular.ttf",
     "NotoSansTamilUI-Regular.ttf",
     "NotoSansTelugu-Regular.ttf",
     "NotoSansThaiUI-Regular.ttf",
