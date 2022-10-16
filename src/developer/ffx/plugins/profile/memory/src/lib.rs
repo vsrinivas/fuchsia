@@ -145,6 +145,7 @@ mod tests {
                 })
                 .detach();
             }
+            _ => unimplemented!(),
         })
     }
 

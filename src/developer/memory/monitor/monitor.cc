@@ -293,6 +293,34 @@ void Monitor::WriteJsonCapture(zx::socket socket) {
   fsl::BlockingCopyFromString(json_string, socket);
 }
 
+void Monitor::WriteJsonCaptureAndBuckets(zx::socket socket) {
+  // Capture state.
+  Capture capture;
+  const zx_status_t capture_status = GetCapture(&capture);
+  if (capture_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Error getting capture: " << zx_status_get_string(capture_status);
+    return;
+  }
+
+  // Copy the bucket definition into a string
+  std::string configuration_str;
+  std::error_code _ignore;
+  if (!std::filesystem::exists(kBucketConfigPath, _ignore)) {
+    FX_LOGS(ERROR) << "Bucket configuration file not found; no buckets will be available.";
+    configuration_str = "[]";
+  } else {
+    FX_CHECK(files::ReadFileToString(kBucketConfigPath, &configuration_str));
+  }
+  std::stringstream stream;
+  Printer printer(stream);
+  printer.PrintCaptureAndBucketConfig(capture, configuration_str);
+  // TODO(b/229972119): avoid a copy by having the stream write directly to the socket.
+  const std::string json_string = stream.str();
+
+  // Send string through socket.
+  fsl::BlockingCopyFromString(json_string, socket);
+}
+
 void Monitor::ReleaseWatcher(fuchsia::memory::Watcher* watcher) {
   auto predicate = [watcher](const auto& target) { return target.get() == watcher; };
   watchers_.erase(std::remove_if(watchers_.begin(), watchers_.end(), predicate));

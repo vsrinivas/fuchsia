@@ -1,6 +1,7 @@
 // Copyright 2017 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+@available(added=7)
 library fuchsia.memory;
 
 using fuchsia.memorypressure;
@@ -13,8 +14,17 @@ protocol Monitor {
         watcher client_end:Watcher;
     });
 
+    // Deprecated. Use `WriteJsonCaptureAndBuckets` instead.
     // Writes to `socket` a JSON capture as a well-formed UTF-8 string.
+    @available(added=9, deprecated=10, note="Use WriteJsonCaptureAndBuckets instead.")
     WriteJsonCapture(resource struct {
+        socket zx.handle:<SOCKET, zx.rights.WRITE | zx.rights.WAIT>;
+    });
+
+    // Writes to `socket` a JSON capture of the memory usage and the memory
+    // bucket definition, as a well-formed UTF-8 string.
+    @available(added=10)
+    WriteJsonCaptureAndBuckets(resource struct {
         socket zx.handle:<SOCKET, zx.rights.WRITE | zx.rights.WAIT>;
     });
 };
