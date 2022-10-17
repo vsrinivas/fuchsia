@@ -4,6 +4,6 @@
 {
     include: [ "//third_party/gvisor_syscall_tests/meta/netstack2/syncudp/syscall_tests.shard.cml" ],
     program: {
-        binary: "test/netstack2_syncudp_tcp_backlog_socket_tests",
+        binary: "test/netstack2_syncudp_loopback_isolated_tcp_linger_timeout_socket_tests",
     },
 }

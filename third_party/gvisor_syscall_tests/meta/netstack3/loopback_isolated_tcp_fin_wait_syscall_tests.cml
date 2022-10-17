@@ -4,6 +4,6 @@
 {
     include: [ "//third_party/gvisor_syscall_tests/meta/netstack3/syscall_tests.shard.cml" ],
     program: {
-        binary: "test/netstack3_tcp_backlog_socket_tests",
+        binary: "test/netstack3_loopback_isolated_tcp_fin_wait_socket_tests",
     },
 }

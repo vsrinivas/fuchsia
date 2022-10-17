@@ -7,6 +7,6 @@
 
 namespace netstack_syscall_test {
 
-void AddNonPassingTests(TestMap& tests) { AddSkippedTestsTcpAcceptBacklog(tests); }
+void AddNonPassingTests(TestMap& tests) { AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(tests); }
 
 }  // namespace netstack_syscall_test

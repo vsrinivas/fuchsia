@@ -93,16 +93,17 @@ static_library("gvisor_test_util") {
 
 generic_test_label = "generic"
 loopback_test_label = "loopback"
+loopback_tcp_accept_backlog_test_label = "loopback_tcp_accept_backlog"
+loopback_tcp_backlog_test_label = "loopback_tcp_backlog"
 loopback_isolated_test_label = "loopback_isolated"
+loopback_isolated_tcp_fin_wait_test_label = "loopback_isolated_tcp_fin_wait"
+loopback_isolated_tcp_linger_timeout_test_label =
+    "loopback_isolated_tcp_linger_timeout"
 raw_packet_test_label = "raw_packet"
 udp_test_label = "udp"
 udp_unbound_test_label = "udp_unbound"
 tcp_test_label = "tcp"
-tcp_accept_backlog_test_label = "tcp_accept_backlog"
-tcp_backlog_test_label = "tcp_backlog"
 tcp_blocking_test_label = "tcp_blocking"
-tcp_fin_wait_test_label = "tcp_fin_wait"
-tcp_linger_timeout_test_label = "tcp_linger_timeout"
 
 source_set("${raw_packet_test_label}_socket_tests") {
   sources = [
@@ -452,22 +453,22 @@ syscall_test_suite(udp_test_label) {
 }
 syscall_test_suite(udp_unbound_test_label) {
 }
-syscall_test_suite(tcp_accept_backlog_test_label) {
+syscall_test_suite(loopback_tcp_accept_backlog_test_label) {
   run_with_fast_udp = false
   test_srcs_target = ":${loopback_test_label}_socket_tests"
 }
-syscall_test_suite(tcp_backlog_test_label) {
+syscall_test_suite(loopback_tcp_backlog_test_label) {
   run_with_fast_udp = false
   test_srcs_target = ":${loopback_test_label}_socket_tests"
 }
 syscall_test_suite(tcp_blocking_test_label) {
   run_with_fast_udp = false
 }
-syscall_test_suite(tcp_fin_wait_test_label) {
+syscall_test_suite(loopback_isolated_tcp_fin_wait_test_label) {
   run_with_fast_udp = false
   test_srcs_target = ":${loopback_isolated_test_label}_socket_tests"
 }
-syscall_test_suite(tcp_linger_timeout_test_label) {
+syscall_test_suite(loopback_isolated_tcp_linger_timeout_test_label) {
   run_with_fast_udp = false
   test_srcs_target = ":${loopback_isolated_test_label}_socket_tests"
 }
@@ -495,13 +496,14 @@ group("local-testing") {
   testonly = true
   public_deps = [
     ":${generic_test_label}_${local_testing_suffix}",
+    ":${loopback_isolated_tcp_fin_wait_test_label}_${local_testing_suffix}",
+    ":${loopback_isolated_tcp_linger_timeout_test_label}_${local_testing_suffix}",
     ":${loopback_isolated_test_label}_${local_testing_suffix}",
+    ":${loopback_tcp_accept_backlog_test_label}_${local_testing_suffix}",
+    ":${loopback_tcp_backlog_test_label}_${local_testing_suffix}",
     ":${loopback_test_label}_${local_testing_suffix}",
     ":${raw_packet_test_label}_${local_testing_suffix}",
-    ":${tcp_backlog_test_label}_${local_testing_suffix}",
     ":${tcp_blocking_test_label}_${local_testing_suffix}",
-    ":${tcp_fin_wait_test_label}_${local_testing_suffix}",
-    ":${tcp_linger_timeout_test_label}_${local_testing_suffix}",
     ":${tcp_test_label}_${local_testing_suffix}",
     ":${udp_test_label}_${local_testing_suffix}",
     ":${udp_unbound_test_label}_${local_testing_suffix}",

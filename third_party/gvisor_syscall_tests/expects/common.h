@@ -13,29 +13,29 @@ namespace netstack_syscall_test {
 // against Netstack2 stacks. This method adds those expectations to the test map.
 void AddCommonExpectsTcpNetstack2(TestMap& tests);
 
-// The `tcp_backlog` target runs only a subset of the tests in its included
-// source files. This method skips all tests besides that subset.
-void AddSkippedTestsTcpBacklog(TestMap& tests);
-
-// The `tcp_accept_backlog` target runs only a subset of the tests in its included
-// source files. This method skips all tests besides that subset.
-void AddSkippedTestsTcpAcceptBacklog(TestMap& tests);
-
 // The `loopback` target runs only a subset of the tests in its included
 // source files. This method skips all tests besides that subset.
 void AddSkippedTestsLoopback(TestMap& tests);
 
+// The `loopback_isolated_tcp_fin_wait` target runs only a subset of the tests in its
+// included source files. This method skips all tests besides that subset.
+void AddSkippedTestsLoopbackIsolatedTcpFinWait(TestMap& tests);
+
+// The `loopback_isolated_tcp_linger_timeout` target runs only a subset of the tests in its
+// included source files. This method skips all tests besides that subset.
+void AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(TestMap& tests);
+
 // The `loopback_isolated` target runs only a subset of the tests in its
-// inclueded source files. This method skips all tests besides that subset.
+// included source files. This method skips all tests besides that subset.
 void AddSkippedTestsLoopbackIsolated(TestMap& tests);
 
-// The `fin_wait` target runs only a subset of the tests in its
-// inclueded source files. This method skips all tests besides that subset.
-void AddSkippedTestsFinWait(TestMap& tests);
+// The `loopback_tcp_backlog` target runs only a subset of the tests in its included
+// source files. This method skips all tests besides that subset.
+void AddSkippedTestsLoopbackTcpBacklog(TestMap& tests);
 
-// The `linger_timeout` target runs only a subset of the tests in its
-// inclueded source files. This method skips all tests besides that subset.
-void AddSkippedTestsLingerTimeout(TestMap& tests);
+// The `loopback_tcp_accept_backlog` target runs only a subset of the tests in its included
+// source files. This method skips all tests besides that subset.
+void AddSkippedTestsLoopbackTcpAcceptBacklog(TestMap& tests);
 
 }  // namespace netstack_syscall_test
 

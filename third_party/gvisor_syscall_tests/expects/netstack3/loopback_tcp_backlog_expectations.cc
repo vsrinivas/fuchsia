@@ -10,7 +10,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  AddSkippedTestsTcpBacklog(tests);
+  AddSkippedTestsLoopbackTcpBacklog(tests);
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
 
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");

@@ -61,13 +61,13 @@ void AddSkippedTestsBacklogAcceptBacklogShared(TestMap& tests) {
            "AllFamilies/SocketMultiProtocolInetLoopbackTest.NoReusePortFollowingReusePort/*");
 }
 
-void AddSkippedTestsTcpAcceptBacklog(TestMap& tests) {
+void AddSkippedTestsLoopbackTcpAcceptBacklog(TestMap& tests) {
   AddSkippedTestsBacklogAcceptBacklogShared(tests);
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/*");
 }
 
-void AddSkippedTestsTcpBacklog(TestMap& tests) {
+void AddSkippedTestsLoopbackTcpBacklog(TestMap& tests) {
   AddSkippedTestsBacklogAcceptBacklogShared(tests);
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
 }
@@ -101,12 +101,12 @@ void AddSkippedTestsFinWaitLingerTimeoutShared(TestMap& tests) {
       "AllFamilies/SocketMultiProtocolInetLoopbackIsolatedTest.V6EphemeralPortReservedReuseAddr/*");
 }
 
-void AddSkippedTestsFinWait(TestMap& tests) {
+void AddSkippedTestsLoopbackIsolatedTcpFinWait(TestMap& tests) {
   AddSkippedTestsFinWaitLingerTimeoutShared(tests);
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPLinger2TimeoutAfterClose/*");
 }
 
-void AddSkippedTestsLingerTimeout(TestMap& tests) {
+void AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(TestMap& tests) {
   AddSkippedTestsFinWaitLingerTimeoutShared(tests);
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");
 }
