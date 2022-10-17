@@ -12,15 +12,10 @@ group("tests") {
     ":mouse-input-test",
     "//src/chromium:web_engine",
     "//src/cobalt/bin/testing/mock_cobalt",
+    "//src/flutter",
     "//src/graphics/bin/vulkan_loader",
     "//src/testing/fidl/intl_property_manager",
   ]
-}
-
-fidl("test.mouse") {
-  sdk_category = "internal"
-  sources = [ "response_listener.test.fidl" ]
-  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 executable("mouse-input-test-bin") {
@@ -28,7 +23,6 @@ executable("mouse-input-test-bin") {
   sources = [ "mouse-input-test.cc" ]
   output_name = "mouse-input-test"
   deps = [
-    ":test.mouse_hlcpp",
     "//sdk/fidl/fuchsia.accessibility.semantics:fuchsia.accessibility.semantics_hlcpp",
     "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo_hlcpp",
     "//sdk/fidl/fuchsia.component:fuchsia.component_hlcpp",
@@ -53,8 +47,7 @@ executable("mouse-input-test-bin") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
-    "//src/lib/ui/input-synthesis:test.inputsynthesis_hlcpp",
-    "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util:portable_ui_test",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
@@ -80,6 +73,10 @@ fuchsia_test_package("mouse-input-test") {
     "//src/developer/build_info/testing:fake-build-info-component",
     "//src/developer/memory/monitor:component",
     "//src/lib/ui/input-synthesis:input-synthesis-component",
+
+    # Include some default config (it doesn't matter which, since we're going to override it).
+    "//src/ui/testing/test_ui_stack:flatland_scene_manager_config",
+    "//src/ui/testing/test_ui_stack:test-ui-stack-component",
   ]
   test_specs = {
     # Do not fail the test if a message with level ERROR is logged.  Several

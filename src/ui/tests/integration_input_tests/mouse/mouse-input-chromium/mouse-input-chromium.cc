@@ -4,6 +4,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <fuchsia/ui/test/input/cpp/fidl.h>
 #include <fuchsia/web/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -16,8 +17,6 @@
 #include <zircon/status.h>
 
 #include <string>
-
-#include <test/mouse/cpp/fidl.h>
 
 #include "fuchsia/ui/views/cpp/fidl.h"
 #include "src/lib/fsl/vmo/vector.h"
@@ -47,6 +46,41 @@ std::string StringFromBuffer(const fuchsia::mem::Buffer& buffer) {
   std::string str(num_bytes, 'x');
   buffer.vmo.read(str.data(), 0, num_bytes);
   return str;
+}
+
+std::vector<fuchsia::ui::test::input::MouseButton> GetPressedButtons(int buttons) {
+  std::vector<fuchsia::ui::test::input::MouseButton> pressed_buttons;
+
+  if (buttons & 0x1) {
+    pressed_buttons.push_back(fuchsia::ui::test::input::MouseButton::FIRST);
+  }
+  if (buttons & 0x1 >> 1) {
+    pressed_buttons.push_back(fuchsia::ui::test::input::MouseButton::SECOND);
+  }
+  if (buttons & 0x1 >> 2) {
+    pressed_buttons.push_back(fuchsia::ui::test::input::MouseButton::THIRD);
+  }
+
+  return pressed_buttons;
+}
+
+fuchsia::ui::test::input::MouseEventPhase GetPhase(std::string type) {
+  if (type == "add") {
+    return fuchsia::ui::test::input::MouseEventPhase::ADD;
+  } else if (type == "hover") {
+    return fuchsia::ui::test::input::MouseEventPhase::HOVER;
+  } else if (type == "mousedown") {
+    return fuchsia::ui::test::input::MouseEventPhase::DOWN;
+  } else if (type == "mousemove") {
+    return fuchsia::ui::test::input::MouseEventPhase::MOVE;
+  } else if (type == "mouseup") {
+    return fuchsia::ui::test::input::MouseEventPhase::UP;
+  } else if (type == "wheel") {
+    return fuchsia::ui::test::input::MouseEventPhase::WHEEL;
+  } else {
+    FX_LOGS(FATAL) << "Invalid mouse event type: " << type;
+    exit(1);
+  }
 }
 
 class NavListener : public fuchsia::web::NavigationEventListener {
@@ -134,12 +168,10 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     RunLoopUntil(
         [&navigation_event_listener] { return navigation_event_listener.window_resized_; });
 
-    test::mouse::ResponseListenerSyncPtr response_listener_proxy;
-    context_->svc()->Connect(response_listener_proxy.NewRequest());
+    fuchsia::ui::test::input::MouseInputListenerSyncPtr mouse_input_listener;
+    context_->svc()->Connect(mouse_input_listener.NewRequest());
 
-    response_listener_proxy->NotifyWebEngineReady();
-
-    RunLoopForMouseReponse(response_listener_proxy, message_port);
+    RunLoopForMouseReponse(mouse_input_listener, message_port);
   }
 
  private:
@@ -305,13 +337,14 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
     }
   }
 
-  void RunLoopForMouseReponse(test::mouse::ResponseListenerSyncPtr& response_listener_proxy,
-                              fuchsia::web::MessagePortPtr& message_port) {
+  void RunLoopForMouseReponse(
+      fuchsia::ui::test::input::MouseInputListenerSyncPtr& mouse_input_listener,
+      fuchsia::web::MessagePortPtr& message_port) {
     while (true) {
       bool got_mouse_event = false;
       FX_LOGS(INFO) << "Waiting for mouse response message";
 
-      message_port->ReceiveMessage([&response_listener_proxy, &got_mouse_event](auto web_message) {
+      message_port->ReceiveMessage([&mouse_input_listener, &got_mouse_event](auto web_message) {
         std::optional<rapidjson::Document> mouse_response;
         mouse_response = json::JSONParser().ParseFromString(StringFromBuffer(web_message.data()),
                                                             "web-app-response");
@@ -331,28 +364,28 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
         FX_CHECK(mouse_resp["buttons"].IsNumber());
 
         // Relay response to parent.
-        test::mouse::PointerData pointer_data;
-        pointer_data.set_time_received(mouse_resp["epoch_msec"].GetInt64() * 1000 * 1000);
-        pointer_data.set_local_x(mouse_resp["x"].GetDouble());
-        pointer_data.set_local_y(mouse_resp["y"].GetDouble());
-        pointer_data.set_device_scale_factor(mouse_resp["device_scale_factor"].GetDouble());
-        pointer_data.set_type(mouse_resp["type"].GetString());
-        pointer_data.set_buttons(mouse_resp["buttons"].GetInt());
+        fuchsia::ui::test::input::MouseInputListenerReportMouseInputRequest request;
+        request.set_time_received(mouse_resp["epoch_msec"].GetInt64() * 1000 * 1000);
+        request.set_local_x(mouse_resp["x"].GetDouble());
+        request.set_local_y(mouse_resp["y"].GetDouble());
+        request.set_device_pixel_ratio(mouse_resp["device_scale_factor"].GetDouble());
+        request.set_phase(GetPhase(mouse_resp["type"].GetString()));
+        request.set_buttons(GetPressedButtons(mouse_resp["buttons"].GetInt()));
 
         if (mouse_resp.HasMember("wheel_h")) {
           FX_CHECK(mouse_resp["wheel_h"].IsNumber());
-          pointer_data.set_wheel_x(mouse_resp["wheel_h"].GetDouble());
+          request.set_wheel_x_physical_pixel(mouse_resp["wheel_h"].GetDouble());
         }
         if (mouse_resp.HasMember("wheel_v")) {
           FX_CHECK(mouse_resp["wheel_v"].IsNumber());
-          pointer_data.set_wheel_y(mouse_resp["wheel_v"].GetDouble());
+          request.set_wheel_y_physical_pixel(mouse_resp["wheel_v"].GetDouble());
         }
 
-        pointer_data.set_component_name("mouse-input-chromium");
+        request.set_component_name("mouse-input-chromium");
 
-        FX_LOGS(INFO) << "Got mouse response message " << pointer_data.type();
+        FX_LOGS(INFO) << "Got mouse response message " << mouse_resp["type"].GetString();
 
-        response_listener_proxy->Respond(std::move(pointer_data));
+        mouse_input_listener->ReportMouseInput(std::move(request));
 
         got_mouse_event = true;
       });

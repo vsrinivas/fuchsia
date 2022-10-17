@@ -8,6 +8,10 @@
             url: "fuchsia-pkg://fuchsia.com/flutter_aot_runner#meta/flutter_aot_runner.cm",
         },
         {
+            name: "flutter_jit_runner",
+            url: "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cm",
+        },
+        {
             name: "mouse_input_flutter",
             url: "#meta/mouse-input-flutter.cm",
             environment: "#mouse_input_flutter_env",
@@ -29,11 +33,12 @@
             from: "parent",
             to: [
                 "#flutter_aot_runner",
+                "#flutter_jit_runner",
                 "#mouse_input_flutter",
             ],
         },
         {
-            protocol: [ "test.mouse.ResponseListener" ],
+            protocol: [ "fuchsia.ui.test.input.MouseInputListener" ],
             from: "parent",
             to: "#mouse_input_flutter",
         },
@@ -53,6 +58,10 @@
                 {
                     runner: "flutter_aot_runner",
                     from: "#flutter_aot_runner",
+                },
+                {
+                    runner: "flutter_jit_runner",
+                    from: "#flutter_jit_runner",
                 },
             ],
         },

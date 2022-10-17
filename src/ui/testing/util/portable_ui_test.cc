@@ -225,4 +225,50 @@ void PortableUITest::InjectSwipe(int start_x, int start_y, int end_x, int end_y,
   });
 }
 
+void PortableUITest::RegisterMouse() {
+  FX_LOGS(INFO) << "Registering fake mouse";
+  input_registry_ = realm_->Connect<fuchsia::ui::test::input::Registry>();
+  input_registry_.set_error_handler([](auto) { FX_LOGS(ERROR) << "Error from input helper"; });
+
+  bool mouse_registered = false;
+  fuchsia::ui::test::input::RegistryRegisterMouseRequest request;
+  request.set_device(fake_mouse_.NewRequest());
+  input_registry_->RegisterMouse(std::move(request),
+                                 [&mouse_registered]() { mouse_registered = true; });
+
+  RunLoopUntil([&mouse_registered] { return mouse_registered; });
+  FX_LOGS(INFO) << "Mouse registered";
+}
+
+void PortableUITest::SimulateMouseEvent(
+    std::vector<fuchsia::ui::test::input::MouseButton> pressed_buttons, int movement_x,
+    int movement_y) {
+  FX_LOGS(INFO) << "Requesting mouse event";
+  fuchsia::ui::test::input::MouseSimulateMouseEventRequest request;
+  request.set_pressed_buttons(std::move(pressed_buttons));
+  request.set_movement_x(movement_x);
+  request.set_movement_y(movement_y);
+
+  fake_mouse_->SimulateMouseEvent(std::move(request),
+                                  [] { FX_LOGS(INFO) << "Mouse event injected"; });
+}
+
+void PortableUITest::SimulateMouseScroll(
+    std::vector<fuchsia::ui::test::input::MouseButton> pressed_buttons, int scroll_x, int scroll_y,
+    bool use_physical_units) {
+  FX_LOGS(INFO) << "Requesting mouse scroll";
+  fuchsia::ui::test::input::MouseSimulateMouseEventRequest request;
+  request.set_pressed_buttons(std::move(pressed_buttons));
+  if (use_physical_units) {
+    request.set_scroll_h_physical_pixel(scroll_x);
+    request.set_scroll_v_physical_pixel(scroll_y);
+  } else {
+    request.set_scroll_h_detent(scroll_x);
+    request.set_scroll_v_detent(scroll_y);
+  }
+
+  fake_mouse_->SimulateMouseEvent(std::move(request),
+                                  [] { FX_LOGS(INFO) << "Mouse scroll event injected"; });
+}
+
 }  // namespace ui_testing

@@ -14,6 +14,7 @@ executable("bin") {
   sources = [ "mouse-input-chromium.cc" ]
   deps = [
     "//sdk/fidl/fuchsia.ui.app:fuchsia.ui.app_hlcpp",
+    "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_hlcpp",
     "//sdk/fidl/fuchsia.web:fuchsia.web_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -22,7 +23,6 @@ executable("bin") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/json_parser",
-    "//src/ui/tests/integration_input_tests/mouse:test.mouse_hlcpp",
     "//third_party/rapidjson",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

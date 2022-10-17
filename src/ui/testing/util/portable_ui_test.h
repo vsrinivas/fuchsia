@@ -65,6 +65,23 @@ class PortableUITest : public ::loop_fixture::RealLoop, public ::testing::Test {
   // in injector coordinate space.
   void InjectSwipe(int start_x, int start_y, int end_x, int end_y, int move_event_count);
 
+  // Registers a fake mouse device, for which mouse movement is measured on a
+  // scale of [-1000, 1000] on both axes and scroll is measured from [-100, 100]
+  // on both axes.
+  void RegisterMouse();
+
+  // Helper method to simulate combinations of button presses/releases and/or
+  // mouse movements.
+  void SimulateMouseEvent(std::vector<fuchsia::ui::test::input::MouseButton> pressed_buttons,
+                          int movement_x, int movement_y);
+
+  // Helper method to simulate a mouse scroll event.
+  //
+  // Set `use_physical_units` to true to specify scroll in physical pixels and
+  // false to specify scroll in detents.
+  void SimulateMouseScroll(std::vector<fuchsia::ui::test::input::MouseButton> pressed_buttons,
+                           int scroll_x, int scroll_y, bool use_physical_units = false);
+
  protected:
   component_testing::RealmBuilder* realm_builder() { return &realm_builder_; }
   component_testing::RealmRoot* realm_root() { return realm_.get(); }
@@ -90,6 +107,7 @@ class PortableUITest : public ::loop_fixture::RealLoop, public ::testing::Test {
 
   fuchsia::ui::test::input::RegistryPtr input_registry_;
   fuchsia::ui::test::input::TouchScreenPtr fake_touchscreen_;
+  fuchsia::ui::test::input::MousePtr fake_mouse_;
   fuchsia::ui::test::scene::ControllerPtr scene_provider_;
   fuchsia::ui::observation::geometry::ViewTreeWatcherPtr view_tree_watcher_;
 
