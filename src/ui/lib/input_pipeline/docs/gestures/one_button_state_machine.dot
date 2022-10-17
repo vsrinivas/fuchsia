@@ -1,0 +1,136 @@
+digraph {
+  rankdir="LR"
+  label="ONE-FINGER BUTTON DOWN RECOGNIZER" labelloc="t"
+
+  // The gesture arena, which invokes methods on the various states of the recognizer.
+  arena [shape="doublecircle"]
+
+  // Definition of `InitialContender`.
+  //
+  // This state does _not_ require the button to be pressed, to allow
+  // the user some time between initial touchpad contact, and depressing
+  // the button.
+  arena -> examine_at_initial_contender [label="examine\nevent()"]
+  examine_at_initial_contender [shape="diamond" label="exactly\none\nfinger?"]
+  examine_at_initial_contender -> return_finger_down_contender_at_initial_contender [label="yes"]
+  examine_at_initial_contender -> return_mismatch_at_initial_contender [label="no"]
+  return_finger_down_contender_at_initial_contender [shape="rectangle" label="return\nFingerDownContender"]
+  return_mismatch_at_initial_contender [shape="rectangle" label="return\nMismatch"]
+  subgraph cluster_initial_contender {
+    label="InitialContender\n`impl Contender`"
+    examine_at_initial_contender
+    return_finger_down_contender_at_initial_contender
+    return_mismatch_at_initial_contender
+  }
+
+  // Definition of `FingerDownContender`.
+  arena -> examine_at_finger_down_contender [label="examine\nevent()"]
+  examine_at_finger_down_contender [shape="diamond" label="elapsed\n<\nthreshold?"]
+  examine_at_finger_down_contender -> return_mismatch_at_finger_down_contender [label="no"]
+  examine_at_finger_down_contender -> examine2_at_finger_down_contender [label="yes"]
+  examine2_at_finger_down_contender [shape="diamond" label="exactly\none\nfinger?"]
+  examine2_at_finger_down_contender -> return_mismatch_at_finger_down_contender [label="no"]
+  examine2_at_finger_down_contender -> examine3_at_finger_down_contender [label="yes"]
+  examine3_at_finger_down_contender [shape="diamond" label="button\npressed?"]
+  examine3_at_finger_down_contender -> return_matched_contender_at_finger_down_contender [label="yes"]
+  examine3_at_finger_down_contender -> return_self_at_finger_down_contender [label="no"]
+  return_mismatch_at_finger_down_contender [shape="rectangle" label="return\nMismatch"]
+  return_matched_contender_at_finger_down_contender [shape="rectangle" label="return\nMatchedContender"]
+  return_self_at_finger_down_contender [shape="rectangle" label="return\n`self`"]
+  subgraph cluster_finger_down_contender {
+    label="FingerDownContender\n`impl Contender`"
+    examine_at_finger_down_contender
+    examine2_at_finger_down_contender
+    examine3_at_finger_down_contender
+    return_mismatch_at_finger_down_contender
+    return_matched_contender_at_finger_down_contender
+    return_self_at_finger_down_contender
+  }
+
+  // Definition of `MatchedContender`.
+  arena -> verify_at_matched_contender [label="verify\nevent()"]
+  verify_at_matched_contender [shape="diamond" label="exactly\none\nfinger?"]
+  verify_at_matched_contender -> return_mismatch_at_matched_contender [label="no"]
+  verify_at_matched_contender -> verify2_at_matched_contender [label="yes"]
+  verify2_at_matched_contender [shape="diamond" label="button\npressed?"]
+  verify2_at_matched_contender -> return_mismatch_at_matched_contender [label="no"]
+  verify2_at_matched_contender -> return_self_at_matched_contender [label="yes"]
+  return_mismatch_at_matched_contender [shape="rectangle" label="return\nMismatch"]
+  return_self_at_matched_contender [shape="rectangle" label="return\n`self`"]
+  arena -> return_button_down_winner_at_matched_contender [label="process\nbuffered\nevents()"]
+  return_button_down_winner_at_matched_contender [shape="rectangle" label="return\nvec![events], Winner, ButtonDownWinner"]
+  subgraph cluster_matched_contender {
+    label="MatchedContender"
+    verify_at_matched_contender
+    verify2_at_matched_contender
+    return_mismatch_at_matched_contender
+    return_self_at_matched_contender
+    return_button_down_winner_at_matched_contender
+  }
+
+  arena -> process_at_button_down_winner [label="process\nnew\nevent()"]
+  // if button release, end the gesture and send button up.
+  process_at_button_down_winner [shape="diamond" label="button\npressed?"]
+  process_at_button_down_winner -> return_end_with_button_up_at_winner [label="no"]
+  process_at_button_down_winner -> process2_at_button_down_winner [label="yes"]
+  return_end_with_button_up_at_winner [shape="rectangle" label="return\nEndesture(Some)"]
+
+  // if button for certain time, it is likely a drag gesture, use smaller
+  // threshold for detect as drag.
+  process2_at_button_down_winner [shape="diamond" label="button\ndown\ntimeout"]
+  process2_at_button_down_winner -> process3_at_button_down_winner[label="no"]
+  process2_at_button_down_winner -> process4_at_button_down_winner[label="yes"]
+
+  // if movement more than threshold, it is a drag gesture. otherwise we don't
+  // need to send any event as no state change (no button change and no movement).
+  process3_at_button_down_winner [shape="diamond" label="movement\n>\nlarger_threshold"]
+  process3_at_button_down_winner -> return_continue_with_no_event_at_winner[label="no"]
+  process3_at_button_down_winner -> return_drag_winner[label="yes"]
+  return_continue_with_no_event_at_winner [shape="rectangle" label="return\nContinueGesture(\nNone, self)"]
+  return_drag_winner [shape="rectangle" label="return\nContinueGesture(\nSome(move_with_button_down),\nDragWinner)"]
+
+  process4_at_button_down_winner [shape="diamond" label="movement\n>\nsmaller_threshold"]
+  process4_at_button_down_winner -> return_continue_with_no_event_at_winner[label="no"]
+  process4_at_button_down_winner -> return_drag_winner[label="yes"]
+
+  // Here number of finger does not matter anymore.
+  // 1. Zero finger is not possible, as button is still pressing.
+  // 2. 1 finger is ok to keep on current winner.
+  // 3. >1 finger, we should keep on current winner and ignore the second finger
+  //    until button release. If we end gesture here, we never have chance to handle
+  //    the button up.
+
+  subgraph cluster_forward_button_down {
+    label="ButtonDownWinner"
+    process_at_button_down_winner
+    return_end_with_button_up_at_winner
+    process2_at_button_down_winner
+    process3_at_button_down_winner
+    process4_at_button_down_winner
+    return_drag_winner
+    return_continue_with_no_event_at_winner
+  }
+
+  arena -> process_at_drag_winner [label="process\nnew\nevent()"]
+  // if button release, end the gesture and send button up.
+  // otherwise, translate the 1st finger movement to mouse event.
+  process_at_drag_winner [shape="diamond" label="button\npressed?"]
+  process_at_drag_winner -> return_end_with_button_up_at_drag_winner [label="no"]
+  process_at_drag_winner -> return_continue_with_event_at_winner [label="yes"]
+  return_end_with_button_up_at_drag_winner [shape="rectangle" label="return\nEndesture(Some)"]
+  return_continue_with_event_at_winner [shape="rectangle" label="return\nContinueGesture(\nSome, self)"]
+
+  // Here number of finger does not matter anymore.
+  // 1. Zero finger is not possible, as button is still pressing.
+  // 2. 1 finger is ok to keep on current winner.
+  // 3. >1 finger, we should keep on current winner and ignore the second finger
+  //    until button release. If we end gesture here, we never have chance to handle
+  //    the button up.
+
+  subgraph cluster_forward_motion {
+    label="DragWinner"
+    process_at_drag_winner
+    return_end_with_button_up_at_drag_winner
+    return_continue_with_event_at_winner
+  }
+}

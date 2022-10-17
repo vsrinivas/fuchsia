@@ -1,0 +1,422 @@
+<g xmlns="http://www.w3.org/2000/svg" id="graph0" class="graph" transform="scale(1 1) rotate(0) translate(4 1065)">
+<polygon fill="white" stroke="none" points="-4,4 -4,-1065 1155.79,-1065 1155.79,4 -4,4"/>
+<text text-anchor="middle" x="575.9" y="-1045.8" font-family="Times,serif" font-size="14.00">ONE-FINGER BUTTON DOWN RECOGNIZER</text>
+<g id="clust1" class="cluster">
+<title>cluster_initial_contender</title>
+<polygon fill="none" stroke="black" points="212.29,-870 212.29,-1030 605.79,-1030 605.79,-870 212.29,-870"/>
+<text text-anchor="middle" x="409.04" y="-1014.8" font-family="Times,serif" font-size="14.00">InitialContender</text>
+<text text-anchor="middle" x="409.04" y="-999.8" font-family="Times,serif" font-size="14.00">`impl Contender`</text>
+</g>
+<g id="clust4" class="cluster">
+<title>cluster_forward_button_down</title>
+<polygon fill="none" stroke="black" points="205.29,-165 205.29,-434 1143.79,-434 1143.79,-165 205.29,-165"/>
+<text text-anchor="middle" x="674.54" y="-418.8" font-family="Times,serif" font-size="14.00">ButtonDownWinner</text>
+</g>
+<g id="clust3" class="cluster">
+<title>cluster_matched_contender</title>
+<polygon fill="none" stroke="black" points="142.79,-442 142.79,-643 810.79,-643 810.79,-442 142.79,-442"/>
+<text text-anchor="middle" x="476.79" y="-627.8" font-family="Times,serif" font-size="14.00">MatchedContender</text>
+</g>
+<g id="clust2" class="cluster">
+<title>cluster_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="195.29,-651 195.29,-862 1104.29,-862 1104.29,-651 195.29,-651"/>
+<text text-anchor="middle" x="649.79" y="-846.8" font-family="Times,serif" font-size="14.00">FingerDownContender</text>
+<text text-anchor="middle" x="649.79" y="-831.8" font-family="Times,serif" font-size="14.00">`impl Contender`</text>
+</g>
+<g id="clust5" class="cluster">
+<title>cluster_forward_motion</title>
+<polygon fill="none" stroke="black" points="205.29,-8 205.29,-157 591.79,-157 591.79,-8 205.29,-8"/>
+<text text-anchor="middle" x="398.54" y="-141.8" font-family="Times,serif" font-size="14.00">DragWinner</text>
+</g>
+<!-- arena -->
+<g id="node1" class="node">
+<title>arena</title>
+<ellipse fill="none" stroke="black" cx="33.9" cy="-508" rx="29.81" ry="29.81"/>
+<ellipse fill="none" stroke="black" cx="33.9" cy="-508" rx="33.8" ry="33.8"/>
+<text text-anchor="middle" x="33.9" y="-504.3" font-family="Times,serif" font-size="14.00">arena</text>
+</g>
+<!-- examine_at_initial_contender -->
+<g id="node2" class="node">
+<title>examine_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="276.29,-984 220.29,-931 276.29,-878 332.29,-931 276.29,-984"/>
+<text text-anchor="middle" x="276.29" y="-942.3" font-family="Times,serif" font-size="14.00">exactly</text>
+<text text-anchor="middle" x="276.29" y="-927.3" font-family="Times,serif" font-size="14.00">one</text>
+<text text-anchor="middle" x="276.29" y="-912.3" font-family="Times,serif" font-size="14.00">finger?</text>
+</g>
+<!-- arena&#45;&gt;examine_at_initial_contender -->
+<g id="edge1" class="edge">
+<title>arena-&gt;examine_at_initial_contender</title>
+<path fill="none" stroke="black" d="M36.35,-542.06C41.01,-611.08 60.57,-769.12 142.79,-866 163.41,-890.29 195.26,-906.32 222.56,-916.38"/>
+<polygon fill="black" stroke="black" points="221.41,-919.69 232,-919.69 223.73,-913.08 221.41,-919.69"/>
+<text text-anchor="middle" x="109.29" y="-868.8" font-family="Times,serif" font-size="14.00">examine</text>
+<text text-anchor="middle" x="109.29" y="-853.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- examine_at_finger_down_contender -->
+<g id="node5" class="node">
+<title>examine_at_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="276.29,-765 203.29,-712 276.29,-659 349.29,-712 276.29,-765"/>
+<text text-anchor="middle" x="276.29" y="-723.3" font-family="Times,serif" font-size="14.00">elapsed</text>
+<text text-anchor="middle" x="276.29" y="-708.3" font-family="Times,serif" font-size="14.00">&lt;</text>
+<text text-anchor="middle" x="276.29" y="-693.3" font-family="Times,serif" font-size="14.00">threshold?</text>
+</g>
+<!-- arena&#45;&gt;examine_at_finger_down_contender -->
+<g id="edge4" class="edge">
+<title>arena-&gt;examine_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M51.71,-537.1C70.61,-567.74 103.81,-615.78 142.79,-647 165.23,-664.96 193.44,-679.67 218.06,-690.51"/>
+<polygon fill="black" stroke="black" points="216.73,-693.75 227.3,-694.48 219.5,-687.32 216.73,-693.75"/>
+<text text-anchor="middle" x="109.29" y="-655.8" font-family="Times,serif" font-size="14.00">examine</text>
+<text text-anchor="middle" x="109.29" y="-640.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- verify_at_matched_contender -->
+<g id="node11" class="node">
+<title>verify_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="276.29,-612 220.29,-559 276.29,-506 332.29,-559 276.29,-612"/>
+<text text-anchor="middle" x="276.29" y="-570.3" font-family="Times,serif" font-size="14.00">exactly</text>
+<text text-anchor="middle" x="276.29" y="-555.3" font-family="Times,serif" font-size="14.00">one</text>
+<text text-anchor="middle" x="276.29" y="-540.3" font-family="Times,serif" font-size="14.00">finger?</text>
+</g>
+<!-- arena&#45;&gt;verify_at_matched_contender -->
+<g id="edge11" class="edge">
+<title>arena-&gt;verify_at_matched_contender</title>
+<path fill="none" stroke="black" d="M64.51,-523.04C71.37,-526.05 78.72,-528.92 85.79,-531 127.5,-543.25 176.02,-550.29 213.53,-554.24"/>
+<polygon fill="black" stroke="black" points="213.49,-557.76 223.8,-555.28 214.2,-550.79 213.49,-557.76"/>
+<text text-anchor="middle" x="109.29" y="-560.8" font-family="Times,serif" font-size="14.00">verify</text>
+<text text-anchor="middle" x="109.29" y="-545.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- return_button_down_winner_at_matched_contender -->
+<g id="node15" class="node">
+<title>return_button_down_winner_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="401.79,-488 150.79,-488 150.79,-450 401.79,-450 401.79,-488"/>
+<text text-anchor="middle" x="276.29" y="-472.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="276.29" y="-457.8" font-family="Times,serif" font-size="14.00">vec![events], Winner, ButtonDownWinner</text>
+</g>
+<!-- arena&#45;&gt;return_button_down_winner_at_matched_contender -->
+<g id="edge16" class="edge">
+<title>arena-&gt;return_button_down_winner_at_matched_contender</title>
+<path fill="none" stroke="black" d="M64.48,-493.34C71.34,-490.47 78.7,-487.8 85.79,-486 103.37,-481.54 122.11,-478.21 140.73,-475.73"/>
+<polygon fill="black" stroke="black" points="141.25,-479.19 150.74,-474.47 140.38,-472.24 141.25,-479.19"/>
+<text text-anchor="middle" x="109.29" y="-519.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-504.8" font-family="Times,serif" font-size="14.00">buffered</text>
+<text text-anchor="middle" x="109.29" y="-489.8" font-family="Times,serif" font-size="14.00">events()</text>
+</g>
+<!-- process_at_button_down_winner -->
+<g id="node16" class="node">
+<title>process_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="276.29,-388 213.29,-350 276.29,-312 339.29,-350 276.29,-388"/>
+<text text-anchor="middle" x="276.29" y="-353.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="276.29" y="-338.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- arena&#45;&gt;process_at_button_down_winner -->
+<g id="edge17" class="edge">
+<title>arena-&gt;process_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M48.54,-476.95C57.18,-460.28 69.76,-440.45 85.79,-427 124.76,-394.32 179.42,-374.11 220.03,-362.64"/>
+<polygon fill="black" stroke="black" points="221.05,-365.99 229.77,-359.98 219.2,-359.24 221.05,-365.99"/>
+<text text-anchor="middle" x="109.29" y="-460.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-445.8" font-family="Times,serif" font-size="14.00">new</text>
+<text text-anchor="middle" x="109.29" y="-430.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- process_at_drag_winner -->
+<g id="node23" class="node">
+<title>process_at_drag_winner</title>
+<polygon fill="none" stroke="black" points="276.29,-126 213.29,-88 276.29,-50 339.29,-88 276.29,-126"/>
+<text text-anchor="middle" x="276.29" y="-91.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="276.29" y="-76.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- arena&#45;&gt;process_at_drag_winner -->
+<g id="edge26" class="edge">
+<title>arena-&gt;process_at_drag_winner</title>
+<path fill="none" stroke="black" d="M37.16,-474C43.24,-406.99 65.22,-256.08 142.79,-161 164.03,-134.97 197.13,-116.73 224.93,-104.99"/>
+<polygon fill="black" stroke="black" points="226.56,-108.1 234.51,-101.1 223.93,-101.61 226.56,-108.1"/>
+<text text-anchor="middle" x="109.29" y="-287.8" font-family="Times,serif" font-size="14.00">process</text>
+<text text-anchor="middle" x="109.29" y="-272.8" font-family="Times,serif" font-size="14.00">new</text>
+<text text-anchor="middle" x="109.29" y="-257.8" font-family="Times,serif" font-size="14.00">event()</text>
+</g>
+<!-- return_finger_down_contender_at_initial_contender -->
+<g id="node3" class="node">
+<title>return_finger_down_contender_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="597.79,-922 456.79,-922 456.79,-884 597.79,-884 597.79,-922"/>
+<text text-anchor="middle" x="527.29" y="-906.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="527.29" y="-891.8" font-family="Times,serif" font-size="14.00">FingerDownContender</text>
+</g>
+<!-- examine_at_initial_contender&#45;&gt;return_finger_down_contender_at_initial_contender -->
+<g id="edge2" class="edge">
+<title>examine_at_initial_contender-&gt;return_finger_down_contender_at_initial_contender</title>
+<path fill="none" stroke="black" d="M326.49,-925.47C360.65,-921.63 406.92,-916.42 446.34,-911.99"/>
+<polygon fill="black" stroke="black" points="446.92,-915.45 456.46,-910.85 446.13,-908.49 446.92,-915.45"/>
+<text text-anchor="middle" x="429.29" y="-917.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_mismatch_at_initial_contender -->
+<g id="node4" class="node">
+<title>return_mismatch_at_initial_contender</title>
+<polygon fill="none" stroke="black" points="563.29,-978 491.29,-978 491.29,-940 563.29,-940 563.29,-978"/>
+<text text-anchor="middle" x="527.29" y="-962.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="527.29" y="-947.8" font-family="Times,serif" font-size="14.00">Mismatch</text>
+</g>
+<!-- examine_at_initial_contender&#45;&gt;return_mismatch_at_initial_contender -->
+<g id="edge3" class="edge">
+<title>examine_at_initial_contender-&gt;return_mismatch_at_initial_contender</title>
+<path fill="none" stroke="black" d="M326.49,-936.53C371.49,-941.59 437.53,-949.02 481.2,-953.93"/>
+<polygon fill="black" stroke="black" points="480.92,-957.42 491.25,-955.06 481.7,-950.46 480.92,-957.42"/>
+<text text-anchor="middle" x="429.29" y="-952.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_mismatch_at_finger_down_contender -->
+<g id="node6" class="node">
+<title>return_mismatch_at_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="802.79,-702 730.79,-702 730.79,-664 802.79,-664 802.79,-702"/>
+<text text-anchor="middle" x="766.79" y="-686.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="766.79" y="-671.8" font-family="Times,serif" font-size="14.00">Mismatch</text>
+</g>
+<!-- examine_at_finger_down_contender&#45;&gt;return_mismatch_at_finger_down_contender -->
+<g id="edge5" class="edge">
+<title>examine_at_finger_down_contender-&gt;return_mismatch_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M335.28,-701.59C370.33,-695.8 415.98,-689.14 456.79,-686 550.15,-678.82 659.83,-680.03 720.18,-681.54"/>
+<polygon fill="black" stroke="black" points="720.42,-685.04 730.51,-681.81 720.6,-678.05 720.42,-685.04"/>
+<text text-anchor="middle" x="527.29" y="-689.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- examine2_at_finger_down_contender -->
+<g id="node7" class="node">
+<title>examine2_at_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="527.29,-816 471.29,-763 527.29,-710 583.29,-763 527.29,-816"/>
+<text text-anchor="middle" x="527.29" y="-774.3" font-family="Times,serif" font-size="14.00">exactly</text>
+<text text-anchor="middle" x="527.29" y="-759.3" font-family="Times,serif" font-size="14.00">one</text>
+<text text-anchor="middle" x="527.29" y="-744.3" font-family="Times,serif" font-size="14.00">finger?</text>
+</g>
+<!-- examine_at_finger_down_contender&#45;&gt;examine2_at_finger_down_contender -->
+<g id="edge6" class="edge">
+<title>examine_at_finger_down_contender-&gt;examine2_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M333.49,-723.51C374.56,-731.92 430.01,-743.28 470.9,-751.65"/>
+<polygon fill="black" stroke="black" points="470.21,-755.08 480.7,-753.66 471.61,-748.23 470.21,-755.08"/>
+<text text-anchor="middle" x="429.29" y="-748.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- examine2_at_finger_down_contender&#45;&gt;return_mismatch_at_finger_down_contender -->
+<g id="edge7" class="edge">
+<title>examine2_at_finger_down_contender-&gt;return_mismatch_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M566.99,-747.51C591.43,-737.95 623.76,-725.7 652.79,-716 675.03,-708.57 700.03,-701.17 720.85,-695.27"/>
+<polygon fill="black" stroke="black" points="722.03,-698.57 730.71,-692.5 720.14,-691.83 722.03,-698.57"/>
+<text text-anchor="middle" x="625.29" y="-731.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- examine3_at_finger_down_contender -->
+<g id="node8" class="node">
+<title>examine3_at_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="766.79,-801 703.79,-763 766.79,-725 829.79,-763 766.79,-801"/>
+<text text-anchor="middle" x="766.79" y="-766.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="766.79" y="-751.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- examine2_at_finger_down_contender&#45;&gt;examine3_at_finger_down_contender -->
+<g id="edge8" class="edge">
+<title>examine2_at_finger_down_contender-&gt;examine3_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M583.38,-763C616.06,-763 657.86,-763 693.21,-763"/>
+<polygon fill="black" stroke="black" points="693.47,-766.5 703.47,-763 693.47,-759.5 693.47,-766.5"/>
+<text text-anchor="middle" x="625.29" y="-766.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_matched_contender_at_finger_down_contender -->
+<g id="node9" class="node">
+<title>return_matched_contender_at_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="1096.29,-747 975.29,-747 975.29,-709 1096.29,-709 1096.29,-747"/>
+<text text-anchor="middle" x="1035.79" y="-731.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1035.79" y="-716.8" font-family="Times,serif" font-size="14.00">MatchedContender</text>
+</g>
+<!-- examine3_at_finger_down_contender&#45;&gt;return_matched_contender_at_finger_down_contender -->
+<g id="edge9" class="edge">
+<title>examine3_at_finger_down_contender-&gt;return_matched_contender_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M818.96,-756.29C860.35,-750.87 919.06,-743.17 964.8,-737.18"/>
+<polygon fill="black" stroke="black" points="965.48,-740.62 974.94,-735.85 964.57,-733.68 965.48,-740.62"/>
+<text text-anchor="middle" x="908.29" y="-748.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_self_at_finger_down_contender -->
+<g id="node10" class="node">
+<title>return_self_at_finger_down_contender</title>
+<polygon fill="none" stroke="black" points="1062.79,-803 1008.79,-803 1008.79,-765 1062.79,-765 1062.79,-803"/>
+<text text-anchor="middle" x="1035.79" y="-787.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1035.79" y="-772.8" font-family="Times,serif" font-size="14.00">`self`</text>
+</g>
+<!-- examine3_at_finger_down_contender&#45;&gt;return_self_at_finger_down_contender -->
+<g id="edge10" class="edge">
+<title>examine3_at_finger_down_contender-&gt;return_self_at_finger_down_contender</title>
+<path fill="none" stroke="black" d="M822.79,-767.33C875.37,-771.46 953.13,-777.58 998.41,-781.14"/>
+<polygon fill="black" stroke="black" points="998.4,-784.65 1008.65,-781.94 998.95,-777.67 998.4,-784.65"/>
+<text text-anchor="middle" x="908.29" y="-777.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_mismatch_at_matched_contender -->
+<g id="node12" class="node">
+<title>return_mismatch_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="802.79,-526 730.79,-526 730.79,-488 802.79,-488 802.79,-526"/>
+<text text-anchor="middle" x="766.79" y="-510.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="766.79" y="-495.8" font-family="Times,serif" font-size="14.00">Mismatch</text>
+</g>
+<!-- verify_at_matched_contender&#45;&gt;return_mismatch_at_matched_contender -->
+<g id="edge12" class="edge">
+<title>verify_at_matched_contender-&gt;return_mismatch_at_matched_contender</title>
+<path fill="none" stroke="black" d="M316.9,-544.36C352.83,-531.89 407.55,-514.94 456.79,-508 549.69,-494.91 659.87,-499.23 720.36,-503.29"/>
+<polygon fill="black" stroke="black" points="720.13,-506.79 730.35,-503.99 720.62,-499.8 720.13,-506.79"/>
+<text text-anchor="middle" x="527.29" y="-511.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- verify2_at_matched_contender -->
+<g id="node13" class="node">
+<title>verify2_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="527.29,-608 464.29,-570 527.29,-532 590.29,-570 527.29,-608"/>
+<text text-anchor="middle" x="527.29" y="-573.8" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="527.29" y="-558.8" font-family="Times,serif" font-size="14.00">pressed?</text>
+</g>
+<!-- verify_at_matched_contender&#45;&gt;verify2_at_matched_contender -->
+<g id="edge13" class="edge">
+<title>verify_at_matched_contender-&gt;verify2_at_matched_contender</title>
+<path fill="none" stroke="black" d="M330.1,-561.33C367.48,-562.98 417.93,-565.21 458.31,-567"/>
+<polygon fill="black" stroke="black" points="458.2,-570.5 468.35,-567.44 458.51,-563.5 458.2,-570.5"/>
+<text text-anchor="middle" x="429.29" y="-569.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- verify2_at_matched_contender&#45;&gt;return_mismatch_at_matched_contender -->
+<g id="edge14" class="edge">
+<title>verify2_at_matched_contender-&gt;return_mismatch_at_matched_contender</title>
+<path fill="none" stroke="black" d="M571.58,-558.52C613.82,-547.31 677.81,-530.34 720.66,-518.97"/>
+<polygon fill="black" stroke="black" points="721.77,-522.3 730.54,-516.35 719.98,-515.53 721.77,-522.3"/>
+<text text-anchor="middle" x="625.29" y="-548.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_self_at_matched_contender -->
+<g id="node14" class="node">
+<title>return_self_at_matched_contender</title>
+<polygon fill="none" stroke="black" points="793.79,-589 739.79,-589 739.79,-551 793.79,-551 793.79,-589"/>
+<text text-anchor="middle" x="766.79" y="-573.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="766.79" y="-558.8" font-family="Times,serif" font-size="14.00">`self`</text>
+</g>
+<!-- verify2_at_matched_contender&#45;&gt;return_self_at_matched_contender -->
+<g id="edge15" class="edge">
+<title>verify2_at_matched_contender-&gt;return_self_at_matched_contender</title>
+<path fill="none" stroke="black" d="M590.38,-570C634.54,-570 692.35,-570 729.29,-570"/>
+<polygon fill="black" stroke="black" points="729.59,-573.5 739.59,-570 729.59,-566.5 729.59,-573.5"/>
+<text text-anchor="middle" x="625.29" y="-573.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_end_with_button_up_at_winner -->
+<g id="node17" class="node">
+<title>return_end_with_button_up_at_winner</title>
+<polygon fill="none" stroke="black" points="582.79,-279 471.79,-279 471.79,-241 582.79,-241 582.79,-279"/>
+<text text-anchor="middle" x="527.29" y="-263.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="527.29" y="-248.8" font-family="Times,serif" font-size="14.00">Endesture(Some)</text>
+</g>
+<!-- process_at_button_down_winner&#45;&gt;return_end_with_button_up_at_winner -->
+<g id="edge18" class="edge">
+<title>process_at_button_down_winner-&gt;return_end_with_button_up_at_winner</title>
+<path fill="none" stroke="black" d="M316.2,-335.94C355.66,-321.68 417.35,-299.38 463.69,-282.63"/>
+<polygon fill="black" stroke="black" points="465.12,-285.83 473.34,-279.14 462.74,-279.25 465.12,-285.83"/>
+<text text-anchor="middle" x="429.29" y="-299.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- process2_at_button_down_winner -->
+<g id="node18" class="node">
+<title>process2_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="527.29,-403 468.29,-350 527.29,-297 586.29,-350 527.29,-403"/>
+<text text-anchor="middle" x="527.29" y="-361.3" font-family="Times,serif" font-size="14.00">button</text>
+<text text-anchor="middle" x="527.29" y="-346.3" font-family="Times,serif" font-size="14.00">down</text>
+<text text-anchor="middle" x="527.29" y="-331.3" font-family="Times,serif" font-size="14.00">timeout</text>
+</g>
+<!-- process_at_button_down_winner&#45;&gt;process2_at_button_down_winner -->
+<g id="edge19" class="edge">
+<title>process_at_button_down_winner-&gt;process2_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M339.49,-350C375.43,-350 420.71,-350 457.69,-350"/>
+<polygon fill="black" stroke="black" points="457.89,-353.5 467.89,-350 457.89,-346.5 457.89,-353.5"/>
+<text text-anchor="middle" x="429.29" y="-353.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- process3_at_button_down_winner -->
+<g id="node19" class="node">
+<title>process3_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="766.79,-279 661.79,-226 766.79,-173 871.79,-226 766.79,-279"/>
+<text text-anchor="middle" x="766.79" y="-237.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="766.79" y="-222.3" font-family="Times,serif" font-size="14.00">&gt;</text>
+<text text-anchor="middle" x="766.79" y="-207.3" font-family="Times,serif" font-size="14.00">larger_threshold</text>
+</g>
+<!-- process2_at_button_down_winner&#45;&gt;process3_at_button_down_winner -->
+<g id="edge20" class="edge">
+<title>process2_at_button_down_winner-&gt;process3_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M565.14,-330.76C602.56,-311.22 661.14,-280.64 705.37,-257.55"/>
+<polygon fill="black" stroke="black" points="707.05,-260.62 714.29,-252.89 703.81,-254.42 707.05,-260.62"/>
+<text text-anchor="middle" x="625.29" y="-305.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- process4_at_button_down_winner -->
+<g id="node20" class="node">
+<title>process4_at_button_down_winner</title>
+<polygon fill="none" stroke="black" points="766.79,-403 652.79,-350 766.79,-297 880.79,-350 766.79,-403"/>
+<text text-anchor="middle" x="766.79" y="-361.3" font-family="Times,serif" font-size="14.00">movement</text>
+<text text-anchor="middle" x="766.79" y="-346.3" font-family="Times,serif" font-size="14.00">&gt;</text>
+<text text-anchor="middle" x="766.79" y="-331.3" font-family="Times,serif" font-size="14.00">smaller_threshold</text>
+</g>
+<!-- process2_at_button_down_winner&#45;&gt;process4_at_button_down_winner -->
+<g id="edge21" class="edge">
+<title>process2_at_button_down_winner-&gt;process4_at_button_down_winner</title>
+<path fill="none" stroke="black" d="M586.39,-350C603.47,-350 622.83,-350 642.36,-350"/>
+<polygon fill="black" stroke="black" points="642.57,-353.5 652.57,-350 642.57,-346.5 642.57,-353.5"/>
+<text text-anchor="middle" x="625.29" y="-353.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_continue_with_no_event_at_winner -->
+<g id="node21" class="node">
+<title>return_continue_with_no_event_at_winner</title>
+<polygon fill="none" stroke="black" points="1092.29,-270.5 979.29,-270.5 979.29,-217.5 1092.29,-217.5 1092.29,-270.5"/>
+<text text-anchor="middle" x="1035.79" y="-255.3" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1035.79" y="-240.3" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="1035.79" y="-225.3" font-family="Times,serif" font-size="14.00">None, self)</text>
+</g>
+<!-- process3_at_button_down_winner&#45;&gt;return_continue_with_no_event_at_winner -->
+<g id="edge22" class="edge">
+<title>process3_at_button_down_winner-&gt;return_continue_with_no_event_at_winner</title>
+<path fill="none" stroke="black" d="M864.26,-229.83C882.07,-230.73 900.5,-231.78 917.79,-233 934.4,-234.17 952.3,-235.71 968.98,-237.26"/>
+<polygon fill="black" stroke="black" points="968.91,-240.77 979.19,-238.23 969.57,-233.8 968.91,-240.77"/>
+<text text-anchor="middle" x="908.29" y="-236.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_drag_winner -->
+<g id="node22" class="node">
+<title>return_drag_winner</title>
+<polygon fill="none" stroke="black" points="1135.79,-370 935.79,-370 935.79,-302 1135.79,-302 1135.79,-370"/>
+<text text-anchor="middle" x="1035.79" y="-354.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="1035.79" y="-339.8" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="1035.79" y="-324.8" font-family="Times,serif" font-size="14.00">Some(move_with_button_down),</text>
+<text text-anchor="middle" x="1035.79" y="-309.8" font-family="Times,serif" font-size="14.00">DragWinner)</text>
+</g>
+<!-- process3_at_button_down_winner&#45;&gt;return_drag_winner -->
+<g id="edge23" class="edge">
+<title>process3_at_button_down_winner-&gt;return_drag_winner</title>
+<path fill="none" stroke="black" d="M837.59,-243.56C863.24,-250.89 892.24,-260.22 917.79,-271 923.35,-273.34 943.61,-284.46 965.75,-296.85"/>
+<polygon fill="black" stroke="black" points="964.2,-300 974.63,-301.84 967.63,-293.89 964.2,-300"/>
+<text text-anchor="middle" x="908.29" y="-274.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- process4_at_button_down_winner&#45;&gt;return_continue_with_no_event_at_winner -->
+<g id="edge24" class="edge">
+<title>process4_at_button_down_winner-&gt;return_continue_with_no_event_at_winner</title>
+<path fill="none" stroke="black" d="M829.05,-325.68C871.13,-308.97 926.92,-286.83 969.78,-269.81"/>
+<polygon fill="black" stroke="black" points="971.27,-272.98 979.28,-266.04 968.69,-266.48 971.27,-272.98"/>
+<text text-anchor="middle" x="908.29" y="-300.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- process4_at_button_down_winner&#45;&gt;return_drag_winner -->
+<g id="edge25" class="edge">
+<title>process4_at_button_down_winner-&gt;return_drag_winner</title>
+<path fill="none" stroke="black" d="M869.5,-344.67C887.78,-343.71 906.9,-342.71 925.38,-341.74"/>
+<polygon fill="black" stroke="black" points="925.78,-345.22 935.58,-341.2 925.41,-338.23 925.78,-345.22"/>
+<text text-anchor="middle" x="908.29" y="-346.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+<!-- return_end_with_button_up_at_drag_winner -->
+<g id="node24" class="node">
+<title>return_end_with_button_up_at_drag_winner</title>
+<polygon fill="none" stroke="black" points="582.79,-54 471.79,-54 471.79,-16 582.79,-16 582.79,-54"/>
+<text text-anchor="middle" x="527.29" y="-38.8" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="527.29" y="-23.8" font-family="Times,serif" font-size="14.00">Endesture(Some)</text>
+</g>
+<!-- process_at_drag_winner&#45;&gt;return_end_with_button_up_at_drag_winner -->
+<g id="edge27" class="edge">
+<title>process_at_drag_winner-&gt;return_end_with_button_up_at_drag_winner</title>
+<path fill="none" stroke="black" d="M323.26,-78.22C362.1,-69.95 418.2,-58.01 461.59,-48.77"/>
+<polygon fill="black" stroke="black" points="462.43,-52.17 471.48,-46.67 460.97,-45.33 462.43,-52.17"/>
+<text text-anchor="middle" x="429.29" y="-59.8" font-family="Times,serif" font-size="14.00">no</text>
+</g>
+<!-- return_continue_with_event_at_winner -->
+<g id="node25" class="node">
+<title>return_continue_with_event_at_winner</title>
+<polygon fill="none" stroke="black" points="583.79,-125.5 470.79,-125.5 470.79,-72.5 583.79,-72.5 583.79,-125.5"/>
+<text text-anchor="middle" x="527.29" y="-110.3" font-family="Times,serif" font-size="14.00">return</text>
+<text text-anchor="middle" x="527.29" y="-95.3" font-family="Times,serif" font-size="14.00">ContinueGesture(</text>
+<text text-anchor="middle" x="527.29" y="-80.3" font-family="Times,serif" font-size="14.00">Some, self)</text>
+</g>
+<!-- process_at_drag_winner&#45;&gt;return_continue_with_event_at_winner -->
+<g id="edge28" class="edge">
+<title>process_at_drag_winner-&gt;return_continue_with_event_at_winner</title>
+<path fill="none" stroke="black" d="M335.36,-90.57C372.82,-92.22 421.64,-94.38 460.53,-96.09"/>
+<polygon fill="black" stroke="black" points="460.56,-99.6 470.71,-96.54 460.87,-92.61 460.56,-99.6"/>
+<text text-anchor="middle" x="429.29" y="-98.8" font-family="Times,serif" font-size="14.00">yes</text>
+</g>
+</g>
