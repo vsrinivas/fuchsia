@@ -273,8 +273,68 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.AUDIO_VOLUME_DOWN",
+        "value": "49162"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.AUDIO_VOLUME_MUTE",
+        "value": "49164"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.AUDIO_VOLUME_UP",
+        "value": "49163"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.BACKSPACE",
         "value": "65"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BRIGHTNESS_DOWN",
+        "value": "28672"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BRIGHTNESS_UP",
+        "value": "28673"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_BACK",
+        "value": "61440"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_FAVORITES",
+        "value": "61441"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_FORWARD",
+        "value": "61442"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_HOME",
+        "value": "61443"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_REFRESH",
+        "value": "61444"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_SEARCH",
+        "value": "61445"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.BROWSER_STOP",
+        "value": "61446"
     },
     {
         "kind": "enum/member",
@@ -300,6 +360,11 @@
         "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.ENTER",
         "value": "49"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.ESCAPE",
+        "value": "24581"
     },
     {
         "kind": "enum/member",
@@ -388,6 +453,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.MEDIA_PLAY_PAUSE",
+        "value": "40968"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.META",
         "value": "23"
     },
@@ -415,6 +485,11 @@
         "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.SCROLL_LOCK",
         "value": "25"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.SELECT",
+        "value": "24588"
     },
     {
         "kind": "enum/member",
@@ -470,6 +545,11 @@
         "kind": "enum/member",
         "name": "fuchsia.ui.input3/NonPrintableKey.UP",
         "value": "100"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.input3/NonPrintableKey.ZOOM_TOGGLE",
+        "value": "73799"
     },
     {
         "kind": "enum",

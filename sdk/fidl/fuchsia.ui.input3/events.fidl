@@ -265,6 +265,30 @@ type NonPrintableKey = flexible enum : uint32 {
     /// The "Page Up" key.
     PAGE_UP = 0x68;
 
+    // UI keys
+    // https://www.w3.org/TR/uievents-key/#keys-ui
+    // Reserved range: 0x6000-0x6FFF
+
+    /// The `Escape` or `Esc` key.
+    @available(added=10)
+    ESCAPE = 0x6005;
+
+    /// The Select key. Used to select the window of a task to focus on.
+    @available(added=10)
+    SELECT = 0x600C;
+
+    // Device keys
+    // https://www.w3.org/TR/uievents-key/#keys-device
+    // Reserved range: 0x7000-0x7FFF
+
+    /// The Brightness Down key. Typically controls the display brightness.
+    @available(added=10)
+    BRIGHTNESS_DOWN = 0x7000;
+
+    /// The Brightness Up key. Typically controls the display brightness.
+    @available(added=10)
+    BRIGHTNESS_UP = 0x7001;
+
     // General-purpose function keys.
     // https://www.w3.org/TR/uievents-key/#keys-function
     // Reserved range: 0x9000-0x9FFF
@@ -332,6 +356,72 @@ type NonPrintableKey = flexible enum : uint32 {
     /// General purpose virtual function key, as index 4.
     @available(added=9)
     SOFT_4 = 0x9014;
+
+    // Multimedia keys
+    // https://www.w3.org/TR/uievents-key/#keys-multimedia
+    // Reserved range: 0xA000-0xAFFF
+
+    /// Pause the currently playing media.
+    ///
+    /// NOTE: Media controller devices should use this value rather than
+    /// `PAUSE` for their pause keys.
+    @available(added=10)
+    MEDIA_PLAY_PAUSE = 0xA008;
+
+    // Audio keys
+    // https://www.w3.org/TR/uievents-key/#keys-audio
+    // Reserved range: 0xC000-0xCFFF
+
+    /// Decrease audio volume.
+    @available(added=10)
+    AUDIO_VOLUME_DOWN = 0xC00A;
+
+    /// Increase audio volume.
+    @available(added=10)
+    AUDIO_VOLUME_UP = 0xC00B;
+
+    /// Toggle between muted state and prior volume level.
+    @available(added=10)
+    AUDIO_VOLUME_MUTE = 0xC00C;
+
+    // Browser keys
+    // https://www.w3.org/TR/uievents-key/#keys-browser
+    // Reserved range: 0xF000-0xFFFF
+
+    /// Navigate to previous content or page in current history.
+    @available(added=10)
+    BROWSER_BACK = 0xF000;
+
+    /// Open the list of browser favorites.
+    @available(added=10)
+    BROWSER_FAVORITES = 0xF001;
+
+    /// Navigate to next content or page in current history.
+    @available(added=10)
+    BROWSER_FORWARD = 0xF002;
+
+    /// Go to the user’s preferred home page.
+    @available(added=10)
+    BROWSER_HOME = 0xF003;
+
+    /// Refresh the current page or content.
+    @available(added=10)
+    BROWSER_REFRESH = 0xF004;
+
+    /// Call up the user’s preferred search page.
+    @available(added=10)
+    BROWSER_SEARCH = 0xF005;
+
+    @available(added=10)
+    BROWSER_STOP = 0xF006;
+
+    // Media controller keys
+    // https://www.w3.org/TR/uievents-key/#keys-media-controller
+    // Reserved range: 0x12000-0x12FFF
+
+    /// Toggle between full-screen and scaled content, or alter magnification level.
+    @available(added=10)
+    ZOOM_TOGGLE = 0x12047;
 };
 
 /// The meaning of the key press. This is typically the Unicode codepoint inserted
