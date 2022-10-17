@@ -105,16 +105,8 @@ service SomeService {
 }
 
 TEST(ServiceTests, BadNoServerEnds) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol SomeProtocol {};
-
-service SomeService {
-    no_server_end server_end:SomeProtocol;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0112.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrOnlyClientEndsInServices);
 }
 
@@ -133,20 +125,8 @@ type CannotUseService = struct {
 }
 
 TEST(ServiceTests, BadCannotUseMoreThanOneProtocolTransportKind) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol ChannelProtocol {};
-
-@transport("Driver")
-protocol DriverProtocol {};
-
-service SomeService {
-  a client_end:ChannelProtocol;
-  b client_end:DriverProtocol;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0113.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrMismatchedTransportInServices);
 }
 

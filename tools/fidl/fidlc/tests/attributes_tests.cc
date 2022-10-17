@@ -336,18 +336,10 @@ protocol A {
 
 // Test that attributes with the same canonical form are considered duplicates.
 TEST(AttributesTests, BadNoTwoSameAttributeCanonical) {
-  TestLibrary library(R"FIDL(
-library fidl.test.dupattributes;
-
-@TheSame("first")
-@The_same("second")
-protocol A {
-    MethodA();
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0123.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateAttributeCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'the_same'");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "canonical form 'custom_attribute'");
 }
 
 TEST(AttributesTests, GoodDocAttribute) {
@@ -634,6 +626,16 @@ protocol MyProtocol {
   }
 }
 
+TEST(AttributesTests, BadSingleDeprecatedAttribute) {
+  TestLibrary library(R"FIDL(
+library fidl.test;
+
+@layout("Simple")
+type MyStruct = struct {};
+)FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDeprecatedAttribute);
+}
+
 TEST(AttributesTests, BadDeprecatedAttributes) {
   TestLibrary library(R"FIDL(
 library fidl.test;
@@ -785,15 +787,8 @@ TEST(AttributesTests, BadAttributeValue) {
 }
 
 TEST(AttributesTests, BadSelectorIncorrectPlacement) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@selector("Nonsense")
-type MyUnion = union {
-  1: hello uint8;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0120-a.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
 }
 

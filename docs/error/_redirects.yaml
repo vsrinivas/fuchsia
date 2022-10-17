@@ -132,6 +132,32 @@ redirects:
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0100
 - from: /fuchsia-src/error/fi-0110
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0110
+- from: /fuchsia-src/error/fi-0111
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0111
+- from: /fuchsia-src/error/fi-0112
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0112
+- from: /fuchsia-src/error/fi-0113
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0113
+- from: /fuchsia-src/error/fi-0114
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0114
+- from: /fuchsia-src/error/fi-0115
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0115
+- from: /fuchsia-src/error/fi-0116
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0116
+- from: /fuchsia-src/error/fi-0117
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0117
+- from: /fuchsia-src/error/fi-0118
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0118
+- from: /fuchsia-src/error/fi-0119
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0119
+- from: /fuchsia-src/error/fi-0120
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0120
+- from: /fuchsia-src/error/fi-0121
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0121
+- from: /fuchsia-src/error/fi-0122
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0122
+- from: /fuchsia-src/error/fi-0123
+  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0123
 - from: /fuchsia-src/error/fi-0124
   to: /fuchsia-src/reference/fidl/language/errcat.md#fi-0124
 - from: /fuchsia-src/error/fi-0125

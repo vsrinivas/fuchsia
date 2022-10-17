@@ -316,16 +316,8 @@ closed protocol Composing {
 }
 
 TEST(ProtocolTests, BadInvalidComposeOpenInAjar) {
-  TestLibrary library(R"FIDL(
-library example;
-
-open protocol Composed {};
-
-ajar protocol Composing {
-  compose Composed;
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0114.test.fidl");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrComposedProtocolTooOpen);
 }
@@ -1294,13 +1286,8 @@ protocol MyProtocol {
 }
 
 TEST(ProtocolTests, BadEventErrorSyntax) {
-  TestLibrary library(R"FIDL(
-library example;
-
-protocol MyProtocol {
-  -> OnMyEvent(struct {}) error int32;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0119.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEventErrorSyntaxDeprecated);
 }
 

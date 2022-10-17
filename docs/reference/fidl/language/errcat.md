@@ -134,6 +134,32 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0110.md>>
 
+<<error-catalog/_fi-0111.md>>
+
+<<error-catalog/_fi-0112.md>>
+
+<<error-catalog/_fi-0113.md>>
+
+<<error-catalog/_fi-0114.md>>
+
+<<error-catalog/_fi-0115.md>>
+
+<<error-catalog/_fi-0116.md>>
+
+<<error-catalog/_fi-0117.md>>
+
+<<error-catalog/_fi-0118.md>>
+
+<<error-catalog/_fi-0119.md>>
+
+<<error-catalog/_fi-0120.md>>
+
+<<error-catalog/_fi-0121.md>>
+
+<<error-catalog/_fi-0122.md>>
+
+<<error-catalog/_fi-0123.md>>
+
 <<error-catalog/_fi-0124.md>>
 
 <<error-catalog/_fi-0125.md>>

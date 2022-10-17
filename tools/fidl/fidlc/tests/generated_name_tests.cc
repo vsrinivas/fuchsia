@@ -273,6 +273,12 @@ type Bar = struct {};
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributeToIdentifier);
 }
 
+TEST(GeneratedNameTests, BadOnStructMember) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0120-b.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidAttributePlacement);
+}
+
 TEST(GeneratedNameTests, BadOnEnumMember) {
   TestLibrary library(R"FIDL(
 library fidl.test;

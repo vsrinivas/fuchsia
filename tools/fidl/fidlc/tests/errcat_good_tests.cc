@@ -318,6 +318,128 @@ TEST(ErrcatTests, Good0110b) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0111) {
+  TestLibrary library;
+  library.AddFile("good/fi-0111.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0112) {
+  TestLibrary library;
+  library.AddFile("good/fi-0112.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0113) {
+  TestLibrary library;
+  library.AddFile("good/fi-0113.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0114a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0114-a.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0114b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0114-b.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0115a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0115-a.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0115b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0115-b.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0116a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0116-a.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0116b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0116-b.test.fidl");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0117a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0117-a.test.fidl");
+  library.UseLibraryZx();
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0117b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0117-b.test.fidl");
+  library.UseLibraryFdf();
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0118) {
+  TestLibrary library;
+  library.AddFile("good/fi-0118.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0119a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0119-a.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0119b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0119-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0120a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0120-a.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0120b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0120-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0121) {
+  TestLibrary library;
+  library.AddFile("good/fi-0121.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0122) {
+  TestLibrary library;
+  library.AddFile("good/fi-0122.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0123) {
+  TestLibrary library;
+  library.AddFile("good/fi-0123.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0124) {
   TestLibrary library;
   library.AddFile("good/fi-0124.test.fidl");

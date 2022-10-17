@@ -234,14 +234,9 @@ type MyStruct = struct {
 }
 
 TEST(StructsTests, BadInlineSizeExceeds64k) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyStruct = struct {
-    arr array<uint8,65536>;
-};
-)FIDL");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceeds64k);
+  TestLibrary library;
+  library.AddFile("bad/fi-0111.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInlineSizeExceedsLimit);
 }
 
 TEST(StructsTests, BadMutuallyRecursive) {

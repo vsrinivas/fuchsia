@@ -504,7 +504,8 @@ bool ConsumeStep::ConsumeParameterList(const SourceSpan method_name,
     // If this is not a request or response, but a success variant:
     if (!is_request_or_response) {
       // Fail because we want `Foo(...) -> (struct {}) error uint32` instead.
-      return Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameter_layout->span(), method_name);
+      return Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameter_layout->span(),
+                  method_name.data());
     }
     // Otherwise, there is nothing to do for an empty payload.
     return true;

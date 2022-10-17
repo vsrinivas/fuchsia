@@ -420,12 +420,8 @@ closed protocol Closed {
 }
 
 TEST(MethodTests, BadInvalidStrictnessFlexibleOneWayMethodInClosed) {
-  TestLibrary library(R"FIDL(library example;
-
-closed protocol Closed {
-  flexible Method();
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0116.test.fidl");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleOneWayMethodInClosedProtocol);
 }
@@ -442,12 +438,8 @@ closed protocol Closed {
 }
 
 TEST(MethodTests, BadInvalidStrictnessFlexibleTwoWayMethodInAjar) {
-  TestLibrary library(R"FIDL(library example;
-
-ajar protocol Ajar {
-  flexible Method() -> (struct {});
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0115.test.fidl");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrFlexibleTwoWayMethodRequiresOpenProtocol);
 }

@@ -203,19 +203,8 @@ protocol P {
 }
 
 TEST(TransportTests, BadSyscallTransportWithDriverClientEndRequest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-@transport("Driver")
-protocol DriverProtocol {};
-
-@transport("Syscall")
-protocol P {
-  M(resource struct{
-     s client_end:DriverProtocol;
-  });
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0118.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTransportEndUsedInIncompatibleTransport);
 }
 
@@ -260,6 +249,13 @@ protocol P {
   });
 };
 )FIDL");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleUsedInIncompatibleTransport);
+}
+
+TEST(TransportTests, BadDriverHandleInZirconChannel) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0117.test.fidl");
+  library.UseLibraryFdf();
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrHandleUsedInIncompatibleTransport);
 }
 

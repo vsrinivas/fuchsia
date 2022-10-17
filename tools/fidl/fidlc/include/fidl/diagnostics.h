@@ -174,7 +174,7 @@ constexpr ErrorDef<74, flat::Decl::Kind> ErrInvalidMethodPayloadLayoutClass(
     "cannot use {} as a request/response; must use a struct, table, or union");
 constexpr ErrorDef<75, const flat::Type *> ErrInvalidMethodPayloadType(
     "invalid request/response type '{}'; must use a struct, table, or union");
-constexpr ErrorDef<76, SourceSpan> ErrResponsesWithErrorsMustNotBeEmpty(
+constexpr ErrorDef<76, std::string_view> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<77, std::string_view> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
@@ -263,43 +263,41 @@ constexpr ErrorDef<110, flat::Name, std::string_view, std::string_view, flat::Na
     ErrTypeMustBeResource(
         "'{}' may contain handles (due to member '{}'), so it must "
         "be declared with the `resource` modifier: `resource {} {}`");
-constexpr UndocumentedErrorDef<111> ErrInlineSizeExceeds64k(
-    "inline objects greater than 64k not currently supported");
+constexpr ErrorDef<111, flat::Name, uint32_t, uint32_t> ErrInlineSizeExceedsLimit(
+    "'{}' has an inline size of {} bytes, which exceeds the maximum allowed "
+    "inline size of {} bytes");
 // TODO(fxbug.dev/70399): As part of consolidating name resolution, these should
 // be grouped into a single "expected foo but got bar" error, along with
 // ErrExpectedValueButGotType.
-constexpr UndocumentedErrorDef<112> ErrOnlyClientEndsInServices(
-    "service members must be client_end:P");
-constexpr UndocumentedErrorDef<113, std::string_view, std::string_view, std::string_view,
-                               std::string_view>
+constexpr ErrorDef<112> ErrOnlyClientEndsInServices("service members must be client_end:P");
+constexpr ErrorDef<113, std::string_view, std::string_view, std::string_view, std::string_view>
     ErrMismatchedTransportInServices(
         "service member {} is over the {} transport, but member {} is over the {} transport. "
         "Multiple transports are not allowed.");
-constexpr UndocumentedErrorDef<114, types::Openness, flat::Name, types::Openness, flat::Name>
+constexpr ErrorDef<114, types::Openness, flat::Name, types::Openness, flat::Name>
     ErrComposedProtocolTooOpen(
         "{} protocol '{}' cannot compose {} protocol '{}'; composed protocol may not be more open "
         "than composing protocol");
-constexpr UndocumentedErrorDef<115, types::Openness> ErrFlexibleTwoWayMethodRequiresOpenProtocol(
+constexpr ErrorDef<115, types::Openness> ErrFlexibleTwoWayMethodRequiresOpenProtocol(
     "flexible two-way method may only be defined in an open protocol, not {}");
-constexpr UndocumentedErrorDef<116, std::string_view> ErrFlexibleOneWayMethodInClosedProtocol(
+constexpr ErrorDef<116, std::string_view> ErrFlexibleOneWayMethodInClosedProtocol(
     "flexible {} may only be defined in an open or ajar protocol, not closed");
-constexpr UndocumentedErrorDef<117, std::string_view, std::string_view, const flat::Decl *>
+constexpr ErrorDef<117, std::string_view, std::string_view, const flat::Decl *>
     ErrHandleUsedInIncompatibleTransport(
         "handle of type {} may not be sent over transport {} used by {}");
-constexpr UndocumentedErrorDef<118, std::string_view, std::string_view, const flat::Decl *>
+constexpr ErrorDef<118, std::string_view, std::string_view, const flat::Decl *>
     ErrTransportEndUsedInIncompatibleTransport(
         "client_end / server_end of transport type {} may not be sent over transport {} used by "
         "{}");
-constexpr UndocumentedErrorDef<119, std::string_view> ErrEventErrorSyntaxDeprecated(
+constexpr ErrorDef<119, std::string_view> ErrEventErrorSyntaxDeprecated(
     "Event '{}' uses the error syntax. This is deprecated (see fxbug.dev/99924)");
-constexpr UndocumentedErrorDef<120, const flat::Attribute *> ErrInvalidAttributePlacement(
+constexpr ErrorDef<120, const flat::Attribute *> ErrInvalidAttributePlacement(
     "placement of attribute '{}' disallowed here");
-constexpr UndocumentedErrorDef<121, const flat::Attribute *> ErrDeprecatedAttribute(
+constexpr ErrorDef<121, const flat::Attribute *> ErrDeprecatedAttribute(
     "attribute '{}' is deprecated");
-constexpr UndocumentedErrorDef<122, std::string_view, SourceSpan> ErrDuplicateAttribute(
+constexpr ErrorDef<122, std::string_view, SourceSpan> ErrDuplicateAttribute(
     "duplicate attribute '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<123, std::string_view, std::string_view, SourceSpan,
-                               std::string_view>
+constexpr ErrorDef<123, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateAttributeCanonical(
         "attribute '{}' conflicts with attribute '{}' from {}; both are "
         "represented by the canonical form '{}'");
