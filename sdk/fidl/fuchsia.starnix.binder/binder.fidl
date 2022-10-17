@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.starnix.binder;
+
+using zx;
+
+const MAX_PATH_LENGTH uint64 = 4095;
+
+/// Give access to the binder nodes.
+@discoverable
+protocol DevBinder {
+    /// Open the given binder node at `path`. `process` will be used by the
+    /// driver to read the data sent to the driver.
+    /// TODO(fxb/112325): Find a better way to give access to the proces memory.
+    Open(resource struct {
+        path vector<uint8>:MAX_PATH_LENGTH;
+        process zx.handle:PROCESS;
+        binder server_end:Binder;
+    });
+};
+
+/// An opened connection to a binder driver.
+protocol Binder {
+    /// Set the VMO to used as a share resource between the driver and the
+    /// client. `mapped_address` is the address where the vmo is mapped in the
+    /// client address space.
+    SetVmo(resource struct {
+        vmo zx.handle:VMO;
+        mapped_address uint64;
+    });
+    Ioctl(struct {
+        tid zx.koid;
+        request uint64;
+        parameter uint64;
+    }) -> (struct {
+        out_code uint16;
+    });
+};

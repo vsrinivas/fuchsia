@@ -39,7 +39,6 @@ mod testing;
 #[fuchsia::main(logging_tags = ["starnix"])]
 async fn main() -> Result<(), Error> {
     let galaxy = Arc::new(create_galaxy().await?);
-    let serve_galaxy = galaxy.clone();
 
     if let Some(lifecycle) =
         fruntime::take_startup_handle(fruntime::HandleInfo::new(fruntime::HandleType::Lifecycle, 0))
@@ -74,11 +73,19 @@ async fn main() -> Result<(), Error> {
     });
 
     fs.dir("svc").add_fidl_service(|stream| {
-        let galaxy = serve_galaxy.clone();
+        let galaxy = galaxy.clone();
         fasync::Task::local(async move {
             execution::serve_galaxy_controller(stream, galaxy)
                 .await
                 .expect("failed to start manager.")
+        })
+        .detach();
+    });
+
+    fs.dir("svc").add_fidl_service(|stream| {
+        let galaxy = galaxy.clone();
+        fasync::Task::local(async move {
+            execution::serve_dev_binder(stream, galaxy).await.expect("failed to start manager.")
         })
         .detach();
     });

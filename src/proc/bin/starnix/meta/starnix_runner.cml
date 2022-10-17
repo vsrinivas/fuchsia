@@ -21,6 +21,7 @@
         {
             protocol: [
                 "fuchsia.component.runner.ComponentRunner",
+                "fuchsia.starnix.binder.DevBinder",
                 "fuchsia.starnix.galaxy.Controller",
             ],
         },

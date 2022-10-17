@@ -5,6 +5,7 @@
 use crate::execution::Galaxy;
 use anyhow::{anyhow, Error};
 use fidl_fuchsia_component_runner as fcrunner;
+use fidl_fuchsia_starnix_binder as fbinder;
 use fidl_fuchsia_starnix_galaxy as fstargalaxy;
 use fuchsia_async::{self as fasync, DurationExt};
 use futures::TryStreamExt;
@@ -12,6 +13,7 @@ use std::sync::Arc;
 use tracing::error;
 
 use crate::fs::fuchsia::create_fuchsia_pipe;
+use crate::logging::not_implemented;
 use crate::types::OpenFlags;
 
 use super::*;
@@ -46,6 +48,20 @@ pub async fn serve_galaxy_controller(
                 connect_to_vsock(port, bridge_socket, &galaxy).await.unwrap_or_else(|e| {
                     tracing::error!("failed to connect to vsock {:?}", e);
                 });
+            }
+        }
+    }
+    Ok(())
+}
+
+pub async fn serve_dev_binder(
+    mut request_stream: fbinder::DevBinderRequestStream,
+    _galaxy: Arc<Galaxy>,
+) -> Result<(), Error> {
+    while let Some(event) = request_stream.try_next().await? {
+        match event {
+            fbinder::DevBinderRequest::Open { .. } => {
+                not_implemented!("N/A", "Binder FIDL protocol is not implemented!");
             }
         }
     }

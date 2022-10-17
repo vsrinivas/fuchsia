@@ -51,6 +51,7 @@ if (target_cpu == "x64" && !is_asan) {
       "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
       "//sdk/fidl/fuchsia.process:fuchsia.process_rust",
       "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
+      "//sdk/fidl/fuchsia.starnix.binder:fuchsia.starnix.binder_rust",
       "//sdk/fidl/fuchsia.starnix.developer:fuchsia.starnix.developer_rust",
       "//sdk/fidl/fuchsia.starnix.galaxy:fuchsia.starnix.galaxy_rust",
       "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
