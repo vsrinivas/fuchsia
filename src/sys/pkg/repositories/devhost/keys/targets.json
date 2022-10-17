@@ -4,7 +4,6 @@
         {
             "keytype": "ed25519",
             "scheme": "ed25519",
-            "keyid_hash_algorithms": ["sha256"],
             "keyval": {
                 "public": "bb1522b35b48c2a686c242a4545a0c3405890481119439cbe094669bf643d7a8",
                 "private": "dd0139bbd4ff005d0c1b1e4c39a7a4705f7236556fdf1988540060d484a1f53bbb1522b35b48c2a686c242a4545a0c3405890481119439cbe094669bf643d7a8"

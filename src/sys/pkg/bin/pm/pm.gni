@@ -290,7 +290,7 @@ template("pm_prepare_publish") {
   # should be computed so we don't forget to copy the file when we rotate the
   # root metadata.
   copy("${target_name}__root_manifest") {
-    sources = [ "$amber_metadata_dir/7.root.json" ]
+    sources = [ "$amber_metadata_dir/9.root.json" ]
 
     outputs = [ "$amber_repository_dir/repository/root.json" ]
   }
@@ -305,6 +305,8 @@ template("pm_prepare_publish") {
       "$amber_metadata_dir/5.root.json",
       "$amber_metadata_dir/6.root.json",
       "$amber_metadata_dir/7.root.json",
+      "$amber_metadata_dir/8.root.json",
+      "$amber_metadata_dir/9.root.json",
     ]
 
     outputs = [ "$amber_repository_dir/repository/{{source_file_part}}" ]
@@ -435,6 +437,8 @@ template("pm_publish_archive") {
       "${amber_metadata_dir}/5.root.json",
       "${amber_metadata_dir}/6.root.json",
       "${amber_metadata_dir}/7.root.json",
+      "${amber_metadata_dir}/8.root.json",
+      "${amber_metadata_dir}/9.root.json",
     ]
 
     assert(inputs == [ inputs[0] ],
@@ -470,9 +474,13 @@ template("pm_publish_archive") {
       rebase_path("${amber_metadata_dir}/6.root.json", root_build_dir),
       "--root-metadata",
       rebase_path("${amber_metadata_dir}/7.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/8.root.json", root_build_dir),
+      "--root-metadata",
+      rebase_path("${amber_metadata_dir}/9.root.json", root_build_dir),
 
       "--default-root-metadata",
-      rebase_path("${amber_metadata_dir}/7.root.json", root_build_dir),
+      rebase_path("${amber_metadata_dir}/9.root.json", root_build_dir),
 
       "--gendir",
       rebase_path(gendir, root_build_dir),
@@ -500,6 +508,8 @@ template("pm_publish_archive") {
       "${gendir}/repository/5.root.json",
       "${gendir}/repository/6.root.json",
       "${gendir}/repository/7.root.json",
+      "${gendir}/repository/8.root.json",
+      "${gendir}/repository/9.root.json",
       "${gendir}/repository/root.json",
     ]
   }
