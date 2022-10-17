@@ -45,6 +45,9 @@ class AmlCpu : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_CPU_CTRL
 
   static zx_status_t Create(void* context, zx_device_t* device);
 
+  static zx_status_t GetPopularVoltageTable(const zx::resource& smc_resource,
+                                            uint32_t* metadata_type);
+
   zx_status_t Init();
 
   // Implements DDK Device Ops

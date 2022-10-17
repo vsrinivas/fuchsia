@@ -10,6 +10,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
+#include <zircon/syscalls/smc.h>
 
 #include <memory>
 #include <vector>
@@ -34,7 +35,44 @@ constexpr size_t kFragmentsPerPfDomainA5 = 2;
 constexpr zx_off_t kCpuVersionOffset = 0x220;
 constexpr zx_off_t kCpuVersionOffsetA5 = 0x300;
 
+constexpr uint32_t kCpuGetDvfsTableIndexFuncId = 0x82000088;
+constexpr uint64_t kDefaultClusterId = 0;
+
 }  // namespace
+
+zx_status_t AmlCpu::GetPopularVoltageTable(const zx::resource& smc_resource,
+                                           uint32_t* metadata_type) {
+  if (smc_resource.is_valid()) {
+    zx_smc_parameters_t smc_params = {};
+    smc_params.func_id = kCpuGetDvfsTableIndexFuncId;
+    smc_params.arg1 = kDefaultClusterId;
+
+    zx_smc_result_t smc_result;
+    zx_status_t status = zx_smc_call(smc_resource.get(), &smc_params, &smc_result);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "zx_smc_call failed: %s", zx_status_get_string(status));
+      return status;
+    }
+
+    switch (smc_result.arg0) {
+      case amlogic_cpu::OppTable1:
+        *metadata_type = DEVICE_METADATA_AML_OP_1_POINTS;
+        break;
+      case amlogic_cpu::OppTable2:
+        *metadata_type = DEVICE_METADATA_AML_OP_2_POINTS;
+        break;
+      case amlogic_cpu::OppTable3:
+        *metadata_type = DEVICE_METADATA_AML_OP_3_POINTS;
+        break;
+      default:
+        *metadata_type = DEVICE_METADATA_AML_OP_POINTS;
+        break;
+    }
+    zxlogf(INFO, "Dvfs using table%ld.\n", smc_result.arg0);
+  }
+
+  return ZX_OK;
+}
 
 zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
   zx_status_t st;
@@ -45,13 +83,6 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     zxlogf(ERROR, "%s: Failed to get performance domains from board driver, st = %d", __func__,
            perf_doms.error_value());
     return perf_doms.error_value();
-  }
-
-  auto op_points = ddk::GetMetadataArray<operating_point_t>(parent, DEVICE_METADATA_AML_OP_POINTS);
-  if (!op_points.is_ok()) {
-    zxlogf(ERROR, "%s: Failed to get operating point from board driver, st = %d", __func__,
-           op_points.error_value());
-    return op_points.error_value();
   }
 
   // Map AOBUS registers
@@ -73,11 +104,29 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     return st;
   }
 
+  zx::resource smc_resource = {};
+  uint32_t metadata_type = DEVICE_METADATA_AML_OP_POINTS;
   size_t fragments_per_pf_domain = kFragmentsPerPfDomain;
   zx_off_t cpu_version_offset = kCpuVersionOffset;
   if (info.pid == PDEV_PID_AMLOGIC_A5) {
+    st = pdev.GetSmc(0, &smc_resource);
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "Failed to get smc: %s", zx_status_get_string(st));
+      return st;
+    }
+    st = GetPopularVoltageTable(smc_resource, &metadata_type);
+    if (st != ZX_OK) {
+      zxlogf(ERROR, "Failed to get popular voltage table: %s", zx_status_get_string(st));
+      return st;
+    }
     fragments_per_pf_domain = kFragmentsPerPfDomainA5;
     cpu_version_offset = kCpuVersionOffsetA5;
+  }
+
+  auto op_points = ddk::GetMetadataArray<operating_point_t>(parent, metadata_type);
+  if (!op_points.is_ok()) {
+    zxlogf(ERROR, "Failed to get operating point from board driver: %s", op_points.status_string());
+    return op_points.error_value();
   }
 
   // Make sure we have the right number of fragments.
