@@ -75,6 +75,7 @@ void AddSkippedTestsTcpBacklog(TestMap& tests) {
 void AddSkippedTestsLoopback(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/*");
 }
 
 void AddSkippedTestsLoopbackIsolated(TestMap& tests) {
