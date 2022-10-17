@@ -4,10 +4,19 @@
 
 #include <fidl/fuchsia.hardware.pty/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
+#include <fidl/fuchsia.posix.socket.packet/cpp/wire_test_base.h>
+#include <fidl/fuchsia.posix.socket.raw/cpp/wire_test_base.h>
+#include <fidl/fuchsia.posix.socket/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/zx/eventpair.h>
+#include <lib/zx/socket.h>
+#include <lib/zx/status.h>
+#include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/cpp/inception.h>
+#include <lib/zxio/types.h>
+#include <lib/zxio/zxio.h>
 #include <string.h>
 
 #include <zxtest/zxtest.h>

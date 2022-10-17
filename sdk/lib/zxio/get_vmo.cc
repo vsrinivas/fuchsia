@@ -5,8 +5,10 @@
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/cpp/inception.h>
+#include <lib/zxio/types.h>
 #include <lib/zxio/zxio.h>
 #include <string.h>
+#include <sys/types.h>
 #include <zircon/syscalls.h>
 
 #include <algorithm>
