@@ -6,7 +6,7 @@
 
 use anyhow::{self, Context, Result};
 use fidl_fuchsia_ui_focus::FocusChain;
-use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning};
+use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning, NonPrintableKey};
 use fidl_fuchsia_ui_shortcut2 as fs2;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_zircon::{self as zx, AsHandleRef};
@@ -470,7 +470,13 @@ fn validate_shortcut(shortcut: &fs2::Shortcut) -> Result<()> {
             match k {
                 KeyMeaning::Codepoint(c) => {
                     // For now, allow Latin shortcuts, but no uppercases.
-                    if ASCII.contains(c) && !UPPERCASE_LATIN.contains(c) {
+                    // Nonprintable keys that have an ASCII code should be
+                    // registered using NonPrintableKey.
+                    // TODO(fxbug.dev/112343): Add other ambiguous code points
+                    // here, too.
+                    if *c == ('\t' as u32) {
+                        Err(anyhow::anyhow!("use {:?}: {:?}", NonPrintableKey::Tab, k))
+                    } else if ASCII.contains(c) && !UPPERCASE_LATIN.contains(c) {
                         Ok(())
                     } else {
                         Err(anyhow::anyhow!("malformed KeyMeaning: {:?}", k))
@@ -491,7 +497,7 @@ mod tests {
     use super::*;
     use fidl::endpoints;
     use fidl_fuchsia_ui_focus::FocusChain;
-    use fidl_fuchsia_ui_input3 as finput3;
+    use fidl_fuchsia_ui_input3::{self as finput3, NonPrintableKey};
     use fidl_fuchsia_ui_views::ViewRef;
     use fuchsia_scenic as scenic;
     use futures::{channel::mpsc, TryStreamExt};
@@ -541,30 +547,42 @@ mod tests {
         FocusChain { focus_chain: Some(focus_chain), ..FocusChain::EMPTY }
     }
 
-    // Creates a shortcut of all supplied code points.
-    fn codepoint_shortcut(id: ShortcutId, code_points: &[char]) -> fs2::Shortcut {
+    // A shorthand initializer for a key meaning based on a code point.
+    fn cp_key(cp: char) -> finput3::KeyMeaning {
+        finput3::KeyMeaning::Codepoint(cp as u32)
+    }
+
+    // A shorthand initializer for a key meaning based on a nonprintable key.
+    fn np_key(key: NonPrintableKey) -> finput3::KeyMeaning {
+        finput3::KeyMeaning::NonPrintableKey(key)
+    }
+
+    // Creates a shortcut of all supplied key meanings
+    fn key_meanings_shortcut(id: ShortcutId, key_meanings: Vec<KeyMeaning>) -> fs2::Shortcut {
         fs2::Shortcut {
             id: *id,
-            key_meanings: code_points
-                .iter()
-                .map(|c| finput3::KeyMeaning::Codepoint(*c as u32))
-                .collect(),
+            key_meanings: key_meanings.iter().map(|k| *k).collect(),
             options: fs2::Options { ..fs2::Options::EMPTY },
         }
+    }
+
+    // Creates a shortcut of all supplied code points.
+    fn codepoint_shortcut(id: ShortcutId, code_points: Vec<char>) -> fs2::Shortcut {
+        key_meanings_shortcut(id, code_points.into_iter().map(|c| cp_key(c)).collect::<Vec<_>>())
     }
 
     // A helper for passing a key meaning sequence through the given handler and
     // reporting results.
     async fn handle_key_sequence(
         handler: &Rc<Shortcut2Impl>,
-        key_sequence: &[(char, finput3::KeyEventType)],
+        key_sequence: Vec<(finput3::KeyMeaning, finput3::KeyEventType)>,
     ) -> Vec<fs2::Handled> {
         let mut result = vec![];
-        for (ch, type_) in key_sequence.iter() {
+        for (key_meaning, type_) in key_sequence {
             let ret = handler
                 .handle_key_event(KeyEvent {
-                    key_meaning: Some(finput3::KeyMeaning::Codepoint(*ch as u32)),
-                    type_: Some(*type_),
+                    key_meaning: Some(key_meaning),
+                    type_: Some(type_),
                     ..KeyEvent::EMPTY
                 })
                 .await
@@ -612,12 +630,12 @@ mod tests {
 
         // Register two shortcuts: A, and A+B. No notifications yet, just trying out.
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("registration went just fine");
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID_2, &vec!['a', 'b']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID_2, vec!['a', 'b']))
             .await
             .expect("no FIDL errors")
             .expect("registration went just fine");
@@ -628,17 +646,21 @@ mod tests {
     }
 
     #[test_case(
-        vec!['a'],
-        vec![('a', KeyEventType::Pressed), ('a', KeyEventType::Released)],
+        vec![cp_key('a')],
+        vec![(cp_key('a'), KeyEventType::Pressed), (cp_key('a'), KeyEventType::Released)],
         vec![fs2::Handled::Handled, fs2::Handled::NotHandled]; "lowercase 'a'")]
     #[test_case(
-        vec!['a'],
-        vec![('A', KeyEventType::Pressed), ('A', KeyEventType::Released)],
+        vec![cp_key('a')],
+        vec![(cp_key('A'), KeyEventType::Pressed), (cp_key('A'), KeyEventType::Released)],
         vec![fs2::Handled::Handled, fs2::Handled::NotHandled]; "uppercase 'A'")]
+    #[test_case(
+        vec![np_key(NonPrintableKey::Tab)],
+        vec![(np_key(NonPrintableKey::Tab), KeyEventType::Pressed), (np_key(NonPrintableKey::Tab), KeyEventType::Released)],
+        vec![fs2::Handled::Handled, fs2::Handled::NotHandled]; "Tab")]
     #[fasync::run_singlethreaded(test)]
     async fn basic_notification(
-        shortcut: Vec<char>,
-        key_sequence: Vec<(char, finput3::KeyEventType)>,
+        shortcut: Vec<KeyMeaning>,
+        key_sequence: Vec<(KeyMeaning, finput3::KeyEventType)>,
         expected: Vec<fs2::Handled>,
     ) {
         let handler = Rc::new(Shortcut2Impl::new());
@@ -657,7 +679,7 @@ mod tests {
         registry_proxy.set_view(&mut clone_view_ref(&view_ref), listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &shortcut))
+            .register_shortcut(&mut key_meanings_shortcut(SHORTCUT_ID, shortcut))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -672,7 +694,7 @@ mod tests {
         let (_listener_task, mut receiver) =
             new_fake_listener(listener_server_end.into_stream().unwrap(), fs2::Handled::Handled);
 
-        let result = handle_key_sequence(&handler, &key_sequence).await;
+        let result = handle_key_sequence(&handler, key_sequence).await;
         pretty_assertions::assert_eq!(expected, result);
         pretty_assertions::assert_eq!(SHORTCUT_ID, receiver.next().await.unwrap());
     }
@@ -695,7 +717,7 @@ mod tests {
 
         // This shortcut is registered out of order.
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -703,7 +725,7 @@ mod tests {
         registry_proxy.set_view(&mut clone_view_ref(&view_ref), listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['b']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['b']))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -717,7 +739,7 @@ mod tests {
 
         let result = handle_key_sequence(
             &handler,
-            &vec![('a', KeyEventType::Pressed), ('a', KeyEventType::Released)],
+            vec![(cp_key('a'), KeyEventType::Pressed), (cp_key('a'), KeyEventType::Released)],
         )
         .await;
         pretty_assertions::assert_eq!(
@@ -745,7 +767,7 @@ mod tests {
         registry_proxy.set_view(&mut clone_view_ref(&view_ref), listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -761,7 +783,8 @@ mod tests {
             new_fake_listener(listener_server_end.into_stream().unwrap(), fs2::Handled::Handled);
 
         let result =
-            handle_key_sequence(&handler, &vec![('a', finput3::KeyEventType::Pressed)]).await;
+            handle_key_sequence(&handler, vec![(cp_key('a'), finput3::KeyEventType::Pressed)])
+                .await;
         assert_eq!(vec![fs2::Handled::NotHandled], result);
     }
 
@@ -787,7 +810,7 @@ mod tests {
         registry_proxy.set_view(&mut clone_view_ref(&view_ref), listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a', 'b']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a', 'b']))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -800,11 +823,11 @@ mod tests {
 
         let result = handle_key_sequence(
             &handler,
-            &vec![
-                ('a', finput3::KeyEventType::Pressed),
-                ('a', finput3::KeyEventType::Released),
-                ('b', finput3::KeyEventType::Pressed),
-                ('b', finput3::KeyEventType::Released),
+            vec![
+                (cp_key('a'), finput3::KeyEventType::Pressed),
+                (cp_key('a'), finput3::KeyEventType::Released),
+                (cp_key('b'), finput3::KeyEventType::Pressed),
+                (cp_key('b'), finput3::KeyEventType::Released),
             ],
         )
         .await;
@@ -842,7 +865,7 @@ mod tests {
         registry_proxy.set_view(&mut clone_view_ref(&view_ref), listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a', 'b']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a', 'b']))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -855,11 +878,11 @@ mod tests {
 
         let result = handle_key_sequence(
             &handler,
-            &vec![
-                ('a', finput3::KeyEventType::Pressed),
-                ('b', finput3::KeyEventType::Pressed),
-                ('a', finput3::KeyEventType::Released),
-                ('b', finput3::KeyEventType::Released),
+            vec![
+                (cp_key('a'), finput3::KeyEventType::Pressed),
+                (cp_key('b'), finput3::KeyEventType::Pressed),
+                (cp_key('a'), finput3::KeyEventType::Released),
+                (cp_key('b'), finput3::KeyEventType::Released),
             ],
         )
         .await;
@@ -898,7 +921,10 @@ mod tests {
         // Actuate shortcut keys before registering the shortcut.
         let result = handle_key_sequence(
             &handler,
-            &vec![('a', finput3::KeyEventType::Pressed), ('b', finput3::KeyEventType::Pressed)],
+            vec![
+                (cp_key('a'), finput3::KeyEventType::Pressed),
+                (cp_key('b'), finput3::KeyEventType::Pressed),
+            ],
         )
         .await;
         assert_eq!(vec![fs2::Handled::NotHandled, fs2::Handled::NotHandled,], result);
@@ -911,7 +937,7 @@ mod tests {
         // Now that the shortcut is registered, no shortcut gets reported until
         // the next time around when the key is pressed.
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("registration was a success");
@@ -923,7 +949,10 @@ mod tests {
         // to activate the shortcut.
         let result = handle_key_sequence(
             &handler,
-            &vec![('b', finput3::KeyEventType::Released), ('a', finput3::KeyEventType::Released)],
+            vec![
+                (cp_key('b'), finput3::KeyEventType::Released),
+                (cp_key('a'), finput3::KeyEventType::Released),
+            ],
         )
         .await;
         assert_eq!(vec![fs2::Handled::NotHandled, fs2::Handled::NotHandled,], result);
@@ -957,7 +986,7 @@ mod tests {
         registry_proxy.set_view(&mut parent_view_ref, parent_listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("parent registration was a success");
@@ -968,7 +997,7 @@ mod tests {
         registry_proxy.set_view(&mut child_view_ref, child_listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("child registration was a success");
@@ -987,7 +1016,10 @@ mod tests {
         // Send the shortcut trigger.
         let result = handle_key_sequence(
             &handler,
-            &vec![('a', finput3::KeyEventType::Pressed), ('a', finput3::KeyEventType::Released)],
+            vec![
+                (cp_key('a'), finput3::KeyEventType::Pressed),
+                (cp_key('a'), finput3::KeyEventType::Released),
+            ],
         )
         .await;
         // The shortcut has been handled; but only the parent handled it.
@@ -1023,7 +1055,7 @@ mod tests {
         registry_proxy.set_view(&mut parent_view_ref, parent_listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("parent registration was a success");
@@ -1034,7 +1066,7 @@ mod tests {
         registry_proxy.set_view(&mut child_view_ref, child_listener_client_end).unwrap();
 
         registry_proxy
-            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, &vec!['a']))
+            .register_shortcut(&mut codepoint_shortcut(SHORTCUT_ID, vec!['a']))
             .await
             .expect("no FIDL errors")
             .expect("child registration was a success");
@@ -1054,7 +1086,10 @@ mod tests {
         // Send the shortcut trigger.
         let result = handle_key_sequence(
             &handler,
-            &vec![('a', finput3::KeyEventType::Pressed), ('a', finput3::KeyEventType::Released)],
+            vec![
+                (cp_key('a'), finput3::KeyEventType::Pressed),
+                (cp_key('a'), finput3::KeyEventType::Released),
+            ],
         )
         .await;
         // The shortcut has been handled; but only the parent handled it.
