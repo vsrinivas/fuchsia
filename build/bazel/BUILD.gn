@@ -8,8 +8,9 @@ import("//build/bazel/legacy_ninja_build_outputs.gni")
 import("//build/images/vbmeta.gni")
 import("//build/product.gni")
 
-assert(current_toolchain == default_toolchain,
-       "This BUILD.gn file should only be parsed in the default toolchain!")
+assert(
+    current_toolchain == default_toolchain,
+    "This BUILD.gn file should only be parsed in the default toolchain, to prevent generating Bazel workspace multiple times.")
 
 # A GN target used to generate at GN-gen time a bazel inputs manifest file
 # under the following path which is hard-coded in toplevel.WORKSPACE.bazel:

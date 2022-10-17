@@ -5,7 +5,10 @@
 # Location of the bazel top directory that contains the workspace
 # and output_base directories. This must match the action that generates
 # the workspace's content, which is currently in //build/bazel/BUILD.gn
-bazel_top_dir = get_label_info("//build/bazel:foo", "target_gen_dir")
+#
+# Bazel workspace is only generated in the default_toolchain to avoid duplicates.
+bazel_top_dir =
+    get_label_info("//build/bazel:foo($default_toolchain)", "target_gen_dir")
 
 # Location of the bazel launcher script, relative to the source root
 bazel_launcher = bazel_top_dir + "/bazel"

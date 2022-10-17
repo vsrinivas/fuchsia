@@ -5,8 +5,6 @@
 import("//build/bazel/bazel_workspace.gni")
 import("//build/bazel/legacy_ninja_build_outputs.gni")
 
-assert(current_toolchain == default_toolchain)
-
 # Run a Bazel build action, which is run in the special workspace
 # setup by `//build/bazel:bazel_workspace`.
 #
@@ -31,7 +29,7 @@ assert(current_toolchain == default_toolchain)
 # set of target patterns.
 #
 # Args:
-#   bazel_inputs:
+#   bazel_inputs: (optional)
 #     List of labels to bazel_input_xxx() targets that define
 #     the set of Ninja-generated inputs that the Bazel build command will
 #     use. These must be in the dependency tree of
@@ -114,8 +112,13 @@ template("bazel_build_action") {
     _outputs += [ target_gen_dir + "/" + path ]
   }
 
+  _bazel_inputs = []
+  if (defined(invoker.bazel_inputs)) {
+    _bazel_inputs = invoker.bazel_inputs
+  }
+
   _inputs = []
-  foreach(label, invoker.bazel_inputs) {
+  foreach(label, _bazel_inputs) {
     _inputs += [ get_label_info(label, "label_with_toolchain") ]
   }
 
@@ -144,9 +147,9 @@ template("bazel_build_action") {
       args += [ "--" ] + invoker.extra_bazel_args
     }
 
-    deps = invoker.bazel_inputs + [
-             "//build/bazel:generate_main_workspace",
-             "//sdk:core",
+    deps = _bazel_inputs + [
+             "//build/bazel:generate_main_workspace($default_toolchain)",
+             "//sdk:core($default_toolchain)",
            ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -162,7 +165,7 @@ template("bazel_build_action") {
     # Prevent concurrent bazel build actions to run, otherwise
     # the `bazel-bin` symlink target would become unpredictable resulting
     # in erroneous outputs or errors.
-    pool = "//build/bazel:build_action_pool"
+    pool = "//build/bazel:build_action_pool($default_toolchain)"
 
     # This action definitely cannot be hermetic. Callers should add
     # themselves to the //build:non_hermetic_deps visibility list.
