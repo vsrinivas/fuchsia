@@ -115,7 +115,7 @@ zx_status_t fdio_open_fd_at_internal(int dirfd, const char* dirty_path, fio::wir
   // (fdio_flags_to_zxio always add _FLAG_DESCRIBE).
   flags |= fio::wire::OpenFlags::kDescribe;
 
-  zx::status io = fdio_internal::open_at_impl(dirfd, dirty_path, flags, kArbitraryMode,
+  zx::result io = fdio_internal::open_at_impl(dirfd, dirty_path, flags, kArbitraryMode,
                                               {
                                                   .disallow_directory = false,
                                                   .allow_absolute_path = allow_absolute_path,
@@ -148,7 +148,7 @@ zx_status_t fdio_open_fd_at(int dirfd, const char* path, uint32_t flags, int* ou
 
 __EXPORT
 zx_handle_t fdio_service_clone(zx_handle_t handle) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
     return ZX_HANDLE_INVALID;
   }

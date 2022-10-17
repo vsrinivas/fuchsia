@@ -19,7 +19,7 @@
 
 namespace fdio_internal {
 
-zx::status<fbl::RefPtr<LocalVnode>> LocalVnode::Create(
+zx::result<fbl::RefPtr<LocalVnode>> LocalVnode::Create(
     fbl::RefPtr<LocalVnode> parent, fidl::ClientEnd<fuchsia_io::Directory> remote,
     fbl::String name) {
   if (!remote.is_valid()) {

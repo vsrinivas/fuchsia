@@ -39,7 +39,7 @@ class SynchronousDatagramSocketTest : public zxtest::Test {
   void SetUp() final {
     ASSERT_OK(zx::eventpair::create(0u, &event0_, &event1_));
 
-    zx::status node_server = fidl::CreateEndpoints(&client_end_);
+    zx::result node_server = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(node_server.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*node_server), &server_);
@@ -106,7 +106,7 @@ class StreamSocketTest : public zxtest::Test {
     ASSERT_OK(zx::socket::create(ZX_SOCKET_STREAM, &socket_, &peer_));
     ASSERT_OK(socket_.get_info(ZX_INFO_SOCKET, &info_, sizeof(info_), nullptr, nullptr));
 
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
@@ -175,7 +175,7 @@ class DatagramSocketTest : public zxtest::Test {
     ASSERT_OK(zx::socket::create(ZX_SOCKET_DATAGRAM, &socket_, &peer_));
     ASSERT_OK(socket_.get_info(ZX_INFO_SOCKET, &info_, sizeof(info_), nullptr, nullptr));
 
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
@@ -275,7 +275,7 @@ class DatagramSocketServer final : public fidl::testing::WireTestBase<fsocket::D
     } else {
       response_builder.to(ConnectedAddr(alloc));
     }
-    zx::status<zx::eventpair> event = DuplicateCachePeer();
+    zx::result<zx::eventpair> event = DuplicateCachePeer();
     ASSERT_OK(event.status_value()) << "failed to duplicate peer event for cache invalidation";
     std::array validity{std::move(event.value())};
     response_builder.validity(fidl::VectorView<zx::eventpair>::FromExternal(validity))
@@ -301,7 +301,7 @@ class DatagramSocketServer final : public fidl::testing::WireTestBase<fsocket::D
                                                       });
   }
 
-  zx::status<zx::eventpair> DuplicateCachePeer() {
+  zx::result<zx::eventpair> DuplicateCachePeer() {
     std::lock_guard lock(lock_);
     zx::eventpair dup;
     if (zx_status_t status = cache_peer_.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup); status != ZX_OK) {
@@ -324,7 +324,7 @@ class DatagramSocketRouteCacheTest : public zxtest::Test {
     ASSERT_OK(zx::eventpair::create(0u, &error_local_, &error_peer_));
     ASSERT_NO_FATAL_FAILURE(server_.InvalidateClientCache());
 
-    zx::status endpoints = fidl::CreateEndpoints<fsocket::DatagramSocket>();
+    zx::result endpoints = fidl::CreateEndpoints<fsocket::DatagramSocket>();
     ASSERT_OK(endpoints.status_value());
     client_ = fidl::WireSyncClient<fsocket::DatagramSocket>{std::move(endpoints->client)};
 
@@ -541,7 +541,7 @@ class RawSocketTest : public zxtest::Test {
   void SetUp() final {
     ASSERT_OK(zx::eventpair::create(0u, &event_client_, &event_server_));
 
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);
@@ -604,7 +604,7 @@ class PacketSocketTest : public zxtest::Test {
   void SetUp() final {
     ASSERT_OK(zx::eventpair::create(0u, &event_client_, &event_server_));
 
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     fidl::BindServer(control_loop_.dispatcher(), std::move(*server_end), &server_);

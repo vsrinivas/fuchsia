@@ -36,7 +36,7 @@ class Directory : public fuchsia::io::testing::Directory_TestBase {
   OpenHandler open_handler_;
 };
 
-zx::status<Namespace> CreateNamespace(fidl::ClientEnd<fuchsia_io::Directory> client_end);
+zx::result<Namespace> CreateNamespace(fidl::ClientEnd<fuchsia_io::Directory> client_end);
 
 }  // namespace driver::testing
 

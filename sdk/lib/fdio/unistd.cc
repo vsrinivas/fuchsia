@@ -176,7 +176,7 @@ fdio_ptr fdio_iodir(int dirfd, std::string_view& in_out_path) {
 
 namespace fdio_internal {
 
-zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32_t mode,
+zx::result<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32_t mode,
                                   bool enforce_eisdir) {
   // Emulate EISDIR behavior from
   // http://pubs.opengroup.org/onlinepubs/9699919799/functions/open.html
@@ -191,7 +191,7 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, int flags, uint32
                       });
 }
 
-zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, fio::wire::OpenFlags flags,
+zx::result<fdio_ptr> open_at_impl(int dirfd, const char* path, fio::wire::OpenFlags flags,
                                   uint32_t mode, OpenAtOptions options) {
   if (path == nullptr) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -244,18 +244,18 @@ zx::status<fdio_ptr> open_at_impl(int dirfd, const char* path, fio::wire::OpenFl
 
 // Open |path| from the |dirfd| directory, enforcing the POSIX EISDIR error condition. Specifically,
 // ZX_ERR_NOT_FILE will be returned when opening a directory with write access/O_CREAT.
-zx::status<fdio_ptr> open_at(int dirfd, const char* path, int flags, uint32_t mode) {
+zx::result<fdio_ptr> open_at(int dirfd, const char* path, int flags, uint32_t mode) {
   return open_at_impl(dirfd, path, flags, mode, true);
 }
 
 // Open |path| from the |dirfd| directory, but allow creating directories/opening them with
 // write access. Note that this differs from POSIX behavior.
-zx::status<fdio_ptr> open_at_ignore_eisdir(int dirfd, const char* path, int flags, uint32_t mode) {
+zx::result<fdio_ptr> open_at_ignore_eisdir(int dirfd, const char* path, int flags, uint32_t mode) {
   return open_at_impl(dirfd, path, flags, mode, false);
 }
 
 // Open |path| from the current working directory, respecting EISDIR.
-zx::status<fdio_ptr> open(const char* path, int flags, uint32_t mode) {
+zx::result<fdio_ptr> open(const char* path, int flags, uint32_t mode) {
   return open_at(AT_FDCWD, path, flags, mode);
 }
 
@@ -329,7 +329,7 @@ using NameBuffer = fbl::StringBuffer<NAME_MAX>;
 // a trailing slash will be added to the name if the last component happens to
 // be a directory.  Otherwise, `is_dir_out` will be set to indicate whether the
 // last component is a directory.
-zx::status<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuffer* out,
+zx::result<fdio_ptr> opendir_containing_at(int dirfd, const char* path, NameBuffer* out,
                                            bool* is_dir_out) {
   if (path == nullptr) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -410,7 +410,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
 
     switch (PA_HND_TYPE(handle_info[n])) {
       case PA_FD: {
-        zx::status io = fdio::create(zx::handle(h));
+        zx::result io = fdio::create(zx::handle(h));
         if (io.is_error()) {
           continue;
         }
@@ -449,7 +449,7 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
   }
 
   if (use_for_stdio == nullptr) {
-    zx::status null = fdio_internal::zxio::create_null();
+    zx::result null = fdio_internal::zxio::create_null();
     ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
     use_for_stdio = std::move(null.value());
   }
@@ -462,17 +462,17 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
   fdio_ptr default_io = nullptr;
   auto get_default = [&default_io]() {
     if (default_io == nullptr) {
-      zx::status default_result = fdio_internal::zxio::create();
+      zx::result default_result = fdio_internal::zxio::create();
       ZX_ASSERT_MSG(default_result.is_ok(), "%s", default_result.status_string());
       default_io = std::move(default_result.value());
     }
     return default_io;
   };
 
-  zx::status root = fdio_ns_open_root(fdio_root_ns);
+  zx::result root = fdio_ns_open_root(fdio_root_ns);
   if (root.is_ok()) {
     ZX_ASSERT(fdio_root_handle.try_set(root.value()));
-    zx::status cwd = fdio_internal::open(fdio_cwd_path.c_str(), O_RDONLY | O_DIRECTORY, 0);
+    zx::result cwd = fdio_internal::open(fdio_cwd_path.c_str(), O_RDONLY | O_DIRECTORY, 0);
     if (cwd.is_ok()) {
       ZX_ASSERT(fdio_cwd_handle.try_set(cwd.value()));
     } else {
@@ -587,7 +587,7 @@ __EXPORT
 int unlinkat(int dirfd, const char* path, int flags) {
   fdio_internal::NameBuffer name;
   bool is_dir;
-  zx::status io = fdio_internal::opendir_containing_at(dirfd, path, &name, &is_dir);
+  zx::result io = fdio_internal::opendir_containing_at(dirfd, path, &name, &is_dir);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -965,7 +965,7 @@ off_t lseek(int fd, off_t offset, int whence) {
 }
 
 static int truncateat(int dirfd, const char* path, off_t len) {
-  zx::status io = fdio_internal::open_at(dirfd, path, O_WRONLY, 0);
+  zx::result io = fdio_internal::open_at(dirfd, path, O_WRONLY, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -1009,14 +1009,14 @@ int ftruncate(int fd, off_t len) {
 static int two_path_op_at(int olddirfd, const char* oldpath, int newdirfd, const char* newpath,
                           two_path_op fdio_t::*op_getter) {
   fdio_internal::NameBuffer oldname;
-  zx::status io_oldparent =
+  zx::result io_oldparent =
       fdio_internal::opendir_containing_at(olddirfd, oldpath, &oldname, nullptr);
   if (io_oldparent.is_error()) {
     return ERROR(io_oldparent.status_value());
   }
 
   fdio_internal::NameBuffer newname;
-  zx::status io_newparent =
+  zx::result io_newparent =
       fdio_internal::opendir_containing_at(newdirfd, newpath, &newname, nullptr);
   if (io_newparent.is_error()) {
     return ERROR(io_newparent.status_value());
@@ -1069,7 +1069,7 @@ static int vopenat(int dirfd, const char* path, int flags, va_list args) {
     }
     mode = va_arg(args, uint32_t) & 0777;
   }
-  zx::status io = fdio_internal::open_at(dirfd, path, flags, mode);
+  zx::result io = fdio_internal::open_at(dirfd, path, flags, mode);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -1147,7 +1147,7 @@ int fstat(int fd, struct stat* s) {
 }
 
 int fstatat(int dirfd, std::string_view filename, struct stat* s, int flags) {
-  zx::status io = fdio_internal::open_at(dirfd, filename.data(), O_PATH, 0);
+  zx::result io = fdio_internal::open_at(dirfd, filename.data(), O_PATH, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -1240,7 +1240,7 @@ int utimensat(int dirfd, const char* path, const struct timespec times[2], int f
     // Allow this flag - don't return an error.  Fuchsia does not support
     // symlinks, so don't break utilities (like tar) that use this flag.
   }
-  zx::status io = fdio_internal::open_at_ignore_eisdir(dirfd, path, O_WRONLY, 0);
+  zx::result io = fdio_internal::open_at_ignore_eisdir(dirfd, path, O_WRONLY, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -1262,7 +1262,7 @@ static int socketpair_create(int fd[2], uint32_t options, int flags) {
     return ERRNO(EINVAL);
   }
 
-  zx::status pair = fdio_internal::pipe::create_pair(options);
+  zx::result pair = fdio_internal::pipe::create_pair(options);
   if (pair.is_error()) {
     return ERROR(pair.status_value());
   }
@@ -1347,7 +1347,7 @@ int faccessat(int dirfd, const char* filename, int amode, int flag) {
 
   if (amode == F_OK) {
     // Check that the file exists a la fstatat.
-    zx::status io = fdio_internal::open_at(dirfd, filename, O_PATH, 0);
+    zx::result io = fdio_internal::open_at(dirfd, filename, O_PATH, 0);
     if (io.is_error()) {
       return ERROR(io.status_value());
     }
@@ -1412,7 +1412,7 @@ void fdio_chdir(fdio_ptr io, const char* path) {
 
 __EXPORT
 int chdir(const char* path) {
-  zx::status io = fdio_internal::open(path, O_RDONLY | O_DIRECTORY, 0);
+  zx::result io = fdio_internal::open(path, O_RDONLY | O_DIRECTORY, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -1451,7 +1451,7 @@ int chroot(const char* path) {
     return ERRNO(ENAMETOOLONG);
   }
 
-  zx::status io = fdio_internal::open(root_path.c_str(), O_RDONLY | O_DIRECTORY, 0);
+  zx::result io = fdio_internal::open(root_path.c_str(), O_RDONLY | O_DIRECTORY, 0);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }

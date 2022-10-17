@@ -27,7 +27,7 @@ std::string MakeServiceMemberPath(std::string_view instance) {
 }
 
 template <typename ServiceMember>
-zx::status<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DriverTransportConnect(
+zx::result<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DriverTransportConnect(
     const driver::Namespace& ns, std::string_view instance = kDefaultInstance) {
   ZX_ASSERT((std::is_same_v<typename ServiceMember::ProtocolType::Transport,
                             fidl::internal::DriverTransport>));
@@ -64,7 +64,7 @@ zx::status<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DriverTransport
 // e.g. fidl::ClientEnd or fdf::ClientEnd.
 template <typename ServiceMember,
           typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-zx::status<fidl::internal::ClientEndType<typename ServiceMember::ProtocolType>> Connect(
+zx::result<fidl::internal::ClientEndType<typename ServiceMember::ProtocolType>> Connect(
     const driver::Namespace& ns, std::string_view instance = kDefaultInstance) {
   if constexpr (std::is_same_v<typename ServiceMember::ProtocolType::Transport,
                                fidl::internal::ChannelTransport>) {

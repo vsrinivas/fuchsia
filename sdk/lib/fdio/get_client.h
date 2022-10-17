@@ -10,12 +10,12 @@
 #include <lib/zx/status.h>
 
 template <class T>
-zx::status<typename fidl::WireSyncClient<T>>& get_client() {
-  static zx::status<typename fidl::WireSyncClient<T>> client;
+zx::result<typename fidl::WireSyncClient<T>>& get_client() {
+  static zx::result<typename fidl::WireSyncClient<T>> client;
   static std::once_flag once;
 
   std::call_once(once, [&]() {
-    client = [&]() -> zx::status<typename fidl::WireSyncClient<T>> {
+    client = [&]() -> zx::result<typename fidl::WireSyncClient<T>> {
       auto endpoints = fidl::CreateEndpoints<T>();
       if (endpoints.is_error()) {
         return endpoints.take_error();

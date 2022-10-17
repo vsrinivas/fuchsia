@@ -107,10 +107,10 @@ class Channel {
   // ZX_ERR_PEER_CLOSED: The other side of the channel is closed.
   //
   // This operation is thread-safe.
-  zx::status<> Write(uint32_t options, const Arena& arena, void* data, uint32_t num_bytes,
+  zx::result<> Write(uint32_t options, const Arena& arena, void* data, uint32_t num_bytes,
                      cpp20::span<zx_handle_t> handles) const {
     uint32_t handles_size = static_cast<uint32_t>(handles.size());
-    return zx::make_status(fdf_channel_write(channel_, options, arena.get(), data, num_bytes,
+    return zx::make_result(fdf_channel_write(channel_, options, arena.get(), data, num_bytes,
                                              handles.data(), handles_size));
   }
 
@@ -135,7 +135,7 @@ class Channel {
   // side of the channel is closed.
   //
   // This operation is thread-safe.
-  zx::status<ReadReturn> Read(uint32_t options) const {
+  zx::result<ReadReturn> Read(uint32_t options) const {
     fdf_arena_t* arena;
     void* data;
     uint32_t num_bytes;
@@ -190,7 +190,7 @@ class Channel {
   // that does not allow sync calls.
   //
   // This operation is thread-safe.
-  zx::status<ReadReturn> Call(uint32_t options, zx::time deadline, const Arena& arena, void* data,
+  zx::result<ReadReturn> Call(uint32_t options, zx::time deadline, const Arena& arena, void* data,
                               uint32_t num_bytes, cpp20::span<zx_handle_t> handles) const {
     fdf_arena_t* rd_arena;
     void* rd_data;
@@ -249,7 +249,7 @@ class ChannelPair {
   ChannelPair(Channel channel0, Channel channel1)
       : end0(std::move(channel0)), end1(std::move(channel1)) {}
 
-  static zx::status<ChannelPair> Create(uint32_t options) {
+  static zx::result<ChannelPair> Create(uint32_t options) {
     fdf_handle_t channel0, channel1;
     zx_status_t status = fdf_channel_create(options, &channel0, &channel1);
     if (status != ZX_OK) {

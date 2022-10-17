@@ -24,7 +24,7 @@ struct OpenAtOptions {
   bool allow_absolute_path;
 };
 
-zx::status<fbl::RefPtr<fdio>> open_at_impl(int dirfd, const char* path,
+zx::result<fbl::RefPtr<fdio>> open_at_impl(int dirfd, const char* path,
                                            fuchsia_io::wire::OpenFlags flags, uint32_t mode,
                                            OpenAtOptions options);
 

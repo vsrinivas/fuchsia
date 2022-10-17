@@ -15,7 +15,7 @@
 namespace driver {
 
 template <typename T>
-zx::status<T> SymbolValue(const fuchsia_driver_framework::wire::DriverStartArgs& args,
+zx::result<T> SymbolValue(const fuchsia_driver_framework::wire::DriverStartArgs& args,
                           std::string_view name) {
   if (!args.has_symbols()) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -33,7 +33,7 @@ zx::status<T> SymbolValue(const fuchsia_driver_framework::wire::DriverStartArgs&
 }
 
 template <typename T>
-zx::status<T> SymbolValue(
+zx::result<T> SymbolValue(
     const std::optional<std::vector<fuchsia_driver_framework::NodeSymbol>>& symbols,
     std::string_view name) {
   if (!symbols.has_value()) {
@@ -64,7 +64,7 @@ T GetSymbol(const std::optional<std::vector<fuchsia_driver_framework::NodeSymbol
   return value.is_ok() ? *value : default_value;
 }
 
-inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary& program,
+inline zx::result<std::string> ProgramValue(const fuchsia_data::wire::Dictionary& program,
                                             std::string_view key) {
   if (program.has_entries()) {
     for (auto& entry : program.entries()) {
@@ -81,7 +81,7 @@ inline zx::status<std::string> ProgramValue(const fuchsia_data::wire::Dictionary
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-inline zx::status<std::string> ProgramValue(const std::optional<fuchsia_data::Dictionary>& program,
+inline zx::result<std::string> ProgramValue(const std::optional<fuchsia_data::Dictionary>& program,
                                             std::string_view key) {
   if (program.has_value() && program->entries().has_value()) {
     for (const auto& entry : *program->entries()) {
@@ -99,7 +99,7 @@ inline zx::status<std::string> ProgramValue(const std::optional<fuchsia_data::Di
 }
 
 // Returns the list of values for |key| as a vector of strings.
-inline zx::status<std::vector<std::string>> ProgramValueAsVector(
+inline zx::result<std::vector<std::string>> ProgramValueAsVector(
     const fuchsia_data::wire::Dictionary& program, std::string_view key) {
   if (program.has_entries()) {
     for (auto& entry : program.entries()) {
@@ -122,7 +122,7 @@ inline zx::status<std::vector<std::string>> ProgramValueAsVector(
 }
 
 // Returns the list of values for |key| as a vector of strings.
-inline zx::status<std::vector<std::string>> ProgramValueAsVector(
+inline zx::result<std::vector<std::string>> ProgramValueAsVector(
     const fuchsia_data::Dictionary& program, std::string_view key) {
   auto program_entries = program.entries();
   if (program_entries.has_value()) {
@@ -144,7 +144,7 @@ inline zx::status<std::vector<std::string>> ProgramValueAsVector(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
+inline zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     const fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries,
     std::string_view path) {
   for (auto& entry : entries) {
@@ -155,7 +155,7 @@ inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-inline zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
+inline zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     const std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries,
     std::string_view path) {
   for (auto& entry : entries) {

@@ -21,7 +21,7 @@ class RootDriver : public driver::DriverBase, public fidl::WireServer<ft::Device
   RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : driver::DriverBase(name, std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     // Setup the outgoing directory.
     auto status = context().outgoing()->component().AddProtocol<ft::Device>(this, name);
     if (status.is_error()) {

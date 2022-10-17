@@ -23,7 +23,7 @@
 
 // The simplest form of a test with the synchronous client
 TEST(CalcIntegrationTest, TestCalcSync) {
-  zx::status client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
+  zx::result client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Calculator| protocol: "
                    << client_end.status_string();
@@ -50,7 +50,7 @@ TEST(CalcIntegrationTest, TestCalcSync) {
 
 // The simplest form of a test with the asynchronous client
 TEST(CalcIntegrationTest, TestCalcAsync) {
-  zx::status client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
+  zx::result client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Calculator| protocol: "
                    << client_end.status_string();
@@ -96,7 +96,7 @@ class CalcTestFixture : public gtest::TestLoopFixture {
   // A helper function that manages the client connection and binding to simplify the test
   // structure.  Mirrors the client implementation in ../client, but uses the synchronous interface
   void GetClient(void) {
-    zx::status client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
+    zx::result client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
     if (!client_end.is_ok()) {
       FX_LOGS(ERROR) << "Synchronous error when connecting to the |Calculator| protocol: "
                      << client_end.status_string();

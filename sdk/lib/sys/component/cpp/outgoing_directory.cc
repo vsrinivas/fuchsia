@@ -75,42 +75,42 @@ OutgoingDirectory::~OutgoingDirectory() {
   }
 }
 
-zx::status<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_server_end) {
+zx::result<> OutgoingDirectory::Serve(fidl::ServerEnd<fuchsia_io::Directory> directory_server_end) {
   if (!directory_server_end.is_valid()) {
-    return zx::error_status(ZX_ERR_BAD_HANDLE);
+    return zx::error_result(ZX_ERR_BAD_HANDLE);
   }
 
   zx_status_t status =
       svc_dir_serve(root_, dispatcher_, directory_server_end.TakeHandle().release());
   if (status != ZX_OK) {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<> OutgoingDirectory::ServeFromStartupInfo() {
+zx::result<> OutgoingDirectory::ServeFromStartupInfo() {
   fidl::ServerEnd<fuchsia_io::Directory> directory_request(
       zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
   return Serve(std::move(directory_request));
 }
 
-zx::status<> OutgoingDirectory::AddProtocol(AnyHandler handler, cpp17::string_view name) {
+zx::result<> OutgoingDirectory::AddProtocol(AnyHandler handler, cpp17::string_view name) {
   return AddProtocolAt(std::move(handler), kServiceDirectoryWithNoSlash, name);
 }
 
-zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_view path,
+zx::result<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_view path,
                                               cpp17::string_view name) {
   // More thorough path validation is done in |svc_add_service|.
   if (path.empty() || name.empty()) {
-    return zx::error_status(ZX_ERR_INVALID_ARGS);
+    return zx::error_result(ZX_ERR_INVALID_ARGS);
   }
 
   std::string directory_entry(path);
   std::string protocol_entry(name);
   if (registered_handlers_.count(directory_entry) != 0 &&
       registered_handlers_[directory_entry].count(protocol_entry) != 0) {
-    return zx::make_status(ZX_ERR_ALREADY_EXISTS);
+    return zx::make_result(ZX_ERR_ALREADY_EXISTS);
   }
 
   // |svc_dir_add_service_by_path| takes in a void* |context| that is passed to
@@ -126,44 +126,44 @@ zx::status<> OutgoingDirectory::AddProtocolAt(AnyHandler handler, cpp17::string_
   auto& directory_handlers = registered_handlers_[directory_entry];
   directory_handlers[protocol_entry] = std::move(context);
 
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+zx::result<> OutgoingDirectory::AddDirectory(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                                              cpp17::string_view directory_name) {
   return AddDirectoryAt(std::move(remote_dir), /*path=*/"", directory_name);
 }
 
-zx::status<> OutgoingDirectory::AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
+zx::result<> OutgoingDirectory::AddDirectoryAt(fidl::ClientEnd<fuchsia_io::Directory> remote_dir,
                                                cpp17::string_view path,
                                                cpp17::string_view directory_name) {
   if (!remote_dir.is_valid()) {
-    return zx::error_status(ZX_ERR_BAD_HANDLE);
+    return zx::error_result(ZX_ERR_BAD_HANDLE);
   }
   if (directory_name.empty()) {
-    return zx::error_status(ZX_ERR_INVALID_ARGS);
+    return zx::error_result(ZX_ERR_INVALID_ARGS);
   }
 
   zx_status_t status = svc_dir_add_directory_by_path(root_, path.data(), directory_name.data(),
                                                      remote_dir.TakeChannel().release());
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<> OutgoingDirectory::AddService(ServiceInstanceHandler handler,
+zx::result<> OutgoingDirectory::AddService(ServiceInstanceHandler handler,
                                            cpp17::string_view service,
                                            cpp17::string_view instance) {
   if (service.empty() || instance.empty()) {
-    return zx::error_status(ZX_ERR_INVALID_ARGS);
+    return zx::error_result(ZX_ERR_INVALID_ARGS);
   }
 
   auto handlers = handler.TakeMemberHandlers();
   if (handlers.empty()) {
-    return zx::make_status(ZX_ERR_INVALID_ARGS);
+    return zx::make_result(ZX_ERR_INVALID_ARGS);
   }
 
   std::string basepath = MakePath(service, instance);
   for (auto& [member_name, member_handler] : handlers) {
-    zx::status<> status = AddProtocolAt(std::move(member_handler), basepath, member_name);
+    zx::result<> status = AddProtocolAt(std::move(member_handler), basepath, member_name);
     if (status.is_error()) {
       // If we encounter an error with any of the instance members, scrub entire
       // directory entry.
@@ -175,29 +175,29 @@ zx::status<> OutgoingDirectory::AddService(ServiceInstanceHandler handler,
   return zx::ok();
 }
 
-zx::status<> OutgoingDirectory::RemoveProtocol(cpp17::string_view name) {
+zx::result<> OutgoingDirectory::RemoveProtocol(cpp17::string_view name) {
   return RemoveProtocolAt(kServiceDirectoryWithNoSlash, name);
 }
 
-zx::status<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
+zx::result<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
                                                  cpp17::string_view name) {
   std::string key(directory);
 
   if (registered_handlers_.count(key) == 0) {
-    return zx::make_status(ZX_ERR_NOT_FOUND);
+    return zx::make_result(ZX_ERR_NOT_FOUND);
   }
 
   auto& svc_root_handlers = registered_handlers_[key];
   std::string entry_key = std::string(name);
   if (svc_root_handlers.count(entry_key) == 0) {
-    return zx::make_status(ZX_ERR_NOT_FOUND);
+    return zx::make_result(ZX_ERR_NOT_FOUND);
   }
 
   // Remove svc_dir_t entry first so that no new connections are attempted on
   // handler after we remove the pointer to it in |svc_root_handlers|.
   zx_status_t status = svc_dir_remove_service(root_, kServiceDirectoryWithNoSlash, name.data());
   if (status != ZX_OK) {
-    return zx::make_status(status);
+    return zx::make_result(status);
   }
 
   // If teardown is managed, e.g. through |AddProtocol| overload for `fidl::Server<T>*`,
@@ -211,11 +211,11 @@ zx::status<> OutgoingDirectory::RemoveProtocolAt(cpp17::string_view directory,
   return zx::ok();
 }
 
-zx::status<> OutgoingDirectory::RemoveService(cpp17::string_view service,
+zx::result<> OutgoingDirectory::RemoveService(cpp17::string_view service,
                                               cpp17::string_view instance) {
   std::string path = MakePath(service, instance);
   if (registered_handlers_.count(path) == 0) {
-    return zx::make_status(ZX_ERR_NOT_FOUND);
+    return zx::make_result(ZX_ERR_NOT_FOUND);
   }
 
   // Remove svc_dir_t entry first so that channels close _before_ we remove
@@ -227,21 +227,21 @@ zx::status<> OutgoingDirectory::RemoveService(cpp17::string_view service,
   // Now it's safe to remove entry from map.
   registered_handlers_.erase(path);
 
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_name) {
+zx::result<> OutgoingDirectory::RemoveDirectory(cpp17::string_view directory_name) {
   return RemoveDirectoryAt(/*path=*/"", directory_name);
 }
 
-zx::status<> OutgoingDirectory::RemoveDirectoryAt(cpp17::string_view path,
+zx::result<> OutgoingDirectory::RemoveDirectoryAt(cpp17::string_view path,
                                                   cpp17::string_view directory_name) {
   if (directory_name.empty()) {
-    return zx::make_status(ZX_ERR_INVALID_ARGS);
+    return zx::make_result(ZX_ERR_INVALID_ARGS);
   }
 
   zx_status_t status = svc_dir_remove_entry_by_path(root_, path.data(), directory_name.data());
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 void OutgoingDirectory::OnConnect(void* raw_context, const char* service_name, zx_handle_t handle) {

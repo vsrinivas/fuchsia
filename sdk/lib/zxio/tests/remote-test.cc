@@ -56,7 +56,7 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::File> {
 class Remote : public zxtest::Test {
  public:
   void SetUp() final {
-    zx::status control_client_end = fidl::CreateEndpoints(&control_server_);
+    zx::result control_client_end = fidl::CreateEndpoints(&control_server_);
     ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
     ASSERT_OK(zxio_remote_init(&remote_, std::move(eventpair_to_client_),
@@ -140,7 +140,7 @@ class CloneTest : public zxtest::Test {
   CloneTest() : server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() final {
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
 
     node_server_.set_clone_func(

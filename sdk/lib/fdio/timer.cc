@@ -161,7 +161,7 @@ int timerfd_create(int clockid, int flags) {
     return ERROR(status);
   }
 
-  zx::status io = fdio_internal::zxio::create();
+  zx::result io = fdio_internal::zxio::create();
   if (io.is_error()) {
     return ERROR(status);
   }

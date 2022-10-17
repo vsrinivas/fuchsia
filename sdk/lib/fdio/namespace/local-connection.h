@@ -20,7 +20,7 @@ namespace fdio_internal {
 // filesystem, which are released on |fdio_t|'s close method.
 //
 // On failure, nullptr is returned.
-zx::status<fbl::RefPtr<fdio>> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
+zx::result<fbl::RefPtr<fdio>> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
                                                     fbl::RefPtr<LocalVnode> vn);
 
 // If |io| is a connection to a local Vnode, returns a reference to that LocalVnode.

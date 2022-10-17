@@ -50,7 +50,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_io::Directory> {
 };
 
 TEST(WatcherTest, WatchInvalidCallback) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
   Server server([](fuchsia_io::wire::WatchMask mask, uint32_t options,
@@ -71,7 +71,7 @@ TEST(WatcherTest, WatchInvalidCallback) {
 }
 
 TEST(WatcherTest, Smoke) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
   Server server([](fuchsia_io::wire::WatchMask mask, uint32_t options,

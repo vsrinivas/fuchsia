@@ -187,7 +187,7 @@ int eventfd(unsigned int initval, int flags) {
     return ERROR(status);
   }
 
-  zx::status io = fdio_internal::zxio::create();
+  zx::result io = fdio_internal::zxio::create();
   if (io.is_error()) {
     return ERROR(io.status_value());
   }

@@ -42,7 +42,7 @@ class ServiceHandlerInterface {
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
   template <typename Protocol>
-  zx::status<> AddMember(std::string_view member, MemberHandler<Protocol> handler) {
+  zx::result<> AddMember(std::string_view member, MemberHandler<Protocol> handler) {
     return AddAnyMember(member,
                         [handler = std::move(handler)](fidl::internal::AnyTransport channel) {
                           return handler(::fidl::internal::ServerEndType<Protocol>(
@@ -64,7 +64,7 @@ class ServiceHandlerInterface {
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  virtual zx::status<> AddAnyMember(std::string_view member, AnyMemberHandler handler) = 0;
+  virtual zx::result<> AddAnyMember(std::string_view member, AnyMemberHandler handler) = 0;
 };
 
 #endif  // __Fuchsia__

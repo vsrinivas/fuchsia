@@ -18,9 +18,9 @@
 int main(int argc, const char** argv) {
   // [START connect]
   // Connect to the |fuchsia.examples/Echo| protocol inside the component's
-  // namespace. This can fail so it's wrapped in a |zx::status| and it must be
+  // namespace. This can fail so it's wrapped in a |zx::result| and it must be
   // checked for errors.
-  zx::status client_end = component::Connect<fuchsia_examples::Echo>();
+  zx::result client_end = component::Connect<fuchsia_examples::Echo>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Echo| protocol: "
                    << client_end.status_string();

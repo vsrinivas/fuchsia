@@ -41,7 +41,7 @@ class RootDriver : public driver::DriverBase {
   RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     node_client_.Bind(std::move(node()), dispatcher());
     // Add service "left".
     {

@@ -20,7 +20,7 @@ void AssertPeerClosed(const zx::channel& channel) {
 
 // Generates a test failure if the peer of |channel| is not closed.
 void AssertPeerClosed(const fdf::Channel& channel) {
-  zx::status status = channel.Read(0);
+  zx::result status = channel.Read(0);
   if (status.status_value() != ZX_ERR_PEER_CLOSED) {
     FAIL("Driver channel peer is not closed (%d)", status.status_value());
   }

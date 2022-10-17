@@ -603,7 +603,7 @@ class base_socket {
   }
 
   zx_status_t CloneSocket(zx_handle_t* out_handle) {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
     if (endpoints.is_error()) {
       return endpoints.status_value();
     }
@@ -2228,7 +2228,7 @@ class socket_with_zx_socket {
       case ZX_ERR_BAD_STATE:
         __FALLTHROUGH;
       case ZX_ERR_PEER_CLOSED: {
-        zx::status err = GetError();
+        zx::result err = GetError();
         if (err.is_error()) {
           return zx::error(err.status_value());
         }
@@ -2252,7 +2252,7 @@ class socket_with_zx_socket {
       case ZX_ERR_BAD_STATE:
         __FALLTHROUGH;
       case ZX_ERR_PEER_CLOSED: {
-        zx::status err = GetError();
+        zx::result err = GetError();
         if (err.is_error()) {
           return zx::error(err.status_value());
         }
@@ -2365,7 +2365,7 @@ struct datagram_socket
     std::optional read_error = GetZxSocketReadError(
         zxio_readv(&datagram_socket_.io, zx_iov, zx_iov_idx, zxio_flags, &count_bytes_read));
     if (read_error.has_value()) {
-      zx::status err = read_error.value();
+      zx::result err = read_error.value();
       if (!err.is_error()) {
         if (err.value() == 0) {
           *out_actual = 0;
@@ -2557,7 +2557,7 @@ struct datagram_socket
     std::optional write_error = GetZxSocketWriteError(
         zxio_writev(&datagram_socket_.io, zx_iov, zx_iov_idx, 0, &bytes_written));
     if (write_error.has_value()) {
-      zx::status err = write_error.value();
+      zx::result err = write_error.value();
       if (!err.is_error()) {
         *out_code = err.value();
       }
@@ -2806,7 +2806,7 @@ struct stream_socket : public socket_with_zx_socket<fidl::WireSyncClient<fsocket
     std::optional read_error =
         GetZxSocketReadError(zxio_recvmsg_inner(&stream_socket_.io, msg, flags, out_actual));
     if (read_error.has_value()) {
-      zx::status err = read_error.value();
+      zx::result err = read_error.value();
       if (!err.is_error()) {
         *out_code = err.value();
         if (err.value() == 0) {
@@ -2849,7 +2849,7 @@ struct stream_socket : public socket_with_zx_socket<fidl::WireSyncClient<fsocket
     std::optional write_error =
         GetZxSocketWriteError(zxio_sendmsg_inner(&stream_socket_.io, msg, flags, out_actual));
     if (write_error.has_value()) {
-      zx::status err = write_error.value();
+      zx::result err = write_error.value();
       if (!err.is_error()) {
         *out_code = err.value();
       }
@@ -2863,7 +2863,7 @@ struct stream_socket : public socket_with_zx_socket<fidl::WireSyncClient<fsocket
   std::optional<ErrOrOutCode> Preflight(int fallback) {
     auto [state, has_error] = GetState();
     if (has_error) {
-      zx::status err = GetError();
+      zx::result err = GetError();
       if (err.is_error()) {
         return err.take_error();
       }

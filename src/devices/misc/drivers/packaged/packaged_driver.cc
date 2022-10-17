@@ -15,7 +15,7 @@ class PackagedDriver : public driver::DriverBase {
   PackagedDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : driver::DriverBase("packaged", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     exposed_inspector_.emplace(
         inspect::ComponentInspector(context().outgoing()->component(), dispatcher()));
     auto& root = exposed_inspector_->root();

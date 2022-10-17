@@ -134,7 +134,7 @@ zx_status_t load_path(const char* path, zx::vmo* out_vmo, char* err_msg) {
 // associated loader service, if the name resolves within the current realm.
 zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_executable,
                          zx::channel* out_ldsvc, char* err_msg) {
-  zx::status endpoints = fidl::CreateEndpoints<fprocess::Resolver>();
+  zx::result endpoints = fidl::CreateEndpoints<fprocess::Resolver>();
   if (!endpoints.is_ok()) {
     report_error(err_msg, "failed to create channel for resolver service: %d",
                  endpoints.status_value());
@@ -820,7 +820,7 @@ zx_status_t spawn_vmo_impl(zx_handle_t job, uint32_t flags, zx::vmo executable_v
     ++handle_capacity;
   }
 
-  zx::status launcher_endpoints = fidl::CreateEndpoints<fprocess::Launcher>();
+  zx::result launcher_endpoints = fidl::CreateEndpoints<fprocess::Launcher>();
   if (!launcher_endpoints.is_ok()) {
     report_error(err_msg, "failed to create channel for launcher service: %d",
                  launcher_endpoints.status_value());

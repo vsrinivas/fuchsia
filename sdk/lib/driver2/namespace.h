@@ -16,11 +16,11 @@ namespace driver {
 class Namespace {
  public:
   // Creates a namespace from `DriverStartArgs::ns`.
-  static zx::status<Namespace> Create(
+  static zx::result<Namespace> Create(
       fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries);
 
   // Creates a namespace from natural types version of `DriverStartArgs::ns`.
-  static zx::status<Namespace> Create(
+  static zx::result<Namespace> Create(
       std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries);
 
   Namespace() = default;
@@ -31,38 +31,38 @@ class Namespace {
 
   // Connect to a protocol within a driver's namespace.
   template <typename Protocol>
-  zx::status<fidl::ClientEnd<Protocol>> Connect(
+  zx::result<fidl::ClientEnd<Protocol>> Connect(
       const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) const {
     return component::ConnectAt<Protocol>(svc_dir(), protocol_name);
   }
 
   template <typename Protocol>
-  zx::status<> Connect(fidl::ServerEnd<Protocol> server_end,
+  zx::result<> Connect(fidl::ServerEnd<Protocol> server_end,
                        const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) const {
     return component::ConnectAt(svc_dir(), std::move(server_end), protocol_name);
   }
 
   // Connect to a service within a driver's namespace.
   template <typename FidlService>
-  zx::status<typename FidlService::ServiceClient> OpenService(std::string_view instance) const {
+  zx::result<typename FidlService::ServiceClient> OpenService(std::string_view instance) const {
     return component::OpenServiceAt<FidlService>(svc_dir(), instance);
   }
 
   // Protocol must compose fuchsia.io/Node.
   template <typename Protocol>
-  zx::status<fidl::ClientEnd<Protocol>> Open(const char* path,
+  zx::result<fidl::ClientEnd<Protocol>> Open(const char* path,
                                              fuchsia_io::wire::OpenFlags flags) const {
     auto endpoints = fidl::CreateEndpoints<Protocol>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    zx::status result = Open(path, flags, endpoints->server.TakeChannel());
+    zx::result result = Open(path, flags, endpoints->server.TakeChannel());
     if (result.is_error()) {
       return result.take_error();
     }
     return zx::ok(std::move(endpoints->client));
   }
-  zx::status<> Open(const char* path, fuchsia_io::wire::OpenFlags flags,
+  zx::result<> Open(const char* path, fuchsia_io::wire::OpenFlags flags,
                     zx::channel server_end) const;
 
   fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir() const { return svc_dir_; }

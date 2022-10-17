@@ -8,7 +8,7 @@ namespace fdfs = fuchsia_device_fs;
 
 namespace driver {
 
-zx::status<DevfsExporter> DevfsExporter::Create(
+zx::result<DevfsExporter> DevfsExporter::Create(
     const Namespace& ns, async_dispatcher_t* dispatcher,
     fidl::WireSharedClient<fuchsia_io::Directory> svc_dir) {
   auto result = ns.Connect<fdfs::Exporter>();

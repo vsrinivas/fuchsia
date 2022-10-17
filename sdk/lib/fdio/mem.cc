@@ -39,7 +39,7 @@ int memfd_create(const char* name, unsigned int flags) {
     return ERROR(status);
   }
 
-  zx::status io = fdio_internal::remote::create(std::move(vmo), std::move(stream));
+  zx::result io = fdio_internal::remote::create(std::move(vmo), std::move(stream));
   if (io.is_error()) {
     return io.status_value();
   }

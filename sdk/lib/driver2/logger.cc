@@ -40,7 +40,7 @@ void Logger::BeginRecord(flog::LogBuffer& buffer, FuchsiaLogSeverity severity,
   buffer.WriteKeyValue("tag", "driver");
 }
 
-zx::status<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispatcher,
+zx::result<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispatcher,
                                   std::string_view name, FuchsiaLogSeverity min_severity) {
   zx::socket client_end, server_end;
   zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &client_end, &server_end);

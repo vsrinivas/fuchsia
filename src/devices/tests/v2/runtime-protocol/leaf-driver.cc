@@ -38,7 +38,7 @@ class LeafDriver : public driver::DriverBase {
         executor_(dispatcher()),
         node_(fidl::WireSharedClient(std::move(node()), dispatcher())) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     auto setter_client = driver::Connect<ft::Service::Setter>(*context().incoming());
     if (setter_client.is_error()) {
       return setter_client.take_error();

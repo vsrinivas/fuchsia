@@ -24,7 +24,7 @@ namespace internal {
 
 // The method signature required to implement the method that issues the Directory::Open
 // FIDL call for a Service's member protocol.
-using ConnectMemberFunc = zx::status<> (*)(zx::unowned_channel service_dir,
+using ConnectMemberFunc = zx::result<> (*)(zx::unowned_channel service_dir,
                                            fidl::StringView member_name,
                                            fidl::internal::AnyTransport channel);
 

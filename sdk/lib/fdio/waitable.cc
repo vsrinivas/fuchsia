@@ -70,9 +70,9 @@ static constexpr zxio_ops_t fdio_waitable_ops = []() {
   return ops;
 }();
 
-zx::status<fdio_ptr> fdio_waitable_create(std::variant<zx::handle, zx::unowned_handle> handle,
+zx::result<fdio_ptr> fdio_waitable_create(std::variant<zx::handle, zx::unowned_handle> handle,
                                           zx_signals_t readable, zx_signals_t writable) {
-  zx::status io = fdio_internal::zxio::create();
+  zx::result io = fdio_internal::zxio::create();
   if (io.is_error()) {
     return io.take_error();
   }

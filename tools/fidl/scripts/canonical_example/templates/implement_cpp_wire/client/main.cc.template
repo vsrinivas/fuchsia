@@ -36,8 +36,8 @@ int main(int argc, const char** argv) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
-  // |zx::status| and it must be checked for errors.
-  zx::status client_end = component::Connect<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}>();
+  // |zx::result| and it must be checked for errors.
+  zx::result client_end = component::Connect<examples_${series_flat_case}_${variant_flat_case}::${protocol_pascal_case}>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |${protocol_pascal_case}| protocol: "
                    << client_end.status_string();

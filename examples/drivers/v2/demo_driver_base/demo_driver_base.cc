@@ -14,7 +14,7 @@ class MyDriver : public DriverBase {
   MyDriver(DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : DriverBase("my_driver", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     // context().incoming()->Connect(...);
     // context().outgoing()->AddService(...);
     FDF_LOG(INFO, "hello world!");
@@ -40,7 +40,7 @@ class AnotherDriver : public DriverBase {
   // now the one who calls the constructor here, and it provides the name argument as well.
   using DriverBase::DriverBase;
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     // context().incoming()->Connect(...);
     // context().outgoing()->AddService(...);
     FDF_LOG(INFO, "foobar!");
@@ -51,7 +51,7 @@ class AnotherDriver : public DriverBase {
 // Here is our custom factory, we can pass it into our Record down below.
 class CustomFactory {
  public:
-  static zx::status<std::unique_ptr<DriverBase>> CreateDriver(
+  static zx::result<std::unique_ptr<DriverBase>> CreateDriver(
       DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher) {
     // The logic here right now is similar to the one in |BasicFactory| but it does not have to be.
     // The driver author can run any custom constructor/initialization here.

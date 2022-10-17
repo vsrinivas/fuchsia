@@ -22,7 +22,7 @@ zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique
 // Waits for a device with topological path |topo_path| to appear in |dir| then opens it.
 // This works by opening each files in |dir| as fuchsia.device.Controller and calling
 // GetTopologicalPath.
-zx::status<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
+zx::result<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
                                                      std::string_view topo_path);
 
 // Waits for the relative |path| starting in |dir| to appear, and opens it.

@@ -379,7 +379,7 @@ class DriverTestRealm final : public fidl::WireServer<fuchsia_driver_test::Realm
  public:
   DriverTestRealm(svc::Outgoing* outgoing, async::Loop* loop) : outgoing_(outgoing), loop_(loop) {}
 
-  static zx::status<std::unique_ptr<DriverTestRealm>> Create(svc::Outgoing* outgoing,
+  static zx::result<std::unique_ptr<DriverTestRealm>> Create(svc::Outgoing* outgoing,
                                                              async::Loop* loop) {
     auto realm = std::make_unique<DriverTestRealm>(outgoing, loop);
     zx_status_t status = realm->Initialize();

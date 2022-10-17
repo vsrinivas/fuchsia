@@ -14,7 +14,7 @@
 
 __EXPORT
 zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {
-  zx::status io = fdio::create(zx::handle(handle));
+  zx::result io = fdio::create(zx::handle(handle));
   if (io.is_error()) {
     return io.status_value();
   }

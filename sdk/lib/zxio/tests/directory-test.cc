@@ -123,11 +123,11 @@ class Directory : public zxtest::Test {
         directory_server_(server_loop_.dispatcher()) {}
 
   void SetUp() override {
-    zx::status directory_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result directory_ends = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(directory_ends.status_value());
     auto [directory_client_end, directory_server_end] = std::move(directory_ends.value());
 
-    zx::status node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
+    zx::result node_ends = fidl::CreateEndpoints<fuchsia_io::Node>();
     ASSERT_OK(node_ends.status_value());
     auto [node_client_end, node_server_end] = std::move(node_ends.value());
 

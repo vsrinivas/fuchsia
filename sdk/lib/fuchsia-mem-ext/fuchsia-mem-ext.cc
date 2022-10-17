@@ -21,7 +21,7 @@ fuchsia::mem::Data CreateInline(std::vector<uint8_t> data) {
 }
 
 template <typename T>
-zx::status<fuchsia::mem::Data> Create(T data, size_t size_threshold, cpp17::string_view vmo_name) {
+zx::result<fuchsia::mem::Data> Create(T data, size_t size_threshold, cpp17::string_view vmo_name) {
   if (size_threshold > ZX_CHANNEL_MAX_MSG_BYTES) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
@@ -57,27 +57,27 @@ zx::status<fuchsia::mem::Data> Create(T data, size_t size_threshold, cpp17::stri
 
 }  // namespace internal
 
-zx::status<fuchsia::mem::Data> CreateWithData(cpp20::span<const uint8_t> data,
+zx::result<fuchsia::mem::Data> CreateWithData(cpp20::span<const uint8_t> data,
                                               cpp17::string_view vmo_name) {
   return CreateWithData(data, kDefaultSizeThreshold, vmo_name);
 }
 
-zx::status<fuchsia::mem::Data> CreateWithData(std::vector<uint8_t> data,
+zx::result<fuchsia::mem::Data> CreateWithData(std::vector<uint8_t> data,
                                               cpp17::string_view vmo_name) {
   return CreateWithData(std::move(data), kDefaultSizeThreshold, vmo_name);
 }
 
-zx::status<fuchsia::mem::Data> CreateWithData(cpp20::span<const uint8_t> data,
+zx::result<fuchsia::mem::Data> CreateWithData(cpp20::span<const uint8_t> data,
                                               size_t size_threshold, cpp17::string_view vmo_name) {
   return internal::Create(data, size_threshold, vmo_name);
 }
 
-zx::status<fuchsia::mem::Data> CreateWithData(std::vector<uint8_t> data, size_t size_threshold,
+zx::result<fuchsia::mem::Data> CreateWithData(std::vector<uint8_t> data, size_t size_threshold,
                                               cpp17::string_view vmo_name) {
   return internal::Create(std::move(data), size_threshold, vmo_name);
 }
 
-zx::status<std::vector<uint8_t>> ExtractData(fuchsia::mem::Data data) {
+zx::result<std::vector<uint8_t>> ExtractData(fuchsia::mem::Data data) {
   switch (data.Which()) {
     case fuchsia::mem::Data::Tag::kBytes: {
       return zx::ok(std::move(data).bytes());

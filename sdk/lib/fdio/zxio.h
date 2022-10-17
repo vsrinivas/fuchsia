@@ -10,8 +10,8 @@
 namespace fdio_internal {
 
 struct zxio : public fdio_t {
-  static zx::status<fdio_ptr> create();
-  static zx::status<fdio_ptr> create_null();
+  static zx::result<fdio_ptr> create();
+  static zx::result<fdio_ptr> create_null();
 
   zx_status_t close() override;
   zx_status_t borrow_channel(zx_handle_t* out_borrowed) final;
@@ -49,8 +49,8 @@ struct zxio : public fdio_t {
 };
 
 struct pipe : public zxio {
-  static zx::status<fdio_ptr> create(zx::socket socket);
-  static zx::status<std::pair<fdio_ptr, fdio_ptr>> create_pair(uint32_t options);
+  static zx::result<fdio_ptr> create(zx::socket socket);
+  static zx::result<std::pair<fdio_ptr, fdio_ptr>> create_pair(uint32_t options);
 
   zx_status_t recvmsg(struct msghdr* msg, int flags, size_t* out_actual,
                       int16_t* out_code) override;
@@ -64,10 +64,10 @@ struct pipe : public zxio {
 };
 
 struct remote : public zxio {
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node);
-  static zx::status<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
+  static zx::result<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node);
+  static zx::result<fdio_ptr> create(zx::vmo vmo, zx::stream stream);
 
-  zx::status<fdio_ptr> open(std::string_view path, fuchsia_io::wire::OpenFlags flags,
+  zx::result<fdio_ptr> open(std::string_view path, fuchsia_io::wire::OpenFlags flags,
                             uint32_t mode) override;
   void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* signals) override;
   void wait_end(zx_signals_t signals, uint32_t* events) override;
@@ -80,7 +80,7 @@ struct remote : public zxio {
   ~remote() override = default;
 };
 
-zx::status<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
+zx::result<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
                                 fuchsia_io::wire::OpenFlags flags, uint32_t mode);
 
 }  // namespace fdio_internal

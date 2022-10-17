@@ -90,7 +90,7 @@ class Dispatcher {
   //
   // ZX_ERR_BAD_STATE: Dispatchers are currently not allowed to be created, such as when a driver
   // is being shutdown by its driver host.
-  static zx::status<Dispatcher> Create(uint32_t options, cpp17::string_view name,
+  static zx::result<Dispatcher> Create(uint32_t options, cpp17::string_view name,
                                        ShutdownHandler shutdown_handler,
                                        cpp17::string_view scheduler_role = {}) {
     // We need to create an additional shutdown context in addition to the fdf::Dispatcher

@@ -193,10 +193,10 @@ int main(int argc, const char** argv) {
   }
 
   // Connect to the fuchsia.examples.calculator/Calculator protocol. This can fail so it's wrapped
-  // in a |zx::status| and it must be checked for errors.
+  // in a |zx::result| and it must be checked for errors.
   // Note: The actual success type type is |fidl::ClientEnd|, which is used to create the
   // |fidl::Client|
-  zx::status client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
+  zx::result client_end = component::Connect<fuchsia_examples_calculator::Calculator>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Calculator| protocol: "
                    << client_end.status_string();

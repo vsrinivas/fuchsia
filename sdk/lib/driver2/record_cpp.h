@@ -18,7 +18,7 @@ namespace driver::internal {
 // This function expects `T` to contain:
 // 1. A static function `T::Name` that returns the name to use for the logger.
 // 2. A member function `T::Start` with the signature:
-//    zx::status<std::unique_ptr<T>> Start(
+//    zx::result<std::unique_ptr<T>> Start(
 //      fuchsia_driver_framework::wire::DriverStartArgs& start_args,
 //      fdf::UnownedDispatcher dispatcher,
 //      fidl::WireSharedClient<fuchsia_driver_framework::Node> node,

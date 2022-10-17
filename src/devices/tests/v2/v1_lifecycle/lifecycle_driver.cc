@@ -30,7 +30,7 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
   LifecycleDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : DriverBase("lifeycle-driver", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     FDF_LOG(INFO, "Starting lifecycle driver");
 
     // Get our parent banjo symbol.

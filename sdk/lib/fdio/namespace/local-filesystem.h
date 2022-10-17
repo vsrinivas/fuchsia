@@ -40,7 +40,7 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Create a new object referring to the root of this namespace.
   //
   // Returns |nullptr| on failure.
-  zx::status<fbl::RefPtr<fdio>> OpenRoot() const;
+  zx::result<fbl::RefPtr<fdio>> OpenRoot() const;
 
   // Change the root of this namespace to match |io|.
   //
@@ -58,7 +58,7 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Create a new object referring to the object at |path|.
   //
   // This object may represent either a local node, or a remote object.
-  zx::status<fbl::RefPtr<fdio>> Open(fbl::RefPtr<LocalVnode> vn, std::string_view path,
+  zx::result<fbl::RefPtr<fdio>> Open(fbl::RefPtr<LocalVnode> vn, std::string_view path,
                                      fuchsia_io::wire::OpenFlags flags, uint32_t mode) const;
 
   // Walk local namespace and send inotify filter request to remote server.
@@ -92,7 +92,7 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   // Creates a local object with a connection to a vnode.
   // This object will increase the number of references to the namespace by
   // one.
-  zx::status<fbl::RefPtr<fdio>> CreateConnection(fbl::RefPtr<LocalVnode> vn) const;
+  zx::result<fbl::RefPtr<fdio>> CreateConnection(fbl::RefPtr<LocalVnode> vn) const;
 
   // Lookup repeatedly to traverse vnodes within the local filesystem.
   //

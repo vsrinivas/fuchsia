@@ -16,8 +16,8 @@
 
 namespace {
 
-zx::status<zx::debuglog> GetDebugLogHandle() {
-  zx::status log_service = component::Connect<fuchsia_boot::WriteOnlyLog>();
+zx::result<zx::debuglog> GetDebugLogHandle() {
+  zx::result log_service = component::Connect<fuchsia_boot::WriteOnlyLog>();
   if (log_service.is_error()) {
     return log_service.take_error();
   }
@@ -29,7 +29,7 @@ zx::status<zx::debuglog> GetDebugLogHandle() {
 }
 
 TEST(DebugLog, Create) {
-  zx::status log = GetDebugLogHandle();
+  zx::result log = GetDebugLogHandle();
   ASSERT_OK(log.status_value());
   zxio_storage_t storage;
   ASSERT_OK(zxio_create(log->release(), &storage));
@@ -41,7 +41,7 @@ TEST(DebugLog, Create) {
 class DebugLogTest : public zxtest::Test {
  protected:
   void SetUp() final {
-    zx::status log = GetDebugLogHandle();
+    zx::result log = GetDebugLogHandle();
     ASSERT_OK(log.status_value());
 
     storage_ = std::make_unique<zxio_storage_t>();

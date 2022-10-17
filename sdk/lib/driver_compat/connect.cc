@@ -65,7 +65,7 @@ void ConnectToParentDevices(async_dispatcher_t* dispatcher, const driver::Namesp
 
   FindDirectoryEntries(
       std::move(result.value()), dispatcher,
-      [ns, cb = std::move(cb)](zx::status<std::vector<std::string>> entries) mutable {
+      [ns, cb = std::move(cb)](zx::result<std::vector<std::string>> entries) mutable {
         if (entries.is_error()) {
           cb(entries.take_error());
           return;

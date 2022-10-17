@@ -76,17 +76,17 @@ TEST(DriverTransport, WireSendDriverClientEnd) {
 TEST(DriverTransport, WireSendDriverClientEndEncodeErrorShouldCloseHandle) {
   fidl_driver_testing::ScopedFakeDriver driver;
   libsync::Completion dispatcher_shutdown;
-  zx::status dispatcher =
+  zx::result dispatcher =
       fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
-  zx::status endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
+  zx::result endpoints = fdf::CreateEndpoints<test_transport::OnErrorCloseHandlesTest>();
   ASSERT_OK(endpoints.status_value());
   fdf::Arena arena('TEST');
 
   fdf::WireSharedClient client(std::move(endpoints->client), dispatcher->get());
 
-  zx::status send_endpoints = fdf::CreateEndpoints<test_transport::OneWayTest>();
+  zx::result send_endpoints = fdf::CreateEndpoints<test_transport::OneWayTest>();
   ASSERT_OK(send_endpoints.status_value());
 
   fidl::Status status =

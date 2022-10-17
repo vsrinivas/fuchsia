@@ -57,7 +57,7 @@ class TestExporter : public fdfs::testing::Exporter_TestBase {
 
 class DevfsExporterTest : public gtest::TestLoopFixture {};
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ServeSvcDir(
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> ServeSvcDir(
     component::OutgoingDirectory& outgoing) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {

@@ -6,7 +6,7 @@
 
 namespace driver {
 
-zx::status<Namespace> Namespace::Create(
+zx::result<Namespace> Namespace::Create(
     fidl::VectorView<fuchsia_component_runner::wire::ComponentNamespaceEntry>& entries) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
@@ -38,7 +38,7 @@ zx::status<Namespace> Namespace::Create(
   return zx::ok(std::move(self));
 }
 
-zx::status<Namespace> Namespace::Create(
+zx::result<Namespace> Namespace::Create(
     std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries) {
   fdio_ns_t* ns;
   zx_status_t status = fdio_ns_create(&ns);
@@ -95,10 +95,10 @@ Namespace& Namespace::operator=(Namespace&& other) noexcept {
   return *this;
 }
 
-zx::status<> Namespace::Open(const char* path, fuchsia_io::wire::OpenFlags flags,
+zx::result<> Namespace::Open(const char* path, fuchsia_io::wire::OpenFlags flags,
                              zx::channel server_end) const {
   zx_status_t status = fdio_ns_open(ns_, path, static_cast<uint32_t>(flags), server_end.release());
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 }  // namespace driver

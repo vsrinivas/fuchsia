@@ -211,7 +211,7 @@ struct Endpoints {
 // - Structured Binding:
 //     auto [client_end, server_end] = std::move(endpoints.value());
 template <typename Protocol>
-zx::status<fdf::Endpoints<Protocol>> CreateEndpoints() {
+zx::result<fdf::Endpoints<Protocol>> CreateEndpoints() {
   auto pair = fdf::ChannelPair::Create(0);
   if (!pair.is_ok()) {
     return pair.take_error();
@@ -230,13 +230,13 @@ zx::status<fdf::Endpoints<Protocol>> CreateEndpoints() {
 // This overload of |CreateEndpoints| may lead to more concise code when the
 // caller already has the client endpoint defined as an instance variable.
 // It will replace the destination of |out_client| with a newly created client
-// endpoint, and return the corresponding server endpoint in a |zx::status|:
+// endpoint, and return the corresponding server endpoint in a |zx::result|:
 //
 //     // |client_end_| is an instance variable.
 //     auto server_end = fdf::CreateEndpoints(&client_end_);
 //     if (server_end.is_ok()) { ... }
 template <typename Protocol>
-zx::status<fdf::ServerEnd<Protocol>> CreateEndpoints(fdf::ClientEnd<Protocol>* out_client) {
+zx::result<fdf::ServerEnd<Protocol>> CreateEndpoints(fdf::ClientEnd<Protocol>* out_client) {
   auto endpoints = CreateEndpoints<Protocol>();
   if (!endpoints.is_ok()) {
     return endpoints.take_error();
@@ -253,13 +253,13 @@ zx::status<fdf::ServerEnd<Protocol>> CreateEndpoints(fdf::ClientEnd<Protocol>* o
 // This overload of |CreateEndpoints| may lead to more concise code when the
 // caller already has the server endpoint defined as an instance variable.
 // It will replace the destination of |out_server| with a newly created server
-// endpoint, and return the corresponding client endpoint in a |zx::status|:
+// endpoint, and return the corresponding client endpoint in a |zx::result|:
 //
 //     // |server_end_| is an instance variable.
 //     auto client_end = fdf::CreateEndpoints(&server_end_);
 //     if (client_end.is_ok()) { ... }
 template <typename Protocol>
-zx::status<fdf::ClientEnd<Protocol>> CreateEndpoints(fdf::ServerEnd<Protocol>* out_server) {
+zx::result<fdf::ClientEnd<Protocol>> CreateEndpoints(fdf::ServerEnd<Protocol>* out_server) {
   auto endpoints = CreateEndpoints<Protocol>();
   if (!endpoints.is_ok()) {
     return endpoints.take_error();

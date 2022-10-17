@@ -28,7 +28,7 @@ namespace fio = fuchsia_io;
 
 namespace fdio_internal {
 
-zx::status<fdio_ptr> zxio::create() {
+zx::result<fdio_ptr> zxio::create() {
   fdio_ptr io = fbl::MakeRefCounted<zxio>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -37,7 +37,7 @@ zx::status<fdio_ptr> zxio::create() {
   return zx::ok(io);
 }
 
-zx::status<fdio_ptr> zxio::create_null() {
+zx::result<fdio_ptr> zxio::create_null() {
   fdio_ptr io = fbl::MakeRefCounted<zxio>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -179,7 +179,7 @@ zx_status_t zxio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
   return zxio_sendmsg_inner(&zxio_storage().io, msg, flags, out_actual);
 }
 
-zx::status<fdio_ptr> pipe::create(zx::socket socket) {
+zx::result<fdio_ptr> pipe::create(zx::socket socket) {
   fdio_ptr io = fbl::MakeRefCounted<pipe>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -196,17 +196,17 @@ zx::status<fdio_ptr> pipe::create(zx::socket socket) {
   return zx::ok(io);
 }
 
-zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
+zx::result<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
   zx::socket h0, h1;
   zx_status_t status = zx::socket::create(options, &h0, &h1);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  zx::status a = pipe::create(std::move(h0));
+  zx::result a = pipe::create(std::move(h0));
   if (a.is_error()) {
     return a.take_error();
   }
-  zx::status b = pipe::create(std::move(h1));
+  zx::result b = pipe::create(std::move(h1));
   if (b.is_error()) {
     return b.take_error();
   }
@@ -229,9 +229,9 @@ zx_status_t pipe::recvmsg(struct msghdr* msg, int flags, size_t* out_actual, int
   return status;
 }
 
-zx::status<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
+zx::result<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
                                 fio::wire::OpenFlags flags, uint32_t mode) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -249,7 +249,7 @@ zx::status<fdio_ptr> open_async(zxio_t* directory, std::string_view path,
   return remote::create(std::move(endpoints->client));
 }
 
-zx::status<fdio_ptr> remote::open(std::string_view path, fio::wire::OpenFlags flags,
+zx::result<fdio_ptr> remote::open(std::string_view path, fio::wire::OpenFlags flags,
                                   uint32_t mode) {
   return open_async(&zxio_storage().io, path, flags, mode);
 }
@@ -306,7 +306,7 @@ void remote::wait_end(zx_signals_t signals, uint32_t* out_events) {
   *out_events = events;
 }
 
-zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node) {
+zx::result<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node) {
   fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -318,7 +318,7 @@ zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node) {
   return zx::ok(io);
 }
 
-zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
+zx::result<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
   fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
     return zx::error(ZX_ERR_NO_MEMORY);

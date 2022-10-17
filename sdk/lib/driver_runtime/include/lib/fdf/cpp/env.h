@@ -19,7 +19,7 @@ class DispatcherBuilder {
   //
   // |driver| is an opaque pointer to the driver object. It will be used to uniquely identify
   // the driver.
-  static zx::status<fdf::Dispatcher> CreateWithOwner(
+  static zx::result<fdf::Dispatcher> CreateWithOwner(
       const void* driver, uint32_t options, cpp17::string_view name,
       fdf::Dispatcher::ShutdownHandler shutdown_handler, cpp17::string_view scheduler_role = {}) {
     // We need to create an additional shutdown context in addition to the fdf::Dispatcher

@@ -28,7 +28,7 @@ class InputReportDriver : public driver::DriverBase {
   InputReportDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher dispatcher)
       : DriverBase(kDeviceName, std::move(start_args), std::move(dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     auto parent_symbol = driver::GetSymbol<compat::device_t*>(symbols(), compat::kDeviceSymbol);
 
     hid_device_protocol_t proto = {};

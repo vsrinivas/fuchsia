@@ -91,7 +91,7 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
 class DirentTest : public zxtest::Test {
  public:
   void SetUp() final {
-    zx::status control_ends = fidl::CreateEndpoints<fio::Directory>();
+    zx::result control_ends = fidl::CreateEndpoints<fio::Directory>();
     ASSERT_OK(control_ends.status_value());
     ASSERT_OK(zxio_dir_init(&dir_, fidl::ClientEnd<fio::Node>{control_ends->client.TakeChannel()}));
     server_ = std::make_unique<TestServer>();

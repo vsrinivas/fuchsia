@@ -41,7 +41,7 @@ using DriverStartArgs = fuchsia_driver_framework::DriverStartArgs;
 //   MyDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
 //       : driver::DriverBase("my_driver", std::move(start_args), std::move(driver_dispatcher)) {}
 //
-//   zx::status<> Start() override {
+//   zx::result<> Start() override {
 //     context().incoming()->Connect(...);
 //     context().outgoing()->AddService(...);
 //     FDF_LOG(INFO, "hello world!");
@@ -89,7 +89,7 @@ class DriverBase {
   // Do not call Serve, as it has already been called by the |DriverBase| constructor.
   // Child nodes can be created here synchronously or asynchronously as long as all of the
   // protocols being offered to the child has been added to the outgoing directory first.
-  virtual zx::status<> Start() = 0;
+  virtual zx::result<> Start() = 0;
 
   virtual void Stop() {}
 
@@ -171,7 +171,7 @@ class BasicFactory {
                 "fdf::UnownedDispatcher)' in order to be used with the BasicFactory.");
 
  public:
-  static zx::status<std::unique_ptr<DriverBase>> CreateDriver(
+  static zx::result<std::unique_ptr<DriverBase>> CreateDriver(
       DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher) {
     std::unique_ptr<DriverBase> driver =
         std::make_unique<Driver>(std::move(start_args), std::move(driver_dispatcher));
@@ -193,7 +193,7 @@ class BasicFactory {
 // |Driver| must inherit from |DriverBase|. If provided, |Factory| must implement a
 // public |CreateDriver| function with the following signature:
 // ```
-// static zx::status<std::unique_ptr<DriverBase>> CreateDriver(
+// static zx::result<std::unique_ptr<DriverBase>> CreateDriver(
 //     DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
 // ```
 //
@@ -206,7 +206,7 @@ class BasicFactory {
 // ```
 // class CustomFactory {
 //  public:
-//   static zx::status<std::unique_ptr<DriverBase>> CreateDriver(
+//   static zx::result<std::unique_ptr<DriverBase>> CreateDriver(
 //       DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
 //   ...construct and start driver...
 // };
@@ -224,10 +224,10 @@ class Record {
                 "Factory must implement a public static CreateDriver function.");
   static_assert(
       std::is_same_v<decltype(&Factory::CreateDriver),
-                     zx::status<std::unique_ptr<DriverBase>> (*)(
+                     zx::result<std::unique_ptr<DriverBase>> (*)(
                          DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)>,
       "CreateDriver must be a public static function with signature "
-      "'zx::status<std::unique_ptr<driver::DriverBase>> (driver::DriverStartArgs start_args, "
+      "'zx::result<std::unique_ptr<driver::DriverBase>> (driver::DriverStartArgs start_args, "
       "fdf::UnownedDispatcher driver_dispatcher)'.");
 
  public:
@@ -244,7 +244,7 @@ class Record {
       return start_args.error_value().status();
     }
 
-    zx::status<std::unique_ptr<DriverBase>> created_driver =
+    zx::result<std::unique_ptr<DriverBase>> created_driver =
         Factory::CreateDriver(std::move(*start_args), fdf::UnownedDispatcher(dispatcher));
 
     if (created_driver.is_error()) {

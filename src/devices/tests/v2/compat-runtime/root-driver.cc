@@ -28,7 +28,7 @@ class RootDriver : public driver::DriverBase, public fdf::Server<ft::Root> {
 
   static constexpr const char* Name() { return "root"; }
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     // Since our child is a V1 driver, we need to serve a VFS to pass to the |compat::DeviceServer|.
     zx_status_t status = ServeRuntimeProtocolForV1();
     if (status != ZX_OK) {

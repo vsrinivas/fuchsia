@@ -82,7 +82,7 @@ zx_status_t fdio::zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_s
   return ZX_OK;
 }
 
-zx::status<fdio_ptr> fdio::create(void*& context, zx_status_t status) {
+zx::result<fdio_ptr> fdio::create(void*& context, zx_status_t status) {
   // If the status is ZX_ERR_NO_MEMORY, then zxio_create_with_allocator has not allocated
   // anything and we can return immediately with no cleanup.
   if (status == ZX_ERR_NO_MEMORY) {
@@ -92,34 +92,34 @@ zx::status<fdio_ptr> fdio::create(void*& context, zx_status_t status) {
 
   // Otherwise, fdio_zxio_allocator has allocated an fdio instance that we now own.
   fdio_ptr io = fbl::ImportFromRawPtr(static_cast<fdio*>(context));
-  return zx::make_status(status, std::move(io));
+  return zx::make_result(status, std::move(io));
 }
 
-zx::status<fdio_ptr> fdio::create(zx::handle handle) {
+zx::result<fdio_ptr> fdio::create(zx::handle handle) {
   return fdio::create([&](zxio_storage_alloc allocator, void** out_context) {
     return zxio_create_with_allocator(std::move(handle), allocator, out_context);
   });
 }
 
-zx::status<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node,
+zx::result<fdio_ptr> fdio::create(fidl::ClientEnd<fio::Node> node,
                                   fio::wire::NodeInfoDeprecated info) {
   return fdio::create([&](zxio_storage_alloc allocator, void** out_context) {
     return zxio_create_with_allocator(std::move(node), info, allocator, out_context);
   });
 }
 
-zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) {
+zx::result<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) {
   class EventHandler : public fidl::WireSyncEventHandler<fio::Node> {
    public:
     explicit EventHandler(fidl::ClientEnd<fio::Node> client_end)
         : client_end_(std::move(client_end)) {}
 
-    zx::status<fdio_ptr>& result() { return result_; }
+    zx::result<fdio_ptr>& result() { return result_; }
 
     const fidl::ClientEnd<fio::Node>& client_end() const { return client_end_; }
 
     void OnOpen(fidl::WireEvent<fio::Node::OnOpen>* event) override {
-      result_ = [&event = *event, this]() -> zx::status<fdio_ptr> {
+      result_ = [&event = *event, this]() -> zx::result<fdio_ptr> {
         if (event.s != ZX_OK) {
           return zx::error(event.s);
         }
@@ -137,7 +137,7 @@ zx::status<fdio_ptr> fdio::create_with_on_open(fidl::ClientEnd<fio::Node> node) 
 
    private:
     fidl::ClientEnd<fio::Node> client_end_;
-    zx::status<fdio_ptr> result_ = zx::error(ZX_ERR_INTERNAL);
+    zx::result<fdio_ptr> result_ = zx::error(ZX_ERR_INTERNAL);
   };
 
   EventHandler event_handler(std::move(node));

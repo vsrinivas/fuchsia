@@ -142,7 +142,7 @@ Driver::~Driver() {
   global_driver_list.RemoveDriver(this);
 }
 
-zx::status<> Driver::Start() {
+zx::result<> Driver::Start() {
   devfs_vfs_ = std::make_unique<fs::SynchronousVfs>(dispatcher());
   devfs_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
 
@@ -692,7 +692,7 @@ zx::result<fit::deferred_callback> Driver::ExportToDevfsSync(
   return zx::ok(std::move(auto_remove));
 }
 
-zx::status<std::unique_ptr<driver::DriverBase>> DriverFactory::CreateDriver(
+zx::result<std::unique_ptr<driver::DriverBase>> DriverFactory::CreateDriver(
     driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher) {
   auto compat_device =
       driver::GetSymbol<const device_t*>(start_args.symbols(), kDeviceSymbol, &kDefaultDevice);

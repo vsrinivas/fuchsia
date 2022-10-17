@@ -128,14 +128,14 @@ TEST_F(ServerTest, ConnectsToDefaultMember) {
   ASSERT_OK(fdio_get_service_handle(svc_fd.release(), &svc_local));
 
   // Connect to the `EchoService` at the 'default' instance.
-  zx::status<EchoService::ServiceClient> open_result =
+  zx::result<EchoService::ServiceClient> open_result =
       component::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local));
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
 
   // Connect to the member 'foo'.
-  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
+  zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
   fidl::WireSyncClient client{std::move(connect_result.value())};
@@ -158,14 +158,14 @@ TEST_F(ServerTest, ConnectsToOtherMember) {
   ASSERT_OK(fdio_get_service_handle(svc_fd.release(), &svc_local));
 
   // Connect to the `EchoService` at the 'default' instance.
-  zx::status<EchoService::ServiceClient> open_result =
+  zx::result<EchoService::ServiceClient> open_result =
       component::OpenServiceAt<EchoService>(zx::unowned_channel(svc_local), "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
 
   // Connect to the member 'foo'.
-  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
+  zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
   fidl::WireSyncClient client{std::move(connect_result.value())};

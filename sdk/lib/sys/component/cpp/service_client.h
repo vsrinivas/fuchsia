@@ -21,24 +21,24 @@ namespace component {
 
 // Opens the directory containing incoming services in the application's default
 // incoming namespace. By default the path is "/svc". Users may specify a custom path.
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(
     const char* path = component::kServiceDirectory);
 
 namespace internal {
 
 // Implementations of |component::Connect| that is independent from the actual |Protocol|.
-zx::status<zx::channel> ConnectRaw(const char* path);
-zx::status<> ConnectRaw(zx::channel server_end, const char* path);
+zx::result<zx::channel> ConnectRaw(const char* path);
+zx::result<> ConnectRaw(zx::channel server_end, const char* path);
 
 // Implementations of |component::ConnectAt| that is independent from the actual |Protocol|.
-zx::status<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                                      const char* protocol_name);
-zx::status<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+zx::result<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                           zx::channel server_end, const char* protocol_name);
 
 // Implementations of |component::Clone| that is independent from the actual |Protocol|.
-zx::status<zx::channel> CloneRaw(zx::unowned_channel&& node);
-zx::status<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end);
+zx::result<zx::channel> CloneRaw(zx::unowned_channel&& node);
+zx::result<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end);
 
 // Determines if |Protocol| contains a method named |Clone|.
 // TODO(fxbug.dev/65964): This template is coupled to LLCPP codegen details,
@@ -101,7 +101,7 @@ std::string MakeServiceMemberPath(std::string_view instance) {
 //
 // See documentation on |fdio_service_connect| for details.
 template <typename Protocol>
-zx::status<fidl::ClientEnd<Protocol>> Connect(
+zx::result<fidl::ClientEnd<Protocol>> Connect(
     const char* path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
   auto channel = internal::ConnectRaw(path);
   if (channel.is_error()) {
@@ -119,7 +119,7 @@ zx::status<fidl::ClientEnd<Protocol>> Connect(
 //
 // See `Connect(const char*)` for details.
 template <typename Protocol>
-zx::status<> Connect(fidl::ServerEnd<Protocol> server_end,
+zx::result<> Connect(fidl::ServerEnd<Protocol> server_end,
                      const char* path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
   return internal::ConnectRaw(server_end.TakeChannel(), path);
 }
@@ -133,7 +133,7 @@ zx::status<> Connect(fidl::ServerEnd<Protocol> server_end,
 // See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, const char*)` for
 // details.
 template <typename Protocol, typename = std::enable_if_t<fidl::IsProtocolV<Protocol>>>
-zx::status<fidl::ClientEnd<Protocol>> ConnectAt(
+zx::result<fidl::ClientEnd<Protocol>> ConnectAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
     const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
   auto channel = internal::ConnectAtRaw(svc_dir, protocol_name);
@@ -151,10 +151,10 @@ zx::status<fidl::ClientEnd<Protocol>> ConnectAt(
 //
 // See documentation on |fdio_service_connect_at| for details.
 template <typename Protocol, typename = std::enable_if_t<fidl::IsProtocolV<Protocol>>>
-zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+zx::result<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                        fidl::ServerEnd<Protocol> server_end,
                        const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
-  if (zx::status<> status =
+  if (zx::result<> status =
           internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), protocol_name);
       status.is_error()) {
     return status.take_error();
@@ -172,7 +172,7 @@ zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
 // details.
 template <typename ServiceMember,
           typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>> ConnectAt(
+zx::result<fidl::ClientEnd<typename ServiceMember::ProtocolType>> ConnectAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
     std::string_view instance = kDefaultInstance) {
   auto path = internal::MakeServiceMemberPath<ServiceMember>(instance);
@@ -192,11 +192,11 @@ zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>> ConnectAt(
 // See documentation on |fdio_service_connect_at| for details.
 template <typename ServiceMember,
           typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-zx::status<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+zx::result<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                        fidl::ServerEnd<typename ServiceMember::ProtocolType> server_end,
                        std::string_view instance = kDefaultInstance) {
   auto path = internal::MakeServiceMemberPath<ServiceMember>(instance);
-  if (zx::status<> status = internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), path.c_str());
+  if (zx::result<> status = internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), path.c_str());
       status.is_error()) {
     return status.take_error();
   }
@@ -246,7 +246,7 @@ template <typename Protocol, typename Tag = std::nullptr_t,
           typename = std::enable_if_t<
               std::disjunction_v<std::is_same<Tag, std::nullptr_t>,
                                  std::is_same<Tag, internal::AssumeProtocolComposesNodeTag>>>>
-zx::status<fidl::ClientEnd<Protocol>> Clone(fidl::UnownedClientEnd<Protocol> node,
+zx::result<fidl::ClientEnd<Protocol>> Clone(fidl::UnownedClientEnd<Protocol> node,
                                             Tag tag = nullptr) {
   internal::CheckProtocolForClone(node, tag);
   auto result = internal::CloneRaw(node.channel());
@@ -260,7 +260,7 @@ zx::status<fidl::ClientEnd<Protocol>> Clone(fidl::UnownedClientEnd<Protocol> nod
 // |const fidl::ClientEnd&| into |fidl::UnownedClientEnd|. C++ cannot consider
 // actual implicit conversions when performing template argument deduction.
 template <typename Protocol, typename Tag = std::nullptr_t>
-zx::status<fidl::ClientEnd<Protocol>> Clone(const fidl::ClientEnd<Protocol>& node,
+zx::result<fidl::ClientEnd<Protocol>> Clone(const fidl::ClientEnd<Protocol>& node,
                                             Tag tag = nullptr) {
   return Clone(node.borrow(), tag);
 }
@@ -298,7 +298,7 @@ namespace component {
 // `dir`. The default instance is called 'default'. See
 // `OpenServiceAt(zx::unowned_channel,fidl::StringView)` for details.
 template <typename FidlService>
-zx::status<typename FidlService::ServiceClient> OpenServiceAt(
+zx::result<typename FidlService::ServiceClient> OpenServiceAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> dir);
 
 // Opens a connection to the given instance of a FIDL service of type `FidlService`, rooted at
@@ -308,10 +308,10 @@ zx::status<typename FidlService::ServiceClient> OpenServiceAt(
 // If the service or instance does not exist, the resulting `FidlService::ServiceClient` will
 // fail to connect to a member.
 //
-// Returns a zx::status of status Ok on success. In the event of failure, an error status
+// Returns a zx::result of status Ok on success. In the event of failure, an error status
 // variant is returned, set to an error value.
 //
-// Returns a zx::status of state Error set to ZX_ERR_INVALID_ARGS if `instance` is more than 255
+// Returns a zx::result of state Error set to ZX_ERR_INVALID_ARGS if `instance` is more than 255
 // characters long.
 //
 // ## Example
@@ -320,19 +320,19 @@ zx::status<typename FidlService::ServiceClient> OpenServiceAt(
 // using Echo = fuchsia_echo::Echo;
 // using EchoService = fuchsia_echo::EchoService;
 //
-// zx::status<EchoService::ServiceClient> open_result =
+// zx::result<EchoService::ServiceClient> open_result =
 //     sys::OpenServiceAt<EchoService>(std::move(svc_));
 // ASSERT_TRUE(open_result.is_ok());
 //
 // EchoService::ServiceClient service = open_result.take_value();
 //
-// zx::status<fidl::ClientEnd<Echo>> connect_result = service.ConnectFoo();
+// zx::result<fidl::ClientEnd<Echo>> connect_result = service.ConnectFoo();
 // ASSERT_TRUE(connect_result.is_ok());
 //
 // fidl::WireSyncClient<Echo> client{connect_result.take_value()};
 // ```
 template <typename FidlService>
-zx::status<typename FidlService::ServiceClient> OpenServiceAt(
+zx::result<typename FidlService::ServiceClient> OpenServiceAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> dir, std::string_view instance);
 
 // Opens a connection to the given instance of a FIDL service with the name `service_name`,
@@ -348,7 +348,7 @@ zx::status<typename FidlService::ServiceClient> OpenServiceAt(
 //
 // Returns ZX_ERR_INVALID_ARGS if `service_path` or `instance` are more than 255
 // characters long.
-zx::status<> OpenNamedServiceAt(fidl::UnownedClientEnd<fuchsia_io::Directory> dir,
+zx::result<> OpenNamedServiceAt(fidl::UnownedClientEnd<fuchsia_io::Directory> dir,
                                 std::string_view service_path, std::string_view instance,
                                 zx::channel remote);
 
@@ -357,20 +357,20 @@ namespace internal {
 // The internal |DirectoryOpenFunc| needs to take raw Zircon channels,
 // because the FIDL runtime that interfaces with it cannot depend on the
 // |fuchsia.io| FIDL library. See <lib/fidl/llcpp/connect_service.h>.
-zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
+zx::result<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
                                fidl::internal::AnyTransport remote);
 
 }  // namespace internal
 
 template <typename FidlService>
-zx::status<typename FidlService::ServiceClient> OpenServiceAt(
+zx::result<typename FidlService::ServiceClient> OpenServiceAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> dir, std::string_view instance) {
   zx::channel local, remote;
   if (zx_status_t status = zx::channel::create(0, &local, &remote); status != ZX_OK) {
     return zx::error(status);
   }
 
-  zx::status<> result = OpenNamedServiceAt(dir, FidlService::Name, instance, std::move(remote));
+  zx::result<> result = OpenNamedServiceAt(dir, FidlService::Name, instance, std::move(remote));
   if (result.is_error()) {
     return result.take_error();
   }
@@ -378,7 +378,7 @@ zx::status<typename FidlService::ServiceClient> OpenServiceAt(
 }
 
 template <typename FidlService>
-zx::status<typename FidlService::ServiceClient> OpenServiceAt(
+zx::result<typename FidlService::ServiceClient> OpenServiceAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> dir) {
   return OpenServiceAt<FidlService>(dir, kDefaultInstance);
 }

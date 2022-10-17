@@ -118,7 +118,7 @@ class BaseTest : public zxtest::Test {
     ASSERT_OK(zx::socket::create(sock_type, &client_socket, &server_socket_));
     server_.emplace(std::move(client_socket));
 
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_posix_socket::StreamSocket>();
     ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(endpoints->server),

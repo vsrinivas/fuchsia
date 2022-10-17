@@ -13,7 +13,7 @@
 namespace {
 
 // Connect to parent device node using fuchsia.driver.compat.Service
-zx::status<fidl::ClientEnd<fuchsia_driver_compat::Device>> ConnectToParentDevice(
+zx::result<fidl::ClientEnd<fuchsia_driver_compat::Device>> ConnectToParentDevice(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir, std::string_view name) {
   auto result = component::OpenServiceAt<fuchsia_driver_compat::Service>(svc_dir, name);
   if (result.is_error()) {
@@ -23,7 +23,7 @@ zx::status<fidl::ClientEnd<fuchsia_driver_compat::Device>> ConnectToParentDevice
 }
 
 // Return the topological path of the parent device node.
-zx::status<std::string> GetTopologicalPath(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir) {
+zx::result<std::string> GetTopologicalPath(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir) {
   auto parent_client = ConnectToParentDevice(svc_dir, "default");
   if (parent_client.is_error()) {
     return parent_client.take_error();
@@ -40,7 +40,7 @@ zx::status<std::string> GetTopologicalPath(fidl::UnownedClientEnd<fuchsia_io::Di
 }
 
 // Connect to the fuchsia.devices.fs.Exporter protocol
-zx::status<fidl::ClientEnd<fuchsia_device_fs::Exporter>> ConnectToDeviceExporter(
+zx::result<fidl::ClientEnd<fuchsia_device_fs::Exporter>> ConnectToDeviceExporter(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir) {
   auto exporter = component::ConnectAt<fuchsia_device_fs::Exporter>(svc_dir);
   if (exporter.is_error()) {
@@ -50,7 +50,7 @@ zx::status<fidl::ClientEnd<fuchsia_device_fs::Exporter>> ConnectToDeviceExporter
 }
 
 // Create an exported directory handle using fuchsia.devices.fs.Exporter
-zx::status<fidl::ServerEnd<fuchsia_io::Directory>> ExportDevfsEntry(
+zx::result<fidl::ServerEnd<fuchsia_io::Directory>> ExportDevfsEntry(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir, std::string service_path,
     std::string devfs_path, uint32_t protocol_id) {
   // Connect to the devfs exporter service
@@ -115,7 +115,7 @@ class DemoNumber : public driver::DriverBase {
       : DriverBase(kDriverName, std::move(start_args), std::move(driver_dispatcher)) {}
 
   // Called by the driver framework to initialize the driver instance.
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     // Add the fuchsia.hardware.demo/Demo protocol to be served as
     // "/svc/fuchsia.hardware.demo/default/demo"
     driver::ServiceInstanceHandler handler;

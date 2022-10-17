@@ -26,7 +26,7 @@
 
 namespace fio = fuchsia_io;
 
-zx::status<fbl::RefPtr<fdio>> fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
+zx::result<fbl::RefPtr<fdio>> fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
 zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io) { return ns->SetRoot(io); }
 
@@ -132,7 +132,7 @@ zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
 
 __EXPORT
 int fdio_ns_opendir(fdio_ns_t* ns) {
-  zx::status io = ns->OpenRoot();
+  zx::result io = ns->OpenRoot();
   if (io.is_error()) {
     errno = ENOMEM;
     return -1;
@@ -146,7 +146,7 @@ int fdio_ns_opendir(fdio_ns_t* ns) {
 
 __EXPORT
 zx_status_t fdio_ns_chdir(fdio_ns_t* ns) {
-  zx::status io = ns->OpenRoot();
+  zx::result io = ns->OpenRoot();
   if (io.is_error()) {
     return ZX_ERR_NO_MEMORY;
   }

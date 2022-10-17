@@ -8,7 +8,7 @@ namespace compat {
 
 void Context::ConnectAndCreate(driver::DriverContext* driver_context,
                                async_dispatcher_t* dispatcher,
-                               fit::callback<void(zx::status<std::unique_ptr<Context>>)> callback) {
+                               fit::callback<void(zx::result<std::unique_ptr<Context>>)> callback) {
   auto context = std::make_unique<Context>();
 
   // Connect to our parent.

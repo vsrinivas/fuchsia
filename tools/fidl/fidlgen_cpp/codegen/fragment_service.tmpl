@@ -53,7 +53,7 @@ class {{ .Name }} final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the reciprocal |ClientEnd| for the |ServerEnd| passed into this method.
-    ::zx::status<> connect_{{ .Name }}({{ .ClientEnd }} client_end) {
+    ::zx::result<> connect_{{ .Name }}({{ .ClientEnd }} client_end) {
       return connect_func_(
           ::zx::unowned_channel(dir_),
           ::fidl::StringView("{{ .Name }}"),
@@ -71,7 +71,7 @@ class {{ .Name }} final {
     // Since the call to |Open| is asynchronous, an error sent by the remote end will not
     // result in a failure of this method. Any errors sent by the remote will appear on
     // the |ClientEnd| returned from this method.
-    ::zx::status<{{ .ClientEnd }}> connect_{{ .Name }}() {
+    ::zx::result<{{ .ClientEnd }}> connect_{{ .Name }}() {
       auto endpoints = {{ .CreateEndpoints }}();
       if (endpoints.is_error()) {
         return endpoints.take_error();
@@ -115,7 +115,7 @@ class {{ .Name }} final {
     // # Errors
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
-    ::zx::status<> add_{{ .Name }}(
+    ::zx::result<> add_{{ .Name }}(
         ::fidl::ServiceHandlerInterface::MemberHandler<{{ .ProtocolType }}> handler) {
       return service_handler_->AddMember<{{ .ProtocolType }}>("{{ .Name }}", std::move(handler));
     }

@@ -46,10 +46,10 @@ class ServiceInstanceHandler final : public fidl::ServiceHandlerInterface {
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  zx::status<> AddAnyMember(std::string_view member, AnyMemberHandler handler) override {
+  zx::result<> AddAnyMember(std::string_view member, AnyMemberHandler handler) override {
     const std::string owned_member = std::string(member);
     if (handlers_.count(owned_member) != 0) {
-      return zx::make_status(ZX_ERR_ALREADY_EXISTS);
+      return zx::make_result(ZX_ERR_ALREADY_EXISTS);
     }
 
     // Since AnyMemberHandler is a protected type of this class' parent class,

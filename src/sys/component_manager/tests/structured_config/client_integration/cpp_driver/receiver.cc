@@ -20,7 +20,7 @@ class ReceiverDriver : public driver::DriverBase,
       : driver::DriverBase("receiver", std::move(start_args), std::move(driver_dispatcher)),
         config_(take_config<receiver_config::Config>()) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     driver::ServiceInstanceHandler handler;
     scrs::ConfigService::Handler device(&handler);
 

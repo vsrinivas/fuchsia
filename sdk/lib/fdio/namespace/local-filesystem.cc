@@ -133,7 +133,7 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
 // appropriate object to interact with the remote object.
 //
 // Otherwise, this function creates a generic "remote" object.
-zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, std::string_view path,
+zx::result<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, std::string_view path,
                                           fio::wire::OpenFlags flags, uint32_t mode) const {
   {
     fbl::AutoLock lock(&lock_);
@@ -145,8 +145,8 @@ zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, std::strin
 
   return std::visit(
       fdio::overloaded{
-          [&](LocalVnode::Intermediate& c) -> zx::status<fdio_ptr> { return CreateConnection(vn); },
-          [&](LocalVnode::Remote& s) -> zx::status<fdio_ptr> {
+          [&](LocalVnode::Intermediate& c) -> zx::result<fdio_ptr> { return CreateConnection(vn); },
+          [&](LocalVnode::Remote& s) -> zx::result<fdio_ptr> {
             // If we're trying to mkdir over top of a mount point,
             // the correct error is EEXIST
             if ((flags & fio::wire::OpenFlags::kCreate) && path == ".") {
@@ -220,7 +220,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
   return populate_entry(inout_entry, child_vnode->Name());
 }
 
-zx::status<fdio_ptr> fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {
+zx::result<fdio_ptr> fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {
   return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
@@ -292,10 +292,10 @@ zx_status_t fdio_namespace::Unbind(std::string_view path) {
     }
 
     // Check to see if the working node contains a child identified by the next path segment.
-    zx::status next_vn =
+    zx::result next_vn =
         std::visit(fdio::overloaded{
                        [&, next_path_segment = next_path_segment](
-                           LocalVnode::Intermediate& c) -> zx::status<fbl::RefPtr<LocalVnode>> {
+                           LocalVnode::Intermediate& c) -> zx::result<fbl::RefPtr<LocalVnode>> {
                          fbl::RefPtr<LocalVnode> next_vn = c.Lookup(next_path_segment);
                          if (next_vn == nullptr) {
                            // The working node was an intermediate node, and Lookup failed to find
@@ -304,7 +304,7 @@ zx_status_t fdio_namespace::Unbind(std::string_view path) {
                          }
                          return zx::ok(next_vn);
                        },
-                       [](LocalVnode::Remote& s) -> zx::status<fbl::RefPtr<LocalVnode>> {
+                       [](LocalVnode::Remote& s) -> zx::result<fbl::RefPtr<LocalVnode>> {
                          // At the end of each iteration, its considered a failure for the "next"
                          // working node to be remote if more segments remain, so the only way
                          // to arrive here is if our first working node is a mount point.
@@ -430,7 +430,7 @@ zx_status_t fdio_namespace::Bind(std::string_view path, fidl::ClientEnd<fio::Dir
                             }
 
                             // The path was "/" so we're trying to bind to the root vnode.
-                            zx::status vn_res = LocalVnode::Create(nullptr, std::move(remote), "");
+                            zx::result vn_res = LocalVnode::Create(nullptr, std::move(remote), "");
                             if (vn_res.is_error()) {
                               return vn_res.error_value();
                             }
@@ -477,7 +477,7 @@ zx_status_t fdio_namespace::Bind(std::string_view path, fidl::ClientEnd<fio::Dir
                   return ZX_ERR_ALREADY_EXISTS;
                 }
 
-                zx::status vn_res =
+                zx::result vn_res =
                     LocalVnode::Create(vn, std::move(remote), fbl::String(next_path_segment));
 
                 if (vn_res.is_error()) {
@@ -534,7 +534,7 @@ zx_status_t fdio_namespace::Bind(std::string_view path, fidl::ClientEnd<fio::Dir
   }
 }
 
-zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
+zx::result<fdio_ptr> fdio_namespace::OpenRoot() const {
   fbl::RefPtr<LocalVnode> vn = [this]() {
     fbl::AutoLock lock(&lock_);
     return root_;
@@ -542,9 +542,9 @@ zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
 
   return std::visit(
       fdio::overloaded{
-          [&](LocalVnode::Intermediate&) -> zx::status<fdio_ptr> { return CreateConnection(vn); },
-          [](LocalVnode::Remote& s) -> zx::status<fdio_ptr> {
-            zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+          [&](LocalVnode::Intermediate&) -> zx::result<fdio_ptr> { return CreateConnection(vn); },
+          [](LocalVnode::Remote& s) -> zx::result<fdio_ptr> {
+            zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
             if (endpoints.is_error()) {
               return endpoints.take_error();
             }
@@ -573,7 +573,7 @@ zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
       return status;
     }
 
-    zx::status vn_res = LocalVnode::Create(nullptr, std::move(client_end), "");
+    zx::result vn_res = LocalVnode::Create(nullptr, std::move(client_end), "");
     if (vn_res.is_error()) {
       return vn_res.error_value();
     }

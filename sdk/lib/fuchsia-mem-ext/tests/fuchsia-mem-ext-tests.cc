@@ -10,7 +10,7 @@
 
 TEST(CreateWithData, EmptySpan) {
   cpp20::span<uint8_t> empty_span;
-  zx::status empty_data = fuchsia_mem_ext::CreateWithData(empty_span);
+  zx::result empty_data = fuchsia_mem_ext::CreateWithData(empty_span);
 
   ASSERT_OK(empty_data.status_value());
 
@@ -20,7 +20,7 @@ TEST(CreateWithData, EmptySpan) {
 
 TEST(CreateWithData, EmptyVector) {
   std::vector<uint8_t> empty_vector;
-  zx::status empty_data = fuchsia_mem_ext::CreateWithData(std::move(empty_vector));
+  zx::result empty_data = fuchsia_mem_ext::CreateWithData(std::move(empty_vector));
 
   ASSERT_OK(empty_data.status_value());
 
@@ -30,7 +30,7 @@ TEST(CreateWithData, EmptyVector) {
 
 TEST(CreateWithData, SmallData) {
   uint8_t single_byte_array[] = {42};
-  zx::status small_data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array));
+  zx::result small_data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array));
 
   ASSERT_OK(small_data.status_value());
 
@@ -43,7 +43,7 @@ TEST(CreateWithData, JustUnderThreshold) {
   constexpr size_t data_size = 16 * 1024 - 1;
   std::vector<uint8_t> byte_vector(data_size, 42);
 
-  zx::status data =
+  zx::result data =
       fuchsia_mem_ext::CreateWithData(cpp20::span(byte_vector.data(), byte_vector.size()));
 
   ASSERT_OK(data.status_value());
@@ -58,7 +58,7 @@ TEST(CreateWithData, AtThreshold) {
   constexpr size_t data_size = 16 * 1024;
   std::vector<uint8_t> byte_vector(data_size, 42);
 
-  zx::status data =
+  zx::result data =
       fuchsia_mem_ext::CreateWithData(cpp20::span(byte_vector.data(), byte_vector.size()));
 
   ASSERT_OK(data.status_value());
@@ -73,7 +73,7 @@ TEST(CreateWithData, JustOverThreshold) {
   constexpr size_t data_size = 16 * 1024 + 1;
   std::vector<uint8_t> byte_vector(data_size, 42);
 
-  zx::status data =
+  zx::result data =
       fuchsia_mem_ext::CreateWithData(cpp20::span(byte_vector.data(), byte_vector.size()));
 
   ASSERT_OK(data.status_value());
@@ -98,7 +98,7 @@ TEST(CreateWithData, LargeDataSpan) {
   constexpr size_t large_data_size = 128 * 1024;
   std::vector<uint8_t> large_byte_vector(large_data_size, 42);
 
-  zx::status data = fuchsia_mem_ext::CreateWithData(
+  zx::result data = fuchsia_mem_ext::CreateWithData(
       cpp20::span(large_byte_vector.data(), large_byte_vector.size()));
 
   ASSERT_OK(data.status_value());
@@ -120,7 +120,7 @@ TEST(CreateWithData, LargeDataVector) {
   constexpr size_t large_data_size = 128 * 1024;
   std::vector<uint8_t> large_byte_vector(large_data_size, 42);
 
-  zx::status data = fuchsia_mem_ext::CreateWithData(std::move(large_byte_vector));
+  zx::result data = fuchsia_mem_ext::CreateWithData(std::move(large_byte_vector));
 
   ASSERT_OK(data.status_value());
 
@@ -140,7 +140,7 @@ TEST(CreateWithData, LargeDataVector) {
 TEST(CreateWithDataAndThreshold, ZeroThreshold) {
   uint8_t single_byte_array[] = {42};
   constexpr size_t zero_threshold = 0;
-  zx::status data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), zero_threshold);
+  zx::result data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), zero_threshold);
 
   ASSERT_OK(data.status_value());
 
@@ -160,7 +160,7 @@ TEST(CreateWithDataAndThreshold, ZeroThreshold) {
 TEST(CreateWithDataAndThreshold, OverlyLargeThreshold) {
   uint8_t single_byte_array[] = {42};
   constexpr size_t huge_threshold = 128 * 1024;
-  zx::status data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), huge_threshold);
+  zx::result data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), huge_threshold);
 
   EXPECT_TRUE(data.is_error());
   EXPECT_EQ(data.status_value(), ZX_ERR_OUT_OF_RANGE);
@@ -171,7 +171,7 @@ TEST(CreateWithDataAndThreshold, VmoName) {
 
   uint8_t single_byte_array[] = {42};
   constexpr size_t zero_threshold = 0;
-  zx::status data =
+  zx::result data =
       fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), zero_threshold, vmo_name);
 
   ASSERT_OK(data.status_value());
@@ -191,7 +191,7 @@ TEST(CreateWithData, VmoNameTooLong) {
   const std::string long_vmo_name(2 * ZX_MAX_NAME_LEN, 'a');
 
   uint8_t single_byte_array[] = {42};
-  zx::status data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), long_vmo_name);
+  zx::result data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), long_vmo_name);
 
   ASSERT_FALSE(data.is_ok());
 
@@ -203,7 +203,7 @@ TEST(CreateWithDataAndThreshold, VmoNameTooLong) {
 
   uint8_t single_byte_array[] = {42};
   constexpr size_t zero_threshold = 0;
-  zx::status data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), zero_threshold,
+  zx::result data = fuchsia_mem_ext::CreateWithData(cpp20::span(single_byte_array), zero_threshold,
                                                     long_vmo_name);
 
   ASSERT_FALSE(data.is_ok());
@@ -215,7 +215,7 @@ TEST(ExtractData, EmptyBytes) {
   std::vector<uint8_t> empty;
   auto data = fuchsia::mem::Data::WithBytes(std::move(empty));
 
-  zx::status extracted = fuchsia_mem_ext::ExtractData(std::move(data));
+  zx::result extracted = fuchsia_mem_ext::ExtractData(std::move(data));
 
   ASSERT_OK(extracted.status_value());
 
@@ -227,7 +227,7 @@ TEST(ExtractData, EmptyBuffer) {
   ASSERT_OK(zx::vmo::create(0u, 0u, &empty_vmo));
   auto data = fuchsia::mem::Data::WithBuffer({std::move(empty_vmo), 0u});
 
-  zx::status extracted = fuchsia_mem_ext::ExtractData(std::move(data));
+  zx::result extracted = fuchsia_mem_ext::ExtractData(std::move(data));
 
   ASSERT_OK(extracted.status_value());
 
@@ -238,7 +238,7 @@ TEST(ExtractData, Bytes) {
   std::vector<uint8_t> data{1, 2, 3, 4, 5};
   fuchsia::mem::Data bytes_backed_data = fuchsia::mem::Data::WithBytes(std::move(data));
 
-  zx::status extracted = fuchsia_mem_ext::ExtractData(std::move(bytes_backed_data));
+  zx::result extracted = fuchsia_mem_ext::ExtractData(std::move(bytes_backed_data));
 
   ASSERT_OK(extracted.status_value());
 
@@ -260,7 +260,7 @@ TEST(ExtractData, Buffer) {
 
   auto buffer_backed_data = fuchsia::mem::Data::WithBuffer({std::move(vmo), data.size()});
 
-  zx::status extracted = fuchsia_mem_ext::ExtractData(std::move(buffer_backed_data));
+  zx::result extracted = fuchsia_mem_ext::ExtractData(std::move(buffer_backed_data));
 
   ASSERT_OK(extracted.status_value());
 

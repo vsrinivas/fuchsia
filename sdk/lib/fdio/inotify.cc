@@ -154,7 +154,7 @@ int inotify_init1(int flags) {
   if (flags & ~(IN_CLOEXEC | IN_NONBLOCK)) {
     return ERRNO(EINVAL);
   }
-  zx::status io = fdio_internal::zxio::create();
+  zx::result io = fdio_internal::zxio::create();
   if (io.is_error()) {
     return ERROR(io.status_value());
   }

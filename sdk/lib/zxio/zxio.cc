@@ -557,7 +557,7 @@ zx_status_t zxio_sendmsg(zxio_t* io, const struct msghdr* msg, int flags, size_t
 }
 
 template <typename T>
-zx::status<fidl::UnownedClientEnd<T>> connect_socket_provider(
+zx::result<fidl::UnownedClientEnd<T>> connect_socket_provider(
     zxio_service_connector service_connector) {
   zx_handle_t socket_provider_handle;
   zx_status_t status =
@@ -592,7 +592,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
           return ZX_ERR_INVALID_ARGS;
       }
 
-      zx::status<fidl::UnownedClientEnd<fpacketsocket::Provider>> provider =
+      zx::result<fidl::UnownedClientEnd<fpacketsocket::Provider>> provider =
           connect_socket_provider<fpacketsocket::Provider>(service_connector);
       if (provider.is_error()) {
         return ZX_ERR_IO;
@@ -657,7 +657,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
       switch (protocol) {
         case IPPROTO_IP:
         case IPPROTO_TCP: {
-          zx::status<fidl::UnownedClientEnd<fsocket::Provider>> provider =
+          zx::result<fidl::UnownedClientEnd<fsocket::Provider>> provider =
               connect_socket_provider<fsocket::Provider>(service_connector);
           if (provider.is_error()) {
             return ZX_ERR_IO;
@@ -728,7 +728,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
           return ZX_ERR_PROTOCOL_NOT_SUPPORTED;
       }
 
-      zx::status<fidl::UnownedClientEnd<fsocket::Provider>> provider =
+      zx::result<fidl::UnownedClientEnd<fsocket::Provider>> provider =
           connect_socket_provider<fsocket::Provider>(service_connector);
       if (provider.is_error()) {
         return ZX_ERR_IO;
@@ -837,7 +837,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
         proto_assoc = frawsocket::wire::ProtocolAssociation::WithAssociated(sock_protocol);
       }
 
-      zx::status<fidl::UnownedClientEnd<frawsocket::Provider>> provider =
+      zx::result<fidl::UnownedClientEnd<frawsocket::Provider>> provider =
           connect_socket_provider<frawsocket::Provider>(service_connector);
       if (provider.is_error()) {
         return ZX_ERR_IO;

@@ -67,7 +67,7 @@ struct local_connection : public fdio_t {
 
   // Expects a canonical path (no ..) with no leading
   // slash and no trailing slash
-  zx::status<fdio_ptr> open(std::string_view path, fio::wire::OpenFlags flags,
+  zx::result<fdio_ptr> open(std::string_view path, fio::wire::OpenFlags flags,
                             uint32_t mode) override {
     auto& dir = local_dir();
     return dir.fs->Open(fbl::RefPtr(dir.vn), path, flags, mode);
@@ -137,7 +137,7 @@ struct local_connection : public fdio_t {
 
 }  // namespace
 
-zx::status<fdio_ptr> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
+zx::result<fdio_ptr> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
                                            fbl::RefPtr<LocalVnode> vn) {
   fdio_ptr io = fbl::MakeRefCounted<local_connection>();
   if (io == nullptr) {

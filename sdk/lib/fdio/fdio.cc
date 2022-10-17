@@ -17,7 +17,7 @@
 
 __EXPORT
 fdio_t* fdio_default_create(void) {
-  zx::status io = fdio_internal::zxio::create();
+  zx::result io = fdio_internal::zxio::create();
   if (io.is_error()) {
     return nullptr;
   }
@@ -27,7 +27,7 @@ fdio_t* fdio_default_create(void) {
 
 __EXPORT
 fdio_t* fdio_null_create(void) {
-  zx::status io = fdio_internal::zxio::create_null();
+  zx::result io = fdio_internal::zxio::create_null();
   if (io.is_error()) {
     return nullptr;
   }
@@ -37,7 +37,7 @@ fdio_t* fdio_null_create(void) {
 
 __EXPORT
 zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
-  zx::status io = fdio::create(zx::handle(h));
+  zx::result io = fdio::create(zx::handle(h));
   if (io.is_ok()) {
     std::variant reference = GetLastReference(std::move(io.value()));
     *out_io = std::get<fdio::last_reference>(reference).ExportToRawPtr();
@@ -47,7 +47,7 @@ zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
 
 __EXPORT
 int fdio_fd_create_null(void) {
-  zx::status io = fdio_internal::zxio::create_null();
+  zx::result io = fdio_internal::zxio::create_null();
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -108,7 +108,7 @@ zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) { return fdio_fd_t
 
 __EXPORT
 fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
-  zx::status io = fdio_internal::zxio::create();
+  zx::result io = fdio_internal::zxio::create();
   if (io.is_error()) {
     return nullptr;
   }

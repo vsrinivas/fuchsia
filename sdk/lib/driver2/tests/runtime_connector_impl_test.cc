@@ -43,7 +43,7 @@ class RuntimeConnectorTest : public gtest::RealLoopFixture {
     root_dir_ = fidl::WireClient<fuchsia_io::Directory>(std::move(endpoints->client), dispatcher());
   }
 
-  zx::status<fidl::WireSharedClient<fdf::RuntimeConnector>> CreateRuntimeConnectorClient() {
+  zx::result<fidl::WireSharedClient<fdf::RuntimeConnector>> CreateRuntimeConnectorClient() {
     zx::channel server_end, client_end;
     auto status = zx::channel::create(0, &server_end, &client_end);
     if (status != ZX_OK) {

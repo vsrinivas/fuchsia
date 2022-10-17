@@ -29,7 +29,7 @@ namespace fio = fuchsia_io;
 __EXPORT
 zx_status_t DirWatcher::Create(fbl::unique_fd dir_fd,
                                std::unique_ptr<DirWatcher>* out_dir_watcher) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
@@ -162,7 +162,7 @@ zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique
 }
 
 __EXPORT
-zx::status<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
+zx::result<zx::channel> WaitForDeviceTopologicalPath(const fbl::unique_fd& dir,
                                                      std::string_view topo_path) {
   struct TopoPathWatchState {
     std::string_view expected_topological_path;

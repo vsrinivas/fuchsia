@@ -22,7 +22,7 @@ int main(int argc, const char** argv) {
   int num_responses = 0;
 
   // Connect to the EchoLauncher protocol
-  zx::status launcher_client_end = component::Connect<fuchsia_examples::EchoLauncher>();
+  zx::result launcher_client_end = component::Connect<fuchsia_examples::EchoLauncher>();
   ZX_ASSERT(launcher_client_end.is_ok());
   fidl::Client launcher(std::move(*launcher_client_end), dispatcher);
 
@@ -46,7 +46,7 @@ int main(int argc, const char** argv) {
                 });
       });
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_examples::Echo>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_examples::Echo>();
   ZX_ASSERT(endpoints.status_value() == ZX_OK);
   auto [client_end, server_end] = *std::move(endpoints);
   // Make a pipelined request to get an instance of Echo

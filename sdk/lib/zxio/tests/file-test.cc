@@ -67,8 +67,8 @@ class File : public zxtest::Test {
     *out_server = static_cast<ServerImpl*>(server_.get());
   }
 
-  zx::status<fidl::ClientEnd<fio::File>> OpenConnection() {
-    zx::status ends = fidl::CreateEndpoints<fio::File>();
+  zx::result<fidl::ClientEnd<fio::File>> OpenConnection() {
+    zx::result ends = fidl::CreateEndpoints<fio::File>();
     if (ends.is_error()) {
       return ends.take_error();
     }
@@ -78,7 +78,7 @@ class File : public zxtest::Test {
   }
 
   zx_status_t OpenFile() {
-    zx::status client_end = OpenConnection();
+    zx::result client_end = OpenConnection();
     if (client_end.is_error()) {
       return client_end.status_value();
     }
@@ -322,7 +322,7 @@ TEST_F(File, ReadWriteStream) {
 class Remote : public File {
  public:
   zx_status_t OpenRemote() {
-    zx::status client_end = OpenConnection();
+    zx::result client_end = OpenConnection();
     if (client_end.is_error()) {
       return client_end.status_value();
     }

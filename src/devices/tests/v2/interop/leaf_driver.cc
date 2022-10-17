@@ -14,7 +14,7 @@ class LeafDriver : public driver::DriverBase {
   LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : driver::DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     auto waiter = context().incoming()->Connect<ft::Waiter>();
     if (waiter.is_error()) {
       node().reset();

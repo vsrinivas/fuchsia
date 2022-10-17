@@ -381,7 +381,7 @@ zx_status_t zxio_remote_borrow(zxio_t* io, zx_handle_t* out_handle) {
 
 zx_status_t zxio_remote_clone(zxio_t* io, zx_handle_t* out_handle) {
   auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
@@ -815,7 +815,7 @@ zx_status_t zxio_remote_vmo_get(zxio_t* io, zxio_vmo_flags_t zxio_flags, zx_hand
 zx_status_t zxio_dir_open(zxio_t* io, uint32_t flags, uint32_t mode, const char* path,
                           size_t path_len, zxio_storage_t* storage) {
   auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
@@ -1090,7 +1090,7 @@ zx_status_t zxio_remote_watch_directory(zxio_t* io, zxio_watch_directory_cb cb, 
     return ZX_ERR_INVALID_ARGS;
   }
   auto& remote = *reinterpret_cast<zxio_remote_t*>(io);
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }

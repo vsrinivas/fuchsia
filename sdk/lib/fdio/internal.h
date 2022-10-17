@@ -77,7 +77,7 @@ fdio_ptr fdio_iodir(int dirfd, std::string_view& in_out_path);
 zx_status_t fdio_validate_path(const char* path, size_t* out_length);
 
 // Wraps an arbitrary handle with an object that works with wait hooks.
-zx::status<fdio_ptr> fdio_waitable_create(std::variant<zx::handle, zx::unowned_handle> h,
+zx::result<fdio_ptr> fdio_waitable_create(std::variant<zx::handle, zx::unowned_handle> h,
                                           zx_signals_t signals_in, zx_signals_t signals_out);
 
 // Returns the sum of the capacities of all the entries in |vector|.
@@ -110,18 +110,18 @@ using two_path_op = zx_status_t(std::string_view src, zx_handle_t dst_token, std
 // follow.
 struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   template <typename F>
-  static zx::status<fdio_ptr> create(F fn) {
+  static zx::result<fdio_ptr> create(F fn) {
     void* context = nullptr;
     return create(context, fn(zxio_allocator, &context));
   }
-  static zx::status<fdio_ptr> create(zx::handle handle);
-  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node,
+  static zx::result<fdio_ptr> create(zx::handle handle);
+  static zx::result<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node,
                                      fuchsia_io::wire::NodeInfoDeprecated info);
 
   // Waits for a |fuchsia.io/Node.OnOpen| event on channel.
-  static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
+  static zx::result<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
 
-  virtual zx::status<fdio_ptr> open(std::string_view path, fuchsia_io::wire::OpenFlags flags,
+  virtual zx::result<fdio_ptr> open(std::string_view path, fuchsia_io::wire::OpenFlags flags,
                                     uint32_t mode);
   virtual zx_status_t clone(zx_handle_t* out_handle) = 0;
   virtual zx_status_t add_inotify_filter(std::string_view path, uint32_t mask,
@@ -245,7 +245,7 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   static zx_status_t zxio_allocator(zxio_object_type_t type, zxio_storage_t** out_storage,
                                     void** out_context);
 
-  static zx::status<fdio_ptr> create(void*& context, zx_status_t status);
+  static zx::result<fdio_ptr> create(void*& context, zx_status_t status);
 
   virtual zx_status_t close() = 0;
 

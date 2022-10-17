@@ -79,7 +79,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
 };
 
 TEST(Tty, Basic) {
-  zx::status device_ends = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+  zx::result device_ends = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   ASSERT_OK(device_ends.status_value());
   auto [device_client, device_server] = std::move(device_ends.value());
 

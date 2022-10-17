@@ -60,15 +60,15 @@ int main(int argc, char** argv) {
   // The `ServeFromStartupInfo()` function sets up the outgoing directory with the startup handle.
   // The startup handle is a handle provided to every component by the system, so that they can
   // serve capabilities (e.g. FIDL protocols) to other components.
-  zx::status result = outgoing.ServeFromStartupInfo();
+  zx::result result = outgoing.ServeFromStartupInfo();
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Failed to serve outgoing directory: " << result.status_string();
     return -1;
   }
 
   // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
-  // |zx::status| and it must be checked for errors.
-  zx::status client_end = component::Connect<test_exampletester::Simple>();
+  // |zx::result| and it must be checked for errors.
+  zx::result client_end = component::Connect<test_exampletester::Simple>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Simple| protocol: "
                    << client_end.status_string();

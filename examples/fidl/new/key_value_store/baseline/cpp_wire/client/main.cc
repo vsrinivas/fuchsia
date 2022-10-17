@@ -23,8 +23,8 @@ int main(int argc, const char** argv) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
-  // |zx::status| and it must be checked for errors.
-  zx::status client_end = component::Connect<examples_keyvaluestore_baseline::Store>();
+  // |zx::result| and it must be checked for errors.
+  zx::result client_end = component::Connect<examples_keyvaluestore_baseline::Store>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Store| protocol: "
                    << client_end.status_string();

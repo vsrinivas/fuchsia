@@ -16,7 +16,7 @@ class DevfsExporter {
   // Creates a devfs exporter, where `ns` will be used to connect to
   // fuchsia.device.fs.Exporter, and `svc_dir` will be used to find the services
   // to export.
-  static zx::status<DevfsExporter> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
+  static zx::result<DevfsExporter> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
                                           fidl::WireSharedClient<fuchsia_io::Directory> svc_dir);
 
   DevfsExporter() = default;

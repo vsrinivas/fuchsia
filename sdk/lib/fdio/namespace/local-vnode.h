@@ -39,7 +39,7 @@ class LocalVnode : public fbl::RefCounted<LocalVnode> {
 
   // Initializes a new vnode with a remote node_type, and attaches a reference to it
   // inside an (optional) parent.
-  static zx::status<fbl::RefPtr<LocalVnode>> Create(fbl::RefPtr<LocalVnode> parent,
+  static zx::result<fbl::RefPtr<LocalVnode>> Create(fbl::RefPtr<LocalVnode> parent,
                                                     fidl::ClientEnd<fuchsia_io::Directory> remote,
                                                     fbl::String name);
 

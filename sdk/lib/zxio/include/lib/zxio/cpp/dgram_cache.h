@@ -16,7 +16,7 @@
 #include <optional>
 #include <unordered_map>
 
-using ErrOrOutCode = zx::status<int16_t>;
+using ErrOrOutCode = zx::result<int16_t>;
 
 namespace std {
 template <>

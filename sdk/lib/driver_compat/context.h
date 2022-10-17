@@ -21,7 +21,7 @@ class Context {
   // well as `/svc/fuchsia.device.fs.Exporter`.
   static void ConnectAndCreate(driver::DriverContext* driver_context,
                                async_dispatcher_t* dispatcher,
-                               fit::callback<void(zx::status<std::unique_ptr<Context>>)> callback);
+                               fit::callback<void(zx::result<std::unique_ptr<Context>>)> callback);
 
   // Given a |relative_child_path| return that child's full topological path.
   std::string TopologicalPath(std::string_view relative_child_path) const;

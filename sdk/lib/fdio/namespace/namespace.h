@@ -14,7 +14,7 @@
 struct fdio;
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
-zx::status<fbl::RefPtr<fdio>> fdio_ns_open_root(fdio_ns_t* ns);
+zx::result<fbl::RefPtr<fdio>> fdio_ns_open_root(fdio_ns_t* ns);
 
 // Change the root of the given namespace |ns| to match |io|.
 //

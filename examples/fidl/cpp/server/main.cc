@@ -136,7 +136,7 @@ int main(int argc, const char** argv) {
   // the startup handle. The startup handle is a handle provided to every
   // component by the system, so that they can serve capabilities (e.g. FIDL
   // protocols) to other components.
-  zx::status result = outgoing.ServeFromStartupInfo();
+  zx::result result = outgoing.ServeFromStartupInfo();
   if (result.is_error()) {
     FX_LOGS(ERROR) << "Failed to serve outgoing directory: " << result.status_string();
     return -1;

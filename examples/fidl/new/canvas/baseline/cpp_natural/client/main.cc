@@ -70,8 +70,8 @@ int main(int argc, const char** argv) {
 
   // [START connect-protocol]
   // Connect to the protocol inside the component's namespace. This can fail so it's wrapped in a
-  // |zx::status| and it must be checked for errors.
-  zx::status client_end = component::Connect<examples_canvas_baseline::Instance>();
+  // |zx::result| and it must be checked for errors.
+  zx::result client_end = component::Connect<examples_canvas_baseline::Instance>();
   if (!client_end.is_ok()) {
     FX_LOGS(ERROR) << "Synchronous error when connecting to the |Instance| protocol: "
                    << client_end.status_string();

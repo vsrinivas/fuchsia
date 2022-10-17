@@ -20,7 +20,7 @@ class Logger {
  public:
   // Creates a logger with a given `name`, which will only send logs that are of
   // at least `min_severity`.
-  static zx::status<Logger> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
+  static zx::result<Logger> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
                                    std::string_view name,
                                    FuchsiaLogSeverity min_severity = FUCHSIA_LOG_INFO);
 

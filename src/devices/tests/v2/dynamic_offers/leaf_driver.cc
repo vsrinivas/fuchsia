@@ -20,7 +20,7 @@ class LeafDriver : public driver::DriverBase {
   LeafDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : driver::DriverBase("leaf", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     auto handshake = driver::Connect<ft::Service::Device>(*context().incoming());
     if (handshake.is_error()) {
       return handshake.take_error();

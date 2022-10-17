@@ -65,7 +65,7 @@ int socket(int domain, int type, int protocol) {
   };
 
   int16_t out_code;
-  zx::status result = fdio::create([&](zxio_storage_alloc allocator, void** out_context) {
+  zx::result result = fdio::create([&](zxio_storage_alloc allocator, void** out_context) {
     return zxio_socket(service_connector, domain, type & kSockTypesMask, protocol, allocator,
                        out_context, &out_code);
   });

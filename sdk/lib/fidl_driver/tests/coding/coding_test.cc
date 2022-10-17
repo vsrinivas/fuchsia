@@ -30,11 +30,11 @@ TEST(StandaloneResourceTypeCoding, Encode) {
   // Set up an object.
   zx::channel zircon_handle_1, zircon_handle_2;
   ASSERT_OK(zx::channel::create(0, &zircon_handle_1, &zircon_handle_2));
-  zx::status driver_handles = fdf::ChannelPair::Create(0);
+  zx::result driver_handles = fdf::ChannelPair::Create(0);
   ASSERT_OK(driver_handles.status_value());
-  zx::status zircon_endpoints = fidl::CreateEndpoints<test_driver_coding::ZirconChannelProtocol>();
+  zx::result zircon_endpoints = fidl::CreateEndpoints<test_driver_coding::ZirconChannelProtocol>();
   ASSERT_OK(zircon_endpoints.status_value());
-  zx::status driver_endpoints = fdf::CreateEndpoints<test_driver_coding::DriverChannelProtocol>();
+  zx::result driver_endpoints = fdf::CreateEndpoints<test_driver_coding::DriverChannelProtocol>();
   ASSERT_OK(driver_endpoints.status_value());
 
   zx_handle_t expected_zircon_handle = zircon_handle_1.get();
@@ -81,11 +81,11 @@ TEST(StandaloneResourceTypeCoding, Decode) {
   // Set up some handles.
   zx::channel zircon_handle_1, zircon_handle_2;
   ASSERT_OK(zx::channel::create(0, &zircon_handle_1, &zircon_handle_2));
-  zx::status driver_handles = fdf::ChannelPair::Create(0);
+  zx::result driver_handles = fdf::ChannelPair::Create(0);
   ASSERT_OK(driver_handles.status_value());
-  zx::status zircon_endpoints = fidl::CreateEndpoints<test_driver_coding::ZirconChannelProtocol>();
+  zx::result zircon_endpoints = fidl::CreateEndpoints<test_driver_coding::ZirconChannelProtocol>();
   ASSERT_OK(zircon_endpoints.status_value());
-  zx::status driver_endpoints = fdf::CreateEndpoints<test_driver_coding::DriverChannelProtocol>();
+  zx::result driver_endpoints = fdf::CreateEndpoints<test_driver_coding::DriverChannelProtocol>();
   ASSERT_OK(driver_endpoints.status_value());
 
   zx_handle_t expected_zircon_handle = zircon_handle_1.release();

@@ -57,7 +57,7 @@ class Arena {
   // ZX_ERR_INVALID_ARGS: |options| is any value other than 0.
   //
   // ZX_ERR_NO_MEMORY: Failed due to a lack of memory.
-  static zx::status<Arena> Create(uint32_t options, fdf_arena_tag_t tag) {
+  static zx::result<Arena> Create(uint32_t options, fdf_arena_tag_t tag) {
     fdf_arena_t* arena;
     zx_status_t status = fdf_arena_create(options, tag, &arena);
     if (status != ZX_OK) {

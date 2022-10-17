@@ -37,7 +37,7 @@ TEST(CompatConnectTest, Connection) {
 
   compat::FindDirectoryEntries(
       std::move(endpoints->client), loop.dispatcher(),
-      [&callback_complete](zx::status<std::vector<std::string>> entries) mutable {
+      [&callback_complete](zx::result<std::vector<std::string>> entries) mutable {
         callback_complete = true;
         ASSERT_EQ(ZX_OK, entries.status_value());
         ASSERT_EQ(3ul, entries->size());

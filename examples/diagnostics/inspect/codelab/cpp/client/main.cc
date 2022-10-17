@@ -37,7 +37,7 @@ int main(int argc, char** argv) {
 
   fidl::SynchronousInterfacePtr<fuchsia::component::Realm> realm;
   std::string realm_service = std::string("/svc/") + fuchsia::component::Realm::Name_;
-  auto status = zx::make_status(
+  auto status = zx::make_result(
       fdio_service_connect(realm_service.c_str(), realm.NewRequest().TakeChannel().get()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Unable to connect to realm: " << status.status_string();
@@ -46,11 +46,11 @@ int main(int argc, char** argv) {
 
   fuchsia::io::DirectorySyncPtr exposed_dir;
   fuchsia::component::Realm_OpenExposedDir_Result result;
-  status = zx::make_status(realm->OpenExposedDir(
+  status = zx::make_result(realm->OpenExposedDir(
       fuchsia::component::decl::ChildRef{.name = "reverser"}, exposed_dir.NewRequest(), &result));
 
   fuchsia::examples::inspect::ReverserSyncPtr reverser;
-  status = zx::make_status(exposed_dir->Open(
+  status = zx::make_result(exposed_dir->Open(
       fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
       fuchsia::io::MODE_TYPE_SERVICE, fuchsia::examples::inspect::Reverser::Name_,
       fidl::InterfaceRequest<fuchsia::io::Node>(reverser.NewRequest().TakeChannel())));
@@ -63,10 +63,10 @@ int main(int argc, char** argv) {
   fuchsia::component::BinderSyncPtr binder;
   fuchsia::io::DirectorySyncPtr fizzbuzz_exposed_dir;
   fuchsia::component::Realm_OpenExposedDir_Result result_open_fizzbuzz;
-  status = zx::make_status(
+  status = zx::make_result(
       realm->OpenExposedDir(fuchsia::component::decl::ChildRef{.name = "fizzbuzz"},
                             fizzbuzz_exposed_dir.NewRequest(), &result_open_fizzbuzz));
-  status = zx::make_status(fizzbuzz_exposed_dir->Open(
+  status = zx::make_result(fizzbuzz_exposed_dir->Open(
       fuchsia::io::OpenFlags::RIGHT_READABLE | fuchsia::io::OpenFlags::RIGHT_WRITABLE,
       fuchsia::io::MODE_TYPE_SERVICE, fuchsia::component::Binder::Name_,
       fidl::InterfaceRequest<fuchsia::io::Node>(binder.NewRequest().TakeChannel())));
@@ -81,7 +81,7 @@ int main(int argc, char** argv) {
     FX_LOGS(INFO) << "Input: " << argv[i];
 
     std::string output;
-    status = zx::make_status(reverser->Reverse(argv[i], &output));
+    status = zx::make_result(reverser->Reverse(argv[i], &output));
     if (status.is_error()) {
       FX_LOGS(ERROR) << "Error: Failed to reverse string.";
       return status.status_value();

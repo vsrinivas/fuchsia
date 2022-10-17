@@ -37,7 +37,7 @@ class RootDriver : public driver::DriverBase,
       : DriverBase("root", std::move(start_args), std::move(driver_dispatcher)),
         node_(fidl::WireClient(std::move(node()), dispatcher())) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     driver::ServiceInstanceHandler handler;
     ft::Service::Handler service(&handler);
 

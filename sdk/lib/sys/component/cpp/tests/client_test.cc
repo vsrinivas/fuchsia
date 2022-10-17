@@ -119,13 +119,13 @@ class ClientTest : public zxtest::Test {
 };
 
 TEST_F(ClientTest, ConnectsToDefault) {
-  zx::status<EchoService::ServiceClient> open_result = component::OpenServiceAt<EchoService>(svc_);
+  zx::result<EchoService::ServiceClient> open_result = component::OpenServiceAt<EchoService>(svc_);
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
 
   // Connect to the member 'foo'.
-  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
+  zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_foo();
   ASSERT_TRUE(connect_result.is_ok());
 
   fidl::WireSyncClient client{std::move(connect_result.value())};
@@ -139,14 +139,14 @@ TEST_F(ClientTest, ConnectsToDefault) {
 }
 
 TEST_F(ClientTest, ConnectsToOther) {
-  zx::status<EchoService::ServiceClient> open_result =
+  zx::result<EchoService::ServiceClient> open_result =
       component::OpenServiceAt<EchoService>(svc_, "other");
   ASSERT_TRUE(open_result.is_ok());
 
   EchoService::ServiceClient service = std::move(open_result.value());
 
   // Connect to the member 'bar'.
-  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_bar();
+  zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_bar();
   ASSERT_TRUE(connect_result.is_ok());
 
   fidl::WireSyncClient client{std::move(connect_result.value())};
@@ -164,7 +164,7 @@ TEST_F(ClientTest, FilePathTooLong) {
   illegal_path.assign(256, 'a');
 
   // Use an instance name that is too long.
-  zx::status<EchoService::ServiceClient> open_result =
+  zx::result<EchoService::ServiceClient> open_result =
       component::OpenServiceAt<EchoService>(svc_, illegal_path);
   ASSERT_TRUE(open_result.is_error());
   ASSERT_EQ(open_result.status_value(), ZX_ERR_INVALID_ARGS);
@@ -226,7 +226,7 @@ TEST(SingletonService, ConnectAt) {
   auto endpoints = fidl::CreateEndpoints<MockProtocol>();
   ASSERT_OK(endpoints.status_value());
   {
-    zx::status<> status = component::ConnectAt(directory->client, std::move(endpoints->server));
+    zx::result<> status = component::ConnectAt(directory->client, std::move(endpoints->server));
     ASSERT_OK(status.status_value());
   }
 

@@ -25,7 +25,7 @@ int fdio_handle_fd(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_
     }
     return zx::handle(h);
   };
-  zx::status io = fdio_waitable_create(handle(), signals_in, signals_out);
+  zx::result io = fdio_waitable_create(handle(), signals_in, signals_out);
   if (io.is_error()) {
     return ERROR(io.status_value());
   }
@@ -43,7 +43,7 @@ zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
   if (status != ZX_OK) {
     return status;
   }
-  zx::status io = fdio_internal::pipe::create(std::move(h0));
+  zx::result io = fdio_internal::pipe::create(std::move(h0));
   if (io.is_error()) {
     return io.status_value();
   }

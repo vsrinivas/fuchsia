@@ -16,7 +16,7 @@ class RootDriver : public driver::DriverBase,
   RootDriver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher)
       : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
-  zx::status<> Start() override {
+  zx::result<> Start() override {
     driver::ServiceInstanceHandler handler;
     ft::Device::Handler device(&handler);
 

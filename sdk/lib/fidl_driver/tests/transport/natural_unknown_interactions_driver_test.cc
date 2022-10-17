@@ -358,7 +358,7 @@ struct ResponseCompleter {
     inner_->completion.Signal();
   }
 
-  zx::status<T> WaitForResponse() const {
+  zx::result<T> WaitForResponse() const {
     auto status = inner_->completion.Wait();
     if (status != ZX_OK) {
       return fit::error(status);

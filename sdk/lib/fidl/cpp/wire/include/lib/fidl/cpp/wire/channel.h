@@ -44,11 +44,11 @@ struct Endpoints {
 // - Structured Binding:
 //     auto [client_end, server_end] = std::move(endpoints.value());
 template <typename Protocol>
-zx::status<Endpoints<Protocol>> CreateEndpoints() {
+zx::result<Endpoints<Protocol>> CreateEndpoints() {
   zx::channel local, remote;
   zx_status_t status = zx::channel::create(0, &local, &remote);
   if (status != ZX_OK) {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
   return zx::ok(Endpoints<Protocol>{
       fidl::ClientEnd<Protocol>(std::move(local)),
@@ -64,13 +64,13 @@ zx::status<Endpoints<Protocol>> CreateEndpoints() {
 // This overload of |CreateEndpoints| may lead to more concise code when the
 // caller already has the client endpoint defined as an instance variable.
 // It will replace the destination of |out_client| with a newly created client
-// endpoint, and return the corresponding server endpoint in a |zx::status|:
+// endpoint, and return the corresponding server endpoint in a |zx::result|:
 //
 //     // |client_end_| is an instance variable.
 //     auto server_end = fidl::CreateEndpoints(&client_end_);
 //     if (server_end.is_ok()) { ... }
 template <typename Protocol>
-zx::status<fidl::ServerEnd<Protocol>> CreateEndpoints(fidl::ClientEnd<Protocol>* out_client) {
+zx::result<fidl::ServerEnd<Protocol>> CreateEndpoints(fidl::ClientEnd<Protocol>* out_client) {
   auto endpoints = fidl::CreateEndpoints<Protocol>();
   if (!endpoints.is_ok()) {
     return endpoints.take_error();
@@ -87,13 +87,13 @@ zx::status<fidl::ServerEnd<Protocol>> CreateEndpoints(fidl::ClientEnd<Protocol>*
 // This overload of |CreateEndpoints| may lead to more concise code when the
 // caller already has the server endpoint defined as an instance variable.
 // It will replace the destination of |out_server| with a newly created server
-// endpoint, and return the corresponding client endpoint in a |zx::status|:
+// endpoint, and return the corresponding client endpoint in a |zx::result|:
 //
 //     // |server_end_| is an instance variable.
 //     auto client_end = fidl::CreateEndpoints(&server_end_);
 //     if (client_end.is_ok()) { ... }
 template <typename Protocol>
-zx::status<fidl::ClientEnd<Protocol>> CreateEndpoints(fidl::ServerEnd<Protocol>* out_server) {
+zx::result<fidl::ClientEnd<Protocol>> CreateEndpoints(fidl::ServerEnd<Protocol>* out_server) {
   auto endpoints = fidl::CreateEndpoints<Protocol>();
   if (!endpoints.is_ok()) {
     return endpoints.take_error();

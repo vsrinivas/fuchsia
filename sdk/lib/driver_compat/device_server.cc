@@ -55,7 +55,7 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
     fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher,
                                                                       std::move(server_end), this);
   };
-  zx::status<> status = compat_service.add_device(std::move(device));
+  zx::result<> status = compat_service.add_device(std::move(device));
   if (status.is_error()) {
     return status.error_value();
   }
@@ -82,7 +82,7 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
     fidl::BindServer<fidl::WireServer<fuchsia_driver_compat::Device>>(dispatcher,
                                                                       std::move(server_end), this);
   };
-  zx::status<> status = compat_service.add_device(std::move(device));
+  zx::result<> status = compat_service.add_device(std::move(device));
   if (status.is_error()) {
     return status.error_value();
   }

@@ -34,7 +34,7 @@ class Driver : public driver::DriverBase {
          device_t device, const zx_protocol_device_t* ops, std::string_view driver_path);
   ~Driver() override;
 
-  zx::status<> Start() override;
+  zx::result<> Start() override;
 
   // Returns the context that DFv1 driver provided.
   void* Context() const;
@@ -135,7 +135,7 @@ class Driver : public driver::DriverBase {
 
 class DriverFactory {
  public:
-  static zx::status<std::unique_ptr<driver::DriverBase>> CreateDriver(
+  static zx::result<std::unique_ptr<driver::DriverBase>> CreateDriver(
       driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver_dispatcher);
 };
 

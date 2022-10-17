@@ -14,8 +14,8 @@
 using fuchsia_examples::Echo;
 using fuchsia_examples::EchoService;
 
-zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
-  zx::status<EchoService::ServiceClient> open_result =
+zx::result<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
+  zx::result<EchoService::ServiceClient> open_result =
       component::OpenServiceAt<EchoService>(std::move(svc));
   if (open_result.is_error()) {
     std::cerr << "failed to open default instance of EchoService: " << open_result.status_string()
@@ -25,7 +25,7 @@ zx::status<> llcpp_example(fidl::UnownedClientEnd<fuchsia_io::Directory> svc) {
 
   EchoService::ServiceClient service = std::move(open_result.value());
 
-  zx::status<fidl::ClientEnd<Echo>> connect_result = service.connect_regular_echo();
+  zx::result<fidl::ClientEnd<Echo>> connect_result = service.connect_regular_echo();
   if (connect_result.is_error()) {
     std::cerr << "failed to connect to member protocol regular_echo of EchoService: "
               << connect_result.status_string() << std::endl;
@@ -65,7 +65,7 @@ int main(int argc, const char** argv) {
   // Convert the typed handle to LLCPP types.
   auto llsvc = fidl::ClientEnd<fuchsia_io::Directory>(svc->TakeChannel());
 
-  zx::status<> result = llcpp_example(llsvc);
+  zx::result<> result = llcpp_example(llsvc);
   if (result.is_error()) {
     std::cerr << "llcpp_example failed with status: " << result.status_string() << std::endl;
     return 1;

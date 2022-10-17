@@ -126,7 +126,7 @@ TEST(DeviceWatcherTest, WaitForDeviceTopologicalPath) {
   ASSERT_EQ(ZX_OK,
             fdio_fd_create(endpoints->client.TakeChannel().release(), dir.reset_and_get_address()));
 
-  zx::status<zx::channel> status =
+  zx::result<zx::channel> status =
       device_watcher::WaitForDeviceTopologicalPath(dir, std::string(kTopoPath).c_str());
   ASSERT_TRUE(status.is_ok());
 

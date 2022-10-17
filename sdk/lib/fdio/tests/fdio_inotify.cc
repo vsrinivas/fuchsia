@@ -82,7 +82,9 @@ std::optional<InotifyEventIterator::Entry> InotifyEventIterator::Next() {
   };
 }
 
-constexpr struct inotify_event kEvent { .wd = 1, .mask = IN_OPEN, .cookie = 0, };
+constexpr struct inotify_event kEvent {
+  .wd = 1, .mask = IN_OPEN, .cookie = 0,
+};
 
 // The inotify read interface can return a variable amount of data since it encodes
 // a path name. This type allocates enough space to read at least one inotify event.
@@ -203,7 +205,7 @@ class InotifyTestDirectoryFuchsia : public InotifyTestDirectory {
     ASSERT_OK(loop_.StartThread("fake-filesystem"));
 
     // client-server channel logic
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_OK(endpoints.status_value());
     fidl::BindServer(loop_.dispatcher(), std::move(endpoints->server), &server_);
 
