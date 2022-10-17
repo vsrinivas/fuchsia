@@ -20,4 +20,12 @@
             path: "/data",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "basemgr",
+                "sessionmgr",
+            ],
+        },
+    },
 }

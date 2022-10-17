@@ -44,4 +44,12 @@
             to: [ "#realm_builder" ],
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "bt-avrcp-target",
+                "codec_factory",
+            ],
+        },
+    },
 }
