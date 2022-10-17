@@ -57,6 +57,19 @@ protocol Interaction {
         mode Mode;
     });
 
+    /// Begins test authentication or enrollment. This method should only be
+    /// called when a `WatchState` response indicated that test is available
+    /// for the requested mode.
+    ///
+    /// The server will close the supplied `TestInteraction` channel if the
+    /// requested mode or mechanism was invalid or when the authentication or
+    /// enrollment is complete. Either event will cause a response to
+    /// `WatchState`.
+    StartTest(resource struct {
+        ui server_end:TestInteraction;
+        mode Mode;
+    });
+
     /// Returns the authentication mechanisms that are available to either
     /// authenticate or enroll. This method follows the "hanging get" interface
     /// pattern, returning immediately on the first call and hanging until a
