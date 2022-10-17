@@ -78,11 +78,13 @@ Add the [`fuchsia.testing.FakeClockControl`][fidl] protocol to the test
 component's manifest.
 ```
     ...
-    "sandbox": {
-        "services": [
-            "fuchsia.testing.FakeClockControl"
-        ]
-    }
+    "use": [
+        {
+            "protocol": [
+                "fuchsia.testing.FakeClockControl"
+            ]
+        }
+    ]
 ```
 
 The test may then connect to
