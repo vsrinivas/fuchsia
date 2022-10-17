@@ -21,6 +21,7 @@ source_set("gesture_manager") {
     "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
     "//sdk/fidl/fuchsia.ui.pointer.augment:fuchsia.ui.pointer.augment_hlcpp",
     "//src/ui/a11y/lib/gesture_manager/arena",
+    "//src/ui/a11y/lib/gesture_manager/arena_v2",
     "//src/ui/a11y/lib/gesture_manager/recognizers",
   ]
 

@@ -1,0 +1,26 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("arena_v2") {
+  sources = [
+    "contest_member_v2.h",
+    "gesture_arena_v2.cc",
+    "gesture_arena_v2.h",
+    "recognizer_v2.cc",
+    "recognizer_v2.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input.accessibility:fuchsia.ui.input.accessibility_hlcpp",
+    "//sdk/lib/fit",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+  ]
+}

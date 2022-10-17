@@ -1,0 +1,25 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [ ":gesture_arena_v2_tests" ]
+}
+
+executable("gesture_arena_v2_tests") {
+  testonly = true
+
+  sources = [ "gesture_arena_v2_unittest.cc" ]
+
+  deps = [
+    "//sdk/lib/fit",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/a11y/lib/gesture_manager/arena_v2",
+    "//src/ui/a11y/lib/testing:input",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}

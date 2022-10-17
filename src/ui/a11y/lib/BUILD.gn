@@ -67,6 +67,10 @@ fuchsia_unittest_component("gesture-arena-tests-component") {
   deps = [ "gesture_manager/arena/tests" ]
 }
 
+fuchsia_unittest_component("gesture-arena-v2-tests-component") {
+  deps = [ "gesture_manager/arena_v2/tests" ]
+}
+
 fuchsia_unittest_component("gesture-recognizers-tests-component") {
   deps = [ "gesture_manager/recognizers/tests" ]
 }
@@ -130,6 +134,7 @@ fuchsia_test_package("a11y-lib-tests") {
     ":configuration-tests-component",
     ":focus-chain-manager-tests-component",
     ":gesture-arena-tests-component",
+    ":gesture-arena-v2-tests-component",
     ":gesture-recognizers-tests-component",
     ":gesture-manager-tests-component",
     ":magnifier-tests-component",
