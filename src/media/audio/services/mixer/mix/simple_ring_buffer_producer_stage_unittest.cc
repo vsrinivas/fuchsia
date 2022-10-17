@@ -30,11 +30,7 @@ constexpr int64_t kRingBufferFrames = 100;
 TEST(SimpleRingBufferProducerStageTest, Read) {
   auto buffer =
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
-  auto ring_buffer = std::make_shared<RingBuffer>(
-      kFormat, DefaultUnreadableClock(),
-      std::make_shared<RingBuffer::Buffer>(buffer,
-                                           /*producer_frames=*/kRingBufferFrames / 2,
-                                           /*consumer_frames=*/kRingBufferFrames / 2));
+  auto ring_buffer = std::make_shared<RingBuffer>(kFormat, DefaultUnreadableClock(), buffer);
 
   // Create a producer and start it.
   SimpleRingBufferProducerStage producer("producer", ring_buffer);

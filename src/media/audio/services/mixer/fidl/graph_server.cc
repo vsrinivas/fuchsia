@@ -149,6 +149,8 @@ ValidateStreamSink(std::string_view debug_description, std::string_view node_nam
 // Validates `ring_buffer` and translates from FIDL types to internal C++ types.
 struct RingBufferInfo {
   std::shared_ptr<RingBuffer> ring_buffer;
+  int64_t producer_frames;
+  int64_t consumer_frames;
   Format format;
   std::shared_ptr<Clock> reference_clock;
 };
@@ -211,14 +213,12 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
   }
 
   return fpromise::ok(RingBufferInfo{
-      .ring_buffer = std::make_shared<RingBuffer>(
-          format, UnreadableClock(clock_result.value()),
-          std::make_shared<RingBuffer::Buffer>(
-              std::move(mapped_buffer),
-              /*producer_frames=*/
-              static_cast<int64_t>(ring_buffer.producer_bytes()) / format.bytes_per_frame(),
-              /*consumer_frames=*/
-              static_cast<int64_t>(ring_buffer.consumer_bytes()) / format.bytes_per_frame())),
+      .ring_buffer = std::make_shared<RingBuffer>(format, UnreadableClock(clock_result.value()),
+                                                  std::move(mapped_buffer)),
+      .producer_frames =
+          static_cast<int64_t>(ring_buffer.producer_bytes()) / format.bytes_per_frame(),
+      .consumer_frames =
+          static_cast<int64_t>(ring_buffer.consumer_bytes()) / format.bytes_per_frame(),
       .format = format,
       .reference_clock = clock_result.value(),
   });
@@ -309,6 +309,9 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
       completer.ReplyError(result.error());
       return;
     }
+
+    // TODO(fxbug.dev/87651): each time the producer's downstream delay changes, validate that
+    // consumer_frames >= downstream delay.
 
     source = std::move(result.value().ring_buffer);
     format = result.value().format;
@@ -421,6 +424,18 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     format = result.value().format;
     reference_clock = std::move(result.value().reference_clock);
     media_ticks_per_ns = format->frames_per_ns();
+
+    // The consumer adds two mix periods worth of delay (it writes one mix period worth of data
+    // starting one mix period in the future). The specified `producer_frames` must be large enough
+    // to cover this delay.
+    auto min_producer_frames = format->integer_frames_per(2 * mix_thread->mix_period());
+    if (min_producer_frames > result.value().producer_frames) {
+      FX_LOGS(WARNING) << "CreateConsumer: ring buffer has " << result.value().producer_frames
+                       << " producer frames, but need at least " << min_producer_frames
+                       << " given a " << mix_thread->mix_period() << " mix period";
+      completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+      return;
+    }
 
   } else {
     FX_LOGS(WARNING) << "Unsupported ConsumerDataSource: "

@@ -41,11 +41,8 @@ class RingBufferConsumerWriterTest : public ::testing::Test {
  private:
   std::shared_ptr<MemoryMappedBuffer> buffer_ =
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
-  std::shared_ptr<RingBuffer> ring_buffer_ = std::make_shared<RingBuffer>(
-      kFormat, DefaultUnreadableClock(),
-      std::make_shared<RingBuffer::Buffer>(buffer_,
-                                           /*producer_frames=*/kRingBufferFrames / 2,
-                                           /*consumer_frames=*/kRingBufferFrames / 2));
+  std::shared_ptr<RingBuffer> ring_buffer_ =
+      std::make_shared<RingBuffer>(kFormat, DefaultUnreadableClock(), buffer_);
   RingBufferConsumerWriter writer_ = RingBufferConsumerWriter(ring_buffer_);
 };
 

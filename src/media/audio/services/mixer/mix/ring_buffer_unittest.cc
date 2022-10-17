@@ -39,11 +39,8 @@ class RingBufferTest : public ::testing::Test {
  private:
   std::shared_ptr<MemoryMappedBuffer> buffer_ =
       MemoryMappedBuffer::CreateOrDie(kRingBufferFrames * kFormat.bytes_per_frame(), true);
-  std::shared_ptr<RingBuffer> ring_buffer_ = std::make_shared<RingBuffer>(
-      kFormat, DefaultUnreadableClock(),
-      std::make_shared<RingBuffer::Buffer>(buffer_,
-                                           /*producer_frames=*/kRingBufferFrames / 2,
-                                           /*consumer_frames=*/kRingBufferFrames / 2));
+  std::shared_ptr<RingBuffer> ring_buffer_ =
+      std::make_shared<RingBuffer>(kFormat, DefaultUnreadableClock(), buffer_);
 };
 
 TEST_F(RingBufferTest, ReadUnwrappedFromStart) {
@@ -130,8 +127,7 @@ TEST(RingBufferUpdateTest, SetBufferAsync) {
   const auto buffer2 = MemoryMappedBuffer::CreateOrDie(4 * kFormat.bytes_per_frame(), true);
   const auto buffer3 = MemoryMappedBuffer::CreateOrDie(4 * kFormat.bytes_per_frame(), true);
 
-  const auto ring_buffer = std::make_shared<RingBuffer>(
-      kFormat, DefaultUnreadableClock(), std::make_shared<RingBuffer::Buffer>(buffer0, 5, 5));
+  const auto ring_buffer = std::make_shared<RingBuffer>(kFormat, DefaultUnreadableClock(), buffer0);
 
   // Fill buffer0 with known values.
   for (int k = 0; k < 10; k++) {
@@ -145,7 +141,7 @@ TEST(RingBufferUpdateTest, SetBufferAsync) {
   // buffer0[8..9] => buffer1[0..1]     // frames [28,29]
   // buffer0[0]    => buffer1[2]        // frames [30]
   {
-    ring_buffer->SetBufferAsync(std::make_shared<RingBuffer::Buffer>(buffer1, 7, 7));
+    ring_buffer->SetBufferAsync(buffer1);
     [[maybe_unused]] auto packet = ring_buffer->PrepareToWrite(31, 3);
 
     std::vector<int32_t> samples(static_cast<int32_t*>(buffer1->start()),
@@ -167,8 +163,8 @@ TEST(RingBufferUpdateTest, SetBufferAsync) {
   // buffer1[2,3] => buffer3[2,3]   // frames [30,31]
   // buffer1[4,5] => buffer3[0,1]   // frames [32,33]
   {
-    ring_buffer->SetBufferAsync(std::make_shared<RingBuffer::Buffer>(buffer2, 2, 2));
-    ring_buffer->SetBufferAsync(std::make_shared<RingBuffer::Buffer>(buffer3, 2, 2));
+    ring_buffer->SetBufferAsync(buffer2);
+    ring_buffer->SetBufferAsync(buffer3);
     [[maybe_unused]] auto packet = ring_buffer->PrepareToWrite(34, 2);
 
     std::vector<int32_t> samples(static_cast<int32_t*>(buffer3->start()),

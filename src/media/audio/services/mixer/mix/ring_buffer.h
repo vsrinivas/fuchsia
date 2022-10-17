@@ -22,25 +22,37 @@ namespace media_audio {
 // window into an infinite stream. Frame numbers are specified relative to this infinite stream --
 // the translation into ring buffer offsets happens internally.
 //
+// ## Concurrency
+//
 // Code in this directory (`mix/`) is supposed to be single-threaded, but ring buffers are unusual.
 // Ring buffers are concurrent by their very nature: the producer and consumer may be running in
 // different threads, or even in different HW domains. Hence, all public methods in this class are
 // safe to call from any thread, except `PrepareToWrite`, which must be called by the producer.
+// The actual data in a ring buffer is synchronized by time, using one of two protocols, as
+// described below.
+//
+// ### External producer or consumer
+//
+// If the ring buffer is shared with an external producer or consumer, such as a hardware device,
+// then we divide the ring buffer into two adjacent regions: a "safe write" region, which the
+// producer can write, and a "safe read" region, which the consumers can read. These regions meet at
+// the current time: the "safe write" region is in the future while the "safe read" region is in the
+// past. The producer and consumers must agree on these regions using some out-of-band mechanism.
+//
+// More information about this protocol can be found at the documentation for the
+// `fuchsia.audio.RingBuffer` FIDL type.
+//
+// ### Splitters
+//
+// Each SplitterNode uses a RingBuffer to connect a source stream (which writes to the buffer) with
+// one or more destination streams (which read from the buffer). SplitterNodes don't have a clean
+// separation into "safe read" and "safe write" regions. In some cases, consumers are allowed to
+// read from the same region the producer is writing to. See ../docs/splitters.h for a detailed
+// description of this protocol.
 class RingBuffer : public std::enable_shared_from_this<RingBuffer> {
  public:
-  struct Buffer {
-    Buffer(std::shared_ptr<MemoryMappedBuffer> b, int64_t pf, int64_t cf)
-        : buffer(std::move(b)), producer_frames(pf), consumer_frames(cf) {}
-
-    // The actual buffer, which stores `buffer->content_size() / format.bytes_per_frame()` frames.
-    std::shared_ptr<MemoryMappedBuffer> buffer;
-    // The number of frames allocated to the producer.
-    int64_t producer_frames;
-    // The number of frames allocated to the consumer.
-    int64_t consumer_frames;
-  };
-
-  RingBuffer(const Format& format, UnreadableClock reference_clock, std::shared_ptr<Buffer> buffer);
+  RingBuffer(const Format& format, UnreadableClock reference_clock,
+             std::shared_ptr<MemoryMappedBuffer> buffer);
 
   // Wraps a PacketView with a destructor that flushes the payload.
   class WritablePacketView : public PacketView {
@@ -61,7 +73,7 @@ class RingBuffer : public std::enable_shared_from_this<RingBuffer> {
   // Changes the underlying buffer. This change happens asynchronously during the next call to
   // `PrepareToWrite`. If this is called multiple times before the next `PrepareToWrite`, only the
   // most recent call has any effect.
-  void SetBufferAsync(std::shared_ptr<Buffer> new_buffer);
+  void SetBufferAsync(std::shared_ptr<MemoryMappedBuffer> new_buffer);
 
   // Returns the format of this buffer.
   [[nodiscard]] const Format& format() const { return format_; }
@@ -79,8 +91,8 @@ class RingBuffer : public std::enable_shared_from_this<RingBuffer> {
 
   // TODO(fxbug.dev/111798): These must be accessed with atomic instructions (std::atomic_load and
   // std::atomic_store). These can be std::atomic<std::shared_ptr<>> after C++20 is available.
-  std::shared_ptr<Buffer> buffer_;          // current buffer
-  std::shared_ptr<Buffer> pending_buffer_;  // non-nullptr if a change is requested
+  std::shared_ptr<MemoryMappedBuffer> buffer_;          // current buffer
+  std::shared_ptr<MemoryMappedBuffer> pending_buffer_;  // non-nullptr if a change is requested
 };
 
 }  // namespace media_audio

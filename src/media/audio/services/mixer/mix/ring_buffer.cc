@@ -26,26 +26,15 @@ WritablePacketView::~WritablePacketView() {
 }
 
 RingBuffer::RingBuffer(const Format& format, UnreadableClock reference_clock,
-                       std::shared_ptr<Buffer> buffer)
+                       std::shared_ptr<MemoryMappedBuffer> buffer)
     : format_(format), reference_clock_(std::move(reference_clock)), buffer_(std::move(buffer)) {
   // std::atomic accesses not necessary during the constructor.
   FX_CHECK(buffer_);
-  auto total_frames = TotalFramesForBuffer(*buffer_->buffer);
-  FX_CHECK(total_frames >= buffer_->producer_frames + buffer_->consumer_frames)
-      << "total_frames=" << total_frames << ", producer_frames=" << buffer_->producer_frames
-      << ", consumer_frames=" << buffer_->consumer_frames;
-  FX_CHECK(buffer_->producer_frames > 0);
-  FX_CHECK(buffer_->consumer_frames > 0);
 }
 
 PacketView RingBuffer::Read(const int64_t start_frame, const int64_t frame_count) {
   auto buffer = std::atomic_load(&buffer_);
-
-  FX_CHECK(frame_count <= buffer->producer_frames)
-      << "producer tried to access " << frame_count << " frames, more than limit of "
-      << buffer->producer_frames;
-
-  auto packet = PacketForRange(*buffer->buffer, start_frame, frame_count);
+  auto packet = PacketForRange(*buffer, start_frame, frame_count);
 
   // Ring buffers are synchronized only by time, which means there may not be a synchronization
   // happens-before edge connecting the last writer with the current reader, which means we must
@@ -64,21 +53,21 @@ PacketView RingBuffer::Read(const int64_t start_frame, const int64_t frame_count
 
 WritablePacketView RingBuffer::PrepareToWrite(const int64_t start_frame,
                                               const int64_t frame_count) {
+  const auto nullptr_buffer = std::shared_ptr<MemoryMappedBuffer>(nullptr);
   auto buffer = std::atomic_load(&buffer_);
 
   // Switch to the pending buffer, if requested.
-  if (auto pending = std::atomic_exchange(&pending_buffer_, std::shared_ptr<Buffer>(nullptr));
-      unlikely(pending)) {
-    int64_t old_total_frames = TotalFramesForBuffer(*buffer->buffer);
-    int64_t new_total_frames = TotalFramesForBuffer(*pending->buffer);
+  if (auto pending = std::atomic_exchange(&pending_buffer_, nullptr_buffer); unlikely(pending)) {
+    int64_t old_total_frames = TotalFramesForBuffer(*buffer);
+    int64_t new_total_frames = TotalFramesForBuffer(*pending);
 
     // Copy the old buffer into the pending buffer.
     int64_t start = start_frame - std::min(old_total_frames, new_total_frames);
     int64_t end = start_frame;
 
     while (end > start) {
-      auto old_packet = PacketForRange(*buffer->buffer, start, end - start);
-      auto new_packet = PacketForRange(*pending->buffer, start, end - start);
+      auto old_packet = PacketForRange(*buffer, start, end - start);
+      auto new_packet = PacketForRange(*pending, start, end - start);
 
       const int64_t frames = std::min(old_packet.length(), new_packet.length());
       std::memmove(new_packet.payload(), old_packet.payload(), frames * format_.bytes_per_frame());
@@ -90,17 +79,13 @@ WritablePacketView RingBuffer::PrepareToWrite(const int64_t start_frame,
     buffer = std::move(pending);
   }
 
-  FX_CHECK(frame_count <= buffer->consumer_frames)
-      << "consumer tried to access " << frame_count << " frames, more than limit of "
-      << buffer->consumer_frames;
-
   // Ring buffers are synchronized only by time, which means there may not be a synchronization
   // happens-before edge connecting the last writer with the current reader. When the write is
   // complete, we must flush our cache to ensure we have published the latest data.
-  return WritablePacketView(PacketForRange(*buffer->buffer, start_frame, frame_count));
+  return WritablePacketView(PacketForRange(*buffer, start_frame, frame_count));
 }
 
-void RingBuffer::SetBufferAsync(std::shared_ptr<Buffer> new_buffer) {
+void RingBuffer::SetBufferAsync(std::shared_ptr<MemoryMappedBuffer> new_buffer) {
   std::atomic_store(&pending_buffer_, std::move(new_buffer));
 }
 

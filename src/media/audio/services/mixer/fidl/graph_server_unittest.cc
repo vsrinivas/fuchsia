@@ -41,6 +41,8 @@ const Format kFormat = Format::CreateOrDie({
     .frames_per_second = 48000,
 });
 
+const auto kDefaultMixPeriod = zx::msec(10);
+
 fuchsia_audio::wire::Format MakeInvalidFormatFidl(fidl::AnyArena& arena) {
   return fuchsia_audio::wire::Format::Builder(arena)
       .sample_type(fuchsia_audio::SampleType::kFloat32)
@@ -117,11 +119,12 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::StreamSinkConsumer> MakeDefaul
 
 fidl::WireTableBuilder<fuchsia_audio::wire::RingBuffer> MakeDefaultRingBuffer(
     fidl::AnyArena& arena) {
+  auto bytes = kFormat.bytes_per(4 * kDefaultMixPeriod);
   auto builder = fuchsia_audio::wire::RingBuffer::Builder(arena);
-  builder.vmo(MakeVmo(1024));
+  builder.vmo(MakeVmo(bytes));
   builder.format(kFormat.ToWireFidl(arena));
-  builder.producer_bytes(512);
-  builder.consumer_bytes(512);
+  builder.producer_bytes(bytes / 2);
+  builder.consumer_bytes(bytes / 2);
   builder.reference_clock(MakeClock());
   return builder;
 }
@@ -140,8 +143,8 @@ fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateThreadRequest>
 MakeDefaultCreateThreadRequest(fidl::AnyArena& arena) {
   auto builder = fuchsia_audio_mixer::wire::GraphCreateThreadRequest::Builder(arena);
   builder.name(fidl::StringView::FromExternal("thread"));
-  builder.period(zx::msec(10).to_nsecs());
-  builder.cpu_per_period(zx::msec(5).to_nsecs());
+  builder.period(kDefaultMixPeriod.to_nsecs());
+  builder.cpu_per_period((kDefaultMixPeriod / 2).to_nsecs());
   return builder;
 }
 
@@ -705,6 +708,27 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_)
                          .thread(2)  // non-existent thread
                          .Build())
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_TRUE(result->is_error());
+    ASSERT_EQ(result->error_value(), CreateNodeError::kInvalidParameter);
+  }
+
+  {
+    SCOPED_TRACE("ProducerFramesTooSmall");
+
+    auto ring_buffer = MakeDefaultRingBuffer(arena_);
+    // Just one frame, while the default thread has a mix period of 10ms.
+    ring_buffer.producer_bytes(kFormat.bytes_per_frame());
+
+    auto result = client()->CreateConsumer(
+        fuchsia_audio_mixer::wire::GraphCreateConsumerRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("consumer"))
+            .direction(PipelineDirection::kOutput)
+            .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
+                arena_, ring_buffer.Build()))
+            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
