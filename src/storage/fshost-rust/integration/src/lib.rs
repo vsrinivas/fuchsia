@@ -119,6 +119,10 @@ pub struct TestFixtureBuilder {
     // Whether or not to add a zxcrypt layer between fvm and the main filesystem, if the filesystem
     // supports it. Doesn't do anything for fxfs.
     zxcrypt: bool,
+
+    // Direct config overrides.
+    fvm_ramdisk: bool,
+    ramdisk_prefix: Option<&'static str>,
 }
 
 impl TestFixtureBuilder {
@@ -130,6 +134,8 @@ impl TestFixtureBuilder {
             ramdisk_size: 0,
             format_data: false,
             zxcrypt: true,
+            fvm_ramdisk: false,
+            ramdisk_prefix: None,
         }
     }
 
@@ -153,6 +159,16 @@ impl TestFixtureBuilder {
         self
     }
 
+    pub fn fvm_ramdisk(mut self) -> Self {
+        self.fvm_ramdisk = true;
+        self
+    }
+
+    pub fn ramdisk_prefix(mut self, prefix: &'static str) -> Self {
+        self.ramdisk_prefix = Some(prefix);
+        self
+    }
+
     pub async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
@@ -165,7 +181,15 @@ impl TestFixtureBuilder {
 
         builder.init_mutable_config_from_package(&fshost).await.unwrap();
         // fshost config overrides
-        builder.set_config_value_bool(&fshost, "no_zxcrypt", !self.zxcrypt).await.unwrap();
+        if !self.zxcrypt {
+            builder.set_config_value_bool(&fshost, "no_zxcrypt", !self.zxcrypt).await.unwrap();
+        }
+        if self.fvm_ramdisk {
+            builder.set_config_value_bool(&fshost, "fvm_ramdisk", self.fvm_ramdisk).await.unwrap();
+        }
+        if let Some(prefix) = self.ramdisk_prefix {
+            builder.set_config_value_string(&fshost, "ramdisk_prefix", prefix).await.unwrap();
+        }
 
         let mocks = builder
             .add_local_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new())
@@ -356,7 +380,7 @@ impl TestFixtureBuilder {
     async fn init_data(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
         match self.data_filesystem_format {
             "fxfs" => init_data_fxfs(ramdisk_path, dev).await,
-            "minfs" => init_data_minfs(ramdisk_path, dev, self.zxcrypt).await,
+            "minfs" => init_data_minfs(ramdisk_path, dev, self.zxcrypt && !self.fvm_ramdisk).await,
             _ => panic!("unsupported data filesystem format type"),
         }
     }

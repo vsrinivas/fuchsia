@@ -79,6 +79,7 @@ template("fshost_integration_test") {
       ":fshost_test_fixture",
       "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+      "//sdk/lib/device-watcher/rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia",
       "//src/lib/zircon/rust:fuchsia-zircon",
@@ -143,12 +144,20 @@ fshost_integration_test("fshost-cpp-integration-test-fxfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs"
   source_root = "tests/fshost_integration_test.rs"
   data_filesystem_format = "fxfs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
 fshost_integration_test("fshost-cpp-integration-test-minfs") {
   fshost_target = "//src/storage/fshost/testing:test-fshost"
   source_root = "tests/fshost_integration_test.rs"
   data_filesystem_format = "minfs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
 # TODO(fxbug.dev/87511): Port this test to fshost-rust.
@@ -160,7 +169,6 @@ fshost_integration_test("fshost-cpp-integration-test-fxfs-recovery") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//sdk/lib/device-watcher/rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
@@ -184,7 +192,6 @@ fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//sdk/lib/device-watcher/rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
@@ -203,12 +210,20 @@ fshost_integration_test("fshost-rust-integration-test-minfs") {
   fshost_target = ":test-fshost-rust-minfs"
   source_root = "tests/fshost_integration_test.rs"
   data_filesystem_format = "minfs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
 fshost_integration_test("fshost-rust-integration-test-fxfs") {
   fshost_target = ":test-fshost-rust-fxfs"
   source_root = "tests/fshost_integration_test.rs"
   data_filesystem_format = "fxfs"
+  deps = [
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
 }
 
 fuchsia_test_package("fshost_integration_tests") {

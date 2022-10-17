@@ -4,7 +4,8 @@
 
 use {
     fidl::endpoints::create_proxy, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
-    fshost_test_fixture::TestFixtureBuilder, fuchsia_zircon as zx,
+    fshost_test_fixture::TestFixtureBuilder, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::FutureExt,
 };
 
 const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
@@ -27,13 +28,13 @@ fn data_fs_type() -> u32 {
     }
 }
 
+fn new_fixture() -> TestFixtureBuilder {
+    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+}
+
 #[fuchsia::test]
 async fn blobfs_and_data_mounted() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .format_data()
-        .build()
-        .await;
+    let fixture = new_fixture().with_ramdisk().format_data().build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -50,10 +51,7 @@ async fn blobfs_and_data_mounted() {
 
 #[fuchsia::test]
 async fn data_formatted() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .build()
-        .await;
+    let fixture = new_fixture().with_ramdisk().build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
 
@@ -62,12 +60,7 @@ async fn data_formatted() {
 
 #[fuchsia::test]
 async fn data_mounted_no_zxcrypt() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .format_data()
-        .no_zxcrypt()
-        .build()
-        .await;
+    let fixture = new_fixture().with_ramdisk().format_data().no_zxcrypt().build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
     let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
@@ -82,11 +75,7 @@ async fn data_mounted_no_zxcrypt() {
 
 #[fuchsia::test]
 async fn data_formatted_no_zxcrypt() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .no_zxcrypt()
-        .build()
-        .await;
+    let fixture = new_fixture().with_ramdisk().no_zxcrypt().build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
 
@@ -111,6 +100,63 @@ async fn wipe_storage_not_supported() {
         .unwrap()
         .expect_err("WipeStorage unexpectedly succeeded");
     assert_eq!(zx::Status::from_raw(result), zx::Status::NOT_SUPPORTED);
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
+async fn ramdisk_blob_and_data_mounted() {
+    let fixture = new_fixture().with_ramdisk().format_data().fvm_ramdisk().build().await;
+
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
+    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+    fixture
+        .dir("data")
+        .open(fio::OpenFlags::RIGHT_READABLE, 0, "foo", server)
+        .expect("open failed");
+    file.get_attr().await.expect("get_attr failed");
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
+async fn ramdisk_data_ignores_non_ramdisk() {
+    // Fake out the ramdisk checking by providing a nonsense ramdisk prefix.
+    let fixture =
+        new_fixture().with_ramdisk().fvm_ramdisk().ramdisk_prefix("/not/the/prefix").build().await;
+
+    let dev = fixture.dir("dev-topological/class/block");
+
+    // The filesystems won't be mounted, but make sure fvm and potentially zxcrypt are bound.
+    device_watcher::wait_for_device_with(&dev, |info| {
+        info.topological_path.ends_with("fvm/data-p-2/block").then_some(())
+    })
+    .await
+    .unwrap();
+
+    if DATA_FILESYSTEM_FORMAT != "fxfs" {
+        device_watcher::wait_for_device_with(&dev, |info| {
+            info.topological_path
+                .ends_with("fvm/data-p-2/block/zxcrypt/unsealed/block")
+                .then_some(())
+        })
+        .await
+        .unwrap();
+    }
+
+    // There isn't really a good way to tell that something is not mounted, but at this point we
+    // would be pretty close to it, so a timeout of a couple seconds should safeguard against
+    // potential issues.
+    futures::select! {
+        _ = fixture.check_fs_type("data", data_fs_type()).fuse() => {
+            panic!("check_fs_type returned unexpectedly - data was mounted");
+        },
+        _ = fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).fuse() => {
+            panic!("check_fs_type returned unexpectedly - blob was mounted");
+        },
+        _ = fasync::Timer::new(std::time::Duration::from_secs(2)).fuse() => (),
+    }
 
     fixture.tear_down().await;
 }

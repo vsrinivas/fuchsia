@@ -29,6 +29,9 @@ pub trait Environment: Send + Sync {
         driver_path: &str,
     ) -> Result<(), Error>;
 
+    /// Bind zxcrypt to this device, unsealing it and formatting it if necessary.
+    async fn bind_zxcrypt(&mut self, device: &mut dyn Device) -> Result<(), Error>;
+
     /// Mounts Blobfs on the given device.
     async fn mount_blobfs(&mut self, device: &mut dyn Device) -> Result<(), Error>;
 
@@ -105,6 +108,11 @@ impl<'a> Environment for FshostEnvironment<'a> {
         Ok(())
     }
 
+    async fn bind_zxcrypt(&mut self, device: &mut dyn Device) -> Result<(), Error> {
+        self.attach_driver(device, "zxcrypt.so").await?;
+        zxcrypt::unseal_or_format(device).await
+    }
+
     async fn mount_blobfs(&mut self, device: &mut dyn Device) -> Result<(), Error> {
         let queue = self.blobfs.queue().ok_or(anyhow!("blobfs already mounted"))?;
 
@@ -148,7 +156,7 @@ impl<'a> Environment for FshostEnvironment<'a> {
             }
             // Default to minfs
             _ => {
-                let proxy = if self.config.no_zxcrypt {
+                let proxy = if self.config.no_zxcrypt || self.config.fvm_ramdisk {
                     device.proxy()?
                 } else {
                     self.attach_driver(device, "zxcrypt.so").await?;
