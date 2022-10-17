@@ -5,9 +5,11 @@
 use {
     anyhow::{format_err, Context as _, Error},
     cstr::cstr,
-    fidl::endpoints::{DiscoverableProtocolMarker as _, ServerEnd},
+    fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_hardware_pty::{DeviceMarker, DeviceProxy, WindowSize},
-    fuchsia_async as fasync, fuchsia_trace as ftrace,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_trace as ftrace,
     fuchsia_zircon::{self as zx, HandleBased, ProcessInfo, ProcessInfoFlags},
     std::{ffi::CStr, fs::File, os::unix::io::AsRawFd},
 };
@@ -116,11 +118,18 @@ impl Pty {
     /// Opens the initial server side of the pty.
     fn open_server_pty() -> Result<File, Error> {
         ftrace::duration!("pty", "Pty:open_server_pty");
-        let server_pty = std::fs::File::options()
-            .read(true)
-            .write(true)
-            .open("/svc/".to_string() + DeviceMarker::PROTOCOL_NAME)
-            .context("failed to open pty service")?;
+        let server_conn =
+            connect_to_protocol::<DeviceMarker>().context("could not connect to pty service")?;
+        let server_chan = server_conn
+            .into_channel()
+            .or(Err(format_err!("failed to convert pty service into channel")))?;
+
+        // Convert the server into a file descriptor.  We need to do this rather than just using
+        // the normal open interface, since otherwise fdio gets confused about the associated event
+        // object.  This confusion is caused by how we currently route the pty service through
+        // svchost.  Once that routing is gone, this bounce through should be unnecessary.
+        let server_pty = fdio::create_fd::<File>(zx::Channel::from(server_chan).into())
+            .context("failed to create FD from server PTY")?;
         let fd = server_pty.as_raw_fd();
         let previous = {
             let res = unsafe { libc::fcntl(fd, libc::F_GETFL) };
