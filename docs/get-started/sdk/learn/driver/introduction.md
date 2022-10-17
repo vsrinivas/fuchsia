@@ -32,7 +32,7 @@ Note: For more details on the driver framework, see the
 
 ## What you'll need
 
-*   A development machine running Linux
+*   An x64-based development machine running Linux or macOS
 *   A configured [Fuchsia SDK environment][driver-get-started]
 *   [Emulator product bundle][driver-product-bundle]
     for `workstation_eng.qemu-x64`

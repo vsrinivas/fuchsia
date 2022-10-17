@@ -27,7 +27,7 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 
 This guide requires that your host machine meets the following criteria:
 
-*  A Linux machine. (**macOS** is not supported yet.)
+*  An x64-based development machine running Linux or macOS.
 *  Has at least 15 GB of storage space.
 *  Supports [KVM][kvm]{:.external} (Kernel Virtual Machine) for running a
    [QEMU][qemu]{:.external}-based emulator.
