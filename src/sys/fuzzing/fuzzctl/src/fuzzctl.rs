@@ -63,7 +63,7 @@ impl<O: OutputSink> FuzzCtl<O> {
                 return match status {
                     Ok(_) => {
                         // User provided '-h' or '--help'.
-                        println!("{}", output);
+                        self.writer.println(format!("{}", output));
                         Ok(())
                     }
                     Err(e) => Err(anyhow!("{:?}: output: {}", e, output)),
@@ -76,7 +76,9 @@ impl<O: OutputSink> FuzzCtl<O> {
         };
         if result.is_err() {
             // Make a best effort to teardown a fuzzer that returns an error.
-            let _ = self.manager.stop(&url).await;
+            if let Err(e) = self.manager.stop(&url).await {
+                self.writer.error(format!("failed to stop fuzzer on error: {}", e));
+            }
         }
         result
     }

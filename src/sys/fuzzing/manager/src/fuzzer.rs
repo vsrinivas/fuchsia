@@ -177,21 +177,37 @@ impl Fuzzer {
     }
 
     /// Waits for the fuzzer to stop.
-    pub async fn stop(&mut self) {
-        if let Some(task) = self.task.take() {
-            task.await;
+    ///
+    /// If a `max_wait_time` is provided, and the fuzzer currently has an output forwarding task, it
+    /// will wait up to that much time for the task to complete. If it has a task but no
+    /// `max_wait_time` is provided, it will drop the task immediately.
+    ///
+    /// Returns an error if the `max_wait_time` elapses without the output forwarding task
+    /// completing.
+    ///
+    pub async fn stop(&mut self, max_wait_time: Option<zx::Duration>) -> Result<(), zx::Status> {
+        if let (Some(task), Some(max_wait_time)) = (self.task.take(), max_wait_time) {
+            // TODO(fxbug.dev/112353): Extend the test fixtures and add tests for the timeout case.
+            let stop_fut = task.fuse();
+            let timer_fut = fasync::Timer::new(max_wait_time).fuse();
+            pin_mut!(stop_fut, timer_fut);
+            select! {
+                _ = stop_fut => Ok(()),
+                _ = timer_fut => Err(zx::Status::TIMED_OUT)
+            }?;
         }
         self.stdout = None;
         self.stderr = None;
         self.syslog = None;
         self.set_state(FuzzerState::Stopped);
+        Ok(())
     }
 
     /// Stops the fuzzer immediately.
-    pub async fn kill(&mut self) {
+    pub async fn kill(&mut self) -> Result<(), zx::Status> {
         if let Some(kill) = self.kill.take() {
             let _ = kill.send(());
         }
-        self.stop().await;
+        self.stop(None).await
     }
 }

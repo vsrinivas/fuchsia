@@ -132,7 +132,7 @@ impl<T: FidlEndpoint<RunBuilderMarker>> Manager<T> {
             FuzzerState::Running => {}
             FuzzerState::Failed(status) => {
                 warn!("failed to connect {}: {}", fuzzer_url, status);
-                fuzzer.kill().await;
+                fuzzer.kill().await?;
                 return Err(status);
             }
             _ => unreachable!("invalid fuzzer state"),
@@ -149,7 +149,7 @@ impl<T: FidlEndpoint<RunBuilderMarker>> Manager<T> {
             zx::Status::OK => {}
             status => {
                 warn!("failed to connect {}: fuzz-registry returned: {}", fuzzer_url, status);
-                fuzzer.kill().await;
+                fuzzer.kill().await?;
                 return Err(status);
             }
         }
@@ -199,7 +199,11 @@ impl<T: FidlEndpoint<RunBuilderMarker>> Manager<T> {
             }
         };
         if let Some(mut fuzzer) = fuzzer {
-            fuzzer.stop().await;
+            let timeout = zx::Duration::from_seconds(DEFAULT_TIMEOUT_IN_SECONDS);
+            if let Err(e) = fuzzer.stop(Some(timeout)).await {
+                warn!("killing fuzzer after stop returned ZX_ERR_{}", e);
+                fuzzer.kill().await?;
+            }
         }
         Ok(())
     }
