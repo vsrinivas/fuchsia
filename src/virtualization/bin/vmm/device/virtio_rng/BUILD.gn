@@ -26,7 +26,12 @@ rustc_binary("virtio_rng_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("virtio_rng") {
+fuchsia_component("virtio_rng_component") {
+  component_name = "virtio_rng"
   manifest = "../../meta/virtio_rng.cml"
   deps = [ ":virtio_rng_bin" ]
+}
+
+fuchsia_package("virtio_rng") {
+  deps = [ ":virtio_rng_component" ]
 }

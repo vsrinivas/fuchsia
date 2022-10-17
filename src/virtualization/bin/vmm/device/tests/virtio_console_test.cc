@@ -14,7 +14,7 @@ namespace {
 constexpr uint16_t kNumQueues = 2;
 constexpr uint16_t kQueueSize = 16;
 
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_console#meta/virtio_console.cm";
+constexpr auto kComponentUrl = "#meta/virtio_console.cm";
 constexpr auto kComponentName = "virtio_console";
 
 class VirtioConsoleTest : public TestWithDevice {

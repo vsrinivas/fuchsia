@@ -25,7 +25,12 @@ executable("virtio_net_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("virtio_net") {
+fuchsia_component("virtio_net_component") {
+  component_name = "virtio_net"
   manifest = "meta/virtio_net.cml"
   deps = [ ":virtio_net_bin" ]
+}
+
+fuchsia_package("virtio_net") {
+  deps = [ ":virtio_net_component" ]
 }

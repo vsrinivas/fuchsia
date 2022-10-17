@@ -32,8 +32,7 @@ class VirtioBalloonTest : public TestWithDevice {
     using component_testing::Route;
 
     constexpr auto kComponentName = "virtio_balloon";
-    constexpr auto kVirtioBalloonUrl =
-        "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/virtio_balloon.cm";
+    constexpr auto kVirtioBalloonUrl = "#meta/virtio_balloon.cm";
     // Add extra memory pages which we will be zero'ing inside of the inflate test
     // Not having extra memory will result in inflate test zero op stomping on its own inflate
     // queue while queue is being processed

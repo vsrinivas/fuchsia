@@ -6,7 +6,19 @@ import("//build/components/fuchsia_unittest_package.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":device_tests_package" ]
+  deps = [
+    ":virtio_balloon_device_tests",
+    ":virtio_block_device_tests",
+    ":virtio_console_device_tests",
+    ":virtio_gpu_device_tests",
+    ":virtio_input_device_tests",
+    ":virtio_magma_device_tests",
+    ":virtio_net_device_tests",
+    ":virtio_rng_device_tests",
+    ":virtio_sound_device_tests",
+    ":virtio_vsock_device_tests",
+    ":virtio_wl_device_tests",
+  ]
 }
 
 source_set("virtio_queue_fake") {
@@ -36,12 +48,44 @@ source_set("test_with_device") {
   ]
 }
 
-source_set("virtio_balloon_test") {
-  testonly = true
+template("device_test") {
+  test_name = target_name
+  bin_name = "${target_name}_bin"
+  component_name = "${target_name}_cmp"
+  package_name = target_name
+  executable(bin_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                           ])
+    output_name = test_name
+    testonly = true
+    deps += [ "//src/lib/fxl/test:gtest_main" ]
+    if (defined(invoker.configs)) {
+      configs += invoker.configs
+    }
+  }
+  fuchsia_test_component(component_name) {
+    forward_variables_from(invoker, [ "manifest" ])
+    component_name = test_name
+    deps = [ ":${bin_name}" ]
+  }
+  fuchsia_test_package(package_name) {
+    forward_variables_from(invoker, [ "test_specs" ])
+    package_name = test_name
+    test_components = [ ":${component_name}" ]
+    if (defined(invoker.device_component)) {
+      deps = [ invoker.device_component ]
+    }
+  }
+}
 
+device_test("virtio_balloon_device_tests") {
   sources = [ "virtio_balloon_test.cc" ]
-
-  configs += [ "//build/config:all_source" ]
+  manifest = "meta/virtio_balloon_device_tests.cml"
+  device_component = "//src/virtualization/bin/vmm/device/virtio_balloon:virtio_balloon_component"
+  configs = [ "//build/config:all_source" ]
 
   deps = [
     ":test_with_device",
@@ -52,12 +96,20 @@ source_set("virtio_balloon_test") {
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//zircon/system/ulib/virtio",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_block_test") {
-  testonly = true
-
+device_test("virtio_block_device_tests") {
   sources = [ "virtio_block_test.cc" ]
+  manifest = "meta/virtio_block_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_block:virtio_block_component"
 
   deps = [
     ":test_with_device",
@@ -71,12 +123,19 @@ source_set("virtio_block_test") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/virtio",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_console_test") {
-  testonly = true
-
+device_test("virtio_console_device_tests") {
   sources = [ "virtio_console_test.cc" ]
+  manifest = "meta/virtio_console_device_tests.cml"
+  device_component = "//src/virtualization/bin/vmm/device/virtio_console:virtio_console_component"
 
   deps = [
     ":test_with_device",
@@ -85,12 +144,20 @@ source_set("virtio_console_test") {
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_gpu_test") {
-  testonly = true
-
+device_test("virtio_gpu_device_tests") {
   sources = [ "virtio_gpu_test.cc" ]
+  manifest = "meta/virtio_gpu_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_gpu:virtio_gpu_component"
 
   deps = [
     ":test_with_device",
@@ -102,15 +169,24 @@ source_set("virtio_gpu_test") {
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
     "//sdk/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/ui/testing/test_graphical_presenter",
     "//src/ui/testing/ui_test_manager",
     "//zircon/system/ulib/virtio",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_input_test") {
-  testonly = true
-
+device_test("virtio_input_device_tests") {
   sources = [ "virtio_input_test.cc" ]
+  manifest = "meta/virtio_input_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_input:virtio_input_component"
 
   deps = [
     ":test_with_device",
@@ -123,12 +199,20 @@ source_set("virtio_input_test") {
     "//zircon/system/ulib/virtio",
     "//zircon/system/ulib/zxc",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_magma_test") {
-  testonly = true
-
+device_test("virtio_magma_device_tests") {
   sources = [ "virtio_magma_test.cc" ]
+  manifest = "meta/virtio_magma_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_magma:virtio_magma_component"
 
   deps = [
     ":test_with_device",
@@ -149,12 +233,20 @@ source_set("virtio_magma_test") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zx",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_net_test") {
-  testonly = true
-
+device_test("virtio_net_device_tests") {
   sources = [ "virtio_net_test.cc" ]
+  manifest = "meta/virtio_net_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_net:virtio_net_component"
 
   deps = [
     ":test_with_device",
@@ -173,12 +265,20 @@ source_set("virtio_net_test") {
     "//zircon/system/ulib/trace-provider",
     "//zircon/system/ulib/virtio",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_rng_test") {
-  testonly = true
-
+device_test("virtio_rng_device_tests") {
   sources = [ "virtio_rng_test.cc" ]
+  manifest = "meta/virtio_rng_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_rng:virtio_rng_component"
 
   deps = [
     ":test_with_device",
@@ -187,12 +287,20 @@ source_set("virtio_rng_test") {
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_hlcpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_sound_test") {
-  testonly = true
-
+device_test("virtio_sound_device_tests") {
   sources = [ "virtio_sound_test.cc" ]
+  manifest = "meta/virtio_sound_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_sound:virtio_sound_component"
 
   deps = [
     ":test_with_device",
@@ -207,12 +315,20 @@ source_set("virtio_sound_test") {
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/virtio",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_vsock_test") {
-  testonly = true
-
+device_test("virtio_vsock_device_tests") {
   sources = [ "virtio_vsock_test.cc" ]
+  manifest = "meta/virtio_vsock_device_tests.cml"
+  device_component =
+      "//src/virtualization/bin/vmm/device/virtio_vsock:virtio_vsock_cmp"
 
   deps = [
     ":test_with_device",
@@ -222,12 +338,19 @@ source_set("virtio_vsock_test") {
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//zircon/system/ulib/virtio",
   ]
+
+  test_specs = {
+    environments = guest_envs
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-source_set("virtio_wl_test") {
-  testonly = true
-
+device_test("virtio_wl_device_tests") {
   sources = [ "virtio_wl_test.cc" ]
+  manifest = "meta/virtio_wl_device_tests.cml"
+  device_component = "//src/virtualization/bin/vmm/device:virtio_wl_component"
 
   deps = [
     ":test_with_device",
@@ -243,35 +366,7 @@ source_set("virtio_wl_test") {
     "//zircon/system/ulib/virtio",
     "//zircon/system/ulib/zx",
   ]
-}
 
-executable("device_tests") {
-  visibility = [ ":*" ]
-  testonly = true
-
-  deps = [
-    ":virtio_balloon_test",
-    ":virtio_block_test",
-    ":virtio_console_test",
-    ":virtio_gpu_test",
-    ":virtio_input_test",
-    ":virtio_magma_test",
-    ":virtio_net_test",
-    ":virtio_rng_test",
-    ":virtio_sound_test",
-    ":virtio_vsock_test",
-    ":virtio_wl_test",
-    "//src/lib/fxl/test:gtest_main",
-  ]
-}
-
-fuchsia_unittest_package("device_tests_package") {
-  package_name = "device_tests"
-  manifest = "meta/device_tests.cml"
-  deps = [
-    ":device_tests",
-    "//src/ui/testing/test_graphical_presenter",
-  ]
   test_specs = {
     environments = guest_envs
     log_settings = {

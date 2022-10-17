@@ -24,7 +24,7 @@ class VirtioRngTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cm";
+    constexpr auto kComponentUrl = "#meta/virtio_rng.cm";
     constexpr auto kComponentName = "virtio_rng";
 
     auto realm_builder = RealmBuilder::Create();

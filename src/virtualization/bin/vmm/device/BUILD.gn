@@ -97,9 +97,14 @@ executable("virtio_wl_bin") {
   ]
 }
 
-fuchsia_package_with_single_component("virtio_wl") {
+fuchsia_component("virtio_wl_component") {
+  component_name = "virtio_wl"
   manifest = "../meta/virtio_wl.cml"
   deps = [ ":virtio_wl_bin" ]
+}
+
+fuchsia_package("virtio_wl") {
+  deps = [ ":virtio_wl_component" ]
 }
 
 source_set("qcow_test_data") {

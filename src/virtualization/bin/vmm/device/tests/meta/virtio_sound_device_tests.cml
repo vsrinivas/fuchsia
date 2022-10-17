@@ -4,36 +4,19 @@
 {
     include: [
         "//src/sys/test_runners/gtest/default.shard.cml",
-        "//src/sys/test_runners/tmp_storage.shard.cml",
         "sys/component/realm_builder.shard.cml",
-        "sys/testing/system-test.shard.cml",
         "syslog/client.shard.cml",
-        "vulkan/client.shard.cml",
     ],
     program: {
-        binary: "bin/device_tests",
+        binary: "bin/virtio_sound_device_tests",
     },
-    use: [
-        {
-            directory: "dev-gpu",
-            rights: [ "r*" ],
-            path: "/dev/class/gpu",
-        },
-    ],
     offer: [
         {
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.scheduler.ProfileProvider",
-                "fuchsia.sysmem.Allocator",
                 "fuchsia.tracing.provider.Registry",
-                "fuchsia.vulkan.loader.Loader",
             ],
-            from: "parent",
-            to: "#realm_builder",
-        },
-        {
-            directory: "dev-gpu",
             from: "parent",
             to: "#realm_builder",
         },

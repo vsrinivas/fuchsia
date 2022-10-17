@@ -179,7 +179,7 @@ class VirtioWlTest : public TestWithDevice {
         zx::vmar::root_self()->allocate(kAllocateFlags, 0u, kVirtioWlVmarSize, &vmar, &vmar_addr),
         ZX_OK);
 
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_wl#meta/virtio_wl.cm";
+    constexpr auto kComponentUrl = "#meta/virtio_wl.cm";
     constexpr auto kComponentName = "virtio_wl";
 
     auto realm_builder = RealmBuilder::Create();

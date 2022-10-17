@@ -134,7 +134,7 @@ class VirtioNetTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cm";
+    constexpr auto kComponentUrl = "#meta/virtio_net.cm";
     constexpr auto kComponentName = "virtio_net";
     constexpr auto kFakeNetwork = "fake_network";
 

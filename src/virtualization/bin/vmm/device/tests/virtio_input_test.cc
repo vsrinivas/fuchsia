@@ -21,7 +21,7 @@ namespace {
 constexpr uint16_t kNumQueues = 2;
 constexpr uint16_t kQueueSize = 16;
 
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_input#meta/virtio_input.cm";
+constexpr auto kComponentUrl = "#meta/virtio_input.cm";
 
 struct VirtioInputTestParam {
   std::string test_name;

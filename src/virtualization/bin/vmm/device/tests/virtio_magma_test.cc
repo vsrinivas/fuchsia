@@ -175,7 +175,7 @@ class VirtioMagmaTest : public TestWithDevice {
     uintptr_t vmar_addr;
     zx::vmar vmar;
     constexpr auto kComponentName = "virtio_magma";
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_magma#meta/virtio_magma.cm";
+    constexpr auto kComponentUrl = "#meta/virtio_magma.cm";
     constexpr auto kFakeScenicAllocator = "fake_scenic_allocator";
     constexpr auto kDevGpuDirectory = "dev-gpu";
 

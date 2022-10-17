@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/gtest/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/virtio_console_device_tests",
+    },
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
+}

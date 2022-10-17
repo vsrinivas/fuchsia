@@ -38,7 +38,7 @@ constexpr uint32_t kScanoutId = 0;
 static constexpr uint32_t kGpuStartupWidth = 1280;
 static constexpr uint32_t kGpuStartupHeight = 720;
 
-constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_gpu#meta/virtio_gpu.cm";
+constexpr auto kComponentUrl = "#meta/virtio_gpu.cm";
 constexpr auto kGraphicalPresenterUrl = "#meta/test_graphical_presenter.cm";
 
 struct VirtioGpuTestParam {

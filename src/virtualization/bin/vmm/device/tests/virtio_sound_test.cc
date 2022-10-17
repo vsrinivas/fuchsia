@@ -346,7 +346,7 @@ class VirtioSoundTestBase : public TestWithDevice {
   }
 
   void SetUp() override {
-    constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_sound#meta/virtio_sound.cm";
+    constexpr auto kComponentUrl = "#meta/virtio_sound.cm";
     constexpr auto kComponentName = "virtio_sound";
     constexpr auto kFakeAudio = "fake_audio";
 

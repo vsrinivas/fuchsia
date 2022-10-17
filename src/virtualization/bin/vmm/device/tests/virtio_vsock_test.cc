@@ -28,7 +28,7 @@ constexpr uint32_t kVirtioVsockHostPort = 22;
 constexpr uint32_t kVirtioVsockGuestPort = 23;
 constexpr uint64_t kGuestCid = fuchsia::virtualization::DEFAULT_GUEST_CID;
 constexpr const char* kComponentName = "virtio_vsock";
-constexpr const char* kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_vsock#meta/virtio_vsock.cm";
+constexpr const char* kComponentUrl = "#meta/virtio_vsock.cm";
 
 struct RxBuffer {
   // The number of virtio descriptors to use for this buffer (1 descriptor for the header, 3 for
