@@ -13,6 +13,7 @@
 #include <lib/fdf/cpp/channel_read.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/cpp/env.h>
+#include <lib/fdf/testing.h>
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 #include <lib/zx/event.h>
@@ -2690,7 +2691,7 @@ TEST_F(DispatcherTest, DestroyAllDispatchers) {
 
 TEST_F(DispatcherTest, WaitUntilDispatchersDestroyed) {
   // No dispatchers, should immediately return.
-  fdf_env_wait_until_all_dispatchers_destroyed();
+  fdf_testing_wait_until_all_dispatchers_destroyed();
 
   constexpr uint32_t kNumDispatchers = 4;
   fdf_dispatcher_t* dispatchers[kNumDispatchers];
@@ -2710,7 +2711,7 @@ TEST_F(DispatcherTest, WaitUntilDispatchersDestroyed) {
   std::atomic_bool wait_complete = false;
   std::thread thread = std::thread([&]() {
     thread_started.Signal();
-    fdf_env_wait_until_all_dispatchers_destroyed();
+    fdf_testing_wait_until_all_dispatchers_destroyed();
     wait_complete = true;
   });
 
@@ -2740,7 +2741,7 @@ TEST_F(DispatcherTest, WaitUntilDispatchersDestroyedHasDriverShutdownObserver) {
   std::atomic_bool wait_complete = false;
   std::thread thread = std::thread([&]() {
     thread_started.Signal();
-    fdf_env_wait_until_all_dispatchers_destroyed();
+    fdf_testing_wait_until_all_dispatchers_destroyed();
     wait_complete = true;
   });
 
@@ -2786,7 +2787,7 @@ TEST_F(DispatcherTest, WaitUntilDispatchersDestroyedDuringDriverShutdownHandler)
   std::atomic_bool wait_complete = false;
   std::thread thread = std::thread([&]() {
     thread_started.Signal();
-    fdf_env_wait_until_all_dispatchers_destroyed();
+    fdf_testing_wait_until_all_dispatchers_destroyed();
     wait_complete = true;
   });
 
@@ -3039,7 +3040,7 @@ TEST_F(DispatcherTest, ConcurrentDispatcherDestroy) {
 
   // Wait for the driver to be removed from the dispatcher coordinator's |driver_state_| map as
   // |Reset| expects it to be empty.
-  fdf_env_wait_until_all_dispatchers_destroyed();
+  fdf_testing_wait_until_all_dispatchers_destroyed();
 
   // Reset the number of threads to 1.
   driver_runtime::GetDispatcherCoordinator().Reset();

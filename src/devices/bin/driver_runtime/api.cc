@@ -205,10 +205,6 @@ __EXPORT void fdf_env_destroy_all_dispatchers() {
   return driver_runtime::DispatcherCoordinator::DestroyAllDispatchers();
 }
 
-__EXPORT void fdf_env_wait_until_all_dispatchers_destroyed() {
-  return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersDestroyed();
-}
-
 __EXPORT bool fdf_env_dispatcher_has_queued_tasks(fdf_dispatcher_t* dispatcher) {
   return dispatcher->HasQueuedTasks();
 }
@@ -219,4 +215,8 @@ __EXPORT void fdf_testing_pop_driver() { driver_context::PopDriver(); }
 
 __EXPORT void fdf_testing_wait_until_all_dispatchers_idle() {
   return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersIdle();
+}
+
+__EXPORT void fdf_testing_wait_until_all_dispatchers_destroyed() {
+  return driver_runtime::DispatcherCoordinator::WaitUntilDispatchersDestroyed();
 }

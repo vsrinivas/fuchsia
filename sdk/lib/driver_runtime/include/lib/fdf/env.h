@@ -60,19 +60,16 @@ zx_status_t fdf_env_dispatcher_create_with_owner(const void* driver, uint32_t op
 zx_status_t fdf_env_shutdown_dispatchers_async(const void* driver,
                                                fdf_env_driver_shutdown_observer_t* observer);
 
-// Destroys all dispatchers in the process.
+// Destroys all dispatchers in the process and blocks the current thread
+// until each runtime dispatcher in the process is observed to have been destroyed.
 //
 // This should only be used called after all dispatchers have been shutdown.
-void fdf_env_destroy_all_dispatchers(void);
-
-// Blocks the current thread until each runtime dispatcher in the process
-// is observed to have been destroyed.
 //
 // # Thread requirements
 //
 // This should not be called from a thread managed by the driver runtime,
 // such as from tasks or ChannelRead callbacks.
-void fdf_env_wait_until_all_dispatchers_destroyed(void);
+void fdf_env_destroy_all_dispatchers(void);
 
 // Notifies the runtime that we have entered a new driver context,
 // such as via a Banjo call.

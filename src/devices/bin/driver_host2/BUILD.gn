@@ -115,7 +115,6 @@ executable("unittests") {
     ":fuchsia.driverhost.test_cpp_wire",
     ":lib",
     "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
-    "//sdk/lib/driver_runtime:driver_runtime_env",
     "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/component/cpp",

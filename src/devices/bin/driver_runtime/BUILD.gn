@@ -78,6 +78,7 @@ test("driver_runtime_test") {
     "//sdk/lib/driver_runtime",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
     "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
+    "//sdk/lib/driver_runtime:testing",
     "//sdk/lib/fidl/cpp/wire",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/sync",

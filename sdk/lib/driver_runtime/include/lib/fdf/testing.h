@@ -28,6 +28,15 @@ void fdf_testing_pop_driver(void);
 // such as from tasks or ChannelRead callbacks.
 void fdf_testing_wait_until_all_dispatchers_idle(void);
 
+// Blocks the current thread until each runtime dispatcher in the process
+// is observed to have been destroyed.
+//
+// # Thread requirements
+//
+// This should not be called from a thread managed by the driver runtime,
+// such as from tasks or ChannelRead callbacks.
+void fdf_testing_wait_until_all_dispatchers_destroyed(void);
+
 __END_CDECLS
 
 #endif  // LIB_DRIVER_RUNTIME_INCLUDE_LIB_FDF_TESTING_H_
