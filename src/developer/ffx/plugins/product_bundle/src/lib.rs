@@ -8,6 +8,7 @@
 
 use {
     anyhow::{bail, Context, Result},
+    ffx_config::ConfigLevel,
     ffx_core::ffx_plugin,
     ffx_product_bundle_args::{
         CreateCommand, GetCommand, ListCommand, ProductBundleCommand, RemoveCommand, SubCommand,
@@ -24,7 +25,7 @@ use {
     std::{
         convert::TryInto,
         fs::{read_dir, remove_dir_all},
-        io::{stderr, stdin, stdout, Write},
+        io::{stderr, stdin},
         path::Component,
     },
     structured_ui::{self, Presentation, Response, SimplePresentation, TableRows, TextUi},
@@ -32,6 +33,8 @@ use {
 };
 
 mod create;
+
+const CONFIG_METADATA: &str = "pbms.metadata";
 
 /// Provide functionality to list product-bundle metadata, fetch metadata, and
 /// pull images and related data.
@@ -42,15 +45,14 @@ pub async fn product_bundle(
     repos: RepositoryRegistryProxy,
 ) -> Result<()> {
     let mut input = stdin();
-    let mut output = stdout();
+    let mut output = writer;
     let mut err_out = stderr();
     let mut ui = TextUi::new(&mut input, &mut output, &mut err_out);
-    product_bundle_plugin_impl(writer, cmd, &mut ui, repos).await
+    product_bundle_plugin_impl(cmd, &mut ui, repos).await
 }
 
 /// Dispatch to a sub-command.
 pub async fn product_bundle_plugin_impl<I>(
-    writer: Writer,
     command: ProductBundleCommand,
     ui: &mut I,
     repos: RepositoryRegistryProxy,
@@ -60,10 +62,37 @@ where
 {
     match &command.sub {
         SubCommand::List(cmd) => pb_list(ui, &cmd).await,
-        SubCommand::Get(cmd) => pb_get(writer, ui, &cmd, repos).await,
+        SubCommand::Get(cmd) => pb_get(ui, &cmd, repos).await,
         SubCommand::Create(cmd) => pb_create(&cmd).await,
         SubCommand::Remove(cmd) => pb_remove(ui, &cmd, repos).await,
     }
+}
+
+async fn check_for_custom_metadata<I>(ui: &mut I, title: &str)
+where
+    I: structured_ui::Interface + Sync,
+{
+    let mut note = TableRows::builder();
+    note.title(title);
+    match ffx_config::query(CONFIG_METADATA)
+        .level(Some(ConfigLevel::User))
+        .get::<Vec<String>>()
+        .await
+    {
+        Ok(v) => {
+            if !v.is_empty() {
+                note.note(
+                    "\nIt looks like you have a custom search path in your FFX configuration, \n\
+                    which may prevent the tool from finding product bundles. Try:\n\n    \
+                        ffx config get pbms.metadata \n\n\
+                    to review your current configuration.\n",
+                );
+            }
+        }
+        // If the config doesn't return an array, we assume there's no custom config set and bail.
+        Err(_) => (),
+    }
+    ui.present(&Presentation::Table(note)).expect("Problem presenting the custom metadata note.");
 }
 
 /// `ffx product-bundle remove` sub-command.
@@ -105,7 +134,7 @@ where
         pb_remove_all(ui, pbs_to_remove, cmd.force, repos).await
     } else {
         // Nothing to remove.
-        println!("There are no product bundles to remove.");
+        check_for_custom_metadata(ui, "There are no product bundles to remove.").await;
         Ok(())
     }
 }
@@ -237,6 +266,10 @@ where
         update_metadata_all(&storage_dir, ui).await?;
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
+    if entries.is_empty() {
+        check_for_custom_metadata(ui, "No product bundles found.").await;
+        return Ok(());
+    }
     entries.sort();
     entries.reverse();
     let mut table = TableRows::builder();
@@ -255,12 +288,7 @@ where
 }
 
 /// `ffx product-bundle get` sub-command.
-async fn pb_get<I>(
-    mut writer: Writer,
-    ui: &mut I,
-    cmd: &GetCommand,
-    repos: RepositoryRegistryProxy,
-) -> Result<()>
+async fn pb_get<I>(ui: &mut I, cmd: &GetCommand, repos: RepositoryRegistryProxy) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -271,7 +299,9 @@ where
 
     let path = get_images_dir(&product_url).await;
     if path.is_ok() && path.unwrap().exists() && !cmd.force {
-        writeln!(writer, "This product bundle is already downloaded. Use --force to replace it.")?;
+        let mut note = TableRows::builder();
+        note.title("This product bundle is already downloaded. Use --force to replace it.");
+        ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
         return Ok(());
     }
 
@@ -306,17 +336,18 @@ where
     // If a repo with the selected name already exists, that's an error.
     let repo_list = get_repos(&repos).await?;
     if repo_list.iter().any(|r| r.name == repo_name) {
-        writeln!(
-            writer,
+        let mut note = TableRows::builder();
+        note.title(format!(
             "A package repository already exists with the name '{}'. \
             Specify an alternative name using the --repository flag.",
             repo_name
-        )?;
+        ));
+        ui.present(&Presentation::Table(note)).expect("Problem presenting the note.");
         return Ok(());
     }
 
     // Go ahead and download the product images.
-    if !get_product_data(writer, &product_url, &output_dir, ui, cmd.force).await? {
+    if !get_product_data(&product_url, &output_dir, ui, cmd.force).await? {
         return Ok(());
     }
 
