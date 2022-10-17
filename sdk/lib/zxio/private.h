@@ -12,8 +12,9 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
-#include <lib/zxio/cpp/inception.h>
+#include <lib/zxio/cpp/dgram_cache.h>
 #include <lib/zxio/cpp/vector.h>
+#include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 
@@ -119,13 +120,54 @@ zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_sock
 // The |handle| should be a Zircon debuglog object.
 zx_status_t zxio_debuglog_init(zxio_storage_t* storage, zx::debuglog handle);
 
+// pipe ------------------------------------------------------------------------
+
+// A |zxio_t| backend that uses a Zircon socket object.
+//
+// The |socket| handle is a Zircon socket object.
+//
+// Will eventually be an implementation detail of zxio once fdio completes its
+// transition to the zxio backend.
+using zxio_pipe_t = struct zxio_pipe {
+  zxio_t io;
+  zx::socket socket;
+};
+
+static_assert(sizeof(zxio_pipe_t) <= sizeof(zxio_storage_t),
+              "zxio_pipe_t must fit inside zxio_storage_t.");
+
 // synchronous datagram socket (channel backed) --------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.SynchronousDatagramSocket object.
+using zxio_synchronous_datagram_socket_t = struct zxio_synchronous_datagram_socket {
+  using FidlProtocol = fuchsia_posix_socket::SynchronousDatagramSocket;
+
+  zxio_t io;
+  zx::eventpair event;
+  fidl::WireSyncClient<FidlProtocol> client;
+};
+
+static_assert(sizeof(zxio_synchronous_datagram_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_synchronous_datagram_socket_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_synchronous_datagram_socket_init(
     zxio_storage_t* storage, zx::eventpair event,
     fidl::ClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> client);
 
 // datagram socket (channel backed)
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.DatagramSocket object.
+using zxio_datagram_socket_t = struct zxio_datagram_socket {
+  zxio_t io;
+  zxio_pipe_t pipe;
+  const zxio_datagram_prelude_size_t prelude_size;
+  RouteCache route_cache;
+  RequestedCmsgCache cmsg_cache;
+  fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket> client;
+};
+
+static_assert(sizeof(zxio_datagram_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_datagram_socket_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::socket socket,
                                       const zx_info_socket_t& info,
@@ -134,16 +176,59 @@ zx_status_t zxio_datagram_socket_init(zxio_storage_t* storage, zx::socket socket
 
 // stream socket (channel backed) --------------------------------------------
 
+enum class zxio_stream_socket_state_t {
+  UNCONNECTED,
+  LISTENING,
+  CONNECTING,
+  CONNECTED,
+};
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.StreamSocket object.
+using zxio_stream_socket_t = struct zxio_stream_socket {
+  zxio_t io;
+  zxio_pipe_t pipe;
+  std::mutex state_lock;
+  zxio_stream_socket_state_t state __TA_GUARDED(state_lock);
+  fidl::WireSyncClient<fuchsia_posix_socket::StreamSocket> client;
+};
+
+static_assert(sizeof(zxio_stream_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_stream_socket_t must fit inside zxio_storage_t.");
+
 zx_status_t zxio_stream_socket_init(zxio_storage_t* storage, zx::socket socket,
                                     const zx_info_socket_t& info, bool is_connected,
                                     fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client);
 
 // raw socket (channel backed) -------------------------------------------------
 
+// A |zxio_t| backend that uses a fuchsia.posix.socket.raw.Socket object.
+using zxio_raw_socket_t = struct zxio_raw_socket {
+  using FidlProtocol = fuchsia_posix_socket_raw::Socket;
+
+  zxio_t io;
+  zx::eventpair event;
+  fidl::WireSyncClient<FidlProtocol> client;
+};
+
+static_assert(sizeof(zxio_raw_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_raw_socket_t must fit inside zxio_storage_t.");
+
 zx_status_t zxio_raw_socket_init(zxio_storage_t* storage, zx::eventpair event,
                                  fidl::ClientEnd<fuchsia_posix_socket_raw::Socket> client);
 
 // packet socket (channel backed) ----------------------------------------------
+
+// A |zxio_t| backend that uses a fuchsia.posix.socket.packet.Socket object.
+using zxio_packet_socket_t = struct zxio_packet_socket {
+  using FidlProtocol = fuchsia_posix_socket_packet::Socket;
+
+  zxio_t io;
+  zx::eventpair event;
+  fidl::WireSyncClient<FidlProtocol> client;
+};
+
+static_assert(sizeof(zxio_packet_socket_t) <= sizeof(zxio_storage_t),
+              "zxio_packet_socket_t must fit inside zxio_storage_t.");
 
 zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event,
                                     fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client);

@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fit/result.h>
 #include <lib/zx/socket.h>
-#include <lib/zxio/cpp/inception.h>
 #include <lib/zxio/cpp/socket_address.h>
 #include <lib/zxio/cpp/transitional.h>
 #include <lib/zxio/cpp/vector.h>

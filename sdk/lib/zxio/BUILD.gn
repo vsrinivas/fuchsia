@@ -47,15 +47,6 @@ library_headers("inception") {
 
     # <lib/zxio/cpp/inception.h> has #include <fidl/fuchsia.io/cpp/wire.h>.
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-
-    # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_cpp_wire",
-
-    # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.posix.socket.packet:fuchsia.posix.socket.packet_cpp_wire",
-
-    # <lib/zxio/inception.h> has #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>.
-    "//sdk/fidl/fuchsia.posix.socket.raw:fuchsia.posix.socket.raw_cpp_wire",
   ]
 
   visibility = [

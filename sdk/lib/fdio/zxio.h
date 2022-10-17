@@ -5,8 +5,6 @@
 #ifndef LIB_FDIO_ZXIO_H_
 #define LIB_FDIO_ZXIO_H_
 
-#include <lib/zxio/cpp/inception.h>
-
 #include "sdk/lib/fdio/internal.h"
 
 namespace fdio_internal {
