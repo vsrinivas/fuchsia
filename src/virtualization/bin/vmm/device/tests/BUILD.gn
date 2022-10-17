@@ -175,7 +175,8 @@ device_test("virtio_gpu_device_tests") {
   ]
 
   test_specs = {
-    environments = guest_envs
+    # Vulkan is needed to support UITestManager.
+    environments = guest_vulkan_envs
     log_settings = {
       max_severity = "ERROR"
     }
@@ -235,7 +236,7 @@ device_test("virtio_magma_device_tests") {
   ]
 
   test_specs = {
-    environments = guest_envs
+    environments = guest_vulkan_envs
     log_settings = {
       max_severity = "ERROR"
     }
