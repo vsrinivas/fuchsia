@@ -18,6 +18,7 @@ files:
     bazel                   Bazel launcher script.
     generated-info.json     State of inputs during last generation.
     output_base/            Bazel output base.
+    output_user_root/       Baze output user root.
     workspace/              Bazel workspace directory.
 
 The workspace/ sub-directory will be populated with symlinks
@@ -308,6 +309,7 @@ def main():
         fuchsia_dir, 'prebuilt', 'third_party', 'ninja', host_tag, 'ninja')
 
     output_base_dir = os.path.abspath(os.path.join(topdir, 'output_base'))
+    output_user_root = os.path.abspath(os.path.join(topdir, 'output_user_root'))
     workspace_dir = os.path.abspath(os.path.join(topdir, 'workspace'))
 
     if not args.bazel_bin:
@@ -327,17 +329,18 @@ def main():
 
     log2(
         '''Using directories and files:
-  Fuchsia:           {}
-  GN build:          {}
-  Ninja binary:      {}
-  Bazel source:      {}
-  Topdir:            {}
-  Bazel workspace:   {}
-  Bazel output_base: {}
-  Bazel launcher:    {}
+  Fuchsia:                {}
+  GN build:               {}
+  Ninja binary:           {}
+  Bazel source:           {}
+  Topdir:                 {}
+  Bazel workspace:        {}
+  Bazel output_base:      {}
+  Bazel output user root: {}
+  Bazel launcher:         {}
 '''.format(
             fuchsia_dir, gn_output_dir, ninja_binary, bazel_bin, topdir,
-            workspace_dir, output_base_dir, bazel_launcher))
+            workspace_dir, output_base_dir, output_user_root, bazel_launcher))
 
     if ninja_regen_check(gn_output_dir, ninja_binary):
         log('Re-generating Ninja build plan!')
@@ -428,6 +431,7 @@ common --experimental_enable_bzlmod
 readonly _SCRIPT_DIR="$(cd "$(dirname "${{BASH_SOURCE[0]}}")" >/dev/null 2>&1 && pwd)"
 readonly _WORKSPACE_DIR="${{_SCRIPT_DIR}}/{workspace}"
 readonly _OUTPUT_BASE="${{_SCRIPT_DIR}}/{output_base}"
+readonly _OUTPUT_USER_ROOT="${{_SCRIPT_DIR}}/{output_user_root}"
 
 # Exported explicitly to be used by repository rules to reference the
 # Ninja output directory and binary.
@@ -437,13 +441,15 @@ export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
 cd "${{_WORKSPACE_DIR}}" && {bazel_bin_path} \
       --nohome_rc \
       --output_base="${{_OUTPUT_BASE}}" \
+      --output_user_root="${{_OUTPUT_USER_ROOT}}" \
       "$@"
 '''.format(
         ninja_output_dir=os.path.abspath(gn_output_dir),
         ninja_prebuilt=os.path.abspath(ninja_binary),
         bazel_bin_path=os.path.abspath(bazel_bin),
         workspace=os.path.relpath(workspace_dir, topdir),
-        output_base=os.path.relpath(output_base_dir, topdir))
+        output_base=os.path.relpath(output_base_dir, topdir),
+        output_user_root=os.path.relpath(output_user_root, topdir))
 
     # Ensure regeneration when this script's content changes!
     generated.add_file_hash(os.path.abspath(__file__))
