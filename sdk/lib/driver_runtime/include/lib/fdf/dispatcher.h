@@ -110,7 +110,7 @@ struct fdf_dispatcher_shutdown_observer {
 zx_status_t fdf_dispatcher_create(uint32_t options, const char* name, size_t name_len,
                                   const char* scheduler_role, size_t scheduler_role_len,
                                   fdf_dispatcher_shutdown_observer_t* observer,
-                                  fdf_dispatcher_t** dispatcher);
+                                  fdf_dispatcher_t** out_dispatcher);
 
 // Returns the asynchronous dispatch interface.
 async_dispatcher_t* fdf_dispatcher_get_async_dispatcher(fdf_dispatcher_t* dispatcher);

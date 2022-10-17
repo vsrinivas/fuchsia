@@ -39,7 +39,7 @@ zx_status_t fdf_env_dispatcher_create_with_owner(const void* driver, uint32_t op
                                                  const char* scheduler_role,
                                                  size_t scheduler_role_len,
                                                  fdf_dispatcher_shutdown_observer_t* observer,
-                                                 fdf_dispatcher_t** dispatcher);
+                                                 fdf_dispatcher_t** out_dispatcher);
 
 // Asynchronously shuts down all dispatchers owned by |driver|.
 // |observer| will be notified once shutdown completes. This is guaranteed to be
