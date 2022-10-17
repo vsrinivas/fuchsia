@@ -18,6 +18,31 @@ source_set("surface_header") {
   public_deps = [ "//src/lib/vulkan:headers" ]
 }
 
+validation_layer_dir = "//third_party/Vulkan-ValidationLayers"
+
+config("vulkan_layer_config") {
+  include_dirs = [
+    "$validation_layer_dir/layers",
+    "$validation_layer_dir/layers/generated",
+  ]
+  cflags = [ "-Wno-extra-semi" ]
+}
+
+source_set("layer_common") {
+  public_configs = [ ":vulkan_layer_config" ]
+
+  sources = [
+    "$validation_layer_dir/layers/generated/vk_dispatch_table_helper.h",
+    "$validation_layer_dir/layers/generated/vk_extension_helper.h",
+    "$validation_layer_dir/layers/generated/vk_layer_dispatch_table.h",
+    "$validation_layer_dir/layers/vk_layer_data.h",
+    "$validation_layer_dir/layers/vk_layer_extension_utils.cpp",
+    "$validation_layer_dir/layers/vk_layer_extension_utils.h",
+  ]
+
+  public_deps = [ "//third_party/Vulkan-Headers:vulkan_headers" ]
+}
+
 loadable_module("swapchain") {
   output_name = "VkLayer_image_pipe_swapchain"
   sources = [
@@ -29,6 +54,7 @@ loadable_module("swapchain") {
     "vulkan_utils.h",
   ]
   deps = [
+    ":layer_common",
     ":surface_header",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
@@ -37,7 +63,6 @@ loadable_module("swapchain") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/ui/flatland-frame-scheduling:simple_present",
-    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace",
@@ -67,12 +92,12 @@ source_set("display") {
     "vulkan_utils.h",
   ]
   deps = [
+    ":layer_common",
     ":surface_header",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
-    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -95,8 +120,8 @@ loadable_module("fb") {
   sources = [ "image_pipe_swapchain_layer.cc" ]
   deps = [
     ":display",
+    ":layer_common",
     ":surface_header",
-    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
@@ -124,8 +149,8 @@ loadable_module("fb_skip_present") {
   sources = [ "image_pipe_swapchain_layer.cc" ]
   deps = [
     ":display",
+    ":layer_common",
     ":surface_header",
-    "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     "//zircon/system/ulib/trace",
   ]
   ldflags = [ "-static-libstdc++" ]
@@ -153,7 +178,7 @@ loadable_module("copy") {
     "swapchain_copy_surface.cc",
     "swapchain_copy_surface.h",
   ]
-  public_deps = [ "//third_party/Vulkan-ValidationLayers:micro_layer_common" ]
+  public_deps = [ ":layer_common" ]
   deps = [ ":surface_header" ]
 
   if (is_fuchsia) {
@@ -191,8 +216,8 @@ if (is_linux) {
       "swapchain_copy_surface.h",
     ]
     deps = [
+      ":layer_common",
       ":surface_header",
-      "//third_party/Vulkan-ValidationLayers:micro_layer_common",
     ]
   }
 }

@@ -50,12 +50,66 @@ constexpr bool kSkipPresent = false;
 #include <vk_dispatch_table_helper.h>
 #include <vk_layer_data.h>
 #include <vk_layer_extension_utils.h>
-#include <vk_layer_utils_minimal.h>
 
 #include <limits>
 #include <thread>
 #include <unordered_map>
 #include <vector>
+
+#include "vk_layer_dispatch_table.h"
+
+namespace {
+// The loader dispatch table may be a different version from the layer's, and can't be used
+// directly.
+struct LoaderVkLayerDispatchTable;
+typedef void* dispatch_key;
+
+// The first value in a dispatchable object should be a pointer to a VkLayerDispatchTable.
+// According to the layer documentation: "the layer should use the dispatch table
+// pointer within the VkDevice or VkInstance [as the hash table key] since that
+// will be unique for a given VkInstance or VkDevice".
+inline dispatch_key get_dispatch_key(const VkDevice object) {
+  return static_cast<dispatch_key>(*reinterpret_cast<LoaderVkLayerDispatchTable* const*>(object));
+}
+inline dispatch_key get_dispatch_key(const VkInstance object) {
+  return static_cast<dispatch_key>(*reinterpret_cast<LoaderVkLayerDispatchTable* const*>(object));
+}
+inline dispatch_key get_dispatch_key(const VkPhysicalDevice object) {
+  return static_cast<dispatch_key>(*reinterpret_cast<LoaderVkLayerDispatchTable* const*>(object));
+}
+inline dispatch_key get_dispatch_key(const VkQueue object) {
+  return static_cast<dispatch_key>(*reinterpret_cast<LoaderVkLayerDispatchTable* const*>(object));
+}
+
+VkLayerInstanceCreateInfo* get_chain_info(const VkInstanceCreateInfo* pCreateInfo,
+                                          VkLayerFunction func) {
+  auto chain_info = static_cast<const VkLayerInstanceCreateInfo*>(pCreateInfo->pNext);
+  while (chain_info) {
+    if (chain_info->sType == VK_STRUCTURE_TYPE_LOADER_INSTANCE_CREATE_INFO &&
+        chain_info->function == func) {
+      return const_cast<VkLayerInstanceCreateInfo*>(chain_info);
+    }
+    chain_info = static_cast<const VkLayerInstanceCreateInfo*>(chain_info->pNext);
+  }
+  assert(false && "Failed to find VkLayerInstanceCreateInfo");
+  return nullptr;
+}
+
+VkLayerDeviceCreateInfo* get_chain_info(const VkDeviceCreateInfo* pCreateInfo,
+                                        VkLayerFunction func) {
+  auto chain_info = static_cast<const VkLayerDeviceCreateInfo*>(pCreateInfo->pNext);
+  while (chain_info) {
+    if (chain_info->sType == VK_STRUCTURE_TYPE_LOADER_DEVICE_CREATE_INFO &&
+        chain_info->function == func) {
+      return const_cast<VkLayerDeviceCreateInfo*>(chain_info);
+    }
+    chain_info = static_cast<const VkLayerDeviceCreateInfo*>(chain_info->pNext);
+  }
+  assert(false && "Failed to find VkLayerDeviceCreateInfo");
+  return nullptr;
+}
+
+}  // namespace
 
 #define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 1, VK_HEADER_VERSION)
 
