@@ -14,6 +14,8 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
 #include <lib/stdcompat/string_view.h>
+#include <lib/zx/status.h>
+#include <lib/zxio/ops.h>
 #include <lib/zxio/posix_mode.h>
 #include <lib/zxio/types.h>
 #include <poll.h>
@@ -44,6 +46,7 @@
 
 #include "sdk/lib/fdio/cleanpath.h"
 #include "sdk/lib/fdio/fdio_unistd.h"
+#include "sdk/lib/fdio/internal.h"
 #include "sdk/lib/fdio/namespace/namespace.h"
 #include "sdk/lib/fdio/zxio.h"
 

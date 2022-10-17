@@ -6,6 +6,7 @@
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/zxio/bsdsocket.h>
 #include <net/if.h>
+#include <netinet/in.h>
 #include <poll.h>
 #include <sys/ioctl.h>
 #include <sys/socket.h>
