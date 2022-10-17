@@ -89,7 +89,7 @@ void IntelDspStream::Start(StartCompleter::Sync& completer) {
   }
 
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-  zx::status status = dsp->StartPipeline(stream_.id);
+  zx::result status = dsp->StartPipeline(stream_.id);
   if (!status.is_ok()) {
     LOG(ERROR, "Error on pipeline start res = %s", status.status_string());
     completer.Close(status.status_value());
@@ -102,7 +102,7 @@ void IntelDspStream::Start(StartCompleter::Sync& completer) {
 void IntelDspStream::Stop(StopCompleter::Sync& completer) {
   fbl::AutoLock lock(obj_lock());
   auto dsp = fbl::RefPtr<IntelDsp>::Downcast(parent_codec());
-  zx::status status = dsp->PausePipeline(stream_.id);
+  zx::result status = dsp->PausePipeline(stream_.id);
   if (!status.is_ok()) {
     LOG(ERROR, "Error on pipeline pause res = %s", status.status_string());
     completer.Close(status.status_value());

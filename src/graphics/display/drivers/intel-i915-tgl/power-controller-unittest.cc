@@ -53,7 +53,7 @@ TEST_F(PowerControllerTest, TransactImmediateSuccess) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  zx::status<uint64_t> result = power_controller.Transact({
+  zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -78,7 +78,7 @@ TEST_F(PowerControllerTest, TransactSuccessAfterDelay) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  zx::status<uint64_t> result = power_controller.Transact({
+  zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -102,7 +102,7 @@ TEST_F(PowerControllerTest, TransactCommandTimeout) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<uint64_t> result = power_controller.Transact({
+  const zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -121,7 +121,7 @@ TEST_F(PowerControllerTest, TransactCommandZeroTimeout) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  zx::status<uint64_t> result = power_controller.Transact({
+  zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -146,7 +146,7 @@ TEST_F(PowerControllerTest, TransactSuccessAfterPriorCommandDelay) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  zx::status<uint64_t> result = power_controller.Transact({
+  zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -173,7 +173,7 @@ TEST_F(PowerControllerTest, TransactSuccessAfterPriorAndCurrentCommandDelay) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  zx::status<uint64_t> result = power_controller.Transact({
+  zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -196,7 +196,7 @@ TEST_F(PowerControllerTest, TransactPreviousCommandTimeout) {
   }
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<uint64_t> result = power_controller.Transact({
+  const zx::result<uint64_t> result = power_controller.Transact({
       .command = 0x40,
       .param1 = 0x41,
       .param2 = 0x42,
@@ -218,7 +218,7 @@ TEST_F(PowerControllerTest, RequestDisplayVoltageLevelNoRetrySuccess) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result =
+  const zx::result<> result =
       power_controller.RequestDisplayVoltageLevel(3, PowerController::RetryBehavior::kNoRetry);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -235,7 +235,7 @@ TEST_F(PowerControllerTest, RequestDisplayVoltageLevelLowLevelNoRetrySuccess) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result =
+  const zx::result<> result =
       power_controller.RequestDisplayVoltageLevel(1, PowerController::RetryBehavior::kNoRetry);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -252,7 +252,7 @@ TEST_F(PowerControllerTest, RequestDisplayVoltageLevelLowLevelNoRetryRefused) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result =
+  const zx::result<> result =
       power_controller.RequestDisplayVoltageLevel(1, PowerController::RetryBehavior::kNoRetry);
   EXPECT_EQ(ZX_ERR_IO_REFUSED, result.status_value());
 }
@@ -269,7 +269,7 @@ TEST_F(PowerControllerTest, RequestDisplayVoltageLevelRetryImmediateSuccess) {
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> result = power_controller.RequestDisplayVoltageLevel(
       3, PowerController::RetryBehavior::kRetryUntilStateChanges);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -304,7 +304,7 @@ TEST_F(PowerControllerTest, RequestDisplayVoltageLevelRetrySuccessAfterRetries) 
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> result = power_controller.RequestDisplayVoltageLevel(
       3, PowerController::RetryBehavior::kRetryUntilStateChanges);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -341,7 +341,7 @@ TEST_F(PowerControllerTest, RequestDisplayVoltageLevelRetryTimeout) {
   fdf::MmioBuffer fake_mmio_buffer = fake_mmio_region.GetMmioBuffer();
   PowerController power_controller(&fake_mmio_buffer);
 
-  const zx::status<> result = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> result = power_controller.RequestDisplayVoltageLevel(
       2, PowerController::RetryBehavior::kRetryUntilStateChanges);
   EXPECT_EQ(ZX_ERR_IO_REFUSED, result.status_value());
 }
@@ -358,7 +358,7 @@ TEST_F(PowerControllerTest, SetDisplayTypeCColdBlockingTigerLakeOnNoRetrySuccess
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  const zx::result<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       true, PowerController::RetryBehavior::kNoRetry);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -375,7 +375,7 @@ TEST_F(PowerControllerTest, SetDisplayTypeCColdBlockingTigerLakeOffNoRetrySucces
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  const zx::result<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       false, PowerController::RetryBehavior::kNoRetry);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -392,7 +392,7 @@ TEST_F(PowerControllerTest, SetDisplayTypeCColdBlockingTigerLakeOffNoRetryRefuse
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  const zx::result<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       false, PowerController::RetryBehavior::kNoRetry);
   EXPECT_EQ(ZX_ERR_IO_REFUSED, result.status_value());
 }
@@ -409,7 +409,7 @@ TEST_F(PowerControllerTest, SetDisplayTypeCColdBlockingTigerLakeOnRetryImmediate
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  const zx::result<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       true, PowerController::RetryBehavior::kRetryUntilStateChanges);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -444,7 +444,7 @@ TEST_F(PowerControllerTest, SetDisplayTypeCColdBlockingTigerLakeOnRetrySuccessAf
   }));
   PowerController power_controller(&mmio_buffer_);
 
-  const zx::status<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  const zx::result<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       true, PowerController::RetryBehavior::kRetryUntilStateChanges);
   EXPECT_TRUE(result.is_ok()) << result.status_string();
 }
@@ -477,7 +477,7 @@ TEST_F(PowerControllerTest, SetDisplayTypeCColdBlockingTigerLakeOnRetryTimeout) 
   fdf::MmioBuffer fake_mmio_buffer = fake_mmio_region.GetMmioBuffer();
   PowerController power_controller(&fake_mmio_buffer);
 
-  const zx::status<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  const zx::result<> result = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       true, PowerController::RetryBehavior::kRetryUntilStateChanges);
   EXPECT_EQ(ZX_ERR_IO_REFUSED, result.status_value());
 }

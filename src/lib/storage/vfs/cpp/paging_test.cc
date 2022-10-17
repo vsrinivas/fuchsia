@@ -96,7 +96,7 @@ class PagingTestFile : public PagedVnode {
       // We're supposed to report errors.
       std::optional vfs = this->vfs();
       ASSERT_TRUE(vfs.has_value());
-      const zx::status result =
+      const zx::result result =
           vfs.value().get().ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY);
       ASSERT_OK(result.status_value());
       return;
@@ -106,7 +106,7 @@ class PagingTestFile : public PagedVnode {
     if (zx::vmo::create(length, 0, &transfer) != ZX_OK) {
       std::optional vfs = this->vfs();
       ASSERT_TRUE(vfs.has_value());
-      const zx::status result =
+      const zx::result result =
           vfs.value().get().ReportPagerError(paged_vmo(), offset, length, ZX_ERR_BAD_STATE);
       ASSERT_OK(result.status_value());
     }
@@ -114,7 +114,7 @@ class PagingTestFile : public PagedVnode {
     transfer.write(&data_[offset], 0, std::min(data_.size() - offset, length));
     std::optional vfs = this->vfs();
     ASSERT_TRUE(vfs.has_value());
-    const zx::status result =
+    const zx::result result =
         vfs.value().get().SupplyPages(paged_vmo(), offset, length, transfer, 0);
     ASSERT_OK(result.status_value());
   }
@@ -126,7 +126,7 @@ class PagingTestFile : public PagedVnode {
       // We're supposed to report errors.
       std::optional vfs = this->vfs();
       ASSERT_TRUE(vfs.has_value());
-      const zx::status result =
+      const zx::result result =
           vfs.value().get().ReportPagerError(paged_vmo(), offset, length, ZX_ERR_IO_DATA_INTEGRITY);
       ASSERT_OK(result.status_value());
       return;
@@ -134,7 +134,7 @@ class PagingTestFile : public PagedVnode {
 
     std::optional vfs = this->vfs();
     ASSERT_TRUE(vfs.has_value());
-    const zx::status result = vfs.value().get().DirtyPages(paged_vmo(), offset, length);
+    const zx::result result = vfs.value().get().DirtyPages(paged_vmo(), offset, length);
     ASSERT_OK(result.status_value());
   }
 
@@ -275,7 +275,7 @@ class PagingTest : public zxtest::Test {
     root_->AddEntry(kFileDirtyErrName, file_dirty_err_);
 
     // Connect to the root.
-    zx::status directory_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result directory_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     EXPECT_OK(directory_endpoints.status_value());
     vfs_->ServeDirectory(root_, std::move(directory_endpoints->server));
 

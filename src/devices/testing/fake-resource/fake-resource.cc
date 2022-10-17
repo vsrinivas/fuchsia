@@ -134,7 +134,7 @@ __EXPORT
 zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64_t base,
                                size_t size, const char* name, size_t name_size,
                                zx_handle_t* resource_out) {
-  zx::status get_res = fake_object::FakeHandleTable().Get(parent_rsrc);
+  zx::result get_res = fake_object::FakeHandleTable().Get(parent_rsrc);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -160,7 +160,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64
 
   fbl::RefPtr<fake_object::Object> new_res;
   ZX_ASSERT(Resource::Create(base, size, kind, flags, name, name_size, &new_res) == ZX_OK);
-  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(new_res));
+  zx::result add_res = fake_object::FakeHandleTable().Add(std::move(new_res));
   if (add_res.is_ok()) {
     *resource_out = add_res.value();
   }
@@ -173,7 +173,7 @@ zx_status_t zx_resource_create(zx_handle_t parent_rsrc, uint32_t options, uint64
 __EXPORT
 zx_status_t zx_vmo_create_physical(zx_handle_t handle, zx_paddr_t paddr, size_t size,
                                    zx_handle_t* out) {
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -190,7 +190,7 @@ zx_status_t zx_vmo_create_physical(zx_handle_t handle, zx_paddr_t paddr, size_t 
 // needs IO permissions then more work will need to be done getting them real
 // resources to allwow it.
 zx_status_t ioport_syscall_common(zx_handle_t handle, uint16_t io_addr, uint32_t len) {
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -227,7 +227,7 @@ zx_status_t fake_root_resource_create(zx_handle_t* out) {
   fbl::RefPtr<fake_object::Object> new_res;
   ZX_ASSERT(Resource::Create(0, 0, ZX_RSRC_KIND_ROOT, 0, name.data(), name.size(), &new_res) ==
             ZX_OK);
-  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(new_res));
+  zx::result add_res = fake_object::FakeHandleTable().Add(std::move(new_res));
   if (add_res.is_ok()) {
     *out = add_res.value();
   }

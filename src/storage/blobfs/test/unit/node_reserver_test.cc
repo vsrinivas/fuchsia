@@ -24,7 +24,7 @@ class FakeNodeReserver : public NodeReserverInterface {
     ZX_ASSERT(id_allocator::IdAllocator::Create(node_count, &node_bitmap_) == ZX_OK);
   }
 
-  zx::status<ReservedNode> ReserveNode() override {
+  zx::result<ReservedNode> ReserveNode() override {
     zx_status_t status;
     size_t index;
     if ((status = node_bitmap_->Allocate(&index)) != ZX_OK) {

@@ -236,7 +236,7 @@ zx_status_t Lcd::Enable() {
   return ZX_OK;
 }
 
-zx::status<Lcd*> Lcd::Create(fbl::AllocChecker* ac, uint32_t panel_type,
+zx::result<Lcd*> Lcd::Create(fbl::AllocChecker* ac, uint32_t panel_type,
                              cpp20::span<const uint8_t> dsi_on, cpp20::span<const uint8_t> dsi_off,
                              fit::function<void(bool)> set_signal_power,
                              ddk::DsiImplProtocolClient dsiimpl, ddk::GpioProtocolClient gpio,

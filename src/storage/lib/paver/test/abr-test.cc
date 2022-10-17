@@ -188,7 +188,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
     ASSERT_FALSE(result2->is_error());
   }
 
-  zx::status<std::unique_ptr<abr::Client>> GetAbrClient() {
+  zx::result<std::unique_ptr<abr::Client>> GetAbrClient() {
     auto& svc_root = fake_svc_.svc_chan();
     return paver::ChromebookX64AbrClientFactory().New(devmgr_.devfs_root().duplicate(), svc_root,
                                                       nullptr);

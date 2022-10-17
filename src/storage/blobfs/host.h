@@ -59,7 +59,7 @@ class FileMapping {
   FileMapping& operator=(FileMapping&& other) noexcept;
   ~FileMapping();
 
-  static zx::status<FileMapping> Create(int fd);
+  static zx::result<FileMapping> Create(int fd);
 
   cpp20::span<const uint8_t> data() const {
     return cpp20::span(static_cast<const uint8_t*>(data_), length_);
@@ -82,13 +82,13 @@ class BlobInfo {
 
   // Creates a BlobInfo object for |fd| using the layout specified by |blob_layout_format|. If
   // compressing the blob would save space then the blob will be compressed.
-  static zx::status<BlobInfo> CreateCompressed(
+  static zx::result<BlobInfo> CreateCompressed(
       int fd, BlobLayoutFormat blob_layout_format, std::filesystem::path file_path,
       chunked_compression::MultithreadedChunkedCompressor& compressor);
 
   // Creates a BlobInfo object for |fd| using the layout specified by |blob_layout_format|. The blob
   // will not be compressed.
-  static zx::status<BlobInfo> CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
+  static zx::result<BlobInfo> CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
                                                  std::filesystem::path file_path);
 
   // If the blob was compressed then this function will return the compressed data. Otherwise the
@@ -149,15 +149,15 @@ class Blobfs : public fbl::RefCounted<Blobfs> {
 
   // Creates an instance of Blobfs from the file at |blockfd|. The blobfs partition is expected to
   // start at |offset| bytes into the file.
-  static zx::status<std::unique_ptr<Blobfs>> Create(fbl::unique_fd blockfd, off_t offset,
+  static zx::result<std::unique_ptr<Blobfs>> Create(fbl::unique_fd blockfd, off_t offset,
                                                     const info_block_t& info_block,
                                                     const fbl::Array<size_t>& extent_lengths);
 
   // Adds a blob to the filesystem.
-  zx::status<> AddBlob(const BlobInfo& blob_info);
+  zx::result<> AddBlob(const BlobInfo& blob_info);
 
   // Access the |node_index|-th inode.
-  zx::status<InodePtr> GetNode(uint32_t node_index);
+  zx::result<InodePtr> GetNode(uint32_t node_index);
 
   NodeFinder* GetNodeFinder() { return allocator_.get(); }
 
@@ -172,7 +172,7 @@ class Blobfs : public fbl::RefCounted<Blobfs> {
   // caller, and will stop the iteration.
   fpromise::result<void, std::string> VisitBlobs(BlobVisitor visitor);
 
-  zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
+  zx::result<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 
  private:
   friend class BlobfsChecker;
@@ -182,32 +182,32 @@ class Blobfs : public fbl::RefCounted<Blobfs> {
 
   // Finds the index of the inode with the given |digest|. Returns ZX_ERR_NOT_FOUND if there is no
   // inode with that digest.
-  zx::status<uint32_t> FindInodeByDigest(const Digest& digest);
+  zx::result<uint32_t> FindInodeByDigest(const Digest& digest);
 
-  zx::status<> WriteData(const BlobInfo& blob_info, const std::vector<ReservedExtent>& extents);
-  zx::status<> WriteBlockBitmap(const Extent& extent);
-  zx::status<> WriteNode(uint32_t node_index);
-  zx::status<> WriteInfo();
+  zx::result<> WriteData(const BlobInfo& blob_info, const std::vector<ReservedExtent>& extents);
+  zx::result<> WriteBlockBitmap(const Extent& extent);
+  zx::result<> WriteNode(uint32_t node_index);
+  zx::result<> WriteInfo();
 
-  zx::status<RawBitmap> LoadBlockBitmap();
+  zx::result<RawBitmap> LoadBlockBitmap();
 
-  zx::status<std::vector<Inode>> LoadNodeMap();
+  zx::result<std::vector<Inode>> LoadNodeMap();
 
   // Read |block_count| blocks starting at |start_block| into |data|.
-  zx::status<> ReadBlocks(uint64_t start_block, uint64_t block_count, void* data);
+  zx::result<> ReadBlocks(uint64_t start_block, uint64_t block_count, void* data);
 
   // Read data from block |block_number| into |data|.
-  zx::status<> ReadBlock(uint64_t block_number, void* data);
+  zx::result<> ReadBlock(uint64_t block_number, void* data);
 
   // Read for inode |node_index| for |block_count| blocks from local |start_block| into |data|.
-  zx::status<> ReadBlocksForInode(uint32_t node_index, uint64_t start_block, uint64_t block_count,
+  zx::result<> ReadBlocksForInode(uint32_t node_index, uint64_t start_block, uint64_t block_count,
                                   uint8_t* data);
 
   // Write |block_count| blocks of |data| at block number starting at |start_block|.
-  zx::status<> WriteBlocks(uint64_t start_block, uint64_t block_count, const void* data);
+  zx::result<> WriteBlocks(uint64_t start_block, uint64_t block_count, const void* data);
 
   // Write |data| into block |block_number|.
-  zx::status<> WriteBlock(uint64_t block_number, const void* data);
+  zx::result<> WriteBlock(uint64_t block_number, const void* data);
 
   zx_status_t LoadAndVerifyBlob(uint32_t node_index);
   fpromise::result<std::vector<uint8_t>, std::string> LoadDataAndVerifyBlob(uint32_t inode_index);

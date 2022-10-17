@@ -41,9 +41,9 @@ namespace hypervisor {
 
 BlockingPortAllocator::BlockingPortAllocator() : semaphore_(kMaxPacketsPerRange) {}
 
-zx::status<> BlockingPortAllocator::Init() {
+zx::result<> BlockingPortAllocator::Init() {
   zx_status_t status = arena_.Init("hypervisor-packets", kMaxPacketsPerRange);
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 PortPacket* BlockingPortAllocator::AllocBlocking() {
@@ -76,9 +76,9 @@ Trap::~Trap() {
   port_->CancelQueued(&port_allocator_ /* handle */, key_);
 }
 
-zx::status<> Trap::Init() { return port_allocator_.Init(); }
+zx::result<> Trap::Init() { return port_allocator_.Init(); }
 
-zx::status<> Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator) {
+zx::result<> Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* invalidator) {
   if (invalidator != nullptr) {
     invalidator->Invalidate();
   }
@@ -98,10 +98,10 @@ zx::status<> Trap::Queue(const zx_port_packet_t& packet, StateInvalidator* inval
       status = ZX_ERR_BAD_STATE;
     }
   }
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<> TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
+zx::result<> TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
                                  fbl::RefPtr<PortDispatcher> port, uint64_t key) {
   if (!ValidRange(kind, addr, len)) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
@@ -134,7 +134,7 @@ zx::status<> TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
   return zx::ok();
 }
 
-zx::status<Trap*> TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr) {
+zx::result<Trap*> TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr) {
   TrapTree* traps = TreeOf(kind);
   if (traps == nullptr) {
     return zx::error(ZX_ERR_INVALID_ARGS);

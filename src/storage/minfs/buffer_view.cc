@@ -21,7 +21,7 @@ BaseBufferView& BaseBufferView::operator=(BaseBufferView&& other) noexcept {
   return *this;
 }
 
-zx::status<> BaseBufferView::Flush() {
+zx::result<> BaseBufferView::Flush() {
   if (!dirty_)
     return zx::ok();
   dirty_ = false;

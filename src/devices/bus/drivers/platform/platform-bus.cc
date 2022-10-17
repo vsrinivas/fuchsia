@@ -200,7 +200,7 @@ void PlatformBus::NodeAdd(NodeAddRequestView request, fdf::Arena& arena,
   completer.buffer(arena).Reply(NodeAddInternal(natural));
 }
 
-zx::status<> PlatformBus::NodeAddInternal(fuchsia_hardware_platform_bus::Node& node) {
+zx::result<> PlatformBus::NodeAddInternal(fuchsia_hardware_platform_bus::Node& node) {
   auto result = ValidateResources(node);
   if (result.is_error()) {
     return result.take_error();
@@ -378,7 +378,7 @@ struct CompositeFragmentData {
 
 // Given |desc|, populates |fragments| with fragments. The return value contains ancillary data for
 // the fragment definitions and must live as long as the |fragments| array is used.
-zx::status<std::vector<CompositeFragmentData>> ConvertFidlFragments(
+zx::result<std::vector<CompositeFragmentData>> ConvertFidlFragments(
     fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment> fragments_list,
     cpp20::span<device_fragment_t> fragments) {
   if (fragments_list.count() > fragments.size()) {
@@ -524,7 +524,7 @@ void PlatformBus::AddCompositeImplicitPbusFragment(
   };
 
   status = DdkAddComposite(std::string(request->node.name().get()).data(), &comp_desc);
-  completer.buffer(arena).Reply(zx::make_status(status));
+  completer.buffer(arena).Reply(zx::make_result(status));
 }
 
 void PlatformBus::AddComposite(AddCompositeRequestView request, fdf::Arena& arena,
@@ -628,7 +628,7 @@ zx_status_t PlatformBus::DdkGetProtocol(uint32_t proto_id, void* out) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx::status<PlatformBus::BootItemResult> PlatformBus::GetBootItem(uint32_t type, uint32_t extra) {
+zx::result<PlatformBus::BootItemResult> PlatformBus::GetBootItem(uint32_t type, uint32_t extra) {
   auto result = fidl::WireCall(items_svc_)->Get(type, extra);
   if (!result.ok()) {
     return zx::error(result.status());
@@ -642,8 +642,8 @@ zx::status<PlatformBus::BootItemResult> PlatformBus::GetBootItem(uint32_t type, 
   });
 }
 
-zx::status<fbl::Array<uint8_t>> PlatformBus::GetBootItemArray(uint32_t type, uint32_t extra) {
-  zx::status result = GetBootItem(type, extra);
+zx::result<fbl::Array<uint8_t>> PlatformBus::GetBootItemArray(uint32_t type, uint32_t extra) {
+  zx::result result = GetBootItem(type, extra);
   if (result.is_error()) {
     return result.take_error();
   }
@@ -784,8 +784,8 @@ PlatformBus::PlatformBus(zx_device_t* parent, zx::channel items_svc)
       items_svc_(fidl::ClientEnd<fuchsia_boot::Items>(std::move(items_svc))),
       outgoing_(driver::OutgoingDirectory::Create(fdf::Dispatcher::GetCurrent()->get())) {}
 
-zx::status<zbi_board_info_t> PlatformBus::GetBoardInfo() {
-  zx::status result = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0);
+zx::result<zbi_board_info_t> PlatformBus::GetBoardInfo() {
+  zx::result result = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0);
   if (result.is_error()) {
     // This is expected on some boards.
     zxlogf(INFO, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found");
@@ -840,7 +840,7 @@ zx_status_t PlatformBus::Init() {
 #endif
 
   // Read platform ID.
-  zx::status platform_id_result = GetBootItem(ZBI_TYPE_PLATFORM_ID, 0);
+  zx::result platform_id_result = GetBootItem(ZBI_TYPE_PLATFORM_ID, 0);
   if (platform_id_result.is_error() && platform_id_result.status_value() != ZX_ERR_NOT_FOUND) {
     return platform_id_result.status_value();
   }
@@ -882,7 +882,7 @@ zx_status_t PlatformBus::Init() {
   }
 
   // Set default board_revision.
-  zx::status zbi_board_info = GetBoardInfo();
+  zx::result zbi_board_info = GetBoardInfo();
   if (zbi_board_info.is_ok()) {
     board_info_.board_revision() = zbi_board_info->revision;
   }
@@ -907,7 +907,7 @@ zx_status_t PlatformBus::Init() {
   return ZX_OK;
 }
 
-zx::status<> PlatformBus::ValidateResources(fuchsia_hardware_platform_bus::Node& node) {
+zx::result<> PlatformBus::ValidateResources(fuchsia_hardware_platform_bus::Node& node) {
   if (node.name() == std::nullopt) {
     zxlogf(ERROR, "Node has no name?");
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -964,7 +964,7 @@ zx::status<> PlatformBus::ValidateResources(fuchsia_hardware_platform_bus::Node&
 }
 
 void PlatformBus::DdkInit(ddk::InitTxn txn) {
-  zx::status board_data = GetBootItemArray(ZBI_TYPE_DRV_BOARD_PRIVATE, 0);
+  zx::result board_data = GetBootItemArray(ZBI_TYPE_DRV_BOARD_PRIVATE, 0);
   if (board_data.is_error() && board_data.status_value() != ZX_ERR_NOT_FOUND) {
     return txn.Reply(board_data.status_value());
   }

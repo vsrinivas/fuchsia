@@ -20,9 +20,9 @@ namespace storage_benchmark {
 class Memfs : public RunningFilesystem {
  public:
   // Starts a memfs instance in a new thread.
-  static zx::status<std::unique_ptr<Memfs>> Create();
+  static zx::result<std::unique_ptr<Memfs>> Create();
 
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const override;
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const override;
 
  private:
   explicit Memfs(std::unique_ptr<async::Loop> loop, ScopedMemfs memfs)

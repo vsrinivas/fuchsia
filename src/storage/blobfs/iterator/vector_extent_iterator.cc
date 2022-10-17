@@ -18,7 +18,7 @@ VectorExtentIterator::VectorExtentIterator(const std::vector<ReservedExtent>& ex
 
 bool VectorExtentIterator::Done() const { return extent_index_ == extents_.size(); }
 
-zx::status<const Extent*> VectorExtentIterator::Next() {
+zx::result<const Extent*> VectorExtentIterator::Next() {
   ZX_DEBUG_ASSERT(!Done());
   const Extent& extent = extents_[extent_index_].extent();
   block_count_ += extent.Length();

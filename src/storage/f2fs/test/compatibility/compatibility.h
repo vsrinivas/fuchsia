@@ -148,7 +148,7 @@ class TargetOperator : public CompatibilityTestOperator {
   void Rename(std::string_view oldpath, std::string_view newpath) final;
 
  protected:
-  zx::status<std::pair<fbl::RefPtr<fs::Vnode>, std::string>> GetLastDirVnodeAndFileName(
+  zx::result<std::pair<fbl::RefPtr<fs::Vnode>, std::string>> GetLastDirVnodeAndFileName(
       std::string_view absolute_path);
 
  private:

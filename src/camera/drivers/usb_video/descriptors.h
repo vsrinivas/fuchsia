@@ -71,7 +71,7 @@ struct StreamingSetting {
   StreamingSetting() = default;
 };
 
-zx::status<StreamingSetting> LoadStreamingSettings(usb_desc_iter_t* iter);
+zx::result<StreamingSetting> LoadStreamingSettings(usb_desc_iter_t* iter);
 
 }  // namespace camera::usb_video
 

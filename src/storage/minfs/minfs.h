@@ -40,10 +40,10 @@ enum class UpdateBackupSuperblock {
 };
 
 // Format the partition backed by |bc| as MinFS.
-zx::status<> Mkfs(const MountOptions& options, Bcache* bc);
+zx::result<> Mkfs(const MountOptions& options, Bcache* bc);
 
 // Format the partition backed by |bc| as MinFS.
-inline zx::status<> Mkfs(Bcache* bc) { return Mkfs({}, bc); }
+inline zx::result<> Mkfs(Bcache* bc) { return Mkfs({}, bc); }
 
 }  // namespace minfs
 

@@ -21,7 +21,7 @@ class FastbootTCPTransport : public fastboot::Transport {
 
   size_t PeekPacketSize() override { return input_packet_size_; }
 
-  zx::status<size_t> ReceivePacket(void *dst, size_t capacity) override {
+  zx::result<size_t> ReceivePacket(void *dst, size_t capacity) override {
     if (!dst) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -37,7 +37,7 @@ class FastbootTCPTransport : public fastboot::Transport {
     return zx::ok(PeekPacketSize());
   }
 
-  zx::status<> Send(std::string_view packet) override {
+  zx::result<> Send(std::string_view packet) override {
     if (write_packet_callback_(packet.data(), packet.size(), ctx_)) {
       return zx::error(ZX_ERR_INTERNAL);
     }

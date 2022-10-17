@@ -32,7 +32,7 @@ auto CreateEventPair() {
 }
 
 TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
-  zx::status endpoints = fidl::CreateEndpoints<test::Protocol>();
+  zx::result endpoints = fidl::CreateEndpoints<test::Protocol>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -64,7 +64,7 @@ TEST(DispatcherHandleOwnership, ServerReceiveOneWay) {
 }
 
 TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
-  zx::status endpoints = fidl::CreateEndpoints<test::Protocol>();
+  zx::result endpoints = fidl::CreateEndpoints<test::Protocol>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 
@@ -128,7 +128,7 @@ TEST(DispatcherHandleOwnership, ClientReceiveTwoWay) {
 }
 
 TEST(DispatcherHandleOwnership, ClientReceiveEvent) {
-  zx::status endpoints = fidl::CreateEndpoints<test::Protocol>();
+  zx::result endpoints = fidl::CreateEndpoints<test::Protocol>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(*endpoints);
 

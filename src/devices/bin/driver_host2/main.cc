@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
       fuchsia::io::OpenFlags::RIGHT_WRITABLE | fuchsia::io::OpenFlags::RIGHT_READABLE |
           fuchsia::io::OpenFlags::RIGHT_EXECUTABLE | fuchsia::io::OpenFlags::DIRECTORY,
       endpoints->server.TakeChannel(), loop.dispatcher());
-  zx::status<> status_result = outgoing.AddDirectory(std::move(endpoints->client), kDiagnosticsDir);
+  zx::result<> status_result = outgoing.AddDirectory(std::move(endpoints->client), kDiagnosticsDir);
   if (status_result.is_error()) {
     FX_SLOG(ERROR, "Failed to add directory entry", KV("name", kDiagnosticsDir),
             KV("status_str", status_result.status_string()));

@@ -122,13 +122,13 @@ class NetdeviceMigrationTest : public ::testing::Test {
         mock_ethernet_impl_(parent_.get()) {}
 
   void CreateDevice() {
-    zx::status device = netdevice_migration::NetdeviceMigration::Create(parent_.get());
+    zx::result device = netdevice_migration::NetdeviceMigration::Create(parent_.get());
     ASSERT_OK(device.status_value());
     device_ = std::move(device.value());
   }
 
   void CreateDeviceFails(zx_status_t expected) {
-    zx::status device = netdevice_migration::NetdeviceMigration::Create(parent_.get());
+    zx::result device = netdevice_migration::NetdeviceMigration::Create(parent_.get());
     ASSERT_STATUS(device.status_value(), expected);
   }
 

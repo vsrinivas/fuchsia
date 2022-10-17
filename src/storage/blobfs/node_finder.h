@@ -33,7 +33,7 @@ class NodeFinder {
   virtual ~NodeFinder() = default;
 
   // Returns a pointer to the requested node or an error if |node_index| is out of range.
-  virtual zx::status<InodePtr> GetNode(uint32_t node_index) = 0;
+  virtual zx::result<InodePtr> GetNode(uint32_t node_index) = 0;
 
   // Called when an InodePtr goes out of scope.
   virtual void DropInodePtr() {}

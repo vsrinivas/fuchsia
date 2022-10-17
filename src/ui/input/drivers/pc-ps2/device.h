@@ -158,7 +158,7 @@ class I8042Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_INP
     return std::get<PS2MouseInputReport>(report_.report);
   }
 
-  zx::status<fuchsia_hardware_input::wire::BootProtocol> Identify();
+  zx::result<fuchsia_hardware_input::wire::BootProtocol> Identify();
   void IrqThread();
   // Keyboard input
   void ProcessScancode(zx::time timestamp, uint8_t code);

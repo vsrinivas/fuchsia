@@ -59,7 +59,7 @@ void Sysconfig::Read(ReadCompleter::Sync& completer) {
   const uint64_t partition_size = status_get_partition_size.value();
 
   zx::vmo vmo;
-  if (auto status = zx::make_status(zx::vmo::create(partition_size, 0, &vmo)); status.is_error()) {
+  if (auto status = zx::make_result(zx::vmo::create(partition_size, 0, &vmo)); status.is_error()) {
     ERROR("Error creating vmo for sysconfig partition read: %s\n", status.status_string());
     completer.ReplyError(status.error_value());
     return;

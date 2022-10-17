@@ -48,7 +48,7 @@ class SuperblockManager final {
 
   ~SuperblockManager() = default;
 
-  static zx::status<std::unique_ptr<SuperblockManager>> Create(block_client::BlockDevice* device,
+  static zx::result<std::unique_ptr<SuperblockManager>> Create(block_client::BlockDevice* device,
                                                                const Superblock& info,
                                                                uint32_t max_blocks,
                                                                IntegrityCheck checks);
@@ -99,7 +99,7 @@ class SuperblockManager final {
 
   ~SuperblockManager() = default;
 
-  static zx::status<std::unique_ptr<SuperblockManager>> Create(const Superblock& info,
+  static zx::result<std::unique_ptr<SuperblockManager>> Create(const Superblock& info,
                                                                uint32_t max_blocks,
                                                                IntegrityCheck checks);
 

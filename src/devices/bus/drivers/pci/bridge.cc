@@ -157,7 +157,7 @@ void Bridge::Unplug() {
   zxlogf(DEBUG, "bridge [%s] unplugged", cfg_->addr());
 }
 
-zx::status<> Bridge::AllocateBars() {
+zx::result<> Bridge::AllocateBars() {
   {
     fbl::AutoLock dev_lock(&dev_lock_);
     if (auto result = AllocateBridgeWindowsLocked(); result.is_error()) {
@@ -173,7 +173,7 @@ zx::status<> Bridge::AllocateBars() {
   return zx::ok();
 }
 
-zx::status<> Bridge::AllocateBridgeWindowsLocked() {
+zx::result<> Bridge::AllocateBridgeWindowsLocked() {
   ZX_DEBUG_ASSERT(upstream_);
 
   // We are configuring a bridge.  We need to be able to allocate the MMIO and
@@ -191,7 +191,7 @@ zx::status<> Bridge::AllocateBridgeWindowsLocked() {
 
   // Every window is configured the same but with different allocators and registers.
   auto configure_window = [&](auto& upstream_alloc, auto& dest_alloc, uint64_t base, size_t limit,
-                              auto label) -> zx::status<> {
+                              auto label) -> zx::result<> {
     std::unique_ptr<PciAllocation> alloc;
     if (base <= limit) {
       uint64_t size = static_cast<uint64_t>(limit) - base + 1;

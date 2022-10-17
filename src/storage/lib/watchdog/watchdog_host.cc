@@ -9,11 +9,11 @@ namespace fs_watchdog {
 namespace {
 
 class Watchdog : public WatchdogInterface {
-  zx::status<> Start() override { return zx::ok(); }
+  zx::result<> Start() override { return zx::ok(); }
 
-  zx::status<> ShutDown() override { return zx::ok(); }
-  zx::status<> Track(OperationTracker* tracker) override { return zx::ok(); }
-  zx::status<> Untrack(OperationTrackerId id) override { return zx::ok(); }
+  zx::result<> ShutDown() override { return zx::ok(); }
+  zx::result<> Track(OperationTracker* tracker) override { return zx::ok(); }
+  zx::result<> Untrack(OperationTrackerId id) override { return zx::ok(); }
   ~Watchdog() override { ZX_DEBUG_ASSERT(ShutDown().is_ok()); }
 };
 

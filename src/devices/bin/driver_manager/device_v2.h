@@ -15,7 +15,7 @@ namespace dfv2 {
 // directory and routed to the Node.
 class Device {
  public:
-  static zx::status<std::unique_ptr<Device>> CreateAndServe(
+  static zx::result<std::unique_ptr<Device>> CreateAndServe(
       std::string topological_path, std::string name, uint64_t device_symbol,
       async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing,
       compat::DeviceServer server, dfv2::NodeManager* manager, dfv2::DriverHost* driver_host);

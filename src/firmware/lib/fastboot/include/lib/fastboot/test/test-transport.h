@@ -26,7 +26,7 @@ using Packets = std::vector<std::string>;
 //    std::string command = "continue";
 //    fastboot::TestTransport transport;
 //    transport.AddInPacket(command);
-//    zx::status<> ret = fastboot.ProcessPacket(&transport);
+//    zx::result<> ret = fastboot.ProcessPacket(&transport);
 class TestTransport : public Transport {
  public:
   // Add a packet to the input stream.
@@ -43,9 +43,9 @@ class TestTransport : public Transport {
   void ClearOutPackets() { out_packets_.clear(); }
 
   // Implementation of the transport interfaces.
-  zx::status<size_t> ReceivePacket(void* dst, size_t capacity) override;
+  zx::result<size_t> ReceivePacket(void* dst, size_t capacity) override;
   size_t PeekPacketSize() override { return in_packets_.empty() ? 0 : in_packets_.back().size(); }
-  zx::status<> Send(std::string_view packet) override;
+  zx::result<> Send(std::string_view packet) override;
 
  private:
   Packets in_packets_;

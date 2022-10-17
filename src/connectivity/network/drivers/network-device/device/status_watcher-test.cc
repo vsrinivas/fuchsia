@@ -55,7 +55,7 @@ class WatchClient {
   WatchClient(WatchClient&&) = delete;
 
   // Creates a |WatchClient|. The client must only be destroyed outside of the dispatcher thread.
-  static zx::status<std::unique_ptr<WatchClient>> Create(
+  static zx::result<std::unique_ptr<WatchClient>> Create(
       async_dispatcher_t* dispatcher, fidl::ClientEnd<netdev::StatusWatcher> client_end) {
     zx::event event;
     if (zx_status_t status = zx::event::create(0, &event); status != ZX_OK) {
@@ -168,7 +168,7 @@ class StatusWatcherTest : public ::testing::Test {
  protected:
   // Creates a watcher and returns an unowned pointer to it for interaction.
   // The test fixture will destroy the created watcher objects when they are unbound.
-  zx::status<StatusWatcher*> MakeWatcher(fidl::ServerEnd<netdev::StatusWatcher> channel,
+  zx::result<StatusWatcher*> MakeWatcher(fidl::ServerEnd<netdev::StatusWatcher> channel,
                                          uint32_t buffers,
                                          fit::callback<void(StatusWatcher*)> on_closed = nullptr) {
     fbl::AutoLock lock(&lock_);
@@ -200,10 +200,10 @@ class StatusWatcherTest : public ::testing::Test {
 };
 
 TEST_F(StatusWatcherTest, HangsForStatus) {
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  zx::status watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
+  zx::result watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
   ASSERT_OK(watch_client_creation.status_value());
   WatchClient& cli = *watch_client_creation.value();
   // ensure that the client is hanging waiting for a new status observation.
@@ -214,13 +214,13 @@ TEST_F(StatusWatcherTest, HangsForStatus) {
 }
 
 TEST_F(StatusWatcherTest, SingleStatus) {
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  zx::status watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
+  zx::result watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
   ASSERT_OK(watch_client_creation.status_value());
   WatchClient& cli = *watch_client_creation.value();
-  zx::status watcher_creation = MakeWatcher(std::move(req), 1);
+  zx::result watcher_creation = MakeWatcher(std::move(req), 1);
   ASSERT_OK(watcher_creation.status_value());
   StatusWatcher* watcher = watcher_creation.value();
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
@@ -233,16 +233,16 @@ TEST_F(StatusWatcherTest, SingleStatus) {
 }
 
 TEST_F(StatusWatcherTest, QueuesStatus) {
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  zx::status watcher_creation = MakeWatcher(std::move(req), 3);
+  zx::result watcher_creation = MakeWatcher(std::move(req), 3);
   ASSERT_OK(watcher_creation.status_value());
   StatusWatcher* watcher = watcher_creation.value();
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   watcher->PushStatus(MakeStatus(kStatusOnline, 200));
   watcher->PushStatus(MakeStatus(kStatusOnline, 300));
-  zx::status watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
+  zx::result watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
   ASSERT_OK(watch_client_creation.status_value());
   WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventCount(3);
@@ -270,16 +270,16 @@ TEST_F(StatusWatcherTest, QueuesStatus) {
 }
 
 TEST_F(StatusWatcherTest, DropsOldestStatus) {
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  zx::status watcher_creation = MakeWatcher(std::move(req), 2);
+  zx::result watcher_creation = MakeWatcher(std::move(req), 2);
   ASSERT_OK(watcher_creation.status_value());
   StatusWatcher* watcher = watcher_creation.value();
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   watcher->PushStatus(MakeStatus(kStatusOnline, 200));
   watcher->PushStatus(MakeStatus(kStatusOnline, 300));
-  zx::status watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
+  zx::result watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
   ASSERT_OK(watch_client_creation.status_value());
   WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventCount(2);
@@ -301,12 +301,12 @@ TEST_F(StatusWatcherTest, DropsOldestStatus) {
 }
 
 TEST_F(StatusWatcherTest, CallsOnClosedCallback) {
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
 
   sync_completion_t completion;
-  zx::status watcher_creation =
+  zx::result watcher_creation =
       MakeWatcher(std::move(req), 2,
                   [&completion](StatusWatcher* watcher) { sync_completion_signal(&completion); });
   ASSERT_OK(watcher_creation.status_value());
@@ -319,15 +319,15 @@ TEST_F(StatusWatcherTest, CallsOnClosedCallback) {
 TEST_F(StatusWatcherTest, LockStepWatch) {
   // Tests that if everytime a status is pushed a waiter is already registered (no queuing ever
   // happens), StatusWatcher behaves appropriately.
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  zx::status watcher_creation = MakeWatcher(std::move(req), 2);
+  zx::result watcher_creation = MakeWatcher(std::move(req), 2);
   ASSERT_OK(watcher_creation.status_value());
   StatusWatcher* watcher = watcher_creation.value();
   // push an initial status
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
-  zx::status watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
+  zx::result watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
   ASSERT_OK(watch_client_creation.status_value());
   WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventAndReset();
@@ -359,16 +359,16 @@ TEST_F(StatusWatcherTest, LockStepWatch) {
 
 TEST_F(StatusWatcherTest, IgnoresDuplicateStatus) {
   // Tests that if PushStatus is called twice with the same status, only one event is generated.
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [ch, req] = std::move(*endpoints);
-  zx::status watcher_creation = MakeWatcher(std::move(req), 2);
+  zx::result watcher_creation = MakeWatcher(std::move(req), 2);
   ASSERT_OK(watcher_creation.status_value());
   StatusWatcher* watcher = watcher_creation.value();
   // push an initial status twice
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
   watcher->PushStatus(MakeStatus(kStatusOnline, 100));
-  zx::status watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
+  zx::result watch_client_creation = WatchClient::Create(loop_.dispatcher(), std::move(ch));
   ASSERT_OK(watch_client_creation.status_value());
   WatchClient& cli = *watch_client_creation.value();
   cli.WaitForEventAndReset();

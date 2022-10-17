@@ -18,10 +18,10 @@ namespace acpi {
 class Client {
  public:
   // Connect to the ACPI FIDL server by calling ConnectServer() on the "acpi" fragment of |parent|.
-  static zx::status<Client> Create(zx_device_t* parent);
+  static zx::result<Client> Create(zx_device_t* parent);
 
   // Connect to the ACPI FIDL server and just return the FIDL ClientEnd.
-  static zx::status<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Connect(zx_device_t* parent);
+  static zx::result<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Connect(zx_device_t* parent);
 
   // Alternate constructor mainly intended for use in unit tests.
   static Client Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device> client);
@@ -31,7 +31,7 @@ class Client {
 
   // This calls _DSM on the device with the given arguments. See
   // ACPI Spec 6.4, 9.1.1 "_DSM (Device Specific Method)" for more information.
-  zx::status<Object> CallDsm(Uuid uuid, uint64_t revision, uint64_t func_index,
+  zx::result<Object> CallDsm(Uuid uuid, uint64_t revision, uint64_t func_index,
                              std::optional<fuchsia_hardware_acpi::wire::Object> params);
 
  private:

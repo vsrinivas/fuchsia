@@ -89,7 +89,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
   zx_status_t UsbHubInterfaceResetPort(uint32_t port);
 
   // Retrieves the status of a port.
-  zx::status<usb_port_status_t> GetPortStatus(PortNumber port);
+  zx::result<usb_port_status_t> GetPortStatus(PortNumber port);
 
   zx_status_t SetFeature(uint8_t request_type, uint16_t feature, uint16_t index);
 
@@ -107,7 +107,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
 
   void DdkRelease() { delete this; }
 
-  zx::status<usb_hub_descriptor_t> GetUsbHubDescriptor(uint16_t type) {
+  zx::result<usb_hub_descriptor_t> GetUsbHubDescriptor(uint16_t type) {
     size_t length = sizeof(usb_hub_descriptor_t);
     auto result = ControlIn(USB_TYPE_CLASS | USB_RECIP_DEVICE | USB_DIR_IN, USB_REQ_GET_DESCRIPTOR,
                             static_cast<uint16_t>(type << 8), 0, length);
@@ -182,7 +182,7 @@ class UsbHubDevice : public UsbHub, public ddk::UsbHubInterfaceProtocol<UsbHubDe
     return PortNumber(index.value() + 1);
   }
 
-  zx::status<std::vector<uint8_t>> ControlIn(uint8_t request_type, uint8_t request, uint16_t value,
+  zx::result<std::vector<uint8_t>> ControlIn(uint8_t request_type, uint8_t request, uint16_t value,
                                              uint16_t index, size_t read_size);
 
   zx_status_t ControlOut(uint8_t request_type, uint8_t request, uint16_t value, uint16_t index,

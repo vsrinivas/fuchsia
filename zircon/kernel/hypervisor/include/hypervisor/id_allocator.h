@@ -38,16 +38,16 @@ class IdAllocator {
 
   // Resets the allocator, and sets a new `max_id`, where:
   // `MinId` < `max_id` <= `MaxId`.
-  zx::status<> Reset(T max_id = MaxId) {
+  zx::result<> Reset(T max_id = MaxId) {
     if (max_id <= MinId || max_id > MaxId) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
     Guard<Mutex> lock{&mutex_};
     zx_status_t status = bitmap_.Reset(max_id);
-    return zx::make_status(status);
+    return zx::make_result(status);
   }
 
-  zx::status<T> TryAlloc() {
+  zx::result<T> TryAlloc() {
     Guard<Mutex> lock{&mutex_};
     auto id = AllocFromHint(next_);
     if (id.is_ok()) {
@@ -56,17 +56,17 @@ class IdAllocator {
     return id;
   }
 
-  zx::status<> Free(T id) {
+  zx::result<> Free(T id) {
     Guard<Mutex> lock{&mutex_};
     if (!bitmap_.GetOne(id)) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
     zx_status_t status = bitmap_.ClearOne(id);
-    return zx::make_status(status);
+    return zx::make_result(status);
   }
 
  private:
-  zx::status<T> AllocFromHint(T next) TA_REQ(mutex_) {
+  zx::result<T> AllocFromHint(T next) TA_REQ(mutex_) {
     size_t first_unset;
     if (bitmap_.Get(next, MaxId, &first_unset)) {
       if (bitmap_.Get(MinId, next, &first_unset)) {

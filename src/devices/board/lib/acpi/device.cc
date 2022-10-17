@@ -321,7 +321,7 @@ void Device::AcpiConnectServer(zx::channel server) {
   }
 }
 
-zx::status<zx::channel> Device::PrepareOutgoing() {
+zx::result<zx::channel> Device::PrepareOutgoing() {
   outgoing_.emplace(manager_->fidl_dispatcher());
   outgoing_->svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
@@ -355,7 +355,7 @@ zx_status_t Device::CallPsxMethod(const PowerStateInfo& state) {
   return psx.zx_status_value();
 }
 
-zx::status<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
+zx::result<Device::PowerStateInfo> Device::GetInfoForState(uint8_t d_state) {
   PowerStateInfo power_state_info{.d_state = d_state};
   std::vector<const PowerResource*> power_resources;
 
@@ -461,7 +461,7 @@ zx_status_t Device::ConfigureInitialPowerState() {
 
 zx_status_t Device::InitializePowerManagement() {
   for (uint8_t d_state = DEV_POWER_STATE_D0; d_state <= DEV_POWER_STATE_D3HOT; ++d_state) {
-    zx::status<PowerStateInfo> power_state_info = GetInfoForState(d_state);
+    zx::result<PowerStateInfo> power_state_info = GetInfoForState(d_state);
 
     if (power_state_info.is_error()) {
       zxlogf(ERROR, "Failed to get info for D state %d", d_state);
@@ -641,7 +641,7 @@ PowerStateTransitionResponse Device::TransitionToPowerState(uint8_t requested_st
   return PowerStateTransitionResponse(ZX_OK, current_power_state_);
 }
 
-zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
+zx::result<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                                cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags) {
   std::array offers = {
       fidl::DiscoverableProtocolName<fuchsia_hardware_acpi::Device>,
@@ -745,7 +745,7 @@ void Device::EvaluateObject(EvaluateObjectRequestView request,
   }
 }
 
-zx::status<zx::interrupt> Device::GetInterrupt(size_t index) {
+zx::result<zx::interrupt> Device::GetInterrupt(size_t index) {
   std::scoped_lock guard{lock_};
   zx_status_t st = ReportCurrentResources();
   if (st != ZX_OK) {

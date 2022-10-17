@@ -144,7 +144,7 @@ TEST(Nhlt, ParseEmpty) {
 
 TEST(Nhlt, ParseSimple) {
   std::vector<uint8_t> data = SampleNHLT();
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
   ASSERT_OK(nhlt.status_value());
 
   // Ensure the data looks reasonable.
@@ -160,14 +160,14 @@ TEST(Nhlt, ParseTruncated) {
   // Remove a byte, and ensure we still successfully notice that the data size is all wrong.
   do {
     data.resize(data.size() - 1);
-    zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+    zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
     ASSERT_FALSE(nhlt.is_ok());
   } while (!data.empty());
 }
 
 TEST(Nhlt, ParseOemStrings) {
   std::vector<uint8_t> data = SampleNHLT();
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
   ASSERT_OK(nhlt.status_value());
 
   std::unique_ptr<Nhlt> nhlt_testvalue = std::move(nhlt.value());
@@ -179,7 +179,7 @@ TEST(Nhlt, ParseOemStrings) {
 
 TEST(Nhlt, ParseOemStrings2) {
   std::vector<uint8_t> data = SampleNHLT2();
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
+  zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(data);
   ASSERT_OK(nhlt.status_value());
 
   std::unique_ptr<Nhlt> nhlt_testvalue = std::move(nhlt.value());

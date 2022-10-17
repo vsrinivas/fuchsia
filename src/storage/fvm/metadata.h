@@ -43,13 +43,13 @@ class Metadata {
   // discarded.
   // Returns a |Metadata| instance over the passed metadata on success, or a failure if neither was
   // valid.
-  static zx::status<Metadata> Create(std::unique_ptr<MetadataBuffer> data_a,
+  static zx::result<Metadata> Create(std::unique_ptr<MetadataBuffer> data_a,
                                      std::unique_ptr<MetadataBuffer> data_b);
 
   // Override of |Create| that allows specifying disk dimensions; the sizes of each metadata copy
   // will be checked against these sizes (see |::fvm::PickValidHeader|) and only deemed valid if
   // they fit within the disk.
-  static zx::status<Metadata> Create(size_t disk_size, size_t disk_block_size,
+  static zx::result<Metadata> Create(size_t disk_size, size_t disk_block_size,
                                      std::unique_ptr<MetadataBuffer> data_a,
                                      std::unique_ptr<MetadataBuffer> data_b);
 
@@ -63,12 +63,12 @@ class Metadata {
   // Note: The user has no need to concern themselves with reserved pslice zero, since this is
   //       adjusted internally. Though, all vpartitions' indexes must be in the range [1,
   //       VPartitionEntryCount).
-  static zx::status<Metadata> Synthesize(const fvm::Header& header,
+  static zx::result<Metadata> Synthesize(const fvm::Header& header,
                                          const VPartitionEntry* partitions, size_t num_partitions,
                                          const SliceEntry* slices, size_t num_slices);
 
   // See Synthesize(fvm::Header, const VPartition,* size_t, const SliceEntry*, size_t);
-  static zx::status<Metadata> Synthesize(const fvm::Header& header,
+  static zx::result<Metadata> Synthesize(const fvm::Header& header,
                                          cpp20::span<const VPartitionEntry> vpartitions,
                                          cpp20::span<const SliceEntry> slices) {
     return Synthesize(header, vpartitions.data(), vpartitions.size(), slices.data(), slices.size());
@@ -113,7 +113,7 @@ class Metadata {
   // may change, and old generations may be lost. The only guarantee is that all partition/slice
   // entries in the active tables will be copied over from this instance.
   // TODO(jfsulliv): Only fvm/host needs this method, and it is not very graceful. Consider removal.
-  zx::status<Metadata> CopyWithNewDimensions(const Header& dimensions) const;
+  zx::result<Metadata> CopyWithNewDimensions(const Header& dimensions) const;
 
  private:
   Metadata(std::unique_ptr<MetadataBuffer> data, SuperblockType active_header);

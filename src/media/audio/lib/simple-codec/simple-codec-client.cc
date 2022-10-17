@@ -173,7 +173,7 @@ zx_status_t SimpleCodecClient::Stop() { return codec_.sync()->Stop().status(); }
 
 zx_status_t SimpleCodecClient::Start() { return codec_.sync()->Start().status(); }
 
-zx::status<Info> SimpleCodecClient::GetInfo() {
+zx::result<Info> SimpleCodecClient::GetInfo() {
   const auto result = codec_.sync()->GetInfo();
   if (!result.ok()) {
     return zx::error(result.status());
@@ -188,7 +188,7 @@ zx::status<Info> SimpleCodecClient::GetInfo() {
   return zx::ok(std::move(info));
 }
 
-zx::status<bool> SimpleCodecClient::IsBridgeable() {
+zx::result<bool> SimpleCodecClient::IsBridgeable() {
   const auto result = codec_.sync()->IsBridgeable();
   if (result.ok()) {
     return zx::ok(result.value().supports_bridged_mode);
@@ -200,7 +200,7 @@ zx_status_t SimpleCodecClient::SetBridgedMode(bool bridged) {
   return codec_->SetBridgedMode(bridged).status();
 }
 
-zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
+zx::result<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
   auto result = codec_.sync()->GetDaiFormats();
   if (!result.ok()) {
     return zx::error(result.status());
@@ -231,7 +231,7 @@ zx::status<DaiSupportedFormats> SimpleCodecClient::GetDaiFormats() {
   return zx::ok(formats);
 }
 
-zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
+zx::result<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   fidl::Arena allocator;
 
   fuchsia_hardware_audio::wire::DaiFormat format2;
@@ -267,9 +267,9 @@ zx::status<CodecFormatInfo> SimpleCodecClient::SetDaiFormat(DaiFormat format) {
   return zx::ok(std::move(format_info));
 }
 
-zx::status<GainFormat> SimpleCodecClient::GetGainFormat() { return gain_format_; }
+zx::result<GainFormat> SimpleCodecClient::GetGainFormat() { return gain_format_; }
 
-zx::status<GainState> SimpleCodecClient::GetGainState() {
+zx::result<GainState> SimpleCodecClient::GetGainState() {
   fbl::AutoLock lock(&gain_state_lock_);
   return gain_state_;
 }

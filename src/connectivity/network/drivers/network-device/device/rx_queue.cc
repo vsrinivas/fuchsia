@@ -17,7 +17,7 @@ RxQueue::~RxQueue() {
   ZX_ASSERT_MSG(!running_, "RxQueue destroyed without disposing of port and thread first.");
 }
 
-zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
+zx::result<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<RxQueue> queue(new (&ac) RxQueue(parent));
   if (!ac.check()) {
@@ -29,13 +29,13 @@ zx::status<std::unique_ptr<RxQueue>> RxQueue::Create(DeviceInterface* parent) {
   // so we can (possibly) reduce the amount of reads on the rx fifo during rx interrupts.
   auto capacity = parent->rx_fifo_depth();
 
-  zx::status available_queue = RingQueue<uint32_t>::Create(capacity);
+  zx::result available_queue = RingQueue<uint32_t>::Create(capacity);
   if (available_queue.is_error()) {
     return available_queue.take_error();
   }
   queue->available_queue_ = std::move(available_queue.value());
 
-  zx::status in_flight = IndexedSlab<InFlightBuffer>::Create(capacity);
+  zx::result in_flight = IndexedSlab<InFlightBuffer>::Create(capacity);
   if (in_flight.is_error()) {
     return in_flight.take_error();
   }

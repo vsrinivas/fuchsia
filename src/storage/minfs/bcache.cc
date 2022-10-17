@@ -37,7 +37,7 @@ std::unique_ptr<block_client::BlockDevice> Bcache::Destroy(std::unique_ptr<Bcach
   return std::move(bcache->owned_device_);
 }
 
-zx::status<> Bcache::Readblk(blk_t bno, void* data) {
+zx::result<> Bcache::Readblk(blk_t bno, void* data) {
   TRACE_DURATION("minfs", "Bcache::Readblk", "blk", bno);
   storage::Operation operation = {};
   operation.type = storage::OperationType::kRead;
@@ -52,7 +52,7 @@ zx::status<> Bcache::Readblk(blk_t bno, void* data) {
   return zx::ok();
 }
 
-zx::status<> Bcache::Writeblk(blk_t bno, const void* data) {
+zx::result<> Bcache::Writeblk(blk_t bno, const void* data) {
   TRACE_DURATION("minfs", "Bcache::Writeblk", "blk", bno);
   storage::Operation operation = {};
   operation.type = storage::OperationType::kWrite;
@@ -60,7 +60,7 @@ zx::status<> Bcache::Writeblk(blk_t bno, const void* data) {
   operation.dev_offset = bno;
   operation.length = 1;
   memcpy(buffer_.Data(0), data, kMinfsBlockSize);
-  return zx::make_status(RunOperation(operation, &buffer_));
+  return zx::make_result(RunOperation(operation, &buffer_));
 }
 
 zx_status_t Bcache::BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out) {
@@ -71,13 +71,13 @@ zx_status_t Bcache::BlockDetachVmo(storage::Vmoid vmoid) {
   return device()->BlockDetachVmo(std::move(vmoid));
 }
 
-zx::status<> Bcache::Sync() {
+zx::result<> Bcache::Sync() {
   block_fifo_request_t request = {};
   request.opcode = BLOCKIO_FLUSH;
-  return zx::make_status(device_->FifoTransaction(&request, 1));
+  return zx::make_result(device_->FifoTransaction(&request, 1));
 }
 
-zx::status<std::unique_ptr<block_client::BlockDevice>> FdToBlockDevice(fbl::unique_fd& fd) {
+zx::result<std::unique_ptr<block_client::BlockDevice>> FdToBlockDevice(fbl::unique_fd& fd) {
   zx::channel channel, server;
   zx_status_t status = zx::channel::create(0, &channel, &server);
   if (status != ZX_OK) {
@@ -100,7 +100,7 @@ zx::status<std::unique_ptr<block_client::BlockDevice>> FdToBlockDevice(fbl::uniq
   return zx::ok(std::move(device));
 }
 
-zx::status<std::unique_ptr<Bcache>> Bcache::Create(
+zx::result<std::unique_ptr<Bcache>> Bcache::Create(
     std::unique_ptr<block_client::BlockDevice> device, uint32_t max_blocks) {
   auto bcache_or = Create(device.get(), max_blocks);
   if (bcache_or.is_ok()) {
@@ -109,7 +109,7 @@ zx::status<std::unique_ptr<Bcache>> Bcache::Create(
   return bcache_or;
 }
 
-zx::status<std::unique_ptr<Bcache>> Bcache::Create(block_client::BlockDevice* device,
+zx::result<std::unique_ptr<Bcache>> Bcache::Create(block_client::BlockDevice* device,
                                                    uint32_t max_blocks) {
   std::unique_ptr<Bcache> bcache(new Bcache(device, max_blocks));
 
@@ -131,7 +131,7 @@ uint32_t Bcache::DeviceBlockSize() const { return info_.block_size; }
 Bcache::Bcache(block_client::BlockDevice* device, uint32_t max_blocks)
     : max_blocks_(max_blocks), device_(device) {}
 
-zx::status<> Bcache::VerifyDeviceInfo() {
+zx::result<> Bcache::VerifyDeviceInfo() {
   zx_status_t status = device_->BlockGetInfo(&info_);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "cannot get block device information: " << status;

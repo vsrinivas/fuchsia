@@ -101,7 +101,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // be spawned to handle data fast path operations (tx data plane).
   //
   // Returns the session and its data path FIFOs.
-  static zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Create(
+  static zx::result<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Create(
       async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
       DeviceInterface* parent, fidl::ServerEnd<netdev::Session> control);
   bool IsPrimary() const;
@@ -226,7 +226,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
 
   Session(async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
           DeviceInterface* parent);
-  zx::status<netdev::wire::Fifos> Init();
+  zx::result<netdev::wire::Fifos> Init();
   void Bind(fidl::ServerEnd<netdev::Session> channel);
   void OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> channel);
 
@@ -241,7 +241,7 @@ class Session : public fbl::DoublyLinkedListable<std::unique_ptr<Session>>,
   // to other ports.
   //
   // Returns zx::error otherwise.
-  zx::status<bool> DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt)
+  zx::result<bool> DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt)
       __TA_REQUIRES(parent_->control_lock());
 
   buffer_descriptor_t* checked_descriptor(uint16_t index);

@@ -19,7 +19,7 @@
 
 namespace pci {
 
-zx::status<uint32_t> Device::QueryIrqMode(pci_interrupt_mode_t mode) {
+zx::result<uint32_t> Device::QueryIrqMode(pci_interrupt_mode_t mode) {
   fbl::AutoLock dev_lock(&dev_lock_);
   switch (mode) {
     case PCI_INTERRUPT_MODE_LEGACY:
@@ -138,7 +138,7 @@ zx_status_t Device::DisableInterrupts() {
   return st;
 }
 
-zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
+zx::result<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
   fbl::AutoLock dev_lock(&dev_lock_);
   // MSI support is controlled through the capability held within the device's configuration space,
   // so the dispatcher needs access to the given device's config vmo. MSI-X needs access to the
@@ -160,7 +160,7 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
       break;
     }
     case PCI_INTERRUPT_MODE_MSI: {
-      zx::status<fdf::MmioView> view_res = cfg_->get_view();
+      zx::result<fdf::MmioView> view_res = cfg_->get_view();
       if (!view_res.is_ok()) {
         return view_res.take_error();
       }
@@ -221,7 +221,7 @@ void Device::DisableLegacyIrq() {
   metrics_.legacy.disabled.Set(irqs_.legacy_disabled);
 }
 
-zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_cnt) {
+zx::result<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_cnt) {
   zx::msi msi;
   zx_status_t st = bdi_->AllocateMsi(irq_cnt, &msi);
   if (st != ZX_OK) {

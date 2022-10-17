@@ -6,7 +6,7 @@
 
 namespace acpi::mock {
 
-zx::status<acpi::Client> Device::CreateClient(async_dispatcher_t* dispatcher) {
+zx::result<acpi::Client> Device::CreateClient(async_dispatcher_t* dispatcher) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
   if (endpoints.is_error()) {
     return endpoints.take_error();

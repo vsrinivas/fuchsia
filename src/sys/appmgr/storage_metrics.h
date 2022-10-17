@@ -48,7 +48,7 @@ class StorageMetrics {
 
   // Should be called exactly once to begin the periodic aggregation, with one being scheduled
   // immediately. Call this only once.
-  zx::status<> Run();
+  zx::result<> Run();
 
  private:
   static constexpr zx::duration kPollCycle = zx::min(60);

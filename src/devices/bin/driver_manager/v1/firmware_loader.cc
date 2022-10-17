@@ -34,7 +34,7 @@ FirmwareLoader::FirmwareLoader(Coordinator* coordinator, async_dispatcher_t* fir
 
 void FirmwareLoader::LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname,
                                   const char* path,
-                                  fit::callback<void(zx::status<LoadFirmwareResult>)> cb) {
+                                  fit::callback<void(zx::result<LoadFirmwareResult>)> cb) {
   const std::string fwdirs[] = {
       path_prefix_ + kBootFirmwarePath,
       kSystemFirmwarePath,

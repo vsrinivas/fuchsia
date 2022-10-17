@@ -90,7 +90,7 @@ class TestMounter : public FilesystemMounter {
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
-  zx::status<StartedFilesystem> LaunchFs(zx::channel block_device,
+  zx::result<StartedFilesystem> LaunchFs(zx::channel block_device,
                                          const fs_management::MountOptions& options,
                                          fs_management::DiskFormat format) const final {
     switch (expected_filesystem_) {
@@ -107,7 +107,7 @@ class TestMounter : public FilesystemMounter {
     return zx::ok(fs_management::StartedSingleVolumeFilesystem());
   }
 
-  zx::status<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server, const char* binary,
+  zx::result<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server, const char* binary,
                               zx::channel block_device,
                               const fs_management::MountOptions& options) const final {
     switch (expected_filesystem_) {

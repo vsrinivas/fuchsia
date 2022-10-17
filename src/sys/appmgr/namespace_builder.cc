@@ -225,7 +225,7 @@ void NamespaceBuilder::PushDirectoryFromPathAsWithPermissions(std::string src_pa
     return;
   }
   fdio_cpp::FdioCaller caller(std::move(dir));
-  zx::status channel = caller.take_directory();
+  zx::result channel = caller.take_directory();
   if (channel.is_error()) {
     FX_DLOGS(WARNING) << "Failed to clone channel for " << src_path << ": "
                       << channel.status_string();

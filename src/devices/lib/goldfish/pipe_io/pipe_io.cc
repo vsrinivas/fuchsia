@@ -153,7 +153,7 @@ PipeIo::~PipeIo() {
   }
 }
 
-zx::status<uint32_t> PipeIo::TransferLocked(const TransferOp& op) {
+zx::result<uint32_t> PipeIo::TransferLocked(const TransferOp& op) {
   auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
 
   buffer->rw_params.consumed_size = 0;
@@ -176,7 +176,7 @@ zx::status<uint32_t> PipeIo::TransferLocked(const TransferOp& op) {
                                    op.type == TransferOp::Type::kRead);
 }
 
-zx::status<uint32_t> PipeIo::TransferLocked(cpp20::span<const TransferOp> ops) {
+zx::result<uint32_t> PipeIo::TransferLocked(cpp20::span<const TransferOp> ops) {
   ZX_DEBUG_ASSERT(!ops.empty());
   auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
 
@@ -219,7 +219,7 @@ zx::status<uint32_t> PipeIo::TransferLocked(cpp20::span<const TransferOp> ops) {
   return ExecTransferCommandLocked(has_write, has_read);
 }
 
-zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_read) {
+zx::result<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_read) {
   ZX_DEBUG_ASSERT(has_write || has_read);
   auto buffer = static_cast<PipeCmdBuffer*>(cmd_buffer_.virt());
   buffer->id = id_;
@@ -232,7 +232,7 @@ zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_
   auto result = pipe_->Exec(id_);
   if (!result.ok()) {
     zxlogf(ERROR, "[%s] Exec failed: %s", __func__, result.status_string());
-    return zx::error_status(ZX_ERR_INTERNAL);
+    return zx::error_result(ZX_ERR_INTERNAL);
   }
 
   // Positive consumed size always indicate a successful transfer.
@@ -244,7 +244,7 @@ zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_
   if (buffer->status != static_cast<int32_t>(fuchsia_hardware_goldfish_pipe::PipeError::kAgain)) {
     zxlogf(ERROR, "[%s] Pipe::Transfer() transfer failed: %s", __func__,
            zx_status_get_string(buffer->status));
-    return zx::error_status(ZX_ERR_INTERNAL);
+    return zx::error_result(ZX_ERR_INTERNAL);
   }
 
   uint32_t clear_events = 0u;
@@ -264,15 +264,15 @@ zx::status<uint32_t> PipeIo::ExecTransferCommandLocked(bool has_write, bool has_
   auto result2 = pipe_->Exec(id_);
   if (!result2.ok()) {
     zxlogf(ERROR, "[%s] Pipe::Exec() failed: %s", __func__, result2.status_string());
-    return zx::error_status(ZX_ERR_INTERNAL);
+    return zx::error_result(ZX_ERR_INTERNAL);
   }
 
   if (buffer->status) {
     zxlogf(ERROR, "Pipe::Transfer() failed to request interrupt: %d", buffer->status);
-    return zx::error_status(ZX_ERR_INTERNAL);
+    return zx::error_result(ZX_ERR_INTERNAL);
   }
 
-  return zx::error_status(ZX_ERR_SHOULD_WAIT);
+  return zx::error_result(ZX_ERR_SHOULD_WAIT);
 }
 
 PipeIo::ReadResult<char> PipeIo::ReadWithHeader(bool blocking) {
@@ -290,7 +290,7 @@ PipeIo::ReadResult<char> PipeIo::ReadWithHeader(bool blocking) {
   return Read<char>(msg_size, blocking);
 }
 
-zx::status<size_t> PipeIo::ReadOnceLocked(void* buf, size_t size) {
+zx::result<size_t> PipeIo::ReadOnceLocked(void* buf, size_t size) {
   auto status = TransferLocked(TransferOp{
       .type = TransferOp::Type::kRead,
       .data = TransferOp::IoBuffer{.offset = 0u},

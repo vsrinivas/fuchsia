@@ -55,7 +55,7 @@ zx_status_t UsbHubDevice::UsbHubInterfaceResetPort(uint32_t port) {
 }
 
 zx_status_t UsbHubDevice::GetPortStatus() {
-  std::vector<zx::status<usb_port_status_t>> pending_actions;
+  std::vector<zx::result<usb_port_status_t>> pending_actions;
   pending_actions.reserve(hub_descriptor_.b_nbr_ports);
   for (uint8_t i = 1; i <= hub_descriptor_.b_nbr_ports; i++) {
     pending_actions.push_back(GetPortStatus(PortNumber(i)));
@@ -389,8 +389,8 @@ zx_status_t UsbHubDevice::PowerOnPorts() {
   return ZX_OK;
 }
 
-zx::status<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
-  zx::status<std::vector<uint8_t>> result = ControlIn(
+zx::result<usb_port_status_t> UsbHubDevice::GetPortStatus(PortNumber port) {
+  zx::result<std::vector<uint8_t>> result = ControlIn(
       USB_RECIP_PORT | USB_DIR_IN, USB_REQ_GET_STATUS, 0, port.value(), sizeof(usb_port_status_t));
   if (result.is_error()) {
     return zx::error(result.error_value());
@@ -500,7 +500,7 @@ zx_status_t UsbHubDevice::ClearFeature(uint8_t request_type, uint16_t feature, u
   return ControlOut(request_type, USB_REQ_CLEAR_FEATURE, feature, index, nullptr, 0);
 }
 
-zx::status<std::vector<uint8_t>> UsbHubDevice::ControlIn(uint8_t request_type, uint8_t request,
+zx::result<std::vector<uint8_t>> UsbHubDevice::ControlIn(uint8_t request_type, uint8_t request,
                                                          uint16_t value, uint16_t index,
                                                          size_t read_size) {
   if ((request_type & USB_DIR_MASK) != USB_DIR_IN) {

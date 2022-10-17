@@ -244,7 +244,7 @@ void* heap_page_alloc(size_t pages) {
   DEBUG_ASSERT(pages > 0);
 
   if constexpr (VIRTUAL_HEAP) {
-    zx::status<vaddr_t> result = virtual_alloc->AllocPages(pages);
+    zx::result<vaddr_t> result = virtual_alloc->AllocPages(pages);
     if (result.is_error()) {
       printf("Failed to allocate %zu pages for heap: %d\n", pages, result.error_value());
       return nullptr;

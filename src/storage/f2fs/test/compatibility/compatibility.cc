@@ -273,7 +273,7 @@ void TargetOperator::Rename(std::string_view oldpath, std::string_view newpath) 
   ASSERT_EQ(oldparent_vn->Rename(newparent_vn, oldchild_name, newchild_name, false, false), ZX_OK);
 }
 
-zx::status<std::pair<fbl::RefPtr<fs::Vnode>, std::string>>
+zx::result<std::pair<fbl::RefPtr<fs::Vnode>, std::string>>
 TargetOperator::GetLastDirVnodeAndFileName(std::string_view absolute_path) {
   std::filesystem::path path(absolute_path);
   if (!path.has_root_directory() || !path.has_filename()) {

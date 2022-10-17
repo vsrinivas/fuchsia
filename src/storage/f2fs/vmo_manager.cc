@@ -22,7 +22,7 @@ VmoNode::~VmoNode() {
   vmo_.reset();
 }
 
-zx::status<bool> VmoNode::CreateAndLockVmo(pgoff_t offset) {
+zx::result<bool> VmoNode::CreateAndLockVmo(pgoff_t offset) {
   ZX_DEBUG_ASSERT(offset < kVmoSize);
   zx_vaddr_t vmo_size = PageIndexToAddress(kVmoSize);
   if (!vmo_.is_valid()) {
@@ -72,7 +72,7 @@ zx_status_t VmoNode::UnlockVmo(pgoff_t offset) {
   return vmo_.op_range(ZX_VMO_OP_UNLOCK, 0, PageIndexToAddress(kVmoSize), nullptr, 0);
 }
 
-zx::status<zx_vaddr_t> VmoNode::GetAddress(pgoff_t offset) {
+zx::result<zx_vaddr_t> VmoNode::GetAddress(pgoff_t offset) {
   ZX_DEBUG_ASSERT(offset < kVmoSize);
   if (!address_ || !vmo_.is_valid()) {
     return zx::error(ZX_ERR_UNAVAILABLE);
@@ -80,7 +80,7 @@ zx::status<zx_vaddr_t> VmoNode::GetAddress(pgoff_t offset) {
   return zx::ok(safemath::CheckAdd<zx_vaddr_t>(address_, PageIndexToAddress(offset)).ValueOrDie());
 }
 
-zx::status<bool> VmoManager::CreateAndLockVmo(const pgoff_t index) __TA_EXCLUDES(tree_lock_) {
+zx::result<bool> VmoManager::CreateAndLockVmo(const pgoff_t index) __TA_EXCLUDES(tree_lock_) {
   std::lock_guard tree_lock(tree_lock_);
   auto vmo_node_or = GetVmoNodeUnsafe(GetVmoNodeKey(index));
   ZX_DEBUG_ASSERT(vmo_node_or.is_ok());
@@ -101,7 +101,7 @@ zx_status_t VmoManager::UnlockVmo(const pgoff_t index, const bool evict) {
   return vmo_node_or.status_value();
 }
 
-zx::status<zx_vaddr_t> VmoManager::GetAddress(pgoff_t index) {
+zx::result<zx_vaddr_t> VmoManager::GetAddress(pgoff_t index) {
   fs::SharedLock tree_lock(tree_lock_);
   auto vmo_node_or = FindVmoNodeUnsafe(GetVmoNodeKey(index));
   if (vmo_node_or.is_ok()) {
@@ -138,14 +138,14 @@ void VmoManager::Reset(bool shutdown) {
   }
 }
 
-zx::status<VmoNode *> VmoManager::FindVmoNodeUnsafe(const pgoff_t index) {
+zx::result<VmoNode *> VmoManager::FindVmoNodeUnsafe(const pgoff_t index) {
   if (auto vmo_node = vmo_tree_.find(index); vmo_node != vmo_tree_.end()) {
     return zx::ok(&(*vmo_node));
   }
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<VmoNode *> VmoManager::GetVmoNodeUnsafe(const pgoff_t index) {
+zx::result<VmoNode *> VmoManager::GetVmoNodeUnsafe(const pgoff_t index) {
   VmoNode *vmo_node = nullptr;
   if (auto vmo_node_or = FindVmoNodeUnsafe(index); vmo_node_or.is_error()) {
     auto new_node = std::make_unique<VmoNode>(index);

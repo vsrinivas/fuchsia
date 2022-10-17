@@ -34,7 +34,7 @@ zx_status_t LambdaConnector::ConnectToDecompressorCreator(zx::channel remote_cha
   return callback_(std::move(remote_channel));
 }
 
-zx::status<std::unique_ptr<LocalDecompressorCreator>> LocalDecompressorCreator::Create() {
+zx::result<std::unique_ptr<LocalDecompressorCreator>> LocalDecompressorCreator::Create() {
   std::unique_ptr<LocalDecompressorCreator> decompressor(new LocalDecompressorCreator());
   decompressor->connector_ = std::make_unique<LambdaConnector>(
       [decompressor = decompressor.get()](zx::channel remote_channel) {

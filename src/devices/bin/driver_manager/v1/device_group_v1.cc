@@ -8,7 +8,7 @@
 
 namespace device_group {
 
-zx::status<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
+zx::result<std::unique_ptr<DeviceGroupV1>> DeviceGroupV1::Create(
     DeviceGroupCreateInfo create_info,
     fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc, DriverLoader* driver_loader) {
   ZX_ASSERT(driver_loader);
@@ -43,7 +43,7 @@ DeviceGroupV1::DeviceGroupV1(DeviceGroupCreateInfo create_info,
   ZX_ASSERT(driver_loader_);
 }
 
-zx::status<std::optional<DeviceOrNode>> DeviceGroupV1::BindNodeImpl(
+zx::result<std::optional<DeviceOrNode>> DeviceGroupV1::BindNodeImpl(
     fuchsia_driver_index::wire::MatchedDeviceGroupInfo info, const DeviceOrNode& device_or_node) {
   auto device_ptr = std::get_if<std::weak_ptr<DeviceV1Wrapper>>(&device_or_node);
   ZX_ASSERT(device_ptr);

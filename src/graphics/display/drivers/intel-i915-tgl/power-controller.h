@@ -86,7 +86,7 @@ class PowerController {
   // some waiting time in return for maximizing the odds of successful
   // execution. The consequence of this approach is that Transact() may take
   // more than `command.timeout_us` to complete.
-  zx::status<uint64_t> Transact(PowerControllerCommand command);
+  zx::result<uint64_t> Transact(PowerControllerCommand command);
 
   // Informs the PCU of the display engine's voltage requirements.
   //
@@ -102,7 +102,7 @@ class PowerController {
   //
   // `voltage_level` must be a valid display engine voltage level. All known
   // display engines use levels 0-3.
-  zx::status<> RequestDisplayVoltageLevel(int voltage_level, RetryBehavior retry_behavior);
+  zx::result<> RequestDisplayVoltageLevel(int voltage_level, RetryBehavior retry_behavior);
 
   // Sets the display engine's block TCCOLD (Type C Cold power state) flag.
   //
@@ -122,7 +122,7 @@ class PowerController {
   //
   // This method implements the communication protocol for Tiger Lake's PCU
   // firmware. Other processors use different protocols.
-  zx::status<> SetDisplayTypeCColdBlockingTigerLake(bool blocked, RetryBehavior retry_behavior);
+  zx::result<> SetDisplayTypeCColdBlockingTigerLake(bool blocked, RetryBehavior retry_behavior);
 
  private:
   fdf::MmioBuffer* mmio_buffer_;

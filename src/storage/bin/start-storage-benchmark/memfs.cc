@@ -17,7 +17,7 @@
 
 namespace storage_benchmark {
 
-zx::status<std::unique_ptr<Memfs>> Memfs::Create() {
+zx::result<std::unique_ptr<Memfs>> Memfs::Create() {
   auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
   if (zx_status_t status = loop->StartThread(); status != ZX_OK) {
     return zx::error(status);
@@ -29,7 +29,7 @@ zx::status<std::unique_ptr<Memfs>> Memfs::Create() {
   return zx::ok(std::unique_ptr<Memfs>(new Memfs(std::move(loop), std::move(*setup))));
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Memfs::GetFilesystemRoot() const {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Memfs::GetFilesystemRoot() const {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();

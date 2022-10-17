@@ -14,9 +14,9 @@
 
 namespace {
 
-zx::status<size_t> StringLength(const char* string) {
+zx::result<size_t> StringLength(const char* string) {
   if (string == nullptr) {
-    return zx::error_status(ZX_ERR_INVALID_ARGS);
+    return zx::error_result(ZX_ERR_INVALID_ARGS);
   }
   return zx::ok(strlen(string));
 }

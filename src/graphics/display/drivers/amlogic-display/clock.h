@@ -29,7 +29,7 @@ class Clock {
  public:
   // Map all necessary resources. This method does not change hardware state,
   // and is therefore safe to use when adopting a bootloader initialized device.
-  static zx::status<std::unique_ptr<Clock>> Create(ddk::PDev& pdev, bool already_enabled);
+  static zx::result<std::unique_ptr<Clock>> Create(ddk::PDev& pdev, bool already_enabled);
 
   zx_status_t Enable(const display_setting_t& d);
   void Disable();
@@ -46,7 +46,7 @@ class Clock {
   static LcdTiming CalculateLcdTiming(const display_setting_t& disp_setting);
   // This function calculates the required pll configurations needed to generate
   // the desired lcd clock
-  static zx::status<PllConfig> GenerateHPLL(const display_setting_t& disp_setting);
+  static zx::result<PllConfig> GenerateHPLL(const display_setting_t& disp_setting);
 
  private:
   // This function wait for hdmi_pll to lock. The retry algorithm is

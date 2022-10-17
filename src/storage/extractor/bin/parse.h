@@ -47,7 +47,7 @@ struct ExtractOptions {
   bool verbose = false;
 };
 
-zx::status<ExtractOptions> ParseCommandLineArguments(int argc, char* const argv[]);
+zx::result<ExtractOptions> ParseCommandLineArguments(int argc, char* const argv[]);
 
 }  // namespace extractor
 

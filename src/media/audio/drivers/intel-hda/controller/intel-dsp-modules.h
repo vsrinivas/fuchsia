@@ -51,28 +51,28 @@ class DspModuleController {
   // Create a pipeline.
   //
   // Return ths ID of the created pipeline on success.
-  zx::status<DspPipelineId> CreatePipeline(uint8_t priority, uint16_t memory_pages, bool low_power);
+  zx::result<DspPipelineId> CreatePipeline(uint8_t priority, uint16_t memory_pages, bool low_power);
 
   // Create an instance of the module "type" in the given pipeline.
   //
   // Returns the ID of the created module on success.
-  zx::status<DspModuleId> CreateModule(DspModuleType type, DspPipelineId parent_pipeline,
+  zx::result<DspModuleId> CreateModule(DspModuleType type, DspPipelineId parent_pipeline,
                                        ProcDomain scheduling_domain,
                                        cpp20::span<const uint8_t> data);
 
   // Connect an output pin of one module to the input pin of another.
-  zx::status<> BindModules(DspModuleId source_module, uint8_t src_output_pin,
+  zx::result<> BindModules(DspModuleId source_module, uint8_t src_output_pin,
                            DspModuleId dest_module, uint8_t dest_input_pin);
 
   // Enable/disable the given pipeline.
-  zx::status<> SetPipelineState(DspPipelineId pipeline, PipelineState state, bool sync_stop_start);
+  zx::result<> SetPipelineState(DspPipelineId pipeline, PipelineState state, bool sync_stop_start);
 
   // Fetch details about modules available on the DSP.
-  zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ReadModuleDetails();
+  zx::result<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ReadModuleDetails();
 
  private:
   // Allocate an instance ID for module of type |type|.
-  zx::status<uint8_t> AllocateInstanceId(DspModuleType type);
+  zx::result<uint8_t> AllocateInstanceId(DspModuleType type);
 
   // Number of instances of each module type that have been created.
   std::unordered_map<DspModuleType, uint8_t> allocated_instances_;
@@ -91,11 +91,11 @@ class DspModuleController {
 //
 // Modules should be listed in source to sink order. Each module will be
 // joined to the previous module, connecting output pin 0 to input pin 0.
-zx::status<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
+zx::result<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
                                                std::initializer_list<DspModule> modules);
 
 // Exposed for testing.
-zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+zx::result<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
     cpp20::span<const uint8_t> data);
 
 }  // namespace intel_hda

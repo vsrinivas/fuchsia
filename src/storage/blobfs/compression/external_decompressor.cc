@@ -26,7 +26,7 @@ DecompressorCreatorConnector& DecompressorCreatorConnector::DefaultServiceConnec
   return singleton;
 }
 
-zx::status<std::unique_ptr<ExternalDecompressorClient>> ExternalDecompressorClient::Create(
+zx::result<std::unique_ptr<ExternalDecompressorClient>> ExternalDecompressorClient::Create(
     DecompressorCreatorConnector* connector, const zx::vmo& decompressed_vmo,
     const zx::vmo& compressed_vmo) {
   std::unique_ptr<ExternalDecompressorClient> client;
@@ -207,7 +207,7 @@ ExternalDecompressorClient::CompressionAlgorithmLocalToFidl(CompressionAlgorithm
   return Fidl::kUncompressed;
 }
 
-zx::status<fuchsia_blobfs_internal::wire::CompressionAlgorithm>
+zx::result<fuchsia_blobfs_internal::wire::CompressionAlgorithm>
 ExternalDecompressorClient::CompressionAlgorithmLocalToFidlForPartial(
     CompressionAlgorithm algorithm) {
   switch (algorithm) {

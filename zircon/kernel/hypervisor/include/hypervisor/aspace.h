@@ -57,7 +57,7 @@ class GuestPtr {
 
 class GuestPhysicalAspace {
  public:
-  static zx::status<GuestPhysicalAspace> Create();
+  static zx::result<GuestPhysicalAspace> Create();
   ~GuestPhysicalAspace();
 
   GuestPhysicalAspace() = default;
@@ -72,10 +72,10 @@ class GuestPhysicalAspace {
   fbl::RefPtr<VmAddressRegion> RootVmar() const { return physical_aspace_->RootVmar(); }
 
   bool IsMapped(zx_gpaddr_t guest_paddr) const;
-  zx::status<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
-  zx::status<> UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
-  zx::status<> PageFault(zx_gpaddr_t guest_paddr);
-  zx::status<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
+  zx::result<> MapInterruptController(zx_gpaddr_t guest_paddr, zx_paddr_t host_paddr, size_t len);
+  zx::result<> UnmapRange(zx_gpaddr_t guest_paddr, size_t len);
+  zx::result<> PageFault(zx_gpaddr_t guest_paddr);
+  zx::result<GuestPtr> CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len, const char* name);
 
  private:
   fbl::RefPtr<VmMapping> FindMapping(zx_gpaddr_t guest_paddr) const
@@ -86,7 +86,7 @@ class GuestPhysicalAspace {
 
 class DirectPhysicalAspace {
  public:
-  static zx::status<DirectPhysicalAspace> Create();
+  static zx::result<DirectPhysicalAspace> Create();
   ~DirectPhysicalAspace();
 
   DirectPhysicalAspace() = default;

@@ -17,7 +17,7 @@ class AstroPartitioner : public DevicePartitioner {
  public:
   enum class AbrWearLevelingOption { ON, OFF };
 
-  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+  static zx::result<std::unique_ptr<DevicePartitioner>> Initialize(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<Context> context);
 
@@ -25,31 +25,31 @@ class AstroPartitioner : public DevicePartitioner {
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+  zx::result<std::unique_ptr<PartitionClient>> AddPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<PartitionClient>> FindPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
+  zx::result<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx::status<> WipeFvm() const override;
+  zx::result<> WipeFvm() const override;
 
-  zx::status<> InitPartitionTables() const override;
+  zx::result<> InitPartitionTables() const override;
 
-  zx::status<> WipePartitionTables() const override;
+  zx::result<> WipePartitionTables() const override;
 
-  zx::status<> ValidatePayload(const PartitionSpec& spec,
+  zx::result<> ValidatePayload(const PartitionSpec& spec,
                                cpp20::span<const uint8_t> data) const override;
 
-  zx::status<> Flush() const override;
+  zx::result<> Flush() const override;
 
  private:
   AstroPartitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block,
                    std::shared_ptr<Context> context)
       : skip_block_(std::move(skip_block)), context_(std::move(context)) {}
 
-  static zx::status<> InitializeContext(const fbl::unique_fd& devfs_root,
+  static zx::result<> InitializeContext(const fbl::unique_fd& devfs_root,
                                         AbrWearLevelingOption abr_wear_leveling_opt,
                                         Context* context);
 
@@ -62,14 +62,14 @@ class AstroPartitioner : public DevicePartitioner {
 
 class AstroPartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(
+  zx::result<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class AstroAbrClientFactory : public abr::ClientFactory {
  public:
-  zx::status<std::unique_ptr<abr::Client>> New(
+  zx::result<std::unique_ptr<abr::Client>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) final;
 };
@@ -81,12 +81,12 @@ class AstroSysconfigPartitionClientBuffered : public BlockDevicePartitionClient 
                                         ::sysconfig::SyncClient::PartitionType partition)
       : context_(context), partition_(partition) {}
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Trim() final;
+  zx::result<> Flush() final;
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -110,10 +110,10 @@ class Bl2PartitionClient final : public SkipBlockPartitionClient {
   explicit Bl2PartitionClient(fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock> partition)
       : SkipBlockPartitionClient(std::move(partition)) {}
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
 
   // No copy, no move.
   Bl2PartitionClient(const Bl2PartitionClient&) = delete;

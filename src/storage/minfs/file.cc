@@ -151,7 +151,7 @@ void File::AllocateAndCommitData(std::unique_ptr<Transaction> transaction) {
   Vfs()->CommitTransaction(std::move(transaction));
 }
 
-zx::status<> File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count, blk_t* bnos) {
+zx::result<> File::BlocksSwap(Transaction* transaction, blk_t start, blk_t count, blk_t* bnos) {
   if (count == 0)
     return zx::ok();
 
@@ -271,7 +271,7 @@ void File::CancelPendingWriteback() {
 
 #endif
 
-zx::status<> File::CanUnlink() const { return zx::ok(); }
+zx::result<> File::CanUnlink() const { return zx::ok(); }
 
 fs::VnodeProtocolSet File::GetProtocols() const { return fs::VnodeProtocol::kFile; }
 
@@ -291,8 +291,8 @@ zx_status_t File::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   });
 }
 
-zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
-  zx::status<blk_t> uncached = zx::error(ZX_ERR_INVALID_ARGS);
+zx::result<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
+  zx::result<blk_t> uncached = zx::error(ZX_ERR_INVALID_ARGS);
   uncached = ::minfs::GetRequiredBlockCount(offset, length, Vfs()->BlockSize());
   if (!DirtyCacheEnabled()) {
     return uncached;
@@ -305,7 +305,7 @@ zx::status<uint32_t> File::GetRequiredBlockCount(size_t offset, size_t length) {
   return GetRequiredBlockCountForDirtyCache(offset, length, uncached.value());
 }
 
-zx::status<> File::CheckAndFlush(bool is_truncate, size_t length, size_t offset) {
+zx::result<> File::CheckAndFlush(bool is_truncate, size_t length, size_t offset) {
   auto status = ShouldFlush(is_truncate, length, offset);
   if (status.is_error()) {
     return status.take_error();
@@ -316,7 +316,7 @@ zx::status<> File::CheckAndFlush(bool is_truncate, size_t length, size_t offset)
   return FlushCachedWrites();
 }
 
-zx::status<std::unique_ptr<Transaction>> File::GetTransaction(uint32_t reserve_blocks) {
+zx::result<std::unique_ptr<Transaction>> File::GetTransaction(uint32_t reserve_blocks) {
   std::unique_ptr<Transaction> transaction;
   std::unique_ptr<CachedBlockTransaction> cached_transaction;
   {
@@ -370,12 +370,12 @@ zx_status_t File::Write(const void* data, size_t len, size_t offset, size_t* out
 
     // If this file's pending blocks have crossed a limit or if there are no free blocks in the
     // filesystem, try to flush before we proceed.
-    if (zx::status status = CheckAndFlush(false, len, offset); status.is_error()) {
+    if (zx::result status = CheckAndFlush(false, len, offset); status.is_error()) {
       return status.error_value();
     }
 
     // Calculate maximum number of blocks to reserve for this write operation.
-    zx::status<uint32_t> reserve_blocks_or = GetRequiredBlockCount(offset, len);
+    zx::result<uint32_t> reserve_blocks_or = GetRequiredBlockCount(offset, len);
     if (reserve_blocks_or.is_error()) {
       return reserve_blocks_or.error_value();
     }

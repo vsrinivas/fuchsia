@@ -39,7 +39,7 @@ constexpr size_t kMinStateSize = 5 * kGibibyte;
 // Chromebook uses the new partition scheme.
 constexpr PartitionScheme kPartitionScheme = PartitionScheme::kNew;
 
-zx::status<Uuid> CrosPartitionType(Partition type) {
+zx::result<Uuid> CrosPartitionType(Partition type) {
   switch (type) {
     case Partition::kZirconA:
     case Partition::kZirconB:
@@ -52,14 +52,14 @@ zx::status<Uuid> CrosPartitionType(Partition type) {
 
 }  // namespace
 
-zx::status<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> CrosDevicePartitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     const fbl::unique_fd& block_device) {
   if (arch != Arch::kX64) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  zx::status<> status = IsBootloader(devfs_root, "coreboot");
+  zx::result<> status = IsBootloader(devfs_root, "coreboot");
   if (status.is_error()) {
     return status.take_error();
   }
@@ -104,7 +104,7 @@ bool CrosDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }  // namespace paver
 
-zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -140,7 +140,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
   }
 
   zx_status_t status = ZX_OK;
-  zx::status<std::unique_ptr<PartitionClient>> result;
+  zx::result<std::unique_ptr<PartitionClient>> result;
   do {
     if (status != ZX_OK) {
       // If AddPartition fails because we're out of space (ZX_ERR_NO_RESOURCES), we try to shrink
@@ -167,7 +167,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::AddPartition
   return result;
 }
 
-zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -222,7 +222,7 @@ zx::status<std::unique_ptr<PartitionClient>> CrosDevicePartitioner::FindPartitio
   }
 }
 
-zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec) const {
+zx::result<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -250,7 +250,7 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
   gpt_partition_t* priority_to_partition[16] = {nullptr};
 
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    zx::status<gpt_partition_t*> partition_or = gpt_->GetGpt()->GetPartition(i);
+    zx::result<gpt_partition_t*> partition_or = gpt_->GetGpt()->GetPartition(i);
     if (partition_or.is_error()) {
       continue;
     }
@@ -305,7 +305,7 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
     ERROR("Cannot set CrOS partition 'tries' for ZIRCON-A\n");
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
-  if (auto status = zx::make_status(gpt_->GetGpt()->Sync()); status.is_error()) {
+  if (auto status = zx::make_result(gpt_->GetGpt()->Sync()); status.is_error()) {
     ERROR("Failed to sync CrOS partition 'tries' for ZIRCON-A\n");
     return status.take_error();
   }
@@ -313,9 +313,9 @@ zx::status<> CrosDevicePartitioner::FinalizePartition(const PartitionSpec& spec)
   return zx::ok();
 }
 
-zx::status<> CrosDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+zx::result<> CrosDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
-zx::status<> CrosDevicePartitioner::InitPartitionTables() const {
+zx::result<> CrosDevicePartitioner::InitPartitionTables() const {
   // Wipe partitions.
   // CrosDevicePartitioner operates on partition names.
   const std::set<std::string_view> partitions_to_wipe{
@@ -372,11 +372,11 @@ zx::status<> CrosDevicePartitioner::InitPartitionTables() const {
   return zx::ok();
 }
 
-zx::status<> CrosDevicePartitioner::WipePartitionTables() const {
+zx::result<> CrosDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
 
-zx::status<> CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
                                                     cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -392,7 +392,7 @@ zx::status<> CrosDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<bool> CrosDevicePartitioner::ShrinkCrosState() const {
+zx::result<bool> CrosDevicePartitioner::ShrinkCrosState() const {
   constexpr const char* name = "STATE";
   const auto filter = [](const gpt_partition_t& part) {
     constexpr uuid::Uuid kCrosStateGuid(GUID_CROS_STATE_VALUE);
@@ -434,13 +434,13 @@ zx::status<bool> CrosDevicePartitioner::ShrinkCrosState() const {
   return zx::ok(true);
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> ChromebookX64PartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> ChromebookX64PartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return CrosDevicePartitioner::Initialize(std::move(devfs_root), svc_root, arch, block_device);
 }
 
-zx::status<std::unique_ptr<abr::Client>> ChromebookX64AbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> ChromebookX64AbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;

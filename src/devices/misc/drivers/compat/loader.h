@@ -25,7 +25,7 @@ class Loader : public fidl::WireServer<fuchsia_ldsvc::Loader> {
 
   // Binds a backing loader, `client_end`, and the VMO for the compatibility
   // driver, `driver_vmo`.
-  zx::status<> Bind(fidl::ClientEnd<fuchsia_ldsvc::Loader> client_end, zx::vmo driver_vmo);
+  zx::result<> Bind(fidl::ClientEnd<fuchsia_ldsvc::Loader> client_end, zx::vmo driver_vmo);
 
  private:
   // fidl::WireServer<fuchsia_ldsvc::Loader>

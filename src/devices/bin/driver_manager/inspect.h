@@ -37,7 +37,7 @@ class InspectDevfs {
   // Use Create instead.
   explicit InspectDevfs(fbl::RefPtr<fs::PseudoDir> root_dir, fbl::RefPtr<fs::PseudoDir> class_dir);
 
-  static zx::status<InspectDevfs> Create(const fbl::RefPtr<fs::PseudoDir>& root_dir);
+  static zx::result<InspectDevfs> Create(const fbl::RefPtr<fs::PseudoDir>& root_dir);
 
   std::tuple<fbl::RefPtr<fs::PseudoDir>, uint32_t*> GetProtoDir(uint32_t id);
   // Get protocol |id| directory if it exists, else create one.
@@ -45,9 +45,9 @@ class InspectDevfs {
   // Delete protocol |id| directory if no files are present.
   void RemoveEmptyProtoDir(uint32_t id);
 
-  zx::status<> AddClassDirEntry(const fbl::RefPtr<Device>& dev);
+  zx::result<> AddClassDirEntry(const fbl::RefPtr<Device>& dev);
 
-  zx::status<> Publish(const fbl::RefPtr<Device>& dev);
+  zx::result<> Publish(const fbl::RefPtr<Device>& dev);
 
   void Unpublish(Device* dev);
 
@@ -63,7 +63,7 @@ class InspectManager {
 
   InspectManager() = delete;
 
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect();
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Connect();
 
   fs::PseudoDir& diagnostics_dir() { return *diagnostics_dir_; }
 

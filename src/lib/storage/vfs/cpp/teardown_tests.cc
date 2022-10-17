@@ -118,7 +118,7 @@ void SyncStart(sync_completion_t* completions, async::Loop* loop,
   ASSERT_OK(loop->StartThread());
 
   auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions, status_for_sync));
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());
   auto [client, server] = std::move(*endpoints);
   auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
@@ -258,7 +258,7 @@ TEST(Teardown, TeardownSlowClone) {
   ASSERT_OK(loop.StartThread());
 
   auto vn = fbl::AdoptRef(new AsyncTearDownVnode(completions));
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints.status_value());
   auto [client, server] = std::move(*endpoints);
   auto validated_options = vn->ValidateOptions(fs::VnodeConnectionOptions());
@@ -272,7 +272,7 @@ TEST(Teardown, TeardownSlowClone) {
   SendSync(client);
   sync_completion_wait(&completions[0], ZX_TIME_INFINITE);
 
-  zx::status endpoints2 = fidl::CreateEndpoints<fuchsia_io::Node>();
+  zx::result endpoints2 = fidl::CreateEndpoints<fuchsia_io::Node>();
   ASSERT_OK(endpoints2.status_value());
   fidl::WireSyncClient fidl_client2{std::move(endpoints2->client)};
   ASSERT_OK(fidl_client2->Clone({}, std::move(endpoints2->server)).status());

@@ -646,7 +646,7 @@ void* KTraceState::ReserveRaw(uint32_t num_bytes) {
   }
 }
 
-zx::status<KTraceState::FxtCompatWriter::Reservation> KTraceState::FxtCompatWriter::Reserve(
+zx::result<KTraceState::FxtCompatWriter::Reservation> KTraceState::FxtCompatWriter::Reserve(
     uint64_t header) {
   // Combine the record size from the provided FXT header with the rest of the
   // KTrace tag.

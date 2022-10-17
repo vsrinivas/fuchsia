@@ -67,7 +67,7 @@ class TransferRing {
   // the nop field of the returned ContiguousTRBInfo. The caller is responsible for setting the
   // Cycle bit to the correct value during the transaction commit stage. The pointer to the
   // contiguous TRB range will be returned in the trb field of the returned ContiguousTRBInfo.
-  zx::status<ContiguousTRBInfo> AllocateContiguous(size_t count);
+  zx::result<ContiguousTRBInfo> AllocateContiguous(size_t count);
   State SaveState();
   void set_stall(bool stalled) {
     fbl::AutoLock l(&mutex_);
@@ -100,7 +100,7 @@ class TransferRing {
   CRCR phys(uint8_t cap_length);
   // Retrieves command ring control register value of the next TRB that would be returned
   // by AllocateTRB.
-  zx::status<CRCR> PeekCommandRingControlRegister(uint8_t cap_length);
+  zx::result<CRCR> PeekCommandRingControlRegister(uint8_t cap_length);
   zx_paddr_t VirtToPhys(TRB* trb);
   zx_paddr_t VirtToPhysLocked(TRB* trb) __TA_REQUIRES(mutex_);
   TRB* PhysToVirt(zx_paddr_t paddr);

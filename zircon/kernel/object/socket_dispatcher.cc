@@ -29,7 +29,7 @@ KCOUNTER(dispatcher_socket_create_count, "dispatcher.socket.create")
 KCOUNTER(dispatcher_socket_destroy_count, "dispatcher.socket.destroy")
 
 // static
-zx::status<SocketDispatcher::Disposition> SocketDispatcher::Disposition::TryFrom(
+zx::result<SocketDispatcher::Disposition> SocketDispatcher::Disposition::TryFrom(
     uint32_t disposition) {
   switch (disposition) {
     case 0:

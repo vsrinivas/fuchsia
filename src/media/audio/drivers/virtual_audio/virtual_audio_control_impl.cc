@@ -156,7 +156,7 @@ VirtualAudioDeviceImpl::Config DefaultConfig(bool is_input) {
   return config;
 }
 
-zx::status<VirtualAudioDeviceImpl::Config> ConfigFromFIDL(
+zx::result<VirtualAudioDeviceImpl::Config> ConfigFromFIDL(
     const fuchsia_virtualaudio::wire::Configuration& fidl, bool is_input) {
   auto config = DefaultConfig(is_input);
 

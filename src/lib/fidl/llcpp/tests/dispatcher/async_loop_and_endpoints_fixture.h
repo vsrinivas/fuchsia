@@ -24,7 +24,7 @@ class AsyncLoopAndEndpointsFixture : public zxtest::Test {
   AsyncLoopAndEndpointsFixture() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
-    zx::status endpoints = fidl::CreateEndpoints<TestProtocol>();
+    zx::result endpoints = fidl::CreateEndpoints<TestProtocol>();
     ASSERT_OK(endpoints.status_value());
     endpoints_ = std::move(*endpoints);
   }

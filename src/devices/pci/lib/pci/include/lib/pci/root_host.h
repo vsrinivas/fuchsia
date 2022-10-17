@@ -72,13 +72,13 @@ class PciRootHost {
     return zx::msi::allocate(*root_resource_, count, msi);
   }
 
-  zx::status<zx_paddr_t> AllocateMmio32Window(zx_paddr_t base, size_t size,
+  zx::result<zx_paddr_t> AllocateMmio32Window(zx_paddr_t base, size_t size,
                                               zx::resource* out_resource,
                                               zx::eventpair* out_endpoint) {
     return Allocate(kMmio32, PCI_ADDRESS_SPACE_MEMORY, base, size, out_resource, out_endpoint);
   }
 
-  zx::status<zx_paddr_t> AllocateMmio64Window(zx_paddr_t base, size_t size,
+  zx::result<zx_paddr_t> AllocateMmio64Window(zx_paddr_t base, size_t size,
                                               zx::resource* out_resource,
                                               zx::eventpair* out_endpoint) {
     auto status =
@@ -95,7 +95,7 @@ class PciRootHost {
     return status;
   }
 
-  zx::status<zx_paddr_t> AllocateIoWindow(zx_paddr_t base, size_t size, zx::resource* out_resource,
+  zx::result<zx_paddr_t> AllocateIoWindow(zx_paddr_t base, size_t size, zx::resource* out_resource,
                                           zx::eventpair* out_endpoint) {
     return Allocate(kIo, io_type_, base, size, out_resource, out_endpoint);
   }
@@ -133,7 +133,7 @@ class PciRootHost {
     Io().WalkAvailableRegions(cb);
   }
   void ProcessQueue() __TA_REQUIRES(lock_);
-  zx::status<zx_paddr_t> Allocate(AllocationType type, uint32_t kind, zx_paddr_t base, size_t size,
+  zx::result<zx_paddr_t> Allocate(AllocationType type, uint32_t kind, zx_paddr_t base, size_t size,
                                   zx::resource* out_resource, zx::eventpair* out_endpoint)
       __TA_EXCLUDES(lock_);
   // Creates a backing pair of eventpair endpoints used to store and track if a

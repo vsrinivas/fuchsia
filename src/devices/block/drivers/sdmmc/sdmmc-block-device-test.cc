@@ -1548,7 +1548,7 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
 
   AddDevice(true);
 
-  zx::status rpmb_ends = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
+  zx::result rpmb_ends = fidl::CreateEndpoints<fuchsia_hardware_rpmb::Rpmb>();
   ASSERT_OK(rpmb_ends.status_value());
 
   sync_completion_t completion;

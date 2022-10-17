@@ -234,7 +234,7 @@ bool IcdComponent::ValidateManifestJson(const std::string& component_url,
   return true;
 }
 
-zx::status<zx::vmo> IcdComponent::CloneVmo() const {
+zx::result<zx::vmo> IcdComponent::CloneVmo() const {
   std::lock_guard lock(vmo_lock_);
   if (!vmo_info_)
     return zx::error(ZX_ERR_BAD_STATE);

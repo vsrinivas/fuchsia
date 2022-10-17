@@ -167,7 +167,7 @@ TEST_F(TiIna231Test, BanjoClients) {
 
   EXPECT_OK(dut.Init(kMetadata));
 
-  zx::status<fidl::ClientEnd<fuchsia_hardware_power_sensor::Device>> client_end;
+  zx::result<fidl::ClientEnd<fuchsia_hardware_power_sensor::Device>> client_end;
   fidl::ServerEnd<fuchsia_hardware_power_sensor::Device> server;
 
   ASSERT_OK((client_end = fidl::CreateEndpoints(&server)).status_value());

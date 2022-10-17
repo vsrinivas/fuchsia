@@ -251,7 +251,7 @@ TEST_F(LoaderServiceTest, InvalidConfig) {
 // implementation is the one used by our musl-based ld.so dynamic linker/loader. In other words,
 // that implementation is used to send most Loader client requests. Test interop with it.
 void LoadObjectLdmsg(fidl::UnownedClientEnd<fldsvc::Loader> client, const char* object_name,
-                     zx::status<> expected) {
+                     zx::result<> expected) {
   size_t req_len;
   ldmsg_req_t req;
   zx_status_t status =

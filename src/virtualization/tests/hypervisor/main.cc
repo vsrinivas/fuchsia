@@ -40,7 +40,7 @@
 namespace {
 
 template <typename T>
-zx::status<zx::resource> GetResource() {
+zx::result<zx::resource> GetResource() {
   auto client_end = component::Connect<T>();
   if (client_end.is_error()) {
     return client_end.take_error();

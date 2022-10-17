@@ -100,7 +100,7 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
 
   // Return a span of memory inside the VMO. Returns nullopt if the given
   // range is invalid.
-  zx::status<cpp20::span<uint8_t>> GetIoRegion(uint8_t vmo_id, uint64_t offset, uint64_t length)
+  zx::result<cpp20::span<uint8_t>> GetIoRegion(uint8_t vmo_id, uint64_t offset, uint64_t length)
       __TA_REQUIRES(mutex_);
 
   std::mutex mutex_;

@@ -20,7 +20,7 @@ void PagedVnode::VmoDirty(uint64_t offset, uint64_t length) {
   ZX_ASSERT_MSG(false, "Filesystem does not support VmoDirty() (maybe read-only filesystem).");
 }
 
-zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size, uint32_t options) {
+zx::result<> PagedVnode::EnsureCreatePagedVmo(uint64_t size, uint32_t options) {
   if (paged_vmo_info_.vmo.is_valid()) {
     return zx::ok();
   }
@@ -28,7 +28,7 @@ zx::status<> PagedVnode::EnsureCreatePagedVmo(uint64_t size, uint32_t options) {
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
   }
 
-  zx::status info_or = vfs_.value().get().CreatePagedNodeVmo(this, size, options);
+  zx::result info_or = vfs_.value().get().CreatePagedNodeVmo(this, size, options);
   if (info_or.is_error()) {
     return info_or.take_error();
   }

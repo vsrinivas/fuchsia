@@ -153,7 +153,7 @@ class Fusb302 : public DeviceType {
   zx_status_t InitInspect();
   zx_status_t InitHw();
   zx_status_t IrqThread();
-  zx::status<Event> GetInterrupt();
+  zx::result<Event> GetInterrupt();
 
   fidl::ClientEnd<fuchsia_hardware_i2c::Device> i2c_;
   zx::interrupt irq_;
@@ -181,7 +181,7 @@ class Fusb302 : public DeviceType {
   zx_status_t Debounce();
 
   zx_status_t FifoTransmit(const PdMessage& message);
-  zx::status<PdMessage> FifoReceive();
+  zx::result<PdMessage> FifoReceive();
 
   bool is_cc_connected_ = false;
   InspectableBool<PowerRole> power_role_ =

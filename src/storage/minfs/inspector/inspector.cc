@@ -58,7 +58,7 @@ zx_status_t Inspector::GetRoot(std::unique_ptr<disk_inspector::DiskObject>* out)
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<disk_inspector::DiskObject>> Inspector::CreateRoot(
+zx::result<std::unique_ptr<disk_inspector::DiskObject>> Inspector::CreateRoot(
     std::unique_ptr<Bcache> bc) {
   MountOptions options = {};
   options.writability = minfs::Writability::ReadOnlyFilesystem;

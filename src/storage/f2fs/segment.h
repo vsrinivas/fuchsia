@@ -389,7 +389,7 @@ class SegmentManager {
   // among the same type of dirty segments as that of the current segment.
   // If it succeeds in finding an eligible victim, it returns the segment number of the selected
   // victim. If it fails, it returns ZX_ERR_UNAVAILABLE.
-  zx::status<uint32_t> GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode);
+  zx::result<uint32_t> GetVictimByDefault(GcType gc_type, CursegType type, AllocMode alloc_mode);
 
   // This function calculates the maximum cost for a victim in each GcType
   // Any segment with a less cost value becomes a victim candidate.

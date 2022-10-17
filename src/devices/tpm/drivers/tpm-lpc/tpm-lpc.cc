@@ -60,7 +60,7 @@ void TpmLpc::DdkRelease() { delete this; }
 
 // Memory is only addressable in 4 byte increments on the qemu-driver, so we have
 // to split up any incoming requests into 4 byte segments in big-endian order.
-zx::status<> TpmLpc::PerformTransfer(uint16_t address, fidl::VectorView<uint8_t>& buf,
+zx::result<> TpmLpc::PerformTransfer(uint16_t address, fidl::VectorView<uint8_t>& buf,
                                      bool do_write) {
   if (address > mmio_.get_size() || buf.count() > mmio_.get_size()) {
     zxlogf(ERROR, "Cannot proceed address is out of range.");

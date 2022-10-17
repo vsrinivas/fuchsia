@@ -424,7 +424,7 @@ TEST_F(DdiAuxChannelTransactTest, TransactAdjustsZeroControl) {
   DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
-  const zx::status transact_status = aux_channel.TransactForTesting();
+  const zx::result transact_status = aux_channel.TransactForTesting();
   EXPECT_TRUE(transact_status.is_ok()) << transact_status.status_string();
 }
 
@@ -439,7 +439,7 @@ TEST_F(DdiAuxChannelTest, TransactAdjustsDefaultControl) {
   DdiAuxChannel aux_channel(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
   aux_channel.WriteRequestForTesting(
       {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
-  const zx::status transact_status = aux_channel.TransactForTesting();
+  const zx::result transact_status = aux_channel.TransactForTesting();
   EXPECT_TRUE(transact_status.is_ok()) << transact_status.status_string();
 }
 
@@ -451,7 +451,7 @@ TEST_F(DdiAuxChannelTransactTest, InstantSuccess) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_TRUE(transact_status.is_ok()) << transact_status.status_string();
 }
 
@@ -466,7 +466,7 @@ TEST_F(DdiAuxChannelTransactTest, PendingThenSuccess) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_TRUE(transact_status.is_ok()) << transact_status.status_string();
 }
 
@@ -481,7 +481,7 @@ TEST_F(DdiAuxChannelTransactTest, PendingThenNotCompleteThenSuccess) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_TRUE(transact_status.is_ok()) << transact_status.status_string();
 }
 
@@ -493,7 +493,7 @@ TEST_F(DdiAuxChannelTransactTest, DdiReportsReceiveError) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, transact_status.error_value())
       << transact_status.status_string();
 }
@@ -506,7 +506,7 @@ TEST_F(DdiAuxChannelTransactTest, DdiReportsTimeout) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_EQ(ZX_ERR_IO_MISSED_DEADLINE, transact_status.error_value())
       << transact_status.status_string();
 }
@@ -519,7 +519,7 @@ TEST_F(DdiAuxChannelTransactTest, EmptyReply) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, transact_status.error_value())
       << transact_status.status_string();
 }
@@ -532,7 +532,7 @@ TEST_F(DdiAuxChannelTransactTest, LongReply) {
   }));
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_EQ(ZX_ERR_IO_DATA_INTEGRITY, transact_status.error_value())
       << transact_status.status_string();
 }
@@ -554,7 +554,7 @@ TEST_F(DdiAuxChannelTransactTest, DdiTimesOut) {
   }
 
   SetUpTransaction();
-  const zx::status transact_status = aux_channel_->TransactForTesting();
+  const zx::result transact_status = aux_channel_->TransactForTesting();
   EXPECT_EQ(ZX_ERR_IO_MISSED_DEADLINE, transact_status.error_value())
       << transact_status.status_string();
 }
@@ -584,7 +584,7 @@ class DdiAuxChannelReadReplyTest : public DdiAuxChannelTest {
     aux_channel_.emplace(&mmio_buffer_, tgl_registers::DDI_A, kAtlasGpuDeviceId);
     aux_channel_->WriteRequestForTesting(
         {.address = 0xabcde, .command = 9, .op_size = 16, .data = cpp20::span<uint8_t>()});
-    const zx::status transact_status = aux_channel_->TransactForTesting();
+    const zx::result transact_status = aux_channel_->TransactForTesting();
 
     // ASSERT_TRUE() doesn't stop the test when called from a nested function.
     EXPECT_TRUE(transact_status.is_ok()) << transact_status.status_string();
@@ -806,7 +806,7 @@ TEST_F(DdiAuxChannelTest, DoTransactReadAck1Byte) {
   const DdiAuxChannel::Request request = {
       .address = 0xabcde, .command = 9, .op_size = 1, .data = cpp20::span<uint8_t>()};
   std::array<uint8_t, 1> reply_data_buffer;
-  const zx::status<DdiAuxChannel::ReplyInfo> result =
+  const zx::result<DdiAuxChannel::ReplyInfo> result =
       aux_channel.DoTransaction(request, reply_data_buffer);
   ASSERT_TRUE(result.is_ok()) << result.status_string();
 
@@ -833,7 +833,7 @@ TEST_F(DdiAuxChannelTest, DoTransactWrite7BytesNack) {
       .address = 0xabcde, .command = 8, .op_size = 7, .data = request_data};
 
   std::array<uint8_t, 1> reply_data_buffer;
-  const zx::status<DdiAuxChannel::ReplyInfo> result =
+  const zx::result<DdiAuxChannel::ReplyInfo> result =
       aux_channel.DoTransaction(request, reply_data_buffer);
   ASSERT_TRUE(result.is_ok()) << result.status_string();
 

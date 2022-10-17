@@ -35,7 +35,7 @@ struct MethodTraits : std::false_type {};
 //
 // Create a Reservation that will have `header` written to as it first 8 bytes.
 template <typename Class, typename ReservationImpl>
-struct MethodTraits<Method::Reserve, zx::status<ReservationImpl> (Class::*)(uint64_t header)>
+struct MethodTraits<Method::Reserve, zx::result<ReservationImpl> (Class::*)(uint64_t header)>
     : std::true_type {
   using Reservation = ReservationImpl;
 };
@@ -84,7 +84,7 @@ struct WriterTraits : std::false_type {};
 
 // Specialization that is selected only when WriterIsValid<W> is well-formed.
 // Evaluates to true-like when WriterIsValid<W> is true-like.
-// Provides an alias of the Reservation type returned by zx::status<Reservation>
+// Provides an alias of the Reservation type returned by zx::result<Reservation>
 // W::Reserve(uint64_t).
 template <typename W>
 struct WriterTraits<W, std::void_t<WriterIsValid<W>>> : WriterIsValid<W> {

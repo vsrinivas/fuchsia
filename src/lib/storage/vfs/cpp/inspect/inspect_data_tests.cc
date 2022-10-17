@@ -67,7 +67,7 @@ TEST(VfsInspectData, GetSizeInfoFromDevice) {
   };
 
   FakeBlockDevice fake_device;
-  zx::status<FvmData::SizeInfo> size_info;
+  zx::result<FvmData::SizeInfo> size_info;
 
   fake_device.SetVolumeInfo(volume_manager_info, volume_info);
   size_info = FvmData::GetSizeInfoFromDevice(fake_device);

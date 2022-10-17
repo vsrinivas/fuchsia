@@ -6,13 +6,13 @@
 
 namespace minfs {
 
-zx::status<> ResizeableArrayBuffer::Shrink(size_t block_count) {
+zx::result<> ResizeableArrayBuffer::Shrink(size_t block_count) {
   ZX_ASSERT(block_count > 0 && block_count <= capacity());
   buffer().resize(block_count * BlockSize());
   return zx::ok();
 }
 
-zx::status<> ResizeableArrayBuffer::Grow(size_t block_count) {
+zx::result<> ResizeableArrayBuffer::Grow(size_t block_count) {
   ZX_ASSERT(block_count >= capacity());
   buffer().resize(block_count * BlockSize());
   return zx::ok();

@@ -53,7 +53,7 @@ class BinaryDecoder {
   explicit BinaryDecoder(cpp20::span<const uint8_t> data) : buffer_(data) {}
 
   // Read off the given number of bytes from the beginning of the buffer.
-  zx::status<cpp20::span<const uint8_t>> Read(size_t size) {
+  zx::result<cpp20::span<const uint8_t>> Read(size_t size) {
     if (size > buffer_.size_bytes()) {
       GLOBAL_LOG(DEBUG,
                  "Input data has been truncated: expected %ld bytes, but only %ld available.", size,
@@ -73,7 +73,7 @@ class BinaryDecoder {
   template <typename T>
   zx_status_t Read(T* result) {
     static_assert(std::is_pod<T>::value, "Function only supports POD types.");
-    zx::status<cpp20::span<const uint8_t>> buffer = Read(sizeof(T));
+    zx::result<cpp20::span<const uint8_t>> buffer = Read(sizeof(T));
     if (!buffer.is_ok()) {
       return buffer.status_value();
     }
@@ -87,7 +87,7 @@ class BinaryDecoder {
   //
   // |T| should be a POD type that can be initialized via memcpy().
   template <typename T>
-  zx::status<T> Read() {
+  zx::result<T> Read() {
     T result;
     zx_status_t status = Read(&result);
     if (status != ZX_OK) {
@@ -103,7 +103,7 @@ class BinaryDecoder {
   //
   // |T::length_field| must be castable to size_t.
   template <typename T, typename F>
-  zx::status<std::tuple<T, cpp20::span<const uint8_t>>> VariableLengthRead(F T::*length_field) {
+  zx::result<std::tuple<T, cpp20::span<const uint8_t>>> VariableLengthRead(F T::*length_field) {
     cpp20::span<const uint8_t> orig_buffer = buffer_;
 
     // Read header.

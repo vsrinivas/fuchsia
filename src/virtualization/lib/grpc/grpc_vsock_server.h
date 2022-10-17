@@ -62,7 +62,7 @@ class GrpcVsockServerBuilder {
   // requests on the sockets.
   //
   // It is safe to free the builder immediately after a call to |Build|.
-  zx::status<
+  zx::result<
       std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<::fuchsia::virtualization::Listener>>>
   Build();
 

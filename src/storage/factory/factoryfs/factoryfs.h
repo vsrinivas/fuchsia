@@ -37,14 +37,14 @@ class Factoryfs {
   // Creates a Factoryfs object.
   //
   // The dispatcher should be for the current thread that Factoryfs is running on.
-  static zx::status<std::unique_ptr<Factoryfs>> Create(async_dispatcher_t* dispatcher,
+  static zx::result<std::unique_ptr<Factoryfs>> Create(async_dispatcher_t* dispatcher,
                                                        std::unique_ptr<BlockDevice> device,
                                                        MountOptions* options, fs::FuchsiaVfs* vfs);
 
   virtual ~Factoryfs();
   zx_status_t OpenRootNode(fbl::RefPtr<fs::Vnode>* out);
 
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo();
 
   fs::FuchsiaVfs* vfs() const { return vfs_; }
   const Superblock& Info() const { return superblock_; }
@@ -56,7 +56,7 @@ class Factoryfs {
   const fuchsia_hardware_block_BlockInfo& GetDeviceBlockInfo() const { return block_info_; }
 
   // Returns a vnode for a given path.
-  zx::status<fbl::RefPtr<fs::Vnode>> Lookup(std::string_view path);
+  zx::result<fbl::RefPtr<fs::Vnode>> Lookup(std::string_view path);
 
   // Called when a vnode is opened.
   void DidOpen(std::string_view path, fs::Vnode& vnode);
@@ -82,7 +82,7 @@ class Factoryfs {
   zx_status_t ParseEntries(Callback callback, void* parse_data);
 
   // Returns a DirectoryEntryManager for the given path.
-  zx::status<std::unique_ptr<DirectoryEntryManager>> LookupInternal(std::string_view path);
+  zx::result<std::unique_ptr<DirectoryEntryManager>> LookupInternal(std::string_view path);
 
   // Terminates all internal connections and returns the underlying
   // block device.

@@ -119,7 +119,7 @@ void SetPartitionVisibility(gpt_partition_t* partition, bool visible);
 bool IsPartitionVisible(const gpt_partition_t* partition);
 
 // Returns a null terminated UTF-8 representation of the partition name.
-zx::status<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity);
+zx::result<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity);
 
 class GptDevice {
  public:
@@ -176,11 +176,11 @@ class GptDevice {
 
   // Returns mutable pointer to partition entry at given index, otherwise ZX_ERR_NOT_FOUND
   // if the partition entry is nullptr, or ZX_ERR_OUT_OF_RANGE if the index is out of range.
-  zx::status<gpt_partition_t*> GetPartition(uint32_t partition_index);
+  zx::result<gpt_partition_t*> GetPartition(uint32_t partition_index);
 
   // Returns const pointer to partition entry at given index, otherwise ZX_ERR_NOT_FOUND
   // if the partition entry is nullptr, or ZX_ERR_OUT_OF_RANGE if the index is out of range.
-  zx::status<const gpt_partition_t*> GetPartition(uint32_t partition_index) const;
+  zx::result<const gpt_partition_t*> GetPartition(uint32_t partition_index) const;
 
   // Updates the type of partition at index partition_index
   zx_status_t SetPartitionType(uint32_t partition_index, const uint8_t* type);
@@ -245,7 +245,7 @@ class GptDevice {
   // Walks entries array and returns error if crc doesn't match or ValidateEntry returns error.
   zx_status_t ValidateEntries(const uint8_t* buffer, uint64_t block_count) const;
 
-  zx::status<gpt_partition_t*> GetPartitionPtr(uint32_t partition_index) const;
+  zx::result<gpt_partition_t*> GetPartitionPtr(uint32_t partition_index) const;
 
   // true if the partition table on the device is valid
   bool valid_;

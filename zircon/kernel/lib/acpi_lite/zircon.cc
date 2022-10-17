@@ -19,7 +19,7 @@ acpi_lite::ZirconPhysmemReader g_physmem_reader;
 
 namespace acpi_lite {
 
-zx::status<const void*> ZirconPhysmemReader::PhysToPtr(uintptr_t phys, size_t length) {
+zx::result<const void*> ZirconPhysmemReader::PhysToPtr(uintptr_t phys, size_t length) {
   // We don't support the 0 physical address or 0-length ranges.
   if (length == 0 || phys == 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -43,7 +43,7 @@ zx::status<const void*> ZirconPhysmemReader::PhysToPtr(uintptr_t phys, size_t le
 }
 
 // Create a new AcpiParser, starting at the given Root System Description Pointer (RSDP).
-zx::status<AcpiParser> AcpiParserInit(zx_paddr_t rsdp_pa) {
+zx::result<AcpiParser> AcpiParserInit(zx_paddr_t rsdp_pa) {
   return AcpiParser::Init(g_physmem_reader, rsdp_pa);
 }
 

@@ -41,7 +41,7 @@ void SetSlotState(gpt_partition_t* partition, const AbrSlotData* data) {
 }
 
 // Returns 0 for slot 'a', 1 for slot 'b', and -1 for all other partitions.
-zx::status<AbrSlotIndex> GetSlotIndexForPartition(gpt_partition_t* partition) {
+zx::result<AbrSlotIndex> GetSlotIndexForPartition(gpt_partition_t* partition) {
   char name_buf[GPT_NAME_LEN / 2];
   constexpr int kZirconLength = 6;  // strlen("zircon")
   utf16_to_cstring(name_buf, reinterpret_cast<uint16_t*>(partition->name), GPT_NAME_LEN / 2);
@@ -67,12 +67,12 @@ zx::status<AbrSlotIndex> GetSlotIndexForPartition(gpt_partition_t* partition) {
 }
 }  // namespace
 
-zx::status<std::unique_ptr<abr::VbootClient>> VbootClient::Create(
+zx::result<std::unique_ptr<abr::VbootClient>> VbootClient::Create(
     std::unique_ptr<paver::CrosDevicePartitioner> gpt) {
   return zx::ok(std::make_unique<VbootClient>(std::move(gpt)));
 }
 
-zx::status<> VbootClient::ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) {
+zx::result<> VbootClient::ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) {
   gpt::GptDevice* gpt = gpt_->GetGpt();
   bool seen_a = false;
   bool seen_b = false;
@@ -106,7 +106,7 @@ zx::status<> VbootClient::ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* on
   return zx::ok();
 }
 
-zx::status<> VbootClient::WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
+zx::result<> VbootClient::WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
                                       uint8_t one_shot_recovery) {
   gpt::GptDevice* gpt = gpt_->GetGpt();
   uint8_t max_prio = std::max(a->priority, b->priority);

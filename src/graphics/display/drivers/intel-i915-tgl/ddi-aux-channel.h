@@ -106,11 +106,11 @@ class DdiAuxChannel {
   // reply message. If the buffer is smaller than the reply payload, only the
   // first `reply_data.size()` bytes of the payload are copied.
   //
-  // The returned zx::status reflects whether the DDI considers this transaction
+  // The returned zx::result reflects whether the DDI considers this transaction
   // successful. If that's the case, the `ReplyInfo` structure has the reply
   // command byte (which could indicate a NACK or a DEFER), and the size of the
   // reply payload.
-  zx::status<ReplyInfo> DoTransaction(const Request& request,
+  zx::result<ReplyInfo> DoTransaction(const Request& request,
                                       cpp20::span<uint8_t> reply_data_buffer);
 
   // Directs AUX transactions to/away from the Thunderbolt controller.
@@ -146,7 +146,7 @@ class DdiAuxChannel {
   // retrieve the transaction reply. DDI-level success isn't conditioned on the
   // reply command, so NACKed and DEFERred transaction will still be considered
   // successful.
-  zx::status<> TransactForTesting();
+  zx::result<> TransactForTesting();
 
   // Reads an AUX channel response from the DDI's data buffer.
   //

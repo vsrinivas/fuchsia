@@ -67,7 +67,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   }
 
   {
-    zx::status result = TrimName(path);
+    zx::result result = TrimName(path);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -82,7 +82,7 @@ Vfs::OpenResult Vfs::OpenLocked(fbl::RefPtr<Vnode> vndir, std::string_view path,
   fbl::RefPtr<Vnode> vn;
   bool just_created;
   if (options.flags.create) {
-    zx::status result = EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights);
+    zx::result result = EnsureExists(std::move(vndir), path, &vn, options, mode, parent_rights);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -162,7 +162,7 @@ Vfs::TraversePathResult Vfs::TraversePathFetchVnodeLocked(fbl::RefPtr<Vnode> vnd
   }
 
   {
-    zx::status result = TrimName(path);
+    zx::result result = TrimName(path);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -197,7 +197,7 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, std::string_view name, bool mu
   return ZX_OK;
 }
 
-zx::status<bool> Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+zx::result<bool> Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                    fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                                    uint32_t mode, Rights parent_rights) {
   if (options.flags.directory && !S_ISDIR(mode)) {
@@ -224,13 +224,13 @@ zx::status<bool> Vfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view pa
     case ZX_ERR_NOT_SUPPORTED:
       // Filesystem may not support create (like devfs) in which case we should still try to open()
       // the file,
-      return zx::make_status(LookupNode(std::move(vndir), path, out_vn), false);
+      return zx::make_result(LookupNode(std::move(vndir), path, out_vn), false);
     default:
       return zx::error(status);
   }
 }
 
-zx::status<bool> Vfs::TrimName(std::string_view& name) {
+zx::result<bool> Vfs::TrimName(std::string_view& name) {
   bool is_dir = false;
   while (!name.empty() && name.back() == '/') {
     is_dir = true;

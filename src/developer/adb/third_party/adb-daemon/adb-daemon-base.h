@@ -18,7 +18,7 @@ class AdbDaemonBase {
   virtual ~AdbDaemonBase() = default;
 
   virtual void SendUsbPacket(uint8_t* buf, size_t len, apacket* p, bool release) = 0;
-  virtual zx::status<zx::socket> GetServiceSocket(const std::string& service_name,
+  virtual zx::result<zx::socket> GetServiceSocket(const std::string& service_name,
                                                   std::string args) = 0;
 };
 

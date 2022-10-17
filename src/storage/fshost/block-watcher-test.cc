@@ -85,7 +85,7 @@ TEST(AddDeviceTestCase, AddUnknownDevice) {
 TEST(AddDeviceTestCase, AddSmallDevice) {
   class SmallDevice : public MockBlockDevice {
    public:
-    zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
+    zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
       fuchsia_hardware_block::wire::BlockInfo info = {};
       info.flags = 0;
       info.block_size = 512;
@@ -171,9 +171,9 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceWithoutSeal) {
    public:
     BlockVerityDeviceWithNoSeal() : MockBlockVerityDevice(/*allow_authoring=*/false) {}
 
-    zx::status<std::string> VeritySeal() final {
+    zx::result<std::string> VeritySeal() final {
       seal_read_ = true;
-      return zx::error_status(ZX_ERR_NOT_FOUND);
+      return zx::error_result(ZX_ERR_NOT_FOUND);
     }
     zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
       ADD_FAILURE() << "Should not call OpenBlockVerityForVerifiedRead";
@@ -200,9 +200,9 @@ TEST(AddDeviceTestCase, AddFormattedBlockVerityDeviceInAuthoringMode) {
    public:
     BlockVerityDeviceInAuthoringMode() : MockBlockVerityDevice(/*allow_authoring=*/true) {}
 
-    zx::status<std::string> VeritySeal() final {
+    zx::result<std::string> VeritySeal() final {
       ADD_FAILURE() << "Should not call VeritySeal";
-      return zx::error_status(ZX_ERR_NOT_FOUND);
+      return zx::error_result(ZX_ERR_NOT_FOUND);
     }
     zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
       ADD_FAILURE() << "Should not call OpenBlockVerityForVerifiedRead";
@@ -535,7 +535,7 @@ TEST(AddDeviceTestCase, AddUnknownFormatBootPartitionDevice) {
         : MockBlockDevice(Options{
               .driver_path = kBootpartDriverPath,
           }) {}
-    zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
+    zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
       fuchsia_hardware_block::wire::BlockInfo info = {};
       info.flags = BLOCK_FLAG_BOOTPART;
       info.block_size = 512;

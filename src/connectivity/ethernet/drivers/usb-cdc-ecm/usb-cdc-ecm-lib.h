@@ -45,7 +45,7 @@ using MacAddress = std::array<uint8_t, ETH_MAC_SIZE>;
 
 class UsbCdcDescriptorParser {
  public:
-  static zx::status<UsbCdcDescriptorParser> Parse(usb::UsbDevice& usb);
+  static zx::result<UsbCdcDescriptorParser> Parse(usb::UsbDevice& usb);
 
   EcmEndpoint GetInterruptEndpoint() const { return int_ep_; }
   EcmEndpoint GetTxEndpoint() const { return tx_ep_; }
@@ -76,7 +76,7 @@ class UsbCdcDescriptorParser {
   static const size_t kExpectedStringSize =
       sizeof(usb_string_descriptor_t) + ETH_MAC_SIZE * sizeof(uint32_t);
 
-  static zx::status<MacAddress> ParseMacAddress(usb::UsbDevice& usb,
+  static zx::result<MacAddress> ParseMacAddress(usb::UsbDevice& usb,
                                                 const usb_cs_ethernet_interface_descriptor_t* desc);
 
   EcmEndpoint int_ep_;

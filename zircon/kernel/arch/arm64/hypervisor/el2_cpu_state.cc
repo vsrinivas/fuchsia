@@ -71,7 +71,7 @@ void El2TranslationTable::Reset() {
   }
 }
 
-zx::status<> El2TranslationTable::Init() {
+zx::result<> El2TranslationTable::Init() {
   // Create the address space.
   el2_aspace_.emplace(/*base=*/0, /*size=*/kEl2PhysAddressSize, ArmAspaceType::kHypervisor);
   zx_status_t status = el2_aspace_->Init();
@@ -114,11 +114,11 @@ zx::status<> El2TranslationTable::Init() {
 
 zx_paddr_t El2TranslationTable::Base() const { return el2_aspace_->arch_table_phys(); }
 
-zx::status<> El2Stack::Alloc() { return page_.Alloc(0); }
+zx::result<> El2Stack::Alloc() { return page_.Alloc(0); }
 
 zx_paddr_t El2Stack::Top() const { return page_.PhysicalAddress() + PAGE_SIZE; }
 
-zx::status<> El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
+zx::result<> El2CpuState::OnTask(void* context, cpu_num_t cpu_num) {
   auto cpu_state = static_cast<El2CpuState*>(context);
   El2TranslationTable& table = cpu_state->table_;
   El2Stack& stack = cpu_state->stacks_[cpu_num];
@@ -142,7 +142,7 @@ static void el2_off_task(void* arg) {
 }
 
 // static
-zx::status<ktl::unique_ptr<El2CpuState>> El2CpuState::Create() {
+zx::result<ktl::unique_ptr<El2CpuState>> El2CpuState::Create() {
   fbl::AllocChecker ac;
   ktl::unique_ptr<El2CpuState> cpu_state(new (&ac) El2CpuState);
   if (!ac.check()) {
@@ -191,11 +191,11 @@ zx::status<ktl::unique_ptr<El2CpuState>> El2CpuState::Create() {
 
 El2CpuState::~El2CpuState() { mp_sync_exec(MP_IPI_TARGET_MASK, cpu_mask_, el2_off_task, nullptr); }
 
-zx::status<uint16_t> El2CpuState::AllocVmid() { return vmid_allocator_.TryAlloc(); }
+zx::result<uint16_t> El2CpuState::AllocVmid() { return vmid_allocator_.TryAlloc(); }
 
-zx::status<> El2CpuState::FreeVmid(uint16_t id) { return vmid_allocator_.Free(id); }
+zx::result<> El2CpuState::FreeVmid(uint16_t id) { return vmid_allocator_.Free(id); }
 
-zx::status<uint16_t> alloc_vmid() {
+zx::result<uint16_t> alloc_vmid() {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
     auto cpu_state = El2CpuState::Create();
@@ -208,7 +208,7 @@ zx::status<uint16_t> alloc_vmid() {
   return el2_cpu_state->AllocVmid();
 }
 
-zx::status<> free_vmid(uint16_t id) {
+zx::result<> free_vmid(uint16_t id) {
   Guard<Mutex> guard(GuestMutex::Get());
   if (auto result = el2_cpu_state->FreeVmid(id); result.is_error()) {
     return result.take_error();

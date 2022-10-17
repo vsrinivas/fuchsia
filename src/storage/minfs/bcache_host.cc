@@ -53,7 +53,7 @@ zx_status_t Bcache::RunRequests(const std::vector<storage::BufferedOperation>& o
   return ZX_OK;
 }
 
-zx::status<> Bcache::Readblk(blk_t bno, void* data) {
+zx::result<> Bcache::Readblk(blk_t bno, void* data) {
   off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
   assert(off / kMinfsBlockSize == bno);  // Overflow
   off += offset_;
@@ -68,7 +68,7 @@ zx::status<> Bcache::Readblk(blk_t bno, void* data) {
   return zx::ok();
 }
 
-zx::status<> Bcache::Writeblk(blk_t bno, const void* data) {
+zx::result<> Bcache::Writeblk(blk_t bno, const void* data) {
   off_t off = static_cast<off_t>(bno) * kMinfsBlockSize;
   assert(off / kMinfsBlockSize == bno);  // Overflow
   off += offset_;
@@ -84,20 +84,20 @@ zx::status<> Bcache::Writeblk(blk_t bno, const void* data) {
   return zx::ok();
 }
 
-zx::status<> Bcache::Sync() {
+zx::result<> Bcache::Sync() {
   // No-op.
   return zx::ok();
 }
 
 // static
-zx::status<std::unique_ptr<Bcache>> Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks) {
+zx::result<std::unique_ptr<Bcache>> Bcache::Create(fbl::unique_fd fd, uint32_t max_blocks) {
   return zx::ok(std::unique_ptr<Bcache>(new Bcache(std::move(fd), max_blocks)));
 }
 
 Bcache::Bcache(fbl::unique_fd fd, uint32_t max_blocks)
     : fd_(std::move(fd)), max_blocks_(max_blocks) {}
 
-zx::status<> Bcache::SetOffset(off_t offset) {
+zx::result<> Bcache::SetOffset(off_t offset) {
   if (offset_ || !extent_lengths_.empty()) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
   }
@@ -105,7 +105,7 @@ zx::status<> Bcache::SetOffset(off_t offset) {
   return zx::ok();
 }
 
-zx::status<> Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths) {
+zx::result<> Bcache::SetSparse(off_t offset, const fbl::Vector<size_t>& extent_lengths) {
   if (offset_ || !extent_lengths_.empty()) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
   }

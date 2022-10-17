@@ -78,7 +78,7 @@ class MipiDsi {
   static zx_status_t CreateCommand(const uint8_t* tbuf, size_t tlen, uint8_t* rbuf, size_t rlen,
                                    bool is_dcs, mipi_dsi_cmd_t* cmd);
 
-  static zx::status<fuchsia_hardware_dsi::wire::MipiDsiCmd> CreateCommandFidl(
+  static zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> CreateCommandFidl(
       uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyArena& allocator);
 };
 

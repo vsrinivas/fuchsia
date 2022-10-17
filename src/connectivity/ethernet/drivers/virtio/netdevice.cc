@@ -489,7 +489,7 @@ void NetworkDevice::NetworkDeviceImplPrepareVmo(uint8_t vmo_id, zx::vmo vmo,
 void NetworkDevice::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
   LTRACE_ENTRY;
   fbl::AutoLock vmo_lock(&state_lock_);
-  if (zx::status<zx::vmo> status = vmo_store_.Unregister(vmo_id); status.status_value() != ZX_OK) {
+  if (zx::result<zx::vmo> status = vmo_store_.Unregister(vmo_id); status.status_value() != ZX_OK) {
     zxlogf(ERROR, "failed to release vmo id = %d: %s", vmo_id, status.status_string());
   }
 }

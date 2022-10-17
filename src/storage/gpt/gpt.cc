@@ -247,7 +247,7 @@ void uint8_to_guid_string(char* dst, const uint8_t* src) {
 
 __END_CDECLS
 
-zx::status<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity) {
+zx::result<> GetPartitionName(const gpt_entry_t& entry, char* name, size_t capacity) {
   size_t len = capacity;
   const uint16_t* utf16_name = reinterpret_cast<const uint16_t*>(entry.name);
   const uint16_t* utf16_name_end = utf16_name + (sizeof(entry.name) / sizeof(uint16_t));
@@ -886,7 +886,7 @@ zx_status_t GptDevice::RemoveAllPartitions() {
   return ZX_OK;
 }
 
-zx::status<gpt_partition_t*> GptDevice::GetPartitionPtr(uint32_t partition_index) const {
+zx::result<gpt_partition_t*> GptDevice::GetPartitionPtr(uint32_t partition_index) const {
   if (partition_index >= kPartitionCount)
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   if (partitions_[partition_index] == nullptr)
@@ -894,16 +894,16 @@ zx::status<gpt_partition_t*> GptDevice::GetPartitionPtr(uint32_t partition_index
   return zx::ok(partitions_[partition_index]);
 }
 
-zx::status<gpt_partition_t*> GptDevice::GetPartition(uint32_t partition_index) {
+zx::result<gpt_partition_t*> GptDevice::GetPartition(uint32_t partition_index) {
   return GetPartitionPtr(partition_index);
 }
 
-zx::status<const gpt_partition_t*> GptDevice::GetPartition(uint32_t partition_index) const {
+zx::result<const gpt_partition_t*> GptDevice::GetPartition(uint32_t partition_index) const {
   return GetPartitionPtr(partition_index);
 }
 
 zx_status_t GptDevice::SetPartitionType(uint32_t partition_index, const uint8_t* type) {
-  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  zx::result<gpt_partition_t*> p = GetPartition(partition_index);
   if (p.is_ok()) {
     memcpy((*p)->type, type, GPT_GUID_LEN);
   }
@@ -911,7 +911,7 @@ zx_status_t GptDevice::SetPartitionType(uint32_t partition_index, const uint8_t*
 }
 
 zx_status_t GptDevice::SetPartitionGuid(uint32_t partition_index, const uint8_t* guid) {
-  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  zx::result<gpt_partition_t*> p = GetPartition(partition_index);
   if (p.is_ok()) {
     memcpy((*p)->guid, guid, GPT_GUID_LEN);
   }
@@ -919,7 +919,7 @@ zx_status_t GptDevice::SetPartitionGuid(uint32_t partition_index, const uint8_t*
 }
 
 zx_status_t GptDevice::SetPartitionVisibility(uint32_t partition_index, bool visible) {
-  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  zx::result<gpt_partition_t*> p = GetPartition(partition_index);
   if (p.is_ok()) {
     gpt::SetPartitionVisibility(*p, visible);
   }
@@ -927,7 +927,7 @@ zx_status_t GptDevice::SetPartitionVisibility(uint32_t partition_index, bool vis
 }
 
 zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
-  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  zx::result<gpt_partition_t*> p = GetPartition(partition_index);
   if (p.is_error()) {
     return p.error_value();
   }
@@ -943,7 +943,7 @@ zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t star
   }
 
   for (uint32_t idx = 0; idx < kPartitionCount; idx++) {
-    zx::status<const gpt_partition_t*> curr_partition = GetPartition(idx);
+    zx::result<const gpt_partition_t*> curr_partition = GetPartition(idx);
     // skip this partition and non-existent partitions
     if ((idx == partition_index) || (curr_partition.is_error())) {
       continue;
@@ -963,7 +963,7 @@ zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t star
 }
 
 zx_status_t GptDevice::GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
-  zx::status<const gpt_partition_t*> p = GetPartition(partition_index);
+  zx::result<const gpt_partition_t*> p = GetPartition(partition_index);
   if (p.is_ok()) {
     *flags = (*p)->flags;
   }
@@ -972,7 +972,7 @@ zx_status_t GptDevice::GetPartitionFlags(uint32_t partition_index, uint64_t* fla
 
 // TODO(auradkar): flags are unckecked for invalid flags
 zx_status_t GptDevice::SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
-  zx::status<gpt_partition_t*> p = GetPartition(partition_index);
+  zx::result<gpt_partition_t*> p = GetPartition(partition_index);
   if (p.is_ok()) {
     (*p)->flags = flags;
   }

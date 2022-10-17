@@ -22,7 +22,7 @@ KCOUNTER(dispatcher_vcpu_destroy_count, "dispatcher.vcpu.destroy")
 
 namespace {
 
-zx::status<ktl::unique_ptr<Vcpu>> CreateVcpu(Guest& guest, uint32_t guest_options,
+zx::result<ktl::unique_ptr<Vcpu>> CreateVcpu(Guest& guest, uint32_t guest_options,
                                              zx_vaddr_t entry) {
   switch (guest_options) {
     case ZX_GUEST_OPT_NORMAL:

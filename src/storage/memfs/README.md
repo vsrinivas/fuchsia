@@ -17,7 +17,7 @@ Typical in-tree C++ users should depend on `//src/storage/memfs:cpp` and
 async::Loop loop(kAsyncLoopConfigNoAttachToCurrentThread);
 loop.StartThread();
 
-zx::status<ScopedMemfs> memfs =
+zx::result<ScopedMemfs> memfs =
     ScopedMemfs::CreateMountedAt(loop.dispatcher(), "/my_tmp");
 ```
 

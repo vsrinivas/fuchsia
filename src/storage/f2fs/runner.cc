@@ -9,7 +9,7 @@
 
 namespace f2fs {
 
-zx::status<std::unique_ptr<Runner>> Runner::CreateRunner(FuchsiaDispatcher dispatcher) {
+zx::result<std::unique_ptr<Runner>> Runner::CreateRunner(FuchsiaDispatcher dispatcher) {
   std::unique_ptr<Runner> runner(new Runner(dispatcher));
 #ifdef __Fuchsia__
   // Create Pager and PagerPool
@@ -20,7 +20,7 @@ zx::status<std::unique_ptr<Runner>> Runner::CreateRunner(FuchsiaDispatcher dispa
   return zx::ok(std::move(runner));
 }
 
-zx::status<std::unique_ptr<Runner>> Runner::Create(FuchsiaDispatcher dispatcher,
+zx::result<std::unique_ptr<Runner>> Runner::Create(FuchsiaDispatcher dispatcher,
                                                    std::unique_ptr<Bcache> bc,
                                                    const MountOptions& options) {
   auto runner_or = CreateRunner(dispatcher);
@@ -84,9 +84,9 @@ Runner::~Runner() {
   TearDown();
 }
 
-zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return f2fs_->GetFilesystemInfo(); }
+zx::result<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return f2fs_->GetFilesystemInfo(); }
 
-zx::status<> Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
+zx::result<> Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   auto root_vnode = f2fs_->GetRootVnode();
   if (root_vnode.is_error()) {
     FX_LOGS(ERROR) << "failed to get the root vnode. " << root_vnode.status_string();

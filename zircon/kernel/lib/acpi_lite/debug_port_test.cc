@@ -20,7 +20,7 @@ namespace {
 TEST(DebugPort, ParseChromebookAtlas) {
   FakeAcpiParser parser({PixelbookAtlasAcpiParser()});
 
-  zx::status<AcpiDebugPortDescriptor> debug_port = GetDebugPort(parser);
+  zx::result<AcpiDebugPortDescriptor> debug_port = GetDebugPort(parser);
   ASSERT_TRUE(debug_port.is_ok());
   EXPECT_EQ(AcpiDebugPortDescriptor::Type::kMmio, debug_port->type);
   EXPECT_EQ(0xfe03'4000u, debug_port->address);
@@ -31,7 +31,7 @@ TEST(DebugPort, ParseIntelNuc) {
   FakePhysMemReader reader = IntelNuc7i5dnPhysMemReader();
   AcpiParser parser = AcpiParser::Init(reader, reader.rsdp()).value();
 
-  zx::status<AcpiDebugPortDescriptor> debug_port = GetDebugPort(parser);
+  zx::result<AcpiDebugPortDescriptor> debug_port = GetDebugPort(parser);
   ASSERT_TRUE(debug_port.is_ok());
   EXPECT_EQ(AcpiDebugPortDescriptor::Type::kPio, debug_port->type);
   EXPECT_EQ(0x3f8u, debug_port->address);

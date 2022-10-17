@@ -18,7 +18,7 @@
 
 namespace console_launcher {
 
-zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline);
+zx::result<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline);
 
 struct Device {
   std::string path = "/svc/console";
@@ -36,12 +36,12 @@ struct Arguments {
   bool virtual_console_need_debuglog = false;
 };
 
-zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client);
+zx::result<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client);
 
 class ConsoleLauncher {
  public:
-  static zx::status<ConsoleLauncher> Create();
-  zx::status<zx::process> LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
+  static zx::result<ConsoleLauncher> Create();
+  zx::result<zx::process> LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
                                       zx::channel stdio, const std::string& term,
                                       const std::optional<std::string>& cmd) const;
 

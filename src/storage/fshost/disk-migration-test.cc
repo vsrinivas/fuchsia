@@ -76,7 +76,7 @@ void BuildDiskImage(zx::vmo vmo) {
 
     // Write a simple file hierarchy out to test the copy code.
     FX_LOGS(INFO) << "Mounting as minfs.";
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_EQ(endpoints.status_value(), ZX_OK);
     zx_status_t status = ZX_OK;
     std::thread thread([&status, &endpoints]() {

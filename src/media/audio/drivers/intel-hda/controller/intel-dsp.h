@@ -44,7 +44,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   IntelDsp(IntelHDAController* controller, MMIO_PTR hda_pp_registers_t* pp_regs);
   ~IntelDsp();
 
-  zx::status<> Init(zx_device_t* dsp_dev);
+  zx::result<> Init(zx_device_t* dsp_dev);
   void ChannelSignalled(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                         const zx_packet_signal_t* signal);
 
@@ -54,8 +54,8 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   void ProcessIrq();
 
   // Start and stop DSP pipelines.
-  zx::status<> StartPipeline(DspPipelineId id);
-  zx::status<> PausePipeline(DspPipelineId id);
+  zx::result<> StartPipeline(DspPipelineId id);
+  zx::result<> PausePipeline(DspPipelineId id);
 
   void DeviceShutdown();
   zx_status_t Suspend(uint8_t requested_state, bool enable_wake, uint8_t suspend_reason,
@@ -69,9 +69,9 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   MMIO_PTR adsp_registers_t* regs() const;
   MMIO_PTR adsp_fw_registers_t* fw_regs() const;
 
-  zx::status<> SetupDspDevice();
-  zx::status<> InitializeDsp();
-  zx::status<> ParseNhlt();
+  zx::result<> SetupDspDevice();
+  zx::result<> InitializeDsp();
+  zx::result<> ParseNhlt();
 
   zx_status_t Boot();
   zx_status_t StripFirmware(const zx::vmo& fw, void* out, size_t* size_inout);
@@ -81,7 +81,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
                          const void** out_blob, size_t* out_size);
 
   zx_status_t GetModulesInfo();
-  zx::status<std::vector<uint8_t>> GetI2SModuleConfig(uint8_t i2s_instance_id, uint8_t direction,
+  zx::result<std::vector<uint8_t>> GetI2SModuleConfig(uint8_t i2s_instance_id, uint8_t direction,
                                                       const CopierCfg& base_cfg);
   bool IsCoreEnabled(uint8_t core_mask);
 
@@ -106,7 +106,7 @@ class IntelDsp : public codecs::IntelHDACodecDriverBase {
   zx_status_t ProcessSetStreamFmt(Channel* channel, const ihda_proto::SetStreamFmtReq& req,
                                   zx::handle rxed_handle);
 
-  zx::status<> CreateAndStartStreams();
+  zx::result<> CreateAndStartStreams();
 
   // Receive a notification from the DSP.
   void DspNotificationReceived(NotificationType type);

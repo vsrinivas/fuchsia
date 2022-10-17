@@ -48,7 +48,7 @@ class LeafDriver : public driver::DriverBase {
   }
 
  private:
-  zx::status<uint32_t> ConnectToDeviceAndGetNumber(std::string path) {
+  zx::result<uint32_t> ConnectToDeviceAndGetNumber(std::string path) {
     auto device = context().incoming()->Connect<ft::Device>(path.c_str());
     if (device.status_value() != ZX_OK) {
       FDF_LOG(ERROR, "Failed to connect to %s: %s", path.data(), device.status_string());
@@ -63,7 +63,7 @@ class LeafDriver : public driver::DriverBase {
     return zx::ok(result.value().number);
   }
 
-  zx::status<> DoWork(const fidl::WireSharedClient<ft::Waiter>& waiter) {
+  zx::result<> DoWork(const fidl::WireSharedClient<ft::Waiter>& waiter) {
     // Check the left device.
     auto number = ConnectToDeviceAndGetNumber("fuchsia.composite.test.Service/left/device");
     if (number.is_error()) {

@@ -76,7 +76,7 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
 
   BlobLayoutFormat Format() const override { return BlobLayoutFormat::kCompactMerkleTreeAtEnd; }
 
-  static zx::status<std::unique_ptr<CompactMerkleTreeAtEndBlobLayout>> CreateFromInode(
+  static zx::result<std::unique_ptr<CompactMerkleTreeAtEndBlobLayout>> CreateFromInode(
       const Inode& inode, uint64_t blobfs_block_size) {
     if (!inode.IsCompressed()) {
       // If the blob is not compressed then the size of the stored data is the file size.
@@ -106,7 +106,7 @@ class CompactMerkleTreeAtEndBlobLayout : public BlobLayout {
         inode.blob_size, data_size, merkle_tree_size, blobfs_block_size));
   }
 
-  static zx::status<std::unique_ptr<CompactMerkleTreeAtEndBlobLayout>> CreateFromSizes(
+  static zx::result<std::unique_ptr<CompactMerkleTreeAtEndBlobLayout>> CreateFromSizes(
       uint64_t file_size, uint64_t data_size, uint64_t blobfs_block_size) {
     uint64_t merkle_tree_size = CalculateMerkleTreeSize(file_size);
     if (!AreSizesValid(file_size, data_size, merkle_tree_size, blobfs_block_size)) {
@@ -164,7 +164,7 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
     return BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
   }
 
-  static zx::status<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromInode(
+  static zx::result<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromInode(
       const Inode& inode, uint64_t blobfs_block_size) {
     if (!inode.IsCompressed()) {
       // If the blob is not compressed then the size of the stored data is the file size.
@@ -200,7 +200,7 @@ class PaddedMerkleTreeAtStartBlobLayout : public BlobLayout {
         inode.blob_size, data_size, merkle_tree_size, blobfs_block_size));
   }
 
-  static zx::status<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromSizes(
+  static zx::result<std::unique_ptr<PaddedMerkleTreeAtStartBlobLayout>> CreateFromSizes(
       uint64_t file_size, uint64_t data_size, uint64_t blobfs_block_size) {
     uint64_t merkle_tree_size = CalculateMerkleTreeSize(file_size);
     if (!AreSizesValid(file_size, data_size, merkle_tree_size, blobfs_block_size)) {
@@ -292,7 +292,7 @@ uint64_t BlobLayout::MerkleTreeBlockCount() const {
   return BlocksRequiredForBytes(MerkleTreeSize(), blobfs_block_size_);
 }
 
-zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(BlobLayoutFormat format,
+zx::result<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(BlobLayoutFormat format,
                                                                     const Inode& inode,
                                                                     uint64_t blobfs_block_size) {
   switch (format) {
@@ -313,7 +313,7 @@ zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromInode(BlobLayoutFo
   }
 }
 
-zx::status<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromSizes(BlobLayoutFormat format,
+zx::result<std::unique_ptr<BlobLayout>> BlobLayout::CreateFromSizes(BlobLayoutFormat format,
                                                                     uint64_t file_size,
                                                                     uint64_t data_size,
                                                                     uint64_t blobfs_block_size) {

@@ -20,7 +20,7 @@ BlobfsInspector::BlobfsInspector(std::unique_ptr<fs::TransactionHandler> handler
       buffer_factory_(std::move(buffer_factory)),
       loader_(handler_.get()) {}
 
-zx::status<std::unique_ptr<BlobfsInspector>> BlobfsInspector::Create(
+zx::result<std::unique_ptr<BlobfsInspector>> BlobfsInspector::Create(
     std::unique_ptr<fs::TransactionHandler> handler,
     std::unique_ptr<disk_inspector::BufferFactory> factory) {
   auto inspector =
@@ -61,7 +61,7 @@ uint64_t BlobfsInspector::GetJournalEntryCount() {
   return journal_block_count - fs::kJournalMetadataBlocks;
 }
 
-zx::status<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start_index,
+zx::result<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start_index,
                                                                   uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
   // Since there are multiple inodes in a block, we first perform calculations to find the block
@@ -99,7 +99,7 @@ zx::status<std::vector<Inode>> BlobfsInspector::InspectInodeRange(uint64_t start
 // small enough to load into the buffer.
 static_assert(fs::kJournalMetadataBlocks == 1);
 
-zx::status<fs::JournalInfo> BlobfsInspector::InspectJournalSuperblock() {
+zx::result<fs::JournalInfo> BlobfsInspector::InspectJournalSuperblock() {
   zx_status_t status = loader_.RunReadOperation(buffer_.get(), 0, JournalStartBlock(superblock_),
                                                 fs::kJournalMetadataBlocks);
   if (status != ZX_OK) {
@@ -110,7 +110,7 @@ zx::status<fs::JournalInfo> BlobfsInspector::InspectJournalSuperblock() {
 }
 
 template <>
-zx::status<fs::JournalPrefix> BlobfsInspector::InspectJournalEntryAs(uint64_t index) {
+zx::result<fs::JournalPrefix> BlobfsInspector::InspectJournalEntryAs(uint64_t index) {
   zx_status_t status = LoadJournalEntry(buffer_.get(), index);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -119,7 +119,7 @@ zx::status<fs::JournalPrefix> BlobfsInspector::InspectJournalEntryAs(uint64_t in
 }
 
 template <>
-zx::status<fs::JournalHeaderBlock> BlobfsInspector::InspectJournalEntryAs(uint64_t index) {
+zx::result<fs::JournalHeaderBlock> BlobfsInspector::InspectJournalEntryAs(uint64_t index) {
   zx_status_t status = LoadJournalEntry(buffer_.get(), index);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -128,7 +128,7 @@ zx::status<fs::JournalHeaderBlock> BlobfsInspector::InspectJournalEntryAs(uint64
 }
 
 template <>
-zx::status<fs::JournalCommitBlock> BlobfsInspector::InspectJournalEntryAs(uint64_t index) {
+zx::result<fs::JournalCommitBlock> BlobfsInspector::InspectJournalEntryAs(uint64_t index) {
   zx_status_t status = LoadJournalEntry(buffer_.get(), index);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -136,7 +136,7 @@ zx::status<fs::JournalCommitBlock> BlobfsInspector::InspectJournalEntryAs(uint64
   return zx::ok(*reinterpret_cast<fs::JournalCommitBlock*>(buffer_->Data(0)));
 }
 
-zx::status<std::vector<uint64_t>> BlobfsInspector::InspectDataBlockAllocatedInRange(
+zx::result<std::vector<uint64_t>> BlobfsInspector::InspectDataBlockAllocatedInRange(
     uint64_t start_index, uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
   // Since there are multiple bits in a block, we first perform calculations to find the block range
@@ -172,7 +172,7 @@ zx::status<std::vector<uint64_t>> BlobfsInspector::InspectDataBlockAllocatedInRa
   return zx::ok(allocated_indices);
 }
 
-zx::status<> BlobfsInspector::WriteSuperblock(Superblock superblock) {
+zx::result<> BlobfsInspector::WriteSuperblock(Superblock superblock) {
   *static_cast<Superblock*>(buffer_->Data(0)) = superblock;
   zx_status_t status = loader_.RunWriteOperation(buffer_.get(), 0, 0, 1);
   if (status != ZX_OK) {
@@ -183,7 +183,7 @@ zx::status<> BlobfsInspector::WriteSuperblock(Superblock superblock) {
   return zx::ok();
 }
 
-zx::status<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t start_index) {
+zx::result<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t start_index) {
   uint64_t end_index = start_index + inodes.size();
   // Since there are multiple inodes in a block, we first perform calculations to find the block
   // range of only the desired inode range to load.
@@ -223,7 +223,7 @@ zx::status<> BlobfsInspector::WriteInodes(std::vector<Inode> inodes, uint64_t st
   return zx::ok();
 }
 
-zx::status<> BlobfsInspector::WriteJournalSuperblock(fs::JournalInfo journal_info) {
+zx::result<> BlobfsInspector::WriteJournalSuperblock(fs::JournalInfo journal_info) {
   *reinterpret_cast<fs::JournalInfo*>(buffer_->Data(0)) = journal_info;
   zx_status_t status = loader_.RunWriteOperation(buffer_.get(), 0, JournalStartBlock(superblock_),
                                                  fs::kJournalMetadataBlocks);
@@ -234,7 +234,7 @@ zx::status<> BlobfsInspector::WriteJournalSuperblock(fs::JournalInfo journal_inf
   return zx::ok();
 }
 
-zx::status<> BlobfsInspector::WriteJournalEntryBlocks(storage::BlockBuffer* buffer,
+zx::result<> BlobfsInspector::WriteJournalEntryBlocks(storage::BlockBuffer* buffer,
                                                       uint64_t start_index) {
   uint64_t start_block = JournalStartBlock(superblock_) + fs::kJournalMetadataBlocks + start_index;
   zx_status_t status = loader_.RunWriteOperation(buffer, 0, start_block, buffer->capacity());
@@ -245,7 +245,7 @@ zx::status<> BlobfsInspector::WriteJournalEntryBlocks(storage::BlockBuffer* buff
   return zx::ok();
 }
 
-zx::status<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t start_index,
+zx::result<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t start_index,
                                                            uint64_t end_index) {
   ZX_ASSERT(end_index > start_index);
   // Since there are multiple bits in a block, we first perform calculations to find the block range
@@ -287,7 +287,7 @@ zx::status<> BlobfsInspector::WriteDataBlockAllocationBits(bool value, uint64_t 
   return zx::ok();
 }
 
-zx::status<> BlobfsInspector::WriteDataBlocks(storage::BlockBuffer* buffer, uint64_t start_index) {
+zx::result<> BlobfsInspector::WriteDataBlocks(storage::BlockBuffer* buffer, uint64_t start_index) {
   uint64_t start_block = DataStartBlock(superblock_) + start_index;
   zx_status_t status = loader_.RunWriteOperation(buffer, 0, start_block, buffer->capacity());
   if (status != ZX_OK) {

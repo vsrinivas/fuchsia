@@ -49,12 +49,12 @@ class StorageBuffer {
   // with kWriteback flag set before. Any writers who want to access |page| wait for
   // its writeback by calling Page::WaitOnWriteback(), but readers are free to
   // access to it.
-  zx::status<size_t> ReserveWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr)
+  zx::result<size_t> ReserveWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr)
       __TA_EXCLUDES(mutex_);
   // It sorts out which Pages need to transfer to fs::TransactionHandler and tries to reserve
   // |buffer_| for the Pages for read I/Os. If successful, it returns PageOpeartions that
   // convey BufferedOperations and the refptr of the Pages for read I/Os.
-  zx::status<PageOperations> ReserveReadOperations(std::vector<LockedPage> &pages,
+  zx::result<PageOperations> ReserveReadOperations(std::vector<LockedPage> &pages,
                                                    std::vector<block_t> blk_addr)
       __TA_EXCLUDES(mutex_);
 
@@ -108,7 +108,7 @@ class PageOperations {
   }
 
   std::vector<storage::BufferedOperation> TakeOperations() { return std::move(operations_); }
-  zx::status<> PopulatePage(void *data, size_t page_index) const {
+  zx::result<> PopulatePage(void *data, size_t page_index) const {
     if (page_index >= io_pages_.size()) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }

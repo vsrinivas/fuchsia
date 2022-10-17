@@ -213,7 +213,7 @@ std::string EdpDpcdRevisionToString(dpcd::EdpRevision rev) {
 
 }  // namespace
 
-zx::status<DdiAuxChannel::ReplyInfo> DpAux::DoTransaction(const DdiAuxChannel::Request& request,
+zx::result<DdiAuxChannel::ReplyInfo> DpAux::DoTransaction(const DdiAuxChannel::Request& request,
                                                           cpp20::span<uint8_t> reply_data_buffer) {
   // If the DisplayPort sink device isn't ready to handle an Aux message,
   // it can return an AUX_DEFER reply, which means we should retry the
@@ -232,7 +232,7 @@ zx::status<DdiAuxChannel::ReplyInfo> DpAux::DoTransaction(const DdiAuxChannel::R
   unsigned timeouts_seen = 0;
 
   for (;;) {
-    zx::status<DdiAuxChannel::ReplyInfo> transaction_result =
+    zx::result<DdiAuxChannel::ReplyInfo> transaction_result =
         aux_channel_.DoTransaction(request, reply_data_buffer);
     if (transaction_result.is_error()) {
       if (transaction_result.error_value() == ZX_ERR_IO_MISSED_DEADLINE) {
@@ -266,24 +266,24 @@ zx::status<DdiAuxChannel::ReplyInfo> DpAux::DoTransaction(const DdiAuxChannel::R
         return transaction_result;
       case DP_REPLY_AUX_NACK:
         zxlogf(TRACE, "DP aux: Reply was not an ack (got AUX_NACK)");
-        return zx::error_status(ZX_ERR_IO_REFUSED);
+        return zx::error_result(ZX_ERR_IO_REFUSED);
       case DP_REPLY_AUX_DEFER:
         if (++defers_seen == kMaxDefers) {
           zxlogf(TRACE, "DP aux: Received too many AUX DEFERs (%d)", kMaxDefers);
-          return zx::error_status(ZX_ERR_IO_MISSED_DEADLINE);
+          return zx::error_result(ZX_ERR_IO_MISSED_DEADLINE);
         }
         // Go around the loop again to retry.
         continue;
       case DP_REPLY_I2C_NACK:
         zxlogf(TRACE, "DP aux: Reply was not an ack (got I2C_NACK)");
-        return zx::error_status(ZX_ERR_IO_REFUSED);
+        return zx::error_result(ZX_ERR_IO_REFUSED);
       case DP_REPLY_I2C_DEFER:
         // TODO(fxbug.dev/31313): Implement handling of I2C_DEFER.
         zxlogf(TRACE, "DP aux: Received I2C_DEFER (not implemented)");
-        return zx::error_status(ZX_ERR_NEXT);
+        return zx::error_result(ZX_ERR_NEXT);
       default:
         zxlogf(TRACE, "DP aux: Unrecognized reply (header byte: 0x%x)", header_byte);
-        return zx::error_status(ZX_ERR_IO_DATA_INTEGRITY);
+        return zx::error_result(ZX_ERR_IO_DATA_INTEGRITY);
     }
   }
 }
@@ -317,7 +317,7 @@ zx_status_t DpAux::DpAuxReadChunk(uint32_t dp_cmd, uint32_t addr, uint8_t* buf, 
       .data = cpp20::span<uint8_t>(),
   };
 
-  zx::status<DdiAuxChannel::ReplyInfo> result =
+  zx::result<DdiAuxChannel::ReplyInfo> result =
       DoTransaction(request, cpp20::span<uint8_t>(buf, size_in));
   if (result.is_error()) {
     return result.error_value();
@@ -348,7 +348,7 @@ zx_status_t DpAux::DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf
   // In case of a short write, receives the amount of written bytes.
   uint8_t reply_data[1];
 
-  zx::status<DdiAuxChannel::ReplyInfo> transaction_result = DoTransaction(request, reply_data);
+  zx::result<DdiAuxChannel::ReplyInfo> transaction_result = DoTransaction(request, reply_data);
   if (transaction_result.is_error()) {
     return transaction_result.error_value();
   }
@@ -1355,7 +1355,7 @@ bool DpDisplay::TypeCConnectTigerLake() {
   {
     zxlogf(TRACE, "Asking PCU firmware to block Type C cold power state");
     PowerController power_controller(mmio_space());
-    zx::status<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+    zx::result<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
         /*blocked=*/true, PowerController::RetryBehavior::kRetryUntilStateChanges);
     if (power_status.is_error()) {
       zxlogf(ERROR, "Type C ports unusable. PCU firmware didn't block Type C cold power state: %s",
@@ -1378,7 +1378,7 @@ bool DpDisplay::TypeCConnectTigerLake() {
     {
       zxlogf(TRACE, "Asking PCU firmware to unblock Type C cold power state");
       PowerController power_controller(mmio_space);
-      zx::status<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+      zx::result<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
           /*blocked=*/false, PowerController::RetryBehavior::kNoRetry);
       if (power_status.is_error()) {
         if (power_status.error_value() == ZX_ERR_IO_REFUSED) {
@@ -1532,7 +1532,7 @@ bool DpDisplay::TypeCDisconnectTigerLake() {
   // here, if another Type C DDI is active.
   zxlogf(TRACE, "Asking PCU firmware to unblock Type C cold power state");
   PowerController power_controller(mmio_space());
-  zx::status<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
+  zx::result<> power_status = power_controller.SetDisplayTypeCColdBlockingTigerLake(
       /*blocked=*/false, PowerController::RetryBehavior::kNoRetry);
   if (power_status.is_error()) {
     if (power_status.error_value() == ZX_ERR_IO_REFUSED) {
@@ -2092,7 +2092,7 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
 bool DpDisplay::HasBacklight() { return type() == Type::kEdp; }
 
-zx::status<> DpDisplay::SetBacklightState(bool power, double brightness) {
+zx::result<> DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);
 
   brightness = std::max(brightness, 0.0);
@@ -2106,7 +2106,7 @@ zx::status<> DpDisplay::SetBacklightState(bool power, double brightness) {
   return zx::success();
 }
 
-zx::status<FidlBacklight::wire::State> DpDisplay::GetBacklightState() {
+zx::result<FidlBacklight::wire::State> DpDisplay::GetBacklightState() {
   return zx::success(FidlBacklight::wire::State{
       .backlight_on = IsBacklightOn(),
       .brightness = GetBacklightBrightness(),

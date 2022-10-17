@@ -107,7 +107,7 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
 class EthernetInterface {
  public:
   explicit EthernetInterface(fbl::unique_fd fd) {
-    zx::status client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ethernet::Device>();
+    zx::result client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ethernet::Device>();
     ASSERT_OK(client_end.status_value());
     ethernet_client_.Bind(std::move(*client_end));
     // Get device information
@@ -219,11 +219,11 @@ class EthernetInterface {
 class NetworkDeviceInterface : public ::loop_fixture::RealLoop {
  public:
   explicit NetworkDeviceInterface(fbl::unique_fd fd) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
     ASSERT_OK(endpoints.status_value());
     auto [client_end, server_end] = *std::move(endpoints);
 
-    zx::status<fidl::ClientEnd<fuchsia_hardware_network::DeviceInstance>> status =
+    zx::result<fidl::ClientEnd<fuchsia_hardware_network::DeviceInstance>> status =
         fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_network::DeviceInstance>();
     ASSERT_OK(status.status_value());
     fidl::WireClient<fuchsia_hardware_network::DeviceInstance> wire_client(
@@ -245,7 +245,7 @@ class NetworkDeviceInterface : public ::loop_fixture::RealLoop {
     });
     {
       client.GetPorts(
-          [this](zx::status<std::vector<network::client::netdev::wire::PortId>> ports_status) {
+          [this](zx::result<std::vector<network::client::netdev::wire::PortId>> ports_status) {
             ASSERT_OK(ports_status.status_value());
             std::vector<network::client::netdev::wire::PortId> ports =
                 std::move(ports_status.value());
@@ -268,7 +268,7 @@ class NetworkDeviceInterface : public ::loop_fixture::RealLoop {
 
     {
       bool checked_mtu = false;
-      zx::status<std::unique_ptr<network::client::NetworkDeviceClient::StatusWatchHandle>> result =
+      zx::result<std::unique_ptr<network::client::NetworkDeviceClient::StatusWatchHandle>> result =
           client.WatchStatus(
               port_id_.value(),
               [this, &checked_mtu](fuchsia_hardware_network::wire::PortStatus status) {
@@ -300,7 +300,7 @@ class NetworkDeviceInterface : public ::loop_fixture::RealLoop {
     return status;
   }
 
-  zx::status<std::vector<uint8_t>> ReceiveData() {
+  zx::result<std::vector<uint8_t>> ReceiveData() {
     // Wait for the read callback registered with the Netdevice client to fill the queue.
     RunLoopUntil([&] { return !rx_queue_.empty(); });
 
@@ -461,7 +461,7 @@ TEST_F(UsbCdcEcmTest, PeripheralTransmitsToHost) {
   size_t received_bytes = 0;
   uint8_t read_data = 0;
   while (received_bytes < fifo_depth * kEthernetMtu) {
-    zx::status<std::vector<uint8_t>> received_data = host.ReceiveData();
+    zx::result<std::vector<uint8_t>> received_data = host.ReceiveData();
     ASSERT_OK(received_data.status_value());
     ASSERT_EQ(kEthernetMtu, received_data.value().size());
     const std::vector<uint8_t>& data = received_data.value();

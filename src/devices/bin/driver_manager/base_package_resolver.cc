@@ -12,7 +12,7 @@
 
 namespace internal {
 
-zx::status<std::unique_ptr<Driver>> BasePackageResolver::FetchDriver(
+zx::result<std::unique_ptr<Driver>> BasePackageResolver::FetchDriver(
     const std::string& package_url) {
   auto result = GetPathFromUrl(package_url);
   if (result.is_error()) {

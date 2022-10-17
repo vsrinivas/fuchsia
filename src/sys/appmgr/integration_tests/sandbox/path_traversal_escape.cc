@@ -24,7 +24,7 @@ TEST(NamespaceTest, PathTraversalEscapeFails) {
       .url = fidl::StringView::FromExternal(child_url),
   };
 
-  zx::status component_controller_endpoints =
+  zx::result component_controller_endpoints =
       fidl::CreateEndpoints<fuchsia_sys::ComponentController>();
   ASSERT_EQ(ZX_OK, component_controller_endpoints.status_value());
   auto [component_controller_client, component_controller_server] =

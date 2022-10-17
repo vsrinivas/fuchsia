@@ -155,7 +155,7 @@ class FsOperationTracker : public OperationTracker {
   // OnTimeOut is called after default handler is called.
   void OnTimeOut(FILE* out_stream) const override {}
 
-  zx::status<> Complete() {
+  zx::result<> Complete() {
     auto ret = watchdog_->Untrack(GetId());
     watchdog_ = nullptr;
     return ret;

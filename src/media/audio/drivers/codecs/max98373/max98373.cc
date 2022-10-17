@@ -105,7 +105,7 @@ zx_status_t Max98373::Reset() {
   return status;
 }
 
-zx::status<DriverIds> Max98373::Initialize() {
+zx::result<DriverIds> Max98373::Initialize() {
   auto ids = DriverIds{
       .vendor_id = PDEV_VID_MAXIM,
       .device_id = PDEV_DID_MAXIM_MAX98373,
@@ -178,7 +178,7 @@ uint8_t Max98373::getTdmClockRatio(uint32_t number_of_channels, uint8_t bits_per
   return clock_ratio;
 }
 
-zx::status<CodecFormatInfo> Max98373::SetDaiFormat(const DaiFormat& format) {
+zx::result<CodecFormatInfo> Max98373::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
     zxlogf(ERROR, "unsupported format");
     return zx::error(ZX_ERR_NOT_SUPPORTED);

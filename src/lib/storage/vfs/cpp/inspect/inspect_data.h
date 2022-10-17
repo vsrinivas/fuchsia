@@ -80,7 +80,7 @@ struct FvmData {
   uint64_t out_of_space_events;
 
   // Helper function to create a `SizeInfo` using the Fvm protocol from a block device.
-  static zx::status<SizeInfo> GetSizeInfoFromDevice(const block_client::BlockDevice& device);
+  static zx::result<SizeInfo> GetSizeInfoFromDevice(const block_client::BlockDevice& device);
 
   // Inspect Property Names
 

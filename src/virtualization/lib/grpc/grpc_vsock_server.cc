@@ -24,7 +24,7 @@ void GrpcVsockServerBuilder::AddListenPort(uint32_t vsock_port) {
   listeners_.push_back({vsock_port, server_->NewBinding()});
 }
 
-zx::status<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>>
+zx::result<std::pair<std::unique_ptr<GrpcVsockServer>, std::vector<Listener>>>
 GrpcVsockServerBuilder::Build() {
   if (listeners_.size() > 1) {
     std::unordered_set<uint32_t> ports;

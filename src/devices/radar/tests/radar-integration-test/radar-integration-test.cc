@@ -78,7 +78,7 @@ class RadarIntegrationTest : public zxtest::Test {
     fidl::WireSyncClient<BurstReaderProvider> provider_client(
         std::move(provider_client_end_or.value()));
 
-    zx::status endpoints = fidl::CreateEndpoints<BurstReader>();
+    zx::result endpoints = fidl::CreateEndpoints<BurstReader>();
     ASSERT_OK(endpoints.status_value());
     auto [client_end, server_end] = std::move(*endpoints);
 

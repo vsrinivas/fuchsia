@@ -60,7 +60,7 @@ inline const char* PanelTypeToNameString(uint32_t panel_type_id) {
 
 namespace touch {
 
-zx::status<fuchsia_mem::wire::Range> Gt6853Device::GetConfigFileVmo() {
+zx::result<fuchsia_mem::wire::Range> Gt6853Device::GetConfigFileVmo() {
   size_t actual = 0;
   uint32_t panel_type_id = 0;
   zx_status_t status = DdkGetFragmentMetadata("pdev", DEVICE_METADATA_BOARD_PRIVATE, &panel_type_id,

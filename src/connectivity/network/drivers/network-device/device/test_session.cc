@@ -14,7 +14,7 @@ zx_status_t TestSession::Open(fidl::WireSyncClient<netdev::Device>& netdevice, c
   if ((status = Init(num_descriptors, buffer_size)) != ZX_OK) {
     return status;
   }
-  zx::status info_status = GetInfo();
+  zx::result info_status = GetInfo();
   if (info_status.is_error()) {
     return info_status.status_value();
   }
@@ -58,7 +58,7 @@ zx_status_t TestSession::Init(uint16_t descriptor_count, uint64_t buffer_size) {
   return ZX_OK;
 }
 
-zx::status<netdev::wire::SessionInfo> TestSession::GetInfo() {
+zx::result<netdev::wire::SessionInfo> TestSession::GetInfo() {
   if (!data_vmo_.is_valid() || !descriptors_vmo_.is_valid()) {
     return zx::error(ZX_ERR_BAD_STATE);
   }

@@ -167,7 +167,7 @@ TEST_F(Tas58xxTest, BadSetDai) {
     audio::DaiFormat format = {};
     auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_INVALID_ARGS, format_info.status_value());
   }
 
@@ -183,7 +183,7 @@ TEST_F(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -199,7 +199,7 @@ TEST_F(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -215,7 +215,7 @@ TEST_F(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client_.GetDaiFormats();
     EXPECT_TRUE(IsDaiFormatSupported(format, formats.value()));  // bitmask not checked here.
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -231,7 +231,7 @@ TEST_F(Tas58xxTest, BadSetDai) {
     format.bits_per_sample = 32;
     auto formats = client_.GetDaiFormats();
     EXPECT_FALSE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 }
@@ -1503,7 +1503,7 @@ TEST(Tas58xxTest, Bridged) {
     // Which channel for birdged miode is not checked by IsDaiFormatSupported,
     // so this still returns TRUE.
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 

@@ -21,7 +21,7 @@ constexpr uint64_t kDefaultVolumeSize = 24lu * 1024 * 1024;
 
 }  // namespace
 
-zx::status<uint64_t> ResizeVolume(
+zx::result<uint64_t> ResizeVolume(
     fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume, uint64_t target_bytes,
     bool inside_zxcrypt) {
   // Free all the existing slices.
@@ -112,7 +112,7 @@ zx::status<uint64_t> ResizeVolume(
   return zx::ok(slice_count * slice_size);
 }
 
-zx::status<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
+zx::result<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   if (endpoints.is_error())
     return endpoints.take_error();
@@ -128,7 +128,7 @@ zx::status<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node)
   return zx::ok(std::move(endpoints->client).TakeChannel());
 }
 
-zx::status<std::string> GetDevicePath(fidl::UnownedClientEnd<fuchsia_device::Controller> device) {
+zx::result<std::string> GetDevicePath(fidl::UnownedClientEnd<fuchsia_device::Controller> device) {
   std::string device_path;
   if (auto result = fidl::WireCall(device)->GetTopologicalPath(); result.status() != ZX_OK) {
     return zx::error(result.status());

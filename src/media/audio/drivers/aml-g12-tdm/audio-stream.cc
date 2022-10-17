@@ -202,7 +202,7 @@ zx_status_t AmlG12TdmStream::InitPDev() {
       return ZX_ERR_NOT_SUPPORTED;
     }
 
-    zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
+    zx::result<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
     if (!format_info.is_ok()) {
       zxlogf(ERROR, "could not set DAI format %s", format_info.status_string());
       return format_info.status_value();
@@ -379,7 +379,7 @@ zx_status_t AmlG12TdmStream::UpdateHardwareSettings() {
   }
 
   for (size_t i = 0; i < metadata_.codecs.number_of_codecs; ++i) {
-    zx::status<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
+    zx::result<CodecFormatInfo> format_info = codecs_[i].SetDaiFormat(dai_formats_[i]);
     if (!format_info.is_ok()) {
       zxlogf(ERROR, "failed to set the DAI format");
       return format_info.status_value();

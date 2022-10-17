@@ -24,19 +24,19 @@
 namespace abr {
 
 // For testing only.
-zx::status<fuchsia_paver::wire::Configuration> PartitionUuidToConfiguration(
+zx::result<fuchsia_paver::wire::Configuration> PartitionUuidToConfiguration(
     const fbl::unique_fd& devfs_root, uuid::Uuid uuid);
 // For testing only.
-zx::status<fuchsia_paver::wire::Configuration> CurrentSlotToConfiguration(std::string_view slot);
+zx::result<fuchsia_paver::wire::Configuration> CurrentSlotToConfiguration(std::string_view slot);
 
-zx::status<fuchsia_paver::wire::Configuration> QueryBootConfig(
+zx::result<fuchsia_paver::wire::Configuration> QueryBootConfig(
     const fbl::unique_fd& devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root);
 
 // Interface for interacting with ABR data.
 class Client {
  public:
   // Factory create method.
-  static zx::status<std::unique_ptr<abr::Client>> Create(
+  static zx::result<std::unique_ptr<abr::Client>> Create(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context);
   virtual ~Client() = default;
@@ -45,7 +45,7 @@ class Client {
     return AbrGetBootSlot(&abr_ops_, update_metadata, is_slot_marked_successful);
   }
 
-  zx::status<AbrSlotIndex> GetSlotLastMarkedActive() const {
+  zx::result<AbrSlotIndex> GetSlotLastMarkedActive() const {
     AbrSlotIndex slot;
     auto status = AbrResultToZxStatus(AbrGetSlotLastMarkedActive(&abr_ops_, &slot));
     if (status.is_error()) {
@@ -54,19 +54,19 @@ class Client {
     return zx::ok(slot);
   }
 
-  zx::status<> MarkSlotActive(AbrSlotIndex index) {
+  zx::result<> MarkSlotActive(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotActive(&abr_ops_, index));
   }
 
-  zx::status<> MarkSlotUnbootable(AbrSlotIndex index) {
+  zx::result<> MarkSlotUnbootable(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotUnbootable(&abr_ops_, index));
   }
 
-  zx::status<> MarkSlotSuccessful(AbrSlotIndex index) {
+  zx::result<> MarkSlotSuccessful(AbrSlotIndex index) {
     return AbrResultToZxStatus(AbrMarkSlotSuccessful(&abr_ops_, index));
   }
 
-  zx::status<AbrSlotInfo> GetSlotInfo(AbrSlotIndex index) const {
+  zx::result<AbrSlotInfo> GetSlotInfo(AbrSlotIndex index) const {
     AbrSlotInfo info;
     auto status = AbrResultToZxStatus(AbrGetSlotInfo(&abr_ops_, index, &info));
     if (status.is_error()) {
@@ -75,9 +75,9 @@ class Client {
     return zx::ok(info);
   }
 
-  static zx::status<> AbrResultToZxStatus(AbrResult status);
+  static zx::result<> AbrResultToZxStatus(AbrResult status);
 
-  virtual zx::status<> Flush() const = 0;
+  virtual zx::result<> Flush() const = 0;
 
   void InitializeAbrOps();
 
@@ -112,20 +112,20 @@ class Client {
   static bool WriteAbrMetadataCustom(void* context, const AbrSlotData* a, const AbrSlotData* b,
                                      uint8_t one_shot_recovery);
 
-  virtual zx::status<> Read(uint8_t* buffer, size_t size) = 0;
+  virtual zx::result<> Read(uint8_t* buffer, size_t size) = 0;
 
-  virtual zx::status<> Write(const uint8_t* buffer, size_t size) = 0;
+  virtual zx::result<> Write(const uint8_t* buffer, size_t size) = 0;
 
-  virtual zx::status<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) = 0;
+  virtual zx::result<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) = 0;
 
-  virtual zx::status<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
+  virtual zx::result<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
                                    uint8_t one_shot_recovery) = 0;
 };
 
 class ClientFactory {
  public:
   // Factory create method.
-  static zx::status<std::unique_ptr<abr::Client>> Create(
+  static zx::result<std::unique_ptr<abr::Client>> Create(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context);
 
@@ -134,7 +134,7 @@ class ClientFactory {
   virtual ~ClientFactory() = default;
 
  private:
-  virtual zx::status<std::unique_ptr<abr::Client>> New(
+  virtual zx::result<std::unique_ptr<abr::Client>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) = 0;
 
@@ -145,7 +145,7 @@ class ClientFactory {
 class AbrPartitionClient : public Client {
  public:
   // |partition| should contain AbrData with no offset.
-  static zx::status<std::unique_ptr<abr::Client>> Create(
+  static zx::result<std::unique_ptr<abr::Client>> Create(
       std::unique_ptr<paver::PartitionClient> partition);
 
  private:
@@ -153,20 +153,20 @@ class AbrPartitionClient : public Client {
                      size_t block_size)
       : partition_(std::move(partition)), vmo_(std::move(vmo)), block_size_(block_size) {}
 
-  zx::status<> Read(uint8_t* buffer, size_t size) override;
+  zx::result<> Read(uint8_t* buffer, size_t size) override;
 
-  zx::status<> Write(const uint8_t* buffer, size_t size) override;
+  zx::result<> Write(const uint8_t* buffer, size_t size) override;
 
-  zx::status<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) override {
+  zx::result<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx::status<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
+  zx::result<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
                            uint8_t one_shot_recovery) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx::status<> Flush() const override { return partition_->Flush(); }
+  zx::result<> Flush() const override { return partition_->Flush(); }
 
   std::unique_ptr<paver::PartitionClient> partition_;
   zx::vmo vmo_;

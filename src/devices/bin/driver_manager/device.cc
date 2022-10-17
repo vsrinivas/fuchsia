@@ -836,7 +836,7 @@ void Device::LoadFirmware(LoadFirmwareRequestView request, LoadFirmwareCompleter
 
   dev->coordinator->firmware_loader()->LoadFirmware(
       dev, driver_path, fw_path,
-      [completer = completer.ToAsync()](zx::status<LoadFirmwareResult> result) mutable {
+      [completer = completer.ToAsync()](zx::result<LoadFirmwareResult> result) mutable {
         if (result.is_error()) {
           completer.ReplyError(result.status_value());
           return;
@@ -923,7 +923,7 @@ std::shared_ptr<dfv2::Node> Device::GetBoundNode() {
   return dfv2_bound_device_->node();
 }
 
-zx::status<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
+zx::result<std::shared_ptr<dfv2::Node>> Device::CreateDFv2Device() {
   if (dfv2_bound_device_) {
     return zx::error(ZX_ERR_ALREADY_EXISTS);
   }

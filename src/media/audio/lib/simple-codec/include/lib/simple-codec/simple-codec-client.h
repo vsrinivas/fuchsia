@@ -57,15 +57,15 @@ class SimpleCodecClient {
   //   formats with multiple frame rates, number of channels, etc. just not overly complex ones).
   // - No direct calls to WatchPlugState, the library only expects "hardwired" codecs.
   zx_status_t Reset();
-  zx::status<Info> GetInfo();
+  zx::result<Info> GetInfo();
   zx_status_t Stop();
   zx_status_t Start();
-  zx::status<bool> IsBridgeable();
+  zx::result<bool> IsBridgeable();
   zx_status_t SetBridgedMode(bool bridged);
-  zx::status<DaiSupportedFormats> GetDaiFormats();
-  zx::status<CodecFormatInfo> SetDaiFormat(DaiFormat format);
-  zx::status<GainFormat> GetGainFormat();
-  zx::status<GainState> GetGainState();
+  zx::result<DaiSupportedFormats> GetDaiFormats();
+  zx::result<CodecFormatInfo> SetDaiFormat(DaiFormat format);
+  zx::result<GainFormat> GetGainFormat();
+  zx::result<GainState> GetGainState();
   void SetGainState(GainState state);
 
  protected:
@@ -101,8 +101,8 @@ class SimpleCodecClient {
   std::future<void> codec_torn_down_;
 
   fbl::Mutex gain_state_lock_;
-  zx::status<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_SHOULD_WAIT);
-  zx::status<GainFormat> gain_format_ = zx::error(ZX_ERR_SHOULD_WAIT);
+  zx::result<GainState> gain_state_ TA_GUARDED(gain_state_lock_) = zx::error(ZX_ERR_SHOULD_WAIT);
+  zx::result<GainFormat> gain_format_ = zx::error(ZX_ERR_SHOULD_WAIT);
   std::optional<uint64_t> gain_pe_id_;
   std::optional<uint64_t> mute_pe_id_;
   std::optional<uint64_t> agc_pe_id_;

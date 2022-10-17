@@ -30,7 +30,7 @@ DECLARE_TEST_FUNCTION(vcpu_enable_disable_mmu)
 
 namespace {
 
-zx::status<fuchsia_sysinfo::InterruptControllerType> GetInterruptControllerType() {
+zx::result<fuchsia_sysinfo::InterruptControllerType> GetInterruptControllerType() {
   auto client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
   if (client_end.is_error()) {
     return client_end.take_error();

@@ -35,7 +35,7 @@ class ClockFactory {
   //
   // Errors:
   // * Anything returned by zx_clock_create.
-  virtual zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>> CreateGraphControlledClock(
+  virtual zx::result<std::pair<std::shared_ptr<Clock>, zx::clock>> CreateGraphControlledClock(
       std::string_view name) = 0;
 
   // Creates a clock which wraps the given zx::clock handle.
@@ -43,7 +43,7 @@ class ClockFactory {
   // Errors:
   // * Anything returned by zx_clock_create.
   // * ZX_ERR_NOT_SUPPORTED if the factory doesn't support wrapping zx::clock handles.
-  virtual zx::status<std::shared_ptr<Clock>> CreateWrappedClock(zx::clock handle,
+  virtual zx::result<std::shared_ptr<Clock>> CreateWrappedClock(zx::clock handle,
                                                                 std::string_view name,
                                                                 uint32_t domain,
                                                                 bool adjustable) = 0;
@@ -75,14 +75,14 @@ class ClockRegistry {
   //
   // Errors:
   // * ZX_ERR_NOT_FOUND if a clock with the same koid does not exist.
-  zx::status<std::shared_ptr<Clock>> Find(zx_koid_t koid);
+  zx::result<std::shared_ptr<Clock>> Find(zx_koid_t koid);
 
   // Looks up the clock with the same koid as `handle`.
   //
   // Errors:
   // * ZX_ERR_BAD_HANDLE if the handle is invalid.
   // * ZX_ERR_NOT_FOUND if a clock with the same koid does not exist.
-  zx::status<std::shared_ptr<Clock>> Find(const zx::clock& handle);
+  zx::result<std::shared_ptr<Clock>> Find(const zx::clock& handle);
 
   // TODO(fxbug.dev/87651): also add
   // CreateSynchronizer(source_clock, dest_clock)

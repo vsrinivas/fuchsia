@@ -14,11 +14,11 @@
 
 namespace vmo_test {
 
-zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
+zx::result<PhysVmo> GetTestPhysVmo(size_t size) {
   // We cannot create any physical VMOs without the root resource.
   zx::unowned_resource root_resource = maybe_standalone::GetRootResource();
   if (!root_resource->is_valid()) {
-    return zx::error_status(ZX_ERR_NOT_SUPPORTED);
+    return zx::error_result(ZX_ERR_NOT_SUPPORTED);
   }
 
   // Fetch the address of the test reserved RAM region.  Even with the root
@@ -42,13 +42,13 @@ zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   ram = *boot_options->test_ram_reserve;
   EXPECT_TRUE(ram.paddr.has_value());
   if (!ram.paddr) {
-    return zx::error_status(ZX_ERR_NO_RESOURCES);
+    return zx::error_result(ZX_ERR_NO_RESOURCES);
   }
 
   PhysVmo ret = {.addr = *ram.paddr, .size = ram.size};
   if (size > 0) {
     if (size > ret.size) {
-      return zx::error_status(ZX_ERR_INVALID_ARGS);
+      return zx::error_result(ZX_ERR_INVALID_ARGS);
     }
     ret.size = size;
   }
@@ -57,7 +57,7 @@ zx::status<PhysVmo> GetTestPhysVmo(size_t size) {
   zx_status_t res = zx::vmo::create_physical(*root_resource, ret.addr, ret.size, &ret.vmo);
   EXPECT_OK(res);
   if (res != ZX_OK) {
-    return zx::error_status(res);
+    return zx::error_result(res);
   }
 
   return zx::ok(std::move(ret));

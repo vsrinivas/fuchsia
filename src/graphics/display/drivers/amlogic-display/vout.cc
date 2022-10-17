@@ -247,7 +247,7 @@ void Vout::DisplayDisconnected() {
   }
 }
 
-zx::status<> Vout::PowerOff() {
+zx::result<> Vout::PowerOff() {
   if (type_ == kDsi) {
     dsi_.clock->Disable();
     dsi_.dsi_host->Disable(dsi_.disp_setting);
@@ -256,7 +256,7 @@ zx::status<> Vout::PowerOff() {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> Vout::PowerOn() {
+zx::result<> Vout::PowerOn() {
   if (type_ == kDsi) {
     dsi_.clock->Enable(dsi_.disp_setting);
     dsi_.dsi_host->Enable(dsi_.disp_setting, dsi_.clock->GetBitrate());

@@ -110,7 +110,7 @@ void LoaderServiceTest::AddDirectoryEntry(const fbl::RefPtr<memfs::VnodeDir>& ro
 }
 
 void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client, std::string name,
-                                   zx::status<std::string> expected) {
+                                   zx::result<std::string> expected) {
   auto result = client->LoadObject(fidl::StringView::FromExternal(name));
   ASSERT_TRUE(result.ok());
   auto response = result.Unwrap();
@@ -133,7 +133,7 @@ void LoaderServiceTest::LoadObject(fidl::WireSyncClient<fldsvc::Loader>& client,
 }
 
 void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std::string config,
-                               zx::status<zx_status_t> expected) {
+                               zx::result<zx_status_t> expected) {
   auto result = client->Config(fidl::StringView::FromExternal(config));
   ASSERT_EQ(result.status(), expected.status_value());
   if (expected.is_ok()) {
@@ -142,15 +142,15 @@ void LoaderServiceTest::Config(fidl::WireSyncClient<fldsvc::Loader>& client, std
 }
 
 // static
-zx::status<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
+zx::result<zx::unowned_resource> LoaderServiceTest::GetVmexResource() {
   static zx::resource vmex_resource;
   if (!vmex_resource.is_valid()) {
     zx::channel client, server;
-    auto status = zx::make_status(zx::channel::create(0, &client, &server));
+    auto status = zx::make_result(zx::channel::create(0, &client, &server));
     if (status.is_error()) {
       return status.take_error();
     }
-    status = zx::make_status(fdio_service_connect(
+    status = zx::make_result(fdio_service_connect(
         fidl::DiscoverableProtocolDefaultPath<fkernel::VmexResource>, server.release()));
     if (status.is_error()) {
       return status.take_error();

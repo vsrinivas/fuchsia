@@ -68,7 +68,7 @@ int main(int argc, char** argv) {
   }
 
   if (enter_fastboot) {
-    zx::status<> ret = gigaboot::FastbootTcpMain();
+    zx::result<> ret = gigaboot::FastbootTcpMain();
     if (ret.is_error()) {
       printf("Fastboot failed\n");
       return 1;

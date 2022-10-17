@@ -304,7 +304,7 @@ TEST_F(UsbAudioTest, Inspect) {
   FakeDevice fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
 
-  zx::status<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
+  zx::result<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
   ASSERT_TRUE(ret.is_ok());
   ASSERT_NO_FATAL_FAILURE(ReadInspect(ret.value()->streams().front().inspect().DuplicateVmo()));
 
@@ -534,7 +534,7 @@ TEST_F(UsbAudioTest, EnumerateWithDescriptorIncludingContinuousFrameRatesRange) 
   FakeDeviceContinuousFrameRatesRange fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
 
-  zx::status<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
+  zx::result<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
   ASSERT_TRUE(ret.is_ok());
 
   auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
@@ -616,7 +616,7 @@ TEST_F(UsbAudioTest, EnumerateBadContinuousFrameRatesRange) {
   FakeDeviceBadContinuousFrameRatesRange fake_device(fake_ddk::kFakeParent);
   ASSERT_OK(fake_device.Bind());
 
-  zx::status<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
+  zx::result<UsbAudioDevice*> ret = UsbAudioDevice::DriverBind(fake_device.dev());
   ASSERT_TRUE(ret.is_ok());
 
   // Both interfaces in the descriptor failed to produce valid formats.

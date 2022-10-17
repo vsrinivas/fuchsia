@@ -14,7 +14,7 @@ namespace network {
 namespace tun {
 
 void TunCtl::CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter::Sync& completer) {
-  zx::status tun_device = TunDevice::Create(
+  zx::result tun_device = TunDevice::Create(
       [this](TunDevice* dev) {
         async::PostTask(dispatcher_, [this, dev]() {
           devices_.erase(*dev);
@@ -35,7 +35,7 @@ void TunCtl::CreateDevice(CreateDeviceRequestView request, CreateDeviceCompleter
 }
 
 void TunCtl::CreatePair(CreatePairRequestView request, CreatePairCompleter::Sync& completer) {
-  zx::status tun_pair = TunPair::Create(
+  zx::result tun_pair = TunPair::Create(
       [this](TunPair* pair) {
         async::PostTask(dispatcher_, [this, pair]() {
           device_pairs_.erase(*pair);

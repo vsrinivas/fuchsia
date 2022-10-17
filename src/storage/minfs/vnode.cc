@@ -65,7 +65,7 @@ void VnodeMinfs::InodeSync(PendingWork* transaction, uint32_t flags) {
 
 // Delete all blocks (relative to a file) from "start" (inclusive) to the end of
 // the file. Does not update mtime/atime.
-zx::status<> VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
+zx::result<> VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
   VnodeMapper mapper(this);
   VnodeIterator iterator;
   if (auto status = iterator.Init(&mapper, transaction, start); status.is_error())
@@ -107,9 +107,9 @@ zx::status<> VnodeMinfs::BlocksShrink(PendingWork* transaction, blk_t start) {
   return zx::ok();
 }
 
-zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
+zx::result<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
   if (!indirect_file_) {
-    zx::status<std::unique_ptr<LazyBuffer>> buffer = LazyBuffer::Create(
+    zx::result<std::unique_ptr<LazyBuffer>> buffer = LazyBuffer::Create(
         fs_->bc_.get(), "minfs-indirect-file", static_cast<uint32_t>(fs_->BlockSize()));
     if (buffer.is_error())
       return buffer.take_error();
@@ -123,7 +123,7 @@ zx::status<LazyBuffer*> VnodeMinfs::GetIndirectFile() {
 // TODO(smklein): Even this hack can be optimized; a bitmap could be used to
 // track all 'empty/read/dirty' blocks for each vnode, rather than reading
 // the entire file.
-zx::status<> VnodeMinfs::InitVmo() {
+zx::result<> VnodeMinfs::InitVmo() {
   TRACE_DURATION("minfs", "VnodeMinfs::InitVmo");
   if (vmo_.is_valid()) {
     return zx::ok();
@@ -167,7 +167,7 @@ zx::status<> VnodeMinfs::InitVmo() {
   }
 
   zx_status_t status = fs_->GetMutableBcache()->RunRequests(builder.TakeOperations());
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 #endif
@@ -178,7 +178,7 @@ void VnodeMinfs::AllocateIndirect(PendingWork* transaction, blk_t* block) {
   inode_.block_count++;
 }
 
-zx::status<blk_t> VnodeMinfs::BlockGetWritable(Transaction* transaction, blk_t n) {
+zx::result<blk_t> VnodeMinfs::BlockGetWritable(Transaction* transaction, blk_t n) {
   VnodeMapper mapper(this);
   VnodeIterator iterator;
   if (auto status = iterator.Init(&mapper, transaction, n); status.is_error())
@@ -197,16 +197,16 @@ zx::status<blk_t> VnodeMinfs::BlockGetWritable(Transaction* transaction, blk_t n
   return zx::ok(block);
 }
 
-zx::status<blk_t> VnodeMinfs::BlockGetReadable(blk_t n) {
+zx::result<blk_t> VnodeMinfs::BlockGetReadable(blk_t n) {
   VnodeMapper mapper(this);
-  zx::status<std::pair<blk_t, uint64_t>> mapping = mapper.MapToBlk(BlockRange(n, n + 1));
+  zx::result<std::pair<blk_t, uint64_t>> mapping = mapper.MapToBlk(BlockRange(n, n + 1));
   if (mapping.is_error())
     return mapping.take_error();
 
   return zx::ok(mapping.value().first);
 }
 
-zx::status<> VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, size_t len,
+zx::result<> VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data, size_t len,
                                            size_t off) {
   size_t actual;
   auto status = ReadInternal(transaction, data, len, off, &actual);
@@ -219,7 +219,7 @@ zx::status<> VnodeMinfs::ReadExactInternal(PendingWork* transaction, void* data,
   return zx::ok();
 }
 
-zx::status<> VnodeMinfs::WriteExactInternal(Transaction* transaction, const void* data, size_t len,
+zx::result<> VnodeMinfs::WriteExactInternal(Transaction* transaction, const void* data, size_t len,
                                             size_t off) {
   size_t actual;
   auto status = WriteInternal(transaction, static_cast<const uint8_t*>(data), len, off, &actual);
@@ -233,7 +233,7 @@ zx::status<> VnodeMinfs::WriteExactInternal(Transaction* transaction, const void
   return zx::ok();
 }
 
-zx::status<> VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
+zx::result<> VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
   ZX_ASSERT(inode_.link_count > 0);
 
   // This effectively 'unlinks' the target node without deleting the direntry
@@ -325,7 +325,7 @@ VnodeMinfs::~VnodeMinfs() {
   }
 }
 
-zx::status<> VnodeMinfs::Purge(Transaction* transaction) {
+zx::result<> VnodeMinfs::Purge(Transaction* transaction) {
   {
     std::lock_guard lock(mutex_);
     ZX_DEBUG_ASSERT(open_count() == 0);
@@ -335,7 +335,7 @@ zx::status<> VnodeMinfs::Purge(Transaction* transaction) {
   return fs_->InoFree(transaction, this);
 }
 
-zx::status<> VnodeMinfs::RemoveUnlinked() {
+zx::result<> VnodeMinfs::RemoveUnlinked() {
   ZX_ASSERT(IsUnlinked());
 
   auto transaction_or = fs_->BeginTransaction(0, 0);
@@ -382,7 +382,7 @@ zx_status_t VnodeMinfs::CloseNode() {
 }
 
 // Internal read. Usable on directories.
-zx::status<> VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size_t len, size_t off,
+zx::result<> VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, size_t len, size_t off,
                                       size_t* actual) {
   // clip to EOF
   if (off >= GetSize()) {
@@ -442,7 +442,7 @@ zx::status<> VnodeMinfs::ReadInternal(PendingWork* transaction, void* vdata, siz
 }
 
 // Internal write. Usable on directories.
-zx::status<> VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* data, size_t len,
+zx::result<> VnodeMinfs::WriteInternal(Transaction* transaction, const uint8_t* data, size_t len,
                                        size_t off, size_t* actual) {
   // We should be called after validating offset and length. Assert if they are invalid.
   auto new_size_or = safemath::CheckAdd(len, off);
@@ -649,13 +649,13 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 
 #ifdef __Fuchsia__
 
-zx::status<std::string> VnodeMinfs::GetDevicePath() const {
+zx::result<std::string> VnodeMinfs::GetDevicePath() const {
   return fs_->bc_->device()->GetDevicePath();
 }
 
 #endif
 
-zx::status<> VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
+zx::result<> VnodeMinfs::TruncateInternal(Transaction* transaction, size_t len) {
   // We should be called after validating length. Assert if len is unexpected.
   ZX_ASSERT(len <= kMinfsMaxFileSize);
 

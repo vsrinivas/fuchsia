@@ -204,13 +204,13 @@ std::optional<LogListener> gListener;
 }
 
 zx_status_t debuglog_init(async_dispatcher_t* dispatcher) {
-  zx::status log_client_end = component::Connect<fuchsia_logger::Log>();
+  zx::result log_client_end = component::Connect<fuchsia_logger::Log>();
   if (log_client_end.is_error()) {
     return log_client_end.status_value();
   }
   fidl::WireSyncClient client{std::move(log_client_end.value())};
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }

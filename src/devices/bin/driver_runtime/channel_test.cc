@@ -875,7 +875,7 @@ class Message {
   zx_status_t Write(const fdf::Channel& channel, const fdf::Arena& arena, fdf_txid_t txid) const;
 
   // Synchronously calls to |channel|, with the data and handle buffers allocated using |arena|.
-  zx::status<fdf::Channel::ReadReturn> Call(const fdf::Channel& channel, const fdf::Arena& arena,
+  zx::result<fdf::Channel::ReadReturn> Call(const fdf::Channel& channel, const fdf::Arena& arena,
                                             zx::time deadline = zx::time::infinite()) const;
 
   // Returns whether |read| contains the expected data and number of handles.
@@ -910,7 +910,7 @@ zx_status_t Message::Write(const fdf::Channel& channel, const fdf::Arena& arena,
 }
 
 // Synchronously calls to |channel|, with the data and handle buffers allocated using |arena|.
-zx::status<fdf::Channel::ReadReturn> Message::Call(const fdf::Channel& channel,
+zx::result<fdf::Channel::ReadReturn> Message::Call(const fdf::Channel& channel,
                                                    const fdf::Arena& arena,
                                                    zx::time deadline) const {
   void* data = nullptr;
@@ -1735,7 +1735,7 @@ TEST(UnownedChannelTest, Equality) {
 }
 
 TEST(UnownedChannelTest, Comparison) {
-  zx::status channels = fdf::ChannelPair::Create(0);
+  zx::result channels = fdf::ChannelPair::Create(0);
   ASSERT_EQ(ZX_OK, channels.status_value());
   fdf::Channel c = std::move(channels->end0);
   fdf::UnownedChannel unowned_valid{c};

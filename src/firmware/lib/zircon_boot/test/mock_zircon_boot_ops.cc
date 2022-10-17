@@ -13,7 +13,7 @@ uint32_t AbrCrc32(const void* buf, size_t buf_size) {
   return crc32(0, reinterpret_cast<const uint8_t*>(buf), buf_size);
 }
 
-zx::status<cpp20::span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* part_name,
+zx::result<cpp20::span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char* part_name,
                                                                      size_t offset, size_t size) {
   auto part = partitions_.find(part_name);
   if (part == partitions_.end()) {
@@ -26,7 +26,7 @@ zx::status<cpp20::span<uint8_t>> MockZirconBootOps::GetPartitionSpan(const char*
   return zx::ok(cpp20::span<uint8_t>(data.data() + offset, size));
 }
 
-zx::status<> MockZirconBootOps::ReadFromPartition(const char* part_name, size_t offset, size_t size,
+zx::result<> MockZirconBootOps::ReadFromPartition(const char* part_name, size_t offset, size_t size,
                                                   void* out) {
   auto status = GetPartitionSpan(part_name, offset, size);
   if (status.is_error()) {
@@ -36,7 +36,7 @@ zx::status<> MockZirconBootOps::ReadFromPartition(const char* part_name, size_t 
   return zx::ok();
 }
 
-zx::status<> MockZirconBootOps::WriteToPartition(const char* part_name, size_t offset, size_t size,
+zx::result<> MockZirconBootOps::WriteToPartition(const char* part_name, size_t offset, size_t size,
                                                  const void* payload) {
   auto status = GetPartitionSpan(part_name, offset, size);
   if (status.is_error()) {
@@ -47,7 +47,7 @@ zx::status<> MockZirconBootOps::WriteToPartition(const char* part_name, size_t o
   return zx::ok();
 }
 
-zx::status<size_t> MockZirconBootOps::GetPartitionSize(const char* part_name) {
+zx::result<size_t> MockZirconBootOps::GetPartitionSize(const char* part_name) {
   auto part = partitions_.find(part_name);
   if (part == partitions_.end()) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -99,7 +99,7 @@ void MockZirconBootOps::WriteRollbackIndex(size_t location, uint64_t rollback_in
   rollback_index_[location] = rollback_index;
 }
 
-zx::status<uint64_t> MockZirconBootOps::ReadRollbackIndex(size_t location) const {
+zx::result<uint64_t> MockZirconBootOps::ReadRollbackIndex(size_t location) const {
   auto iter = rollback_index_.find(location);
   if (iter == rollback_index_.end()) {
     return zx::error(ZX_ERR_NOT_FOUND);

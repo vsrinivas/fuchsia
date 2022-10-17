@@ -18,8 +18,8 @@
 
 namespace {
 
-zx::status<zx::resource> GetRootResource() {
-  zx::status<fidl::ClientEnd<fuchsia_boot::RootResource>> client_end =
+zx::result<zx::resource> GetRootResource() {
+  zx::result<fidl::ClientEnd<fuchsia_boot::RootResource>> client_end =
       component::Connect<fuchsia_boot::RootResource>();
   if (client_end.is_error()) {
     printf("mtrace: Could not connect to RootResource service: %s\n", client_end.status_string());
@@ -55,7 +55,7 @@ bool IsIntelPMUSupported() {
 
 TEST(X86MtraceTestCase, GetProperties) {
   perfmon::X86PmuProperties properties;
-  zx::status<zx::resource> root_resource_or_error = GetRootResource();
+  zx::result<zx::resource> root_resource_or_error = GetRootResource();
   zx::resource root_resource = std::move(root_resource_or_error.value());
   ASSERT_TRUE(root_resource_or_error.is_ok(), "failed to get root resource: %s",
               zx_status_get_string(root_resource_or_error.error_value()));
@@ -77,7 +77,7 @@ TEST(X86MtraceTestCase, GetProperties) {
 // Note that MTRACE_KIND_PERFMON is currently single-master; only a single agent needs to or can
 // invoke MTRACE_PERFMON_INIT / MTRACE_PERFMON_FINI at a time.
 TEST(X86MtraceTestCase, InitFini) {
-  zx::status<zx::resource> root_resource_or_error = GetRootResource();
+  zx::result<zx::resource> root_resource_or_error = GetRootResource();
   ASSERT_TRUE(root_resource_or_error.is_ok(), "failed to get root resource: %s",
               zx_status_get_string(root_resource_or_error.error_value()));
   zx::resource root_resource = std::move(root_resource_or_error.value());
@@ -107,7 +107,7 @@ TEST(X86MtraceTestCase, InitFini) {
 }
 
 TEST(X86MtraceTestCase, AssignBuffer) {
-  zx::status<zx::resource> root_resource_or_error = GetRootResource();
+  zx::result<zx::resource> root_resource_or_error = GetRootResource();
   ASSERT_TRUE(root_resource_or_error.is_ok(), "failed to get root resource: %s",
               zx_status_get_string(root_resource_or_error.error_value()));
   zx::resource root_resource = std::move(root_resource_or_error.value());
@@ -149,7 +149,7 @@ TEST(X86MtraceTestCase, AssignBuffer) {
 // counter - the Intel Architectural PMU Fixed-Function Counter 0, 'Instructions Retired'.
 TEST(X86MtraceTestCase, InstructionsRetiredFixedCounterTest) {
   perfmon::X86PmuProperties properties;
-  zx::status<zx::resource> root_resource_or_error = GetRootResource();
+  zx::result<zx::resource> root_resource_or_error = GetRootResource();
   zx::resource root_resource = std::move(root_resource_or_error.value());
   ASSERT_TRUE(root_resource_or_error.is_ok(), "failed to get root resource: %s",
               zx_status_get_string(root_resource_or_error.error_value()));

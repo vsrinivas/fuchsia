@@ -59,7 +59,7 @@ class Directory final : public fs::Vnode {
   zx_status_t Truncate(size_t len) final;
   zx_status_t Append(const void* data, size_t len, size_t* out_end, size_t* out_actual) final;
   zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) final;
-  zx::status<std::string> GetDevicePath() const final;
+  zx::result<std::string> GetDevicePath() const final;
   void Sync(SyncCallback closure) final;
 
   // Other functions

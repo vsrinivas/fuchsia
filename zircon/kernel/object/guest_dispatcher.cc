@@ -18,7 +18,7 @@ KCOUNTER(dispatcher_guest_destroy_count, "dispatcher.guest.destroy")
 
 namespace {
 
-zx::status<ktl::unique_ptr<Guest>> CreateGuest(uint32_t options) {
+zx::result<ktl::unique_ptr<Guest>> CreateGuest(uint32_t options) {
   switch (options) {
     case ZX_GUEST_OPT_NORMAL:
       return NormalGuest::Create();

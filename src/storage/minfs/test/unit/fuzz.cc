@@ -40,12 +40,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   std::unique_ptr<Runner> runner;
   {
     std::unique_ptr device = std::make_unique<FakeBlockDevice>(kBlockCount, kMinfsBlockSize);
-    zx::status bcache_or = Bcache::Create(std::move(device), kBlockCount);
+    zx::result bcache_or = Bcache::Create(std::move(device), kBlockCount);
     ZX_ASSERT_MSG(bcache_or.is_ok(), "Failed to create Bcache: %s", bcache_or.status_string());
-    zx::status mkfs_result = Mkfs(bcache_or.value().get());
+    zx::result mkfs_result = Mkfs(bcache_or.value().get());
     ZX_ASSERT_MSG(mkfs_result.is_ok(), "Mkfs failure: %s", mkfs_result.status_string());
     MountOptions options = {};
-    zx::status fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
+    zx::result fs_or = Runner::Create(loop.dispatcher(), std::move(bcache_or.value()), options);
     ZX_ASSERT_MSG(fs_or.is_ok(), "Failed to create Runner: %s", fs_or.status_string());
     runner = std::move(fs_or.value());
   }
@@ -54,7 +54,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
 
   fbl::RefPtr<fs::Vnode> root_node;
   {
-    zx::status root_or = fs.VnodeGet(kMinfsRootIno);
+    zx::result root_or = fs.VnodeGet(kMinfsRootIno);
     ZX_ASSERT_MSG(root_or.is_ok(), "Failed to get root node: %s", root_or.status_string());
     root_node = std::move(root_or.value());
   }
@@ -83,7 +83,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
         root_node = nullptr;
         // Fsck should always pass regardless of if we flushed any outstanding transactions or not.
         if (fuzzed_data.ConsumeBool()) {
-          zx::status status = fs.BlockingJournalSync();
+          zx::result status = fs.BlockingJournalSync();
           ZX_ASSERT_MSG(status.is_ok(), "Failed to sync: %s", status.status_string());
         }
         loop.RunUntilIdle();

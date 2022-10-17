@@ -14,7 +14,7 @@
 
 class EthClient {
  public:
-  static zx::status<std::unique_ptr<EthClient>> Create(
+  static zx::result<std::unique_ptr<EthClient>> Create(
       async_dispatcher_t* dispatcher, fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end,
       zx::vmo io_vmo, void* io_mem, fit::closure on_rx, fit::closure on_status,
       fit::closure on_closed);
@@ -40,7 +40,7 @@ class EthClient {
   // ZX_OK - completed packets are available.
   zx_status_t WaitTx(zx::time deadline);
 
-  zx::status<fuchsia_hardware_ethernet::wire::DeviceStatus> GetStatus();
+  zx::result<fuchsia_hardware_ethernet::wire::DeviceStatus> GetStatus();
 
  private:
   void OnRxSignal(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

@@ -122,7 +122,7 @@ class AmlPower : public AmlPowerType, public ddk::PowerImplProtocol<AmlPower, dd
     ddk::VregProtocolClient vreg;
     int* current_voltage_index = nullptr;
   };
-  zx::status<ClusterArgs> GetClusterArgs(uint32_t cluster_index);
+  zx::result<ClusterArgs> GetClusterArgs(uint32_t cluster_index);
 
   zx_status_t GetTargetIndex(const ddk::PwmProtocolClient& pwm, uint32_t u_volts,
                              uint32_t* target_index);

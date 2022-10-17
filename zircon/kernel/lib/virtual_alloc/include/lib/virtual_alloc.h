@@ -51,7 +51,7 @@ class VirtualAlloc {
 
   // AllocPages can only be called after after a successful Init call, otherwise it will return an
   // error. Number of pages requested must be non zero.
-  zx::status<vaddr_t> AllocPages(size_t pages);
+  zx::result<vaddr_t> AllocPages(size_t pages);
 
   // Returns a non-zero number of pages at the given virtual address. Partial frees are supported
   // such that if 2 pages were allocated at X it is allowed to FreePages(X, 1) and separately
@@ -104,8 +104,8 @@ class VirtualAlloc {
   zx_status_t AllocMapPages(vaddr_t vaddr, size_t num_pages);
   void UnmapFreePages(vaddr_t vaddr, size_t num_pages);
   void Destroy();
-  zx::status<size_t> BitmapAlloc(size_t num_pages);
-  zx::status<size_t> BitmapAllocRange(size_t num_pages, size_t start, size_t end);
+  zx::result<size_t> BitmapAlloc(size_t num_pages);
+  zx::result<size_t> BitmapAllocRange(size_t num_pages, size_t start, size_t end);
   void BitmapFree(size_t start, size_t num_pages);
   size_t BitmapPages() const;
 

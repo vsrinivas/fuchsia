@@ -13,7 +13,7 @@
 
 namespace {
 
-[[maybe_unused]] zx::status<bool> IsChromebook(
+[[maybe_unused]] zx::result<bool> IsChromebook(
     fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBootloaderVendor();
   zx_status_t status = result.ok() ? result->status : result.status();
@@ -23,7 +23,7 @@ namespace {
   return zx::ok(strncmp(result->vendor.data(), "coreboot", result->vendor.size()) == 0);
 }
 
-zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+zx::result<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
                           char* real_board_name) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBoardName();
   if (!result.ok()) {
@@ -44,7 +44,7 @@ zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysin
   // more specific name from the BIOS (e.g. "NUC7i5DNHE".)
 #if __x86_64__
   {
-    zx::status is_chromebook = IsChromebook(sysinfo);
+    zx::result is_chromebook = IsChromebook(sysinfo);
     if (is_chromebook.is_error()) {
       return is_chromebook.take_error();
     }
@@ -59,7 +59,7 @@ zx::status<> GetBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysin
   return zx::ok();
 }
 
-zx::status<uint32_t> GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
+zx::result<uint32_t> GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo) {
   fidl::WireResult result = fidl::WireCall(sysinfo)->GetBoardRevision();
   if (!result.ok()) {
     return zx::error(result.status());
@@ -73,7 +73,7 @@ zx::status<uint32_t> GetBoardRevision(fidl::UnownedClientEnd<fuchsia_sysinfo::Sy
 
 }  // namespace
 
-zx::status<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+zx::result<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
                                 const char* name, size_t length) {
   if (!sysinfo) {
     return zx::error(ZX_ERR_BAD_HANDLE);
@@ -81,7 +81,7 @@ zx::status<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo>
 
   char real_board_name[ZX_MAX_NAME_LEN] = {};
 
-  if (zx::status<> status = GetBoardName(sysinfo, real_board_name); status.is_error()) {
+  if (zx::result<> status = GetBoardName(sysinfo, real_board_name); status.is_error()) {
     return status.take_error();
   }
   length = std::min(length, ZX_MAX_NAME_LEN);
@@ -89,7 +89,7 @@ zx::status<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo>
   return zx::ok(strncmp(real_board_name, name, length) == 0);
 }
 
-zx::status<> ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
+zx::result<> ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
                            off_t offset, size_t* length) {
   if (!sysinfo) {
     return zx::error(ZX_ERR_BAD_HANDLE);
@@ -102,12 +102,12 @@ zx::status<> ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysi
   auto* board_info = static_cast<board_info_t*>(data);
   memset(board_info, 0, sizeof(*board_info));
 
-  if (zx::status<> status = GetBoardName(sysinfo, board_info->board_name); status.is_error()) {
+  if (zx::result<> status = GetBoardName(sysinfo, board_info->board_name); status.is_error()) {
     return status.take_error();
   }
 
   {
-    zx::status status = GetBoardRevision(sysinfo);
+    zx::result status = GetBoardRevision(sysinfo);
     if (status.is_error()) {
       return status.take_error();
     }

@@ -80,7 +80,7 @@ class RestrictedState {
 
   // Accessor for the arch restricted state member.
   // Will allocate on first call.
-  zx::status<ArchRestrictedState*> GetArchState() {
+  zx::result<ArchRestrictedState*> GetArchState() {
     // If we've already allocated it, just return the existing pointer.
     if (likely(arch_)) {
       return zx::ok(arch_.get());

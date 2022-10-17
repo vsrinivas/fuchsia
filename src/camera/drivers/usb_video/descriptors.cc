@@ -100,7 +100,7 @@ std::map<UvcPixelFormat, fuchsia::sysmem::PixelFormatType> Uvc2SysmemPixelFormat
 
 // Verifies that the iterator is valid, and that the
 // memory it points to is valid for the full length given.
-zx::status<uint8_t> VerifyDescriptor(usb_desc_iter_t* iter) {
+zx::result<uint8_t> VerifyDescriptor(usb_desc_iter_t* iter) {
   usb_descriptor_header_t* header = usb_desc_iter_peek(iter);
   if (header == NULL) {
     return zx::error(ZX_ERR_STOP);
@@ -114,7 +114,7 @@ zx::status<uint8_t> VerifyDescriptor(usb_desc_iter_t* iter) {
 
 // Verify and extract arbitrary struct from the usb descriptor iterator.
 template <class T>
-zx::status<T> GetStruct(usb_desc_iter_t* iter, uint8_t required_type = 0) {
+zx::result<T> GetStruct(usb_desc_iter_t* iter, uint8_t required_type = 0) {
   auto type_or = VerifyDescriptor(iter);
   if (type_or.is_error()) {
     return type_or.take_error();
@@ -134,15 +134,15 @@ zx::status<T> GetStruct(usb_desc_iter_t* iter, uint8_t required_type = 0) {
   return zx::error(ZX_ERR_BAD_STATE);
 }
 
-zx::status<usb_interface_descriptor_t> VerifyStdInterface(usb_desc_iter_t* iter) {
+zx::result<usb_interface_descriptor_t> VerifyStdInterface(usb_desc_iter_t* iter) {
   return GetStruct<usb_interface_descriptor_t>(iter, USB_DT_INTERFACE);
 }
 
-zx::status<usb_cs_interface_descriptor_t> VerifyCSInterface(usb_desc_iter_t* iter) {
+zx::result<usb_cs_interface_descriptor_t> VerifyCSInterface(usb_desc_iter_t* iter) {
   return GetStruct<usb_cs_interface_descriptor_t>(iter, USB_DT_CS_INTERFACE);
 }
 
-zx::status<usb_endpoint_info_descriptor_t> VerifyEndpoint(usb_desc_iter_t* iter) {
+zx::result<usb_endpoint_info_descriptor_t> VerifyEndpoint(usb_desc_iter_t* iter) {
   return GetStruct<usb_endpoint_info_descriptor_t>(iter, USB_DT_ENDPOINT);
 }
 
@@ -158,7 +158,7 @@ bool IsVideoStreamingInterface(usb_desc_iter_t* iter) {
          header_or->b_interface_sub_class == USB_SUBCLASS_VIDEO_STREAMING;
 }
 
-zx::status<uint32_t> GetClockFrequency(usb_desc_iter_t* iter) {
+zx::result<uint32_t> GetClockFrequency(usb_desc_iter_t* iter) {
   auto cs_descrip_or = VerifyCSInterface(iter);
   if (cs_descrip_or.is_error()) {
     return cs_descrip_or.take_error();
@@ -174,7 +174,7 @@ zx::status<uint32_t> GetClockFrequency(usb_desc_iter_t* iter) {
   return zx::ok(vc_header->dwClockFrequency);
 }
 
-zx::status<usb_video_vs_input_header_desc_short> GetInputHeader(usb_desc_iter_t* iter) {
+zx::result<usb_video_vs_input_header_desc_short> GetInputHeader(usb_desc_iter_t* iter) {
   auto cs_descrip_or = VerifyCSInterface(iter);
   if (cs_descrip_or.is_error()) {
     return cs_descrip_or.take_error();
@@ -190,7 +190,7 @@ zx::status<usb_video_vs_input_header_desc_short> GetInputHeader(usb_desc_iter_t*
 // format.  This returned pointer will later be re-cast to the full header type,
 // after verifying that that the size of the type is less than the bLength field
 // of the header.
-zx::status<const usb_video_format_header*> VerifyFormat(usb_desc_iter_t* iter) {
+zx::result<const usb_video_format_header*> VerifyFormat(usb_desc_iter_t* iter) {
   auto cs_descrip_or = VerifyCSInterface(iter);
   if (cs_descrip_or.is_error()) {
     return cs_descrip_or.take_error();
@@ -212,7 +212,7 @@ zx::status<const usb_video_format_header*> VerifyFormat(usb_desc_iter_t* iter) {
 // format.  This returned pointer will later be re-cast to the full header type,
 // after verifying that that the size of the type is less than the bLength field
 // of the header.
-zx::status<const usb_video_frame_header*> VerifyFrame(usb_desc_iter_t* iter) {
+zx::result<const usb_video_frame_header*> VerifyFrame(usb_desc_iter_t* iter) {
   auto cs_descrip_or = VerifyCSInterface(iter);
   if (cs_descrip_or.is_error()) {
     return cs_descrip_or.take_error();
@@ -244,7 +244,7 @@ zx::status<const usb_video_frame_header*> VerifyFrame(usb_desc_iter_t* iter) {
 // TODO(fxbug.dev/104233): Use of dwMaxVideoFrameBufferSize has been deprecated.  The
 // dwMaxVideoFrameSize field obtained from the Video Probe and Commit control exchange
 // should be used instead.
-zx::status<UvcFormat> ParseUvcFormat(const usb_video_format_header* format,
+zx::result<UvcFormat> ParseUvcFormat(const usb_video_format_header* format,
                                      const usb_video_frame_header* frame) {
   // make sure the format type and frame type match:
   auto iter = kAllowedFrames.find(format->bDescriptorSubType);
@@ -327,16 +327,16 @@ zx::status<UvcFormat> ParseUvcFormat(const usb_video_format_header* format,
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::vector<UvcFormat>> GetFormat(usb_desc_iter_t* iter) {
+zx::result<std::vector<UvcFormat>> GetFormat(usb_desc_iter_t* iter) {
   std::vector<UvcFormat> formats;
-  zx::status<const usb_video_format_header*> format_header_or = VerifyFormat(iter);
+  zx::result<const usb_video_format_header*> format_header_or = VerifyFormat(iter);
   if (format_header_or.is_error()) {
     return format_header_or.take_error();
   }
   usb_desc_iter_advance(iter);
   // Now load the frames that come after the format. we should have bNumFrameDescriptors
   for (uint8_t i = 0; i < format_header_or.value()->bNumFrameDescriptors; ++i) {
-    zx::status<const usb_video_frame_header*> frame_header_or = VerifyFrame(iter);
+    zx::result<const usb_video_frame_header*> frame_header_or = VerifyFrame(iter);
     if (frame_header_or.is_error()) {
       return frame_header_or.take_error();
     }
@@ -389,7 +389,7 @@ uint32_t UsbEPIsocBandwidth(const usb_endpoint_info_descriptor_t& ep) {
 
 // Alternate settings consist of a VideoStreaming Standard Interface
 // followed by an endpoint descriptor.
-zx::status<StreamingEndpointSetting> GetAlternateSetting(usb_desc_iter_t* iter) {
+zx::result<StreamingEndpointSetting> GetAlternateSetting(usb_desc_iter_t* iter) {
   if (!IsVideoStreamingInterface(iter)) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -415,7 +415,7 @@ zx::status<StreamingEndpointSetting> GetAlternateSetting(usb_desc_iter_t* iter) 
 
 }  // anonymous namespace
 
-zx::status<StreamingSetting> LoadStreamingSettings(usb_desc_iter_t* iter) {
+zx::result<StreamingSetting> LoadStreamingSettings(usb_desc_iter_t* iter) {
   StreamingSetting settings;
   // Skip past the first few headers
   while (VerifyDescriptor(iter).is_ok() && !IsVideoControlInterface(iter)) {

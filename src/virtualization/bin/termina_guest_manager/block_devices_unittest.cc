@@ -59,7 +59,7 @@ class BlockDevicesTest : public ::testing::Test {
     fvm_path_ = std::move(fvm_path.value());
   }
 
-  zx::status<std::array<uint8_t, GPT_GUID_LEN>> ReadPartitionTypeGuid(const std::string& path) {
+  zx::result<std::array<uint8_t, GPT_GUID_LEN>> ReadPartitionTypeGuid(const std::string& path) {
     fuchsia::hardware::block::partition::PartitionSyncPtr partition;
     zx_status_t status =
         fdio_service_connect(path.c_str(), partition.NewRequest().TakeChannel().release());
@@ -97,7 +97,7 @@ class BlockDevicesTest : public ::testing::Test {
     uint64_t size;
     std::string partition_name;
   };
-  zx::status<VolumeInfo> QueryVolumeInfo(const std::string& path) {
+  zx::result<VolumeInfo> QueryVolumeInfo(const std::string& path) {
     fuchsia::hardware::block::partition::PartitionSyncPtr partition;
     zx_status_t status =
         fdio_service_connect(path.c_str(), partition.NewRequest().TakeChannel().release());

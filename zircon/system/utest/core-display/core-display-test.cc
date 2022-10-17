@@ -85,11 +85,11 @@ class CoreDisplayTest : public zxtest::Test {
 };
 
 void CoreDisplayTest::SetUp() {
-  zx::status device_server_channel =
+  zx::result device_server_channel =
       fidl::CreateEndpoints<fhd::Controller>(&device_client_channel_);
   ASSERT_TRUE(device_server_channel.is_ok(), "%s", device_server_channel.status_string());
 
-  zx::status dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  zx::result dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
   ASSERT_TRUE(dc_endpoints.is_ok(), "%s", dc_endpoints.status_string());
 
   fbl::unique_fd fd;
@@ -137,7 +137,7 @@ void CoreDisplayTest::SetUp() {
   } while (!event_handler.has_display());
 
   // get sysmem
-  zx::status sysmem_allocator = component::Connect<sysmem::Allocator>();
+  zx::result sysmem_allocator = component::Connect<sysmem::Allocator>();
   ASSERT_TRUE(sysmem_allocator.is_ok(), "%s", sysmem_allocator.status_string());
   sysmem_allocator_ = fidl::WireSyncClient(std::move(sysmem_allocator.value()));
 }
@@ -163,7 +163,7 @@ void CoreDisplayTest::ImportEvent() {
 
 void CoreDisplayTest::CreateToken() {
   // Create token and keep the client
-  zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  zx::result endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   // Pass token server to sysmem allocator
@@ -176,7 +176,7 @@ void CoreDisplayTest::CreateToken() {
 
 void CoreDisplayTest::DuplicateAndImportToken() {
   // Duplicate the token, to be passed to the display controller
-  zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  zx::result endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   {
@@ -208,7 +208,7 @@ void CoreDisplayTest::FinalizeClientConstraints() {
   // now that we have provided all that's needed to the display controllers, we can
   // return our token, set our own constraints and for allocation
   // Before that, we need to create a channel to communicate with the buffer collection
-  zx::status endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
+  zx::result endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   {
@@ -319,10 +319,10 @@ void CoreDisplayTest::CaptureSetup() {
 }
 
 TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
-  zx::status device_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  zx::result device_endpoints = fidl::CreateEndpoints<fhd::Controller>();
   ASSERT_TRUE(device_endpoints.is_ok(), "%s", device_endpoints.status_string());
 
-  zx::status dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  zx::result dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
   ASSERT_TRUE(dc_endpoints.is_ok(), "%s", dc_endpoints.status_string());
 
   const fidl::WireResult result =

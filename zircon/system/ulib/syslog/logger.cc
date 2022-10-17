@@ -153,8 +153,8 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
 #ifndef SYSLOG_STATIC
   if (config->log_sink_channel == ZX_HANDLE_INVALID &&
       config->log_sink_socket == ZX_HANDLE_INVALID) {
-    zx::status socket = []() -> zx::status<zx::socket> {
-      zx::status logger = service::Connect<fuchsia_logger::LogSink>();
+    zx::result socket = []() -> zx::result<zx::socket> {
+      zx::result logger = service::Connect<fuchsia_logger::LogSink>();
       if (logger.is_error()) {
         return logger.take_error();
       }

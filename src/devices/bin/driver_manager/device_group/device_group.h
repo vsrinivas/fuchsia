@@ -33,7 +33,7 @@ class DeviceGroup {
 
   // Called when DeviceGroupManager receives a MatchedDeviceGroupNode.
   // Returns ZX_ERR_ALREADY_BOUND if it's already bound. See BindNodeImpl() for return type details.
-  zx::status<std::optional<DeviceOrNode>> BindNode(
+  zx::result<std::optional<DeviceOrNode>> BindNode(
       fuchsia_driver_index::wire::MatchedDeviceGroupInfo info, const DeviceOrNode& device_or_node);
 
   // Exposed for testing.
@@ -45,7 +45,7 @@ class DeviceGroup {
   // std::nullopt. In DFv2, if the composite is complete, it returns a pointer to the new node.
   // Otherwise, it returns std::nullopt. The lifetime of this node object is managed by
   // the parent nodes.
-  virtual zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
+  virtual zx::result<std::optional<DeviceOrNode>> BindNodeImpl(
       fuchsia_driver_index::wire::MatchedDeviceGroupInfo info,
       const DeviceOrNode& device_or_node) = 0;
 

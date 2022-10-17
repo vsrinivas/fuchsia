@@ -142,7 +142,7 @@ void RingBufferReservation::Reset() {
   ZX_DEBUG_ASSERT(!Reserved());
 }
 
-zx::status<size_t> RingBufferReservation::CopyRequests(
+zx::result<size_t> RingBufferReservation::CopyRequests(
     cpp20::span<const storage::UnbufferedOperation> in_operations, size_t offset,
     std::vector<storage::BufferedOperation>* out_operations) {
   ZX_DEBUG_ASSERT_MSG(Reserved(), "Copying to invalid reservation");

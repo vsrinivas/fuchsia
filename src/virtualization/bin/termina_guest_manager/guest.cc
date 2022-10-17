@@ -134,7 +134,7 @@ Guest::~Guest() {
   }
 }
 
-zx::status<> Guest::StartGrpcServer() {
+zx::result<> Guest::StartGrpcServer() {
   TRACE_DURATION("termina_guest_manager", "Guest::StartGrpcServer");
   fuchsia::virtualization::HostVsockEndpointPtr socket_endpoint;
 

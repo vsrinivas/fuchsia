@@ -42,7 +42,7 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
 // Allocates empty partitions inside the volume manager. Note that the partitions
 // are simply allocated; the actual size of each partition (number of slices etc)
 // is determined when formatting each volume.
-zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
+zx::result<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
                                      const fbl::unique_fd& fvm_fd);
 
 // Given an fd representing a "sparse FVM format", fill the FVM with the
@@ -50,7 +50,7 @@ zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
 //
 // Decides to overwrite or create new partitions based on the type
 // GUID, not the instance GUID.
-zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
+zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
                                  std::unique_ptr<PartitionClient> partition_client,
                                  std::unique_ptr<fvm::ReaderInterface> payload);
 

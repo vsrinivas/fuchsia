@@ -286,7 +286,7 @@ Node::Node(std::string_view name, std::vector<Node*> parents, NodeManager* node_
   TransformToValidName(name_);
 }
 
-zx::status<std::shared_ptr<Node>> Node::CreateCompositeNode(
+zx::result<std::shared_ptr<Node>> Node::CreateCompositeNode(
     std::string_view node_name, std::vector<Node*> parents, std::vector<std::string> parents_names,
     std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
     NodeManager* driver_binder, async_dispatcher_t* dispatcher) {
@@ -573,7 +573,7 @@ void Node::AddChild(AddChildRequestView request, AddChildCompleter::Sync& comple
   completer.ReplySuccess();
 }
 
-zx::status<> Node::StartDriver(
+zx::result<> Node::StartDriver(
     fuchsia_component_runner::wire::ComponentStartInfo start_info,
     fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller) {
   auto url = start_info.resolved_url().get();

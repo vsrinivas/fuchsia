@@ -16,12 +16,12 @@ class VmoReader {
  public:
   VmoReader(fuchsia_mem::wire::Buffer buffer) : vmo_(std::move(buffer.vmo)), size_(buffer.size) {}
 
-  zx::status<size_t> Read(void* buf, size_t buf_size) {
+  zx::result<size_t> Read(void* buf, size_t buf_size) {
     if (offset_ >= size_) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
     const auto size = std::min(size_ - offset_, buf_size);
-    auto status = zx::make_status(vmo_.read(buf, offset_, size));
+    auto status = zx::make_result(vmo_.read(buf, offset_, size));
     if (status.is_error()) {
       return status.take_error();
     }

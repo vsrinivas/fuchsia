@@ -41,7 +41,7 @@ bool BaseAllocator::CheckBlocksAllocated(uint64_t start_block, uint64_t end_bloc
   return result;
 }
 
-zx::status<bool> BaseAllocator::IsBlockAllocated(uint64_t block_number) const {
+zx::result<bool> BaseAllocator::IsBlockAllocated(uint64_t block_number) const {
   if (block_number >= block_bitmap_.size()) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
@@ -96,7 +96,7 @@ ReservedExtent BaseAllocator::FreeBlocks(const Extent& extent) {
 
 zx_status_t BaseAllocator::ReserveNodes(uint64_t num_nodes, std::vector<ReservedNode>* out_nodes) {
   for (uint64_t i = 0; i < num_nodes; i++) {
-    zx::status<ReservedNode> node = ReserveNode();
+    zx::result<ReservedNode> node = ReserveNode();
     if (node.is_error()) {
       out_nodes->clear();
       return node.status_value();
@@ -106,11 +106,11 @@ zx_status_t BaseAllocator::ReserveNodes(uint64_t num_nodes, std::vector<Reserved
   return ZX_OK;
 }
 
-zx::status<ReservedNode> BaseAllocator::ReserveNode() {
-  zx::status<uint32_t> node = FindNode();
+zx::result<ReservedNode> BaseAllocator::ReserveNode() {
+  zx::result<uint32_t> node = FindNode();
   if (node.is_error()) {
     // If we didn't find any free inodes, try adding more.
-    if (zx::status<> status = AddNodes(); status.is_error()) {
+    if (zx::result<> status = AddNodes(); status.is_error()) {
       return zx::error(ZX_ERR_NO_SPACE);
     }
     node = FindNode();
@@ -354,7 +354,7 @@ zx_status_t BaseAllocator::FindBlocks(uint64_t start, uint64_t num_blocks,
   return ZX_OK;
 }
 
-zx::status<uint32_t> BaseAllocator::FindNode() {
+zx::result<uint32_t> BaseAllocator::FindNode() {
   size_t i;
   if (node_bitmap_->Allocate(&i) != ZX_OK) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);

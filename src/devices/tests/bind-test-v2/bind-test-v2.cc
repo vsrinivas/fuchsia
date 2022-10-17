@@ -50,7 +50,7 @@ class BindCompilerV2Test : public gtest::TestLoopFixture {
     status = device_watcher::RecursiveWaitForFile(root_fd, "sys/test/test", &out);
     ASSERT_EQ(status, ZX_OK);
 
-    zx::status root_device_client_end =
+    zx::result root_device_client_end =
         fdio_cpp::FdioCaller(std::move(out)).take_as<fuchsia_device_test::RootDevice>();
     ASSERT_EQ(root_device_client_end.status_value(), ZX_OK);
     fidl::WireSyncClient root_device{std::move(*root_device_client_end)};

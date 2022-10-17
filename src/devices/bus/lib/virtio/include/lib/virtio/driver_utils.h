@@ -19,7 +19,7 @@
 
 namespace virtio {
 // Get the bti and virtio backend for a given pci virtio device.
-zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
+zx::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
     zx_device_t* bus_device);
 
 // Creates a Virtio device by determining the backend and moving that into

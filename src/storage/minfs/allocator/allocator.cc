@@ -43,7 +43,7 @@ Allocator::~Allocator() {
   ZX_ASSERT(pending_changes_.empty());
 }
 
-zx::status<> Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
+zx::result<> Allocator::LoadStorage(fs::BufferedOperationsBuilder* builder) {
   std::scoped_lock lock(lock_);
   storage::OwnedVmoid vmoid;
   auto status = storage_->AttachVmo(map_.StorageUnsafe()->GetVmo(), &vmoid);

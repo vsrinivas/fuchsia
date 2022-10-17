@@ -45,15 +45,15 @@ class BlockDevice : public BlockDeviceInterface {
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
-  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
+  zx::result<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
       const char* topological_path) const override;
-  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
+  zx::result<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
       fbl::unique_fd fd) const override;
   void AddData(Copier) override;
-  zx::status<Copier> ExtractData() override;
+  zx::result<Copier> ExtractData() override;
   fs_management::DiskFormat GetFormat() override;
   void SetFormat(fs_management::DiskFormat format) override;
-  zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override;
+  zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override;
   const fuchsia_hardware_block_partition::wire::Guid& GetInstanceGuid() const override;
   const fuchsia_hardware_block_partition::wire::Guid& GetTypeGuid() const override;
   zx_status_t AttachDriver(const std::string_view& driver) override;
@@ -63,7 +63,7 @@ class BlockDevice : public BlockDeviceInterface {
   zx_status_t CheckFilesystem() override;
   zx_status_t FormatFilesystem() override;
   zx_status_t MountFilesystem() override;
-  zx::status<std::string> VeritySeal() override;
+  zx::result<std::string> VeritySeal() override;
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) override;
   bool ShouldAllowAuthoringFactory() override;
   zx_status_t SetPartitionMaxSize(const std::string& fvm_path, uint64_t max_byte_size) override;
@@ -74,7 +74,7 @@ class BlockDevice : public BlockDeviceInterface {
   fs_management::DiskFormat content_format() const override;
   const std::string& topological_path() const override { return topological_path_; }
   const std::string& partition_name() const override;
-  zx::status<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
+  zx::result<fidl::ClientEnd<fuchsia_io::Node>> GetDeviceEndPoint() const;
   zx_status_t CheckCustomFilesystem(fs_management::DiskFormat format) const;
   zx_status_t FormatCustomFilesystem(fs_management::DiskFormat format);
 

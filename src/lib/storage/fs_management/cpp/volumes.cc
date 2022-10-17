@@ -28,7 +28,7 @@ namespace fs_management {
 
 namespace {
 
-zx::status<> CheckExists(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+zx::result<> CheckExists(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                          const std::string& path) {
   // Check if the volume exists.  This way, we can return an explicit NOT_FOUND if absent.
   // TODO(fxbug.dev/93066): Check the epitaph of the call to Mount instead.
@@ -53,7 +53,7 @@ zx::status<> CheckExists(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_d
 }  // namespace
 
 __EXPORT
-zx::status<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+zx::result<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                           std::string_view name,
                           fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
                           zx::channel crypt_client) {
@@ -73,7 +73,7 @@ zx::status<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_
 }
 
 __EXPORT
-zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+zx::result<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                         std::string_view name, fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
                         zx::channel crypt_client) {
   std::string path = "volumes/" + std::string(name);
@@ -96,7 +96,7 @@ zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_di
   return zx::ok();
 }
 
-__EXPORT zx::status<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+__EXPORT zx::result<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                                   std::string_view name, zx::channel crypt_client) {
   std::string path = "volumes/" + std::string(name);
   if (auto status = CheckExists(exposed_dir, path); status.is_error()) {

@@ -196,16 +196,16 @@ bool LatencyTest(perftest::RepeatState* state, const uint16_t buffer_count) {
 
   network::FakeDeviceImpl impl(state);
 
-  zx::status device_status =
+  zx::result device_status =
       network::internal::DeviceInterface::Create(loop.dispatcher(), impl.client());
   ZX_ASSERT_OK(device_status.status_value(), "failed to create device");
   std::unique_ptr device = std::move(device_status.value());
 
-  zx::status device_endpoints = fidl::CreateEndpoints<network::netdev::Device>();
+  zx::result device_endpoints = fidl::CreateEndpoints<network::netdev::Device>();
   ZX_ASSERT_OK(device_endpoints.status_value(), "failed to create device endpoints");
   ZX_ASSERT_OK(device->Bind(std::move(device_endpoints->server)), "failed to bind to device");
 
-  zx::status port_endpoints = fidl::CreateEndpoints<network::netdev::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<network::netdev::Port>();
   ZX_ASSERT_OK(port_endpoints.status_value(), "failed to create port endpoints");
   ZX_ASSERT_OK(
       device->BindPort(network::FakeDeviceImpl::kPortId, std::move(port_endpoints->server)),

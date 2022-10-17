@@ -28,7 +28,7 @@ AsidAllocator::AsidAllocator(enum arm64_asid_width width_override) {
 
 AsidAllocator::~AsidAllocator() {}
 
-zx::status<uint16_t> AsidAllocator::Alloc() {
+zx::result<uint16_t> AsidAllocator::Alloc() {
   uint16_t new_asid;
 
   // use the bitmap allocator to allocate ids in the range of
@@ -59,7 +59,7 @@ zx::status<uint16_t> AsidAllocator::Alloc() {
   return zx::ok(new_asid);
 }
 
-zx::status<> AsidAllocator::Free(uint16_t asid) {
+zx::result<> AsidAllocator::Free(uint16_t asid) {
   LTRACEF("free asid %#x\n", asid);
 
   Guard<Mutex> al{&lock_};

@@ -42,7 +42,7 @@ std::optional<zx::vmo> IcdList::GetVmoMatchingSystemLib(const std::string& libra
     // Only ever return clones of the original VMO to clients.  If we handed out
     // the original VMO, even without ZX_RIGHT_WRITE, the client could still
     // modify it using zx_process_write_memory.
-    zx::status<zx::vmo> result = icd->CloneVmo();
+    zx::result<zx::vmo> result = icd->CloneVmo();
 
     if (result.is_ok()) {
       return {std::move(result.value())};

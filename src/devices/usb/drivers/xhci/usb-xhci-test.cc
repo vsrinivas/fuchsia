@@ -485,7 +485,7 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
   return ZX_OK;
 }
 
-zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
+zx::result<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
   fbl::AutoLock _(&mutex_);
   auto new_trb = static_cast<XhciHarness*>(hci_->GetTestHarness())->CreateTRBs(count);
   new_trb->prev = static_cast<FakeTRB*>(trbs_)->phys();
@@ -500,7 +500,7 @@ zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
 
 constexpr auto kPeekPtr = 0x13823990000;
 
-zx::status<CRCR> TransferRing::TransferRing::PeekCommandRingControlRegister(uint8_t cap_length) {
+zx::result<CRCR> TransferRing::TransferRing::PeekCommandRingControlRegister(uint8_t cap_length) {
   fbl::AutoLock l(&mutex_);
   CRCR cr;
   cr.set_RCS(pcs_);

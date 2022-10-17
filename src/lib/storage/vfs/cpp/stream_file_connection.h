@@ -51,8 +51,8 @@ class StreamFileConnection final : public FileConnection {
   zx_status_t ReadAtInternal(void* data, size_t len, size_t offset, size_t* out_actual);
   zx_status_t WriteInternal(const void* data, size_t len, size_t* out_actual);
   zx_status_t WriteAtInternal(const void* data, size_t len, size_t offset, size_t* out_actual);
-  zx::status<fuchsia_io::wire::OpenFlags> GetFlagsInternal();
-  zx::status<> SetFlagsInternal(fuchsia_io::wire::OpenFlags flags);
+  zx::result<fuchsia_io::wire::OpenFlags> GetFlagsInternal();
+  zx::result<> SetFlagsInternal(fuchsia_io::wire::OpenFlags flags);
 
   zx::stream stream_;
 };

@@ -64,7 +64,7 @@ class FakeCrosAcpi : public fidl::testing::WireTestBase<fuchsia_acpi_chromeos::D
     completer.ReplySuccess(active_slot_);
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_acpi_chromeos::Device>> GetClient(
+  zx::result<fidl::ClientEnd<fuchsia_acpi_chromeos::Device>> GetClient(
       async_dispatcher_t* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_acpi_chromeos::Device>();
     if (endpoints.is_error()) {
@@ -88,7 +88,7 @@ class FakeFirmwareParam : public fidl::WireServer<fuchsia_vboot::FirmwareParam> 
     completer.ReplySuccess();
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_vboot::FirmwareParam>> GetClient(
+  zx::result<fidl::ClientEnd<fuchsia_vboot::FirmwareParam>> GetClient(
       async_dispatcher_t* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_vboot::FirmwareParam>();
     if (endpoints.is_error()) {
@@ -112,7 +112,7 @@ class FakeFlashmap : public fidl::WireServer<fuchsia_nand_flashmap::Flashmap> {
     }
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_nand_flashmap::Flashmap>> GetClient(
+  zx::result<fidl::ClientEnd<fuchsia_nand_flashmap::Flashmap>> GetClient(
       async_dispatcher_t* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_nand_flashmap::Flashmap>();
     if (endpoints.is_error()) {

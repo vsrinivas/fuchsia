@@ -43,7 +43,7 @@ std::vector<std::string> MountOptions::as_argv(const char *binary) const {
   return argv;
 }
 
-zx::status<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_options() const {
+zx::result<fuchsia_fs_startup::wire::StartOptions> MountOptions::as_start_options() const {
   fuchsia_fs_startup::wire::StartOptions options;
 
   options.read_only = readonly;

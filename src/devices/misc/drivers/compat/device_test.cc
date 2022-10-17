@@ -176,7 +176,7 @@ class DeviceTest : public gtest::TestLoopFixture {
   }
 
  private:
-  zx::status<driver::Namespace> CreateNamespace(fidl::ClientEnd<fio::Directory> client_end) {
+  zx::result<driver::Namespace> CreateNamespace(fidl::ClientEnd<fio::Directory> client_end) {
     fidl::Arena arena;
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries(arena, 1);
     entries[0].Allocate(arena);

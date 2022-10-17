@@ -20,11 +20,11 @@ int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
 
   component::OutgoingDirectory outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
-  if (const zx::status status = outgoing.AddProtocol<fuchsia_sysinfo::SysInfo>(
+  if (const zx::result status = outgoing.AddProtocol<fuchsia_sysinfo::SysInfo>(
           [](fidl::ServerEnd<fuchsia_sysinfo::SysInfo> server_end) {
             constexpr char kSysInfoPath[] = "/dev/sys/platform";
 
-            if (const zx::status status = component::Connect<fuchsia_sysinfo::SysInfo>(
+            if (const zx::result status = component::Connect<fuchsia_sysinfo::SysInfo>(
                     std::move(server_end), kSysInfoPath);
                 status.is_error()) {
               fprintf(stderr, "sysinfo: component::Connect(\"%s\") = %s\n", kSysInfoPath,
@@ -36,7 +36,7 @@ int main(int argc, const char** argv) {
     return -1;
   }
 
-  if (const zx::status status = outgoing.ServeFromStartupInfo(); status.is_error()) {
+  if (const zx::result status = outgoing.ServeFromStartupInfo(); status.is_error()) {
     fprintf(stderr, "sysinfo: outgoing.ServeFromStartupInfo() = %s\n", status.status_string());
     return -1;
   }

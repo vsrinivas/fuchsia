@@ -78,7 +78,7 @@ class RamInfoTest : public zxtest::Test {
   RamInfoTest() : zxtest::Test(), loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   void SetUp() override {
-    zx::status server = fidl::CreateEndpoints<fuchsia_hardware_ram_metrics::Device>(&client_);
+    zx::result server = fidl::CreateEndpoints<fuchsia_hardware_ram_metrics::Device>(&client_);
     ASSERT_OK(server.status_value());
     ASSERT_OK(fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(*server), &fake_device_));
     loop_.StartThread("ram-info-test-loop");

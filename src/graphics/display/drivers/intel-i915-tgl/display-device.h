@@ -102,10 +102,10 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   void set_type(Type type) { type_ = type; }
 
   virtual bool HasBacklight() { return false; }
-  virtual zx::status<> SetBacklightState(bool power, double brightness) {
+  virtual zx::result<> SetBacklightState(bool power, double brightness) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
-  virtual zx::status<FidlBacklight::wire::State> GetBacklightState() {
+  virtual zx::result<FidlBacklight::wire::State> GetBacklightState() {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 

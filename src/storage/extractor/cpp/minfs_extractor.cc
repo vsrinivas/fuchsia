@@ -36,12 +36,12 @@ bool IsPii(const minfs::Inode& inode, minfs::BlockType type) {
 // Walks the file system and collects interesting metadata.
 class FsWalker {
  public:
-  static zx::status<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
+  static zx::result<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
                                                       Extractor& extractor);
-  zx::status<> Walk() const;
+  zx::result<> Walk() const;
 
  private:
-  zx::status<> ReadBlock(uint64_t block_number, uint8_t* buf) const {
+  zx::result<> ReadBlock(uint64_t block_number, uint8_t* buf) const {
     off_t offset;
     if (!safemath::CheckMul(block_number, Info().block_size).AssignIfValid(&offset)) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
@@ -61,7 +61,7 @@ class FsWalker {
   // All the block numbers stored in double indirect and indirect blocks are relative to
   // Superblock.DataStartBlock(). This helper routine converts such block numbers to absolute block
   // number.
-  zx::status<uint32_t> DataBlockToAbsoluteBlock(uint32_t n) const {
+  zx::result<uint32_t> DataBlockToAbsoluteBlock(uint32_t n) const {
     auto blk_or = safemath::CheckAdd(n, static_cast<uint32_t>(Info().DataStartBlock()));
     if (blk_or.IsValid()) {
       return zx::ok(blk_or.ValueOrDie());
@@ -71,10 +71,10 @@ class FsWalker {
 
   // Given a block that belongs to a file/directory, this function adds the block to extractor with
   // right set of properties.
-  zx::status<> InodeBlockHandler(uint32_t block_number, bool pii) const;
+  zx::result<> InodeBlockHandler(uint32_t block_number, bool pii) const;
 
   // Walks indirect and double indirect block at block_number.
-  zx::status<> WalkXkIndirects(const minfs::Inode& inode, minfs::ino_t ino, uint32_t block_number,
+  zx::result<> WalkXkIndirects(const minfs::Inode& inode, minfs::ino_t ino, uint32_t block_number,
                                bool is_double_indirect) const;
 
   // Returns reference to inode for given inode number
@@ -85,7 +85,7 @@ class FsWalker {
 
   // Walks all in-use inode and calls handler on those.
   // "in-use" here means the file is marked as allocated in inode bitmap table.
-  zx::status<> WalkInodes() const;
+  zx::result<> WalkInodes() const;
 
   // Returns maximum addressable block in the fs.
   uint64_t BlockLimit() const { return Info().DataStartBlock() + DataBlocks(Info()); }
@@ -95,11 +95,11 @@ class FsWalker {
 
   // Walks the partition and marks all bytes as reported by ByteLimit() as unused for non-fvm
   // partition or unmapped for fvm partition.
-  zx::status<> WalkPartition() const;
+  zx::result<> WalkPartition() const;
 
   // Walks different segments, like inode table and bitmaps except data segment, of the filesystem.
   // Marks them as data unmodified.
-  zx::status<> WalkSegments() const;
+  zx::result<> WalkSegments() const;
 
   // Returns a reference to loaded superblock.
   const minfs::Superblock& Info() const { return info_; }
@@ -114,15 +114,15 @@ class FsWalker {
 
   // Loads superblock located at start_offset. If the copy of superblock has valid
   // magic values, the function returns zx::ok().
-  zx::status<> TryLoadSuperblock(uint64_t start_offset);
+  zx::result<> TryLoadSuperblock(uint64_t start_offset);
 
   // Loads one valid copy of superblock from the input_fd_.
   // Primary superblock location is given highest priority followed by backup superblock
   // of fvm partition and then non-fvm partition.
-  zx::status<> LoadSuperblock();
+  zx::result<> LoadSuperblock();
 
   // Loads entire contents of inode table in memory.
-  zx::status<> LoadInodeTable();
+  zx::result<> LoadInodeTable();
 
   // The valid copy of superblock.
   minfs::Superblock info_;
@@ -140,7 +140,7 @@ class FsWalker {
 FsWalker::FsWalker(fbl::unique_fd input_fd, Extractor& extractor)
     : extractor_(extractor), input_fd_(std::move(input_fd)) {}
 
-zx::status<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
+zx::result<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
                                                        Extractor& extractor) {
   auto walker = std::unique_ptr<FsWalker>(new FsWalker(std::move(input_fd), extractor));
 
@@ -154,7 +154,7 @@ zx::status<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
   return zx::ok(std::move(walker));
 }
 
-zx::status<> FsWalker::Walk() const {
+zx::result<> FsWalker::Walk() const {
   if (auto status = WalkPartition(); status.is_error()) {
     return status;
   }
@@ -198,7 +198,7 @@ bool FsWalker::IsMapped(uint32_t block_number) const {
   return false;
 }
 
-zx::status<> FsWalker::InodeBlockHandler(uint32_t block_number, bool pii) const {
+zx::result<> FsWalker::InodeBlockHandler(uint32_t block_number, bool pii) const {
   ExtentProperties properties = {.extent_kind = ExtentKind::Data,
                                  .data_kind = DataKind::Unmodified};
 
@@ -215,7 +215,7 @@ zx::status<> FsWalker::InodeBlockHandler(uint32_t block_number, bool pii) const 
   return extractor_.AddBlock(block_number, properties);
 }
 
-zx::status<> FsWalker::WalkXkIndirects(const minfs::Inode& inode, minfs::ino_t ino,
+zx::result<> FsWalker::WalkXkIndirects(const minfs::Inode& inode, minfs::ino_t ino,
                                        uint32_t block_number, bool is_double_indirect) const {
   ZX_ASSERT(block_number >= Info().DataStartBlock());
   if (block_number == Info().DataStartBlock()) {
@@ -261,7 +261,7 @@ zx::status<> FsWalker::WalkXkIndirects(const minfs::Inode& inode, minfs::ino_t i
   return zx::ok();
 }
 
-zx::status<> FsWalker::WalkInodes() const {
+zx::result<> FsWalker::WalkInodes() const {
   for (minfs::ino_t ino = 0; ino < Info().inode_count; ino++) {
     auto inode = GetInode(ino);
     if (inode.magic != minfs::kMinfsMagicFile && inode.magic != minfs::kMinfsMagicDir) {
@@ -310,7 +310,7 @@ zx::status<> FsWalker::WalkInodes() const {
   return zx::ok();
 }
 
-zx::status<> FsWalker::WalkPartition() const {
+zx::result<> FsWalker::WalkPartition() const {
   auto max_offset = ByteLimit();
   ExtentProperties properties;
   if (!Info().GetFlagFvm()) {
@@ -326,7 +326,7 @@ zx::status<> FsWalker::WalkPartition() const {
   return extractor_.Add(0, max_offset, properties);
 }
 
-zx::status<> FsWalker::WalkSegments() const {
+zx::result<> FsWalker::WalkSegments() const {
   auto info = Info();
 
   ExtentProperties properties{.extent_kind = ExtentKind::Data, .data_kind = DataKind::Unmodified};
@@ -368,7 +368,7 @@ zx::status<> FsWalker::WalkSegments() const {
   return extractor_.AddBlocks(info_.DataStartBlock(), DataBlocks(info), properties);
 }
 
-zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
+zx::result<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
   off_t pread_offset;
   if (!safemath::MakeCheckedNum<uint64_t>(start_offset)
            .Cast<off_t>()
@@ -387,7 +387,7 @@ zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
   return zx::error(ZX_ERR_BAD_STATE);
 }
 
-zx::status<> FsWalker::LoadSuperblock() {
+zx::result<> FsWalker::LoadSuperblock() {
   if (auto status = TryLoadSuperblock(minfs::kSuperblockStart * minfs::kMinfsBlockSize);
       status.is_ok()) {
     return status;
@@ -405,7 +405,7 @@ zx::status<> FsWalker::LoadSuperblock() {
   return status;
 }
 
-zx::status<> FsWalker::LoadInodeTable() {
+zx::result<> FsWalker::LoadInodeTable() {
   inode_table_ =
       std::make_unique<minfs::Inode[]>(InodeBlocks(Info()) * minfs::kMinfsInodesPerBlock);
   auto size = safemath::checked_cast<ssize_t>(InodeBlocks(Info()) * Info().BlockSize());
@@ -419,7 +419,7 @@ zx::status<> FsWalker::LoadInodeTable() {
 
 }  // namespace
 
-zx::status<> MinfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
+zx::result<> MinfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
   auto walker_or = FsWalker::Create(std::move(input_fd), extractor);
   if (walker_or.is_error()) {
     std::cerr << "Walker: Init failure: " << walker_or.error_value() << std::endl;

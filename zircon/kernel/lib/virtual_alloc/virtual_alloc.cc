@@ -97,7 +97,7 @@ zx_status_t VirtualAlloc::Init(vaddr_t base, size_t size, size_t alloc_guard, si
   return ZX_OK;
 }
 
-zx::status<size_t> VirtualAlloc::BitmapAllocRange(size_t num_pages, size_t start, size_t end) {
+zx::result<size_t> VirtualAlloc::BitmapAllocRange(size_t num_pages, size_t start, size_t end) {
   ZX_DEBUG_ASSERT(end >= start);
   ZX_DEBUG_ASSERT(num_pages > 0);
   const size_t align_pages = 1ul << (align_log2_ - PAGE_SIZE_SHIFT);
@@ -164,9 +164,9 @@ zx::status<size_t> VirtualAlloc::BitmapAllocRange(size_t num_pages, size_t start
   return complete_alloc(alloc_start);
 }
 
-zx::status<size_t> VirtualAlloc::BitmapAlloc(size_t num_pages) {
+zx::result<size_t> VirtualAlloc::BitmapAlloc(size_t num_pages) {
   // First search from our saved recommended starting location.
-  zx::status<size_t> result = BitmapAllocRange(num_pages, next_search_start_, bitmap_.size());
+  zx::result<size_t> result = BitmapAllocRange(num_pages, next_search_start_, bitmap_.size());
   if (result.is_error()) {
     // Try again from the beginning (skipping the bitmap itself). Still search to the end just in
     // case the original search start was in the middle of a free run.
@@ -175,7 +175,7 @@ zx::status<size_t> VirtualAlloc::BitmapAlloc(size_t num_pages) {
   return result;
 }
 
-zx::status<vaddr_t> VirtualAlloc::AllocPages(size_t pages) {
+zx::result<vaddr_t> VirtualAlloc::AllocPages(size_t pages) {
   canary_.Assert();
 
   if (unlikely(alloc_base_ == 0)) {
@@ -188,7 +188,7 @@ zx::status<vaddr_t> VirtualAlloc::AllocPages(size_t pages) {
 
   // Allocate space from the bitmap, it will set the bits and ensure padding is left around the
   // allocation.
-  zx::status<size_t> alloc_result = BitmapAlloc(pages);
+  zx::result<size_t> alloc_result = BitmapAlloc(pages);
   if (unlikely(alloc_result.is_error())) {
     return alloc_result.take_error();
   }

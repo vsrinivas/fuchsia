@@ -80,7 +80,7 @@ zx_status_t IoApic::Write(uint64_t addr, const IoValue& value) {
       return ZX_OK;
     }
     case kIoApicIoWin: {
-      zx::status<Action> result;
+      zx::result<Action> result;
       {
         std::lock_guard<std::mutex> lock(mutex_);
         result = WriteRegisterLocked(select_, value);
@@ -147,7 +147,7 @@ zx_status_t IoApic::ReadRegisterLocked(uint8_t select_register, IoValue* value) 
   }
 }
 
-zx::status<IoApic::Action> IoApic::WriteRegisterLocked(uint8_t select_register,
+zx::result<IoApic::Action> IoApic::WriteRegisterLocked(uint8_t select_register,
                                                        const IoValue& value) {
   switch (select_register) {
     case kIoApicRegisterId: {
@@ -180,7 +180,7 @@ zx_status_t IoApic::ReadRedirectEntryLocked(uint32_t global_irq, RedirectBits bi
   return ZX_OK;
 }
 
-zx::status<IoApic::Action> IoApic::WriteRedirectEntryLocked(uint32_t global_irq, RedirectBits bits,
+zx::result<IoApic::Action> IoApic::WriteRedirectEntryLocked(uint32_t global_irq, RedirectBits bits,
                                                             const IoValue& value) {
   if (value.access_size != 4) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);

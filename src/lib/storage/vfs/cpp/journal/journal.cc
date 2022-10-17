@@ -19,7 +19,7 @@ namespace fs {
 namespace {
 
 template <storage::OperationType type, typename T>
-zx::status<uint64_t> CheckOperationsAndGetTotalBlockCount(const T& operations) {
+zx::result<uint64_t> CheckOperationsAndGetTotalBlockCount(const T& operations) {
   uint64_t total_blocks = 0;
   for (const auto& operation : operations) {
     if (operation.op.type != type) {

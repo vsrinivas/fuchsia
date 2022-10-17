@@ -63,7 +63,7 @@ class RebootRateLimiterTest : public testing::Test {
 
 TEST_F(RebootRateLimiterTest, CanRebootReturnsTrueIfFileDoesntExist) {
   auto rate_limiter = RebootRateLimiter(GetTmpFilePath());
-  zx::status<bool> can_reboot_or = rate_limiter.CanReboot();
+  zx::result<bool> can_reboot_or = rate_limiter.CanReboot();
 
   ASSERT_TRUE(can_reboot_or.is_ok());
   EXPECT_TRUE(can_reboot_or.value());
@@ -73,7 +73,7 @@ TEST_F(RebootRateLimiterTest, CanRebootReturnsTrueIfAfterBackoffThreshold) {
   ASSERT_TRUE(files::WriteFile(GetTmpFilePath(), GenerateTestFileContent()));
 
   auto rate_limiter = RebootRateLimiter(GetTmpFilePath());
-  zx::status<bool> can_reboot_or = rate_limiter.CanReboot(GenerateTestTimePoint(/*minutes=*/3));
+  zx::result<bool> can_reboot_or = rate_limiter.CanReboot(GenerateTestTimePoint(/*minutes=*/3));
 
   ASSERT_TRUE(can_reboot_or.is_ok());
   EXPECT_TRUE(can_reboot_or.value());
@@ -84,7 +84,7 @@ TEST_F(RebootRateLimiterTest, CanRebootReturnsFalseIfBeforeBackoffThreshold) {
   ASSERT_TRUE(files::WriteFile(GetTmpFilePath(), GenerateTestFileContent()));
 
   auto rate_limiter = RebootRateLimiter(GetTmpFilePath(), /*backoff_base=*/5);
-  zx::status<bool> can_reboot_or = rate_limiter.CanReboot(timepoint);
+  zx::result<bool> can_reboot_or = rate_limiter.CanReboot(timepoint);
 
   ASSERT_TRUE(can_reboot_or.is_ok());
   EXPECT_FALSE(can_reboot_or.value());
@@ -96,7 +96,7 @@ TEST_F(RebootRateLimiterTest, CanRebootReturnsTrueIfBeyondMaxDelay) {
       files::WriteFile(GetTmpFilePath(), GenerateTestFileContent(/*minutes=0*/ 0, /*counter=*/4)));
 
   auto rate_limiter = RebootRateLimiter(GetTmpFilePath(), /*backoff_base=*/2, /*max_delay=*/16);
-  zx::status<bool> can_reboot_or = rate_limiter.CanReboot(timepoint);
+  zx::result<bool> can_reboot_or = rate_limiter.CanReboot(timepoint);
 
   ASSERT_TRUE(can_reboot_or.is_ok());
   EXPECT_TRUE(can_reboot_or.value());
@@ -107,7 +107,7 @@ TEST_F(RebootRateLimiterTest, CanRebootFlushesFileAfterTTLExpiresAndReturnsTrue)
 
   auto rate_limiter = RebootRateLimiter(GetTmpFilePath(), /*backoff_base=*/10, /*max_delay=*/100,
                                         /*tracking_file_ttl=*/std::chrono::minutes(1));
-  zx::status<bool> can_reboot_or = rate_limiter.CanReboot(GenerateTestTimePoint(/*minutes=*/2));
+  zx::result<bool> can_reboot_or = rate_limiter.CanReboot(GenerateTestTimePoint(/*minutes=*/2));
 
   EXPECT_FALSE(files::IsFile(GetTmpFilePath()));
 

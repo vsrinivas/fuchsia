@@ -25,14 +25,14 @@ namespace blobfs {
 class StreamingChunkedDecompressor {
  public:
   // Type of callback used to handle streaming data as it is decompressed.
-  using StreamCallback = fit::function<zx::status<>(cpp20::span<const uint8_t>)>;
+  using StreamCallback = fit::function<zx::result<>(cpp20::span<const uint8_t>)>;
 
-  static zx::status<std::unique_ptr<StreamingChunkedDecompressor>> Create(
+  static zx::result<std::unique_ptr<StreamingChunkedDecompressor>> Create(
       DecompressorCreatorConnector& connector, const chunked_compression::SeekTable& seek_table,
       StreamCallback stream_callback);
 
   // Add more data to the internal state of the decompressor.
-  zx::status<> Update(cpp20::span<const uint8_t> data);
+  zx::result<> Update(cpp20::span<const uint8_t> data);
 
  private:
   StreamingChunkedDecompressor(const chunked_compression::SeekTable& seek_table,

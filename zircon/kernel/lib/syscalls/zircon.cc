@@ -189,7 +189,7 @@ zx_status_t sys_debuglog_write(zx_handle_t log_handle, uint32_t options,
 // Converts a dlog_record_t into a zx_log_record_t and copies it out to user memory.
 //
 // Copies at most |len| bytes to |dst|.
-static zx::status<size_t> CopyOutLogRecord(const dlog_record_t& internal_record,
+static zx::result<size_t> CopyOutLogRecord(const dlog_record_t& internal_record,
                                            user_out_ptr<zx_log_record_t> dst, size_t len) {
   zx_log_record_t external_record{};
   external_record.sequence = internal_record.hdr.sequence;
@@ -262,7 +262,7 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options, user_out
     return status;
   }
 
-  zx::status<size_t> result = CopyOutLogRecord(record, ptr.reinterpret<zx_log_record_t>(), len);
+  zx::result<size_t> result = CopyOutLogRecord(record, ptr.reinterpret<zx_log_record_t>(), len);
   if (result.is_error()) {
     return result.error_value();
   }

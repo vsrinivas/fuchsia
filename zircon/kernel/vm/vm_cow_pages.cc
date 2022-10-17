@@ -233,7 +233,7 @@ zx_status_t VmCowPages::CacheAllocPage(uint alloc_flags, vm_page_t** p, paddr_t*
     return pmm_alloc_page(alloc_flags, p, pa);
   }
 
-  zx::status result = page_cache_.Allocate(1, alloc_flags);
+  zx::result result = page_cache_.Allocate(1, alloc_flags);
   if (result.is_error()) {
     return result.error_value();
   }
@@ -6577,7 +6577,7 @@ void VmCowPages::InitializePageCache(uint32_t level) {
   ASSERT(level < LK_INIT_LEVEL_THREADING);
 
   const size_t reserve_pages = 64;
-  zx::status<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
+  zx::result<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
 
   ASSERT(result.is_ok());
   page_cache_ = ktl::move(result.value());

@@ -240,7 +240,7 @@ fpromise::result<Partition, std::string> OpenSparseImage(
     // This will allow limited growth (i.e. FVM's metadata can only grow to a block boundary).
     header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, slices.size(), slice_size);
   }
-  zx::status<fvm::Metadata> metadata_or = fvm::Metadata::Synthesize(
+  zx::result<fvm::Metadata> metadata_or = fvm::Metadata::Synthesize(
       header, fvm_partitions.data(), fvm_partitions.size(), slices.data(), slices.size());
   if (metadata_or.is_error()) {
     return fpromise::error("Generating FVM metadata failed: " +

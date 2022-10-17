@@ -22,7 +22,7 @@ class El2TranslationTable {
   El2TranslationTable() = default;
   ~El2TranslationTable();
 
-  zx::status<> Init();
+  zx::result<> Init();
   zx_paddr_t Base() const;
 
  private:
@@ -35,7 +35,7 @@ class El2TranslationTable {
 // Represents a stack for use with EL2/
 class El2Stack {
  public:
-  zx::status<> Alloc();
+  zx::result<> Alloc();
   zx_paddr_t Top() const;
 
  private:
@@ -45,12 +45,12 @@ class El2Stack {
 // Maintains the EL2 state for each CPU.
 class El2CpuState {
  public:
-  static zx::status<ktl::unique_ptr<El2CpuState>> Create();
+  static zx::result<ktl::unique_ptr<El2CpuState>> Create();
   ~El2CpuState();
 
   // Allocate/free a VMID.
-  zx::status<uint16_t> AllocVmid();
-  zx::status<> FreeVmid(uint16_t id);
+  zx::result<uint16_t> AllocVmid();
+  zx::result<> FreeVmid(uint16_t id);
 
  private:
   El2TranslationTable table_;
@@ -63,11 +63,11 @@ class El2CpuState {
 
   El2CpuState() = default;
 
-  static zx::status<> OnTask(void* context, cpu_num_t cpu_num);
+  static zx::result<> OnTask(void* context, cpu_num_t cpu_num);
 };
 
 // Allocate and free virtual machine IDs.
-zx::status<uint16_t> alloc_vmid();
-zx::status<> free_vmid(uint16_t id);
+zx::result<uint16_t> alloc_vmid();
+zx::result<> free_vmid(uint16_t id);
 
 #endif  // ZIRCON_KERNEL_ARCH_ARM64_HYPERVISOR_EL2_CPU_STATE_PRIV_H_

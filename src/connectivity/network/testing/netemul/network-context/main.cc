@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
     // initialized.
     static std::once_flag flag;
     std::call_once(flag, [&devfs_root]() {
-      zx::status result = netemul::StartDriverTestRealm();
+      zx::result result = netemul::StartDriverTestRealm();
       if (result.is_error()) {
         FX_PLOGS(ERROR, result.status_value()) << "failed while starting driver test realm";
         return;

@@ -361,7 +361,7 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
   ASSERT_OK(index_loop.StartThread("test-thread"));
   InspectManager inspect_manager(loop.dispatcher());
   FakeDriverIndex fake(index_loop.dispatcher(),
-                       [&](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+                       [&](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
                          return zx::ok(FakeDriverIndex::MatchResult{
                              .url = kFakeDriverUrl,
                          });
@@ -422,7 +422,7 @@ TEST(MiscTestCase, AddDeviceGroup) {
 
   InspectManager inspect_manager(loop.dispatcher());
   FakeDriverIndex fake_driver_index(index_loop.dispatcher(),
-                                    [&](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+                                    [&](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
                                       return zx::error(ZX_ERR_NOT_FOUND);
                                     });
 

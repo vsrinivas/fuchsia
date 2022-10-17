@@ -15,7 +15,7 @@ DeviceGroupV2::DeviceGroupV2(DeviceGroupCreateInfo create_info, async_dispatcher
       dispatcher_(dispatcher),
       node_manager_(node_manager) {}
 
-zx::status<std::optional<DeviceOrNode>> DeviceGroupV2::BindNodeImpl(
+zx::result<std::optional<DeviceOrNode>> DeviceGroupV2::BindNodeImpl(
     fuchsia_driver_index::wire::MatchedDeviceGroupInfo info, const DeviceOrNode& device_or_node) {
   auto node_ptr = std::get_if<std::weak_ptr<dfv2::Node>>(&device_or_node);
   ZX_ASSERT(node_ptr);

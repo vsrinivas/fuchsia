@@ -22,8 +22,8 @@ namespace {
 namespace fio = fuchsia_io;
 
 void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const char* path,
-                       zx::status<fio::wire::NodeInfoDeprecated::Tag> expected) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+                       zx::result<fio::wire::NodeInfoDeprecated::Tag> expected) {
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   const fidl::WireResult result = fidl::WireCall(directory)->Open(
       fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kDescribe, 0,
@@ -68,7 +68,7 @@ void FidlOpenValidator(const fidl::ClientEnd<fio::Directory>& directory, const c
 // Ensure that our hand-rolled FIDL messages within devfs and memfs are acting correctly
 // for open event messages (on both success and error).
 TEST(FidlTestCase, OpenDev) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_get_installed(&ns));
@@ -82,7 +82,7 @@ TEST(FidlTestCase, OpenDev) {
 }
 
 TEST(FidlTestCase, OpenPkg) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
   fdio_ns_t* ns;
   ASSERT_OK(fdio_ns_get_installed(&ns));
@@ -95,7 +95,7 @@ TEST(FidlTestCase, OpenPkg) {
 }
 
 TEST(FidlTestCase, BasicDevClass) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
   const fidl::WireResult result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
@@ -105,7 +105,7 @@ TEST(FidlTestCase, BasicDevClass) {
 }
 
 TEST(FidlTestCase, BasicDevZero) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/dev/zero", endpoints->server.channel().release()));
   const fidl::WireResult result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
@@ -157,10 +157,10 @@ void ReadEvent(watch_buffer_t* wb, const fidl::ClientEnd<fio::DirectoryWatcher>&
 }
 
 TEST(FidlTestCase, DirectoryWatcherExisting) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  zx::status watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   ASSERT_OK(watcher_endpoints.status_value());
 
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
@@ -188,13 +188,13 @@ TEST(FidlTestCase, DirectoryWatcherExisting) {
 }
 
 TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
 
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
 
   {
-    zx::status watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+    zx::result watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
     ASSERT_OK(watcher_endpoints.status_value());
 
     // Close our end of the watcher before devmgr gets its end.
@@ -211,7 +211,7 @@ TEST(FidlTestCase, DirectoryWatcherWithClosedHalf) {
 
   {
     // Create a new watcher, and see if it's functional at all
-    zx::status watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+    zx::result watcher_endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
     ASSERT_OK(watcher_endpoints.status_value());
 
     const fidl::WireResult result =

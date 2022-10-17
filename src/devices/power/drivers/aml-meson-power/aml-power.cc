@@ -152,7 +152,7 @@ zx_status_t AmlPower::PowerImplGetSupportedVoltageRange(uint32_t index, uint32_t
   return ZX_ERR_INTERNAL;
 }
 
-zx::status<AmlPower::ClusterArgs> AmlPower::GetClusterArgs(uint32_t cluster_index) {
+zx::result<AmlPower::ClusterArgs> AmlPower::GetClusterArgs(uint32_t cluster_index) {
   if (cluster_index >= num_domains_) {
     zxlogf(ERROR, "%s: Requested for a domain that doesn't exist, idx = %u", __func__,
            cluster_index);
@@ -403,7 +403,7 @@ zx_status_t AmlPower::Create(void* ctx, zx_device_t* parent) {
     return voltage_table.error_value();
   }
 
-  zx::status<std::unique_ptr<voltage_pwm_period_ns_t>> pwm_period =
+  zx::result<std::unique_ptr<voltage_pwm_period_ns_t>> pwm_period =
       ddk::GetMetadata<voltage_pwm_period_ns_t>(parent, DEVICE_METADATA_AML_PWM_PERIOD_NS);
   if (!pwm_period.is_ok() && pwm_period.error_value() != ZX_ERR_NOT_FOUND) {
     zxlogf(ERROR, "%s: Failed to get aml pwm period, st = %d", __func__, pwm_period.error_value());

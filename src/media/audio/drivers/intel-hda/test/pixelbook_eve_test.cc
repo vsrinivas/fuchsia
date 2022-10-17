@@ -38,7 +38,7 @@ using audio::utils::AudioInput;
 using audio::utils::AudioOutput;
 
 fbl::String GetDeviceName(AudioDeviceStream* stream) {
-  zx::status<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_PRODUCT);
+  zx::result<fbl::String> result = GetStreamConfigString(stream, AUDIO_STREAM_STR_ID_PRODUCT);
   if (!result.is_ok()) {
     return "<error>";
   }

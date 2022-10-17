@@ -36,7 +36,7 @@ class VideoFrame {
   // The returned FrameAvailableEvent accounts for frame errors, or if we didn't have a buffer.
   // Release will only return an error if there was a logical issue with the frame,
   // in which case the frame should not be sent to the stream client.
-  zx::status<fuchsia::camera::FrameAvailableEvent> Release();
+  zx::result<fuchsia::camera::FrameAvailableEvent> Release();
 
   // Extracts the payload data from the usb request response,
   // and stores it in the video buffer.
@@ -59,7 +59,7 @@ class VideoFrame {
 
  private:
   struct PayloadHeader {
-    static zx::status<PayloadHeader> ParseHeader(usb_request_t* req);
+    static zx::result<PayloadHeader> ParseHeader(usb_request_t* req);
 
     uint32_t length() const { return header.bHeaderLength; }
     uint8_t fid() const { return header.bmHeaderInfo & USB_VIDEO_VS_PAYLOAD_HEADER_FID; }

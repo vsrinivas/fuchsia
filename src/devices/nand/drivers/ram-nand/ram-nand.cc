@@ -118,7 +118,7 @@ NandDevice::~NandDevice() {
 }
 
 zx_status_t NandDevice::Bind(fuchsia_hardware_nand::wire::RamNandInfo& info) {
-  zx::status<DeviceNameType> device_name = Init(std::move(info.vmo));
+  zx::result<DeviceNameType> device_name = Init(std::move(info.vmo));
   if (device_name.is_error()) {
     return device_name.status_value();
   }
@@ -162,7 +162,7 @@ void NandDevice::DdkInit(ddk::InitTxn txn) {
   return txn.Reply(ZX_OK);
 }
 
-zx::status<NandDevice::DeviceNameType> NandDevice::Init(zx::vmo vmo) {
+zx::result<NandDevice::DeviceNameType> NandDevice::Init(zx::vmo vmo) {
   ZX_DEBUG_ASSERT(!thread_created_);
   static uint64_t dev_count = 0;
 

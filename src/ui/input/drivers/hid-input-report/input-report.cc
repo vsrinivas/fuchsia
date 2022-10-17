@@ -24,7 +24,7 @@
 
 namespace hid_input_report_dev {
 
-zx::status<hid_input_report::DeviceType> InputReport::InputReportDeviceTypeToHid(
+zx::result<hid_input_report::DeviceType> InputReport::InputReportDeviceTypeToHid(
     const fuchsia_input_report::wire::DeviceType type) {
   switch (type) {
     case fuchsia_input_report::wire::DeviceType::kMouse:

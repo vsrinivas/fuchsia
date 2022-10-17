@@ -130,7 +130,7 @@ class MkfsTester {
   static GlobalParameters &GetGlobalParameters(MkfsWorker &mkfs) { return mkfs.params_; }
 
   static zx_status_t InitAndGetDeviceInfo(MkfsWorker &mkfs);
-  static zx::status<std::unique_ptr<Bcache>> FormatDevice(MkfsWorker &mkfs);
+  static zx::result<std::unique_ptr<Bcache>> FormatDevice(MkfsWorker &mkfs);
 };
 
 }  // namespace f2fs

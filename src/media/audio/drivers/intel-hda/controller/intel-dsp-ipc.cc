@@ -43,8 +43,8 @@ class HardwareDspChannel : public DspChannel {
   // Implementation of DspChannel.
   void Shutdown() override TA_EXCL(lock_);
   void ProcessIrq() override;
-  zx::status<> Send(uint32_t primary, uint32_t extension) override;
-  zx::status<> SendWithData(uint32_t primary, uint32_t extension,
+  zx::result<> Send(uint32_t primary, uint32_t extension) override;
+  zx::result<> SendWithData(uint32_t primary, uint32_t extension,
                             cpp20::span<const uint8_t> payload, cpp20::span<uint8_t> recv_buffer,
                             size_t* bytes_received) override;
 
@@ -179,7 +179,7 @@ void HardwareDspChannel::Shutdown() {
   in_flight_callbacks_.WaitForZero();
 }
 
-zx::status<> HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
+zx::result<> HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extension,
                                               cpp20::span<const uint8_t> payload,
                                               cpp20::span<uint8_t> recv_buffer,
                                               size_t* bytes_received) {
@@ -213,7 +213,7 @@ zx::status<> HardwareDspChannel::SendWithData(uint32_t primary, uint32_t extensi
   return zx::ok();
 }
 
-zx::status<> HardwareDspChannel::Send(uint32_t primary, uint32_t extension) {
+zx::result<> HardwareDspChannel::Send(uint32_t primary, uint32_t extension) {
   return SendWithData(primary, extension, cpp20::span<uint8_t>(), cpp20::span<uint8_t>(), nullptr);
 }
 

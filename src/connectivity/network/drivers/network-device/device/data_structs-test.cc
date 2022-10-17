@@ -19,7 +19,7 @@ using RingQueue = network::internal::RingQueue<uint64_t>;
 
 TEST(DataStructsTest, RingQueue) {
   constexpr uint32_t kCapacity = 16;
-  zx::status queue_creation = RingQueue::Create(kCapacity);
+  zx::result queue_creation = RingQueue::Create(kCapacity);
   ASSERT_OK(queue_creation.status_value());
   std::unique_ptr queue = std::move(queue_creation.value());
   ASSERT_EQ(queue->count(), 0u);
@@ -36,7 +36,7 @@ TEST(DataStructsTest, RingQueue) {
 
 TEST(DataStructsTest, RingQueueOverCapacity) {
   constexpr uint32_t kCapacity = 2;
-  zx::status queue_creation = RingQueue::Create(kCapacity);
+  zx::result queue_creation = RingQueue::Create(kCapacity);
   ASSERT_OK(queue_creation.status_value());
   std::unique_ptr queue = std::move(queue_creation.value());
   queue->Push(1);
@@ -46,7 +46,7 @@ TEST(DataStructsTest, RingQueueOverCapacity) {
 
 TEST(DataStructsTest, IndexedSlab) {
   constexpr uint32_t kCapacity = 16;
-  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  zx::result slab_creation = IndexedSlab::Create(kCapacity);
   ASSERT_OK(slab_creation.status_value());
   std::unique_ptr slab = std::move(slab_creation.value());
   ASSERT_EQ(slab->available(), kCapacity);
@@ -65,7 +65,7 @@ TEST(DataStructsTest, IndexedSlab) {
 
 TEST(DataStructsTest, IndexedSlabOverCapacity) {
   constexpr uint32_t kCapacity = 2;
-  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  zx::result slab_creation = IndexedSlab::Create(kCapacity);
   ASSERT_OK(slab_creation.status_value());
   std::unique_ptr slab = std::move(slab_creation.value());
   slab->Push(1);
@@ -75,7 +75,7 @@ TEST(DataStructsTest, IndexedSlabOverCapacity) {
 
 TEST(DataStructsTest, IndexedSlabDoubleFree) {
   constexpr uint32_t kCapacity = 2;
-  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  zx::result slab_creation = IndexedSlab::Create(kCapacity);
   ASSERT_OK(slab_creation.status_value());
   std::unique_ptr slab = std::move(slab_creation.value());
   slab->Push(1);
@@ -104,7 +104,7 @@ void VerifyIterator(IndexedSlab& slab, const std::vector<uint64_t>& expect) {
 
 TEST(DataStructsTest, IndexedSlabIterator) {
   constexpr uint32_t kCapacity = 4;
-  zx::status slab_creation = IndexedSlab::Create(kCapacity);
+  zx::result slab_creation = IndexedSlab::Create(kCapacity);
   ASSERT_OK(slab_creation.status_value());
   std::unique_ptr slab = std::move(slab_creation.value());
   // If we're empty, the iterator should be empty:

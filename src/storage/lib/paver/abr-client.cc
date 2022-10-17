@@ -39,7 +39,7 @@ namespace partition = fuchsia_hardware_block_partition;
 using fuchsia_paver::wire::Asset;
 using fuchsia_paver::wire::Configuration;
 
-zx::status<Configuration> CurrentSlotToConfiguration(std::string_view slot) {
+zx::result<Configuration> CurrentSlotToConfiguration(std::string_view slot) {
   // Some bootloaders prefix slot with dash or underscore. We strip them for consistency.
   slot.remove_prefix(std::min(slot.find_first_not_of("_-"), slot.size()));
   if (slot.compare("a") == 0) {
@@ -108,7 +108,7 @@ bool FindPartitionLabelByGuid(const fbl::unique_fd& devfs_root, const uint8_t* g
   return false;
 }
 
-zx::status<Configuration> PartitionUuidToConfiguration(const fbl::unique_fd& devfs_root,
+zx::result<Configuration> PartitionUuidToConfiguration(const fbl::unique_fd& devfs_root,
                                                        uuid::Uuid uuid) {
   std::string name;
   auto result = FindPartitionLabelByGuid(devfs_root, uuid.bytes(), name);
@@ -144,7 +144,7 @@ zx::status<Configuration> PartitionUuidToConfiguration(const fbl::unique_fd& dev
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
+zx::result<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
                                           fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
   auto client_end = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
   if (!client_end.is_ok()) {
@@ -179,13 +179,13 @@ zx::status<Configuration> QueryBootConfig(const fbl::unique_fd& devfs_root,
 
 namespace {
 
-zx::status<> SupportsVerifiedBoot(const fbl::unique_fd& devfs_root,
+zx::result<> SupportsVerifiedBoot(const fbl::unique_fd& devfs_root,
                                   fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
-  return zx::make_status(QueryBootConfig(devfs_root, svc_root).status_value());
+  return zx::make_result(QueryBootConfig(devfs_root, svc_root).status_value());
 }
 }  // namespace
 
-zx::status<std::unique_ptr<abr::Client>> AbrPartitionClient::Create(
+zx::result<std::unique_ptr<abr::Client>> AbrPartitionClient::Create(
     std::unique_ptr<paver::PartitionClient> partition) {
   auto status = partition->GetBlockSize();
   if (status.is_error()) {
@@ -194,7 +194,7 @@ zx::status<std::unique_ptr<abr::Client>> AbrPartitionClient::Create(
   size_t block_size = status.value();
 
   zx::vmo vmo;
-  if (auto status = zx::make_status(
+  if (auto status = zx::make_result(
           zx::vmo::create(fbl::round_up(block_size, zx_system_get_page_size()), 0, &vmo));
       status.is_error()) {
     return status.take_error();
@@ -207,18 +207,18 @@ zx::status<std::unique_ptr<abr::Client>> AbrPartitionClient::Create(
   return zx::ok(new AbrPartitionClient(std::move(partition), std::move(vmo), block_size));
 }
 
-zx::status<> AbrPartitionClient::Read(uint8_t* buffer, size_t size) {
+zx::result<> AbrPartitionClient::Read(uint8_t* buffer, size_t size) {
   if (auto status = partition_->Read(vmo_, block_size_); status.is_error()) {
     return status.take_error();
   }
-  if (auto status = zx::make_status(vmo_.read(buffer, 0, size)); status.is_error()) {
+  if (auto status = zx::make_result(vmo_.read(buffer, 0, size)); status.is_error()) {
     return status.take_error();
   }
   return zx::ok();
 }
 
-zx::status<> AbrPartitionClient::Write(const uint8_t* buffer, size_t size) {
-  if (auto status = zx::make_status(vmo_.write(buffer, 0, size)); status.is_error()) {
+zx::result<> AbrPartitionClient::Write(const uint8_t* buffer, size_t size) {
+  if (auto status = zx::make_result(vmo_.write(buffer, 0, size)); status.is_error()) {
     return status.take_error();
   }
   if (auto status = partition_->Write(vmo_, block_size_); status.is_error()) {
@@ -235,7 +235,7 @@ std::vector<std::unique_ptr<ClientFactory>>* ClientFactory::registered_factory_l
   return registered_factory_list;
 }
 
-zx::status<std::unique_ptr<abr::Client>> ClientFactory::Create(
+zx::result<std::unique_ptr<abr::Client>> ClientFactory::Create(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   if (auto status = SupportsVerifiedBoot(devfs_root, svc_root); status.is_error()) {
@@ -292,7 +292,7 @@ bool Client::WriteAbrMetadataCustom(void* context, const AbrSlotData* a, const A
   return true;
 }
 
-zx::status<> Client::AbrResultToZxStatus(AbrResult status) {
+zx::result<> Client::AbrResultToZxStatus(AbrResult status) {
   switch (status) {
     case kAbrResultOk:
       return zx::ok();

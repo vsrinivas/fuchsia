@@ -15,7 +15,7 @@ void TestTransport::AddInPacket(const void* data, size_t size) {
   in_packets_.insert(in_packets_.begin(), std::string(start, start + size));
 }
 
-zx::status<size_t> TestTransport::ReceivePacket(void* dst, size_t capacity) {
+zx::result<size_t> TestTransport::ReceivePacket(void* dst, size_t capacity) {
   if (in_packets_.empty()) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -32,7 +32,7 @@ zx::status<size_t> TestTransport::ReceivePacket(void* dst, size_t capacity) {
 }
 
 // Send a packet over the transport.
-zx::status<> TestTransport::Send(std::string_view packet) {
+zx::result<> TestTransport::Send(std::string_view packet) {
   out_packets_.push_back(std::string(packet.data(), packet.size()));
   return zx::ok();
 }

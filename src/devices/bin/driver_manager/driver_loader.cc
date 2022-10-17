@@ -24,7 +24,7 @@
 
 namespace {
 
-zx::status<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::MatchedDriver driver) {
+zx::result<fdi::wire::MatchedDriverInfo> GetFidlMatchedDriverInfo(fdi::wire::MatchedDriver driver) {
   if (driver.is_device_group_node()) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }

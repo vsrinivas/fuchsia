@@ -97,7 +97,7 @@ class Vfs {
   //
   // Returns true iff name is suffixed with a trailing slash indicating an explicit reference to a
   // directory.
-  static zx::status<bool> TrimName(std::string_view& name);
+  static zx::result<bool> TrimName(std::string_view& name);
 
   // Attempt to create an entry with name |name| within the |vndir| directory.
   //
@@ -106,7 +106,7 @@ class Vfs {
   //   fatal), attempt to lookup the vnode.
   //
   // In the success case, returns a boolean indicating whether an entry was created.
-  virtual zx::status<bool> EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+  virtual zx::result<bool> EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                         fbl::RefPtr<Vnode>* out_vn,
                                         fs::VnodeConnectionOptions options, uint32_t mode,
                                         Rights parent_rights) __TA_REQUIRES(vfs_lock_);

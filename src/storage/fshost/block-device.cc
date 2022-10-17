@@ -275,7 +275,7 @@ BlockDevice::BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
       content_format_(fs_management::kDiskFormatUnknown),
       topological_path_(GetTopologicalPath(fd_.get())) {}
 
-zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDevice(
+zx::result<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDevice(
     const char* topological_path) const {
   fbl::unique_fd fd(open(topological_path, O_RDWR, S_IFBLK));
   if (!fd) {
@@ -286,14 +286,14 @@ zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDevice(
   return OpenBlockDeviceByFd(std::move(fd));
 }
 
-zx::status<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDeviceByFd(
+zx::result<std::unique_ptr<BlockDeviceInterface>> BlockDevice::OpenBlockDeviceByFd(
     fbl::unique_fd fd) const {
   return zx::ok(std::make_unique<BlockDevice>(mounter_, std::move(fd), device_config_));
 }
 
 void BlockDevice::AddData(Copier copier) { source_data_ = std::move(copier); }
 
-zx::status<Copier> BlockDevice::ExtractData() {
+zx::result<Copier> BlockDevice::ExtractData() {
   if (content_format() != fs_management::kDiskFormatMinfs) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -338,7 +338,7 @@ const std::string& BlockDevice::partition_name() const {
   return partition_name_;
 }
 
-zx::status<fuchsia_hardware_block::wire::BlockInfo> BlockDevice::GetInfo() const {
+zx::result<fuchsia_hardware_block::wire::BlockInfo> BlockDevice::GetInfo() const {
   if (info_.has_value()) {
     return zx::ok(*info_);
   }
@@ -477,7 +477,7 @@ zx_status_t BlockDevice::FormatZxcrypt() {
   return volume.Format();
 }
 
-zx::status<std::string> BlockDevice::VeritySeal() {
+zx::result<std::string> BlockDevice::VeritySeal() {
   return mounter_->boot_args()->block_verity_seal();
 }
 
@@ -580,7 +580,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
     return ZX_OK;
   }
 
-  zx::status info = GetInfo();
+  zx::result info = GetInfo();
   if (info.is_error()) {
     return info.status_value();
   }
@@ -655,7 +655,7 @@ zx_status_t BlockDevice::CheckFilesystem() {
 }
 
 zx_status_t BlockDevice::FormatFilesystem() {
-  zx::status info = GetInfo();
+  zx::result info = GetInfo();
   if (info.is_error()) {
     return info.status_value();
   }
@@ -823,7 +823,7 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
       }
 
       if (!ShouldAllowAuthoringFactory()) {
-        zx::status<std::string> seal_text = VeritySeal();
+        zx::result<std::string> seal_text = VeritySeal();
         if (seal_text.is_error()) {
           FX_LOGS(ERROR) << "Couldn't get block-verity seal: " << seal_text.status_string();
           return seal_text.error_value();
@@ -893,7 +893,7 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
 }
 
 // Clones the device handle.
-zx::status<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() const {
+zx::result<fidl::ClientEnd<fuchsia_io::Node>> BlockDevice::GetDeviceEndPoint() const {
   auto end_points_or = fidl::CreateEndpoints<fuchsia_io::Node>();
   if (end_points_or.is_error())
     return end_points_or.take_error();

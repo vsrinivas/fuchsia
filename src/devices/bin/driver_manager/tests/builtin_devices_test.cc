@@ -23,7 +23,7 @@ namespace fio = fuchsia_io;
 class BuiltinDevicesTest : public zxtest::Test {
  public:
   void SetUp() override {
-    zx::status server = fidl::CreateEndpoints(&client_);
+    zx::result server = fidl::CreateEndpoints(&client_);
     ASSERT_OK(server.status_value());
     ASSERT_OK(dir_->AddEntry(kNullDevName, fbl::MakeRefCounted<BuiltinDevVnode>(true)));
     ASSERT_OK(dir_->AddEntry(kZeroDevName, fbl::MakeRefCounted<BuiltinDevVnode>(false)));
@@ -31,9 +31,9 @@ class BuiltinDevicesTest : public zxtest::Test {
     ASSERT_OK(loop_.StartThread("builtin-devices"));
   }
 
-  zx::status<fidl::ClientEnd<fio::Node>> HandleOpen(fio::wire::OpenFlags flags,
+  zx::result<fidl::ClientEnd<fio::Node>> HandleOpen(fio::wire::OpenFlags flags,
                                                     std::string_view path) {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -56,7 +56,7 @@ class BuiltinDevicesTest : public zxtest::Test {
 };
 
 TEST_F(BuiltinDevicesTest, ReadZero) {
-  zx::status client = HandleOpen(
+  zx::result client = HandleOpen(
       fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable, kZeroDevName);
   ASSERT_OK(client.status_value());
 
@@ -70,7 +70,7 @@ TEST_F(BuiltinDevicesTest, ReadZero) {
 }
 
 TEST_F(BuiltinDevicesTest, WriteZero) {
-  zx::status client = HandleOpen(
+  zx::result client = HandleOpen(
       fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable, kZeroDevName);
   ASSERT_OK(client.status_value());
 
@@ -84,7 +84,7 @@ TEST_F(BuiltinDevicesTest, WriteZero) {
 }
 
 TEST_F(BuiltinDevicesTest, ReadNull) {
-  zx::status client = HandleOpen(
+  zx::result client = HandleOpen(
       fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightReadable, kNullDevName);
 
   fbl::unique_fd fd;
@@ -99,7 +99,7 @@ TEST_F(BuiltinDevicesTest, ReadNull) {
 }
 
 TEST_F(BuiltinDevicesTest, WriteNull) {
-  zx::status client = HandleOpen(
+  zx::result client = HandleOpen(
       fio::wire::OpenFlags::kNotDirectory | fio::wire::OpenFlags::kRightWritable, kNullDevName);
 
   fbl::unique_fd fd;

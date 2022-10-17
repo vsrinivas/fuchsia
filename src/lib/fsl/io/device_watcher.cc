@@ -58,7 +58,7 @@ std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
 std::unique_ptr<DeviceWatcher> DeviceWatcher::CreateWithIdleCallback(
     fbl::unique_fd dir_fd, ExistsCallback exists_callback, IdleCallback idle_callback,
     async_dispatcher_t* dispatcher) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   if (endpoints.is_error()) {
     return nullptr;
   }

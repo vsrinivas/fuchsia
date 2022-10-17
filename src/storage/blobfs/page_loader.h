@@ -84,7 +84,7 @@ class PageLoader {
   };
 
   // Abstracts out how pages are supplied to the system.
-  using PageSupplier = std::function<zx::status<>(uint64_t offset, uint64_t length,
+  using PageSupplier = std::function<zx::result<>(uint64_t offset, uint64_t length,
                                                   const zx::vmo& aux_vmo, uint64_t aux_offset)>;
 
   // Creates an instance of PageLoader.
@@ -93,7 +93,7 @@ class PageLoader {
   // storage. |resources| is a set of resources needed for each individual |Worker| so only as many
   // pager threads are supported as there are sets of resources. |decompression_buffer_size| is the
   // size of the scratch buffer to use for decompression.
-  [[nodiscard]] static zx::status<std::unique_ptr<PageLoader>> Create(
+  [[nodiscard]] static zx::result<std::unique_ptr<PageLoader>> Create(
       std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
       BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector);
 
@@ -125,7 +125,7 @@ class PageLoader {
     // storage. |compressed_buffer| is used to retrieve and buffer compressed data from the
     // underlying storage. |decompression_buffer_size| is the size of the scratch buffer to use for
     // decompression.
-    [[nodiscard]] static zx::status<std::unique_ptr<Worker>> Create(
+    [[nodiscard]] static zx::result<std::unique_ptr<Worker>> Create(
         std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
         BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector);
 

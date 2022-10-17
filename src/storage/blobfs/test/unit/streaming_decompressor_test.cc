@@ -55,7 +55,7 @@ class StreamingDecompressorTest : public ::testing::Test {
     // Make sure the data we compressed has at least two chunks so we exercise all code paths.
     ASSERT_GE(seek_table_.Entries().size(), 2u);
 
-    zx::status local_decompressor = LocalDecompressorCreator::Create();
+    zx::result local_decompressor = LocalDecompressorCreator::Create();
     ASSERT_TRUE(local_decompressor.is_ok()) << local_decompressor.status_string();
     local_decompressor_ = std::move(local_decompressor.value());
   }
@@ -88,18 +88,18 @@ TEST_F(StreamingDecompressorTest, WholeFile) {
   std::vector<uint8_t> decompressed_data(kTestDataSize);
   size_t decompressed_data_offset = 0;
 
-  auto callback = [&](cpp20::span<const uint8_t> data) -> zx::status<> {
+  auto callback = [&](cpp20::span<const uint8_t> data) -> zx::result<> {
     ZX_ASSERT(decompressed_data_offset + data.size() <= decompressed_data.size());
     std::copy(data.begin(), data.end(), decompressed_data.data() + decompressed_data_offset);
     decompressed_data_offset += data.size();
     return zx::ok();
   };
 
-  zx::status streaming_decompressor = StreamingChunkedDecompressor::Create(
+  zx::result streaming_decompressor = StreamingChunkedDecompressor::Create(
       DecompressorConnector(), seek_table(), std::move(callback));
   ASSERT_TRUE(streaming_decompressor.is_ok()) << streaming_decompressor.status_string();
 
-  zx::status result = streaming_decompressor->Update(compressed_data());
+  zx::result result = streaming_decompressor->Update(compressed_data());
   ASSERT_TRUE(result.is_ok()) << result.status_string();
 
   ASSERT_EQ(decompressed_data_offset, original_data().size());
@@ -112,21 +112,21 @@ TEST_F(StreamingDecompressorTest, Chunked) {
   std::vector<uint8_t> decompressed_data(kTestDataSize);
   size_t decompressed_data_offset = 0;
 
-  auto callback = [&](cpp20::span<const uint8_t> data) -> zx::status<> {
+  auto callback = [&](cpp20::span<const uint8_t> data) -> zx::result<> {
     ZX_ASSERT(decompressed_data_offset + data.size() <= decompressed_data.size());
     std::copy(data.begin(), data.end(), decompressed_data.data() + decompressed_data_offset);
     decompressed_data_offset += data.size();
     return zx::ok();
   };
 
-  zx::status streaming_decompressor = StreamingChunkedDecompressor::Create(
+  zx::result streaming_decompressor = StreamingChunkedDecompressor::Create(
       DecompressorConnector(), seek_table(), std::move(callback));
   ASSERT_TRUE(streaming_decompressor.is_ok()) << streaming_decompressor.status_string();
 
   size_t bytes_streamed = 0;
   while (bytes_streamed < compressed_data().size()) {
     size_t bytes_to_stream = std::min(kStreamChunkSize, compressed_data().size() - bytes_streamed);
-    zx::status result =
+    zx::result result =
         streaming_decompressor->Update(compressed_data().subspan(bytes_streamed, bytes_to_stream));
     ASSERT_TRUE(result.is_ok()) << result.status_string();
     bytes_streamed += bytes_to_stream;
@@ -139,11 +139,11 @@ TEST_F(StreamingDecompressorTest, Chunked) {
 
 // Test that we get a failure if we try to add more data to the decompressor past the end.
 TEST_F(StreamingDecompressorTest, ExtraDataFails) {
-  auto callback = [&](cpp20::span<const uint8_t>) -> zx::status<> { return zx::ok(); };
-  zx::status streaming_decompressor = StreamingChunkedDecompressor::Create(
+  auto callback = [&](cpp20::span<const uint8_t>) -> zx::result<> { return zx::ok(); };
+  zx::result streaming_decompressor = StreamingChunkedDecompressor::Create(
       DecompressorConnector(), seek_table(), std::move(callback));
   ASSERT_TRUE(streaming_decompressor.is_ok()) << streaming_decompressor.status_string();
-  zx::status result = streaming_decompressor->Update(compressed_data());
+  zx::result result = streaming_decompressor->Update(compressed_data());
   ASSERT_TRUE(result.is_ok()) << result.status_string();
   // Try to stream in more data past the end of the archive. The actual amount of data doesn't
   // matter, only that we get a failure trying to process more.
@@ -157,9 +157,9 @@ TEST_F(StreamingDecompressorTest, ExtraDataFails) {
 
 // Test that we can't create a streaming decompressor with an invalid seek table.
 TEST_F(StreamingDecompressorTest, InvalidSeekTable) {
-  auto callback = [&](cpp20::span<const uint8_t>) -> zx::status<> { return zx::ok(); };
+  auto callback = [&](cpp20::span<const uint8_t>) -> zx::result<> { return zx::ok(); };
   chunked_compression::SeekTable empty_seek_table{};
-  zx::status streaming_decompressor = StreamingChunkedDecompressor::Create(
+  zx::result streaming_decompressor = StreamingChunkedDecompressor::Create(
       DecompressorConnector(), empty_seek_table, std::move(callback));
   ASSERT_EQ(streaming_decompressor.status_value(), ZX_ERR_INVALID_ARGS)
       << streaming_decompressor.status_string();
@@ -168,13 +168,13 @@ TEST_F(StreamingDecompressorTest, InvalidSeekTable) {
 // Test that errors in the stream callback are propagated.
 TEST_F(StreamingDecompressorTest, StreamCallbackError) {
   constexpr zx_status_t kTestErrorCode = ZX_ERR_INTERNAL;
-  auto callback = [&](cpp20::span<const uint8_t>) -> zx::status<> {
+  auto callback = [&](cpp20::span<const uint8_t>) -> zx::result<> {
     return zx::error(kTestErrorCode);
   };
-  zx::status streaming_decompressor = StreamingChunkedDecompressor::Create(
+  zx::result streaming_decompressor = StreamingChunkedDecompressor::Create(
       DecompressorConnector(), seek_table(), std::move(callback));
   ASSERT_TRUE(streaming_decompressor.is_ok()) << streaming_decompressor.status_string();
-  zx::status result = streaming_decompressor->Update(compressed_data());
+  zx::result result = streaming_decompressor->Update(compressed_data());
   ASSERT_EQ(result.status_value(), kTestErrorCode) << result.status_string();
 }
 

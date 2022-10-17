@@ -22,13 +22,13 @@ class ComponentRunner final : public fs::ManagedVfs {
   ComponentRunner(const ComponentRunner&) = delete;
   ComponentRunner& operator=(const ComponentRunner&) = delete;
 
-  zx::status<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root,
+  zx::result<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root,
                          fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle);
-  zx::status<> Configure(std::unique_ptr<Bcache> bcache, const MountOptions& options);
+  zx::result<> Configure(std::unique_ptr<Bcache> bcache, const MountOptions& options);
 
   // fs::ManagedVfs interface
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
   void OnNoConnections() final;
 
   void SetUnmountCallback(fit::closure on_unmount) { on_unmount_ = std::move(on_unmount); }

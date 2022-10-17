@@ -23,7 +23,7 @@
 
 namespace minfs {
 
-zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device) {
+zx::result<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device) {
   fuchsia_hardware_block_BlockInfo info;
   zx_status_t status = device->BlockGetInfo(&info);
   if (status != ZX_OK) {
@@ -61,7 +61,7 @@ zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockD
   return zx::ok(std::move(result));
 }
 
-zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
+zx::result<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
                    fidl::ServerEnd<fuchsia_io::Directory> root) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -71,7 +71,7 @@ zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& op
     return runner.take_error();
   }
   runner->SetUnmountCallback([&loop]() { loop.Quit(); });
-  zx::status status = runner->ServeRoot(std::move(root));
+  zx::result status = runner->ServeRoot(std::move(root));
   if (status.is_error()) {
     return status.take_error();
   }
@@ -85,7 +85,7 @@ zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& op
   return zx::ok();
 }
 
-zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::result<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

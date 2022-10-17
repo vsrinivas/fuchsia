@@ -18,7 +18,7 @@ TunPair::TunPair(fit::callback<void(TunPair*)> teardown, DevicePairConfig config
       config_(std::move(config)),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-zx::status<std::unique_ptr<TunPair>> TunPair::Create(
+zx::result<std::unique_ptr<TunPair>> TunPair::Create(
     fit::callback<void(TunPair*)> teardown, fuchsia_net_tun::wire::DevicePairConfig config) {
   fbl::AllocChecker ac;
   std::unique_ptr<TunPair> tun(new (&ac) TunPair(std::move(teardown), DevicePairConfig(config)));
@@ -26,14 +26,14 @@ zx::status<std::unique_ptr<TunPair>> TunPair::Create(
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  zx::status left = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
+  zx::result left = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
   if (left.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init left failed with %s", left.status_string());
     return left.take_error();
   }
   tun->left_ = std::move(left.value());
 
-  zx::status right = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
+  zx::result right = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
   if (right.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init right failed with %s",
             right.status_string());
@@ -104,11 +104,11 @@ void TunPair::AddPort(AddPortRequestView request, AddPortCompleter::Sync& comple
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    zx::status left = Port::Create(this, true, config, std::move(config.mac_left));
+    zx::result left = Port::Create(this, true, config, std::move(config.mac_left));
     if (left.is_error()) {
       return left.status_value();
     }
-    zx::status right = Port::Create(this, false, config, std::move(config.mac_right));
+    zx::result right = Port::Create(this, false, config, std::move(config.mac_right));
     if (right.is_error()) {
       return right.status_value();
     }
@@ -203,13 +203,13 @@ void TunPair::OnRxAvail(DeviceAdapter* device) {
   source->CopyTo(device, fallible);
 }
 
-zx::status<std::unique_ptr<TunPair::Port>> TunPair::Port::Create(
+zx::result<std::unique_ptr<TunPair::Port>> TunPair::Port::Create(
     TunPair* parent, bool left, const BasePortConfig& config,
     std::optional<fuchsia_net::wire::MacAddress> mac) {
   std::unique_ptr<Port> port(new Port(parent, left));
   std::unique_ptr<MacAdapter> mac_adapter;
   if (mac.has_value()) {
-    zx::status status = MacAdapter::Create(port.get(), std::move(*mac), true);
+    zx::result status = MacAdapter::Create(port.get(), std::move(*mac), true);
     if (status.is_error()) {
       return status.take_error();
     }

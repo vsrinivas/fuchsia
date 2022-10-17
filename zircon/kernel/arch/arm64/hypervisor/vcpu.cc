@@ -165,7 +165,7 @@ AutoGich::~AutoGich() {
 static uint8_t num_aprs(uint8_t num_pres) { return static_cast<uint8_t>(1u << (num_pres - 5u)); }
 
 // static
-zx::status<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
+zx::result<ktl::unique_ptr<Vcpu>> Vcpu::Create(Guest& guest, zx_vaddr_t entry) {
   hypervisor::GuestPhysicalAspace& gpa = guest.AddressSpace();
   if (entry >= gpa.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);

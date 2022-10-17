@@ -32,39 +32,39 @@ class FakePartitionClient final : public paver::BlockDevicePartitionClient {
   explicit FakePartitionClient(size_t block_size, size_t partition_size)
       : block_size_(block_size), partition_size_(partition_size) {}
 
-  zx::status<size_t> GetBlockSize() final {
+  zx::result<size_t> GetBlockSize() final {
     if (result_ == ZX_OK) {
       return zx::ok(block_size_);
     }
     return zx::error(result_);
   }
-  zx::status<size_t> GetPartitionSize() final {
+  zx::result<size_t> GetPartitionSize() final {
     if (result_ == ZX_OK) {
       return zx::ok(partition_size_);
     }
     return zx::error(result_);
   }
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final {
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final {
     read_called_ = true;
     if (size > partition_size_) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
-    return zx::make_status(result_);
+    return zx::make_result(result_);
   }
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final {
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final {
     write_called_ = true;
     if (vmo_size > partition_size_) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
-    return zx::make_status(result_);
+    return zx::make_result(result_);
   }
-  zx::status<> Trim() final {
+  zx::result<> Trim() final {
     trim_called_ = true;
-    return zx::make_status(result_);
+    return zx::make_result(result_);
   }
-  zx::status<> Flush() final {
+  zx::result<> Flush() final {
     flush_called_ = true;
-    return zx::make_status(result_);
+    return zx::make_result(result_);
   }
 
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final { return {}; }

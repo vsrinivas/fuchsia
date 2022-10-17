@@ -44,13 +44,13 @@ PowerController::PowerController(fdf::MmioBuffer* mmio_buffer) : mmio_buffer_(mm
   ZX_DEBUG_ASSERT(mmio_buffer);
 }
 
-zx::status<uint64_t> PowerController::Transact(PowerControllerCommand command) {
+zx::result<uint64_t> PowerController::Transact(PowerControllerCommand command) {
   auto mailbox_interface = tgl_registers::PowerMailboxInterface::Get().FromValue(0);
 
   if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_buffer_).has_active_transaction(); },
                  zx::usec(1), kPreviousCommandTimeoutUs)) {
     zxlogf(WARNING, "Timed out while waiting for PCU to finish pre-existing work");
-    return zx::error_status(ZX_ERR_IO_MISSED_DEADLINE);
+    return zx::error_result(ZX_ERR_IO_MISSED_DEADLINE);
   }
 
   auto mailbox_data0 = tgl_registers::PowerMailboxData0::Get().FromValue(0);
@@ -69,7 +69,7 @@ zx::status<uint64_t> PowerController::Transact(PowerControllerCommand command) {
 
   if (!PollUntil([&] { return !mailbox_interface.ReadFrom(mmio_buffer_).has_active_transaction(); },
                  zx::usec(1), command.timeout_us)) {
-    return zx::error_status(ZX_ERR_IO_MISSED_DEADLINE);
+    return zx::error_result(ZX_ERR_IO_MISSED_DEADLINE);
   }
 
   const uint32_t data_low = mailbox_data0.ReadFrom(mmio_buffer_).reg_value();
@@ -78,7 +78,7 @@ zx::status<uint64_t> PowerController::Transact(PowerControllerCommand command) {
   return zx::ok(data);
 }
 
-zx::status<> PowerController::RequestDisplayVoltageLevel(int voltage_level,
+zx::result<> PowerController::RequestDisplayVoltageLevel(int voltage_level,
                                                          RetryBehavior retry_behavior) {
   // This operation is documented in the Clocking sections in Intel's display
   // engine PRMs.
@@ -103,7 +103,7 @@ zx::status<> PowerController::RequestDisplayVoltageLevel(int voltage_level,
                                 : zx::time::infinite_past();
 
   do {
-    zx::status<uint64_t> mailbox_result = Transact({
+    zx::result<uint64_t> mailbox_result = Transact({
         .command = 0x07,
         .data = static_cast<uint64_t>(voltage_level),
         .timeout_us = kVoltageLevelRequestReplyTimeoutUs,
@@ -117,10 +117,10 @@ zx::status<> PowerController::RequestDisplayVoltageLevel(int voltage_level,
     }
   } while (zx::clock::get_monotonic() < deadline);
 
-  return zx::error_status(ZX_ERR_IO_REFUSED);
+  return zx::error_result(ZX_ERR_IO_REFUSED);
 }
 
-zx::status<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
+zx::result<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
                                                                    RetryBehavior retry_behavior) {
   // This operation is documented in IHD-OS-TGL-Vol 12-1.22-Rev2.0, sections
   // "GT Driver Mailbox to Block TCCOLD" and "GT Driver Mailbox to Unblock
@@ -136,7 +136,7 @@ zx::status<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
 
   const uint64_t command_data = blocked ? 0 : 1;
   do {
-    zx::status<uint64_t> mailbox_result = Transact({
+    zx::result<uint64_t> mailbox_result = Transact({
         .command = 0x26,
         .data = command_data,
         .timeout_us = kTypeCColdBlockingChangeReplyTimeoutUs,
@@ -150,7 +150,7 @@ zx::status<> PowerController::SetDisplayTypeCColdBlockingTigerLake(bool blocked,
     }
   } while (zx::clock::get_monotonic() < deadline);
 
-  return zx::error_status(ZX_ERR_IO_REFUSED);
+  return zx::error_result(ZX_ERR_IO_REFUSED);
 }
 
 }  // namespace i915_tgl

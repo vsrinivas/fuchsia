@@ -135,7 +135,7 @@ class MountTestTemplate : public testing::Test {
     if (runner.is_error()) {
       return runner.error_value();
     }
-    zx::status status = runner->ServeRoot(std::move(root_server_end_));
+    zx::result status = runner->ServeRoot(std::move(root_server_end_));
     if (status.is_error()) {
       return status.error_value();
     }

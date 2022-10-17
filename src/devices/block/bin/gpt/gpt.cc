@@ -178,7 +178,7 @@ size_t Dump(const GptDevice* gpt) {
   const char* Y;
   size_t i;
   for (i = 0; i < gpt::kPartitionCount; i++) {
-    zx::status<const gpt_partition_t*> entry = gpt->GetPartition(i);
+    zx::result<const gpt_partition_t*> entry = gpt->GetPartition(i);
     if (!entry.is_ok())
       break;
     const gpt_partition_t* p = entry.value();
@@ -325,7 +325,7 @@ zx_status_t RemovePartition(const char* dev, uint32_t n) {
     return ZX_ERR_INTERNAL;
   }
 
-  zx::status<const gpt_partition_t*> p = gpt->GetPartition(n);
+  zx::result<const gpt_partition_t*> p = gpt->GetPartition(n);
   if (!p.is_ok()) {
     fprintf(stderr, "Failed to get partition at index %u\n", n);
     return ZX_ERR_INVALID_ARGS;
@@ -492,7 +492,7 @@ zx_status_t EditCrosPartition(char* const* argv, int argc) {
     return ZX_ERR_INTERNAL;
   }
 
-  zx::status<const gpt_partition_t*> part = gpt->GetPartition(args.idx_part);
+  zx::result<const gpt_partition_t*> part = gpt->GetPartition(args.idx_part);
   if (part.is_error()) {
     fprintf(stderr, "Partition not found at given index\n");
     return ZX_ERR_INVALID_ARGS;
@@ -646,7 +646,7 @@ zx_status_t Repartition(int argc, char** argv, std::optional<PartitionScheme> sc
   argv = &argv[1];
   ZX_ASSERT(argc > 0);
   size_t num_partitions = static_cast<size_t>(argc / 3);
-  zx::status<const gpt_partition_t*> p = gpt->GetPartition(0);
+  zx::result<const gpt_partition_t*> p = gpt->GetPartition(0);
   while (p.is_ok()) {
     ZX_ASSERT(gpt->RemovePartition((*p)->guid) == ZX_OK);
     p = gpt->GetPartition(0);

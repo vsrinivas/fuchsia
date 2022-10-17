@@ -9,7 +9,7 @@
 namespace fdd = fuchsia_driver_development;
 namespace fdm = fuchsia_device_manager;
 
-zx::status<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
+zx::result<std::vector<fdd::wire::DeviceInfo>> GetDeviceInfo(
     fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<const Device>>& devices) {
   std::vector<fdd::wire::DeviceInfo> device_info_vec;
   for (const auto& device : devices) {

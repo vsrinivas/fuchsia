@@ -124,7 +124,7 @@ const char* PartitionName(Partition partition, PartitionScheme scheme) {
 }
 
 // Returns the given partition's type GUID.
-zx::status<Uuid> PartitionTypeUuid(Partition partition, PartitionScheme scheme) {
+zx::result<Uuid> PartitionTypeUuid(Partition partition, PartitionScheme scheme) {
   const PartitionInfo* info = GetPartitionInfo(partition);
   if (info) {
     return zx::ok(scheme == PartitionScheme::kNew ? info->type : info->legacy_type);
@@ -191,7 +191,7 @@ void DevicePartitionerFactory::Register(std::unique_ptr<DevicePartitionerFactory
 
 constexpr PartitionScheme kFixedDevicePartitionScheme = PartitionScheme::kLegacy;
 
-zx::status<std::unique_ptr<DevicePartitioner>> FixedDevicePartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> FixedDevicePartitioner::Initialize(
     fbl::unique_fd devfs_root) {
   if (HasSkipBlockDevice(devfs_root)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -214,20 +214,20 @@ bool FixedDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const 
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::AddPartition(
     const PartitionSpec& spec) const {
   ERROR("Cannot add partitions to a fixed-map partition device\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx::status<Uuid> type_or = PartitionTypeUuid(spec.partition, kFixedDevicePartitionScheme);
+  zx::result<Uuid> type_or = PartitionTypeUuid(spec.partition, kFixedDevicePartitionScheme);
   if (type_or.is_error()) {
     ERROR("partition_type is invalid!\n");
     return type_or.take_error();
@@ -242,7 +242,7 @@ zx::status<std::unique_ptr<PartitionClient>> FixedDevicePartitioner::FindPartiti
   return zx::ok(new BlockPartitionClient(std::move(partition.value())));
 }
 
-zx::status<> FixedDevicePartitioner::WipeFvm() const {
+zx::result<> FixedDevicePartitioner::WipeFvm() const {
   if (auto status = WipeBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE));
       status.is_error()) {
     ERROR("Failed to wipe FVM.\n");
@@ -253,15 +253,15 @@ zx::status<> FixedDevicePartitioner::WipeFvm() const {
   return zx::ok();
 }
 
-zx::status<> FixedDevicePartitioner::InitPartitionTables() const {
+zx::result<> FixedDevicePartitioner::InitPartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> FixedDevicePartitioner::WipePartitionTables() const {
+zx::result<> FixedDevicePartitioner::WipePartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
                                                      cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -271,7 +271,7 @@ zx::status<> FixedDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> DefaultPartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> DefaultPartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return FixedDevicePartitioner::Initialize(std::move(devfs_root));

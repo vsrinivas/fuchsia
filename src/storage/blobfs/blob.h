@@ -84,7 +84,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
       __TA_EXCLUDES(mutex_);
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final __TA_EXCLUDES(mutex_);
   zx_status_t Truncate(size_t len) final __TA_EXCLUDES(mutex_);
-  zx::status<std::string> GetDevicePath() const final __TA_EXCLUDES(mutex_);
+  zx::result<std::string> GetDevicePath() const final __TA_EXCLUDES(mutex_);
   zx_status_t GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) final
       __TA_EXCLUDES(mutex_);
   void Sync(SyncCallback on_complete) final __TA_EXCLUDES(mutex_);
@@ -233,7 +233,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Initialize seek table and decompressor when streaming precompressed blobs. Returns true if
   // initialization was successful, false if more data is required to decode the seek table.
-  zx::status<bool> InitializeDecompressor(size_t buff_pos) __TA_REQUIRES(mutex_);
+  zx::result<bool> InitializeDecompressor(size_t buff_pos) __TA_REQUIRES(mutex_);
 
   // Verifies the integrity of the null blob (i.e. that its name is correct). Can only be called on
   // the null blob and will assert otherwise.

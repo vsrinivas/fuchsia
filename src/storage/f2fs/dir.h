@@ -26,7 +26,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
       __TA_REQUIRES_SHARED(dir_mutex_);
   DirEntry *FindEntry(std::string_view name, fbl::RefPtr<Page> *res_page)
       __TA_REQUIRES_SHARED(dir_mutex_);
-  zx::status<DirEntry> FindEntry(std::string_view name) __TA_REQUIRES_SHARED(dir_mutex_);
+  zx::result<DirEntry> FindEntry(std::string_view name) __TA_REQUIRES_SHARED(dir_mutex_);
   DirEntry *FindInInlineDir(std::string_view name, fbl::RefPtr<Page> *res_page)
       __TA_REQUIRES_SHARED(dir_mutex_);
   DirEntry *FindInBlock(fbl::RefPtr<Page> dentry_page, std::string_view name, uint64_t *max_slots,
@@ -57,7 +57,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t Mkdir(std::string_view name, uint32_t mode, fbl::RefPtr<fs::Vnode> *out)
       __TA_REQUIRES(dir_mutex_);
   zx_status_t AddLink(std::string_view name, VnodeF2fs *vnode) __TA_REQUIRES(dir_mutex_);
-  zx::status<bool> AddInlineEntry(std::string_view name, VnodeF2fs *vnode)
+  zx::result<bool> AddInlineEntry(std::string_view name, VnodeF2fs *vnode)
       __TA_REQUIRES(dir_mutex_);
   zx_status_t ConvertInlineDir() __TA_REQUIRES(dir_mutex_);
   void UpdateParentMetadata(VnodeF2fs *inode, unsigned int current_depth) __TA_REQUIRES(dir_mutex_);
@@ -78,7 +78,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
       __TA_REQUIRES(dir_mutex_);
 
   // recovery
-  zx::status<> RecoverLink(VnodeF2fs &vnode) __TA_EXCLUDES(dir_mutex_);
+  zx::result<> RecoverLink(VnodeF2fs &vnode) __TA_EXCLUDES(dir_mutex_);
 
   // inline helper
   uint64_t InlineDentryBitmapSize() const;
@@ -95,7 +95,7 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   block_t DirBlocks();
   void SetDeType(DirEntry *de, VnodeF2fs *vnode);
   bool EarlyMatchName(std::string_view name, f2fs_hash_t namehash, const DirEntry &de);
-  zx::status<bool> IsSubdir(Dir *possible_dir);
+  zx::result<bool> IsSubdir(Dir *possible_dir);
   bool IsEmptyDir();
   bool IsEmptyInlineDir();
 

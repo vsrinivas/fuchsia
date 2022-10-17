@@ -19,7 +19,7 @@ class ExportWatcher : public fidl::WireAsyncEventHandler<fuchsia_io::Node> {
   explicit ExportWatcher() = default;
 
   // Create an ExportWatcher.
-  static zx::status<std::unique_ptr<ExportWatcher>> Create(
+  static zx::result<std::unique_ptr<ExportWatcher>> Create(
       async_dispatcher_t* dispatcher, Devfs& devfs, Devnode* root,
       fidl::ClientEnd<fuchsia_io::Directory> service_dir, std::string_view service_path,
       std::string_view devfs_path, uint32_t protocol_id,

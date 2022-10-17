@@ -68,7 +68,7 @@ struct MountOptions {
   // Generate a StartOptions fidl struct to pass the a fuchsia.fs.startup.Startup interface based
   // on this set of options.
   __EXPORT
-  zx::status<fuchsia_fs_startup::wire::StartOptions> as_start_options() const;
+  zx::result<fuchsia_fs_startup::wire::StartOptions> as_start_options() const;
 };
 
 struct MkfsOptions {

@@ -76,7 +76,7 @@ struct Channel : public Object {
     //   ZX_OK: A message with |txid_| has been delivered.
     //   ZX_ERR_PEER_CLOSED: The channel or its peer is closing.
     //   ZX_ERR_TIMED_OUT: No message with |txid_| has been delivered before the timeout.
-    zx::status<MessagePacketOwner> TakeLocked();
+    zx::result<MessagePacketOwner> TakeLocked();
 
     fbl::RefPtr<Channel> channel() { return channel_; }
 

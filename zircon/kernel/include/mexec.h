@@ -47,7 +47,7 @@ typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint
 
 // Writes an mexec data ZBI into the provided buffer and returns the size of
 // that ZBI if successful.
-zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer);
+zx::result<size_t> WriteMexecData(ktl::span<ktl::byte> buffer);
 
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.

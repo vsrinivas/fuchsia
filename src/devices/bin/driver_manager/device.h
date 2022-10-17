@@ -313,7 +313,7 @@ class Device final
   void set_link_name(fbl::String link_name) { link_name_ = std::move(link_name); }
 
   std::shared_ptr<dfv2::Node> GetBoundNode();
-  zx::status<std::shared_ptr<dfv2::Node>> CreateDFv2Device();
+  zx::result<std::shared_ptr<dfv2::Node>> CreateDFv2Device();
 
   enum class State {
     kActive,
@@ -392,7 +392,7 @@ class Device final
   // dfv2::NodeManager
   void Bind(dfv2::Node& node, std::shared_ptr<dfv2::BindResultTracker> result_tracker) override {}
 
-  zx::status<dfv2::DriverHost*> CreateDriverHost() override {
+  zx::result<dfv2::DriverHost*> CreateDriverHost() override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 

@@ -33,7 +33,7 @@ static const zx_bind_inst_t kSysmemFidlFragment[]{
 };
 
 template <typename T>
-zx::status<std::vector<uint8_t>> DoFidlEncode(T data) {
+zx::result<std::vector<uint8_t>> DoFidlEncode(T data) {
   fidl::unstable::OwnedEncodedMessage<T> encoded(fidl::internal::WireFormatVersion::kV2, &data);
   if (!encoded.ok()) {
     return zx::error(encoded.status());
@@ -169,7 +169,7 @@ acpi::status<> DeviceBuilder::GatherResources(acpi::Acpi* acpi, fidl::AnyArena& 
   return result;
 }
 
-zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
+zx::result<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
   if (parent_->zx_device_ == nullptr) {
     zxlogf(ERROR, "Parent has not been added to the tree yet!");
     return zx::error(ZX_ERR_BAD_STATE);
@@ -180,7 +180,7 @@ zx::status<zx_device_t*> DeviceBuilder::Build(acpi::Manager* manager) {
   }
   DeviceArgs device_args(parent_->zx_device_, manager, handle_);
   if (HasBusId() && bus_type_ != BusType::kPci) {
-    zx::status<std::vector<uint8_t>> metadata = FidlEncodeMetadata();
+    zx::result<std::vector<uint8_t>> metadata = FidlEncodeMetadata();
     if (metadata.is_error()) {
       zxlogf(ERROR, "Error while encoding metadata for '%s': %d", name(), metadata.status_value());
       return metadata.take_error();
@@ -255,13 +255,13 @@ size_t DeviceBuilder::AddBusChild(DeviceChildEntry d) {
       d);
 }
 
-zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
+zx::result<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
 #ifdef __Fuchsia__
   using SpiChannel = fuchsia_hardware_spi_businfo::wire::SpiChannel;
   using I2CChannel = fuchsia_hardware_i2c_businfo::wire::I2CChannel;
   fidl::Arena<> allocator;
   return std::visit(
-      [this, &allocator](auto&& arg) -> zx::status<std::vector<uint8_t>> {
+      [this, &allocator](auto&& arg) -> zx::result<std::vector<uint8_t>> {
         using T = std::decay_t<decltype(arg)>;
         if constexpr (std::is_same_v<T, std::monostate>) {
           return zx::ok(std::vector<uint8_t>());
@@ -294,7 +294,7 @@ zx::status<std::vector<uint8_t>> DeviceBuilder::FidlEncodeMetadata() {
 #endif
 }
 
-zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
+zx::result<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
                                            std::vector<zx_device_str_prop_t>& str_props) {
   if (parent_->GetBusType() == BusType::kPci) {
     // If a device is on a PCI bus, the PCI bus driver will publish a composite device, so we
@@ -429,7 +429,7 @@ zx::status<> DeviceBuilder::BuildComposite(acpi::Manager* manager,
   }
 #endif
 
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 std::vector<zx_bind_inst_t> DeviceBuilder::GetFragmentBindInsnsForChild(size_t child_index) {

@@ -74,7 +74,7 @@ constexpr DiskImage kExtrasImage = DiskImage{
 };
 
 // Finds the guest FVM partition, and the FVM GPT partition.
-zx::status<std::tuple<VolumeHandle, ManagerHandle>> FindPartitions(DIR* dir) {
+zx::result<std::tuple<VolumeHandle, ManagerHandle>> FindPartitions(DIR* dir) {
   VolumeHandle volume;
   ManagerHandle manager;
 
@@ -129,7 +129,7 @@ zx::status<std::tuple<VolumeHandle, ManagerHandle>> FindPartitions(DIR* dir) {
 //
 // TODO(fxbug.dev/90469): Use a directory watcher instead of scanning for
 // new partitions.
-zx::status<VolumeHandle> WaitForPartition(DIR* dir) {
+zx::result<VolumeHandle> WaitForPartition(DIR* dir) {
   for (size_t retry = 0; retry != kNumRetries; retry++) {
     auto partitions = FindPartitions(dir);
     if (partitions.is_error()) {
@@ -147,7 +147,7 @@ zx::status<VolumeHandle> WaitForPartition(DIR* dir) {
 
 // Locates the FVM partition for a guest block device. If a partition does not
 // exist, allocate one.
-zx::status<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t partition_size) {
+zx::result<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t partition_size) {
   auto dir = opendir(path.data());
   if (dir == nullptr) {
     FX_LOGS(ERROR) << "Failed to open directory '" << path << "'";
@@ -192,7 +192,7 @@ zx::status<VolumeHandle> FindOrAllocatePartition(std::string_view path, size_t p
 }
 
 // Opens the given disk image.
-zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
+zx::result<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
   TRACE_DURATION("termina_guest_manager", "GetPartition");
   fuchsia::io::OpenFlags flags = fuchsia::io::OpenFlags::RIGHT_READABLE;
   if (!image.read_only) {
@@ -211,7 +211,7 @@ zx::status<fuchsia::io::FileHandle> GetPartition(const DiskImage& image) {
 }
 
 // Opens the given disk image.
-zx::status<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
+zx::result<fuchsia::io::FileHandle> GetFxfsPartition(const DiskImage& image,
                                                      const size_t image_size_bytes) {
   TRACE_DURATION("linux_runner", "GetFxfsPartition");
 
@@ -366,7 +366,7 @@ void DropDevNamespace() {
   }
 }
 
-zx::status<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
+zx::result<> WipeStatefulPartition(size_t bytes_to_zero, uint8_t value) {
   auto dir = opendir(kBlockPath);
   if (dir == nullptr) {
     FX_LOGS(ERROR) << "Failed to open directory '" << kBlockPath << "'";

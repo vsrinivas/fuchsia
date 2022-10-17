@@ -61,7 +61,7 @@ zx_status_t MsixCapability::Init(const Bar& tbar, const Bar& pbar) {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx::status<zx::vmo> result = tbar.allocation->CreateVmo();
+  zx::result<zx::vmo> result = tbar.allocation->CreateVmo();
   if (!result.is_ok()) {
     zxlogf(ERROR, "[%s] Couldn't allocate VMO for MSI-X table bar: %s", addr(),
            result.status_string());
@@ -97,7 +97,7 @@ zx_status_t MsixCapability::Init(const Bar& tbar, const Bar& pbar) {
   return ZX_OK;
 }
 
-zx::status<size_t> MsixCapability::GetBarDataSize(const Bar& bar) const {
+zx::result<size_t> MsixCapability::GetBarDataSize(const Bar& bar) const {
   size_t bar_size = bar.size;
   uint32_t page_size = zx_system_get_page_size();
   // In the best case, Vector and PBA tables are placed in their own BAR.

@@ -10,30 +10,30 @@ namespace paver {
 
 class As370Partitioner : public DevicePartitioner {
  public:
-  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(fbl::unique_fd devfs_root);
+  static zx::result<std::unique_ptr<DevicePartitioner>> Initialize(fbl::unique_fd devfs_root);
 
   bool IsFvmWithinFtl() const override { return true; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+  zx::result<std::unique_ptr<PartitionClient>> AddPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<PartitionClient>> FindPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
+  zx::result<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx::status<> WipeFvm() const override;
+  zx::result<> WipeFvm() const override;
 
-  zx::status<> InitPartitionTables() const override;
+  zx::result<> InitPartitionTables() const override;
 
-  zx::status<> WipePartitionTables() const override;
+  zx::result<> WipePartitionTables() const override;
 
-  zx::status<> ValidatePayload(const PartitionSpec& spec,
+  zx::result<> ValidatePayload(const PartitionSpec& spec,
                                cpp20::span<const uint8_t> data) const override;
 
-  zx::status<> Flush() const override { return zx::ok(); }
+  zx::result<> Flush() const override { return zx::ok(); }
 
  private:
   As370Partitioner(std::unique_ptr<SkipBlockDevicePartitioner> skip_block)
@@ -44,7 +44,7 @@ class As370Partitioner : public DevicePartitioner {
 
 class As370PartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(
+  zx::result<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };

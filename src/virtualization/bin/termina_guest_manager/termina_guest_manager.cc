@@ -161,7 +161,7 @@ void TerminaGuestManager::WipeData(WipeDataCallback callback) {
   }
   // We zero out some bytes at the beginning of the partition to corrupt any filesystem data-
   // structures stored there.
-  zx::status<> status = WipeStatefulPartition(kBytesToWipe);
+  zx::result<> status = WipeStatefulPartition(kBytesToWipe);
   if (status.is_error()) {
     callback(fuchsia::virtualization::LinuxManager_WipeData_Result::WithErr(status.status_value()));
   } else {

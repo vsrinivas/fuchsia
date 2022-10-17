@@ -40,7 +40,7 @@ void PrintUsage() {
       << "--help : Show this help message\n";
 }
 
-zx::status<> ParseInputFile(const char* path, ExtractOptions& options) {
+zx::result<> ParseInputFile(const char* path, ExtractOptions& options) {
   options.input_path.assign(path);
   if (options.input_path.length() == 0) {
     std::cerr << "Missing disk path argument" << std::endl;
@@ -55,7 +55,7 @@ zx::status<> ParseInputFile(const char* path, ExtractOptions& options) {
   return zx::ok();
 }
 
-zx::status<> ParseOutputFile(const char* path, ExtractOptions& options) {
+zx::result<> ParseOutputFile(const char* path, ExtractOptions& options) {
   options.output_path.assign(path);
   if (options.output_path.length() == 0) {
     std::cerr << "Missing image path argument" << options.output_path << std::endl;
@@ -78,7 +78,7 @@ zx::status<> ParseOutputFile(const char* path, ExtractOptions& options) {
 
 }  // namespace
 
-zx::status<ExtractOptions> ParseExtractArguments(int argc, char* const argv[]) {
+zx::result<ExtractOptions> ParseExtractArguments(int argc, char* const argv[]) {
   ExtractOptions options;
   options.sub_command = SubCommand::kExtract;
 
@@ -133,7 +133,7 @@ zx::status<ExtractOptions> ParseExtractArguments(int argc, char* const argv[]) {
   return zx::ok(std::move(options));
 }
 
-zx::status<ExtractOptions> ParseDeflateArguments(int argc, char* const argv[]) {
+zx::result<ExtractOptions> ParseDeflateArguments(int argc, char* const argv[]) {
   ExtractOptions options;
   options.sub_command = SubCommand::kDeflate;
 
@@ -176,7 +176,7 @@ zx::status<ExtractOptions> ParseDeflateArguments(int argc, char* const argv[]) {
   return zx::ok(std::move(options));
 }
 
-zx::status<ExtractOptions> ParseCommandLineArguments(int argc, char* const argv[]) {
+zx::result<ExtractOptions> ParseCommandLineArguments(int argc, char* const argv[]) {
   if (argc <= 1) {
     PrintUsage();
     return zx::error(ZX_ERR_INVALID_ARGS);

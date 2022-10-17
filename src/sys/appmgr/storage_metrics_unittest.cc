@@ -37,7 +37,7 @@ class StorageMetricsTest : public ::testing::Test {
     testing::Test::SetUp();
     ASSERT_EQ(ZX_OK, loop_.StartThread());
 
-    zx::status<ScopedMemfs> memfs = ScopedMemfs::CreateMountedAt(loop_.dispatcher(), kTestRoot);
+    zx::result<ScopedMemfs> memfs = ScopedMemfs::CreateMountedAt(loop_.dispatcher(), kTestRoot);
     ASSERT_TRUE(memfs.is_ok());
     memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
 

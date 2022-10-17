@@ -40,10 +40,10 @@ class FsWalker {
       vfs_->TearDown();
   }
 
-  static zx::status<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
+  static zx::result<std::unique_ptr<FsWalker>> Create(fbl::unique_fd input_fd,
                                                       Extractor& extractor);
 
-  zx::status<> Walk(async_dispatcher_t* dispatcher);
+  zx::result<> Walk(async_dispatcher_t* dispatcher);
 
  private:
   // Returns maximum addressable block in the fs.
@@ -54,24 +54,24 @@ class FsWalker {
 
   // Walks the partition and marks all bytes as reported by ByteLimit() as unused for non-fvm
   // partition or unmapped for fvm partition.
-  zx::status<> WalkPartition() const;
+  zx::result<> WalkPartition() const;
 
   // Walks different segments, like inode table and bitmaps except data segment, of the filesystem.
   // Marks them as data unmodified.
-  zx::status<> WalkSegments() const;
+  zx::result<> WalkSegments() const;
 
   // LoadAndVerify each blob and dump the corrupted files.
-  zx::status<> WalkBlobs(blobfs::Blobfs& blobfs) const;
+  zx::result<> WalkBlobs(blobfs::Blobfs& blobfs) const;
 
   // Dumps each block in an extent
-  zx::status<> ExtentBlockHandler(blobfs::Extent extent) const;
+  zx::result<> ExtentBlockHandler(blobfs::Extent extent) const;
 
   // Iterates through all the extents of an inode, node_num is inode index,
   // alloc_block is a counter for number of blocks traversed.
-  zx::status<> WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node_num, uint32_t alloc_block,
+  zx::result<> WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node_num, uint32_t alloc_block,
                                    blobfs::Inode ino) const;
 
-  zx::status<std::unique_ptr<blobfs::Blobfs>> CreateBlobfs(async_dispatcher_t* dispatcher);
+  zx::result<std::unique_ptr<blobfs::Blobfs>> CreateBlobfs(async_dispatcher_t* dispatcher);
 
   const blobfs::Superblock& Info() const { return info_; }
 
@@ -85,12 +85,12 @@ class FsWalker {
 
   // Loads superblock located at start_offset. If the copy of superblock has valid
   // magic values, the function returns zx::ok().
-  zx::status<> TryLoadSuperblock(uint64_t start_offset);
+  zx::result<> TryLoadSuperblock(uint64_t start_offset);
 
   // Loads one valid copy of superblock from the input_fd_.
   // Primary superblock location is given highest priority followed by backup superblock
   // of fvm partition and then non-fvm partition.
-  zx::status<> LoadSuperblock();
+  zx::result<> LoadSuperblock();
 
   // The valid copy of superblock.
   blobfs::Superblock info_;
@@ -109,7 +109,7 @@ blobfs::MountOptions ReadOnlyOptions() {
   return blobfs::MountOptions{.writability = blobfs::Writability::ReadOnlyDisk};
 }
 
-zx::status<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatcher_t* dispatcher) {
+zx::result<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatcher_t* dispatcher) {
   zx::channel root_client;
   if (zx_status_t status = fdio_fd_clone(input_fd_.get(), root_client.reset_and_get_address());
       status != ZX_OK) {
@@ -142,7 +142,7 @@ zx::status<std::unique_ptr<blobfs::Blobfs>> FsWalker::CreateBlobfs(async_dispatc
 FsWalker::FsWalker(fbl::unique_fd input_fd, Extractor& extractor)
     : extractor_(extractor), input_fd_(std::move(input_fd)) {}
 
-zx::status<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
+zx::result<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
                                                        Extractor& extractor) {
   auto walker = std::unique_ptr<FsWalker>(new FsWalker(std::move(input_fd), extractor));
 
@@ -154,7 +154,7 @@ zx::status<std::unique_ptr<FsWalker>> FsWalker::Create(fbl::unique_fd input_fd,
   return zx::ok(std::move(walker));
 }
 
-zx::status<> FsWalker::Walk(async_dispatcher_t* dispatcher) {
+zx::result<> FsWalker::Walk(async_dispatcher_t* dispatcher) {
   if (auto status = WalkPartition(); status.is_error()) {
     std::cerr << "Walking partition failed" << std::endl;
     return status;
@@ -173,7 +173,7 @@ zx::status<> FsWalker::Walk(async_dispatcher_t* dispatcher) {
   return WalkBlobs(*blob_or.value());
 }
 
-zx::status<> FsWalker::WalkBlobs(blobfs::Blobfs& blobfs) const {
+zx::result<> FsWalker::WalkBlobs(blobfs::Blobfs& blobfs) const {
   for (unsigned n = 0; n < blobfs.Info().inode_count; n++) {
     auto inode_or = blobfs.GetNode(n);
     blobfs::Inode ino = *inode_or.value();
@@ -194,7 +194,7 @@ zx::status<> FsWalker::WalkBlobs(blobfs::Blobfs& blobfs) const {
   return zx::ok();
 }
 
-zx::status<> FsWalker::WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node_num,
+zx::result<> FsWalker::WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node_num,
                                            uint32_t alloc_block, blobfs::Inode ino) const {
   auto inode_or = blobfs.GetNode(node_num);
   if (inode_or.is_error()) {
@@ -215,7 +215,7 @@ zx::status<> FsWalker::WalkExtentContainer(blobfs::Blobfs& blobfs, uint32_t node
   return zx::ok();
 }
 
-zx::status<> FsWalker::ExtentBlockHandler(blobfs::Extent extent) const {
+zx::result<> FsWalker::ExtentBlockHandler(blobfs::Extent extent) const {
   ExtentProperties properties = {.extent_kind = ExtentKind::Data,
                                  .data_kind = DataKind::Unmodified};
 
@@ -228,7 +228,7 @@ zx::status<> FsWalker::ExtentBlockHandler(blobfs::Extent extent) const {
   return zx::ok();
 }
 
-zx::status<> FsWalker::WalkPartition() const {
+zx::result<> FsWalker::WalkPartition() const {
   auto max_offset = ByteLimit();
   ExtentProperties properties;
   if (!(info_.flags & blobfs::kBlobFlagFVM)) {
@@ -244,7 +244,7 @@ zx::status<> FsWalker::WalkPartition() const {
   return extractor_.Add(0, max_offset, properties);
 }
 
-zx::status<> FsWalker::WalkSegments() const {
+zx::result<> FsWalker::WalkSegments() const {
   ExtentProperties properties{.extent_kind = ExtentKind::Data, .data_kind = DataKind::Unmodified};
   if (auto status = extractor_.AddBlocks(blobfs::kSuperblockOffset, blobfs::kBlobfsSuperblockBlocks,
                                          properties);
@@ -281,7 +281,7 @@ zx::status<> FsWalker::WalkSegments() const {
   return zx::ok();
 }
 
-zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
+zx::result<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
   off_t pread_offset;
   if (!safemath::MakeCheckedNum<uint64_t>(start_offset)
            .Cast<off_t>()
@@ -300,7 +300,7 @@ zx::status<> FsWalker::TryLoadSuperblock(uint64_t start_offset) {
   return zx::error(ZX_ERR_BAD_STATE);
 }
 
-zx::status<> FsWalker::LoadSuperblock() {
+zx::result<> FsWalker::LoadSuperblock() {
   ExtentProperties properties{.extent_kind = ExtentKind::Data, .data_kind = DataKind::Unmodified};
   auto load_status = TryLoadSuperblock(blobfs::kSuperblockOffset * blobfs::kBlobfsBlockSize);
   if (load_status.is_ok()) {
@@ -317,7 +317,7 @@ zx::status<> FsWalker::LoadSuperblock() {
 
 }  // namespace
 
-zx::status<> BlobfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
+zx::result<> BlobfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   if (zx_status_t status = loop.StartThread(); status != ZX_OK) {
     std::cerr << "Cannot initialize dispatch loop: " << zx_status_get_string(status);

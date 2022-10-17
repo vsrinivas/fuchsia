@@ -123,10 +123,10 @@ class Device : public DeviceType,
   void AcpiConnectServer(zx::channel server);
 
   // Wrapper around |DdkAdd| which handles setting up FIDL outgoing directory.
-  zx::status<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
+  zx::result<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                          cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags);
 
-  zx::status<zx::interrupt> GetInterrupt(size_t index) __TA_EXCLUDES(lock_);
+  zx::result<zx::interrupt> GetInterrupt(size_t index) __TA_EXCLUDES(lock_);
 
   // FIDL impls
   void GetBusId(GetBusIdCompleter::Sync& completer) override;
@@ -169,7 +169,7 @@ class Device : public DeviceType,
   zx_status_t ReportCurrentResources() __TA_REQUIRES(lock_);
   ACPI_STATUS AddResource(ACPI_RESOURCE*) __TA_REQUIRES(lock_);
   // Set up FIDL outgoing directory and start serving fuchsia.hardware.acpi.Device.
-  zx::status<zx::channel> PrepareOutgoing();
+  zx::result<zx::channel> PrepareOutgoing();
 
   struct PowerStateInfo {
     uint8_t d_state;
@@ -180,7 +180,7 @@ class Device : public DeviceType,
   };
 
   zx_status_t InitializePowerManagement();
-  zx::status<PowerStateInfo> GetInfoForState(uint8_t d_state);
+  zx::result<PowerStateInfo> GetInfoForState(uint8_t d_state);
   zx_status_t ConfigureInitialPowerState();
   zx_status_t CallPsxMethod(const PowerStateInfo& state);
   zx_status_t Resume(const PowerStateInfo& requested_state_info);

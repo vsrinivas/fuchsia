@@ -14,7 +14,7 @@ namespace audio {
 template <typename DerivedType, uint8_t address>
 struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
   // Read from I2C and log errors.
-  static zx::status<DerivedType> Read(fidl::ClientEnd<fuchsia_hardware_i2c::Device>& i2c) {
+  static zx::result<DerivedType> Read(fidl::ClientEnd<fuchsia_hardware_i2c::Device>& i2c) {
     auto ret = Get();
 // #define TRACE_I2C
 #ifdef TRACE_I2C

@@ -25,7 +25,7 @@ class Page {
     }
   }
 
-  zx::status<> Alloc(uint8_t fill) {
+  zx::result<> Alloc(uint8_t fill) {
     zx_status_t status = pmm_alloc_page(0, &page_, &pa_);
     if (status != ZX_OK) {
       return zx::error(status);
@@ -61,7 +61,7 @@ class Page {
 template <typename T>
 class PagePtr {
  public:
-  zx::status<> Alloc() {
+  zx::result<> Alloc() {
     auto result = page_.Alloc(0);
     if (result.is_error()) {
       return result.take_error();

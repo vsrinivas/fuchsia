@@ -101,7 +101,7 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreate) {
   fdio_cpp::FdioCaller caller(std::move(fd));
 
   // Opening with kOpenFlagCreate should succeed.
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   auto result = fidl::WireCall(caller.borrow_as<fio::Directory>())
@@ -123,7 +123,7 @@ TEST_P(DotDotTest, RawOpenDotDirectoryCreateIfAbsent) {
   fdio_cpp::FdioCaller caller(std::move(fd));
 
   // Opening with kOpenFlagCreateIfAbsent should fail.
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   auto result =

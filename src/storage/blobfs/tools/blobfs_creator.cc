@@ -44,7 +44,7 @@ std::string CompressedName(const std::string& prefix_path, const blobfs::BlobInf
          blobfs::kChunkedFileExtension;
 }
 
-zx::status<> WriteCompressedBlob(const std::string& path, const blobfs::BlobInfo& blob) {
+zx::result<> WriteCompressedBlob(const std::string& path, const blobfs::BlobInfo& blob) {
   std::ofstream file(path, std::ofstream::out | std::ofstream::binary);
   if (!file.is_open()) {
     fprintf(stderr, "Failed to open: %s for write\n", path.c_str());
@@ -83,7 +83,7 @@ void WriteBlobInfoToJson(std::ofstream& file, const blobfs::BlobInfo& blob,
   file << "  }";
 }
 
-zx::status<> RecordBlobs(const std::filesystem::path& path,
+zx::result<> RecordBlobs(const std::filesystem::path& path,
                          std::map<digest::Digest, blobfs::BlobInfo>& blobs,
                          const std::string& compressed_copy_prefix) {
   std::ofstream file(path);
@@ -110,14 +110,14 @@ zx::status<> RecordBlobs(const std::filesystem::path& path,
   return zx::ok();
 }
 
-zx::status<> CreateBlobfsWithBlobs(fbl::unique_fd fd,
+zx::result<> CreateBlobfsWithBlobs(fbl::unique_fd fd,
                                    const std::map<digest::Digest, blobfs::BlobInfo>& blobs) {
   std::unique_ptr<blobfs::Blobfs> blobfs;
   if (zx_status_t status = blobfs_create(&blobfs, std::move(fd)); status != ZX_OK) {
     return zx::error(status);
   }
   for (const auto& [digest, blob] : blobs) {
-    if (zx::status status = blobfs->AddBlob(blob); status.is_error()) {
+    if (zx::result status = blobfs->AddBlob(blob); status.is_error()) {
       fprintf(stderr, "Failed to add blob '%s': %d\n", blob.GetSrcFilePath().c_str(),
               status.status_value());
       return status;
@@ -258,7 +258,7 @@ zx_status_t BlobfsCreator::ProcessCustom(int argc, char** argv, uint8_t* process
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx::status<blobfs::BlobInfo> BlobfsCreator::ProcessBlobToBlobInfo(
+zx::result<blobfs::BlobInfo> BlobfsCreator::ProcessBlobToBlobInfo(
     const std::filesystem::path& path,
     std::optional<chunked_compression::MultithreadedChunkedCompressor>& compressor) {
   if (zx_status_t res = AppendDepfile(path.c_str()); res != ZX_OK) {
@@ -269,7 +269,7 @@ zx::status<blobfs::BlobInfo> BlobfsCreator::ProcessBlobToBlobInfo(
     fprintf(stderr, "Failed to open: %s\n", path.c_str());
     return zx::error(ZX_ERR_BAD_PATH);
   }
-  zx::status<blobfs::BlobInfo> blob_info =
+  zx::result<blobfs::BlobInfo> blob_info =
       compressor.has_value()
           ? blobfs::BlobInfo::CreateCompressed(data_fd.get(), blob_layout_format_, path,
                                                *compressor)
@@ -279,7 +279,7 @@ zx::status<blobfs::BlobInfo> BlobfsCreator::ProcessBlobToBlobInfo(
     return blob_info;
   }
   if (blob_info->IsCompressed() && !compressed_copy_prefix_.empty()) {
-    zx::status copy_status =
+    zx::result copy_status =
         WriteCompressedBlob(CompressedName(compressed_copy_prefix_, *blob_info), blob_info.value());
     if (copy_status.is_error()) {
       return copy_status.take_error();
@@ -315,7 +315,7 @@ zx_status_t BlobfsCreator::CalculateRequiredSize(off_t* out) {
         if (i >= blob_list_.size()) {
           break;
         }
-        zx::status<blobfs::BlobInfo> info_or = ProcessBlobToBlobInfo(blob_list_[i], compressor);
+        zx::result<blobfs::BlobInfo> info_or = ProcessBlobToBlobInfo(blob_list_[i], compressor);
         if (info_or.is_error()) {
           status.store(info_or.status_value(), std::memory_order_relaxed);
           return;
@@ -427,13 +427,13 @@ zx_status_t BlobfsCreator::Add() {
     return Usage();
   }
 
-  if (zx::status status = CreateBlobfsWithBlobs(std::move(fd_), blob_info_list_);
+  if (zx::result status = CreateBlobfsWithBlobs(std::move(fd_), blob_info_list_);
       status.is_error()) {
     return status.status_value();
   }
 
   if (json_output_path().has_value()) {
-    if (zx::status status =
+    if (zx::result status =
             RecordBlobs(*json_output_path(), blob_info_list_, compressed_copy_prefix_);
         status.is_error()) {
       return status.status_value();

@@ -118,7 +118,7 @@ bool Gt92xxDevice::ProductIdsMatch(const uint8_t* firmware_product_id,
   return memcmp(firmware_product_id, chip_product_id, size) == 0;
 }
 
-zx::status<fzl::VmoMapper> Gt92xxDevice::LoadAndVerifyFirmware() {
+zx::result<fzl::VmoMapper> Gt92xxDevice::LoadAndVerifyFirmware() {
   constexpr size_t kMinFirmwareSize = kFirmwareHeaderSize + kDspIspSize +
                                       kFirmwareTotalSectionSize + kFirmwareTotalSectionSize +
                                       kDspSize + kBootSize;
@@ -193,7 +193,7 @@ bool Gt92xxDevice::IsFirmwareApplicable(const fzl::VmoMapper& firmware_mapper) {
 
   hw_info = le32toh(hw_info);
 
-  zx::status<uint8_t> fw_message = zx::ok(0);
+  zx::result<uint8_t> fw_message = zx::ok(0);
   for (int i = 0; i < GT_REG_FW_MESSAGE_RETRIES; i++) {
     fw_message = Read(GT_REG_FW_MESSAGE);
     if (fw_message.is_error() || fw_message.value() == GT_FIRMWARE_MAGIC) {
@@ -269,7 +269,7 @@ zx_status_t Gt92xxDevice::EnterUpdateMode() {
     return status;
   }
 
-  zx::status<bool> updated = Ss51AndDspHeld();
+  zx::result<bool> updated = Ss51AndDspHeld();
   if (updated.is_error()) {
     return updated.error_value();
   }
@@ -379,7 +379,7 @@ zx_status_t Gt92xxDevice::WaitUntilNotBusy() {
   for (;;) {
     zx::nanosleep(zx::deadline_after(zx::msec(10)));
 
-    zx::status status = DeviceBusy();
+    zx::result status = DeviceBusy();
     if (status.is_error()) {
       return status.error_value();
     }
@@ -674,7 +674,7 @@ zx_status_t Gt92xxDevice::WriteLink(cpp20::span<const uint8_t> section) {
 
 zx_status_t Gt92xxDevice::UpdateFirmwareIfNeeded() {
   // 1. Verify firmware
-  zx::status<fzl::VmoMapper> firmware_mapper = LoadAndVerifyFirmware();
+  zx::result<fzl::VmoMapper> firmware_mapper = LoadAndVerifyFirmware();
   if (firmware_mapper.is_error() && firmware_mapper.error_value() == ZX_ERR_NOT_FOUND) {
     // Just continue if the driver package doesn't include firmware.
     return ZX_OK;

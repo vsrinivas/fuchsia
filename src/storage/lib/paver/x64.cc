@@ -31,7 +31,7 @@ constexpr char kOldEfiName[] = "efi-system";
 
 }  // namespace
 
-zx::status<std::unique_ptr<DevicePartitioner>> EfiDevicePartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> EfiDevicePartitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     const fbl::unique_fd& block_device) {
   if (arch != Arch::kX64) {
@@ -71,7 +71,7 @@ bool EfiDevicePartitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -122,7 +122,7 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::AddPartition(
   return gpt_->AddPartition(name, type.value(), minimum_size_bytes, /*optional_reserve_bytes*/ 0);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -172,18 +172,18 @@ zx::status<std::unique_ptr<PartitionClient>> EfiDevicePartitioner::FindPartition
   }
 }
 
-zx::status<> EfiDevicePartitioner::FinalizePartition(const PartitionSpec& spec) const {
+zx::result<> EfiDevicePartitioner::FinalizePartition(const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  return zx::make_status(gpt_->GetGpt()->Sync());
+  return zx::make_result(gpt_->GetGpt()->Sync());
 }
 
-zx::status<> EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+zx::result<> EfiDevicePartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
-zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
+zx::result<> EfiDevicePartitioner::InitPartitionTables() const {
   const std::array<Partition, 9> partitions_to_add{
       Partition::kBootloaderA, Partition::kZirconA, Partition::kZirconB,
       Partition::kZirconR,     Partition::kVbMetaA, Partition::kVbMetaB,
@@ -239,11 +239,11 @@ zx::status<> EfiDevicePartitioner::InitPartitionTables() const {
   return zx::ok();
 }  // namespace paver
 
-zx::status<> EfiDevicePartitioner::WipePartitionTables() const {
+zx::result<> EfiDevicePartitioner::WipePartitionTables() const {
   return gpt_->WipePartitionTables();
 }
 
-zx::status<> EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
                                                    cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -259,13 +259,13 @@ zx::status<> EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> X64PartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> X64PartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return EfiDevicePartitioner::Initialize(std::move(devfs_root), svc_root, arch, block_device);
 }
 
-zx::status<std::unique_ptr<abr::Client>> X64AbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> X64AbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;

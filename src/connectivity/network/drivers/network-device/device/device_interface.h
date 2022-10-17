@@ -65,7 +65,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
                         public ddk::NetworkDeviceIfcProtocol<DeviceInterface>,
                         public ::network::NetworkDeviceInterface {
  public:
-  static zx::status<std::unique_ptr<DeviceInterface>> Create(
+  static zx::result<std::unique_ptr<DeviceInterface>> Create(
       async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent);
   ~DeviceInterface() override;
 
@@ -169,7 +169,7 @@ class DeviceInterface : public fidl::WireServer<netdev::Device>,
   //
   // NB: The validity of the returned AttachedPort is not really guaranteed by the type system, but
   // by the fact that DeviceInterface will detach all ports from sessions before continuing.
-  zx::status<AttachedPort> AcquirePort(netdev::wire::PortId port_id,
+  zx::result<AttachedPort> AcquirePort(netdev::wire::PortId port_id,
                                        cpp20::span<const netdev::wire::FrameType> rx_frame_types)
       __TA_REQUIRES(control_lock_);
 

@@ -67,7 +67,7 @@ zx_status_t MkfsFat(const char* device_path, LaunchCallback cb, const MkfsOption
   return cb(std::move(argv), {});
 }
 
-zx::status<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+zx::result<> MkfsComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                              const std::string& device_path, const MkfsOptions& options) {
   auto device = component::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
   if (device.is_error())

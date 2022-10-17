@@ -15,7 +15,7 @@ namespace minfs {
 AllocatorReservation::AllocatorReservation(Allocator* allocator) : allocator_(*allocator) {}
 AllocatorReservation::~AllocatorReservation() { Cancel(); }
 
-zx::status<> AllocatorReservation::Reserve(PendingWork* transaction, size_t reserved) {
+zx::result<> AllocatorReservation::Reserve(PendingWork* transaction, size_t reserved) {
   if (reserved_ != 0) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -26,7 +26,7 @@ zx::status<> AllocatorReservation::Reserve(PendingWork* transaction, size_t rese
   return status;
 }
 
-zx::status<> AllocatorReservation::ExtendReservation(PendingWork* transaction, size_t reserved) {
+zx::result<> AllocatorReservation::ExtendReservation(PendingWork* transaction, size_t reserved) {
   auto status = allocator_.Reserve({}, transaction, reserved);
   if (status.is_ok()) {
     reserved_ += reserved;

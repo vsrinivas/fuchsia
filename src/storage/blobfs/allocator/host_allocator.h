@@ -24,18 +24,18 @@ namespace blobfs {
 class HostAllocator : public BaseAllocator {
  public:
   // Does not take ownership of |block_bitmap|.
-  static zx::status<std::unique_ptr<HostAllocator>> Create(RawBitmap block_bitmap,
+  static zx::result<std::unique_ptr<HostAllocator>> Create(RawBitmap block_bitmap,
                                                            cpp20::span<Inode> node_map);
 
   // blobfs::NodeFinder interface.
-  zx::status<InodePtr> GetNode(uint32_t node_index) final;
+  zx::result<InodePtr> GetNode(uint32_t node_index) final;
 
   void* GetBlockBitmapData();
 
  protected:
   // blobfs::BaseAllocator interface.
-  zx::status<> AddBlocks(uint64_t block_count) final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
-  zx::status<> AddNodes() final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  zx::result<> AddBlocks(uint64_t block_count) final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  zx::result<> AddNodes() final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
  private:
   HostAllocator(RawBitmap block_bitmap, cpp20::span<Inode> node_map,

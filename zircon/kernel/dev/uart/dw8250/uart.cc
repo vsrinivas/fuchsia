@@ -164,7 +164,7 @@ static int dw8250_uart_pgetc() {
 
 static int dw8250_uart_getc(bool wait) {
   if (initialized) {
-    zx::status<char> result = uart_rx_buf.ReadChar(wait);
+    zx::result<char> result = uart_rx_buf.ReadChar(wait);
     if (result.is_ok()) {
       return result.value();
     }

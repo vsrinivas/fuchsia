@@ -44,7 +44,7 @@ class NetdeviceMigration
   static constexpr mode_t kSupportedMacFilteringModes =
       MODE_MULTICAST_FILTER | MODE_MULTICAST_PROMISCUOUS | MODE_PROMISCUOUS;
   static constexpr uint32_t kMulticastFilterMax = MAX_MAC_FILTER;
-  static zx::status<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
+  static zx::result<std::unique_ptr<NetdeviceMigration>> Create(zx_device_t* dev);
   virtual ~NetdeviceMigration() = default;
 
   // Initializes the driver and binds it to the parent device `dev`. The DDK calls Bind through

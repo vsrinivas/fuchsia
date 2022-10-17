@@ -75,7 +75,7 @@ TEST(Service, ApiTest) {
 }
 
 TEST(Service, ServeDirectory) {
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_EQ(ZX_OK, root.status_value());
 
   // open client
@@ -105,7 +105,7 @@ TEST(Service, ServeDirectory) {
 
 TEST(Service, ServiceNodeIsNotDirectory) {
   // Set up the server
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_EQ(ZX_OK, root.status_value());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -127,7 +127,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
   ASSERT_EQ(ZX_ERR_NOT_DIR, result.status_value());
 
   // Open the service through FIDL with the directory flag, which should fail.
-  zx::status abc = fidl::CreateEndpoints<fio::Node>();
+  zx::result abc = fidl::CreateEndpoints<fio::Node>();
   ASSERT_EQ(ZX_OK, abc.status_value());
 
   loop.StartThread();
@@ -162,7 +162,7 @@ TEST(Service, ServiceNodeIsNotDirectory) {
 
 TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   // Set up the server
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_EQ(ZX_OK, root.status_value());
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -176,7 +176,7 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
   directory->AddEntry("abc", vnode);
   ASSERT_EQ(ZX_OK, vfs.ServeDirectory(directory, std::move(root->server)));
 
-  zx::status abc = fidl::CreateEndpoints<fio::Node>();
+  zx::result abc = fidl::CreateEndpoints<fio::Node>();
   ASSERT_EQ(ZX_OK, abc.status_value());
 
   loop.StartThread();

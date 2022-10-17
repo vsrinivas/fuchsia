@@ -436,7 +436,7 @@ zx_status_t PlatformDevice::RpcGetMetadata(uint32_t index, uint32_t* out_type, u
   if (!IsValid(metadata)) {
     return ZX_ERR_INTERNAL;
   }
-  zx::status metadata_bi =
+  zx::result metadata_bi =
       bus_->GetBootItem(metadata.zbi_type().value(), metadata.zbi_extra().value());
   if (metadata_bi.is_error()) {
     return metadata_bi.status_value();
@@ -648,7 +648,7 @@ void PlatformDevice::DdkInit(ddk::InitTxn txn) {
         txn.Reply(ZX_ERR_INTERNAL);
         return;
       }
-      zx::status data =
+      zx::result data =
           bus_->GetBootItemArray(metadata.zbi_type().value(), metadata.zbi_extra().value());
       zx_status_t status = data.status_value();
       if (data.is_ok()) {

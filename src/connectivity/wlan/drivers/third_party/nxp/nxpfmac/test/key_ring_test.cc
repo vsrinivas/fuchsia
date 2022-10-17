@@ -29,7 +29,7 @@ constexpr uint32_t kBssIndex = 4;
 
 struct KeyRingTest : public zxtest::Test {
   void SetUp() override {
-    zx::status<std::unique_ptr<wlan::nxpfmac::IoctlAdapter>> adapter =
+    zx::result<std::unique_ptr<wlan::nxpfmac::IoctlAdapter>> adapter =
         wlan::nxpfmac::IoctlAdapter::Create(mlan_mock_.GetAdapter(), &mock_bus_);
     ASSERT_OK(adapter.status_value());
     ioctl_adapter_ = std::move(adapter.value());

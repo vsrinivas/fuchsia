@@ -40,7 +40,7 @@ class MemfsHandler {
     ZX_ASSERT(loop_.StartThread("memfs-serving-thread") == ZX_OK);
   }
 
-  zx::status<> Start() {
+  zx::result<> Start() {
     std::scoped_lock guard{mutex_};
     if (memfs_ != nullptr) {
       return zx::error(ZX_ERR_ALREADY_EXISTS);
@@ -117,7 +117,7 @@ int main(int argc, char* argv[]) {
   auto outgoing_directory = OutgoingDirectory::Create(dispatcher);
   MemfsHandler memfs_handler_(outgoing_directory);
 
-  if (zx::status status = outgoing_directory.ServeFromStartupInfo(); status.is_error()) {
+  if (zx::result status = outgoing_directory.ServeFromStartupInfo(); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to serve outgoing directory: " << status.status_string();
     return EXIT_FAILURE;
   }

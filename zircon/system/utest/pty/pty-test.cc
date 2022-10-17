@@ -18,7 +18,7 @@
 
 namespace fpty = fuchsia_hardware_pty;
 
-zx::status<uint32_t> fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any,
+zx::result<uint32_t> fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any,
                                 zx::time deadline) {
   uint32_t signals = 0;
   zx_status_t status = fdio_wait_fd(fd.get(), wait_for_any, &signals, deadline.get());
@@ -83,7 +83,7 @@ static zx_status_t open_client(const fbl::unique_fd& fd, uint32_t client_id, int
 
   fdio_cpp::UnownedFdioCaller io(fd.get());
 
-  zx::status endpoints = fidl::CreateEndpoints<fpty::Device>();
+  zx::result endpoints = fidl::CreateEndpoints<fpty::Device>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }

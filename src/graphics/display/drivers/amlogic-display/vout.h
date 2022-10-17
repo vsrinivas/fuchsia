@@ -102,7 +102,7 @@ class Vout {
   // This method is not guaranteed to power off all devices. Returns ZX_OK if
   // successful, ZX_ERR_UNSUPPORTED if the panel cannot be powered off. May
   // return other errors.
-  zx::status<> PowerOff();
+  zx::result<> PowerOff();
 
   // Turn on all connected displays and reprogram clocks. This will resume vsync
   // interrupts as well.
@@ -110,7 +110,7 @@ class Vout {
   // This method is not guaranteed to power on all devices. Returns ZX_OK if
   // successful, ZX_ERR_UNSUPPORTED if the panel cannot be powered on. May
   // return other errors.
-  zx::status<> PowerOn();
+  zx::result<> PowerOn();
 
   void Dump();
 

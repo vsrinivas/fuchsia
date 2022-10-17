@@ -70,9 +70,9 @@ class DirEntryCache {
   // Therefore, explicit deallocation on unmount is needed.
   void Reset() __TA_EXCLUDES(lock_);
 
-  zx::status<DirEntry> LookupDirEntry(ino_t parent_ino, std::string_view child_name)
+  zx::result<DirEntry> LookupDirEntry(ino_t parent_ino, std::string_view child_name)
       __TA_EXCLUDES(lock_);
-  zx::status<pgoff_t> LookupDataPageIndex(ino_t parent_ino, std::string_view child_name)
+  zx::result<pgoff_t> LookupDataPageIndex(ino_t parent_ino, std::string_view child_name)
       __TA_EXCLUDES(lock_);
   void UpdateDirEntry(ino_t parent_ino, std::string_view child_name, DirEntry &dir_entry,
                       pgoff_t data_page_index) __TA_EXCLUDES(lock_);

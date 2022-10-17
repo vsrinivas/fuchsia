@@ -214,7 +214,7 @@ class Dispatcher : public async_dispatcher_t,
 
   // Returns ownership of an event that will be signaled once the dispatcher is ready
   // to complete shutdown.
-  zx::status<zx::event> RegisterForCompleteShutdownEvent();
+  zx::result<zx::event> RegisterForCompleteShutdownEvent();
 
   // Blocks the current thread until the dispatcher is idle.
   void WaitUntilIdle();
@@ -322,7 +322,7 @@ class Dispatcher : public async_dispatcher_t,
    public:
     // Returns a duplicate of the event that will be signaled when the dispatcher
     // is ready to complete shutdown.
-    zx::status<zx::event> GetEvent();
+    zx::result<zx::event> GetEvent();
     // Signal and reset the idle event.
     zx_status_t Signal();
 

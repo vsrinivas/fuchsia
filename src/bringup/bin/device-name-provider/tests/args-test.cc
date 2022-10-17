@@ -32,7 +32,7 @@ class FakeSvc {
                              return ZX_OK;
                            }));
 
-    zx::status server_end = fidl::CreateEndpoints(&svc_local_);
+    zx::result server_end = fidl::CreateEndpoints(&svc_local_);
     ASSERT_OK(server_end.status_value());
 
     vfs_.ServeDirectory(root_dir, std::move(server_end.value()));

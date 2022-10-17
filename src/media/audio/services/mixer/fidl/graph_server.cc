@@ -49,7 +49,7 @@ std::string ClockNameFromNodeName(std::string_view node_name) {
 
 // Looks up a clock by `zx::clock` handle. If none exists in `registry`, creates an unadjustable
 // wrapper clock with `factory` and adds that clock to `registry`.
-zx::status<std::shared_ptr<Clock>> LookupClock(ClockRegistry& registry, ClockFactory& factory,
+zx::result<std::shared_ptr<Clock>> LookupClock(ClockRegistry& registry, ClockFactory& factory,
                                                zx::clock handle, uint32_t domain,
                                                std::string_view name) {
   if (auto result = registry.Find(handle); result.is_ok()) {
@@ -67,7 +67,7 @@ zx::status<std::shared_ptr<Clock>> LookupClock(ClockRegistry& registry, ClockFac
 
 // Looks up a clock by `reference_clock` and `node_name`. If none exists in `registry`, creates an
 // unadjustable wrapper clock with `factory` and adds that clock to `registry`.
-zx::status<std::shared_ptr<Clock>> LookupClock(
+zx::result<std::shared_ptr<Clock>> LookupClock(
     ClockRegistry& registry, ClockFactory& factory,
     fuchsia_audio_mixer::wire::ReferenceClock& reference_clock, std::string_view node_name) {
   return LookupClock(

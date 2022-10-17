@@ -97,7 +97,7 @@ class VirtioInputTest : public TestWithDevice,
     ASSERT_EQ(ZX_OK, status);
   }
 
-  zx::status<std::vector<virtio_input_event_t*>> AddEventDescriptorsToChain(size_t n) {
+  zx::result<std::vector<virtio_input_event_t*>> AddEventDescriptorsToChain(size_t n) {
     std::vector<virtio_input_event_t*> result(n);
     // Note: virtio-input sends only one virtio_input_event_t per chain.
     for (size_t i = 0; i < n; ++i) {

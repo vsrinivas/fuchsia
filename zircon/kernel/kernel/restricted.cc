@@ -35,7 +35,7 @@ extern "C" [[noreturn]] void syscall_from_restricted(const syscall_regs_t* regs)
   RestrictedState& rs = Thread::Current().restricted_state();
 
   // get a handle to the arch specific buffer
-  zx::status<ArchRestrictedState*> _arch = rs.GetArchState();
+  zx::result<ArchRestrictedState*> _arch = rs.GetArchState();
   ASSERT_MSG(_arch.is_ok(), "unable to get handle to arch state\n");
   ArchRestrictedState* arch = *_arch;
 
@@ -88,7 +88,7 @@ zx_status_t RestrictedEnter(uint32_t options, uintptr_t vector_table_ptr, uintpt
     DEBUG_ASSERT(!rs.in_restricted());
 
     // get a handle to the arch specific buffer
-    zx::status<ArchRestrictedState*> _arch = rs.GetArchState();
+    zx::result<ArchRestrictedState*> _arch = rs.GetArchState();
     if (unlikely(_arch.is_error())) {
       return _arch.error_value();
     }
@@ -159,7 +159,7 @@ zx_status_t RestrictedWriteState(user_in_ptr<const void> data, size_t data_size)
   RestrictedState& rs = Thread::Current::restricted_state();
 
   // get a handle to the arch specific buffer
-  zx::status<ArchRestrictedState*> _arch = rs.GetArchState();
+  zx::result<ArchRestrictedState*> _arch = rs.GetArchState();
   if (_arch.is_error()) {
     return _arch.error_value();
   }
@@ -181,7 +181,7 @@ zx_status_t RestrictedReadState(user_out_ptr<void> data, size_t data_size) {
 
   // get a handle to the arch specific buffer
   RestrictedState& rs = Thread::Current::restricted_state();
-  zx::status<ArchRestrictedState*> _arch = rs.GetArchState();
+  zx::result<ArchRestrictedState*> _arch = rs.GetArchState();
   if (_arch.is_error()) {
     return _arch.error_value();
   }

@@ -1174,7 +1174,7 @@ void Dispatcher::DispatchCallbacks(std::unique_ptr<EventWaiter> event_waiter,
   }
 }
 
-zx::status<zx::event> Dispatcher::RegisterForCompleteShutdownEvent() {
+zx::result<zx::event> Dispatcher::RegisterForCompleteShutdownEvent() {
   fbl::AutoLock lock_(&callback_lock_);
   auto event = complete_shutdown_event_manager_.GetEvent();
   if (event.is_error()) {
@@ -1260,7 +1260,7 @@ zx_status_t Dispatcher::EventWaiter::BeginWaitWithRef(std::unique_ptr<EventWaite
   return BeginWait(std::move(event), dispatcher->process_shared_dispatcher_);
 }
 
-zx::status<zx::event> Dispatcher::CompleteShutdownEventManager::GetEvent() {
+zx::result<zx::event> Dispatcher::CompleteShutdownEventManager::GetEvent() {
   if (!event_.is_valid()) {
     // If this is the first waiter to register, we need to create the
     // idle event manager's event.

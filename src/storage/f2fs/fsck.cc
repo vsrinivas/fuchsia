@@ -229,7 +229,7 @@ zx_status_t FsckWorker::ValidateNodeBlock(const Node &node_block, NodeInfoDeprec
   return ZX_OK;
 }
 
-zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfoDeprecated node_info,
+zx::result<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfoDeprecated node_info,
                                            FileType ftype, NodeType ntype) {
   nid_t nid = node_info.nid;
   if (ftype != FileType::kFtOrphan || TestValidBitmap(nid, fsck_.nat_area_bitmap.get()) != 0x0) {
@@ -285,7 +285,7 @@ zx::status<bool> FsckWorker::UpdateContext(const Node &node_block, NodeInfoDepre
   return zx::ok(true);
 }
 
-zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> FsckWorker::ReadNodeBlock(
+zx::result<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> FsckWorker::ReadNodeBlock(
     nid_t nid) {
   if (!IsValidNid(nid)) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -318,7 +318,7 @@ zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> FsckWorker::
       std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>{std::move(fs_block), node_info});
 }
 
-zx::status<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t nid, FileType ftype,
+zx::result<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t nid, FileType ftype,
                                                       NodeType ntype) {
   uint64_t block_count = 0;
   uint32_t link_count = 0;
@@ -361,7 +361,7 @@ zx::status<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t 
 
   if (*do_traverse == true) {
     // Traverse to underlying structures.
-    zx::status<TraverseResult> ret;
+    zx::result<TraverseResult> ret;
     switch (ntype) {
       case NodeType::kTypeInode:
         ret = TraverseInodeBlock(*node_block, node_info, ftype);
@@ -405,7 +405,7 @@ zx::status<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t 
   return zx::ok(TraverseResult{block_count, link_count});
 }
 
-zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block,
+zx::result<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block,
                                                           NodeInfoDeprecated node_info,
                                                           FileType ftype) {
   uint32_t child_count = 0, child_files = 0;
@@ -494,7 +494,7 @@ zx::status<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block
   return zx::ok(TraverseResult{block_count, child_count});
 }
 
-zx::status<TraverseResult> FsckWorker::TraverseDnodeBlock(const Inode *inode,
+zx::result<TraverseResult> FsckWorker::TraverseDnodeBlock(const Inode *inode,
                                                           const Node &node_block,
                                                           NodeInfoDeprecated node_info,
                                                           FileType ftype) {
@@ -516,7 +516,7 @@ zx::status<TraverseResult> FsckWorker::TraverseDnodeBlock(const Inode *inode,
   return zx::ok(TraverseResult{block_count, child_count});
 }
 
-zx::status<TraverseResult> FsckWorker::TraverseIndirectNodeBlock(const Inode *inode,
+zx::result<TraverseResult> FsckWorker::TraverseIndirectNodeBlock(const Inode *inode,
                                                                  const Node &node_block,
                                                                  FileType ftype) {
   uint64_t block_count = 1;
@@ -536,7 +536,7 @@ zx::status<TraverseResult> FsckWorker::TraverseIndirectNodeBlock(const Inode *in
   return zx::ok(TraverseResult{block_count, child_count});
 }
 
-zx::status<TraverseResult> FsckWorker::TraverseDoubleIndirectNodeBlock(const Inode *inode,
+zx::result<TraverseResult> FsckWorker::TraverseDoubleIndirectNodeBlock(const Inode *inode,
                                                                        const Node &node_block,
                                                                        FileType ftype) {
   uint64_t block_count = 1;
@@ -1416,7 +1416,7 @@ zx_status_t FsckWorker::SanityCheckRawSuper(const Superblock *raw_super) {
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<FsBlock>> FsckWorker::GetSuperblock(block_t index) {
+zx::result<std::unique_ptr<FsBlock>> FsckWorker::GetSuperblock(block_t index) {
   if (index >= kSuperblockCopies) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
@@ -1466,7 +1466,7 @@ void FsckWorker::InitSuperblockInfo() {
   superblock_info_.SetMetaIno(LeToCpu(raw_super.meta_ino));
 }
 
-zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCheckpoint(
+zx::result<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCheckpoint(
     block_t cp_addr) {
   auto cp_page_1 = std::make_unique<FsBlock>();
   auto cp_page_2 = std::make_unique<FsBlock>();
@@ -1521,7 +1521,7 @@ zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCh
 
 zx_status_t FsckWorker::GetValidCheckpoint() {
   const Superblock &raw_sb = superblock_info_.GetRawSuperblock();
-  zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> current = zx::error(ZX_ERR_NOT_FOUND);
+  zx::result<std::pair<std::unique_ptr<FsBlock>, uint64_t>> current = zx::error(ZX_ERR_NOT_FOUND);
   block_t cp_start_blk_no = 0;
 
   for (auto checkpoint_start :
@@ -1969,7 +1969,7 @@ std::pair<SegType, Summary> FsckWorker::GetSummaryEntry(uint32_t block_address) 
   return {type, summary_entry};
 }
 
-zx::status<RawNatEntry> FsckWorker::GetNatEntry(nid_t nid) {
+zx::result<RawNatEntry> FsckWorker::GetNatEntry(nid_t nid) {
   block_t block_off;
   block_t block_addr;
   block_t seg_off;
@@ -2007,7 +2007,7 @@ zx::status<RawNatEntry> FsckWorker::GetNatEntry(nid_t nid) {
   return zx::ok(nat_block->entries[entry_off]);
 }
 
-zx::status<NodeInfoDeprecated> FsckWorker::GetNodeInfo(nid_t nid) {
+zx::result<NodeInfoDeprecated> FsckWorker::GetNodeInfo(nid_t nid) {
   NodeInfoDeprecated node_info;
   auto result = GetNatEntry(nid);
   if (result.is_error()) {
@@ -2111,7 +2111,7 @@ void FsckWorker::BuildSitAreaBitmap() {
   }
 }
 
-zx::status<RawNatEntry> FsckWorker::LookupNatInJournal(nid_t nid) {
+zx::result<RawNatEntry> FsckWorker::LookupNatInJournal(nid_t nid) {
   RawNatEntry raw_nat;
   CursegInfo *curseg = segment_manager_->CURSEG_I(CursegType::kCursegHotData);
   SummaryBlock *sum = curseg->sum_blk;

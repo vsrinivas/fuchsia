@@ -34,7 +34,7 @@ ComponentRunner::ComponentRunner(async::Loop& loop, ComponentOptions config)
       loop_.dispatcher(), config_,
       [this](std::unique_ptr<BlockDevice> device, const MountOptions& options) {
         FX_LOGS(INFO) << "configure callback is called";
-        zx::status<> status = Configure(std::move(device), options);
+        zx::result<> status = Configure(std::move(device), options);
         if (status.is_error()) {
           FX_LOGS(ERROR) << "Could not configure blobfs: " << status.status_string();
         }
@@ -98,11 +98,11 @@ void ComponentRunner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx::status<fs::FilesystemInfo> ComponentRunner::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> ComponentRunner::GetFilesystemInfo() {
   return blobfs_->GetFilesystemInfo();
 }
 
-zx::status<> ComponentRunner::ServeRoot(
+zx::result<> ComponentRunner::ServeRoot(
     fidl::ServerEnd<fuchsia_io::Directory> root,
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
     fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin_client,
@@ -148,7 +148,7 @@ zx::status<> ComponentRunner::ServeRoot(
   return zx::ok();
 }
 
-zx::status<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
+zx::result<> ComponentRunner::Configure(std::unique_ptr<BlockDevice> device,
                                         const MountOptions& options) {
   if (auto status = Init(); status.is_error()) {
     FX_LOGS(ERROR) << "configure failed; vfs init failed";

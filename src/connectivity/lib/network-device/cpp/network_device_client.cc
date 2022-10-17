@@ -27,7 +27,7 @@ constexpr zx_signals_t kFifoWaitReads = ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED;
 constexpr zx_signals_t kFifoWaitWrites = ZX_FIFO_WRITABLE;
 }  // namespace
 
-zx::status<DeviceInfo> DeviceInfo::Create(const netdev::wire::DeviceInfo& fidl) {
+zx::result<DeviceInfo> DeviceInfo::Create(const netdev::wire::DeviceInfo& fidl) {
   if (!(fidl.has_min_descriptor_length() && fidl.has_descriptor_version() && fidl.has_rx_depth() &&
         fidl.has_tx_depth() && fidl.has_buffer_alignment() && fidl.has_min_rx_buffer_length() &&
         fidl.has_min_tx_buffer_length() && fidl.has_min_tx_buffer_head() &&
@@ -68,7 +68,7 @@ zx::status<DeviceInfo> DeviceInfo::Create(const netdev::wire::DeviceInfo& fidl) 
   return zx::ok(std::move(info));
 }
 
-zx::status<PortInfoAndMac> PortInfoAndMac::Create(
+zx::result<PortInfoAndMac> PortInfoAndMac::Create(
     const netdev::wire::PortInfo& fidl,
     const std::optional<fuchsia_net::wire::MacAddress>& unicast_address) {
   if (!(fidl.has_id() && fidl.has_class())) {
@@ -159,7 +159,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
           res.complete_error(result.status());
           return;
         }
-        zx::status info = DeviceInfo::Create(result->info);
+        zx::result info = DeviceInfo::Create(result->info);
         if (info.is_error()) {
           res.complete_error(info.status_value());
         } else {
@@ -180,7 +180,7 @@ void NetworkDeviceClient::OpenSession(const std::string& name,
   auto open_session = [this, name]() -> fpromise::promise<void, zx_status_t> {
     fpromise::bridge<void, zx_status_t> bridge;
     fidl::Arena alloc;
-    zx::status session_info = MakeSessionInfo(alloc);
+    zx::result session_info = MakeSessionInfo(alloc);
     if (session_info.is_error()) {
       return fpromise::make_error_promise(session_info.error_value());
     }
@@ -359,14 +359,14 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
   auto state = std::make_unique<State>();
 
   // Connect to the requested port.
-  zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<netdev::Port>();
   if (port_endpoints.is_error()) {
     callback(zx::error(port_endpoints.error_value()));
     return;
   }
   state->port_client.Bind(std::move(port_endpoints->client), dispatcher_);
   // Connect to the port's MacAddressing interface.
-  zx::status mac_endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
+  zx::result mac_endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
   if (mac_endpoints.is_error()) {
     callback(zx::error(mac_endpoints.error_value()));
     return;
@@ -387,7 +387,7 @@ void NetworkDeviceClient::GetPortInfoWithMac(netdev::wire::PortId port_id,
           completer.complete_error(result.status());
           return;
         }
-        zx::status<PortInfoAndMac> info =
+        zx::result<PortInfoAndMac> info =
             PortInfoAndMac::Create(result.value().info, /*unicast_address=*/std::nullopt);
         if (!info.is_ok()) {
           completer.complete_error(info.error_value());
@@ -495,7 +495,7 @@ void NetworkDeviceClient::GetPorts(PortsCallback callback) {
           });
     }
   };
-  zx::status watcher_endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
+  zx::result watcher_endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
   if (watcher_endpoints.is_error()) {
     callback(zx::error(watcher_endpoints.error_value()));
     return;
@@ -556,15 +556,15 @@ zx_status_t NetworkDeviceClient::KillSession() {
   return result.status();
 }
 
-zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>>
+zx::result<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>>
 NetworkDeviceClient::WatchStatus(netdev::wire::PortId port_id, StatusCallback callback,
                                  uint32_t buffer) {
-  zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<netdev::Port>();
   if (port_endpoints.is_error()) {
     return port_endpoints.take_error();
   }
 
-  zx::status watcher_endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result watcher_endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   if (watcher_endpoints.is_error()) {
     return watcher_endpoints.take_error();
   }
@@ -583,7 +583,7 @@ NetworkDeviceClient::WatchStatus(netdev::wire::PortId port_id, StatusCallback ca
       std::move(watcher_endpoints->client), dispatcher_, std::move(callback))));
 }
 
-zx::status<netdev::wire::SessionInfo> NetworkDeviceClient::MakeSessionInfo(fidl::AnyArena& alloc) {
+zx::result<netdev::wire::SessionInfo> NetworkDeviceClient::MakeSessionInfo(fidl::AnyArena& alloc) {
   uint64_t descriptor_length_words = session_config_.descriptor_length / sizeof(uint64_t);
   ZX_DEBUG_ASSERT_MSG(descriptor_length_words <= std::numeric_limits<uint8_t>::max(),
                       "session descriptor length %ld (%ld words) overflows uint8_t",

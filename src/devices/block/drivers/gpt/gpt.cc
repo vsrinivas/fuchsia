@@ -304,7 +304,7 @@ zx_status_t Bind(void* ctx, zx_device_t* parent) {
   bool has_partition = false;
   unsigned int partitions;
   for (partitions = 0; partitions < gpt->EntryCount(); partitions++) {
-    zx::status<gpt_partition_t*> p = gpt->GetPartition(partitions);
+    zx::result<gpt_partition_t*> p = gpt->GetPartition(partitions);
     if (!p.is_ok()) {
       continue;
     }

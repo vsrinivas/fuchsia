@@ -52,7 +52,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
  public:
   // Creates a new `DeviceAdapter` with  `parent`, that will serve its requests through
   // `dispatcher`.
-  static zx::status<std::unique_ptr<DeviceAdapter>> Create(async_dispatcher_t* dispatcher,
+  static zx::result<std::unique_ptr<DeviceAdapter>> Create(async_dispatcher_t* dispatcher,
                                                            DeviceAdapterParent* parent);
 
   // Binds `req` to this adapter's `NetworkDeviceInterface`.
@@ -98,15 +98,15 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   // Returns the number of remaining available buffers.
   // Returns `ZX_ERR_BAD_STATE` if the device is offline, or `ZX_ERR_SHOULD_WAIT` if there are no
   // buffers available to write `data` into
-  zx::status<size_t> WriteRxFrame(PortAdapter& port,
+  zx::result<size_t> WriteRxFrame(PortAdapter& port,
                                   fuchsia_hardware_network::wire::FrameType frame_type,
                                   const uint8_t* data, size_t count,
                                   const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
-  zx::status<size_t> WriteRxFrame(PortAdapter& port,
+  zx::result<size_t> WriteRxFrame(PortAdapter& port,
                                   fuchsia_hardware_network::wire::FrameType frame_type,
                                   const fidl::VectorView<uint8_t>& data,
                                   const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
-  zx::status<size_t> WriteRxFrame(PortAdapter& port,
+  zx::result<size_t> WriteRxFrame(PortAdapter& port,
                                   fuchsia_hardware_network::wire::FrameType frame_type,
                                   const std::vector<uint8_t>& data,
                                   const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta);
@@ -141,7 +141,7 @@ class DeviceAdapter : public ddk::NetworkDeviceImplProtocol<DeviceAdapter> {
   // Commits all pending tx frames, returning them to the `NetworkDeviceInterface`.
   void CommitTx() __TA_REQUIRES(tx_lock_);
   // Allocates rx buffer space with at least `length` bytes.
-  zx::status<RxBuffer> AllocRxSpace(size_t length) __TA_REQUIRES(rx_lock_);
+  zx::result<RxBuffer> AllocRxSpace(size_t length) __TA_REQUIRES(rx_lock_);
   void ReclaimRxSpace(RxBuffer buffer) __TA_REQUIRES(rx_lock_);
 
   std::unique_ptr<NetworkDeviceInterface> device_;

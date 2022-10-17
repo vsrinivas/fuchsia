@@ -34,7 +34,7 @@ PagerThreadPool::~PagerThreadPool() {
   threads_.clear();
 }
 
-zx::status<> PagerThreadPool::Init() {
+zx::result<> PagerThreadPool::Init() {
   if (zx_status_t status = zx::port::create(0, &port_); status != ZX_OK)
     return zx::error(status);
 

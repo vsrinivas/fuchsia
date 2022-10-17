@@ -65,7 +65,7 @@ void FakeNvmeController::SubmitCompletion(nvme::Completion& completion) {
   irqs_.find(0)->second.Trigger();
 }
 
-zx::status<zx::interrupt> FakeNvmeController::GetOrCreateInterrupt(size_t index) {
+zx::result<zx::interrupt> FakeNvmeController::GetOrCreateInterrupt(size_t index) {
   auto value = irqs_.find(index);
   zx::unowned_interrupt to_clone;
   if (value != irqs_.end()) {

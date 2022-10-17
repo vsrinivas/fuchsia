@@ -38,7 +38,7 @@ fs_management::DiskFormat FilesystemOptionToDiskFormat(FilesystemOption filesyst
   }
 }
 
-zx::status<std::unique_ptr<RunningFilesystem>> StartFilesystem(const CommandLineOptions& options) {
+zx::result<std::unique_ptr<RunningFilesystem>> StartFilesystem(const CommandLineOptions& options) {
   if (options.filesystem == FilesystemOption::kMemfs) {
     return Memfs::Create();
   }
@@ -72,7 +72,7 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartFilesystem(const CommandLine
   }
 
   fs_management::DiskFormat disk_format = FilesystemOptionToDiskFormat(options.filesystem);
-  if (zx::status<> status = FormatBlockDevice(block_device_path, disk_format); status.is_error()) {
+  if (zx::result<> status = FormatBlockDevice(block_device_path, disk_format); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to format device: " << status.status_string();
     return status.take_error();
   }

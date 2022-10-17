@@ -44,7 +44,7 @@ void vmxoff() {
   ASSERT(!err);
 }
 
-zx::status<> vmxon_task(void* context, cpu_num_t cpu_num) {
+zx::result<> vmxon_task(void* context, cpu_num_t cpu_num) {
   auto pages = static_cast<fbl::Array<VmxPage>*>(context);
   VmxPage& page = (*pages)[cpu_num];
 
@@ -216,7 +216,7 @@ zx_status_t VmxPage::Alloc(const VmxInfo& vmx_info, uint8_t fill) {
   return hypervisor::Page::Alloc(fill).status_value();
 }
 
-zx::status<> alloc_vmx_state() {
+zx::result<> alloc_vmx_state() {
   Guard<Mutex> guard(GuestMutex::Get());
   if (num_guests == 0) {
     fbl::AllocChecker ac;

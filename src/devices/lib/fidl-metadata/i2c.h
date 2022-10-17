@@ -25,7 +25,7 @@ struct Channel {
 
 // Convert an array of i2c_channel to fuchsia.hardware.i2c.I2CBusMetadata encoded
 // in a FIDL bytestream.
-zx::status<std::vector<uint8_t>> I2CChannelsToFidl(cpp20::span<const Channel> channels);
+zx::result<std::vector<uint8_t>> I2CChannelsToFidl(cpp20::span<const Channel> channels);
 
 }  // namespace fidl_metadata::i2c
 

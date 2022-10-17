@@ -10,7 +10,7 @@
 namespace network {
 namespace tun {
 
-zx::status<cpp20::span<uint8_t>> VmoStore::GetMappedVmo(uint8_t id) {
+zx::result<cpp20::span<uint8_t>> VmoStore::GetMappedVmo(uint8_t id) {
   auto* stored_vmo = store_.GetVmo(id);
   if (!stored_vmo) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -32,11 +32,11 @@ zx_status_t VmoStore::UnregisterVmo(uint8_t id) { return store_.Unregister(id).s
 
 zx_status_t VmoStore::Copy(VmoStore& src_store, uint8_t src_id, size_t src_offset,
                            VmoStore& dst_store, uint8_t dst_id, size_t dst_offset, size_t len) {
-  zx::status src = src_store.GetMappedVmo(src_id);
+  zx::result src = src_store.GetMappedVmo(src_id);
   if (src.is_error()) {
     return src.error_value();
   }
-  zx::status dst = dst_store.GetMappedVmo(dst_id);
+  zx::result dst = dst_store.GetMappedVmo(dst_id);
   if (dst.is_error()) {
     return dst.error_value();
   }
@@ -107,7 +107,7 @@ zx_status_t Buffer::Write(const std::vector<uint8_t>& data) {
   return Write(data.data(), data.size());
 }
 
-zx::status<size_t> Buffer::CopyFrom(Buffer& other) {
+zx::result<size_t> Buffer::CopyFrom(Buffer& other) {
   size_t copied = 0;
   uint64_t offset_me = 0;
   uint64_t offset_other = 0;

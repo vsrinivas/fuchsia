@@ -116,14 +116,14 @@ void SendHangingMessage(const fidl::ClientEnd<Protocol>& client_end) {
 
 TEST_F(TransactionCountingTest, CountStartsAtZero) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   ASSERT_EQ(inflight_transactions(), 0);
 
   // Connect to file
-  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  zx::result fc = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
@@ -134,12 +134,12 @@ TEST_F(TransactionCountingTest, CountStartsAtZero) {
 
 TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file
-  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  zx::result fc = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
@@ -176,12 +176,12 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyShortMessage) {
 
 TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file
-  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  zx::result fc = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
@@ -221,12 +221,12 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightReplyValidMessage) {
 
 TEST_F(TransactionCountingTest, SingleTransactionInflightCloseOnMessage) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file
-  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  zx::result fc = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
@@ -246,18 +246,18 @@ TEST_F(TransactionCountingTest, SingleTransactionInflightCloseOnMessage) {
 
 TEST_F(TransactionCountingTest, MultipleTransactionsInflight) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to file twice
-  zx::status fc1 = fidl::CreateEndpoints<fio::File>();
+  zx::result fc1 = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc1.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
                          fc1->server.TakeChannel().release()));
 
-  zx::status fc2 = fidl::CreateEndpoints<fio::File>();
+  zx::result fc2 = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc2.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),

@@ -17,7 +17,7 @@ namespace fpbus = fuchsia_hardware_platform_bus;
 
 constexpr size_t kBtiSysmem = 0;
 
-zx::status<> AcpiArm64::SysmemInit() {
+zx::result<> AcpiArm64::SysmemInit() {
   static const std::vector<fpbus::Bti> kSysmemBtis{
       {{
           .iommu_index = 0,

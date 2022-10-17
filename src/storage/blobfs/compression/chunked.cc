@@ -179,12 +179,12 @@ zx_status_t SeekableChunkedDecompressor::DecompressRange(void* uncompressed_buf,
   return ZX_OK;
 }
 
-zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
+zx::result<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
     size_t offset, size_t len, size_t max_decompressed_len) const {
   return MappingForDecompressedRange(*seek_table_, offset, len, max_decompressed_len);
 }
 
-zx::status<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
+zx::result<CompressionMapping> SeekableChunkedDecompressor::MappingForDecompressedRange(
     const chunked_compression::SeekTable& seek_table, size_t offset, size_t len,
     size_t max_decompressed_len) {
   if (max_decompressed_len == 0) {

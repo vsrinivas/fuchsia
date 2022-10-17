@@ -167,7 +167,7 @@ class X86PageTableBase {
                            ExistingEntryAction existing_action, const MappingCursor& start_cursor,
                            MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
 
-  zx::status<bool> RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
+  zx::result<bool> RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
                                  EnlargeOperation enlarge, const MappingCursor& start_cursor,
                                  MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
   bool RemoveMappingL0(volatile pt_entry_t* table, const MappingCursor& start_cursor,

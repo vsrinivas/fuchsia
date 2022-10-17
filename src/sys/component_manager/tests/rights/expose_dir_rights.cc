@@ -20,7 +20,7 @@ int main(int argc, char* argv[]) {
     return -1;
   }
 
-  zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(memfs_loop.dispatcher());
+  zx::result<ScopedMemfs> memfs = ScopedMemfs::Create(memfs_loop.dispatcher());
   if (memfs.is_error()) {
     fprintf(stderr, "Failed to create memfs: %s\n", memfs.status_string());
     return -1;

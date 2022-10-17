@@ -74,7 +74,7 @@ void AcpiArm64::DdkInit(ddk::InitTxn txn) {
 
   auto dispatcher = fdf::Dispatcher::GetCurrent();
   async::PostTask(dispatcher->async_dispatcher(), [txn = std::move(txn), this]() mutable {
-    zx::status<> zx_status = SysmemInit();
+    zx::result<> zx_status = SysmemInit();
     if (zx_status.is_error()) {
       zxlogf(ERROR, "Sysmem init failed: %s", zx_status.status_string());
       txn.Reply(zx_status.status_value());
@@ -110,7 +110,7 @@ void AcpiArm64::DdkInit(ddk::InitTxn txn) {
   });
 }
 
-zx::status<> AcpiArm64::SmbiosInit() {
+zx::result<> AcpiArm64::SmbiosInit() {
   fpbus::BoardInfo board_info;
   board_info.board_name() = "arm64";
   board_info.board_revision() = 0;
@@ -135,12 +135,12 @@ zx::status<> AcpiArm64::SmbiosInit() {
     if (!result.ok()) {
       zxlogf(ERROR, "%s: SetBoardInfo request failed: %s", __func__,
              result.FormatDescription().data());
-      return zx::make_status(result.status());
+      return zx::make_result(result.status());
     }
     if (result->is_error()) {
       zxlogf(ERROR, "%s: SetBoardInfo failed: %s", __func__,
              zx_status_get_string(result->error_value()));
-      return zx::make_status(result->error_value());
+      return zx::make_result(result->error_value());
     }
   }
 
@@ -151,12 +151,12 @@ zx::status<> AcpiArm64::SmbiosInit() {
     if (!result.ok()) {
       zxlogf(ERROR, "%s: SetBootloaderInfo request failed: %s", __func__,
              result.FormatDescription().data());
-      return zx::make_status(result.status());
+      return zx::make_result(result.status());
     }
     if (result->is_error()) {
       zxlogf(ERROR, "%s: SetBootloaderInfo failed: %s", __func__,
              zx_status_get_string(result->error_value()));
-      return zx::make_status(result->error_value());
+      return zx::make_result(result->error_value());
     }
   }
 

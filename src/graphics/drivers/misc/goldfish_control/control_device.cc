@@ -238,7 +238,7 @@ zx_status_t Control::InitAddressSpaceDeviceLocked() {
   }
 
   // Initialize address space device.
-  zx::status endpoints =
+  zx::result endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceChildDriver>();
   if (!endpoints.is_ok()) {
     zxlogf(ERROR, "%s: FIDL endpoints failed: %s", kTag, endpoints.status_string());
@@ -267,7 +267,7 @@ zx_status_t Control::InitSyncDeviceLocked() {
   }
 
   // Initialize sync timeline client.
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   if (!endpoints.is_ok()) {
     zxlogf(ERROR, "%s: FIDL endpoints failed: %d", kTag, endpoints.status_value());
     return endpoints.status_value();

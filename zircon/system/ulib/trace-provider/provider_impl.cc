@@ -94,7 +94,7 @@ EXPORT trace_provider_t* trace_provider_create_with_name(zx_handle_t to_service_
   ZX_DEBUG_ASSERT(dispatcher);
 
   // Create the channel to which we will bind the trace provider.
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Provider>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Provider>();
   if (endpoints.is_error()) {
     fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n",
             endpoints.status_value(), endpoints.status_string());
@@ -142,7 +142,7 @@ EXPORT trace_provider_t* trace_provider_create_synchronously(zx_handle_t to_serv
   ZX_DEBUG_ASSERT(dispatcher);
 
   // Create the channel to which we will bind the trace provider.
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Provider>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Provider>();
   if (endpoints.is_error()) {
     fprintf(stderr, "TraceProvider: channel create failed: status=%d(%s)\n",
             endpoints.status_value(), endpoints.status_string());

@@ -79,7 +79,7 @@ TEST_P(WatcherTest, Add) {
   DIR* dir = opendir(GetPath("dir").c_str());
   ASSERT_NE(dir, nullptr);
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
@@ -145,7 +145,7 @@ TEST_P(WatcherTest, Existing) {
 
   // These files should be visible to the watcher through the "EXISTING"
   // mechanism.
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
@@ -181,7 +181,7 @@ TEST_P(WatcherTest, Existing) {
 
   // If we create a secondary watcher with the "EXISTING" request, we'll
   // see all files in the directory, but the first watcher won't see anything.
-  zx::status endpoints2 = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints2 = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   ASSERT_TRUE(endpoints2.is_ok()) << endpoints.status_string();
   {
     auto watch_result = fidl::WireCall(caller.borrow_as<fio::Directory>())
@@ -224,7 +224,7 @@ TEST_P(WatcherTest, Removed) {
   DIR* dir = opendir(GetPath("dir").c_str());
   ASSERT_NE(dir, nullptr);
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   fio::wire::WatchMask mask = fio::wire::WatchMask::kAdded | fio::wire::WatchMask::kRemoved;
@@ -278,7 +278,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
   ASSERT_NE(dir, nullptr);
 
   {
-    zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+    zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
     ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
     fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));
@@ -302,7 +302,7 @@ TEST_P(WatcherTest, DirectoryDeleted) {
   dir = opendir(dir_name.c_str());
   ASSERT_NE(dir, nullptr);
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   fdio_cpp::FdioCaller caller(fbl::unique_fd(dirfd(dir)));

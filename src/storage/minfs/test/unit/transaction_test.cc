@@ -36,11 +36,11 @@ class FakeStorage : public AllocatorStorage {
 
   ~FakeStorage() override = default;
 
-  zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return zx::ok(); }
+  zx::result<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return zx::ok(); }
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
 
-  zx::status<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
+  zx::result<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
     return zx::error(ZX_ERR_NO_SPACE);
   }
 
@@ -72,7 +72,7 @@ class FakeBlockDevice : public block_client::BlockDevice {
   FakeBlockDevice() = default;
 
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final { return ZX_OK; }
-  zx::status<std::string> GetDevicePath() const final { return zx::ok(std::string()); }
+  zx::result<std::string> GetDevicePath() const final { return zx::ok(std::string()); }
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final { return ZX_OK; }
   zx_status_t BlockAttachVmo(const zx::vmo& vmo, storage::Vmoid* out_vmoid) final { return ZX_OK; }
   zx_status_t VolumeGetInfo(fuchsia_hardware_block_volume_VolumeManagerInfo* out_manager,
@@ -98,7 +98,7 @@ class FakeMinfs : public TransactionalFs {
 
   fbl::Mutex* GetLock() const override { return &txn_lock_; }
 
-  zx::status<std::unique_ptr<Transaction>> BeginTransaction(size_t reserve_inodes,
+  zx::result<std::unique_ptr<Transaction>> BeginTransaction(size_t reserve_inodes,
                                                             size_t reserve_blocks) override {
     return zx::ok(nullptr);
   }
@@ -143,11 +143,11 @@ class FakeMinfs : public TransactionalFs {
     return *inode_manager_;
   }
 
-  zx::status<std::unique_ptr<Transaction>> CreateTransaction(size_t inodes, size_t blocks) {
+  zx::result<std::unique_ptr<Transaction>> CreateTransaction(size_t inodes, size_t blocks) {
     return Transaction::Create(this, inodes, blocks, &GetInodeManager());
   }
 
-  zx::status<std::unique_ptr<Transaction>> ContinueTransaction(
+  zx::result<std::unique_ptr<Transaction>> ContinueTransaction(
       size_t blocks, std::unique_ptr<CachedBlockTransaction> cached_transaction) {
     std::unique_ptr<Transaction> transaction =
         Transaction::FromCachedBlockTransaction(this, std::move(cached_transaction));
@@ -397,7 +397,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
 
  private:
   bool IsDirectory() const final { return false; }
-  zx::status<> CanUnlink() const final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  zx::result<> CanUnlink() const final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   // minfs::Vnode interface.
   blk_t GetBlockCount() const final { return 0; }
@@ -412,7 +412,7 @@ class MockVnodeMinfs : public VnodeMinfs, public fbl::Recyclable<MockVnodeMinfs>
   void CancelPendingWriteback() final {}
   bool DirtyCacheEnabled() const final { return false; }
   bool IsDirty() const final { return false; }
-  zx::status<> FlushCachedWrites() final { return zx::ok(); }
+  zx::result<> FlushCachedWrites() final { return zx::ok(); }
   void DropCachedWrites() final {}
 
   // fs::Vnode interface.

@@ -25,7 +25,7 @@ class SocketDispatcher final : public PeeredDispatcher<SocketDispatcher, ZX_DEFA
    public:
     enum Value { kNone, kWriteDisabled, kWriteEnabled };
 
-    static zx::status<Disposition> TryFrom(uint32_t disposition);
+    static zx::result<Disposition> TryFrom(uint32_t disposition);
     explicit Disposition(Value disposition);
     operator Value() const;
 

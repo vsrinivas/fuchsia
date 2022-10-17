@@ -85,7 +85,7 @@ Devnode::ExportOptions* Devnode::export_options() {
                     target());
 }
 
-zx::status<Devnode*> Devnode::walk(std::string_view path) {
+zx::result<Devnode*> Devnode::walk(std::string_view path) {
   Devnode* dn = this;
 
   while (!path.empty()) {
@@ -325,7 +325,7 @@ void Devfs::advertise_modified(Device& device) {
 
 ProtoNode::ProtoNode(fbl::String name) : name_(std::move(name)) {}
 
-zx::status<fbl::String> ProtoNode::seq_name() {
+zx::result<fbl::String> ProtoNode::seq_name() {
   std::string dest;
   for (uint32_t i = 0; i < 1000; ++i) {
     dest.clear();
@@ -383,7 +383,7 @@ zx_status_t Devfs::initialize(Device& device) {
         ProtoNode& dir = *dir_ptr;
         fbl::String name = device.name();
         if (id != ZX_PROTOCOL_CONSOLE) {
-          zx::status seq_name = dir.seq_name();
+          zx::result seq_name = dir.seq_name();
           if (seq_name.is_error()) {
             return seq_name.status_value();
           }
@@ -401,8 +401,8 @@ zx_status_t Devfs::initialize(Device& device) {
   return ZX_OK;
 }
 
-zx::status<fidl::ClientEnd<fio::Directory>> Devfs::Connect(fs::FuchsiaVfs& vfs) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+zx::result<fidl::ClientEnd<fio::Directory>> Devfs::Connect(fs::FuchsiaVfs& vfs) {
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -410,7 +410,7 @@ zx::status<fidl::ClientEnd<fio::Directory>> Devfs::Connect(fs::FuchsiaVfs& vfs) 
   // NB: Serve the `PseudoDir` rather than the root `Devnode` because
   // otherwise we'd end up in the connector code path. Clients that want to open
   // the root node as a device can do so using `"."` and appropriate flags.
-  return zx::make_status(vfs.ServeDirectory(root_.node_, std::move(server)), std::move(client));
+  return zx::make_result(vfs.ServeDirectory(root_.node_, std::move(server)), std::move(client));
 }
 
 Devfs::Devfs(std::optional<Devnode>& root, Device* device,
@@ -461,7 +461,7 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
   Devnode* dn = this;
   for (size_t i = 0; i < segments.size(); ++i) {
     const std::string_view name = segments.at(i);
-    zx::status child = [name, &children = dn->children()]() -> zx::status<Devnode*> {
+    zx::result child = [name, &children = dn->children()]() -> zx::result<Devnode*> {
       fbl::RefPtr<fs::Vnode> out;
       switch (const zx_status_t status = children.Lookup(name, &out); status) {
         case ZX_OK:
@@ -511,14 +511,14 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
     // under the protocol directory too.
     if (ProtoNode* dir_ptr = devfs_.proto_node(protocol_id); dir_ptr != nullptr) {
       ProtoNode& dn = *dir_ptr;
-      zx::status seq_name = dn.seq_name();
+      zx::result seq_name = dn.seq_name();
       if (seq_name.is_error()) {
         return seq_name.status_value();
       }
       const fbl::String name = seq_name.value();
 
       // Clone the service node for the entry in the protocol directory.
-      zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+      zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
       if (endpoints.is_error()) {
         return endpoints.status_value();
       }

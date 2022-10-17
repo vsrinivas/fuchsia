@@ -32,10 +32,10 @@ class Shtv3Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_TEM
 
   // Visible for testing.
   zx_status_t Init();
-  zx::status<float> ReadTemperature();
+  zx::result<float> ReadTemperature();
 
  private:
-  zx::status<uint16_t> Read16();
+  zx::result<uint16_t> Read16();
   zx_status_t Write16(uint16_t value);
 
   ddk::I2cChannel i2c_;

@@ -30,7 +30,7 @@ void usage(const std::string& argv0) {
   printf("         path: Path to dsi-base interface, defaults to /dev/class/dsi-base/000\n\n");
 }
 
-zx::status<uint32_t> ParseUintArg(const std::string& arg, uint32_t min, uint32_t max) {
+zx::result<uint32_t> ParseUintArg(const std::string& arg, uint32_t min, uint32_t max) {
   uint32_t out_val;
   bool is_hex = (arg[0] == '0') && (arg[1] == 'x');
   if (sscanf(arg.c_str(), is_hex ? "%x" : "%u", &out_val) != 1) {

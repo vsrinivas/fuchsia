@@ -61,7 +61,7 @@ uint32_t SegmentManager::GetMaxCost(const VictimSelPolicy &policy) {
   return 0;
 }
 
-zx::status<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type,
+zx::result<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegType type,
                                                         AllocMode alloc_mode) {
   std::lock_guard lock(dirty_info_->seglist_lock);
   VictimSelPolicy policy = GetVictimSelPolicy(gc_type, type, alloc_mode);
@@ -150,13 +150,13 @@ zx::status<uint32_t> SegmentManager::GetVictimByDefault(GcType gc_type, CursegTy
   return zx::error(ZX_ERR_UNAVAILABLE);
 }
 
-zx::status<uint32_t> GcManager::GetGcVictim(GcType gc_type, CursegType type) {
+zx::result<uint32_t> GcManager::GetGcVictim(GcType gc_type, CursegType type) {
   SitInfo &sit_i = fs_->GetSegmentManager().GetSitInfo();
   std::lock_guard sentry_lock(sit_i.sentry_lock);
   return fs_->GetSegmentManager().GetVictimByDefault(gc_type, type, AllocMode::kLFS);
 }
 
-zx::status<uint32_t> GcManager::F2fsGc() {
+zx::result<uint32_t> GcManager::F2fsGc() {
   // For testing
   if (disable_gc_for_test_) {
     return zx::ok(0);
@@ -293,7 +293,7 @@ zx_status_t GcManager::GcNodeSegment(const SummaryBlock &sum_blk, uint32_t segno
   return ZX_OK;
 }
 
-zx::status<std::pair<nid_t, block_t>> GcManager::CheckDnode(const Summary &sum, block_t blkaddr) {
+zx::result<std::pair<nid_t, block_t>> GcManager::CheckDnode(const Summary &sum, block_t blkaddr) {
   nid_t nid = LeToCpu(sum.nid);
   uint64_t ofs_in_node = LeToCpu(sum.ofs_in_node);
 

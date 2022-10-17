@@ -21,7 +21,7 @@ class TestDriver {
             component::OutgoingDirectory::Create(fdf_dispatcher_get_async_dispatcher(dispatcher))) {
   }
 
-  zx::status<> Init(fdf::wire::DriverStartArgs* start_args) {
+  zx::result<> Init(fdf::wire::DriverStartArgs* start_args) {
     auto error = driver::SymbolValue<zx_status_t*>(*start_args, "error");
     if (error.is_ok()) {
       return zx::error(**error);

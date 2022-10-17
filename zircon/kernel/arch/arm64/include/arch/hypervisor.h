@@ -39,7 +39,7 @@ enum class InterruptState : uint8_t;
 // Represents a guest within the hypervisor.
 class Guest {
  public:
-  static zx::status<ktl::unique_ptr<Guest>> Create();
+  static zx::result<ktl::unique_ptr<Guest>> Create();
   ~Guest();
 
   Guest(Guest&&) = delete;
@@ -54,8 +54,8 @@ class Guest {
   fbl::RefPtr<VmAddressRegion> RootVmar() const { return gpa_.RootVmar(); }
   hypervisor::TrapMap& Traps() { return traps_; }
 
-  zx::status<uint16_t> AllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(uint16_t id) { return vpid_allocator_.Free(id); }
+  zx::result<uint16_t> AllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::result<> FreeVpid(uint16_t id) { return vpid_allocator_.Free(id); }
 
  private:
   uint16_t vmid_;
@@ -106,7 +106,7 @@ class AutoGich {
 // Represents a virtual CPU within a guest.
 class Vcpu {
  public:
-  static zx::status<ktl::unique_ptr<Vcpu>> Create(Guest& guest, zx_vaddr_t entry);
+  static zx::result<ktl::unique_ptr<Vcpu>> Create(Guest& guest, zx_vaddr_t entry);
   ~Vcpu();
 
   Vcpu(Vcpu&&) = delete;

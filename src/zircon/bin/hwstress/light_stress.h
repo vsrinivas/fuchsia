@@ -34,11 +34,11 @@ bool operator==(const LightInfo&, const LightInfo&);
 bool operator!=(const LightInfo&, const LightInfo&);
 
 // Query all lights on the given interface.
-zx::status<std::vector<LightInfo>> GetLights(const fuchsia::hardware::light::LightSyncPtr& light);
+zx::result<std::vector<LightInfo>> GetLights(const fuchsia::hardware::light::LightSyncPtr& light);
 
 // Turn on or off the light at the given index.
-zx::status<> TurnOnLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num);
-zx::status<> TurnOffLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num);
+zx::result<> TurnOnLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num);
+zx::result<> TurnOffLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num);
 
 }  // namespace hwstress
 

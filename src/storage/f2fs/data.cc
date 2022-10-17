@@ -141,7 +141,7 @@ void VnodeF2fs::UpdateExtentCache(block_t blk_addr, pgoff_t file_offset) {
   MarkInodeDirty();
 }
 
-zx::status<block_t> VnodeF2fs::FindDataBlkAddr(pgoff_t index) {
+zx::result<block_t> VnodeF2fs::FindDataBlkAddr(pgoff_t index) {
   uint32_t ofs_in_dnode;
   if (auto result = fs()->GetNodeManager().GetOfsInDnode(*this, index); result.is_error()) {
     return result.take_error();
@@ -196,7 +196,7 @@ zx_status_t VnodeF2fs::FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out) {
   return ZX_OK;
 }
 
-zx::status<LockedPagesAndAddrs> VnodeF2fs::FindDataBlockAddrsAndPages(const pgoff_t start,
+zx::result<LockedPagesAndAddrs> VnodeF2fs::FindDataBlockAddrsAndPages(const pgoff_t start,
                                                                       const pgoff_t end) {
   LockedPagesAndAddrs addrs_and_pages;
 
@@ -247,7 +247,7 @@ zx_status_t VnodeF2fs::GetLockedDataPage(pgoff_t index, LockedPage *out) {
   return ZX_OK;
 }
 
-zx::status<std::vector<LockedPage>> VnodeF2fs::GetLockedDataPages(const pgoff_t start,
+zx::result<std::vector<LockedPage>> VnodeF2fs::GetLockedDataPages(const pgoff_t start,
                                                                   const pgoff_t end) {
   LockedPagesAndAddrs addrs_and_pages;
   if (auto addrs_and_pages_or = FindDataBlockAddrsAndPages(start, end);
@@ -457,7 +457,7 @@ zx_status_t VnodeF2fs::WriteDataPage(LockedPage &page, bool is_reclaim) {
   return ZX_OK;
 }
 
-zx::status<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, const size_t len) {
+zx::result<std::vector<LockedPage>> VnodeF2fs::WriteBegin(const size_t offset, const size_t len) {
   fs()->GetSegmentManager().BalanceFs();
 
   const pgoff_t index_start = safemath::CheckDiv<pgoff_t>(offset, kBlockSize).ValueOrDie();

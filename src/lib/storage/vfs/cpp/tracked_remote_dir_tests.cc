@@ -27,7 +27,7 @@ class TestRemoteDir final : public fs::TrackedRemoteDir {
 
 TEST(TrackedRemoteDir, AddingTrackedDirectory) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::status root = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(root.status_value());
 
   fbl::String name = "remote-directory";
@@ -58,7 +58,7 @@ TEST(TrackedRemoteDir, AddingTrackedDirectory) {
 
 TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::status root = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(root.status_value());
 
   fbl::String name = "remote-directory";
@@ -86,7 +86,7 @@ TEST(TrackedRemoteDir, AddingTrackedDirectoryMultiple) {
 
 TEST(TrackedRemoteDir, TrackAddingDifferentVnode) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::status root = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(root.status_value());
 
   auto dir = fbl::MakeRefCounted<fs::PseudoDir>();

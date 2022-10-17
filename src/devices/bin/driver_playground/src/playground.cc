@@ -28,7 +28,7 @@ struct ResolvedProcess {
 // This function is based on one in sdk/lib/fdio/spawn.cc
 // ResolveName makes a call to the fuchsia.process.Resolver service and may return a vmo and
 // associated loader service, if the name resolves within the current realm.
-zx::status<ResolvedProcess> ResolveName(std::string_view name) {
+zx::result<ResolvedProcess> ResolveName(std::string_view name) {
   auto client = component::Connect<fprocess::Resolver>();
   if (client.is_error()) {
     return client.take_error();
@@ -57,7 +57,7 @@ zx::status<ResolvedProcess> ResolveName(std::string_view name) {
 
 // This function is based on one from zircon/third_party/uapp/dash/src/process.c
 // Check for process termination, this call blocks until the termination.
-zx::status<int> ProcessAwaitTermination(zx::process& process) {
+zx::result<int> ProcessAwaitTermination(zx::process& process) {
   zx_status_t status = process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
   if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
     return zx::error(status);
@@ -85,7 +85,7 @@ void Playground::RunTool(RunToolRequestView request, RunToolCompleter::Sync& com
   std::vector<std::string> str_argv = playground_utils::ExtractStringArgs(tool_name, request->args);
   std::vector<const char*> argv = playground_utils::ConvertToArgv(str_argv);
   std::string name_for_resolve = playground_utils::GetNameForResolve(kDefaultPackageUrl, tool_name);
-  zx::status<ResolvedProcess> resolve_name_status = ResolveName(name_for_resolve);
+  zx::result<ResolvedProcess> resolve_name_status = ResolveName(name_for_resolve);
   if (resolve_name_status.is_error()) {
     LOGF(ERROR, "failed to resolve name.");
     completer.ReplyError(resolve_name_status.error_value());
@@ -149,7 +149,7 @@ void Playground::RunTool(RunToolRequestView request, RunToolCompleter::Sync& com
 
   completer.ReplySuccess();
 
-  zx::status<int> termination_status = ProcessAwaitTermination(zx_process);
+  zx::result<int> termination_status = ProcessAwaitTermination(zx_process);
 
   if (termination_status.is_error()) {
     LOGF(ERROR, "failed to await termination.");

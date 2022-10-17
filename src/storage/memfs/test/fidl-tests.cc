@@ -50,7 +50,7 @@ TEST(FidlTests, TestFidlBasic) {
   ASSERT_EQ(write(fd.get(), data, datalen), datalen);
   fd.reset();
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/fidltmp/file-a", endpoints->server.TakeChannel().release()));
 
@@ -82,7 +82,7 @@ TEST(FidlTests, TestFidlOpenReadOnly) {
   ASSERT_GE(fd.get(), 0);
   fd.reset();
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_open("/fidltmp-ro/file-ro",
                       static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),

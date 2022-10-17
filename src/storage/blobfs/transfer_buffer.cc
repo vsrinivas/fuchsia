@@ -24,7 +24,7 @@ StorageBackedTransferBuffer::StorageBackedTransferBuffer(zx::vmo vmo, size_t siz
       vmoid_(std::move(vmoid)),
       metrics_(metrics) {}
 
-zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBuffer::Create(
+zx::result<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBuffer::Create(
     size_t size, TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
     BlobfsMetrics* metrics) {
   ZX_DEBUG_ASSERT(metrics != nullptr && txn_manager != nullptr && block_iter_provider != nullptr);
@@ -48,7 +48,7 @@ zx::status<std::unique_ptr<StorageBackedTransferBuffer>> StorageBackedTransferBu
       std::move(vmo), size, std::move(vmoid), txn_manager, block_iter_provider, metrics)));
 }
 
-zx::status<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t length,
+zx::result<> StorageBackedTransferBuffer::Populate(uint64_t offset, uint64_t length,
                                                    const LoaderInfo& info) {
   // Currently our block size is saved as a variable in some places and uses a constant in others.
   // These should always match.

@@ -22,7 +22,7 @@
 
 namespace pci {
 
-zx::status<zx::vmo> PciAllocation::CreateVmo() const {
+zx::result<zx::vmo> PciAllocation::CreateVmo() const {
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create_physical(resource(), base(), size(), &vmo);
   if (status != ZX_OK) {
@@ -32,7 +32,7 @@ zx::status<zx::vmo> PciAllocation::CreateVmo() const {
   return zx::ok(std::move(vmo));
 }
 
-zx::status<zx::resource> PciAllocation::CreateResource() const {
+zx::result<zx::resource> PciAllocation::CreateResource() const {
   zx::resource resource;
   // A BAR allocation will already be sized to the BAR, so we can simply
   // duplicate the resource rather than creating a sub-resource.
@@ -43,7 +43,7 @@ zx::status<zx::resource> PciAllocation::CreateResource() const {
   return zx::ok(std::move(resource));
 }
 
-zx::status<std::unique_ptr<PciAllocation>> PciRootAllocator::Allocate(
+zx::result<std::unique_ptr<PciAllocation>> PciRootAllocator::Allocate(
     std::optional<zx_paddr_t> base, size_t size) {
   zx_paddr_t in_base = (base) ? *base : 0;
   zx_paddr_t out_base = {};
@@ -64,7 +64,7 @@ zx::status<std::unique_ptr<PciAllocation>> PciRootAllocator::Allocate(
   return zx::ok(std::move(allocation));
 }
 
-zx::status<std::unique_ptr<PciAllocation>> PciRegionAllocator::Allocate(
+zx::result<std::unique_ptr<PciAllocation>> PciRegionAllocator::Allocate(
     std::optional<zx_paddr_t> base, size_t size) {
   if (!parent_alloc_) {
     return zx::error(ZX_ERR_NO_MEMORY);

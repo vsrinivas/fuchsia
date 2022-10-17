@@ -50,7 +50,7 @@ AppClientBase::AppClientBase(fuchsia::sys::Launcher* const launcher,
       return;
     }
     fdio_cpp::FdioCaller caller(std::move(dir));
-    zx::status channel = caller.take_directory();
+    zx::result channel = caller.take_directory();
     if (channel.is_error()) {
       FX_PLOGS(ERROR, channel.status_value()) << "Unable create a handle from  " << data_origin;
       return;

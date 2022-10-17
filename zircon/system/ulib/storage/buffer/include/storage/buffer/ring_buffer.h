@@ -139,7 +139,7 @@ class RingBufferReservation {
   // - The reservation must be large enough to copy |requests|:
   //  - offset + BlockCount(in_requests) <= length()
   // - |Reserved()| must be true.
-  zx::status<uint64_t> CopyRequests(cpp20::span<const storage::UnbufferedOperation> in_operations,
+  zx::result<uint64_t> CopyRequests(cpp20::span<const storage::UnbufferedOperation> in_operations,
                                     size_t offset,
                                     std::vector<storage::BufferedOperation>* out_operations);
 

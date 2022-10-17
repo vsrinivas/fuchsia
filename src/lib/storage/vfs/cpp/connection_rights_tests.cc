@@ -101,7 +101,7 @@ TEST(ConnectionRightsTest, RightsBehaveAsExpected) {
     auto vnode = fbl::AdoptRef<TestVNode>(new TestVNode());
     for (test_row_t& row : test_data) {
       // Set up a vfs connection with the testcase's connection flags
-      zx::status file = fidl::CreateEndpoints<fio::File>();
+      zx::result file = fidl::CreateEndpoints<fio::File>();
       ASSERT_OK(file.status_value());
       fio::wire::OpenFlags flags = row.connection_flags;
       vfs->Serve(vnode, file->server.TakeChannel(),

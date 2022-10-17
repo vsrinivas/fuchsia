@@ -17,7 +17,7 @@
 namespace blobfs {
 
 // static.
-zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
+zx::result<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
                                                    std::unique_ptr<BlockDevice> device,
                                                    const MountOptions& options,
                                                    zx::resource vmex_resource) {
@@ -68,7 +68,7 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return blobfs_->GetFilesystemInfo(); }
+zx::result<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return blobfs_->GetFilesystemInfo(); }
 
 zx_status_t Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   fbl::RefPtr<fs::Vnode> vn;

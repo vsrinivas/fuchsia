@@ -275,7 +275,7 @@ struct Ip6Stack {
       return ZX_ERR_INVALID_ARGS;
     }
 
-    zx::status status = DeviceBuffer::Get(ETH_MTU, block);
+    zx::result status = DeviceBuffer::Get(ETH_MTU, block);
     if (status.is_error()) {
       return status.status_value();
     }
@@ -308,7 +308,7 @@ zx_status_t udp6_send(const void* data, size_t dlen, const ip6_addr_t* daddr, ui
   if (dlen > UDP6_MAX_PAYLOAD)
     return ZX_ERR_INVALID_ARGS;
   size_t length = dlen + UDP_HDR_LEN;
-  zx::status status = DeviceBuffer::Get(ETH_MTU, block);
+  zx::result status = DeviceBuffer::Get(ETH_MTU, block);
   if (status.is_error()) {
     printf("%s: DeviceBuffer::Get failed: %s\n", __func__, status.status_string());
     return status.status_value();

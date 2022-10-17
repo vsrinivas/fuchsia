@@ -47,7 +47,7 @@ constexpr auto kVmoFlags = fio::wire::VmoFlags::kRead | fio::wire::VmoFlags::kEx
 namespace {
 
 zx::vmo GetVmo(std::string_view path) {
-  zx::status endpoints = fidl::CreateEndpoints<fio::File>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::File>();
   EXPECT_TRUE(endpoints.is_ok()) << endpoints.status_string();
   zx_status_t status = fdio_open(path.data(), static_cast<uint32_t>(kOpenFlags),
                                  endpoints->server.channel().release());

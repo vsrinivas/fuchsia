@@ -111,7 +111,7 @@ TEST(PbusTest, Enumeration) {
 
   fdio_cpp::FdioCaller caller{std::move(platform_bus)};
 
-  zx::status channel = caller.take_as<fuchsia_sysinfo::SysInfo>();
+  zx::result channel = caller.take_as<fuchsia_sysinfo::SysInfo>();
   ASSERT_OK(channel.status_value());
 
   const fidl::WireSyncClient<fuchsia_sysinfo::SysInfo> client(std::move(channel.value()));

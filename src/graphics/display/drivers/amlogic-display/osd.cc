@@ -1230,7 +1230,7 @@ void Osd::Release() {
 }
 
 // static
-zx::status<std::unique_ptr<Osd>> Osd::Create(ddk::PDev* pdev, bool supports_afbc, uint32_t fb_width,
+zx::result<std::unique_ptr<Osd>> Osd::Create(ddk::PDev* pdev, bool supports_afbc, uint32_t fb_width,
                                              uint32_t fb_height, uint32_t display_width,
                                              uint32_t display_height, inspect::Node* parent_node) {
   fbl::AllocChecker ac;

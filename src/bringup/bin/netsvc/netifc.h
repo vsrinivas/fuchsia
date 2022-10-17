@@ -25,7 +25,7 @@ class DeviceBuffer {
   explicit DeviceBuffer(Contents contents);
   cpp20::span<uint8_t> data();
   zx_status_t Send(size_t len);
-  static zx::status<DeviceBuffer> Get(size_t len, bool block);
+  static zx::result<DeviceBuffer> Get(size_t len, bool block);
 
  private:
   Contents contents_;
@@ -35,7 +35,7 @@ class DeviceBuffer {
 //
 // If non-empty, `interface` holds the topological path of the interface
 // intended to use for networking.
-zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
+zx::result<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
                          fit::callback<void(zx_status_t)> on_error);
 
 // Return nonzero if interface exists.

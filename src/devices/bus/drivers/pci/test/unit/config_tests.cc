@@ -225,7 +225,7 @@ TEST_F(PciConfigTests, ConfigGetView) {
   cfg.reset();
   auto& ecam_mmio = pciroot_proto().ecam().mmio();
   ASSERT_OK(MmioConfig::Create(default_bdf2(), &ecam_mmio, /*start_bus=*/1, /*end_bus=*/2, &cfg));
-  zx::status result = cfg->get_view();
+  zx::result result = cfg->get_view();
   ASSERT_TRUE(result.is_ok());
   auto view = std::move(result.value());
   ASSERT_EQ(view.get_size(), PCIE_EXTENDED_CONFIG_SIZE);

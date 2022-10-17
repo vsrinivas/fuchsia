@@ -60,7 +60,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   size_t NumOrphanedNodes() const;
   void PublishComponentRunner(component::OutgoingDirectory& outgoing);
   void PublishDeviceGroupManager(component::OutgoingDirectory& outgoing);
-  zx::status<> StartRootDriver(std::string_view url);
+  zx::result<> StartRootDriver(std::string_view url);
   std::shared_ptr<Node> root_node();
   // This function schedules a callback to attempt to bind all orphaned nodes against
   // the base drivers.
@@ -74,7 +74,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   DeviceGroupManager& device_group_manager() { return device_group_manager_; }
 
   // Create a driver component with `url` against a given `node`.
-  zx::status<> StartDriver(Node& node, std::string_view url,
+  zx::result<> StartDriver(Node& node, std::string_view url,
                            fuchsia_driver_index::DriverPackageType package_type);
 
  private:
@@ -86,7 +86,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   // track the results.
   void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) override;
 
-  zx::status<DriverHost*> CreateDriverHost() override;
+  zx::result<DriverHost*> CreateDriverHost() override;
 
   // The untracked version of TryBindAllOrphans.
   void TryBindAllOrphansUntracked();
@@ -96,7 +96,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
     zx::handle token;
     fidl::ServerEnd<fuchsia_io::Directory> exposed_dir;
   };
-  zx::status<> CreateComponent(std::string name, Collection collection, std::string url,
+  zx::result<> CreateComponent(std::string name, Collection collection, std::string url,
                                CreateComponentOpts opts);
 
   uint64_t next_driver_host_id_ = 0;

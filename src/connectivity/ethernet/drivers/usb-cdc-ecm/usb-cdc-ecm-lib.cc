@@ -12,7 +12,7 @@
 
 namespace usb_cdc_ecm {
 
-zx::status<MacAddress> UsbCdcDescriptorParser::ParseMacAddress(
+zx::result<MacAddress> UsbCdcDescriptorParser::ParseMacAddress(
     usb::UsbDevice& usb, const usb_cs_ethernet_interface_descriptor_t* desc) {
   // Read string descriptor for MAC address (string index is in iMACAddress field)
   size_t out_length;
@@ -63,7 +63,7 @@ zx::status<MacAddress> UsbCdcDescriptorParser::ParseMacAddress(
   return zx::ok(mac_addr);
 }
 
-zx::status<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb::UsbDevice& usb) {
+zx::result<UsbCdcDescriptorParser> UsbCdcDescriptorParser::Parse(usb::UsbDevice& usb) {
   std::optional<usb::InterfaceList> interfaces;
   zx_status_t status = usb::InterfaceList::Create(usb, false, &interfaces);
   if (status != ZX_OK) {

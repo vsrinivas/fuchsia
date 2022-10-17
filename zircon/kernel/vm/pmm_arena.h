@@ -68,7 +68,7 @@ class PmmArena : public fbl::DoublyLinkedListable<PmmArena*> {
   //
   // A loaned page is considered non-free for purposes of contiguous memory
   // allocation.
-  zx::status<uint64_t> FindLastNonFree(uint64_t offset, size_t count) const;
+  zx::result<uint64_t> FindLastNonFree(uint64_t offset, size_t count) const;
 
   pmm_arena_info_t info_ = {};
   vm_page_t* page_array_ = nullptr;

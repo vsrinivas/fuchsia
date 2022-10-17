@@ -20,7 +20,7 @@ int Extract(extractor::ExtractOptions& args) {
     return EXIT_FAILURE;
   }
   auto extractor = std::move(extractor_or.value());
-  zx::status<> status;
+  zx::result<> status;
   if (!args.type.has_value()) {
     std::cerr << "extract options type is none, error:  " << status.error_value() << std::endl;
     return EXIT_FAILURE;

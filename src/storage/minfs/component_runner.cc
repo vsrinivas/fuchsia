@@ -26,7 +26,7 @@ ComponentRunner::ComponentRunner(async_dispatcher_t* dispatcher)
   auto startup_svc = fbl::MakeRefCounted<StartupService>(
       dispatcher_, [this](std::unique_ptr<Bcache> device, const MountOptions& options) {
         FX_LOGS(INFO) << "configure callback is called";
-        zx::status<> status = Configure(std::move(device), options);
+        zx::result<> status = Configure(std::move(device), options);
         if (status.is_error()) {
           FX_LOGS(ERROR) << "Could not configure minfs: " << status.status_string();
         }
@@ -35,7 +35,7 @@ ComponentRunner::ComponentRunner(async_dispatcher_t* dispatcher)
   startup->AddEntry(fidl::DiscoverableProtocolName<fuchsia_fs_startup::Startup>, startup_svc);
 }
 
-zx::status<> ComponentRunner::ServeRoot(
+zx::result<> ComponentRunner::ServeRoot(
     fidl::ServerEnd<fuchsia_io::Directory> root,
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle) {
   LifecycleServer::Create(
@@ -70,7 +70,7 @@ zx::status<> ComponentRunner::ServeRoot(
   return zx::ok();
 }
 
-zx::status<> ComponentRunner::Configure(std::unique_ptr<Bcache> bcache,
+zx::result<> ComponentRunner::Configure(std::unique_ptr<Bcache> bcache,
                                         const MountOptions& options) {
   auto minfs = Minfs::Create(dispatcher_, std::move(bcache), options, this);
   if (minfs.is_error()) {
@@ -169,7 +169,7 @@ void ComponentRunner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx::status<fs::FilesystemInfo> ComponentRunner::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> ComponentRunner::GetFilesystemInfo() {
   return minfs_->GetFilesystemInfo();
 }
 

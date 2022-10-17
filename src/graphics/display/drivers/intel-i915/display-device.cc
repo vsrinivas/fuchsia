@@ -212,7 +212,7 @@ void DisplayDevice::ApplyConfiguration(const display_config_t* config,
 }
 
 void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& completer) {
-  zx::status<FidlBacklight::wire::State> backlight_state = zx::error(ZX_ERR_BAD_STATE);
+  zx::result<FidlBacklight::wire::State> backlight_state = zx::error(ZX_ERR_BAD_STATE);
 
   if (display_ref_ != nullptr) {
     fbl::AutoLock lock(&display_ref_->mtx);
@@ -230,7 +230,7 @@ void DisplayDevice::GetStateNormalized(GetStateNormalizedCompleter::Sync& comple
 
 void DisplayDevice::SetStateNormalized(SetStateNormalizedRequestView request,
                                        SetStateNormalizedCompleter::Sync& completer) {
-  zx::status<> status = zx::error(ZX_ERR_BAD_STATE);
+  zx::result<> status = zx::error(ZX_ERR_BAD_STATE);
 
   if (display_ref_ != nullptr) {
     fbl::AutoLock lock(&display_ref_->mtx);

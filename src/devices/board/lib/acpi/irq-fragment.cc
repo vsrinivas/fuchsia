@@ -20,7 +20,7 @@ IrqFragment::IrqFragment(async_dispatcher_t* dispatcher, acpi::Device& parent, u
       dispatcher_(dispatcher),
       outgoing_(component::OutgoingDirectory::Create(dispatcher)) {}
 
-zx::status<> IrqFragment::Create(async_dispatcher_t* dispatcher, acpi::Device& parent,
+zx::result<> IrqFragment::Create(async_dispatcher_t* dispatcher, acpi::Device& parent,
                                  uint32_t irq_index, uint32_t acpi_device_id) {
   auto device = std::unique_ptr<IrqFragment>(new IrqFragment(dispatcher, parent, irq_index));
 
@@ -33,7 +33,7 @@ zx::status<> IrqFragment::Create(async_dispatcher_t* dispatcher, acpi::Device& p
   return result;
 }
 
-zx::status<> IrqFragment::Init(uint32_t device_id) {
+zx::result<> IrqFragment::Init(uint32_t device_id) {
   component::ServiceInstanceHandler handler;
   fuchsia_hardware_interrupt::Service::Handler service(&handler);
 
@@ -86,7 +86,7 @@ zx::status<> IrqFragment::Init(uint32_t device_id) {
                                   .set_fidl_service_offers(offers)
                                   .set_props(properties));
 
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 void IrqFragment::Get(GetCompleter::Sync& completer) {

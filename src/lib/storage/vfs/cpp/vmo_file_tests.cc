@@ -136,19 +136,19 @@ TEST(VmoFile, Open) {
     auto file = fbl::MakeRefCounted<fs::VmoFile>(std::move(dup), 0u, true);
     fbl::RefPtr<fs::Vnode> redirect;
     {
-      zx::status result = file->ValidateOptions(VnodeOptions::ReadOnly());
+      zx::result result = file->ValidateOptions(VnodeOptions::ReadOnly());
       EXPECT_RESULT_OK(result);
       EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
       EXPECT_NULL(redirect);
     }
     {
-      zx::status result = file->ValidateOptions(VnodeOptions::ReadWrite());
+      zx::result result = file->ValidateOptions(VnodeOptions::ReadWrite());
       EXPECT_RESULT_OK(result);
       EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
       EXPECT_NULL(redirect);
     }
     {
-      zx::status result = file->ValidateOptions(VnodeOptions::WriteOnly());
+      zx::result result = file->ValidateOptions(VnodeOptions::WriteOnly());
       EXPECT_RESULT_OK(result);
       EXPECT_EQ(ZX_OK, file->Open(result.value(), &redirect));
       EXPECT_NULL(redirect);

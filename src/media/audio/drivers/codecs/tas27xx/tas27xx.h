@@ -78,13 +78,13 @@ class Tas27xx : public SimpleCodecServer {
   zx_status_t Reinitialize();
 
   // Implementation for SimpleCodecServer.
-  zx::status<DriverIds> Initialize() override;
+  zx::result<DriverIds> Initialize() override;
   zx_status_t Reset() override;
   Info GetInfo() override;
   zx_status_t Stop() override;
   zx_status_t Start() override;
   DaiSupportedFormats GetDaiFormats() override;
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override;
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override;
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;
@@ -117,7 +117,7 @@ class Tas27xx : public SimpleCodecServer {
   zx_status_t UpdatePowerControl();
   zx_status_t GetTemperature(float* temperature);
   zx_status_t GetVbat(float* voltage);
-  zx::status<CodecFormatInfo> SetDaiFormatInternal(const DaiFormat& format);
+  zx::result<CodecFormatInfo> SetDaiFormatInternal(const DaiFormat& format);
   void SetGainStateInternal(GainState state);
   bool InErrorState();
   void ReportState(State& registers, const char* description);

@@ -17,7 +17,7 @@ namespace audio::intel_hda {
 namespace {
 
 TEST(DspTopology, GetI2sBlob) {
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
+  zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
   ASSERT_TRUE(nhlt.is_ok());
 
   AudioDataFormat format = {
@@ -40,7 +40,7 @@ TEST(DspTopology, GetI2sBlob) {
 }
 
 TEST(DspTopology, GetPdmBlob) {
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
+  zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
   ASSERT_TRUE(nhlt.is_ok());
 
   AudioDataFormat format = {
@@ -63,7 +63,7 @@ TEST(DspTopology, GetPdmBlob) {
 }
 
 TEST(DspTopology, GetI2sModuleConfig) {
-  zx::status<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
+  zx::result<std::unique_ptr<Nhlt>> nhlt = Nhlt::FromBuffer(kExampleNhtl);
   ASSERT_TRUE(nhlt.is_ok());
 
   AudioDataFormat format = {
@@ -82,7 +82,7 @@ TEST(DspTopology, GetI2sModuleConfig) {
   uint32_t i2s_gateway_id = I2S_GATEWAY_CFG_NODE_ID(DMA_TYPE_I2S_LINK_OUTPUT, kBusId, 0);
   // Use same format for input and output in this test.
   CopierCfg i2s_out_copier = CreateGatewayCopierCfg(format, format, i2s_gateway_id);
-  zx::status<std::vector<uint8_t>> i2s_config = GetModuleConfig(
+  zx::result<std::vector<uint8_t>> i2s_config = GetModuleConfig(
       *nhlt.value().get(), kBusId, NHLT_DIRECTION_RENDER, NHLT_LINK_TYPE_SSP, i2s_out_copier);
   ASSERT_TRUE(i2s_config.is_ok());
 

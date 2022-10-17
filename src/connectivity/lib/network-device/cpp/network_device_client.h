@@ -48,7 +48,7 @@ struct SessionConfig {
 //
 // A newtype for fuchsia.hardware.network/DeviceInfo with owned values.
 struct DeviceInfo {
-  static zx::status<DeviceInfo> Create(const netdev::wire::DeviceInfo& fidl);
+  static zx::result<DeviceInfo> Create(const netdev::wire::DeviceInfo& fidl);
 
   uint8_t min_descriptor_length;
   uint8_t descriptor_version;
@@ -70,7 +70,7 @@ struct DeviceInfo {
 // Contains details about a single port derived from fuchsia.hardware.network/PortInfo
 // and from fuchsia.hardware.network/MacAddressing.
 struct PortInfoAndMac {
-  static zx::status<PortInfoAndMac> Create(
+  static zx::result<PortInfoAndMac> Create(
       const netdev::wire::PortInfo& fidl,
       const std::optional<fuchsia_net::wire::MacAddress>& unicast_address);
 
@@ -128,8 +128,8 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   using RxCallback = fit::function<void(Buffer buffer)>;
   using ErrorCallback = fit::function<void(zx_status_t)>;
   using StatusCallback = fit::function<void(netdev::wire::PortStatus)>;
-  using PortInfoWithMacCallback = fit::function<void(zx::status<PortInfoAndMac>)>;
-  using PortsCallback = fit::function<void(zx::status<std::vector<netdev::wire::PortId>>)>;
+  using PortInfoWithMacCallback = fit::function<void(zx::result<PortInfoAndMac>)>;
+  using PortsCallback = fit::function<void(zx::result<std::vector<netdev::wire::PortId>>)>;
 
   // Opens a new session with `name` and invokes `callback` when done.
   //
@@ -186,7 +186,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
   // `StatusWatchHandle` is in scope.
   // `buffer` is the number of changes buffered by the network device, according to the
   // `fuchsia.hardware.network.Device` protocol.
-  zx::status<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>> WatchStatus(
+  zx::result<std::unique_ptr<NetworkDeviceClient::StatusWatchHandle>> WatchStatus(
       netdev::wire::PortId port_id, StatusCallback callback, uint32_t buffer = 1);
 
   const DeviceInfo& device_info() const { return device_info_; }
@@ -360,7 +360,7 @@ class NetworkDeviceClient : public internal::DeviceEventHandlerProxy<NetworkDevi
 
  private:
   zx_status_t PrepareSession();
-  zx::status<netdev::wire::SessionInfo> MakeSessionInfo(fidl::AnyArena& alloc);
+  zx::result<netdev::wire::SessionInfo> MakeSessionInfo(fidl::AnyArena& alloc);
   zx_status_t PrepareDescriptors();
   buffer_descriptor_t* descriptor(uint16_t idx);
   void* data(uint64_t offset);

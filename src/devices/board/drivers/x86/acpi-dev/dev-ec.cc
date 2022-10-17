@@ -41,7 +41,7 @@ zx_status_t EcDevice::Create(zx_device_t* parent, acpi::Acpi* acpi, ACPI_HANDLE 
 
 zx_status_t EcDevice::Init() {
   // Do we need global lock?
-  zx::status<bool> use_glk = NeedsGlobalLock();
+  zx::result<bool> use_glk = NeedsGlobalLock();
   if (use_glk.is_error()) {
     return use_glk.error_value();
   }
@@ -54,14 +54,14 @@ zx_status_t EcDevice::Init() {
     return status;
   }
   // Find GPE info.
-  zx::status<std::pair<ACPI_HANDLE, uint32_t>> gpe_info = GetGpeInfo();
+  zx::result<std::pair<ACPI_HANDLE, uint32_t>> gpe_info = GetGpeInfo();
   if (gpe_info.is_error()) {
     return gpe_info.error_value();
   }
   gpe_info_ = *gpe_info;
 
   // Find I/O ports and map them.
-  zx::status<> io_status = SetupIo();
+  zx::result<> io_status = SetupIo();
   if (io_status.is_error()) {
     return io_status.error_value();
   }
@@ -167,7 +167,7 @@ ACPI_STATUS EcDevice::SpaceRequest(uint32_t function, ACPI_PHYSICAL_ADDRESS padd
     }
   } else {
     for (uint8_t i = 0; i < bytes; i++) {
-      zx::status<uint8_t> result = Read(addr + i);
+      zx::result<uint8_t> result = Read(addr + i);
       if (result.is_error()) {
         return AE_ERROR;
       }
@@ -181,7 +181,7 @@ ACPI_STATUS EcDevice::SpaceRequest(uint32_t function, ACPI_PHYSICAL_ADDRESS padd
 void EcDevice::TransactionThread() {
   zx_signals_t pending = 0;
   do {
-    zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kTransactionReady);
+    zx::result<zx_signals_t> status = WaitForIrq(EcSignal::kTransactionReady);
     if (status.is_error()) {
       if (status.error_value() != ZX_ERR_CANCELED) {
         zxlogf(ERROR, "irq wait failed: %s", status.status_string());
@@ -237,7 +237,7 @@ zx_status_t EcDevice::DoTransaction(Transaction* txn) {
   switch (txn->op) {
     case EcCmd::kRead: {
       // Wait until we can write the address.
-      zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kCanWrite);
+      zx::result<zx_signals_t> status = WaitForIrq(EcSignal::kCanWrite);
       if (status.is_error()) {
         return status.error_value();
       }
@@ -260,7 +260,7 @@ zx_status_t EcDevice::DoTransaction(Transaction* txn) {
     }
     case EcCmd::kWrite: {
       // Wait until we can write the address.
-      zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kCanWrite);
+      zx::result<zx_signals_t> status = WaitForIrq(EcSignal::kCanWrite);
       if (status.is_error()) {
         return status.error_value();
       }
@@ -291,7 +291,7 @@ zx_status_t EcDevice::DoTransaction(Transaction* txn) {
     }
     case EcCmd::kQuery: {
       // Wait for the EC to respond.
-      zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kCanRead);
+      zx::result<zx_signals_t> status = WaitForIrq(EcSignal::kCanRead);
       if (status.is_error()) {
         return status.error_value();
       }
@@ -306,7 +306,7 @@ zx_status_t EcDevice::DoTransaction(Transaction* txn) {
   return ZX_OK;
 }
 
-zx::status<zx_signals_t> EcDevice::WaitForIrq(zx_signals_t signals) {
+zx::result<zx_signals_t> EcDevice::WaitForIrq(zx_signals_t signals) {
   zx_signals_t pending;
   signals |= EcSignal::kEcShutdown;
   zx_status_t status = irq_.wait_one(signals, zx::time::infinite(), &pending);
@@ -323,7 +323,7 @@ zx::status<zx_signals_t> EcDevice::WaitForIrq(zx_signals_t signals) {
 
 void EcDevice::QueryThread() {
   while (true) {
-    zx::status<zx_signals_t> status = WaitForIrq(EcSignal::kPendingEvent);
+    zx::result<zx_signals_t> status = WaitForIrq(EcSignal::kPendingEvent);
     if (status.is_error()) {
       if (status.error_value() != ZX_ERR_CANCELED) {
         zxlogf(ERROR, "irq wait failed: %s", status.status_string());
@@ -333,7 +333,7 @@ void EcDevice::QueryThread() {
 
     uint8_t event;
     while (io_ports_->inp(cmd_port_) & EcStatus::kSciEvt) {
-      zx::status<uint8_t> ret = Query();
+      zx::result<uint8_t> ret = Query();
       if (ret.is_error()) {
         break;
       }
@@ -363,7 +363,7 @@ zx_status_t EcDevice::Write(uint8_t addr, uint8_t val) {
   return status;
 }
 
-zx::status<uint8_t> EcDevice::Read(uint8_t addr) {
+zx::result<uint8_t> EcDevice::Read(uint8_t addr) {
   Transaction txn{
       .op = EcCmd::kRead,
       .addr = addr,
@@ -375,7 +375,7 @@ zx::status<uint8_t> EcDevice::Read(uint8_t addr) {
   return zx::error(status);
 }
 
-zx::status<uint8_t> EcDevice::Query() {
+zx::result<uint8_t> EcDevice::Query() {
   Transaction txn{
       .op = EcCmd::kQuery,
   };
@@ -400,7 +400,7 @@ zx_status_t EcDevice::QueueTransactionAndWait(Transaction* txn) {
   return txn->status;
 }
 
-zx::status<bool> EcDevice::NeedsGlobalLock() {
+zx::result<bool> EcDevice::NeedsGlobalLock() {
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> ret =
       acpi_->EvaluateObject(handle_, "_GLK", std::nullopt);
   if (ret.is_error()) {
@@ -420,7 +420,7 @@ zx::status<bool> EcDevice::NeedsGlobalLock() {
   return zx::ok(obj->Integer.Value != 0);
 }
 
-zx::status<std::pair<ACPI_HANDLE, uint32_t>> EcDevice::GetGpeInfo() {
+zx::result<std::pair<ACPI_HANDLE, uint32_t>> EcDevice::GetGpeInfo() {
   acpi::status<acpi::UniquePtr<ACPI_OBJECT>> ret =
       acpi_->EvaluateObject(handle_, "_GPE", std::nullopt);
   if (ret.is_error()) {
@@ -457,7 +457,7 @@ zx::status<std::pair<ACPI_HANDLE, uint32_t>> EcDevice::GetGpeInfo() {
   return zx::ok(std::make_pair(block, number));
 }
 
-zx::status<> EcDevice::SetupIo() {
+zx::result<> EcDevice::SetupIo() {
   size_t resource_count = 0;
   acpi::status<> ret = acpi_->WalkResources(
       handle_, "_CRS", [this, &resource_count](ACPI_RESOURCE* rsrc) -> acpi::status<> {
@@ -507,7 +507,7 @@ zx::status<> EcDevice::SetupIo() {
     return zx::error(status);
   }
 
-  return zx::make_status(ret.zx_status_value());
+  return zx::make_result(ret.zx_status_value());
 }
 
 }  // namespace acpi_ec

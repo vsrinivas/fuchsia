@@ -2529,7 +2529,7 @@ TEST_F(DispatcherTest, ShutdownAllDriverDispatchers) {
 }
 
 TEST_F(DispatcherTest, DriverDestroysDispatcherShutdownByDriverHost) {
-  zx::status<fdf::Dispatcher> dispatcher;
+  zx::result<fdf::Dispatcher> dispatcher;
 
   libsync::Completion completion;
   auto shutdown_handler = [&](fdf_dispatcher_t* shutdown_dispatcher) mutable {

@@ -18,7 +18,7 @@
 
 namespace virtio {
 
-zx::status<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
+zx::result<std::pair<zx::bti, std::unique_ptr<virtio::Backend>>> GetBtiAndBackend(
     zx_device_t* bus_device) {
   zx_status_t status;
   ddk::Pci pci(bus_device, "pci");

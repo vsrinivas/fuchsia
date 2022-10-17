@@ -301,7 +301,7 @@ std::unordered_map<std::string, std::unique_ptr<OptionHandler>> GetAllOptionHand
 
 }  // namespace
 
-zx::status<GuestConfig> ParseConfig(const std::string& data, OpenAt open_at) {
+zx::result<GuestConfig> ParseConfig(const std::string& data, OpenAt open_at) {
   rapidjson::Document document;
   document.Parse(data);
   if (!document.IsObject()) {

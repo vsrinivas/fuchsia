@@ -492,7 +492,7 @@ zx_status_t MkfsTester::InitAndGetDeviceInfo(MkfsWorker &mkfs) {
   return mkfs.GetDeviceInfo();
 }
 
-zx::status<std::unique_ptr<Bcache>> MkfsTester::FormatDevice(MkfsWorker &mkfs) {
+zx::result<std::unique_ptr<Bcache>> MkfsTester::FormatDevice(MkfsWorker &mkfs) {
   if (zx_status_t ret = mkfs.FormatDevice(); ret != ZX_OK)
     return zx::error(ret);
   return zx::ok(std::move(mkfs.bc_));

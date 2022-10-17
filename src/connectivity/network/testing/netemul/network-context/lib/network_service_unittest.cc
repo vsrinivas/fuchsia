@@ -61,7 +61,7 @@ class NetworkServiceTest : public gtest::RealLoopFixture {
     ASSERT_OK(svc_loop_->StartThread("testloop"));
     svc_ = std::make_unique<NetworkContext>(svc_loop_->dispatcher());
 
-    zx::status result = StartDriverTestRealm();
+    zx::result result = StartDriverTestRealm();
     ASSERT_OK(result.status_value()) << "driver test realm failed to start";
     devfs_root_.reset(std::move(result.value()));
     svc_->SetDevfsHandler([this](zx::channel req) {
@@ -199,10 +199,10 @@ class NetworkServiceTest : public gtest::RealLoopFixture {
         [&eth1, &eth2]() { return (*eth1)->online() && (*eth2)->online(); }, kTestTimeout));
   }
 
-  zx::status<fuchsia_hardware_network::wire::PortId> GetSinglePortId(
+  zx::result<fuchsia_hardware_network::wire::PortId> GetSinglePortId(
       network::client::NetworkDeviceClient& cli) {
-    std::optional<zx::status<fuchsia_hardware_network::wire::PortId>> id;
-    cli.GetPorts([&id](zx::status<std::vector<fuchsia_hardware_network::wire::PortId>> result) {
+    std::optional<zx::result<fuchsia_hardware_network::wire::PortId>> id;
+    cli.GetPorts([&id](zx::result<std::vector<fuchsia_hardware_network::wire::PortId>> result) {
       if (result.is_error()) {
         id = result.take_error();
         return;
@@ -1122,7 +1122,7 @@ TEST_F(NetworkServiceTest, HybridNetworkDevice) {
   });
   WAIT_FOR_OK_AND_RESET(ok);
 
-  zx::status maybe_port_id = GetSinglePortId(netdev_cli);
+  zx::result maybe_port_id = GetSinglePortId(netdev_cli);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
@@ -1249,7 +1249,7 @@ TEST_F(NetworkServiceTest, DualNetworkDevice) {
   });
   WAIT_FOR_OK_AND_RESET(ok);
 
-  zx::status maybe_port_id = GetSinglePortId(cli1);
+  zx::result maybe_port_id = GetSinglePortId(cli1);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id1 = maybe_port_id.value();
   cli1.AttachPort(port_id1, {kEndpointFrameType}, [&ok](zx_status_t status) {
@@ -1494,7 +1494,7 @@ TEST_F(NetworkServiceTest, NetworkDeviceAndVirtualization) {
   });
   WAIT_FOR_OK_AND_RESET(ok);
 
-  zx::status maybe_port_id = GetSinglePortId(cli);
+  zx::result maybe_port_id = GetSinglePortId(cli);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 

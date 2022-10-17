@@ -24,7 +24,7 @@ using uuid::Uuid;
 
 }  // namespace
 
-zx::status<std::unique_ptr<DevicePartitioner>> Vim3Partitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> Vim3Partitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "vim3");
@@ -58,13 +58,13 @@ bool Vim3Partitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> Vim3Partitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> Vim3Partitioner::AddPartition(
     const PartitionSpec& spec) const {
   ERROR("Cannot add partitions to a vim3 device\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> Vim3Partitioner::GetEmmcBootPartitionClient() const {
+zx::result<std::unique_ptr<PartitionClient>> Vim3Partitioner::GetEmmcBootPartitionClient() const {
   auto boot0_part =
       OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
   if (boot0_part.is_error()) {
@@ -88,7 +88,7 @@ zx::status<std::unique_ptr<PartitionClient>> Vim3Partitioner::GetEmmcBootPartiti
   return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
 }
 
-zx::status<std::unique_ptr<PartitionClient>> Vim3Partitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> Vim3Partitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -142,18 +142,18 @@ zx::status<std::unique_ptr<PartitionClient>> Vim3Partitioner::FindPartition(
   return zx::ok(std::move(status->partition));
 }
 
-zx::status<> Vim3Partitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+zx::result<> Vim3Partitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
-zx::status<> Vim3Partitioner::InitPartitionTables() const {
+zx::result<> Vim3Partitioner::InitPartitionTables() const {
   ERROR("Initializing gpt partitions from paver is not supported on vim3\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> Vim3Partitioner::WipePartitionTables() const {
+zx::result<> Vim3Partitioner::WipePartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> Vim3Partitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> Vim3Partitioner::ValidatePayload(const PartitionSpec& spec,
                                               cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -162,13 +162,13 @@ zx::status<> Vim3Partitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> Vim3PartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> Vim3PartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return Vim3Partitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
-zx::status<std::unique_ptr<abr::Client>> Vim3AbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> Vim3AbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;

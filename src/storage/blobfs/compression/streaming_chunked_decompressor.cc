@@ -16,7 +16,7 @@ const size_t kSystemPageSize = zx_system_get_page_size();
 
 namespace blobfs {
 
-zx::status<std::unique_ptr<StreamingChunkedDecompressor>> StreamingChunkedDecompressor::Create(
+zx::result<std::unique_ptr<StreamingChunkedDecompressor>> StreamingChunkedDecompressor::Create(
     DecompressorCreatorConnector& connector, const chunked_compression::SeekTable& seek_table,
     StreamingChunkedDecompressor::StreamCallback stream_callback) {
   ZX_DEBUG_ASSERT(stream_callback != nullptr);
@@ -45,7 +45,7 @@ zx::status<std::unique_ptr<StreamingChunkedDecompressor>> StreamingChunkedDecomp
     return zx::error(status);
   }
 
-  zx::status client_or =
+  zx::result client_or =
       ExternalDecompressorClient::Create(&connector, decompression_buff.vmo(), compression_buff);
   if (client_or.is_error()) {
     return client_or.take_error();
@@ -70,7 +70,7 @@ StreamingChunkedDecompressor::StreamingChunkedDecompressor(
       compression_buff_(std::move(compression_buff)),
       stream_callback_(std::move(stream_callback)) {}
 
-zx::status<> StreamingChunkedDecompressor::Update(cpp20::span<const uint8_t> data) {
+zx::result<> StreamingChunkedDecompressor::Update(cpp20::span<const uint8_t> data) {
   if (compressed_bytes_ + data.size_bytes() > seek_table_.CompressedSize()) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
@@ -94,7 +94,7 @@ zx::status<> StreamingChunkedDecompressor::Update(cpp20::span<const uint8_t> dat
     if (status != ZX_OK) {
       return zx::error(status);
     }
-    zx::status result = stream_callback_(
+    zx::result result = stream_callback_(
         {static_cast<const uint8_t*>(decompression_buff_.start()), curr_entry_->decompressed_size});
     if (result.is_error()) {
       return result.take_error();

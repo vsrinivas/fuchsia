@@ -11,7 +11,7 @@
 namespace network {
 namespace tun {
 
-zx::status<std::unique_ptr<MacAdapter>> MacAdapter::Create(MacAdapterParent* parent,
+zx::result<std::unique_ptr<MacAdapter>> MacAdapter::Create(MacAdapterParent* parent,
                                                            fuchsia_net::wire::MacAddress mac,
                                                            bool promisc_only) {
   fbl::AllocChecker ac;
@@ -21,7 +21,7 @@ zx::status<std::unique_ptr<MacAdapter>> MacAdapter::Create(MacAdapterParent* par
   }
 
   mac_addr_protocol_t proto = adapter->proto();
-  zx::status device = MacAddrDeviceInterface::Create(ddk::MacAddrProtocolClient(&proto));
+  zx::result device = MacAddrDeviceInterface::Create(ddk::MacAddrProtocolClient(&proto));
   if (device.is_error()) {
     return device.take_error();
   }

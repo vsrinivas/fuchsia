@@ -31,7 +31,7 @@ fuchsia_hardware_network::wire::StatusFlags ToStatusFlags(uint32_t ethernet_stat
 namespace netdevice_migration {
 
 zx_status_t NetdeviceMigration::Bind(void* ctx, zx_device_t* dev) {
-  zx::status netdevm_result = Create(dev);
+  zx::result netdevm_result = Create(dev);
   if (netdevm_result.is_error()) {
     return netdevm_result.error_value();
   }
@@ -46,7 +46,7 @@ zx_status_t NetdeviceMigration::Bind(void* ctx, zx_device_t* dev) {
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<NetdeviceMigration>> NetdeviceMigration::Create(zx_device_t* dev) {
+zx::result<std::unique_ptr<NetdeviceMigration>> NetdeviceMigration::Create(zx_device_t* dev) {
   ddk::EthernetImplProtocolClient ethernet(dev);
   if (!ethernet.is_valid()) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -414,7 +414,7 @@ void NetdeviceMigration::NetworkDeviceImplPrepareVmo(
 
 void NetdeviceMigration::NetworkDeviceImplReleaseVmo(uint8_t id) __TA_EXCLUDES(vmo_lock_) {
   fbl::AutoLock vmo_lock(&vmo_lock_);
-  if (zx::status<zx::vmo> status = vmo_store_.Unregister(id); status.status_value() != ZX_OK) {
+  if (zx::result<zx::vmo> status = vmo_store_.Unregister(id); status.status_value() != ZX_OK) {
     // A failure here may be the result of a failed call to register the vmo, in which case the
     // driver is queued for removal from device manager. Accordingly, we must not panic lest we
     // disrupt the orderly shutdown of the driver: a log statement is the best we can do.

@@ -37,7 +37,7 @@ class PagerThreadPool {
 
   const zx::port& port() const { return port_; }
 
-  zx::status<> Init();
+  zx::result<> Init();
 
   bool IsRunning() const { return !threads_.empty(); }
 

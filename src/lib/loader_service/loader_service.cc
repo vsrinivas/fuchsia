@@ -27,7 +27,7 @@ const std::string& LoaderServiceBase::log_prefix() {
   return log_prefix_;
 }
 
-zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> LoaderServiceBase::Connect() {
+zx::result<fidl::ClientEnd<fuchsia_ldsvc::Loader>> LoaderServiceBase::Connect() {
   auto endpoints = fidl::CreateEndpoints<fuchsia_ldsvc::Loader>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
@@ -62,7 +62,7 @@ void LoaderConnection::LoadObject(LoadObjectRequestView request,
                                   LoadObjectCompleter::Sync& completer) {
   std::string name(request->object_name.data(), request->object_name.size());
 
-  auto reply = [this, &name, &completer](zx::status<zx::vmo> status) {
+  auto reply = [this, &name, &completer](zx::result<zx::vmo> status) {
     // Generally we wouldn't want to log in a library, but these logs have proven to be useful in
     // past, and the new loader name in the prefix will make them moreso.
     if (status.status_value() == ZX_ERR_NOT_FOUND) {
@@ -142,7 +142,7 @@ std::shared_ptr<LoaderService> LoaderService::Create(async_dispatcher_t* dispatc
       new LoaderService(dispatcher, std::move(lib_dir), std::move(name)));
 }
 
-zx::status<zx::vmo> LoaderService::LoadObjectImpl(std::string path) {
+zx::result<zx::vmo> LoaderService::LoadObjectImpl(std::string path) {
   const fio::wire::OpenFlags kFlags = fio::wire::OpenFlags::kNotDirectory |
                                       fio::wire::OpenFlags::kRightReadable |
                                       fio::wire::OpenFlags::kRightExecutable;

@@ -95,7 +95,7 @@ void Dwc3::HandleEp0TransferCompleteEvent(uint8_t ep_num) {
                         ep0_.buffer.size(), false);
         ep0_.state = Ep0::State::DataOut;
       } else {
-        zx::status<size_t> status = HandleEp0Setup(setup, vaddr, ep0_.buffer.size());
+        zx::result<size_t> status = HandleEp0Setup(setup, vaddr, ep0_.buffer.size());
         if (status.is_error()) {
           zxlogf(DEBUG, "HandleSetup returned %s", zx_status_get_string(status.error_value()));
           CmdEpSetStall(ep0_.out);
@@ -124,7 +124,7 @@ void Dwc3::HandleEp0TransferCompleteEvent(uint8_t ep_num) {
       ep0_.shared_fifo.current = nullptr;
       zx_off_t received = ep0_.buffer.size() - TRB_BUFSIZ(trb.status);
 
-      zx::status<size_t> status = HandleEp0Setup(ep0_.cur_setup, ep0_.buffer.virt(), received);
+      zx::result<size_t> status = HandleEp0Setup(ep0_.cur_setup, ep0_.buffer.virt(), received);
       if (status.is_error()) {
         CmdEpSetStall(ep0_.out);
         Ep0QueueSetupLocked();
@@ -201,9 +201,9 @@ void Dwc3::HandleEp0TransferNotReadyEvent(uint8_t ep_num, uint32_t stage) {
   }
 }
 
-zx::status<size_t> Dwc3::HandleEp0Setup(const usb_setup_t& setup, void* buffer, size_t length) {
+zx::result<size_t> Dwc3::HandleEp0Setup(const usb_setup_t& setup, void* buffer, size_t length) {
   auto DoControlCall = [this](const usb_setup_t& setup, const uint8_t* in_buf, size_t in_len,
-                              uint8_t* out_buf, size_t out_len) -> zx::status<size_t> {
+                              uint8_t* out_buf, size_t out_len) -> zx::result<size_t> {
     fbl::AutoLock lock(&dci_lock_);
 
     if (!dci_intf_.has_value()) {
@@ -231,7 +231,7 @@ zx::status<size_t> Dwc3::HandleEp0Setup(const usb_setup_t& setup, void* buffer, 
         ResetConfiguration();
         configured_ = false;
 
-        zx::status<size_t> status = DoControlCall(setup, nullptr, 0, nullptr, 0);
+        zx::result<size_t> status = DoControlCall(setup, nullptr, 0, nullptr, 0);
         if (status.is_ok() && setup.w_value) {
           ZX_DEBUG_ASSERT(status.value() == 0);
           configured_ = true;
@@ -248,7 +248,7 @@ zx::status<size_t> Dwc3::HandleEp0Setup(const usb_setup_t& setup, void* buffer, 
     ResetConfiguration();
     configured_ = false;
 
-    zx::status<size_t> status = DoControlCall(setup, nullptr, 0, nullptr, 0);
+    zx::result<size_t> status = DoControlCall(setup, nullptr, 0, nullptr, 0);
     if (status.is_ok()) {
       configured_ = true;
       Ep0StartEndpoints();

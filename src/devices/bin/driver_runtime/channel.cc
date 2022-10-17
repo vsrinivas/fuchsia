@@ -540,7 +540,7 @@ void Channel::MessageWaiter::Wait(zx_time_t deadline) {
   __UNUSED zx_status_t status = completion_.Wait(zx::duration(duration));
 }
 
-zx::status<MessagePacketOwner> Channel::MessageWaiter::TakeLocked() {
+zx::result<MessagePacketOwner> Channel::MessageWaiter::TakeLocked() {
   ZX_ASSERT(channel_);
 
   channel_ = nullptr;

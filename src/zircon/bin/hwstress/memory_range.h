@@ -32,7 +32,7 @@ class MemoryRange {
   // Create and map a memory range of the given size.
   //
   // Size must be aligned to zx_system_get_page_size().
-  static zx::status<std::unique_ptr<MemoryRange>> Create(uint64_t size, CacheMode mode);
+  static zx::result<std::unique_ptr<MemoryRange>> Create(uint64_t size, CacheMode mode);
 
   // Create a MemoryRange from the given pre-mapped VMO.
   MemoryRange(zx::vmo vmo, uint8_t* addr, uint64_t size, CacheMode mode);

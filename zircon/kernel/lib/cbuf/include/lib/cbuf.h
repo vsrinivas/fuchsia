@@ -52,7 +52,7 @@ class Cbuf {
    *
    * If |wait| is false and no character is ready, ZX_ERR_SHOULD_WAIT is returned.
    */
-  zx::status<char> ReadChar(bool block);
+  zx::result<char> ReadChar(bool block);
 
   size_t WriteChar(char c);
 

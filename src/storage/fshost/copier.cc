@@ -75,7 +75,7 @@ Copier::DirectoryEntry* GetEntry(Copier::DirectoryEntries& entries, const std::s
 
 }  // namespace
 
-zx::status<Copier> Copier::Read(fbl::unique_fd root_fd,
+zx::result<Copier> Copier::Read(fbl::unique_fd root_fd,
                                 const std::vector<std::filesystem::path>& excluded_paths) {
   struct PendingRead {
     UniqueDir dir;
@@ -181,7 +181,7 @@ zx_status_t Copier::Write(fbl::unique_fd root_fd) const {
   return ZX_OK;
 }
 
-zx::status<> Copier::InsertFile(const std::filesystem::path& path, std::string contents) {
+zx::result<> Copier::InsertFile(const std::filesystem::path& path, std::string contents) {
   if (path.filename().empty() || path.is_absolute()) {
     // |path| was either empty, ended with '/', or started with '/'.
     return zx::error(ZX_ERR_INVALID_ARGS);

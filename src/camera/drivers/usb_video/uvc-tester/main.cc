@@ -69,7 +69,7 @@ std::string FormatToString(Format f) {
   return ConvertPixelFormatToString(f.format.pixel_format) + buffer;
 }
 
-zx::status<CamControl> OpenCamera(const std::string& path) {
+zx::result<CamControl> OpenCamera(const std::string& path) {
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (fd.get() < 0) {
     FX_PLOGS(ERROR, fd.get()) << "Failed to open sensor at " << path;
@@ -98,7 +98,7 @@ zx::status<CamControl> OpenCamera(const std::string& path) {
   return zx::ok(std::move(ctrl));
 }
 
-zx::status<std::vector<fuchsia::camera::VideoFormat>> GetFormats(CamControl& ctrl) {
+zx::result<std::vector<fuchsia::camera::VideoFormat>> GetFormats(CamControl& ctrl) {
   std::vector<fuchsia::camera::VideoFormat> all_formats;
   uint32_t total_format_count;
   uint32_t format_index = 0;
@@ -131,7 +131,7 @@ zx::status<std::vector<fuchsia::camera::VideoFormat>> GetFormats(CamControl& ctr
   return zx::ok(all_formats);
 }
 
-zx::status<Buffer> Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers = 8) {
+zx::result<Buffer> Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers = 8) {
   Buffer buffer_collection;
   // In the future, some special alignment might happen here, or special
   // memory allocated...

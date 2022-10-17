@@ -38,13 +38,13 @@ class ComponentRunner final : public fs::PagedVfs {
 
   // fs::PagedVfs interface.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
 
-  zx::status<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root,
+  zx::result<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root,
                          fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
                          fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin_client,
                          zx::resource vmex_resource);
-  zx::status<> Configure(std::unique_ptr<BlockDevice> device, const MountOptions& options);
+  zx::result<> Configure(std::unique_ptr<BlockDevice> device, const MountOptions& options);
 
  private:
   // Tell driver_manager to remove all drivers living in storage. This must be called before

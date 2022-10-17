@@ -241,7 +241,7 @@ zx_status_t Device::OverrideSizeFromCommandLine(const char* name, int64_t* memor
   return ZX_OK;
 }
 
-zx::status<std::string> Device::GetFromCommandLine(const char* name) {
+zx::result<std::string> Device::GetFromCommandLine(const char* name) {
   char arg[32];
   auto status = device_get_variable(parent(), name, arg, sizeof(arg), nullptr);
   if (status == ZX_ERR_NOT_FOUND) {
@@ -258,7 +258,7 @@ zx::status<std::string> Device::GetFromCommandLine(const char* name) {
   return zx::ok(std::string(arg, strlen(arg)));
 }
 
-zx::status<bool> Device::GetBoolFromCommandLine(const char* name, bool default_value) {
+zx::result<bool> Device::GetBoolFromCommandLine(const char* name, bool default_value) {
   auto result = GetFromCommandLine(name);
   if (!result.is_ok()) {
     if (result.error_value() == ZX_ERR_NOT_FOUND) {
@@ -543,7 +543,7 @@ zx_status_t Device::Bind() {
   }
 
   const char* kDisableDynamicRanges = "driver.sysmem.protected_ranges.disable_dynamic";
-  zx::status<bool> protected_ranges_disable_dynamic =
+  zx::result<bool> protected_ranges_disable_dynamic =
       GetBoolFromCommandLine(kDisableDynamicRanges, false);
   if (protected_ranges_disable_dynamic.is_error()) {
     return protected_ranges_disable_dynamic.status_value();
@@ -1088,7 +1088,7 @@ FidlDevice::FidlDevice(zx_device_t* parent, sysmem_driver::Device* sysmem_device
 }
 
 zx_status_t FidlDevice::Bind() {
-  zx::status status =
+  zx::result status =
       outgoing_.AddProtocol(this, fidl::DiscoverableProtocolName<fuchsia_hardware_sysmem::Sysmem>);
   if (status.is_error()) {
     zxlogf(ERROR, "failed to add FIDL protocol to the outgoing directory: %s",

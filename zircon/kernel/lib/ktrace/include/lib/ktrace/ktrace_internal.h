@@ -145,7 +145,7 @@ class KTraceState {
       uint64_t ktrace_header_{0};
     };
 
-    zx::status<Reservation> Reserve(uint64_t header);
+    zx::result<Reservation> Reserve(uint64_t header);
 
    private:
     KTraceState& ks_;

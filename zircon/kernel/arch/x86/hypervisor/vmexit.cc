@@ -471,7 +471,7 @@ zx_status_t handle_io_instruction(const ExitInfo& exit_info, AutoVmcs& vmcs,
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx::status<hypervisor::Trap*> trap = traps.FindTrap(ZX_GUEST_TRAP_IO, io_info.port);
+  zx::result<hypervisor::Trap*> trap = traps.FindTrap(ZX_GUEST_TRAP_IO, io_info.port);
   if (trap.is_error()) {
     dprintf(INFO, "hypervisor: Unhandled guest IO port %s %#x\n", io_info.input ? "read" : "write",
             io_info.port);
@@ -909,7 +909,7 @@ uint8_t default_operand_size(uint64_t efer, uint32_t cs_access_rights) {
 zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs& vmcs, bool read,
                         zx_vaddr_t guest_paddr, hypervisor::TrapMap& traps,
                         zx_port_packet_t& packet) {
-  zx::status<hypervisor::Trap*> trap = traps.FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
+  zx::result<hypervisor::Trap*> trap = traps.FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   if (trap.is_error()) {
     return trap.status_value();
   }

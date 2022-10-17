@@ -33,7 +33,7 @@ void FidlDevice::Bind(fidl::ServerEnd<fuchsia_hardware_pci::Device> request) {
       fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(request), this);
 }
 
-zx::status<> FidlDevice::Create(zx_device_t* parent, pci::Device* device) {
+zx::result<> FidlDevice::Create(zx_device_t* parent, pci::Device* device) {
   fbl::AllocChecker ac;
   std::unique_ptr<FidlDevice> fidl_dev(new (&ac) FidlDevice(parent, device));
   if (!ac.check()) {
@@ -200,7 +200,7 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
   // access. If the MSI-X bar exists in the only page present in the BAR then we
   // need to deny all access to the BAR.
   if (device_->capabilities().msix) {
-    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(*bar);
+    zx::result<size_t> result = device_->capabilities().msix->GetBarDataSize(*bar);
     if (result.is_error()) {
       completer.ReplyError(result.status_value());
       RETURN_DEBUG(result.status_value(), "%u", request->bar_id);
@@ -211,7 +211,7 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
 
   zx_status_t status = ZX_OK;
   if (bar->is_mmio) {
-    zx::status<zx::vmo> result = bar->allocation->CreateVmo();
+    zx::result<zx::vmo> result = bar->allocation->CreateVmo();
     if (result.is_ok()) {
       completer.ReplySuccess({.bar_id = request->bar_id,
                               .size = bar_size,
@@ -220,7 +220,7 @@ void FidlDevice::GetBar(GetBarRequestView request, GetBarCompleter::Sync& comple
     }
     status = result.status_value();
   } else {
-    zx::status<zx::resource> result = bar->allocation->CreateResource();
+    zx::result<zx::resource> result = bar->allocation->CreateResource();
     if (status == ZX_OK) {
       fidl::Arena arena;
       completer.ReplySuccess(
@@ -265,7 +265,7 @@ void FidlDevice::AckInterrupt(AckInterruptCompleter::Sync& completer) {
 
 void FidlDevice::MapInterrupt(MapInterruptRequestView request,
                               MapInterruptCompleter::Sync& completer) {
-  zx::status<zx::interrupt> result = device_->MapInterrupt(request->which_irq);
+  zx::result<zx::interrupt> result = device_->MapInterrupt(request->which_irq);
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
     RETURN_DEBUG(result.status_value(), "%#x", request->which_irq);

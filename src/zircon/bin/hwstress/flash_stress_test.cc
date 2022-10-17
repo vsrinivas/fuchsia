@@ -163,12 +163,12 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
 
 TEST(Flash, FlashStress) {
   // Create a RAM disk.
-  zx::status<storage::RamDisk> ramdisk = storage::RamDisk::Create(
+  zx::result<storage::RamDisk> ramdisk = storage::RamDisk::Create(
       /*block_size=*/kBlockSize, /*block_count=*/kDefaultRamDiskSize / kBlockSize);
   ASSERT_TRUE(ramdisk.is_ok());
 
   // Instantiate it as a FVM device.
-  zx::status<std::string> fvm_path =
+  zx::result<std::string> fvm_path =
       storage::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
   ASSERT_TRUE(fvm_path.is_ok());
 
@@ -262,12 +262,12 @@ TEST(Flash, SingleBlock) {
 
 TEST(Flash, DeletePartition) {
   // Create a RAM disk.
-  zx::status<storage::RamDisk> ramdisk = storage::RamDisk::Create(
+  zx::result<storage::RamDisk> ramdisk = storage::RamDisk::Create(
       /*block_size=*/kBlockSize, /*block_count=*/kDefaultRamDiskSize / kBlockSize);
   ASSERT_TRUE(ramdisk.is_ok());
 
   // Instantiate it as a FVM device.
-  zx::status<std::string> fvm_path =
+  zx::result<std::string> fvm_path =
       storage::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
   ASSERT_TRUE(fvm_path.is_ok());
 

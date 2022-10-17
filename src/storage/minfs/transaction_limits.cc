@@ -28,7 +28,7 @@ blk_t GetBlockBitmapBlocks(const Superblock& info) {
   return bitmap_blocks;
 }
 
-zx::status<blk_t> GetRequiredBlockCount(size_t offset, size_t length, size_t block_size) {
+zx::result<blk_t> GetRequiredBlockCount(size_t offset, size_t length, size_t block_size) {
   if (block_size != kMinfsBlockSize) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }

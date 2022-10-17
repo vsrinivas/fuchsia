@@ -14,7 +14,7 @@ namespace minfs {
 InodeManager::InodeManager(Bcache* bc, blk_t start_block, uint32_t block_size)
     : start_block_(start_block), block_size_(block_size), bc_(bc) {}
 
-zx::status<std::unique_ptr<InodeManager>> InodeManager::Create(
+zx::result<std::unique_ptr<InodeManager>> InodeManager::Create(
     Bcache* bc, SuperblockManager* sb, fs::BufferedOperationsBuilder* builder,
     AllocatorMetadata metadata, blk_t start_block, size_t inodes) {
   auto mgr = std::unique_ptr<InodeManager>(new InodeManager(bc, start_block, sb->BlockSize()));

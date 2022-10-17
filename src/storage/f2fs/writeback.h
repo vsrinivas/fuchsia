@@ -40,7 +40,7 @@ class Writer final {
   void ScheduleSubmitPages(sync_completion_t *completion = nullptr,
                            PageType type = PageType::kNrPageType);
   // It merges Pages to be written.
-  zx::status<> EnqueuePage(LockedPage &page, block_t blk_addr, PageType type);
+  zx::result<> EnqueuePage(LockedPage &page, block_t blk_addr, PageType type);
 
  private:
   // It takes write operations from |writer_buffer_| and passes them to RunReqeusts()
@@ -68,7 +68,7 @@ class Reader {
 
   // It makes read operations from |writer_buffer_| and passes them to RunReqeusts()
   // synchronously.
-  zx::status<std::vector<LockedPage>> SubmitPages(std::vector<LockedPage> pages,
+  zx::result<std::vector<LockedPage>> SubmitPages(std::vector<LockedPage> pages,
                                                   std::vector<block_t> addrs);
 
  private:

@@ -31,21 +31,21 @@ namespace {
 // Walks the fvm and collects interesting metadata.
 class FvmWalker {
  public:
-  static zx::status<std::unique_ptr<FvmWalker>> Create(fbl::unique_fd input_fd,
+  static zx::result<std::unique_ptr<FvmWalker>> Create(fbl::unique_fd input_fd,
                                                        Extractor& extractor);
 
-  zx::status<> Walk();
+  zx::result<> Walk();
 
  private:
   // Returns maximum addressable byte in the fvm.
   uint64_t ByteLimit() const { return info_.fvm_partition_size; }
 
   // Walks the fvm partition and marks all bytes as reported by ByteLimit() as unmapped
-  zx::status<> WalkPartition() const;
+  zx::result<> WalkPartition() const;
 
   // Walks different segments, like partition table and allocation table, of the fvm partition.
   // Marks them as data unmodified.
-  zx::status<> WalkSegments() const;
+  zx::result<> WalkSegments() const;
 
   const fvm::Header& Info() const { return info_; }
 
@@ -59,12 +59,12 @@ class FvmWalker {
 
   // Loads superblock located at start_offset. If the copy of superblock has valid
   // magic values, the function returns zx::ok().
-  zx::status<> TryLoadSuperblock(uint64_t start_offset);
+  zx::result<> TryLoadSuperblock(uint64_t start_offset);
 
   // Tries to load the primary superblock. If primary superblock is corrupt,
   // dumps the first copy of metadata based on max sizes for the
   // partition and allocation tables
-  zx::status<> LoadSuperblock();
+  zx::result<> LoadSuperblock();
 
   // The primary superblock, if valid
   fvm::Header info_;
@@ -79,7 +79,7 @@ class FvmWalker {
 FvmWalker::FvmWalker(fbl::unique_fd input_fd, Extractor& extractor)
     : extractor_(extractor), input_fd_(std::move(input_fd)) {}
 
-zx::status<std::unique_ptr<FvmWalker>> FvmWalker::Create(fbl::unique_fd input_fd,
+zx::result<std::unique_ptr<FvmWalker>> FvmWalker::Create(fbl::unique_fd input_fd,
                                                          Extractor& extractor) {
   auto walker = std::unique_ptr<FvmWalker>(new FvmWalker(std::move(input_fd), extractor));
 
@@ -90,7 +90,7 @@ zx::status<std::unique_ptr<FvmWalker>> FvmWalker::Create(fbl::unique_fd input_fd
   return zx::ok(std::move(walker));
 }
 
-zx::status<> FvmWalker::Walk() {
+zx::result<> FvmWalker::Walk() {
   if (auto status = WalkPartition(); status.is_error()) {
     std::cerr << "Walking partition failed" << std::endl;
     return status;
@@ -103,13 +103,13 @@ zx::status<> FvmWalker::Walk() {
   return zx::ok();
 }
 
-zx::status<> FvmWalker::WalkPartition() const {
+zx::result<> FvmWalker::WalkPartition() const {
   auto max_offset = ByteLimit();
   ExtentProperties properties{.extent_kind = ExtentKind::Unmmapped, .data_kind = DataKind::Skipped};
   return extractor_.Add(0, max_offset, properties);
 }
 
-zx::status<> FvmWalker::WalkSegments() const {
+zx::result<> FvmWalker::WalkSegments() const {
   ExtentProperties properties{.extent_kind = ExtentKind::Data, .data_kind = DataKind::Unmodified};
   if (auto status = extractor_.AddBlocks(info_.GetSuperblockOffset(fvm::SuperblockType::kPrimary),
                                          1, properties);
@@ -155,7 +155,7 @@ zx::status<> FvmWalker::WalkSegments() const {
   return zx::ok();
 }
 
-zx::status<> FvmWalker::TryLoadSuperblock(uint64_t start_offset) {
+zx::result<> FvmWalker::TryLoadSuperblock(uint64_t start_offset) {
   off_t pread_offset;
   if (!safemath::MakeCheckedNum(start_offset).Cast<off_t>().AssignIfValid(&pread_offset)) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
@@ -171,7 +171,7 @@ zx::status<> FvmWalker::TryLoadSuperblock(uint64_t start_offset) {
   return zx::error(ZX_ERR_BAD_STATE);
 }
 
-zx::status<> FvmWalker::LoadSuperblock() {
+zx::result<> FvmWalker::LoadSuperblock() {
   auto load_status = TryLoadSuperblock(0);
   if (load_status.is_ok()) {
     return load_status;
@@ -187,7 +187,7 @@ zx::status<> FvmWalker::LoadSuperblock() {
 
 }  // namespace
 
-zx::status<> FvmExtract(fbl::unique_fd input_fd, Extractor& extractor) {
+zx::result<> FvmExtract(fbl::unique_fd input_fd, Extractor& extractor) {
   auto walker_or = FvmWalker::Create(std::move(input_fd), extractor);
   if (walker_or.is_error()) {
     std::cerr << "Walker: Init failure: " << walker_or.error_value() << std::endl;

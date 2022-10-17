@@ -27,7 +27,7 @@ class VectorExtentIterator : public ExtentIterator {
 
   // ExtentIterator interface.
   bool Done() const final;
-  zx::status<const Extent*> Next() final;
+  zx::result<const Extent*> Next() final;
   uint64_t BlockIndex() const final;
 
  private:

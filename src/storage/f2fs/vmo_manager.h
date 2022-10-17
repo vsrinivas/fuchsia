@@ -22,10 +22,10 @@ class VmoNode : public fbl::WAVLTreeContainable<std::unique_ptr<VmoNode>> {
   // by calling Page::GetPage(). When it needs to reuse |vmo_| that it unlocked due to no
   // reference to |vmo_|, it tries VMO_OP_TRY_LOCK to check if kernel has reclaimed any pages
   // of |vmo_|. If so, it does VMO_OP_LOCK to check which pages were decommitted by kernel.
-  zx::status<bool> CreateAndLockVmo(pgoff_t offset);
+  zx::result<bool> CreateAndLockVmo(pgoff_t offset);
   // It unlocks |vmo_| when there is no Page using it.
   zx_status_t UnlockVmo(pgoff_t offset);
-  zx::status<zx_vaddr_t> GetAddress(pgoff_t offset);
+  zx::result<zx_vaddr_t> GetAddress(pgoff_t offset);
   pgoff_t GetKey() const { return index_; }
   uint64_t GetActivePages() const { return active_pages_; }
 
@@ -62,9 +62,9 @@ class VmoManager {
   VmoManager &operator=(const VmoManager &&) = delete;
   ~VmoManager() { Reset(true); }
 
-  zx::status<bool> CreateAndLockVmo(const pgoff_t index) __TA_EXCLUDES(tree_lock_);
+  zx::result<bool> CreateAndLockVmo(const pgoff_t index) __TA_EXCLUDES(tree_lock_);
   zx_status_t UnlockVmo(const pgoff_t index, const bool evict) __TA_EXCLUDES(tree_lock_);
-  zx::status<zx_vaddr_t> GetAddress(pgoff_t index) __TA_EXCLUDES(tree_lock_);
+  zx::result<zx_vaddr_t> GetAddress(pgoff_t index) __TA_EXCLUDES(tree_lock_);
   void Reset(bool shutdown = false) __TA_EXCLUDES(tree_lock_);
 
  private:
@@ -77,8 +77,8 @@ class VmoManager {
 
   using VmoTreeTraits = fbl::DefaultKeyedObjectTraits<pgoff_t, VmoNode>;
   using VmoTree = fbl::WAVLTree<pgoff_t, std::unique_ptr<VmoNode>, VmoTreeTraits>;
-  zx::status<VmoNode *> FindVmoNodeUnsafe(const pgoff_t index) __TA_REQUIRES_SHARED(tree_lock_);
-  zx::status<VmoNode *> GetVmoNodeUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
+  zx::result<VmoNode *> FindVmoNodeUnsafe(const pgoff_t index) __TA_REQUIRES_SHARED(tree_lock_);
+  zx::result<VmoNode *> GetVmoNodeUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
 
   fs::SharedMutex tree_lock_;
   VmoTree vmo_tree_ __TA_GUARDED(tree_lock_);

@@ -214,7 +214,7 @@ static void motmot_uart_irq(void* arg) {
 
 static int motmot_uart_getc(bool wait) {
   // RX irq based
-  zx::status<char> result = uart_rx_buf.ReadChar(wait);
+  zx::result<char> result = uart_rx_buf.ReadChar(wait);
   if (result.is_ok()) {
     {
       // See the comment on the critical section in |motmot_uart_irq|.

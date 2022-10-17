@@ -48,7 +48,7 @@ class FileEventHandler : public fidl::AsyncEventHandler<fio::File> {
 // TODO(fxbug.dev/99679): This logic needs to be kept in sync with |driver::NsValue|.
 // Once we have the ability to produce a const view from FIDL natural types, we can
 // directly use |driver::NsValue| and delete this function.
-zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
+zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
     const std::vector<fuchsia_component_runner::ComponentNamespaceEntry>& entries,
     std::string_view path) {
   for (auto& entry : entries) {
@@ -62,7 +62,7 @@ zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> NsValue(
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<fidl::ClientEnd<fio::File>> OpenDriverFile(
+zx::result<fidl::ClientEnd<fio::File>> OpenDriverFile(
     const fdf::DriverStartArgs& start_args, const fuchsia_data::wire::Dictionary& program) {
   const auto& ns = start_args.ns();
   auto pkg = ns ? NsValue(*ns, "/pkg") : zx::error(ZX_ERR_INVALID_ARGS);
@@ -71,7 +71,7 @@ zx::status<fidl::ClientEnd<fio::File>> OpenDriverFile(
     return pkg.take_error();
   }
 
-  zx::status<std::string> binary = driver::ProgramValue(program, "binary");
+  zx::result<std::string> binary = driver::ProgramValue(program, "binary");
   if (binary.is_error()) {
     LOGF(ERROR, "Failed to start driver, missing 'binary' argument: %s", binary.status_string());
     return binary.take_error();
@@ -94,7 +94,7 @@ zx::status<fidl::ClientEnd<fio::File>> OpenDriverFile(
 
 }  // namespace
 
-zx::status<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
+zx::result<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
   // Give the driver's VMO a name. We can't fit the entire URL in the name, so
   // use the name of the manifest from the URL.
   auto manifest = GetManifest(url);
@@ -142,7 +142,7 @@ void Driver::set_binding(fidl::ServerBindingRef<fdh::Driver> binding) {
 
 void Driver::Stop(StopCompleter::Sync& completer) { binding_->Unbind(); }
 
-zx::status<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
+zx::result<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
                            ::fdf::Dispatcher dispatcher) {
   initial_dispatcher_ = std::move(dispatcher);
 
@@ -194,7 +194,7 @@ uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& prog
   return opts;
 }
 
-zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts) {
+zx::result<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts) {
   auto name = GetManifest(driver->url());
   // The dispatcher must be shutdown before the dispatcher is destroyed.
   // Usually we will wait for the callback from |fdf_env::DriverShutdown| before destroying
@@ -213,7 +213,7 @@ zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_
 
 void LoadDriver(fuchsia_driver_framework::DriverStartArgs start_args,
                 async_dispatcher_t* dispatcher,
-                fit::callback<void(zx::status<LoadedDriver>)> callback) {
+                fit::callback<void(zx::result<LoadedDriver>)> callback) {
   if (!start_args.url()) {
     LOGF(ERROR, "Failed to start driver, missing 'url' argument");
     callback(zx::error(ZX_ERR_INVALID_ARGS));
@@ -261,7 +261,7 @@ void LoadDriver(fuchsia_driver_framework::DriverStartArgs start_args,
           return;
         }
 
-        zx::status<fdf::Dispatcher> driver_dispatcher =
+        zx::result<fdf::Dispatcher> driver_dispatcher =
             CreateDispatcher(*driver, default_dispatcher_opts);
         if (driver_dispatcher.is_error()) {
           callback(driver_dispatcher.take_error());

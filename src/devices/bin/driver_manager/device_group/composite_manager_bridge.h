@@ -8,7 +8,7 @@
 #include "src/devices/bin/driver_manager/device_group/device_group.h"
 
 using AddToIndexCallback =
-    fit::callback<void(zx::status<fuchsia_driver_index::DriverIndexAddDeviceGroupResponse>)>;
+    fit::callback<void(zx::result<fuchsia_driver_index::DriverIndexAddDeviceGroupResponse>)>;
 
 // Bridge class for the composite device handling in DFv1 and DFv2.
 // Implemented by the Coordinator in DFv1 and DriverRunner in DFv2.

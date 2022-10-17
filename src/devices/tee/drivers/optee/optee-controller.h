@@ -97,7 +97,7 @@ class OpteeControllerBase {
   size_t CommandQueueSize() const;
   size_t CommandQueueWaitSize() const;
 
-  virtual zx::status<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const = 0;
+  virtual zx::result<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const = 0;
   virtual zx_device_t* GetDevice() const = 0;
 
  private:
@@ -158,7 +158,7 @@ class OpteeController : public OpteeControllerBase,
 
   zx_device_t* GetDevice() const override { return zxdev(); }
 
-  zx::status<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const override {
+  zx::result<fidl::ClientEnd<fuchsia_hardware_rpmb::Rpmb>> RpmbConnectServer() const override {
     return DdkConnectFragmentFidlProtocol<fuchsia_hardware_rpmb::Service::Device>("rpmb");
   }
 

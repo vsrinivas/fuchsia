@@ -15,7 +15,7 @@
 
 namespace acpi_lite {
 
-zx::status<AcpiDebugPortDescriptor> ParseAcpiDbg2Table(const AcpiDbg2Table& debug_table) {
+zx::result<AcpiDebugPortDescriptor> ParseAcpiDbg2Table(const AcpiDbg2Table& debug_table) {
   // Ensure there is at least one debug port.
   if (debug_table.num_entries < 1) {
     LOG_INFO("acpi_lite: DBG2 table contains no debug ports.\n");
@@ -84,7 +84,7 @@ zx::status<AcpiDebugPortDescriptor> ParseAcpiDbg2Table(const AcpiDbg2Table& debu
   return zx::success(result);
 }
 
-zx::status<AcpiDebugPortDescriptor> GetDebugPort(const AcpiParserInterface& parser) {
+zx::result<AcpiDebugPortDescriptor> GetDebugPort(const AcpiParserInterface& parser) {
   // Find the DBG2 table entry.
   const AcpiDbg2Table* debug_table = GetTableByType<AcpiDbg2Table>(parser);
   if (debug_table == nullptr) {

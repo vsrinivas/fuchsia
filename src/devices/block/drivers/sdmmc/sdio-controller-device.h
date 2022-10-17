@@ -129,7 +129,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   zx_status_t SdioDoRwByteLocked(bool write, uint8_t fn_idx, uint32_t addr, uint8_t write_byte,
                                  uint8_t* out_read_byte) TA_REQ(lock_);
 
-  zx::status<uint8_t> ReadCccrByte(uint32_t addr) TA_REQ(lock_);
+  zx::result<uint8_t> ReadCccrByte(uint32_t addr) TA_REQ(lock_);
 
   struct SdioTxnPosition {
     cpp20::span<const sdmmc_buffer_region_t> buffers;  // The buffers remaining to be processed.
@@ -138,7 +138,7 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   };
 
   // Returns an SdioTxnPosition representing the new position in the buffers list.
-  zx::status<SdioTxnPosition> DoOneRwTxnRequest(uint8_t fn_idx, const sdio_rw_txn_new_t& txn,
+  zx::result<SdioTxnPosition> DoOneRwTxnRequest(uint8_t fn_idx, const sdio_rw_txn_new_t& txn,
                                                 SdioTxnPosition current_position) TA_REQ(lock_);
 
   int SdioIrqThread();

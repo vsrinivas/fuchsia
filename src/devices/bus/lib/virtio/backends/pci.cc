@@ -104,7 +104,7 @@ zx_status_t PciBackend::ConfigureInterruptMode() {
   return ZX_OK;
 }
 
-zx::status<uint32_t> PciBackend::WaitForInterrupt() {
+zx::result<uint32_t> PciBackend::WaitForInterrupt() {
   zx_port_packet packet;
   zx_status_t st = wait_port_.wait(zx::deadline_after(zx::msec(100)), &packet);
   if (st != ZX_OK) {

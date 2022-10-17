@@ -17,7 +17,7 @@
 
 namespace storage {
 
-zx::status<> WaitForRamctl(zx::duration time = zx::duration::infinite());
+zx::result<> WaitForRamctl(zx::duration time = zx::duration::infinite());
 
 // A thin wrapper around the ram-disk C API. Strictly speaking, this isn't specific to
 // isolated-devmgr.
@@ -29,11 +29,11 @@ class RamDisk {
   };
 
   // Creates a ram-disk with |block_count| blocks of |block_size| bytes.
-  static zx::status<RamDisk> Create(int block_size, uint64_t block_count,
+  static zx::result<RamDisk> Create(int block_size, uint64_t block_count,
                                     const Options& options = Options{});
 
   // Creates a ram-disk with the given VMO.  If block_size is zero, a default block size is used.
-  static zx::status<RamDisk> CreateWithVmo(zx::vmo vmo, uint64_t block_size = 0);
+  static zx::result<RamDisk> CreateWithVmo(zx::vmo vmo, uint64_t block_size = 0);
 
   RamDisk() = default;
   RamDisk(RamDisk&& other) : client_(other.client_) { other.client_ = nullptr; }
@@ -56,13 +56,13 @@ class RamDisk {
   std::string path() const { return ramdisk_get_path(client_); }
 
   // Returns a channel to the device.
-  zx::status<zx::channel> channel() const;
+  zx::result<zx::channel> channel() const;
 
-  zx::status<> SleepAfter(uint64_t block_count) {
-    return zx::make_status(ramdisk_sleep_after(client_, block_count));
+  zx::result<> SleepAfter(uint64_t block_count) {
+    return zx::make_result(ramdisk_sleep_after(client_, block_count));
   }
 
-  zx::status<> Wake() { return zx::make_status(ramdisk_wake(client_)); }
+  zx::result<> Wake() { return zx::make_result(ramdisk_wake(client_)); }
 
  private:
   RamDisk(ramdisk_client_t* client) : client_(client) {}

@@ -30,12 +30,12 @@ struct PvClockOffset {
 } __PACKED;
 
 // Updates guest boot time.
-zx::status<> pv_clock_update_boot_time(hypervisor::GuestPhysicalAspace* gpa,
+zx::result<> pv_clock_update_boot_time(hypervisor::GuestPhysicalAspace* gpa,
                                        zx_vaddr_t guest_paddr);
 
 // Remembers guest physical address for KVM clock system time structure and enables updates
 // to guest system time.
-zx::status<> pv_clock_reset_clock(PvClockState* pv_clock, hypervisor::GuestPhysicalAspace* gpa,
+zx::result<> pv_clock_reset_clock(PvClockState* pv_clock, hypervisor::GuestPhysicalAspace* gpa,
                                   zx_vaddr_t guest_paddr);
 
 // Disables updates to guest system time.
@@ -46,6 +46,6 @@ void pv_clock_update_system_time(PvClockState* pv_clock, hypervisor::GuestPhysic
 
 // Populates mapping between TSC and wall time per guest request. guest_padds contains
 // physical address of PvClockOffset structure where the result should be stored.
-zx::status<> pv_clock_populate_offset(hypervisor::GuestPhysicalAspace* gpa, zx_vaddr_t guest_paddr);
+zx::result<> pv_clock_populate_offset(hypervisor::GuestPhysicalAspace* gpa, zx_vaddr_t guest_paddr);
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_HYPERVISOR_PV_PRIV_H_

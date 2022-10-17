@@ -91,10 +91,10 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
 TestFilesystemOptions OptionsWithDescription(std::string_view description);
 
 // Returns device and device path.
-zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(const TestFilesystemOptions& options);
+zx::result<std::pair<RamDevice, std::string>> CreateRamDevice(const TestFilesystemOptions& options);
 
 // Returns a handle to a test crypt service.
-zx::status<zx::channel> GetCryptService();
+zx::result<zx::channel> GetCryptService();
 
 // A file system instance is a specific instance created for test purposes.
 class FilesystemInstance {
@@ -104,15 +104,15 @@ class FilesystemInstance {
   FilesystemInstance& operator=(const FilesystemInstance&) = delete;
   virtual ~FilesystemInstance() = default;
 
-  virtual zx::status<> Format(const TestFilesystemOptions&) = 0;
-  virtual zx::status<> Mount(const std::string& mount_path,
+  virtual zx::result<> Format(const TestFilesystemOptions&) = 0;
+  virtual zx::result<> Mount(const std::string& mount_path,
                              const fs_management::MountOptions& options) = 0;
-  virtual zx::status<> Unmount(const std::string& mount_path);
-  virtual zx::status<> Fsck() = 0;
+  virtual zx::result<> Unmount(const std::string& mount_path);
+  virtual zx::result<> Fsck() = 0;
 
   // Returns path of the device on which the filesystem is created. For filesystem that are not
   // block device based, like memfs, the function returns an error.
-  virtual zx::status<std::string> DevicePath() const = 0;
+  virtual zx::result<std::string> DevicePath() const = 0;
   virtual storage::RamDisk* GetRamDisk() { return nullptr; }
   virtual ramdevice_client::RamNand* GetRamNand() { return nullptr; }
   virtual fs_management::SingleVolumeFilesystemInterface* fs() = 0;
@@ -150,9 +150,9 @@ class Filesystem {
   };
 
   virtual ~Filesystem() = default;
-  virtual zx::status<std::unique_ptr<FilesystemInstance>> Make(
+  virtual zx::result<std::unique_ptr<FilesystemInstance>> Make(
       const TestFilesystemOptions& options) const = 0;
-  virtual zx::status<std::unique_ptr<FilesystemInstance>> Open(
+  virtual zx::result<std::unique_ptr<FilesystemInstance>> Open(
       const TestFilesystemOptions& options) const {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -175,7 +175,7 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
   virtual std::unique_ptr<FilesystemInstance> Create(RamDevice device,
                                                      std::string device_path) const = 0;
 
-  zx::status<std::unique_ptr<FilesystemInstance>> Make(
+  zx::result<std::unique_ptr<FilesystemInstance>> Make(
       const TestFilesystemOptions& options) const override {
     auto result = CreateRamDevice(options);
     if (result.is_error()) {
@@ -183,7 +183,7 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
     }
     auto [device, device_path] = std::move(result).value();
     auto instance = Create(std::move(device), std::move(device_path));
-    zx::status<> status = instance->Format(options);
+    zx::result<> status = instance->Format(options);
     if (status.is_error()) {
       return status.take_error();
     }
@@ -193,21 +193,21 @@ class FilesystemImplWithDefaultMake : public FilesystemImpl<T> {
 
 // -- Default implementations that use fs-management --
 
-zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
+zx::result<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
                       const fs_management::MkfsOptions& options, bool create_default_volume);
 
-zx::status<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
+zx::result<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
                      fs_management::NamespaceBinding>>
 FsMount(const std::string& device_path, const std::string& mount_path,
         fs_management::DiskFormat format, const fs_management::MountOptions& mount_options,
         bool is_multi_volume);
 
-zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options);
+zx::result<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options);
 
 std::string StripTrailingSlash(const std::string& in);
 
 // Removes `mount_path` from the namespace.
-zx::status<> FsUnbind(const std::string& mount_path);
+zx::result<> FsUnbind(const std::string& mount_path);
 
 }  // namespace fs_test
 

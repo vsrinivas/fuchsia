@@ -38,13 +38,13 @@ class Tas58xx : public SimpleCodecServer,
 
  protected:
   // Implementation for SimpleCodecServer.
-  zx::status<DriverIds> Initialize() override;
+  zx::result<DriverIds> Initialize() override;
   zx_status_t Reset() override;
   Info GetInfo() override;
   zx_status_t Stop() override;
   zx_status_t Start() override;
   DaiSupportedFormats GetDaiFormats() override;
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override;
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override;
   GainFormat GetGainFormat() override;
   GainState GetGainState() override;
   void SetGainState(GainState state) override;

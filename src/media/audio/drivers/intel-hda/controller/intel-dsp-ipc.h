@@ -56,8 +56,8 @@ class DspChannel {
   // be sent or received, and both the send and receive spans may point to the
   // same underlying memory if the same buffer should be used for both reading
   // and writing.
-  virtual zx::status<> Send(uint32_t primary, uint32_t extension) = 0;
-  virtual zx::status<> SendWithData(uint32_t primary, uint32_t extension,
+  virtual zx::result<> Send(uint32_t primary, uint32_t extension) = 0;
+  virtual zx::result<> SendWithData(uint32_t primary, uint32_t extension,
                                     cpp20::span<const uint8_t> payload,
                                     cpp20::span<uint8_t> recv_buffer, size_t* bytes_received) = 0;
 

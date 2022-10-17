@@ -33,7 +33,7 @@ class BlobVerifier {
   //
   // Returns an error if the merkle tree's root does not match |digest|, or if the required tree
   // size for |data_size| bytes is bigger than |merkle_size|.
-  [[nodiscard]] static zx::status<std::unique_ptr<BlobVerifier>> Create(
+  [[nodiscard]] static zx::result<std::unique_ptr<BlobVerifier>> Create(
       digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
       cpp20::span<const uint8_t> merkle_data_blocks, const BlobLayout& layout,
       const BlobCorruptionNotifier* notifier);
@@ -41,7 +41,7 @@ class BlobVerifier {
   // Creates an instance of BlobVerifier for blobs named |digest|, which are small enough to not
   // have a stored merkle tree (i.e. MerkleTreeBytes(data_size) == 0). The passed-in BlobfsMetrics
   // will be updated when this class runs.
-  [[nodiscard]] static zx::status<std::unique_ptr<BlobVerifier>> CreateWithoutTree(
+  [[nodiscard]] static zx::result<std::unique_ptr<BlobVerifier>> CreateWithoutTree(
       digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics, size_t data_size,
       const BlobCorruptionNotifier* notifier);
 

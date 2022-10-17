@@ -155,7 +155,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
   return ZX_OK;
 }
 
-zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_handler,
+zx::result<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_handler,
                                             storage::VmoidRegistry* registry,
                                             uint64_t journal_start, uint64_t journal_length,
                                             uint32_t block_size) {

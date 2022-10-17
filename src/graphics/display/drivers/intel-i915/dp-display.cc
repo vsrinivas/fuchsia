@@ -1495,7 +1495,7 @@ bool DpDisplay::HandleHotplug(bool long_pulse) {
 
 bool DpDisplay::HasBacklight() { return type() == Type::kEdp; }
 
-zx::status<> DpDisplay::SetBacklightState(bool power, double brightness) {
+zx::result<> DpDisplay::SetBacklightState(bool power, double brightness) {
   SetBacklightOn(power);
 
   brightness = std::max(brightness, 0.0);
@@ -1509,7 +1509,7 @@ zx::status<> DpDisplay::SetBacklightState(bool power, double brightness) {
   return zx::success();
 }
 
-zx::status<FidlBacklight::wire::State> DpDisplay::GetBacklightState() {
+zx::result<FidlBacklight::wire::State> DpDisplay::GetBacklightState() {
   return zx::success(FidlBacklight::wire::State{
       .backlight_on = IsBacklightOn(),
       .brightness = GetBacklightBrightness(),

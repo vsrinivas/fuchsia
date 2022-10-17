@@ -19,7 +19,7 @@ int Mount(const f2fs::MountOptions& options, std::unique_ptr<f2fs::Bcache> bc) {
   fidl::ServerEnd<fuchsia_io::Directory> root(
       zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
 
-  zx::status status = f2fs::Mount(options, std::move(bc), std::move(root));
+  zx::result status = f2fs::Mount(options, std::move(bc), std::move(root));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "failed to mount: " << status.status_string();
     return EXIT_FAILURE;
@@ -55,7 +55,7 @@ int StartComponent(const f2fs::MountOptions& options, std::unique_ptr<f2fs::Bcac
   fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request(
       std::move(lifecycle_channel));
 
-  zx::status status = f2fs::StartComponent(std::move(outgoing_dir), std::move(lifecycle_request));
+  zx::result status = f2fs::StartComponent(std::move(outgoing_dir), std::move(lifecycle_request));
   if (status.is_error()) {
     return EXIT_FAILURE;
   }

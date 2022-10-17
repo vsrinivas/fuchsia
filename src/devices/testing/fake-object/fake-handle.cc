@@ -33,7 +33,7 @@ bool HandleTable::IsValidFakeHandle(zx_handle_t handle) {
 }
 
 __EXPORT
-zx::status<fbl::RefPtr<Object>> HandleTable::Get(zx_handle_t handle) __TA_EXCLUDES(lock_) {
+zx::result<fbl::RefPtr<Object>> HandleTable::Get(zx_handle_t handle) __TA_EXCLUDES(lock_) {
   canary_.Assert();
   fbl::AutoLock lock(&lock_);
   auto iter = handles_.find(handle);
@@ -48,7 +48,7 @@ zx::status<fbl::RefPtr<Object>> HandleTable::Get(zx_handle_t handle) __TA_EXCLUD
 }
 
 __EXPORT
-zx::status<zx_handle_t> HandleTable::Add(fbl::RefPtr<Object> obj) {
+zx::result<zx_handle_t> HandleTable::Add(fbl::RefPtr<Object> obj) {
   canary_.Assert();
   // Fake objects are represented as empty VMOs because:
   // 1. We need a simple object that will have minimal effect on the test environment
@@ -78,7 +78,7 @@ zx::status<zx_handle_t> HandleTable::Add(fbl::RefPtr<Object> obj) {
 }
 
 __EXPORT
-zx::status<> HandleTable::Remove(zx_handle_t handle) {
+zx::result<> HandleTable::Remove(zx_handle_t handle) {
   canary_.Assert();
   // Pull the object out of the handle table so that we can release the handle
   // table lock before running the object's dtor. This prevents issues like

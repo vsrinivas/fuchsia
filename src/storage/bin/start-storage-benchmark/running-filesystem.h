@@ -16,7 +16,7 @@ class RunningFilesystem {
   virtual ~RunningFilesystem() = default;
 
   // Returns a channel to the filesystem's root directory.
-  virtual zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const = 0;
+  virtual zx::result<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const = 0;
 };
 
 }  // namespace storage_benchmark

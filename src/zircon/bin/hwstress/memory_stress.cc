@@ -238,7 +238,7 @@ std::vector<MemoryWorkload> GenerateMemoryWorkloads() {
 // Ensure that |result| contains at least |size| bytes of memory, mapped in as mode |mode|.
 //
 // Will deallocate and reallocate memory as required to achieve this.
-zx::status<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
+zx::result<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
                                         std::unique_ptr<MemoryRange>* result) {
   // If we are already allocated and have the right cache mode, nothing to do.
   if (*result != nullptr && result->get()->cache() == mode && result->get()->size_bytes() >= size) {
@@ -247,7 +247,7 @@ zx::status<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
 
   // Otherwise, allocate new memory.
   result->reset();
-  zx::status<std::unique_ptr<MemoryRange>> maybe_memory = MemoryRange::Create(size, mode);
+  zx::result<std::unique_ptr<MemoryRange>> maybe_memory = MemoryRange::Create(size, mode);
   if (maybe_memory.is_error()) {
     return zx::error(maybe_memory.status_value());
   }
@@ -257,7 +257,7 @@ zx::status<> ReallocateMemoryAsRequired(CacheMode mode, size_t size,
 
 fit::result<std::string, size_t> GetMemoryToTest(const CommandLineArgs& args) {
   // Get amount of RAM and free memory in system.
-  zx::status<fuchsia::kernel::MemoryStats> maybe_stats = GetMemoryStats();
+  zx::result<fuchsia::kernel::MemoryStats> maybe_stats = GetMemoryStats();
   if (maybe_stats.is_error()) {
     return fit::error("Could not fetch free memory.");
   }
@@ -376,7 +376,7 @@ bool StressMemory(StatusLine* status, const CommandLineArgs& args, zx::duration 
     MemoryWorkloadGenerator::Workload next = workload_generator.Next();
 
     // Allocate memory for tests.
-    zx::status<> result =
+    zx::result<> result =
         ReallocateMemoryAsRequired(next.workload.memory_type, bytes_to_test.value(), &memory);
     if (result.is_error()) {
       status->Log("Failed to reallocate memory: %s", result.status_string());

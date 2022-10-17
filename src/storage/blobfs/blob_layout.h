@@ -101,14 +101,14 @@ class BlobLayout {
   virtual BlobLayoutFormat Format() const = 0;
 
   // Initializes a |BlobLayout| from a blob's inode.
-  static zx::status<std::unique_ptr<BlobLayout>> CreateFromInode(BlobLayoutFormat format,
+  static zx::result<std::unique_ptr<BlobLayout>> CreateFromInode(BlobLayoutFormat format,
                                                                  const Inode& inode,
                                                                  uint64_t blobfs_block_size);
 
   // Initializes a |BlobLayout| from a blob's file size and data size.
   // For uncompressed blobs |data_size| is the same as |file_size|.
   // For compressed blobs |data_size| is the compressed size of the file.
-  static zx::status<std::unique_ptr<BlobLayout>> CreateFromSizes(BlobLayoutFormat format,
+  static zx::result<std::unique_ptr<BlobLayout>> CreateFromSizes(BlobLayoutFormat format,
                                                                  uint64_t file_size,
                                                                  uint64_t data_size,
                                                                  uint64_t blobfs_block_size);

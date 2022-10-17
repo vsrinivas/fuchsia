@@ -13,7 +13,7 @@
 namespace network {
 namespace testing {
 
-zx::status<std::vector<uint8_t>> TxBuffer::GetData(const VmoProvider& vmo_provider) {
+zx::result<std::vector<uint8_t>> TxBuffer::GetData(const VmoProvider& vmo_provider) {
   if (!vmo_provider) {
     return zx::error(ZX_ERR_INTERNAL);
   }
@@ -310,10 +310,10 @@ bool FakeNetworkDeviceImpl::TriggerStop() {
   return false;
 }
 
-zx::status<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::CreateChild(
+zx::result<std::unique_ptr<NetworkDeviceInterface>> FakeNetworkDeviceImpl::CreateChild(
     async_dispatcher_t* dispatcher) {
   network_device_impl_protocol_t protocol = proto();
-  zx::status device = internal::DeviceInterface::Create(
+  zx::result device = internal::DeviceInterface::Create(
       dispatcher, ddk::NetworkDeviceImplProtocolClient(&protocol));
   if (device.is_error()) {
     return device.take_error();

@@ -30,7 +30,7 @@ namespace {
 
 constexpr std::string_view sparse_image_path = "/pkg/data/test_fvm.sparse.blk";
 
-zx::status<std::string> AttachFvm(const std::string& device_path) {
+zx::result<std::string> AttachFvm(const std::string& device_path) {
   fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     return zx::error(ZX_ERR_BAD_STATE);
@@ -38,7 +38,7 @@ zx::status<std::string> AttachFvm(const std::string& device_path) {
   if (auto status = storage::BindFvm(fd.get()); status.is_error())
     return status.take_error();
   std::string fvm_disk_path = device_path + "/fvm";
-  if (auto status = zx::make_status(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
+  if (auto status = zx::make_result(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
       status.is_error()) {
     return status.take_error();
   }

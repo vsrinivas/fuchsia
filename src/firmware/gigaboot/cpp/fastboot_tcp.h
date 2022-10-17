@@ -9,7 +9,7 @@
 
 namespace gigaboot {
 
-zx::status<> FastbootTcpMain();
+zx::result<> FastbootTcpMain();
 
 }  // namespace gigaboot
 

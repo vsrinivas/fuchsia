@@ -43,7 +43,7 @@ constexpr zx_cpu_set_t CpuNumToCpuSet(size_t cpu_num) {
   return cpu_set;
 }
 
-zx::status<zx_info_thread_stats_t> GetThreadStats(const zx::thread& thread) {
+zx::result<zx_info_thread_stats_t> GetThreadStats(const zx::thread& thread) {
   zx_info_thread_stats_t info;
   const zx_status_t status =
       thread.get_info(ZX_INFO_THREAD_STATS, &info, sizeof(info), nullptr, nullptr);
@@ -53,7 +53,7 @@ zx::status<zx_info_thread_stats_t> GetThreadStats(const zx::thread& thread) {
   return zx::ok(info);
 }
 
-zx::status<size_t> GetCpuCount() {
+zx::result<size_t> GetCpuCount() {
   size_t actual, available;
   const zx_status_t status =
       standalone::GetRootResource()->get_info(ZX_INFO_CPU_STATS, nullptr, 0, &actual, &available);
@@ -63,7 +63,7 @@ zx::status<size_t> GetCpuCount() {
   return zx::ok(available);
 }
 
-zx::status<zx::resource> GetSystemCpuResource() {
+zx::result<zx::resource> GetSystemCpuResource() {
   zx::resource system_cpu_resource;
   const zx_status_t status =
       zx::resource::create(*standalone::GetSystemRootResource(), ZX_RSRC_KIND_SYSTEM,
@@ -74,7 +74,7 @@ zx::status<zx::resource> GetSystemCpuResource() {
   return zx::ok(std::move(system_cpu_resource));
 }
 
-zx::status<zx::resource> GetSystemInfoResource() {
+zx::result<zx::resource> GetSystemInfoResource() {
   zx::resource system_info_resource;
   const zx_status_t status =
       zx::resource::create(*standalone::GetSystemRootResource(), ZX_RSRC_KIND_SYSTEM,
@@ -85,7 +85,7 @@ zx::status<zx::resource> GetSystemInfoResource() {
   return zx::ok(std::move(system_info_resource));
 }
 
-zx::status<zx::unowned_resource> GetMmioResource() {
+zx::result<zx::unowned_resource> GetMmioResource() {
   return zx::ok(standalone::GetMmioRootResource());
 }
 
@@ -125,7 +125,7 @@ zx_status_t RunThread(Callable&& callable) {
 }  // anonymous namespace
 
 TEST(SystemCpu, SetPerformanceInfoArgumentValidation) {
-  const zx::status resource = GetSystemCpuResource();
+  const zx::result resource = GetSystemCpuResource();
   ASSERT_TRUE(resource.is_ok());
 
   // Test invalid handle -> ZX_ERR_BAD_HANDLE.
@@ -138,7 +138,7 @@ TEST(SystemCpu, SetPerformanceInfoArgumentValidation) {
 
   // Test incorrect resource kind -> ZX_ERR_WRONG_TYPE.
   {
-    const zx::status info_resource = GetMmioResource();
+    const zx::result info_resource = GetMmioResource();
     ASSERT_TRUE(info_resource.is_ok());
 
     zx_cpu_performance_info_t info[] = {{0, {1, 0}}};
@@ -149,7 +149,7 @@ TEST(SystemCpu, SetPerformanceInfoArgumentValidation) {
 
   // Test incorrect system resource range -> ZX_ERR_OUT_OF_RANGE.
   {
-    const zx::status info_resource = GetSystemInfoResource();
+    const zx::result info_resource = GetSystemInfoResource();
     ASSERT_TRUE(info_resource.is_ok());
 
     zx_cpu_performance_info_t info[] = {{0, {1, 0}}};
@@ -207,7 +207,7 @@ TEST(SystemCpu, SetPerformanceInfoArgumentValidation) {
   }
 
   // Test invalid sort order -> ZX_ERR_INVALID_ARGS.
-  if (const zx::status cpu_count = GetCpuCount(); cpu_count.is_ok() && *cpu_count >= 2) {
+  if (const zx::result cpu_count = GetCpuCount(); cpu_count.is_ok() && *cpu_count >= 2) {
     zx_cpu_performance_info_t info[] = {{0, {1, 0}}, {0, {1, 0}}};
     const zx_status_t status =
         zx_system_set_performance_info(resource->get(), ZX_CPU_PERF_SCALE, &info, std::size(info));
@@ -216,10 +216,10 @@ TEST(SystemCpu, SetPerformanceInfoArgumentValidation) {
 }
 
 TEST(SystemCpu, GetPerformanceInfoArgumentValidation) {
-  const zx::status resource = GetSystemCpuResource();
+  const zx::result resource = GetSystemCpuResource();
   ASSERT_TRUE(resource.is_ok());
 
-  const zx::status cpu_count = GetCpuCount();
+  const zx::result cpu_count = GetCpuCount();
   ASSERT_TRUE(cpu_count.is_ok());
   std::vector<zx_cpu_performance_info_t> info(*cpu_count);
 
@@ -233,7 +233,7 @@ TEST(SystemCpu, GetPerformanceInfoArgumentValidation) {
 
   // Test incorrect resource kind -> ZX_ERR_WRONG_TYPE.
   {
-    const zx::status info_resource = GetMmioResource();
+    const zx::result info_resource = GetMmioResource();
     ASSERT_TRUE(info_resource.is_ok());
 
     size_t count;
@@ -244,7 +244,7 @@ TEST(SystemCpu, GetPerformanceInfoArgumentValidation) {
 
   // Test incorrect system resource range -> ZX_ERR_OUT_OF_RANGE.
   {
-    const zx::status info_resource = GetSystemInfoResource();
+    const zx::result info_resource = GetSystemInfoResource();
     ASSERT_TRUE(info_resource.is_ok());
 
     size_t count;
@@ -294,10 +294,10 @@ TEST(SystemCpu, GetPerformanceInfoArgumentValidation) {
 }
 
 TEST(SystemCpu, GetPerformanceInfo) {
-  const zx::status resource = GetSystemCpuResource();
+  const zx::result resource = GetSystemCpuResource();
   ASSERT_TRUE(resource.is_ok());
 
-  const zx::status cpu_count = GetCpuCount();
+  const zx::result cpu_count = GetCpuCount();
   ASSERT_TRUE(cpu_count.is_ok());
 
   std::vector<zx_cpu_performance_info_t> info(*cpu_count);
@@ -344,10 +344,10 @@ TEST(SystemCpu, TargetPreemptionTimeAssert) {
     return;
   }
 
-  const zx::status resource = GetSystemCpuResource();
+  const zx::result resource = GetSystemCpuResource();
   ASSERT_TRUE(resource.is_ok());
 
-  const zx::status cpu_count = GetCpuCount();
+  const zx::result cpu_count = GetCpuCount();
   ASSERT_TRUE(cpu_count.is_ok());
   std::vector<zx_cpu_performance_info_t> original_performance_info(*cpu_count);
 
@@ -402,10 +402,10 @@ TEST(SystemCpu, ScaleBandwidth) {
   }
 
   const zx_status_t run_thread_result = RunThread([&] {
-    const zx::status resource = GetSystemCpuResource();
+    const zx::result resource = GetSystemCpuResource();
     ASSERT_TRUE(resource.is_ok());
 
-    const zx::status cpu_count = GetCpuCount();
+    const zx::result cpu_count = GetCpuCount();
     ASSERT_TRUE(cpu_count.is_ok());
     std::vector<zx_cpu_performance_info_t> original_info(*cpu_count);
 
@@ -422,7 +422,7 @@ TEST(SystemCpu, ScaleBandwidth) {
     // Sleep for at least one period to guarantee starting in a new period.
     zx::nanosleep(zx::deadline_after(zx::duration(kTestThreadDeadlineParams.period)));
 
-    const zx::status<zx_info_thread_stats_t> stats_begin = GetThreadStats(*zx::thread::self());
+    const zx::result<zx_info_thread_stats_t> stats_begin = GetThreadStats(*zx::thread::self());
     ASSERT_TRUE(stats_begin.is_ok());
     EXPECT_EQ(kTestThreadCpu, stats_begin->last_scheduled_cpu);
 
@@ -435,7 +435,7 @@ TEST(SystemCpu, ScaleBandwidth) {
       now = zx::clock::get_monotonic();
     } while (now < time_end);
 
-    const zx::status<zx_info_thread_stats_t> stats_end = GetThreadStats(*zx::thread::self());
+    const zx::result<zx_info_thread_stats_t> stats_end = GetThreadStats(*zx::thread::self());
     ASSERT_TRUE(stats_end.is_ok());
     EXPECT_EQ(kTestThreadCpu, stats_end->last_scheduled_cpu);
 

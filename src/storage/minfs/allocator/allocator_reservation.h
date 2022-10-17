@@ -42,11 +42,11 @@ class AllocatorReservation {
   // Returns |ZX_OK| when |allocator| reserves |reserved| elements and |this| is successfully
   // initialized. Returns an error if not enough elements are available for reservation,
   // or there was previous reservation.
-  zx::status<> Reserve(PendingWork* transaction, size_t reserved);
+  zx::result<> Reserve(PendingWork* transaction, size_t reserved);
 
   // Extends reservation by |reserved| number of elements.
   // Returns an error if not enough elements are available for reservation.
-  zx::status<> ExtendReservation(PendingWork* transaction, size_t reserved);
+  zx::result<> ExtendReservation(PendingWork* transaction, size_t reserved);
 
   // Allocate a new item in allocator_. Return the index of the newly allocated item.
   size_t Allocate();

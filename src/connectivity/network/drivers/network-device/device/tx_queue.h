@@ -25,7 +25,7 @@ class Session;
 
 class TxQueue {
  public:
-  static zx::status<std::unique_ptr<TxQueue>> Create(DeviceInterface* parent);
+  static zx::result<std::unique_ptr<TxQueue>> Create(DeviceInterface* parent);
   using SessionKey = size_t;
 
   ~TxQueue();

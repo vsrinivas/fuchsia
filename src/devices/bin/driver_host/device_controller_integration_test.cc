@@ -36,7 +36,7 @@ void CreateTestDevice(const IsolatedDevmgr& devmgr, const char* driver_name,
       device_watcher::RecursiveWaitForFile(devmgr.devfs_root(), "sys/test/test", &root_fd);
   ASSERT_OK(status);
 
-  zx::status test_client_end =
+  zx::result test_client_end =
       fdio_cpp::FdioCaller(std::move(root_fd)).take_as<fuchsia_device_test::RootDevice>();
   ASSERT_OK(test_client_end.status_value());
   fidl::WireSyncClient test_root{std::move(*test_client_end)};

@@ -48,7 +48,7 @@ class PageCache {
   // Creates a page cache with the given number of reserve pages per CPU.
   // Filling the per-CPU page caches is deferred until the first allocation
   // request.
-  static zx::status<PageCache> Create(size_t reserve_pages);
+  static zx::result<PageCache> Create(size_t reserve_pages);
 
   PageCache() = default;
   ~PageCache() = default;
@@ -64,7 +64,7 @@ class PageCache {
   // Returns true if this PageCache instance is non-empty.
   explicit operator bool() const { return bool(per_cpu_caches_); }
 
-  // Utility type for returning a list of pages via zx::status. Automatically
+  // Utility type for returning a list of pages via zx::result. Automatically
   // frees a non-empty list of pages on destruction to improve safety and
   // ergonomics.
   struct PageList : list_node {
@@ -108,7 +108,7 @@ class PageCache {
 
   // Allocates the given number of pages from the page cache. Falls back to the
   // PMM if the cache is insufficient to fulfill the request.
-  zx::status<AllocateResult> Allocate(size_t page_count, uint alloc_flags = 0) {
+  zx::result<AllocateResult> Allocate(size_t page_count, uint alloc_flags = 0) {
     LocalTraceDuration trace{"PageCache::Allocate"_stringref};
     DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
     DEBUG_ASSERT(per_cpu_caches_ != nullptr);
@@ -119,7 +119,7 @@ class PageCache {
       list_node page_list = LIST_INITIAL_VALUE(page_list);
       const zx_status_t status = pmm_alloc_pages(page_count, alloc_flags, &page_list);
       if (status != ZX_OK) {
-        return zx::error_status(status);
+        return zx::error_result(status);
       }
       return zx::ok(AllocateResult{ktl::move(page_list), page_count});
     }
@@ -172,7 +172,7 @@ class PageCache {
   // cache is insufficient for the request, falls back to the PMM to fulfill the
   // request and refill the cache. The requested number of pages may be zero, in
   // which case only the cache is filled.
-  zx::status<AllocateResult> Allocate(CpuCache& entry, size_t requested_pages, uint alloc_flags)
+  zx::result<AllocateResult> Allocate(CpuCache& entry, size_t requested_pages, uint alloc_flags)
       TA_EXCL(entry.fill_lock, entry.cache_lock) {
     if (requested_pages > 0) {
       Guard<Mutex> guard{&entry.cache_lock};
@@ -239,7 +239,7 @@ class PageCache {
     CountFreePages(free_count);
   }
 
-  zx::status<AllocateResult> AllocatePagesAndFillCache(CpuCache& entry, size_t requested_pages,
+  zx::result<AllocateResult> AllocatePagesAndFillCache(CpuCache& entry, size_t requested_pages,
                                                        uint alloc_flags) const
       TA_EXCL(entry.fill_lock, entry.cache_lock) {
     LocalTraceDuration trace{"PageCache::AllocatePagesAndFillCache"_stringref};
@@ -277,7 +277,7 @@ class PageCache {
         status = pmm_alloc_pages(total_pages, alloc_flags, &page_list);
       });
       if (status != ZX_OK) {
-        return zx::error_status(status);
+        return zx::error_result(status);
       }
 
       // Set the page state of the refill pages and find the end of the refill list.

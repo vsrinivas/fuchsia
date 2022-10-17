@@ -20,7 +20,7 @@ Writer::~Writer() {
 #endif
 }
 
-zx::status<> Writer::EnqueuePage(LockedPage &page, block_t blk_addr, PageType type) {
+zx::result<> Writer::EnqueuePage(LockedPage &page, block_t blk_addr, PageType type) {
   ZX_DEBUG_ASSERT(type < PageType::kNrPageType);
   auto ret = write_buffer_->ReserveWriteOperation(page.release(), blk_addr);
   if (ret.is_error()) {
@@ -102,7 +102,7 @@ Reader::Reader(Bcache *bc, size_t capacity) : transaction_handler_(bc) {
   buffer_ = std::make_unique<StorageBuffer>(bc, capacity, kBlockSize, "ReadBuffer");
 }
 
-zx::status<std::vector<LockedPage>> Reader::SubmitPages(std::vector<LockedPage> pages,
+zx::result<std::vector<LockedPage>> Reader::SubmitPages(std::vector<LockedPage> pages,
                                                         std::vector<block_t> addrs) {
   auto operation_or = buffer_->ReserveReadOperations(pages, std::move(addrs));
   if (operation_or.is_error()) {

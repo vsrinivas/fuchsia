@@ -71,7 +71,7 @@ class FakePartition
     completer.ReplySuccess(fidl::StringView::FromExternal(path_));
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_hardware_block_partition::PartitionAndDevice>> GetClient(
+  zx::result<fidl::ClientEnd<fuchsia_hardware_block_partition::PartitionAndDevice>> GetClient(
       async_dispatcher_t* dispatcher) {
     auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_block_partition::PartitionAndDevice>();
     if (endpoints.is_error()) {

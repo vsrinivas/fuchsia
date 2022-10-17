@@ -14,7 +14,7 @@
 
 namespace network {
 
-zx::status<std::unique_ptr<MacAddrDeviceInterface>> MacAddrDeviceInterface::Create(
+zx::result<std::unique_ptr<MacAddrDeviceInterface>> MacAddrDeviceInterface::Create(
     ddk::MacAddrProtocolClient parent) {
   return internal::MacInterface::Create(parent);
 }
@@ -36,7 +36,7 @@ MacInterface::~MacInterface() {
                 clients_.size_slow());
 }
 
-zx::status<std::unique_ptr<MacInterface>> MacInterface::Create(ddk::MacAddrProtocolClient parent) {
+zx::result<std::unique_ptr<MacInterface>> MacInterface::Create(ddk::MacAddrProtocolClient parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<MacInterface> mac(new (&ac) MacInterface(parent));
   if (!ac.check()) {

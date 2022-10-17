@@ -15,7 +15,7 @@ namespace blobfs {
 class BlockIteratorProvider {
  public:
   // Provide a valid `BlockIterator` for the block at node index `node_index`.
-  virtual zx::status<BlockIterator> BlockIteratorByNodeIndex(uint32_t node_index) = 0;
+  virtual zx::result<BlockIterator> BlockIteratorByNodeIndex(uint32_t node_index) = 0;
 };
 
 }  // namespace blobfs

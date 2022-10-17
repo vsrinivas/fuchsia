@@ -256,7 +256,7 @@ zx_status_t VPartitionManager::Load() {
   // Allocate a buffer big enough for the allocated metadata.
   size_t metadata_vmo_size = sb.GetMetadataAllocatedBytes();
 
-  auto load_metadata = [&](size_t offset) -> zx::status<std::unique_ptr<VmoMetadataBuffer>> {
+  auto load_metadata = [&](size_t offset) -> zx::result<std::unique_ptr<VmoMetadataBuffer>> {
     fzl::OwnedVmoMapper mapper;
     zx_status_t status;
     if (status = mapper.CreateAndMap(metadata_vmo_size, "fvm-metadata"); status != ZX_OK) {
@@ -280,7 +280,7 @@ zx_status_t VPartitionManager::Load() {
     return buffer_b_or.status_value();
   }
 
-  zx::status<Metadata> metadata_or = Metadata::Create(
+  zx::result<Metadata> metadata_or = Metadata::Create(
       DiskSize(), info_.block_size, std::move(buffer_a_or.value()), std::move(buffer_b_or.value()));
   if (metadata_or.is_error()) {
     zxlogf(ERROR, "Failed to parse fvm metadata.");
@@ -798,7 +798,7 @@ void VPartitionManager::LogPartitionInfoLocked() const {
 
 // Device protocol (FVM)
 
-zx::status<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
+zx::result<std::unique_ptr<VPartition>> VPartitionManager::AllocatePartition(
     uint64_t slice_count, const fuchsia_hardware_block_partition::wire::Guid& type,
     const fuchsia_hardware_block_partition::wire::Guid& instance, fidl::StringView name,
     uint32_t flags) {

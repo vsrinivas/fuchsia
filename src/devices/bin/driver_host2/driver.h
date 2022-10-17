@@ -19,7 +19,7 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
                public fbl::RefCounted<Driver>,
                public fbl::DoublyLinkedListable<fbl::RefPtr<Driver>> {
  public:
-  static zx::status<fbl::RefPtr<Driver>> Load(std::string url, zx::vmo vmo);
+  static zx::result<fbl::RefPtr<Driver>> Load(std::string url, zx::vmo vmo);
 
   Driver(std::string url, void* library, const DriverRecordV1* record);
   ~Driver() override;
@@ -30,7 +30,7 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
   void Stop(StopCompleter::Sync& completer) override;
 
   // Starts the driver.
-  zx::status<> Start(fuchsia_driver_framework::DriverStartArgs start_args,
+  zx::result<> Start(fuchsia_driver_framework::DriverStartArgs start_args,
                      fdf::Dispatcher dispatcher);
 
  private:
@@ -50,7 +50,7 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
 // Returns zero if no options were specified.
 uint32_t ExtractDefaultDispatcherOpts(const fuchsia_data::wire::Dictionary& program);
 
-zx::status<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts);
+zx::result<fdf::Dispatcher> CreateDispatcher(fbl::RefPtr<Driver> driver, uint32_t dispatcher_opts);
 
 struct LoadedDriver {
   fbl::RefPtr<Driver> driver;
@@ -60,7 +60,7 @@ struct LoadedDriver {
 
 void LoadDriver(fuchsia_driver_framework::DriverStartArgs start_args,
                 async_dispatcher_t* dispatcher,
-                fit::callback<void(zx::status<LoadedDriver>)> callback);
+                fit::callback<void(zx::result<LoadedDriver>)> callback);
 
 }  // namespace dfv2
 

@@ -21,7 +21,7 @@ T ConfigGetOrDefault(const rapidjson::Value& value, const char* member, T defaul
 // Represents a filesystem that is configured using json.  See fs_test.schema.json for the schema.
 class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
  public:
-  static zx::status<std::unique_ptr<JsonFilesystem>> NewFilesystem(
+  static zx::result<std::unique_ptr<JsonFilesystem>> NewFilesystem(
       const rapidjson::Document& config);
 
   JsonFilesystem(Traits traits, fs_management::DiskFormat format, int sectors_per_cluster,
@@ -41,7 +41,7 @@ class JsonFilesystem : public FilesystemImplWithDefaultMake<JsonFilesystem> {
   std::unique_ptr<FilesystemInstance> Create(RamDevice device,
                                              std::string device_path) const override;
 
-  zx::status<std::unique_ptr<FilesystemInstance>> Open(
+  zx::result<std::unique_ptr<FilesystemInstance>> Open(
       const TestFilesystemOptions& options) const override;
 
  private:

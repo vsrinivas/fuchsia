@@ -49,8 +49,8 @@ bool FakeDdkSysmem::Init() {
   return initialized_;
 }
 
-zx::status<fidl::ClientEnd<fuchsia_sysmem::Allocator>> FakeDdkSysmem::Connect() {
-  zx::status allocator_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::Allocator>();
+zx::result<fidl::ClientEnd<fuchsia_sysmem::Allocator>> FakeDdkSysmem::Connect() {
+  zx::result allocator_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::Allocator>();
   if (allocator_endpoints.is_error()) {
     return zx::error(allocator_endpoints.status_value());
   }

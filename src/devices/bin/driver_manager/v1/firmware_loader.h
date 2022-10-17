@@ -22,7 +22,7 @@ class FirmwareLoader {
                  std::string path_prefix);
 
   void LoadFirmware(const fbl::RefPtr<Device>& dev, const char* driver_libname, const char* path,
-                    fit::callback<void(zx::status<LoadFirmwareResult>)> cb);
+                    fit::callback<void(zx::result<LoadFirmwareResult>)> cb);
 
  private:
   Coordinator* coordinator_;

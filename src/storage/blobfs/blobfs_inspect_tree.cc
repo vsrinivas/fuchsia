@@ -55,7 +55,7 @@ void BlobfsInspectTree::UpdateSuperblock(const Superblock& superblock) {
 
 // Update FVM fvm information and record any out of space events.
 void BlobfsInspectTree::UpdateFvmData(const block_client::BlockDevice& device, bool out_of_space) {
-  zx::status<fs_inspect::FvmData::SizeInfo> size_info =
+  zx::result<fs_inspect::FvmData::SizeInfo> size_info =
       fs_inspect::FvmData::GetSizeInfoFromDevice(device);
   if (size_info.is_error()) {
     FX_LOGS(WARNING) << "Failed to obtain size information from block device: "

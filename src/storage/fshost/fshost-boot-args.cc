@@ -15,7 +15,7 @@ namespace fshost {
 std::shared_ptr<FshostBootArgs> FshostBootArgs::Create() {
   return std::make_shared<FshostBootArgs>(
       fidl::WireSyncClient([]() -> fidl::ClientEnd<fuchsia_boot::Arguments> {
-        zx::status local = component::Connect<fuchsia_boot::Arguments>();
+        zx::result local = component::Connect<fuchsia_boot::Arguments>();
         if (local.is_error()) {
           // This service might be missing if we're running in a test environment. Log
           // the error and continue.
@@ -68,7 +68,7 @@ FshostBootArgs::FshostBootArgs(fidl::WireSyncClient<fuchsia_boot::Arguments> boo
   }
 }
 
-zx::status<std::string> FshostBootArgs::GetStringArgument(const std::string& key) {
+zx::result<std::string> FshostBootArgs::GetStringArgument(const std::string& key) {
   if (!boot_args_) {
     return zx::error(ZX_ERR_NOT_FOUND);
   }
@@ -85,7 +85,7 @@ zx::status<std::string> FshostBootArgs::GetStringArgument(const std::string& key
   return zx::ok(std::string(value.data(), value.size()));
 }
 
-zx::status<std::string> FshostBootArgs::block_verity_seal() {
+zx::result<std::string> FshostBootArgs::block_verity_seal() {
   return GetStringArgument("factory_verity_seal");
 }
 

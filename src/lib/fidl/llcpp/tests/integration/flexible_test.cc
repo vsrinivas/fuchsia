@@ -315,7 +315,7 @@ class FlexibleEnvelopeTest : public ::testing::Test {
   virtual void SetUp() {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
     ASSERT_EQ(loop_->StartThread("test_llcpp_flexible_envelope_server"), ZX_OK);
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_EQ(server_end.status_value(), ZX_OK);
     server_ = std::make_unique<Server>(loop_->dispatcher(), std::move(*server_end));
   }
@@ -400,7 +400,7 @@ TEST_F(FlexibleEnvelopeTest, ReceiveUnknownTableFieldWithMoreHandles) {
 class FlexibleEnvelopeEventTest : public ::testing::Test {
  public:
   void SetUp() final {
-    zx::status endpoints = fidl::CreateEndpoints<test::ReceiveFlexibleEnvelope>();
+    zx::result endpoints = fidl::CreateEndpoints<test::ReceiveFlexibleEnvelope>();
     ASSERT_TRUE(endpoints.is_ok());
     client_end_ = std::move(endpoints->client);
     server_end_ = std::move(endpoints->server);

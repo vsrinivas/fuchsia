@@ -32,7 +32,7 @@
 namespace {
 
 bool IsDfv2Enabled() {
-  zx::status driver_development =
+  zx::result driver_development =
       component::Connect<fuchsia_driver_development::DriverDevelopment>();
   EXPECT_OK(driver_development.status_value());
 
@@ -95,7 +95,7 @@ void WaitForOne(cpp20::span<const char*> device_paths) {
 }
 
 fbl::String GetTestFilter() {
-  zx::status sys_info = component::Connect<fuchsia_sysinfo::SysInfo>();
+  zx::result sys_info = component::Connect<fuchsia_sysinfo::SysInfo>();
   if (sys_info.is_error()) {
     return "Unknown";
   }
@@ -198,7 +198,7 @@ class DeviceEnumerationTest : public zxtest::Test {
   static void PrintAllDevices() {
     // This uses the development API for its convenience over directory traversal. It would be more
     // useful to log paths in devfs for the purposes of this test, but less convenient.
-    zx::status driver_development =
+    zx::result driver_development =
         component::Connect<fuchsia_driver_development::DriverDevelopment>();
     ASSERT_OK(driver_development.status_value());
 
@@ -207,7 +207,7 @@ class DeviceEnumerationTest : public zxtest::Test {
     const bool is_dfv2 = result.value().response;
 
     {
-      zx::status endpoints =
+      zx::result endpoints =
           fidl::CreateEndpoints<fuchsia_driver_development::DeviceInfoIterator>();
       ASSERT_OK(endpoints.status_value());
       auto& [client, server] = endpoints.value();

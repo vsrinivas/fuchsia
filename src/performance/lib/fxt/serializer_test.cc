@@ -56,7 +56,7 @@ struct FakeRecord {
 struct FakeWriter {
   using Reservation = FakeRecord;
   std::vector<uint8_t> bytes;
-  zx::status<FakeRecord> Reserve(uint64_t header) {
+  zx::result<FakeRecord> Reserve(uint64_t header) {
     FakeRecord rec{false, bytes};
     rec.WriteWord(header);
     return zx::ok(rec);
@@ -65,7 +65,7 @@ struct FakeWriter {
 
 struct FakeNoMemWriter {
   using Reservation = FakeRecord;
-  zx::status<FakeRecord> Reserve(uint64_t header) { return zx::error(ZX_ERR_NO_MEMORY); }
+  zx::result<FakeRecord> Reserve(uint64_t header) { return zx::error(ZX_ERR_NO_MEMORY); }
 };
 
 TEST(Serializer, NoMemWriter) {

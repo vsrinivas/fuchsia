@@ -33,7 +33,7 @@ class MkfsWorker {
   MkfsWorker(const MkfsWorker&&) = delete;
   MkfsWorker& operator=(const MkfsWorker&&) = delete;
 
-  zx::status<std::unique_ptr<Bcache>> DoMkfs();
+  zx::result<std::unique_ptr<Bcache>> DoMkfs();
 
   std::unique_ptr<Bcache> Destroy() { return std::move(bc_); }
 
@@ -56,7 +56,7 @@ class MkfsWorker {
 
   zx_status_t WriteToDisk(FsBlock& buf, block_t bno);
 
-  zx::status<uint32_t> GetCalculatedOp(uint32_t op);
+  zx::result<uint32_t> GetCalculatedOp(uint32_t op);
 
   zx_status_t PrepareSuperblock();
   zx_status_t InitSitArea();
@@ -75,7 +75,7 @@ class MkfsWorker {
 void PrintUsage();
 zx_status_t ParseOptions(int argc, char** argv, MkfsOptions& options);
 
-zx::status<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions& options, std::unique_ptr<Bcache> bc);
+zx::result<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions& options, std::unique_ptr<Bcache> bc);
 
 void AsciiToUnicode(const std::string_view in_string, std::u16string& out_string);
 

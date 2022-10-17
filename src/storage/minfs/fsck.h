@@ -33,16 +33,16 @@ enum class BlockType {
 
 #ifdef __Fuchsia__
 // Validates header information.
-zx::status<> CheckSuperblock(const Superblock& info, block_client::BlockDevice* device,
+zx::result<> CheckSuperblock(const Superblock& info, block_client::BlockDevice* device,
                              uint32_t max_blocks);
 // Reconstructs and updates the alloc_*_counts of superblock.
-zx::status<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+zx::result<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
                                     block_client::BlockDevice* device, Superblock* out_info);
 #else
 // Validates header information.
-zx::status<> CheckSuperblock(const Superblock& info, uint32_t max_blocks);
+zx::result<> CheckSuperblock(const Superblock& info, uint32_t max_blocks);
 // Reconstructs and updates the alloc_*_counts of superblock.
-zx::status<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
+zx::result<> ReconstructAllocCounts(fs::TransactionHandler* transaction_handler,
                                     Superblock* out_info);
 #endif
 
@@ -62,31 +62,31 @@ struct FsckOptions {
 void UpdateChecksum(Superblock* info);
 
 // Loads superblock from disk and checks it for integrity.
-zx::status<Superblock> LoadSuperblock(Bcache* bc);
+zx::result<Superblock> LoadSuperblock(Bcache* bc);
 
 // Repair corrupted superblock from backup.
 #ifdef __Fuchsia__
-zx::status<Superblock> RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
+zx::result<Superblock> RepairSuperblock(fs::DeviceTransactionHandler* transaction_handler,
                                         block_client::BlockDevice* device, uint32_t max_blocks);
 #endif
 
 // On success, returns ZX_OK and copies the number of bytes used by data
 // within the fs.
-zx::status<uint64_t> UsedDataSize(std::unique_ptr<Bcache>& bc);
+zx::result<uint64_t> UsedDataSize(std::unique_ptr<Bcache>& bc);
 
 // On success, returns ZX_OK and copies the number of allocated
 // inodes within the fs.
-zx::status<uint64_t> UsedInodes(std::unique_ptr<Bcache>& bc);
+zx::result<uint64_t> UsedInodes(std::unique_ptr<Bcache>& bc);
 
 // On success, returns ZX_OK and copies the number of bytes used by data
 // and bytes reserved for superblock, bitmaps, inodes and journal within the fs.
-zx::status<uint64_t> UsedSize(std::unique_ptr<Bcache>& bc);
+zx::result<uint64_t> UsedSize(std::unique_ptr<Bcache>& bc);
 
 // Run fsck on an unmounted filesystem backed by |bc|.
 //
 // Invokes CheckSuperblock, and repairs filesystem if needed.
 // On success, returns bcache to |out_bc|, if supplied.
-zx::status<std::unique_ptr<Bcache>> Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options);
+zx::result<std::unique_ptr<Bcache>> Fsck(std::unique_ptr<Bcache> bc, const FsckOptions& options);
 
 // Returns number of blocks required to store inode_count inodes
 constexpr uint64_t BlocksRequiredForInode(uint64_t inode_count) {

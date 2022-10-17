@@ -8,7 +8,7 @@
 #include "third_party/android/platform/system/core/libsparse/sparse_format.h"
 // The above header includes the
 // third_party/android/platform/system/core/libsparse/sparse_defs.h which defines a `error()`
-// macro. It confuses the compiler when we try to create a zx::status with zx::error(). Thus,
+// macro. It confuses the compiler when we try to create a zx::result with zx::error(). Thus,
 // we need to undefine the macro.
 #undef error
 

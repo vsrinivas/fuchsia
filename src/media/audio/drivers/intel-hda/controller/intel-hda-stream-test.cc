@@ -55,7 +55,7 @@ class TestCodec : public codecs::IntelHDACodecDriverBase {
     return codecs::IntelHDACodecDriverBase::ActivateStream(stream);
   }
 
-  zx::status<> Bind(zx_device_t* codec_dev, const char* name) {
+  zx::result<> Bind(zx_device_t* codec_dev, const char* name) {
     return codecs::IntelHDACodecDriverBase::Bind(codec_dev, name);
   }
   void DeviceRelease() { codecs::IntelHDACodecDriverBase::DeviceRelease(); }

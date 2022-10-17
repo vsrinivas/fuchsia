@@ -228,7 +228,7 @@ void StorageMetrics::PollStorage() {
       loop_.dispatcher(), [this] { this->PollStorage(); }, kPollCycle);
 }
 
-zx::status<> StorageMetrics::Run() {
+zx::result<> StorageMetrics::Run() {
   zx_status_t status = loop_.StartThread("StorageMetrics");
   if (status != ZX_OK) {
     return zx::error(status);

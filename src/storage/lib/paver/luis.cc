@@ -24,7 +24,7 @@ using uuid::Uuid;
 
 }  // namespace
 
-zx::status<std::unique_ptr<DevicePartitioner>> LuisPartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> LuisPartitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "luis");
@@ -62,13 +62,13 @@ bool LuisPartitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> LuisPartitioner::AddPartition(
     const PartitionSpec& spec) const {
   ERROR("Cannot add partitions to a luis device\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::GetBootloaderPartitionClient() const {
+zx::result<std::unique_ptr<PartitionClient>> LuisPartitioner::GetBootloaderPartitionClient() const {
   auto boot0_part =
       OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
   if (boot0_part.is_error()) {
@@ -92,7 +92,7 @@ zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::GetBootloaderParti
   return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
 }
 
-zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> LuisPartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -151,18 +151,18 @@ zx::status<std::unique_ptr<PartitionClient>> LuisPartitioner::FindPartition(
   return zx::ok(std::move(status->partition));
 }
 
-zx::status<> LuisPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+zx::result<> LuisPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
-zx::status<> LuisPartitioner::InitPartitionTables() const {
+zx::result<> LuisPartitioner::InitPartitionTables() const {
   ERROR("Initializing gpt partitions from paver is not supported on luis\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> LuisPartitioner::WipePartitionTables() const {
+zx::result<> LuisPartitioner::WipePartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> LuisPartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> LuisPartitioner::ValidatePayload(const PartitionSpec& spec,
                                               cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -172,13 +172,13 @@ zx::status<> LuisPartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> LuisPartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> LuisPartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return LuisPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
-zx::status<std::unique_ptr<abr::Client>> LuisAbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> LuisAbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;

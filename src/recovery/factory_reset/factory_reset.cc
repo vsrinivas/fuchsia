@@ -59,7 +59,7 @@ zx_status_t ShredFxfsDevice(fbl::unique_fd fd) {
   // will have access to the running filesystem and can wait for shutdown with
   // something like:
   //   fdio_cpp::FdioCaller caller(std::move(fd));
-  //   if (zx::status<> status = fs_management::Shutdown(caller.directory()); !status.is_ok()) {
+  //   if (zx::result<> status = fs_management::Shutdown(caller.directory()); !status.is_ok()) {
   //     return status.error_value();
   //   }
   // TODO(https://fxbug.dev/98889): Perform secure erase once we have keybag support.

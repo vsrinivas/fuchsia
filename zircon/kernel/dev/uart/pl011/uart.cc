@@ -192,7 +192,7 @@ void Pl011UartInitLate() {
 }
 
 static int pl011_uart_getc(bool wait) {
-  zx::status<char> result = uart_rx_buf.ReadChar(wait);
+  zx::result<char> result = uart_rx_buf.ReadChar(wait);
   if (result.is_ok()) {
     {
       // See the comment on the critical section in |pl011_uart_irq|.

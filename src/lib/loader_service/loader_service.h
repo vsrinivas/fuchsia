@@ -33,7 +33,7 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
   // Bind and Connect create a new connection to the loader service. Connect is identical to
   // Bind but creates the channel for the caller.
   void Bind(fidl::ServerEnd<fuchsia_ldsvc::Loader> channel);
-  zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Connect();
+  zx::result<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Connect();
 
  protected:
   LoaderServiceBase(async_dispatcher_t* dispatcher, std::string name)
@@ -53,7 +53,7 @@ class LoaderServiceBase : public std::enable_shared_from_this<LoaderServiceBase>
   // loader config as requested by the client. For example, a `Config("asan!")` call followed by a
   // `LoadObject("libfoo.so")` call will result in the base class calling this with
   // "asan/libfoo.so".
-  virtual zx::status<zx::vmo> LoadObjectImpl(std::string path) = 0;
+  virtual zx::result<zx::vmo> LoadObjectImpl(std::string path) = 0;
 
   const std::string& log_prefix();
 
@@ -111,7 +111,7 @@ class LoaderService : public LoaderServiceBase {
  protected:
   LoaderService(async_dispatcher_t* dispatcher, fbl::unique_fd lib_dir, std::string name)
       : LoaderServiceBase(dispatcher, std::move(name)), dir_(std::move(lib_dir)) {}
-  virtual zx::status<zx::vmo> LoadObjectImpl(std::string path) override;
+  virtual zx::result<zx::vmo> LoadObjectImpl(std::string path) override;
 
  private:
   fbl::unique_fd dir_;

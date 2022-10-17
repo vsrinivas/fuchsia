@@ -55,7 +55,7 @@ class SeekableDecompressor {
   // is less than or equal to `max_decompressed_len`. The returned decompressed range is guaranteed
   // to contain `offset` but its length might be less than `len` if it was trimmed to a smaller
   // `max_decompressed_len`.
-  virtual zx::status<CompressionMapping> MappingForDecompressedRange(
+  virtual zx::result<CompressionMapping> MappingForDecompressedRange(
       size_t offset, size_t len, size_t max_decompressed_len) const = 0;
 
   // Returns the CompressionAlgorithm that this SeekableDecompressor supports.

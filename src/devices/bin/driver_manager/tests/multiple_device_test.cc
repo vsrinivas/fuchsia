@@ -506,7 +506,7 @@ class UnsupportedErrorMatcher {
 
 TEST_F(MultipleDeviceTestCase, DevfsUnsupportedAPICheck) {
   fs::SynchronousVfs vfs(coordinator_loop()->dispatcher());
-  zx::status devfs_client = coordinator().devfs().Connect(vfs);
+  zx::result devfs_client = coordinator().devfs().Connect(vfs);
   ASSERT_OK(devfs_client.status_value());
   fidl::WireClient client(std::move(devfs_client.value()), coordinator_loop()->dispatcher());
 

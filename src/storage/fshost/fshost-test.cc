@@ -88,7 +88,7 @@ TEST(FsManagerTestCase, ShutdownSignalsCompletion) {
 
 // Test that the manager shuts down the filesystems given a call on the lifecycle channel
 TEST(FsManagerTestCase, LifecycleStop) {
-  zx::status create_lifecycle = fidl::CreateEndpoints<fuchsia_process_lifecycle::Lifecycle>();
+  zx::result create_lifecycle = fidl::CreateEndpoints<fuchsia_process_lifecycle::Lifecycle>();
   ASSERT_TRUE(create_lifecycle.is_ok()) << create_lifecycle.status_string();
   auto [lifecycle_client, lifecycle_server] = std::move(create_lifecycle).value();
 

@@ -268,7 +268,7 @@ void IntelThermal::Handle(HandleRequestView request, HandleCompleter::Sync& comp
   completer.Reply();
 }
 
-zx::status<uint64_t> IntelThermal::EvaluateInteger(const char* name) {
+zx::result<uint64_t> IntelThermal::EvaluateInteger(const char* name) {
   auto result = acpi_.borrow()->EvaluateObject(fidl::StringView::FromExternal(name),
                                                facpi::EvaluateObjectMode::kPlainObject,
                                                fidl::VectorView<facpi::Object>());

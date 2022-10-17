@@ -45,14 +45,14 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   LOGRTN(allocator_client.status_value(), "Failed to connect to sysmem driver.\n");
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator(std::move(allocator_client.value()));
 
-  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   LOGRTN(token_endpoints.status_value(), "Failed token channel create.\n");
   auto [token_client_end, token_server_end] = std::move(*token_endpoints);
 
   auto allocate_result = allocator->AllocateSharedCollection(std::move(token_server_end));
   LOGRTN(allocate_result.status(), "Failed to allocate shared collection.\n");
 
-  zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  zx::result collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   LOGRTN(collection_endpoints.status_value(), "Failed collection channel create.\n");
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 

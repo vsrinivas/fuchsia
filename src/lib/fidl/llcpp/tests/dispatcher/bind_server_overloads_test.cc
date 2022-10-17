@@ -41,7 +41,7 @@ class BindServerOverloads : public zxtest::Test {
     ASSERT_OK(endpoints_.status_value());
   }
 
-  zx::status<fidl::Endpoints<Empty>>& endpoints() { return endpoints_; }
+  zx::result<fidl::Endpoints<Empty>>& endpoints() { return endpoints_; }
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
 
@@ -49,7 +49,7 @@ class BindServerOverloads : public zxtest::Test {
 
  private:
   async::Loop loop_;
-  zx::status<fidl::Endpoints<Empty>> endpoints_;
+  zx::result<fidl::Endpoints<Empty>> endpoints_;
 };
 
 // Test that |BindServer| correctly destroys a server it uniquely owns.

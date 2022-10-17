@@ -11,7 +11,7 @@
 namespace hwstress {
 
 // Get current system memory statistics.
-zx::status<fuchsia::kernel::MemoryStats> GetMemoryStats();
+zx::result<fuchsia::kernel::MemoryStats> GetMemoryStats();
 
 }  // namespace hwstress
 

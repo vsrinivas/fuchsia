@@ -11,7 +11,7 @@
 
 class ZbiTestEntry {
  public:
-  zx::status<> Init(int argc, char** argv);
+  zx::result<> Init(int argc, char** argv);
 
   zx::unowned_resource mexec_resource() { return mexec_resource_.borrow(); }
   zx::vmo& kernel_zbi() { return kernel_zbi_; }

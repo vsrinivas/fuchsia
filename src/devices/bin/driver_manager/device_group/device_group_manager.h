@@ -49,7 +49,7 @@ class DeviceGroupManager {
   // A std::nullopt is returned if the chosen device group is not yet complete, otherwise a
   // shared pointer to the newly created child node is returned along with the driver of the
   // chosen match. DriverRunner is responsible for starting the driver on the node.
-  zx::status<std::optional<CompositeNodeAndDriver>> BindDeviceGroupNode(
+  zx::result<std::optional<CompositeNodeAndDriver>> BindDeviceGroupNode(
       fuchsia_driver_index::wire::MatchedDeviceGroupNodeInfo match_info,
       const DeviceOrNode& device_or_node);
 
@@ -57,7 +57,7 @@ class DeviceGroupManager {
   // via natural types because BindDeviceGroupNode is outside of the fidl wire response's scope.
   // In DFv2 BindDeviceGroupNode happens in the scope of the wire response so we don't want to
   // do any natural type conversions.
-  zx::status<std::optional<CompositeNodeAndDriver>> BindDeviceGroupNode(
+  zx::result<std::optional<CompositeNodeAndDriver>> BindDeviceGroupNode(
       fuchsia_driver_index::MatchedDeviceGroupNodeInfo match_info,
       const DeviceOrNode& device_or_node);
 

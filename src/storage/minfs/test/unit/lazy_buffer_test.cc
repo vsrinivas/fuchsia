@@ -27,11 +27,11 @@ constexpr unsigned kIndex = kOffset / 4;
 // SimpleMapper multiplies the file block by 2.
 class SimpleMapper : public MapperInterface {
  public:
-  zx::status<DeviceBlockRange> Map(BlockRange range) {
+  zx::result<DeviceBlockRange> Map(BlockRange range) {
     return zx::ok(DeviceBlockRange(range.Start() * 2, 1));
   }
 
-  zx::status<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
+  zx::result<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
                                            bool* allocated) {
     *allocated = false;
     return Map(range);
@@ -65,7 +65,7 @@ class LazyBufferTest : public testing::Test {
       return buffer_->Flush(
           nullptr, &mapper, view,
           [this](storage::ResizeableVmoBuffer* buffer, BlockRange range, DeviceBlock device_block) {
-            return zx::make_status(
+            return zx::make_result(
                 bcache_->RunOperation(storage::Operation{.type = storage::OperationType::kWrite,
                                                          .vmo_offset = range.Start(),
                                                          .dev_offset = device_block.block(),
@@ -192,9 +192,9 @@ TEST_F(LazyBufferTest, FlushWritesAllBlocksInRange) {
 
 class ErrorMapper : public MapperInterface {
  public:
-  zx::status<DeviceBlockRange> Map(BlockRange range) { return zx::error(ZX_ERR_IO); }
+  zx::result<DeviceBlockRange> Map(BlockRange range) { return zx::error(ZX_ERR_IO); }
 
-  zx::status<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
+  zx::result<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
                                            bool* allocated) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }

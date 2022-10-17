@@ -38,7 +38,7 @@ class GptDevicePartitioner {
   // directly. If it is not provided, we search for a device with a valid GPT,
   // with an entry for an FVM. If multiple devices with valid GPT containing
   // FVM entries are found, an error is returned.
-  static zx::status<InitializeGptResult> InitializeGpt(
+  static zx::result<InitializeGptResult> InitializeGpt(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       const fbl::unique_fd& block_device);
 
@@ -58,11 +58,11 @@ class GptDevicePartitioner {
   // Returns the |start_out| block and |length_out| blocks, indicating
   // how much space was found, on success. This may be larger than
   // the number of bytes requested.
-  zx::status<FindFirstFitResult> FindFirstFit(size_t bytes_requested) const;
+  zx::result<FindFirstFitResult> FindFirstFit(size_t bytes_requested) const;
 
   // Creates a partition, adds an entry to the GPT, and returns a file descriptor to it.
   // Assumes that the partition does not already exist.
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(const char* name,
+  zx::result<std::unique_ptr<PartitionClient>> AddPartition(const char* name,
                                                             const uuid::Uuid& type,
                                                             size_t minimum_size_bytes,
                                                             size_t optional_reserve_bytes) const;
@@ -74,17 +74,17 @@ class GptDevicePartitioner {
 
   // Returns a file descriptor to a partition which can be paved,
   // if one exists.
-  zx::status<FindPartitionResult> FindPartition(FilterCallback filter) const;
+  zx::result<FindPartitionResult> FindPartition(FilterCallback filter) const;
 
   // Wipes a specified partition from the GPT, and overwrites first 8KiB with
   // nonsense.
-  zx::status<> WipeFvm() const;
+  zx::result<> WipeFvm() const;
 
   // Removes all partitions from GPT.
-  zx::status<> WipePartitionTables() const;
+  zx::result<> WipePartitionTables() const;
 
   // Wipes all partitions meeting given criteria.
-  zx::status<> WipePartitions(FilterCallback filter) const;
+  zx::result<> WipePartitions(FilterCallback filter) const;
 
   const fbl::unique_fd& devfs_root() { return devfs_root_; }
 
@@ -98,7 +98,7 @@ class GptDevicePartitioner {
  private:
   // Initializes GPT for a device which was explicitly provided. If |gpt_device| doesn't have a
   // valid GPT, it will initialize it with a valid one.
-  static zx::status<std::unique_ptr<GptDevicePartitioner>> InitializeProvidedGptDevice(
+  static zx::result<std::unique_ptr<GptDevicePartitioner>> InitializeProvidedGptDevice(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       fbl::unique_fd gpt_device);
 
@@ -112,7 +112,7 @@ class GptDevicePartitioner {
         gpt_(std::move(gpt)),
         block_info_(block_info) {}
 
-  zx::status<uuid::Uuid> CreateGptPartition(const char* name, const uuid::Uuid& type,
+  zx::result<uuid::Uuid> CreateGptPartition(const char* name, const uuid::Uuid& type,
                                             uint64_t offset, uint64_t blocks) const;
 
   const fbl::unique_fd devfs_root_;
@@ -122,10 +122,10 @@ class GptDevicePartitioner {
   fuchsia_hardware_block::wire::BlockInfo block_info_;
 };
 
-zx::status<uuid::Uuid> GptPartitionType(Partition type,
+zx::result<uuid::Uuid> GptPartitionType(Partition type,
                                         PartitionScheme scheme = PartitionScheme::kLegacy);
 
-zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
+zx::result<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
                              zx::unowned_channel chan);
 
 // TODO(69527): Remove this and migrate usages to |utf16_to_utf8|

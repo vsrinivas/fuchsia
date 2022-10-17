@@ -114,7 +114,7 @@ struct ComponentOptions {
 // requesting VMOs for blobs with VmoFlags::EXECUTE.
 //
 // This function blocks until the filesystem terminates.
-zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::result<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
                             zx::resource vmex_resource);
 

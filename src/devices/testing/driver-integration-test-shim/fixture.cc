@@ -135,7 +135,7 @@ zx_status_t IsolatedDevmgr::Create(Args* args, IsolatedDevmgr* out) {
     return status;
   }
 
-  zx::status client_end =
+  zx::result client_end =
       fdio_cpp::FdioCaller(std::move(platform_fd)).take_as<fuchsia_board_test::Board>();
   if (client_end.status_value() != ZX_OK) {
     return client_end.status_value();

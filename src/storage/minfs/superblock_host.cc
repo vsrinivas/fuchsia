@@ -23,7 +23,7 @@ SuperblockManager::SuperblockManager(const Superblock& info) {
 }
 
 // static
-zx::status<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(const Superblock& info,
+zx::result<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(const Superblock& info,
                                                                          uint32_t max_blocks,
                                                                          IntegrityCheck checks) {
   if (checks == IntegrityCheck::kAll) {

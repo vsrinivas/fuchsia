@@ -140,7 +140,7 @@ class MockResponseContext : public fidl::internal::ResponseContext {
 class ClientBaseTest : public zxtest::Test {
  public:
   ClientBaseTest() : loop_(&kAsyncLoopConfigNeverAttachToThread) {
-    zx::status endpoints = fidl::CreateEndpoints<TestProtocol>();
+    zx::result endpoints = fidl::CreateEndpoints<TestProtocol>();
     ZX_ASSERT(endpoints.is_ok());
 
     fidl::internal::AnyIncomingEventDispatcher event_dispatcher;

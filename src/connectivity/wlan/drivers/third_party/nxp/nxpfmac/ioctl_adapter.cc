@@ -21,7 +21,7 @@ namespace wlan::nxpfmac {
 
 constexpr char kIoctlWorkerThreadName[] = "nxpfmac_ioctl_worker";
 
-zx::status<std::unique_ptr<IoctlAdapter>> IoctlAdapter::Create(void* mlan_adapter,
+zx::result<std::unique_ptr<IoctlAdapter>> IoctlAdapter::Create(void* mlan_adapter,
                                                                BusInterface* bus) {
   std::unique_ptr<IoctlAdapter> adapter(new IoctlAdapter(mlan_adapter, bus));
 

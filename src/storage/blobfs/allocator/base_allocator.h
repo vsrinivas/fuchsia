@@ -44,7 +44,7 @@ class BaseAllocator : private ExtentReserver, private NodeReserverInterface, pub
                             uint64_t* out_first_unallocated = nullptr) const;
 
   // Returns true if the block is allocated. If the block_number is invalid, returns error.
-  zx::status<bool> IsBlockAllocated(uint64_t block_number) const;
+  zx::result<bool> IsBlockAllocated(uint64_t block_number) const;
 
   // Reserves space for blocks in memory. Does not update disk.
   //
@@ -69,7 +69,7 @@ class BaseAllocator : private ExtentReserver, private NodeReserverInterface, pub
   zx_status_t ReserveNodes(uint64_t num_nodes, std::vector<ReservedNode>* out_nodes);
 
   // blobfs::NodeReserverInterface interface.
-  zx::status<ReservedNode> ReserveNode() override;
+  zx::result<ReservedNode> ReserveNode() override;
   void UnreserveNode(ReservedNode node) override;
   uint64_t ReservedNodeCount() const override;
 
@@ -91,10 +91,10 @@ class BaseAllocator : private ExtentReserver, private NodeReserverInterface, pub
 
  protected:
   // Requests that blobfs increase the size of it's data section by |block_count| blocks.
-  virtual zx::status<> AddBlocks(uint64_t block_count) = 0;
+  virtual zx::result<> AddBlocks(uint64_t block_count) = 0;
 
   // Requests that blobfs increase the size of it's node map.
-  virtual zx::status<> AddNodes() = 0;
+  virtual zx::result<> AddNodes() = 0;
 
   RawBitmap& GetBlockBitmap() { return block_bitmap_; }
   const RawBitmap& GetBlockBitmap() const { return block_bitmap_; }
@@ -139,7 +139,7 @@ class BaseAllocator : private ExtentReserver, private NodeReserverInterface, pub
                          std::vector<ReservedExtent>* out_extents, uint64_t* out_actual_blocks);
 
   // Finds an unallocated node.
-  zx::status<uint32_t> FindNode();
+  zx::result<uint32_t> FindNode();
 
   // The number of nodes currently reserved.
   uint64_t reserved_node_count_ = 0;

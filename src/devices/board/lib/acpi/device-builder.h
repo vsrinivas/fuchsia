@@ -104,7 +104,7 @@ class DeviceBuilder {
   }
 
   // Creates an actual device from this DeviceBuilder, returning a pointer to its zx_device_t.
-  zx::status<zx_device_t*> Build(acpi::Manager* acpi);
+  zx::result<zx_device_t*> Build(acpi::Manager* acpi);
 
   // Set the bus type of this device. A device can only have a single bus type.
   void SetBusType(BusType t) {
@@ -156,11 +156,11 @@ class DeviceBuilder {
   // https://www.kernel.org/doc/html/latest/firmware-guide/acpi/enumeration.html#device-tree-namespace-link-device-id
   constexpr static const char* kDeviceTreeLinkID = "PRP0001";
   // Encode this bus's child metadata for consumption by the bus driver.
-  zx::status<std::vector<uint8_t>> FidlEncodeMetadata();
+  zx::result<std::vector<uint8_t>> FidlEncodeMetadata();
   // Build a composite for this device that binds to all of its parents.
   // For instance, if a device had an i2c and spi resource, this would generate a composite device
   // that binds to the i2c device, the spi device, and the acpi device.
-  zx::status<> BuildComposite(acpi::Manager* acpi, std::vector<zx_device_str_prop_t>& str_props);
+  zx::result<> BuildComposite(acpi::Manager* acpi, std::vector<zx_device_str_prop_t>& str_props);
   // Get bind instructions for the |child_index|th child of this bus.
   // Used by |BuildComposite| to generate the bus bind rules.
   std::vector<zx_bind_inst_t> GetFragmentBindInsnsForChild(size_t child_index);

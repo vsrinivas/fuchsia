@@ -28,7 +28,7 @@ fs_management::MountOptions TestFilesystem::DefaultMountOptions() const {
   return options;
 }
 
-zx::status<TestFilesystem> TestFilesystem::FromInstance(
+zx::result<TestFilesystem> TestFilesystem::FromInstance(
     const TestFilesystemOptions& options, std::unique_ptr<FilesystemInstance> instance) {
   static uint32_t mount_index;
   TestFilesystem filesystem(options, std::move(instance),
@@ -40,7 +40,7 @@ zx::status<TestFilesystem> TestFilesystem::FromInstance(
   return zx::ok(std::move(filesystem));
 }
 
-zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
+zx::result<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& options) {
   auto instance_or = options.filesystem->Make(options);
   if (instance_or.is_error()) {
     return instance_or.take_error();
@@ -48,7 +48,7 @@ zx::status<TestFilesystem> TestFilesystem::Create(const TestFilesystemOptions& o
   return FromInstance(options, std::move(instance_or).value());
 }
 
-zx::status<TestFilesystem> TestFilesystem::Open(const TestFilesystemOptions& options) {
+zx::result<TestFilesystem> TestFilesystem::Open(const TestFilesystemOptions& options) {
   auto instance_or = options.filesystem->Open(options);
   if (instance_or.is_error()) {
     return instance_or.take_error();
@@ -68,7 +68,7 @@ TestFilesystem::~TestFilesystem() {
   }
 }
 
-zx::status<> TestFilesystem::Mount(const fs_management::MountOptions& options) {
+zx::result<> TestFilesystem::Mount(const fs_management::MountOptions& options) {
   auto status = filesystem_->Mount(mount_path_, options);
   if (status.is_ok()) {
     mounted_ = true;
@@ -76,7 +76,7 @@ zx::status<> TestFilesystem::Mount(const fs_management::MountOptions& options) {
   return status;
 }
 
-zx::status<> TestFilesystem::Unmount() {
+zx::result<> TestFilesystem::Unmount() {
   if (!filesystem_) {
     return zx::ok();
   }
@@ -87,11 +87,11 @@ zx::status<> TestFilesystem::Unmount() {
   return status;
 }
 
-zx::status<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
+zx::result<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
 
-zx::status<std::string> TestFilesystem::DevicePath() const { return filesystem_->DevicePath(); }
+zx::result<std::string> TestFilesystem::DevicePath() const { return filesystem_->DevicePath(); }
 
-zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
+zx::result<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() const {
   fbl::unique_fd root_fd = fbl::unique_fd(open(mount_path().c_str(), O_RDONLY | O_DIRECTORY));
   fdio_cpp::UnownedFdioCaller root_connection(root_fd);
   const auto& result = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_io::Directory>(

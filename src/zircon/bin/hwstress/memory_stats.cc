@@ -11,7 +11,7 @@
 
 namespace hwstress {
 
-zx::status<fuchsia::kernel::MemoryStats> GetMemoryStats() {
+zx::result<fuchsia::kernel::MemoryStats> GetMemoryStats() {
   std::shared_ptr<sys::ServiceDirectory> svc = sys::ServiceDirectory::CreateFromNamespace();
   if (svc == nullptr) {
     return zx::error(ZX_ERR_UNAVAILABLE);

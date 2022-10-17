@@ -71,7 +71,7 @@ class TransferBuffer {
   // Loads the buffer with data from the inode corresponding to |info.identifier|, at the byte range
   // specified by [|offset|, |offset| + |length|).
   // |offset| must be block aligned. |length| may be rounded up to a block-aligned offset.
-  [[nodiscard]] virtual zx::status<> Populate(uint64_t offset, uint64_t length,
+  [[nodiscard]] virtual zx::result<> Populate(uint64_t offset, uint64_t length,
                                               const LoaderInfo& info) = 0;
 
   // Accesses the underlying VMO.
@@ -92,11 +92,11 @@ class StorageBackedTransferBuffer : public TransferBuffer {
 
   // Creates an instance of |StorageBackedTransferBuffer| with a VMO of size |size| bytes.
   // |size| must be a multiple of the block size of the underlying storage device.
-  [[nodiscard]] static zx::status<std::unique_ptr<StorageBackedTransferBuffer>> Create(
+  [[nodiscard]] static zx::result<std::unique_ptr<StorageBackedTransferBuffer>> Create(
       size_t size, TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
       BlobfsMetrics* metrics);
 
-  [[nodiscard]] zx::status<> Populate(uint64_t offset, uint64_t length,
+  [[nodiscard]] zx::result<> Populate(uint64_t offset, uint64_t length,
                                       const LoaderInfo& info) final;
 
   const zx::vmo& GetVmo() const final { return vmo_; }

@@ -34,7 +34,7 @@ class DeviceInfoIterator : public fidl::WireServer<fuchsia_driver_development::D
   std::vector<fuchsia_driver_development::wire::DeviceInfo> list_;
 };
 
-zx::status<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
+zx::result<std::vector<fuchsia_driver_development::wire::DeviceInfo>> GetDeviceInfo(
     fidl::AnyArena& allocator, const std::vector<fbl::RefPtr<const Device>>& devices);
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_V1_DRIVER_DEVELOPMENT_H_

@@ -13,7 +13,7 @@
 // Create an identity-mapped page table.
 //
 // @param phys_mem     The guest physical memory to write the page table to.
-zx::status<> CreatePageTable(const PhysMem& phys_mem);
+zx::result<> CreatePageTable(const PhysMem& phys_mem);
 
 // NOTE: x86 instructions are guaranteed to be 15 bytes or fewer.
 constexpr uint8_t kMaxInstructionSize = 15;
@@ -27,7 +27,7 @@ using InstructionSpan = cpp20::span<uint8_t>;
 // @param rip_addr The address of the instruction in the guest virtual address
 //                 space.
 // @param span     The location to read the instruction into.
-zx::status<> ReadInstruction(const PhysMem& phys_mem, zx_gpaddr_t cr3_addr, zx_vaddr_t rip_addr,
+zx::result<> ReadInstruction(const PhysMem& phys_mem, zx_gpaddr_t cr3_addr, zx_vaddr_t rip_addr,
                              InstructionSpan span);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_PAGE_TABLE_H_

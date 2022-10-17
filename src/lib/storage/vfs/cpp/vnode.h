@@ -134,7 +134,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   //
   // The |zx::error| variant of the return value contains a suitable error code
   // when validation fails.
-  zx::status<ValidatedOptions> ValidateOptions(VnodeConnectionOptions options) const;
+  zx::result<ValidatedOptions> ValidateOptions(VnodeConnectionOptions options) const;
 
   // Picks one protocol from |protocols|, when the intersection of the protocols requested by the
   // client and the ones supported by the vnode has more than one elements i.e. tie-breaking is
@@ -373,7 +373,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
 #ifdef __Fuchsia__
   // Returns the name of the device backing the filesystem, if one exists.
-  virtual zx::status<std::string> GetDevicePath() const;
+  virtual zx::result<std::string> GetDevicePath() const;
 
   // Implements fuchsia.io/Openable.Open by forwarding requests to the remote end. Supported iff
   // `IsRemote()`.

@@ -153,7 +153,7 @@ struct FramebufferInfo {
 // ZBI_TYPE_FRAMEBUFFER entry. We assume this information to be valid and unmodified by an
 // unauthorized call to zx_framebuffer_set_range(), however this is potentially an issue.
 // See fxbug.dev/77501.
-zx::status<FramebufferInfo> GetFramebufferInfo() {
+zx::result<FramebufferInfo> GetFramebufferInfo() {
   FramebufferInfo info;
   // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
   zx_status_t status = zx_framebuffer_get_info(get_root_resource(), &info.format, &info.width,
@@ -2022,7 +2022,7 @@ zx_status_t Controller::DdkGetProtocol(uint32_t proto_id, void* out) {
 void Controller::DdkSuspend(ddk::SuspendTxn txn) {
   // TODO(fxbug.dev/43204): Implement the suspend hook based on suspendtxn
   if (txn.suspend_reason() == DEVICE_SUSPEND_REASON_MEXEC) {
-    zx::status<FramebufferInfo> fb_status = GetFramebufferInfo();
+    zx::result<FramebufferInfo> fb_status = GetFramebufferInfo();
     if (fb_status.is_error()) {
       txn.Reply(ZX_OK, txn.requested_state());
       return;

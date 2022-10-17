@@ -35,7 +35,7 @@ class InspectManagerTest : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_EQ(memfs_loop_.StartThread(), ZX_OK);
-    zx::status<ScopedMemfs> memfs =
+    zx::result<ScopedMemfs> memfs =
         ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), kTmpfsPath);
     ASSERT_TRUE(memfs.is_ok());
     memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));

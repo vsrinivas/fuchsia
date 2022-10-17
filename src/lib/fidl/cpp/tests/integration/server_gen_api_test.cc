@@ -31,7 +31,7 @@ TEST(Server, SyncReply) {
 
   auto server = std::make_unique<SyncServer>();
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  zx::status endpoints = fidl::CreateEndpoints<ValueEcho>();
+  zx::result endpoints = fidl::CreateEndpoints<ValueEcho>();
   ASSERT_OK(endpoints.status_value());
 
   fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), server.get());

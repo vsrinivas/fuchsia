@@ -25,11 +25,12 @@ class AsidAllocator {
   explicit AsidAllocator(enum arm64_asid_width asid_width_override = arm64_asid_width::UNKNOWN);
   ~AsidAllocator();
 
-  zx::status<uint16_t> Alloc();
-  zx::status<> Free(uint16_t asid);
+  zx::result<uint16_t> Alloc();
+  zx::result<> Free(uint16_t asid);
 
   uint16_t max_user_asid() const {
-    return (asid_width_ == arm64_asid_width::ASID_8) ? MMU_ARM64_MAX_USER_ASID_8 : MMU_ARM64_MAX_USER_ASID_16;
+    return (asid_width_ == arm64_asid_width::ASID_8) ? MMU_ARM64_MAX_USER_ASID_8
+                                                     : MMU_ARM64_MAX_USER_ASID_16;
   }
 
  private:

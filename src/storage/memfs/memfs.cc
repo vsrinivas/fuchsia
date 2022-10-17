@@ -42,7 +42,7 @@ zx_status_t Memfs::GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_siz
   return ZX_OK;
 }
 
-zx::status<fs::FilesystemInfo> Memfs::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> Memfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
   info.block_size = safemath::checked_cast<uint32_t>(GetPageSize());

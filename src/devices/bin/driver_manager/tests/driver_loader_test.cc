@@ -21,7 +21,7 @@ namespace fdi = fuchsia_driver_index;
 
 class FakeResolver : public internal::PackageResolverInterface {
  public:
-  zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override {
+  zx::result<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override {
     if (map.count(package_url) != 0) {
       auto driver = std::move(map[package_url]);
       map.erase(package_url);

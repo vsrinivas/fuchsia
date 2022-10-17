@@ -48,7 +48,7 @@ TEST_P(FragmentationTest, Fragmentation) {
     ASSERT_TRUE(fd) << "Failed to create blob";
     if (capture_large_blob_storage_space_usage && !do_small_blob) {
       // Record how much space was used by blobfs before writing a large blob.
-      const zx::status fs_info = fs().GetFsInfo();
+      const zx::result fs_info = fs().GetFsInfo();
       ASSERT_TRUE(fs_info.is_ok()) << fs_info.status_string();
       large_blob_storage_space_usage = fs_info.value().used_bytes;
     }
@@ -60,7 +60,7 @@ TEST_P(FragmentationTest, Fragmentation) {
     if (capture_large_blob_storage_space_usage && !do_small_blob) {
       // Determine how much space was required to store the large by blob by comparing blobfs'
       // space usage before and after writing the blob.
-      const zx::status fs_info = fs().GetFsInfo();
+      const zx::result fs_info = fs().GetFsInfo();
       ASSERT_TRUE(fs_info.is_ok()) << fs_info.status_string();
       large_blob_storage_space_usage = fs_info.value().used_bytes - large_blob_storage_space_usage;
       capture_large_blob_storage_space_usage = false;
@@ -99,7 +99,7 @@ TEST_P(FragmentationTest, Fragmentation) {
   ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
 
   // Validate that we have enough space (before we try allocating)...
-  const zx::status fs_info = fs().GetFsInfo();
+  const zx::result fs_info = fs().GetFsInfo();
   ASSERT_TRUE(fs_info.is_ok()) << fs_info.status_string();
   ASSERT_GE(fs_info.value().total_bytes - fs_info.value().used_bytes,
             large_blob_storage_space_usage);

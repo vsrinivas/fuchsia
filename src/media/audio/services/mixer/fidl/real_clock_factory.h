@@ -19,9 +19,9 @@ class RealClockFactory : public ClockFactory {
 
   // Implements ClockFactory.
   std::shared_ptr<const Clock> SystemMonotonicClock() const override { return system_mono_; }
-  zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>> CreateGraphControlledClock(
+  zx::result<std::pair<std::shared_ptr<Clock>, zx::clock>> CreateGraphControlledClock(
       std::string_view name) override;
-  zx::status<std::shared_ptr<Clock>> CreateWrappedClock(zx::clock handle, std::string_view name,
+  zx::result<std::shared_ptr<Clock>> CreateWrappedClock(zx::clock handle, std::string_view name,
                                                         uint32_t domain, bool adjustable) override;
   std::shared_ptr<Timer> CreateTimer() override;
 

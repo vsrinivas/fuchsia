@@ -29,10 +29,10 @@ class AcpiArm64 : public DeviceType {
   void DdkInit(ddk::InitTxn txn);
   void DdkRelease() { delete this; }
 
-  zx::status<> SysmemInit();
+  zx::result<> SysmemInit();
 
  private:
-  zx::status<> SmbiosInit();
+  zx::result<> SmbiosInit();
 
   std::optional<acpi::FuchsiaManager> manager_;
   acpi::AcpiImpl acpi_;

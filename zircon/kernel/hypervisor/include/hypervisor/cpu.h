@@ -13,7 +13,7 @@
 
 namespace hypervisor {
 
-using percpu_task_t = zx::status<> (*)(void* context, cpu_num_t cpu_num);
+using percpu_task_t = zx::result<> (*)(void* context, cpu_num_t cpu_num);
 
 // Executes a task on each online CPU, and returns a CPU mask containing each
 // CPU the task was successfully run on.

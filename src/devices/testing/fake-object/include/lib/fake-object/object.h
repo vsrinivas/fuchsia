@@ -112,9 +112,9 @@ class HandleTable {
 
   static bool IsValidFakeHandle(zx_handle_t handle);
 
-  zx::status<fbl::RefPtr<Object>> Get(zx_handle_t handle) __TA_EXCLUDES(lock_);
-  zx::status<> Remove(zx_handle_t handle) __TA_EXCLUDES(lock_);
-  zx::status<zx_handle_t> Add(fbl::RefPtr<Object> obj) __TA_EXCLUDES(lock_);
+  zx::result<fbl::RefPtr<Object>> Get(zx_handle_t handle) __TA_EXCLUDES(lock_);
+  zx::result<> Remove(zx_handle_t handle) __TA_EXCLUDES(lock_);
+  zx::result<zx_handle_t> Add(fbl::RefPtr<Object> obj) __TA_EXCLUDES(lock_);
   void Clear() __TA_EXCLUDES(lock_);
 
   // Walks the handle table and calls |cb| on each handle that matches the
@@ -154,9 +154,9 @@ class HandleTable {
 HandleTable& FakeHandleTable();
 
 // Creates a base object for testing handle methods.
-zx::status<zx_handle_t> fake_object_create();
-zx::status<zx_handle_t> fake_object_create_typed(zx_obj_type_t type);
-zx::status<zx_koid_t> fake_object_get_koid(zx_handle_t);
+zx::result<zx_handle_t> fake_object_create();
+zx::result<zx_handle_t> fake_object_create_typed(zx_obj_type_t type);
+zx::result<zx_koid_t> fake_object_get_koid(zx_handle_t);
 
 void* FindRealSyscall(const char* name);
 

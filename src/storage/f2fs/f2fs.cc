@@ -34,10 +34,10 @@ F2fs::F2fs(FuchsiaDispatcher dispatcher, std::unique_ptr<f2fs::Bcache> bc,
 #endif  // __Fuchsia__
 }
 
-zx::status<std::unique_ptr<F2fs>> F2fs::Create(FuchsiaDispatcher dispatcher,
+zx::result<std::unique_ptr<F2fs>> F2fs::Create(FuchsiaDispatcher dispatcher,
                                                std::unique_ptr<f2fs::Bcache> bc,
                                                const MountOptions& options, PlatformVfs* vfs) {
-  zx::status<std::unique_ptr<Superblock>> superblock_or;
+  zx::result<std::unique_ptr<Superblock>> superblock_or;
   if (superblock_or = LoadSuperblock(*bc); superblock_or.is_error()) {
     return superblock_or.take_error();
   }
@@ -53,7 +53,7 @@ zx::status<std::unique_ptr<F2fs>> F2fs::Create(FuchsiaDispatcher dispatcher,
   return zx::ok(std::move(fs));
 }
 
-zx::status<std::unique_ptr<Superblock>> F2fs::LoadSuperblock(f2fs::Bcache& bc) {
+zx::result<std::unique_ptr<Superblock>> F2fs::LoadSuperblock(f2fs::Bcache& bc) {
   FsBlock block;
 #ifdef __Fuchsia__
   auto buffer = block.GetData().data();
@@ -82,7 +82,7 @@ void F2fs::Sync(SyncCallback closure) {
   }
 }
 
-zx::status<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> F2fs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
   info.block_size = kBlockSize;
@@ -176,7 +176,7 @@ bool F2fs::IsValid() const {
 }
 
 // Fill the locked page with data located in the block address.
-zx::status<LockedPage> F2fs::MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
+zx::result<LockedPage> F2fs::MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
                                                bool is_sync) {
   if (page->IsUptodate()) {
     return zx::ok(std::move(page));
@@ -191,7 +191,7 @@ zx::status<LockedPage> F2fs::MakeReadOperation(LockedPage page, block_t blk_addr
   return zx::ok(std::move((*pages_or)[0]));
 }
 
-zx::status<std::vector<LockedPage>> F2fs::MakeReadOperations(std::vector<LockedPage> pages,
+zx::result<std::vector<LockedPage>> F2fs::MakeReadOperations(std::vector<LockedPage> pages,
                                                              std::vector<block_t> addrs,
                                                              PageType type, bool is_sync) {
   return reader_->SubmitPages(std::move(pages), std::move(addrs));

@@ -36,7 +36,7 @@
 
 namespace pci {
 
-zx::status<> BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
+zx::result<> BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
   fbl::AllocChecker ac;
   std::unique_ptr<BanjoDevice> banjo_dev(new (&ac) BanjoDevice(parent, std::move(device)));
   if (!ac.check()) {
@@ -159,7 +159,7 @@ zx_status_t BanjoDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
 }
 
 zx_status_t BanjoDevice::PciReadConfig8(uint16_t offset, uint8_t* out_value) {
-  zx::status<uint8_t> result = device_->ReadConfig<uint8_t, PciReg8>(offset);
+  zx::result<uint8_t> result = device_->ReadConfig<uint8_t, PciReg8>(offset);
   if (result.is_ok()) {
     *out_value = result.value();
   }
@@ -167,7 +167,7 @@ zx_status_t BanjoDevice::PciReadConfig8(uint16_t offset, uint8_t* out_value) {
 }
 
 zx_status_t BanjoDevice::PciReadConfig16(uint16_t offset, uint16_t* out_value) {
-  zx::status<uint16_t> result = device_->ReadConfig<uint16_t, PciReg16>(offset);
+  zx::result<uint16_t> result = device_->ReadConfig<uint16_t, PciReg16>(offset);
   if (result.is_ok()) {
     *out_value = result.value();
   }
@@ -175,7 +175,7 @@ zx_status_t BanjoDevice::PciReadConfig16(uint16_t offset, uint16_t* out_value) {
 }
 
 zx_status_t BanjoDevice::PciReadConfig32(uint16_t offset, uint32_t* out_value) {
-  zx::status<uint32_t> result = device_->ReadConfig<uint32_t, PciReg32>(offset);
+  zx::result<uint32_t> result = device_->ReadConfig<uint32_t, PciReg32>(offset);
   if (result.is_ok()) {
     *out_value = result.value();
   }
@@ -223,7 +223,7 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   // to determine what portions of the BAR the driver can be permitted to
   // access.
   if (device_->capabilities().msix) {
-    zx::status<size_t> result = device_->capabilities().msix->GetBarDataSize(*bar);
+    zx::result<size_t> result = device_->capabilities().msix->GetBarDataSize(*bar);
     if (result.is_error()) {
       return LOG_STATUS(DEBUG, result.status_value(), "%u", bar_id);
     }
@@ -238,7 +238,7 @@ zx_status_t BanjoDevice::PciGetBar(uint32_t bar_id, pci_bar_t* out_bar) {
   // MMIO Bars have an associated VMO for the driver to map, whereas IO bars
   // have a Resource corresponding to an IO range for the driver to access.
   // These are mutually exclusive, so only one handle is ever needed.
-  zx::status<zx::handle> result;
+  zx::result<zx::handle> result;
   if (bar->is_mmio) {
     result = bar->allocation->CreateVmo();
     if (result.is_ok()) {
@@ -348,7 +348,7 @@ zx_status_t BanjoDevice::PciSetInterruptMode(pci_interrupt_mode_t mode,
 }
 
 zx_status_t BanjoDevice::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
-  zx::status<zx::interrupt> result = device_->MapInterrupt(which_irq);
+  zx::result<zx::interrupt> result = device_->MapInterrupt(which_irq);
   if (result.is_ok()) {
     *out_handle = std::move(result.value());
   }

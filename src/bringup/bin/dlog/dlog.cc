@@ -55,7 +55,7 @@ int main(int argc, char** argv) {
     argv++;
   }
 
-  zx::status client = component::Connect<fuchsia_boot::ReadOnlyLog>();
+  zx::result client = component::Connect<fuchsia_boot::ReadOnlyLog>();
   if (client.is_error()) {
     fprintf(stderr, "failed to connect to read only log: %s\n", client.status_string());
     return -1;

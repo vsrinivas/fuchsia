@@ -61,7 +61,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
 
   fbl::unique_fd fd;
   EXPECT_OK(RecursiveWaitForFile(dev_fd, kDevicePath, &fd));
-  zx::status bti_client_end =
+  zx::result bti_client_end =
       fdio_cpp::FdioCaller(std::move(fd)).take_as<fuchsia_hardware_btitest::BtiDevice>();
   ASSERT_OK(bti_client_end.status_value());
 

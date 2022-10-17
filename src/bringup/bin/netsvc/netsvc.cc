@@ -174,7 +174,7 @@ int main(int argc, char** argv) {
   }
 
   for (;;) {
-    if (zx::status status = netifc_open(loop.dispatcher(), interface,
+    if (zx::result status = netifc_open(loop.dispatcher(), interface,
                                         [&loop](zx_status_t error) {
                                           printf("netsvc: interface error: %s\n",
                                                  zx_status_get_string(error));

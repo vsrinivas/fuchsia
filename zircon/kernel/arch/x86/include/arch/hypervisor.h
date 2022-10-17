@@ -54,7 +54,7 @@ class Guest {
 
  protected:
   template <typename G>
-  static zx::status<ktl::unique_ptr<G>> Create();
+  static zx::result<ktl::unique_ptr<G>> Create();
 
   Guest() = default;
 
@@ -63,13 +63,13 @@ class Guest {
 
 class NormalGuest : public Guest {
  public:
-  static zx::status<ktl::unique_ptr<Guest>> Create();
+  static zx::result<ktl::unique_ptr<Guest>> Create();
 
   zx_status_t SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len, fbl::RefPtr<PortDispatcher> port,
                       uint64_t key);
 
-  zx::status<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
-  zx::status<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
+  zx::result<uint16_t> TryAllocVpid() { return vpid_allocator_.TryAlloc(); }
+  zx::result<> FreeVpid(uint16_t vpid) { return vpid_allocator_.Free(vpid); }
 
   hypervisor::GuestPhysicalAspace& AddressSpace() { return gpa_; }
   fbl::RefPtr<VmAddressRegion> RootVmar() const override { return gpa_.RootVmar(); }
@@ -86,7 +86,7 @@ class DirectGuest : public Guest {
   // Global VPID for a direct mode address space.
   static constexpr uint16_t kGlobalAspaceVpid = 1;
 
-  static zx::status<ktl::unique_ptr<Guest>> Create();
+  static zx::result<ktl::unique_ptr<Guest>> Create();
   ~DirectGuest() override;
 
   hypervisor::DirectPhysicalAspace& AddressSpace() { return dpa_; }
@@ -117,7 +117,7 @@ class Vcpu {
 
  protected:
   template <typename V, typename G>
-  static zx::status<ktl::unique_ptr<V>> Create(G& guest, uint16_t vpid, zx_vaddr_t entry);
+  static zx::result<ktl::unique_ptr<V>> Create(G& guest, uint16_t vpid, zx_vaddr_t entry);
 
   Vcpu(Guest& guest, uint16_t vpid, Thread* thread);
 
@@ -191,7 +191,7 @@ class NormalVcpu : public Vcpu {
       .unrestricted = true,
   };
 
-  static zx::status<ktl::unique_ptr<Vcpu>> Create(NormalGuest& guest, zx_vaddr_t entry);
+  static zx::result<ktl::unique_ptr<Vcpu>> Create(NormalGuest& guest, zx_vaddr_t entry);
 
   NormalVcpu(NormalGuest& guest, uint16_t vpid, Thread* thread);
   ~NormalVcpu() override;
@@ -214,7 +214,7 @@ class DirectVcpu : public Vcpu {
       .unrestricted = false,
   };
 
-  static zx::status<ktl::unique_ptr<Vcpu>> Create(DirectGuest& guest, zx_vaddr_t entry);
+  static zx::result<ktl::unique_ptr<Vcpu>> Create(DirectGuest& guest, zx_vaddr_t entry);
 
   DirectVcpu(DirectGuest& guest, uint16_t vpid, Thread* thread);
 

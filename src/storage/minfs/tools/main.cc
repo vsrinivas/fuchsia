@@ -704,7 +704,7 @@ zx_status_t MinfsCreator::ProcessBlocks(off_t file_size) {
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<minfs::Bcache>> MinfsCreator::GenerateBcache() {
+zx::result<std::unique_ptr<minfs::Bcache>> MinfsCreator::GenerateBcache() {
   uint32_t block_count = static_cast<uint32_t>(GetLength() / minfs::kMinfsBlockSize);
 
   // Duplicate the fd so that we can re-open the minfs partition if we need to.

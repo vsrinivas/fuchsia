@@ -32,12 +32,12 @@ class FakeStorage : public AllocatorStorage {
   ~FakeStorage() {}
 
 #ifdef __Fuchsia__
-  zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return zx::ok(); }
+  zx::result<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) final { return zx::ok(); }
 #endif
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final {}
 
-  zx::status<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
+  zx::result<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final {
     return zx::error(ZX_ERR_NO_SPACE);
   }
 

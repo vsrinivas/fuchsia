@@ -29,7 +29,7 @@ class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
   DriverHost(inspect::Inspector& inspector, async::Loop& loop);
 
   fpromise::promise<inspect::Inspector> Inspect();
-  zx::status<> PublishDriverHost(component::OutgoingDirectory& outgoing_directory);
+  zx::result<> PublishDriverHost(component::OutgoingDirectory& outgoing_directory);
 
  private:
   // fidl::Server<fuchsia_driver_host::DriverHost>
@@ -37,7 +37,7 @@ class DriverHost : public fidl::Server<fuchsia_driver_host::DriverHost> {
 
   void GetProcessKoid(GetProcessKoidCompleter::Sync& completer) override;
 
-  zx::status<> StartDriver(fbl::RefPtr<Driver> driver,
+  zx::result<> StartDriver(fbl::RefPtr<Driver> driver,
                            fuchsia_driver_framework::DriverStartArgs start_args,
                            fdf::Dispatcher dispatcher,
                            fidl::ServerEnd<fuchsia_driver_host::Driver> driver_request);

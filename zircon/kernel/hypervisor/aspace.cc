@@ -33,7 +33,7 @@ constexpr size_t kNumPhysmapPages = PHYSMAP_SIZE / PAGE_SIZE;
 
 namespace hypervisor {
 
-zx::status<GuestPhysicalAspace> GuestPhysicalAspace::Create() {
+zx::result<GuestPhysicalAspace> GuestPhysicalAspace::Create() {
   auto physical_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
   if (!physical_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);
@@ -57,7 +57,7 @@ bool GuestPhysicalAspace::IsMapped(zx_gpaddr_t guest_paddr) const {
   return FindMapping(guest_paddr) != nullptr;
 }
 
-zx::status<> GuestPhysicalAspace::MapInterruptController(zx_gpaddr_t guest_paddr,
+zx::result<> GuestPhysicalAspace::MapInterruptController(zx_gpaddr_t guest_paddr,
                                                          zx_paddr_t host_paddr, size_t len) {
   fbl::RefPtr<VmObjectPhysical> vmo;
   zx_status_t status = VmObjectPhysical::Create(host_paddr, len, &vmo);
@@ -90,12 +90,12 @@ zx::status<> GuestPhysicalAspace::MapInterruptController(zx_gpaddr_t guest_paddr
   return zx::ok();
 }
 
-zx::status<> GuestPhysicalAspace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
+zx::result<> GuestPhysicalAspace::UnmapRange(zx_gpaddr_t guest_paddr, size_t len) {
   zx_status_t status = RootVmar()->UnmapAllowPartial(guest_paddr, len);
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<> GuestPhysicalAspace::PageFault(zx_gpaddr_t guest_paddr) {
+zx::result<> GuestPhysicalAspace::PageFault(zx_gpaddr_t guest_paddr) {
   __UNINITIALIZED LazyPageRequest page_request;
 
   zx_status_t status;
@@ -131,10 +131,10 @@ zx::status<> GuestPhysicalAspace::PageFault(zx_gpaddr_t guest_paddr) {
     }
   } while (status == ZX_ERR_SHOULD_WAIT);
 
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
-zx::status<GuestPtr> GuestPhysicalAspace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
+zx::result<GuestPtr> GuestPhysicalAspace::CreateGuestPtr(zx_gpaddr_t guest_paddr, size_t len,
                                                          const char* name) {
   const zx_gpaddr_t begin = ROUNDDOWN(guest_paddr, PAGE_SIZE);
   const zx_gpaddr_t end = ROUNDUP(guest_paddr + len, PAGE_SIZE);
@@ -201,7 +201,7 @@ fbl::RefPtr<VmMapping> GuestPhysicalAspace::FindMapping(zx_gpaddr_t guest_paddr)
   return nullptr;
 }
 
-zx::status<DirectPhysicalAspace> DirectPhysicalAspace::Create() {
+zx::result<DirectPhysicalAspace> DirectPhysicalAspace::Create() {
   auto physical_aspace = VmAspace::Create(VmAspace::Type::GuestPhysical, "guest_physical");
   if (!physical_aspace) {
     return zx::error(ZX_ERR_NO_MEMORY);

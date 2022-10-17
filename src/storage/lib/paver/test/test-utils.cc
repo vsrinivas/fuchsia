@@ -103,11 +103,11 @@ FakePartitionClient::FakePartitionClient(size_t block_count, size_t block_size)
 FakePartitionClient::FakePartitionClient(size_t block_count)
     : FakePartitionClient(block_count, zx_system_get_page_size()) {}
 
-zx::status<size_t> FakePartitionClient::GetBlockSize() { return zx::ok(block_size_); }
+zx::result<size_t> FakePartitionClient::GetBlockSize() { return zx::ok(block_size_); }
 
-zx::status<size_t> FakePartitionClient::GetPartitionSize() { return zx::ok(partition_size_); }
+zx::result<size_t> FakePartitionClient::GetPartitionSize() { return zx::ok(partition_size_); }
 
-zx::status<> FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
   if (partition_size_ == 0) {
     return zx::ok();
   }
@@ -116,10 +116,10 @@ zx::status<> FakePartitionClient::Read(const zx::vmo& vmo, size_t size) {
   if (auto status = mapper.Map(vmo, 0, size, ZX_VM_PERM_WRITE); status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::make_status(partition_.read(mapper.start(), 0, size));
+  return zx::make_result(partition_.read(mapper.start(), 0, size));
 }
 
-zx::status<> FakePartitionClient::Write(const zx::vmo& vmo, size_t size) {
+zx::result<> FakePartitionClient::Write(const zx::vmo& vmo, size_t size) {
   if (size > partition_size_) {
     size_t new_size = fbl::round_up(size, block_size_);
     zx_status_t status = partition_.set_size(new_size);
@@ -133,10 +133,10 @@ zx::status<> FakePartitionClient::Write(const zx::vmo& vmo, size_t size) {
   if (auto status = mapper.Map(vmo, 0, size, ZX_VM_PERM_READ); status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::make_status(partition_.write(mapper.start(), 0, size));
+  return zx::make_result(partition_.write(mapper.start(), 0, size));
 }
 
-zx::status<> FakePartitionClient::Trim() {
+zx::result<> FakePartitionClient::Trim() {
   zx_status_t status = partition_.set_size(0);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -145,7 +145,7 @@ zx::status<> FakePartitionClient::Trim() {
   return zx::ok();
 }
 
-zx::status<> FakePartitionClient::Flush() { return zx::ok(); }
+zx::result<> FakePartitionClient::Flush() { return zx::ok(); }
 
 fidl::ClientEnd<fuchsia_hardware_block::Block> FakePartitionClient::GetChannel() { return {}; }
 

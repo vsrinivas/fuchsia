@@ -64,7 +64,7 @@ bool CoreDisplayClockSkylake::LoadState() {
 bool CoreDisplayClockSkylake::PreChangeFreq() {
   zxlogf(TRACE, "Asking PCU firmware to raise display voltage to maximum level");
   PowerController power_controller(mmio_space_);
-  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> status = power_controller.RequestDisplayVoltageLevel(
       3, PowerController::RetryBehavior::kRetryUntilStateChanges);
   if (status.is_error()) {
     zxlogf(ERROR, "PCU firmware malfunction! Failed to raise voltage to maximum level: %s",
@@ -80,7 +80,7 @@ bool CoreDisplayClockSkylake::PostChangeFreq(uint32_t freq_khz) {
   zxlogf(TRACE, "Asking PCU firmware to drop display voltage to level %d", voltage_level);
 
   PowerController power_controller(mmio_space_);
-  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> status = power_controller.RequestDisplayVoltageLevel(
       voltage_level, PowerController::RetryBehavior::kNoRetry);
   if (status.is_error()) {
     if (status.error_value() == ZX_ERR_IO_REFUSED) {
@@ -333,7 +333,7 @@ bool CoreDisplayClockTigerLake::PreChangeFreq() {
   zxlogf(TRACE, "Asking PCU firmware to raise display voltage to maximum level");
 
   PowerController power_controller(mmio_space_);
-  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> status = power_controller.RequestDisplayVoltageLevel(
       3, PowerController::RetryBehavior::kRetryUntilStateChanges);
   if (!status.is_ok()) {
     zxlogf(ERROR, "PCU firmware malfunction! Failed to raise voltage to maximum level: %s",
@@ -354,7 +354,7 @@ bool CoreDisplayClockTigerLake::PostChangeFreq(uint32_t freq_khz) {
   // reason about the driver's behavior. We may revisit this optimization
   // opportunity in the future.
   PowerController power_controller(mmio_space_);
-  const zx::status<> status = power_controller.RequestDisplayVoltageLevel(
+  const zx::result<> status = power_controller.RequestDisplayVoltageLevel(
       voltage_level, PowerController::RetryBehavior::kNoRetry);
   if (status.is_error()) {
     if (status.error_value() == ZX_ERR_IO_REFUSED) {

@@ -20,7 +20,7 @@ class PackageResolverInterface {
  public:
   virtual ~PackageResolverInterface() = default;
 
-  virtual zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) = 0;
+  virtual zx::result<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) = 0;
 };
 
 class PackageResolver : public PackageResolverInterface {
@@ -36,17 +36,17 @@ class PackageResolver : public PackageResolverInterface {
   // and return the resulting Driver object.
   //
   // E.g of a URL: fuchsia-pkg://fuchsia.com/my-package#driver/my-driver.so
-  zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override;
+  zx::result<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override;
 
  private:
   // Connects to the package resolver service if not already connected.
   zx_status_t ConnectToResolverService();
 
   // Creates the directory client for |package_url|.
-  zx::status<fidl::WireSyncClient<fuchsia_io::Directory>> Resolve(
+  zx::result<fidl::WireSyncClient<fuchsia_io::Directory>> Resolve(
       const component::FuchsiaPkgUrl& package_url);
 
-  zx::status<zx::vmo> LoadDriver(const fidl::WireSyncClient<fuchsia_io::Directory>& package_dir,
+  zx::result<zx::vmo> LoadDriver(const fidl::WireSyncClient<fuchsia_io::Directory>& package_dir,
                                  const component::FuchsiaPkgUrl& package_url);
 
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args_;

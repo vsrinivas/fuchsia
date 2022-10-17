@@ -14,7 +14,7 @@
 
 namespace factoryfs {
 
-zx::status<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
+zx::result<std::unique_ptr<Runner>> Runner::Create(async::Loop* loop,
                                                    std::unique_ptr<BlockDevice> device,
                                                    MountOptions* options) {
   auto runner = std::unique_ptr<Runner>(new Runner(loop));
@@ -44,7 +44,7 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> Runner::GetFilesystemInfo() {
   return factoryfs_->GetFilesystemInfo();
 }
 

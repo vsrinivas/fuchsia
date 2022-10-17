@@ -142,7 +142,7 @@ zx_status_t DriverHost::Launch(const DriverHostConfig& config, fbl::RefPtr<Drive
   return ZX_OK;
 }
 
-zx::status<fidl::ClientEnd<fdh::Driver>> DriverHost::Start(
+zx::result<fidl::ClientEnd<fdh::Driver>> DriverHost::Start(
     fidl::ClientEnd<fdf::Node> client_end, std::string node_name,
     fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
     frunner::wire::ComponentStartInfo start_info) {

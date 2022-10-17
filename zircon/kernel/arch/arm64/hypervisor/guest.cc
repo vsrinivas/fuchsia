@@ -18,7 +18,7 @@ static constexpr zx_gpaddr_t kGicvAddress = 0x800001000;
 static constexpr size_t kGicvSize = 0x2000;
 
 // static
-zx::status<ktl::unique_ptr<Guest>> Guest::Create() {
+zx::result<ktl::unique_ptr<Guest>> Guest::Create() {
   if (arm64_get_boot_el() < 2) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }

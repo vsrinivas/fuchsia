@@ -36,7 +36,7 @@ class FakeTraceManager : public fidl::WireServer<fuchsia_tracing_provider::Regis
 
 // Test handling of early loop cancel by having the loop be destructed before the provider.
 TEST(ProviderTest, EarlyLoopCancel) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Registry>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_tracing_provider::Registry>();
   ASSERT_TRUE(endpoints.is_ok(), "%s", endpoints.status_string());
 
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};

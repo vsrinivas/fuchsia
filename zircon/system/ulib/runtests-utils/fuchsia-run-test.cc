@@ -248,7 +248,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
         return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);
       }
       fdio_cpp::FdioCaller caller(std::move(fd));
-      zx::status result = caller.take_directory();
+      zx::result result = caller.take_directory();
       if (result.is_error()) {
         fprintf(stderr, "FAILURE: Could not take directory %s channel: %s\n", path,
                 result.status_string());
@@ -257,7 +257,7 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
       fidl::ClientEnd client_end = std::move(result).value();
 
       if (strcmp(path, "/svc") == 0) {
-        zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+        zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
         if (endpoints.is_error()) {
           fprintf(stderr, "FAILURE: Could not create endpoints: %s\n", endpoints.status_string());
           return std::make_unique<Result>(path, FAILED_UNKNOWN, 0, 0);

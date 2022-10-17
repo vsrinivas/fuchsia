@@ -73,11 +73,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
-  zx::status device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+  zx::result device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(device_ends.status_value());
   auto [device_local, device_remote] = std::move(*device_ends);
 
-  zx::status device_ends2 = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+  zx::result device_ends2 = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(device_ends2.status_value());
   auto [device_local2, device_remote2] = std::move(*device_ends2);
 
@@ -189,10 +189,10 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   fbl::RefPtr<zx_device> dev;
   ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &dev));
 
-  zx::status device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
+  zx::result device_ends = fidl::CreateEndpoints<fuchsia_device_manager::DeviceController>();
   ASSERT_OK(device_ends.status_value());
 
-  zx::status coordinator_ends = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
+  zx::result coordinator_ends = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
   ASSERT_OK(coordinator_ends.status_value());
 
   class DeviceControllerConnectionTest : public DeviceControllerConnection {

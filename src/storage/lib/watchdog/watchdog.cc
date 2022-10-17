@@ -51,10 +51,10 @@ class Watchdog : public WatchdogInterface {
 
   ~Watchdog() override { [[maybe_unused]] auto status = ShutDown(); }
 
-  zx::status<> Start() final;
-  zx::status<> ShutDown() final;
-  zx::status<> Track(OperationTracker* tracker) final;
-  zx::status<> Untrack(OperationTrackerId tracker_id) final;
+  zx::result<> Start() final;
+  zx::result<> ShutDown() final;
+  zx::result<> Track(OperationTracker* tracker) final;
+  zx::result<> Untrack(OperationTrackerId tracker_id) final;
 
  private:
   // Worker routine that scans the list of in-flight trackers. Returns only if
@@ -85,7 +85,7 @@ class Watchdog : public WatchdogInterface {
   sync_completion_t completion_;
 };
 
-zx::status<> Watchdog::Track(OperationTracker* tracker) {
+zx::result<> Watchdog::Track(OperationTracker* tracker) {
   std::lock_guard<std::mutex> lock(lock_);
   if (!options_.enabled) {
     return zx::error(ZX_ERR_BAD_STATE);
@@ -104,7 +104,7 @@ zx::status<> Watchdog::Track(OperationTracker* tracker) {
   return zx::ok();
 }
 
-zx::status<> Watchdog::Untrack(OperationTrackerId id) {
+zx::result<> Watchdog::Untrack(OperationTrackerId id) {
   OperationTracker* tracker;
   bool timed_out = false;
   {
@@ -196,7 +196,7 @@ void Watchdog::Run() {
   }
 }
 
-zx::status<> Watchdog::Start() {
+zx::result<> Watchdog::Start() {
   {
     std::lock_guard<std::mutex> lock(lock_);
     if (!options_.enabled || running_) {
@@ -211,7 +211,7 @@ zx::status<> Watchdog::Start() {
   return zx::ok();
 }
 
-zx::status<> Watchdog::ShutDown() {
+zx::result<> Watchdog::ShutDown() {
   if (!thread_.joinable()) {
     return zx::error(ZX_ERR_BAD_STATE);
   }

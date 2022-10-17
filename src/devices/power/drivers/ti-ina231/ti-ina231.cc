@@ -100,7 +100,7 @@ zx_status_t Ina231Device::PowerSensorConnectServer(zx::channel server) {
 }
 
 void Ina231Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
-  zx::status<uint16_t> power_reg;
+  zx::result<uint16_t> power_reg;
 
   {
     fbl::AutoLock lock(&i2c_lock_);
@@ -117,7 +117,7 @@ void Ina231Device::GetPowerWatts(GetPowerWattsCompleter::Sync& completer) {
 }
 
 void Ina231Device::GetVoltageVolts(GetVoltageVoltsCompleter::Sync& completer) {
-  zx::status<uint16_t> voltage_reg;
+  zx::result<uint16_t> voltage_reg;
 
   {
     fbl::AutoLock lock(&i2c_lock_);
@@ -167,7 +167,7 @@ zx_status_t Ina231Device::Init(const Ina231Metadata& metadata) {
     return status.error_value();
   }
 
-  const zx::status<uint16_t> config_status = Read16(Register::kConfigurationReg);
+  const zx::result<uint16_t> config_status = Read16(Register::kConfigurationReg);
   if (config_status.is_error()) {
     return config_status.error_value();
   }
@@ -184,7 +184,7 @@ zx_status_t Ina231Device::Init(const Ina231Metadata& metadata) {
   return ZX_OK;
 }
 
-zx::status<uint16_t> Ina231Device::Read16(Register reg) {
+zx::result<uint16_t> Ina231Device::Read16(Register reg) {
   const uint8_t address = static_cast<uint8_t>(reg);
   uint16_t value = 0;
   zx_status_t status = i2c_.WriteReadSync(&address, sizeof(address),
@@ -196,7 +196,7 @@ zx::status<uint16_t> Ina231Device::Read16(Register reg) {
   return zx::ok(betoh16(value));
 }
 
-zx::status<> Ina231Device::Write16(Register reg, uint16_t value) {
+zx::result<> Ina231Device::Write16(Register reg, uint16_t value) {
   uint8_t buffer[] = {static_cast<uint8_t>(reg), static_cast<uint8_t>(value >> 8),
                       static_cast<uint8_t>(value & 0xff)};
   zx_status_t status = i2c_.WriteSync(buffer, sizeof(buffer));

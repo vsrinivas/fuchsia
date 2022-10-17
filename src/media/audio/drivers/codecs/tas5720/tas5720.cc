@@ -189,7 +189,7 @@ zx_status_t Tas5720::Reinitialize() {
   return ZX_OK;
 }
 
-zx::status<DriverIds> Tas5720::Initialize() {
+zx::result<DriverIds> Tas5720::Initialize() {
   size_t actual = 0;
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &instance_count_,
                                     sizeof(instance_count_), &actual);
@@ -271,7 +271,7 @@ zx_status_t Tas5720::Start() {
 
 DaiSupportedFormats Tas5720::GetDaiFormats() { return kSupportedDaiFormats; }
 
-zx::status<CodecFormatInfo> Tas5720::SetDaiFormat(const DaiFormat& format) {
+zx::result<CodecFormatInfo> Tas5720::SetDaiFormat(const DaiFormat& format) {
   ZX_ASSERT(format.channels_to_use_bitmask == 1 ||
             format.channels_to_use_bitmask == 2);  // Mono codec, 2 channel TDM.
   tdm_slot_ = static_cast<uint8_t>(__builtin_ctzl(format.channels_to_use_bitmask));
@@ -333,7 +333,7 @@ zx_status_t Tas5720::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buffer[2];
   write_buffer[0] = reg;
   write_buffer[1] = value;
-//#define TRACE_I2C
+// #define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing to instance/slot %u/%u register 0x%02X to value 0x%02X\n", instance_count_,
          tdm_slot_, reg, value);

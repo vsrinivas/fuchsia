@@ -15,7 +15,7 @@ constexpr size_t kNelsonBL2Size = 64 * 1024;
 
 class NelsonPartitioner : public DevicePartitioner {
  public:
-  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+  static zx::result<std::unique_ptr<DevicePartitioner>> Initialize(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       const fbl::unique_fd& block_device);
 
@@ -23,31 +23,31 @@ class NelsonPartitioner : public DevicePartitioner {
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+  zx::result<std::unique_ptr<PartitionClient>> AddPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<PartitionClient>> FindPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
+  zx::result<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx::status<> WipeFvm() const override;
+  zx::result<> WipeFvm() const override;
 
-  zx::status<> InitPartitionTables() const override;
+  zx::result<> InitPartitionTables() const override;
 
-  zx::status<> WipePartitionTables() const override;
+  zx::result<> WipePartitionTables() const override;
 
-  zx::status<> ValidatePayload(const PartitionSpec& spec,
+  zx::result<> ValidatePayload(const PartitionSpec& spec,
                                cpp20::span<const uint8_t> data) const override;
 
-  zx::status<> Flush() const override { return zx::ok(); }
+  zx::result<> Flush() const override { return zx::ok(); }
 
  private:
   explicit NelsonPartitioner(std::unique_ptr<GptDevicePartitioner> gpt) : gpt_(std::move(gpt)) {}
 
-  zx::status<std::unique_ptr<PartitionClient>> GetEmmcBootPartitionClient() const;
+  zx::result<std::unique_ptr<PartitionClient>> GetEmmcBootPartitionClient() const;
 
-  zx::status<std::unique_ptr<PartitionClient>> GetBootloaderPartitionClient(
+  zx::result<std::unique_ptr<PartitionClient>> GetBootloaderPartitionClient(
       const PartitionSpec& spec) const;
 
   std::unique_ptr<GptDevicePartitioner> gpt_;
@@ -55,14 +55,14 @@ class NelsonPartitioner : public DevicePartitioner {
 
 class NelsonPartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(
+  zx::result<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class NelsonAbrClientFactory : public abr::ClientFactory {
  public:
-  zx::status<std::unique_ptr<abr::Client>> New(
+  zx::result<std::unique_ptr<abr::Client>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) final;
 };
@@ -74,12 +74,12 @@ class NelsonBootloaderPartitionClient final : public BlockDevicePartitionClient 
       std::unique_ptr<FixedOffsetBlockPartitionClient> tpl_client)
       : emmc_boot_client_(std::move(emmc_boot_client)), tpl_client_(std::move(tpl_client)) {}
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Trim() final;
+  zx::result<> Flush() final;
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 

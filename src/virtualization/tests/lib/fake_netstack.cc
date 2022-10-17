@@ -159,7 +159,7 @@ class Device : public fuchsia::net::virtualization::Interface {
       std::lock_guard guard(state->device->checker_);
       state->device->client_.GetPortInfoWithMac(
           state->port_id, [state, completer = std::move(bridge.completer)](
-                              zx::status<network::client::PortInfoAndMac> result) mutable {
+                              zx::result<network::client::PortInfoAndMac> result) mutable {
             if (result.is_error()) {
               FX_PLOGS(WARNING, result.status_value()) << "Could not fetch device port information";
               completer.complete_error(result.status_value());

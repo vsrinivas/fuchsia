@@ -45,11 +45,11 @@ class BindDriverManager {
   // should be the first in the vector.
   // If |drvlibname| is not empty then the device will only be checked against the driver
   // with that specific name.
-  zx::status<std::vector<MatchedDriver>> GetMatchingDrivers(const fbl::RefPtr<Device>& dev,
+  zx::result<std::vector<MatchedDriver>> GetMatchingDrivers(const fbl::RefPtr<Device>& dev,
                                                             std::string_view drvlibname);
 
   // Find and return matching drivers for |dev|.
-  zx::status<std::vector<MatchedDriver>> MatchDevice(
+  zx::result<std::vector<MatchedDriver>> MatchDevice(
       const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) const;
 
   // Find matching drivers for |dev| and then bind them.

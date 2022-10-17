@@ -9,7 +9,7 @@ namespace f2fs {
 InspectTree::InspectTree(F2fs* fs) : fs_(fs) { ZX_ASSERT(fs_ != nullptr); }
 
 void InspectTree::Initialize() {
-  zx::status<fs::FilesystemInfo> fs_info = fs_->GetFilesystemInfo();
+  zx::result<fs::FilesystemInfo> fs_info = fs_->GetFilesystemInfo();
   if (fs_info.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize F2fs inspect tree: GetFilesystemInfo returned "
                    << fs_info.status_string();
@@ -45,7 +45,7 @@ void InspectTree::Initialize() {
 }
 
 void InspectTree::UpdateUsage() {
-  zx::status<fs::FilesystemInfo> fs_info = fs_->GetFilesystemInfo();
+  zx::result<fs::FilesystemInfo> fs_info = fs_->GetFilesystemInfo();
   if (fs_info.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize F2fs inspect tree: GetFilesystemInfo returned "
                    << fs_info.status_string();
@@ -59,7 +59,7 @@ void InspectTree::UpdateUsage() {
 }
 
 void InspectTree::UpdateFvmSizeInfo() {
-  zx::status<fs_inspect::FvmData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
+  zx::result<fs_inspect::FvmData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
   {
     size_info = fs_inspect::FvmData::GetSizeInfoFromDevice(*fs_->GetBc().GetDevice());
     if (size_info.is_error()) {

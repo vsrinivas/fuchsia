@@ -255,7 +255,7 @@ TEST_F(AddressSpaceDeviceTest, OpenChildDriver) {
   auto mapped = MapControlRegisters();
   Registers* ctrl_regs = reinterpret_cast<Registers*>(mapped->ptr());
 
-  zx::status endpoints =
+  zx::result endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_goldfish::AddressSpaceChildDriver>();
   ASSERT_OK(endpoints.status_value());
 

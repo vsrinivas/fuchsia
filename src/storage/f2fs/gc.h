@@ -16,7 +16,7 @@ class GcManager {
   GcManager() = delete;
   GcManager(F2fs *fs) : fs_(fs), cur_victim_sec_(kNullSecNo) {}
 
-  zx::status<uint32_t> F2fsGc() __TA_EXCLUDES(gc_mutex_);
+  zx::result<uint32_t> F2fsGc() __TA_EXCLUDES(gc_mutex_);
 
   // For testing
   void DisableFgGc() { disable_gc_for_test_ = true; }
@@ -26,7 +26,7 @@ class GcManager {
   uint32_t GetCurVictimSec() const { return cur_victim_sec_; }
 
  private:
-  zx::status<uint32_t> GetGcVictim(GcType gc_type, CursegType type) __TA_REQUIRES(gc_mutex_);
+  zx::result<uint32_t> GetGcVictim(GcType gc_type, CursegType type) __TA_REQUIRES(gc_mutex_);
   zx_status_t DoGarbageCollect(uint32_t segno, GcType gc_type) __TA_REQUIRES(gc_mutex_);
 
   bool CheckValidMap(uint32_t segno, uint64_t offset) __TA_REQUIRES(gc_mutex_);
@@ -35,7 +35,7 @@ class GcManager {
 
   // CheckDnode() returns ino of target block and start block index of the target block's dnode
   // block. It also checks the validity of summary.
-  zx::status<std::pair<nid_t, block_t>> CheckDnode(const Summary &sum, block_t blkaddr)
+  zx::result<std::pair<nid_t, block_t>> CheckDnode(const Summary &sum, block_t blkaddr)
       __TA_REQUIRES(gc_mutex_);
   zx_status_t GcDataSegment(const SummaryBlock &sum_blk, unsigned int segno, GcType gc_type)
       __TA_REQUIRES(gc_mutex_);

@@ -20,7 +20,7 @@
 struct memfs_filesystem {
  public:
   // Creates a memfs instance associated with the given dispatcher.
-  static zx::status<memfs_filesystem> Create(async_dispatcher_t* dispatcher) {
+  static zx::result<memfs_filesystem> Create(async_dispatcher_t* dispatcher) {
     auto fs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (fs_endpoints.is_error())
       return fs_endpoints.take_error();
@@ -122,7 +122,7 @@ zx_status_t memfs_create_filesystem(async_dispatcher_t* dispatcher, memfs_filesy
   ZX_DEBUG_ASSERT(out_fs != nullptr);
   ZX_DEBUG_ASSERT(out_root != nullptr);
 
-  zx::status<memfs_filesystem> setup_or = memfs_filesystem::Create(dispatcher);
+  zx::result<memfs_filesystem> setup_or = memfs_filesystem::Create(dispatcher);
   if (setup_or.is_error())
     return setup_or.error_value();
 
@@ -137,7 +137,7 @@ zx_status_t memfs_install_at(async_dispatcher_t* dispatcher, const char* path,
   ZX_DEBUG_ASSERT(path);
   ZX_DEBUG_ASSERT(out_fs);
 
-  zx::status<memfs_filesystem> setup_or = memfs_filesystem::Create(dispatcher);
+  zx::result<memfs_filesystem> setup_or = memfs_filesystem::Create(dispatcher);
   if (setup_or.is_error())
     return setup_or.error_value();
 

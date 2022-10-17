@@ -11,7 +11,7 @@
 
 namespace composite_driver_v1 {
 
-zx::status<uint32_t> DoFidlConnections(zx_device_t* dev, const char* fragment) {
+zx::result<uint32_t> DoFidlConnections(zx_device_t* dev, const char* fragment) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_composite_test::Device>();
   zx_status_t status = device_connect_fragment_fidl_protocol(
       dev, fragment, "fuchsia.composite.test.Device", endpoints->server.TakeChannel().release());

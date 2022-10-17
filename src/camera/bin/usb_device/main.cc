@@ -28,7 +28,7 @@
 // TODO(ernesthua) - Need to dynamically determine the path name!
 std::string camera_path("/dev/class/camera/000");
 
-zx::status<fuchsia::camera::ControlSyncPtr> OpenCamera(std::string path) {
+zx::result<fuchsia::camera::ControlSyncPtr> OpenCamera(std::string path) {
   fbl::unique_fd fd(open(path.c_str(), O_RDWR));
   if (fd.get() < 0) {
     FX_PLOGS(ERROR, fd.get()) << "Failed to open sensor at " << path;
@@ -69,7 +69,7 @@ int main(int argc, char* argv[]) {
   std::string outgoing_service_name("fuchsia.camera3.Device");
 
   // Connect to hard coded usb camera device.
-  zx::status<fuchsia::camera::ControlSyncPtr> status_or = OpenCamera(camera_path);
+  zx::result<fuchsia::camera::ControlSyncPtr> status_or = OpenCamera(camera_path);
   if (status_or.is_error()) {
     FX_PLOGS(FATAL, status_or.error_value())
         << "Failed to request camera device: error: " << status_or.error_value();

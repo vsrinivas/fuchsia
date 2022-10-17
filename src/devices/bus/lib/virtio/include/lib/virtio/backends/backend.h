@@ -73,7 +73,7 @@ class Backend {
   // internal waiting period.
   // Returns ZX_OK if woken by an interrupt along with the key of the interrupt to ack.
   //         ZX_ERR_TIMED_OUT if an internal timeout expired; there may be work from the device
-  virtual zx::status<uint32_t> WaitForInterrupt() = 0;
+  virtual zx::result<uint32_t> WaitForInterrupt() = 0;
   virtual void InterruptAck(uint32_t key) = 0;
 
   // Called when the driver is shutting down.

@@ -14,7 +14,7 @@ namespace ddk {
 
 // Gets the raw metadata.
 // Returns an error if metadata does not exist.
-inline zx::status<std::vector<uint8_t>> GetMetadataBlob(zx_device_t* dev, uint32_t type) {
+inline zx::result<std::vector<uint8_t>> GetMetadataBlob(zx_device_t* dev, uint32_t type) {
   size_t metadata_size;
   zx_status_t status = device_get_metadata_size(dev, type, &metadata_size);
   if (status != ZX_OK) {
@@ -32,7 +32,7 @@ inline zx::status<std::vector<uint8_t>> GetMetadataBlob(zx_device_t* dev, uint32
 // Gets a metadata that is contained in a specific struct.
 // Checks that the size of the metadata corresponds to the struct size.
 template <class T>
-zx::status<std::unique_ptr<T>> GetMetadata(zx_device_t* dev, uint32_t type) {
+zx::result<std::unique_ptr<T>> GetMetadata(zx_device_t* dev, uint32_t type) {
   auto metadata = GetMetadataBlob(dev, type);
   if (!metadata.is_ok()) {
     return metadata.take_error();
@@ -48,7 +48,7 @@ zx::status<std::unique_ptr<T>> GetMetadata(zx_device_t* dev, uint32_t type) {
 // Gets a metadata that is contained in an array of struct T.
 // Checks that the size of the metadata corresponds to the struct size.
 template <class T>
-zx::status<std::vector<T>> GetMetadataArray(zx_device_t* dev, uint32_t type) {
+zx::result<std::vector<T>> GetMetadataArray(zx_device_t* dev, uint32_t type) {
   auto metadata = GetMetadataBlob(dev, type);
   if (!metadata.is_ok()) {
     return metadata.take_error();
@@ -84,7 +84,7 @@ class DecodedMetadata {
 // Decodes the metadata and returns a DecodedMetadata object, which stores the raw
 // data as well as the decoded struct.
 template <typename T>
-zx::status<DecodedMetadata<T>> GetEncodedMetadata(zx_device_t* dev, uint32_t type) {
+zx::result<DecodedMetadata<T>> GetEncodedMetadata(zx_device_t* dev, uint32_t type) {
   auto metadata = GetMetadataBlob(dev, type);
   if (!metadata.is_ok()) {
     return metadata.take_error();
@@ -94,7 +94,7 @@ zx::status<DecodedMetadata<T>> GetEncodedMetadata(zx_device_t* dev, uint32_t typ
     zxlogf(ERROR, "Failed to deserialize metadata.");
     return zx::error(ZX_ERR_INTERNAL);
   }
-  return zx::make_status(ZX_OK, std::move(decoded));
+  return zx::make_result(ZX_OK, std::move(decoded));
 }
 
 }  // namespace ddk

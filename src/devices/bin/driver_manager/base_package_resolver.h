@@ -17,7 +17,7 @@ class BasePackageResolver : public PackageResolverInterface {
   explicit BasePackageResolver(fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args)
       : boot_args_(boot_args) {}
 
-  zx::status<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override;
+  zx::result<std::unique_ptr<Driver>> FetchDriver(const std::string& package_url) override;
 
  private:
   fidl::WireSyncClient<fuchsia_boot::Arguments>* boot_args_;

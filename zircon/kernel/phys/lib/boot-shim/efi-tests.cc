@@ -181,7 +181,7 @@ class MockAcpiTables {
 
 TEST(BootShimTests, EfiGetAcpi) {
   constexpr efi_system_table kEmptySystemTable = {};
-  zx::status<acpi_lite::AcpiParser> result = boot_shim::EfiGetAcpi(&kEmptySystemTable);
+  zx::result<acpi_lite::AcpiParser> result = boot_shim::EfiGetAcpi(&kEmptySystemTable);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.status_value(), ZX_ERR_NOT_FOUND);
 

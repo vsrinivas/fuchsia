@@ -16,7 +16,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-zx::status<> InspectDevfs::Publish(const fbl::RefPtr<Device>& dev) { return AddClassDirEntry(dev); }
+zx::result<> InspectDevfs::Publish(const fbl::RefPtr<Device>& dev) { return AddClassDirEntry(dev); }
 
 // TODO(surajmalhotra): Ideally this would take a RefPtr, but currently this is
 // invoked in the dtor for Device.
@@ -44,9 +44,9 @@ InspectDevfs::InspectDevfs(fbl::RefPtr<fs::PseudoDir> root_dir,
   std::copy(std::begin(kProtoInfos), std::end(kProtoInfos), proto_infos_.begin());
 }
 
-zx::status<InspectDevfs> InspectDevfs::Create(const fbl::RefPtr<fs::PseudoDir>& root_dir) {
+zx::result<InspectDevfs> InspectDevfs::Create(const fbl::RefPtr<fs::PseudoDir>& root_dir) {
   auto class_dir = fbl::MakeRefCounted<fs::PseudoDir>();
-  zx::status<> status = zx::make_status(root_dir->AddEntry("class", class_dir));
+  zx::result<> status = zx::make_result(root_dir->AddEntry("class", class_dir));
   if (status.is_error()) {
     return status.take_error();
   }
@@ -91,7 +91,7 @@ void InspectDevfs::RemoveEmptyProtoDir(uint32_t id) {
   }
 }
 
-zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
+zx::result<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
   // Create link in /dev/class/... if this id has a published class
   auto [dir, seqcount] = GetOrCreateProtoDir(dev->protocol_id());
   if (dir == nullptr) {
@@ -126,7 +126,7 @@ zx::status<> InspectDevfs::AddClassDirEntry(const fbl::RefPtr<Device>& dev) {
     name = tmp;
   }
 
-  zx::status<> status = zx::make_status(dir->AddEntry(name, file));
+  zx::result<> status = zx::make_result(dir->AddEntry(name, file));
   if (status.is_error()) {
     return status;
   }
@@ -159,13 +159,13 @@ InspectManager::InspectManager(async_dispatcher_t* dispatcher) {
   device_count_ = root_node().CreateUint("device_count", 0);
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> InspectManager::Connect() {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> InspectManager::Connect() {
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
   auto& [client, server] = endpoints.value();
-  return zx::make_status(diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(server)),
+  return zx::make_result(diagnostics_vfs_->ServeDirectory(diagnostics_dir_, std::move(server)),
                          std::move(client));
 }
 

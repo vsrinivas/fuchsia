@@ -78,7 +78,7 @@ class Device : public std::enable_shared_from_this<Device>,
   zx_status_t GetMetadata(uint32_t type, void* buf, size_t buflen, size_t* actual);
   zx_status_t GetMetadataSize(uint32_t type, size_t* out_size);
   zx_status_t MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
-  zx::status<uint32_t> SetPerformanceStateOp(uint32_t state);
+  zx::result<uint32_t> SetPerformanceStateOp(uint32_t state);
 
   void InitReply(zx_status_t status);
   zx_status_t ConnectFragmentFidl(const char* fragment_name, const char* protocol_name,
@@ -106,7 +106,7 @@ class Device : public std::enable_shared_from_this<Device>,
 
   // Serves the |fuchsia_driver_framework::RuntimeConnector| protocol,
   // used for supporting v1 of driver runtime protocol discovery.
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ServeRuntimeConnectorProtocol();
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> ServeRuntimeConnectorProtocol();
 
   // |fuchsia_driver_framework::RuntimeConnector| implementation.
   void ListProtocols(ListProtocolsRequestView request,

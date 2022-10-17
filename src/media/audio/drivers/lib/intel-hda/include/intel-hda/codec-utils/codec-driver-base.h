@@ -60,7 +60,7 @@ class IntelHDACodecDriverBase : public fbl::RefCounted<IntelHDACodecDriverBase> 
   // Bind should only ever be called exactly once (during driver
   // instantiation).  Drivers must make sure that no other methods are in
   // flight during a call to Bind.
-  zx::status<> Bind(zx_device_t* codec_dev, const char* name);
+  zx::result<> Bind(zx_device_t* codec_dev, const char* name);
 
   // Send a codec command to our codec device.
   zx_status_t SendCodecCommand(uint16_t nid, CodecVerb verb, bool no_ack);

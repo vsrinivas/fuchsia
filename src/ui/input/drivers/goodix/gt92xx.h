@@ -146,7 +146,7 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   zx_status_t HoldSs51ReleaseDsp() { return Write(GT_REG_SW_RESET, GT_HOLD_SS51); }
   zx_status_t ReleaseSs51HoldDsp() { return Write(GT_REG_SW_RESET, GT_HOLD_DSP); }
   zx_status_t ReleaseSs51AndDsp() { return Write(GT_REG_SW_RESET, 0); }
-  zx::status<bool> Ss51AndDspHeld() {
+  zx::result<bool> Ss51AndDspHeld() {
     auto status = Read(GT_REG_SW_RESET);
     if (status.is_ok()) {
       return zx::ok(status.value() == (GT_HOLD_SS51 | GT_HOLD_DSP));
@@ -161,7 +161,7 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
   zx_status_t SetScramble() { return Write(GT_REG_BOOT_OPTION_B0, 0); }
 
   zx_status_t WriteCopyCommand(uint8_t command) { return Write(GT_REG_BOOT_CONTROL, command); }
-  zx::status<bool> DeviceBusy() {
+  zx::result<bool> DeviceBusy() {
     auto status = Read(GT_REG_BOOT_CONTROL);
     if (status.is_ok()) {
       return zx::ok(status.value() != 0);
@@ -169,7 +169,7 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
     return status.take_error();
   }
 
-  zx::status<fzl::VmoMapper> LoadAndVerifyFirmware();
+  zx::result<fzl::VmoMapper> LoadAndVerifyFirmware();
   bool IsFirmwareApplicable(const fzl::VmoMapper& firmware_mapper);
   zx_status_t EnterUpdateMode();
   void LeaveUpdateMode();
@@ -190,7 +190,7 @@ class Gt92xxDevice : public ddk::Device<Gt92xxDevice, ddk::Unbindable>,
 
   zx_status_t UpdateFirmwareIfNeeded();
 
-  zx::status<uint8_t> Read(uint16_t addr);
+  zx::result<uint8_t> Read(uint16_t addr);
   zx_status_t Read(uint16_t addr, uint8_t* buf, size_t len);
   zx_status_t Write(uint16_t addr, uint8_t val);
   zx_status_t Write(uint8_t* buf, size_t len);

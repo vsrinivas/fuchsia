@@ -51,7 +51,7 @@ class RootDriver : public driver::DriverBase {
         fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
                                                        &this->left_server_);
       };
-      zx::status<> status = service.add_device(std::move(device));
+      zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
       }
@@ -69,7 +69,7 @@ class RootDriver : public driver::DriverBase {
         fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
                                                        &this->right_server_);
       };
-      zx::status<> status = service.add_device(std::move(device));
+      zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
       }

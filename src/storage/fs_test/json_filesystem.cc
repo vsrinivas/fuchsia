@@ -14,7 +14,7 @@
 
 namespace fs_test {
 
-zx::status<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
+zx::result<std::unique_ptr<JsonFilesystem>> JsonFilesystem::NewFilesystem(
     const rapidjson::Document& config) {
   auto name = config["name"].GetString();
 
@@ -68,7 +68,7 @@ class JsonInstance : public FilesystemInstance {
         device_(std::move(device)),
         device_path_(std::move(device_path)) {}
 
-  virtual zx::status<> Format(const TestFilesystemOptions& options) override {
+  virtual zx::result<> Format(const TestFilesystemOptions& options) override {
     fs_management::MkfsOptions mkfs_options;
     mkfs_options.sectors_per_cluster = filesystem_.sectors_per_cluster();
     if (filesystem_.is_component()) {
@@ -80,7 +80,7 @@ class JsonInstance : public FilesystemInstance {
                     filesystem_.GetTraits().is_multi_volume);
   }
 
-  zx::status<> Mount(const std::string& mount_path,
+  zx::result<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
     fs_management::MountOptions mount_options = options;
     if (filesystem_.is_component()) {
@@ -97,7 +97,7 @@ class JsonInstance : public FilesystemInstance {
     return zx::ok();
   }
 
-  zx::status<> Fsck() override {
+  zx::result<> Fsck() override {
     fs_management::FsckOptions options{
         .verbose = false,
         .never_modify = true,
@@ -109,7 +109,7 @@ class JsonInstance : public FilesystemInstance {
       options.component_child_name = name.c_str();
       options.component_url = "#meta/" + name;
     }
-    auto status = zx::make_status(fs_management::Fsck(device_path_.c_str(), filesystem_.format(),
+    auto status = zx::make_result(fs_management::Fsck(device_path_.c_str(), filesystem_.format(),
                                                       options, fs_management::LaunchStdioSync));
     if (status.is_error()) {
       return status.take_error();
@@ -141,7 +141,7 @@ class JsonInstance : public FilesystemInstance {
     return fs->CheckVolume(kDefaultVolumeName, mount_options.crypt_client());
   }
 
-  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
+  zx::result<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
 
   storage::RamDisk* GetRamDisk() override { return std::get_if<storage::RamDisk>(&device_); }
 
@@ -173,7 +173,7 @@ std::unique_ptr<FilesystemInstance> JsonFilesystem::Create(RamDevice device,
   return std::make_unique<JsonInstance>(this, std::move(device), std::move(device_path));
 }
 
-zx::status<std::unique_ptr<FilesystemInstance>> JsonFilesystem::Open(
+zx::result<std::unique_ptr<FilesystemInstance>> JsonFilesystem::Open(
     const TestFilesystemOptions& options) const {
   auto result = OpenRamDevice(options);
   if (result.is_error()) {

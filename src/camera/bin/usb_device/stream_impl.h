@@ -53,7 +53,7 @@ class StreamImpl {
 
  private:
   // Allocate driver-facing buffer collection.
-  zx::status<fuchsia::sysmem::BufferCollectionInfo> Gralloc(
+  zx::result<fuchsia::sysmem::BufferCollectionInfo> Gralloc(
       fuchsia::camera::VideoFormat video_format, uint32_t num_buffers);
 
   // Called when a client calls Rebind.

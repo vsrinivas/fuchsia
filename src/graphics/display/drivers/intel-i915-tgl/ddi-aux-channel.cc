@@ -62,10 +62,10 @@ DdiAuxChannel::DdiAuxChannel(fdf::MmioBuffer* mmio_buffer, tgl_registers::Ddi dd
   }
 }
 
-zx::status<DdiAuxChannel::ReplyInfo> DdiAuxChannel::DoTransaction(
+zx::result<DdiAuxChannel::ReplyInfo> DdiAuxChannel::DoTransaction(
     const Request& request, cpp20::span<uint8_t> reply_data_buffer) {
   WriteRequestForTesting(request);
-  zx::status<> transact_status = TransactForTesting();
+  zx::result<> transact_status = TransactForTesting();
   if (!transact_status.is_ok()) {
     return transact_status.take_error();
   }
@@ -220,7 +220,7 @@ void DdiAuxChannel::WriteRequestData(cpp20::span<const uint8_t> data) {
   }
 }
 
-zx::status<> DdiAuxChannel::TransactForTesting() {
+zx::result<> DdiAuxChannel::TransactForTesting() {
   // If the AUX control register works as documented, it should be sufficient to
   // call FixConfig() once, to adjust the configuration left over from the boot
   // firmware.
@@ -243,7 +243,7 @@ zx::status<> DdiAuxChannel::TransactForTesting() {
     // timeout) in the allotted time. This is most likely a hardware error.
     zxlogf(WARNING, "DDI did not complete / fail AUX transaction in %d us",
            kDdiTransactionTimeoutUs);
-    return zx::make_status(ZX_ERR_IO_MISSED_DEADLINE);
+    return zx::make_result(ZX_ERR_IO_MISSED_DEADLINE);
   }
 
   if (aux_control_.timeout()) {
@@ -258,11 +258,11 @@ zx::status<> DdiAuxChannel::TransactForTesting() {
     // The 3.2ms timeout comes from the DisplayPort 2.0 standard version 2.0,
     // section 2.11.2 "AUX Trransaction Response/Reply Timeouts", page 382.
     zxlogf(TRACE, "DDI reported AUX transaction timeout. This is normal after HPD or wakeup.");
-    return zx::make_status(ZX_ERR_IO_MISSED_DEADLINE);
+    return zx::make_result(ZX_ERR_IO_MISSED_DEADLINE);
   }
   if (aux_control_.receive_error()) {
     zxlogf(WARNING, "DDI AUX receive error. Data corrupted or incorrect bit count.");
-    return zx::make_status(ZX_ERR_IO_DATA_INTEGRITY);
+    return zx::make_result(ZX_ERR_IO_DATA_INTEGRITY);
   }
 
   // The cast is lossless because message_size() is a 5-bit field.
@@ -272,7 +272,7 @@ zx::status<> DdiAuxChannel::TransactForTesting() {
   // at most 16 data bytes, asides from the header byte.
   if (reply_size == 0 || reply_size > 1 + kMaxOpSize) {
     zxlogf(WARNING, "DDI AUX invalid reply size: %d bytes", reply_size);
-    return zx::make_status(ZX_ERR_IO_DATA_INTEGRITY);
+    return zx::make_result(ZX_ERR_IO_DATA_INTEGRITY);
   }
 
   return zx::ok();

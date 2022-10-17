@@ -466,7 +466,7 @@ zx_status_t PciDevice::AddCapability(cpp20::span<const uint8_t> payload) {
   return ZX_OK;
 }
 
-zx::status<size_t> PciDevice::AddBar(PciBar bar) {
+zx::result<size_t> PciDevice::AddBar(PciBar bar) {
   if (bars_.size() >= kPciMaxBars) {
     return zx::error(ZX_ERR_NO_RESOURCES);
   }

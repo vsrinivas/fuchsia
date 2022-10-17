@@ -31,7 +31,7 @@ class CallerAllocatingFixture : public ::zxtest::Test {
 
   void SetUp() override {
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToCurrentThread);
-    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    zx::result server_end = fidl::CreateEndpoints(&client_end_);
     ASSERT_OK(server_end.status_value());
     server_ = GetServer();
     binding_ref_ = fidl::BindServer(loop_->dispatcher(), std::move(*server_end), server_);
@@ -344,7 +344,7 @@ TEST_F(WireSendEventTest, ServerBindingRefCallerAllocateInsufficientBufferSize) 
 TEST(WireSendEventTest, ServerEndCallerAllocate) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fidl::ServerEnd<test::Frobinator> server_end;
-  zx::status client_end = fidl::CreateEndpoints(&server_end);
+  zx::result client_end = fidl::CreateEndpoints(&server_end);
   ASSERT_OK(client_end.status_value());
   ExpectHrobEventHandler event_handler{"test"};
   fidl::WireClient client(std::move(*client_end), loop.dispatcher(), &event_handler);
@@ -361,7 +361,7 @@ TEST(WireSendEventTest, ServerEndCallerAllocate) {
 TEST(WireSendEventTest, ServerEndCallerAllocateInsufficientBufferSize) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fidl::ServerEnd<test::Frobinator> server_end;
-  zx::status client_end = fidl::CreateEndpoints(&server_end);
+  zx::result client_end = fidl::CreateEndpoints(&server_end);
   ASSERT_OK(client_end.status_value());
   ExpectHrobEventHandler event_handler{"test"};
   fidl::WireClient client(std::move(*client_end), loop.dispatcher(), &event_handler);

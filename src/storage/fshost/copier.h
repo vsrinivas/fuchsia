@@ -34,7 +34,7 @@ class Copier {
 
   // Reads all the data at |root_fd| except for the files and directories that match
   // |excluded_paths|.
-  static zx::status<Copier> Read(fbl::unique_fd root_fd,
+  static zx::result<Copier> Read(fbl::unique_fd root_fd,
                                  const std::vector<std::filesystem::path>& excluded_paths = {});
 
   Copier() = default;
@@ -47,7 +47,7 @@ class Copier {
   // Inserts a file into the in-memory structure creating parent directories as necessary.
   // Returns an error if the file already exists or a directory could not be created because a file
   // with the same name already exists.
-  zx::status<> InsertFile(const std::filesystem::path& path, std::string contents);
+  zx::result<> InsertFile(const std::filesystem::path& path, std::string contents);
 
   const DirectoryEntries& entries() const { return entries_; }
 

@@ -52,7 +52,7 @@ zx_status_t zx_vmo_create_contiguous(zx_handle_t bti_handle, size_t size, uint32
   vmo_wrapper->metadata().alignment_log2 = alignment_log2;
   vmo_wrapper->metadata().bti_handle = bti_handle;
   vmo_wrapper->metadata().size = size;
-  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(vmo_wrapper));
+  zx::result add_res = fake_object::FakeHandleTable().Add(std::move(vmo_wrapper));
   if (add_res.is_ok()) {
     *out = add_res.value();
   }
@@ -68,7 +68,7 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out) {
 
   auto vmo_wrapper = fbl::AdoptRef(new VmoWrapper(std::move(vmo)));
   vmo_wrapper->metadata().size = size;
-  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(vmo_wrapper));
+  zx::result add_res = fake_object::FakeHandleTable().Add(std::move(vmo_wrapper));
   if (add_res.is_ok()) {
     *out = add_res.value();
   }
@@ -78,7 +78,7 @@ zx_status_t zx_vmo_create(uint64_t size, uint32_t options, zx_handle_t* out) {
 zx_status_t zx_vmar_map(zx_handle_t vmar_handle, zx_vm_option_t options, uint64_t vmar_offset,
                         zx_handle_t vmo_handle, uint64_t vmo_offset, uint64_t len,
                         zx_vaddr_t* mapped_addr) {
-  zx::status get_res = fake_object::FakeHandleTable().Get(vmo_handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(vmo_handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -93,7 +93,7 @@ zx_status_t zx_vmar_map(zx_handle_t vmar_handle, zx_vm_option_t options, uint64_
 }
 
 zx_status_t zx_vmo_set_cache_policy(zx_handle_t handle, uint32_t cache_policy) {
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
@@ -112,7 +112,7 @@ zx_status_t zx_bti_pin(zx_handle_t bti_handle, uint32_t options, zx_handle_t vmo
     return ZX_ERR_BAD_HANDLE;
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(vmo_handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(vmo_handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }

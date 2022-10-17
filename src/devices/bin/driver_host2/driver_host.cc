@@ -46,7 +46,7 @@ fpromise::promise<inspect::Inspector> DriverHost::Inspect() {
   return fpromise::make_ok_promise(std::move(inspector));
 }
 
-zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoing_directory) {
+zx::result<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoing_directory) {
   const auto service = [this](fidl::ServerEnd<fdh::DriverHost> request) {
     fidl::BindServer(loop_.dispatcher(), std::move(request), this);
   };
@@ -62,7 +62,7 @@ zx::status<> DriverHost::PublishDriverHost(component::OutgoingDirectory& outgoin
 
 void DriverHost::Start(StartRequest& request, StartCompleter::Sync& completer) {
   auto callback = [this, request = std::move(request.driver()),
-                   completer = completer.ToAsync()](zx::status<LoadedDriver> loaded) mutable {
+                   completer = completer.ToAsync()](zx::result<LoadedDriver> loaded) mutable {
     if (loaded.is_error()) {
       completer.Close(loaded.error_value());
       return;
@@ -95,7 +95,7 @@ void DriverHost::GetProcessKoid(GetProcessKoidCompleter::Sync& completer) {
   completer.Reply(zx::ok(info.koid));
 }
 
-zx::status<> DriverHost::StartDriver(fbl::RefPtr<Driver> driver,
+zx::result<> DriverHost::StartDriver(fbl::RefPtr<Driver> driver,
                                      fuchsia_driver_framework::DriverStartArgs start_args,
                                      fdf::Dispatcher dispatcher,
                                      fidl::ServerEnd<fuchsia_driver_host::Driver> request) {

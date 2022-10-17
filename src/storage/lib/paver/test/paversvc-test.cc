@@ -2124,7 +2124,7 @@ TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {
   zx::channel gpt_chan;
   ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
   int block_fd;
-  ASSERT_TRUE(zx::make_status(fdio_fd_create(gpt_chan.release(), &block_fd)).is_ok());
+  ASSERT_TRUE(zx::make_result(fdio_fd_create(gpt_chan.release(), &block_fd)).is_ok());
   fbl::unique_fd block_unique_fd(block_fd);
   fbl::unique_fd fvm_fd(FvmPartitionFormat(devmgr_.devfs_root(), std::move(block_unique_fd), header,
                                            paver::BindOption::Reformat));

@@ -157,7 +157,7 @@ class DLog {
   // Attempt to read a Record from the ring buffer located at |offset|,
   // reporting any diagnostic information to |error_file| in the case of
   // trouble.
-  zx::status<Record> ReadRecord(size_t offset, FILE* error_file = nullptr) const TA_REQ(lock_) {
+  zx::result<Record> ReadRecord(size_t offset, FILE* error_file = nullptr) const TA_REQ(lock_) {
     // Attempt to reassemble the header from the specified offset.
     Record ret;
     zx_status_t status =

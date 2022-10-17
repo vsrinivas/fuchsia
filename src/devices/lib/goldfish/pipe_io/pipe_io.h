@@ -37,7 +37,7 @@ class PipeIo {
   using ReadContents = std::conditional_t<std::is_same_v<T, char>, std::string, std::vector<T>>;
 
   template <class T>
-  using ReadResult = zx::status<ReadContents<T>>;
+  using ReadResult = zx::result<ReadContents<T>>;
 
   // Read |size| elements of type |T| from the pipe.
   // Returns:
@@ -176,7 +176,7 @@ class PipeIo {
   zx_status_t CallTo(cpp20::span<const WriteSrc> write_sources, void* read_dst, size_t read_size,
                      bool blocking = false);
 
-  zx::status<size_t> ReadOnceLocked(void* buf, size_t size) TA_REQ(lock_);
+  zx::result<size_t> ReadOnceLocked(void* buf, size_t size) TA_REQ(lock_);
 
   struct TransferOp {
     struct IoBuffer {
@@ -193,17 +193,17 @@ class PipeIo {
 
   // Run a TransferOp command to read / write data stored in IoBuffer or pinned
   // VMO, as specified in |data|.
-  zx::status<uint32_t> TransferLocked(const TransferOp& op) TA_REQ(lock_);
+  zx::result<uint32_t> TransferLocked(const TransferOp& op) TA_REQ(lock_);
 
   // Run a TransferOp command to read / write multiple data stored in IoBuffer
   // or pinned VMO.
   // If there are both kWrite and kRead in |ops|, all kWrite ops must occur
   // before kRead ops. Otherwise it will return |ZX_ERR_INVALID_ARGS|.
-  zx::status<uint32_t> TransferLocked(cpp20::span<const TransferOp> ops) TA_REQ(lock_);
+  zx::result<uint32_t> TransferLocked(cpp20::span<const TransferOp> ops) TA_REQ(lock_);
 
   // Once the command buffer is set up, this runs the transfer command on
   // goldfish pipe device, and will request a wake-up if it gets back pressure.
-  zx::status<uint32_t> ExecTransferCommandLocked(bool has_write, bool has_read) TA_REQ(lock_);
+  zx::result<uint32_t> ExecTransferCommandLocked(bool has_write, bool has_read) TA_REQ(lock_);
 
   fbl::Mutex lock_;
 

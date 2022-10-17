@@ -20,7 +20,7 @@ using MsiTest = RootResourceFixture;
 
 namespace {
 
-zx::status<std::pair<zx::vmo, void*>> GetMsiTestVmo() {
+zx::result<std::pair<zx::vmo, void*>> GetMsiTestVmo() {
   const size_t vmo_size = zx_system_get_page_size();
   auto result = vmo_test::GetTestPhysVmo(vmo_size);
   if (result.is_error()) {

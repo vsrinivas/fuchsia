@@ -34,7 +34,7 @@ class FakeBackendForNetdeviceTest : public FakeBackend {
   void Terminate() override { sync_completion_signal(&completion_); }
   // We'll trigger interrupts manually during testing, keep the interrupt thread
   // locked until termination.
-  zx::status<uint32_t> WaitForInterrupt() override {
+  zx::result<uint32_t> WaitForInterrupt() override {
     sync_completion_wait(&completion_, ZX_TIME_INFINITE);
     return zx::ok(0);
   }

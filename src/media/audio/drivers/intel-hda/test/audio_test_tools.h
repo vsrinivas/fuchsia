@@ -48,7 +48,7 @@ std::unique_ptr<audio::utils::AudioOutput> CreateAndOpenOutputStream(const char*
 std::unique_ptr<audio::utils::AudioInput> CreateAndOpenInputStream(const char* device);
 
 // Fetch the string |id| from the given audio stream / device node.
-zx::status<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
+zx::result<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
                                               audio_stream_string_id_t id);
 
 }  // namespace audio::intel_hda

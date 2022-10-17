@@ -83,7 +83,7 @@ void RaisePacketLimitException(zx_koid_t koid, size_t num_packets) {
 }  // namespace.
 
 PortPacket* PortPacketCacheAllocator::Alloc() {
-  zx::status result = packet_allocator.Allocate(nullptr, this);
+  zx::result result = packet_allocator.Allocate(nullptr, this);
   if (result.is_error()) {
     printf("WARNING: Could not allocate new port packet: %d\n", result.error_value());
     return nullptr;
@@ -504,7 +504,7 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
 void PortDispatcher::InitializeCacheAllocators(uint32_t /*level*/) {
   const size_t observer_reserve_pages = gBootOptions->port_observer_reserve_pages;
 
-  zx::status observer_result =
+  zx::result observer_result =
       object_cache::ObjectCache<PortObserver, object_cache::Option::PerCpu>::Create(
           observer_reserve_pages);
 
@@ -515,7 +515,7 @@ void PortDispatcher::InitializeCacheAllocators(uint32_t /*level*/) {
   // overridden on the command line.
   const size_t packet_reserve_pages = gBootOptions->port_packet_reserve_pages;
 
-  zx::status packet_result =
+  zx::result packet_result =
       object_cache::ObjectCache<PortPacket, object_cache::Option::PerCpu>::Create(
           packet_reserve_pages);
 

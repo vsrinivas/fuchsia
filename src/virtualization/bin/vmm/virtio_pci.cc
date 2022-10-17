@@ -448,7 +448,7 @@ zx_status_t VirtioPci::ConfigBarWrite(uint64_t addr, const IoValue& value) {
 
 zx_status_t VirtioPci::SetupCaps() {
   // Install the device configuration BAR.
-  zx::status<size_t> config_bar =
+  zx::result<size_t> config_bar =
       AddBar(PciBar(this, kVirtioPciDeviceCfgBase + device_config_->config_size,
                     TrapType::MMIO_SYNC, &config_bar_callback_));
   if (config_bar.is_error()) {
@@ -458,7 +458,7 @@ zx_status_t VirtioPci::SetupCaps() {
 
   // Install the device notification BAR.
   size_t notify_size = device_config_->num_queues * kQueueNotifyMultiplier;
-  zx::status<size_t> notify_bar =
+  zx::result<size_t> notify_bar =
       AddBar(PciBar(this, notify_size, TrapType::MMIO_BELL, &notify_bar_callback_));
   if (notify_bar.is_error()) {
     return notify_bar.error_value();

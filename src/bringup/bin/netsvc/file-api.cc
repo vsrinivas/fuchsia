@@ -30,7 +30,7 @@ FileApi::FileApi(bool is_zedboot, std::unique_ptr<NetCopyInterface> netcp,
   ZX_ASSERT(paver_ != nullptr);
 
   if (!sysinfo_) {
-    zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+    zx::result client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
     if (client_end.is_ok()) {
       sysinfo_ = std::move(client_end.value());
     }
@@ -114,7 +114,7 @@ tftp_status FileApi::Read(void* data, size_t* length, off_t offset) {
 
   switch (type_) {
     case NetfileType::kBoardInfo: {
-      zx::status<> status = ReadBoardInfo(sysinfo_, data, offset, length);
+      zx::result<> status = ReadBoardInfo(sysinfo_, data, offset, length);
       if (status.is_error()) {
         printf("netsvc: Failed to read board information: %s\n", status.status_string());
         return TFTP_ERR_BAD_STATE;
@@ -153,7 +153,7 @@ tftp_status FileApi::Write(const void* data, size_t* length, off_t offset) {
       return paver_->Write(data, length, offset);
 
     case NetfileType::kBoardInfo: {
-      zx::status status = CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length);
+      zx::result status = CheckBoardName(sysinfo_, reinterpret_cast<const char*>(data), *length);
       if (status.is_error()) {
         printf("netsvc: Failed to check board name: %s\n", status.status_string());
         return TFTP_ERR_BAD_STATE;

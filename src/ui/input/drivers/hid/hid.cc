@@ -49,7 +49,7 @@ std::map<HidPageUsage, const std::string> kBindPropKeyMap({
     {MAKE_KEY(Sensor, Undefined), bind_fuchsia_hid::SENSOR},  // only match page
 });
 
-zx::status<HidPageUsage> FindProp(HidPageUsage key) {
+zx::result<HidPageUsage> FindProp(HidPageUsage key) {
   if (kBindPropKeyMap.find(key) != kBindPropKeyMap.end()) {
     return zx::ok(key);
   }

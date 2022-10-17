@@ -31,12 +31,12 @@ class EthertapClientTest : public gtest::RealLoopFixture {
   void SetUp() override {
     services_ = sys::ServiceDirectory::CreateFromNamespace();
 
-    zx::status result = StartDriverTestRealm();
+    zx::result result = StartDriverTestRealm();
     ASSERT_OK(result.status_value()) << "driver test realm failed to start";
     devfs_root_.reset(std::move(result.value()));
   }
 
-  zx::status<fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr>> GetDevmgr() {
+  zx::result<fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr>> GetDevmgr() {
     fidl::InterfaceHandle<fuchsia::netemul::devmgr::IsolatedDevmgr> devmgr;
     fidl::WireResult result =
         fidl::WireCall(devfs_root_.directory())
@@ -53,7 +53,7 @@ class EthertapClientTest : public gtest::RealLoopFixture {
     EthertapConfig config(fxl::StringPrintf("etap-%lu", taps_.size()));
     config.tap_cfg.mtu = TEST_MTU_SIZE;
     config.tap_cfg.options = fuchsia::hardware::ethertap::OPT_TRACE;
-    zx::status status = GetDevmgr();
+    zx::result status = GetDevmgr();
     ASSERT_OK(status.status_value()) << "failed to connect request to /dev";
     config.devfs_root = status.value().TakeChannel();
 

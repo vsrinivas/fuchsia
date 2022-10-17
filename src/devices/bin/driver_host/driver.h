@@ -20,7 +20,7 @@
 class Driver : public fbl::RefCounted<Driver> {
  public:
   // |zx_driver| must outlive |Driver|.
-  static zx::status<fbl::RefPtr<Driver>> Create(zx_driver_t* zx_driver);
+  static zx::result<fbl::RefPtr<Driver>> Create(zx_driver_t* zx_driver);
 
   explicit Driver(zx_driver_t* zx_driver) : zx_driver_(zx_driver) {}
 

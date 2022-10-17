@@ -14,9 +14,7 @@ bool Constructor() {
   BEGIN_TEST;
 
   // Construct, but don't initialize.
-  {
-    Cbuf cbuf;
-  }
+  { Cbuf cbuf; }
 
   // Construct and initialize.
   {
@@ -48,7 +46,7 @@ bool ReadWrite() {
 
   // Read them back.
   for (char c : data) {
-    zx::status<char> result = cbuf.ReadChar(true);
+    zx::result<char> result = cbuf.ReadChar(true);
     ASSERT_TRUE(result.is_ok());
     ASSERT_EQ(result.value(), c);
   }
@@ -71,7 +69,7 @@ bool ReadWriteRace() {
   thread_start_routine fn = [](void* arg) -> int {
     Cbuf& cbuf = *reinterpret_cast<Cbuf*>(arg);
     while (true) {
-      zx::status<char> result = cbuf.ReadChar(true);
+      zx::result<char> result = cbuf.ReadChar(true);
       if (!result.is_ok()) {
         return result.error_value();
       }

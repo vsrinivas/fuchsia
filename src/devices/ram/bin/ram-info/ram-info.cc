@@ -144,7 +144,7 @@ void CsvPrinter::Print(const ram_metrics::wire::BandwidthInfo& info) const {
   }
 }
 
-zx::status<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> ParseChannelString(
+zx::result<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> ParseChannelString(
     std::string_view str) {
   if (str[0] == '\0') {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -158,7 +158,7 @@ zx::status<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> ParseChan
     char* endptr;
     channel = strtoul(next_channel.data(), &endptr, 0);
     if (endptr > &(*next_channel.cend())) {
-      return zx::error_status(ZX_ERR_BAD_STATE);
+      return zx::error_result(ZX_ERR_BAD_STATE);
     }
 
     next_channel = endptr;
@@ -173,7 +173,7 @@ zx::status<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> ParseChan
 
     // Only a comma separator is allowed.
     if (next_channel[0] != ',') {
-      return zx::error_status(ZX_ERR_INVALID_ARGS);
+      return zx::error_result(ZX_ERR_INVALID_ARGS);
     }
 
     next_channel = next_channel.data() + 1;
@@ -181,7 +181,7 @@ zx::status<std::array<uint64_t, ram_metrics::wire::kMaxCountChannels>> ParseChan
 
   // Make sure there are no trailing characters.
   if (next_channel[0] != '\0') {
-    return zx::error_status(ZX_ERR_INVALID_ARGS);
+    return zx::error_result(ZX_ERR_INVALID_ARGS);
   }
 
   return zx::ok(channels);

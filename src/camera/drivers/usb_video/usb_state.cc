@@ -57,7 +57,7 @@ void print_controls(const usb_video_vc_probe_and_commit_controls& proposal) {
   zxlogf(DEBUG, "dwMaxPayloadTransferSize: %u", proposal.dwMaxPayloadTransferSize);
 }
 
-zx::status<usb_video_vc_probe_and_commit_controls> ClearIfIoErrors(zx_status_t status,
+zx::result<usb_video_vc_probe_and_commit_controls> ClearIfIoErrors(zx_status_t status,
                                                                    usb_protocol_t* usb) {
   if (status == ZX_ERR_IO_REFUSED || status == ZX_ERR_IO_INVALID) {
     usb_reset_endpoint(usb, 0);
@@ -68,7 +68,7 @@ zx::status<usb_video_vc_probe_and_commit_controls> ClearIfIoErrors(zx_status_t s
 
 // TODO(fxbug.dev/104233): Use of dwMaxVideoFrameBufferSize for certain formats has been
 // deprecated.  The dwMaxVideoFrameSize field obtained here should be used instead.
-zx::status<usb_video_vc_probe_and_commit_controls> ProbeAndCommit(usb_protocol_t* usb,
+zx::result<usb_video_vc_probe_and_commit_controls> ProbeAndCommit(usb_protocol_t* usb,
                                                                   uint8_t iface_num,
                                                                   uint8_t format_index,
                                                                   uint8_t frame_index,
@@ -152,7 +152,7 @@ std::string UsbState::State2String(UsbState::StreamingState state) {
 }
 
 //  static
-zx::status<UsbRequest> UsbRequest::Create(usb_protocol_t* usb, uint8_t ep_addr, uint64_t size) {
+zx::result<UsbRequest> UsbRequest::Create(usb_protocol_t* usb, uint8_t ep_addr, uint64_t size) {
   uint64_t parent_req_size = usb_get_request_size(usb);
   if (!parent_req_size) {
     return zx::error(ZX_ERR_INTERNAL);
@@ -322,7 +322,7 @@ zx_status_t UsbState::Allocate(uint64_t size, int ep_type) {
   zxlogf(DEBUG, "allocating %d usb requests of size %lu", MAX_OUTSTANDING_REQS, size);
 
   for (uint32_t i = 0; i < MAX_OUTSTANDING_REQS; i++) {
-    zx::status<UsbRequest> req_or = UsbRequest::Create(&usb_, usb_ep_addr_, size);
+    zx::result<UsbRequest> req_or = UsbRequest::Create(&usb_, usb_ep_addr_, size);
     if (req_or.is_error()) {
       zxlogf(ERROR, "usb_request_alloc failed: %d", req_or.error_value());
       allocated_requests_.clear();

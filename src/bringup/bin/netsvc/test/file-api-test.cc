@@ -69,7 +69,7 @@ class FakeNetCopy : public netsvc::NetCopyInterface {
 class FakeSysinfo : public fidl::WireServer<fuchsia_sysinfo::SysInfo> {
  public:
   FakeSysinfo(async_dispatcher_t* dispatcher) {
-    zx::status server_end = fidl::CreateEndpoints(&svc_chan_);
+    zx::result server_end = fidl::CreateEndpoints(&svc_chan_);
     ASSERT_OK(server_end.status_value());
     fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end.value()), this);
   }

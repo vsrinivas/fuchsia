@@ -68,13 +68,13 @@ void ConstructMexecDataZbi(uint level) {
 // After the VM is initialized so that we can allocate.
 LK_INIT_HOOK(construct_mexec_data_zbi, ConstructMexecDataZbi, LK_INIT_LEVEL_VM)
 
-zx::status<size_t> WriteMexecData(ktl::span<ktl::byte> buffer) {
+zx::result<size_t> WriteMexecData(ktl::span<ktl::byte> buffer) {
   // Storage or write errors resulting from a span-backed Image imply buffer
   // overflow.
-  constexpr auto error = [](const auto& err) -> zx::status<size_t> {
+  constexpr auto error = [](const auto& err) -> zx::result<size_t> {
     return zx::error{err.storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL};
   };
-  constexpr auto extend_error = [](const auto& err) -> zx::status<size_t> {
+  constexpr auto extend_error = [](const auto& err) -> zx::result<size_t> {
     return zx::error{err.write_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL};
   };
 

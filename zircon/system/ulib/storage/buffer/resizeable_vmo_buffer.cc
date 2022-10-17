@@ -6,16 +6,16 @@
 
 namespace storage {
 
-zx::status<> ResizeableVmoBuffer::Attach(const char* name, storage::VmoidRegistry* device) {
+zx::result<> ResizeableVmoBuffer::Attach(const char* name, storage::VmoidRegistry* device) {
   ZX_DEBUG_ASSERT(!vmoid_.IsAttached());
   zx_status_t status = vmo_.CreateAndMap(block_size_, name);
   if (status != ZX_OK)
     return zx::error(status);
-  return zx::make_status(device->BlockAttachVmo(vmo_.vmo(), &vmoid_));
+  return zx::make_result(device->BlockAttachVmo(vmo_.vmo(), &vmoid_));
 }
 
-zx::status<> ResizeableVmoBuffer::Detach(storage::VmoidRegistry* device) {
-  return zx::make_status(device->BlockDetachVmo(std::move(vmoid_)));
+zx::result<> ResizeableVmoBuffer::Detach(storage::VmoidRegistry* device) {
+  return zx::make_result(device->BlockDetachVmo(std::move(vmoid_)));
 }
 
 zx_status_t ResizeableVmoBuffer::Zero(size_t index, size_t count) {

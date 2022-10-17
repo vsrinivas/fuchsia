@@ -35,7 +35,7 @@ static bool hypervisor_supported() {
   return true;
 }
 
-static zx::status<hypervisor::GuestPhysicalAspace> create_gpas() {
+static zx::result<hypervisor::GuestPhysicalAspace> create_gpas() {
   auto gpa = hypervisor::GuestPhysicalAspace::Create();
 #if ARCH_ARM64
   if (gpa.is_ok()) {

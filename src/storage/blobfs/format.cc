@@ -38,7 +38,7 @@ std::optional<fuchsia_hardware_block_volume_VolumeManagerInfo> TryGetVolumeManag
 }
 
 // Generates a superblock that will cover the entire device described by |block_info|.
-zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& block_info,
+zx::result<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& block_info,
                                         const FilesystemOptions& options) {
   uint64_t blocks = (block_info.block_size * block_info.block_count) / kBlobfsBlockSize;
   Superblock superblock;
@@ -56,7 +56,7 @@ zx::status<Superblock> FormatSuperblock(const fuchsia_hardware_block_BlockInfo& 
 
 // Generates a FVM-aware superblock with the minimum number of slices reserved for each metadata
 // region.
-zx::status<Superblock> FormatSuperblockFVM(
+zx::result<Superblock> FormatSuperblockFVM(
     BlockDevice* device, const fuchsia_hardware_block_volume_VolumeManagerInfo& fvm_info,
     const FilesystemOptions& options) {
   Superblock superblock;
@@ -299,7 +299,7 @@ zx_status_t FormatFilesystem(BlockDevice* device, const FilesystemOptions& optio
     return ZX_ERR_IO_INVALID;
   }
 
-  zx::status<Superblock> superblock_or;
+  zx::result<Superblock> superblock_or;
   if (auto maybe_volume_info = TryGetVolumeManagerInfo(*device); maybe_volume_info.has_value()) {
     superblock_or = FormatSuperblockFVM(device, maybe_volume_info.value(), options);
   } else {

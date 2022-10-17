@@ -15,7 +15,7 @@ namespace acpi::mock {
 class Device : public fidl::WireServer<fuchsia_hardware_acpi::Device> {
  public:
   // Create an |acpi::Client| that will talk to this |Device|.
-  zx::status<acpi::Client> CreateClient(async_dispatcher_t *dispatcher);
+  zx::result<acpi::Client> CreateClient(async_dispatcher_t *dispatcher);
 
   // MOCK_FN_IMPL[12](name, default_error) creates:
   // * a |name|Fn type that is a callback with either one or two arguments.

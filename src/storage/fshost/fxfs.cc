@@ -56,7 +56,7 @@ constexpr char kFxfsDataVolumeName[] = "data";
 // zxcrypt is the legacy crypto mechanism for minfs, which doesn't have its own encryption.
 constexpr char kFxfsDataVolumeKeyName[] = "zxcrypt";
 
-zx::status<crypto::Bytes> GetKeyFromKms(std::string_view key_name) {
+zx::result<crypto::Bytes> GetKeyFromKms(std::string_view key_name) {
   // Zero-pad the key name.  key_info_buf does not need to be null-terminated.
   if (key_name.length() > kms_stateless::kExpectedKeyInfoSize) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -78,7 +78,7 @@ zx::status<crypto::Bytes> GetKeyFromKms(std::string_view key_name) {
 }
 
 // Generates a key deterministically from |key_name|.
-zx::status<crypto::Bytes> GenerateInsecureKey(std::string_view key_name) {
+zx::result<crypto::Bytes> GenerateInsecureKey(std::string_view key_name) {
   if (key_name.length() == 0 || key_name.length() > key_bag::AES128_KEY_SIZE) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -92,7 +92,7 @@ zx::status<crypto::Bytes> GenerateInsecureKey(std::string_view key_name) {
   return zx::ok(std::move(key));
 }
 
-zx::status<> InitCryptClient(fidl::UnownedClientEnd<fuchsia_fxfs::CryptManagement> crypt,
+zx::result<> InitCryptClient(fidl::UnownedClientEnd<fuchsia_fxfs::CryptManagement> crypt,
                              crypto::Bytes data, crypto::Bytes metadata) {
   if (auto result = fidl::WireCall(crypt)->AddWrappingKey(
           0, fidl::VectorView<unsigned char>::FromExternal(data.get(), data.len()));
@@ -121,7 +121,7 @@ zx::status<> InitCryptClient(fidl::UnownedClientEnd<fuchsia_fxfs::CryptManagemen
   return zx::ok();
 }
 
-zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
+zx::result<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
     fs_management::StartedMultiVolumeFilesystem& fs, const fshost_config::Config& config,
     const bool create) {
   auto volume_fn = [&](const char* name, zx::channel crypt) {
@@ -219,8 +219,8 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
       create ? ComputeEffectiveCreatePolicy(*ksp) : ComputeEffectiveUnsealPolicy(*ksp);
   for (const auto& key_source : key_sources) {
     FX_LOGS(INFO) << "Trying key policy " << KeySourceString(key_source);
-    std::function<zx::status<crypto::Bytes>(const char*)> key_fn;
-    zx::status<crypto::Bytes> unwrap_key_bytes;
+    std::function<zx::result<crypto::Bytes>(const char*)> key_fn;
+    zx::result<crypto::Bytes> unwrap_key_bytes;
     switch (key_source) {
       case KeySource::kTeeSource: {
         unwrap_key_bytes = GetKeyFromKms(kFxfsDataVolumeKeyName);
@@ -304,7 +304,7 @@ zx::status<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
 
 }  // namespace
 
-zx::status<std::pair<fs_management::StartedMultiVolumeFilesystem, fs_management::MountedVolume*>>
+zx::result<std::pair<fs_management::StartedMultiVolumeFilesystem, fs_management::MountedVolume*>>
 FormatFxfsAndInitDataVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> block_device,
                             const fshost_config::Config& config) {
   auto device_path = GetDevicePath(
@@ -350,13 +350,13 @@ FormatFxfsAndInitDataVolume(fidl::ClientEnd<fuchsia_hardware_block::Block> block
   return zx::ok(std::make_pair(std::move(*fs), *volume));
 }
 
-zx::status<fs_management::MountedVolume*> UnwrapDataVolume(
+zx::result<fs_management::MountedVolume*> UnwrapDataVolume(
     fs_management::StartedMultiVolumeFilesystem& fs, const fshost_config::Config& config) {
   return UnwrapOrInitDataVolume(fs, config, false);
 }
 
 // Initializes the data volume in |fs|, which should be freshly reformatted.
-zx::status<fs_management::MountedVolume*> InitDataVolume(
+zx::result<fs_management::MountedVolume*> InitDataVolume(
     fs_management::StartedMultiVolumeFilesystem& fs, const fshost_config::Config& config) {
   return UnwrapOrInitDataVolume(fs, config, true);
 }

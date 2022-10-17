@@ -29,7 +29,7 @@ class BlockDevice : public storage::VmoidRegistry {
   virtual zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) = 0;
 
   // Queries the device path using the fuchsia.device.Controller interface.
-  virtual zx::status<std::string> GetDevicePath() const = 0;
+  virtual zx::result<std::string> GetDevicePath() const = 0;
 
   // fuchsia.device.block interface:
   virtual zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const = 0;

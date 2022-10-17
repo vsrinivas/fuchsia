@@ -10,14 +10,14 @@
 
 namespace media_audio {
 
-zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>>
+zx::result<std::pair<std::shared_ptr<Clock>, zx::clock>>
 SyntheticClockFactory::CreateGraphControlledClock(std::string_view name) {
   auto clock = realm_->CreateClock(name, Clock::kExternalDomain, /*adjustable=*/true);
   auto handle = clock->DuplicateZxClockUnreadable();
   return zx::ok(std::make_pair(std::move(clock), std::move(handle)));
 }
 
-zx::status<std::shared_ptr<Clock>> SyntheticClockFactory::CreateWrappedClock(zx::clock handle,
+zx::result<std::shared_ptr<Clock>> SyntheticClockFactory::CreateWrappedClock(zx::clock handle,
                                                                              std::string_view name,
                                                                              uint32_t domain,
                                                                              bool adjustable) {

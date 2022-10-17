@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_MULTITHREADED_CHUNKED_COMPRESSION_CHUNKED_COMPRESSOR_H_
-#define SRC_LIB_MULTITHREADED_CHUNKED_COMPRESSION_CHUNKED_COMPRESSOR_H_
+#ifndef SRC_LIB_CHUNKED_COMPRESSION_MULTITHREADED_CHUNKED_COMPRESSOR_H_
+#define SRC_LIB_CHUNKED_COMPRESSION_MULTITHREADED_CHUNKED_COMPRESSOR_H_
 
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
@@ -24,7 +24,7 @@ class MultithreadedChunkedCompressor {
   ~MultithreadedChunkedCompressor();
 
   // Compresses |input| and returns the compressed result.
-  zx::status<std::vector<uint8_t>> Compress(const CompressionParams& params,
+  zx::result<std::vector<uint8_t>> Compress(const CompressionParams& params,
                                             cpp20::span<const uint8_t> input);
 
  private:
@@ -34,4 +34,4 @@ class MultithreadedChunkedCompressor {
 
 }  // namespace chunked_compression
 
-#endif  // SRC_LIB_MULTITHREADED_CHUNKED_COMPRESSION_CHUNKED_COMPRESSOR_H_
+#endif  // SRC_LIB_CHUNKED_COMPRESSION_MULTITHREADED_CHUNKED_COMPRESSOR_H_

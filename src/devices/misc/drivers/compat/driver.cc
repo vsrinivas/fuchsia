@@ -439,7 +439,7 @@ fpromise::promise<void, zx_status_t> Driver::ConnectToParentDevices() {
   compat::ConnectToParentDevices(
       dispatcher(), context().incoming().get(),
       [this, completer = std::move(bridge.completer)](
-          zx::status<std::vector<compat::ParentDevice>> devices) mutable {
+          zx::result<std::vector<compat::ParentDevice>> devices) mutable {
         if (devices.is_error()) {
           completer.complete_error(devices.error_value());
           return;
@@ -530,7 +530,7 @@ void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file,
   inner_logger_.logvf(severity, tag, file, line, msg, args);
 }
 
-zx::status<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, size_t* size) {
+zx::result<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, size_t* size) {
   std::string full_filename = "/pkg/lib/firmware/";
   full_filename.append(filename);
   fpromise::result connect_result = fpromise::run_single_threaded(
@@ -589,7 +589,7 @@ zx_status_t Driver::AddDevice(Device* parent, device_add_args_t* args, zx_device
   return ZX_OK;
 }
 
-zx::status<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const char* name) {
+zx::result<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const char* name) {
   auto profile_client = context().incoming()->Connect<fuchsia_scheduler::ProfileProvider>();
   if (!profile_client.is_ok()) {
     return profile_client.take_error();
@@ -610,7 +610,7 @@ zx::status<zx::profile> Driver::GetSchedulerProfile(uint32_t priority, const cha
   return zx::ok(std::move(response.profile));
 }
 
-zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t deadline,
+zx::result<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t deadline,
                                                    uint64_t period, const char* name) {
   auto profile_client = context().incoming()->Connect<fuchsia_scheduler::ProfileProvider>();
   if (!profile_client.is_ok()) {
@@ -633,7 +633,7 @@ zx::status<zx::profile> Driver::GetDeadlineProfile(uint64_t capacity, uint64_t d
   return zx::ok(std::move(response.profile));
 }
 
-zx::status<> Driver::SetProfileByRole(zx::unowned_thread thread, std::string_view role) {
+zx::result<> Driver::SetProfileByRole(zx::unowned_thread thread, std::string_view role) {
   auto profile_client = context().incoming()->Connect<fuchsia_scheduler::ProfileProvider>();
   if (profile_client.is_error()) {
     return profile_client.take_error();
@@ -658,7 +658,7 @@ zx::status<> Driver::SetProfileByRole(zx::unowned_thread thread, std::string_vie
   return zx::ok();
 }
 
-zx::status<std::string> Driver::GetVariable(const char* name) {
+zx::result<std::string> Driver::GetVariable(const char* name) {
   auto boot_args = context().incoming()->Connect<fuchsia_boot::Arguments>();
   if (boot_args.is_error()) {
     return boot_args.take_error();
@@ -671,7 +671,7 @@ zx::status<std::string> Driver::GetVariable(const char* name) {
   return zx::ok(std::string(result->value.data(), result->value.size()));
 }
 
-zx::status<fit::deferred_callback> Driver::ExportToDevfsSync(
+zx::result<fit::deferred_callback> Driver::ExportToDevfsSync(
     fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
     std::string name, std::string_view topological_path, uint32_t proto_id) {
   zx_status_t add_status = devfs_dir_->AddEntry(name, dev_node);

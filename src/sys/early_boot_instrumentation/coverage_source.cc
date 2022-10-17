@@ -55,7 +55,7 @@ struct ExportedFd {
   std::string export_name;
 };
 
-zx::status<> Export(vfs::PseudoDir& out_dir, cpp20::span<ExportedFd> exported_fds) {
+zx::result<> Export(vfs::PseudoDir& out_dir, cpp20::span<ExportedFd> exported_fds) {
   for (const auto& [fd, export_as] : exported_fds) {
     // Get the underlying vmo of the fd.
     zx::vmo vmo;
@@ -91,7 +91,7 @@ struct OpenData {
   zx::unowned_channel service_request;
 };
 
-zx::status<OpenData> GetOpenData(cpp20::span<uint8_t> message, cpp20::span<zx_handle_t> handles) {
+zx::result<OpenData> GetOpenData(cpp20::span<uint8_t> message, cpp20::span<zx_handle_t> handles) {
   if (message.size() < sizeof(fuchsia_io_DirectoryOpenRequest)) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
@@ -115,7 +115,7 @@ struct PublishedData {
   size_t content_size;
 };
 
-zx::status<PublishedData> GetPublishedData(cpp20::span<uint8_t> message,
+zx::result<PublishedData> GetPublishedData(cpp20::span<uint8_t> message,
                                            cpp20::span<zx_handle_t> handles) {
   if (message.size() < sizeof(fuchsia_debugdata_PublisherPublishRequestMessage)) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
@@ -162,7 +162,7 @@ struct ChannelMessageInfo {
   uint32_t outstanding_handles = 0;
 };
 
-zx::status<ChannelMessageInfo> GetChannelOutstandingBytesAndHandles(const zx::channel& channel) {
+zx::result<ChannelMessageInfo> GetChannelOutstandingBytesAndHandles(const zx::channel& channel) {
   ChannelMessageInfo info;
   if (auto res = channel.read(0, nullptr, nullptr, 0, 0, &info.outstanding_bytes,
                               &info.outstanding_handles);
@@ -236,7 +236,7 @@ vfs::PseudoDir& GetOrCreate(std::string_view sink_name, DataType type, SinkDirMa
 
 }  // namespace
 
-zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap& sink_map) {
+zx::result<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap& sink_map) {
   std::vector<ExportedFd> exported_fds;
 
   fbl::unique_fd kernel_profile(openat(kernel_data_dir.get(), kKernelProfRaw.data(), O_RDONLY));
@@ -256,7 +256,7 @@ zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap
   return Export(GetOrCreate(kLlvmSink, DataType::kDynamic, sink_map), exported_fds);
 }
 
-zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map) {
+zx::result<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map) {
   std::vector<ExportedFd> exported_fds;
 
   fbl::unique_fd phys_profile(openat(physboot_data_dir.get(), kPhysbootProfRaw.data(), O_RDONLY));

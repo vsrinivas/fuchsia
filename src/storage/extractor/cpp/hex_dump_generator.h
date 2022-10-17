@@ -33,14 +33,14 @@ struct HexDumpGeneratorOptions {
 class HexDumpGenerator {
  public:
   // Creates a streamable hexdump of |input| file descriptor.
-  static zx::status<std::unique_ptr<HexDumpGenerator>> Create(fbl::unique_fd input,
+  static zx::result<std::unique_ptr<HexDumpGenerator>> Create(fbl::unique_fd input,
                                                               HexDumpGeneratorOptions options);
 
   // Returns the next hexdump line.
   // Note: The function may return 2 lines when the current line happens to be
   // duplicate of previous line.
   // Returns ZX_ERR_STOP if we are done dumping all of the data in the file.
-  zx::status<std::string> GetNextLine();
+  zx::result<std::string> GetNextLine();
 
   // Returns true if all the contents of the file have been hex-dumped.
   bool Done() const;
@@ -50,7 +50,7 @@ class HexDumpGenerator {
       : input_(std::move(input)), options_(std::move(options)), file_size_(file_size) {}
 
   // Returns hexdump of the data in |buffer| which is read from |input_| from offset |offset|.
-  zx::status<std::string> DumpToString(const uint8_t* buffer, off_t offset, size_t size);
+  zx::result<std::string> DumpToString(const uint8_t* buffer, off_t offset, size_t size);
 
   // A helper function to generate string considering options like |dump_offset_|, |tag_|, etc.
   std::string BuildLine(const std::string& hex_string, off_t offset, size_t size) const;

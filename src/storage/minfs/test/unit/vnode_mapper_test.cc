@@ -55,7 +55,7 @@ using VnodeIndirectMapperTest = VnodeMapperTestFixture;
 TEST_F(VnodeIndirectMapperTest, FirstIndirectBlockIsMapped) {
   vnode_->GetMutableInode()->inum[0] = 10;
   VnodeIndirectMapper mapper(vnode_.get());
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
   EXPECT_EQ(runner_->minfs().Info().dat_block + 10, device_range.value().block());
@@ -66,7 +66,7 @@ TEST_F(VnodeIndirectMapperTest, CoalescedBlocks) {
   vnode_->GetMutableInode()->inum[0] = 10;
   vnode_->GetMutableInode()->inum[1] = 11;
   VnodeIndirectMapper mapper(vnode_.get());
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_EQ(runner_->minfs().Info().dat_block + 10, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 2ul);
@@ -75,7 +75,7 @@ TEST_F(VnodeIndirectMapperTest, CoalescedBlocks) {
 TEST_F(VnodeIndirectMapperTest, LastIndirectBlockIsMapped) {
   vnode_->GetMutableInode()->inum[kMinfsIndirect - 1] = 17;
   VnodeIndirectMapper mapper(vnode_.get());
-  zx::status<DeviceBlockRange> device_range =
+  zx::result<DeviceBlockRange> device_range =
       mapper.Map(BlockRange(kMinfsIndirect - 1, kMinfsIndirect));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
@@ -85,7 +85,7 @@ TEST_F(VnodeIndirectMapperTest, LastIndirectBlockIsMapped) {
 TEST_F(VnodeIndirectMapperTest, IndirectBlocksAreUnmapped) {
   vnode_->GetMutableInode()->inum[kMinfsIndirect - 1] = 17;
   VnodeIndirectMapper mapper(vnode_.get());
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(3, kMinfsIndirect));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(3, kMinfsIndirect));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_FALSE(device_range.value().IsMapped());
   EXPECT_EQ(kMinfsIndirect - 3 - 1, device_range.value().count());
@@ -94,7 +94,7 @@ TEST_F(VnodeIndirectMapperTest, IndirectBlocksAreUnmapped) {
 TEST_F(VnodeIndirectMapperTest, DoubleIndirectBlockIsMapped) {
   vnode_->GetMutableInode()->dinum[0] = 17;
   VnodeIndirectMapper mapper(vnode_.get());
-  zx::status<DeviceBlockRange> device_range =
+  zx::result<DeviceBlockRange> device_range =
       mapper.Map(BlockRange(kMinfsIndirect, kMinfsIndirect + 1));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
@@ -110,7 +110,7 @@ TEST_F(VnodeIndirectMapperTest, DoubleIndirectFirstLeafBlockIsMapped) {
                   .is_ok());
   VnodeIndirectMapper mapper(vnode_.get());
   uint64_t block = kMinfsIndirect + kMinfsDoublyIndirect;
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_EQ(runner_->minfs().Info().dat_block + 18, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
@@ -127,7 +127,7 @@ TEST_F(VnodeIndirectMapperTest, DoubleIndirectLastLeafBlockIsMapped) {
   VnodeIndirectMapper mapper(vnode_.get());
   uint64_t block =
       kMinfsIndirect + kMinfsDoublyIndirect + kMinfsDirectPerIndirect * kMinfsDoublyIndirect - 1;
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_EQ(runner_->minfs().Info().dat_block + 21, device_range.value().block());
   EXPECT_EQ(device_range.value().count(), 1ul);
@@ -137,7 +137,7 @@ TEST_F(VnodeIndirectMapperTest, BlockOutOfRange) {
   VnodeIndirectMapper mapper(vnode_.get());
   uint64_t block =
       kMinfsIndirect + kMinfsDoublyIndirect + kMinfsDirectPerIndirect * kMinfsDoublyIndirect;
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 1));
   EXPECT_EQ(device_range.status_value(), ZX_ERR_OUT_OF_RANGE);
 }
 
@@ -186,7 +186,7 @@ TEST_F(VnodeIndirectMapperTest, MapForWriteAllocatesBlock) {
   VnodeIndirectMapper mapper(vnode_.get());
   FakeTransaction transaction(runner_->minfs().GetMutableBcache());
   bool allocated = false;
-  zx::status<DeviceBlockRange> device_range =
+  zx::result<DeviceBlockRange> device_range =
       mapper.MapForWrite(&transaction, BlockRange(10, 10 + 2), &allocated);
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   EXPECT_EQ(runner_->minfs().Info().dat_block + FakeTransaction::kFirstBlock,
@@ -200,11 +200,11 @@ using VnodeMapperTest = VnodeMapperTestFixture;
 TEST_F(VnodeMapperTest, VnodeMapperDirectBlocksAreMapped) {
   vnode_->GetMutableInode()->dnum[0] = 17;
   VnodeMapper mapper(vnode_.get());
-  zx::status<std::pair<blk_t, uint64_t>> mapping = mapper.MapToBlk(BlockRange(0, 2));
+  zx::result<std::pair<blk_t, uint64_t>> mapping = mapper.MapToBlk(BlockRange(0, 2));
   ASSERT_EQ(mapping.status_value(), ZX_OK);
   EXPECT_EQ(mapping.value().first, 17u);
   EXPECT_EQ(mapping.value().second, 1u);
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
   EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
@@ -216,7 +216,7 @@ TEST_F(VnodeMapperTest, VnodeMapperContiguousDirectBlocksAreCoalesced) {
   vnode_->GetMutableInode()->dnum[1] = 18;
   vnode_->GetMutableInode()->dnum[2] = 20;
   VnodeMapper mapper(vnode_.get());
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 3));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(0, 3));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
   EXPECT_EQ(runner_->minfs().Info().dat_block + 17, device_range.value().block());
@@ -232,7 +232,7 @@ TEST_F(VnodeMapperTest, VnodeMapperIndirectBlocksAreMapped) {
                   .is_ok());
   VnodeMapper mapper(vnode_.get());
   uint64_t block = kMinfsDirect;
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 2));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + 2));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
   EXPECT_EQ(runner_->minfs().Info().dat_block + 19, device_range.value().block());
@@ -255,7 +255,7 @@ TEST_F(VnodeMapperTest, VnodeMapperDoubleIndirectBlocksAreMapped) {
   VnodeMapper mapper(vnode_.get());
   uint64_t block_count = 3;
   uint64_t block = kMinfsDirect + kMinfsIndirect * kMinfsDirectPerIndirect;
-  zx::status<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + block_count));
+  zx::result<DeviceBlockRange> device_range = mapper.Map(BlockRange(block, block + block_count));
   ASSERT_EQ(device_range.status_value(), ZX_OK);
   ASSERT_TRUE(device_range.value().IsMapped());
   EXPECT_EQ(runner_->minfs().Info().dat_block + 37, device_range.value().block());

@@ -22,10 +22,10 @@ enum GpioFunc {
 };
 
 template <typename T, typename ReturnType>
-zx::status<ReturnType> GetStatus(const T& result);
+zx::result<ReturnType> GetStatus(const T& result);
 
 template <typename T>
-zx::status<> GetStatus(const T& result);
+zx::result<> GetStatus(const T& result);
 
 // Parse the command line arguments in |argv|
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,

@@ -19,7 +19,7 @@
 namespace abr {
 class VbootClient : public Client {
  public:
-  static zx::status<std::unique_ptr<abr::VbootClient>> Create(
+  static zx::result<std::unique_ptr<abr::VbootClient>> Create(
       std::unique_ptr<paver::CrosDevicePartitioner> gpt);
 
   explicit VbootClient(std::unique_ptr<paver::CrosDevicePartitioner> gpt)
@@ -28,19 +28,19 @@ class VbootClient : public Client {
  private:
   std::unique_ptr<paver::CrosDevicePartitioner> gpt_;
 
-  zx::status<> Read(uint8_t* buffer, size_t size) override {
+  zx::result<> Read(uint8_t* buffer, size_t size) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx::status<> Write(const uint8_t* buffer, size_t size) override {
+  zx::result<> Write(const uint8_t* buffer, size_t size) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
-  zx::status<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) override;
-  zx::status<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
+  zx::result<> ReadCustom(AbrSlotData* a, AbrSlotData* b, uint8_t* one_shot_recovery) override;
+  zx::result<> WriteCustom(const AbrSlotData* a, const AbrSlotData* b,
                            uint8_t one_shot_recovery) override;
 
-  zx::status<> Flush() const override { return zx::make_status(gpt_->GetGpt()->Sync()); }
+  zx::result<> Flush() const override { return zx::make_result(gpt_->GetGpt()->Sync()); }
 };
 }  // namespace abr
 

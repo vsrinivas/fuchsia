@@ -25,7 +25,7 @@ struct DiscoveredInterface {
   mac_addr_t mac;
 };
 
-zx::status<DiscoveredInterface> netifc_discover(const std::string& devdir,
+zx::result<DiscoveredInterface> netifc_discover(const std::string& devdir,
                                                 cpp17::string_view topological_path);
 
 #endif  // SRC_BRINGUP_BIN_NETSVC_NETIFC_DISCOVER_H_

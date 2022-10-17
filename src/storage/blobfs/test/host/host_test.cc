@@ -130,7 +130,7 @@ std::unique_ptr<File> CreateFileWithRandomContent(uint64_t file_size, unsigned i
   return file;
 }
 
-zx::status<BlobInfo> CreateCompressedBlob(int fd, BlobLayoutFormat blob_layout_format) {
+zx::result<BlobInfo> CreateCompressedBlob(int fd, BlobLayoutFormat blob_layout_format) {
   chunked_compression::MultithreadedChunkedCompressor compressor(/*thread_count=*/1);
   return BlobInfo::CreateCompressed(fd, blob_layout_format, kSrcFilePath, compressor);
 }

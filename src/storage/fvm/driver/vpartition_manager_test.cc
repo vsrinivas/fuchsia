@@ -125,7 +125,7 @@ class VPartitionManagerTestAtRevision : public zxtest::Test {
   }
 
   // Returns a copy of the FVM metadata written to the block device.
-  zx::status<Metadata> GetMetadata() const {
+  zx::result<Metadata> GetMetadata() const {
     // Need to look at the header to tell how big the metadata will be.
     Header header;
     if (block_device_.data().size() < sizeof(Header))
@@ -148,7 +148,7 @@ class VPartitionManagerTestAtRevision : public zxtest::Test {
   }
 
   // Create a partition and returns it on success.
-  zx::status<std::unique_ptr<VPartition>> AllocatePartition(const std::string& name = "name",
+  zx::result<std::unique_ptr<VPartition>> AllocatePartition(const std::string& name = "name",
                                                             uint64_t slices = 1u) {
     static int next_id = 1;
 

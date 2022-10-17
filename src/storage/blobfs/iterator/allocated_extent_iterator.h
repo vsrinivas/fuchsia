@@ -29,11 +29,11 @@ class AllocatedExtentIterator : public ExtentIterator {
 
   // Creates an AllocatedExtentIterator.  Returns an error if |node_index| isn't a valid index in
   // |finder|.
-  static zx::status<AllocatedExtentIterator> Create(NodeFinder* finder, uint32_t node_index);
+  static zx::result<AllocatedExtentIterator> Create(NodeFinder* finder, uint32_t node_index);
 
   // ExtentIterator interface.
   bool Done() const final;
-  zx::status<const Extent*> Next() final;
+  zx::result<const Extent*> Next() final;
   uint64_t BlockIndex() const final;
 
   // Returns the number of extents we've iterated past already.

@@ -25,7 +25,7 @@ class NodeReserverInterface {
  public:
   // Reserves space for a node in memory. Does not update disk. Returns an error if a node could not
   // be reserved.
-  virtual zx::status<ReservedNode> ReserveNode() = 0;
+  virtual zx::result<ReservedNode> ReserveNode() = 0;
 
   // Unreserves space for a node in memory. Does not update disk.
   virtual void UnreserveNode(ReservedNode node) = 0;

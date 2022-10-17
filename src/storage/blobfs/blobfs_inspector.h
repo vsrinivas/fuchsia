@@ -26,7 +26,7 @@ class BlobfsInspector {
  public:
   // Creates a BlobfsInspector from a block device. Tries to load the superblock from disk upon
   // creation by calling ReloadSuperblock().
-  static zx::status<std::unique_ptr<BlobfsInspector>> Create(
+  static zx::result<std::unique_ptr<BlobfsInspector>> Create(
       std::unique_ptr<fs::TransactionHandler> handler,
       std::unique_ptr<disk_inspector::BufferFactory> factory);
 
@@ -69,45 +69,45 @@ class BlobfsInspector {
 
   // Loads the inode table blocks for which the inodes from |start_index| inclusive to |end_index|
   // exclusive from disk and returns the Inodes in the range as a vector.
-  zx::status<std::vector<Inode>> InspectInodeRange(uint64_t start_index, uint64_t end_index);
+  zx::result<std::vector<Inode>> InspectInodeRange(uint64_t start_index, uint64_t end_index);
 
   // Loads the first journal block
-  zx::status<fs::JournalInfo> InspectJournalSuperblock();
+  zx::result<fs::JournalInfo> InspectJournalSuperblock();
 
   // Loads the |index| element journal entry block and returns it as a struct of type T. Only
   // supports casting to fs::JournalPrefix, fs::JournalHeaderBlock, and fs::JournalCommitBlock.
   template <typename T>
-  zx::status<T> InspectJournalEntryAs(uint64_t index);
+  zx::result<T> InspectJournalEntryAs(uint64_t index);
 
   // Loads the data bitmap blocks where the allocation bits for data blocks from |start_index|
   // inclusive to |end_index| exclusive are located from disk and returns the indices for which the
   // corresponding bits are allocated.
-  zx::status<std::vector<uint64_t>> InspectDataBlockAllocatedInRange(uint64_t start_index,
+  zx::result<std::vector<uint64_t>> InspectDataBlockAllocatedInRange(uint64_t start_index,
                                                                      uint64_t end_index);
 
   // Writes the |superblock| argument to disk and sets |superblock_| to |superblock| if the write
   // succeeds.
-  zx::status<> WriteSuperblock(Superblock superblock);
+  zx::result<> WriteSuperblock(Superblock superblock);
 
   // Writes the vector of |inodes| to disk as the range of inodes starting at |start_index| based on
   // |superblock_| specified location. If users wish to write ExtentContainers, we expect them to
   // treat the containers as Inodes and use this function to write them.
-  zx::status<> WriteInodes(std::vector<Inode> inodes, uint64_t start_index);
+  zx::result<> WriteInodes(std::vector<Inode> inodes, uint64_t start_index);
 
   // Writes the |journal_info| as the journal superblock based on |superblock_| specified location.
-  zx::status<> WriteJournalSuperblock(fs::JournalInfo journal_info);
+  zx::result<> WriteJournalSuperblock(fs::JournalInfo journal_info);
 
   // Treats the entire |buffer| as journal entry blocks and writes the entire buffer to disk
   // starting at the |start_index| journal entry block.
-  zx::status<> WriteJournalEntryBlocks(storage::BlockBuffer* buffer, uint64_t start_index);
+  zx::result<> WriteJournalEntryBlocks(storage::BlockBuffer* buffer, uint64_t start_index);
 
   // Sets the block allocation bitmap bits starting from |start_index| inclusive to |end_index|
   // exclusive to |value| based on |superblock_| specified location.
-  zx::status<> WriteDataBlockAllocationBits(bool value, uint64_t start_index, uint64_t end_index);
+  zx::result<> WriteDataBlockAllocationBits(bool value, uint64_t start_index, uint64_t end_index);
 
   // Writes the entire |buffer| to the data segment of disk starting at |start_index| data block
   // based on |superblock_| specified location.
-  zx::status<> WriteDataBlocks(storage::BlockBuffer* buffer, uint64_t start_index);
+  zx::result<> WriteDataBlocks(storage::BlockBuffer* buffer, uint64_t start_index);
 
  private:
   explicit BlobfsInspector(std::unique_ptr<fs::TransactionHandler> handler,

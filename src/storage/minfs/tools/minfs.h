@@ -62,7 +62,7 @@ class MinfsCreator : public FsCreator {
   zx_status_t ProcessBlocks(off_t data_size);
 
   // Generate a Bcache instance from fd_.
-  zx::status<std::unique_ptr<minfs::Bcache>> GenerateBcache();
+  zx::result<std::unique_ptr<minfs::Bcache>> GenerateBcache();
 
   // "Mount" the minfs partition using the host-side emu_ interface.
   zx_status_t MountMinfs();

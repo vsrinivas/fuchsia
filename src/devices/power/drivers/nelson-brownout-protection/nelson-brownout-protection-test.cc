@@ -31,7 +31,7 @@ class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalPro
   bool agl_enabled() { return agl_enabled_; }
 
  private:
-  zx::status<audio::DriverIds> Initialize() override {
+  zx::result<audio::DriverIds> Initialize() override {
     return zx::ok(audio::DriverIds{.vendor_id = 0, .device_id = 0});
   }
   zx_status_t Reset() override { return ZX_ERR_NOT_SUPPORTED; }
@@ -80,7 +80,7 @@ class FakeCodec : public audio::SimpleCodecServer, public signal_fidl::SignalPro
     callback(signal_fidl::SignalProcessing_SetTopology_Result::WithErr(ZX_ERR_NOT_SUPPORTED));
   }
   audio::DaiSupportedFormats GetDaiFormats() override { return {}; }
-  zx::status<audio::CodecFormatInfo> SetDaiFormat(const audio::DaiFormat& format) override {
+  zx::result<audio::CodecFormatInfo> SetDaiFormat(const audio::DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   audio::GainFormat GetGainFormat() override { return {.min_gain = -103.0f}; }

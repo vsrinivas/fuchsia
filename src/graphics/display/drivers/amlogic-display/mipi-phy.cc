@@ -194,7 +194,7 @@ zx_status_t MipiPhy::Startup() {
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<MipiPhy>> MipiPhy::Create(ddk::PDev& pdev,
+zx::result<std::unique_ptr<MipiPhy>> MipiPhy::Create(ddk::PDev& pdev,
                                                      ddk::DsiImplProtocolClient dsi,
                                                      bool already_enabled) {
   fbl::AllocChecker ac;

@@ -58,7 +58,7 @@ class CsvPrinter : public Printer {
   void Print(const fuchsia_hardware_ram_metrics::wire::BandwidthInfo& info) const override;
 };
 
-zx::status<std::array<uint64_t, fuchsia_hardware_ram_metrics::wire::kMaxCountChannels>>
+zx::result<std::array<uint64_t, fuchsia_hardware_ram_metrics::wire::kMaxCountChannels>>
 ParseChannelString(std::string_view str);
 
 std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice();

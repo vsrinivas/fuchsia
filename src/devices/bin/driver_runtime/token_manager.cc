@@ -16,7 +16,7 @@ namespace {
 // Verifies |token| is a valid channel handle, and returns the corresponding token id.
 // If |use_primary_koid| is true, the token id will be the koid of |token|, otherwise it will
 // be the koid of the peer of |token|.
-zx::status<TokenManager::TokenId> ValidateToken(zx_handle_t token, bool use_primary_koid) {
+zx::result<TokenManager::TokenId> ValidateToken(zx_handle_t token, bool use_primary_koid) {
   zx_info_handle_basic_t info;
   zx_status_t status =
       zx_object_get_info(token, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), NULL, NULL);

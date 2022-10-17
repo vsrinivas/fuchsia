@@ -169,7 +169,7 @@ zx_status_t FvmAllocatePartitionImpl(int fvm_fd, const alloc_req_t* request) {
 }
 
 // Takes ownership of |dir|.
-zx::status<fbl::unique_fd> OpenPartitionImpl(DIR* dir, std::string_view out_path_base,
+zx::result<fbl::unique_fd> OpenPartitionImpl(DIR* dir, std::string_view out_path_base,
                                              const PartitionMatcher* matcher, zx_duration_t timeout,
                                              std::string* out_path) {
   ZX_ASSERT(matcher != nullptr);
@@ -456,7 +456,7 @@ zx_status_t FvmDestroyWithDevfs(int devfs_root_fd, const char* relative_path) {
 
 // Helper function to allocate, find, and open VPartition.
 __EXPORT
-zx::status<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* request) {
+zx::result<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* request) {
   if (zx_status_t status = FvmAllocatePartitionImpl(fvm_fd, request); status != ZX_OK) {
     return zx::error(status);
   }
@@ -468,7 +468,7 @@ zx::status<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* r
 }
 
 __EXPORT
-zx::status<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int fvm_fd,
+zx::result<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int fvm_fd,
                                                          const alloc_req_t* request) {
   int alloc_status = FvmAllocatePartitionImpl(fvm_fd, request);
   if (alloc_status != 0) {
@@ -482,7 +482,7 @@ zx::status<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int 
 }
 
 __EXPORT
-zx::status<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd) {
+zx::result<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
   auto response =
@@ -500,7 +500,7 @@ zx::status<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd)
 }
 
 __EXPORT
-zx::status<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_duration_t timeout,
+zx::result<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_duration_t timeout,
                                          std::string* out_path) {
   DIR* dir = opendir(kBlockDevPath);
   if (dir == nullptr) {
@@ -511,7 +511,7 @@ zx::status<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_dur
 }
 
 __EXPORT
-zx::status<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
+zx::result<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
                                                   const PartitionMatcher* matcher,
                                                   zx_duration_t timeout,
                                                   std::string* out_path_relative) {

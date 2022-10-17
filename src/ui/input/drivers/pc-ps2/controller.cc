@@ -181,7 +181,7 @@ void Controller::DdkInit(ddk::InitTxn txn) {
   });
 }
 
-zx::status<std::vector<uint8_t>> Controller::SendControllerCommand(
+zx::result<std::vector<uint8_t>> Controller::SendControllerCommand(
     Command command, cpp20::span<const uint8_t> data) {
   if (data.size() != command.param_count) {
     zxlogf(ERROR, "%s: Wrong parameter count: wanted %u, got %zu", __func__, command.param_count,
@@ -217,7 +217,7 @@ zx::status<std::vector<uint8_t>> Controller::SendControllerCommand(
   return zx::ok(std::move(ret));
 }
 
-zx::status<std::vector<uint8_t>> Controller::SendDeviceCommand(Command command, Port port) {
+zx::result<std::vector<uint8_t>> Controller::SendDeviceCommand(Command command, Port port) {
   if (command.param_count != 0) {
     zxlogf(ERROR, "Sending parameters to device not supported.");
     return zx::error(ZX_ERR_NOT_SUPPORTED);

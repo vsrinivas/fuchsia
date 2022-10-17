@@ -33,10 +33,10 @@ BlockPartitionClient::~BlockPartitionClient() {
   }
 }
 
-zx::status<> BlockPartitionClient::ReadBlockInfo() {
+zx::result<> BlockPartitionClient::ReadBlockInfo() {
   if (!block_info_) {
     auto result = partition_->GetInfo();
-    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+    auto status = zx::make_result(result.ok() ? result.value().status : result.status());
     if (status.is_error()) {
       ERROR("Failed to get partition info with status: %s\n", status.status_string());
       return status.take_error();
@@ -46,7 +46,7 @@ zx::status<> BlockPartitionClient::ReadBlockInfo() {
   return zx::ok();
 }
 
-zx::status<size_t> BlockPartitionClient::GetBlockSize() {
+zx::result<size_t> BlockPartitionClient::GetBlockSize() {
   auto status = ReadBlockInfo();
   if (status.is_error()) {
     return status.take_error();
@@ -54,7 +54,7 @@ zx::status<size_t> BlockPartitionClient::GetBlockSize() {
   return zx::ok(block_info_->block_size);
 }
 
-zx::status<size_t> BlockPartitionClient::GetPartitionSize() {
+zx::result<size_t> BlockPartitionClient::GetPartitionSize() {
   auto status = ReadBlockInfo();
   if (status.is_error()) {
     return status.take_error();
@@ -62,13 +62,13 @@ zx::status<size_t> BlockPartitionClient::GetPartitionSize() {
   return zx::ok(block_info_->block_size * block_info_->block_count);
 }
 
-zx::status<> BlockPartitionClient::RegisterFastBlockIo() {
+zx::result<> BlockPartitionClient::RegisterFastBlockIo() {
   if (client_) {
     return zx::ok();
   }
 
   auto result = partition_->GetFifo();
-  auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
@@ -77,7 +77,7 @@ zx::status<> BlockPartitionClient::RegisterFastBlockIo() {
   return zx::ok();
 }
 
-zx::status<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
+zx::result<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
   zx::vmo dup;
   if (vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup) != ZX_OK) {
     ERROR("Couldn't duplicate buffer vmo\n");
@@ -85,7 +85,7 @@ zx::status<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
   }
 
   auto result = partition_->AttachVmo(std::move(dup));
-  auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
@@ -93,7 +93,7 @@ zx::status<vmoid_t> BlockPartitionClient::RegisterVmo(const zx::vmo& vmo) {
   return zx::ok(result.value().vmoid->id);
 }
 
-zx::status<vmoid_t> BlockPartitionClient::Setup(const zx::vmo& vmo) {
+zx::result<vmoid_t> BlockPartitionClient::Setup(const zx::vmo& vmo) {
   auto status = RegisterFastBlockIo();
   if (status.is_error()) {
     return status.take_error();
@@ -114,11 +114,11 @@ zx::status<vmoid_t> BlockPartitionClient::Setup(const zx::vmo& vmo) {
   return zx::ok(register_status.value());
 }
 
-zx::status<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   return Read(vmo, size, 0, 0);
 }
 
-zx::status<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size, size_t dev_offset,
+zx::result<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size, size_t dev_offset,
                                         size_t vmo_offset) {
   auto status = Setup(vmo);
   if (status.is_error()) {
@@ -140,7 +140,7 @@ zx::status<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size, size_t 
   request.vmo_offset = vmo_offset;
   request.dev_offset = dev_offset;
 
-  if (auto status = zx::make_status(client_->Transaction(&request, 1)); status.is_error()) {
+  if (auto status = zx::make_result(client_->Transaction(&request, 1)); status.is_error()) {
     ERROR("Error reading partition data: %s\n", status.status_string());
     return status.take_error();
   }
@@ -148,11 +148,11 @@ zx::status<> BlockPartitionClient::Read(const zx::vmo& vmo, size_t size, size_t 
   return zx::ok();
 }
 
-zx::status<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+zx::result<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   return Write(vmo, vmo_size, 0, 0);
 }
 
-zx::status<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset,
+zx::result<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset,
                                          size_t vmo_offset) {
   auto status = Setup(vmo);
   if (status.is_error()) {
@@ -173,14 +173,14 @@ zx::status<> BlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size, si
   request.vmo_offset = vmo_offset;
   request.dev_offset = dev_offset;
 
-  if (auto status = zx::make_status(client_->Transaction(&request, 1)); status.is_error()) {
+  if (auto status = zx::make_result(client_->Transaction(&request, 1)); status.is_error()) {
     ERROR("Error writing partition data: %s\n", status.status_string());
     return status.take_error();
   }
   return zx::ok();
 }
 
-zx::status<> BlockPartitionClient::Trim() {
+zx::result<> BlockPartitionClient::Trim() {
   auto status = RegisterFastBlockIo();
   if (status.is_error()) {
     return status.take_error();
@@ -194,10 +194,10 @@ zx::status<> BlockPartitionClient::Trim() {
   request.vmo_offset = 0;
   request.dev_offset = 0;
 
-  return zx::make_status(client_->Transaction(&request, 1));
+  return zx::make_result(client_->Transaction(&request, 1));
 }
 
-zx::status<> BlockPartitionClient::Flush() {
+zx::result<> BlockPartitionClient::Flush() {
   auto status = RegisterFastBlockIo();
   if (status.is_error()) {
     return status.take_error();
@@ -211,7 +211,7 @@ zx::status<> BlockPartitionClient::Flush() {
   request.vmo_offset = 0;
   request.dev_offset = 0;
 
-  return zx::make_status(client_->Transaction(&request, 1));
+  return zx::make_result(client_->Transaction(&request, 1));
 }
 
 fidl::ClientEnd<fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel() {
@@ -222,7 +222,7 @@ fbl::unique_fd BlockPartitionClient::block_fd() {
   zx::channel dup(fdio_service_clone(partition_.client_end().channel().get()));
 
   int block_fd;
-  auto status = zx::make_status(fdio_fd_create(dup.release(), &block_fd));
+  auto status = zx::make_result(fdio_fd_create(dup.release(), &block_fd));
   if (status.is_error()) {
     return fbl::unique_fd();
   }
@@ -230,7 +230,7 @@ fbl::unique_fd BlockPartitionClient::block_fd() {
 }
 
 // The partition size does not account for the offset.
-zx::status<size_t> FixedOffsetBlockPartitionClient::GetPartitionSize() {
+zx::result<size_t> FixedOffsetBlockPartitionClient::GetPartitionSize() {
   auto status_or_block_size = GetBlockSize();
   if (status_or_block_size.is_error()) {
     return status_or_block_size.take_error();
@@ -251,15 +251,15 @@ zx::status<size_t> FixedOffsetBlockPartitionClient::GetPartitionSize() {
   return zx::ok(full_size - block_size * offset_partition_in_blocks_);
 }
 
-zx::status<> FixedOffsetBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> FixedOffsetBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   return client_.Read(vmo, size, offset_partition_in_blocks_, offset_buffer_in_blocks_);
 }
 
-zx::status<> FixedOffsetBlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+zx::result<> FixedOffsetBlockPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   return client_.Write(vmo, vmo_size, offset_partition_in_blocks_, offset_buffer_in_blocks_);
 }
 
-zx::status<size_t> FixedOffsetBlockPartitionClient::GetBufferOffsetInBytes() {
+zx::result<size_t> FixedOffsetBlockPartitionClient::GetBufferOffsetInBytes() {
   auto status_or_block_size = GetBlockSize();
   if (status_or_block_size.is_error()) {
     return status_or_block_size.take_error();
@@ -268,13 +268,13 @@ zx::status<size_t> FixedOffsetBlockPartitionClient::GetBufferOffsetInBytes() {
   return zx::ok(block_size * offset_buffer_in_blocks_);
 }
 
-zx::status<size_t> FixedOffsetBlockPartitionClient::GetBlockSize() {
+zx::result<size_t> FixedOffsetBlockPartitionClient::GetBlockSize() {
   return client_.GetBlockSize();
 }
 
-zx::status<> FixedOffsetBlockPartitionClient::Trim() { return client_.Trim(); }
+zx::result<> FixedOffsetBlockPartitionClient::Trim() { return client_.Trim(); }
 
-zx::status<> FixedOffsetBlockPartitionClient::Flush() { return client_.Flush(); }
+zx::result<> FixedOffsetBlockPartitionClient::Flush() { return client_.Flush(); }
 
 fidl::ClientEnd<fuchsia_hardware_block::Block> FixedOffsetBlockPartitionClient::GetChannel() {
   return client_.GetChannel();
@@ -282,7 +282,7 @@ fidl::ClientEnd<fuchsia_hardware_block::Block> FixedOffsetBlockPartitionClient::
 
 fbl::unique_fd FixedOffsetBlockPartitionClient::block_fd() { return client_.block_fd(); }
 
-zx::status<size_t> PartitionCopyClient::GetBlockSize() {
+zx::result<size_t> PartitionCopyClient::GetBlockSize() {
   // Choose the lowest common multiple of all block sizes.
   size_t lcm = 1;
   for (auto& partition : partitions_) {
@@ -296,7 +296,7 @@ zx::status<size_t> PartitionCopyClient::GetBlockSize() {
   return zx::ok(lcm);
 }
 
-zx::status<size_t> PartitionCopyClient::GetPartitionSize() {
+zx::result<size_t> PartitionCopyClient::GetPartitionSize() {
   // Return minimum size of all partitions.
   bool one_succeed = false;
   size_t minimum_size = UINT64_MAX;
@@ -312,7 +312,7 @@ zx::status<size_t> PartitionCopyClient::GetPartitionSize() {
   return zx::ok(minimum_size);
 }
 
-zx::status<> PartitionCopyClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> PartitionCopyClient::Read(const zx::vmo& vmo, size_t size) {
   // Read until one is successful.
   for (auto& partition : partitions_) {
     if (auto status = partition->Read(vmo, size); status.is_ok()) {
@@ -322,7 +322,7 @@ zx::status<> PartitionCopyClient::Read(const zx::vmo& vmo, size_t size) {
   return zx::error(ZX_ERR_IO);
 }
 
-zx::status<> PartitionCopyClient::Write(const zx::vmo& vmo, size_t size) {
+zx::result<> PartitionCopyClient::Write(const zx::vmo& vmo, size_t size) {
   // Guaranatee at least one write was successful.
   bool one_succeed = false;
   for (auto& partition : partitions_) {
@@ -340,7 +340,7 @@ zx::status<> PartitionCopyClient::Write(const zx::vmo& vmo, size_t size) {
   }
 }
 
-zx::status<> PartitionCopyClient::Trim() {
+zx::result<> PartitionCopyClient::Trim() {
   // All must trim successfully.
   for (auto& partition : partitions_) {
     if (auto status = partition->Trim(); status.is_error()) {
@@ -350,7 +350,7 @@ zx::status<> PartitionCopyClient::Trim() {
   return zx::ok();
 }
 
-zx::status<> PartitionCopyClient::Flush() {
+zx::result<> PartitionCopyClient::Flush() {
   // All must flush successfully.
   for (auto& partition : partitions_) {
     if (auto status = partition->Flush(); status.is_error()) {

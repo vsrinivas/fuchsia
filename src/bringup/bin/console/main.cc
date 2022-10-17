@@ -72,7 +72,7 @@ int main(int argc, const char** argv) {
     return status;
   }
 
-  zx::status boot_args = component::Connect<fuchsia_boot::Arguments>();
+  zx::result boot_args = component::Connect<fuchsia_boot::Arguments>();
   if (boot_args.is_error()) {
     return boot_args.status_value();
   }

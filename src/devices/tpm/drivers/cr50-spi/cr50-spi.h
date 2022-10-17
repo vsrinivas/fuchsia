@@ -53,14 +53,14 @@ class Cr50SpiDevice : public DeviceType,
 
   // Transfer |buf| to the TPM. If |do_write| is true, |buf| will be written to |address|,
   // otherwise it will be populated with data read from |address|.
-  zx::status<> DoXfer(uint16_t address, fidl::VectorView<uint8_t>& buf, bool do_write);
+  zx::result<> DoXfer(uint16_t address, fidl::VectorView<uint8_t>& buf, bool do_write);
   // Send the TPM header transaction header. This will also call FlowControl().
-  zx::status<> SendHeader(uint16_t address, size_t msg_length, bool writing);
+  zx::result<> SendHeader(uint16_t address, size_t msg_length, bool writing);
   // Do flow control after sending the header while waiting for the device to become ready.
-  zx::status<> FlowControl();
+  zx::result<> FlowControl();
 
-  zx::status<> DoSpiWrite(fidl::VectorView<uint8_t>& buf);
-  zx::status<> DoSpiRead(fidl::VectorView<uint8_t>& buf);
+  zx::result<> DoSpiWrite(fidl::VectorView<uint8_t>& buf);
+  zx::result<> DoSpiRead(fidl::VectorView<uint8_t>& buf);
 
   void IrqThread();
   // Wait for the cr50 to become ready after sending a previous command.

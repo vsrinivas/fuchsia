@@ -44,7 +44,7 @@ class TxBuffer : public fbl::DoublyLinkedListable<std::unique_ptr<TxBuffer>> {
 
   void set_status(zx_status_t status) { status_ = status; }
 
-  zx::status<std::vector<uint8_t>> GetData(const VmoProvider& vmo_provider);
+  zx::result<std::vector<uint8_t>> GetData(const VmoProvider& vmo_provider);
 
   tx_result_t result() {
     return {
@@ -194,7 +194,7 @@ class FakeNetworkDeviceImpl : public ddk::NetworkDeviceImplProtocol<FakeNetworkD
   FakeNetworkDeviceImpl();
   ~FakeNetworkDeviceImpl();
 
-  zx::status<std::unique_ptr<NetworkDeviceInterface>> CreateChild(async_dispatcher_t* dispatcher);
+  zx::result<std::unique_ptr<NetworkDeviceInterface>> CreateChild(async_dispatcher_t* dispatcher);
 
   zx_status_t NetworkDeviceImplInit(const network_device_ifc_protocol_t* iface);
   void NetworkDeviceImplStart(network_device_impl_start_callback callback, void* cookie);

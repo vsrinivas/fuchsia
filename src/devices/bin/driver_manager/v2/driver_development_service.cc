@@ -52,7 +52,7 @@ class DeviceInfoIterator : public fidl::WireServer<fdd::DeviceInfoIterator> {
 };
 }  // namespace
 
-zx::status<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
+zx::result<fdd::wire::DeviceInfo> CreateDeviceInfo(fidl::AnyArena& allocator,
                                                    const dfv2::Node* node) {
   fdd::wire::DeviceInfo device_info(allocator);
 

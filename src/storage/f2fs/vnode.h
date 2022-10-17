@@ -113,10 +113,10 @@ class VnodeF2fs : public fs::Vnode,
   void VmoDirty(uint64_t offset, uint64_t length) final {
     FX_LOGS(ERROR) << "Unsupported VmoDirty in VnodeF2fs.";
   }
-  zx::status<zx::vmo> PopulateAndGetMmappedVmo(const size_t offset, const size_t length)
+  zx::result<zx::vmo> PopulateAndGetMmappedVmo(const size_t offset, const size_t length)
       __TA_EXCLUDES(mutex_);
   void OnNoPagedVmoClones() final __TA_REQUIRES(mutex_);
-  virtual zx::status<> PopulateVmoWithInlineData(zx::vmo &vmo) __TA_EXCLUDES(mutex_) {
+  virtual zx::result<> PopulateVmoWithInlineData(zx::vmo &vmo) __TA_EXCLUDES(mutex_) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 #endif  // __Fuchsia__
@@ -125,7 +125,7 @@ class VnodeF2fs : public fs::Vnode,
   zx_status_t WritePagedVmo(const void *buffer_address, uint64_t offset, size_t len)
       __TA_EXCLUDES(mutex_);
   void ReleasePagedVmo() __TA_EXCLUDES(mutex_);
-  zx::status<bool> ReleasePagedVmoUnsafe() __TA_REQUIRES(mutex_);
+  zx::result<bool> ReleasePagedVmoUnsafe() __TA_REQUIRES(mutex_);
 
 #if 0  // porting needed
   // void F2fsSetInodeFlags();
@@ -151,7 +151,7 @@ class VnodeF2fs : public fs::Vnode,
 
   // Caller should ensure node_page is locked.
   void SetDataBlkaddr(NodePage &node_page, uint32_t ofs_in_node, block_t new_addr);
-  zx::status<block_t> FindDataBlkAddr(pgoff_t index);
+  zx::result<block_t> FindDataBlkAddr(pgoff_t index);
   // Caller should ensure node_page is locked.
   zx_status_t ReserveNewBlock(NodePage &node_page, uint32_t ofs_in_node);
 
@@ -161,15 +161,15 @@ class VnodeF2fs : public fs::Vnode,
   // node page of a offset or the block address is not assigned, this function adds null LockedPage
   // and kNullAddr to LockedPagesAndAddrs struct. The handling of null LockedPage and kNullAddr is
   // responsible for StorageBuffer::ReserveReadOperations().
-  zx::status<LockedPagesAndAddrs> FindDataBlockAddrsAndPages(const pgoff_t start,
+  zx::result<LockedPagesAndAddrs> FindDataBlockAddrsAndPages(const pgoff_t start,
                                                              const pgoff_t end);
   zx_status_t GetLockedDataPage(pgoff_t index, LockedPage *out);
-  zx::status<std::vector<LockedPage>> GetLockedDataPages(pgoff_t start, pgoff_t end);
+  zx::result<std::vector<LockedPage>> GetLockedDataPages(pgoff_t start, pgoff_t end);
   zx_status_t GetNewDataPage(pgoff_t index, bool new_i_size, LockedPage *out);
 
   zx_status_t DoWriteDataPage(LockedPage &page);
   zx_status_t WriteDataPage(LockedPage &page, bool is_reclaim = false);
-  zx::status<std::vector<LockedPage>> WriteBegin(const size_t offset, const size_t len);
+  zx::result<std::vector<LockedPage>> WriteBegin(const size_t offset, const size_t len);
 
   virtual zx_status_t RecoverInlineData(NodePage &node_page) __TA_EXCLUDES(mutex_) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -415,11 +415,11 @@ class VnodeF2fs : public fs::Vnode,
     return file_cache_.GetPage(index, out);
   }
 
-  zx::status<std::vector<LockedPage>> GrabCachePages(pgoff_t start, pgoff_t end) {
+  zx::result<std::vector<LockedPage>> GrabCachePages(pgoff_t start, pgoff_t end) {
     return file_cache_.GetPages(start, end);
   }
 
-  zx::status<std::vector<LockedPage>> GrabCachePages(const std::vector<pgoff_t> &page_offsets) {
+  zx::result<std::vector<LockedPage>> GrabCachePages(const std::vector<pgoff_t> &page_offsets) {
     return file_cache_.GetPages(page_offsets);
   }
 

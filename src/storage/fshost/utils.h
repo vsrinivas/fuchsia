@@ -21,15 +21,15 @@ namespace fshost {
 // available space.
 // If `inside_zxcrypt` is set, one less FVM slice is allocated, since the zxcrypt header occupies
 // one slice.
-zx::status<uint64_t> ResizeVolume(
+zx::result<uint64_t> ResizeVolume(
     fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume, uint64_t target_bytes,
     bool inside_zxcrypt);
 
 // Clones the given node, returning a raw channel to it.
-zx::status<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node);
+zx::result<zx::channel> CloneNode(fidl::UnownedClientEnd<fuchsia_io::Node> node);
 
 // Returns the topological path of the given device.
-zx::status<std::string> GetDevicePath(fidl::UnownedClientEnd<fuchsia_device::Controller> device);
+zx::result<std::string> GetDevicePath(fidl::UnownedClientEnd<fuchsia_device::Controller> device);
 
 }  // namespace fshost
 

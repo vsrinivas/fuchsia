@@ -81,7 +81,7 @@ void DirEntryCache::Evict() {
   }
 }
 
-zx::status<DirEntry> DirEntryCache::LookupDirEntry(ino_t parent_ino, std::string_view child_name) {
+zx::result<DirEntry> DirEntryCache::LookupDirEntry(ino_t parent_ino, std::string_view child_name) {
   if (IsDotOrDotDot(child_name)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -98,7 +98,7 @@ zx::status<DirEntry> DirEntryCache::LookupDirEntry(ino_t parent_ino, std::string
   return zx::ok(element->GetDirEntry());
 }
 
-zx::status<pgoff_t> DirEntryCache::LookupDataPageIndex(ino_t parent_ino,
+zx::result<pgoff_t> DirEntryCache::LookupDataPageIndex(ino_t parent_ino,
                                                        std::string_view child_name) {
   if (IsDotOrDotDot(child_name)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);

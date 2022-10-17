@@ -47,7 +47,7 @@ TEST(AllocatorTest, Single) {
   // We can allocate a single unit.
   std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
-  zx::status<ReservedNode> node = allocator->ReserveNode();
+  zx::result<ReservedNode> node = allocator->ReserveNode();
   ASSERT_TRUE(node.is_ok());
 }
 
@@ -58,7 +58,7 @@ TEST(AllocatorTest, SingleCollision) {
 
   std::vector<ReservedExtent> extents;
   ASSERT_EQ(allocator->ReserveBlocks(1, &extents), ZX_OK);
-  zx::status<ReservedNode> maybe_node = allocator->ReserveNode();
+  zx::result<ReservedNode> maybe_node = allocator->ReserveNode();
   ASSERT_TRUE(maybe_node.is_ok());
   ReservedNode& node = maybe_node.value();
   uint32_t node_index = node.index();

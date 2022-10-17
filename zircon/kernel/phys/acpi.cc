@@ -18,14 +18,14 @@ class PhysMemReader final : public acpi_lite::PhysMemReader {
  public:
   constexpr PhysMemReader() = default;
 
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) final {
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) final {
     return zx::success(reinterpret_cast<const void*>(phys));
   }
 };
 
 }  // namespace
 
-zx::status<acpi_lite::AcpiParser> MakeAcpiParser(uint64_t acpi_rsdp) {
+zx::result<acpi_lite::AcpiParser> MakeAcpiParser(uint64_t acpi_rsdp) {
   static fbl::NoDestructor<PhysMemReader> reader;
   if (static_cast<uintptr_t>(acpi_rsdp) != acpi_rsdp) {
     printf("%s: ACPI tables found at (%#" PRIx64 ") not within lower 4GiB\n", ProgramName(),

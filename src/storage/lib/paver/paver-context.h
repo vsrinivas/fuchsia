@@ -31,7 +31,7 @@ class ContextBase {
 class Context {
  public:
   template <typename T>
-  zx::status<> Initialize(std::function<zx::status<std::unique_ptr<T>>()> factory) {
+  zx::result<> Initialize(std::function<zx::result<std::unique_ptr<T>>()> factory) {
     std::lock_guard<std::mutex> lock(mutex_);
     // Already holds a context
     if (impl_) {
@@ -48,7 +48,7 @@ class Context {
   // All functions using the contexts are callbacks so we can grab the
   // lock and do type checking ourselves internally.
   template <typename T>
-  zx::status<> Call(std::function<zx::status<>(T*)> callback) {
+  zx::result<> Call(std::function<zx::result<>(T*)> callback) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!impl_) {
       fprintf(stderr, "Context is not initialized.\n");
@@ -58,7 +58,7 @@ class Context {
   }
 
   template <typename T, typename R>
-  zx::status<R> Call(std::function<zx::status<R>(T*)> callback) {
+  zx::result<R> Call(std::function<zx::result<R>(T*)> callback) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (!impl_) {
       fprintf(stderr, "Context is not initialized.\n");

@@ -37,7 +37,7 @@ namespace internal {
 class FidlTransaction;
 class Binding;
 
-zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeProtocol protocol,
+zx::result<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeProtocol protocol,
                                          VnodeConnectionOptions options);
 
 // Perform basic flags sanitization.
@@ -196,16 +196,16 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // own any child objects and handles to avoid a dangling reference.
 
   void NodeClone(fuchsia_io::wire::OpenFlags flags, fidl::ServerEnd<fuchsia_io::Node> server_end);
-  zx::status<> NodeClose();
+  zx::result<> NodeClose();
   fidl::VectorView<uint8_t> NodeQuery();
-  zx::status<VnodeRepresentation> NodeDescribe();
+  zx::result<VnodeRepresentation> NodeDescribe();
   void NodeSync(fit::callback<void(zx_status_t)> callback);
-  zx::status<VnodeAttributes> NodeGetAttr();
-  zx::status<> NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
+  zx::result<VnodeAttributes> NodeGetAttr();
+  zx::result<> NodeSetAttr(fuchsia_io::wire::NodeAttributeFlags flags,
                            const fuchsia_io::wire::NodeAttributes& attributes);
-  zx::status<fuchsia_io::wire::OpenFlags> NodeGetFlags();
-  zx::status<> NodeSetFlags(fuchsia_io::wire::OpenFlags flags);
-  zx::status<fuchsia_io::wire::FilesystemInfo> NodeQueryFilesystem();
+  zx::result<fuchsia_io::wire::OpenFlags> NodeGetFlags();
+  zx::result<> NodeSetFlags(fuchsia_io::wire::OpenFlags flags);
+  zx::result<fuchsia_io::wire::FilesystemInfo> NodeQueryFilesystem();
 
  private:
   // The contract of the Vnode API is that there should be a balancing |Close| call for every |Open|

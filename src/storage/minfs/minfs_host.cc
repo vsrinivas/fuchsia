@@ -17,7 +17,7 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
   return vnodes;
 }
 
-zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
+zx::result<> Minfs::ContinueTransaction(size_t reserve_blocks,
                                         std::unique_ptr<CachedBlockTransaction> cached_transaction,
                                         std::unique_ptr<Transaction>* out) {
   // Reserve blocks from allocators before returning WritebackWork to client.

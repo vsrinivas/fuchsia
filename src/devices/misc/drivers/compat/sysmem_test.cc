@@ -37,7 +37,7 @@ class SysmemTest : public gtest::DriverTestLoopFixture {
     fake_sysmem_ = fbl::MakeRefCounted<FakeSysmem>();
   }
 
-  zx::status<std::vector<frunner::ComponentNamespaceEntry>> CreateNamespace() {
+  zx::result<std::vector<frunner::ComponentNamespaceEntry>> CreateNamespace() {
     ns_server_ = component::OutgoingDirectory::Create(dispatcher());
     auto add_protocol_result = ns_server_->AddProtocol<fuchsia_sysmem::Allocator>(
         [this](fidl::ServerEnd<fuchsia_sysmem::Allocator> server) {

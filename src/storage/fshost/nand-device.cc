@@ -18,7 +18,7 @@
 
 namespace fshost {
 
-zx::status<std::unique_ptr<BlockDeviceInterface>> NandDevice::OpenBlockDevice(
+zx::result<std::unique_ptr<BlockDeviceInterface>> NandDevice::OpenBlockDevice(
     const char* topological_path) const {
   fbl::unique_fd fd(::open(topological_path, O_RDWR, S_IFBLK));
   if (!fd) {

@@ -19,7 +19,7 @@ bool IsFuchsiaPkgScheme(std::string_view url) {
   return url.compare(0, kFuchsiaPkgPrefix.length(), kFuchsiaPkgPrefix) == 0;
 }
 
-zx::status<std::string> GetResourcePath(std::string_view url) {
+zx::result<std::string> GetResourcePath(std::string_view url) {
   size_t seperator = url.find('#');
   if (seperator == std::string::npos) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -37,7 +37,7 @@ bool IsFuchsiaBootScheme(std::string_view url) {
   return url.compare(0, kFuchsiaBootPrefix.length(), kFuchsiaBootPrefix) == 0;
 }
 
-zx::status<std::string> GetBasePathFromUrl(const std::string& url) {
+zx::result<std::string> GetBasePathFromUrl(const std::string& url) {
   if (IsFuchsiaPkgScheme(url)) {
     component::FuchsiaPkgUrl package_url;
     if (!package_url.Parse(url)) {
@@ -67,7 +67,7 @@ zx::status<std::string> GetBasePathFromUrl(const std::string& url) {
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<std::string> GetPathFromUrl(const std::string& url) {
+zx::result<std::string> GetPathFromUrl(const std::string& url) {
   if (IsFuchsiaPkgScheme(url)) {
     component::FuchsiaPkgUrl package_url;
     if (!package_url.Parse(url)) {
@@ -97,7 +97,7 @@ zx::status<std::string> GetPathFromUrl(const std::string& url) {
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<DriverManifestEntries> ParseDriverManifest(rapidjson::Document manifest) {
+zx::result<DriverManifestEntries> ParseDriverManifest(rapidjson::Document manifest) {
   DriverManifestEntries parsed_drivers;
 
   if (!manifest.IsArray()) {
@@ -123,7 +123,7 @@ zx::status<DriverManifestEntries> ParseDriverManifest(rapidjson::Document manife
   return zx::ok(std::move(parsed_drivers));
 }
 
-zx::status<DriverManifestEntries> ParseDriverManifestFromPath(const std::string& path) {
+zx::result<DriverManifestEntries> ParseDriverManifestFromPath(const std::string& path) {
   json_parser::JSONParser parser;
   rapidjson::Document manifest = parser.ParseFromFile(path);
   if (parser.HasError()) {

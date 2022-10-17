@@ -55,7 +55,7 @@ zx_status_t GetFileFromBootfs(std::string_view path, zbitl::MapUnownedVmo bootfs
 
 }  // namespace
 
-zx::status<> ZbiTestEntry::Init(int argc, char** argv) {
+zx::result<> ZbiTestEntry::Init(int argc, char** argv) {
   ZX_ASSERT(argc > 0);
   const char* program_name = argv[0];
 

@@ -81,7 +81,7 @@ TEST(Shtv3Test, ReadTemperature) {
   EXPECT_OK(dut.Init());
   EXPECT_EQ(fake_i2c_.state(), FakeShtv3Device::kIdle);
 
-  const zx::status<float> status = dut.ReadTemperature();
+  const zx::result<float> status = dut.ReadTemperature();
   EXPECT_TRUE(status.is_ok());
   EXPECT_TRUE(FloatNear(status.value(), 20.5f));
   EXPECT_EQ(fake_i2c_.state(), FakeShtv3Device::kIdle);

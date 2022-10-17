@@ -120,12 +120,12 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
   // To be implemented in a device-specific file. Should set panel_type_id_ and panel_type_, and
   // config_status_ in cases when the config download is skipped. Returns an invalid VMO if the
   // firmware update and config download should be skipped.
-  zx::status<fuchsia_mem::wire::Range> GetConfigFileVmo();
+  zx::result<fuchsia_mem::wire::Range> GetConfigFileVmo();
 
   zx_status_t Init();
 
   zx_status_t DownloadConfigIfNeeded(const fuchsia_mem::wire::Range& config_file);
-  static zx::status<uint64_t> GetConfigOffset(const fzl::VmoMapper& mapped_config,
+  static zx::result<uint64_t> GetConfigOffset(const fzl::VmoMapper& mapped_config,
                                               uint8_t sensor_id);
   zx_status_t PollCommandRegister(DeviceCommand command);
   zx_status_t SendCommand(HostCommand command);
@@ -133,7 +133,7 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
 
   zx_status_t UpdateFirmwareIfNeeded();
   // Returns the number of subsys entries found and populated.
-  static zx::status<size_t> ParseFirmwareInfo(const fzl::VmoMapper& mapped_fw,
+  static zx::result<size_t> ParseFirmwareInfo(const fzl::VmoMapper& mapped_fw,
                                               FirmwareSubsysInfo* out_subsys_entries);
   zx_status_t PrepareFirmwareUpdate(cpp20::span<const FirmwareSubsysInfo> subsys_entries);
   zx_status_t LoadIsp(const FirmwareSubsysInfo& isp_info);
@@ -142,11 +142,11 @@ class Gt6853Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_IN
   zx_status_t SendFirmwarePacket(uint8_t type, const uint8_t* packet, size_t size);
   zx_status_t FinishFirmwareUpdate();
 
-  zx::status<uint8_t> ReadReg8(Register reg);
-  zx::status<> Read(Register reg, uint8_t* buffer, size_t size);
-  zx::status<> WriteReg8(Register reg, uint8_t value);
-  zx::status<> Write(Register reg, const uint8_t* buffer, size_t size);
-  zx::status<> WriteAndCheck(Register reg, const uint8_t* buffer, size_t size);
+  zx::result<uint8_t> ReadReg8(Register reg);
+  zx::result<> Read(Register reg, uint8_t* buffer, size_t size);
+  zx::result<> WriteReg8(Register reg, uint8_t value);
+  zx::result<> Write(Register reg, const uint8_t* buffer, size_t size);
+  zx::result<> WriteAndCheck(Register reg, const uint8_t* buffer, size_t size);
 
   int Thread();
   void Shutdown();  // Only called after thread_ has been started.

@@ -42,7 +42,7 @@ class Transport {
   // Fetch a packet in to a given buffer of a given capacity.
   // Implementation should check against the given capacity. It should block
   // until the entire packet is read into the given buffer.
-  virtual zx::status<size_t> ReceivePacket(void *dst, size_t capacity) = 0;
+  virtual zx::result<size_t> ReceivePacket(void *dst, size_t capacity) = 0;
 
   // Peek the size of the next packet.
   virtual size_t PeekPacketSize() = 0;
@@ -53,7 +53,7 @@ class Transport {
   // The system might event start power cycle shortly after the method returns.
   // Thus implementation should block at least until the packet is sent out to the
   // transport.
-  virtual zx::status<> Send(std::string_view packet) = 0;
+  virtual zx::result<> Send(std::string_view packet) = 0;
 };
 
 constexpr char kOemPrefix[] = "oem ";
@@ -74,7 +74,7 @@ class FastbootBase {
     kDownload,
   };
 
-  zx::status<> ProcessPacket(Transport *transport);
+  zx::result<> ProcessPacket(Transport *transport);
 
   // Get the total and remaining download size when running `fastboot download` command.
   size_t total_download_size() const { return total_download_size_; }
@@ -104,24 +104,24 @@ class FastbootBase {
   // returned. Otherwise the error code while sending the message is returned. This is to make it
   // easier for callsite so that it doesn't have to check multiple error codes and decide which to
   // returns.
-  static zx::status<> SendResponse(ResponseType resp_type, std::string_view message,
-                                   Transport *transport, zx::status<> status_code = zx::ok());
+  static zx::result<> SendResponse(ResponseType resp_type, std::string_view message,
+                                   Transport *transport, zx::result<> status_code = zx::ok());
 
   // Send a data response package "DATA<hex string of `datasize`>" i.e. DATA0x12345678
-  static zx::status<> SendDataResponse(size_t data_size, Transport *transport);
+  static zx::result<> SendDataResponse(size_t data_size, Transport *transport);
 
  private:
   // Prepare a buffer for storing download buffer
-  virtual zx::status<void *> GetDownloadBuffer(size_t total_download_size) = 0;
+  virtual zx::result<void *> GetDownloadBuffer(size_t total_download_size) = 0;
 
   // Process a command. Implementation is responsible for handling all needed response to sent.
-  virtual zx::status<> ProcessCommand(std::string_view cmd, Transport *transport) = 0;
+  virtual zx::result<> ProcessCommand(std::string_view cmd, Transport *transport) = 0;
 
   // Perform implementation-specific clearing/resetting of download, i.e releasing buffer.
   virtual void DoClearDownload() = 0;
 
   void ClearDownload();
-  zx::status<> Download(std::string_view cmd, Transport *transport);
+  zx::result<> Download(std::string_view cmd, Transport *transport);
 
   State state_ = State::kCommand;
   size_t remaining_download_size_ = 0;

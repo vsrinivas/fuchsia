@@ -34,7 +34,7 @@ class PagedVfs : public ManagedVfs {
 
   // Creates the pager and worker threads. If any of these fail, this class should not be used.
   // After calling Init, TearDown *must* be called before destroying.
-  zx::status<> Init() __TA_EXCLUDES(vfs_lock_);
+  zx::result<> Init() __TA_EXCLUDES(vfs_lock_);
   bool is_initialized() const { return pager_.is_valid(); }
 
   // TearDown should be called before PagedVfs is destroyed. It can be called from the derived
@@ -48,18 +48,18 @@ class PagedVfs : public ManagedVfs {
   // Called in response to a successful PagedVnode::VmoRead() request, this supplies paged data from
   // aux_vmo to the PagedVnode's VMO to the kernel. See zx_pager_supply_pages() documentation for
   // more.
-  zx::status<> SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+  zx::result<> SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                            const zx::vmo& aux_vmo, uint64_t aux_offset) __TA_EXCLUDES(vfs_lock_);
 
   // Called in response to a successful PagedVnode::VmoDirty() request, this transits page state
   // from clean to dirty. See zx_pager_op_range() documentation for more.
-  zx::status<> DirtyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length)
+  zx::result<> DirtyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length)
       __TA_EXCLUDES(vfs_lock_);
 
   // Called in response to a failed PagedVnode::VmoRead() request, this reports that there was an
   // error populating page data. See zx_pager_op_range() documentation for more, only certain
   // values are permitted for err.
-  zx::status<> ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+  zx::result<> ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                 zx_status_t err) __TA_EXCLUDES(vfs_lock_);
 
   // Allocates a VMO of the given size associated with the given PagedVnode. VMOs for use with
@@ -80,7 +80,7 @@ class PagedVfs : public ManagedVfs {
     // Unique identifier for the VMO that can be used in FreePagedVmo().
     uint64_t id = 0;
   };
-  zx::status<VmoCreateInfo> CreatePagedNodeVmo(PagedVnode* node, uint64_t size,
+  zx::result<VmoCreateInfo> CreatePagedNodeVmo(PagedVnode* node, uint64_t size,
                                                uint32_t options = 0) __TA_EXCLUDES(vfs_lock_);
 
   // When there is a VMO clone is alive, the PagedVnode should be registered with the VFS to handle

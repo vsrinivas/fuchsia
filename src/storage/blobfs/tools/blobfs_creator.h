@@ -38,7 +38,7 @@ class BlobfsCreator : public FsCreator {
   zx_status_t ProcessCustom(int argc, char** argv, uint8_t* processed) override;
 
   // Generate BlobInfo for a given blob path.
-  zx::status<blobfs::BlobInfo> ProcessBlobToBlobInfo(
+  zx::result<blobfs::BlobInfo> ProcessBlobToBlobInfo(
       const std::filesystem::path& path,
       std::optional<chunked_compression::MultithreadedChunkedCompressor>& compressor);
 

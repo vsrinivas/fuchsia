@@ -64,7 +64,7 @@ static const audio::DaiSupportedFormats kSupportedDaiFormats = {
 
 zx_status_t Tas5707::Shutdown() { return ZX_OK; }
 
-zx::status<DriverIds> Tas5707::Initialize() {
+zx::result<DriverIds> Tas5707::Initialize() {
   size_t actual = 0;
   auto status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &metadata_,
                                     sizeof(metadata_), &actual);
@@ -142,7 +142,7 @@ DaiSupportedFormats Tas5707::GetDaiFormats() { return kSupportedDaiFormats; }
 
 // this driver does not allow to change the slot used and does not check for the correct slot being
 // specified
-zx::status<CodecFormatInfo> Tas5707::SetDaiFormat(const DaiFormat& format) {
+zx::result<CodecFormatInfo> Tas5707::SetDaiFormat(const DaiFormat& format) {
   if (!IsDaiFormatSupported(format, kSupportedDaiFormats)) {
     zxlogf(ERROR, "instance %u - unsupported format", instance_count_);
     return zx::error(ZX_ERR_NOT_SUPPORTED);

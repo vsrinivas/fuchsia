@@ -20,7 +20,7 @@ namespace fs_management {
 //
 // In all successful cases, it returns the exposed directory associated with the launched component
 // instance.
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
     std::string_view component_url, std::string_view component_child_name,
     std::optional<std::string_view> component_collection_name);
 
@@ -28,7 +28,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
 // |component_collection_name|. Destruction only works on dynamic components, so the collection
 // name is required. If it tries to destroy a component and gets an INSTANCE_NOT_FOUND error, it
 // still returns success - the end goal of having no component with this moniker is achieved.
-zx::status<> DestroyFsComponent(std::string_view component_child_name,
+zx::result<> DestroyFsComponent(std::string_view component_child_name,
                                 std::string_view component_collection_name);
 
 }  // namespace fs_management

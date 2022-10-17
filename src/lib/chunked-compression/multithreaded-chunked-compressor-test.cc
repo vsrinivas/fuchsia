@@ -91,7 +91,7 @@ TEST(MultithreadedChunkedCompressorTest, InputTooLargeForChunkSize) {
 TEST(MultithreadedChunkedCompressorTest, CompressMultipleBuffersWithDifferentParamsAtOnce) {
   struct CompressionTask {
     std::vector<uint8_t> data;
-    zx::status<std::vector<uint8_t>> result;
+    zx::result<std::vector<uint8_t>> result;
     CompressionParams params;
   };
   std::vector<CompressionTask> compression_tasks = {

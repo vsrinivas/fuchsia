@@ -127,7 +127,7 @@ zx_status_t Dir::DoCreate(std::string_view name, uint32_t mode, fbl::RefPtr<fs::
   return ZX_OK;
 }
 
-zx::status<> Dir::RecoverLink(VnodeF2fs &vnode) {
+zx::result<> Dir::RecoverLink(VnodeF2fs &vnode) {
   std::lock_guard dir_lock(dir_mutex_);
   fbl::RefPtr<Page> page;
   auto dir_entry = FindEntry(vnode.GetNameView(), &page);
@@ -339,7 +339,7 @@ zx_status_t Dir::Rmdir(Dir *vnode, std::string_view name) {
 // }
 #endif
 
-zx::status<bool> Dir::IsSubdir(Dir *possible_dir) {
+zx::result<bool> Dir::IsSubdir(Dir *possible_dir) {
   Dir *vn = possible_dir;
   fbl::RefPtr<VnodeF2fs> parent = nullptr;
 

@@ -18,7 +18,7 @@
 
 namespace radarutil {
 
-zx::status<zx::duration> ParseDuration(char* arg) {
+zx::result<zx::duration> ParseDuration(char* arg) {
   char* endptr;
   const int64_t duration = strtol(arg, &endptr, 10);
   if (endptr == arg || *endptr == '\0' || duration < 0) {
@@ -146,7 +146,7 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv,
         help_ = true;
         return ZX_OK;
       case 'p': {
-        zx::status<zx::duration> burst_process_time = ParseDuration(optarg);
+        zx::result<zx::duration> burst_process_time = ParseDuration(optarg);
         if (burst_process_time.is_error()) {
           Usage();
           return burst_process_time.error_value();
@@ -160,7 +160,7 @@ zx_status_t RadarUtil::ParseArgs(int argc, char** argv,
           return ZX_ERR_INVALID_ARGS;
         }
 
-        zx::status<zx::duration> run_time = ParseDuration(optarg);
+        zx::result<zx::duration> run_time = ParseDuration(optarg);
         if (run_time.is_error()) {
           Usage();
           return run_time.error_value();

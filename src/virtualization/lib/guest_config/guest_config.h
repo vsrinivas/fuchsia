@@ -14,7 +14,7 @@ namespace guest_config {
 using OpenAt = fit::function<zx_status_t(const std::string& path,
                                          fidl::InterfaceRequest<fuchsia::io::File> file)>;
 // Parses json configuration.
-zx::status<fuchsia::virtualization::GuestConfig> ParseConfig(const std::string& data,
+zx::result<fuchsia::virtualization::GuestConfig> ParseConfig(const std::string& data,
                                                              OpenAt open_at);
 
 fuchsia::virtualization::GuestConfig MergeConfigs(fuchsia::virtualization::GuestConfig base,

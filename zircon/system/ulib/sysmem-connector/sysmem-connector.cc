@@ -160,7 +160,7 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
 
   {
     const fdio_cpp::UnownedFdioCaller caller(dirfd);
-    zx::status status = service::ConnectAt<fuchsia_sysmem::DriverConnector>(
+    zx::result status = service::ConnectAt<fuchsia_sysmem::DriverConnector>(
         caller.borrow_as<fuchsia_io::Directory>(), filename);
     if (status.is_error()) {
       printf("sysmem-connector: service::ConnectAt(%s, %s): %s\n", sysmem_directory_path_, filename,

@@ -354,7 +354,7 @@ TEST_F(Tcs3400Test, GetInputReports) {
   }
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-  zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+  zx::result reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
   fidl::WireSyncClient reader{std::move(*reader_client_end)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -471,7 +471,7 @@ TEST_F(Tcs3400Test, GetMultipleInputReports) {
   fake_i2c_.WaitForConfiguration();
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-  zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+  zx::result reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
   fidl::WireSyncClient reader{std::move(*reader_client_end)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -531,7 +531,7 @@ TEST_F(Tcs3400Test, GetInputReportsMultipleReaders) {
   fidl::WireSyncClient<fuchsia_input_report::InputReportsReader> readers[kReaderCount];
   for (auto& reader : readers) {
     fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-    zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+    zx::result reader_client_end = fidl::CreateEndpoints(&reader_server);
     ASSERT_OK(reader_client_end.status_value());
     reader = fidl::WireSyncClient(std::move(*reader_client_end));
     // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
@@ -582,7 +582,7 @@ TEST_F(Tcs3400Test, InputReportSaturated) {
   }
 
   fidl::ServerEnd<fuchsia_input_report::InputReportsReader> reader_server;
-  zx::status reader_client_end = fidl::CreateEndpoints(&reader_server);
+  zx::result reader_client_end = fidl::CreateEndpoints(&reader_server);
   ASSERT_OK(reader_client_end.status_value());
   fidl::WireSyncClient reader{std::move(*reader_client_end)};
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.

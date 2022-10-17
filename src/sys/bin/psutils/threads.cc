@@ -249,7 +249,7 @@ int dump_process(zx_koid_t pid) {
 // Writer that writes to stdout at a throttled rate.
 class Writer {
  public:
-  static zx::status<std::unique_ptr<Writer>> Create();
+  static zx::result<std::unique_ptr<Writer>> Create();
 
   ~Writer() {
     Join();
@@ -294,7 +294,7 @@ class Writer {
   const size_t baud_;
 };
 
-zx::status<std::unique_ptr<Writer>> Writer::Create() {
+zx::result<std::unique_ptr<Writer>> Writer::Create() {
   // We create an 1GiB VMO relying on overcommit to prevent any issues. We will decommit pages as
   // they are written out to stdout to prevent buffer from growing too much.
   constexpr size_t kVmoSize = 1024 * 1024 * 1024;
@@ -407,7 +407,7 @@ void Writer::Signal() {
 }
 
 int dump_all_processes() {
-  zx::status<std::unique_ptr<Writer>> status_or_writer = Writer::Create();
+  zx::result<std::unique_ptr<Writer>> status_or_writer = Writer::Create();
   if (status_or_writer.is_error()) {
     fprintf(stderr, "ERROR: unable to create Writer: %s", status_or_writer.status_string());
     return 1;

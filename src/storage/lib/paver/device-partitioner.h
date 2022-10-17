@@ -109,33 +109,33 @@ class DevicePartitioner {
 
   // Returns a PartitionClient matching |spec|, creating the partition.
   // Assumes that the partition does not already exist.
-  virtual zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+  virtual zx::result<std::unique_ptr<PartitionClient>> AddPartition(
       const PartitionSpec& spec) const = 0;
 
   // Returns a PartitionClient matching |spec| if one exists.
-  virtual zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+  virtual zx::result<std::unique_ptr<PartitionClient>> FindPartition(
       const PartitionSpec& spec) const = 0;
 
   // Finalizes the PartitionClient matching |spec| after it has been written.
-  virtual zx::status<> FinalizePartition(const PartitionSpec& spec) const = 0;
+  virtual zx::result<> FinalizePartition(const PartitionSpec& spec) const = 0;
 
   // Wipes Fuchsia Volume Manager partition.
-  virtual zx::status<> WipeFvm() const = 0;
+  virtual zx::result<> WipeFvm() const = 0;
 
   // Initializes partition tables.
-  virtual zx::status<> InitPartitionTables() const = 0;
+  virtual zx::result<> InitPartitionTables() const = 0;
 
   // Wipes partition tables.
-  virtual zx::status<> WipePartitionTables() const = 0;
+  virtual zx::result<> WipePartitionTables() const = 0;
 
   // Determine if the given data file is a valid image for this device.
   //
   // This analysis is best-effort only, providing only basic safety checks.
-  virtual zx::status<> ValidatePayload(const PartitionSpec& spec,
+  virtual zx::result<> ValidatePayload(const PartitionSpec& spec,
                                        cpp20::span<const uint8_t> data) const = 0;
 
   // Flush all buffered write to persistant storage.
-  virtual zx::status<> Flush() const = 0;
+  virtual zx::result<> Flush() const = 0;
 };
 
 class DevicePartitionerFactory {
@@ -155,7 +155,7 @@ class DevicePartitionerFactory {
  private:
   // This method is overridden by derived classes that implement different kinds
   // of DevicePartitioners.
-  virtual zx::status<std::unique_ptr<DevicePartitioner>> New(
+  virtual zx::result<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) = 0;
 
@@ -168,30 +168,30 @@ class DevicePartitionerFactory {
 // ZIRCON-R).
 class FixedDevicePartitioner : public DevicePartitioner {
  public:
-  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(fbl::unique_fd devfs_root);
+  static zx::result<std::unique_ptr<DevicePartitioner>> Initialize(fbl::unique_fd devfs_root);
 
   bool IsFvmWithinFtl() const override { return false; }
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+  zx::result<std::unique_ptr<PartitionClient>> AddPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<PartitionClient>> FindPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
+  zx::result<> FinalizePartition(const PartitionSpec& spec) const override { return zx::ok(); }
 
-  zx::status<> WipeFvm() const override;
+  zx::result<> WipeFvm() const override;
 
-  zx::status<> InitPartitionTables() const override;
+  zx::result<> InitPartitionTables() const override;
 
-  zx::status<> WipePartitionTables() const override;
+  zx::result<> WipePartitionTables() const override;
 
-  zx::status<> ValidatePayload(const PartitionSpec& spec,
+  zx::result<> ValidatePayload(const PartitionSpec& spec,
                                cpp20::span<const uint8_t> data) const override;
 
-  zx::status<> Flush() const override { return zx::ok(); }
+  zx::result<> Flush() const override { return zx::ok(); }
 
  private:
   FixedDevicePartitioner(fbl::unique_fd devfs_root) : devfs_root_(std::move(devfs_root)) {}
@@ -201,7 +201,7 @@ class FixedDevicePartitioner : public DevicePartitioner {
 
 class DefaultPartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(
+  zx::result<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };

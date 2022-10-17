@@ -25,7 +25,7 @@
 namespace audio {
 namespace usb {
 
-zx::status<UsbAudioDevice*> UsbAudioDevice::DriverBind(zx_device_t* parent) {
+zx::result<UsbAudioDevice*> UsbAudioDevice::DriverBind(zx_device_t* parent) {
   fbl::AllocChecker ac;
   auto usb_device = fbl::AdoptRef(new (&ac) audio::usb::UsbAudioDevice(parent));
   if (!ac.check()) {

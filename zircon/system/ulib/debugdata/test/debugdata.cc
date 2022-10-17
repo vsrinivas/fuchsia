@@ -40,7 +40,7 @@ constexpr uint8_t kTestData[] = {0x00, 0x11, 0x22, 0x33};
 
 TEST(DebugDataTest, PublishData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::Publisher>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_debugdata::Publisher>();
   ASSERT_OK(endpoints.status_value());
   std::unordered_map<std::string, std::vector<zx::vmo>> data;
   debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},
@@ -77,7 +77,7 @@ TEST(DebugDataTest, PublishData) {
 
 TEST(DebugDataTest, DrainData) {
   async::Loop loop{&kAsyncLoopConfigNoAttachToCurrentThread};
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_debugdata::Publisher>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_debugdata::Publisher>();
   ASSERT_OK(endpoints.status_value());
   std::unordered_map<std::string, std::vector<zx::vmo>> data;
   debugdata::Publisher publisher(loop.dispatcher(), fbl::unique_fd{open("/", O_RDONLY)},

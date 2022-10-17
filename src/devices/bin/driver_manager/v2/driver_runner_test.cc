@@ -266,7 +266,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
   }
 
   FakeDriverIndex CreateDriverIndex() {
-    return FakeDriverIndex(dispatcher(), [](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+    return FakeDriverIndex(dispatcher(), [](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
       if (args.name().get() == "second") {
         return zx::ok(FakeDriverIndex::MatchResult{
             .url = "fuchsia-boot:///#meta/second-driver.cm",
@@ -387,7 +387,7 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
     return std::move(controller_endpoints->client);
   }
 
-  zx::status<fidl::ClientEnd<frunner::ComponentController>> StartRootDriver(
+  zx::result<fidl::ClientEnd<frunner::ComponentController>> StartRootDriver(
       std::string url, DriverRunner& driver_runner) {
     realm().SetCreateChildHandler(
         [](fdecl::CollectionRef collection, fdecl::Child decl, auto offers) {
@@ -1003,7 +1003,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
 // node properties.
 TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
   FakeDriverIndex driver_index(
-      dispatcher(), [](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+      dispatcher(), [](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
         if (args.has_properties() && args.properties()[0].key().is_int_value() &&
             args.properties()[0].key().int_value() == 0x1985 &&
             args.properties()[0].value().is_int_value() &&
@@ -1123,7 +1123,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UnknownNode) {
 TEST_F(DriverRunnerTest, StartSecondDriver_BindOrphanToBaseDriver) {
   bool base_drivers_loaded = false;
   FakeDriverIndex driver_index(
-      dispatcher(), [&base_drivers_loaded](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+      dispatcher(), [&base_drivers_loaded](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
         if (base_drivers_loaded) {
           if (args.name().get() == "second") {
             return zx::ok(FakeDriverIndex::MatchResult{
@@ -1306,7 +1306,7 @@ TEST_F(DriverRunnerTest, StartSecondDriver_CloseSecondDriver) {
 // Start a chain of drivers, and then unbind the second driver's node.
 TEST_F(DriverRunnerTest, StartDriverChain_UnbindSecondNode) {
   FakeDriverIndex driver_index(dispatcher(),
-                               [](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+                               [](auto args) -> zx::result<FakeDriverIndex::MatchResult> {
                                  std::string name(args.name().get());
                                  return zx::ok(FakeDriverIndex::MatchResult{
                                      .url = "fuchsia-boot:///#meta/" + name + "-driver.cm",

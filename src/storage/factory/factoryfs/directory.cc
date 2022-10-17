@@ -78,7 +78,7 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
 }
 
 #ifdef __Fuchsia__
-zx::status<std::string> Directory::GetDevicePath() const {
+zx::result<std::string> Directory::GetDevicePath() const {
   return factoryfs_.Device().GetDevicePath();
 }
 #endif

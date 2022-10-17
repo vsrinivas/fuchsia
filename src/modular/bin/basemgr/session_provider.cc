@@ -118,7 +118,7 @@ void SessionProvider::OnSessionShutdown(SessionContextImpl::ShutDownReason shutd
 }
 
 void SessionProvider::TriggerReboot() {
-  zx::status<bool> can_reboot_or = reboot_rate_limiter_.CanReboot();
+  zx::result<bool> can_reboot_or = reboot_rate_limiter_.CanReboot();
   if (can_reboot_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to read reboot tracking file: "
                    << zx_status_get_string(can_reboot_or.status_value());

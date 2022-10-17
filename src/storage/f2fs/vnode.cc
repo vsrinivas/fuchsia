@@ -191,7 +191,7 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
   }
 }
 
-zx::status<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, const size_t length) {
+zx::result<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, const size_t length) {
   zx::vmo vmo;
   // It creates a zero-filled vmo, so we don't need to fill an invalidated area with zero.
   if (auto status = vmo.create(length, 0, &vmo); status != ZX_OK) {
@@ -803,7 +803,7 @@ void VnodeF2fs::TruncateToSize() {
 }
 
 void VnodeF2fs::ReleasePagedVmo() {
-  zx::status<bool> valid_vmo_or;
+  zx::result<bool> valid_vmo_or;
   {
     std::lock_guard lock(mutex_);
     valid_vmo_or = ReleasePagedVmoUnsafe();
@@ -820,7 +820,7 @@ void VnodeF2fs::ReleasePagedVmo() {
   }
 }
 
-zx::status<bool> VnodeF2fs::ReleasePagedVmoUnsafe() {
+zx::result<bool> VnodeF2fs::ReleasePagedVmoUnsafe() {
 #ifdef __Fuchsia__
   if (paged_vmo()) {
     fbl::RefPtr<fs::Vnode> pager_reference = FreePagedVmo();

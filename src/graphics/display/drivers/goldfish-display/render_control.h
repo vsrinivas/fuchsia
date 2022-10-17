@@ -29,22 +29,22 @@ class RenderControl {
 
   int32_t GetFbParam(uint32_t param, int32_t default_value);
   using ColorBufferId = uint32_t;
-  zx::status<ColorBufferId> CreateColorBuffer(uint32_t width, uint32_t height, uint32_t format);
+  zx::result<ColorBufferId> CreateColorBuffer(uint32_t width, uint32_t height, uint32_t format);
   zx_status_t OpenColorBuffer(ColorBufferId id);
   zx_status_t CloseColorBuffer(ColorBufferId id);
 
   // Zero means success; non-zero value means the call failed.
   using RcResult = int32_t;
-  zx::status<RcResult> SetColorBufferVulkanMode(ColorBufferId id, uint32_t mode);
-  zx::status<RcResult> UpdateColorBuffer(ColorBufferId id, const fzl::PinnedVmo& pinned_vmo,
+  zx::result<RcResult> SetColorBufferVulkanMode(ColorBufferId id, uint32_t mode);
+  zx::result<RcResult> UpdateColorBuffer(ColorBufferId id, const fzl::PinnedVmo& pinned_vmo,
                                          uint32_t width, uint32_t height, uint32_t format,
                                          size_t size);
   zx_status_t FbPost(uint32_t id);
   using DisplayId = uint32_t;
-  zx::status<DisplayId> CreateDisplay();
-  zx::status<RcResult> DestroyDisplay(DisplayId display_id);
-  zx::status<RcResult> SetDisplayColorBuffer(DisplayId display_id, uint32_t id);
-  zx::status<RcResult> SetDisplayPose(DisplayId display_id, int32_t x, int32_t y, uint32_t w,
+  zx::result<DisplayId> CreateDisplay();
+  zx::result<RcResult> DestroyDisplay(DisplayId display_id);
+  zx::result<RcResult> SetDisplayColorBuffer(DisplayId display_id, uint32_t id);
+  zx::result<RcResult> SetDisplayPose(DisplayId display_id, int32_t x, int32_t y, uint32_t w,
                                       uint32_t h);
 
   PipeIo* pipe_io() { return pipe_io_.get(); }

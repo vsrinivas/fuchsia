@@ -89,7 +89,7 @@ class FuchsiaVfs : public Vfs {
 
   // Provides the implementation for fuchsia.io.Directory.QueryFilesystem().
   // This default implementation returns ZX_ERR_NOT_SUPPORTED.
-  virtual zx::status<FilesystemInfo> GetFilesystemInfo() __TA_EXCLUDES(vfs_lock_);
+  virtual zx::result<FilesystemInfo> GetFilesystemInfo() __TA_EXCLUDES(vfs_lock_);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   void SetDispatcher(async_dispatcher_t* dispatcher);
@@ -141,7 +141,7 @@ class FuchsiaVfs : public Vfs {
 
  protected:
   // Vfs protected overrides.
-  zx::status<bool> EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+  zx::result<bool> EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                 fbl::RefPtr<Vnode>* out_vn, fs::VnodeConnectionOptions options,
                                 uint32_t mode, Rights parent_rights) override
       __TA_REQUIRES(vfs_lock_);

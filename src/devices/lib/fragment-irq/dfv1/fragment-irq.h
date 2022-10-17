@@ -9,9 +9,9 @@
 namespace fragment_irq {
 
 // Get an interrupt with name |fragment_name|.
-zx::status<zx::interrupt> GetInterrupt(zx_device_t* dev, const char* fragment_name);
+zx::result<zx::interrupt> GetInterrupt(zx_device_t* dev, const char* fragment_name);
 
 // Get interrupt index |which|. This will attempt to use fragments and FIDL to get the
 // interrupt.
-zx::status<zx::interrupt> GetInterrupt(zx_device_t* dev, uint32_t which);
+zx::result<zx::interrupt> GetInterrupt(zx_device_t* dev, uint32_t which);
 }  // namespace fragment_irq

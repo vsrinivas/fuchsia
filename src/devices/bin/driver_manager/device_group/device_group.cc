@@ -11,7 +11,7 @@ DeviceGroup::DeviceGroup(DeviceGroupCreateInfo create_info)
   device_group_nodes_ = std::vector<bool>(create_info.size, false);
 }
 
-zx::status<std::optional<DeviceOrNode>> DeviceGroup::BindNode(
+zx::result<std::optional<DeviceOrNode>> DeviceGroup::BindNode(
     fuchsia_driver_index::wire::MatchedDeviceGroupInfo info, const DeviceOrNode& device_or_node) {
   ZX_ASSERT(info.has_node_index());
   auto node_index = info.node_index();

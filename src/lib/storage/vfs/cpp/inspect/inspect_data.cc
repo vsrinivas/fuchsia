@@ -49,7 +49,7 @@ std::string InfoData::OldestVersion(uint32_t oldest_major, uint32_t oldest_minor
   return std::to_string(oldest_major) + "/" + std::to_string(oldest_minor);
 }
 
-zx::status<FvmData::SizeInfo> FvmData::GetSizeInfoFromDevice(
+zx::result<FvmData::SizeInfo> FvmData::GetSizeInfoFromDevice(
     const block_client::BlockDevice& device) {
   FvmData::SizeInfo size_info{};
   // This information is for the entire FVM volume. So the "slices allocated" counts across all

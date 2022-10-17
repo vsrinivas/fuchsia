@@ -52,7 +52,7 @@ uintptr_t CreatePageTableLevel(const PhysMem& phys_mem, size_t l1_page_size, uin
 
 }  // namespace
 
-zx::status<> CreatePageTable(const PhysMem& phys_mem) {
+zx::result<> CreatePageTable(const PhysMem& phys_mem) {
   if (phys_mem.size() % PAGE_SIZE != 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -88,7 +88,7 @@ zx_gpaddr_t PageAddress(zx_gpaddr_t pt_addr, size_t level, zx_vaddr_t guest_vadd
 }
 
 // Returns the page for a given guest virtual address.
-zx::status<Page> FindPage(const PhysMem& phys_mem, zx_gpaddr_t pt_addr, zx_vaddr_t guest_vaddr) {
+zx::result<Page> FindPage(const PhysMem& phys_mem, zx_gpaddr_t pt_addr, zx_vaddr_t guest_vaddr) {
   const size_t num_entries = PAGE_SIZE / sizeof(zx_gpaddr_t);
   const size_t indices[X86_PAGING_LEVELS] = {
       VADDR_TO_PML4_INDEX(guest_vaddr),
@@ -110,7 +110,7 @@ zx::status<Page> FindPage(const PhysMem& phys_mem, zx_gpaddr_t pt_addr, zx_vaddr
   return zx::ok(Page(reinterpret_cast<uint8_t*>(pt.data()), pt.size_bytes()));
 }
 
-zx::status<> ReadInstruction(const PhysMem& phys_mem, zx_gpaddr_t cr3_addr, zx_vaddr_t rip_addr,
+zx::result<> ReadInstruction(const PhysMem& phys_mem, zx_gpaddr_t cr3_addr, zx_vaddr_t rip_addr,
                              InstructionSpan span) {
   auto page = FindPage(phys_mem, cr3_addr, rip_addr);
   if (page.is_error()) {

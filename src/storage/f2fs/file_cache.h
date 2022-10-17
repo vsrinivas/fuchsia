@@ -87,7 +87,7 @@ class Page : public PageRefCounted<Page>,
   // also keeps with its vmo.
   zx_status_t GetPage();
   zx_status_t VmoOpUnlock(bool evict = false);
-  zx::status<bool> VmoOpLock();
+  zx::result<bool> VmoOpLock();
   template <typename T = void>
   T *GetAddress() const {
     ZX_DEBUG_ASSERT(IsMapped());
@@ -310,12 +310,12 @@ class FileCache {
   // If there is no Page, it creates and returns a locked Page.
   zx_status_t GetPage(const pgoff_t index, LockedPage *out) __TA_EXCLUDES(tree_lock_);
   // It returns locked Pages corresponding to [start - end) from |page_tree_|.
-  zx::status<std::vector<LockedPage>> GetPages(const pgoff_t start, const pgoff_t end)
+  zx::result<std::vector<LockedPage>> GetPages(const pgoff_t start, const pgoff_t end)
       __TA_EXCLUDES(tree_lock_);
   // It returns locked pages corresponding to |page_offsets| from |page_tree_|.
   // If kInvalidPageOffset is included in |page_offsets|, the corresponding Page will be a null
   // page.
-  zx::status<std::vector<LockedPage>> GetPages(const std::vector<pgoff_t> &page_offsets)
+  zx::result<std::vector<LockedPage>> GetPages(const std::vector<pgoff_t> &page_offsets)
       __TA_EXCLUDES(tree_lock_);
   LockedPage GetNewPage(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   // It returns an unlocked Page corresponding to |index| from |page_tree|.
@@ -346,11 +346,11 @@ class FileCache {
   // |page| is unlocked, it acquires |tree_lock_| again and returns ZX_ERR_UNAVAILABLE since
   // it is not allowed to acquire |tree_lock_| with |page| locked. Then, a caller may retry it
   // with the same |page|.
-  zx::status<LockedPage> GetLockedPage(fbl::RefPtr<Page> page) __TA_REQUIRES(tree_lock_);
+  zx::result<LockedPage> GetLockedPage(fbl::RefPtr<Page> page) __TA_REQUIRES(tree_lock_);
   // It returns a set of locked dirty Pages that meet |operation|.
   std::vector<LockedPage> GetLockedDirtyPagesUnsafe(const WritebackOperation &operation)
       __TA_REQUIRES(tree_lock_);
-  zx::status<LockedPage> GetPageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
+  zx::result<LockedPage> GetPageUnsafe(const pgoff_t index) __TA_REQUIRES(tree_lock_);
   zx_status_t AddPageUnsafe(const fbl::RefPtr<Page> &page) __TA_REQUIRES(tree_lock_);
   zx_status_t EvictUnsafe(Page *page) __TA_REQUIRES(tree_lock_);
   // It returns all Pages from |page_tree_| within the range of |start| to |end|.

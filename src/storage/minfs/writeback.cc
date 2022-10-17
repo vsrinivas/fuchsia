@@ -33,7 +33,7 @@
 
 namespace minfs {
 
-zx::status<std::unique_ptr<Transaction>> Transaction::Create(TransactionalFs* minfs,
+zx::result<std::unique_ptr<Transaction>> Transaction::Create(TransactionalFs* minfs,
                                                              size_t reserve_inodes,
                                                              size_t reserve_blocks,
                                                              InodeManager* inode_manager) {
@@ -128,7 +128,7 @@ void Transaction::EnqueueData(storage::Operation operation, storage::BlockBuffer
 void Transaction::PinVnode(fbl::RefPtr<VnodeMinfs> vnode) {}
 #endif
 
-zx::status<> Transaction::ExtendBlockReservation(size_t reserve_blocks) {
+zx::result<> Transaction::ExtendBlockReservation(size_t reserve_blocks) {
   return block_reservation_->ExtendReservation(this, reserve_blocks);
 }
 

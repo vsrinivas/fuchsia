@@ -36,7 +36,7 @@ using object_cache::UniquePtr;
 struct TestAllocator {
   static constexpr size_t kSlabSize = DefaultAllocator::kSlabSize;
 
-  static zx::status<void*> Allocate() {
+  static zx::result<void*> Allocate() {
     allocated_slabs.fetch_add(1, ktl::memory_order_relaxed);
     return DefaultAllocator::Allocate();
   }
@@ -90,7 +90,7 @@ struct TestParent : fbl::RefCounted<TestParent> {
     fbl::RefPtr<TestParent> parent;
   };
 
-  zx::status<fbl::RefPtr<Child>> Allocate() {
+  zx::result<fbl::RefPtr<Child>> Allocate() {
     auto result = allocator.Allocate(fbl::RefPtr{this});
     if (result.is_error()) {
       return result.take_error();

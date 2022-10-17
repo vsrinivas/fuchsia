@@ -43,7 +43,7 @@ void FileConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
 }
 
 void FileConnection::Close(CloseCompleter::Sync& completer) {
-  zx::status result = Connection::NodeClose();
+  zx::result result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
   } else {
@@ -56,7 +56,7 @@ void FileConnection::Query(QueryCompleter::Sync& completer) {
 }
 
 void FileConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
-  zx::status result = Connection::NodeDescribe();
+  zx::result result = Connection::NodeDescribe();
   if (result.is_error()) {
     return completer.Close(result.status_value());
   }
@@ -66,7 +66,7 @@ void FileConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& compl
 }
 
 void FileConnection::Describe2(Describe2Completer::Sync& completer) {
-  zx::status result = Connection::NodeDescribe();
+  zx::result result = Connection::NodeDescribe();
   if (result.is_error()) {
     return completer.Close(result.status_value());
   }
@@ -97,7 +97,7 @@ void FileConnection::Sync(SyncCompleter::Sync& completer) {
 }
 
 void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
-  zx::status result = Connection::NodeGetAttr();
+  zx::result result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.status_value(), fio::wire::NodeAttributes());
   } else {
@@ -106,7 +106,7 @@ void FileConnection::GetAttr(GetAttrCompleter::Sync& completer) {
 }
 
 void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
-  zx::status result = Connection::NodeSetAttr(request->flags, request->attributes);
+  zx::result result = Connection::NodeSetAttr(request->flags, request->attributes);
   if (result.is_error()) {
     completer.Reply(result.status_value());
   } else {
@@ -115,7 +115,7 @@ void FileConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync&
 }
 
 void FileConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  zx::status result = Connection::NodeQueryFilesystem();
+  zx::result result = Connection::NodeQueryFilesystem();
   completer.Reply(result.status_value(),
                   result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
                                        &result.value())

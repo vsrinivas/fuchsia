@@ -60,7 +60,7 @@ class CodecTest : public SimpleCodecServer {
   explicit CodecTest(zx_device_t* device) : SimpleCodecServer(device) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
-  zx::status<DriverIds> Initialize() override { return zx::ok(DriverIds{}); }
+  zx::result<DriverIds> Initialize() override { return zx::ok(DriverIds{}); }
   zx_status_t Shutdown() override { return ZX_OK; }
   zx_status_t Reset() override {
     started_ = true;
@@ -87,7 +87,7 @@ class CodecTest : public SimpleCodecServer {
     formats.bits_per_sample.push_back(16);
     return formats;
   }
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     last_frame_rate_ = format.frame_rate;
     CodecFormatInfo format_info = {};
     format_info.set_turn_on_delay(kTestTurnOnNsecs);

@@ -43,7 +43,7 @@ class VmoStore {
   // Returns an error if the specified region is invalid or `id` is not registered.
   template <class T>
   zx_status_t Read(uint8_t id, size_t offset, size_t len, T data) {
-    zx::status vmo_data = GetMappedVmo(id);
+    zx::result vmo_data = GetMappedVmo(id);
     if (vmo_data.is_error()) {
       return vmo_data.status_value();
     }
@@ -59,7 +59,7 @@ class VmoStore {
   // Returns an error if the specified region is invalid or `id` is not registered.
   template <class T>
   zx_status_t Write(uint8_t id, size_t offset, size_t len, T data) {
-    zx::status vmo_data = GetMappedVmo(id);
+    zx::result vmo_data = GetMappedVmo(id);
     if (vmo_data.is_error()) {
       return vmo_data.status_value();
     }
@@ -94,7 +94,7 @@ class VmoStore {
   RxBuffer MakeEmptyRxBuffer();
 
  private:
-  zx::status<cpp20::span<uint8_t>> GetMappedVmo(uint8_t id);
+  zx::result<cpp20::span<uint8_t>> GetMappedVmo(uint8_t id);
   vmo_store::VmoStore<vmo_store::SlabStorage<uint8_t>> store_;
 };
 
@@ -122,7 +122,7 @@ class Buffer {
   zx_status_t Write(const fidl::VectorView<uint8_t>& data);
   zx_status_t Write(const std::vector<uint8_t>& data);
   // Copies data from `other` into this buffer, returning the number of bytes written on success.
-  zx::status<size_t> CopyFrom(Buffer& other);
+  zx::result<size_t> CopyFrom(Buffer& other);
   // Returns this buffer's length in bytes.
   uint64_t length() const { return total_length_; }
 

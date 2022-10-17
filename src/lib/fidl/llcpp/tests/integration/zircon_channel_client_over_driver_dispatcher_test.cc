@@ -47,7 +47,7 @@ std::pair<fdf::Dispatcher, std::shared_ptr<libsync::Completion>> CreateSyncDispa
   constexpr uint32_t kSyncDispatcherOptions = FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
   std::shared_ptr<libsync::Completion> dispatcher_shutdown =
       std::make_shared<libsync::Completion>();
-  zx::status dispatcher = fdf::Dispatcher::Create(
+  zx::result dispatcher = fdf::Dispatcher::Create(
       kSyncDispatcherOptions, "",
       [dispatcher_shutdown](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown->Signal(); });
   ZX_ASSERT(dispatcher.status_value() == ZX_OK);
@@ -60,7 +60,7 @@ TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {
 
   auto [dispatcher1, dispatcher1_shutdown] = CreateSyncDispatcher();
   auto [dispatcher2, dispatcher2_shutdown] = CreateSyncDispatcher();
-  zx::status endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
+  zx::result endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<fidl::WireClient<test_empty_protocol::Empty>> client;
@@ -98,7 +98,7 @@ TEST(WireClient, CannotDestroyOnUnmanagedThread) {
   ScopedFakeDriver driver;
 
   auto [dispatcher1, dispatcher1_shutdown] = CreateSyncDispatcher();
-  zx::status endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
+  zx::result endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<fidl::WireClient<test_empty_protocol::Empty>> client;
@@ -139,7 +139,7 @@ TEST_P(WireSharedClient, CanSendAcrossDispatcher) {
 
   auto [dispatcher1, dispatcher1_shutdown] = CreateSyncDispatcher();
   auto [dispatcher2, dispatcher2_shutdown] = CreateSyncDispatcher();
-  zx::status endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
+  zx::result endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<fidl::WireSharedClient<test_empty_protocol::Empty>> client;
@@ -172,7 +172,7 @@ TEST_P(WireSharedClient, CanDestroyOnUnmanagedThread) {
   ScopedFakeDriver driver;
 
   auto [dispatcher1, dispatcher1_shutdown] = CreateSyncDispatcher();
-  zx::status endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
+  zx::result endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
 
   std::unique_ptr<fidl::WireSharedClient<test_empty_protocol::Empty>> client;
@@ -203,12 +203,12 @@ TEST(WireClient, CannotBindUnsynchronizedDispatcher) {
   ScopedFakeDriver driver;
 
   libsync::Completion dispatcher_shutdown;
-  zx::status dispatcher =
+  zx::result dispatcher =
       fdf::Dispatcher::Create(FDF_DISPATCHER_OPTION_UNSYNCHRONIZED, "",
                               [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
-  zx::status endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
+  zx::result endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
 
   fidl::WireClient<test_empty_protocol::Empty> client;
@@ -231,11 +231,11 @@ TEST_P(WireSharedClient, CanBindAnyDispatcher) {
   ScopedFakeDriver driver;
 
   libsync::Completion dispatcher_shutdown;
-  zx::status dispatcher = fdf::Dispatcher::Create(
+  zx::result dispatcher = fdf::Dispatcher::Create(
       GetParam(), "", [&](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown.Signal(); });
   ASSERT_OK(dispatcher.status_value());
 
-  zx::status endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
+  zx::result endpoints = fidl::CreateEndpoints<test_empty_protocol::Empty>();
   ASSERT_OK(endpoints.status_value());
 
   fidl::WireSharedClient<test_empty_protocol::Empty> client;

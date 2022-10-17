@@ -34,7 +34,7 @@ zx_status_t Fsck(std::string_view device_path, DiskFormat df, const FsckOptions&
                  LaunchCallback cb);
 
 // Get a connection to the root of the filesystem, given a filesystem outgoing directory.
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> FsRootHandle(
     fidl::UnownedClientEnd<fuchsia_io::Directory> export_root,
     fuchsia_io::wire::OpenFlags flags = fuchsia_io::wire::OpenFlags::kRightReadable |
                                         fuchsia_io::wire::OpenFlags::kPosixWritable |

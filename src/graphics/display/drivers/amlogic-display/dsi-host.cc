@@ -85,7 +85,7 @@ DsiHost::DsiHost(zx_device_t* parent, uint32_t panel_type)
       panel_type_(panel_type) {}
 
 // static
-zx::status<std::unique_ptr<DsiHost>> DsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
+zx::result<std::unique_ptr<DsiHost>> DsiHost::Create(zx_device_t* parent, uint32_t panel_type) {
   fbl::AllocChecker ac;
   std::unique_ptr<DsiHost> self =
       fbl::make_unique_checked<DsiHost>(&ac, DsiHost(parent, panel_type));

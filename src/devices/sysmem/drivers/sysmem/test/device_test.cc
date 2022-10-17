@@ -186,11 +186,11 @@ class FakeDdkSysmem : public zxtest::Test {
   }
 
   fidl::ClientEnd<fuchsia_sysmem::Allocator> Connect() {
-    zx::status allocator_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::Allocator>();
+    zx::result allocator_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::Allocator>();
     EXPECT_OK(allocator_endpoints);
     auto [allocator_client_end, allocator_server_end] = std::move(*allocator_endpoints);
 
-    zx::status connector_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::DriverConnector>();
+    zx::result connector_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::DriverConnector>();
     EXPECT_OK(connector_endpoints);
     auto [connector_client_end, connector_server_end] = std::move(*connector_endpoints);
 
@@ -207,7 +207,7 @@ class FakeDdkSysmem : public zxtest::Test {
   fidl::ClientEnd<fuchsia_sysmem::BufferCollection> AllocateNonSharedCollection() {
     fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator(Connect());
 
-    zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+    zx::result collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     EXPECT_OK(collection_endpoints);
     auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
@@ -247,7 +247,7 @@ TEST_F(FakeDdkSysmem, DummySecureMem) {
 TEST_F(FakeDdkSysmem, NamedToken) {
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator(Connect());
 
-  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   EXPECT_OK(token_endpoints);
   auto [token_client_end, token_server_end] = std::move(*token_endpoints);
 
@@ -260,7 +260,7 @@ TEST_F(FakeDdkSysmem, NamedToken) {
   EXPECT_OK(token->SetName(100u, "a"));
   EXPECT_OK(token->SetName(6u, "b"));
 
-  zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  zx::result collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   EXPECT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 
@@ -326,7 +326,7 @@ TEST_F(FakeDdkSysmem, NamedClient) {
 TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator(Connect());
 
-  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   EXPECT_OK(token_endpoints);
   auto [token_client_end, token_server_end] = std::move(*token_endpoints);
 
@@ -337,7 +337,7 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
   EXPECT_OK(token->SetDebugClientInfo("bad", 6));
   EXPECT_OK(allocator->SetDebugClientInfo("a", 5));
 
-  zx::status collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  zx::result collection_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   EXPECT_OK(collection_endpoints);
   auto [collection_client_end, collection_server_end] = std::move(*collection_endpoints);
 

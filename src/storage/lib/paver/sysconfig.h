@@ -17,12 +17,12 @@ class SysconfigPartitionClient final : public BlockDevicePartitionClient {
                            ::sysconfig::SyncClient::PartitionType partition)
       : client_(std::move(client)), partition_(partition) {}
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Trim() final;
+  zx::result<> Flush() final;
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 

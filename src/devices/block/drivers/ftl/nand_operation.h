@@ -28,7 +28,7 @@ class NandOperation {
   // the result of queueing and completing such operations. Unlike calling |Execute| in sequence,
   // this method will queue all operations before waiting, and will return once all successfully
   // queued operations are signalled.
-  static std::vector<zx::status<>> ExecuteBatch(
+  static std::vector<zx::result<>> ExecuteBatch(
       OobDoubler* parent, cpp20::span<std::unique_ptr<NandOperation>> operation);
 
   explicit NandOperation(size_t op_size) : op_size_(op_size) {}

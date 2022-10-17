@@ -39,7 +39,7 @@ bool File::IsDirty() const {
   return cached_transaction_ != nullptr;
 }
 
-zx::status<> File::WalkFileBlocks(size_t offset, size_t length,
+zx::result<> File::WalkFileBlocks(size_t offset, size_t length,
                                   WalkWriteBlockHandlerType& handler) {
   ZX_ASSERT(DirtyCacheEnabled());
   blk_t start_block = static_cast<blk_t>(offset / Vfs()->BlockSize());
@@ -65,13 +65,13 @@ zx::status<> File::WalkFileBlocks(size_t offset, size_t length,
   return zx::ok();
 }
 
-zx::status<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, size_t length,
+zx::result<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, size_t length,
                                                               uint32_t uncached_block_count) {
   ZX_ASSERT(DirtyCacheEnabled());
   size_t data_blocks_to_write = 0;
   WalkWriteBlockHandlerType count_blocks = [&data_blocks_to_write, &uncached_block_count](
                                                uint32_t block, bool allocated,
-                                               bool is_pending) -> zx::status<> {
+                                               bool is_pending) -> zx::result<> {
     if (!is_pending) {
       data_blocks_to_write++;
     } else {
@@ -88,7 +88,7 @@ zx::status<uint32_t> File::GetRequiredBlockCountForDirtyCache(size_t offset, siz
   return zx::ok(uncached_block_count);
 }
 
-zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length,
+zx::result<> File::MarkRequiredBlocksPending(size_t offset, size_t length,
                                              const Transaction& transaction) {
   ZX_ASSERT(DirtyCacheEnabled());
 
@@ -100,7 +100,7 @@ zx::status<> File::MarkRequiredBlocksPending(size_t offset, size_t length,
   ZX_ASSERT(Vfs()->AllReservationsBacked(transaction));
 
   WalkWriteBlockHandlerType mark_pending = [this](uint32_t block, bool allocated,
-                                                  bool is_pending) -> zx::status<> {
+                                                  bool is_pending) -> zx::result<> {
     if (!is_pending) {
       allocation_state_.SetPending(block, allocated);
       Vfs()->InspectTree()->AddDirtyBytes(Vfs()->BlockSize());
@@ -119,7 +119,7 @@ void File::DropCachedWrites() {
   }
   uint32_t block_count = 0;
   WalkWriteBlockHandlerType clear_pending = [this, &block_count](uint32_t block, bool allocated,
-                                                                 bool is_pending) -> zx::status<> {
+                                                                 bool is_pending) -> zx::result<> {
     if (!is_pending) {
       return zx::ok();
     }
@@ -142,7 +142,7 @@ void File::DropCachedWrites() {
   ZX_ASSERT(allocation_state_.GetTotalPending() == 0);
 }
 
-zx::status<> File::FlushCachedWrites() {
+zx::result<> File::FlushCachedWrites() {
   if (!DirtyCacheEnabled()) {
     std::lock_guard lock(mutex_);
     ZX_DEBUG_ASSERT(cached_transaction_ == nullptr);
@@ -173,7 +173,7 @@ zx::status<> File::FlushCachedWrites() {
   return ForceFlushTransaction(std::move(transaction));
 }
 
-zx::status<bool> File::ShouldFlush(bool is_truncate, size_t length, size_t offset) {
+zx::result<bool> File::ShouldFlush(bool is_truncate, size_t length, size_t offset) {
   if (!DirtyCacheEnabled()) {
     std::lock_guard lock(mutex_);
     ZX_DEBUG_ASSERT(cached_transaction_ == nullptr);
@@ -198,14 +198,14 @@ zx::status<bool> File::ShouldFlush(bool is_truncate, size_t length, size_t offse
                  Vfs()->BlocksAvailable() < reserve_blocks));
 }
 
-zx::status<> File::ForceFlushTransaction(std::unique_ptr<Transaction> transaction) {
+zx::result<> File::ForceFlushTransaction(std::unique_ptr<Transaction> transaction) {
   // Ensure this Vnode remains alive while it has an operation in-flight.
   transaction->PinVnode(fbl::RefPtr(this));
   AllocateAndCommitData(std::move(transaction));
   return zx::ok();
 }
 
-zx::status<> File::FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush) {
+zx::result<> File::FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush) {
   if (!DirtyCacheEnabled() || force_flush) {
     // Shortcut case: If we don't have any data blocks to update, we may as well just update
     // the inode by itself.

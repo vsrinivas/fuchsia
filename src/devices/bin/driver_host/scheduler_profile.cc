@@ -21,7 +21,7 @@ fidl::ClientEnd<fuchsia_scheduler::ProfileProvider> scheduler_profile_provider;
 }  // namespace
 
 zx_status_t connect_scheduler_profile_provider() {
-  zx::status client_end = component::Connect<fuchsia_scheduler::ProfileProvider>();
+  zx::result client_end = component::Connect<fuchsia_scheduler::ProfileProvider>();
   if (client_end.is_ok()) {
     scheduler_profile_provider = std::move(client_end.value());
   }

@@ -30,7 +30,7 @@ class AllocatedNodeIterator {
 
   // Returns a pointer to the next extent container on success, or a status on
   // error.
-  zx::status<ExtentContainer*> Next();
+  zx::result<ExtentContainer*> Next();
 
   // Returns the number of extents we've iterated past already.
   uint32_t ExtentIndex() const;

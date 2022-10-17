@@ -15,7 +15,7 @@ namespace test = test_basic_protocol;
 namespace {
 
 TEST(SyncEventHandler, TestBase) {
-  zx::status endpoints = fidl::CreateEndpoints<test::TwoEvents>();
+  zx::result endpoints = fidl::CreateEndpoints<test::TwoEvents>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fidl::WireSendEvent(endpoints->server)->EventA());
 
@@ -53,7 +53,7 @@ TEST(SyncEventHandler, ExhaustivenessRequired) {
 }
 
 TEST(SyncEventHandler, HandleEvent) {
-  zx::status endpoints = fidl::CreateEndpoints<test::TwoEvents>();
+  zx::result endpoints = fidl::CreateEndpoints<test::TwoEvents>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fidl::WireSendEvent(endpoints->server)->EventA());
 
@@ -71,7 +71,7 @@ TEST(SyncEventHandler, HandleEvent) {
 }
 
 TEST(SyncEventHandler, UnknownEvent) {
-  zx::status endpoints = fidl::CreateEndpoints<test::TwoEvents>();
+  zx::result endpoints = fidl::CreateEndpoints<test::TwoEvents>();
   ASSERT_OK(endpoints.status_value());
   constexpr uint64_t kUnknownOrdinal = 0x1234abcd1234abcdULL;
   static_assert(kUnknownOrdinal != fidl::internal::WireOrdinal<test::TwoEvents::EventA>::value);
@@ -102,7 +102,7 @@ TEST(SyncEventHandler, UnknownEvent) {
 }
 
 TEST(SyncEventHandler, UnhandledTransitionalEvent) {
-  zx::status endpoints = fidl::CreateEndpoints<test_transitional::TransitionalEvent>();
+  zx::result endpoints = fidl::CreateEndpoints<test_transitional::TransitionalEvent>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fidl::WireSendEvent(endpoints->server)->Event());
 

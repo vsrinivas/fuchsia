@@ -46,7 +46,7 @@ const char kZxcryptConfigFile[] = "/pkg/config/zxcrypt";
 }  // namespace
 
 __EXPORT
-zx::status<KeySourcePolicy> SelectKeySourcePolicy() {
+zx::result<KeySourcePolicy> SelectKeySourcePolicy() {
   fbl::unique_fd fd(open(kZxcryptConfigFile, O_RDONLY));
   if (!fd) {
     xprintf("zxcrypt: couldn't open %s\n", kZxcryptConfigFile);

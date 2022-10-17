@@ -56,7 +56,7 @@ namespace fio = fuchsia_io;
 
 using Directory = fuchsia_io::Directory;
 
-zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::channel device,
+zx::result<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::channel device,
                                                     const MountOptions& options,
                                                     LaunchCallback cb) {
   zx_status_t status;
@@ -96,7 +96,7 @@ zx::status<fidl::ClientEnd<Directory>> InitNativeFs(const char* binary, zx::chan
   return zx::ok(std::move(outgoing_directory_or->client));
 }
 
-zx::status<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx::channel device,
+zx::result<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx::channel device,
                               const MountOptions& options) {
   auto startup_client_end = component::ConnectAt<fuchsia_fs_startup::Startup>(exposed_dir);
   if (startup_client_end.is_error())
@@ -116,7 +116,7 @@ zx::status<> StartFsComponent(fidl::UnownedClientEnd<Directory> exposed_dir, zx:
   return zx::ok();
 }
 
-zx::status<fidl::ClientEnd<Directory>> InitFsComponent(zx::channel device, DiskFormat df,
+zx::result<fidl::ClientEnd<Directory>> InitFsComponent(zx::channel device, DiskFormat df,
                                                        const MountOptions& options) {
   std::string_view url =
       options.component_url.empty() ? DiskFormatComponentUrl(df) : options.component_url;
@@ -124,7 +124,7 @@ zx::status<fidl::ClientEnd<Directory>> InitFsComponent(zx::channel device, DiskF
       ConnectFsComponent(url, *options.component_child_name, options.component_collection_name);
   if (exposed_dir_or.is_error())
     return exposed_dir_or.take_error();
-  zx::status<> start_status = StartFsComponent(*exposed_dir_or, std::move(device), options);
+  zx::result<> start_status = StartFsComponent(*exposed_dir_or, std::move(device), options);
   if (start_status.is_error()) {
     if (options.component_collection_name) {
       // If we hit an error starting, destroy the component instance. It may have been left in a
@@ -154,7 +154,7 @@ std::string StripTrailingSlash(const char* in) {
 
 }  // namespace
 
-__EXPORT zx::status<NamespaceBinding> NamespaceBinding::Create(
+__EXPORT zx::result<NamespaceBinding> NamespaceBinding::Create(
     const char* path, fidl::ClientEnd<fuchsia_io::Directory> dir) {
   auto stripped_path = StripTrailingSlash(path);
   if (stripped_path.empty()) {
@@ -191,14 +191,14 @@ fidl::ClientEnd<fuchsia_io::Directory> StartedSingleVolumeFilesystem::Release() 
 }
 
 __EXPORT
-zx::status<> StartedSingleVolumeFilesystem::Unmount() {
+zx::result<> StartedSingleVolumeFilesystem::Unmount() {
   auto res = Shutdown(ExportRoot());
   export_root_.reset();
   return res;
 }
 
 __EXPORT
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> StartedSingleVolumeFilesystem::DataRoot() const {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> StartedSingleVolumeFilesystem::DataRoot() const {
   return FsRootHandle(export_root_);
 }
 
@@ -208,7 +208,7 @@ fidl::ClientEnd<fuchsia_io::Directory> MountedVolume::Release() {
 }
 
 __EXPORT
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> MountedVolume::DataRoot() const {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> MountedVolume::DataRoot() const {
   return FsRootHandle(export_root_);
 }
 
@@ -230,7 +230,7 @@ StartedMultiVolumeFilesystem::Release() {
 }
 
 __EXPORT
-zx::status<> StartedMultiVolumeFilesystem::Unmount() {
+zx::result<> StartedMultiVolumeFilesystem::Unmount() {
   volumes_.clear();
   auto res = Shutdown(exposed_dir_);
   exposed_dir_.reset();
@@ -238,7 +238,7 @@ zx::status<> StartedMultiVolumeFilesystem::Unmount() {
 }
 
 __EXPORT
-zx::status<MountedVolume*> StartedMultiVolumeFilesystem::OpenVolume(std::string_view name,
+zx::result<MountedVolume*> StartedMultiVolumeFilesystem::OpenVolume(std::string_view name,
                                                                     zx::channel crypt_client) {
   if (volumes_.find(name) != volumes_.end()) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
@@ -257,7 +257,7 @@ zx::status<MountedVolume*> StartedMultiVolumeFilesystem::OpenVolume(std::string_
 }
 
 __EXPORT
-zx::status<MountedVolume*> StartedMultiVolumeFilesystem::CreateVolume(std::string_view name,
+zx::result<MountedVolume*> StartedMultiVolumeFilesystem::CreateVolume(std::string_view name,
                                                                       zx::channel crypt_client) {
   if (volumes_.find(name) != volumes_.end()) {
     return zx::error(ZX_ERR_ALREADY_BOUND);
@@ -275,7 +275,7 @@ zx::status<MountedVolume*> StartedMultiVolumeFilesystem::CreateVolume(std::strin
   return zx::ok(&iter->second);
 }
 
-__EXPORT zx::status<> StartedMultiVolumeFilesystem::CheckVolume(std::string_view volume_name,
+__EXPORT zx::result<> StartedMultiVolumeFilesystem::CheckVolume(std::string_view volume_name,
                                                                 zx::channel crypt_client) {
   return fs_management::CheckVolume(exposed_dir_, volume_name, std::move(crypt_client));
 }
@@ -292,7 +292,7 @@ fidl::ClientEnd<fuchsia_io::Directory> StartedSingleVolumeMultiVolumeFilesystem:
 }
 
 __EXPORT
-zx::status<> StartedSingleVolumeMultiVolumeFilesystem::Unmount() {
+zx::result<> StartedSingleVolumeMultiVolumeFilesystem::Unmount() {
   volume_.reset();
   auto res = Shutdown(exposed_dir_);
   exposed_dir_.reset();
@@ -302,7 +302,7 @@ zx::status<> StartedSingleVolumeMultiVolumeFilesystem::Unmount() {
 __EXPORT SingleVolumeFilesystemInterface::~SingleVolumeFilesystemInterface() = default;
 
 __EXPORT
-zx::status<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFormat df,
+zx::result<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFormat df,
                                                 const MountOptions& options, LaunchCallback cb) {
   if (IsMultiVolume(df)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -341,7 +341,7 @@ zx::status<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFo
 }
 
 __EXPORT
-zx::status<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_fd, DiskFormat df,
+zx::result<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_fd, DiskFormat df,
                                                           const MountOptions& options,
                                                           LaunchCallback cb) {
   if (!IsMultiVolume(df)) {
@@ -364,7 +364,7 @@ zx::status<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_
 }
 
 __EXPORT
-zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault(
+zx::result<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault(
     fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options, LaunchCallback cb,
     const char* volume_name) {
   if (!IsMultiVolume(df)) {
@@ -403,7 +403,7 @@ zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault
 }
 
 __EXPORT
-zx::status<> Shutdown(fidl::UnownedClientEnd<Directory> svc_dir) {
+zx::result<> Shutdown(fidl::UnownedClientEnd<Directory> svc_dir) {
   auto admin_or = component::ConnectAt<fuchsia_fs::Admin>(svc_dir);
   if (admin_or.is_error()) {
     return admin_or.take_error();

@@ -45,7 +45,7 @@ class StartedFilesystem {
       fs_;
 };
 
-zx::status<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
+zx::result<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
                                                const fs_management::MountOptions& options,
                                                fs_management::DiskFormat format);
 
@@ -107,7 +107,7 @@ class FilesystemMounter {
   // protocol.
   // Performs the mechanical action of mounting a filesystem, without validating the type of
   // filesystem being mounted.
-  zx::status<> MountLegacyFilesystem(FsManager::MountPoint point, fs_management::DiskFormat df,
+  zx::result<> MountLegacyFilesystem(FsManager::MountPoint point, fs_management::DiskFormat df,
                                      const char* binary_path,
                                      const fs_management::MountOptions& options,
                                      zx::channel block_device) const;
@@ -116,14 +116,14 @@ class FilesystemMounter {
   // is the LaunchFsNative variant which allows control over where the endpoint is bound to.
   //
   // Virtualized to enable testing.
-  virtual zx::status<StartedFilesystem> LaunchFs(zx::channel block_device,
+  virtual zx::result<StartedFilesystem> LaunchFs(zx::channel block_device,
                                                  const fs_management::MountOptions& options,
                                                  fs_management::DiskFormat format) const;
 
   // Actually launches the filesystem.
   //
   // Virtualized to enable testing.
-  virtual zx::status<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
+  virtual zx::result<> LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
                                       const char* binary, zx::channel block_device,
                                       const fs_management::MountOptions& options) const;
 

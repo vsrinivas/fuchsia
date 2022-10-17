@@ -242,7 +242,7 @@ void Tas58xx::PeriodicPollFaults() {
   ScheduleFaultPolling();
 }
 
-zx::status<DriverIds> Tas58xx::Initialize() {
+zx::result<DriverIds> Tas58xx::Initialize() {
   ScheduleFaultPolling();
   return zx::ok(DriverIds{
       .vendor_id = PDEV_VID_TI,
@@ -756,7 +756,7 @@ void Tas58xx::SetElementState(uint64_t processing_element_id, signal_fidl::Eleme
 
 DaiSupportedFormats Tas58xx::GetDaiFormats() { return kSupportedDaiDaiFormats; }
 
-zx::status<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
+zx::result<CodecFormatInfo> Tas58xx::SetDaiFormat(const DaiFormat& format) {
   rate_ = format.frame_rate;
   if (!IsDaiFormatSupported(format, kSupportedDaiDaiFormats)) {
     zxlogf(ERROR, "unsupported format");

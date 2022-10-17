@@ -19,7 +19,7 @@ class FakeDeviceGroup : public DeviceGroup {
   explicit FakeDeviceGroup(DeviceGroupCreateInfo create_info)
       : DeviceGroup(std::move(create_info)) {}
 
-  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
+  zx::result<std::optional<DeviceOrNode>> BindNodeImpl(
       fuchsia_driver_index::wire::MatchedDeviceGroupInfo info,
       const DeviceOrNode& device_or_node) override {
     return zx::ok(std::nullopt);
@@ -33,7 +33,7 @@ class FakeDeviceManagerBridge : public CompositeManagerBridge {
   void AddDeviceGroupToDriverIndex(fdf::wire::DeviceGroup group,
                                    AddToIndexCallback callback) override {
     auto iter = device_group_matches_.find(std::string(group.topological_path().get()));
-    zx::status<fdi::DriverIndexAddDeviceGroupResponse> result;
+    zx::result<fdi::DriverIndexAddDeviceGroupResponse> result;
     if (iter == device_group_matches_.end()) {
       result = zx::error(ZX_ERR_NOT_FOUND);
     } else {

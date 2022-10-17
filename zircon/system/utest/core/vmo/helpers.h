@@ -110,7 +110,7 @@ struct PhysVmo {
 // Create and return a physical VMO from the reserved regions of RAM.  |size|
 // indicates the desired size of the VMO, or 0 to fetch the entire reserved
 // region of RAM, whatever its size might be.
-zx::status<PhysVmo> GetTestPhysVmo(size_t size = 0);
+zx::result<PhysVmo> GetTestPhysVmo(size_t size = 0);
 
 zx::bti CreateNamedBti(const zx::iommu& fake_iommu, uint32_t options, uint64_t bti_id,
                        const char* name);

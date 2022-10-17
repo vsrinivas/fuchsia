@@ -34,14 +34,14 @@ class BlockWatcherPauser {
   ~BlockWatcherPauser();
 
   // This is the function used for creating the BlockWatcherPauser.
-  static zx::status<BlockWatcherPauser> Create(
+  static zx::result<BlockWatcherPauser> Create(
       fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root);
 
  private:
   // Create a new Pauser. This should immediately be followed by a call to Pause().
   explicit BlockWatcherPauser(fidl::ClientEnd<fuchsia_fshost::BlockWatcher> chan)
       : watcher_(fidl::WireSyncClient(std::move(chan))), valid_(false) {}
-  zx::status<> Pause();
+  zx::result<> Pause();
 
   fidl::WireSyncClient<fuchsia_fshost::BlockWatcher> watcher_;
   bool valid_;
@@ -56,15 +56,15 @@ std::unique_ptr<T> WrapUnique(T* ptr) {
 // Either opens a |fuchsia.hardware.block.partition/Partition|, or
 // |fuchsia.hardware.skipblock/SkipBlock|, depending on the filter rules
 // defined in |should_filter_file|.
-zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
+zx::result<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
                                       fit::function<bool(const zx::channel&)> should_filter_file,
                                       zx_duration_t timeout);
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>> OpenBlockPartition(
+zx::result<fidl::ClientEnd<fuchsia_hardware_block_partition::Partition>> OpenBlockPartition(
     const fbl::unique_fd& devfs_root, std::optional<uuid::Uuid> unique_guid,
     std::optional<uuid::Uuid> type_guid, zx_duration_t timeout);
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock>> OpenSkipBlockPartition(
+zx::result<fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock>> OpenSkipBlockPartition(
     const fbl::unique_fd& devfs_root, const uuid::Uuid& type_guid, zx_duration_t timeout);
 
 bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root);
@@ -73,13 +73,13 @@ bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root);
 // partition. Does not rebind partition drivers.
 //
 // At most one of |unique_guid| and |type_guid| may be nullptr.
-zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root,
+zx::result<> WipeBlockPartition(const fbl::unique_fd& devfs_root,
                                 std::optional<uuid::Uuid> unique_guid,
                                 std::optional<uuid::Uuid> type_guid);
 
-zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name);
+zx::result<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name);
 
-zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor);
+zx::result<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor);
 
 }  // namespace paver
 

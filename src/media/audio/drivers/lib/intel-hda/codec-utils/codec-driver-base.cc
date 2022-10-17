@@ -46,7 +46,7 @@ zx_protocol_device_t IntelHDACodecDriverBase::CODEC_DEVICE_THUNKS = []() {
 }();
 #undef DEV
 
-zx::status<> IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
+zx::result<> IntelHDACodecDriverBase::Bind(zx_device_t* codec_dev, const char* name) {
   ZX_ASSERT(codec_dev != nullptr);
 
   if (codec_device_ != nullptr) {

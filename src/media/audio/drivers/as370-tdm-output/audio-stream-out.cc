@@ -108,7 +108,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   format.frame_rate = kWantedFrameRate;
   format.bits_per_sample = 32;
   format.bits_per_slot = 32;
-  zx::status<CodecFormatInfo> info = codec_.SetDaiFormat(format);
+  zx::result<CodecFormatInfo> info = codec_.SetDaiFormat(format);
   if (info.is_ok()) {
     zxlogf(INFO, "audio: as370 audio output initialized");
   }

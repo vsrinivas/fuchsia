@@ -43,7 +43,7 @@ int ParseArgs(int argc, char** argv, fidl::UnownedClientEnd<fuchsia_io::Director
   *out = DeviceNameProviderArgs();
 
   // First parse from kernel args, then use use cmdline args as overrides.
-  zx::status client_end = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
+  zx::result client_end = component::ConnectAt<fuchsia_boot::Arguments>(svc_root);
   if (client_end.is_error()) {
     *error = "netsvc: unable to connect to fuchsia.boot.Arguments";
     return -1;

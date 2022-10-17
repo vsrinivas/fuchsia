@@ -24,7 +24,7 @@ namespace {
 // Registers an asynchronous channel read handler with |dispatcher|.
 // The read handler will read |count| messages, re-registering the read handler if necessary.
 // If |reply| is true, the read messages will be written back to the channel.
-zx::status<std::unique_ptr<fdf::ChannelRead>> RegisterChannelReadMultiple(
+zx::result<std::unique_ptr<fdf::ChannelRead>> RegisterChannelReadMultiple(
     const fdf::Channel& channel, const fdf::Dispatcher& dispatcher, uint32_t want_num_read,
     bool reply, uint32_t want_msg_size, sync_completion_t* completion) {
   auto channel_read = std::make_unique<fdf::ChannelRead>(

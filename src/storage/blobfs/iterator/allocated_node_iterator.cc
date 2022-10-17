@@ -24,7 +24,7 @@ bool AllocatedNodeIterator::Done() const {
   return extent_index_ + NodeExtentCount() >= inode_->extent_count;
 }
 
-zx::status<ExtentContainer*> AllocatedNodeIterator::Next() {
+zx::result<ExtentContainer*> AllocatedNodeIterator::Next() {
   ZX_DEBUG_ASSERT(!Done());
 
   const uint32_t next_node_index = NextNodeIndex();

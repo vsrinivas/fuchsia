@@ -198,7 +198,7 @@ zx_status_t Dir::ConvertInlineDir() {
   return ZX_OK;
 }
 
-zx::status<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
+zx::result<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
   {
     LockedPage ipage;
     if (zx_status_t err = fs()->GetNodeManager().GetNodePage(Ino(), &ipage); err != ZX_OK) {
@@ -372,7 +372,7 @@ uint8_t *File::InlineDataPtr(Page *page) {
 }
 
 #ifdef __Fuchsia__
-zx::status<> File::PopulateVmoWithInlineData(zx::vmo &vmo) {
+zx::result<> File::PopulateVmoWithInlineData(zx::vmo &vmo) {
   LockedPage inline_page;
   if (zx_status_t ret = fs()->GetNodeManager().GetNodePage(Ino(), &inline_page); ret != ZX_OK) {
     return zx::error(ret);

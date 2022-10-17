@@ -50,17 +50,17 @@ namespace fio = fuchsia_io;
 
 namespace {
 
-zx::status<> CopyDataToFilesystem(fidl::ClientEnd<fuchsia_io::Directory> data_root, Copier copier) {
+zx::result<> CopyDataToFilesystem(fidl::ClientEnd<fuchsia_io::Directory> data_root, Copier copier) {
   fbl::unique_fd fd;
   if (zx_status_t status =
           fdio_fd_create(data_root.TakeHandle().release(), fd.reset_and_get_address());
       status != ZX_OK) {
     return zx::error(status);
   }
-  return zx::make_status(copier.Write(std::move(fd)));
+  return zx::make_result(copier.Write(std::move(fd)));
 }
 
-zx::status<std::string> GetDevicePath(const zx::channel& block_device) {
+zx::result<std::string> GetDevicePath(const zx::channel& block_device) {
   std::string device_path;
   if (auto result =
           fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(block_device.borrow()))
@@ -90,7 +90,7 @@ void StartedFilesystem::Detach() {
   std::visit([&](auto& fs) { fs.Release(); }, fs_);
 }
 
-zx::status<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
+zx::result<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
                                                const fs_management::MountOptions& options,
                                                fs_management::DiskFormat format) {
   fbl::unique_fd device_fd;
@@ -113,7 +113,7 @@ zx::status<StartedFilesystem> LaunchFilesystem(zx::channel block_device,
   return zx::ok(StartedFilesystem(std::move(*fs)));
 }
 
-zx::status<> FilesystemMounter::MountLegacyFilesystem(FsManager::MountPoint point,
+zx::result<> FilesystemMounter::MountLegacyFilesystem(FsManager::MountPoint point,
                                                       fs_management::DiskFormat df,
                                                       const char* binary_path,
                                                       const fs_management::MountOptions& options,
@@ -144,13 +144,13 @@ zx::status<> FilesystemMounter::MountLegacyFilesystem(FsManager::MountPoint poin
   return zx::ok();
 }
 
-zx::status<StartedFilesystem> FilesystemMounter::LaunchFs(
+zx::result<StartedFilesystem> FilesystemMounter::LaunchFs(
     zx::channel block_device, const fs_management::MountOptions& options,
     fs_management::DiskFormat format) const {
   return LaunchFilesystem(std::move(block_device), options, format);
 }
 
-zx::status<> FilesystemMounter::LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
+zx::result<> FilesystemMounter::LaunchFsNative(fidl::ServerEnd<fuchsia_io::Directory> server,
                                                const char* binary, zx::channel block_device_client,
                                                const fs_management::MountOptions& options) const {
   FX_LOGS(INFO) << "FilesystemMounter::LaunchFsNative(" << binary << ")";
@@ -237,7 +237,7 @@ zx_status_t FilesystemMounter::MountData(zx::channel block_device, std::optional
     }
 
     std::optional<fidl::UnownedClientEnd<fuchsia_io::Directory>> export_root;
-    zx::status<fidl::ClientEnd<fuchsia_io::Directory>> data_root;
+    zx::result<fidl::ClientEnd<fuchsia_io::Directory>> data_root;
     if (const auto* fs =
             std::get_if<fs_management::StartedSingleVolumeFilesystem>(&mounted_filesystem->fs_)) {
       export_root = fs->ExportRoot();
@@ -372,7 +372,7 @@ zx_status_t FilesystemMounter::MountBlob(zx::channel block_device,
     return ZX_ERR_ALREADY_BOUND;
   }
 
-  zx::status ret = LaunchFs(std::move(block_device), options, fs_management::kDiskFormatBlobfs);
+  zx::result ret = LaunchFs(std::move(block_device), options, fs_management::kDiskFormatBlobfs);
   if (ret.is_error()) {
     return ret.error_value();
   }
@@ -407,7 +407,7 @@ zx_status_t FilesystemMounter::CopyDataToLegacyFilesystem(fs_management::DiskFor
     FX_PLOGS(ERROR, res.status_value()) << "Unable to mount for copying";
     return res.status_value();
   }
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> data_root;
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> data_root;
   if (const auto* fs = std::get_if<fs_management::StartedSingleVolumeFilesystem>(&res->fs_)) {
     data_root = fs->DataRoot();
   } else {

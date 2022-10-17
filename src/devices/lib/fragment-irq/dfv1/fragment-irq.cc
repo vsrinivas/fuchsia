@@ -14,7 +14,7 @@
 namespace fragment_irq {
 namespace fint = fuchsia_hardware_interrupt;
 
-zx::status<zx::interrupt> GetInterrupt(zx_device_t* dev, const char* fragment_name) {
+zx::result<zx::interrupt> GetInterrupt(zx_device_t* dev, const char* fragment_name) {
   auto client_end = ddk::Device<void>::DdkConnectFragmentFidlProtocol<fint::Service::Provider>(
       dev, fragment_name);
   if (client_end.is_error()) {
@@ -37,7 +37,7 @@ zx::status<zx::interrupt> GetInterrupt(zx_device_t* dev, const char* fragment_na
   return zx::ok(std::move(result->value()->interrupt));
 }
 
-zx::status<zx::interrupt> GetInterrupt(zx_device_t* dev, uint32_t which) {
+zx::result<zx::interrupt> GetInterrupt(zx_device_t* dev, uint32_t which) {
   return GetInterrupt(dev, fbl::StringPrintf("irq%03u", which).data());
 }
 

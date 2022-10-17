@@ -27,7 +27,7 @@
 // the same thread it will deadlock.
 class ScopedMemfs {
  public:
-  static zx::status<ScopedMemfs> Create(async_dispatcher_t* dispatcher) {
+  static zx::result<ScopedMemfs> Create(async_dispatcher_t* dispatcher) {
     memfs_filesystem_t* fs = nullptr;
     zx_handle_t root = 0;
 
@@ -38,7 +38,7 @@ class ScopedMemfs {
     return zx::ok(ScopedMemfs(fs, root));
   }
 
-  static zx::status<ScopedMemfs> CreateMountedAt(async_dispatcher_t* dispatcher, const char* path) {
+  static zx::result<ScopedMemfs> CreateMountedAt(async_dispatcher_t* dispatcher, const char* path) {
     memfs_filesystem_t* fs = nullptr;
     zx_status_t status = memfs_install_at(dispatcher, path, &fs);
     if (status != ZX_OK)

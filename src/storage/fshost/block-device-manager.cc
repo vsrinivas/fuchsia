@@ -651,7 +651,7 @@ class FactoryfsMatcher : public BlockDeviceManager::Matcher {
 class BootpartMatcher : public BlockDeviceManager::Matcher {
  public:
   fs_management::DiskFormat Match(const BlockDeviceInterface& device) override {
-    zx::status info = device.GetInfo();
+    zx::result info = device.GetInfo();
     if (info.is_error()) {
       return fs_management::kDiskFormatUnknown;
     }

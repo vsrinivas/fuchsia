@@ -48,7 +48,7 @@ void PackageLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
     return;
   }
   fdio_cpp::FdioCaller caller(std::move(dirfd));
-  zx::status channel = caller.take_channel();
+  zx::result channel = caller.take_channel();
   if (channel.is_error()) {
     FX_LOGS(ERROR) << "Could not release directory channel " << fuchsia_url.pkgfs_dir_path()
                    << " status=" << channel.status_string();
@@ -89,7 +89,7 @@ bool LoadPackageResource(const std::string& path, fuchsia::sys::Package& package
   auto dirfd = fsl::OpenChannelAsFileDescriptor(package.directory.TakeChannel());
   const bool got_resource = fsl::VmoFromFilenameAt(dirfd.get(), path, &resource);
   fdio_cpp::FdioCaller caller(std::move(dirfd));
-  zx::status channel = caller.take_channel();
+  zx::result channel = caller.take_channel();
   if (channel.is_error()) {
     return false;
   }

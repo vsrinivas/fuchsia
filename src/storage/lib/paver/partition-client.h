@@ -26,24 +26,24 @@ namespace paver {
 class PartitionClient {
  public:
   // Returns the block size which the vmo provided to read/write should be aligned to.
-  virtual zx::status<size_t> GetBlockSize() = 0;
+  virtual zx::result<size_t> GetBlockSize() = 0;
 
   // Returns the partition size.
-  virtual zx::status<size_t> GetPartitionSize() = 0;
+  virtual zx::result<size_t> GetPartitionSize() = 0;
 
   // Reads the specified size from the partition into |vmo|. |size| must be aligned to the block
   // size returned in `GetBlockSize`.
-  virtual zx::status<> Read(const zx::vmo& vmo, size_t size) = 0;
+  virtual zx::result<> Read(const zx::vmo& vmo, size_t size) = 0;
 
   // Writes |vmo| into the partition. |vmo_size| must be aligned to the block size returned in
   // `GetBlockSize`.
-  virtual zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) = 0;
+  virtual zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) = 0;
 
   // Issues a trim to the entire partition.
-  virtual zx::status<> Trim() = 0;
+  virtual zx::result<> Trim() = 0;
 
   // Flushes all previous operations to persistent storage.
-  virtual zx::status<> Flush() = 0;
+  virtual zx::result<> Flush() = 0;
 
   // Returns a file descriptor representing the partition.
   // Will return an invalid fd if underlying partition is not a block device.
@@ -74,14 +74,14 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
 
   ~BlockPartitionClient();
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size, size_t dev_offset, size_t vmo_offset);
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset, size_t vmo_offset);
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size, size_t dev_offset, size_t vmo_offset);
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size, size_t dev_offset, size_t vmo_offset);
+  zx::result<> Trim() final;
+  zx::result<> Flush() final;
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -92,10 +92,10 @@ class BlockPartitionClient final : public BlockDevicePartitionClient {
   BlockPartitionClient& operator=(BlockPartitionClient&&) = delete;
 
  private:
-  zx::status<vmoid_t> Setup(const zx::vmo& vmo);
-  zx::status<> RegisterFastBlockIo();
-  zx::status<vmoid_t> RegisterVmo(const zx::vmo& vmo);
-  zx::status<> ReadBlockInfo();
+  zx::result<vmoid_t> Setup(const zx::vmo& vmo);
+  zx::result<> RegisterFastBlockIo();
+  zx::result<vmoid_t> RegisterVmo(const zx::vmo& vmo);
+  zx::result<> ReadBlockInfo();
 
   fidl::WireSyncClient<fuchsia_hardware_block::Block> partition_;
   std::unique_ptr<block_client::Client> client_;
@@ -125,12 +125,12 @@ class FixedOffsetBlockPartitionClient final : public BlockDevicePartitionClient 
             fidl::ClientEnd<fuchsia_hardware_block::Block>(partition.TakeChannel()),
             offset_partition_in_blocks, offset_buffer_in_blocks) {}
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Trim() final;
+  zx::result<> Flush() final;
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
@@ -140,7 +140,7 @@ class FixedOffsetBlockPartitionClient final : public BlockDevicePartitionClient 
   FixedOffsetBlockPartitionClient(FixedOffsetBlockPartitionClient&&) = delete;
   FixedOffsetBlockPartitionClient& operator=(FixedOffsetBlockPartitionClient&&) = delete;
 
-  zx::status<size_t> GetBufferOffsetInBytes();
+  zx::result<size_t> GetBufferOffsetInBytes();
 
  private:
   BlockPartitionClient client_;
@@ -157,12 +157,12 @@ class PartitionCopyClient final : public BlockDevicePartitionClient {
   explicit PartitionCopyClient(std::vector<std::unique_ptr<PartitionClient>> partitions)
       : partitions_(std::move(partitions)) {}
 
-  zx::status<size_t> GetBlockSize() final;
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final;
-  zx::status<> Flush() final;
+  zx::result<size_t> GetBlockSize() final;
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Trim() final;
+  zx::result<> Flush() final;
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 

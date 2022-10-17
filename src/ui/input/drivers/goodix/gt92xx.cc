@@ -83,7 +83,7 @@ int Gt92xxDevice::Thread() {
     // ready when interrupt is generated, so allow a couple retries to check
     // touch status.
     while (!(touch_stat & GT_REG_TOUCH_STATUS_READY) && (retry_cnt < 3)) {
-      zx::status<uint8_t> read_status = Read(GT_REG_TOUCH_STATUS);
+      zx::result<uint8_t> read_status = Read(GT_REG_TOUCH_STATUS);
       if (read_status.is_ok()) {
         touch_stat = read_status.value();
       }
@@ -224,7 +224,7 @@ zx_status_t Gt92xxDevice::Init() {
   ZX_DEBUG_ASSERT((Conf.size() - sizeof(uint16_t)) ==
                   (GT_REG_CONFIG_REFRESH - GT_REG_CONFIG_DATA + 1));
 
-  zx::status<uint8_t> version = Read(GT_REG_CONFIG_DATA);
+  zx::result<uint8_t> version = Read(GT_REG_CONFIG_DATA);
   if (version.is_ok() && version.value() > Conf.data()[sizeof(uint16_t)]) {
     // Force the controller to take the config.
     Conf[sizeof(uint16_t)] = 0x00;
@@ -349,7 +349,7 @@ zx_status_t Gt92xxDevice::HidbusStart(const hidbus_ifc_protocol_t* ifc) {
   return ZX_OK;
 }
 
-zx::status<uint8_t> Gt92xxDevice::Read(uint16_t addr) {
+zx::result<uint8_t> Gt92xxDevice::Read(uint16_t addr) {
   uint8_t rbuf;
   zx_status_t status = Read(addr, &rbuf, 1);
   if (status != ZX_OK) {

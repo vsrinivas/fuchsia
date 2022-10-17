@@ -187,7 +187,7 @@ class Config {
   inline const char* addr() const { return addr_; }
   virtual const char* type() const = 0;
   // Return a copy of the MmioView backing the Config's MMIO space, if supported.
-  virtual zx::status<fdf::MmioView> get_view() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  virtual zx::result<fdf::MmioView> get_view() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   // Virtuals
   void DumpConfig(uint16_t len) const;
@@ -223,7 +223,7 @@ class MmioConfig : public Config {
   void Write(PciReg16 addr, uint16_t val) const final;
   void Write(PciReg32 addr, uint32_t val) const override;
   const char* type() const override;
-  zx::status<fdf::MmioView> get_view() const final { return zx::ok(fdf::MmioView(view_)); }
+  zx::result<fdf::MmioView> get_view() const final { return zx::ok(fdf::MmioView(view_)); }
 
  private:
   friend class FakeMmioConfig;

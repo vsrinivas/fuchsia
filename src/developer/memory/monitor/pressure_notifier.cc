@@ -13,7 +13,7 @@ namespace monitor {
 namespace {
 
 // Convert monitor::Level to the Level type signalled by the fuchsia.memorypressure service.
-zx::status<fuchsia::memorypressure::Level> ConvertToMemoryPressureServiceLevel(Level level) {
+zx::result<fuchsia::memorypressure::Level> ConvertToMemoryPressureServiceLevel(Level level) {
   switch (level) {
     case Level::kCritical:
       return zx::ok(fuchsia::memorypressure::Level::CRITICAL);

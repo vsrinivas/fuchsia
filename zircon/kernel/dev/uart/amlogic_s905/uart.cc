@@ -227,7 +227,7 @@ static int s905_uart_pgetc() {
 static int s905_uart_getc(bool wait) {
   if (initialized) {
     // do cbuf stuff here
-    zx::status<char> result = uart_rx_buf.ReadChar(wait);
+    zx::result<char> result = uart_rx_buf.ReadChar(wait);
     if (result.is_ok()) {
       return result.value();
     }

@@ -65,7 +65,7 @@ class NandDevice : public DeviceType, public ddk::NandProtocol<NandDevice, ddk::
   // Perform object initialization, and return a unique null-terminated name of this device.
   // If `vmo` is not provided or is not valid, the device will create its own buffer, and
   // initialize it to be empty (all 1s).
-  zx::status<DeviceNameType> Init(zx::vmo vmo = {});
+  zx::result<DeviceNameType> Init(zx::vmo vmo = {});
 
   zx_status_t Bind(fuchsia_hardware_nand::wire::RamNandInfo& info);
   void DdkInit(ddk::InitTxn txn);

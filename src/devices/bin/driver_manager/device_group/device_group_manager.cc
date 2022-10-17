@@ -29,7 +29,7 @@ fit::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
   auto node_count = fidl_group.nodes().count();
   AddToIndexCallback callback =
       [this, group = std::move(device_group), topological_path, node_count](
-          zx::status<fuchsia_driver_index::DriverIndexAddDeviceGroupResponse> result) mutable {
+          zx::result<fuchsia_driver_index::DriverIndexAddDeviceGroupResponse> result) mutable {
         if (!result.is_ok()) {
           if (result.status_value() == ZX_ERR_NOT_FOUND) {
             device_groups_[topological_path] = std::move(group);
@@ -56,7 +56,7 @@ fit::result<fdf::DeviceGroupError> DeviceGroupManager::AddDeviceGroup(
   return fit::ok();
 }
 
-zx::status<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDeviceGroupNode(
+zx::result<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDeviceGroupNode(
     fdi::wire::MatchedDeviceGroupNodeInfo match_info, const DeviceOrNode &device_or_node) {
   if (!match_info.has_device_groups() || match_info.device_groups().empty()) {
     LOGF(ERROR, "MatchedDeviceGroupNodeInfo needs to contain as least one device group");
@@ -124,7 +124,7 @@ zx::status<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDevice
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDeviceGroupNode(
+zx::result<std::optional<CompositeNodeAndDriver>> DeviceGroupManager::BindDeviceGroupNode(
     fdi::MatchedDeviceGroupNodeInfo match_info, const DeviceOrNode &device_or_node) {
   fidl::Arena<> arena;
   return BindDeviceGroupNode(fidl::ToWire(arena, std::move(match_info)), device_or_node);

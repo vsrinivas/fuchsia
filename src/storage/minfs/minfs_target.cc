@@ -41,7 +41,7 @@ std::vector<fbl::RefPtr<VnodeMinfs>> Minfs::GetDirtyVnodes() {
   return vnodes;
 }
 
-zx::status<> Minfs::ContinueTransaction(size_t reserve_blocks,
+zx::result<> Minfs::ContinueTransaction(size_t reserve_blocks,
                                         std::unique_ptr<CachedBlockTransaction> cached_transaction,
                                         std::unique_ptr<Transaction>* out) {
   if (journal_ == nullptr) {
@@ -98,7 +98,7 @@ bool Minfs::AllReservationsBacked(const Transaction&) const {
   return BlocksReserved() <= blocks_available;
 }
 
-zx::status<> Minfs::BlockingJournalSync() {
+zx::result<> Minfs::BlockingJournalSync() {
   zx_status_t sync_status = ZX_OK;
   sync_completion_t sync_completion = {};
   journal_->schedule_task(journal_->Sync().then(
@@ -109,9 +109,9 @@ zx::status<> Minfs::BlockingJournalSync() {
       }));
   zx_status_t status = sync_completion_wait(&sync_completion, ZX_TIME_INFINITE);
   if (status != ZX_OK) {
-    return zx::make_status(status);
+    return zx::make_result(status);
   }
-  return zx::make_status(sync_status);
+  return zx::make_result(sync_status);
 }
 
 }  // namespace minfs

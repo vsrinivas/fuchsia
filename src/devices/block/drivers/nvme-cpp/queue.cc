@@ -10,7 +10,7 @@
 
 namespace nvme {
 
-zx::status<> Queue::Init(zx::unowned_bti bti, size_t entries) {
+zx::result<> Queue::Init(zx::unowned_bti bti, size_t entries) {
   size_t queue_size = entries * entry_size_;
   if (queue_size > zx_system_get_page_size()) {
     entries = zx_system_get_page_size() / entry_size_;

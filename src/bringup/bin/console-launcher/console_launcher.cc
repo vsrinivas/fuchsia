@@ -21,7 +21,7 @@
 namespace console_launcher {
 
 // Wait for the requested file.  Its parent directory must exist.
-zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline) {
+zx::result<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline) {
   std::string_view basename{path};
   std::string_view dirname = "/";
   if (const size_t slash = basename.rfind('/'); slash != std::string::npos) {
@@ -59,11 +59,11 @@ zx::status<fbl::unique_fd> WaitForFile(const char* path, zx::time deadline) {
   return zx::ok(std::move(fd));
 }
 
-zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
+zx::result<ConsoleLauncher> ConsoleLauncher::Create() {
   ConsoleLauncher launcher;
 
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
-  zx::status client_end = component::Connect<fuchsia_kernel::RootJob>();
+  zx::result client_end = component::Connect<fuchsia_kernel::RootJob>();
   if (client_end.is_error()) {
     FX_PLOGS(ERROR, client_end.status_value())
         << "failed to connect to " << fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>;
@@ -89,7 +89,7 @@ zx::status<ConsoleLauncher> ConsoleLauncher::Create() {
   return zx::ok(std::move(launcher));
 }
 
-zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client) {
+zx::result<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments>& client) {
   Arguments ret;
 
   {
@@ -169,7 +169,7 @@ zx::status<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
   return zx::ok(ret);
 }
 
-zx::status<zx::process> ConsoleLauncher::LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
+zx::result<zx::process> ConsoleLauncher::LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
                                                      zx::channel stdio, const std::string& term,
                                                      const std::optional<std::string>& cmd) const {
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr, nullptr, nullptr};

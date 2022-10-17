@@ -25,7 +25,7 @@ class BlobDataProducer {
   // Producers must be able to accommodate zero padding up to kBlobfsBlockSize if it would be
   // required i.e. if the last span returned is not a whole block size, it must point to a buffer
   // that can be extended with zero padding (which will be done by the caller).
-  virtual zx::status<cpp20::span<const uint8_t>> Consume(uint64_t max) = 0;
+  virtual zx::result<cpp20::span<const uint8_t>> Consume(uint64_t max) = 0;
 
   // Subclasses should return true if the next call to Consume would invalidate data returned by
   // previous calls to Consume.
@@ -39,7 +39,7 @@ class SimpleBlobDataProducer : public BlobDataProducer {
 
   // BlobDataProducer implementation:
   uint64_t GetRemainingBytes() const override;
-  zx::status<cpp20::span<const uint8_t>> Consume(uint64_t max) override;
+  zx::result<cpp20::span<const uint8_t>> Consume(uint64_t max) override;
 
  private:
   cpp20::span<const uint8_t> data_;
@@ -56,7 +56,7 @@ class MergeBlobDataProducer : public BlobDataProducer {
 
   // BlobDataProducer implementation:
   uint64_t GetRemainingBytes() const override;
-  zx::status<cpp20::span<const uint8_t>> Consume(uint64_t max) override;
+  zx::result<cpp20::span<const uint8_t>> Consume(uint64_t max) override;
   bool NeedsFlush() const override;
 
  private:
@@ -69,12 +69,12 @@ class MergeBlobDataProducer : public BlobDataProducer {
 // discover that it is not profitable to compress a blob.  It decompresses into a temporary buffer.
 class DecompressBlobDataProducer : public BlobDataProducer {
  public:
-  static zx::status<DecompressBlobDataProducer> Create(BlobCompressor& compressor,
+  static zx::result<DecompressBlobDataProducer> Create(BlobCompressor& compressor,
                                                        uint64_t decompressed_size);
 
   // BlobDataProducer implementation:
   uint64_t GetRemainingBytes() const override;
-  zx::status<cpp20::span<const uint8_t>> Consume(uint64_t max) override;
+  zx::result<cpp20::span<const uint8_t>> Consume(uint64_t max) override;
   bool NeedsFlush() const override;
 
  private:

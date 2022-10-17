@@ -99,7 +99,7 @@ class FakeBackend : public Backend {
     kicked_queues_.insert(ring_index);
   }
   uint32_t IsrStatus() override { return registers8_.find(kISRStatus)->second; }
-  zx::status<uint32_t> WaitForInterrupt() override { return zx::ok(0); }
+  zx::result<uint32_t> WaitForInterrupt() override { return zx::ok(0); }
   void InterruptAck(uint32_t key) override {}
 
   State DeviceState() const { return state_; }

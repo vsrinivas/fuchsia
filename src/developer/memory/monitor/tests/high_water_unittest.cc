@@ -37,7 +37,7 @@ class HighWaterUnitTest : public gtest::RealLoopFixture {
     // Install memfs on a different async loop thread to resolve some deadlock when doing blocking
     // file operations on our test loop.
     memfs_loop_.StartThread();
-    zx::status<ScopedMemfs> memfs =
+    zx::result<ScopedMemfs> memfs =
         ScopedMemfs::CreateMountedAt(memfs_loop_.dispatcher(), kMemfsDir);
     ASSERT_TRUE(memfs.is_ok());
     data_ = std::make_unique<ScopedMemfs>(std::move(*memfs));

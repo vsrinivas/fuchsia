@@ -27,7 +27,7 @@ const void* EfiGetVendorTable(const efi_system_table* systab, const efi_guid& gu
                               std::string_view prefix = {});
 
 // Create an AcpiParser for the ACPI tables found in the ConfigurionTable.
-zx::status<acpi_lite::AcpiParser> EfiGetAcpi(const efi_system_table* systab);
+zx::result<acpi_lite::AcpiParser> EfiGetAcpi(const efi_system_table* systab);
 
 // This just adds the ZBI_TYPE_EFI_SYSTEM_TABLE with the physical address.
 class EfiSystemTableItem : public SingleOptionalItem<uint64_t, ZBI_TYPE_EFI_SYSTEM_TABLE> {

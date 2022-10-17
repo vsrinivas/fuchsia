@@ -3,8 +3,8 @@
  * found in the LICENSE file.
  */
 
-#ifndef SRC_FIRMWARE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
-#define SRC_FIRMWARE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
+#ifndef SRC_FIRMWARE_LIB_ZIRCON_BOOT_INCLUDE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
+#define SRC_FIRMWARE_LIB_ZIRCON_BOOT_INCLUDE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
 
 #include <lib/stdcompat/span.h>
 #include <lib/zbi/zbi.h>
@@ -27,9 +27,9 @@ class MockZirconBootOps {
   MockZirconBootOps() = default;
 
   // Basic ops
-  zx::status<> ReadFromPartition(const char* part, size_t offset, size_t size, void* out);
-  zx::status<> WriteToPartition(const char* part, size_t offset, size_t size, const void* payload);
-  zx::status<size_t> GetPartitionSize(const char* part);
+  zx::result<> ReadFromPartition(const char* part, size_t offset, size_t size, void* out);
+  zx::result<> WriteToPartition(const char* part, size_t offset, size_t size, const void* payload);
+  zx::result<size_t> GetPartitionSize(const char* part);
   void AddPartition(const char* name, size_t size);
   void Boot(zbi_header_t* image, size_t capacity, AbrSlotIndex slot);
   std::optional<AbrSlotIndex> GetBootedSlot() const { return booted_slot_; }
@@ -43,7 +43,7 @@ class MockZirconBootOps {
 
   // Verified boot related.
   void WriteRollbackIndex(size_t location, uint64_t rollback_index);
-  zx::status<uint64_t> ReadRollbackIndex(size_t location) const;
+  zx::result<uint64_t> ReadRollbackIndex(size_t location) const;
   LockStatus GetDeviceLockStatus() { return device_locked_status_; }
   void SetDeviceLockStatus(LockStatus status) { device_locked_status_ = status; }
   AvbAtxPermanentAttributes GetPermanentAttributes();
@@ -62,7 +62,7 @@ class MockZirconBootOps {
   std::function<bool(zbi_header_t*, size_t, AbrSlotIndex)> add_zbi_items_;
   AvbAtxPermanentAttributes permanent_attributes_;
 
-  zx::status<cpp20::span<uint8_t>> GetPartitionSpan(const char* name, size_t offset, size_t size);
+  zx::result<cpp20::span<uint8_t>> GetPartitionSpan(const char* name, size_t offset, size_t size);
 
   // For assigning to ZirconBootOps
   static bool ReadFromPartition(ZirconBootOps* ops, const char* part, size_t offset, size_t size,
@@ -86,4 +86,4 @@ class MockZirconBootOps {
   static bool ReadPermanentAttributesHash(ZirconBootOps* ops, uint8_t hash[AVB_SHA256_DIGEST_SIZE]);
 };
 
-#endif  // SRC_FIRMWARE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_
+#endif  // SRC_FIRMWARE_LIB_ZIRCON_BOOT_INCLUDE_LIB_ZIRCON_BOOT_TEST_MOCK_ZIRCON_BOOT_OPS_H_

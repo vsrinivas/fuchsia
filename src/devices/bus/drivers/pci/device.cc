@@ -323,7 +323,7 @@ zx_status_t Device::WriteBarInformation(const Bar& bar) {
   return ZX_OK;
 }
 
-zx::status<> Device::ProbeBar(uint8_t bar_id) {
+zx::result<> Device::ProbeBar(uint8_t bar_id) {
   if (bar_id >= bar_count_) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -430,7 +430,7 @@ void Device::ProbeBars() {
 
 // Allocates appropriate address space for BAR |bar| out of any suitable
 // upstream allocators, using |base| as the base address if present.
-zx::status<std::unique_ptr<PciAllocation>> Device::AllocateFromUpstream(
+zx::result<std::unique_ptr<PciAllocation>> Device::AllocateFromUpstream(
     const Bar& bar, std::optional<zx_paddr_t> base) {
   ZX_DEBUG_ASSERT(bar.size > 0);
   std::unique_ptr<PciAllocation> allocation;
@@ -465,7 +465,7 @@ zx::status<std::unique_ptr<PciAllocation>> Device::AllocateFromUpstream(
 
 // Higher level method to allocate address space a previously probed BAR id
 // |bar_id| and handle configuration space setup.
-zx::status<> Device::AllocateBar(uint8_t bar_id) {
+zx::result<> Device::AllocateBar(uint8_t bar_id) {
   ZX_DEBUG_ASSERT(upstream_);
   ZX_DEBUG_ASSERT(bar_id < bar_count_);
   ZX_DEBUG_ASSERT(bars_[bar_id].has_value());
@@ -491,7 +491,7 @@ zx::status<> Device::AllocateBar(uint8_t bar_id) {
   return zx::ok();
 }
 
-zx::status<> Device::AllocateBars() {
+zx::result<> Device::AllocateBars() {
   fbl::AutoLock dev_lock(&dev_lock_);
   ZX_DEBUG_ASSERT(plugged_in_);
   ZX_DEBUG_ASSERT(bar_count_ <= bars_.max_size());
@@ -510,7 +510,7 @@ zx::status<> Device::AllocateBars() {
   return zx::ok();
 }
 
-zx::status<PowerManagementCapability::PowerState> Device::GetPowerState() {
+zx::result<PowerManagementCapability::PowerState> Device::GetPowerState() {
   fbl::AutoLock dev_lock(&dev_lock_);
   if (!caps_.power) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);

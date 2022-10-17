@@ -58,7 +58,7 @@ void PlatformInitAcpi(zx_paddr_t acpi_rsdp) {
   ASSERT(global_acpi_parser == nullptr);
 
   // Create AcpiParser.
-  zx::status<acpi_lite::AcpiParser> result = acpi_lite::AcpiParserInit(acpi_rsdp);
+  zx::result<acpi_lite::AcpiParser> result = acpi_lite::AcpiParserInit(acpi_rsdp);
   if (result.is_error()) {
     panic("Could not initialize ACPI. Error code: %d.", result.error_value());
   }

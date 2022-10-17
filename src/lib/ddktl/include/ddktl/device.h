@@ -668,7 +668,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   template <typename ServiceMember,
             typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-  zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectFidlProtocol() const {
+  zx::result<fidl::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectFidlProtocol() const {
     static_assert(std::is_same_v<typename ServiceMember::ProtocolType::Transport,
                                  fidl::internal::ChannelTransport>);
 
@@ -677,7 +677,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   template <typename ServiceMember,
             typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-  static zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectFidlProtocol(
+  static zx::result<fidl::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectFidlProtocol(
       zx_device_t* parent) {
     static_assert(std::is_same_v<typename ServiceMember::ProtocolType::Transport,
                                  fidl::internal::ChannelTransport>);
@@ -698,7 +698,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   template <typename ServiceMember,
             typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-  zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectFragmentFidlProtocol(
+  zx::result<fidl::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectFragmentFidlProtocol(
       const char* fragment_name) const {
     static_assert(std::is_same_v<typename ServiceMember::ProtocolType::Transport,
                                  fidl::internal::ChannelTransport>);
@@ -708,7 +708,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
 
   template <typename ServiceMember,
             typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>
-  static zx::status<fidl::ClientEnd<typename ServiceMember::ProtocolType>>
+  static zx::result<fidl::ClientEnd<typename ServiceMember::ProtocolType>>
   DdkConnectFragmentFidlProtocol(zx_device_t* parent, const char* fragment_name) {
     static_assert(std::is_same_v<typename ServiceMember::ProtocolType::Transport,
                                  fidl::internal::ChannelTransport>);
@@ -732,7 +732,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   }
 
   template <typename ServiceMember>
-  zx::status<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectRuntimeProtocol()
+  zx::result<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectRuntimeProtocol()
       const {
     static_assert(fidl::IsServiceMemberV<ServiceMember>);
     static_assert(std::is_same_v<typename ServiceMember::ProtocolType::Transport,
@@ -742,7 +742,7 @@ class Device : public ::ddk::internal::base_device<D, Mixins...> {
   }
 
   template <typename ServiceMember>
-  static zx::status<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectRuntimeProtocol(
+  static zx::result<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DdkConnectRuntimeProtocol(
       zx_device_t* parent) {
     static_assert(fidl::IsServiceMemberV<ServiceMember>);
     static_assert(std::is_same_v<typename ServiceMember::ProtocolType::Transport,

@@ -30,7 +30,7 @@ auto constexpr tMeasureSleep = zx::usec(300);
 
 }  // namespace
 
-zx::status<Event> Fusb302::GetInterrupt() {
+zx::result<Event> Fusb302::GetInterrupt() {
   Event event(0);
   zx_status_t status;
 
@@ -270,7 +270,7 @@ zx_status_t Fusb302::FifoTransmit(const PdMessage& message) {
   return ZX_OK;
 }
 
-zx::status<PdMessage> Fusb302::FifoReceive() {
+zx::result<PdMessage> Fusb302::FifoReceive() {
   enum RxToken : uint8_t {
     kRxSop = 0b111,
     kRxSop1 = 0b110,

@@ -24,7 +24,7 @@ struct Channel {
 
 // Convert an array of spi_channel to fuchsia.hardware.spi.SpiBusMetadata encoded
 // in a FIDL bytestream.
-zx::status<std::vector<uint8_t>> SpiChannelsToFidl(cpp20::span<const Channel> channels);
+zx::result<std::vector<uint8_t>> SpiChannelsToFidl(cpp20::span<const Channel> channels);
 
 }  // namespace fidl_metadata::spi
 

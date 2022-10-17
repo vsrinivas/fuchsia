@@ -32,7 +32,7 @@ const MountOpt default_option[] = {
 };
 
 #ifdef __Fuchsia__
-zx::status<> Mount(const MountOptions& options, std::unique_ptr<f2fs::Bcache> bc,
+zx::result<> Mount(const MountOptions& options, std::unique_ptr<f2fs::Bcache> bc,
                    fidl::ServerEnd<fuchsia_io::Directory> root) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
@@ -59,7 +59,7 @@ zx::status<> Mount(const MountOptions& options, std::unique_ptr<f2fs::Bcache> bc
   return zx::ok();
 }
 
-zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::result<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());

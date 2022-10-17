@@ -18,7 +18,7 @@ namespace fio = fuchsia_io;
 
 namespace internal {
 
-zx::status<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::string& package_url) {
+zx::result<std::unique_ptr<Driver>> PackageResolver::FetchDriver(const std::string& package_url) {
   component::FuchsiaPkgUrl parsed_url;
   if (!parsed_url.Parse(std::string(package_url))) {
     LOGF(ERROR, "Failed to parse package url: %s", package_url.data());
@@ -66,7 +66,7 @@ zx_status_t PackageResolver::ConnectToResolverService() {
   return ZX_OK;
 }
 
-zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
+zx::result<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
     const component::FuchsiaPkgUrl& package_url) {
   if (!resolver_client_.is_valid()) {
     zx_status_t status = ConnectToResolverService();
@@ -113,7 +113,7 @@ zx::status<fidl::WireSyncClient<fio::Directory>> PackageResolver::Resolve(
   return zx::ok(fidl::WireSyncClient(std::move(endpoints->client)));
 }
 
-zx::status<zx::vmo> PackageResolver::LoadDriver(
+zx::result<zx::vmo> PackageResolver::LoadDriver(
     const fidl::WireSyncClient<fuchsia_io::Directory>& package_dir,
     const component::FuchsiaPkgUrl& package_url) {
   const fio::wire::OpenFlags kFileRights =

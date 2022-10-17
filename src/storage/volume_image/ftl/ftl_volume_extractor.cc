@@ -77,7 +77,7 @@ BlockStatus block_status(cpp20::span<uint8_t> data) {
 // "READFAIL" if either of those conditions hold for the page.
 // If an incomplete page or spare chunk is read this will return ZX_ERR_IO, or if the number of data
 // pages is mismatched with the spare chunk count. Returns a populate NDM on success.
-zx::status<std::unique_ptr<NdmRamDriver>> LoadData(const ftl::VolumeOptions& options, FILE* data) {
+zx::result<std::unique_ptr<NdmRamDriver>> LoadData(const ftl::VolumeOptions& options, FILE* data) {
   uint32_t page_count = 0;
   TestOptions test_options = kBoringTestOptions;
   std::unique_ptr<NdmRamDriver> ndm = std::make_unique<NdmRamDriver>(options, test_options);
@@ -165,7 +165,7 @@ bool WriteVolume(std::unique_ptr<NdmRamDriver> ndm, const ftl::VolumeOptions& op
   return true;
 }
 
-zx::status<size_t> GetFileSize(FILE* file) {
+zx::result<size_t> GetFileSize(FILE* file) {
   size_t file_size;
   if (fseek(file, 0, SEEK_END) != 0) {
     fprintf(stderr, "Failed to seek to end of input file: %s\n", strerror(errno));

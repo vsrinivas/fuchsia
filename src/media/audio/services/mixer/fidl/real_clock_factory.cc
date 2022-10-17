@@ -27,7 +27,7 @@ std::shared_ptr<const Clock> CreateSystemMonotonicClock() {
 
 RealClockFactory::RealClockFactory() : system_mono_(CreateSystemMonotonicClock()) {}
 
-zx::status<std::pair<std::shared_ptr<Clock>, zx::clock>>
+zx::result<std::pair<std::shared_ptr<Clock>, zx::clock>>
 RealClockFactory::CreateGraphControlledClock(std::string_view name) {
   // Create a new zx::clock.
   zx::clock adjustable_handle;
@@ -51,7 +51,7 @@ RealClockFactory::CreateGraphControlledClock(std::string_view name) {
   return zx::ok(std::make_pair(std::move(clock), std::move(unadjustable_handle)));
 }
 
-zx::status<std::shared_ptr<Clock>> RealClockFactory::CreateWrappedClock(zx::clock handle,
+zx::result<std::shared_ptr<Clock>> RealClockFactory::CreateWrappedClock(zx::clock handle,
                                                                         std::string_view name,
                                                                         uint32_t domain,
                                                                         bool adjustable) {

@@ -96,9 +96,9 @@ class EcDevice : public DeviceType {
   // Write |value| to |addr| on the EC.
   zx_status_t Write(uint8_t addr, uint8_t val);
   // Read |addr| from the EC.
-  zx::status<uint8_t> Read(uint8_t addr);
+  zx::result<uint8_t> Read(uint8_t addr);
   // Query the EC for pending events, and return the event code.
-  zx::status<uint8_t> Query();
+  zx::result<uint8_t> Query();
 
  private:
   // Transaction thread. This is the only thread that handles I/O with the EC.
@@ -115,18 +115,18 @@ class EcDevice : public DeviceType {
 
   // Wait for the given signal(s) to be set.
   // Returns which signals were set, or ZX_ERR_CANCELED if the driver is shutting down.
-  zx::status<zx_signals_t> WaitForIrq(zx_signals_t signals);
+  zx::result<zx_signals_t> WaitForIrq(zx_signals_t signals);
 
   // This thread watches for kPendingEvent on |irq_| and then queues queries until SCI_EVT becomes
   // unset.
   void QueryThread();
 
   // Returns true if we need to acquire the global lock when interacting with the EC.
-  zx::status<bool> NeedsGlobalLock();
+  zx::result<bool> NeedsGlobalLock();
   // Returns information about the GPE we use.
-  zx::status<std::pair<ACPI_HANDLE, uint32_t>> GetGpeInfo();
+  zx::result<std::pair<ACPI_HANDLE, uint32_t>> GetGpeInfo();
   // Configures and maps I/O ports.
-  zx::status<> SetupIo();
+  zx::result<> SetupIo();
 
   static uint32_t GpeHandlerThunk(ACPI_HANDLE, uint32_t, void* ctx) {
     static_cast<EcDevice*>(ctx)->HandleGpe();

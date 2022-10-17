@@ -40,7 +40,7 @@ namespace {
 using fuchsia_hardware_block_volume::Volume;
 using fuchsia_hardware_block_volume::VolumeManager;
 
-zx::status<uint64_t> GetFvmSliceSize(fidl::ClientEnd<VolumeManager> &fvm_client) {
+zx::result<uint64_t> GetFvmSliceSize(fidl::ClientEnd<VolumeManager> &fvm_client) {
   auto response = fidl::WireCall(fvm_client)->GetInfo();
   if (!response.ok()) {
     fprintf(stderr, "Failed to get fvm slice size: %s\n", response.status_string());
@@ -55,7 +55,7 @@ zx::status<uint64_t> GetFvmSliceSize(fidl::ClientEnd<VolumeManager> &fvm_client)
 }
 
 // Returns the number of slices required to create a volume of |volume_size| in fvm.
-zx::status<uint64_t> GetSliceCount(fidl::ClientEnd<VolumeManager> &fvm_client,
+zx::result<uint64_t> GetSliceCount(fidl::ClientEnd<VolumeManager> &fvm_client,
                                    uint64_t volume_size) {
   if (volume_size == 0) {
     // If no volume size was specified then only use 1 slice and let the filesystem grow within
@@ -77,7 +77,7 @@ class BlockDeviceFilesystem : public RunningFilesystem {
                         FvmVolume volume)
       : volume_(std::move(volume)), filesystem_(std::move(filesystem)) {}
 
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const override {
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> GetFilesystemRoot() const override {
     return filesystem_->DataRoot();
   }
 
@@ -89,7 +89,7 @@ class BlockDeviceFilesystem : public RunningFilesystem {
 // Whilst this runs as a v1 component, we use this slightly hacky way of launching the crypt
 // service.  Once we have migrated to a v2 component, then we should be able to instantiate the
 // crypt service via the manifest and run it as a child.
-zx::status<zx::channel> GetCryptService() {
+zx::result<zx::channel> GetCryptService() {
   static zx_handle_t svc_directory = [] {
     zx::process process;
     char error_message[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
@@ -183,9 +183,9 @@ FvmVolume::~FvmVolume() {
   }
 }
 
-zx::status<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_client,
+zx::result<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_client,
                                         uint64_t partition_size) {
-  zx::status<uint64_t> slice_count = GetSliceCount(fvm_client, partition_size);
+  zx::result<uint64_t> slice_count = GetSliceCount(fvm_client, partition_size);
   if (slice_count.is_error()) {
     return slice_count.take_error();
   }
@@ -220,7 +220,7 @@ zx::status<FvmVolume> FvmVolume::Create(fidl::ClientEnd<VolumeManager> &fvm_clie
   return zx::ok(FvmVolume(std::move(path)));
 }
 
-zx::status<std::string> FindFvmBlockDevicePath() {
+zx::result<std::string> FindFvmBlockDevicePath() {
   for (const auto &block_device : std::filesystem::directory_iterator("/dev/class/block")) {
     fbl::unique_fd fd(open(block_device.path().c_str(), O_RDWR));
     if (!fd.is_valid()) {
@@ -235,7 +235,7 @@ zx::status<std::string> FindFvmBlockDevicePath() {
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<fidl::ClientEnd<VolumeManager>> ConnectToFvm(const std::string &fvm_block_device_path) {
+zx::result<fidl::ClientEnd<VolumeManager>> ConnectToFvm(const std::string &fvm_block_device_path) {
   auto fvm_block_topological_path = storage::GetTopologicalPath(fvm_block_device_path);
   if (fvm_block_topological_path.is_error()) {
     fprintf(stderr, "Failed to get the topological path to fvm's block device: %s\n",
@@ -247,7 +247,7 @@ zx::status<fidl::ClientEnd<VolumeManager>> ConnectToFvm(const std::string &fvm_b
   return component::Connect<VolumeManager>(fvm_path.c_str());
 }
 
-zx::status<> FormatBlockDevice(const std::string &block_device_path,
+zx::result<> FormatBlockDevice(const std::string &block_device_path,
                                fs_management::DiskFormat format) {
   fs_management::MkfsOptions mkfs_options;
 
@@ -256,7 +256,7 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
     mkfs_options.component_child_name = "fxfs";
   }
 
-  zx::status<> status;
+  zx::result<> status;
   if (format == fs_management::kDiskFormatFxfs) {
     auto service = GetCryptService();
     if (service.is_error()) {
@@ -267,7 +267,7 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
                                             fs_management::LaunchStdioSync, mkfs_options,
                                             *std::move(service));
   } else {
-    status = zx::make_status(fs_management::Mkfs(block_device_path.c_str(), format,
+    status = zx::make_result(fs_management::Mkfs(block_device_path.c_str(), format,
                                                  fs_management::LaunchStdioSync, mkfs_options));
   }
   if (status.is_error()) {
@@ -279,7 +279,7 @@ zx::status<> FormatBlockDevice(const std::string &block_device_path,
   return status;
 }
 
-zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
+zx::result<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
     const std::string &block_device_path, fs_management::DiskFormat format, FvmVolume fvm_volume) {
   fs_management::MountOptions mount_options;
   fbl::unique_fd volume_fd(open(block_device_path.c_str(), O_RDWR));
@@ -318,7 +318,7 @@ zx::status<std::unique_ptr<RunningFilesystem>> StartBlockDeviceFilesystem(
   return zx::ok(std::make_unique<BlockDeviceFilesystem>(std::move(fs), std::move(fvm_volume)));
 }
 
-zx::status<std::string> CreateZxcryptVolume(const std::string &device_path) {
+zx::result<std::string> CreateZxcryptVolume(const std::string &device_path) {
   fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     fprintf(stderr, "Failed to open %s\n", device_path.c_str());
@@ -332,20 +332,20 @@ zx::status<std::string> CreateZxcryptVolume(const std::string &device_path) {
 
   zxcrypt::VolumeManager volume_manager(std::move(fd), std::move(dev_fd));
   zx::channel driver_chan;
-  auto status = zx::make_status(volume_manager.OpenClient(zx::sec(2), driver_chan));
+  auto status = zx::make_result(volume_manager.OpenClient(zx::sec(2), driver_chan));
   if (status.is_error()) {
     fprintf(stderr, "Failed to bind zxcrypt driver on %s\n", device_path.c_str());
     return status.take_error();
   }
 
   zxcrypt::EncryptedVolumeClient volume(std::move(driver_chan));
-  status = zx::make_status(volume.FormatWithImplicitKey(0));
+  status = zx::make_result(volume.FormatWithImplicitKey(0));
   if (status.is_error()) {
     fprintf(stderr, "Failed to create zxcrypt volume on %s\n", device_path.c_str());
     return status.take_error();
   }
 
-  status = zx::make_status(volume.UnsealWithImplicitKey(0));
+  status = zx::make_result(volume.UnsealWithImplicitKey(0));
   if (status.is_error()) {
     fprintf(stderr, "Failed to unseal zxcrypt volume: %s\n", status.status_string());
     return status.take_error();

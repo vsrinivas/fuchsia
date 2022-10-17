@@ -39,14 +39,14 @@ class FshostBootArgs {
   }
 
   // The seal of the factory partition, required for opening the block device for verified read.
-  zx::status<std::string> block_verity_seal();
+  zx::result<std::string> block_verity_seal();
 
   // Returns the eviction policy to pass to blobfs (via the --eviction_policy flag).
   std::optional<std::string> blobfs_eviction_policy() const { return blobfs_eviction_policy_; }
 
  protected:
  private:
-  zx::status<std::string> GetStringArgument(const std::string& key);
+  zx::result<std::string> GetStringArgument(const std::string& key);
 
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args_;
   bool netsvc_netboot_ = false;

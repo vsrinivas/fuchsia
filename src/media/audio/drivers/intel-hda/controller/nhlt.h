@@ -43,7 +43,7 @@ class Nhlt {
   Nhlt() = default;
 
   // Parse the given raw NHLT data.
-  static zx::status<std::unique_ptr<Nhlt>> FromBuffer(cpp20::span<const uint8_t> buffer);
+  static zx::result<std::unique_ptr<Nhlt>> FromBuffer(cpp20::span<const uint8_t> buffer);
 
   // Get parsed I2S configs.
   const fbl::Vector<EndPointConfig>& configs() const { return configs_; }

@@ -19,7 +19,7 @@ class Test : public SimpleCodecServer {
 
  protected:
   // Implementation for SimpleCodecServer.
-  zx::status<DriverIds> Initialize() override {
+  zx::result<DriverIds> Initialize() override {
     return zx::ok(DriverIds{
         .vendor_id = 1,
         .device_id = 2,
@@ -43,7 +43,7 @@ class Test : public SimpleCodecServer {
         .bits_per_sample = {16, 24, 32},
     };
   }
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     if (format.channels_to_use_bitmask != 1)  // First Codec gets the first TDM slot.
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     return zx::ok(CodecFormatInfo{});

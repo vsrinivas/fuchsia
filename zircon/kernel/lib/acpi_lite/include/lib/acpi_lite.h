@@ -40,7 +40,7 @@ class AcpiParser final : public AcpiParserInterface {
   // Create a new AcpiParser, using the given PhysMemReader object.
   //
   // PhysMemReader must outlive this object. Caller retains ownership of the PhysMemReader.
-  static zx::status<AcpiParser> Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa);
+  static zx::result<AcpiParser> Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa);
 
   uint64_t rsdp_pa() const { return rsdp_addr_; }
 
@@ -99,7 +99,7 @@ const T* GetTableByType(const AcpiParserInterface& parser) {
 class PhysMemReader {
  public:
   virtual ~PhysMemReader() = default;
-  virtual zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) = 0;
+  virtual zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) = 0;
 };
 
 //
@@ -113,9 +113,9 @@ bool AcpiChecksumValid(const void* buf, size_t len);
 uint8_t AcpiChecksum(const void* _buf, size_t len);
 
 // Validate the RSDT / XSDT tables.
-zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
+zx::result<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
                                          size_t* num_tables);
-zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa,
+zx::result<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa,
                                          size_t* num_tables);
 
 }  // namespace acpi_lite

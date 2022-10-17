@@ -25,7 +25,7 @@ HostAllocator::HostAllocator(RawBitmap block_bitmap, cpp20::span<Inode> node_map
                              std::unique_ptr<id_allocator::IdAllocator> node_bitmap)
     : BaseAllocator(std::move(block_bitmap), std::move(node_bitmap)), node_map_(node_map) {}
 
-zx::status<std::unique_ptr<HostAllocator>> HostAllocator::Create(RawBitmap block_bitmap,
+zx::result<std::unique_ptr<HostAllocator>> HostAllocator::Create(RawBitmap block_bitmap,
                                                                  cpp20::span<Inode> node_map) {
   std::unique_ptr<id_allocator::IdAllocator> node_bitmap;
   if (zx_status_t status = id_allocator::IdAllocator::Create(node_map.size(), &node_bitmap);
@@ -48,7 +48,7 @@ zx::status<std::unique_ptr<HostAllocator>> HostAllocator::Create(RawBitmap block
   return zx::ok(std::move(host_allocator));
 }
 
-zx::status<InodePtr> HostAllocator::GetNode(uint32_t node_index) {
+zx::result<InodePtr> HostAllocator::GetNode(uint32_t node_index) {
   if (node_index >= node_map_.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }

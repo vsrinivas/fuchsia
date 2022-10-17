@@ -57,7 +57,7 @@ class LogListenerTest : public zxtest::Test {
                   /* retransmit */ false, kMaxLogData) {}
 
   void SetUp() override {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
     ASSERT_OK(endpoints.status_value());
     auto [client, server] = std::move(endpoints.value());
     listener_.Bind(std::move(server));

@@ -61,7 +61,7 @@ void DisplayInfo::InitializeInspect(inspect::Node* parent_node) {
 }
 
 // static
-zx::status<fbl::RefPtr<DisplayInfo>> DisplayInfo::Create(const added_display_args_t& info,
+zx::result<fbl::RefPtr<DisplayInfo>> DisplayInfo::Create(const added_display_args_t& info,
                                                          ddk::I2cImplProtocolClient* i2c) {
   fbl::AllocChecker ac;
   fbl::RefPtr<DisplayInfo> out = fbl::AdoptRef(new (&ac) DisplayInfo);

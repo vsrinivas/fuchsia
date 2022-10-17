@@ -31,14 +31,14 @@ class Runner final : public fs::PagedVfs {
 
   virtual ~Runner();
 
-  static zx::status<std::unique_ptr<Runner>> Create(async::Loop* loop,
+  static zx::result<std::unique_ptr<Runner>> Create(async::Loop* loop,
                                                     std::unique_ptr<BlockDevice> device,
                                                     const MountOptions& options,
                                                     zx::resource vmex_resource);
 
   // fs::PagedVfs implementation.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
 
   // Serves the root directory of the filesystem using |root| as the server-end of an IPC
   // connection.

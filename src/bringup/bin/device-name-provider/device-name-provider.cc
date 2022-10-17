@@ -109,7 +109,7 @@ int main(int argc, char** argv) {
   if (!args.nodename.empty()) {
     strlcpy(device_name, args.nodename.c_str(), sizeof(device_name));
   } else {
-    zx::status status = netifc_discover(args.devdir, args.interface);
+    zx::result status = netifc_discover(args.devdir, args.interface);
     if (status.is_error()) {
       strlcpy(device_name, fuchsia_device::wire::kDefaultDeviceName, sizeof(device_name));
       printf("device-name-provider: using default name \"%s\": netifc_discover(\"%s\", ...) = %s\n",

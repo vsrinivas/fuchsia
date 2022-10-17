@@ -79,7 +79,7 @@ static_assert(sizeof(eth_buffer) == 32);
 
 struct Netifc {
   virtual ~Netifc() = default;
-  virtual zx::status<DeviceBuffer> GetBuffer(size_t len, bool block) = 0;
+  virtual zx::result<DeviceBuffer> GetBuffer(size_t len, bool block) = 0;
 };
 
 struct EthNetifc : Netifc {
@@ -122,7 +122,7 @@ struct EthNetifc : Netifc {
     eth_buffers = buf;
   }
 
-  zx::status<eth_buffer*> GetBuffer(size_t sz, uint32_t newstate, bool block)
+  zx::result<eth_buffer*> GetBuffer(size_t sz, uint32_t newstate, bool block)
       __TA_REQUIRES(eth_lock) {
     eth_buffer* buf;
     if (sz > NET_BUFFERSZ) {
@@ -169,9 +169,9 @@ struct EthNetifc : Netifc {
     return zx::ok(buf);
   }
 
-  zx::status<DeviceBuffer> GetBuffer(size_t sz, bool block) override {
+  zx::result<DeviceBuffer> GetBuffer(size_t sz, bool block) override {
     std::lock_guard lock(eth_lock);
-    zx::status status = GetBuffer(sz, ETH_BUFFER_CLIENT, block);
+    zx::result status = GetBuffer(sz, ETH_BUFFER_CLIENT, block);
     if (status.is_error()) {
       return status.take_error();
     }
@@ -196,7 +196,7 @@ struct EthNetifc : Netifc {
 
   void HandleSignal() {
     // Device status was signaled, fetch new status.
-    zx::status status = eth->GetStatus();
+    zx::result status = eth->GetStatus();
     if (status.is_error()) {
       printf("netifc: error fetching device status %s\n", status.status_string());
       on_error(status.status_value());
@@ -224,7 +224,7 @@ struct NetdeviceIfc : Netifc {
                fuchsia_hardware_network::wire::PortId port_id)
       : client(std::move(device), dispatcher), port_id(port_id), on_error(std::move(on_error)) {}
 
-  zx::status<DeviceBuffer> GetBuffer(size_t len, bool block) override {
+  zx::result<DeviceBuffer> GetBuffer(size_t len, bool block) override {
     network::client::NetworkDeviceClient::Buffer tx = client.AllocTx();
     if (!tx.is_valid()) {
       // Be loud in case the caller expects this to be synchronous, we can
@@ -267,7 +267,7 @@ cpp20::span<uint8_t> DeviceBuffer::data() {
       contents_);
 }
 
-zx::status<DeviceBuffer> DeviceBuffer::Get(size_t len, bool block) {
+zx::result<DeviceBuffer> DeviceBuffer::Get(size_t len, bool block) {
   if (g_state == nullptr) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -331,7 +331,7 @@ zx_status_t DeviceBuffer::Send(size_t len) {
 
 int eth_add_mcast_filter(const mac_addr_t* addr) { return 0; }
 
-zx::status<> open_ethernet(async_dispatcher_t* dispatcher,
+zx::result<> open_ethernet(async_dispatcher_t* dispatcher,
                            fidl::ClientEnd<fuchsia_hardware_ethernet::Device> device,
                            fit::callback<void(zx_status_t)> on_error) {
   std::unique_ptr state = std::make_unique<EthNetifc>();
@@ -372,7 +372,7 @@ zx::status<> open_ethernet(async_dispatcher_t* dispatcher,
     eth_state.PutBuffer(&buffer, ETH_BUFFER_FREE);
   }
 
-  zx::status eth_status =
+  zx::result eth_status =
       EthClient::Create(dispatcher, std::move(device), std::move(vmo), mapper.start(),
                         fit::bind_member<&EthNetifc::HandleRx>(&eth_state),
                         fit::bind_member<&EthNetifc::HandleSignal>(&eth_state),
@@ -385,7 +385,7 @@ zx::status<> open_ethernet(async_dispatcher_t* dispatcher,
 
   // Enqueue rx buffers.
   for (unsigned n = 0; n < NET_BUFFERS; n++) {
-    zx::status status = eth_state.GetBuffer(NET_BUFFERSZ, ETH_BUFFER_RX, false);
+    zx::result status = eth_state.GetBuffer(NET_BUFFERSZ, ETH_BUFFER_RX, false);
     if (status.is_error()) {
       printf("netifc: only queued %u buffers (desired: %u)\n", n, NET_BUFFERS);
       break;
@@ -401,7 +401,7 @@ zx::status<> open_ethernet(async_dispatcher_t* dispatcher,
   return zx::ok();
 }
 
-zx::status<> open_netdevice(async_dispatcher_t* dispatcher, NetdeviceInterface iface,
+zx::result<> open_netdevice(async_dispatcher_t* dispatcher, NetdeviceInterface iface,
                             fit::callback<void(zx_status_t)> on_error) {
   std::unique_ptr state = std::make_unique<NetdeviceIfc>(std::move(iface.device), dispatcher,
                                                          std::move(on_error), iface.port_id);
@@ -436,9 +436,9 @@ zx::status<> open_netdevice(async_dispatcher_t* dispatcher, NetdeviceInterface i
   return zx::ok();
 }
 
-zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
+zx::result<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view interface,
                          fit::callback<void(zx_status_t)> on_error) {
-  zx::status status = netifc_discover("/dev", interface);
+  zx::result status = netifc_discover("/dev", interface);
   if (status.is_error()) {
     printf("netifc: failed to discover interface %s\n", status.status_string());
     return status.take_error();
@@ -446,12 +446,12 @@ zx::status<> netifc_open(async_dispatcher_t* dispatcher, cpp17::string_view inte
   auto& [dev, mac] = status.value();
 
   {
-    zx::status status = std::visit(
+    zx::result status = std::visit(
         overloaded{[dispatcher, &on_error](
-                       fidl::ClientEnd<fuchsia_hardware_ethernet::Device>& d) -> zx::status<> {
+                       fidl::ClientEnd<fuchsia_hardware_ethernet::Device>& d) -> zx::result<> {
                      return open_ethernet(dispatcher, std::move(d), std::move(on_error));
                    },
-                   [dispatcher, &on_error](NetdeviceInterface& d) -> zx::status<> {
+                   [dispatcher, &on_error](NetdeviceInterface& d) -> zx::result<> {
                      return open_netdevice(dispatcher, std::move(d), std::move(on_error));
                    }},
         dev);

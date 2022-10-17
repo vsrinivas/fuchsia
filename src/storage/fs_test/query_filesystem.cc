@@ -20,7 +20,7 @@ namespace {
 using QueryFilesystemTest = FilesystemTest;
 
 TEST_P(QueryFilesystemTest, QueryTest) {
-  const zx::status result1 = fs().GetFsInfo();
+  const zx::result result1 = fs().GetFsInfo();
   ASSERT_TRUE(result1.is_ok()) << result1.status_string();
   const auto& info1 = result1.value();
 
@@ -39,7 +39,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
   EXPECT_EQ(write(fd.get(), buf.get(), buf_size), static_cast<ssize_t>(buf_size))
       << strerror(errno);
 
-  const zx::status result2 = fs().GetFsInfo();
+  const zx::result result2 = fs().GetFsInfo();
   ASSERT_TRUE(result2.is_ok()) << result2.status_string();
   const auto& info2 = result2.value();
 
@@ -58,7 +58,7 @@ TEST_P(QueryFilesystemTest, QueryTest) {
     EXPECT_GE(info2.used_bytes, info1.used_bytes + buf_size);
   }
 
-  const zx::status result3 = fs().GetFsInfo();
+  const zx::result result3 = fs().GetFsInfo();
   ASSERT_TRUE(result3.is_ok()) << result3.status_string();
   const auto& info3 = result3.value();
 

@@ -23,6 +23,6 @@ int fastboot_process(size_t packet_size, int (*read_packet_callback)(void *, siz
   }
 
   FastbootTCPTransport transport(ctx, packet_size, read_packet_callback, write_packet_callback);
-  zx::status<> ret = fastboot->ProcessPacket(&transport);
+  zx::result<> ret = fastboot->ProcessPacket(&transport);
   return ret.is_ok() ? 0 : 1;
 }

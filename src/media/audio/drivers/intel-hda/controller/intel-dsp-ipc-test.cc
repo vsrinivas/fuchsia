@@ -121,7 +121,7 @@ TEST(Ipc, SimpleSend) {
 
   // Start a thread, give it a chance to run.
   auto worker = Thread([&]() {
-    zx::status result = dsp->Send(0xaa, 0x55);
+    zx::result result = dsp->Send(0xaa, 0x55);
     ZX_ASSERT_MSG(result.is_ok(), "Send failed: %s (code: %d)", result.status_string(),
                   result.status_value());
   });
@@ -146,7 +146,7 @@ TEST(Ipc, ErrorReply) {
 
   // Start a thread.
   auto worker = Thread([&]() {
-    zx::status result = dsp->Send(0xaa, 0x55);
+    zx::result result = dsp->Send(0xaa, 0x55);
     ZX_ASSERT_MSG(result.status_value() == ZX_ERR_INTERNAL, "Got incorrect error message: %s",
                   result.status_string());
   });
@@ -167,7 +167,7 @@ TEST(Ipc, HardwareTimeout) {
 
   // Start a thread.
   auto worker = Thread([&]() {
-    zx::status result = dsp->Send(0xaa, 0x55);
+    zx::result result = dsp->Send(0xaa, 0x55);
     ZX_ASSERT_MSG(result.status_value() == ZX_ERR_TIMED_OUT, "Got incorrect error: %s",
                   result.status_string());
   });
@@ -195,7 +195,7 @@ TEST(Ipc, QueuedMessages) {
   std::array<std::unique_ptr<Thread>, kNumThreads> workers;
   for (int i = 0; i < kNumThreads; i++) {
     workers[i] = std::make_unique<Thread>([i, &dsp]() {
-      zx::status result = dsp->Send(0, i);
+      zx::result result = dsp->Send(0, i);
       ZX_ASSERT_MSG(result.is_ok(), "Send failed: %s (code: %d)", result.status_string(),
                     result.status_value());
     });
@@ -219,7 +219,7 @@ TEST(Ipc, ShutdownWithQueuedSend) {
 
   // Start a thread, and wait for it to send.
   Thread thread([&dsp]() {
-    zx::status result = dsp->Send(0, 0);
+    zx::result result = dsp->Send(0, 0);
     ZX_ASSERT_MSG(!result.is_ok() && result.status_value() == ZX_ERR_CANCELED,
                   "Expected send to fail with 'ZX_ERR_CANCELED', but got: %s",
                   result.status_string());

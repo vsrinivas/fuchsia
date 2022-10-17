@@ -57,7 +57,7 @@ PagedVfs::~PagedVfs() {
   // The local_nodes will now release its references which will normally delete the Vnode objects.
 }
 
-zx::status<> PagedVfs::Init() {
+zx::result<> PagedVfs::Init() {
   if (zx_status_t status = zx::pager::create(0, &pager_); status != ZX_OK)
     return zx::error(status);
 
@@ -94,21 +94,21 @@ std::vector<zx::unowned_thread> PagedVfs::GetPagerThreads() const {
   return pager_pool_->GetPagerThreads();
 }
 
-zx::status<> PagedVfs::SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+zx::result<> PagedVfs::SupplyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                    const zx::vmo& aux_vmo, uint64_t aux_offset) {
-  return zx::make_status(pager_.supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));
+  return zx::make_result(pager_.supply_pages(node_vmo, offset, length, aux_vmo, aux_offset));
 }
 
-zx::status<> PagedVfs::DirtyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length) {
-  return zx::make_status(pager_.op_range(ZX_PAGER_OP_DIRTY, node_vmo, offset, length, 0));
+zx::result<> PagedVfs::DirtyPages(const zx::vmo& node_vmo, uint64_t offset, uint64_t length) {
+  return zx::make_result(pager_.op_range(ZX_PAGER_OP_DIRTY, node_vmo, offset, length, 0));
 }
 
-zx::status<> PagedVfs::ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
+zx::result<> PagedVfs::ReportPagerError(const zx::vmo& node_vmo, uint64_t offset, uint64_t length,
                                         zx_status_t err) {
-  return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
+  return zx::make_result(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
 }
 
-zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* node, uint64_t size,
+zx::result<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(PagedVnode* node, uint64_t size,
                                                                  uint32_t options) {
   // Register this node with a unique ID to associated it with pager requests.
   VmoCreateInfo create_info;

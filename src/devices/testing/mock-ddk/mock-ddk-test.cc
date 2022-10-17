@@ -93,7 +93,7 @@ class TestDevice : public DeviceType {
   }
 
   // Bind call from which would come from the driver:
-  static zx::status<TestDevice*> Bind(zx_device_t* parent) {
+  static zx::result<TestDevice*> Bind(zx_device_t* parent) {
     auto dev = std::make_unique<TestDevice>(parent);
     // The device_add_args_t will be filled out by the
     // base class.
@@ -106,7 +106,7 @@ class TestDevice : public DeviceType {
     return zx::error(status);
   }
 
-  zx::status<mock_ddk::Protocol> GetProtocol(uint32_t proto_id) {
+  zx::result<mock_ddk::Protocol> GetProtocol(uint32_t proto_id) {
     mock_ddk::Protocol protocol;
     auto status = device_get_protocol(parent_, proto_id, &protocol);
     if (status == ZX_OK) {
@@ -115,7 +115,7 @@ class TestDevice : public DeviceType {
     return zx::error(status);
   }
 
-  zx::status<zx::channel> ConnectToProtocol(const char* protocol_name) {
+  zx::result<zx::channel> ConnectToProtocol(const char* protocol_name) {
     zx::channel client, server;
     auto status = zx::channel::create(0, &client, &server);
     if (status != ZX_OK) {
@@ -129,7 +129,7 @@ class TestDevice : public DeviceType {
     return zx::error(status);
   }
 
-  zx::status<zx::channel> ConnectToFragmentProtocol(const char* fragment_name,
+  zx::result<zx::channel> ConnectToFragmentProtocol(const char* fragment_name,
                                                     const char* protocol_name) {
     zx::channel client, server;
     auto status = zx::channel::create(0, &client, &server);
@@ -145,7 +145,7 @@ class TestDevice : public DeviceType {
     return zx::error(status);
   }
 
-  zx::status<std::vector<uint8_t>> GetMetadata(uint32_t type, size_t max_size) {
+  zx::result<std::vector<uint8_t>> GetMetadata(uint32_t type, size_t max_size) {
     std::vector<uint8_t> data(max_size);
     size_t actual;
     auto status = device_get_metadata(parent_, type, data.data(), max_size, &actual);
@@ -156,7 +156,7 @@ class TestDevice : public DeviceType {
     return zx::error(status);
   }
 
-  zx::status<std::string> GetVariable(const char* name, size_t max_size) {
+  zx::result<std::string> GetVariable(const char* name, size_t max_size) {
     std::vector<char> data(max_size, '\0');
     size_t actual;
     auto status = device_get_variable(parent_, name, data.data(), max_size, &actual);
@@ -166,7 +166,7 @@ class TestDevice : public DeviceType {
     return zx::error(status);
   }
 
-  zx::status<std::vector<uint8_t>> LoadFirmware(std::string_view path) {
+  zx::result<std::vector<uint8_t>> LoadFirmware(std::string_view path) {
     size_t actual;
     zx::vmo fw;
     auto status = load_firmware_from_driver(nullptr, zxdev(), std::string(path).c_str(),
@@ -182,7 +182,7 @@ class TestDevice : public DeviceType {
     return zx::ok(data);
   }
 
-  zx::status<size_t> GetMetadataSize(uint32_t type) {
+  zx::result<size_t> GetMetadataSize(uint32_t type) {
     size_t actual;
     auto status = device_get_metadata_size(parent_, type, &actual);
     if (status == ZX_OK) {
@@ -192,7 +192,7 @@ class TestDevice : public DeviceType {
   }
 
   // Add a child device with this device as the parent:
-  zx::status<TestDevice*> AddChild() {
+  zx::result<TestDevice*> AddChild() {
     auto result = Bind(zxdev());
     if (result.is_ok()) {
       children_.push_back(result.value());

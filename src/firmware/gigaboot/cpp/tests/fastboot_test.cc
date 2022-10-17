@@ -110,7 +110,7 @@ TEST(FastbootTest, FastbootContinueTest) {
   Fastboot fastboot(download_buffer, ZirconBootOps());
   fastboot::TestTransport transport;
   transport.AddInPacket(std::string("continue"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   ASSERT_EQ(transport.GetOutPackets().size(), 1ULL);
@@ -135,7 +135,7 @@ TEST_P(BasicVarTest, TestBasicVar) {
 
   std::string command = std::string{"getvar:"} + test_case.var;
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(
@@ -278,7 +278,7 @@ class FastbootFlashTest : public ::testing::Test {
              download_content.size());
     fastboot::TestTransport transport;
     transport.AddInPacket(std::string(download_command));
-    zx::status ret = fastboot.ProcessPacket(&transport);
+    zx::result ret = fastboot.ProcessPacket(&transport);
     ASSERT_TRUE(ret.is_ok());
 
     // Download
@@ -365,7 +365,7 @@ TEST_P(FastbootSlotAllSlotsTest, TestFastbootGetSlot) {
 
   InitializeAbr(test_case.slot_index);
   transport.AddInPacket(std::string("getvar:current-slot"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   fastboot::Packets expected_packets = {std::string{"OKAY"} + test_case.slot_str};
@@ -394,7 +394,7 @@ TEST_P(FastbootSlotABTest, TestFastbootSetActive) {
 
   InitializeAbr(kAbrSlotIndexR);
   transport.AddInPacket(std::string{"set_active:"} + test_case.slot_str);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   fastboot::Packets expected_packets = {"OKAY"};
@@ -417,7 +417,7 @@ TEST_P(FastbootSlotABTest, GetVarSlotLastSetActive) {
 
   InitializeAbr(test_case.slot_index);
   transport.AddInPacket(std::string("getvar:slot-last-set-active"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   fastboot::Packets expected_packets{std::string{"OKAY"} + test_case.slot_str};
@@ -434,7 +434,7 @@ TEST_P(FastbootSlotABTest, GetVarSlotUnbootable) {
 
   std::string command = std::string{"getvar:slot-unbootable:"} + test_case.slot_str;
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAYno"}));
 
@@ -455,7 +455,7 @@ TEST_P(FastbootSlotABTest, GetVarSlotRetryCount) {
   InitializeAbr(test_case.slot_index);
   std::string command = std::string("getvar:slot-retry-count:") + test_case.slot_str;
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAY7"}));
 
@@ -477,7 +477,7 @@ TEST_P(FastbootSlotABTest, GetVarSlotSuccessful) {
   MarkSuccesful(test_case.slot_index);
   std::string command = std::string{"getvar:slot-successful:"} + test_case.slot_str;
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAYyes"}));
 
@@ -505,7 +505,7 @@ TEST_F(FastbootSlotTest, GetVarSlotSuccessfulR) {
 
   std::string command = std::string{"getvar:slot-successful:r"};
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAYyes"}));
 }
@@ -517,7 +517,7 @@ TEST_F(FastbootSlotTest, GetVarSlotBootableR) {
 
   std::string command = std::string{"getvar:slot-unbootable:r"};
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), {"OKAYno"}));
 }
@@ -541,7 +541,7 @@ TEST_P(FastbootSetActiveUserErrorTest, TestFastbootSetActiveUserError) {
 
   std::string cmd = std::string{"set_active"} + test_case.user_str;
   transport.AddInPacket(cmd);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   auto sent_packets = transport.GetOutPackets();
@@ -570,7 +570,7 @@ TEST_F(FastbootSlotTest, SetActiveSlotWriteFailure) {
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("set_active:b"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_error());
   auto sent_packets = transport.GetOutPackets();
   ASSERT_EQ(sent_packets.size(), 1ULL);
@@ -593,7 +593,7 @@ TEST_P(VarErrorTest, TestVarError) {
   std::string command = std::string{"getvar:"} + test_case.var;
 
   transport.AddInPacket(command);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   auto sent_packets = transport.GetOutPackets();
@@ -642,7 +642,7 @@ TEST_F(FastbootFlashTest, FlashPartition) {
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("flash:") + GPT_ZIRCON_A_NAME);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
 
   fastboot::Packets expected_packets = {"OKAY"};
@@ -665,7 +665,7 @@ TEST_F(FastbootFlashTest, FlashPartitionFailedToWritePartition) {
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("flash:") + GPT_ZIRCON_A_NAME);
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_error());
 
   // Should fail while searching for gpt device.
@@ -693,7 +693,7 @@ TEST_F(FastbootFlashTest, RebootNormal) {
   FakeRebootMode bootmode(RebootMode::kBootloader);
 
   transport.AddInPacket(std::string("reboot"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
@@ -715,7 +715,7 @@ TEST_F(FastbootFlashTest, RebootBootloader) {
   FakeRebootMode bootmode(RebootMode::kNormal);
 
   transport.AddInPacket(std::string("reboot-bootloader"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
@@ -737,7 +737,7 @@ TEST_F(FastbootFlashTest, RebootRecovery) {
   FakeRebootMode bootmode(RebootMode::kNormal);
 
   transport.AddInPacket(std::string("reboot-recovery"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_ok());
   std::vector<std::string> expected_packets = {"OKAY"};
   ASSERT_NO_FATAL_FAILURE(CheckPacketsEqual(transport.GetOutPackets(), expected_packets));
@@ -759,7 +759,7 @@ TEST_F(FastbootFlashTest, RebootSetRebootModeFail) {
   FakeRebootMode bootmode(RebootMode::kNormal, false);
 
   transport.AddInPacket(std::string("reboot"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_error());
 
   auto sent_packets = transport.GetOutPackets();
@@ -782,7 +782,7 @@ TEST_F(FastbootFlashTest, RebootResetSystemFail) {
   fastboot::TestTransport transport;
 
   transport.AddInPacket(std::string("reboot"));
-  zx::status ret = fastboot.ProcessPacket(&transport);
+  zx::result ret = fastboot.ProcessPacket(&transport);
   ASSERT_TRUE(ret.is_error());
 
   // We should still receive an OKAY packet.

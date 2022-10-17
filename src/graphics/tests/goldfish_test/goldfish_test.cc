@@ -22,7 +22,7 @@
 
 namespace {
 fidl::WireSyncClient<fuchsia_sysmem::Allocator> CreateSysmemAllocator() {
-  zx::status client_end = component::Connect<fuchsia_sysmem::Allocator>();
+  zx::result client_end = component::Connect<fuchsia_sysmem::Allocator>();
   EXPECT_EQ(client_end.status_value(), ZX_OK);
   if (!client_end.is_ok()) {
     return {};

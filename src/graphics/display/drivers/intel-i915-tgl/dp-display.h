@@ -56,7 +56,7 @@ class DpAux : public DpcdChannel {
   zx_status_t DpAuxWrite(uint32_t dp_cmd, uint32_t addr, const uint8_t* buf, size_t size)
       __TA_REQUIRES(lock_);
 
-  zx::status<DdiAuxChannel::ReplyInfo> DoTransaction(const DdiAuxChannel::Request& request,
+  zx::result<DdiAuxChannel::ReplyInfo> DoTransaction(const DdiAuxChannel::Request& request,
                                                      cpp20::span<uint8_t> reply_data_buffer)
       __TA_REQUIRES(lock_);
 };
@@ -265,8 +265,8 @@ class DpDisplay : public DisplayDevice {
 
   bool HandleHotplug(bool long_pulse) override;
   bool HasBacklight() override;
-  zx::status<> SetBacklightState(bool power, double brightness) override;
-  zx::status<FidlBacklight::wire::State> GetBacklightState() override;
+  zx::result<> SetBacklightState(bool power, double brightness) override;
+  zx::result<FidlBacklight::wire::State> GetBacklightState() override;
 
   void SetLinkRate(uint32_t value);
 

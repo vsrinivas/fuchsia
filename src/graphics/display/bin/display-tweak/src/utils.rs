@@ -6,7 +6,7 @@ use anyhow::{anyhow, Error};
 use fidl;
 use fuchsia_zircon as zx;
 
-/// Unwraps the result of a FIDL call that errors out with a zx::status into a
+/// Unwraps the result of a FIDL call that errors out with a zx::result into a
 /// Result<T, E>.
 pub fn flatten_zx_error<T>(
     fidl_result: Result<Result<T, zx::zx_status_t>, fidl::Error>,
@@ -15,7 +15,7 @@ pub fn flatten_zx_error<T>(
         .map_err(|zx_status| anyhow!("Server response: {}", zx::Status::from_raw(zx_status)))
 }
 
-/// Unwraps the result of a FIDL call that returns a zx::status into a
+/// Unwraps the result of a FIDL call that returns a zx::result into a
 /// Result<T, E>. If the result is an error, it has `context` attached to it.
 pub fn flatten_zx_status(fidl_result: Result<zx::zx_status_t, fidl::Error>) -> Result<(), Error> {
     // Make the return type look like the FIDL call errors with zx.status.

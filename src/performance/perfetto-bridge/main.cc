@@ -64,7 +64,7 @@ int main(int argc, char** argv) {
 
   // Expose the FIDL server.
   component::OutgoingDirectory outgoing = component::OutgoingDirectory::Create(dispatcher);
-  zx::status result = outgoing.AddProtocol<fuchsia_tracing_perfetto::ProducerConnector>(
+  zx::result result = outgoing.AddProtocol<fuchsia_tracing_perfetto::ProducerConnector>(
       [dispatcher, service = &producer_connector_service](
           fidl::ServerEnd<fuchsia_tracing_perfetto::ProducerConnector> server_end) {
         fidl::BindServer(dispatcher, std::move(server_end), service,

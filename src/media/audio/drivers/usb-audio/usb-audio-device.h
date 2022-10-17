@@ -29,7 +29,7 @@ using UsbAudioDeviceBase = ddk::Device<UsbAudioDevice, ddk::Unbindable>;
 
 class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudioDevice> {
  public:
-  static zx::status<UsbAudioDevice*> DriverBind(zx_device_t* parent);
+  static zx::result<UsbAudioDevice*> DriverBind(zx_device_t* parent);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
 

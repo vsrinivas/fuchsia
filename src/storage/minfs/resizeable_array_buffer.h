@@ -28,13 +28,13 @@ class ResizeableArrayBuffer : public storage::ArrayBuffer {
   // different handle types should go away and this should no longer be required.
   Handle GetHandle() { return Data(0); }
 
-  [[nodiscard]] zx::status<> Attach(const char* name, fs::TransactionHandler* device) {
+  [[nodiscard]] zx::result<> Attach(const char* name, fs::TransactionHandler* device) {
     return zx::ok();
   }
-  zx::status<> Detach(fs::TransactionHandler* device) { return zx::ok(); }
+  zx::result<> Detach(fs::TransactionHandler* device) { return zx::ok(); }
 
-  [[nodiscard]] zx::status<> Shrink(size_t block_count);
-  [[nodiscard]] zx::status<> Grow(size_t block_count);
+  [[nodiscard]] zx::result<> Shrink(size_t block_count);
+  [[nodiscard]] zx::result<> Grow(size_t block_count);
 };
 
 }  // namespace minfs

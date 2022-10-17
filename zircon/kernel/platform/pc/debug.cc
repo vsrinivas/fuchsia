@@ -434,7 +434,7 @@ int platform_dgetc(char* c, bool wait) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx::status<char> result = console_input_buf.ReadChar(wait);
+  zx::result<char> result = console_input_buf.ReadChar(wait);
   if (result.is_ok()) {
     *c = result.value();
     return 1;

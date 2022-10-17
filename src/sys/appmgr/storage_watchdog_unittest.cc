@@ -36,7 +36,7 @@ class StorageWatchdogTest : public ::testing::Test {
 
     ASSERT_EQ(ZX_OK, loop_.StartThread());
 
-    zx::status<ScopedMemfs> memfs =
+    zx::result<ScopedMemfs> memfs =
         ScopedMemfs::CreateMountedAt(loop_.dispatcher(), "/hippo_storage");
     ASSERT_TRUE(memfs.is_ok());
     memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));

@@ -44,7 +44,7 @@ class Nvme : public DeviceType {
 
   // Returns the result of Identify with CNS set to 0.
   // See NVME Command Set Specification 4.1.5, "Identify Command" for more information.
-  zx::status<fpromise::promise<Completion, Completion>> IdentifyNamespace(uint32_t id,
+  zx::result<fpromise::promise<Completion, Completion>> IdentifyNamespace(uint32_t id,
                                                                           zx::vmo& data);
   // For inspect test.
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }

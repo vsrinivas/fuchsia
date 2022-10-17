@@ -42,12 +42,12 @@ class FakeDspChannel : public DspChannel {
   void ProcessIrq() override {}
   bool IsOperationPending() const override { return false; }
 
-  zx::status<> Send(uint32_t primary, uint32_t extension) override {
+  zx::result<> Send(uint32_t primary, uint32_t extension) override {
     return SendWithData(primary, extension, cpp20::span<const uint8_t>(), cpp20::span<uint8_t>(),
                         nullptr);
   }
 
-  zx::status<> SendWithData(uint32_t primary, uint32_t extension,
+  zx::result<> SendWithData(uint32_t primary, uint32_t extension,
                             cpp20::span<const uint8_t> payload, cpp20::span<uint8_t> recv_buffer,
                             size_t* bytes_received) override {
     ipcs_.push_back(Ipc{primary, extension, std::vector<uint8_t>(payload.begin(), payload.end())});
@@ -78,7 +78,7 @@ TEST(DspModuleController, TooManyPipelines) {
   std::unordered_set<uint8_t> seen_ids;
   bool saw_error = false;
   for (int i = 0; i < 1000; i++) {
-    zx::status<DspPipelineId> pipeline = controller.CreatePipeline(0, 0, 0);
+    zx::result<DspPipelineId> pipeline = controller.CreatePipeline(0, 0, 0);
     if (!pipeline.is_ok()) {
       saw_error = true;
       break;
@@ -115,7 +115,7 @@ TEST(DspModuleController, TooManyModules) {
   std::unordered_set<uint8_t> seen_ids;
   bool saw_error = false;
   for (int i = 0; i < 1000; i++) {
-    zx::status<DspModuleId> module = controller.CreateModule(
+    zx::result<DspModuleId> module = controller.CreateModule(
         /*type=*/42, pipeline, ProcDomain::LOW_LATENCY, {});
     if (!module.is_ok()) {
       saw_error = true;

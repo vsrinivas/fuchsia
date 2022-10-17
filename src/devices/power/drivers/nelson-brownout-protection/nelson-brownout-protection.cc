@@ -27,7 +27,7 @@ constexpr float kVoltageUpwardThreshold = 11.5f;
 namespace brownout_protection {
 
 zx_status_t CodecClientAgl::Init(ddk::CodecProtocolClient codec_proto) {
-  zx::status codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
+  zx::result codec_endpoints = fidl::CreateEndpoints<fuchsia_hardware_audio::Codec>();
   if (!codec_endpoints.is_ok()) {
     zxlogf(ERROR, "Failed to create codec endpoints: %s", codec_endpoints.status_string());
     return codec_endpoints.status_value();
@@ -40,7 +40,7 @@ zx_status_t CodecClientAgl::Init(ddk::CodecProtocolClient codec_proto) {
     return status;
   }
 
-  zx::status signal_endpoints =
+  zx::result signal_endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_audio_signalprocessing::SignalProcessing>();
   if (!signal_endpoints.is_ok()) {
     zxlogf(ERROR, "Failed to create signal processing endpoints: %s",
@@ -99,7 +99,7 @@ zx_status_t NelsonBrownoutProtection::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_RESOURCES;
   }
 
-  zx::status power_sensor_endpoints =
+  zx::result power_sensor_endpoints =
       fidl::CreateEndpoints<fuchsia_hardware_power_sensor::Device>();
   if (!power_sensor_endpoints.is_ok()) {
     zxlogf(ERROR, "Failed to create channel: %s", power_sensor_endpoints.status_string());

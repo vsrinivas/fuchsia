@@ -19,7 +19,7 @@
 
 namespace extractor {
 
-zx::status<std::unique_ptr<HexDumpGenerator>> HexDumpGenerator::Create(
+zx::result<std::unique_ptr<HexDumpGenerator>> HexDumpGenerator::Create(
     fbl::unique_fd input, HexDumpGeneratorOptions options) {
   if (!input || options.bytes_per_line == 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -53,7 +53,7 @@ std::string HexDumpGenerator::BuildLine(const std::string& hex_string, off_t off
   return stream.str();
 }
 
-zx::status<std::string> HexDumpGenerator::DumpToString(const uint8_t* buffer, off_t offset,
+zx::result<std::string> HexDumpGenerator::DumpToString(const uint8_t* buffer, off_t offset,
                                                        size_t size) {
   ZX_ASSERT(size > 0 && size <= options_.bytes_per_line);
   std::stringstream stream;
@@ -95,7 +95,7 @@ zx::status<std::string> HexDumpGenerator::DumpToString(const uint8_t* buffer, of
 
 bool HexDumpGenerator::Done() const { return current_offset_ == file_size_; }
 
-zx::status<std::string> HexDumpGenerator::GetNextLine() {
+zx::result<std::string> HexDumpGenerator::GetNextLine() {
   if (Done()) {
     return zx::error(ZX_ERR_STOP);
   }

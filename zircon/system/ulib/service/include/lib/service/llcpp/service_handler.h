@@ -38,13 +38,13 @@ class ServiceHandler final : public fidl::ServiceHandlerInterface {
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The member already exists.
-  zx::status<> AddAnyMember(std::string_view member, AnyMemberHandler handler) override {
+  zx::result<> AddAnyMember(std::string_view member, AnyMemberHandler handler) override {
     // Bridge for fs::Service Callable argument
     auto bridge_func = [handler = std::move(handler)](zx::channel request_channel) {
       handler(fidl::internal::MakeAnyTransport(std::move(request_channel)));
       return ZX_OK;
     };
-    return zx::make_status(
+    return zx::make_result(
         dir_->AddEntry(member, fbl::MakeRefCounted<fs::Service>(std::move(bridge_func))));
   }
 

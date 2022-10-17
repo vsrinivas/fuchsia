@@ -27,7 +27,7 @@ void StorageBuffer::Init() {
   }
 }
 
-zx::status<size_t> StorageBuffer::ReserveWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr) {
+zx::result<size_t> StorageBuffer::ReserveWriteOperation(fbl::RefPtr<Page> page, block_t blk_addr) {
   if (blk_addr >= max_blocks_) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
@@ -57,7 +57,7 @@ zx::status<size_t> StorageBuffer::ReserveWriteOperation(fbl::RefPtr<Page> page, 
   return zx::ok(pages_.size());
 }
 
-zx::status<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<LockedPage> &pages,
+zx::result<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<LockedPage> &pages,
                                                                 std::vector<block_t> addrs) {
   if (pages.size() != addrs.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);

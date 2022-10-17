@@ -184,7 +184,7 @@ int Main() {
   }
 
   // Serve the root filesystems in our own namespace.
-  zx::status fs_dir_or = fs_manager.GetFsDir();
+  zx::result fs_dir_or = fs_manager.GetFsDir();
   if (fs_dir_or.is_error()) {
     FX_PLOGS(ERROR, fs_dir_or.status_value()) << "Cannot serve root filesystems";
     return EXIT_FAILURE;

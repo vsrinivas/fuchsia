@@ -55,13 +55,13 @@ class NetDeviceDriverTest : public ::testing::Test {
     return ZX_OK;
   }
 
-  zx::status<fidl::WireSyncClient<netdev::Device>> ConnectNetDevice() {
-    zx::status endpoints = fidl::CreateEndpoints<netdev::Device>();
+  zx::result<fidl::WireSyncClient<netdev::Device>> ConnectNetDevice() {
+    zx::result endpoints = fidl::CreateEndpoints<netdev::Device>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    zx::status client = [this]() -> zx::status<fidl::WireSyncClient<netdev::DeviceInstance>> {
-      zx::status endpoints = fidl::CreateEndpoints<netdev::DeviceInstance>();
+    zx::result client = [this]() -> zx::result<fidl::WireSyncClient<netdev::DeviceInstance>> {
+      zx::result endpoints = fidl::CreateEndpoints<netdev::DeviceInstance>();
       if (endpoints.is_error()) {
         return endpoints.take_error();
       }
@@ -85,14 +85,14 @@ class NetDeviceDriverTest : public ::testing::Test {
   const FakeNetworkDeviceImpl& device_impl() const { return device_impl_; }
   FakeNetworkPortImpl& port_impl() { return port_impl_; }
 
-  zx::status<netdev::wire::PortId> GetSaltedPortId(uint8_t base_id) {
+  zx::result<netdev::wire::PortId> GetSaltedPortId(uint8_t base_id) {
     // List all existing ports from the device until we find the right port id.
-    zx::status connect_result = ConnectNetDevice();
+    zx::result connect_result = ConnectNetDevice();
     if (connect_result.is_error()) {
       return connect_result.take_error();
     }
     fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
-    zx::status endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
+    zx::result endpoints = fidl::CreateEndpoints<netdev::PortWatcher>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -134,7 +134,7 @@ class NetDeviceDriverTest : public ::testing::Test {
          cpp20::span(impl.port_info().rx_types_list, impl.port_info().rx_types_count)) {
       rx_types.push_back(static_cast<netdev::wire::FrameType>(frame_type));
     }
-    zx::status port_id = GetSaltedPortId(impl.id());
+    zx::result port_id = GetSaltedPortId(impl.id());
     if (port_id.is_error()) {
       return port_id.status_value();
     }
@@ -155,7 +155,7 @@ TEST_F(NetDeviceDriverTest, TestCreateSimple) { ASSERT_OK(CreateDevice()); }
 TEST_F(NetDeviceDriverTest, TestOpenSession) {
   ASSERT_OK(CreateDevice());
   TestSession session;
-  zx::status connect_result = ConnectNetDevice();
+  zx::result connect_result = ConnectNetDevice();
   ASSERT_OK(connect_result.status_value());
   fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
   ASSERT_OK(session.Open(netdevice, "test-session"));
@@ -173,21 +173,21 @@ TEST_F(NetDeviceDriverTest, TestWatcherDestruction) {
   // Test that on device removal watcher channels get closed.
   ASSERT_OK(CreateDevice());
 
-  zx::status connect_result = ConnectNetDevice();
+  zx::result connect_result = ConnectNetDevice();
   ASSERT_OK(connect_result.status_value());
   fidl::WireSyncClient<netdev::Device>& netdevice = connect_result.value();
 
-  zx::status maybe_port_id = GetSaltedPortId(kPortId);
+  zx::result maybe_port_id = GetSaltedPortId(kPortId);
   ASSERT_OK(maybe_port_id.status_value());
   const netdev::wire::PortId& port_id = maybe_port_id.value();
 
-  zx::status port_endpoints = fidl::CreateEndpoints<netdev::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<netdev::Port>();
   ASSERT_OK(port_endpoints.status_value());
   auto [port_client_end, port_server_end] = std::move(*port_endpoints);
   ASSERT_OK(netdevice->GetPort(port_id, std::move(port_server_end)).status());
   fidl::WireSyncClient port{std::move(port_client_end)};
 
-  zx::status endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<netdev::StatusWatcher>();
   ASSERT_OK(endpoints.status_value());
   auto [client_end, server_end] = std::move(*endpoints);
   ASSERT_OK(port->GetStatusWatcher(std::move(server_end), 1).status());

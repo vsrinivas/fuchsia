@@ -60,7 +60,7 @@ std::shared_ptr<DriverHostLoaderService> DriverHostLoaderService::Create(
       new DriverHostLoaderService(dispatcher, std::move(lib_fd), std::move(name)));
 }
 
-zx::status<zx::vmo> DriverHostLoaderService::LoadObjectImpl(std::string path) {
+zx::result<zx::vmo> DriverHostLoaderService::LoadObjectImpl(std::string path) {
   if (!InAllowlist(path)) {
     return zx::error(ZX_ERR_ACCESS_DENIED);
   }

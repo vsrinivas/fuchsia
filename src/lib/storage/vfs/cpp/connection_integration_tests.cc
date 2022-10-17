@@ -58,11 +58,11 @@ class FileOrDirectory : public fs::Vnode {
 
 // Helper method to monitor the OnOpen event, used by the tests below when
 // OPEN_FLAG_DESCRIBE is used.
-zx::status<fio::wire::NodeInfoDeprecated> GetOnOpenResponse(
+zx::result<fio::wire::NodeInfoDeprecated> GetOnOpenResponse(
     fidl::UnownedClientEnd<fio::Node> channel) {
-  zx::status<fio::wire::NodeInfoDeprecated> node_info{};
+  zx::result<fio::wire::NodeInfoDeprecated> node_info{};
   auto get_on_open_response = [](fidl::UnownedClientEnd<fio::Node> channel,
-                                 zx::status<fio::wire::NodeInfoDeprecated>& node_info) {
+                                 zx::result<fio::wire::NodeInfoDeprecated>& node_info) {
     class EventHandler final : public fidl::testing::WireSyncEventHandlerTestBase<fio::Node> {
      public:
       explicit EventHandler() = default;
@@ -136,12 +136,12 @@ using ConnectionTest = VfsTestSetup;
 
 TEST_F(ConnectionTest, NodeGetSetFlagsOnFile) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to File
-  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  zx::result fc = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
@@ -168,12 +168,12 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnFile) {
 
 TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to Directory
-  zx::status dc = fidl::CreateEndpoints<fio::Directory>();
+  zx::result dc = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(dc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "dir",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
@@ -198,7 +198,7 @@ TEST_F(ConnectionTest, NodeGetSetFlagsOnDirectory) {
 
 TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
   // Create connection to VFS with all rights.
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
@@ -209,7 +209,7 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
 
   for (const fio::wire::OpenFlags OPEN_FLAGS : OPEN_FLAG_COMBINATIONS) {
     // Connect to drectory specifying the flag combination we want to test.
-    zx::status dc = fidl::CreateEndpoints<fio::Directory>();
+    zx::result dc = fidl::CreateEndpoints<fio::Directory>();
     ASSERT_OK(dc.status_value());
     ASSERT_OK(fdio_open_at(root->client.channel().get(), "dir",
                            static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable | OPEN_FLAGS),
@@ -227,7 +227,7 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
       EXPECT_TRUE(fio::wire::OpenFlags::kRightExecutable & dir_flags);
 
     // Repeat test, but for file, which should not have any expanded rights.
-    zx::status fc = fidl::CreateEndpoints<fio::File>();
+    zx::result fc = fidl::CreateEndpoints<fio::File>();
     ASSERT_OK(fc.status_value());
     ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                            static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable | OPEN_FLAGS),
@@ -240,12 +240,12 @@ TEST_F(ConnectionTest, PosixFlagDirectoryRightExpansion) {
 
 TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Connect to File
-  zx::status fc = fidl::CreateEndpoints<fio::File>();
+  zx::result fc = fidl::CreateEndpoints<fio::File>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fdio_open_at(root->client.channel().get(), "file",
                          static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable),
@@ -274,13 +274,13 @@ TEST_F(ConnectionTest, FileGetSetFlagsOnFile) {
 
 TEST_F(ConnectionTest, FileSeekDirectory) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   // Interacting with a Directory connection using File protocol methods should fail.
   {
-    zx::status dc = fidl::CreateEndpoints<fio::Directory>();
+    zx::result dc = fidl::CreateEndpoints<fio::Directory>();
     ASSERT_OK(dc.status_value());
     ASSERT_OK(fdio_open_at(root->client.channel().get(), "dir",
                            static_cast<uint32_t>(fio::wire::OpenFlags::kRightReadable |
@@ -297,40 +297,40 @@ TEST_F(ConnectionTest, FileSeekDirectory) {
 
 TEST_F(ConnectionTest, NegotiateProtocol) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
   constexpr uint32_t kOpenMode = 0755;
 
   // Connect to polymorphic node as a directory, by passing |kOpenFlagDirectory|.
-  zx::status dc = fidl::CreateEndpoints<fio::Node>();
+  zx::result dc = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(dc.status_value());
   ASSERT_OK(fidl::WireCall(root->client)
                 ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kDescribe |
                            fio::wire::OpenFlags::kDirectory,
                        kOpenMode, fidl::StringView("file_or_dir"), std::move(dc->server))
                 .status());
-  zx::status<fio::wire::NodeInfoDeprecated> dir_info = GetOnOpenResponse(dc->client);
+  zx::result<fio::wire::NodeInfoDeprecated> dir_info = GetOnOpenResponse(dc->client);
   ASSERT_OK(dir_info);
   ASSERT_TRUE(dir_info->is_directory());
 
   // Connect to polymorphic node as a file, by passing |kOpenFlagNotDirectory|.
-  zx::status fc = fidl::CreateEndpoints<fio::Node>();
+  zx::result fc = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(fc.status_value());
   ASSERT_OK(fidl::WireCall(root->client)
                 ->Open(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kDescribe |
                            fio::wire::OpenFlags::kNotDirectory,
                        kOpenMode, fidl::StringView("file_or_dir"), std::move(fc->server))
                 .status());
-  zx::status<fio::wire::NodeInfoDeprecated> file_info = GetOnOpenResponse(fc->client);
+  zx::result<fio::wire::NodeInfoDeprecated> file_info = GetOnOpenResponse(fc->client);
   ASSERT_OK(file_info);
   ASSERT_TRUE(file_info->is_file());
 }
 
 TEST_F(ConnectionTest, PrevalidateFlagsOpenFailure) {
   // Create connection to vfs
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
@@ -340,7 +340,7 @@ TEST_F(ConnectionTest, PrevalidateFlagsOpenFailure) {
       fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kDescribe |
       fio::wire::OpenFlags::kDirectory | fio::wire::OpenFlags::kNodeReference |
       fio::wire::OpenFlags::kAppend;
-  zx::status dc = fidl::CreateEndpoints<fio::Node>();
+  zx::result dc = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(dc.status_value());
   // Ensure that invalid flag combination returns INVALID_ARGS.
   ASSERT_OK(fidl::WireCall(root->client)
@@ -402,7 +402,7 @@ class ConnectionClosingTest : public zxtest::Test {
 
 TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
   // Create connection to vfs.
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 
@@ -414,7 +414,7 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
   // Create a number of active connections to "count_outstanding_open_vnode".
   std::vector<fidl::ClientEnd<fio::Node>> clients;
   for (int i = 0; i < kNumActiveClients; i++) {
-    zx::status fc = fidl::CreateEndpoints<fio::Node>();
+    zx::result fc = fidl::CreateEndpoints<fio::Node>();
     ASSERT_OK(fc.status_value());
     ASSERT_OK(fidl::WireCall(root->client)
                   ->Open(fio::wire::OpenFlags::kRightReadable, kOpenMode,
@@ -436,7 +436,7 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
 
 TEST_F(ConnectionClosingTest, ClosingNodeLeadsToClosingServerEndChannel) {
   // Create connection to vfs.
-  zx::status root = fidl::CreateEndpoints<fio::Directory>();
+  zx::result root = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(root.status_value());
   ASSERT_OK(ConnectClient(std::move(root->server)));
 

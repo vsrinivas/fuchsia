@@ -139,7 +139,7 @@ void test_instruction(Instruction isn) {
   }
 
   // Wait for crash or thread completion.
-  zx::status<zx::exception> result = catcher.ExpectException();
+  zx::result<zx::exception> result = catcher.ExpectException();
   if (result.is_ok()) {
     zx_exception_report_t report = {};
     ASSERT_EQ(thread.get_info(ZX_INFO_THREAD_EXCEPTION_REPORT, &report, sizeof(report), NULL, NULL),

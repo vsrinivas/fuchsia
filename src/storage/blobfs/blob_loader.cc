@@ -59,7 +59,7 @@ BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* b
 
 BlobLoader::~BlobLoader() { [[maybe_unused]] auto status = read_mapper_.Detach(txn_manager_); }
 
-zx::status<std::unique_ptr<BlobLoader>> BlobLoader::Create(
+zx::result<std::unique_ptr<BlobLoader>> BlobLoader::Create(
     TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
     NodeFinder* node_finder, std::shared_ptr<BlobfsMetrics> metrics,
     DecompressorCreatorConnector* decompression_connector) {
@@ -76,7 +76,7 @@ zx::status<std::unique_ptr<BlobLoader>> BlobLoader::Create(
     }
     const char* name = "blobfs-sandbox";
     sandbox_vmo.set_property(ZX_PROP_NAME, name, strlen(name));
-    zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
+    zx::result<std::unique_ptr<ExternalDecompressorClient>> client_or =
         ExternalDecompressorClient::Create(decompression_connector, sandbox_vmo, read_mapper.vmo());
     if (!client_or.is_ok()) {
       return client_or.take_error();
@@ -89,7 +89,7 @@ zx::status<std::unique_ptr<BlobLoader>> BlobLoader::Create(
       std::move(sandbox_vmo), std::move(decompressor_client))));
 }
 
-zx::status<LoaderInfo> BlobLoader::LoadBlob(uint32_t node_index,
+zx::result<LoaderInfo> BlobLoader::LoadBlob(uint32_t node_index,
                                             const BlobCorruptionNotifier* corruption_notifier) {
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
   auto inode = node_finder_->GetNode(node_index);
@@ -142,7 +142,7 @@ zx::status<LoaderInfo> BlobLoader::LoadBlob(uint32_t node_index,
   return zx::ok(std::move(result));
 }
 
-zx::status<std::unique_ptr<BlobVerifier>> BlobLoader::CreateBlobVerifier(
+zx::result<std::unique_ptr<BlobVerifier>> BlobLoader::CreateBlobVerifier(
     uint32_t node_index, const Inode& inode, const BlobLayout& blob_layout,
     const BlobCorruptionNotifier* notifier) {
   if (blob_layout.MerkleTreeSize() == 0) {
@@ -166,7 +166,7 @@ zx::status<std::unique_ptr<BlobVerifier>> BlobLoader::CreateBlobVerifier(
 zx_status_t BlobLoader::InitForDecompression(
     uint32_t node_index, const Inode& inode, const BlobLayout& blob_layout,
     const BlobVerifier& verifier, std::unique_ptr<SeekableDecompressor>* decompressor_out) {
-  zx::status<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
+  zx::result<CompressionAlgorithm> algorithm_status = AlgorithmForInode(inode);
   if (algorithm_status.is_error()) {
     FX_LOGS(ERROR) << "Cannot decode blob due to invalid compression flags.";
     return algorithm_status.status_value();
@@ -215,7 +215,7 @@ zx_status_t BlobLoader::InitForDecompression(
   return ZX_OK;
 }
 
-zx::status<cpp20::span<const uint8_t>> BlobLoader::LoadBlocks(uint32_t node_index,
+zx::result<cpp20::span<const uint8_t>> BlobLoader::LoadBlocks(uint32_t node_index,
                                                               uint64_t block_offset,
                                                               uint64_t block_count) {
   TRACE_DURATION("blobfs", "BlobLoader::LoadBlocks", "block_count", block_count);

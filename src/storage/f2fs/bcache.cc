@@ -23,7 +23,7 @@
 namespace f2fs {
 
 #ifdef __Fuchsia__
-zx::status<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
+zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
                                                  bool* out_readonly) {
   fuchsia_hardware_block_BlockInfo info;
   if (zx_status_t status = device->BlockGetInfo(&info); status != ZX_OK) {
@@ -52,7 +52,7 @@ zx::status<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::B
   return Bcache::Create(std::move(device), block_count, kBlockSize);
 }
 
-zx::status<std::unique_ptr<Bcache>> CreateBcache(zx::channel device_channel, bool* out_readonly) {
+zx::result<std::unique_ptr<Bcache>> CreateBcache(zx::channel device_channel, bool* out_readonly) {
   std::unique_ptr<block_client::RemoteBlockDevice> device;
   zx_status_t status = block_client::RemoteBlockDevice::Create(std::move(device_channel), &device);
   if (status != ZX_OK) {
@@ -88,7 +88,7 @@ zx_status_t Bcache::BlockDetachVmo(storage::Vmoid vmoid) {
   return GetDevice()->BlockDetachVmo(std::move(vmoid));
 }
 
-zx::status<std::unique_ptr<Bcache>> Bcache::Create(
+zx::result<std::unique_ptr<Bcache>> Bcache::Create(
     std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks, block_t block_size) {
   std::unique_ptr<Bcache> bcache(new Bcache(std::move(device), max_blocks, block_size));
 

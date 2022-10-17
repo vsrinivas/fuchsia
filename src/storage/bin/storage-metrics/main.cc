@@ -49,7 +49,7 @@ void PrintBlockMetrics(const char* dev, const fuchsia_hardware_block::wire::Bloc
 }
 
 // Retrieves metrics for the block device at dev. Clears metrics if clear is true.
-zx::status<fuchsia_hardware_block::wire::BlockStats> GetBlockStats(const char* dev, bool clear) {
+zx::result<fuchsia_hardware_block::wire::BlockStats> GetBlockStats(const char* dev, bool clear) {
   auto client_end = component::Connect<fuchsia_hardware_block::Block>(dev);
   if (!client_end.is_ok()) {
     return client_end.take_error();
@@ -116,7 +116,7 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
   }
 
   if (!device_path.empty()) {
-    zx::status<fuchsia_hardware_block::wire::BlockStats> block_stats =
+    zx::result<fuchsia_hardware_block::wire::BlockStats> block_stats =
         GetBlockStats(device_path.data(), options.clear_block);
     if (block_stats.is_ok()) {
       PrintBlockMetrics(device_path.data(), *block_stats);
@@ -128,7 +128,7 @@ void RunBlockMetrics(const char* path, const StorageMetricOptions options) {
     // Maybe this is not a filesystem. See if this happens to be a block device.
     // TODO(auradkar): We need better args parsing to consider fs and block
     // device seperately.
-    zx::status<fuchsia_hardware_block::wire::BlockStats> block_stats =
+    zx::result<fuchsia_hardware_block::wire::BlockStats> block_stats =
         GetBlockStats(path, options.clear_block);
     if (!block_stats.is_ok()) {
       fprintf(stderr, "storage-metrics could not retrieve block metrics for %s: %s\n", path,

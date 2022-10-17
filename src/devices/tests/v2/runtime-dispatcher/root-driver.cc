@@ -28,7 +28,7 @@ class RootDriver : public driver::DriverBase, public fidl::WireServer<ft::Handsh
     auto service = [this](fidl::ServerEnd<ft::Handshake> server_end) {
       fidl::BindServer(dispatcher(), std::move(server_end), this);
     };
-    zx::status<> status =
+    zx::result<> status =
         context().outgoing()->component().AddProtocol<ft::Handshake>(std::move(service));
     if (status.is_error()) {
       return status;

@@ -22,7 +22,7 @@ class FuzzedPhysMemReader : public PhysMemReader {
     addr_ = std::min(addr_, UINT64_MAX - data.size());
   }
 
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
     // PhysToPtr is responsible for ensuring no overflow.
     uint64_t phys_end;
     if (length == 0 || add_overflow(phys, length - 1, &phys_end)) {
@@ -55,7 +55,7 @@ void TestOneInput(FuzzedDataProvider& provider) {
   // Create regions of memory.
   FuzzedPhysMemReader reader{region, provider.ConsumeRemainingBytes<uint8_t>()};
 
-  zx::status<AcpiParser> parser = acpi_lite::AcpiParser::Init(reader, paddr);
+  zx::result<AcpiParser> parser = acpi_lite::AcpiParser::Init(reader, paddr);
   if (parser.is_ok()) {
     GetTableBySignature(parser.value(), AcpiSignature("APIC"));
   }

@@ -46,7 +46,7 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
     return ZX_OK;
   }
   const fdio_cpp::UnownedFdioCaller caller{dirfd};
-  zx::status channel = component::ConnectAt<virtualbustest::BusTest>(caller.directory(), name);
+  zx::result channel = component::ConnectAt<virtualbustest::BusTest>(caller.directory(), name);
   if (channel.is_error()) {
     return channel.status_value();
   }

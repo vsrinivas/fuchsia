@@ -114,7 +114,7 @@ size_t Metadata::MetadataOffset(SuperblockType type) const {
 
 const MetadataBuffer* Metadata::Get() const { return data_.get(); }
 
-zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) const {
+zx::result<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) const {
   if (BytesNeeded(dimensions) < data_->size()) {
     return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
   }
@@ -156,13 +156,13 @@ zx::status<Metadata> Metadata::CopyWithNewDimensions(const Header& dimensions) c
   return Synthesize(new_header, partitions, num_partitions, slices, num_slices);
 }
 
-zx::status<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data_a,
+zx::result<Metadata> Metadata::Create(std::unique_ptr<MetadataBuffer> data_a,
                                       std::unique_ptr<MetadataBuffer> data_b) {
   return Create(std::numeric_limits<uint64_t>::max(), kBlockSize, std::move(data_a),
                 std::move(data_b));
 }
 
-zx::status<Metadata> Metadata::Create(size_t disk_size, size_t disk_block_size,
+zx::result<Metadata> Metadata::Create(size_t disk_size, size_t disk_block_size,
                                       std::unique_ptr<MetadataBuffer> data_a,
                                       std::unique_ptr<MetadataBuffer> data_b) {
   if (data_a->size() < sizeof(Header)) {
@@ -199,7 +199,7 @@ zx::status<Metadata> Metadata::Create(size_t disk_size, size_t disk_block_size,
   return zx::ok(Metadata(std::move(data), active_header.value()));
 }
 
-zx::status<Metadata> Metadata::Synthesize(const fvm::Header& header,
+zx::result<Metadata> Metadata::Synthesize(const fvm::Header& header,
                                           const VPartitionEntry* partitions, size_t num_partitions,
                                           const SliceEntry* slices, size_t num_slices) {
   if (num_partitions > header.GetPartitionTableEntryCount()) {

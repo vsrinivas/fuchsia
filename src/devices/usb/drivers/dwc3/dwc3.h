@@ -271,7 +271,7 @@ class Dwc3 : public Dwc3Type, public ddk::UsbDciProtocol<Dwc3, ddk::base_protoco
   void Ep0Start() TA_EXCL(lock_);
   void Ep0QueueSetupLocked() TA_REQ(ep0_.lock) TA_EXCL(lock_);
   void Ep0StartEndpoints() TA_REQ(ep0_.lock) TA_EXCL(lock_);
-  zx::status<size_t> HandleEp0Setup(const usb_setup_t& setup, void* buffer, size_t length)
+  zx::result<size_t> HandleEp0Setup(const usb_setup_t& setup, void* buffer, size_t length)
       TA_REQ(ep0_.lock) TA_EXCL(lock_);
   void HandleEp0TransferCompleteEvent(uint8_t ep_num) TA_EXCL(lock_, ep0_.lock);
   void HandleEp0TransferNotReadyEvent(uint8_t ep_num, uint32_t stage) TA_EXCL(lock_, ep0_.lock);

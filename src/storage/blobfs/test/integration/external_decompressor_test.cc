@@ -65,7 +65,7 @@ TEST(ExternalDecompressorSetUpTest, DecompressedVmoMissingWrite) {
             compressed_vmo.duplicate(ZX_DEFAULT_VMO_RIGHTS & (~ZX_RIGHT_WRITE), &decompressed_vmo));
 
   DecompressorCreatorConnector& connector = DecompressorCreatorConnector::DefaultServiceConnector();
-  zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
+  zx::result<std::unique_ptr<ExternalDecompressorClient>> client_or =
       ExternalDecompressorClient::Create(&connector, decompressed_vmo, compressed_vmo);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, client_or.status_value());
 }
@@ -78,7 +78,7 @@ TEST(ExternalDecompressorSetUpTest, CompressedVmoMissingDuplicate) {
                                               &compressed_vmo));
 
   DecompressorCreatorConnector& connector = DecompressorCreatorConnector::DefaultServiceConnector();
-  zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
+  zx::result<std::unique_ptr<ExternalDecompressorClient>> client_or =
       ExternalDecompressorClient::Create(&connector, decompressed_vmo, compressed_vmo);
   ASSERT_EQ(ZX_ERR_ACCESS_DENIED, client_or.status_value());
 }
@@ -103,7 +103,7 @@ class ExternalDecompressorTest : public ::testing::Test {
 
     DecompressorCreatorConnector& connector =
         DecompressorCreatorConnector::DefaultServiceConnector();
-    zx::status<std::unique_ptr<ExternalDecompressorClient>> client_or =
+    zx::result<std::unique_ptr<ExternalDecompressorClient>> client_or =
         ExternalDecompressorClient::Create(&connector, remote_decompressed_vmo,
                                            remote_compressed_vmo);
     ASSERT_EQ(ZX_OK, client_or.status_value());
@@ -118,12 +118,12 @@ class ExternalDecompressorTest : public ::testing::Test {
 };
 
 // Get a full range mapping for a SeekableDecompressor.
-zx::status<std::vector<CompressionMapping>> GetMappings(SeekableDecompressor* decompressor,
+zx::result<std::vector<CompressionMapping>> GetMappings(SeekableDecompressor* decompressor,
                                                         size_t length) {
   std::vector<CompressionMapping> mappings;
   size_t current = 0;
   while (current < length) {
-    zx::status<CompressionMapping> mapping_or =
+    zx::result<CompressionMapping> mapping_or =
         decompressor->MappingForDecompressedRange(current, 1, std::numeric_limits<size_t>::max());
     if (!mapping_or.is_ok()) {
       return mapping_or.take_error();

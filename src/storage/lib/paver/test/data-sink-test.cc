@@ -80,7 +80,7 @@ class MockPartitionClient : public FakePartitionClient {
 
   // Writes the |vmo| to the partition, and verifies that no page faults are generated, i.e. the
   // |vmo| passed in is already populated.
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) override {
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) override {
     EXPECT_NOT_NULL(pager_);
 
     // The payload vmo was pager-backed. Verify that all its pages were committed before
@@ -111,12 +111,12 @@ class MockDevicePartitioner : public FakeDevicePartitioner {
   explicit MockDevicePartitioner(MockUserPager* pager) : pager_(pager) {}
 
   // Dummy FindPartition function that creates and returns a MockPartitionClient.
-  zx::status<std::unique_ptr<paver::PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<paver::PartitionClient>> FindPartition(
       const paver::PartitionSpec& spec) const override {
     return zx::ok(std::make_unique<MockPartitionClient>(pager_, kBlockCount));
   }
 
-  zx::status<> Flush() const override { return zx::ok(); }
+  zx::result<> Flush() const override { return zx::ok(); }
 
  private:
   MockUserPager* pager_;

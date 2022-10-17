@@ -62,24 +62,24 @@ class MockBlockDevice : public BlockDeviceInterface {
   // Returns the value SetPartitionMaxSize() was called with. Will be a nullopt if uncalled.
   const std::optional<uint64_t>& max_size() const { return max_size_; }
 
-  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
+  zx::result<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
       const char* topological_path) const override {
     return zx::error(ZX_ERR_INTERNAL);
   }
-  zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
+  zx::result<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
       fbl::unique_fd fd) const override {
     return zx::error(ZX_ERR_INTERNAL);
   }
 
   void AddData(Copier) override {}
-  zx::status<Copier> ExtractData() override { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  zx::result<Copier> ExtractData() override { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   fs_management::DiskFormat content_format() const override { return options_.content_format; }
   const std::string& topological_path() const override { return options_.topological_path; }
   const std::string& partition_name() const override { return partition_name_; }
   fs_management::DiskFormat GetFormat() final { return format_; }
   void SetFormat(fs_management::DiskFormat format) final { format_ = format; }
-  zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
+  zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const override {
     fuchsia_hardware_block::wire::BlockInfo info = {};
     info.flags = 0;
     info.block_size = 512;
@@ -126,7 +126,7 @@ class MockBlockDevice : public BlockDeviceInterface {
     ADD_FAILURE() << "Test should not invoke function " << __FUNCTION__;
     return ZX_ERR_INTERNAL;
   }
-  zx::status<std::string> VeritySeal() override {
+  zx::result<std::string> VeritySeal() override {
     ADD_FAILURE() << "Test should not invoke function " << __FUNCTION__;
     return zx::error(ZX_ERR_INTERNAL);
   }
@@ -187,7 +187,7 @@ class MockSealedBlockVerityDevice : public MockBlockVerityDevice {
  public:
   MockSealedBlockVerityDevice() : MockBlockVerityDevice(/*allow_authoring=*/false) {}
 
-  zx::status<std::string> VeritySeal() final { return zx::ok(std::string(kFakeSeal)); }
+  zx::result<std::string> VeritySeal() final { return zx::ok(std::string(kFakeSeal)); }
   zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) final {
     EXPECT_EQ(std::string_view(kFakeSeal), seal_hex);
     opened_ = true;

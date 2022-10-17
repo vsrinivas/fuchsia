@@ -19,7 +19,7 @@ class DeviceGroupV2 : public DeviceGroup {
   ~DeviceGroupV2() override = default;
 
  protected:
-  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
+  zx::result<std::optional<DeviceOrNode>> BindNodeImpl(
       fuchsia_driver_index::wire::MatchedDeviceGroupInfo info,
       const DeviceOrNode& device_or_node) override;
 

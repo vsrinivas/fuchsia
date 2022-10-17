@@ -19,15 +19,15 @@ class MemfsInstance : public fs_test::FilesystemInstance {
     ZX_ASSERT(loop_.StartThread() == ZX_OK);
   }
 
-  zx::status<> Format(const fs_test::TestFilesystemOptions&) override {
-    zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(loop_.dispatcher());
+  zx::result<> Format(const fs_test::TestFilesystemOptions&) override {
+    zx::result<ScopedMemfs> memfs = ScopedMemfs::Create(loop_.dispatcher());
     if (memfs.is_error())
       return memfs.take_error();
     memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
     return zx::ok();
   }
 
-  zx::status<> Mount(const std::string& mount_path,
+  zx::result<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
     if (!memfs_->root()) {
       // Already mounted.
@@ -35,20 +35,20 @@ class MemfsInstance : public fs_test::FilesystemInstance {
     }
 
     fdio_ns_t* ns;
-    if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
+    if (auto status = zx::make_result(fdio_ns_get_installed(&ns)); status.is_error()) {
       return status;
     }
-    return zx::make_status(fdio_ns_bind(ns, fs_test::StripTrailingSlash(mount_path).c_str(),
+    return zx::make_result(fdio_ns_bind(ns, fs_test::StripTrailingSlash(mount_path).c_str(),
                                         memfs_->root().release()));
   }
 
-  zx::status<> Unmount(const std::string& mount_path) override {
+  zx::result<> Unmount(const std::string& mount_path) override {
     return fs_test::FsUnbind(mount_path);
   }
 
-  zx::status<> Fsck() override { return zx::ok(); }
+  zx::result<> Fsck() override { return zx::ok(); }
 
-  zx::status<std::string> DevicePath() const override { return zx::error(ZX_ERR_BAD_STATE); }
+  zx::result<std::string> DevicePath() const override { return zx::error(ZX_ERR_BAD_STATE); }
 
   fs_management::SingleVolumeFilesystemInterface* fs() override { return nullptr; }
 
@@ -59,10 +59,10 @@ class MemfsInstance : public fs_test::FilesystemInstance {
 
 class MemfsFilesystem : public fs_test::FilesystemImpl<MemfsFilesystem> {
  public:
-  zx::status<std::unique_ptr<fs_test::FilesystemInstance>> Make(
+  zx::result<std::unique_ptr<fs_test::FilesystemInstance>> Make(
       const fs_test::TestFilesystemOptions& options) const override {
     auto instance = std::make_unique<MemfsInstance>();
-    zx::status<> status = instance->Format(options);
+    zx::result<> status = instance->Format(options);
     if (status.is_error()) {
       return status.take_error();
     }

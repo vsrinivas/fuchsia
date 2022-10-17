@@ -53,7 +53,7 @@ class VnodeMinfs;
 // will protect against multiple simultaneous writes to these structures.
 class Transaction final : public PendingWork {
  public:
-  static zx::status<std::unique_ptr<Transaction>> Create(TransactionalFs* minfs,
+  static zx::result<std::unique_ptr<Transaction>> Create(TransactionalFs* minfs,
                                                          size_t reserve_inodes,
                                                          size_t reserve_blocks,
                                                          InodeManager* inode_manager);
@@ -90,7 +90,7 @@ class Transaction final : public PendingWork {
 
   // Extends block reservation by |reserve_blocks| number of blocks. It may fail
   // if the underlying allocator runs out of space.
-  zx::status<> ExtendBlockReservation(size_t reserve_blocks);
+  zx::result<> ExtendBlockReservation(size_t reserve_blocks);
 
 #ifdef __Fuchsia__
   // Returns a vector of all enqueued metadata write operations.

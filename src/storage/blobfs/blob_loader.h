@@ -42,7 +42,7 @@ class BlobLoader {
   BlobLoader& operator=(BlobLoader&& o) = delete;
 
   // Creates a BlobLoader.
-  static zx::status<std::unique_ptr<BlobLoader>> Create(
+  static zx::result<std::unique_ptr<BlobLoader>> Create(
       TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
       NodeFinder* node_finder, std::shared_ptr<BlobfsMetrics> metrics,
       DecompressorCreatorConnector* decompression_connector);
@@ -56,7 +56,7 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  zx::status<LoaderInfo> LoadBlob(uint32_t node_index,
+  zx::result<LoaderInfo> LoadBlob(uint32_t node_index,
                                   const BlobCorruptionNotifier* corruption_notifier);
 
  private:
@@ -67,7 +67,7 @@ class BlobLoader {
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents.
-  zx::status<std::unique_ptr<BlobVerifier>> CreateBlobVerifier(
+  zx::result<std::unique_ptr<BlobVerifier>> CreateBlobVerifier(
       uint32_t node_index, const Inode& inode, const BlobLayout& blob_layout,
       const BlobCorruptionNotifier* corruption_notifier);
 
@@ -82,7 +82,7 @@ class BlobLoader {
   // Reads |block_count| blocks starting at |block_offset| from the blob specified by |node_index|
   // and returns a span pointing to the data read (which will be contained within read_mapper_).
   // The span will remain valid until the next call to LoadBlocks or Decommit is called.
-  zx::status<cpp20::span<const uint8_t>> LoadBlocks(uint32_t node_index, uint64_t block_offset,
+  zx::result<cpp20::span<const uint8_t>> LoadBlocks(uint32_t node_index, uint64_t block_offset,
                                                     uint64_t block_count);
 
   // Returns the block size used by blobfs.

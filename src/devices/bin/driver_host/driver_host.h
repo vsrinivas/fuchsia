@@ -45,7 +45,7 @@ namespace internal {
 DriverHostContext* ContextForApi();
 void RegisterContextForApi(DriverHostContext* context);
 
-using StatusOrConn = zx::status<std::unique_ptr<DeviceControllerConnection>>;
+using StatusOrConn = zx::result<std::unique_ptr<DeviceControllerConnection>>;
 
 class DriverHostControllerConnection
     : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {

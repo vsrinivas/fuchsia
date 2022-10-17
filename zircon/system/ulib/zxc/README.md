@@ -9,7 +9,7 @@ that promote ergonomics, safety, and consistency.
 
 ZXC provides the following vocabulary types:
 * fit::result: An efficient value-or-error result type.
-* zx::status: A specialization of `fit::result` for `zx_status_t` errors.
+* zx::result: A specialization of `fit::result` for `zx_status_t` errors.
 
 ### fit::result<E, Ts...>
 
@@ -443,9 +443,9 @@ bool TestMessage() {
 }
 ```
 
-### zx::status<T?>
+### zx::result<T?>
 
-`zx::status<T?>` is a specialization for Zircon `zx_status_t` errors, based on
+`zx::result<T?>` is a specialization for Zircon `zx_status_t` errors, based on
 `fit::result<zx_status_t, T?>`, to make inter-op safer and more natural.
 
 The namespace `zx` has aliases of the support types and functions in `fit`:
@@ -457,27 +457,27 @@ The namespace `zx` has aliases of the support types and functions in `fit`:
 
 #### Returning and Using Values
 
-Returning values with `zx::status` is the same as returning values with the
+Returning values with `zx::result` is the same as returning values with the
 base `fit::result`. The status type supports the same value constructors,
 conversions, and accessors as the base result type.
 
 #### Returning Errors
 
-`zx::status` enforces the convention that errors are distinct from values by
+`zx::result` enforces the convention that errors are distinct from values by
 disallowing the value `ZX_OK` as an error value with a runtime assertion.
 
 Instead of using `ZX_OK` to signal success, simply return a value or values.
 When the value set is empty, return `zx::ok()` to signal success, just as with
 the base result type.
 
-##### zx::error_status Utility
+##### zx::error_result Utility
 
-`zx::error_status` is a simple alias of `zx::error<zx_status_t>` for
+`zx::error_result` is a simple alias of `zx::error<zx_status_t>` for
 convenience.
 
 #### Handling Errors
 
-Handling errors with `zx::status` is the same as handling errors with
+Handling errors with `zx::result` is the same as handling errors with
 `fit::result`. All of the same constructs and accessors are available.
 
 The `status_value()` accessor returns `ZX_OK` when the status is in the value
@@ -488,8 +488,8 @@ The `status_string()` accessor returns a string constant representing the value
 returned by `status_value()`.
 
 ```C++
-zx::status<> CheckValues(const foo&);
-zx::status<foo> GetValues();
+zx::result<> CheckValues(const foo&);
+zx::result<foo> GetValues();
 
 // Simple pass through.
 zx_status_t check_foo_and_bar(const foo& foo_in) {
@@ -514,11 +514,11 @@ zx_status_t get_foo_and_bar(foo* foo_out) {
 }
 ```
 
-#### Propagating Errors and Values with zx::make_status
+#### Propagating Errors and Values with zx::make_result
 
-`zx::make_status` is a utility function to simplify forwarding `zx_status_t`
-values through functions returning `zx::status<>` with an empty value set or
-through functions returning `zx::status<T>`.
+`zx::make_result` is a utility function to simplify forwarding `zx_status_t`
+values through functions returning `zx::result<>` with an empty value set or
+through functions returning `zx::result<T>`.
 
 This is primarily to simplify interfacing with FFIs.
 
@@ -527,19 +527,19 @@ For functions that return zx_status_t with no output parameters:
 ```C++
 zx_status_t check_foo_and_bar(const foo&, const &bar);
 
-// Without using zx::make_status.
-zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
+// Without using zx::make_result.
+zx::result<> CheckValues(const foo& foo_in, const bar& bar_in) {
   const zx_status_t status = check_foo_and_bar(foo_in, bar_in);
   if (status == ZX_OK) {
     return zx::ok();
   } else {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 }
 
-// With using zx::make_status.
-zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
-  return zx::make_status(check_foo_and_bar(foo_in, bar_in));
+// With using zx::make_result.
+zx::result<> CheckValues(const foo& foo_in, const bar& bar_in) {
+  return zx::make_result(check_foo_and_bar(foo_in, bar_in));
 }
 ```
 
@@ -548,8 +548,8 @@ For functions that return zx_status_t with one output parameter:
 ```C++
 zx_status_t compute_foo(foo&);
 
-// Without using zx::make_status.
-zx::status<foo> Compute() {
+// Without using zx::make_result.
+zx::result<foo> Compute() {
   foo foo_out;
   const zx_status_t status = compute(foo_out);
   if (status == ZX_OK) {
@@ -559,18 +559,18 @@ zx::status<foo> Compute() {
   }
 }
 
-// With using zx::make_status.
-zx::status<foo> Compute() {
+// With using zx::make_result.
+zx::result<foo> Compute() {
   foo foo_out;
   zx_status_t status = compute(foo_out);
-  return zx::make_status(status, foo_out);
+  return zx::make_result(status, foo_out);
 }
 
 // And if you are very careful with argument order evaluation the above can be
 // further simplified by eliminating the status variable.
-zx::status<foo> Compute() {
+zx::result<foo> Compute() {
   foo foo_out;
-  return zx::make_status(compute(foo_out), foo_out);
+  return zx::make_result(compute(foo_out), foo_out);
 }
 ```
 

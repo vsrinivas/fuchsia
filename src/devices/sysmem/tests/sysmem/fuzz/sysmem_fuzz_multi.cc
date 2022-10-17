@@ -21,7 +21,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator_1(
       std::move(allocator_client_1.value()));
 
-  zx::status token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  zx::result token_endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   LOGRTN(token_endpoints.status_value(), "Failed token 1 channel create.\n");
   auto [token_client_1, token_server_1] = std::move(*token_endpoints);
 
@@ -30,7 +30,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   auto new_collection_result = allocator_1->AllocateSharedCollection(std::move(token_server_1));
   LOGRTN(new_collection_result.status(), "Failed client 1 shared collection allocate.\n");
 
-  zx::status token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  zx::result token_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   LOGRTN(token_endpoints_2.status_value(), "Failed token 2 channel create.\n");
   auto [token_client_2, token_server_2] = std::move(*token_endpoints_2);
 
@@ -42,7 +42,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   auto duplicate_result_2 = token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_2));
   LOGRTN(duplicate_result_2.status(), "Failed token 1 -> 2 duplicate.\n");
 
-  zx::status token_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
+  zx::result token_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollectionToken>();
   LOGRTN(token_endpoints_3.status_value(), "Failed token 3 channel create.\n");
   auto [token_client_3, token_server_3] = std::move(*token_endpoints_3);
 
@@ -51,7 +51,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   auto duplicate_result_3 = token_1->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_server_3));
   LOGRTN(duplicate_result_3.status(), "Failed token 1 -> 3 duplicate.\n");
 
-  zx::status collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  zx::result collection_endpoints_1 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   LOGRTN(collection_endpoints_1.status_value(), "Failed collection 1 channel create.\n");
   auto [collection_client_1, collection_server_1] = std::move(*collection_endpoints_1);
   LOGRTNC(token_1.client_end().channel().get() == ZX_HANDLE_INVALID, "Invalid token client 1.\n");
@@ -78,7 +78,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
   fidl::WireSyncClient<fuchsia_sysmem::Allocator> allocator_2(
       std::move(allocator_client_2.value()));
 
-  zx::status collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  zx::result collection_endpoints_2 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   LOGRTN(collection_endpoints_2.status_value(), "Failed collection 2 channel create.\n");
   auto [collection_client_2, collection_server_2] = std::move(*collection_endpoints_2);
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_2(
@@ -96,7 +96,7 @@ extern "C" int LLVMFuzzerTestOneInput(uint8_t* data, size_t size) {
       allocator_2->BindSharedCollection(std::move(token_client_2), std::move(collection_server_2));
   LOGRTN(bind_result_2.status(), "Failed BindSharedCollection 2.\n");
 
-  zx::status collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
+  zx::result collection_endpoints_3 = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
   LOGRTN(collection_endpoints_3.status_value(), "Failed collection 3 channel create.\n");
   auto [collection_client_3, collection_server_3] = std::move(*collection_endpoints_3);
   fidl::WireSyncClient<fuchsia_sysmem::BufferCollection> collection_3(

@@ -33,13 +33,13 @@ class Runner : public fs::ManagedVfs {
   Runner& operator=(const Runner&) = delete;
   Runner& operator=(Runner&&) = delete;
 
-  static zx::status<std::unique_ptr<Runner>> Create(async::Loop* loop,
+  static zx::result<std::unique_ptr<Runner>> Create(async::Loop* loop,
                                                     std::unique_ptr<BlockDevice> device,
                                                     MountOptions* options);
 
   // fs::ManagedVfs interface.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
 
   // Other methods.
 

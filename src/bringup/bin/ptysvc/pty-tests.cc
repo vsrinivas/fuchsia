@@ -39,7 +39,7 @@ class PtyTestCase : public zxtest::Test {
   }
 
  protected:
-  static zx::status<Connection> OpenClient(Connection& conn, uint32_t id) {
+  static zx::result<Connection> OpenClient(Connection& conn, uint32_t id) {
     auto endpoints = fidl::CreateEndpoints<Device>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
@@ -149,7 +149,7 @@ TEST_F(PtyTestCase, ServerReadEvents) {
 // Basic test of opening a client
 TEST_F(PtyTestCase, ServerBasicOpenClient) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   // Make sure our client connection is valid after this
@@ -161,7 +161,7 @@ TEST_F(PtyTestCase, ServerBasicOpenClient) {
 // Try opening two clients with the same id
 TEST_F(PtyTestCase, ServerOpenClientTwice) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
   ASSERT_STATUS(OpenClient(server, 0).status_value(), ZX_ERR_INVALID_ARGS);
 
@@ -174,9 +174,9 @@ TEST_F(PtyTestCase, ServerOpenClientTwice) {
 // Try opening two clients with different ids
 TEST_F(PtyTestCase, ServerOpenClientTwoDifferent) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
-  zx::status client2 = OpenClient(server, 0);
+  zx::result client2 = OpenClient(server, 0);
   ASSERT_OK(client2.status_value());
 
   // Both connections should be good
@@ -227,7 +227,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
   // Create a client and close it, then make sure we're back in the initial
   // state
   {
-    zx::status client = OpenClient(server, 1);
+    zx::result client = OpenClient(server, 1);
     ASSERT_OK(client.status_value());
   }
   // Wait for the server to signal that it got the client disconnect
@@ -240,7 +240,7 @@ TEST_F(PtyTestCase, ServerWithNoClientsInitialConditions) {
 // Verify a server with a client has the right state
 TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   zx::eventpair server_event = GetEvent(server);
@@ -282,7 +282,7 @@ TEST_F(PtyTestCase, ServerWithClientInitialConditions) {
 // Verify a read from a server for 0 bytes doesn't return ZX_ERR_SHOULD_WAIT
 TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   const fidl::WireResult result = server->Read(0);
@@ -298,7 +298,7 @@ TEST_F(PtyTestCase, ServerEmpty0ByteRead) {
 // ZX_ERR_SHOULD_WAIT
 TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   // Fill up FIFO
@@ -325,9 +325,9 @@ TEST_F(PtyTestCase, ClientFull0ByteServerWrite) {
 // ZX_ERR_SHOULD_WAIT
 TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
-  zx::status inactive_client = OpenClient(server, 0);
+  zx::result inactive_client = OpenClient(server, 0);
   ASSERT_OK(inactive_client.status_value());
 
   const fidl::WireResult result = inactive_client->Write({});
@@ -340,7 +340,7 @@ TEST_F(PtyTestCase, ClientInactive0ByteClientWrite) {
 // Make sure the client connections describe appropriately
 TEST_F(PtyTestCase, ClientDescribe) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   auto result = client->Describe2();
@@ -351,7 +351,7 @@ TEST_F(PtyTestCase, ClientDescribe) {
 
 TEST_F(PtyTestCase, ClientWindowSize) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   {
@@ -382,7 +382,7 @@ TEST_F(PtyTestCase, ClientWindowSize) {
 
 TEST_F(PtyTestCase, ClientClrSetFeature) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   {
@@ -419,7 +419,7 @@ TEST_F(PtyTestCase, ClientClrSetFeature) {
 
 TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   {
@@ -439,7 +439,7 @@ TEST_F(PtyTestCase, ClientClrSetFeatureInvalidBit) {
 
 TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   auto result = client->GetWindowSize();
@@ -452,9 +452,9 @@ TEST_F(PtyTestCase, ClientGetWindowSizeServerNeverSet) {
 // Each client should have its own feature flags
 TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
-  zx::status client2 = OpenClient(server, 0);
+  zx::result client2 = OpenClient(server, 0);
   ASSERT_OK(client2.status_value());
 
   {
@@ -475,9 +475,9 @@ TEST_F(PtyTestCase, ClientIndependentFeatureFlags) {
 
 TEST_F(PtyTestCase, ClientMakeActive) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
-  zx::status client2 = OpenClient(server, 0);
+  zx::result client2 = OpenClient(server, 0);
   ASSERT_OK(client2.status_value());
 
   {
@@ -515,9 +515,9 @@ TEST_F(PtyTestCase, ClientMakeActive) {
 
 TEST_F(PtyTestCase, ClientReadEvents) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
-  zx::status client2 = OpenClient(server, 0);
+  zx::result client2 = OpenClient(server, 0);
   ASSERT_OK(client2.status_value());
 
   {
@@ -539,9 +539,9 @@ TEST_F(PtyTestCase, ClientReadEvents) {
 // Reading events should clear the event condition
 TEST_F(PtyTestCase, ClientReadEventsClears) {
   Connection server{take_server()};
-  zx::status active_client = OpenClient(server, 1);
+  zx::result active_client = OpenClient(server, 1);
   ASSERT_OK(active_client.status_value());
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
 
   zx::eventpair control_event = GetEvent(control_client.value());
@@ -584,14 +584,14 @@ TEST_F(PtyTestCase, ClientReadEventsClears) {
 // Events arrive even without a controlling client connected
 TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
   Connection server{take_server()};
-  zx::status active_client = OpenClient(server, 1);
+  zx::result active_client = OpenClient(server, 1);
   ASSERT_OK(active_client.status_value());
 
   // Write a ^C byte from the server to trigger a cooked-mode event
   ASSERT_NO_FATAL_FAILURE(WriteCtrlC(server));
 
   // Connect a control client to inspect the event
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
 
   zx::eventpair control_event = GetEvent(control_client.value());
@@ -608,7 +608,7 @@ TEST_F(PtyTestCase, EventsSentWithNoControllingClient) {
 
 TEST_F(PtyTestCase, SetWindowSizeSendsEvent) {
   Connection server{take_server()};
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
 
   zx::eventpair control_event = GetEvent(control_client.value());
@@ -645,7 +645,7 @@ TEST_F(PtyTestCase, SetWindowSizeSendsEvent) {
 
 TEST_F(PtyTestCase, NonControllingClientOpenClient) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   // This client is not the controlling client (id=0), so it cannot create new
@@ -655,19 +655,19 @@ TEST_F(PtyTestCase, NonControllingClientOpenClient) {
 
 TEST_F(PtyTestCase, ControllingClientOpenClient) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
-  zx::status client2 = OpenClient(client.value(), 1);
+  zx::result client2 = OpenClient(client.value(), 1);
   ASSERT_OK(client2.status_value());
 }
 
 TEST_F(PtyTestCase, ActiveClientCloses) {
   Connection server{take_server()};
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
   {
-    zx::status active_client = OpenClient(server, 1);
+    zx::result active_client = OpenClient(server, 1);
     ASSERT_OK(active_client.status_value());
     auto result = control_client->MakeActive(1);
     ASSERT_OK(result.status());
@@ -698,7 +698,7 @@ TEST_F(PtyTestCase, ActiveClientCloses) {
 TEST_F(PtyTestCase, ActiveClientClosesWhenControl) {
   Connection server{take_server()};
   {
-    zx::status control_client = OpenClient(server, 0);
+    zx::result control_client = OpenClient(server, 0);
     ASSERT_OK(control_client.status_value());
   }
   zx::eventpair event = GetEvent(server);
@@ -709,7 +709,7 @@ TEST_F(PtyTestCase, ActiveClientClosesWhenControl) {
 
 TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 0);
+  zx::result client = OpenClient(server, 0);
   ASSERT_OK(client.status_value());
 
   // Write some data to the client, so we can verify the client can drain the
@@ -780,7 +780,7 @@ TEST_F(PtyTestCase, ServerClosesWhenClientPresent) {
 // Test writes from the client to the server when the client is cooked
 TEST_F(PtyTestCase, ServerReadClientCooked) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   // In cooked mode, client writes should have \n transformed to \r\n, and
@@ -819,7 +819,7 @@ TEST_F(PtyTestCase, ServerReadClientCooked) {
 // Test writes from the server to the client when the client is cooked
 TEST_F(PtyTestCase, ServerWriteClientCooked) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   // In cooked mode, server writes should have newlines untouched and control
@@ -860,7 +860,7 @@ TEST_F(PtyTestCase, ServerWriteClientCooked) {
 // Test writes from the client to the server when the client is raw
 TEST_F(PtyTestCase, ServerReadClientRaw) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   {
@@ -902,9 +902,9 @@ TEST_F(PtyTestCase, ServerReadClientRaw) {
 // Test writes from the server to the client when the client is raw
 TEST_F(PtyTestCase, ServerWriteClientRaw) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
 
   {
@@ -953,7 +953,7 @@ TEST_F(PtyTestCase, ServerWriteClientRaw) {
 
 TEST_F(PtyTestCase, ServerFillsClientFifo) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   zx::eventpair server_event = GetEvent(server);
@@ -1008,7 +1008,7 @@ TEST_F(PtyTestCase, ServerFillsClientFifo) {
 
 TEST_F(PtyTestCase, ClientFillsServerFifo) {
   Connection server{take_server()};
-  zx::status client = OpenClient(server, 1);
+  zx::result client = OpenClient(server, 1);
   ASSERT_OK(client.status_value());
 
   zx::eventpair server_event = GetEvent(server);
@@ -1063,9 +1063,9 @@ TEST_F(PtyTestCase, ClientFillsServerFifo) {
 
 TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
   Connection server{take_server()};
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
-  zx::status other_client = OpenClient(server, 1);
+  zx::result other_client = OpenClient(server, 1);
   ASSERT_OK(other_client.status_value());
 
   // control_client is the current active
@@ -1087,9 +1087,9 @@ TEST_F(PtyTestCase, NonActiveClientsCantWrite) {
 
 TEST_F(PtyTestCase, ClientsHaveIndependentFifos) {
   Connection server{take_server()};
-  zx::status control_client = OpenClient(server, 0);
+  zx::result control_client = OpenClient(server, 0);
   ASSERT_OK(control_client.status_value());
-  zx::status other_client = OpenClient(server, 1);
+  zx::result other_client = OpenClient(server, 1);
   ASSERT_OK(other_client.status_value());
 
   uint8_t kControlClientByte = 1;

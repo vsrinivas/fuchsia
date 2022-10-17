@@ -53,7 +53,7 @@ bool TestZirconPhysmemReader() {
   // Given an physical address, expect to be able to see it again.
   static uint64_t test_token = 0xabcd'1234'dead'beef;
   paddr_t paddr = vaddr_to_paddr(&test_token);
-  zx::status<const void*> result = reader.PhysToPtr(paddr, sizeof(uint64_t));
+  zx::result<const void*> result = reader.PhysToPtr(paddr, sizeof(uint64_t));
   ASSERT_TRUE(result.is_ok());
   EXPECT_EQ(*static_cast<const uint64_t*>(result.value()), test_token);
 
@@ -73,7 +73,7 @@ bool TestZirconPhysmemReader() {
 bool TestParseSystem() {
   BEGIN_TEST;
 
-  zx::status<AcpiParser> result = AcpiParserInit(0);
+  zx::result<AcpiParser> result = AcpiParserInit(0);
   if (result.is_ok()) {
     printf("Successfully parsed the current system's tables.\n");
   } else {

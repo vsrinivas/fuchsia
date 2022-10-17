@@ -59,7 +59,7 @@ class Tcs3400Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_I
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
   // Visible for testing.
-  static zx::status<Tcs3400Device*> CreateAndGetDevice(void* ctx, zx_device_t* parent);
+  static zx::result<Tcs3400Device*> CreateAndGetDevice(void* ctx, zx_device_t* parent);
 
   Tcs3400Device(zx_device_t* device, ddk::I2cChannel i2c, ddk::GpioProtocolClient gpio,
                 zx::port port)
@@ -112,7 +112,7 @@ class Tcs3400Device : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_I
   async::Loop loop_;
   input_report_reader::InputReportReaderManager<Tcs3400InputReport> readers_;
 
-  zx::status<Tcs3400InputReport> ReadInputRpt();
+  zx::result<Tcs3400InputReport> ReadInputRpt();
   zx_status_t InitGain(uint8_t gain);
   zx_status_t WriteReg(uint8_t reg, uint8_t value);
   zx_status_t ReadReg(uint8_t reg, uint8_t& output_value);

@@ -89,7 +89,7 @@ class ClientFixture : public zxtest::Test {
   ClientFixture() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() override {
-    zx::status endpoints = fidl::CreateEndpoints<TestProtocol>();
+    zx::result endpoints = fidl::CreateEndpoints<TestProtocol>();
     ASSERT_OK(endpoints.status_value());
     endpoints_ = std::move(*endpoints);
   }

@@ -175,7 +175,7 @@ void I8042Device::DdkUnbind(ddk::UnbindTxn txn) {
   unbind_ready_.notify_all();
 }
 
-zx::status<finput::BootProtocol> I8042Device::Identify() {
+zx::result<finput::BootProtocol> I8042Device::Identify() {
   // Before sending IDENTIFY, disable scanning.
   // Otherwise a keyboard button pressed by the user could interfere with the value returned by
   // IDENTIFY.

@@ -12,7 +12,7 @@
 
 #include "lib/fdf/dispatcher.h"
 
-zx::status<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
+zx::result<fbl::RefPtr<Driver>> Driver::Create(zx_driver_t* zx_driver) {
   auto driver = fbl::MakeRefCounted<Driver>(zx_driver);
 
   auto dispatcher = fdf_env::DispatcherBuilder::CreateWithOwner(

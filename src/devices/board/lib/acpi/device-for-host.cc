@@ -8,7 +8,7 @@ namespace acpi {
 
 zx_device_t* Device::zxdev() { return static_cast<zx_device_t*>(this); }
 
-zx::status<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
+zx::result<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                                cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags) {
   printf("Added device '%s'\n", name);
   return zx::ok();

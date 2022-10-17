@@ -2309,7 +2309,7 @@ static zx_status_t brcmf_sdio_bus_flush_buffers(brcmf_bus* bus_if) {
   return ZX_OK;
 }
 
-zx::status<uint8_t*> brcmf_map_vmo(brcmf_sdio* bus, uint8_t vmo_id, zx_handle_t vmo,
+zx::result<uint8_t*> brcmf_map_vmo(brcmf_sdio* bus, uint8_t vmo_id, zx_handle_t vmo,
                                    uint64_t vmo_size) {
   if (vmo_id == kInternalVmoId && bus->rx_tx_data.vmo_addrs[vmo_id] != nullptr) {
     return zx::error(ZX_ERR_ALREADY_EXISTS);
@@ -3928,7 +3928,7 @@ static zx_status_t brcmf_create_internal_rx_tx_space(struct brcmf_sdio* bus) {
     return ret;
   }
 
-  zx::status<uint8_t*> address = brcmf_map_vmo(
+  zx::result<uint8_t*> address = brcmf_map_vmo(
       bus, kInternalVmoId, bus->rx_tx_data.internal_vmo.get(), kDmaInternalBufferSize);
   if (address.is_error()) {
     BRCMF_ERR("Failed to map internal VMO: %s", address.status_string());

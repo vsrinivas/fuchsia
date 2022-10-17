@@ -32,7 +32,7 @@ namespace {
 // Return the files in the given directory.
 //
 // The given path should end with "/".
-zx::status<std::vector<fbl::String>> GetFilesInDir(const char* path) {
+zx::result<std::vector<fbl::String>> GetFilesInDir(const char* path) {
   std::vector<fbl::String> result;
 
   // Open path.
@@ -97,7 +97,7 @@ bool IsIntelHdaDevicePresent() {
   return !devices.controllers.empty() && !devices.inputs.empty() && !devices.outputs.empty();
 }
 
-zx::status<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
+zx::result<fbl::String> GetStreamConfigString(audio::utils::AudioDeviceStream* stream,
                                               audio_stream_string_id_t id) {
   // Fetch information from stream.
   audio_stream_cmd_get_string_resp_t response;

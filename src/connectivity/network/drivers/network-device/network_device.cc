@@ -45,7 +45,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::status device = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl);
+  zx::result device = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl);
   if (device.is_error()) {
     zxlogf(ERROR, "failed to create inner device %s", device.status_string());
     return device.status_value();

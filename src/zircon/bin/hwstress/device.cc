@@ -14,7 +14,7 @@
 namespace hwstress {
 
 // Open the given path as a FIDL channel.
-zx::status<zx::channel> OpenDeviceChannel(std::string_view path) {
+zx::result<zx::channel> OpenDeviceChannel(std::string_view path) {
   zx::channel client, server;
   zx_status_t status = zx::channel::create(0, &client, &server);
   if (status != ZX_OK) {

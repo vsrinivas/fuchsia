@@ -158,7 +158,7 @@ class VirtioGpuTest : public TestWithDevice,
     return ui_test_manager_->FindViewFromSnapshotByKoid(presenter->children()[0]);
   }
 
-  zx::status<std::pair<uint32_t, uint32_t>> WaitForScanout() {
+  zx::result<std::pair<uint32_t, uint32_t>> WaitForScanout() {
     bool view_created =
         RunLoopWithTimeoutOrUntil([this] { return FindGpuView().has_value(); }, zx::sec(20));
     if (!view_created) {

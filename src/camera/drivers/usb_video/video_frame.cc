@@ -20,7 +20,7 @@ namespace camera::usb_video {
 // whereas the XHCI host returns 64 bits.
 static constexpr uint16_t USB_SOF_MASK = 0x7FF;
 
-zx::status<fuchsia::camera::FrameAvailableEvent> VideoFrame::Release() {
+zx::result<fuchsia::camera::FrameAvailableEvent> VideoFrame::Release() {
   if (bytes_ == 0) {
     zxlogf(WARNING, "VideoFrame::Release: bytes == 0");
     return zx::error(ZX_ERR_BAD_STATE);
@@ -44,7 +44,7 @@ zx::status<fuchsia::camera::FrameAvailableEvent> VideoFrame::Release() {
 }
 
 // static
-zx::status<VideoFrame::PayloadHeader> VideoFrame::PayloadHeader::ParseHeader(usb_request_t* req) {
+zx::result<VideoFrame::PayloadHeader> VideoFrame::PayloadHeader::ParseHeader(usb_request_t* req) {
   if (req->response.status != ZX_OK) {
     failure_count_++;
     if (failure_count_ == 1 || (failure_count_) % 10 == 0) {

@@ -24,7 +24,7 @@ using uuid::Uuid;
 
 }  // namespace
 
-zx::status<std::unique_ptr<DevicePartitioner>> NelsonPartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> NelsonPartitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "nelson");
@@ -63,13 +63,13 @@ bool NelsonPartitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> NelsonPartitioner::AddPartition(
     const PartitionSpec& spec) const {
   ERROR("Cannot add partitions to a nelson device\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetEmmcBootPartitionClient() const {
+zx::result<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetEmmcBootPartitionClient() const {
   auto boot0_part =
       OpenBlockPartition(gpt_->devfs_root(), std::nullopt, Uuid(GUID_EMMC_BOOT1_VALUE), ZX_SEC(5));
   if (boot0_part.is_error()) {
@@ -93,7 +93,7 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetEmmcBootParti
   return zx::ok(std::make_unique<PartitionCopyClient>(std::move(partitions)));
 }
 
-zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetBootloaderPartitionClient(
+zx::result<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetBootloaderPartitionClient(
     const PartitionSpec& spec) const {
   std::vector<std::unique_ptr<PartitionClient>> partitions;
 
@@ -128,7 +128,7 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::GetBootloaderPar
                                                                   std::move(tpl)));
 }
 
-zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -210,18 +210,18 @@ zx::status<std::unique_ptr<PartitionClient>> NelsonPartitioner::FindPartition(
   }
 }
 
-zx::status<> NelsonPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+zx::result<> NelsonPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
-zx::status<> NelsonPartitioner::InitPartitionTables() const {
+zx::result<> NelsonPartitioner::InitPartitionTables() const {
   ERROR("Initializing gpt partitions from paver is not supported on nelson\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> NelsonPartitioner::WipePartitionTables() const {
+zx::result<> NelsonPartitioner::WipePartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> NelsonPartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> NelsonPartitioner::ValidatePayload(const PartitionSpec& spec,
                                                 cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -238,13 +238,13 @@ zx::status<> NelsonPartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> NelsonPartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> NelsonPartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return NelsonPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
-zx::status<std::unique_ptr<abr::Client>> NelsonAbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> NelsonAbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
@@ -265,11 +265,11 @@ zx::status<std::unique_ptr<abr::Client>> NelsonAbrClientFactory::New(
   return abr::AbrPartitionClient::Create(std::move(partition.value()));
 }
 
-zx::status<size_t> NelsonBootloaderPartitionClient::GetBlockSize() {
+zx::result<size_t> NelsonBootloaderPartitionClient::GetBlockSize() {
   return emmc_boot_client_->GetBlockSize();
 }
 
-zx::status<size_t> NelsonBootloaderPartitionClient::GetPartitionSize() {
+zx::result<size_t> NelsonBootloaderPartitionClient::GetPartitionSize() {
   auto boot_partition_size_status = emmc_boot_client_->GetPartitionSize();
   if (boot_partition_size_status.is_error()) {
     return boot_partition_size_status.take_error();
@@ -284,14 +284,14 @@ zx::status<size_t> NelsonBootloaderPartitionClient::GetPartitionSize() {
   return zx::ok(partition_size);
 }
 
-zx::status<> NelsonBootloaderPartitionClient::Trim() {
+zx::result<> NelsonBootloaderPartitionClient::Trim() {
   if (auto status = emmc_boot_client_->Trim(); status.is_error()) {
     return status.take_error();
   }
   return tpl_client_->Trim();
 }
 
-zx::status<> NelsonBootloaderPartitionClient::Flush() {
+zx::result<> NelsonBootloaderPartitionClient::Flush() {
   if (auto status = emmc_boot_client_->Flush(); status.is_error()) {
     return status.take_error();
   }
@@ -310,7 +310,7 @@ fbl::unique_fd NelsonBootloaderPartitionClient::block_fd() {
   return fbl::unique_fd();
 }
 
-zx::status<> NelsonBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> NelsonBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   // Read from boot0/1 first
   if (auto status = emmc_boot_client_->Read(vmo, size); status.is_error()) {
     return status.take_error();
@@ -323,7 +323,7 @@ zx::status<> NelsonBootloaderPartitionClient::Read(const zx::vmo& vmo, size_t si
   return zx::ok();
 }
 
-zx::status<> NelsonBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+zx::result<> NelsonBootloaderPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   // write to boot0/1 for the entire combined image.
   if (auto status = emmc_boot_client_->Write(vmo, vmo_size); status.is_error()) {
     return status.take_error();

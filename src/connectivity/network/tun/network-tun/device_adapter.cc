@@ -13,7 +13,7 @@
 namespace network {
 namespace tun {
 
-zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatcher_t* dispatcher,
+zx::result<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatcher_t* dispatcher,
                                                                  DeviceAdapterParent* parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<DeviceAdapter> adapter(new (&ac) DeviceAdapter(parent));
@@ -25,7 +25,7 @@ zx::status<std::unique_ptr<DeviceAdapter>> DeviceAdapter::Create(async_dispatche
       .ctx = adapter.get(),
   };
 
-  zx::status device =
+  zx::result device =
       NetworkDeviceInterface::Create(dispatcher, ddk::NetworkDeviceImplProtocolClient(&proto));
   if (device.is_error()) {
     return device.take_error();
@@ -202,7 +202,7 @@ void DeviceAdapter::RetainTxBuffers(fit::function<zx_status_t(TxBuffer&)> func) 
   CommitTx();
 }
 
-zx::status<size_t> DeviceAdapter::WriteRxFrame(
+zx::result<size_t> DeviceAdapter::WriteRxFrame(
     PortAdapter& port, fuchsia_hardware_network::wire::FrameType frame_type, const uint8_t* data,
     size_t count, const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
   if (!port.online()) {
@@ -216,7 +216,7 @@ zx::status<size_t> DeviceAdapter::WriteRxFrame(
   if (rx_buffers_.empty()) {
     return zx::error(ZX_ERR_SHOULD_WAIT);
   }
-  zx::status alloc = AllocRxSpace(count);
+  zx::result alloc = AllocRxSpace(count);
   if (alloc.is_error()) {
     return alloc.take_error();
   }
@@ -231,14 +231,14 @@ zx::status<size_t> DeviceAdapter::WriteRxFrame(
   return zx::ok(rx_buffers_.size());
 }
 
-zx::status<size_t> DeviceAdapter::WriteRxFrame(
+zx::result<size_t> DeviceAdapter::WriteRxFrame(
     PortAdapter& port, fuchsia_hardware_network::wire::FrameType frame_type,
     const fidl::VectorView<uint8_t>& data,
     const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
   return WriteRxFrame(port, frame_type, data.data(), data.count(), meta);
 }
 
-zx::status<size_t> DeviceAdapter::WriteRxFrame(
+zx::result<size_t> DeviceAdapter::WriteRxFrame(
     PortAdapter& port, fuchsia_hardware_network::wire::FrameType frame_type,
     const std::vector<uint8_t>& data,
     const std::optional<fuchsia_net_tun::wire::FrameMetadata>& meta) {
@@ -251,7 +251,7 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
 
   while (!tx_buffers_.empty()) {
     TxBuffer& tx_buff = tx_buffers_.front();
-    zx::status alloc_rx = other->AllocRxSpace(tx_buff.length());
+    zx::result alloc_rx = other->AllocRxSpace(tx_buff.length());
     if (alloc_rx.is_error()) {
       if (!return_failed_buffers) {
         // stop once we run out of rx buffers to copy to
@@ -263,7 +263,7 @@ void DeviceAdapter::CopyTo(DeviceAdapter* other, bool return_failed_buffers) {
       continue;
     }
     RxBuffer rx_buff = std::move(alloc_rx.value());
-    zx::status status = rx_buff.CopyFrom(tx_buff);
+    zx::result status = rx_buff.CopyFrom(tx_buff);
     if (status.is_error()) {
       FX_LOGF(ERROR, "tun", "DeviceAdapter:CopyTo: Failed to copy buffer: %s",
               status.status_string());
@@ -369,7 +369,7 @@ DeviceAdapter::DeviceAdapter(DeviceAdapterParent* parent)
   }
 }
 
-zx::status<RxBuffer> DeviceAdapter::AllocRxSpace(size_t length) __TA_REQUIRES(rx_lock_) {
+zx::result<RxBuffer> DeviceAdapter::AllocRxSpace(size_t length) __TA_REQUIRES(rx_lock_) {
   RxBuffer buffer = vmos_.MakeEmptyRxBuffer();
   while (!rx_buffers_.empty()) {
     const rx_space_buffer_t& space = rx_buffers_.front();

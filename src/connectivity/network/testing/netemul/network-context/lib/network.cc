@@ -204,7 +204,7 @@ void Network::Bind(fidl::InterfaceRequest<FNetwork> req) {
 
 void Network::AddPort(fidl::InterfaceHandle<fuchsia::hardware::network::Port> port,
                       fidl::InterfaceRequest<fuchsia::net::virtualization::Interface> interface) {
-  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
   if (device_endpoints.is_error()) {
     FX_LOGS(ERROR) << "failed to create device endpoints" << device_endpoints.status_string();
     interface.Close(ZX_ERR_INTERNAL);

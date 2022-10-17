@@ -14,7 +14,7 @@ namespace media_audio {
 
 namespace {
 
-zx::status<zx_koid_t> ZxClockToKoid(const zx::clock& handle) {
+zx::result<zx_koid_t> ZxClockToKoid(const zx::clock& handle) {
   zx_info_handle_basic_t info;
   auto status = handle.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status != ZX_OK) {
@@ -40,7 +40,7 @@ void ClockRegistry::Add(std::shared_ptr<Clock> clock) {
   FX_CHECK(is_new) << "cannot duplicate clocks";
 }
 
-zx::status<std::shared_ptr<Clock>> ClockRegistry::Find(zx_koid_t koid) {
+zx::result<std::shared_ptr<Clock>> ClockRegistry::Find(zx_koid_t koid) {
   auto it = clocks_.find(koid);
   if (it == clocks_.end()) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -55,7 +55,7 @@ zx::status<std::shared_ptr<Clock>> ClockRegistry::Find(zx_koid_t koid) {
   return zx::ok(std::move(clock));
 }
 
-zx::status<std::shared_ptr<Clock>> ClockRegistry::Find(const zx::clock& handle) {
+zx::result<std::shared_ptr<Clock>> ClockRegistry::Find(const zx::clock& handle) {
   auto koid_result = ZxClockToKoid(handle);
   if (!koid_result.is_ok()) {
     return koid_result.take_error();

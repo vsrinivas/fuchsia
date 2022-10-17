@@ -28,7 +28,7 @@ TEST(SystemInstanceTest, CheckBootArgParsing) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  zx::result args = console_launcher::GetArguments(boot_args.client_end());
   ASSERT_OK(args.status_value());
 
   ASSERT_TRUE(args->run_shell);
@@ -52,7 +52,7 @@ TEST(SystemInstanceTest, CheckBootArgDefaultStrings) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  zx::result args = console_launcher::GetArguments(boot_args.client_end());
   ASSERT_OK(args.status_value());
 
   ASSERT_FALSE(args->run_shell);
@@ -74,7 +74,7 @@ TEST(VirtconSetup, VirtconDefaults) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  zx::result args = console_launcher::GetArguments(boot_args.client_end());
   ASSERT_OK(args.status_value());
 
   ASSERT_FALSE(args->virtual_console_need_debuglog);
@@ -93,7 +93,7 @@ TEST(VirtconSetup, VirtconNeedDebuglog) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  zx::result args = console_launcher::GetArguments(boot_args.client_end());
   ASSERT_OK(args.status_value());
 
   ASSERT_TRUE(args->virtual_console_need_debuglog);
@@ -112,7 +112,7 @@ TEST(VirtconSetup, VirtconNetbootWithNetsvcDisabled) {
   fidl::WireSyncClient<fuchsia_boot::Arguments> boot_args;
   boot_server.CreateClient(loop.dispatcher(), &boot_args);
 
-  zx::status args = console_launcher::GetArguments(boot_args.client_end());
+  zx::result args = console_launcher::GetArguments(boot_args.client_end());
   ASSERT_OK(args.status_value());
 
   ASSERT_FALSE(args->virtual_console_need_debuglog);

@@ -55,7 +55,7 @@ class Allocator : public BaseAllocator {
   ~Allocator() override = default;
 
   // blobfs::NodeFinder interface.
-  zx::status<InodePtr> GetNode(uint32_t node_index) final;
+  zx::result<InodePtr> GetNode(uint32_t node_index) final;
 
   void SetLogging(bool enable) { log_allocation_failure_ = enable; }
 
@@ -71,7 +71,7 @@ class Allocator : public BaseAllocator {
   const zx::vmo& GetNodeMapVmo() const;
 
   // blobfs::NodeReserverInterface interface.
-  zx::status<ReservedNode> ReserveNode() final;
+  zx::result<ReservedNode> ReserveNode() final;
   // Called when InodePtr goes out of scope.
   void DropInodePtr() final;
 
@@ -80,8 +80,8 @@ class Allocator : public BaseAllocator {
 
  protected:
   // blobfs::BaseAllocator interface.
-  zx::status<> AddBlocks(uint64_t block_count) final;
-  zx::status<> AddNodes() final;
+  zx::result<> AddBlocks(uint64_t block_count) final;
+  zx::result<> AddNodes() final;
 
  private:
   // Resets the size of the block map based on |Info().data_block_count|.

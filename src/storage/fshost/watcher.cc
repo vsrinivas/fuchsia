@@ -48,7 +48,7 @@ std::vector<Watcher> Watcher::CreateWatchers() {
 
 zx_status_t Watcher::ReinitWatcher() {
   watcher_.reset();
-  zx::status server_end = fidl::CreateEndpoints<fio::DirectoryWatcher>(&watcher_);
+  zx::result server_end = fidl::CreateEndpoints<fio::DirectoryWatcher>(&watcher_);
   if (server_end.is_error()) {
     FX_PLOGS(ERROR, server_end.status_value()) << "failed to create watcher channel";
     return server_end.status_value();

@@ -53,7 +53,7 @@ class QueuePair {
         completion_doorbell_(completion_doorbell),
         submission_doorbell_(submission_doorbell) {}
 
-  static zx::status<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, size_t queue_id,
+  static zx::result<std::unique_ptr<QueuePair>> Create(zx::unowned_bti bti, size_t queue_id,
                                                        size_t max_entries, CapabilityReg& reg,
                                                        fdf::MmioBuffer& mmio);
 
@@ -67,7 +67,7 @@ class QueuePair {
 
   // Submit will take ownership of |completer| only if submission succeeds. If submission fails, it
   // is up to the caller to appropriately fail the completer.
-  zx::status<> Submit(Submission& submission, std::optional<zx::unowned_vmo> data,
+  zx::result<> Submit(Submission& submission, std::optional<zx::unowned_vmo> data,
                       zx_off_t vmo_offset, TransactionData::Completer& completer) {
     return Submit(cpp20::span<uint8_t>(reinterpret_cast<uint8_t*>(&submission), sizeof(submission)),
                   std::move(data), vmo_offset, completer);
@@ -77,11 +77,11 @@ class QueuePair {
   friend class QueuePairTest;
 
   // Raw implementation of submit that operates on a byte span rather than a submission.
-  zx::status<> Submit(cpp20::span<uint8_t> submission, std::optional<zx::unowned_vmo> data,
+  zx::result<> Submit(cpp20::span<uint8_t> submission, std::optional<zx::unowned_vmo> data,
                       zx_off_t vmo_offset, TransactionData::Completer& completer);
 
   // Puts a PRP list in |buf| containing the given addresses.
-  zx::status<> PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages);
+  zx::result<> PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages);
 
   // Completion queue.
   Queue completion_ __TA_GUARDED(completion_lock_);

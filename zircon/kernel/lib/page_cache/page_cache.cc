@@ -21,14 +21,14 @@ KCOUNTER(page_cache_free_pages, "cache.page.freed")
 
 namespace page_cache {
 
-zx::status<PageCache> PageCache::Create(size_t reserve_pages) {
+zx::result<PageCache> PageCache::Create(size_t reserve_pages) {
   const size_t cpu_count = percpu::processor_count();
   DEBUG_ASSERT(cpu_count != 0);
 
   fbl::AllocChecker alloc_checker;
   ktl::unique_ptr<CpuCache[]> entries{new (&alloc_checker) CpuCache[cpu_count]};
   if (!alloc_checker.check()) {
-    return zx::error_status(ZX_ERR_NO_MEMORY);
+    return zx::error_result(ZX_ERR_NO_MEMORY);
   }
   DEBUG_ASSERT(((MAX_CACHE_LINE - 1) & reinterpret_cast<uintptr_t>(entries.get())) == 0);
   return zx::ok(PageCache{reserve_pages, ktl::move(entries)});

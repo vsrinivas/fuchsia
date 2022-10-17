@@ -40,7 +40,7 @@ void IgnoreMsr(const VmxPage& msr_bitmaps_page, uint32_t msr) {
 
 // static
 template <typename G>
-zx::status<ktl::unique_ptr<G>> Guest::Create() {
+zx::result<ktl::unique_ptr<G>> Guest::Create() {
   // Check that the CPU supports VMX.
   if (!x86_feature_test(X86_FEATURE_VMX)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -86,7 +86,7 @@ zx::status<ktl::unique_ptr<G>> Guest::Create() {
 Guest::~Guest() { free_vmx_state(); }
 
 // static
-zx::status<ktl::unique_ptr<Guest>> NormalGuest::Create() {
+zx::result<ktl::unique_ptr<Guest>> NormalGuest::Create() {
   auto gpa = hypervisor::GuestPhysicalAspace::Create();
   if (gpa.is_error()) {
     return gpa.take_error();
@@ -136,7 +136,7 @@ zx_status_t NormalGuest::SetTrap(uint32_t kind, zx_vaddr_t addr, size_t len,
 }
 
 // static
-zx::status<ktl::unique_ptr<Guest>> DirectGuest::Create() {
+zx::result<ktl::unique_ptr<Guest>> DirectGuest::Create() {
   auto dpa = hypervisor::DirectPhysicalAspace::Create();
   if (dpa.is_error()) {
     return dpa.take_error();

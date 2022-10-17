@@ -20,7 +20,7 @@ using InitChildDeviceType = ddk::Device<InitTestChild, ddk::Initializable>;
 class InitTestChild : public InitChildDeviceType {
  public:
   explicit InitTestChild(zx_device_t* parent) : InitChildDeviceType(parent) {}
-  static zx::status<InitTestChild*> Create(zx_device_t* parent, const char* name) {
+  static zx::result<InitTestChild*> Create(zx_device_t* parent, const char* name) {
     auto driver = std::make_unique<InitTestChild>(parent);
     zx_status_t status = driver->DdkAdd(ddk::DeviceAddArgs(name));
     if (status != ZX_OK) {

@@ -6,7 +6,7 @@
 
 namespace extractor {
 
-zx::status<> BlobfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
+zx::result<> BlobfsExtract(fbl::unique_fd input_fd, Extractor& extractor) {
   return zx::error(ZX_ERR_ACCESS_DENIED);
 }
 

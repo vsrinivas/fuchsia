@@ -37,11 +37,11 @@ class Controller : public ControllerDeviceType {
   void DdkInit(ddk::InitTxn txn);
 
   // Send a command to the controller.
-  zx::status<std::vector<uint8_t>> SendControllerCommand(Command command,
+  zx::result<std::vector<uint8_t>> SendControllerCommand(Command command,
                                                          cpp20::span<const uint8_t> data);
 
   // Send a command to the given port.
-  zx::status<std::vector<uint8_t>> SendDeviceCommand(Command command, Port port);
+  zx::result<std::vector<uint8_t>> SendDeviceCommand(Command command, Port port);
 
   StatusReg ReadStatus();
 

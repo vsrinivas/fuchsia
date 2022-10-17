@@ -34,7 +34,7 @@ class File : public VnodeF2fs, public fbl::Recyclable<File> {
       __TA_EXCLUDES(mutex_);
   zx_status_t Truncate(size_t len) final __TA_EXCLUDES(mutex_);
 #ifdef __Fuchsia__
-  zx::status<> PopulateVmoWithInlineData(zx::vmo& vmo) final __TA_EXCLUDES(mutex_);
+  zx::result<> PopulateVmoWithInlineData(zx::vmo& vmo) final __TA_EXCLUDES(mutex_);
 #endif  // __Fuchsia__
   zx_status_t RecoverInlineData(NodePage& node_page) final __TA_EXCLUDES(mutex_);
 

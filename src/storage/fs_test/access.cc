@@ -183,7 +183,7 @@ void CloneFdAsReadOnlyHelper(fbl::unique_fd in_fd, fbl::unique_fd* out_fd) {
   fdio_cpp::FdioCaller fdio_caller(std::move(in_fd));
 
   // Clone |in_fd| as read-only; the entire tree under the new connection now becomes read-only
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   auto clone_result =
@@ -217,7 +217,7 @@ TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
     // Obtain the underlying connection behind |foo_fd|.
     fdio_cpp::FdioCaller fdio_caller(std::move(foo_fd));
 
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
     ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
     auto clone_result =
@@ -239,7 +239,7 @@ TEST_P(DirectoryPermissionTest, TestCloneCannotIncreaseRights) {
   // Attempt to clone the read-only fd back to read-write.
   fdio_cpp::FdioCaller fdio_caller(std::move(foo_readonly));
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_TRUE(endpoints.is_ok()) << endpoints.status_string();
 
   auto clone_result =

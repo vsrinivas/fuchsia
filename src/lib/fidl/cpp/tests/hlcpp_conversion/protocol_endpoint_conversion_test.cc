@@ -34,7 +34,7 @@ TEST(ProtocolEndpointConversion, ToNatural) {
 }
 
 TEST(ProtocolEndpointConversion, ToHLCPP) {
-  zx::status unified_endpoints = fidl::CreateEndpoints<test_types::Baz>();
+  zx::result unified_endpoints = fidl::CreateEndpoints<test_types::Baz>();
   ASSERT_TRUE(unified_endpoints.is_ok());
 
   EXPECT_TRUE(unified_endpoints->client.is_valid());

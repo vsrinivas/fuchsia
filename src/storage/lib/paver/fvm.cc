@@ -639,7 +639,7 @@ zx_status_t WipeAllFvmPartitionsWithGuid(const fbl::unique_fd& fvm_fd, const uin
   return ZX_OK;
 }
 
-zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
+zx::result<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
                                      const fbl::unique_fd& fvm_fd) {
   FvmPartition fvm_partitions[] = {
       FvmPartition::Make(std::array<uint8_t, fvm::kGuidSize>(GUID_BLOB_VALUE),
@@ -655,15 +655,15 @@ zx::status<> AllocateEmptyPartitions(const fbl::unique_fd& devfs_root,
                                                                 .active = true,
                                                             }},
                                        2);
-  return zx::make_status(AllocatePartitions(devfs_root, fvm_fd, &partitions));
+  return zx::make_result(AllocatePartitions(devfs_root, fvm_fd, &partitions));
 }
 
-zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
+zx::result<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
                                  std::unique_ptr<PartitionClient> partition_client,
                                  std::unique_ptr<fvm::ReaderInterface> payload) {
   std::unique_ptr<fvm::SparseReader> reader;
-  zx::status<> status = zx::ok();
-  if (status = zx::make_status(fvm::SparseReader::Create(std::move(payload), &reader));
+  zx::result<> status = zx::ok();
+  if (status = zx::make_result(fvm::SparseReader::Create(std::move(payload), &reader));
       status.is_error()) {
     return status.take_error();
   }
@@ -686,7 +686,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   //
   // Additionally, delete the old versions of any new partitions.
   size_t requested_slices = 0;
-  if (status = zx::make_status(PreProcessPartitions(fvm_fd, reader, parts, &requested_slices));
+  if (status = zx::make_result(PreProcessPartitions(fvm_fd, reader, parts, &requested_slices));
       status.is_error()) {
     ERROR("Failed to validate partitions: %s\n", status.status_string());
     return status.take_error();
@@ -723,7 +723,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   LOG("Partitions pre-validated successfully: Enough space exists to pave.\n");
 
   // Actually allocate the storage for the incoming image.
-  if (status = zx::make_status(AllocatePartitions(devfs_root, fvm_fd, &parts)); status.is_error()) {
+  if (status = zx::make_result(AllocatePartitions(devfs_root, fvm_fd, &parts)); status.is_error()) {
     ERROR("Failed to allocate partitions: %s\n", status.status_string());
     return status.take_error();
   }
@@ -745,7 +745,7 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
   for (size_t p = 0; p < parts.size(); p++) {
     vmoid_t vmoid;
     std::unique_ptr<block_client::Client> client;
-    auto status = zx::make_status(RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client));
+    auto status = zx::make_result(RegisterFastBlockIo(parts[p].new_part, vmo, &vmoid, &client));
     if (status.is_error()) {
       ERROR("Failed to register fast block IO\n");
       return status.take_error();
@@ -771,14 +771,14 @@ zx::status<> FvmStreamPartitions(const fbl::unique_fd& devfs_root,
     request.opcode = BLOCKIO_WRITE;
 
     LOG("Streaming partition %zu\n", p);
-    status = zx::make_status(
+    status = zx::make_result(
         StreamFvmPartition(reader.get(), &parts[p], mapping, *client, block_size, &request));
     LOG("Done streaming partition %zu\n", p);
     if (status.is_error()) {
       ERROR("Failed to stream partition status=%d\n", status.error_value());
       return status.take_error();
     }
-    if (status = zx::make_status(FlushClient(client.get())); status.is_error()) {
+    if (status = zx::make_result(FlushClient(client.get())); status.is_error()) {
       ERROR("Failed to flush client\n");
       return status.take_error();
     }

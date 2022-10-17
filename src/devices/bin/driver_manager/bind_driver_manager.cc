@@ -76,7 +76,7 @@ zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
   }
 
   // TODO: disallow if we're in the middle of enumeration, etc
-  zx::status<std::vector<MatchedDriver>> result = GetMatchingDrivers(dev, drvlibname);
+  zx::result<std::vector<MatchedDriver>> result = GetMatchingDrivers(dev, drvlibname);
   if (!result.is_ok()) {
     return result.error_value();
   }
@@ -98,7 +98,7 @@ zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
   return ZX_OK;
 }
 
-zx::status<std::vector<MatchedDriver>> BindDriverManager::GetMatchingDrivers(
+zx::result<std::vector<MatchedDriver>> BindDriverManager::GetMatchingDrivers(
     const fbl::RefPtr<Device>& dev, std::string_view drvlibname) {
   // It shouldn't be possible to get a bind request for a proxy device.
   if (dev->flags & DEV_CTX_PROXY) {
@@ -115,7 +115,7 @@ zx::status<std::vector<MatchedDriver>> BindDriverManager::GetMatchingDrivers(
   return zx::ok(coordinator_->driver_loader().MatchDeviceDriverIndex(dev, config));
 }
 
-zx::status<std::vector<MatchedDriver>> BindDriverManager::MatchDevice(
+zx::result<std::vector<MatchedDriver>> BindDriverManager::MatchDevice(
     const fbl::RefPtr<Device>& dev, const DriverLoader::MatchDeviceConfig& config) const {
   if (dev->IsAlreadyBound()) {
     return zx::error(ZX_ERR_ALREADY_BOUND);

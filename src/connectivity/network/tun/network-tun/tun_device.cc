@@ -50,7 +50,7 @@ TunDevice::TunDevice(fit::callback<void(TunDevice*)> teardown, DeviceConfig conf
       config_(std::move(config)),
       loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
-zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(
+zx::result<std::unique_ptr<TunDevice>> TunDevice::Create(
     fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig& config) {
   fbl::AllocChecker ac;
   std::unique_ptr<TunDevice> tun(new (&ac) TunDevice(std::move(teardown), DeviceConfig(config)));
@@ -65,7 +65,7 @@ zx::status<std::unique_ptr<TunDevice>> TunDevice::Create(
     return zx::error(status);
   }
 
-  zx::status device = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
+  zx::result device = DeviceAdapter::Create(tun->loop_.dispatcher(), tun.get());
   if (device.is_error()) {
     FX_LOGF(ERROR, "tun", "TunDevice::Init device init failed with %s", device.status_string());
     return device.take_error();
@@ -108,7 +108,7 @@ void TunDevice::Teardown() {
 
 template <typename F, typename C>
 bool TunDevice::WriteWith(F fn, C& completer) {
-  zx::status avail = fn();
+  zx::result avail = fn();
   switch (zx_status_t status = avail.status_value(); status) {
     case ZX_OK:
       if (avail.value() == 0) {
@@ -132,7 +132,7 @@ bool TunDevice::RunWriteFrame() {
   while (!pending_write_frame_.empty()) {
     auto& pending = pending_write_frame_.front();
     bool handled = WriteWith(
-        [this, &pending]() -> zx::status<size_t> {
+        [this, &pending]() -> zx::result<size_t> {
           std::unique_ptr<Port>& port = ports_[pending.port_id];
           if (!port) {
             return zx::error(ZX_ERR_NOT_FOUND);
@@ -279,7 +279,7 @@ void TunDevice::WriteFrame(WriteFrameRequestView request, WriteFrameCompleter::S
       meta = frame.meta();
     }
     bool handled = WriteWith(
-        [this, &frame_type, &frame_data, &port_id, &meta]() -> zx::status<size_t> {
+        [this, &frame_type, &frame_data, &port_id, &meta]() -> zx::result<size_t> {
           std::unique_ptr<Port>& port = ports_[port_id];
           if (!port) {
             return zx::error(ZX_ERR_NOT_FOUND);
@@ -323,7 +323,7 @@ void TunDevice::AddPort(AddPortRequestView request, AddPortCompleter::Sync& _com
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    zx::status maybe_port = Port::Create(this, port_config);
+    zx::result maybe_port = Port::Create(this, port_config);
     if (maybe_port.is_error()) {
       return maybe_port.status_value();
     }
@@ -353,12 +353,12 @@ void TunDevice::OnRxAvail(DeviceAdapter* device) {
   async::PostTask(loop_.dispatcher(), [this]() { RunWriteFrame(); });
 }
 
-zx::status<std::unique_ptr<TunDevice::Port>> TunDevice::Port::Create(
+zx::result<std::unique_ptr<TunDevice::Port>> TunDevice::Port::Create(
     TunDevice* parent, const DevicePortConfig& config) {
   std::unique_ptr<Port> port(new Port(parent));
   std::unique_ptr<MacAdapter> mac;
   if (config.mac.has_value()) {
-    zx::status status = MacAdapter::Create(port.get(), config.mac.value(), false);
+    zx::result status = MacAdapter::Create(port.get(), config.mac.value(), false);
     if (status.is_error()) {
       return status.take_error();
     }

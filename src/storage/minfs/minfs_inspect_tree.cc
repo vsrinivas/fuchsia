@@ -84,7 +84,7 @@ void MinfsInspectTree::SubtractDirtyBytes(uint64_t bytes) {
 }
 
 fs_inspect::FvmData MinfsInspectTree::GetFvmData() {
-  zx::status<fs_inspect::FvmData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
+  zx::result<fs_inspect::FvmData::SizeInfo> size_info = zx::error(ZX_ERR_BAD_HANDLE);
   {
     std::lock_guard guard(device_mutex_);
     size_info = fs_inspect::FvmData::GetSizeInfoFromDevice(*device_);

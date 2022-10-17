@@ -687,7 +687,7 @@ void Display::TeardownDisplay(uint64_t display_id) {
   Device& device = devices_[display_id];
 
   if (device.host_display_id) {
-    zx::status<uint32_t> status = rc_->DestroyDisplay(device.host_display_id);
+    zx::result<uint32_t> status = rc_->DestroyDisplay(device.host_display_id);
     ZX_DEBUG_ASSERT(status.is_ok());
     ZX_DEBUG_ASSERT(!status.value());
   }

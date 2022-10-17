@@ -31,9 +31,9 @@ namespace {
 // to be accessed at a particular address cannot be determined until we first read
 // a header at that address.
 template <typename T>
-zx::status<const T*> MapStructure(PhysMemReader& reader, zx_paddr_t phys) {
+zx::result<const T*> MapStructure(PhysMemReader& reader, zx_paddr_t phys) {
   // Try and read the header.
-  zx::status<const void*> result = reader.PhysToPtr(phys, sizeof(T));
+  zx::result<const void*> result = reader.PhysToPtr(phys, sizeof(T));
   if (result.is_error()) {
     return result.take_error();
   }
@@ -73,9 +73,9 @@ struct RootSystemTableDetails {
   uint64_t xsdt_address;
 };
 
-zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t rsdp_pa) {
+zx::result<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t rsdp_pa) {
   // Read the header.
-  zx::status<const void*> maybe_rsdp_v1 = reader.PhysToPtr(rsdp_pa, sizeof(AcpiRsdp));
+  zx::result<const void*> maybe_rsdp_v1 = reader.PhysToPtr(rsdp_pa, sizeof(AcpiRsdp));
   if (maybe_rsdp_v1.is_error()) {
     return maybe_rsdp_v1.take_error();
   }
@@ -96,7 +96,7 @@ zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t r
   }
 
   // Try and map the larger V2 structure.
-  zx::status<const AcpiRsdpV2*> rsdp_v2 = MapStructure<AcpiRsdpV2>(reader, rsdp_pa);
+  zx::result<const AcpiRsdpV2*> rsdp_v2 = MapStructure<AcpiRsdpV2>(reader, rsdp_pa);
   if (rsdp_v2.is_error()) {
     return rsdp_v2.take_error();
   }
@@ -120,9 +120,9 @@ zx::status<RootSystemTableDetails> ParseRsdp(PhysMemReader& reader, zx_paddr_t r
 // Return 0 if no RSDP found.
 //
 // Reference: ACPI v6.3, Section 5.2.5.1
-zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
+zx::result<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
   // Get a virtual address for the read-only BIOS range.
-  zx::status<const void*> maybe_bios_section =
+  zx::result<const void*> maybe_bios_section =
       reader.PhysToPtr(kBiosReadOnlyAreaStart, kBiosReadOnlyAreaLength);
   if (maybe_bios_section.is_error()) {
     return maybe_bios_section.take_error();
@@ -142,7 +142,7 @@ zx::status<zx_paddr_t> FindRsdpPc(PhysMemReader& reader) {
 }
 #endif
 
-zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
+zx::result<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
                                                   zx_paddr_t rsdp_pa) {
   // If the user gave us an explicit RSDP, just use that directly.
   if (rsdp_pa != 0) {
@@ -152,7 +152,7 @@ zx::status<RootSystemTableDetails> FindRootTables(PhysMemReader& physmem_reader,
   // Otherwise, attempt to find it in a platform-specific way.
 #if defined(__x86_64__) || defined(__i386__)
   {
-    zx::status<zx_paddr_t> result = FindRsdpPc(physmem_reader);
+    zx::result<zx_paddr_t> result = FindRsdpPc(physmem_reader);
     if (result.is_ok()) {
       LOG_DEBUG("ACPI LITE: Found RSDP at physical address %#" PRIxPTR ".\n", result.value());
       return ParseRsdp(physmem_reader, result.value());
@@ -194,10 +194,10 @@ uint8_t AcpiChecksum(const void* _buf, size_t len) {
   return -c;
 }
 
-zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
+zx::result<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa,
                                          size_t* num_tables) {
   // Map in the RSDT.
-  zx::status<const AcpiRsdt*> rsdt = MapStructure<AcpiRsdt>(reader, rsdt_pa);
+  zx::result<const AcpiRsdt*> rsdt = MapStructure<AcpiRsdt>(reader, rsdt_pa);
   if (rsdt.is_error()) {
     return rsdt.take_error();
   }
@@ -223,10 +223,10 @@ zx::status<const AcpiRsdt*> ValidateRsdt(PhysMemReader& reader, uint32_t rsdt_pa
   return rsdt;
 }
 
-zx::status<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa,
+zx::result<const AcpiXsdt*> ValidateXsdt(PhysMemReader& reader, uint64_t xsdt_pa,
                                          size_t* num_tables) {
   // Map in the XSDT.
-  zx::status<const AcpiXsdt*> xsdt =
+  zx::result<const AcpiXsdt*> xsdt =
       MapStructure<AcpiXsdt>(reader, static_cast<zx_paddr_t>(xsdt_pa));
   if (xsdt.is_error()) {
     return xsdt.take_error();
@@ -296,9 +296,9 @@ const AcpiSdtHeader* GetTableBySignature(const AcpiParserInterface& parser, Acpi
   return nullptr;
 }
 
-zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa) {
+zx::result<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_t rsdp_pa) {
   // Find the root tables.
-  zx::status<RootSystemTableDetails> root_tables = FindRootTables(physmem_reader, rsdp_pa);
+  zx::result<RootSystemTableDetails> root_tables = FindRootTables(physmem_reader, rsdp_pa);
   if (root_tables.is_error()) {
     LOG_INFO("ACPI LITE: Could not validate RSDP structure: %" PRId32 "\n",
              root_tables.error_value());
@@ -306,11 +306,11 @@ zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_
   }
 
   // Validate the tables.
-  auto parser = [&]() -> zx::status<AcpiParser> {
+  auto parser = [&]() -> zx::result<AcpiParser> {
     // If an XSDT table exists, try using it first.
     if (root_tables.value().xsdt_address != 0) {
       size_t num_tables = 0;
-      zx::status<const AcpiXsdt*> xsdt =
+      zx::result<const AcpiXsdt*> xsdt =
           ValidateXsdt(physmem_reader, root_tables.value().xsdt_address, &num_tables);
       if (xsdt.is_ok()) {
         LOG_DEBUG("ACPI LITE: Found valid XSDT table at physical address %#" PRIx64 "\n",
@@ -327,7 +327,7 @@ zx::status<AcpiParser> AcpiParser::Init(PhysMemReader& physmem_reader, zx_paddr_
     // Otherwise, try using the RSDT.
     if (root_tables.value().rsdt_address != 0) {
       size_t num_tables = 0;
-      zx::status<const AcpiRsdt*> rsdt =
+      zx::result<const AcpiRsdt*> rsdt =
           ValidateRsdt(physmem_reader, root_tables.value().rsdt_address, &num_tables);
       if (rsdt.is_ok()) {
         LOG_DEBUG("ACPI LITE: Found valid RSDT table at physical address %#" PRIx32 "\n",

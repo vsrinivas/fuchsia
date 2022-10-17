@@ -51,7 +51,7 @@ class Devnode
   Devnode(Devnode&&) = delete;
   Devnode& operator=(Devnode&&) = delete;
 
-  zx::status<Devnode*> walk(std::string_view path);
+  zx::result<Devnode*> walk(std::string_view path);
 
   // Exports `service_path` from `service_dir` to `devfs_path`, under `dn`. If
   // `protocol_id` matches a known protocol, `service_path` will also be exposed
@@ -174,7 +174,7 @@ class ProtoNode {
   friend class Devfs;
   friend class Devnode;
 
-  zx::status<fbl::String> seq_name();
+  zx::result<fbl::String> seq_name();
 
   const fbl::String name_;
 
@@ -189,7 +189,7 @@ class Devfs {
   Devfs(std::optional<Devnode>& root, Device* device,
         std::optional<fidl::ClientEnd<fuchsia_io::Directory>> diagnostics = {});
 
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Connect(fs::FuchsiaVfs& vfs);
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Connect(fs::FuchsiaVfs& vfs);
 
   zx_status_t initialize(Device& device);
   void publish(Device& device);

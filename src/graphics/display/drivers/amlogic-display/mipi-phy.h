@@ -23,7 +23,7 @@ namespace amlogic_display {
 class MipiPhy {
  public:
   // This function initializes internal state of the object
-  static zx::status<std::unique_ptr<MipiPhy>> Create(ddk::PDev& pdev,
+  static zx::result<std::unique_ptr<MipiPhy>> Create(ddk::PDev& pdev,
                                                      ddk::DsiImplProtocolClient dsi,
                                                      bool already_enabled);
   // This function enables and starts up the Mipi Phy

@@ -21,14 +21,14 @@ namespace {
 
 TEST(AcpiParser, NoRsdp) {
   NullPhysMemReader reader;
-  zx::status<AcpiParser> result = AcpiParser::Init(reader, 0);
+  zx::result<AcpiParser> result = AcpiParser::Init(reader, 0);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_NOT_FOUND);
 }
 
 TEST(AcpiParser, EmptyTables) {
   EmptyPhysMemReader reader;
-  zx::status<AcpiParser> result = AcpiParser::Init(reader, 0);
+  zx::result<AcpiParser> result = AcpiParser::Init(reader, 0);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_NOT_FOUND);
 }
@@ -137,7 +137,7 @@ TEST(AcpiParser, RsdtInvalidLengths) {
 TEST(AcpiParser, DumpTables) {
   // Parse the QEMU tables.
   FakePhysMemReader reader = QemuPhysMemReader();
-  zx::status<AcpiParser> result = AcpiParser::Init(reader, reader.rsdp());
+  zx::result<AcpiParser> result = AcpiParser::Init(reader, reader.rsdp());
   ASSERT_FALSE(result.is_error());
 
   // Dump the (relatively short) QEMU tables.
@@ -161,7 +161,7 @@ class BiosAreaPhysMemReader : public PhysMemReader {
     }
   }
 
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
     if (phys >= kBiosReadOnlyAreaStart && phys < kBiosReadOnlyAreaEnd &&
         phys + length <= kBiosReadOnlyAreaEnd) {
       return zx::success(&bios_area_[phys - kBiosReadOnlyAreaStart]);
@@ -198,7 +198,7 @@ TEST(AcpiParser, AcpiSignatureWriteToBuffer) {
 TEST(AcpiParser, RsdPtrAutodetect) {
   BiosAreaPhysMemReader reader(
       {QemuPhysMemReader().regions().data(), QemuPhysMemReader().regions().size()});
-  zx::status<AcpiParser> result = AcpiParser::Init(reader, /*rsdp_pa=*/0);
+  zx::result<AcpiParser> result = AcpiParser::Init(reader, /*rsdp_pa=*/0);
   ASSERT_TRUE(!result.is_error());
   EXPECT_EQ(4u, result->num_tables());
 }

@@ -8,7 +8,7 @@
 
 namespace dfv2 {
 
-zx::status<std::unique_ptr<Device>> Device::CreateAndServe(
+zx::result<std::unique_ptr<Device>> Device::CreateAndServe(
     std::string topological_path, std::string name, uint64_t device_symbol,
     async_dispatcher_t* dispatcher, component::OutgoingDirectory* outgoing,
     compat::DeviceServer server, dfv2::NodeManager* manager, dfv2::DriverHost* driver_host) {

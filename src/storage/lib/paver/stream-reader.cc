@@ -10,22 +10,22 @@
 
 namespace paver {
 
-zx::status<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel stream) {
+zx::result<std::unique_ptr<StreamReader>> StreamReader::Create(zx::channel stream) {
   zx::vmo vmo;
-  auto status = zx::make_status(zx::vmo::create(8192, 0, &vmo));
+  auto status = zx::make_result(zx::vmo::create(8192, 0, &vmo));
   if (status.is_error()) {
     ERROR("Unable to create vmo.\n");
     return status.take_error();
   }
   zx::vmo dup;
-  status = zx::make_status(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  status = zx::make_result(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
   if (status.is_error()) {
     ERROR("Unable to duplicate vmo.\n");
     return status.take_error();
   }
   auto result = fidl::WireCall<fuchsia_paver::PayloadStream>(zx::unowned(stream))
                     ->RegisterVmo(std::move(dup));
-  status = zx::make_status(result.ok() ? result.value().status : result.status());
+  status = zx::make_result(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     ERROR("Unable to register vmo: %d\n", status.error_value());
     return status.take_error();

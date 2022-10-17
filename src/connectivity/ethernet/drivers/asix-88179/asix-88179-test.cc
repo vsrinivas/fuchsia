@@ -87,7 +87,7 @@ class UsbAx88179Test : public zxtest::Test {
 
   void ConnectEthernetClient() {
     fbl::unique_fd fd(openat(bus_->GetRootFd(), dev_path_.c_str(), O_RDWR));
-    zx::status ethernet_client_end =
+    zx::result ethernet_client_end =
         fdio_cpp::FdioCaller(std::move(fd)).take_as<ethernet::Device>();
     ASSERT_OK(ethernet_client_end.status_value());
     ethernet_client_.Bind(std::move(*ethernet_client_end));
@@ -119,7 +119,7 @@ class UsbAx88179Test : public zxtest::Test {
 
   void SetDeviceOnline() {
     fbl::unique_fd fd(openat(bus_->GetRootFd(), test_function_path_.c_str(), O_RDWR));
-    zx::status test_client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ax88179::Hooks>();
+    zx::result test_client_end = fdio_cpp::FdioCaller(std::move(fd)).take_as<ax88179::Hooks>();
     ASSERT_OK(test_client_end.status_value());
     fidl::WireSyncClient test_client{std::move(*test_client_end)};
 

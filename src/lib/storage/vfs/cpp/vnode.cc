@@ -96,7 +96,7 @@ bool Vnode::Supports(VnodeProtocolSet protocols) const {
 
 bool Vnode::ValidateRights([[maybe_unused]] Rights rights) const { return true; }
 
-zx::status<Vnode::ValidatedOptions> Vnode::ValidateOptions(VnodeConnectionOptions options) const {
+zx::result<Vnode::ValidatedOptions> Vnode::ValidateOptions(VnodeConnectionOptions options) const {
   auto protocols = options.protocols();
   if (!Supports(protocols)) {
     if (protocols == VnodeProtocol::kDirectory) {
@@ -264,7 +264,7 @@ zx_status_t Vnode::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx::status<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+zx::result<std::string> Vnode::GetDevicePath() const { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
 zx_status_t Vnode::OpenRemote(fuchsia_io::OpenFlags, uint32_t, fidl::StringView,
                               fidl::ServerEnd<fuchsia_io::Node>) const {

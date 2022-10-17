@@ -88,7 +88,7 @@ void FreeSlices(const Superblock* info, block_client::BlockDevice* device) {
 }
 
 // Checks all slices against the block device. May shrink the partition.
-zx::status<> CheckSlices(const Superblock& info, size_t blocks_per_slice,
+zx::result<> CheckSlices(const Superblock& info, size_t blocks_per_slice,
                          block_client::BlockDevice* device, bool repair_slices) {
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
   fuchsia_hardware_block_volume_VolumeInfo volume_info;
@@ -163,7 +163,7 @@ zx::status<> CheckSlices(const Superblock& info, size_t blocks_per_slice,
 // Setups the superblock based on the mount options and the underlying device.
 // It can be called when not loaded on top of FVM, in which case this function
 // will do nothing.
-zx::status<> CreateFvmData(const MountOptions& options, Superblock* info,
+zx::result<> CreateFvmData(const MountOptions& options, Superblock* info,
                            block_client::BlockDevice* device) {
   fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
   fuchsia_hardware_block_volume_VolumeInfo volume_info;
@@ -249,7 +249,7 @@ zx::status<> CreateFvmData(const MountOptions& options, Superblock* info,
 
 // Verifies that the allocated slices are sufficient to hold the allocated data
 // structures of the filesystem.
-zx::status<> VerifySlicesSize(const Superblock& info, const TransactionLimits& limits,
+zx::result<> VerifySlicesSize(const Superblock& info, const TransactionLimits& limits,
                               size_t blocks_per_slice) {
   size_t ibm_blocks_needed = (info.inode_count + kMinfsBlockBits - 1) / kMinfsBlockBits;
   size_t ibm_blocks_allocated = info.ibm_slices * blocks_per_slice;
@@ -313,7 +313,7 @@ zx::status<> VerifySlicesSize(const Superblock& info, const TransactionLimits& l
 }
 
 // Fuses "reading the superblock from storage" with "correcting if it is wrong".
-zx::status<Superblock> LoadSuperblockWithRepair(Bcache* bc, bool repair) {
+zx::result<Superblock> LoadSuperblockWithRepair(Bcache* bc, bool repair) {
   auto info_or = LoadSuperblock(bc);
   if (info_or.is_error()) {
     if (!repair) {
@@ -341,7 +341,7 @@ zx::status<Superblock> LoadSuperblockWithRepair(Bcache* bc, bool repair) {
 // Replays the journal and reloads the superblock (it may have been present in the journal).
 //
 // |info| is both an input and output parameter; it may be overwritten.
-zx::status<fs::JournalSuperblock> ReplayJournalReloadSuperblock(Bcache* bc, Superblock* info) {
+zx::result<fs::JournalSuperblock> ReplayJournalReloadSuperblock(Bcache* bc, Superblock* info) {
   auto journal_block_or = ReplayJournal(bc, *info);
   if (journal_block_or.is_error()) {
     FX_LOGS(ERROR) << "Cannot replay journal";
@@ -410,10 +410,10 @@ void UpdateChecksum(Superblock* info) {
 }
 
 #ifdef __Fuchsia__
-zx::status<> CheckSuperblock(const Superblock& info, block_client::BlockDevice* device,
+zx::result<> CheckSuperblock(const Superblock& info, block_client::BlockDevice* device,
                              uint32_t max_blocks) {
 #else
-zx::status<> CheckSuperblock(const Superblock& info, uint32_t max_blocks) {
+zx::result<> CheckSuperblock(const Superblock& info, uint32_t max_blocks) {
 #endif
   DumpInfo(info);
 
@@ -480,7 +480,7 @@ zx::status<> CheckSuperblock(const Superblock& info, uint32_t max_blocks) {
     }
   } else {
     const size_t kBlocksPerSlice = info.slice_size / info.BlockSize();
-    zx::status<> status;
+    zx::result<> status;
 #ifdef __Fuchsia__
     status = CheckSlices(info, kBlocksPerSlice, device, /*repair_slices=*/false);
     if (status.is_error()) {
@@ -550,7 +550,7 @@ void Minfs::Terminate() {
 #endif
 }
 
-zx::status<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_inodes,
+zx::result<std::unique_ptr<Transaction>> Minfs::BeginTransaction(size_t reserve_inodes,
                                                                  size_t reserve_blocks) {
   ZX_DEBUG_ASSERT(reserve_inodes <= TransactionLimits::kMaxInodeBitmapBlocks);
 #ifdef __Fuchsia__
@@ -630,7 +630,7 @@ class ReleaseObject {
  public:
   explicit ReleaseObject(T object) : object_(std::move(object)) {}
 
-  void operator()([[maybe_unused]] const zx::status<void>& dont_care) { object_.reset(); }
+  void operator()([[maybe_unused]] const zx::result<void>& dont_care) { object_.reset(); }
 
  private:
   std::optional<T> object_;
@@ -760,7 +760,7 @@ Minfs::Minfs(std::unique_ptr<Bcache> bc, std::unique_ptr<SuperblockManager> sb,
 
 Minfs::~Minfs() { Terminate(); }
 
-zx::status<> Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
+zx::result<> Minfs::InoFree(Transaction* transaction, VnodeMinfs* vn) {
   TRACE_DURATION("minfs", "Minfs::InoFree", "ino", vn->GetIno());
 
 #ifdef __Fuchsia__
@@ -838,7 +838,7 @@ void Minfs::RemoveUnlinked(PendingWork* transaction, VnodeMinfs* vn) {
   }
 }
 
-zx::status<> Minfs::PurgeUnlinked() {
+zx::result<> Minfs::PurgeUnlinked() {
   ino_t last_ino = 0;
   ino_t next_ino = Info().unlinked_head;
   ino_t unlinked_count = 0;
@@ -895,7 +895,7 @@ zx::status<> Minfs::PurgeUnlinked() {
 }
 
 #ifdef __Fuchsia__
-zx::status<> Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
+zx::result<> Minfs::UpdateCleanBitAndOldestRevision(bool is_clean) {
   auto transaction_or = BeginTransaction(0, 0);
   if (transaction_or.is_error()) {
     FX_LOGS(ERROR) << "failed to " << (is_clean ? "set" : "unset")
@@ -967,7 +967,7 @@ void Minfs::InoNew(Transaction* transaction, const Inode* inode, ino_t* out_ino)
   InodeUpdate(transaction, *out_ino, inode);
 }
 
-zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::VnodeNew(Transaction* transaction, uint32_t type) {
+zx::result<fbl::RefPtr<VnodeMinfs>> Minfs::VnodeNew(Transaction* transaction, uint32_t type) {
   TRACE_DURATION("minfs", "Minfs::VnodeNew");
   if ((type != kMinfsTypeFile) && (type != kMinfsTypeDir)) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -1014,7 +1014,7 @@ void Minfs::VnodeRelease(VnodeMinfs* vn) {
   vnode_hash_.erase(*vn);
 }
 
-zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::VnodeGet(ino_t ino) {
+zx::result<fbl::RefPtr<VnodeMinfs>> Minfs::VnodeGet(ino_t ino) {
   TRACE_DURATION("minfs", "Minfs::VnodeGet", "ino", ino);
   if ((ino < 1) || (ino >= Info().inode_count)) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
@@ -1092,7 +1092,7 @@ void InitializeDirectory(void* bdata, ino_t ino_self, ino_t ino_parent) {
   memcpy(&static_cast<uint8_t*>(bdata)[kSelfSize], parent.raw, kParentSize);
 }
 
-zx::status<std::pair<std::unique_ptr<Allocator>, std::unique_ptr<InodeManager>>>
+zx::result<std::pair<std::unique_ptr<Allocator>, std::unique_ptr<InodeManager>>>
 Minfs::ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& superblock,
                          const MountOptions& mount_options) {
 #ifdef __Fuchsia__
@@ -1161,7 +1161,7 @@ Minfs::ReadInitialBlocks(const Superblock& info, Bcache& bc, SuperblockManager& 
       std::make_pair(std::move(block_allocator_or.value()), std::move(inodes_or.value())));
 }
 
-zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
+zx::result<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
                                                  std::unique_ptr<Bcache> bc,
                                                  const MountOptions& options, PlatformVfs* vfs) {
   // Read the superblock before replaying the journal.
@@ -1178,7 +1178,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
   }
 
   // Replay the journal before loading any other structures.
-  zx::status<fs::JournalSuperblock> journal_superblock_or;
+  zx::result<fs::JournalSuperblock> journal_superblock_or;
   if (options.writability != Writability::ReadOnlyDisk) {
     journal_superblock_or = ReplayJournalReloadSuperblock(bc.get(), &info);
     if (journal_superblock_or.is_error()) {
@@ -1197,7 +1197,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
 #endif
 
   IntegrityCheck checks = options.repair_filesystem ? IntegrityCheck::kAll : IntegrityCheck::kNone;
-  zx::status<std::unique_ptr<SuperblockManager>> sb_or;
+  zx::result<std::unique_ptr<SuperblockManager>> sb_or;
 #ifdef __Fuchsia__
   block_client::BlockDevice* device = bc->device();
   sb_or = SuperblockManager::Create(device, info, bc->Maxblk(), checks);
@@ -1282,7 +1282,7 @@ zx::status<std::unique_ptr<Minfs>> Minfs::Create(FuchsiaDispatcher dispatcher,
 }  // namespace minfs
 
 #ifdef __Fuchsia__
-zx::status<fs::JournalSuperblock> ReplayJournal(Bcache* bc, const Superblock& info) {
+zx::result<fs::JournalSuperblock> ReplayJournal(Bcache* bc, const Superblock& info) {
   FX_LOGS(INFO) << "Replaying journal";
 
   auto superblock_or =
@@ -1296,7 +1296,7 @@ zx::status<fs::JournalSuperblock> ReplayJournal(Bcache* bc, const Superblock& in
   return superblock_or;
 }
 
-zx::status<> Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
+zx::result<> Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) {
   if (journal_ != nullptr) {
     FX_LOGS(ERROR) << "Journal was already initialized.";
     return zx::error(ZX_ERR_ALREADY_EXISTS);
@@ -1328,7 +1328,7 @@ zx::status<> Minfs::InitializeJournal(fs::JournalSuperblock journal_superblock) 
 }
 
 void Minfs::InitializeInspectTree() {
-  zx::status<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};
+  zx::result<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};
   if (fs_info.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize Minfs inspect tree: GetFilesystemInfo returned "
                    << fs_info.status_string();
@@ -1339,7 +1339,7 @@ void Minfs::InitializeInspectTree() {
 
 #endif
 
-zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::OpenRootNode() {
+zx::result<fbl::RefPtr<VnodeMinfs>> Minfs::OpenRootNode() {
   auto vn_or = VnodeGet(kMinfsRootIno);
   if (vn_or.is_error()) {
     FX_LOGS(ERROR) << "cannot find root inode: " << vn_or.is_error();
@@ -1353,7 +1353,7 @@ zx::status<fbl::RefPtr<VnodeMinfs>> Minfs::OpenRootNode() {
 
 #ifdef __Fuchsia__
 
-zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
   info.SetFsId(fs_id_);
@@ -1371,7 +1371,7 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
 
   const block_client::BlockDevice* device = bc_->device();
   if (device) {
-    zx::status<fs_inspect::FvmData::SizeInfo> size_info =
+    zx::result<fs_inspect::FvmData::SizeInfo> size_info =
         fs_inspect::FvmData::GetSizeInfoFromDevice(*device);
     if (size_info.is_ok()) {
       info.free_shared_pool_bytes = size_info->available_space_bytes;
@@ -1385,7 +1385,7 @@ zx::status<fs::FilesystemInfo> Minfs::GetFilesystemInfo() {
 
 #endif
 
-zx::status<> Mkfs(const MountOptions& options, Bcache* bc) {
+zx::result<> Mkfs(const MountOptions& options, Bcache* bc) {
   Superblock info;
   memset(&info, 0x00, sizeof(info));
   info.magic0 = kMinfsMagic0;
@@ -1602,7 +1602,7 @@ zx::status<> Mkfs(const MountOptions& options, Bcache* bc) {
   return bc->Sync();
 }
 
-zx::status<> Minfs::ReadDat(blk_t bno, void* data) {
+zx::result<> Minfs::ReadDat(blk_t bno, void* data) {
 #ifdef __Fuchsia__
   return bc_->Readblk(Info().dat_block + bno, data);
 #else
@@ -1615,7 +1615,7 @@ zx_status_t Minfs::ReadBlock(blk_t start_block_num, void* out_data) const {
 }
 
 #ifndef __Fuchsia__
-zx::status<> Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max,
+zx::result<> Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_max,
                             void* data) const {
   if (bno >= hard_max) {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
@@ -1628,7 +1628,7 @@ zx::status<> Minfs::ReadBlk(blk_t bno, blk_t start, blk_t soft_max, blk_t hard_m
   return bc_->Readblk(start + bno, data);
 }
 
-zx::status<std::unique_ptr<minfs::Bcache>> CreateBcacheFromFd(
+zx::result<std::unique_ptr<minfs::Bcache>> CreateBcacheFromFd(
     fbl::unique_fd fd, off_t start, off_t end, const fbl::Vector<size_t>& extent_lengths) {
   if (start >= end) {
     FX_LOGS(ERROR) << "Insufficient space allocated";
@@ -1667,7 +1667,7 @@ zx::status<std::unique_ptr<minfs::Bcache>> CreateBcacheFromFd(
   return zx::ok(std::move(bc_or.value()));
 }
 
-zx::status<uint64_t> SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,
+zx::result<uint64_t> SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t end,
                                         const fbl::Vector<size_t>& extent_lengths) {
   auto bc_or = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths);
   if (bc_or.is_error()) {
@@ -1676,7 +1676,7 @@ zx::status<uint64_t> SparseUsedDataSize(fbl::unique_fd fd, off_t start, off_t en
   return UsedDataSize(bc_or.value());
 }
 
-zx::status<uint64_t> SparseUsedInodes(fbl::unique_fd fd, off_t start, off_t end,
+zx::result<uint64_t> SparseUsedInodes(fbl::unique_fd fd, off_t start, off_t end,
                                       const fbl::Vector<size_t>& extent_lengths) {
   auto bc_or = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths);
   if (bc_or.is_error()) {
@@ -1685,7 +1685,7 @@ zx::status<uint64_t> SparseUsedInodes(fbl::unique_fd fd, off_t start, off_t end,
   return UsedInodes(bc_or.value());
 }
 
-zx::status<uint64_t> SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
+zx::result<uint64_t> SparseUsedSize(fbl::unique_fd fd, off_t start, off_t end,
                                     const fbl::Vector<size_t>& extent_lengths) {
   auto bc_or = CreateBcacheFromFd(std::move(fd), start, end, extent_lengths);
   if (bc_or.is_error()) {

@@ -34,7 +34,7 @@ zx_status_t Mount(std::unique_ptr<BlockDevice> device, const MountOptions& optio
   return ZX_OK;
 }
 
-zx::status<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::result<> StartComponent(ComponentOptions options, fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle,
                             zx::resource vmex_resource) {
   // When the loop is destroyed, it can make calls into runner, so runner *must* be destroyed after

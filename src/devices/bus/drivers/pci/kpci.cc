@@ -735,7 +735,7 @@ void KernelPciFidl::GetBti(GetBtiRequestView request, GetBtiCompleter::Sync& com
 
 zx_status_t KernelPciFidl::SetUpOutgoingDirectory(
     fidl::ServerEnd<fuchsia_io::Directory> server_end) {
-  zx::status status = outgoing_.AddProtocol(this, fidl::DiscoverableProtocolName<fpci::Device>);
+  zx::result status = outgoing_.AddProtocol(this, fidl::DiscoverableProtocolName<fpci::Device>);
   if (status.is_error()) {
     return status.status_value();
   }

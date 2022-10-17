@@ -19,7 +19,7 @@ namespace acpi_lite::testing {
 // Every address just translates to 0.
 class NullPhysMemReader : public PhysMemReader {
  public:
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
     return zx::error(ZX_ERR_OUT_OF_RANGE);
   }
 };
@@ -29,7 +29,7 @@ class EmptyPhysMemReader : public PhysMemReader {
  public:
   EmptyPhysMemReader() { empty_data_ = std::make_unique<uint8_t[]>(kMaxSupportedSize); }
 
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
     if (length >= kMaxSupportedSize) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
@@ -64,7 +64,7 @@ class FakePhysMemReader : public PhysMemReader {
     }
   }
 
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) override {
     for (const auto& region : regions_) {
       if (region.phys_addr == phys && length <= region.data.size_bytes()) {
         return zx::success(region.data.data());

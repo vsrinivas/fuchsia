@@ -26,7 +26,7 @@ class LocalDecompressorCreator {
 
   ~LocalDecompressorCreator();
 
-  static zx::status<std::unique_ptr<LocalDecompressorCreator>> Create();
+  static zx::result<std::unique_ptr<LocalDecompressorCreator>> Create();
 
   DecompressorCreatorConnector& GetDecompressorConnector() { return *connector_; }
 

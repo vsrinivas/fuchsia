@@ -19,7 +19,7 @@ AllocatedExtentIterator::AllocatedExtentIterator(NodeFinder* finder, InodePtr in
                                                  uint32_t node_index)
     : inode_(std::move(inode)), node_iterator_(finder, node_index, inode_.get()) {}
 
-zx::status<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* finder,
+zx::result<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* finder,
                                                                     uint32_t node_index) {
   auto inode = finder->GetNode(node_index);
   if (inode.is_error()) {
@@ -34,7 +34,7 @@ zx::status<AllocatedExtentIterator> AllocatedExtentIterator::Create(NodeFinder* 
 
 bool AllocatedExtentIterator::Done() const { return ExtentIndex() >= inode_->extent_count; }
 
-zx::status<const Extent*> AllocatedExtentIterator::Next() {
+zx::result<const Extent*> AllocatedExtentIterator::Next() {
   if (Done()) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
@@ -72,7 +72,7 @@ zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, uint32_
   AllocatedNodeIterator fast(finder, node_index, inode);
   AllocatedNodeIterator slow(finder, node_index, inode);
   while (!fast.Done()) {
-    zx::status<ExtentContainer*> status = fast.Next();
+    zx::result<ExtentContainer*> status = fast.Next();
     if (status.is_error()) {
       return status.status_value();
     }
@@ -95,7 +95,7 @@ zx_status_t AllocatedExtentIterator::VerifyIteration(NodeFinder* finder, uint32_
 
     // Advance the slow pointer to detct cycles.
     if (++container_count % 2 == 0) {
-      zx::status<ExtentContainer*> status = slow.Next();
+      zx::result<ExtentContainer*> status = slow.Next();
       if (status.is_error()) {
         return status.status_value();
       }
@@ -126,7 +126,7 @@ zx_status_t AllocatedExtentIterator::NextContainer() {
   // debugging use cases.
   ZX_DEBUG_ASSERT(node_index != kMaxNodeId);
 
-  zx::status<ExtentContainer*> status = node_iterator_.Next();
+  zx::result<ExtentContainer*> status = node_iterator_.Next();
   if (status.is_error()) {
     return status.status_value();
   }

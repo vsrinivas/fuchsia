@@ -42,7 +42,7 @@ void NodeConnection::Clone(CloneRequestView request, CloneCompleter::Sync& compl
 }
 
 void NodeConnection::Close(CloseCompleter::Sync& completer) {
-  zx::status result = Connection::NodeClose();
+  zx::result result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
   } else {
@@ -55,7 +55,7 @@ void NodeConnection::Query(QueryCompleter::Sync& completer) {
 }
 
 void NodeConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
-  zx::status result = Connection::NodeDescribe();
+  zx::result result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.status_value());
   } else {
@@ -116,7 +116,7 @@ void NodeConnection::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sy
 }
 
 void NodeConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  zx::status result = Connection::NodeQueryFilesystem();
+  zx::result result = Connection::NodeQueryFilesystem();
   completer.Reply(result.status_value(),
                   result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
                                        &result.value())

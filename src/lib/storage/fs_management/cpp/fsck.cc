@@ -54,7 +54,7 @@ zx_status_t FsckFat(const char* device_path, const FsckOptions& options, LaunchC
   return cb(options.as_argv_fat32(GetBinaryPath("fsck-msdosfs").c_str(), device_path), {});
 }
 
-zx::status<> FsckComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+zx::result<> FsckComponentFs(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                              const std::string& device_path, const FsckOptions& options) {
   auto device = component::Connect<fuchsia_hardware_block::Block>(device_path.c_str());
   if (device.is_error())

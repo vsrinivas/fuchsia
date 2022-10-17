@@ -18,7 +18,7 @@ namespace DynamicLibraryLoader {
 // package_fd should be an open fd for a package directory. This function will open the "lib/"
 // subdirectory automatically when creating the loader service, so it does not need ownership of
 // package_fd.
-zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Start(int package_fd, std::string name);
+zx::result<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Start(int package_fd, std::string name);
 
 }  // namespace DynamicLibraryLoader
 }  // namespace component

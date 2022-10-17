@@ -42,7 +42,7 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
   }
 
   size_t bytes_received_local;
-  zx::status result =
+  zx::result result =
       ipc->SendWithData(IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST,
                                 ModuleMsgType::LARGE_CONFIG_GET, instance_id, module_id),
                         IPC_LARGE_CONFIG_EXT(true, false, to_underlying(large_param_id),
@@ -65,7 +65,7 @@ zx_status_t LargeConfigGet(DspChannel* ipc, uint16_t module_id, uint8_t instance
 }  // namespace
 
 // Parse the module list returned from the DSP.
-zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
+zx::result<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> ParseModules(
     cpp20::span<const uint8_t> data) {
   BinaryDecoder decoder(data);
 
@@ -105,7 +105,7 @@ DspModuleController::DspModuleController(DspChannel* channel) : channel_(channel
 // Create an instance of the module "type".
 //
 // Returns the ID of the created module on success.
-zx::status<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
+zx::result<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
                                                           DspPipelineId parent_pipeline,
                                                           ProcDomain scheduling_domain,
                                                           cpp20::span<const uint8_t> data) {
@@ -116,14 +116,14 @@ zx::status<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
   }
 
   // Allocate an ID.
-  zx::status<uint8_t> instance_id = AllocateInstanceId(type);
+  zx::result<uint8_t> instance_id = AllocateInstanceId(type);
   if (!instance_id.is_ok()) {
     return zx::error(instance_id.status_value());
   }
   GLOBAL_LOG(TRACE, "CreateModule(type %u, inst %u)", type, instance_id.value());
 
   // Create the module.
-  zx::status result = channel_->SendWithData(
+  zx::result result = channel_->SendWithData(
       IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::INIT_INSTANCE,
               instance_id.value(), type),
       IPC_INIT_INSTANCE_EXT(scheduling_domain, /*core_id=*/0, parent_pipeline.id,
@@ -139,7 +139,7 @@ zx::status<DspModuleId> DspModuleController::CreateModule(DspModuleType type,
 // Create a pipeline.
 //
 // Return ths ID of the created pipeline on success.
-zx::status<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority,
+zx::result<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority,
                                                               uint16_t memory_pages,
                                                               bool low_power) {
   // Allocate a pipeline name.
@@ -151,7 +151,7 @@ zx::status<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority,
   GLOBAL_LOG(TRACE, "CreatePipeline(inst %u)", id);
 
   // Create the pipeline.
-  zx::status result = channel_->Send(IPC_CREATE_PIPELINE_PRI(id, priority, memory_pages),
+  zx::result result = channel_->Send(IPC_CREATE_PIPELINE_PRI(id, priority, memory_pages),
                                      IPC_CREATE_PIPELINE_EXT(low_power));
   if (!result.is_ok()) {
     GLOBAL_LOG(TRACE, "CreatePipeline failed: %s", result.status_string());
@@ -161,12 +161,12 @@ zx::status<DspPipelineId> DspModuleController::CreatePipeline(uint8_t priority,
 }
 
 // Connect an output pin of one module to the input pin of another.
-zx::status<> DspModuleController::BindModules(DspModuleId source_module, uint8_t src_output_pin,
+zx::result<> DspModuleController::BindModules(DspModuleId source_module, uint8_t src_output_pin,
                                               DspModuleId dest_module, uint8_t dest_input_pin) {
   GLOBAL_LOG(TRACE, "BindModules (mod %u inst %u):%u --> (mod %u, inst %u):%u", source_module.type,
              source_module.id, src_output_pin, dest_module.type, dest_module.id, dest_input_pin);
 
-  zx::status result = channel_->Send(
+  zx::result result = channel_->Send(
       IPC_PRI(MsgTarget::MODULE_MSG, MsgDir::MSG_REQUEST, ModuleMsgType::BIND, source_module.id,
               source_module.type),
       IPC_BIND_UNBIND_EXT(dest_module.type, dest_module.id, dest_input_pin, src_output_pin));
@@ -179,12 +179,12 @@ zx::status<> DspModuleController::BindModules(DspModuleId source_module, uint8_t
 }
 
 // Enable/disable the given pipeline.
-zx::status<> DspModuleController::SetPipelineState(DspPipelineId pipeline, PipelineState state,
+zx::result<> DspModuleController::SetPipelineState(DspPipelineId pipeline, PipelineState state,
                                                    bool sync_stop_start) {
   GLOBAL_LOG(TRACE, "SetPipelineStatus(pipeline=%u, state=%u, sync_stop_start=%s)", pipeline.id,
              static_cast<unsigned int>(state), sync_stop_start ? "true" : "false");
 
-  zx::status result = channel_->Send(IPC_SET_PIPELINE_STATE_PRI(pipeline.id, state),
+  zx::result result = channel_->Send(IPC_SET_PIPELINE_STATE_PRI(pipeline.id, state),
                                      IPC_SET_PIPELINE_STATE_EXT(false, sync_stop_start));
   if (!result.is_ok()) {
     GLOBAL_LOG(TRACE, "SetPipelineStatus failed: %s", result.status_string());
@@ -194,7 +194,7 @@ zx::status<> DspModuleController::SetPipelineState(DspPipelineId pipeline, Pipel
   return zx::ok();
 }
 
-zx::status<uint8_t> DspModuleController::AllocateInstanceId(DspModuleType type) {
+zx::result<uint8_t> DspModuleController::AllocateInstanceId(DspModuleType type) {
   uint8_t& instance_count = allocated_instances_[type];
   if (instance_count >= kMaxInstancesPerModule) {
     GLOBAL_LOG(ERROR, "Could not allocate more instances of given module type.");
@@ -205,7 +205,7 @@ zx::status<uint8_t> DspModuleController::AllocateInstanceId(DspModuleType type) 
   return zx::ok(std::move(result));
 }
 
-zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>>
+zx::result<std::map<fbl::String, std::unique_ptr<ModuleEntry>>>
 DspModuleController::ReadModuleDetails() {
   constexpr int kMaxModules = 64;
   uint8_t buffer[sizeof(ModulesInfo) + (kMaxModules * sizeof(ModuleEntry))];
@@ -222,7 +222,7 @@ DspModuleController::ReadModuleDetails() {
   }
 
   // Parse DSP's module list.
-  zx::status<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules =
+  zx::result<std::map<fbl::String, std::unique_ptr<ModuleEntry>>> modules =
       ParseModules(data.subspan(0, bytes_received));
   if (!modules.is_ok()) {
     GLOBAL_LOG(ERROR, "Could not parse DSP's module list");
@@ -240,13 +240,13 @@ DspModuleController::ReadModuleDetails() {
   return zx::ok(std::move(modules.value()));
 }
 
-zx::status<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
+zx::result<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
                                                std::initializer_list<DspModule> modules) {
   // Create a pipeline.
   //
   // TODO(fxbug.dev/31426): Calculate actual memory usage.
   const uint16_t pipeline_memory_pages_needed = 4;
-  zx::status<DspPipelineId> pipeline =
+  zx::result<DspPipelineId> pipeline =
       controller->CreatePipeline(/*pipeline_priority=*/0,
                                  /*pipeline_memory_pages=*/pipeline_memory_pages_needed,
                                  /*low_power=*/true);
@@ -261,7 +261,7 @@ zx::status<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
   DspModuleId prev_module;
   for (const DspModule& module : modules) {
     // Create the module.
-    zx::status<DspModuleId> id =
+    zx::result<DspModuleId> id =
         controller->CreateModule(module.type, pipeline_id, ProcDomain::LOW_LATENCY, module.data);
     if (!id.is_ok()) {
       GLOBAL_LOG(ERROR, "Failed creating module #%u.", module_count);
@@ -270,7 +270,7 @@ zx::status<DspPipelineId> CreateSimplePipeline(DspModuleController* controller,
 
     // Join it to the previous module.
     if (module_count > 0) {
-      zx::status result = controller->BindModules(prev_module, /*src_output_pin=*/0, id.value(),
+      zx::result result = controller->BindModules(prev_module, /*src_output_pin=*/0, id.value(),
                                                   /*dest_input_pin=*/0);
       if (!result.is_ok()) {
         GLOBAL_LOG(ERROR, "Failed to connect module #%u to #%u", module_count - 1, module_count);

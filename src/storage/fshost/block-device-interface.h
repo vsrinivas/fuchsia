@@ -29,10 +29,10 @@ class BlockDeviceInterface {
   // Opens a block device at the given topological path.
   // This is effectively a factory method; it is an instance method for overridability but it
   // doesn't interact with the instance.
-  virtual zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
+  virtual zx::result<std::unique_ptr<BlockDeviceInterface>> OpenBlockDevice(
       const char* topological_path) const = 0;
   // Opens a block device given a file descriptor.
-  virtual zx::status<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
+  virtual zx::result<std::unique_ptr<BlockDeviceInterface>> OpenBlockDeviceByFd(
       fbl::unique_fd fd) const = 0;
 
   // When the filesystem inside the device is mounted, this data will be inserted into the
@@ -41,7 +41,7 @@ class BlockDeviceInterface {
 
   // Attempt to extract the data out of the block device (which should be formatted as a mutable
   // filesystem, e.g. minfs).
-  virtual zx::status<Copier> ExtractData() = 0;
+  virtual zx::result<Copier> ExtractData() = 0;
 
   // Returns the format that the content appears to be.  Avoid using this unless
   // there is no other way to determine the format of the device.
@@ -65,7 +65,7 @@ class BlockDeviceInterface {
   virtual void SetFormat(fs_management::DiskFormat format) = 0;
 
   // Queries (using the block interface) for info about the underlying device.
-  virtual zx::status<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const = 0;
+  virtual zx::result<fuchsia_hardware_block::wire::BlockInfo> GetInfo() const = 0;
 
   // Queries (using the partition interface) for the instance/type GUID of the underlying device.
   // Returns a GUID with all 0 bytes on failure, normally this means the device doesn't support the
@@ -99,7 +99,7 @@ class BlockDeviceInterface {
   virtual zx_status_t MountFilesystem() = 0;
 
   // Queries the seal used to open the verity device.
-  virtual zx::status<std::string> VeritySeal() = 0;
+  virtual zx::result<std::string> VeritySeal() = 0;
 
   // Opens the block-verity device for reading.
   virtual zx_status_t OpenBlockVerityForVerifiedRead(std::string seal_hex) = 0;

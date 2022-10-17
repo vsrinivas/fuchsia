@@ -111,7 +111,7 @@ zx_status_t CacheAllocPage(vm_page_t** p, paddr_t* pa) {
     return pmm_alloc_page(PMM_ALLOC_FLAG_ANY, p, pa);
   }
 
-  zx::status result = page_cache.Allocate(1);
+  zx::result result = page_cache.Allocate(1);
   if (result.is_error()) {
     return result.error_value();
   }
@@ -147,7 +147,7 @@ void InitializePageCache(uint32_t level) {
   ASSERT(level < LK_INIT_LEVEL_THREADING);
 
   const size_t reserve_pages = 8;
-  zx::status<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
+  zx::result<page_cache::PageCache> result = page_cache::PageCache::Create(reserve_pages);
 
   ASSERT(result.is_ok());
   page_cache = ktl::move(result.value());

@@ -306,7 +306,7 @@ zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
                               hypervisor::GuestPhysicalAspace* gpa, hypervisor::TrapMap* traps,
                               zx_port_packet_t* packet) {
   zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
-  zx::status<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
+  zx::result<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   switch (trap.status_value()) {
     case ZX_ERR_NOT_FOUND:
       if (auto result = gpa->PageFault(guest_paddr); result.is_error()) {

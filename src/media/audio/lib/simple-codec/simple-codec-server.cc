@@ -501,7 +501,7 @@ void SimpleCodecServerInternal<T>::SetDaiFormat(audio_fidl::DaiFormat format,
   }
   // clang-format on
   audio_fidl::Codec_SetDaiFormat_Result result = {};
-  zx::status<CodecFormatInfo> format_info = thiz->SetDaiFormat(std::move(format2));
+  zx::result<CodecFormatInfo> format_info = thiz->SetDaiFormat(std::move(format2));
   if (!format_info.is_ok()) {
     thiz->state_.Set(std::string("Set DAI format error: ") + format_info.status_string());
     result.set_err(format_info.status_value());

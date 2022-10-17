@@ -41,7 +41,7 @@ zx_status_t map_kind_to_err(Error kind) {
   }
 }
 
-zx::status<> map_error(CResult result) {
+zx::result<> map_error(CResult result) {
   if (result.ok) {
     return zx::ok();
   }
@@ -50,7 +50,7 @@ zx::status<> map_error(CResult result) {
 
 }  // namespace
 
-zx::status<std::unique_ptr<Extractor>> Extractor::Create(fbl::unique_fd input_stream,
+zx::result<std::unique_ptr<Extractor>> Extractor::Create(fbl::unique_fd input_stream,
                                                          ExtractorOptions options,
                                                          fbl::unique_fd output_stream) {
   std::unique_ptr<Extractor> out(new Extractor());
@@ -69,23 +69,23 @@ zx::status<std::unique_ptr<Extractor>> Extractor::Create(fbl::unique_fd input_st
   return zx::ok(std::move(out));
 }
 
-zx::status<> Extractor::Add(uint64_t offset, uint64_t size, ExtentProperties properties) {
+zx::result<> Extractor::Add(uint64_t offset, uint64_t size, ExtentProperties properties) {
   return map_error(extractor_add(extractor_, offset, size, properties));
 }
 
-zx ::status<> Extractor::AddBlocks(uint64_t block_offset, uint64_t block_count,
-                                   ExtentProperties properties) {
+zx::result<> Extractor::AddBlocks(uint64_t block_offset, uint64_t block_count,
+                                  ExtentProperties properties) {
   return Add(safemath::CheckMul(block_offset, options_.alignment).ValueOrDie(),
              safemath::CheckMul(block_count, options_.alignment).ValueOrDie(), properties);
 }
 
-zx::status<> Extractor::AddBlock(uint64_t block_offset, ExtentProperties properties) {
+zx::result<> Extractor::AddBlock(uint64_t block_offset, ExtentProperties properties) {
   return AddBlocks(block_offset, 1, properties);
 }
 
-zx::status<> Extractor::Write() { return map_error(extractor_write(extractor_)); }
+zx::result<> Extractor::Write() { return map_error(extractor_write(extractor_)); }
 
-zx::status<> Extractor::Deflate(fbl::unique_fd input_stream, fbl::unique_fd output_stream,
+zx::result<> Extractor::Deflate(fbl::unique_fd input_stream, fbl::unique_fd output_stream,
                                 fbl::unique_fd verbose_stream) {
   return map_error(
       extractor_deflate(input_stream.get(), output_stream.get(), verbose_stream.get()));

@@ -61,7 +61,7 @@ fbl::String ReportReasonString(fs_management::DiskFormat format, FsManager::Repo
   }
 }
 
-zx::status<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io::Directory> root) {
+zx::result<uint64_t> GetFsId(fidl::UnownedClientEnd<fuchsia_io::Directory> root) {
   auto result = fidl::WireCall(root)->QueryFilesystem();
   if (!result.ok())
     return zx::error(result.status());
@@ -129,7 +129,7 @@ zx_status_t FsManager::Initialize(
   }
 
   for (const auto& point : mount_points) {
-    zx::status endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (endpoints_or.is_error()) {
       return endpoints_or.status_value();
     }
@@ -138,7 +138,7 @@ zx_status_t FsManager::Initialize(
     // they are queued into the channel pair and serviced when the filesystem is started.
     // Similarly, calls on the pair created by FsRootHandle, of which root_or is the client end,
     // are also queued.
-    zx::status root_or = fs_management::FsRootHandle(endpoints_or->client);
+    zx::result root_or = fs_management::FsRootHandle(endpoints_or->client);
     if (root_or.is_error()) {
       return root_or.status_value();
     }
@@ -180,8 +180,8 @@ zx_status_t FsManager::Initialize(
   return ZX_OK;
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetFsDir() {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetFsDir() {
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -234,7 +234,7 @@ void FsManager::RegisterDevicePath(MountPoint point, std::string_view device_pat
     return;
   }
 
-  zx::status root_or = GetRoot(point);
+  zx::result root_or = GetRoot(point);
   if (root_or.is_error()) {
     FX_PLOGS(ERROR, root_or.status_value()) << "Failed to get root handle for mount point";
     return;
@@ -482,7 +482,7 @@ zx_status_t FsManager::DetachMount(std::string_view name) {
   return mnt_dir_->RemoveEntry(name);
 }
 
-zx::status<std::string> FsManager::GetDevicePath(uint64_t fs_id) {
+zx::result<std::string> FsManager::GetDevicePath(uint64_t fs_id) {
   std::lock_guard guard(device_paths_lock_);
   auto iter = device_paths_.find(fs_id);
   if (iter == device_paths_.end())
@@ -491,7 +491,7 @@ zx::status<std::string> FsManager::GetDevicePath(uint64_t fs_id) {
     return zx::ok(iter->second);
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetRoot(MountPoint point) const {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> FsManager::GetRoot(MountPoint point) const {
   auto node = mount_nodes_.find(point);
   if (node == mount_nodes_.cend()) {
     return zx::error(ZX_ERR_NOT_FOUND);

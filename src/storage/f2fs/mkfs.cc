@@ -23,7 +23,7 @@ void MkfsWorker::PrintCurrentOption() {
   std::cerr << "f2fs mkfs extension list = " << mkfs_options_.extension_list << std::endl;
 }
 
-zx::status<std::unique_ptr<Bcache>> MkfsWorker::DoMkfs() {
+zx::result<std::unique_ptr<Bcache>> MkfsWorker::DoMkfs() {
   InitGlobalParameters();
 
   if (zx_status_t ret = GetDeviceInfo(); ret != ZX_OK)
@@ -128,7 +128,7 @@ zx_status_t MkfsWorker::WriteToDisk(FsBlock &buf, block_t bno) {
 #endif  // __Fuchsia__
 }
 
-zx::status<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
+zx::result<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
   uint32_t max_op = 0;
   uint32_t max_user_segments = 0;
 
@@ -998,7 +998,7 @@ zx_status_t ParseOptions(int argc, char **argv, MkfsOptions &options) {
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions &options, std::unique_ptr<Bcache> bc) {
+zx::result<std::unique_ptr<Bcache>> Mkfs(const MkfsOptions &options, std::unique_ptr<Bcache> bc) {
   MkfsWorker mkfs(std::move(bc), options);
   return mkfs.DoMkfs();
 }

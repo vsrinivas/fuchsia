@@ -42,20 +42,20 @@ class Driver : public driver::DriverBase {
   void Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
            const char* msg, va_list args);
 
-  zx::status<zx::vmo> LoadFirmware(Device* device, const char* filename, size_t* size);
+  zx::result<zx::vmo> LoadFirmware(Device* device, const char* filename, size_t* size);
   void LoadFirmwareAsync(Device* device, const char* filename, load_firmware_callback_t callback,
                          void* ctx);
 
   zx_status_t AddDevice(Device* parent, device_add_args_t* args, zx_device_t** out);
-  zx::status<zx::profile> GetSchedulerProfile(uint32_t priority, const char* name);
-  zx::status<zx::profile> GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period,
+  zx::result<zx::profile> GetSchedulerProfile(uint32_t priority, const char* name);
+  zx::result<zx::profile> GetDeadlineProfile(uint64_t capacity, uint64_t deadline, uint64_t period,
                                              const char* name);
-  zx::status<> SetProfileByRole(zx::unowned_thread thread, std::string_view role);
-  zx::status<std::string> GetVariable(const char* name);
+  zx::result<> SetProfileByRole(zx::unowned_thread thread, std::string_view role);
+  zx::result<std::string> GetVariable(const char* name);
 
   // Export a device to devfs. If this returns success, the deferred callback will remove
   // the device from devfs when it goes out of scope.
-  zx::status<fit::deferred_callback> ExportToDevfsSync(
+  zx::result<fit::deferred_callback> ExportToDevfsSync(
       fuchsia_device_fs::wire::ExportOptions options, fbl::RefPtr<fs::Vnode> dev_node,
       std::string name, std::string_view topological_path, uint32_t proto_id);
 

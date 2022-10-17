@@ -138,7 +138,7 @@ struct InstructionHeader {
   uint8_t sib;
 };
 
-zx::status<InstructionHeader> DeconstructHeader(InstructionSpan span) {
+zx::result<InstructionHeader> DeconstructHeader(InstructionSpan span) {
   if (span.empty()) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -182,7 +182,7 @@ zx::status<InstructionHeader> DeconstructHeader(InstructionSpan span) {
 // Decode an instruction used in a memory access to determine the register used
 // as a source or destination. There's no need to decode memory operands because
 // the faulting address is already known.
-zx::status<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
+zx::result<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
                                           zx_vcpu_state_t& vcpu_state) {
   if (span.empty()) {
     return zx::error(ZX_ERR_BAD_STATE);

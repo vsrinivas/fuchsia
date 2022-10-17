@@ -73,7 +73,7 @@ zx_status_t zx_msi_allocate(zx_handle_t /*root*/, uint32_t count, zx_handle_t* m
 __EXPORT
 zx_status_t zx_msi_create(zx_handle_t msi_handle, uint32_t options, uint32_t msi_id,
                           zx_handle_t vmo_hnd, size_t cap_offset, zx_handle_t* out) {
-  zx::status get_res = fake_object::FakeHandleTable().Get(msi_handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(msi_handle);
   if (!get_res.is_ok()) {
     return ZX_ERR_BAD_HANDLE;
   }

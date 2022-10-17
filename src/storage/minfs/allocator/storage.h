@@ -28,7 +28,7 @@
 
 namespace minfs {
 
-using GrowMapCallback = fit::function<zx::status<size_t>(size_t pool_size)>;
+using GrowMapCallback = fit::function<zx::result<size_t>(size_t pool_size)>;
 
 // Interface for an Allocator's underlying storage.
 class AllocatorStorage {
@@ -39,7 +39,7 @@ class AllocatorStorage {
   virtual ~AllocatorStorage() {}
 
 #ifdef __Fuchsia__
-  virtual zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) = 0;
+  virtual zx::result<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) = 0;
 #endif
 
   // Loads data from disk into |data| using |builder|.
@@ -52,7 +52,7 @@ class AllocatorStorage {
   virtual void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) = 0;
 
   // Extend the on-disk extent containing map_.
-  virtual zx::status<> Extend(PendingWork* transaction, WriteData data,
+  virtual zx::result<> Extend(PendingWork* transaction, WriteData data,
                               GrowMapCallback grow_map) = 0;
 
   // Returns the number of unallocated elements.
@@ -97,12 +97,12 @@ class PersistentStorage : public AllocatorStorage {
   ~PersistentStorage() {}
 
 #ifdef __Fuchsia__
-  zx::status<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) override;
+  zx::result<> AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* vmoid) override;
 #endif
 
   void Load(fs::BufferedOperationsBuilder* builder, storage::BlockBuffer* data) final;
 
-  zx::status<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final;
+  zx::result<> Extend(PendingWork* transaction, WriteData data, GrowMapCallback grow_map) final;
 
   uint32_t PoolAvailable() const final { return metadata_.PoolAvailable(); }
 

@@ -37,7 +37,7 @@ class MacClientInstance;
 // fuchsia.hardware.network.MacAddressing (FIDL).
 class MacInterface : public ::network::MacAddrDeviceInterface {
  public:
-  static zx::status<std::unique_ptr<MacInterface>> Create(ddk::MacAddrProtocolClient parent);
+  static zx::result<std::unique_ptr<MacInterface>> Create(ddk::MacAddrProtocolClient parent);
 
   ~MacInterface() override;
 

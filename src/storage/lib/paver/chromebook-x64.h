@@ -12,7 +12,7 @@ namespace paver {
 // DevicePartitioner implementation for ChromeOS devices.
 class CrosDevicePartitioner : public DevicePartitioner {
  public:
-  static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
+  static zx::result<std::unique_ptr<DevicePartitioner>> Initialize(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       const fbl::unique_fd& block_device);
 
@@ -20,24 +20,24 @@ class CrosDevicePartitioner : public DevicePartitioner {
 
   bool SupportsPartition(const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> AddPartition(
+  zx::result<std::unique_ptr<PartitionClient>> AddPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<std::unique_ptr<PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<PartitionClient>> FindPartition(
       const PartitionSpec& spec) const override;
 
-  zx::status<> FinalizePartition(const PartitionSpec& spec) const override;
+  zx::result<> FinalizePartition(const PartitionSpec& spec) const override;
 
-  zx::status<> WipeFvm() const override;
+  zx::result<> WipeFvm() const override;
 
-  zx::status<> InitPartitionTables() const override;
+  zx::result<> InitPartitionTables() const override;
 
-  zx::status<> WipePartitionTables() const override;
+  zx::result<> WipePartitionTables() const override;
 
-  zx::status<> ValidatePayload(const PartitionSpec& spec,
+  zx::result<> ValidatePayload(const PartitionSpec& spec,
                                cpp20::span<const uint8_t> data) const override;
 
-  zx::status<> Flush() const override { return zx::ok(); }
+  zx::result<> Flush() const override { return zx::ok(); }
 
   GptDevice* GetGpt() const { return gpt_->GetGpt(); }
 
@@ -48,7 +48,7 @@ class CrosDevicePartitioner : public DevicePartitioner {
   // Halve the size of the ChromeOS STATE partition in an attempt to (relatively) non-destructively
   // make room for Fuchsia. The minimum size of the state partition is kMinStateSize.
   // Returns true if partition was shrunk, false if it was not.
-  zx::status<bool> ShrinkCrosState() const;
+  zx::result<bool> ShrinkCrosState() const;
 
   std::unique_ptr<GptDevicePartitioner> gpt_;
   bool supports_abr_;
@@ -56,14 +56,14 @@ class CrosDevicePartitioner : public DevicePartitioner {
 
 class ChromebookX64PartitionerFactory : public DevicePartitionerFactory {
  public:
-  zx::status<std::unique_ptr<DevicePartitioner>> New(
+  zx::result<std::unique_ptr<DevicePartitioner>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
       std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class ChromebookX64AbrClientFactory : public abr::ClientFactory {
  public:
-  zx::status<std::unique_ptr<abr::Client>> New(
+  zx::result<std::unique_ptr<abr::Client>> New(
       fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) final;
 };

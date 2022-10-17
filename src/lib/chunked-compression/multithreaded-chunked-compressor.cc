@@ -78,7 +78,7 @@ class TaskQueue {
 };
 
 struct CompressFrameResponse {
-  zx::status<std::vector<uint8_t>> compressed_data;
+  zx::result<std::vector<uint8_t>> compressed_data;
   size_t frame_id;
 };
 
@@ -89,7 +89,7 @@ struct CompressFrameRequest {
   TaskQueue<CompressFrameResponse>* response_queue;
 };
 
-zx::status<std::vector<uint8_t>> CompressFrame(const CompressionParams& params,
+zx::result<std::vector<uint8_t>> CompressFrame(const CompressionParams& params,
                                                cpp20::span<const uint8_t> data, ZSTD_CCtx* ctx) {
   if (ZSTD_isError(
           ZSTD_CCtx_setParameter(ctx, ZSTD_c_compressionLevel, params.compression_level))) {
@@ -143,7 +143,7 @@ class MultithreadedChunkedCompressor::MultithreadedChunkedCompressorImpl {
     }
   }
 
-  zx::status<std::vector<uint8_t>> Compress(const CompressionParams& params,
+  zx::result<std::vector<uint8_t>> Compress(const CompressionParams& params,
                                             cpp20::span<const uint8_t> input) {
     if (!params.IsValid()) {
       return zx::error(ZX_ERR_INVALID_ARGS);
@@ -221,7 +221,7 @@ MultithreadedChunkedCompressor::MultithreadedChunkedCompressor(size_t thread_cou
 
 MultithreadedChunkedCompressor::~MultithreadedChunkedCompressor() = default;
 
-zx::status<std::vector<uint8_t>> MultithreadedChunkedCompressor::Compress(
+zx::result<std::vector<uint8_t>> MultithreadedChunkedCompressor::Compress(
     const CompressionParams& params, cpp20::span<const uint8_t> input) {
   return impl_->Compress(params, input);
 }

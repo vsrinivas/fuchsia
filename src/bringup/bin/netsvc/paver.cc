@@ -30,7 +30,7 @@ namespace netsvc {
 Paver* Paver::Get() {
   static Paver* instance_ = nullptr;
   if (instance_ == nullptr) {
-    zx::status client_end = component::Connect<fuchsia_io::Directory>("/svc");
+    zx::result client_end = component::Connect<fuchsia_io::Directory>("/svc");
     if (client_end.is_error()) {
       return nullptr;
     }
@@ -120,7 +120,7 @@ int Paver::StreamBuffer() {
     in_progress_.store(false);
   });
 
-  zx::status data_sink = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+  zx::result data_sink = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
   if (data_sink.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     exit_code_.store(data_sink.status_value());
@@ -134,7 +134,7 @@ int Paver::StreamBuffer() {
     return 0;
   }
 
-  zx::status payload_stream = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
+  zx::result payload_stream = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
   if (payload_stream.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     exit_code_.store(payload_stream.status_value());
@@ -185,7 +185,7 @@ zx_status_t ProcessWriteFirmwareResult(const WriteFirmwareResult& res, const cha
 
 zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> data_sink,
                                 fuchsia_mem::wire::Buffer buffer) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
   if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     exit_code_.store(endpoints.status_value());
@@ -296,7 +296,7 @@ zx_status_t Paver::WriteABImage(fidl::WireSyncClient<fuchsia_paver::DataSink> da
 }
 
 zx_status_t Paver::ClearSysconfig() {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::Sysconfig>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::Sysconfig>();
   if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     return endpoints.status_value();
@@ -356,14 +356,14 @@ zx_status_t Paver::OpenDataSink(fuchsia_mem::wire::Buffer buffer,
 
   fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
 
-  zx::status client_end = component::ConnectAt<fuchsia_hardware_block::Block>(
+  zx::result client_end = component::ConnectAt<fuchsia_hardware_block::Block>(
       caller.directory(), &partition_info.block_device_path[5]);
   if (client_end.is_error()) {
     fprintf(stderr, "netsvc: Unable to open %s.\n", partition_info.block_device_path);
     return client_end.status_value();
   }
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
   if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel.\n");
     return endpoints.status_value();
@@ -482,7 +482,7 @@ int Paver::MonitorBuffer() {
       break;
   };
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
   if (endpoints.is_error()) {
     fprintf(stderr, "netsvc: unable to create channel\n");
     exit_code_.store(endpoints.status_value());

@@ -64,8 +64,8 @@ class Device final : public DdkDeviceType,
   Device(zx_device_t* parent_device, Driver* parent_driver);
 
   [[nodiscard]] zx_status_t OverrideSizeFromCommandLine(const char* name, int64_t* memory_size);
-  [[nodiscard]] zx::status<std::string> GetFromCommandLine(const char* name);
-  [[nodiscard]] zx::status<bool> GetBoolFromCommandLine(const char* name, bool default_value);
+  [[nodiscard]] zx::result<std::string> GetFromCommandLine(const char* name);
+  [[nodiscard]] zx::result<bool> GetBoolFromCommandLine(const char* name, bool default_value);
   [[nodiscard]] zx_status_t GetContiguousGuardParameters(
       uint64_t* guard_bytes_out, bool* unused_pages_guarded,
       zx::duration* unused_page_check_cycle_period, bool* internal_guard_pages_out,

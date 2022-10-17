@@ -130,7 +130,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   });
 }
 
-zx::status<std::string> Directory::GetDevicePath() const {
+zx::result<std::string> Directory::GetDevicePath() const {
   return blobfs_->Device()->GetDevicePath();
 }
 

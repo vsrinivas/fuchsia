@@ -33,7 +33,7 @@ class DsiHost {
   // Map all necessary resources. This will not modify hardware state in any
   // way, and is thus safe to use when adopting a device that was initialized by
   // the bootloader.
-  static zx::status<std::unique_ptr<DsiHost>> Create(zx_device_t* parent, uint32_t panel_type);
+  static zx::result<std::unique_ptr<DsiHost>> Create(zx_device_t* parent, uint32_t panel_type);
 
   // This function sets up mipi dsi interface. It includes both DWC and AmLogic blocks
   // The DesignWare setup could technically be moved to the dw_mipi_dsi driver. However,

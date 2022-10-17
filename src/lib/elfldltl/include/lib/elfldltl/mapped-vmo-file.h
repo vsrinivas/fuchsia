@@ -41,7 +41,7 @@ class MappedVmoFile : public DirectMemory {
     return *this;
   }
 
-  zx::status<> Init(zx::unowned_vmo vmo, zx::unowned_vmar vmar = zx::vmar::root_self());
+  zx::result<> Init(zx::unowned_vmo vmo, zx::unowned_vmar vmar = zx::vmar::root_self());
 
   ~MappedVmoFile();
 

@@ -6,7 +6,7 @@
 
 namespace minfs {
 
-zx::status<> LazyReader::Read(ByteRange range, ReaderInterface* reader) {
+zx::result<> LazyReader::Read(ByteRange range, ReaderInterface* reader) {
   if (range.Length() == 0)
     return zx::ok();
 
@@ -45,8 +45,8 @@ void LazyReader::SetLoaded(BlockRange range, bool set) {
   }
 }
 
-zx::status<uint64_t> MappedFileReader::Enqueue(BlockRange range) {
-  zx::status<DeviceBlockRange> status = mapper_.Map(range);
+zx::result<uint64_t> MappedFileReader::Enqueue(BlockRange range) {
+  zx::result<DeviceBlockRange> status = mapper_.Map(range);
   if (status.is_error())
     return status.take_error();
   const DeviceBlockRange device_range = status.value();

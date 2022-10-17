@@ -155,7 +155,7 @@ int32_t RenderControl::GetFbParam(uint32_t param, int32_t default_value) {
   return (result.is_ok()) ? result.value()[0] : default_value;
 }
 
-zx::status<RenderControl::ColorBufferId> RenderControl::CreateColorBuffer(uint32_t width,
+zx::result<RenderControl::ColorBufferId> RenderControl::CreateColorBuffer(uint32_t width,
                                                                           uint32_t height,
                                                                           uint32_t format) {
   TRACE_DURATION("gfx", "RenderControl::CreateColorBuffer", "width", width, "height", height,
@@ -170,7 +170,7 @@ zx::status<RenderControl::ColorBufferId> RenderControl::CreateColorBuffer(uint32
   PipeIo::WriteSrc src[] = {{.data = ToByteSpan(cmd)}};
   auto result = pipe_io_->Call<ColorBufferId>(src, 1, true);
   return result.is_ok() ? zx::ok(result.value()[0])
-                        : zx::status<ColorBufferId>(result.take_error());
+                        : zx::result<ColorBufferId>(result.take_error());
 }
 
 zx_status_t RenderControl::OpenColorBuffer(ColorBufferId id) {
@@ -195,7 +195,7 @@ zx_status_t RenderControl::CloseColorBuffer(ColorBufferId id) {
   return pipe_io_->Write(src, true);
 }
 
-zx::status<RenderControl::RcResult> RenderControl::SetColorBufferVulkanMode(ColorBufferId id,
+zx::result<RenderControl::RcResult> RenderControl::SetColorBufferVulkanMode(ColorBufferId id,
                                                                             uint32_t mode) {
   TRACE_DURATION("gfx", "RenderControl::SetColorBufferVulkanMode", "id", id, "mode", mode);
 
@@ -206,10 +206,10 @@ zx::status<RenderControl::RcResult> RenderControl::SetColorBufferVulkanMode(Colo
 
   PipeIo::WriteSrc src[] = {{.data = ToByteSpan(cmd)}};
   auto result = pipe_io_->Call<RcResult>(src, 1, true);
-  return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
+  return result.is_ok() ? zx::ok(result.value()[0]) : zx::result<RcResult>(result.take_error());
 }
 
-zx::status<RenderControl::RcResult> RenderControl::UpdateColorBuffer(
+zx::result<RenderControl::RcResult> RenderControl::UpdateColorBuffer(
     ColorBufferId id, const fzl::PinnedVmo& pinned_vmo, uint32_t width, uint32_t height,
     uint32_t format, size_t size) {
   TRACE_DURATION("gfx", "RenderControl::UpdateColorBuffer", "size", size);
@@ -243,7 +243,7 @@ zx::status<RenderControl::RcResult> RenderControl::UpdateColorBuffer(
     return zx::ok(0);
   }
   auto result = pipe_io_->Read<RcResult>(1, true);
-  return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
+  return result.is_ok() ? zx::ok(result.value()[0]) : zx::result<RcResult>(result.take_error());
 }
 
 zx_status_t RenderControl::FbPost(ColorBufferId id) {
@@ -258,7 +258,7 @@ zx_status_t RenderControl::FbPost(ColorBufferId id) {
   return result;
 }
 
-zx::status<RenderControl::DisplayId> RenderControl::CreateDisplay() {
+zx::result<RenderControl::DisplayId> RenderControl::CreateDisplay() {
   TRACE_DURATION("gfx", "RenderControl::CreateDisplay");
 
   CreateDisplayCmd cmd = {
@@ -282,7 +282,7 @@ zx::status<RenderControl::DisplayId> RenderControl::CreateDisplay() {
   return zx::ok(result.value()[0].id);
 }
 
-zx::status<RenderControl::RcResult> RenderControl::DestroyDisplay(DisplayId display_id) {
+zx::result<RenderControl::RcResult> RenderControl::DestroyDisplay(DisplayId display_id) {
   TRACE_DURATION("gfx", "RenderControl::DestroyDisplay", "display_id", display_id);
 
   DestroyDisplayCmd cmd = {
@@ -291,10 +291,10 @@ zx::status<RenderControl::RcResult> RenderControl::DestroyDisplay(DisplayId disp
 
   PipeIo::WriteSrc src[] = {{.data = ToByteSpan(cmd)}};
   auto result = pipe_io_->Call<RcResult>(src, 1, true);
-  return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
+  return result.is_ok() ? zx::ok(result.value()[0]) : zx::result<RcResult>(result.take_error());
 }
 
-zx::status<RenderControl::RcResult> RenderControl::SetDisplayColorBuffer(DisplayId display_id,
+zx::result<RenderControl::RcResult> RenderControl::SetDisplayColorBuffer(DisplayId display_id,
                                                                          ColorBufferId id) {
   TRACE_DURATION("gfx", "RenderControl::SetDisplayColorBuffer", "display_id", display_id, "id", id);
 
@@ -305,10 +305,10 @@ zx::status<RenderControl::RcResult> RenderControl::SetDisplayColorBuffer(Display
 
   PipeIo::WriteSrc src[] = {{.data = ToByteSpan(cmd)}};
   auto result = pipe_io_->Call<RcResult>(src, 1, true);
-  return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
+  return result.is_ok() ? zx::ok(result.value()[0]) : zx::result<RcResult>(result.take_error());
 }
 
-zx::status<RenderControl::RcResult> RenderControl::SetDisplayPose(DisplayId display_id, int32_t x,
+zx::result<RenderControl::RcResult> RenderControl::SetDisplayPose(DisplayId display_id, int32_t x,
                                                                   int32_t y, uint32_t w,
                                                                   uint32_t h) {
   TRACE_DURATION("gfx", "RenderControl::SetDisplayPose", "display_id", display_id);
@@ -323,7 +323,7 @@ zx::status<RenderControl::RcResult> RenderControl::SetDisplayPose(DisplayId disp
 
   PipeIo::WriteSrc src[] = {{.data = ToByteSpan(cmd)}};
   auto result = pipe_io_->Call<RcResult>(src, 1, true);
-  return result.is_ok() ? zx::ok(result.value()[0]) : zx::status<RcResult>(result.take_error());
+  return result.is_ok() ? zx::ok(result.value()[0]) : zx::result<RcResult>(result.take_error());
 }
 
 }  // namespace goldfish

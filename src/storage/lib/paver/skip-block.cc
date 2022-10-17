@@ -31,7 +31,7 @@ namespace skipblock = fuchsia_hardware_skipblock;
 
 }  // namespace
 
-zx::status<std::unique_ptr<SkipBlockPartitionClient>> SkipBlockDevicePartitioner::FindPartition(
+zx::result<std::unique_ptr<SkipBlockPartitionClient>> SkipBlockDevicePartitioner::FindPartition(
     const Uuid& type) const {
   auto status = OpenSkipBlockPartition(devfs_root_, type, ZX_SEC(5));
   if (status.is_error()) {
@@ -41,7 +41,7 @@ zx::status<std::unique_ptr<SkipBlockPartitionClient>> SkipBlockDevicePartitioner
   return zx::ok(new SkipBlockPartitionClient(std::move(status.value())));
 }
 
-zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvmPartition() const {
+zx::result<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvmPartition() const {
   // FVM partition is managed so it should expose a normal block device.
   auto status = OpenBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE), ZX_SEC(5));
   if (status.is_error()) {
@@ -51,7 +51,7 @@ zx::status<std::unique_ptr<PartitionClient>> SkipBlockDevicePartitioner::FindFvm
   return zx::ok(new BlockPartitionClient(std::move(status.value())));
 }
 
-zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
+zx::result<> SkipBlockDevicePartitioner::WipeFvm() const {
   const uint8_t fvm_type[GPT_GUID_LEN] = GUID_FVM_VALUE;
   auto status = OpenBlockPartition(devfs_root_, std::nullopt, Uuid(fvm_type), ZX_SEC(3));
   if (status.is_error()) {
@@ -81,7 +81,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
                      static_cast<size_t>(response.value()->path.size()));
 
   {
-    auto status = zx::make_status(FvmUnbind(devfs_root_, name_buffer.data()));
+    auto status = zx::make_result(FvmUnbind(devfs_root_, name_buffer.data()));
     if (status.is_error()) {
       // The driver may refuse to bind to a corrupt volume.
       ERROR("Warning: Failed to unbind FVM: %s\n", status.status_string());
@@ -100,7 +100,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
 
   zx::channel local, remote;
   {
-    auto status = zx::make_status(zx::channel::create(0, &local, &remote));
+    auto status = zx::make_result(zx::channel::create(0, &local, &remote));
     if (status.is_error()) {
       ERROR("Warning: Failed to create channel pair: %s\n", status.status_string());
       return status.take_error();
@@ -109,7 +109,7 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
   fdio_cpp::UnownedFdioCaller caller(devfs_root_.get());
   {
     auto status =
-        zx::make_status(fdio_service_connect_at(caller.borrow_channel(), parent, remote.release()));
+        zx::make_result(fdio_service_connect_at(caller.borrow_channel(), parent, remote.release()));
     if (status.is_error()) {
       ERROR("Warning: Unable to open block parent device: %s\n", status.status_string());
       return status.take_error();
@@ -119,13 +119,13 @@ zx::status<> SkipBlockDevicePartitioner::WipeFvm() const {
   fidl::WireSyncClient<block::Ftl> client(std::move(local));
   auto result2 = client->Format();
 
-  return zx::make_status(result2.ok() ? result2.value().status : result2.status());
+  return zx::make_result(result2.ok() ? result2.value().status : result2.status());
 }
 
-zx::status<> SkipBlockPartitionClient::ReadPartitionInfo() {
+zx::result<> SkipBlockPartitionClient::ReadPartitionInfo() {
   if (!partition_info_) {
     auto result = partition_->GetPartitionInfo();
-    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+    auto status = zx::make_result(result.ok() ? result.value().status : result.status());
     if (status.is_error()) {
       ERROR("Failed to get partition info with status: %s\n", status.status_string());
       return status.take_error();
@@ -135,7 +135,7 @@ zx::status<> SkipBlockPartitionClient::ReadPartitionInfo() {
   return zx::ok();
 }
 
-zx::status<size_t> SkipBlockPartitionClient::GetBlockSize() {
+zx::result<size_t> SkipBlockPartitionClient::GetBlockSize() {
   auto status = ReadPartitionInfo();
   if (status.is_error()) {
     return status.take_error();
@@ -143,7 +143,7 @@ zx::status<size_t> SkipBlockPartitionClient::GetBlockSize() {
   return zx::ok(static_cast<size_t>(partition_info_->block_size_bytes));
 }
 
-zx::status<size_t> SkipBlockPartitionClient::GetPartitionSize() {
+zx::result<size_t> SkipBlockPartitionClient::GetPartitionSize() {
   auto status = ReadPartitionInfo();
   if (status.is_error()) {
     return status.take_error();
@@ -151,7 +151,7 @@ zx::status<size_t> SkipBlockPartitionClient::GetPartitionSize() {
   return zx::ok(partition_info_->block_size_bytes * partition_info_->partition_block_count);
 }
 
-zx::status<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   auto status = SkipBlockPartitionClient::GetBlockSize();
   if (status.is_error()) {
     return status.take_error();
@@ -159,7 +159,7 @@ zx::status<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   const size_t block_size = status.value();
 
   zx::vmo dup;
-  if (auto status = zx::make_status(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)); status.is_error()) {
+  if (auto status = zx::make_result(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)); status.is_error()) {
     ERROR("Couldn't duplicate buffer vmo\n");
     return status.take_error();
   }
@@ -173,7 +173,7 @@ zx::status<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
 
   auto result = partition_->Read(std::move(operation));
   {
-    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+    auto status = zx::make_result(result.ok() ? result.value().status : result.status());
     if (status.is_error()) {
       ERROR("Error reading partition data: %s\n", status.status_string());
       return status.take_error();
@@ -182,7 +182,7 @@ zx::status<> SkipBlockPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   return zx::ok();
 }
 
-zx::status<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
+zx::result<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   auto status = SkipBlockPartitionClient::GetBlockSize();
   if (status.is_error()) {
     return status.take_error();
@@ -190,7 +190,7 @@ zx::status<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   size_t block_size = status.value();
 
   zx::vmo dup;
-  if (auto status = zx::make_status(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)); status.is_error()) {
+  if (auto status = zx::make_result(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)); status.is_error()) {
     ERROR("Couldn't duplicate buffer vmo\n");
     return status.take_error();
   }
@@ -204,7 +204,7 @@ zx::status<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
 
   auto result = partition_->Write(std::move(operation));
   {
-    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+    auto status = zx::make_result(result.ok() ? result.value().status : result.status());
     if (status.is_error()) {
       ERROR("Error writing partition data: %s\n", status.status_string());
       return status.take_error();
@@ -213,10 +213,10 @@ zx::status<> SkipBlockPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   return zx::ok();
 }
 
-zx::status<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t offset,
+zx::result<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t offset,
                                                   size_t size) {
   zx::vmo dup;
-  if (auto status = zx::make_status(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)); status.is_error()) {
+  if (auto status = zx::make_result(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup)); status.is_error()) {
     ERROR("Couldn't duplicate buffer vmo\n");
     return status.take_error();
   }
@@ -230,7 +230,7 @@ zx::status<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t o
   };
 
   auto result = partition_->WriteBytes(std::move(operation));
-  auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+  auto status = zx::make_result(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     ERROR("Error writing partition data: %s\n", status.status_string());
     return status.take_error();
@@ -238,9 +238,9 @@ zx::status<> SkipBlockPartitionClient::WriteBytes(const zx::vmo& vmo, zx_off_t o
   return zx::ok();
 }
 
-zx::status<> SkipBlockPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+zx::result<> SkipBlockPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
-zx::status<> SkipBlockPartitionClient::Flush() { return zx::ok(); }
+zx::result<> SkipBlockPartitionClient::Flush() { return zx::ok(); }
 
 fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock> SkipBlockPartitionClient::GetChannel() {
   return component::MaybeClone(partition_.client_end(), component::AssumeProtocolComposesNode);

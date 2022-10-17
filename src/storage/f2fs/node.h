@@ -106,14 +106,14 @@ class NodeManager {
   void NodeInfoFromRawNat(NodeInfoDeprecated &ni, RawNatEntry &raw_ne);
   zx_status_t BuildNodeManager();
   void DestroyNodeManager();
-  zx::status<LockedPage> ReadNodePage(LockedPage page, nid_t nid, int type);
+  zx::result<LockedPage> ReadNodePage(LockedPage page, nid_t nid, int type);
   zx_status_t GetNodePage(nid_t nid, LockedPage *out);
 
-  zx::status<bool> IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset);
+  zx::result<bool> IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset);
   // If indices use the same node page, read the node page once and reuse it. This
   // can reduce repeated node page access overhead.
   // If |read_only| is true, it does not assign a new block address for kNullAddr.
-  zx::status<std::vector<block_t>> GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
+  zx::result<std::vector<block_t>> GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
                                                          size_t count, bool read_only = false);
 
   // If an unassigned node page is encountered while following the node path, a new node page is
@@ -123,7 +123,7 @@ class NodeManager {
   // Read-only mode of GetLockedDnodePage().
   zx_status_t FindLockedDnodePage(VnodeF2fs &vnode, pgoff_t index, LockedPage *out);
 
-  zx::status<uint32_t> GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index);
+  zx::result<uint32_t> GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index);
 
   zx_status_t RestoreNodeSummary(uint32_t segno, SummaryBlock &sum);
 
@@ -147,7 +147,7 @@ class NodeManager {
   // Caller should acquire LockType:kFileOp.
   zx_status_t RemoveInodePage(VnodeF2fs *vnode);
   // Caller should acquire LockType:kFileOp.
-  zx::status<LockedPage> NewInodePage(VnodeF2fs &new_vnode);
+  zx::result<LockedPage> NewInodePage(VnodeF2fs &new_vnode);
 
   bool IsCheckpointedNode(nid_t nid);
 
@@ -210,14 +210,14 @@ class NodeManager {
   void SetNodeAddr(NodeInfoDeprecated &ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 
-  zx::status<int32_t> GetNodePath(VnodeF2fs &vnode, pgoff_t block,
+  zx::result<int32_t> GetNodePath(VnodeF2fs &vnode, pgoff_t block,
                                   int32_t (&offset)[kMaxNodeBlockLevel],
                                   uint32_t (&noffset)[kMaxNodeBlockLevel]);
 
   // Caller should ensure node_page is locked.
   void TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page);
-  zx::status<uint32_t> TruncateDnode(VnodeF2fs &vnode, nid_t nid);
-  zx::status<uint32_t> TruncateNodes(VnodeF2fs &vnode, nid_t start_nid, uint32_t nofs, int32_t ofs,
+  zx::result<uint32_t> TruncateDnode(VnodeF2fs &vnode, nid_t nid);
+  zx::result<uint32_t> TruncateNodes(VnodeF2fs &vnode, nid_t start_nid, uint32_t nofs, int32_t ofs,
                                      int32_t depth);
   zx_status_t TruncatePartialNodes(VnodeF2fs &vnode, const Inode &ri,
                                    const int32_t (&offset)[kMaxNodeBlockLevel], int32_t depth);

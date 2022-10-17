@@ -55,7 +55,7 @@ RebootRateLimiter::RebootRateLimiter(std::string tracking_file_path, size_t back
       max_delay_(max_delay),
       tracking_file_ttl_(tracking_file_ttl) {}
 
-zx::status<bool> RebootRateLimiter::CanReboot(TimePoint timepoint) {
+zx::result<bool> RebootRateLimiter::CanReboot(TimePoint timepoint) {
   // File is empty, assume that this is first attempt. It's safe to reboot.
   if (!files::IsFile(tracking_file_path_)) {
     FX_LOGS(INFO) << "File doesn't exit at path: " << tracking_file_path_.data();
@@ -98,7 +98,7 @@ zx::status<bool> RebootRateLimiter::CanReboot(TimePoint timepoint) {
                 backoff_threshold >= std::chrono::minutes(max_delay_));
 }
 
-zx::status<> RebootRateLimiter::UpdateTrackingFile(TimePoint timepoint) {
+zx::result<> RebootRateLimiter::UpdateTrackingFile(TimePoint timepoint) {
   // Default to 0 in case no file is present.
   size_t reboot_counter = 0;
 
@@ -132,7 +132,7 @@ std::string RebootRateLimiter::SerializeLastReboot(TimePoint timepoint, size_t r
   return ss.str();
 }
 
-zx::status<std::pair<RebootRateLimiter::TimePoint, size_t>>
+zx::result<std::pair<RebootRateLimiter::TimePoint, size_t>>
 RebootRateLimiter::DeserializeLastReboot(std::string_view payload) {
   auto parts = fxl::SplitString(payload, "\n", fxl::WhiteSpaceHandling::kTrimWhitespace,
                                 fxl::SplitResult::kSplitWantAll);

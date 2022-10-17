@@ -26,7 +26,7 @@ constexpr size_t kMebibyte = kKibibyte * 1024;
 
 }  // namespace
 
-zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> SherlockPartitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "sherlock");
@@ -85,13 +85,13 @@ bool SherlockPartitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> SherlockPartitioner::AddPartition(
     const PartitionSpec& spec) const {
   ERROR("Cannot add partitions to a sherlock device\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -180,16 +180,16 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
   return zx::ok(std::move(status->partition));
 }
 
-zx::status<> SherlockPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
+zx::result<> SherlockPartitioner::WipeFvm() const { return gpt_->WipeFvm(); }
 
-zx::status<> SherlockPartitioner::InitPartitionTables() const {
+zx::result<> SherlockPartitioner::InitPartitionTables() const {
   struct Partition {
     const char* name;
     Uuid type;
     size_t min_size;
   };
 
-  const auto add_partitions = [&](cpp20::span<const Partition> partitions) -> zx::status<> {
+  const auto add_partitions = [&](cpp20::span<const Partition> partitions) -> zx::result<> {
     for (const auto& part : partitions) {
       if (auto status = gpt_->AddPartition(part.name, part.type, part.min_size, 0);
           status.is_error()) {
@@ -303,11 +303,11 @@ zx::status<> SherlockPartitioner::InitPartitionTables() const {
   return zx::ok();
 }
 
-zx::status<> SherlockPartitioner::WipePartitionTables() const {
+zx::result<> SherlockPartitioner::WipePartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> SherlockPartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> SherlockPartitioner::ValidatePayload(const PartitionSpec& spec,
                                                   cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -317,13 +317,13 @@ zx::status<> SherlockPartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> SherlockPartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> SherlockPartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return SherlockPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
-zx::status<std::unique_ptr<abr::Client>> SherlockAbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> SherlockAbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;

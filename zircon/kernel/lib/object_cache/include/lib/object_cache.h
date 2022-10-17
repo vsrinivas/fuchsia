@@ -60,8 +60,8 @@
 //     // containing it.
 //     object_cache::ObjectCache<Child> allocator;
 //
-//     zx::status<fbl::RefPtr<Child>> Allocate() {
-//       zx::status result = allocator.Allocate(fbl::RefPtr{this});
+//     zx::result<fbl::RefPtr<Child>> Allocate() {
+//       zx::result result = allocator.Allocate(fbl::RefPtr{this});
 //       if (result.is_error()) {
 //         return result.take_error();
 //       }
@@ -89,12 +89,12 @@ namespace object_cache {
 struct DefaultAllocator {
   static constexpr size_t kSlabSize = PAGE_SIZE;
 
-  static zx::status<void*> Allocate() {
+  static zx::result<void*> Allocate() {
     paddr_t paddr = 0;
     vm_page_t* vm_page;
     const zx_status_t page_alloc_status = pmm_alloc_page(PMM_ALLOC_FLAG_ANY, &vm_page, &paddr);
     if (page_alloc_status != ZX_OK) {
-      return zx::error_status(page_alloc_status);
+      return zx::error_result(page_alloc_status);
     }
 
     vm_page->set_state(vm_page_state::SLAB);
@@ -226,13 +226,13 @@ class ObjectCache<T, Option::Single, Allocator> {
   // arguments. Returns a pointer to the constructed object as a unique pointer.
   // If the object is ref counted it is not yet adopted.
   template <typename... Args>
-  EnableIfConstructible<zx::status<PtrType>, Args...> Allocate(Args&&... args) TA_EXCL(lock_) {
+  EnableIfConstructible<zx::result<PtrType>, Args...> Allocate(Args&&... args) TA_EXCL(lock_) {
     LocalTraceDuration<Basic> trace{"ObjectCache::Allocate"_stringref};
     DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
     AutoPreemptDisabler preempt_disable;
 
     while (true) {
-      zx::status<SlabPtr> slab = GetSlab();
+      zx::result<SlabPtr> slab = GetSlab();
       if (slab.is_error()) {
         return slab.take_error();
       }
@@ -241,7 +241,7 @@ class ObjectCache<T, Option::Single, Allocator> {
       // thread that is either filling or releasing a slab. Retry on another
       // slab until allocation succeeds or slab allocation fails due to
       // insufficient memory.
-      zx::status<Entry*> object = slab->Allocate();
+      zx::result<Entry*> object = slab->Allocate();
       if (object.is_ok()) {
         return zx::ok(object.value()->ToObject(ktl::forward<Args>(args)...));
       }
@@ -409,7 +409,7 @@ class ObjectCache<T, Option::Single, Allocator> {
 
     // Allocates an entry from the slab and moves the slab to the appropriate
     // list in the cache. The caller must hold a reference to this slab.
-    zx::status<Entry*> Allocate() {
+    zx::result<Entry*> Allocate() {
       LocalTraceDuration<Detail> trace{"Slab::Allocate"_stringref};
 
       Guard<Mutex> slab_guard{&control.lock};
@@ -419,7 +419,7 @@ class ObjectCache<T, Option::Single, Allocator> {
       // this slab between releasing the object cache lock in GetSlab and
       // acquiring the slab lock here.
       if (available_objects() == 0) {
-        return zx::error_status(ZX_ERR_NO_MEMORY);
+        return zx::error_result(ZX_ERR_NO_MEMORY);
       }
 
       Guard<Mutex> object_cache_guard{&control.object_cache->lock_};
@@ -430,7 +430,7 @@ class ObjectCache<T, Option::Single, Allocator> {
       // to the cache, however, there is a good chance that another partial slab
       // exists that would reduce fragmentation.
       if (!InContainer()) {
-        return zx::error_status(ZX_ERR_NO_MEMORY);
+        return zx::error_result(ZX_ERR_NO_MEMORY);
       }
 
       const bool was_empty = is_empty();
@@ -511,7 +511,7 @@ class ObjectCache<T, Option::Single, Allocator> {
 
   // Returns a reference to a slab with at least one available entry. Allocates
   // a new slab if no slabs have available entries.
-  zx::status<SlabPtr> GetSlab() TA_EXCL(lock_) {
+  zx::result<SlabPtr> GetSlab() TA_EXCL(lock_) {
     LocalTraceDuration<Detail> trace{"ObjectCache::GetSlab"_stringref};
     Guard<Mutex> guard{&lock_};
 
@@ -524,10 +524,10 @@ class ObjectCache<T, Option::Single, Allocator> {
   }
 
   // Allocates a new slab and adds it to the empty list.
-  zx::status<Slab*> AllocateSlab() TA_REQ(lock_) {
+  zx::result<Slab*> AllocateSlab() TA_REQ(lock_) {
     LocalTraceDuration<Detail> trace{"ObjectCache::AllocateSlab"_stringref};
 
-    zx::status<void*> result = Allocator::Allocate();
+    zx::result<void*> result = Allocator::Allocate();
     if (result.is_ok()) {
       Allocator::CountSlabAllocation();
 
@@ -602,12 +602,12 @@ class ObjectCache<T, Option::PerCpu, Allocator> {
   // Creates a per-CPU ObjectCache with the given slab reservation value. The
   // reserve value applies to each per-CPU cache independently. Reserve slabs
   // are not immediately allocated.
-  static zx::status<ObjectCache> Create(size_t reserve_slabs) {
+  static zx::result<ObjectCache> Create(size_t reserve_slabs) {
     const size_t processor_count = internal::GetProcessorCount();
     fbl::AllocChecker checker;
     ktl::unique_ptr<CpuCache[]> per_cpu_caches{new (&checker) CpuCache[processor_count]};
     if (!checker.check()) {
-      return zx::error_status(ZX_ERR_NO_MEMORY);
+      return zx::error_result(ZX_ERR_NO_MEMORY);
     }
 
     for (size_t i = 0; i < processor_count; i++) {
@@ -624,7 +624,7 @@ class ObjectCache<T, Option::PerCpu, Allocator> {
   // to the constructed object as a unique pointer. If the object is ref counted
   // it is not yet adopted.
   template <typename... Args>
-  EnableIfConstructible<zx::status<PtrType>, Args...> Allocate(Args&&... args) {
+  EnableIfConstructible<zx::result<PtrType>, Args...> Allocate(Args&&... args) {
     DEBUG_ASSERT(cpu_caches_ != nullptr);
     DEBUG_ASSERT(Thread::Current::memory_allocation_state().IsEnabled());
 

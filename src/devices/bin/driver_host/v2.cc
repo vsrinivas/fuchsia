@@ -26,7 +26,7 @@ using namespace fuchsia_driver_framework;
 void internal::DriverHostControllerConnection::Start(StartRequestView request,
                                                      StartCompleter::Sync& completer) {
   auto callback = [this, request = std::move(request->driver),
-                   completer = completer.ToAsync()](zx::status<dfv2::LoadedDriver> loaded) mutable {
+                   completer = completer.ToAsync()](zx::result<dfv2::LoadedDriver> loaded) mutable {
     if (loaded.is_error()) {
       completer.Close(loaded.error_value());
     }

@@ -207,7 +207,7 @@ zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Dri
   return ZX_OK;
 }
 
-zx::status<zx::vmo> DriverToVmo(const Driver* driver) {
+zx::result<zx::vmo> DriverToVmo(const Driver* driver) {
   // If we haven't cached the vmo, load it now.
   if (driver->dso_vmo == ZX_HANDLE_INVALID) {
     zx::vmo vmo;
@@ -278,7 +278,7 @@ Coordinator::Coordinator(CoordinatorConfig config, InspectManager* inspect_manag
                                                fidl::ClientEnd<fio::Directory>())),
       devfs_(root_device_->self, root_device_.get(),
              [this]() {
-               zx::status diagnostics_client = inspect_manager_->Connect();
+               zx::result diagnostics_client = inspect_manager_->Connect();
                ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
                return std::move(diagnostics_client.value());
              }()),
@@ -418,7 +418,7 @@ zx_status_t Coordinator::LibnameToVmo(const fbl::String& libname, zx::vmo* out_v
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::status result = DriverToVmo(drv);
+  zx::result result = DriverToVmo(drv);
   if (result.is_error()) {
     return result.error_value();
   }
@@ -902,7 +902,7 @@ void Coordinator::GetDeviceInfo(GetDeviceInfoRequestView request,
     ZX_ASSERT(root_node_opt.has_value());
     Devnode& root_node = root_node_opt.value();
     for (const auto& device_path : request->device_filter) {
-      zx::status dn = root_node.walk(device_path.get());
+      zx::result dn = root_node.walk(device_path.get());
       if (dn.is_error()) {
         request->iterator.Close(dn.status_value());
         return;

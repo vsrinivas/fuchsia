@@ -18,7 +18,7 @@ struct ValidatedCompositeInfo {
   std::string url;
 };
 
-zx::status<ValidatedCompositeInfo> GetValidatedCompositeInfo(
+zx::result<ValidatedCompositeInfo> GetValidatedCompositeInfo(
     std::string_view node_name,
     const fuchsia_driver_index::wire::MatchedCompositeInfo& composite_info) {
   if (!composite_info.has_node_index() || !composite_info.has_num_nodes()) {
@@ -48,7 +48,7 @@ CompositeNodeManager::CompositeNodeManager(async_dispatcher_t* dispatcher,
                                            NodeManager* driver_binder)
     : dispatcher_(dispatcher), node_manager_(driver_binder) {}
 
-zx::status<CompositeNodeManager::ParentSetIterator> CompositeNodeManager::AcquireCompositeParentSet(
+zx::result<CompositeNodeManager::ParentSetIterator> CompositeNodeManager::AcquireCompositeParentSet(
     std::string_view node_name, const fdi::wire::MatchedCompositeInfo& composite_info) {
   // Ensure that the composite_info has all necessary fields on it.
   auto validated_result = GetValidatedCompositeInfo(node_name, composite_info);
@@ -78,7 +78,7 @@ zx::status<CompositeNodeManager::ParentSetIterator> CompositeNodeManager::Acquir
                                                 valid_composite_info.num_nodes));
 }
 
-zx::status<Node*> CompositeNodeManager::HandleMatchedCompositeInfo(
+zx::result<Node*> CompositeNodeManager::HandleMatchedCompositeInfo(
     Node& node, const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver) {
   auto parent_set_result = AcquireCompositeParentSet(node.name(), matched_driver);
   if (parent_set_result.is_error()) {

@@ -20,7 +20,7 @@ class MacAddrDeviceInterface {
  public:
   virtual ~MacAddrDeviceInterface() = default;
   // Creates a new MacAddrDeviceInterface that is bound to the provided parent.
-  static zx::status<std::unique_ptr<MacAddrDeviceInterface>> Create(
+  static zx::result<std::unique_ptr<MacAddrDeviceInterface>> Create(
       ddk::MacAddrProtocolClient parent);
 
   // Binds the request channel req to this MacAddrDeviceInterface. Requests will be handled on the

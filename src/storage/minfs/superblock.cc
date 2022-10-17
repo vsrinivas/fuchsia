@@ -23,7 +23,7 @@ SuperblockManager::SuperblockManager(const Superblock& info, fzl::OwnedVmoMapper
     : mapping_(std::move(mapper)) {}
 
 // static
-zx::status<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(
+zx::result<std::unique_ptr<SuperblockManager>> SuperblockManager::Create(
     block_client::BlockDevice* device, const Superblock& info, uint32_t max_blocks,
     IntegrityCheck checks) {
   if (checks == IntegrityCheck::kAll) {

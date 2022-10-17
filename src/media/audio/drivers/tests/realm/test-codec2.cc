@@ -19,7 +19,7 @@ class Test : public SimpleCodecServer {
 
  protected:
   // Implementation for SimpleCodecServer.
-  zx::status<DriverIds> Initialize() override {
+  zx::result<DriverIds> Initialize() override {
     return zx::ok(DriverIds{
         .vendor_id = 1,
         .device_id = 2,
@@ -36,7 +36,7 @@ class Test : public SimpleCodecServer {
   DaiSupportedFormats GetDaiFormats() override {
     return {};  // No valid DAI formats returned to test drivers/configurator handling.
   }
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     return zx::ok(CodecFormatInfo{});
   }
   GainFormat GetGainFormat() override { return {}; }

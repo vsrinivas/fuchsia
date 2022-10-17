@@ -52,7 +52,7 @@ class ProfileManager {
   // new profile using |create_fn|.
   template <typename T>
   zx_status_t CreateAndApplyProfile(std::unordered_map<T, zx::profile>* cache, T key,
-                                    std::function<zx::status<zx::profile>(T)> create_fn,
+                                    std::function<zx::result<zx::profile>(T)> create_fn,
                                     const zx::thread& thread);
 
   fuchsia::scheduler::ProfileProviderSyncPtr profile_provider_;
@@ -71,7 +71,7 @@ zx::unowned<zx::thread> HandleFromThread(std::thread* thread);
 template <typename T>
 zx_status_t ProfileManager::CreateAndApplyProfile(
     std::unordered_map<T, zx::profile>* cache, T key,
-    std::function<zx::status<zx::profile>(T)> create_fn, const zx::thread& thread) {
+    std::function<zx::result<zx::profile>(T)> create_fn, const zx::thread& thread) {
   std::lock_guard<std::mutex> guard(mutex_);
 
   // If we already have a profile for this priority, just use that.
@@ -81,7 +81,7 @@ zx_status_t ProfileManager::CreateAndApplyProfile(
   }
 
   // Create a profile.
-  zx::status<zx::profile> profile = create_fn(key);
+  zx::result<zx::profile> profile = create_fn(key);
   if (profile.is_error()) {
     return profile.error_value();
   }

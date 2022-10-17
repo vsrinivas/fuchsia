@@ -27,7 +27,7 @@ zx_status_t CheckDataPage(F2fs *fs, pgoff_t data_blkaddr, uint32_t index) {
   return ret;
 }
 
-zx::status<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page) {
+zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page) {
   pgoff_t block_count = 0, start_index = 0, checked = 0;
 
   if (IsInode(node_page)) {
@@ -52,7 +52,7 @@ zx::status<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page) {
   return zx::ok(checked);
 }
 
-zx::status<fbl::RefPtr<VnodeF2fs>> CreateFileAndWritePages(Dir *dir_vnode,
+zx::result<fbl::RefPtr<VnodeF2fs>> CreateFileAndWritePages(Dir *dir_vnode,
                                                            std::string_view file_name,
                                                            pgoff_t page_count, uint32_t signiture) {
   fbl::RefPtr<fs::Vnode> file_fs_vnode;

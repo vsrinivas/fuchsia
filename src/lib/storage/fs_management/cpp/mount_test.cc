@@ -78,7 +78,7 @@ class RamdiskTestFixture : public testing::Test {
   }
 
   // Mounts a minfs formatted partition to the desired point.
-  zx::status<std::pair<fs_management::StartedSingleVolumeFilesystem, NamespaceBinding>> MountMinfs(
+  zx::result<std::pair<fs_management::StartedSingleVolumeFilesystem, NamespaceBinding>> MountMinfs(
       bool read_only) const {
     MountOptions options;
     options.readonly = read_only;

@@ -442,7 +442,7 @@ zx_status_t WriteProviderInfoMetadataRecord(Writer* writer, uint32_t provider_id
       MetadataRecordFields::MetadataType::Make(ToUnderlyingType(MetadataType::kProviderInfo)) |
       ProviderInfoMetadataRecordFields::Id::Make(provider_id) |
       ProviderInfoMetadataRecordFields::NameLength::Make(name_length);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteBytes(name, name_length);
     res->Commit();
@@ -466,7 +466,7 @@ zx_status_t WriteProviderSectionMetadataRecord(Writer* writer, uint32_t provider
       MakeHeader(RecordType::kMetadata, record_size) |
       MetadataRecordFields::MetadataType::Make(ToUnderlyingType(MetadataType::kProviderSection)) |
       ProviderSectionMetadataRecordFields::Id::Make(provider_id);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->Commit();
   }
@@ -491,7 +491,7 @@ zx_status_t WriteProviderEventMetadataRecord(Writer* writer, uint32_t provider_i
       MetadataRecordFields::MetadataType::Make(ToUnderlyingType(MetadataType::kProviderEvent)) |
       ProviderEventMetadataRecordFields::Id::Make(provider_id) |
       ProviderEventMetadataRecordFields::Event::Make(event_id);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->Commit();
   }
@@ -506,7 +506,7 @@ zx_status_t WriteProviderEventMetadataRecord(Writer* writer, uint32_t provider_i
 template <typename Writer, internal::EnableIfWriter<Writer> = 0>
 zx_status_t WriteMagicNumberRecord(Writer* writer) {
   uint64_t header = 0x0016547846040010;
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->Commit();
   }
@@ -523,7 +523,7 @@ template <typename Writer, internal::EnableIfWriter<Writer> = 0>
 zx_status_t WriteInitializationRecord(Writer* writer, zx_ticks_t ticks_per_second) {
   const WordSize record_size(2);
   uint64_t header = MakeHeader(RecordType::kInitialization, record_size);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(ticks_per_second);
     res->Commit();
@@ -543,7 +543,7 @@ zx_status_t WriteStringRecord(Writer* writer, uint16_t index, const char* string
   uint64_t header = MakeHeader(RecordType::kString, record_size) |
                     fxt::StringRecordFields::StringIndex::Make(index) |
                     fxt::StringRecordFields::StringLength::Make(string_length);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteBytes(string, string_length);
     res->Commit();
@@ -562,7 +562,7 @@ zx_status_t WriteThreadRecord(Writer* writer, uint16_t index, zx_koid_t process_
   const WordSize record_size(3);
   uint64_t header = MakeHeader(RecordType::kThread, record_size) |
                     fxt::ThreadRecordFields::ThreadIndex::Make(index);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(process_koid);
     res->WriteWord(thread_koid);
@@ -643,7 +643,7 @@ zx_status_t WriteZeroWordEventRecord(Writer* writer, uint64_t event_time,
                                      const Argument<arg_types, ref_types>&... args) {
   uint64_t header =
       internal::MakeEventHeader(eventType, thread_ref, category_ref, name_ref, args...);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     fxt::internal::WriteEventRecord<Writer>(*res, event_time, thread_ref, category_ref, name_ref,
                                             args...);
@@ -664,7 +664,7 @@ zx_status_t WriteOneWordEventRecord(Writer* writer, uint64_t event_time,
                                     const Argument<arg_types, ref_types>&... args) {
   uint64_t header =
       internal::MakeEventHeader(eventType, thread_ref, category_ref, name_ref, args...);
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     fxt::internal::WriteEventRecord<Writer>(*res, event_time, thread_ref, category_ref, name_ref,
                                             args...);
@@ -887,7 +887,7 @@ zx_status_t WriteBlobRecord(Writer* writer, const StringRef<name_type>& blob_nam
                     fxt::BlobRecordFields::BlobSize::Make(num_bytes) |
                     fxt::BlobRecordFields::BlobType::Make(ToUnderlyingType(type));
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     blob_name.Write(*res);
     res->WriteBytes(bytes, num_bytes);
@@ -918,7 +918,7 @@ zx_status_t WriteUserspaceObjectRecord(Writer* writer, uintptr_t pointer,
       fxt::UserspaceObjectRecordFields::NameStringRef::Make(name_arg.HeaderEntry()) |
       fxt::UserspaceObjectRecordFields::ArgumentCount::Make(sizeof...(args));
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(pointer);
     thread_arg.Write(*res);
@@ -949,7 +949,7 @@ zx_status_t WriteKernelObjectRecord(Writer* writer, zx_koid_t koid, zx_obj_type_
                     fxt::KernelObjectRecordFields::NameStringRef::Make(name_arg.HeaderEntry()) |
                     fxt::KernelObjectRecordFields::ArgumentCount::Make(sizeof...(args));
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(koid);
     name_arg.Write(*res);
@@ -985,7 +985,7 @@ zx_status_t WriteContextSwitchRecord(Writer* writer, uint64_t event_time, uint8_
       fxt::ContextSwitchRecordFields::OutgoingThreadPriority::Make(outgoing_thread_priority) |
       fxt::ContextSwitchRecordFields::IncomingThreadPriority::Make(incoming_thread_priority);
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(event_time);
     outgoing_thread.Write(*res);
@@ -1010,7 +1010,7 @@ zx_status_t WriteLogRecord(Writer* writer, uint64_t event_time,
                     fxt::LogRecordFields::LogMessageLength::Make(log_message_length) |
                     fxt::LogRecordFields::ThreadRef::Make(thread_arg.HeaderEntry());
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(event_time);
     thread_arg.Write(*res);
@@ -1050,7 +1050,7 @@ zx_status_t WriteLargeBlobRecordWithMetadata(Writer* writer, uint64_t timestamp,
       BlobFormatEventFields::ArgumentCount::Make(sizeof...(args)) |
       BlobFormatEventFields::ThreadRef::Make(thread_ref.HeaderEntry());
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(blob_header);
     category_ref.Write(*res);
@@ -1090,7 +1090,7 @@ zx_status_t WriteLargeBlobRecordWithNoMetadata(Writer* writer,
       BlobFormatAttachmentFields::CategoryStringRef::Make(category_ref.HeaderEntry()) |
       BlobFormatAttachmentFields::NameStringRef::Make(name_ref.HeaderEntry());
 
-  zx::status<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
+  zx::result<typename internal::WriterTraits<Writer>::Reservation> res = writer->Reserve(header);
   if (res.is_ok()) {
     res->WriteWord(blob_header);
     category_ref.Write(*res);

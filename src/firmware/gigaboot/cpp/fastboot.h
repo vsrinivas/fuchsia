@@ -27,15 +27,15 @@ class Fastboot : public fastboot::FastbootBase {
   bool IsContinue() { return continue_; }
 
  private:
-  zx::status<> ProcessCommand(std::string_view cmd, fastboot::Transport *transport) override;
+  zx::result<> ProcessCommand(std::string_view cmd, fastboot::Transport *transport) override;
   void DoClearDownload() override;
-  zx::status<void *> GetDownloadBuffer(size_t total_download_size) override;
+  zx::result<void *> GetDownloadBuffer(size_t total_download_size) override;
   AbrOps GetAbrOps() { return GetAbrOpsFromZirconBootOps(&zb_ops_); }
 
   // A function to call to determine the value of a variable.
   // Variables with constant, i.e. compile-time values should instead
   // define their value via the string variant.
-  using VarFunc = zx::status<> (Fastboot::*)(const CommandArgs &, fastboot::Transport *);
+  using VarFunc = zx::result<> (Fastboot::*)(const CommandArgs &, fastboot::Transport *);
 
   struct VariableEntry {
     std::string_view name;
@@ -46,27 +46,27 @@ class Fastboot : public fastboot::FastbootBase {
 
   struct CommandCallbackEntry {
     std::string_view name;
-    zx::status<> (Fastboot::*cmd)(std::string_view, fastboot::Transport *);
+    zx::result<> (Fastboot::*cmd)(std::string_view, fastboot::Transport *);
   };
 
   cpp20::span<CommandCallbackEntry> GetCommandCallbackTable();
 
-  zx::status<> GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *);
-  zx::status<> GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *);
-  zx::status<> GetVarSlotLastSetActive(const CommandArgs &, fastboot::Transport *);
-  zx::status<> GetVarSlotRetryCount(const CommandArgs &, fastboot::Transport *);
-  zx::status<> GetVarSlotSuccessful(const CommandArgs &, fastboot::Transport *);
-  zx::status<> GetVarSlotUnbootable(const CommandArgs &, fastboot::Transport *);
+  zx::result<> GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *);
+  zx::result<> GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *);
+  zx::result<> GetVarSlotLastSetActive(const CommandArgs &, fastboot::Transport *);
+  zx::result<> GetVarSlotRetryCount(const CommandArgs &, fastboot::Transport *);
+  zx::result<> GetVarSlotSuccessful(const CommandArgs &, fastboot::Transport *);
+  zx::result<> GetVarSlotUnbootable(const CommandArgs &, fastboot::Transport *);
 
-  zx::status<> GetVar(std::string_view cmd, fastboot::Transport *transport);
-  zx::status<> Flash(std::string_view cmd, fastboot::Transport *transport);
-  zx::status<> Continue(std::string_view cmd, fastboot::Transport *transport);
-  zx::status<> DoReboot(RebootMode reboot_mode, std::string_view cmd,
+  zx::result<> GetVar(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> Flash(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> Continue(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> DoReboot(RebootMode reboot_mode, std::string_view cmd,
                         fastboot::Transport *transport);
-  zx::status<> Reboot(std::string_view cmd, fastboot::Transport *transport);
-  zx::status<> RebootBootloader(std::string_view cmd, fastboot::Transport *transport);
-  zx::status<> RebootRecovery(std::string_view cmd, fastboot::Transport *transport);
-  zx::status<> SetActive(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> Reboot(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> RebootBootloader(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> RebootRecovery(std::string_view cmd, fastboot::Transport *transport);
+  zx::result<> SetActive(std::string_view cmd, fastboot::Transport *transport);
 
   cpp20::span<uint8_t> download_buffer_;
   ZirconBootOps zb_ops_;

@@ -74,7 +74,7 @@ class MockTransactionManager : public TransactionManager, public block_client::B
   // FIFO protocol.
   zx_status_t FifoTransaction(block_fifo_request_t* requests, size_t count) final;
 
-  zx::status<std::string> GetDevicePath() const final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+  zx::result<std::string> GetDevicePath() const final { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
   zx_status_t BlockGetInfo(fuchsia_hardware_block_BlockInfo* out_info) const final {
     return ZX_ERR_NOT_SUPPORTED;

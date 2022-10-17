@@ -159,7 +159,7 @@ TEST_F(DecompressorSandboxTest, ChunkedPartialDecompression) {
   size_t total_size = 0;
   size_t iterations = 0;
   while (total_size < kDataSize) {
-    zx::status<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(
+    zx::result<CompressionMapping> mapping_or = local_decompressor->MappingForDecompressedRange(
         total_size, 1, std::numeric_limits<size_t>::max());
     ASSERT_TRUE(mapping_or.is_ok());
     CompressionMapping mapping = mapping_or.value();

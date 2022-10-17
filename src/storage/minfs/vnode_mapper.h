@@ -33,14 +33,14 @@ class VnodeIndirectMapper : public MapperInterface {
  public:
   explicit VnodeIndirectMapper(VnodeMinfs* vnode) : vnode_(*vnode) {}
 
-  [[nodiscard]] zx::status<DeviceBlockRange> Map(BlockRange range) override;
+  [[nodiscard]] zx::result<DeviceBlockRange> Map(BlockRange range) override;
 
-  [[nodiscard]] zx::status<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
+  [[nodiscard]] zx::result<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
                                                          bool* allocated) override;
 
  private:
   // Returns a view into the indirect file for the blocks in |range|.
-  zx::status<BufferView<blk_t>> GetView(PendingWork* transaction, BlockRange range);
+  zx::result<BufferView<blk_t>> GetView(PendingWork* transaction, BlockRange range);
 
   VnodeMinfs& vnode_;
 };
@@ -60,16 +60,16 @@ class VnodeMapper : public MapperInterface {
 
   // MapperInterface:
 
-  zx::status<DeviceBlockRange> Map(BlockRange range) override;
+  zx::result<DeviceBlockRange> Map(BlockRange range) override;
 
-  zx::status<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange file_range,
+  zx::result<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange file_range,
                                            bool* allocated) override {
     // All allocations for Minfs vnodes are done elsewhere.
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
 
   // A convenience function that does the same as Map but returns a blk_t.
-  [[nodiscard]] zx::status<std::pair<blk_t, uint64_t>> MapToBlk(BlockRange range);
+  [[nodiscard]] zx::result<std::pair<blk_t, uint64_t>> MapToBlk(BlockRange range);
 
  private:
   VnodeMinfs& vnode_;
@@ -113,7 +113,7 @@ class VnodeIterator {
   // Initialize the iterator so that it is pointing at file_block. |transaction| can be nullptr in
   // which case the returned iterator is read-only. The iterator is left in an undefined state if
   // Init fails (except that it is safe to destroy).
-  [[nodiscard]] zx::status<> Init(VnodeMapper* mapper, PendingWork* transaction,
+  [[nodiscard]] zx::result<> Init(VnodeMapper* mapper, PendingWork* transaction,
                                   uint64_t file_block);
 
   // Returns the file block that the iterator is currently located at.
@@ -126,7 +126,7 @@ class VnodeIterator {
 
   // Sets the target block. The iterator will need to be flushed after calling this (by calling the
   // Flush method).
-  [[nodiscard]] zx::status<> SetBlk(blk_t block) { return SetBlk(levels_.data(), block); }
+  [[nodiscard]] zx::result<> SetBlk(blk_t block) { return SetBlk(levels_.data(), block); }
 
   // Returns the length in blocks of a contiguous range at most |max_blocks|. For
   // efficiency/simplicity reasons, it might return fewer than there actually are.
@@ -135,14 +135,14 @@ class VnodeIterator {
 
   // Flushes any changes that may have been made. This is a no-op if there are no changes or
   // this iterator is read-only.
-  [[nodiscard]] zx::status<> Flush();
+  [[nodiscard]] zx::result<> Flush();
 
   // Advances the iterator by |advance| blocks. This will also flush the iterator first if
   // necessary.
-  [[nodiscard]] zx::status<> Advance(uint64_t advance = 1);
+  [[nodiscard]] zx::result<> Advance(uint64_t advance = 1);
 
  private:
-  using ViewGetter = fit::function<zx::status<BufferView<blk_t>>(PendingWork*, VnodeMinfs* vnode,
+  using ViewGetter = fit::function<zx::result<BufferView<blk_t>>(PendingWork*, VnodeMinfs* vnode,
                                                                  BlockPointerRange)>;
 
   // Level contains all the information required to manage block pointers at one particular
@@ -178,18 +178,18 @@ class VnodeIterator {
   // the implementation file for more detail.
   static constexpr int kMaxLevels = 3;
 
-  zx::status<> InitializeLevel(int level, BlockPointerRange range, uint64_t block,
+  zx::result<> InitializeLevel(int level, BlockPointerRange range, uint64_t block,
                                ViewGetter view_getter);
-  zx::status<> InitializeIndirectLevel(int level, uint64_t relative_block);
+  zx::result<> InitializeIndirectLevel(int level, uint64_t relative_block);
 
   // Flushes the given level if there are any changes.
-  [[nodiscard]] zx::status<> FlushLevel(int level);
+  [[nodiscard]] zx::result<> FlushLevel(int level);
 
   // Finds a contiguous run of blocks, but not necessarily the longest.
   uint64_t ComputeContiguousBlockCount() const;
 
   // Sets a block pointer in the given level.
-  zx::status<> SetBlk(Level* level, blk_t block);
+  zx::result<> SetBlk(Level* level, blk_t block);
 
   // The owning mapper.
   VnodeMapper* mapper_ = nullptr;

@@ -43,45 +43,45 @@ class FlashmapPartitionClient : public PartitionClient {
         cros_acpi_(std::move(cros_acpi)),
         fwparam_(std::move(fwparam)) {}
 
-  static zx::status<std::unique_ptr<FlashmapPartitionClient>> Create(
+  static zx::result<std::unique_ptr<FlashmapPartitionClient>> Create(
       const fbl::unique_fd& devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       zx::duration timeout);
 
   // Helper for creating partition client in tests.
-  static zx::status<std::unique_ptr<FlashmapPartitionClient>> CreateWithClients(
+  static zx::result<std::unique_ptr<FlashmapPartitionClient>> CreateWithClients(
       fidl::ClientEnd<fuchsia_nand_flashmap::Flashmap> flashmap,
       fidl::ClientEnd<fuchsia_acpi_chromeos::Device> cros_acpi,
       fidl::ClientEnd<fuchsia_vboot::FirmwareParam> fwparam);
 
-  zx::status<size_t> GetBlockSize() final { return zx::ok(erase_block_size_); }
-  zx::status<size_t> GetPartitionSize() final;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) final;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
-  zx::status<> Trim() final { return zx::ok(); }
-  zx::status<> Flush() final { return zx::ok(); }
+  zx::result<size_t> GetBlockSize() final { return zx::ok(erase_block_size_); }
+  zx::result<size_t> GetPartitionSize() final;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) final;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) final;
+  zx::result<> Trim() final { return zx::ok(); }
+  zx::result<> Flush() final { return zx::ok(); }
   fbl::unique_fd block_fd() final { return fbl::unique_fd(); }
 
  private:
   // Initialisation of state that might fail (i.e. getting area list and erase block size over
   // FIDL).
-  zx::status<> Init();
+  zx::result<> Init();
 
   // Do a full update, overwriting RW and RO flash sections, except areas marked as PRESERVE. Also
   // preserve the HWID and GBB flags.
-  zx::status<> FullUpdate(fzl::VmoMapper& new_image);
+  zx::result<> FullUpdate(fzl::VmoMapper& new_image);
   // Do an A/B update, updating the inactive RW section only.
-  zx::status<> ABUpdate(fzl::VmoMapper& new_image);
+  zx::result<> ABUpdate(fzl::VmoMapper& new_image);
 
   // Compare the public keys stored in the GBB with the current GBB to determine if the new firmware
   // image needs a full update.
   bool NeedsFullUpdate(GoogleBinaryBlockHeader* cur_gbb, GoogleBinaryBlockHeader* new_gbb);
 
   // Returns true if the RO section of flash is writable.
-  zx::status<bool> CanWriteRO();
+  zx::result<bool> CanWriteRO();
 
   std::optional<FlashmapArea> FindArea(const char* name);
   // Returns true if the given region differs between |new_image| and |flashmap_|.
-  zx::status<bool> NeedsUpdate(const fzl::VmoMapper& new_image, const FlashmapArea& region);
+  zx::result<bool> NeedsUpdate(const fzl::VmoMapper& new_image, const FlashmapArea& region);
 
   // Returns true if the two GBBs have compatible HWIDs.
   // Note that we never overwrite HWID, but we use the first word ("ATLAS", "EVE", etc.) to

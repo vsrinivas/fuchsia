@@ -29,10 +29,10 @@ struct AcpiDebugPortDescriptor {
 };
 
 // Lookup low-level debug port information.
-zx::status<AcpiDebugPortDescriptor> GetDebugPort(const AcpiParserInterface& parser);
+zx::result<AcpiDebugPortDescriptor> GetDebugPort(const AcpiParserInterface& parser);
 
 // Parse an AcpiDbh2Table ACPI structure.
-zx::status<AcpiDebugPortDescriptor> ParseAcpiDbg2Table(const AcpiDbg2Table& debug_table);
+zx::result<AcpiDebugPortDescriptor> ParseAcpiDbg2Table(const AcpiDbg2Table& debug_table);
 
 }  // namespace acpi_lite
 

@@ -80,7 +80,7 @@ class Bus : public PciBusType,
         ecam_(std::move(ecam)) {}
   ~Bus() override;
   // Map an ecam VMO for Bus and Config use.
-  static zx::status<fdf::MmioBuffer> MapEcam(zx::vmo ecam_vmo);
+  static zx::result<fdf::MmioBuffer> MapEcam(zx::vmo ecam_vmo);
 
   zx_status_t Initialize() __TA_EXCLUDES(devices_lock_);
   // Bus Device Interface implementation

@@ -107,11 +107,11 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options, user_out_ptr<v
 // zx_status_t zx_socket_set_disposition
 zx_status_t sys_socket_set_disposition(zx_handle_t handle, uint32_t disposition,
                                        uint32_t disposition_peer) {
-  zx::status maybe_disposition = SocketDispatcher::Disposition::TryFrom(disposition);
+  zx::result maybe_disposition = SocketDispatcher::Disposition::TryFrom(disposition);
   if (maybe_disposition.is_error()) {
     return maybe_disposition.error_value();
   }
-  zx::status maybe_disposition_peer = SocketDispatcher::Disposition::TryFrom(disposition_peer);
+  zx::result maybe_disposition_peer = SocketDispatcher::Disposition::TryFrom(disposition_peer);
   if (maybe_disposition_peer.is_error()) {
     return maybe_disposition_peer.error_value();
   }

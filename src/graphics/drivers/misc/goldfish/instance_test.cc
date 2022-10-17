@@ -115,7 +115,7 @@ class InstanceDeviceTest : public zxtest::Test {
     // the end of the test.
     dut_ = dut.release();
 
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::PipeDevice>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::PipeDevice>();
     ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(dut_->Connect(loop_.dispatcher(), std::move(endpoints->server)));

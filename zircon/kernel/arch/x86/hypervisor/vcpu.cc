@@ -714,7 +714,7 @@ bool cr0_is_invalid(AutoVmcs& vmcs, uint64_t cr0_value) {
 
 // static
 template <typename V, typename G>
-zx::status<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, zx_vaddr_t entry) {
+zx::result<ktl::unique_ptr<V>> Vcpu::Create(G& guest, uint16_t vpid, zx_vaddr_t entry) {
   if (fbl::RefPtr<VmAddressRegion> root_vmar = guest.RootVmar();
       entry < root_vmar->base() || entry >= root_vmar->base() + root_vmar->size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -1041,7 +1041,7 @@ void Vcpu::GetInfo(zx_info_vcpu_t* info) {
 }
 
 // static
-zx::status<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vaddr_t entry) {
+zx::result<ktl::unique_ptr<Vcpu>> NormalVcpu::Create(NormalGuest& guest, zx_vaddr_t entry) {
   auto vpid = guest.TryAllocVpid();
   if (vpid.is_error()) {
     return vpid.take_error();
@@ -1171,7 +1171,7 @@ zx_status_t NormalVcpu::WriteState(const zx_vcpu_io_t& io_state) {
 }
 
 // static
-zx::status<ktl::unique_ptr<Vcpu>> DirectVcpu::Create(DirectGuest& guest, zx_vaddr_t entry) {
+zx::result<ktl::unique_ptr<Vcpu>> DirectVcpu::Create(DirectGuest& guest, zx_vaddr_t entry) {
   auto vcpu = Vcpu::Create<DirectVcpu>(guest, DirectGuest::kGlobalAspaceVpid, entry);
   if (vcpu.is_error()) {
     return vcpu.take_error();

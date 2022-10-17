@@ -44,7 +44,7 @@ size_t PendingChange::GetNextUnreserved(size_t start) const {
 }
 
 // static
-zx::status<std::unique_ptr<Allocator>> Allocator::Create(fs::BufferedOperationsBuilder* builder,
+zx::result<std::unique_ptr<Allocator>> Allocator::Create(fs::BufferedOperationsBuilder* builder,
                                                          std::unique_ptr<AllocatorStorage> storage)
     __TA_NO_THREAD_SAFETY_ANALYSIS {
   // Ignore thread-safety analysis on the |allocator| object; no one has an
@@ -175,7 +175,7 @@ void Allocator::Free(AllocatorReservation* reservation, size_t index) {
   }
 }
 
-zx::status<size_t> Allocator::GrowMapLocked(size_t new_size) {
+zx::result<size_t> Allocator::GrowMapLocked(size_t new_size) {
   ZX_DEBUG_ASSERT(new_size >= map_.size());
   size_t old_size = map_.size();
   // Grow before shrinking to ensure the underlying storage is a multiple
@@ -190,7 +190,7 @@ zx::status<size_t> Allocator::GrowMapLocked(size_t new_size) {
   return zx::ok(old_size);
 }
 
-zx::status<> Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count) {
+zx::result<> Allocator::Reserve(AllocatorReservationKey, PendingWork* transaction, size_t count) {
   std::scoped_lock lock(lock_);
   if (GetAvailableLocked() < count) {
     // If we do not have enough free elements, attempt to extend the partition.

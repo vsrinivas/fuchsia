@@ -355,7 +355,7 @@ void NodeManager::GetNodeInfo(nid_t nid, NodeInfoDeprecated &out) {
 
 // The maximum depth is four.
 // Offset[0] will have raw inode offset.
-zx::status<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, int32_t (&offset)[4],
+zx::result<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, int32_t (&offset)[4],
                                              uint32_t (&noffset)[4]) {
   const pgoff_t direct_index = vnode.GetAddrsPerInode();
   const pgoff_t direct_blks = kAddrsPerBlock;
@@ -426,7 +426,7 @@ zx::status<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
   return zx::ok(level);
 }
 
-zx::status<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset) {
+zx::result<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint32_t node_offset) {
   int32_t offset[4];
   uint32_t noffset[4];
 
@@ -441,7 +441,7 @@ zx::status<bool> NodeManager::IsSameDnode(VnodeF2fs &vnode, pgoff_t index, uint3
   return zx::ok(noffset[level_or.value()] == node_offset);
 }
 
-zx::status<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
+zx::result<std::vector<block_t>> NodeManager::GetDataBlockAddresses(VnodeF2fs &vnode, pgoff_t index,
                                                                     size_t count, bool read_only) {
   std::vector<block_t> data_block_addresses(count);
   uint32_t prev_node_offset = kInvalidNodeOffset;
@@ -567,7 +567,7 @@ zx_status_t NodeManager::GetLockedDnodePage(VnodeF2fs &vnode, pgoff_t index, Loc
   return ZX_OK;
 }
 
-zx::status<uint32_t> NodeManager::GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index) {
+zx::result<uint32_t> NodeManager::GetOfsInDnode(VnodeF2fs &vnode, pgoff_t index) {
   int32_t offset[4];
   uint32_t noffset[4];
 
@@ -603,7 +603,7 @@ void NodeManager::TruncateNode(VnodeF2fs &vnode, nid_t nid, NodePage &node_page)
   GetSuperblockInfo().SetDirty();
 }
 
-zx::status<uint32_t> NodeManager::TruncateDnode(VnodeF2fs &vnode, nid_t nid) {
+zx::result<uint32_t> NodeManager::TruncateDnode(VnodeF2fs &vnode, nid_t nid) {
   LockedPage page;
 
   if (nid == 0) {
@@ -624,7 +624,7 @@ zx::status<uint32_t> NodeManager::TruncateDnode(VnodeF2fs &vnode, nid_t nid) {
   return zx::ok(1);
 }
 
-zx::status<uint32_t> NodeManager::TruncateNodes(VnodeF2fs &vnode, nid_t start_nid, uint32_t nofs,
+zx::result<uint32_t> NodeManager::TruncateNodes(VnodeF2fs &vnode, nid_t start_nid, uint32_t nofs,
                                                 int32_t ofs, int32_t depth) {
   if (start_nid == 0) {
     return zx::ok(kNidsPerBlock + 1);
@@ -767,7 +767,7 @@ zx_status_t NodeManager::TruncateInodeBlocks(VnodeF2fs &vnode, pgoff_t from) {
 
   bool run = true;
   while (run) {
-    zx::status<uint32_t> freed_or;
+    zx::result<uint32_t> freed_or;
     nid_t nid = LeToCpu(rn->i.i_nid[offset[0] - kNodeDir1Block]);
     switch (offset[0]) {
       case kNodeDir1Block:
@@ -834,7 +834,7 @@ zx_status_t NodeManager::RemoveInodePage(VnodeF2fs *vnode) {
   return ZX_OK;
 }
 
-zx::status<LockedPage> NodeManager::NewInodePage(VnodeF2fs &new_vnode) {
+zx::result<LockedPage> NodeManager::NewInodePage(VnodeF2fs &new_vnode) {
   LockedPage page;
 
   // allocate inode page for new inode
@@ -886,7 +886,7 @@ zx_status_t NodeManager::NewNodePage(VnodeF2fs &vnode, nid_t nid, uint32_t ofs, 
   return ZX_OK;
 }
 
-zx::status<LockedPage> NodeManager::ReadNodePage(LockedPage page, nid_t nid, int type) {
+zx::result<LockedPage> NodeManager::ReadNodePage(LockedPage page, nid_t nid, int type) {
   NodeInfoDeprecated ni;
 
   GetNodeInfo(nid, ni);

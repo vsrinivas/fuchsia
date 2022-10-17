@@ -12,8 +12,8 @@
 
 namespace storage {
 
-zx::status<> WaitForRamctl(zx::duration time) {
-  auto status = zx::make_status(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", time.get()));
+zx::result<> WaitForRamctl(zx::duration time) {
+  auto status = zx::make_result(wait_for_device("/dev/sys/platform/00:00:2d/ramctl", time.get()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Timed-out waiting for ramctl: " << status.status_string();
     return status.take_error();
@@ -21,7 +21,7 @@ zx::status<> WaitForRamctl(zx::duration time) {
   return zx::ok();
 }
 
-zx::status<RamDisk> RamDisk::Create(int block_size, uint64_t block_count,
+zx::result<RamDisk> RamDisk::Create(int block_size, uint64_t block_count,
                                     const RamDisk::Options& options) {
   auto status = WaitForRamctl();
   if (status.is_error()) {
@@ -29,10 +29,10 @@ zx::status<RamDisk> RamDisk::Create(int block_size, uint64_t block_count,
   }
   ramdisk_client_t* client;
   if (options.type_guid) {
-    status = zx::make_status(ramdisk_create_with_guid(
+    status = zx::make_result(ramdisk_create_with_guid(
         block_size, block_count, options.type_guid->data(), options.type_guid->size(), &client));
   } else {
-    status = zx::make_status(ramdisk_create(block_size, block_count, &client));
+    status = zx::make_result(ramdisk_create(block_size, block_count, &client));
   }
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not create ramdisk for test: " << status.status_string();
@@ -41,14 +41,14 @@ zx::status<RamDisk> RamDisk::Create(int block_size, uint64_t block_count,
   return zx::ok(RamDisk(client));
 }
 
-zx::status<RamDisk> RamDisk::CreateWithVmo(zx::vmo vmo, uint64_t block_size) {
+zx::result<RamDisk> RamDisk::CreateWithVmo(zx::vmo vmo, uint64_t block_size) {
   auto status = WaitForRamctl();
   if (status.is_error()) {
     return status.take_error();
   }
   ramdisk_client_t* client;
   status =
-      zx::make_status(ramdisk_create_from_vmo_with_block_size(vmo.release(), block_size, &client));
+      zx::make_result(ramdisk_create_from_vmo_with_block_size(vmo.release(), block_size, &client));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not create ramdisk for test: " << status.status_string();
     return status.take_error();
@@ -56,7 +56,7 @@ zx::status<RamDisk> RamDisk::CreateWithVmo(zx::vmo vmo, uint64_t block_size) {
   return zx::ok(RamDisk(client));
 }
 
-zx::status<zx::channel> RamDisk::channel() const {
+zx::result<zx::channel> RamDisk::channel() const {
   zx::channel device, device_server;
   zx_status_t status = zx::channel::create(0, &device, &device_server);
   if (status != ZX_OK) {

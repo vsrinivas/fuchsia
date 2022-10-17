@@ -42,10 +42,10 @@ class LazyReader {
 
     // Queue a read for |range| blocks. Returns the number of blocks enqueued. The remainder will be
     // pased to a subsequent call.
-    [[nodiscard]] virtual zx::status<uint64_t> Enqueue(BlockRange range) = 0;
+    [[nodiscard]] virtual zx::result<uint64_t> Enqueue(BlockRange range) = 0;
 
     // Issues the queued reads and returns the result.
-    [[nodiscard]] virtual zx::status<> RunRequests() = 0;
+    [[nodiscard]] virtual zx::result<> RunRequests() = 0;
 
     virtual uint32_t BlockSize() const = 0;
   };
@@ -53,7 +53,7 @@ class LazyReader {
   // Reads |length| bytes at offset |offset| into the buffer (if it isn't already pressent) using
   // the provided ReaderInterface. The actual reads will be blocks and so |range| will be aligned to
   // the nearest block boundaries that encompass |range|.
-  [[nodiscard]] zx::status<> Read(ByteRange range, ReaderInterface* reader);
+  [[nodiscard]] zx::result<> Read(ByteRange range, ReaderInterface* reader);
 
   // Marks the given block range as loaded or not according to |set|.
   void SetLoaded(BlockRange range, bool set);
@@ -74,11 +74,11 @@ class MapperInterface {
   virtual ~MapperInterface() = default;
 
   // Maps from file block to device block.
-  [[nodiscard]] virtual zx::status<DeviceBlockRange> Map(BlockRange file_range) = 0;
+  [[nodiscard]] virtual zx::result<DeviceBlockRange> Map(BlockRange file_range) = 0;
 
   // Same as Map, but if |allocated| is non-null, blocks should be allocated if necessary and
   // |allocated| will be updated to indicate whether an allocation took place.
-  [[nodiscard]] virtual zx::status<DeviceBlockRange> MapForWrite(PendingWork* transaction,
+  [[nodiscard]] virtual zx::result<DeviceBlockRange> MapForWrite(PendingWork* transaction,
                                                                  BlockRange file_range,
                                                                  bool* allocated) = 0;
 };
@@ -93,10 +93,10 @@ class MappedFileReader : public LazyReader::ReaderInterface {
 
   uint32_t BlockSize() const override { return buffer_.BlockSize(); }
 
-  zx::status<uint64_t> Enqueue(BlockRange range) override;
+  zx::result<uint64_t> Enqueue(BlockRange range) override;
 
-  [[nodiscard]] zx::status<> RunRequests() override {
-    return zx::make_status(handler_.RunRequests(builder_.TakeOperations()));
+  [[nodiscard]] zx::result<> RunRequests() override {
+    return zx::make_result(handler_.RunRequests(builder_.TakeOperations()));
   }
 
   MapperInterface& mapper() { return mapper_; }

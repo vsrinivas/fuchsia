@@ -73,7 +73,7 @@ constexpr uint32_t kExtentCount = 5;
 namespace blobfs {
 namespace {
 
-zx::status<> ReadBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
+zx::result<> ReadBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
                                   off_t file_offset, void* data) {
   off_t off = safemath::checked_cast<off_t>(
       safemath::CheckAdd(file_offset,
@@ -95,11 +95,11 @@ zx::status<> ReadBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_c
   return zx::ok();
 }
 
-zx::status<> ReadBlockWithOffset(int fd, uint64_t block_number, off_t file_offset, void* data) {
+zx::result<> ReadBlockWithOffset(int fd, uint64_t block_number, off_t file_offset, void* data) {
   return ReadBlocksWithOffset(fd, block_number, /*block_count=*/1, file_offset, data);
 }
 
-zx::status<> WriteBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
+zx::result<> WriteBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_count,
                                    off_t file_offset, const void* data) {
   off_t off = safemath::checked_cast<off_t>(
       safemath::CheckAdd(file_offset,
@@ -121,16 +121,16 @@ zx::status<> WriteBlocksWithOffset(int fd, uint64_t start_block, uint64_t block_
   return zx::ok();
 }
 
-zx::status<> WriteBlocks(int fd, uint64_t start_block, uint64_t block_count, const void* data) {
+zx::result<> WriteBlocks(int fd, uint64_t start_block, uint64_t block_count, const void* data) {
   return WriteBlocksWithOffset(fd, start_block, block_count, /*file_offset=*/0, data);
 }
 
-zx::status<> WriteBlock(int fd, uint64_t block_number, const void* data) {
+zx::result<> WriteBlock(int fd, uint64_t block_number, const void* data) {
   return WriteBlocks(fd, block_number, /*block_count=*/1, data);
 }
 
 struct MerkleTreeInfo {
-  static zx::status<MerkleTreeInfo> Create(cpp20::span<const uint8_t> data,
+  static zx::result<MerkleTreeInfo> Create(cpp20::span<const uint8_t> data,
                                            BlobLayoutFormat blob_layout_format) {
     MerkleTreeCreator mtc;
     mtc.SetUseCompactFormat(blob_layout_format == BlobLayoutFormat::kCompactMerkleTreeAtEnd);
@@ -206,7 +206,7 @@ zx_status_t get_superblock(const fbl::unique_fd& fd, off_t start, std::optional<
 
 }  // namespace
 
-zx::status<FileMapping> FileMapping::Create(int fd) {
+zx::result<FileMapping> FileMapping::Create(int fd) {
   struct stat s;
   if (fstat(fd, &s) < 0) {
     return zx::error(ZX_ERR_BAD_STATE);
@@ -243,10 +243,10 @@ FileMapping::~FileMapping() {
   }
 }
 
-zx::status<BlobInfo> BlobInfo::CreateCompressed(
+zx::result<BlobInfo> BlobInfo::CreateCompressed(
     int fd, BlobLayoutFormat blob_layout_format, std::filesystem::path file_path,
     chunked_compression::MultithreadedChunkedCompressor& compressor) {
-  zx::status<BlobInfo> blob_info = CreateUncompressed(fd, blob_layout_format, std::move(file_path));
+  zx::result<BlobInfo> blob_info = CreateUncompressed(fd, blob_layout_format, std::move(file_path));
   if (blob_info.is_error()) {
     return blob_info;
   }
@@ -258,13 +258,13 @@ zx::status<BlobInfo> BlobInfo::CreateCompressed(
     return blob_info;
   }
 
-  zx::status<std::vector<uint8_t>> compressed_data =
+  zx::result<std::vector<uint8_t>> compressed_data =
       compressor.Compress(GetDefaultChunkedCompressionParams(data.size()), data);
   if (compressed_data.is_error()) {
     return compressed_data.take_error();
   }
 
-  zx::status<std::unique_ptr<BlobLayout>> compressed_blob_layout = BlobLayout::CreateFromSizes(
+  zx::result<std::unique_ptr<BlobLayout>> compressed_blob_layout = BlobLayout::CreateFromSizes(
       blob_layout_format, data.size(), compressed_data->size(), kBlobfsBlockSize);
   if (compressed_blob_layout.is_error()) {
     return compressed_blob_layout.take_error();
@@ -281,18 +281,18 @@ zx::status<BlobInfo> BlobInfo::CreateCompressed(
   return blob_info;
 }
 
-zx::status<BlobInfo> BlobInfo::CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
+zx::result<BlobInfo> BlobInfo::CreateUncompressed(int fd, BlobLayoutFormat blob_layout_format,
                                                   std::filesystem::path file_path) {
   BlobInfo blob_info;
   blob_info.src_file_path_ = std::move(file_path);
 
-  zx::status<FileMapping> file_mapping = FileMapping::Create(fd);
+  zx::result<FileMapping> file_mapping = FileMapping::Create(fd);
   if (file_mapping.is_error()) {
     return file_mapping.take_error();
   }
 
   cpp20::span<const uint8_t> data = file_mapping->data();
-  zx::status<MerkleTreeInfo> merkle_tree_info = MerkleTreeInfo::Create(data, blob_layout_format);
+  zx::result<MerkleTreeInfo> merkle_tree_info = MerkleTreeInfo::Create(data, blob_layout_format);
   if (merkle_tree_info.is_error()) {
     return merkle_tree_info.take_error();
   }
@@ -544,7 +544,7 @@ Blobfs::Blobfs(fbl::unique_fd fd, off_t offset, const info_block_t& info_block,
   data_block_count_ = extent_lengths[4] / kBlobfsBlockSize;
 }
 
-zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(fbl::unique_fd blockfd_, off_t offset,
+zx::result<std::unique_ptr<Blobfs>> Blobfs::Create(fbl::unique_fd blockfd_, off_t offset,
                                                    const info_block_t& info_block,
                                                    const fbl::Array<size_t>& extent_lengths) {
   if (zx_status_t status = CheckSuperblock(&info_block.info, TotalBlocks(info_block.info));
@@ -587,7 +587,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(fbl::unique_fd blockfd_, off_
   return zx::ok(std::move(fs));
 }
 
-zx::status<RawBitmap> Blobfs::LoadBlockBitmap() {
+zx::result<RawBitmap> Blobfs::LoadBlockBitmap() {
   RawBitmap block_bitmap;
   if (zx_status_t status = block_bitmap.Reset(block_map_block_count_ * kBlobfsBlockBits);
       status != ZX_OK) {
@@ -596,7 +596,7 @@ zx::status<RawBitmap> Blobfs::LoadBlockBitmap() {
   if (zx_status_t status = block_bitmap.Shrink(info_.data_block_count); status != ZX_OK) {
     return zx::error(status);
   }
-  if (zx::status<> status = ReadBlocks(block_map_start_block_, block_map_block_count_,
+  if (zx::result<> status = ReadBlocks(block_map_start_block_, block_map_block_count_,
                                        block_bitmap.StorageUnsafe()->GetData());
       status.is_error()) {
     return status.take_error();
@@ -604,10 +604,10 @@ zx::status<RawBitmap> Blobfs::LoadBlockBitmap() {
   return zx::ok(std::move(block_bitmap));
 }
 
-zx::status<std::vector<Inode>> Blobfs::LoadNodeMap() {
+zx::result<std::vector<Inode>> Blobfs::LoadNodeMap() {
   const size_t nodes_to_load = fbl::round_up(Info().inode_count, kBlobfsInodesPerBlock);
   std::vector<Inode> node_map(nodes_to_load);
-  if (zx::status<> status =
+  if (zx::result<> status =
           ReadBlocks(node_map_start_block_, NodeMapBlocks(info_), node_map.data());
       status.is_error()) {
     return status.take_error();
@@ -615,7 +615,7 @@ zx::status<std::vector<Inode>> Blobfs::LoadNodeMap() {
   return zx::ok(std::move(node_map));
 }
 
-zx::status<uint32_t> Blobfs::FindInodeByDigest(const Digest& digest) {
+zx::result<uint32_t> Blobfs::FindInodeByDigest(const Digest& digest) {
   for (uint32_t node_index = 0; node_index < info_.inode_count; ++node_index) {
     Inode& inode = node_map_[node_index];
     if (inode.header.IsAllocated() && inode.header.IsInode() && digest == inode.merkle_root_hash) {
@@ -625,7 +625,7 @@ zx::status<uint32_t> Blobfs::FindInodeByDigest(const Digest& digest) {
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
+zx::result<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   const BlobLayout& blob_layout = blob_info.GetBlobLayout();
   if (blob_layout.Format() != GetBlobLayoutFormat(Info())) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -655,7 +655,7 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   }
 
   // Write out the blob's data.
-  if (zx::status<> status = WriteData(blob_info, extents); status.is_error()) {
+  if (zx::result<> status = WriteData(blob_info, extents); status.is_error()) {
     FX_LOGS(ERROR) << "Blobfs WriteData failed " << status.status_value();
     return status;
   }
@@ -663,7 +663,7 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   // Update the block bitmap and write it out.
   for (const ReservedExtent& reserved_extent : extents) {
     allocator_->MarkBlocksAllocated(reserved_extent);
-    if (zx::status<> status = WriteBlockBitmap(reserved_extent.extent()); status.is_error()) {
+    if (zx::result<> status = WriteBlockBitmap(reserved_extent.extent()); status.is_error()) {
       FX_LOGS(ERROR) << "Blobfs WriteBlockBitmap failed " << status.status_value();
       return status;
     }
@@ -708,7 +708,7 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   // The nodes can't be in written in |on_node| because the NodePopulator modifies the nodes after
   // calling |on_node|.
   for (uint32_t node_index : node_indices) {
-    if (zx::status<> status = WriteNode(node_index); status.is_error()) {
+    if (zx::result<> status = WriteNode(node_index); status.is_error()) {
       FX_LOGS(ERROR) << "Blobfs WriteNode failed " << status.status_value();
       return status;
     }
@@ -717,7 +717,7 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   // Update and write out the Superblock.
   info_.alloc_block_count += blob_layout.TotalBlockCount();
   info_.alloc_inode_count += node_count;
-  if (zx::status<> status = WriteInfo(); status.is_error()) {
+  if (zx::result<> status = WriteInfo(); status.is_error()) {
     FX_LOGS(ERROR) << "Blobfs WriteInfo failed " << status.status_value();
     return status;
   }
@@ -725,7 +725,7 @@ zx::status<> Blobfs::AddBlob(const BlobInfo& blob_info) {
   return zx::ok();
 }
 
-zx::status<> Blobfs::WriteBlockBitmap(const Extent& extent) {
+zx::result<> Blobfs::WriteBlockBitmap(const Extent& extent) {
   uint64_t block_bitmap_start_block = extent.Start() / kBlobfsBlockBits;
   uint64_t block_bitmap_end_block =
       fbl::round_up(extent.Start() + extent.Length(), kBlobfsBlockBits) / kBlobfsBlockBits;
@@ -736,13 +736,13 @@ zx::status<> Blobfs::WriteBlockBitmap(const Extent& extent) {
   return WriteBlocks(absolute_block_number, block_count, data);
 }
 
-zx::status<> Blobfs::WriteNode(uint32_t node_index) {
+zx::result<> Blobfs::WriteNode(uint32_t node_index) {
   uint64_t node_block = node_index / kBlobfsInodesPerBlock;
   return WriteBlock(node_map_start_block_ + node_block,
                     fs::GetBlock(kBlobfsBlockSize, node_map_.data(), node_block));
 }
 
-zx::status<> Blobfs::WriteData(const BlobInfo& blob_info,
+zx::result<> Blobfs::WriteData(const BlobInfo& blob_info,
                                const std::vector<ReservedExtent>& extents) {
   const BlobLayout& blob_layout = blob_info.GetBlobLayout();
   if (blob_layout.TotalBlockCount() == 0) {
@@ -777,13 +777,13 @@ zx::status<> Blobfs::WriteData(const BlobInfo& blob_info,
   VectorExtentIterator extent_iter(extents);
   uint64_t buf_block_offset = 0;
   while (!extent_iter.Done()) {
-    zx::status<const Extent*> extent = extent_iter.Next();
+    zx::result<const Extent*> extent = extent_iter.Next();
     if (extent.is_error()) {
       return extent.take_error();
     }
 
     const void* extent_data = fs::GetBlock(GetBlockSize(), buf.get(), buf_block_offset);
-    if (zx::status<> status =
+    if (zx::result<> status =
             WriteBlocks(data_start_block_ + (*extent)->Start(), (*extent)->Length(), extent_data);
         status.is_error()) {
       FX_LOGS(ERROR) << "Failed to write extent data: " << status.status_value();
@@ -795,25 +795,25 @@ zx::status<> Blobfs::WriteData(const BlobInfo& blob_info,
   return zx::ok();
 }
 
-zx::status<> Blobfs::WriteInfo() { return WriteBlock(0, info_block_); }
+zx::result<> Blobfs::WriteInfo() { return WriteBlock(0, info_block_); }
 
-zx::status<> Blobfs::ReadBlocks(uint64_t start_block, uint64_t block_count, void* data) {
+zx::result<> Blobfs::ReadBlocks(uint64_t start_block, uint64_t block_count, void* data) {
   return ReadBlocksWithOffset(blockfd_.get(), start_block, block_count, offset_, data);
 }
 
-zx::status<> Blobfs::ReadBlock(uint64_t block_number, void* data) {
+zx::result<> Blobfs::ReadBlock(uint64_t block_number, void* data) {
   return ReadBlocks(block_number, /*block_count=*/1, data);
 }
 
-zx::status<> Blobfs::WriteBlocks(uint64_t start_block, uint64_t block_count, const void* data) {
+zx::result<> Blobfs::WriteBlocks(uint64_t start_block, uint64_t block_count, const void* data) {
   return WriteBlocksWithOffset(blockfd_.get(), start_block, block_count, offset_, data);
 }
 
-zx::status<> Blobfs::WriteBlock(uint64_t block_number, const void* data) {
+zx::result<> Blobfs::WriteBlock(uint64_t block_number, const void* data) {
   return WriteBlocks(block_number, /*block_count=*/1, data);
 }
 
-zx::status<InodePtr> Blobfs::GetNode(uint32_t node_index) {
+zx::result<InodePtr> Blobfs::GetNode(uint32_t node_index) {
   return allocator_->GetNode(node_index);
 }
 
@@ -822,9 +822,9 @@ bool Blobfs::CheckBlocksAllocated(uint64_t start_block, uint64_t end_block,
   return allocator_->CheckBlocksAllocated(start_block, end_block, first_unset);
 }
 
-zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_block,
+zx::result<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_block,
                                         uint64_t block_count, uint8_t* data) {
-  zx::status<AllocatedExtentIterator> extent_iterator_or =
+  zx::result<AllocatedExtentIterator> extent_iterator_or =
       AllocatedExtentIterator::Create(GetNodeFinder(), node_index);
   if (extent_iterator_or.is_error()) {
     return extent_iterator_or.take_error();
@@ -845,7 +845,7 @@ zx::status<> Blobfs::ReadBlocksForInode(uint32_t node_index, uint64_t start_bloc
   }
   size_t block_offset = 0;
   for (auto range : ranges) {
-    zx::status<> status = ReadBlocks(data_start_block_ + range.first, range.second,
+    zx::result<> status = ReadBlocks(data_start_block_ + range.first, range.second,
                                      &data[block_offset * GetBlockSize()]);
     if (status.is_error()) {
       return status;
@@ -883,7 +883,7 @@ fpromise::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlo
   std::vector<uint8_t> merkle_tree_blocks(blob_layout->MerkleTreeBlockAlignedSize(), 0);
   std::vector<uint8_t> data_blocks(blob_layout->DataBlockAlignedSize(), 0);
   if (blob_layout->MerkleTreeBlockAlignedSize() > 0) {
-    if (zx::status<> status =
+    if (zx::result<> status =
             ReadBlocksForInode(node_index, blob_layout->MerkleTreeBlockOffset(),
                                blob_layout->MerkleTreeBlockCount(), merkle_tree_blocks.data());
         status.is_error()) {
@@ -892,7 +892,7 @@ fpromise::result<std::vector<uint8_t>, std::string> Blobfs::LoadDataAndVerifyBlo
     }
   }
   if (blob_layout->DataBlockAlignedSize() > 0) {
-    if (zx::status<> status = ReadBlocksForInode(node_index, blob_layout->DataBlockOffset(),
+    if (zx::result<> status = ReadBlocksForInode(node_index, blob_layout->DataBlockOffset(),
                                                  blob_layout->DataBlockCount(), data_blocks.data());
         status.is_error()) {
       return make_error("Failed to read in data blocks: " + std::to_string(status.status_value()));
@@ -1007,9 +1007,9 @@ fpromise::result<void, std::string> ExportBlobs(int output_dir, Blobfs& fs) {
   });
 }
 
-zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
+zx::result<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
   auto superblock = std::make_unique<Superblock>();
-  if (zx::status<> status = ReadBlock(kFVMBackupSuperblockOffset, superblock.get());
+  if (zx::result<> status = ReadBlock(kFVMBackupSuperblockOffset, superblock.get());
       status.is_error()) {
     return status.take_error();
   }

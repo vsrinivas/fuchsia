@@ -25,8 +25,8 @@ namespace test {
 // TODO(fxbug.dev/104928) Remove the calls to fuchsia.device/Controller once upgraded to DFv2
 class TestDeviceBase {
  public:
-  static zx::status<TestDeviceBase> CreateFromFileName(std::string_view path) {
-    zx::status client_end =
+  static zx::result<TestDeviceBase> CreateFromFileName(std::string_view path) {
+    zx::result client_end =
         component::Connect<fuchsia_device::Controller>(std::string(path).c_str());
     if (client_end.is_error()) {
       return client_end.take_error();
@@ -34,7 +34,7 @@ class TestDeviceBase {
     return zx::ok(TestDeviceBase(std::move(client_end.value())));
   }
 
-  static zx::status<TestDeviceBase> CreateFromTopologicalPathSuffix(const fbl::unique_fd& fd,
+  static zx::result<TestDeviceBase> CreateFromTopologicalPathSuffix(const fbl::unique_fd& fd,
                                                                     std::string_view suffix) {
     std::optional<TestDeviceBase> out;
     std::pair<std::reference_wrapper<decltype(out)>, std::string_view> pair{out, suffix};
@@ -48,7 +48,7 @@ class TestDeviceBase {
           auto& [out, suffix] = *static_cast<std::add_pointer<decltype(pair)>::type>(cookie);
 
           fdio_cpp::UnownedFdioCaller caller(dirfd);
-          zx::status client_end =
+          zx::result client_end =
               component::ConnectAt<fuchsia_device::Controller>(caller.directory(), fn);
           if (client_end.is_error()) {
             return client_end.error_value();
@@ -83,7 +83,7 @@ class TestDeviceBase {
 
   // Get a channel to the parent device, so we can rebind the driver to it. This
   // can require sandbox access to /dev/sys.
-  zx::status<TestDeviceBase> GetParentDevice() const {
+  zx::result<TestDeviceBase> GetParentDevice() const {
     const fidl::WireResult result = fidl::WireCall(client_end_)->GetTopologicalPath();
     if (!result.ok()) {
       return zx::error(result.status());
@@ -102,7 +102,7 @@ class TestDeviceBase {
     return CreateFromFileName(path);
   }
 
-  zx::status<> UnbindChildren() const {
+  zx::result<> UnbindChildren() const {
     const fidl::WireResult result = fidl::WireCall(client_end_)->UnbindChildren();
     if (!result.ok()) {
       return zx::error(result.status());
@@ -114,7 +114,7 @@ class TestDeviceBase {
     return zx::ok();
   }
 
-  zx::status<> BindDriver(std::string_view path) const {
+  zx::result<> BindDriver(std::string_view path) const {
     // Rebinding the device immediately after unbinding it sometimes causes the new device to be
     // created before the old one is released, which can cause problems since the old device can
     // hold onto interrupts and other resources. Delay recreation to make that less likely.
@@ -145,7 +145,7 @@ class TestDeviceBase {
     return zx::error(ZX_ERR_TIMED_OUT);
   }
 
-  zx::status<> Unbind() const {
+  zx::result<> Unbind() const {
     const fidl::WireResult result = fidl::WireCall(client_end_)->ScheduleUnbind();
     if (!result.ok()) {
       return zx::error(result.status());
@@ -178,11 +178,11 @@ TEST(TestRunner, DISABLED_RunTests) {
   fbl::unique_fd media_codec(open(kMediaCodecPath, O_RDONLY));
   ASSERT_TRUE(media_codec.is_valid(), "%s", strerror(errno));
 
-  zx::status test_device1 =
+  zx::result test_device1 =
       TestDeviceBase::CreateFromTopologicalPathSuffix(media_codec, kTopologicalPathSuffix);
   ASSERT_OK(test_device1.status_value());
 
-  zx::status parent_device = test_device1.value().GetParentDevice();
+  zx::result parent_device = test_device1.value().GetParentDevice();
   ASSERT_OK(parent_device.status_value());
 
   ASSERT_OK(parent_device.value().UnbindChildren().status_value());
@@ -190,7 +190,7 @@ TEST(TestRunner, DISABLED_RunTests) {
                 .BindDriver("/system/driver/amlogic_video_decoder_test.so")
                 .status_value());
 
-  zx::status test_device2 =
+  zx::result test_device2 =
       TestDeviceBase::CreateFromTopologicalPathSuffix(media_codec, kTestTopologicalPathSuffix);
   ASSERT_OK(test_device2.status_value());
 
@@ -219,11 +219,11 @@ TEST(TestRunner, Rebind) {
   fbl::unique_fd media_codec(open(kMediaCodecPath, O_RDONLY));
   ASSERT_TRUE(media_codec.is_valid(), "%s", strerror(errno));
 
-  zx::status test_device1 =
+  zx::result test_device1 =
       TestDeviceBase::CreateFromTopologicalPathSuffix(media_codec, kTopologicalPathSuffix);
   ASSERT_OK(test_device1.status_value());
 
-  zx::status parent_device = test_device1.value().GetParentDevice();
+  zx::result parent_device = test_device1.value().GetParentDevice();
   ASSERT_OK(parent_device.status_value());
 
   ASSERT_OK(parent_device.value().UnbindChildren().status_value());

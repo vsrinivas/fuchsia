@@ -110,8 +110,8 @@ DriverManagerParams GetDriverManagerParams(fidl::WireSyncClient<fuchsia_boot::Ar
 }
 
 // Get the root job from the root job service.
-zx::status<zx::job> get_root_job() {
-  zx::status client_end = component::Connect<fuchsia_kernel::RootJob>();
+zx::result<zx::job> get_root_job() {
+  zx::result client_end = component::Connect<fuchsia_kernel::RootJob>();
   if (client_end.is_error()) {
     return client_end.take_error();
   }
@@ -125,8 +125,8 @@ zx::status<zx::job> get_root_job() {
 // Get the root resource from the root resource service. Not receiving the
 // startup handle is logged, but not fatal.  In test environments, it would not
 // be present.
-zx::status<zx::resource> get_root_resource() {
-  zx::status client_end = component::Connect<fuchsia_boot::RootResource>();
+zx::result<zx::resource> get_root_resource() {
+  zx::result client_end = component::Connect<fuchsia_boot::RootResource>();
   if (client_end.is_error()) {
     return client_end.take_error();
   }
@@ -140,8 +140,8 @@ zx::status<zx::resource> get_root_resource() {
 // Get the mexec resource from the mexec resource service. Not receiving the
 // startup handle is logged, but not fatal.  In test environments, it would not
 // be present.
-zx::status<zx::resource> get_mexec_resource() {
-  zx::status client_end = component::Connect<fuchsia_kernel::MexecResource>();
+zx::result<zx::resource> get_mexec_resource() {
+  zx::result client_end = component::Connect<fuchsia_kernel::MexecResource>();
   if (client_end.is_error()) {
     return client_end.take_error();
   }
@@ -225,19 +225,19 @@ int main(int argc, char** argv) {
       std::move(driver_index_client.value()), loop.dispatcher());
 
   // TODO(fxbug.dev/33958): Remove all uses of the root resource.
-  if (zx::status root_resource = get_root_resource(); root_resource.is_error()) {
+  if (zx::result root_resource = get_root_resource(); root_resource.is_error()) {
     LOGF(INFO, "Failed to get root resource, assuming test environment and continuing (%s)",
          root_resource.status_string());
   } else {
     config.root_resource = std::move(root_resource.value());
   }
   // TODO(fxbug.dev/33957): Remove all uses of the root job.
-  zx::status root_job = get_root_job();
+  zx::result root_job = get_root_job();
   if (root_job.is_error()) {
     LOGF(ERROR, "Failed to get root job: %s", root_job.status_string());
     return root_job.status_value();
   }
-  if (zx::status mexec_resource = get_mexec_resource(); mexec_resource.is_error()) {
+  if (zx::result mexec_resource = get_mexec_resource(); mexec_resource.is_error()) {
     LOGF(INFO, "Failed to get mexec resource, assuming test environment and continuing (%s)",
          mexec_resource.status_string());
   } else {
@@ -364,24 +364,24 @@ int main(int argc, char** argv) {
   fs::SynchronousVfs vfs(loop.dispatcher());
 
   {
-    zx::status devfs_client = coordinator.devfs().Connect(vfs);
+    zx::result devfs_client = coordinator.devfs().Connect(vfs);
     ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
     system_instance.ServiceStarter(&coordinator, std::move(devfs_client.value()));
   }
 
   // Serve the USB device watcher protocol.
   {
-    zx::status devfs_client = coordinator.devfs().Connect(vfs);
+    zx::result devfs_client = coordinator.devfs().Connect(vfs);
     ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
 
-    const zx::status result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
+    const zx::result result = outgoing.AddProtocol<fuchsia_device_manager::DeviceWatcher>(
         [devfs_client = std::move(devfs_client.value()), dispatcher = loader_loop.dispatcher()](
             fidl::ServerEnd<fuchsia_device_manager::DeviceWatcher> request) {
           // Move off the main loop, which is also serving devfs.
           async::PostTask(
               dispatcher, [&devfs_client, dispatcher, request = std::move(request)]() mutable {
-                zx::status fd = [&devfs_client]() -> zx::status<fbl::unique_fd> {
-                  zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+                zx::result fd = [&devfs_client]() -> zx::result<fbl::unique_fd> {
+                  zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
                   if (endpoints.is_error()) {
                     return endpoints.take_error();
                   }
@@ -416,24 +416,24 @@ int main(int argc, char** argv) {
     ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
   }
 
-  zx::status diagnostics_client = coordinator.inspect_manager().Connect();
+  zx::result diagnostics_client = coordinator.inspect_manager().Connect();
   ZX_ASSERT_MSG(diagnostics_client.is_ok(), "%s", diagnostics_client.status_string());
 
-  zx::status devfs_client = coordinator.devfs().Connect(vfs);
+  zx::result devfs_client = coordinator.devfs().Connect(vfs);
   ZX_ASSERT_MSG(devfs_client.is_ok(), "%s", devfs_client.status_string());
 
   {
-    const zx::status result = outgoing.AddDirectory(std::move(devfs_client.value()), "dev");
+    const zx::result result = outgoing.AddDirectory(std::move(devfs_client.value()), "dev");
     ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
   }
   {
-    const zx::status result =
+    const zx::result result =
         outgoing.AddDirectory(std::move(diagnostics_client.value()), "diagnostics");
     ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
   }
 
   {
-    const zx::status result = outgoing.ServeFromStartupInfo();
+    const zx::result result = outgoing.ServeFromStartupInfo();
     ZX_ASSERT_MSG(result.is_ok(), "%s", result.status_string());
   }
 

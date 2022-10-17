@@ -102,7 +102,7 @@ class VmoStoreBase {
 //
 //   // Now let's register, retrieve, and unregister a `zx::vmo` obtained through `GetVmo()`.
 //   // The second argument to `Register` is our user metadata.
-//   zx::status<size_t> result = store.Register(GetVmo(), "my first VMO");
+//   zx::result<size_t> result = store.Register(GetVmo(), "my first VMO");
 //   size_t key = result.take_value();
 //   auto * my_registered_vmo = store.GetVmo(key);
 //
@@ -134,11 +134,11 @@ class VmoStore : public VmoStoreBase<Backing> {
 
   // Registers a VMO with this store, returning the key used to access that VMO on success.
   template <typename... MetaArgs>
-  zx::status<Key> Register(zx::vmo vmo, MetaArgs... vmo_args) {
+  zx::result<Key> Register(zx::vmo vmo, MetaArgs... vmo_args) {
     return Register(StoredVmo(std::move(vmo), std::forward<MetaArgs>(vmo_args)...));
   }
 
-  zx::status<Key> Register(StoredVmo vmo) {
+  zx::result<Key> Register(StoredVmo vmo) {
     zx_status_t status = PrepareStore(&vmo);
     if (status != ZX_OK) {
       return zx::error(status);
@@ -169,7 +169,7 @@ class VmoStore : public VmoStoreBase<Backing> {
   // All the mapping and pinning handles will be dropped, and the VMO will be
   // returned to the caller.
   // Returns `ZX_ERR_NOT_FOUND` if `key` does not point to a registered VMO.
-  zx::status<zx::vmo> Unregister(Key key) {
+  zx::result<zx::vmo> Unregister(Key key) {
     cpp17::optional<StoredVmo> vmo = this->impl_.Extract(key);
     if (vmo) {
       return zx::ok(std::move(vmo->take_vmo()));

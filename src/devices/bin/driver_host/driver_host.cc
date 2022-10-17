@@ -135,7 +135,7 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
   return str_property;
 }
 
-zx::status<fdf::wire::BindRule> ConvertBindRuleToFidl(fidl::AnyArena& allocator,
+zx::result<fdf::wire::BindRule> ConvertBindRuleToFidl(fidl::AnyArena& allocator,
                                                       device_group_bind_rule_t bind_rule) {
   fdf::wire::NodePropertyKey property_key;
 
@@ -209,7 +209,7 @@ zx::status<fdf::wire::BindRule> ConvertBindRuleToFidl(fidl::AnyArena& allocator,
   });
 }
 
-zx::status<fdf::wire::NodeProperty> ConvertBindPropToFidl(fidl::AnyArena& allocator,
+zx::result<fdf::wire::NodeProperty> ConvertBindPropToFidl(fidl::AnyArena& allocator,
                                                           const device_bind_prop_t& bind_prop) {
   auto node_property = fdf::wire::NodeProperty::Builder(allocator);
 
@@ -258,7 +258,7 @@ zx::status<fdf::wire::NodeProperty> ConvertBindPropToFidl(fidl::AnyArena& alloca
   return zx::ok(node_property.Build());
 }
 
-zx::status<fdf::wire::DeviceGroupNode> ConvertDeviceGroupNode(fidl::AnyArena& allocator,
+zx::result<fdf::wire::DeviceGroupNode> ConvertDeviceGroupNode(fidl::AnyArena& allocator,
                                                               device_group_node_t node) {
   fidl::VectorView<fdf::wire::BindRule> bind_rules(allocator, node.bind_rule_count);
   for (size_t i = 0; i < node.bind_rule_count; i++) {

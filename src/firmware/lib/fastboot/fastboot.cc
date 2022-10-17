@@ -125,7 +125,7 @@ Fastboot::Fastboot(size_t max_download_size) : max_download_size_(max_download_s
 Fastboot::Fastboot(size_t max_download_size, fidl::ClientEnd<fuchsia_io::Directory> svc_root)
     : max_download_size_(max_download_size), svc_root_(std::move(svc_root)) {}
 
-zx::status<> Fastboot::ProcessCommand(std::string_view command, Transport* transport) {
+zx::result<> Fastboot::ProcessCommand(std::string_view command, Transport* transport) {
   for (const CommandEntry& cmd : GetCommandTable()) {
     if (MatchCommand(command, cmd.name)) {
       return (this->*cmd.cmd)(command.data(), transport);
@@ -137,7 +137,7 @@ zx::status<> Fastboot::ProcessCommand(std::string_view command, Transport* trans
 
 void Fastboot::DoClearDownload() { download_vmo_mapper_.Reset(); }
 
-zx::status<void*> Fastboot::GetDownloadBuffer(size_t total_download_size) {
+zx::result<void*> Fastboot::GetDownloadBuffer(size_t total_download_size) {
   if (zx_status_t ret = download_vmo_mapper_.CreateAndMap(total_download_size, "fastboot download");
       ret != ZX_OK) {
     return zx::error(ret);
@@ -151,7 +151,7 @@ zx::status<void*> Fastboot::GetDownloadBuffer(size_t total_download_size) {
   return zx::ok(download_vmo_mapper_.start());
 }
 
-zx::status<> Fastboot::GetVar(const std::string& command, Transport* transport) {
+zx::result<> Fastboot::GetVar(const std::string& command, Transport* transport) {
   std::vector<std::string_view> args =
       fxl::SplitString(command, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (args.size() < 2) {
@@ -164,7 +164,7 @@ zx::status<> Fastboot::GetVar(const std::string& command, Transport* transport) 
     return SendResponse(ResponseType::kFail, "Unknown variable", transport);
   }
 
-  zx::status<std::string> var_ret = (this->*(find_res->second))(args, transport);
+  zx::result<std::string> var_ret = (this->*(find_res->second))(args, transport);
   if (var_ret.is_error()) {
     return SendResponse(ResponseType::kFail, "Fail to get variable", transport,
                         zx::error(var_ret.status_value()));
@@ -173,12 +173,12 @@ zx::status<> Fastboot::GetVar(const std::string& command, Transport* transport) 
   return SendResponse(ResponseType::kOkay, var_ret.value(), transport);
 }
 
-zx::status<std::string> Fastboot::GetVarMaxDownloadSize(const std::vector<std::string_view>&,
+zx::result<std::string> Fastboot::GetVarMaxDownloadSize(const std::vector<std::string_view>&,
                                                         Transport*) {
   return zx::ok(fxl::StringPrintf("0x%08zx", max_download_size_));
 }
 
-zx::status<std::string> Fastboot::GetVarHwRevision(const std::vector<std::string_view>&,
+zx::result<std::string> Fastboot::GetVarHwRevision(const std::vector<std::string_view>&,
                                                    Transport*) {
   auto svc_root = GetSvcRoot();
   if (svc_root.is_error()) {
@@ -200,7 +200,7 @@ zx::status<std::string> Fastboot::GetVarHwRevision(const std::vector<std::string
   return zx::ok(resp->build_info.board_config().data());
 }
 
-zx::status<std::string> Fastboot::GetVarSlotCount(const std::vector<std::string_view>&,
+zx::result<std::string> Fastboot::GetVarSlotCount(const std::vector<std::string_view>&,
                                                   Transport* transport) {
   auto boot_manager_res = FindBootManager();
   if (boot_manager_res.is_error()) {
@@ -213,12 +213,12 @@ zx::status<std::string> Fastboot::GetVarSlotCount(const std::vector<std::string_
   return boot_manager_res.value()->QueryCurrentConfiguration().ok() ? zx::ok("2") : zx::ok("1");
 }
 
-zx::status<std::string> Fastboot::GetVarIsUserspace(const std::vector<std::string_view>&,
+zx::result<std::string> Fastboot::GetVarIsUserspace(const std::vector<std::string_view>&,
                                                     Transport*) {
   return zx::ok("yes");
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
   // If `svc_root_` is not set, use the system svc root.
   if (!svc_root_) {
     zx::channel request, service_root;
@@ -241,7 +241,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>*> Fastboot::GetSvcRoot() {
   return zx::ok(&svc_root_);
 }
 
-zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver() {
+zx::result<fidl::WireSyncClient<fuchsia_paver::Paver>> Fastboot::ConnectToPaver() {
   // Connect to the paver
   auto svc_root = GetSvcRoot();
   if (svc_root.is_error()) {
@@ -264,7 +264,7 @@ fuchsia_mem::wire::Buffer Fastboot::GetWireBufferFromDownload() {
   return buf;
 }
 
-zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
+zx::result<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
                                      std::string_view firmware_type, Transport* transport,
                                      fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
   auto ret = data_sink->WriteFirmware(config, fidl::StringView::FromExternal(firmware_type),
@@ -286,7 +286,7 @@ zx::status<> Fastboot::WriteFirmware(fuchsia_paver::wire::Configuration config,
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
-zx::status<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
+zx::result<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
                                   fuchsia_paver::wire::Asset asset, Transport* transport,
                                   fidl::WireSyncClient<fuchsia_paver::DataSink>& data_sink) {
   auto ret = data_sink->WriteAsset(config, asset, GetWireBufferFromDownload());
@@ -298,7 +298,7 @@ zx::status<> Fastboot::WriteAsset(fuchsia_paver::wire::Configuration config,
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
-zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
+zx::result<> Fastboot::Flash(const std::string& command, Transport* transport) {
   if (IsAndroidSparseImage(download_vmo_mapper_.start(), download_vmo_mapper_.size())) {
     return SendResponse(ResponseType::kFail, "Android sparse image is not supported.", transport);
   }
@@ -397,13 +397,13 @@ zx::status<> Fastboot::Flash(const std::string& command, Transport* transport) {
   return zx::ok();
 }
 
-zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> Fastboot::FindBootManager() {
+zx::result<fidl::WireSyncClient<fuchsia_paver::BootManager>> Fastboot::FindBootManager() {
   auto paver_client_res = ConnectToPaver();
   if (!paver_client_res.is_ok()) {
     return zx::error(paver_client_res.status_value());
   }
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
   if (endpoints.is_error()) {
     FX_LOGST(ERROR, kFastbootLogTag) << "Failed to create endpoint";
     return zx::error(endpoints.status_value());
@@ -418,7 +418,7 @@ zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> Fastboot::FindBootM
   return zx::ok(fidl::WireSyncClient(std::move(endpoints->client)));
 }
 
-zx::status<> Fastboot::SetActive(const std::string& command, Transport* transport) {
+zx::result<> Fastboot::SetActive(const std::string& command, Transport* transport) {
   std::vector<std::string_view> args =
       fxl::SplitString(command, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
   if (args.size() < 2) {
@@ -448,7 +448,7 @@ zx::status<> Fastboot::SetActive(const std::string& command, Transport* transpor
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
-zx::status<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
+zx::result<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
 Fastboot::ConnectToPowerStateControl() {
   auto svc_root = GetSvcRoot();
   if (svc_root.is_error()) {
@@ -464,7 +464,7 @@ Fastboot::ConnectToPowerStateControl() {
   return zx::ok(fidl::WireSyncClient(std::move(connect_result.value())));
 }
 
-zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) {
+zx::result<> Fastboot::Reboot(const std::string& command, Transport* transport) {
   auto connect_result = ConnectToPowerStateControl();
   if (connect_result.is_error()) {
     return SendResponse(ResponseType::kFail,
@@ -474,7 +474,7 @@ zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) 
 
   // Send an okay response regardless of the result. Because once system reboots, we have
   // no chance to send any response.
-  zx::status<> ret = SendResponse(ResponseType::kOkay, "", transport);
+  zx::result<> ret = SendResponse(ResponseType::kOkay, "", transport);
   if (ret.is_error()) {
     return ret;
   }
@@ -490,8 +490,8 @@ zx::status<> Fastboot::Reboot(const std::string& command, Transport* transport) 
   return zx::ok();
 }
 
-zx::status<> Fastboot::Continue(const std::string& command, Transport* transport) {
-  zx::status<> ret = SendResponse(
+zx::result<> Fastboot::Continue(const std::string& command, Transport* transport) {
+  zx::result<> ret = SendResponse(
       ResponseType::kInfo, "userspace fastboot cannot continue, rebooting instead", transport);
   if (ret.is_error()) {
     return ret;
@@ -500,8 +500,8 @@ zx::status<> Fastboot::Continue(const std::string& command, Transport* transport
   return Reboot(command, transport);
 }
 
-zx::status<> Fastboot::RebootBootloader(const std::string& command, Transport* transport) {
-  zx::status<> ret = SendResponse(
+zx::result<> Fastboot::RebootBootloader(const std::string& command, Transport* transport) {
+  zx::result<> ret = SendResponse(
       ResponseType::kInfo,
       "userspace fastboot cannot reboot to bootloader, rebooting to recovery instead", transport);
   if (ret.is_error()) {
@@ -532,7 +532,7 @@ zx::status<> Fastboot::RebootBootloader(const std::string& command, Transport* t
   return zx::ok();
 }
 
-zx::status<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
+zx::result<> Fastboot::OemAddStagedBootloaderFile(const std::string& command,
                                                   Transport* transport) {
   std::vector<std::string_view> args =
       fxl::SplitString(command, " ", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);

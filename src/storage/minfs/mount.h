@@ -51,14 +51,14 @@ struct CreateBcacheResult {
 // Creates a Bcache using |device|.
 //
 // Returns the bcache and a boolean indicating if the underlying device is read-only.
-zx::status<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device);
+zx::result<CreateBcacheResult> CreateBcache(std::unique_ptr<block_client::BlockDevice> device);
 
 // Start the filesystem on the block device backed by |bcache|, and serve it on |root|. Blocks
 // until the filesystem terminates.
-zx::status<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
+zx::result<> Mount(std::unique_ptr<minfs::Bcache> bcache, const MountOptions& options,
                    fidl::ServerEnd<fuchsia_io::Directory> root);
 
-zx::status<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
+zx::result<> StartComponent(fidl::ServerEnd<fuchsia_io::Directory> root,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle);
 
 #endif  // __Fuchsia__

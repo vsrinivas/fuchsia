@@ -35,7 +35,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
       auto device = [this](fidl::ServerEnd<ft::Handshake> server_end) mutable -> void {
         fidl::BindServer<fidl::Server<ft::Handshake>>(dispatcher(), std::move(server_end), this);
       };
-      zx::status<> status = service.add_device(std::move(device));
+      zx::result<> status = service.add_device(std::move(device));
       if (status.is_error()) {
         FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
       }
@@ -55,7 +55,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
   }
 
  private:
-  zx::status<> AddChild() {
+  zx::result<> AddChild() {
     fidl::Arena arena;
 
     auto offer = driver::MakeOffer<ft::Service>(kChildName);

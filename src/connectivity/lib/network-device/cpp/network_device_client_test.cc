@@ -97,12 +97,12 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  zx::status<fidl::ClientEnd<tun::Device>> OpenTunDevice(tun::wire::DeviceConfig config) {
-    zx::status device_endpoints = fidl::CreateEndpoints<tun::Device>();
+  zx::result<fidl::ClientEnd<tun::Device>> OpenTunDevice(tun::wire::DeviceConfig config) {
+    zx::result device_endpoints = fidl::CreateEndpoints<tun::Device>();
     if (device_endpoints.is_error()) {
       return device_endpoints.take_error();
     }
-    zx::status tunctl = component::Connect<tun::Control>();
+    zx::result tunctl = component::Connect<tun::Control>();
     if (tunctl.is_error()) {
       return tunctl.take_error();
     }
@@ -115,9 +115,9 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(device_endpoints->client));
   }
 
-  zx::status<fidl::ClientEnd<tun::Port>> AddTunPort(const fidl::ClientEnd<tun::Device>& client,
+  zx::result<fidl::ClientEnd<tun::Port>> AddTunPort(const fidl::ClientEnd<tun::Device>& client,
                                                     tun::wire::DevicePortConfig config) {
-    zx::status port_endpoints = fidl::CreateEndpoints<tun::Port>();
+    zx::result port_endpoints = fidl::CreateEndpoints<tun::Port>();
     if (port_endpoints.is_error()) {
       return port_endpoints.take_error();
     }
@@ -129,20 +129,20 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(port_endpoints->client));
   }
 
-  zx::status<std::tuple<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>,
+  zx::result<std::tuple<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>,
                         netdev::wire::PortId>>
   OpenTunDeviceAndPort(tun::wire::DeviceConfig device_config,
                        tun::wire::DevicePortConfig port_config) {
-    zx::status device = OpenTunDevice(std::move(device_config));
+    zx::result device = OpenTunDevice(std::move(device_config));
     if (device.is_error()) {
       return device.take_error();
     }
-    zx::status port = AddTunPort(*device, std::move(port_config));
+    zx::result port = AddTunPort(*device, std::move(port_config));
     if (port.is_error()) {
       return port.take_error();
     }
     fidl::ClientEnd port_client = std::move(port.value());
-    zx::status port_id = GetPortId([&port_client](fidl::ServerEnd<netdev::Port> server) {
+    zx::result port_id = GetPortId([&port_client](fidl::ServerEnd<netdev::Port> server) {
       return fidl::WireCall(port_client)->GetPort(std::move(server)).status();
     });
     if (port_id.is_error()) {
@@ -157,15 +157,15 @@ class NetDeviceTest : public gtest::RealLoopFixture {
         port_id.value()));
   }
 
-  zx::status<std::tuple<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>,
+  zx::result<std::tuple<fidl::WireSharedClient<tun::Device>, fidl::WireSharedClient<tun::Port>,
                         netdev::wire::PortId>>
   OpenTunDeviceAndPort() {
     return OpenTunDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
   }
 
-  static zx::status<fuchsia_hardware_network::wire::PortId> GetPortId(
+  static zx::result<fuchsia_hardware_network::wire::PortId> GetPortId(
       fit::function<zx_status_t(fidl::ServerEnd<fuchsia_hardware_network::Port>)> get_port) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -185,13 +185,13 @@ class NetDeviceTest : public gtest::RealLoopFixture {
     return zx::ok(port_info.id());
   }
 
-  zx::status<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair(
+  zx::result<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair(
       tun::wire::DevicePairConfig config) {
-    zx::status device_pair_endpoints = fidl::CreateEndpoints<tun::DevicePair>();
+    zx::result device_pair_endpoints = fidl::CreateEndpoints<tun::DevicePair>();
     if (device_pair_endpoints.is_error()) {
       return device_pair_endpoints.take_error();
     }
-    zx::status tunctl = component::Connect<tun::Control>();
+    zx::result tunctl = component::Connect<tun::Control>();
     if (tunctl.is_error()) {
       return tunctl.take_error();
     }
@@ -206,7 +206,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
         std::make_unique<TestEventHandler<tun::DevicePair>>("tun device pair")));
   }
 
-  zx::status<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair() {
+  zx::result<fidl::WireSharedClient<tun::DevicePair>> OpenTunPair() {
     return OpenTunPair(DefaultPairConfig());
   }
 
@@ -234,7 +234,7 @@ class NetDeviceTest : public gtest::RealLoopFixture {
 
   fidl::ServerEnd<fuchsia_hardware_network::Device> CreateClientRequest(
       std::unique_ptr<NetworkDeviceClient>* out_client) {
-    zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+    zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
     EXPECT_OK(device_endpoints.status_value());
     std::unique_ptr client =
         std::make_unique<NetworkDeviceClient>(std::move(device_endpoints->client));
@@ -461,7 +461,7 @@ TEST_F(NetDeviceTest, TestEchoPair) {
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->is_ok()) << zx_status_get_string(result->error_value());
   }
-  zx::status port_id = GetPortId([&tun_pair](fidl::ServerEnd<netdev::Port> port) {
+  zx::result port_id = GetPortId([&tun_pair](fidl::ServerEnd<netdev::Port> port) {
     return tun_pair->GetLeftPort(kPortId, std::move(port)).status();
   });
   ASSERT_OK(port_id.status_value());
@@ -690,9 +690,9 @@ TEST_F(NetDeviceTest, TestPortInfoNoMac) {
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   // Fetch the port's details.
-  std::optional<zx::status<network::client::PortInfoAndMac>> response;
+  std::optional<zx::result<network::client::PortInfoAndMac>> response;
   client->GetPortInfoWithMac(port_id,
-                             [&response](zx::status<network::client::PortInfoAndMac> result) {
+                             [&response](zx::result<network::client::PortInfoAndMac> result) {
                                response = std::move(result);
                              });
   ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
@@ -726,9 +726,9 @@ TEST_F(NetDeviceTest, TestPortInfoWithMac) {
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   // Fetch the port's details.
-  std::optional<zx::status<network::client::PortInfoAndMac>> response;
+  std::optional<zx::result<network::client::PortInfoAndMac>> response;
   client->GetPortInfoWithMac(port_id,
-                             [&response](zx::status<network::client::PortInfoAndMac> result) {
+                             [&response](zx::result<network::client::PortInfoAndMac> result) {
                                response = std::move(result);
                              });
   ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
@@ -752,9 +752,9 @@ TEST_F(NetDeviceTest, TestPortInfoInvalidPort) {
   ASSERT_OK(tun_device->GetDevice(CreateClientRequest(&client)).status());
 
   // Query an invalid port.
-  std::optional<zx::status<network::client::PortInfoAndMac>> response;
+  std::optional<zx::result<network::client::PortInfoAndMac>> response;
   client->GetPortInfoWithMac(netdev::wire::PortId{.base = 17},
-                             [&response](zx::status<network::client::PortInfoAndMac> result) {
+                             [&response](zx::result<network::client::PortInfoAndMac> result) {
                                response = std::move(result);
                              });
   ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
@@ -941,10 +941,10 @@ TEST_P(GetPortsTest, GetPortsWithPortCount) {
     SCOPED_TRACE(i);
     tun::wire::DevicePortConfig config = DefaultDevicePortConfig();
     config.base().set_id(static_cast<uint8_t>(i + 1));
-    zx::status status = AddTunPort(tun_device, std::move(config));
+    zx::result status = AddTunPort(tun_device, std::move(config));
     ASSERT_OK(status.status_value());
     fidl::ClientEnd port = std::move(status.value());
-    zx::status endpoints = fidl::CreateEndpoints<netdev::Port>();
+    zx::result endpoints = fidl::CreateEndpoints<netdev::Port>();
     ASSERT_OK(endpoints.status_value());
     auto [client, server] = std::move(endpoints.value());
     ASSERT_OK(fidl::WireCall(port)->GetPort(std::move(server)).status());
@@ -957,11 +957,11 @@ TEST_P(GetPortsTest, GetPortsWithPortCount) {
     expect_ids.insert(PortId{.id = info.id()}.v);
   }
 
-  std::optional<zx::status<std::vector<netdev::wire::PortId>>> response;
+  std::optional<zx::result<std::vector<netdev::wire::PortId>>> response;
   client->GetPorts(
-      [&response](zx::status<std::vector<netdev::wire::PortId>> result) { response = result; });
+      [&response](zx::result<std::vector<netdev::wire::PortId>> result) { response = result; });
   ASSERT_TRUE(RunLoopUntilOrFailure([&response]() { return response.has_value(); }));
-  zx::status status = std::move(response.value());
+  zx::result status = std::move(response.value());
   ASSERT_OK(status.status_value());
   std::vector<netdev::wire::PortId> got_ids = std::move(status.value());
   EXPECT_EQ(got_ids.size(), expect_ids.size());

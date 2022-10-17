@@ -31,7 +31,7 @@ namespace display {
 class DisplayInfo : public IdMappable<fbl::RefPtr<DisplayInfo>>,
                     public fbl::RefCounted<DisplayInfo> {
  public:
-  static zx::status<fbl::RefPtr<DisplayInfo>> Create(const added_display_args_t& info,
+  static zx::result<fbl::RefPtr<DisplayInfo>> Create(const added_display_args_t& info,
                                                      ddk::I2cImplProtocolClient* i2c);
 
   // Should be called after init_done is set to true.

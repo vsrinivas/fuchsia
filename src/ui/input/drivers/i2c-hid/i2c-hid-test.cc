@@ -355,7 +355,7 @@ TEST(I2cHidTest, HidTestReportDescFailureLifetimeTest) {
 
   fidl::BindServer(loop.dispatcher(), std::move(i2c_endpoints->server), &fake_i2c_hid_);
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
   ASSERT_OK(endpoints.status_value());
   endpoints->server.reset();
   device_ = new I2cHidbus(parent.get(),

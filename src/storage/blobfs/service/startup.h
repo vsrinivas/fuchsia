@@ -15,7 +15,7 @@
 namespace blobfs {
 
 using ConfigureCallback =
-    fit::callback<zx::status<>(std::unique_ptr<BlockDevice>, const MountOptions&)>;
+    fit::callback<zx::result<>(std::unique_ptr<BlockDevice>, const MountOptions&)>;
 
 class StartupService final : public fidl::WireServer<fuchsia_fs_startup::Startup>,
                              public fs::Service {

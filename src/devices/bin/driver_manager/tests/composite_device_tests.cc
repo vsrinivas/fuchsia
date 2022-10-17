@@ -849,7 +849,7 @@ TEST_F(CompositeTestCase, DevfsNotifications) {
   fs::SynchronousVfs vfs(coordinator().dispatcher());
   std::vector<fidl::ClientEnd<fuchsia_io::DirectoryWatcher>> client_ends;
   for (const auto& device : devices_) {
-    zx::status server =
+    zx::result server =
         fidl::CreateEndpoints<fuchsia_io::DirectoryWatcher>(&client_ends.emplace_back());
     ASSERT_OK(server.status_value());
     std::optional<Devnode>& dn = device.device->self;
@@ -933,9 +933,9 @@ TEST_F(CompositeTestCase, Topology) {
 
     ASSERT_OK(coordinator().GetTopologicalPath(device.device, path_buf, sizeof(path_buf)));
     const std::string_view parent_topological_path{path_buf + kDev.size()};
-    zx::status parent = root.walk(parent_topological_path);
+    zx::result parent = root.walk(parent_topological_path);
     ASSERT_OK(parent);
-    zx::status child = parent.value()->walk(kCompositeDevName);
+    zx::result child = parent.value()->walk(kCompositeDevName);
     if (i != 0) {
       // This isn't the primary parent; the composite device isn't a child node.
       ASSERT_STATUS(child.status_value(), ZX_ERR_NOT_FOUND);

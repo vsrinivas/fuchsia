@@ -99,13 +99,13 @@ class VnodeMinfs : public fs::Vnode,
   //
   // If the response is not ZX_OK, operations to unlink (or rename on top of) this
   // vnode will fail.
-  virtual zx::status<> CanUnlink() const = 0;
+  virtual zx::result<> CanUnlink() const = 0;
 
   // Removes from disk an unlinked and closed vnode. Asserts that inode IsUnlinked().
-  zx::status<> RemoveUnlinked();
+  zx::result<> RemoveUnlinked();
 
   // Issues a write on all dirty bytes within a vnode.
-  virtual zx::status<> FlushCachedWrites() = 0;
+  virtual zx::result<> FlushCachedWrites() = 0;
 
   // Discards all the dirty bytes within a vnode.
   // This also drops any inode or block reservation a vnode might have.
@@ -176,14 +176,14 @@ class VnodeMinfs : public fs::Vnode,
 
   // Local implementations of read, write, and truncate functions which
   // may operate on either files or directories.
-  zx::status<> ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
+  zx::result<> ReadInternal(PendingWork* transaction, void* data, size_t len, size_t off,
                             size_t* actual);
-  zx::status<> ReadExactInternal(PendingWork* transaction, void* data, size_t len, size_t off);
-  zx::status<> WriteInternal(Transaction* transaction, const uint8_t* data, size_t len, size_t off,
+  zx::result<> ReadExactInternal(PendingWork* transaction, void* data, size_t len, size_t off);
+  zx::result<> WriteInternal(Transaction* transaction, const uint8_t* data, size_t len, size_t off,
                              size_t* actual);
-  zx::status<> WriteExactInternal(Transaction* transaction, const void* data, size_t len,
+  zx::result<> WriteExactInternal(Transaction* transaction, const void* data, size_t len,
                                   size_t off);
-  zx::status<> TruncateInternal(Transaction* transaction, size_t len);
+  zx::result<> TruncateInternal(Transaction* transaction, size_t len);
 
   // Update the vnode's inode and write it to disk.
   void InodeSync(PendingWork* transaction, uint32_t flags);
@@ -194,19 +194,19 @@ class VnodeMinfs : public fs::Vnode,
   // If the link count becomes zero, the node either:
   // 1) Calls |Purge()| (if no open fds exist), or
   // 2) Adds itself to the "unlinked list", to be purged later.
-  [[nodiscard]] zx::status<> RemoveInodeLink(Transaction* transaction);
+  [[nodiscard]] zx::result<> RemoveInodeLink(Transaction* transaction);
 
   // Allocates an indirect block.
   void AllocateIndirect(PendingWork* transaction, blk_t* block);
 
   // Initializes (if necessary) and returns the indirect file.
-  [[nodiscard]] zx::status<LazyBuffer*> GetIndirectFile();
+  [[nodiscard]] zx::result<LazyBuffer*> GetIndirectFile();
 
   // Deletes all blocks (relative to a file) from "start" (inclusive) to the end
   // of the file. Does not update mtime/atime.
   // This can be extended to return indices of deleted bnos, or to delete a specific number of
   // bnos
-  zx::status<> BlocksShrink(PendingWork* transaction, blk_t start);
+  zx::result<> BlocksShrink(PendingWork* transaction, blk_t start);
 
  protected:
   // fs::Vnode protected interface.
@@ -218,25 +218,25 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
 #ifdef __Fuchsia__
-  zx::status<std::string> GetDevicePath() const final;
+  zx::result<std::string> GetDevicePath() const final;
 #endif
 
   // Get the disk block 'bno' corresponding to the 'n' block
   //
   // May or may not allocate |bno|; certain Vnodes (like File) delay allocation
   // until writeback, and will return a sentinel value of zero.
-  zx::status<blk_t> BlockGetWritable(Transaction* transaction, blk_t n);
+  zx::result<blk_t> BlockGetWritable(Transaction* transaction, blk_t n);
 
   // Get the disk block 'bno' corresponding to relative block address |n| within the file.
   // Does not allocate any blocks, direct or indirect, to acquire this block.
-  zx::status<blk_t> BlockGetReadable(blk_t n);
+  zx::result<blk_t> BlockGetReadable(blk_t n);
 
   // Deletes this Vnode from disk, freeing the inode and blocks.
   //
   // Must only be called on Vnodes which
   // - Have no open fds
   // - Are fully unlinked (link count == 0)
-  [[nodiscard]] zx::status<> Purge(Transaction* transaction);
+  [[nodiscard]] zx::result<> Purge(Transaction* transaction);
 
 #ifdef __Fuchsia__
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
@@ -248,7 +248,7 @@ class VnodeMinfs : public fs::Vnode,
   // Since we cannot yet register the filesystem as a paging service (and
   // cleanly fault on pages when they are actually needed), we currently read an
   // entire file to a VMO when a file's data block are accessed.
-  zx::status<> InitVmo();
+  zx::result<> InitVmo();
 
   // Use the watcher container to implement a directory watcher
   void Notify(std::string_view name, fuchsia_io::wire::WatchEvent event) final;

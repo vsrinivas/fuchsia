@@ -19,11 +19,11 @@
 const int kRamdiskBlockSize = 1024;
 constexpr char kExt4FilePath[] = "/pkg/data/factory_ext4.img";
 
-zx::status<storage::RamDisk> MakeRamdisk() {
+zx::result<storage::RamDisk> MakeRamdisk() {
   fsl::SizedVmo result;
   if (!fsl::VmoFromFilename(kExt4FilePath, &result)) {
     FX_SLOG(ERROR, "Failed to read file", KV("path", kExt4FilePath));
-    return zx::make_status(ZX_ERR_INTERNAL).take_error();
+    return zx::make_result(ZX_ERR_INTERNAL).take_error();
   }
 
   auto size = result.size();

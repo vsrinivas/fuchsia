@@ -128,7 +128,7 @@ class FakeBackendForBlock : public virtio::FakeBackend {
     return terminate_ ? ZX_ERR_CANCELED : ZX_OK;
   }
 
-  zx::status<uint32_t> WaitForInterrupt() override {
+  zx::result<uint32_t> WaitForInterrupt() override {
     std::unique_lock<std::mutex> lock(mutex_);
     for (;;) {
       if (terminate_)

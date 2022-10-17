@@ -26,7 +26,7 @@ namespace fs_management {
 // RAII wrapper for a binding of a `fuchsia.io.Directory` into the local namespace.
 class NamespaceBinding {
  public:
-  static zx::status<NamespaceBinding> Create(const char* path,
+  static zx::result<NamespaceBinding> Create(const char* path,
                                              fidl::ClientEnd<fuchsia_io::Directory> dir);
   NamespaceBinding() = default;
   ~NamespaceBinding();
@@ -61,13 +61,13 @@ class __EXPORT SingleVolumeFilesystemInterface {
   virtual ~SingleVolumeFilesystemInterface() = 0;
 
   // Returns a connection to the data root (i.e. the directory which contains user data).
-  virtual zx::status<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const = 0;
+  virtual zx::result<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const = 0;
 
   // Returns the connection to the export root of the filesystem.
   virtual const fidl::ClientEnd<fuchsia_io::Directory>& ExportRoot() const = 0;
 
   // Unmounts and shuts down the filesystem.  Leaves this object in an indeterminate state.
-  virtual zx::status<> Unmount() = 0;
+  virtual zx::result<> Unmount() = 0;
 };
 
 /// Manages a started filesystem instance (i.e. one started by [`fuchsia.fs.startup.Start`]).
@@ -88,7 +88,7 @@ class __EXPORT StartedSingleVolumeFilesystem : public SingleVolumeFilesystemInte
   ~StartedSingleVolumeFilesystem() override;
 
   // Unmounts and shuts down the filesystem.  Leaves this object in an indeterminate state.
-  zx::status<> Unmount() override;
+  zx::result<> Unmount() override;
 
   // Takes the filesystem connection, so the filesystem won't automatically be shut down when this
   // object goes out of scope.  Some filesystems will automatically shut down when the last
@@ -96,7 +96,7 @@ class __EXPORT StartedSingleVolumeFilesystem : public SingleVolumeFilesystemInte
   fidl::ClientEnd<fuchsia_io::Directory> Release();
 
   // Returns a connection to the data root (i.e. the directory which contains user data).
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const override;
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const override;
 
   // Returns the connection to the service directory offered by the filesystem.
   const fidl::ClientEnd<fuchsia_io::Directory>& ExportRoot() const override { return export_root_; }
@@ -119,7 +119,7 @@ class MountedVolume {
     return *this;
   }
   // Returns a connection to the data root (i.e. the directory which contains user data).
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const;
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const;
 
   // Returns the connection to the export root of the volume.
   const fidl::ClientEnd<fuchsia_io::Directory>& ExportRoot() const { return export_root_; }
@@ -162,7 +162,7 @@ class __EXPORT StartedMultiVolumeFilesystem {
   Release();
 
   // Unmounts and shuts down the filesystem.  Leaves this object in an indeterminate state.
-  zx::status<> Unmount();
+  zx::result<> Unmount();
 
   // Returns the connection to the service directory offered by the filesystem.
   const fidl::ClientEnd<fuchsia_io::Directory>& ServiceDirectory() const { return exposed_dir_; }
@@ -172,18 +172,18 @@ class __EXPORT StartedMultiVolumeFilesystem {
   //
   // Returns a pointer to the volume if it was opened.  The lifetime of the pointer is less than
   // this object.
-  zx::status<MountedVolume*> OpenVolume(std::string_view name, zx::channel crypt_client);
+  zx::result<MountedVolume*> OpenVolume(std::string_view name, zx::channel crypt_client);
 
   // Creates a volume.  |crypt_client| is an optional connection to a crypt service used
   // to unlock the volume; if unset, the volume is assumed to be unencrypted.
   //
   // Returns a pointer to the volume if it was created.  The lifetime of the pointer is less than
   // this object.
-  zx::status<MountedVolume*> CreateVolume(std::string_view name, zx::channel crypt_client);
+  zx::result<MountedVolume*> CreateVolume(std::string_view name, zx::channel crypt_client);
 
   // Verifies the integrity of a volume.  |crypt_client| is an optional connection to a crypt
   // service used to unlock the volume; if unset, the volume is assumed to be unencrypted.
-  zx::status<> CheckVolume(std::string_view name, zx::channel crypt_client);
+  zx::result<> CheckVolume(std::string_view name, zx::channel crypt_client);
 
   // Returns a pointer to the given volume, if it is already open.  The lifetime of the pointer is
   // less than this object.
@@ -228,10 +228,10 @@ class __EXPORT StartedSingleVolumeMultiVolumeFilesystem : public SingleVolumeFil
   fidl::ClientEnd<fuchsia_io::Directory> Release();
 
   // Unmounts and shuts down the filesystem.  Leaves this object in an indeterminate state.
-  zx::status<> Unmount() override;
+  zx::result<> Unmount() override;
 
   // Returns a connection to the data root (i.e. the directory which contains user data).
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const override {
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> DataRoot() const override {
     return volume_ ? volume_->DataRoot() : zx::error(ZX_ERR_BAD_STATE);
   }
   // Returns the connection to the export root of the filesystem.
@@ -253,7 +253,7 @@ class __EXPORT StartedSingleVolumeMultiVolumeFilesystem : public SingleVolumeFil
 //                filesystems). This can be one of the functions declared in launch.h.
 //
 // See //src/storage/docs/launching.md for more information.
-zx::status<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFormat df,
+zx::result<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFormat df,
                                                 const MountOptions& options, LaunchCallback cb);
 
 // Mounts a multi-volume filesystem.
@@ -265,7 +265,7 @@ zx::status<StartedSingleVolumeFilesystem> Mount(fbl::unique_fd device_fd, DiskFo
 //                filesystems). This can be one of the functions declared in launch.h.
 //
 // See //src/storage/docs/launching.md for more information.
-zx::status<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_fd, DiskFormat df,
+zx::result<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_fd, DiskFormat df,
                                                           const MountOptions& options,
                                                           LaunchCallback cb);
 
@@ -280,7 +280,7 @@ zx::status<StartedMultiVolumeFilesystem> MountMultiVolume(fbl::unique_fd device_
 //   volume_name : the volume to open.
 //
 // See //src/storage/docs/launching.md for more information.
-zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault(
+zx::result<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault(
     fbl::unique_fd device_fd, DiskFormat df, const MountOptions& options, LaunchCallback cb,
     const char* volume_name = "default");
 
@@ -288,7 +288,7 @@ zx::status<StartedSingleVolumeMultiVolumeFilesystem> MountMultiVolumeWithDefault
 //
 // This method takes a directory protocol to the service directory and assumes that we
 // can find the fuchsia.fs.Admin protocol there.
-zx::status<> Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir);
+zx::result<> Shutdown(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir);
 
 }  // namespace fs_management
 

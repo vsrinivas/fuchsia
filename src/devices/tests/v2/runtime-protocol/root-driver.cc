@@ -45,7 +45,7 @@ class RootDriver : public driver::DriverBase,
       fdf::BindServer<fdf::Server<ft::Setter>>(driver_dispatcher()->get(), std::move(server_end),
                                                this);
     };
-    zx::status<> status = service.add_setter(std::move(setter));
+    zx::result<> status = service.add_setter(std::move(setter));
     if (status.is_error()) {
       FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
     }

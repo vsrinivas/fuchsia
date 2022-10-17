@@ -32,7 +32,7 @@ fbl::Array<const zx_device_prop_t> NodeToProps(Node* node) {
   return props_array;
 }
 
-zx::status<CompositeDeviceFragment> CompositeDeviceFragment::Create(
+zx::result<CompositeDeviceFragment> CompositeDeviceFragment::Create(
     fuchsia_device_manager::DeviceFragment fragment) {
   auto composite_fragment = CompositeDeviceFragment();
 
@@ -87,7 +87,7 @@ void CompositeDeviceFragment::Inspect(inspect::Node& root) const {
   root.RecordString(name_, moniker);
 }
 
-zx::status<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::Create(
+zx::result<std::unique_ptr<CompositeDeviceAssembler>> CompositeDeviceAssembler::Create(
     std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor,
     NodeManager* node_manager, async_dispatcher_t* dispatcher) {
   auto assembler = std::make_unique<CompositeDeviceAssembler>();
@@ -286,7 +286,7 @@ void CompositeDeviceManager::Inspect(inspect::Node& root) const {
 void CompositeDeviceManager::AddCompositeDevice(AddCompositeDeviceRequest& request,
                                                 AddCompositeDeviceCompleter::Sync& completer) {
   zx_status_t status = AddCompositeDevice(request.name(), request.args());
-  completer.Reply(zx::make_status(status));
+  completer.Reply(zx::make_result(status));
 }
 
 }  // namespace dfv2

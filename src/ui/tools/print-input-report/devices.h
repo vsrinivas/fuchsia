@@ -12,7 +12,7 @@
 
 namespace print_input_report {
 
-zx::status<fidl::WireSharedClient<fuchsia_input_report::InputReportsReader>> GetReaderClient(
+zx::result<fidl::WireSharedClient<fuchsia_input_report::InputReportsReader>> GetReaderClient(
     fidl::WireSharedClient<fuchsia_input_report::InputDevice>* client,
     async_dispatcher_t* dispatcher);
 

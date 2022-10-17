@@ -237,7 +237,7 @@ void RemoteFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& co
 }
 
 void RemoteFileConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
-  zx::status result = NodeGetFlags();
+  zx::result result = NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.status_value(), {});
   } else {

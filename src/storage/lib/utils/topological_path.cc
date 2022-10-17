@@ -9,7 +9,7 @@
 
 namespace storage {
 
-zx::status<std::string> GetTopologicalPath(
+zx::result<std::string> GetTopologicalPath(
     fidl::UnownedClientEnd<fuchsia_device::Controller> channel) {
   auto result = fidl::WireCall(channel)->GetTopologicalPath();
   if (!result.ok())
@@ -19,7 +19,7 @@ zx::status<std::string> GetTopologicalPath(
   return zx::ok(std::string(result->value()->path.data(), result->value()->path.size()));
 }
 
-zx::status<std::string> GetTopologicalPath(const std::string& path) {
+zx::result<std::string> GetTopologicalPath(const std::string& path) {
   auto client_end_or = component::Connect<fuchsia_device::Controller>(path.c_str());
   if (client_end_or.is_error())
     return client_end_or.take_error();

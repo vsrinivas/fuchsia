@@ -96,28 +96,28 @@ class FsckWorker {
 
   // This is the main logic of fsck.
   // It reads and validates a node block, updates the context and traverse along its child blocks.
-  zx::status<TraverseResult> CheckNodeBlock(const Inode *inode, nid_t nid, FileType ftype,
+  zx::result<TraverseResult> CheckNodeBlock(const Inode *inode, nid_t nid, FileType ftype,
                                             NodeType ntype);
 
   // Even in a successful return, the returned pair can be |{*nullptr*, node_info}| if
   // |node_info.blkaddr| is |kNewAddr|.
-  zx::status<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> ReadNodeBlock(nid_t nid);
+  zx::result<std::pair<std::unique_ptr<FsBlock>, NodeInfoDeprecated>> ReadNodeBlock(nid_t nid);
   zx_status_t ValidateNodeBlock(const Node &node_block, NodeInfoDeprecated node_info,
                                 FileType ftype, NodeType ntype);
   // This function checks the sanity of a node block with respect to the traverse context and
   // updates the context. In a successful return, this function returns a bool value to indicate
   // whether the caller should traverse deeper.
-  zx::status<bool> UpdateContext(const Node &node_block, NodeInfoDeprecated node_info,
+  zx::result<bool> UpdateContext(const Node &node_block, NodeInfoDeprecated node_info,
                                  FileType ftype, NodeType ntype);
 
   // Below traverse functions describe how to iterate over for each data structures.
-  zx::status<TraverseResult> TraverseInodeBlock(const Node &node_block,
+  zx::result<TraverseResult> TraverseInodeBlock(const Node &node_block,
                                                 NodeInfoDeprecated node_info, FileType ftype);
-  zx::status<TraverseResult> TraverseDnodeBlock(const Inode *inode, const Node &node_block,
+  zx::result<TraverseResult> TraverseDnodeBlock(const Inode *inode, const Node &node_block,
                                                 NodeInfoDeprecated node_info, FileType ftype);
-  zx::status<TraverseResult> TraverseIndirectNodeBlock(const Inode *inode, const Node &node_block,
+  zx::result<TraverseResult> TraverseIndirectNodeBlock(const Inode *inode, const Node &node_block,
                                                        FileType ftype);
-  zx::status<TraverseResult> TraverseDoubleIndirectNodeBlock(const Inode *inode,
+  zx::result<TraverseResult> TraverseDoubleIndirectNodeBlock(const Inode *inode,
                                                              const Node &node_block,
                                                              FileType ftype);
 
@@ -180,10 +180,10 @@ class FsckWorker {
   zx_status_t Run();
 
   void InitSuperblockInfo();
-  zx::status<std::unique_ptr<FsBlock>> GetSuperblock(block_t index);
+  zx::result<std::unique_ptr<FsBlock>> GetSuperblock(block_t index);
   zx_status_t SanityCheckRawSuper(const Superblock *raw_super);
   zx_status_t GetValidSuperblock();
-  zx::status<std::pair<std::unique_ptr<FsBlock>, uint64_t>> ValidateCheckpoint(block_t cp_addr);
+  zx::result<std::pair<std::unique_ptr<FsBlock>, uint64_t>> ValidateCheckpoint(block_t cp_addr);
   zx_status_t SanityCheckCkpt();
   zx_status_t GetValidCheckpoint();
   zx_status_t InitNodeManager();
@@ -209,12 +209,12 @@ class FsckWorker {
   std::unique_ptr<FsBlock> GetCurrentSitPage(uint32_t segno);
   void SegmentInfoFromRawSit(SegmentEntry &segment_entry, const SitEntry &raw_sit);
   void CheckBlockCount(uint32_t segno, const SitEntry &raw_sit);
-  zx::status<RawNatEntry> LookupNatInJournal(nid_t nid);
-  zx::status<RawNatEntry> GetNatEntry(nid_t nid);
+  zx::result<RawNatEntry> LookupNatInJournal(nid_t nid);
+  zx::result<RawNatEntry> GetNatEntry(nid_t nid);
   inline void CheckSegmentRange(uint32_t segno);
   SegmentEntry &GetSegmentEntry(uint32_t segno);
   uint32_t GetSegmentNumber(uint32_t block_address);
-  zx::status<NodeInfoDeprecated> GetNodeInfo(nid_t nid);
+  zx::result<NodeInfoDeprecated> GetNodeInfo(nid_t nid);
   void AddIntoInodeLinkMap(nid_t nid, uint32_t link_count);
   zx_status_t FindAndIncreaseInodeLinkMap(nid_t nid);
 

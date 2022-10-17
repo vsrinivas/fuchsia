@@ -47,13 +47,13 @@ using SinkDirMap = std::map<std::string, std::unique_ptr<vfs::PseudoDir>, std::l
 // and add them as VMO file into |sink_map| as if it where published with the sink "llvm-profile".
 //
 // Usually |kernel_data_dir| is '/boot/kernel/data'.
-zx::status<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap& sink_map);
+zx::result<> ExposeKernelProfileData(fbl::unique_fd& kernel_data_dir, SinkDirMap& sink_map);
 
 // Given a handle to |phys_data_dir|, will extract the physboot's coverage vmos from it,
 // and add them as VMO file into |sink_map| as if it where published with the sink "llvm-profile".
 //
 // Usually |phys_data_dir| is '/boot/kernel/data/phys'.
-zx::status<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map);
+zx::result<> ExposePhysbootProfileData(fbl::unique_fd& physboot_data_dir, SinkDirMap& sink_map);
 
 // Given a channel speaking the |fuchsia.boot.SvcStash| protocol, this will extract all published
 // debug data, and return a map from 'sink_name' to a root directory for each sink. Each root

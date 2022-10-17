@@ -6,7 +6,7 @@
 #include <fidl/fuchsia.hardware.tee/cpp/wire.h>
 
 namespace fidl_metadata::tee {
-zx::status<std::vector<uint8_t>> TeeMetadataToFidl(
+zx::result<std::vector<uint8_t>> TeeMetadataToFidl(
     uint32_t default_thread_count, cpp20::span<const CustomThreadConfig> thread_config) {
   fidl::Arena allocator;
 

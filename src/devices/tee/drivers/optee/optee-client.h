@@ -117,14 +117,14 @@ class OpteeClient : public fidl::WireServer<fuchsia_tee::Application> {
   //  * ZX_ERR_UNAVAILABLE:   The current client does not have access to a `Provider`.
   //  * `zx_status_t` codes from `zx::channel::create` or requesting the `Provider` over
   //    FIDL.
-  zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> GetRootStorage();
+  zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> GetRootStorage();
 
   // Requests a connection to the storage directory pointed to by the path.
   //
   // Parameters:
   //  * path:                 The path of the directory, relative to the root storage directory.
   //  * create:               Flag specifying whether to create directories if they don't exist.
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetStorageDirectory(
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> GetStorageDirectory(
       const std::filesystem::path& path, bool create);
 
   // Inits the Rpmb client from `OpteeController` and caches it in `rpmb_client_`.

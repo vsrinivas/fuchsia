@@ -24,7 +24,7 @@ class PciBackend : public Backend {
   const char* tag() { return tag_; }
 
   zx_status_t ConfigureInterruptMode();
-  zx::status<uint32_t> WaitForInterrupt() final;
+  zx::result<uint32_t> WaitForInterrupt() final;
   void InterruptAck(uint32_t key) final;
 
   // Virtio spec 4.1.5.1.2 - MSI-X Vector Configuration

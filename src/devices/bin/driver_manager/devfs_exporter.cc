@@ -10,7 +10,7 @@ namespace fdfs = fuchsia_device_fs;
 
 namespace driver_manager {
 
-zx::status<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
+zx::result<std::unique_ptr<ExportWatcher>> ExportWatcher::Create(
     async_dispatcher_t* dispatcher, Devfs& devfs, Devnode* root,
     fidl::ClientEnd<fuchsia_io::Directory> service_dir, std::string_view service_path,
     std::string_view devfs_path, uint32_t protocol_id,

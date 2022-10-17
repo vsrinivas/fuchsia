@@ -128,8 +128,8 @@ class MinfsFvmTest : public BaseFilesystemTest {
   }
 
   // Returns the GUID associated with the minfs partition inside FVM.
-  zx::status<fuchsia_hardware_block_partition::wire::Guid> GetMinfsPartitionGuid() {
-    zx::status<std::string> device_path_or = fs().DevicePath();
+  zx::result<fuchsia_hardware_block_partition::wire::Guid> GetMinfsPartitionGuid() {
+    zx::result<std::string> device_path_or = fs().DevicePath();
     EXPECT_TRUE(device_path_or.is_ok());
     fbl::unique_fd fd(open(device_path_or->c_str(), O_RDWR));
     EXPECT_TRUE(fd);
@@ -146,7 +146,7 @@ class MinfsFvmTest : public BaseFilesystemTest {
     return zx::ok(*response.value().guid);
   }
 
-  zx::status<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> GetVolumeManagerInfo() {
+  zx::result<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> GetVolumeManagerInfo() {
     fbl::unique_fd fvm_fd = GetFvmFd();
     EXPECT_TRUE(fvm_fd);
 
@@ -289,7 +289,7 @@ void FillDirectory(const TestFilesystem& fs, int dir_fd, uint32_t max_blocks) {
 TEST_F(MinfsFvmTestWith8MiBSliceSize, FreeSharedPoolBytes) {
   // Get the volume initial conditions for computing what minfs should be returning. There should be
   // at least two free slices for us to test the partition limit.
-  zx::status<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> manager_info =
+  zx::result<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> manager_info =
       GetVolumeManagerInfo();
   ASSERT_TRUE(manager_info.is_ok());
   ASSERT_LT(manager_info->assigned_slice_count, manager_info->slice_count);

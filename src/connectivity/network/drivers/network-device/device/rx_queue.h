@@ -27,7 +27,7 @@ class RxQueue {
   static constexpr uint64_t kFifoWatchKey = 3;
   static constexpr uint64_t kQuitWatchKey = 4;
 
-  static zx::status<std::unique_ptr<RxQueue>> Create(DeviceInterface* parent);
+  static zx::result<std::unique_ptr<RxQueue>> Create(DeviceInterface* parent);
   ~RxQueue();
 
   // Helper function with TA annotations that bridges the gap between parent's locks and local

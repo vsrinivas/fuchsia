@@ -246,8 +246,8 @@ class DpDisplay : public DisplayDevice {
 
   bool HandleHotplug(bool long_pulse) override;
   bool HasBacklight() override;
-  zx::status<> SetBacklightState(bool power, double brightness) override;
-  zx::status<FidlBacklight::wire::State> GetBacklightState() override;
+  zx::result<> SetBacklightState(bool power, double brightness) override;
+  zx::result<FidlBacklight::wire::State> GetBacklightState() override;
 
   void SetLinkRate(uint32_t value);
 

@@ -25,7 +25,7 @@ namespace audio::intel_hda {
 // Read a "specific config" NHLT section.
 //
 // This consists of a uint32_t |size| field, followed by |size| bytes of data.
-zx::status<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
+zx::result<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
   // Read the the size of the SpecificConfig structure.
   //
   // The length field indicates the number of capabilities (== the number
@@ -36,7 +36,7 @@ zx::status<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
   }
   uint32_t length = std::move(length_status.value());
   // Read payload.
-  zx::status<cpp20::span<const uint8_t>> payload_status = decoder->Read(length);
+  zx::result<cpp20::span<const uint8_t>> payload_status = decoder->Read(length);
   if (!payload_status.is_ok()) {
     return zx::error(payload_status.status_value());
   }
@@ -64,7 +64,7 @@ zx::status<fbl::Vector<uint8_t>> ReadSpecificConfig(BinaryDecoder* decoder) {
 //   * A specific config block.
 //   * A byte specifying the number of formats.
 //   * N format blocks.
-zx::status<EndPointConfig> ParseDescriptor(const nhlt_descriptor_t& header,
+zx::result<EndPointConfig> ParseDescriptor(const nhlt_descriptor_t& header,
                                            cpp20::span<const uint8_t> additional_bytes) {
   EndPointConfig config;
   config.header = header;
@@ -112,7 +112,7 @@ zx::status<EndPointConfig> ParseDescriptor(const nhlt_descriptor_t& header,
   return zx::ok(std::move(config));
 }
 
-zx::status<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(cpp20::span<const uint8_t> buffer) {
+zx::result<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(cpp20::span<const uint8_t> buffer) {
   // Create output object.
   fbl::AllocChecker ac;
   auto result = fbl::make_unique_checked<Nhlt>(&ac);
@@ -150,7 +150,7 @@ zx::status<std::unique_ptr<Nhlt>> Nhlt::FromBuffer(cpp20::span<const uint8_t> bu
     auto [desc_header, desc_additional_bytes] = std::move(desc.value());
 
     // Parse the descriptor.
-    zx::status<EndPointConfig> config = ParseDescriptor(desc_header, desc_additional_bytes);
+    zx::result<EndPointConfig> config = ParseDescriptor(desc_header, desc_additional_bytes);
     if (!config.is_ok()) {
       GLOBAL_LOG(DEBUG, "Error reading NHLT descriptor body at index %lu", i);
       return zx::error(config.status_value());

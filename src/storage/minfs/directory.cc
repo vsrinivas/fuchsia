@@ -43,7 +43,7 @@
 namespace minfs {
 namespace {
 
-zx::status<> ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
+zx::result<> ValidateDirent(Dirent* de, size_t bytes_read, size_t off) {
   if (bytes_read < kMinfsDirentSize) {
     FX_LOGS(ERROR) << "vn_dir: Short read (" << bytes_read << " bytes) at offset " << off;
     return zx::error(ZX_ERR_IO);
@@ -115,7 +115,7 @@ void Directory::CancelPendingWriteback() {}
 
 #endif
 
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackFind(
+zx::result<Directory::IteratorCommand> Directory::DirentCallbackFind(
     fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
     Dirent* de, DirArgs* args) {
   if ((de->ino != 0) && std::string_view(de->name, de->namelen) == args->name) {
@@ -126,7 +126,7 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackFind(
   return NextDirent(de, &args->offs);
 }
 
-zx::status<> Directory::CanUnlink() const {
+zx::result<> Directory::CanUnlink() const {
   // directories must be empty (dirent_count == 2)
   if (GetInode()->dirent_count != 2) {
     // if we have more than "." and "..", not empty, cannot unlink
@@ -140,7 +140,7 @@ zx::status<> Directory::CanUnlink() const {
   return zx::ok();
 }
 
-zx::status<Directory::IteratorCommand> Directory::UnlinkChild(Transaction* transaction,
+zx::result<Directory::IteratorCommand> Directory::UnlinkChild(Transaction* transaction,
                                                               fbl::RefPtr<VnodeMinfs> childvn,
                                                               Dirent* de, DirectoryOffset* offs) {
   // Coalesce the current dirent with the previous/next dirent, if they
@@ -223,7 +223,7 @@ zx::status<Directory::IteratorCommand> Directory::UnlinkChild(Transaction* trans
 }
 
 // caller is expected to prevent unlink of "." or ".."
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackUnlink(
+zx::result<Directory::IteratorCommand> Directory::DirentCallbackUnlink(
     fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
     Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
@@ -246,7 +246,7 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackUnlink(
 }
 
 // same as unlink, but do not validate vnode
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackForceUnlink(
+zx::result<Directory::IteratorCommand> Directory::DirentCallbackForceUnlink(
     fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
     Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
@@ -269,7 +269,7 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackForceUnlink(
 //   - If the previous checks pass, then:
 //      - Remove the old vnode (decrement link count by one)
 //      - Replace the old vnode's position in the directory with the new inode
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackAttemptRename(
+zx::result<Directory::IteratorCommand> Directory::DirentCallbackAttemptRename(
     fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
     Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
@@ -316,7 +316,7 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackAttemptRename(
   return zx::ok(IteratorCommand::kIteratorSaveSync);
 }
 
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackUpdateInode(
+zx::result<Directory::IteratorCommand> Directory::DirentCallbackUpdateInode(
     fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
     Dirent* de, DirArgs* args) {
   if ((de->ino == 0) || std::string_view(de->name, de->namelen) != args->name) {
@@ -335,7 +335,7 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackUpdateInode(
   return zx::ok(IteratorCommand::kIteratorSaveSync);
 }
 
-zx::status<Directory::IteratorCommand> Directory::DirentCallbackFindSpace(
+zx::result<Directory::IteratorCommand> Directory::DirentCallbackFindSpace(
     fbl::RefPtr<Directory> vndir,  // NOLINT(performance-unnecessary-value-param)
     Dirent* de, DirArgs* args) {
   // Reserved space for this record (possibly going to the max directory size if it's the last
@@ -367,13 +367,13 @@ zx::status<Directory::IteratorCommand> Directory::DirentCallbackFindSpace(
 }
 
 // Updates offset information to move to the next direntry in the directory.
-zx::status<Directory::IteratorCommand> Directory::NextDirent(Dirent* de, DirectoryOffset* offs) {
+zx::result<Directory::IteratorCommand> Directory::NextDirent(Dirent* de, DirectoryOffset* offs) {
   offs->off_prev = offs->off;
   offs->off += DirentReservedSize(de, offs->off);
   return zx::ok(IteratorCommand::kIteratorNext);
 }
 
-zx::status<> Directory::AppendDirent(DirArgs* args) {
+zx::result<> Directory::AppendDirent(DirArgs* args) {
   DirentBuffer dirent_buffer;
   Dirent* de = &dirent_buffer.dirent;
 
@@ -454,7 +454,7 @@ zx::status<> Directory::AppendDirent(DirArgs* args) {
 //  'offs': Offset info about where in the directory this direntry is located.
 //          Since 'func' may create / remove surrounding dirents, it is responsible for
 //          updating the offset information to access the next dirent.
-zx::status<bool> Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
+zx::result<bool> Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
   DirentBuffer dirent_buffer;
   Dirent* de = &dirent_buffer.dirent;
 
@@ -521,11 +521,11 @@ zx_status_t Directory::Lookup(std::string_view name, fbl::RefPtr<fs::Vnode>* out
   });
 }
 
-zx::status<fbl::RefPtr<fs::Vnode>> Directory::LookupInternal(std::string_view name) {
+zx::result<fbl::RefPtr<fs::Vnode>> Directory::LookupInternal(std::string_view name) {
   DirArgs args;
   args.name = name;
 
-  zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
+  zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
   if (found_or.is_error()) {
     return found_or.take_error();
   }
@@ -647,7 +647,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
   // Ensure file does not exist.
   {
     TRACE_DURATION("minfs", "Directory::Create::ExistenceCheck");
-    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
+    zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
     if (found_or.is_error()) {
       return found_or.error_value();
     }
@@ -665,7 +665,7 @@ zx_status_t Directory::Create(std::string_view name, uint32_t mode, fbl::RefPtr<
     TRACE_DURATION("minfs", "Directory::Create::SpaceCheck");
     args.type = type;
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
+    zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
     if (found_or.is_error()) {
       return found_or.error_value();
     }
@@ -746,7 +746,7 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
     args.type = must_be_dir ? kMinfsTypeDir : 0;
     args.transaction = transaction_or.value().get();
 
-    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackUnlink);
+    zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackUnlink);
     if (found_or.is_error()) {
       return found_or.error_value();
     }
@@ -762,9 +762,9 @@ zx_status_t Directory::Unlink(std::string_view name, bool must_be_dir) {
 zx_status_t Directory::Truncate(size_t len) { return ZX_ERR_NOT_FILE; }
 
 // Verify that the 'newdir' inode is not a subdirectory of the source.
-zx::status<> Directory::CheckNotSubdirectory(fbl::RefPtr<Directory> newdir) {
+zx::result<> Directory::CheckNotSubdirectory(fbl::RefPtr<Directory> newdir) {
   fbl::RefPtr<Directory> vn = std::move(newdir);
-  zx::status<> status = zx::ok();
+  zx::result<> status = zx::ok();
   while (vn->GetIno() != kMinfsRootIno) {
     if (vn->GetIno() == GetIno()) {
       status = zx::error(ZX_ERR_INVALID_ARGS);
@@ -803,7 +803,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
   DirArgs args;
   args.name = oldname;
 
-  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind); found_or.is_error()) {
+  if (zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackFind); found_or.is_error()) {
     return found_or.error_value();
   } else if (!found_or.value()) {
     return ZX_ERR_NOT_FOUND;
@@ -835,7 +835,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
   args.type = oldvn_or->IsDirectory() ? kMinfsTypeDir : kMinfsTypeFile;
   args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(newname.length())));
 
-  if (zx::status<bool> found_or = newdir->ForEachDirent(&args, DirentCallbackFindSpace);
+  if (zx::result<bool> found_or = newdir->ForEachDirent(&args, DirentCallbackFindSpace);
       found_or.is_error()) {
     return found_or.error_value();
   } else if (!found_or.value()) {
@@ -863,7 +863,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
   args.name = newname;
   args.ino = oldvn_or->GetIno();
 
-  if (zx::status<bool> found_or = newdir->ForEachDirent(&args, DirentCallbackAttemptRename);
+  if (zx::result<bool> found_or = newdir->ForEachDirent(&args, DirentCallbackAttemptRename);
       found_or.is_error()) {
     return found_or.error_value();
   } else if (!found_or.value()) {
@@ -885,7 +885,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
     args.name = "..";
     args.ino = newdir->GetIno();
 
-    if (zx::status<bool> found_or = vn->ForEachDirent(&args, DirentCallbackUpdateInode);
+    if (zx::result<bool> found_or = vn->ForEachDirent(&args, DirentCallbackUpdateInode);
         found_or.is_error()) {
       return found_or.error_value();
     } else if (!found_or.value()) {
@@ -899,7 +899,7 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, std::string_view o
 
   // finally, remove oldname from its original position
   args.name = oldname;
-  zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackForceUnlink);
+  zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackForceUnlink);
   if (found_or.is_error()) {
     return found_or.error_value();
   }
@@ -930,7 +930,7 @@ zx_status_t Directory::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _targe
     // The destination should not exist
     DirArgs args;
     args.name = name;
-    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
+    zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
     if (found_or.is_error()) {
       return found_or.error_value();
     }
@@ -942,7 +942,7 @@ zx_status_t Directory::Link(std::string_view name, fbl::RefPtr<fs::Vnode> _targe
     // before updating any other metadata.
     args.type = kMinfsTypeFile;  // We can't hard link directories
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-    if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
+    if (zx::result<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
         found_or.is_error()) {
       return found_or.error_value();
     } else if (!found_or.value()) {

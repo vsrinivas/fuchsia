@@ -13,7 +13,7 @@
 
 namespace {
 
-zx::status<Options> GetBootArguments(const fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
+zx::result<Options> GetBootArguments(const fidl::WireSyncClient<fuchsia_boot::Arguments>& client) {
   Options ret;
 
   fidl::StringView vars[]{
@@ -57,7 +57,7 @@ zx_status_t ParseArgs(console_config::Config&& config,
   opts->allowed_log_tags = std::move(config.allowed_log_tags());
   opts->denied_log_tags = std::move(config.denied_log_tags());
 
-  zx::status<Options> boot_args = GetBootArguments(client);
+  zx::result<Options> boot_args = GetBootArguments(client);
   if (boot_args.is_error()) {
     return boot_args.status_value();
   }

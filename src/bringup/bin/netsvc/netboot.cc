@@ -254,7 +254,7 @@ static zx_status_t do_dmctl_mexec() {
     return status;
   }
 
-  zx::status client_end = component::Connect<statecontrol::Admin>();
+  zx::result client_end = component::Connect<statecontrol::Admin>();
   if (client_end.is_error()) {
     return client_end.status_value();
   }
@@ -272,7 +272,7 @@ static zx_status_t do_dmctl_mexec() {
 }
 
 static zx_status_t reboot() {
-  zx::status client_end = component::Connect<statecontrol::Admin>();
+  zx::result client_end = component::Connect<statecontrol::Admin>();
   if (client_end.is_error()) {
     return client_end.status_value();
   }

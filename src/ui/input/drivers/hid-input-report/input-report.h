@@ -67,7 +67,7 @@ class InputReport : public fidl::WireServer<fuchsia_input_report::InputDevice>,
   static constexpr zx::duration kLatencyInitialStep = kLatencyFloor;
   static constexpr uint64_t kLatencyStepMultiplier = 3;
 
-  static zx::status<hid_input_report::DeviceType> InputReportDeviceTypeToHid(
+  static zx::result<hid_input_report::DeviceType> InputReportDeviceTypeToHid(
       fuchsia_input_report::wire::DeviceType type);
 
   bool ParseHidInputReportDescriptor(const hid::ReportDescriptor* report_desc);

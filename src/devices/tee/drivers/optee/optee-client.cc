@@ -160,7 +160,7 @@ zx_status_t AwaitIoOnOpenStatus(fidl::UnownedClientEnd<fuchsia_io::Node> node) {
 }
 
 // Calls `fuchsia.io.Directory/Open` on a channel and awaits the result.
-zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
+zx::result<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, fuchsia_io::wire::OpenFlags flags,
     uint32_t mode, const std::string& path) {
   // Ensure `kOpenFlagDescribe` is passed
@@ -199,7 +199,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Node>> OpenObjectInDirectory(
 //  * root: The channel to the directory to start the walk from.
 //  * path: The path relative to `root` to open.
 template <uint32_t kOpenFlags>
-static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
+static zx::result<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
   static_assert(
       (kOpenFlags & static_cast<uint32_t>(fuchsia_io::wire::OpenFlags::kNotDirectory)) == 0,
@@ -242,7 +242,7 @@ static zx::status<fidl::ClientEnd<fuchsia_io::Directory>> RecursivelyWalkPath(
   return zx::ok(std::move(current_dir));
 }
 
-inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
+inline zx::result<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
   static constexpr fuchsia_io::wire::OpenFlags kCreateFlags =
       fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable |
@@ -250,7 +250,7 @@ inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateDirectory(
   return RecursivelyWalkPath<static_cast<uint32_t>(kCreateFlags)>(root, path);
 }
 
-inline zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
+inline zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenDirectory(
     fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::filesystem::path& path) {
   static constexpr fuchsia_io::wire::OpenFlags kOpenFlags =
       fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable |
@@ -502,7 +502,7 @@ std::optional<SharedMemoryView> OpteeClient::GetMemoryReference(SharedMemoryList
   return result;
 }
 
-zx::status<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootStorage() {
+zx::result<fidl::UnownedClientEnd<fuchsia_io::Directory>> OpteeClient::GetRootStorage() {
   if (!provider_.is_valid()) {
     return zx::error(ZX_ERR_UNAVAILABLE);
   }
@@ -530,7 +530,7 @@ zx_status_t OpteeClient::InitRpmbClient() {
     return ZX_OK;
   }
 
-  zx::status client_end = controller_->RpmbConnectServer();
+  zx::result client_end = controller_->RpmbConnectServer();
   if (client_end.is_error()) {
     LOG(ERROR, "failed to connect to RPMB server (status: %s)", client_end.status_string());
     return client_end.status_value();
@@ -541,7 +541,7 @@ zx_status_t OpteeClient::InitRpmbClient() {
   return ZX_OK;
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpteeClient::GetStorageDirectory(
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpteeClient::GetStorageDirectory(
     const std::filesystem::path& path, bool create) {
   auto root = GetRootStorage();
   if (root.is_error()) {

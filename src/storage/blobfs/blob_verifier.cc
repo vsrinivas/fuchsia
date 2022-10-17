@@ -19,7 +19,7 @@ namespace blobfs {
 BlobVerifier::BlobVerifier(digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics)
     : digest_(std::move(digest)), metrics_(std::move(metrics)) {}
 
-zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::Create(
+zx::result<std::unique_ptr<BlobVerifier>> BlobVerifier::Create(
     digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics,
     cpp20::span<const uint8_t> merkle_data_blocks, const BlobLayout& layout,
     const BlobCorruptionNotifier* notifier) {
@@ -57,7 +57,7 @@ zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::Create(
   return zx::ok(std::move(verifier));
 }
 
-zx::status<std::unique_ptr<BlobVerifier>> BlobVerifier::CreateWithoutTree(
+zx::result<std::unique_ptr<BlobVerifier>> BlobVerifier::CreateWithoutTree(
     digest::Digest digest, std::shared_ptr<BlobfsMetrics> metrics, size_t data_size,
     const BlobCorruptionNotifier* notifier) {
   std::unique_ptr<BlobVerifier> verifier(new BlobVerifier(std::move(digest), std::move(metrics)));

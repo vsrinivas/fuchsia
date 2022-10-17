@@ -122,7 +122,7 @@ class FakeService {
                            }));
 
     // We serve this directory.
-    zx::status remote = fidl::CreateEndpoints(&svc_local_);
+    zx::result remote = fidl::CreateEndpoints(&svc_local_);
     ASSERT_OK(remote.status_value());
     vfs_.ServeDirectory(root_dir, std::move(remote.value()));
   }
@@ -183,7 +183,7 @@ class TestBase : public zxtest::Test {
   }
 
   // Synchronously read and return the exception from |exception_channel_| within |limit|.
-  zx::status<std::pair<zx::exception, zx_exception_info_t>> ReadPendingException(
+  zx::result<std::pair<zx::exception, zx_exception_info_t>> ReadPendingException(
       const zx::duration limit) const {
     if (const auto status =
             exception_channel().wait_one(ZX_CHANNEL_READABLE, zx::deadline_after(limit), nullptr);

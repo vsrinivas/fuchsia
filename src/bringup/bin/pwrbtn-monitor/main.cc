@@ -249,7 +249,7 @@ void ProcessPowerEvent(
 }
 
 // Get the root job from the root job service.
-zx::status<zx::job> GetRootJob() {
+zx::result<zx::job> GetRootJob() {
   auto connect_result = component::Connect<fuchsia_kernel::RootJob>();
 
   if (connect_result.is_error()) {
@@ -280,7 +280,7 @@ bool StartOomWatcher(pwrbtn::OomWatcher* watcher, async_dispatcher_t* dispatcher
   }
 
   zx::event event_handle;
-  zx::status get_root_job = GetRootJob();
+  zx::result get_root_job = GetRootJob();
   if (!get_root_job.is_ok()) {
     printf("pwrbtn-monitor: failed to get root job, OOM events will not be monitored: %s\n",
            get_root_job.status_string());

@@ -280,7 +280,7 @@ TEST_F(Max98373Test, SetDaiFormatTdmSlot) {
     format.bits_per_sample = 16;
     auto formats = client_.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 
@@ -296,7 +296,7 @@ TEST_F(Max98373Test, SetDaiFormatTdmSlot) {
     format.bits_per_sample = 16;
     auto formats = client_.GetDaiFormats();
     ASSERT_TRUE(IsDaiFormatSupported(format, formats.value()));
-    zx::status<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
+    zx::result<CodecFormatInfo> format_info = client_.SetDaiFormat(std::move(format));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, format_info.status_value());
   }
 }

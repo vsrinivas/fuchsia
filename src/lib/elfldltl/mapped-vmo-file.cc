@@ -10,7 +10,7 @@
 
 namespace elfldltl {
 
-zx::status<> MappedVmoFile::Init(zx::unowned_vmo vmo, zx::unowned_vmar vmar) {
+zx::result<> MappedVmoFile::Init(zx::unowned_vmo vmo, zx::unowned_vmar vmar) {
   uint64_t vmo_size;
   zx_status_t status = vmo->get_size(&vmo_size);
   if (status == ZX_OK) {

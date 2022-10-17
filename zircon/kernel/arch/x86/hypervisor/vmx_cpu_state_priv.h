@@ -56,7 +56,7 @@ struct VmxRegion {
   uint32_t revision_id;
 };
 
-zx::status<> alloc_vmx_state();
+zx::result<> alloc_vmx_state();
 void free_vmx_state();
 bool cr_is_invalid(uint64_t cr_value, uint32_t fixed0_msr, uint32_t fixed1_msr);
 

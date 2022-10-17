@@ -14,7 +14,7 @@
 
 namespace minfs {
 
-using ConfigureCallback = fit::callback<zx::status<>(std::unique_ptr<Bcache>, const MountOptions&)>;
+using ConfigureCallback = fit::callback<zx::result<>(std::unique_ptr<Bcache>, const MountOptions&)>;
 
 class StartupService final : public fidl::WireServer<fuchsia_fs_startup::Startup>,
                              public fs::Service {

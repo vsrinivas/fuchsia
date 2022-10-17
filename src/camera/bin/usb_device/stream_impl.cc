@@ -47,7 +47,7 @@ inline size_t ROUNDUP(size_t size, size_t page_size) {
   return (size + (page_size - 1)) & ~(page_size - 1);
 }
 
-zx::status<fuchsia::sysmem::BufferCollectionInfo> StreamImpl::Gralloc(
+zx::result<fuchsia::sysmem::BufferCollectionInfo> StreamImpl::Gralloc(
     fuchsia::camera::VideoFormat video_format, uint32_t num_buffers) {
   fuchsia::sysmem::BufferCollectionInfo buffer_collection_info;
   size_t buffer_size =

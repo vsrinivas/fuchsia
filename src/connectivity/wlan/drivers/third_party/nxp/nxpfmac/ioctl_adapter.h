@@ -29,7 +29,7 @@ class BusInterface;
 
 class IoctlAdapter {
  public:
-  static zx::status<std::unique_ptr<IoctlAdapter>> Create(void* mlan_adapter, BusInterface* bus);
+  static zx::result<std::unique_ptr<IoctlAdapter>> Create(void* mlan_adapter, BusInterface* bus);
   ~IoctlAdapter();
 
   // Issue an IOCTL with the specified request. The call returns IoctlStatus::Pending if the request

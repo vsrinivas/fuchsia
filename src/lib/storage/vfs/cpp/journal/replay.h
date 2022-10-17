@@ -32,7 +32,7 @@ zx_status_t ParseJournalEntries(const JournalSuperblock* info, storage::VmoBuffe
 //
 // Returns the new |JournalSuperblock|, with an updated sequence number which should be used on
 // journal initialization.
-zx::status<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_handler,
+zx::result<JournalSuperblock> ReplayJournal(fs::TransactionHandler* transaction_handler,
                                             storage::VmoidRegistry* registry,
                                             uint64_t journal_start, uint64_t journal_length,
                                             uint32_t block_size);

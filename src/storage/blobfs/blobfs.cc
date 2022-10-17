@@ -114,7 +114,7 @@ std::shared_ptr<BlobfsMetrics> CreateBlobfsMetrics(inspect::Inspector inspector)
 
 }  // namespace
 
-zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
+zx::result<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatcher,
                                                    std::unique_ptr<BlockDevice> device,
                                                    fs::PagedVfs* vfs, const MountOptions& options,
                                                    zx::resource vmex_resource) {
@@ -303,7 +303,7 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     FX_LOGS(ERROR) << "Failed to initialize Vnodes: " << zx_status_get_string(status);
     return zx::error(status);
   }
-  zx::status<std::unique_ptr<BlobLoader>> loader_or = BlobLoader::Create(
+  zx::result<std::unique_ptr<BlobLoader>> loader_or = BlobLoader::Create(
       fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->GetMetrics(), fs->decompression_connector());
   if (loader_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
@@ -370,7 +370,7 @@ void Blobfs::InitializeInspectTree() {
           fs_inspect::InfoData::OldestVersion(Info().major_version, Info().oldest_minor_version),
   };
 
-  zx::status<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};
+  zx::result<fs::FilesystemInfo> fs_info{GetFilesystemInfo()};
   if (fs_info.is_error()) {
     FX_LOGS(ERROR) << "Failed to get filesystem info while initializing inspect tree: "
                    << fs_info.status_string();
@@ -393,7 +393,7 @@ void Blobfs::InitializeInspectTree() {
 }
 
 // Writeback enabled, journaling enabled.
-zx::status<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
+zx::result<std::unique_ptr<Journal>> Blobfs::InitializeJournal(
     fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
     uint64_t journal_length, JournalSuperblock journal_superblock) {
   const uint64_t journal_entry_blocks = journal_length - fs::kJournalMetadataBlocks;
@@ -771,7 +771,7 @@ zx_status_t Blobfs::AddBlocks(size_t nblocks, RawBitmap* block_map) {
   return ZX_OK;
 }
 
-zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
   fs::FilesystemInfo info{};
 
   info.block_size = kBlobfsBlockSize;
@@ -796,7 +796,7 @@ zx::status<fs::FilesystemInfo> Blobfs::GetFilesystemInfo() {
   return zx::ok(info);
 }
 
-zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
+zx::result<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {
   auto extent_iter = AllocatedExtentIterator::Create(GetAllocator(), node_index);
   if (extent_iter.is_error()) {
     return extent_iter.take_error();
@@ -985,7 +985,7 @@ void Blobfs::ComputeBlobFragmentation(uint32_t node_index, Inode& inode,
 
   AllocatedNodeIterator extents_iter(GetNodeFinder(), node_index, &inode);
   while (!extents_iter.Done()) {
-    zx::status<ExtentContainer*> container_or = extents_iter.Next();
+    zx::result<ExtentContainer*> container_or = extents_iter.Next();
     if (container_or.is_error()) {
       FX_LOGS(ERROR) << "Failed to get next extent container for inode " << node_index << ": "
                      << container_or.status_string();
@@ -1147,7 +1147,7 @@ zx_status_t Blobfs::RunRequests(const std::vector<storage::BufferedOperation>& o
   return TransactionManager::RunRequests(operations);
 }
 
-zx::status<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
+zx::result<std::unique_ptr<Superblock>> Blobfs::ReadBackupSuperblock() {
   // If the filesystem is writable, it's possible that we just wrote a backup superblock, so issue
   // a sync just in case.
   if (writability_ == Writability::Writable) {

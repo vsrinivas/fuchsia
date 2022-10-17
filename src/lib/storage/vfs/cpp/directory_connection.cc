@@ -101,7 +101,7 @@ void DirectoryConnection::Clone(CloneRequestView request, CloneCompleter::Sync& 
 }
 
 void DirectoryConnection::Close(CloseCompleter::Sync& completer) {
-  zx::status result = Connection::NodeClose();
+  zx::result result = Connection::NodeClose();
   if (result.is_error()) {
     completer.ReplyError(result.status_value());
   } else {
@@ -114,7 +114,7 @@ void DirectoryConnection::Query(QueryCompleter::Sync& completer) {
 }
 
 void DirectoryConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
-  zx::status result = Connection::NodeDescribe();
+  zx::result result = Connection::NodeDescribe();
   if (result.is_error()) {
     completer.Close(result.status_value());
     return;
@@ -139,7 +139,7 @@ void DirectoryConnection::Sync(SyncCompleter::Sync& completer) {
 }
 
 void DirectoryConnection::GetAttr(GetAttrCompleter::Sync& completer) {
-  zx::status result = Connection::NodeGetAttr();
+  zx::result result = Connection::NodeGetAttr();
   if (result.is_error()) {
     completer.Reply(result.status_value(), fio::wire::NodeAttributes());
   } else {
@@ -148,7 +148,7 @@ void DirectoryConnection::GetAttr(GetAttrCompleter::Sync& completer) {
 }
 
 void DirectoryConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
-  zx::status result = Connection::NodeSetAttr(request->flags, request->attributes);
+  zx::result result = Connection::NodeSetAttr(request->flags, request->attributes);
   if (result.is_error()) {
     completer.Reply(result.status_value());
   } else {
@@ -157,7 +157,7 @@ void DirectoryConnection::SetAttr(SetAttrRequestView request, SetAttrCompleter::
 }
 
 void DirectoryConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
-  zx::status result = Connection::NodeGetFlags();
+  zx::result result = Connection::NodeGetFlags();
   if (result.is_error()) {
     completer.Reply(result.status_value(), {});
   } else {
@@ -167,7 +167,7 @@ void DirectoryConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
 
 void DirectoryConnection::SetFlags(SetFlagsRequestView request,
                                    SetFlagsCompleter::Sync& completer) {
-  zx::status result = Connection::NodeSetFlags(request->flags);
+  zx::result result = Connection::NodeSetFlags(request->flags);
   if (result.is_error()) {
     completer.Reply(result.status_value());
   } else {
@@ -388,7 +388,7 @@ void DirectoryConnection::Watch(WatchRequestView request, WatchCompleter::Sync& 
 void DirectoryConnection::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[DirectoryQueryFilesystem] our options: ", options());
 
-  zx::status result = Connection::NodeQueryFilesystem();
+  zx::result result = Connection::NodeQueryFilesystem();
   completer.Reply(result.status_value(),
                   result.is_ok() ? fidl::ObjectView<fuchsia_io::wire::FilesystemInfo>::FromExternal(
                                        &result.value())

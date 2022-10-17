@@ -86,7 +86,7 @@ class IoApic : public IoHandler, public PlatformDevice {
   // Read or write indirect registers directly.
   zx_status_t ReadRegisterLocked(uint8_t select_register, IoValue* value) const
       __TA_REQUIRES(mutex_);
-  zx::status<Action> WriteRegisterLocked(uint8_t select_register, const IoValue& value)
+  zx::result<Action> WriteRegisterLocked(uint8_t select_register, const IoValue& value)
       __TA_REQUIRES(mutex_);
 
   // Read/write the given redirect entry.
@@ -103,7 +103,7 @@ class IoApic : public IoHandler, public PlatformDevice {
   };
   zx_status_t ReadRedirectEntryLocked(uint32_t global_irq, RedirectBits bits, IoValue* result) const
       __TA_REQUIRES(mutex_);
-  zx::status<Action> WriteRedirectEntryLocked(uint32_t global_irq, RedirectBits bits,
+  zx::result<Action> WriteRedirectEntryLocked(uint32_t global_irq, RedirectBits bits,
                                               const IoValue& value) __TA_REQUIRES(mutex_);
 
   // Deliver an interrupt to the guest according to the given IoApicRedirectEntry.

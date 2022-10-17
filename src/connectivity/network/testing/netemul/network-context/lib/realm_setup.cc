@@ -14,8 +14,8 @@ namespace netemul {
 
 constexpr char kTapctlRelativePath[] = "sys/test/tapctl";
 
-zx::status<fbl::unique_fd> StartDriverTestRealm() {
-  zx::status client_end = component::Connect<fuchsia_driver_test::Realm>();
+zx::result<fbl::unique_fd> StartDriverTestRealm() {
+  zx::result client_end = component::Connect<fuchsia_driver_test::Realm>();
   if (client_end.is_error()) {
     return zx::error(client_end.status_value());
   }

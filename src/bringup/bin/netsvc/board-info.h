@@ -9,10 +9,10 @@
 #include <lib/zx/status.h>
 #include <unistd.h>
 
-zx::status<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
+zx::result<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,
                                 const char* name, size_t length);
 
-zx::status<> ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
+zx::result<> ReadBoardInfo(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo, void* data,
                            off_t offset, size_t* length);
 
 size_t BoardInfoSize();

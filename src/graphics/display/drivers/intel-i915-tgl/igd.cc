@@ -408,7 +408,7 @@ zx_status_t IgdOpRegion::Init(const ddk::Pci& pci) {
   }
 
   {
-    zx::status<AcpiMemoryRegion> memory_op_region =
+    zx::result<AcpiMemoryRegion> memory_op_region =
         AcpiMemoryRegion::Create(igd_addr, kIgdOpRegionLen);
     if (memory_op_region.is_error()) {
       zxlogf(ERROR, "Failed to map IGD Memory OpRegion: %s",
@@ -430,7 +430,7 @@ zx_status_t IgdOpRegion::Init(const ddk::Pci& pci) {
       igd_opregion_->asle_supported()) {
     auto [rvda, rvds] = igd_opregion_->vbt_region();
 
-    zx::status<AcpiMemoryRegion> extended_vbt_region =
+    zx::result<AcpiMemoryRegion> extended_vbt_region =
         AcpiMemoryRegion::Create(igd_addr + rvda, rvds);
     if (extended_vbt_region.is_error()) {
       zxlogf(ERROR, "Failed to map extended VBT: %s",

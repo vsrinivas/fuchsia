@@ -17,7 +17,7 @@
 
 namespace minfs {
 
-zx::status<std::unique_ptr<Runner>> Runner::Create(FuchsiaDispatcher dispatcher,
+zx::result<std::unique_ptr<Runner>> Runner::Create(FuchsiaDispatcher dispatcher,
                                                    std::unique_ptr<Bcache> bc,
                                                    const MountOptions& options) {
   std::unique_ptr<Runner> runner(new Runner(dispatcher));
@@ -73,9 +73,9 @@ void Runner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx::status<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return minfs_->GetFilesystemInfo(); }
+zx::result<fs::FilesystemInfo> Runner::GetFilesystemInfo() { return minfs_->GetFilesystemInfo(); }
 
-zx::status<> Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
+zx::result<> Runner::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root) {
   auto vn = minfs_->VnodeGet(kMinfsRootIno);
   if (vn.is_error()) {
     FX_LOGS(ERROR) << "cannot find root inode: " << vn.is_error();

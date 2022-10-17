@@ -25,7 +25,7 @@ enum class CompressionAlgorithm {
 const char* CompressionAlgorithmToString(CompressionAlgorithm);
 
 // Returns the compression algorithm used in |inode|.
-zx::status<CompressionAlgorithm> AlgorithmForInode(const Inode& inode);
+zx::result<CompressionAlgorithm> AlgorithmForInode(const Inode& inode);
 
 // Return an Inode header flagset with the flags associated with |algorithm| set, and all other
 // flags are unset.

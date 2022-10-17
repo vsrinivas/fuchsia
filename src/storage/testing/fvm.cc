@@ -23,13 +23,13 @@ constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0
 constexpr uint8_t kTestUniqueGUID[] = {0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07,
                                        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f};
 
-zx::status<> BindFvm(int fd) {
+zx::result<> BindFvm(int fd) {
   fdio_cpp::UnownedFdioCaller caller(fd);
   auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->Bind("fvm.so");
-  auto status = zx::make_status(resp.status());
+  auto status = zx::make_result(resp.status());
   if (status.is_ok()) {
     if (resp->is_error()) {
-      status = zx::make_status(resp->error_value());
+      status = zx::make_result(resp->error_value());
     }
   }
   if (status.is_error()) {
@@ -39,13 +39,13 @@ zx::status<> BindFvm(int fd) {
   return zx::ok();
 }
 
-zx::status<std::string> CreateFvmInstance(const std::string& device_path, size_t slice_size) {
+zx::result<std::string> CreateFvmInstance(const std::string& device_path, size_t slice_size) {
   fbl::unique_fd fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     FX_LOGS(ERROR) << "Could not open test disk";
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  auto status = zx::make_status(fs_management::FvmInit(fd.get(), slice_size));
+  auto status = zx::make_result(fs_management::FvmInit(fd.get(), slice_size));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "Could not format disk with FVM";
     return status.take_error();
@@ -54,7 +54,7 @@ zx::status<std::string> CreateFvmInstance(const std::string& device_path, size_t
   if (status.is_error())
     return status.take_error();
   std::string fvm_disk_path = device_path + "/fvm";
-  status = zx::make_status(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
+  status = zx::make_result(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
   if (status.is_error()) {
     FX_LOGS(ERROR) << "FVM driver never appeared at " << fvm_disk_path;
     return status.take_error();
@@ -63,13 +63,13 @@ zx::status<std::string> CreateFvmInstance(const std::string& device_path, size_t
   return zx::ok(fvm_disk_path);
 }
 
-zx::status<std::string> CreateFvmPartition(const std::string& device_path, size_t slice_size,
+zx::result<std::string> CreateFvmPartition(const std::string& device_path, size_t slice_size,
                                            const FvmOptions& options) {
   if (options.name.size() >= BLOCK_NAME_LEN)
     return zx::error(ZX_ERR_INVALID_ARGS);
 
   // Format the raw device to support FVM, and bind the FVM driver to it.
-  zx::status<std::string> fvm_disk_path_or = CreateFvmInstance(device_path, slice_size);
+  zx::result<std::string> fvm_disk_path_or = CreateFvmInstance(device_path, slice_size);
   if (fvm_disk_path_or.is_error()) {
     return fvm_disk_path_or.take_error();
   }

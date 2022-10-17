@@ -132,7 +132,7 @@ bool AcpiTableHasKeyword(const fidl::ClientEnd<Acpi>& acpi_channel, std::string_
 // device can be found if and only if it's an AEMU board.
 bool IsAemuBoard() {
   // Open up channel to ACPI device.
-  zx::status channel = component::Connect<Acpi>(kAcpiDevicePath);
+  zx::result channel = component::Connect<Acpi>(kAcpiDevicePath);
   if (channel.is_error()) {
     return false;
   }

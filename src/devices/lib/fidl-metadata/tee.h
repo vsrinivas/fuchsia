@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVICES_LIB_FIDL_METADATA_OPTEE_H_
-#define SRC_DEVICES_LIB_FIDL_METADATA_OPTEE_H_
+#ifndef SRC_DEVICES_LIB_FIDL_METADATA_TEE_H_
+#define SRC_DEVICES_LIB_FIDL_METADATA_TEE_H_
 
 #include <lib/stdcompat/span.h>
 #include <lib/zx/status.h>
@@ -31,9 +31,9 @@ struct CustomThreadConfig {
 
 // Convert an Tee Thread Config to fuchsia.hardware.tee.TeeMetadata encoded
 // in a FIDL bytestream.
-zx::status<std::vector<uint8_t>> TeeMetadataToFidl(
+zx::result<std::vector<uint8_t>> TeeMetadataToFidl(
     uint32_t default_thread_count, cpp20::span<const CustomThreadConfig> thread_config);
 
 }  // namespace fidl_metadata::tee
 
-#endif  // SRC_DEVICES_LIB_FIDL_METADATA_OPTEE_H_
+#endif  // SRC_DEVICES_LIB_FIDL_METADATA_TEE_H_

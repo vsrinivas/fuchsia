@@ -71,7 +71,7 @@ struct Instruction {
   }
 
   template <typename T>
-  zx::status<> Read(T value) const {
+  zx::result<> Read(T value) const {
     if (type != InstructionType::kRead || access_size != sizeof(T)) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
@@ -80,7 +80,7 @@ struct Instruction {
   }
 
   template <typename T>
-  zx::status<> Write(T& value) const {
+  zx::result<> Write(T& value) const {
     if (type != InstructionType::kWrite || access_size != sizeof(T)) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
@@ -88,7 +88,7 @@ struct Instruction {
     return zx::ok();
   }
 
-  zx::status<> Test8(uint8_t inst_val, uint8_t value) const {
+  zx::result<> Test8(uint8_t inst_val, uint8_t value) const {
     if (type != InstructionType::kTest || access_size != 1u || Value<uint8_t>() != inst_val) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
@@ -98,7 +98,7 @@ struct Instruction {
   }
 
   template <typename T>
-  zx::status<> Or(T inst_val, T& value) const {
+  zx::result<> Or(T inst_val, T& value) const {
     if (type != InstructionType::kLogicalOr || access_size != sizeof(T) || Value<T>() != inst_val) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
@@ -108,7 +108,7 @@ struct Instruction {
   }
 };
 
-zx::status<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
+zx::result<Instruction> DecodeInstruction(InstructionSpan span, uint8_t default_operand_size,
                                           zx_vcpu_state_t& vcpu_state);
 
 #endif  // SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_DECODE_H_

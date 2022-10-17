@@ -266,7 +266,7 @@ void Tas27xx::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBase* irq, zx_
   irq_.ack();
 }
 
-zx::status<DriverIds> Tas27xx::Initialize() {
+zx::result<DriverIds> Tas27xx::Initialize() {
   zx_status_t status = fault_gpio_.GetInterrupt(ZX_INTERRUPT_MODE_EDGE_LOW, &irq_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "tas27xx: Could not get codec interrupt %d", status);
@@ -409,12 +409,12 @@ zx_status_t Tas27xx::Shutdown() {
 
 DaiSupportedFormats Tas27xx::GetDaiFormats() { return kSupportedDaiFormats; }
 
-zx::status<CodecFormatInfo> Tas27xx::SetDaiFormat(const DaiFormat& format) {
+zx::result<CodecFormatInfo> Tas27xx::SetDaiFormat(const DaiFormat& format) {
   format_.emplace(format);
   return SetDaiFormatInternal(format);
 }
 
-zx::status<CodecFormatInfo> Tas27xx::SetDaiFormatInternal(const DaiFormat& format) {
+zx::result<CodecFormatInfo> Tas27xx::SetDaiFormatInternal(const DaiFormat& format) {
   zx_status_t status = SetRate(format.frame_rate);
   if (status != ZX_OK) {
     return zx::error(status);
@@ -442,7 +442,7 @@ zx_status_t Tas27xx::WriteReg(uint8_t reg, uint8_t value) {
   uint8_t write_buffer[2];
   write_buffer[0] = reg;
   write_buffer[1] = value;
-//#define TRACE_I2C
+// #define TRACE_I2C
 #ifdef TRACE_I2C
   printf("Writing register 0x%02X to value 0x%02X\n", reg, value);
 #endif

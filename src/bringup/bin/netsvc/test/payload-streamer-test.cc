@@ -22,7 +22,7 @@ class PayloadStreamerTest : public zxtest::Test {
   }
 
   void StartStreamer(netsvc::ReadCallback callback = DefaultCallback) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::PayloadStream>();
     ASSERT_OK(endpoints.status_value());
 
     client_ = fidl::WireSyncClient(std::move(endpoints->client));

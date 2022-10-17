@@ -21,7 +21,7 @@ constexpr std::string_view kDefaultLightDevicePath = "/dev/class/light/000";
 
 namespace {
 
-zx::status<> LightErrorToZxStatus(fuchsia::hardware::light::LightError error) {
+zx::result<> LightErrorToZxStatus(fuchsia::hardware::light::LightError error) {
   switch (error) {
     case fuchsia::hardware::light::LightError::OK:
       return zx::error(ZX_OK);
@@ -36,7 +36,7 @@ zx::status<> LightErrorToZxStatus(fuchsia::hardware::light::LightError error) {
   }
 }
 
-zx::status<> SetLightBrightness(const fuchsia::hardware::light::LightSyncPtr& light,
+zx::result<> SetLightBrightness(const fuchsia::hardware::light::LightSyncPtr& light,
                                 uint32_t light_num, double brightness) {
   fuchsia::hardware::light::Light_SetBrightnessValue_Result result;
   light->SetBrightnessValue(light_num, brightness, &result);
@@ -53,15 +53,15 @@ bool operator==(const LightInfo& a, const LightInfo& b) {
 }
 bool operator!=(const LightInfo& a, const LightInfo& b) { return !(a == b); }
 
-zx::status<> TurnOnLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num) {
+zx::result<> TurnOnLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num) {
   return SetLightBrightness(light, light_num, /*brightness=*/1.0);
 }
 
-zx::status<> TurnOffLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num) {
+zx::result<> TurnOffLight(const fuchsia::hardware::light::LightSyncPtr& light, uint32_t light_num) {
   return SetLightBrightness(light, light_num, /*brightness=*/0.0);
 }
 
-zx::status<std::vector<LightInfo>> GetLights(const fuchsia::hardware::light::LightSyncPtr& light) {
+zx::result<std::vector<LightInfo>> GetLights(const fuchsia::hardware::light::LightSyncPtr& light) {
   // Get the number of lights.
   uint32_t num_lights;
   zx_status_t status = light->GetNumLights(&num_lights);
@@ -101,7 +101,7 @@ zx::status<std::vector<LightInfo>> GetLights(const fuchsia::hardware::light::Lig
 
 bool StressLight(StatusLine* status, const CommandLineArgs& args, zx::duration duration) {
   // Open the light device.
-  zx::status<zx::channel> channel = OpenDeviceChannel(kDefaultLightDevicePath);
+  zx::result<zx::channel> channel = OpenDeviceChannel(kDefaultLightDevicePath);
   if (channel.is_error()) {
     status->Log("Could not open device: %s\n", channel.status_string());
     return false;
@@ -109,7 +109,7 @@ bool StressLight(StatusLine* status, const CommandLineArgs& args, zx::duration d
   fuchsia::hardware::light::LightSyncPtr light_dev{};
   light_dev.Bind(std::move(channel).value());
   // Fetch information about the lights.
-  zx::status<std::vector<LightInfo>> lights_or = GetLights(light_dev);
+  zx::result<std::vector<LightInfo>> lights_or = GetLights(light_dev);
   if (lights_or.is_error()) {
     status->Log("Could not query lights: %s\n", lights_or.status_string());
     return false;
@@ -134,7 +134,7 @@ bool StressLight(StatusLine* status, const CommandLineArgs& args, zx::duration d
   while (zx::clock::get_monotonic() < end_time) {
     // Turn lights on.
     for (const LightInfo& light : lights) {
-      zx::status<> result = TurnOnLight(light_dev, light.index);
+      zx::result<> result = TurnOnLight(light_dev, light.index);
       if (result.is_error()) {
         status->Log("Could not turn on light %d '%s': %s", light.index, light.name.c_str(),
                     result.status_string());
@@ -145,7 +145,7 @@ bool StressLight(StatusLine* status, const CommandLineArgs& args, zx::duration d
 
     // Turn all lights off.
     for (const LightInfo& light : lights) {
-      zx::status<> result = TurnOffLight(light_dev, light.index);
+      zx::result<> result = TurnOffLight(light_dev, light.index);
       if (result.is_error()) {
         status->Log("Could not turn off light %d '%s': %s", light.index, light.name.c_str(),
                     result.status_string());

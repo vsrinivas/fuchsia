@@ -95,7 +95,7 @@ zx_status_t TiTca6408a::GpioImplRead(uint32_t index, uint8_t* out_value) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  zx::status<uint8_t> value = ReadBit(Register::kInputPort, index);
+  zx::result<uint8_t> value = ReadBit(Register::kInputPort, index);
   if (value.is_error()) {
     return value.status_value();
   }
@@ -112,7 +112,7 @@ zx_status_t TiTca6408a::GpioImplWrite(uint32_t index, uint8_t value) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  const zx::status<> status =
+  const zx::result<> status =
       value ? SetBit(Register::kOutputPort, index) : ClearBit(Register::kOutputPort, index);
   return status.status_value();
 }
@@ -128,7 +128,7 @@ zx_status_t TiTca6408a::GpioImplSetPolarity(uint32_t index, gpio_polarity_t pola
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx::status<uint8_t> TiTca6408a::ReadBit(Register reg, uint32_t index) {
+zx::result<uint8_t> TiTca6408a::ReadBit(Register reg, uint32_t index) {
   const auto bit = static_cast<uint8_t>(1 << (index - pin_index_offset_));
   const auto address = static_cast<uint8_t>(reg);
 
@@ -143,7 +143,7 @@ zx::status<uint8_t> TiTca6408a::ReadBit(Register reg, uint32_t index) {
   return zx::ok(static_cast<uint8_t>((value & bit) ? 1 : 0));
 }
 
-zx::status<> TiTca6408a::SetBit(Register reg, uint32_t index) {
+zx::result<> TiTca6408a::SetBit(Register reg, uint32_t index) {
   const auto bit = static_cast<uint8_t>(1 << (index - pin_index_offset_));
   const auto address = static_cast<uint8_t>(reg);
 
@@ -165,7 +165,7 @@ zx::status<> TiTca6408a::SetBit(Register reg, uint32_t index) {
   return zx::ok();
 }
 
-zx::status<> TiTca6408a::ClearBit(Register reg, uint32_t index) {
+zx::result<> TiTca6408a::ClearBit(Register reg, uint32_t index) {
   const auto bit = static_cast<uint8_t>(1 << (index - pin_index_offset_));
   const auto address = static_cast<uint8_t>(reg);
 

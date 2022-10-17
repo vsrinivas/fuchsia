@@ -53,12 +53,12 @@ class TestFidlClient {
     zx::event event = {};
   };
 
-  zx::status<uint64_t> ImportImageWithSysmem(
+  zx::result<uint64_t> ImportImageWithSysmem(
       const fuchsia_hardware_display::wire::ImageConfig& image_config) TA_EXCL(mtx());
 
-  zx::status<uint64_t> CreateImage() TA_EXCL(mtx());
-  zx::status<uint64_t> CreateLayer() TA_EXCL(mtx());
-  zx::status<EventInfo> CreateEvent() TA_EXCL(mtx());
+  zx::result<uint64_t> CreateImage() TA_EXCL(mtx());
+  zx::result<uint64_t> CreateLayer() TA_EXCL(mtx());
+  zx::result<EventInfo> CreateEvent() TA_EXCL(mtx());
 
   fuchsia_hardware_display::wire::ConfigStamp GetRecentAppliedConfigStamp() TA_EXCL(mtx());
 
@@ -115,10 +115,10 @@ class TestFidlClient {
   fuchsia_hardware_display::wire::ConfigStamp recent_presented_config_stamp_;
   const fidl::WireSyncClient<fuchsia_sysmem::Allocator>& sysmem_;
 
-  zx::status<uint64_t> ImportImageWithSysmemLocked(
+  zx::result<uint64_t> ImportImageWithSysmemLocked(
       const fuchsia_hardware_display::wire::ImageConfig& image_config) TA_REQ(mtx());
-  zx::status<uint64_t> CreateLayerLocked() TA_REQ(mtx());
-  zx::status<EventInfo> CreateEventLocked() TA_REQ(mtx());
+  zx::result<uint64_t> CreateLayerLocked() TA_REQ(mtx());
+  zx::result<EventInfo> CreateEventLocked() TA_REQ(mtx());
 
   void OnEventMsgAsync(async_dispatcher_t* dispatcher, async::WaitBase* self, zx_status_t status,
                        const zx_packet_signal_t* signal) TA_EXCL(mtx());

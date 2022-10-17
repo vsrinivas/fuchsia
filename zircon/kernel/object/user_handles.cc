@@ -65,7 +65,7 @@ zx_status_t get_user_handles_to_consume(user_inout_ptr<zx_handle_disposition_t> 
 }
 
 // This overload is used by zx_channel_write.
-zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
+zx::result<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   const zx_handle_t* handle_val) {
   Handle* source = process->handle_table().GetHandleLocked(*process, *handle_val);
@@ -79,7 +79,7 @@ zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
 }
 
 // This overload is used by zx_channel_write_etc.
-zx::status<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
+zx::result<Handle*> get_handle_for_message_locked(ProcessDispatcher* process,
                                                   const Dispatcher* channel,
                                                   zx_handle_disposition_t* handle_disposition) {
   Handle* source = process->handle_table().GetHandleLocked(*process, handle_disposition->handle);

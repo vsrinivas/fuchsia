@@ -14,7 +14,7 @@ namespace fdf = fuchsia_driver_framework;
 
 namespace dfv2 {
 
-zx::status<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
+zx::result<> SetEncodedConfig(fdf::wire::DriverStartArgs& args,
                               frunner::wire::ComponentStartInfo& start_info) {
   if (!start_info.has_encoded_config()) {
     return zx::ok();
@@ -53,7 +53,7 @@ DriverHostComponent::DriverHostComponent(
     : driver_host_(std::move(driver_host), dispatcher,
                    fidl::ObserveTeardown([this, driver_hosts] { driver_hosts->erase(*this); })) {}
 
-zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
+zx::result<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
     fidl::ClientEnd<fdf::Node> client_end, std::string node_name,
     fidl::VectorView<fuchsia_driver_framework::wire::NodeSymbol> symbols,
     frunner::wire::ComponentStartInfo start_info) {
@@ -91,7 +91,7 @@ zx::status<fidl::ClientEnd<fdh::Driver>> DriverHostComponent::Start(
   return zx::ok(std::move(endpoints->client));
 }
 
-zx::status<uint64_t> DriverHostComponent::GetProcessKoid() const {
+zx::result<uint64_t> DriverHostComponent::GetProcessKoid() const {
   auto result = driver_host_.sync()->GetProcessKoid();
   if (!result.ok()) {
     return zx::error(result.status());

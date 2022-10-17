@@ -23,7 +23,7 @@
 namespace i915_tgl {
 
 // static
-zx::status<AcpiMemoryRegion> AcpiMemoryRegion::Create(zx_paddr_t region_base, size_t region_size) {
+zx::result<AcpiMemoryRegion> AcpiMemoryRegion::Create(zx_paddr_t region_base, size_t region_size) {
   auto [first_page_physical_address, vmo_size] = RoundToPageBoundaries(region_base, region_size);
 
   // The static_cast below is lossless because of this.
@@ -45,14 +45,14 @@ zx::status<AcpiMemoryRegion> AcpiMemoryRegion::Create(zx_paddr_t region_base, si
   zx_status_t status = zx::vmo::create_physical(*zx::unowned_resource(get_root_resource()),
                                                 first_page_physical_address, vmo_size, &region_vmo);
   if (status != ZX_OK) {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
   zx_vaddr_t first_page_address;
   status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, /*vmar_offset=*/0,
                                       region_vmo, /*vmo_offset=*/0, vmo_size, &first_page_address);
   if (status != ZX_OK) {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
   const zx_vaddr_t region_address = static_cast<zx_vaddr_t>(first_page_address + page_offset);

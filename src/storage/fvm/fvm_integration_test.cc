@@ -133,11 +133,11 @@ class FvmTest : public zxtest::Test {
 
   void CreateRamdisk(uint64_t block_size, uint64_t block_count);
 
-  zx::status<fbl::unique_fd> OpenPartition(const fs_management::PartitionMatcher& matcher) const {
+  zx::result<fbl::unique_fd> OpenPartition(const fs_management::PartitionMatcher& matcher) const {
     return WaitForPartition(matcher, zx::duration(0));
   }
 
-  zx::status<fbl::unique_fd> WaitForPartition(
+  zx::result<fbl::unique_fd> WaitForPartition(
       const fs_management::PartitionMatcher& matcher,
       zx::duration timeout = zx::duration::infinite()) const {
     return fs_management::OpenPartitionWithDevfs(devfs_root().get(), &matcher, timeout.get(),
@@ -152,7 +152,7 @@ class FvmTest : public zxtest::Test {
     uint32_t flags = 0;
   };
 
-  zx::status<fbl::unique_fd> AllocatePartition(AllocatePartitionRequest request) const {
+  zx::result<fbl::unique_fd> AllocatePartition(AllocatePartitionRequest request) const {
     alloc_req_t req;
     req.slice_count = request.slice_count;
     req.flags = request.flags;
@@ -255,7 +255,7 @@ void ValidateFVM(fbl::unique_fd fd, ValidationResult result = ValidationResult::
   }
 }
 
-zx::status<std::string> GetPartitionPath(int fd) {
+zx::result<std::string> GetPartitionPath(int fd) {
   fdio_cpp::UnownedFdioCaller caller(fd);
   auto controller = caller.borrow_as<fuchsia_device::Controller>();
   auto path = fidl::WireCall(controller)->GetTopologicalPath();

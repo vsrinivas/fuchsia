@@ -147,7 +147,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // TODO(91513): Move these back to a .cc after we no longer have both Banjo and FIDL callers for
   // them.
   template <typename V, typename R>
-  zx::status<V> ReadConfig(uint16_t offset) {
+  zx::result<V> ReadConfig(uint16_t offset) {
     if (offset + sizeof(V) > PCI_EXT_CONFIG_SIZE) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
@@ -259,10 +259,10 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // These methods handle IRQ configuration and are generally called by the
   // PciProtocol methods, though they may be used to disable IRQs on
   // initialization as well.
-  zx::status<uint32_t> QueryIrqMode(pci_interrupt_mode_t mode) __TA_EXCLUDES(dev_lock_);
+  zx::result<uint32_t> QueryIrqMode(pci_interrupt_mode_t mode) __TA_EXCLUDES(dev_lock_);
   pci_interrupt_modes_t GetInterruptModes() __TA_EXCLUDES(dev_lock_);
   zx_status_t SetIrqMode(pci_interrupt_mode_t mode, uint32_t irq_cnt) __TA_EXCLUDES(dev_lock_);
-  zx::status<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
+  zx::result<zx::interrupt> MapInterrupt(uint32_t which_irq) __TA_EXCLUDES(dev_lock_);
   zx_status_t DisableInterrupts() __TA_REQUIRES(dev_lock_);
   zx_status_t EnableLegacy(bool needs_ack) __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsi(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
@@ -278,7 +278,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   void EnableLegacyIrq() __TA_REQUIRES(dev_lock_);
   void DisableLegacyIrq() __TA_REQUIRES(dev_lock_);
 
-  zx::status<PowerManagementCapability::PowerState> GetPowerState() __TA_EXCLUDES(dev_lock_);
+  zx::result<PowerManagementCapability::PowerState> GetPowerState() __TA_EXCLUDES(dev_lock_);
 
   // Provide Irq information to the Bus for handling situations with no ack.
   Irqs& irqs() __TA_REQUIRES(dev_lock_) { return irqs_; }
@@ -328,23 +328,23 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // Probes a BAR's configuration. If it is already allocated it will try to
   // reserve the existing address window for it so that devices configured by system
   // firmware can be maintained as much as possible.
-  zx::status<> ProbeBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
+  zx::result<> ProbeBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   void ProbeBars() __TA_REQUIRES(dev_lock_);
   // Allocates address space for a BAR out of any suitable allocators.
-  zx::status<std::unique_ptr<PciAllocation>> AllocateFromUpstream(const Bar& bar,
+  zx::result<std::unique_ptr<PciAllocation>> AllocateFromUpstream(const Bar& bar,
                                                                   std::optional<zx_paddr_t> base)
       __TA_REQUIRES(dev_lock_);
   zx_status_t WriteBarInformation(const Bar& bar) __TA_REQUIRES(dev_lock_);
   // Allocates address space for a BAR if it does not already exist.
-  zx::status<> AllocateBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
+  zx::result<> AllocateBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   // Called a device to configure (probe/allocate) its BARs
-  zx::status<> AllocateBarsLocked() __TA_REQUIRES(dev_lock_);
+  zx::result<> AllocateBarsLocked() __TA_REQUIRES(dev_lock_);
   // Called by an UpstreamNode to configure the BARs of a device downstream.
   // Bridge implements it so it can allocate its bridge windows and own BARs before
   // configuring downstream BARs..
-  virtual zx::status<> AllocateBars() __TA_EXCLUDES(dev_lock_);
+  virtual zx::result<> AllocateBars() __TA_EXCLUDES(dev_lock_);
   zx_status_t ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
-  zx::status<std::pair<zx::msi, zx_info_msi_t>> AllocateMsi(uint32_t irq_cnt)
+  zx::result<std::pair<zx::msi, zx_info_msi_t>> AllocateMsi(uint32_t irq_cnt)
       __TA_REQUIRES(dev_lock_);
   zx_status_t VerifyAllMsisFreed() __TA_REQUIRES(dev_lock_);
 
@@ -417,7 +417,7 @@ class BanjoDevice : public BanjoDeviceType, public ddk::PciProtocol<pci::BanjoDe
 
   // Does the work necessary to create a ddk Composite device representing the
   // pci::Device.
-  static zx::status<> Create(zx_device_t* parent, pci::Device* device);
+  static zx::result<> Create(zx_device_t* parent, pci::Device* device);
 
   // DDK mix-in impls
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -434,7 +434,7 @@ using FidlDeviceType = ddk::Device<pci::FidlDevice, ddk::Unbindable>;
 class FidlDevice : public FidlDeviceType, public fidl::WireServer<fuchsia_hardware_pci::Device> {
  public:
   void Bind(fidl::ServerEnd<fuchsia_hardware_pci::Device> request);
-  static zx::status<> Create(zx_device_t* parent, pci::Device* device);
+  static zx::result<> Create(zx_device_t* parent, pci::Device* device);
 
   // fidl::WireServer<fuchsia_hardware_pci::Pci> implementations.
   void GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) override;

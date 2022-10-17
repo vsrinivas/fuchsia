@@ -24,7 +24,7 @@ async_loop_config_t MakeConfig() {
 }
 
 ScopedMemfs MakeMemfs(async_dispatcher_t* dispatcher) {
-  zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(dispatcher);
+  zx::result<ScopedMemfs> memfs = ScopedMemfs::Create(dispatcher);
   FX_CHECK(memfs.is_ok());
   memfs->set_cleanup_timeout(zx::sec(10));
   return std::move(*memfs);

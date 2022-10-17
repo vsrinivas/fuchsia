@@ -68,7 +68,7 @@ class InputReportDriver : public driver::DriverBase {
   }
 
  private:
-  void CreateAndExportDevice(zx::status<std::shared_ptr<compat::Context>> context) {
+  void CreateAndExportDevice(zx::result<std::shared_ptr<compat::Context>> context) {
     if (!context.is_ok()) {
       FDF_LOG(ERROR, "Call to Context::ConnectAndCreate failed: %s", context.status_string());
       return ScheduleStop();

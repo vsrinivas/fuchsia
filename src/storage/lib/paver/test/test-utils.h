@@ -94,27 +94,27 @@ class FakeDevicePartitioner : public paver::DevicePartitioner {
 
   bool SupportsPartition(const paver::PartitionSpec& spec) const override { return true; }
 
-  zx::status<std::unique_ptr<paver::PartitionClient>> FindPartition(
+  zx::result<std::unique_ptr<paver::PartitionClient>> FindPartition(
       const paver::PartitionSpec& spec) const override {
     return zx::ok(nullptr);
   }
 
-  zx::status<> FinalizePartition(const paver::PartitionSpec& spec) const override {
+  zx::result<> FinalizePartition(const paver::PartitionSpec& spec) const override {
     return zx::ok();
   }
 
-  zx::status<std::unique_ptr<paver::PartitionClient>> AddPartition(
+  zx::result<std::unique_ptr<paver::PartitionClient>> AddPartition(
       const paver::PartitionSpec& spec) const override {
     return zx::ok(nullptr);
   }
 
-  zx::status<> WipeFvm() const override { return zx::ok(); }
+  zx::result<> WipeFvm() const override { return zx::ok(); }
 
-  zx::status<> InitPartitionTables() const override { return zx::ok(); }
+  zx::result<> InitPartitionTables() const override { return zx::ok(); }
 
-  zx::status<> WipePartitionTables() const override { return zx::ok(); }
+  zx::result<> WipePartitionTables() const override { return zx::ok(); }
 
-  zx::status<> ValidatePayload(const paver::PartitionSpec& spec,
+  zx::result<> ValidatePayload(const paver::PartitionSpec& spec,
                                cpp20::span<const uint8_t> data) const override {
     return zx::ok();
   }
@@ -127,12 +127,12 @@ class FakePartitionClient : public paver::BlockDevicePartitionClient {
   FakePartitionClient(size_t block_count, size_t block_size);
   explicit FakePartitionClient(size_t block_count);
 
-  zx::status<size_t> GetBlockSize();
-  zx::status<size_t> GetPartitionSize();
-  zx::status<> Read(const zx::vmo& vmo, size_t size);
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size);
-  zx::status<> Trim();
-  zx::status<> Flush();
+  zx::result<size_t> GetBlockSize();
+  zx::result<size_t> GetPartitionSize();
+  zx::result<> Read(const zx::vmo& vmo, size_t size);
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size);
+  zx::result<> Trim();
+  zx::result<> Flush();
   fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel();
   fbl::unique_fd block_fd();
 

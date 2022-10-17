@@ -197,7 +197,7 @@ class PciDevice {
   // the PciBar was installed at.
   //
   // Returns ZX_ERR_NO_RESOURCES if all BARs have already been used.
-  zx::status<size_t> AddBar(PciBar bar);
+  zx::result<size_t> AddBar(PciBar bar);
 
  private:
   friend class PciBus;

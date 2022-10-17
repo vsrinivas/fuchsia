@@ -71,7 +71,7 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
   }
   auto [bcache, bcache_read_only] = *std::move(bcache_res);
 
-  zx::status<> res = configure_(std::move(bcache),
+  zx::result<> res = configure_(std::move(bcache),
                                 ParseMountOptions(std::move(request->options), bcache_read_only));
   if (res.is_error()) {
     completer.ReplyError(res.status_value());
@@ -103,7 +103,7 @@ void StartupService::Format(FormatRequestView request, FormatCompleter::Sync& co
     return;
   }
 
-  zx::status mkfs_res = Mkfs(ParseFormatOptions(std::move(request->options)), bcache.get());
+  zx::result mkfs_res = Mkfs(ParseFormatOptions(std::move(request->options)), bcache.get());
   if (mkfs_res.is_error()) {
     FX_LOGS(ERROR) << "Failed to format minfs: " << mkfs_res.status_string();
     completer.ReplyError(mkfs_res.status_value());

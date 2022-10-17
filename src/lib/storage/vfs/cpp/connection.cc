@@ -47,7 +47,7 @@ constexpr zx_signals_t kWakeSignals =
 
 namespace internal {
 
-zx::status<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeProtocol protocol,
+zx::result<VnodeRepresentation> Describe(const fbl::RefPtr<Vnode>& vnode, VnodeProtocol protocol,
                                          VnodeConnectionOptions options) {
   if (options.flags.node_reference) {
     return zx::ok(VnodeRepresentation::Connector());
@@ -305,8 +305,8 @@ void Connection::NodeClone(fio::wire::OpenFlags flags, fidl::ServerEnd<fio::Node
   vfs_->Serve(vn, server_end.TakeChannel(), validated_options);
 }
 
-zx::status<> Connection::NodeClose() {
-  zx::status result = zx::make_status(EnsureVnodeClosed());
+zx::result<> Connection::NodeClose() {
+  zx::result result = zx::make_result(EnsureVnodeClosed());
   closing_ = true;
   AsyncTeardown();
   return result;
@@ -335,7 +335,7 @@ fidl::VectorView<uint8_t> Connection::NodeQuery() {
   return fidl::VectorView<uint8_t>::FromExternal(data, protocol.size());
 }
 
-zx::status<VnodeRepresentation> Connection::NodeDescribe() {
+zx::result<VnodeRepresentation> Connection::NodeDescribe() {
   return Describe(vnode(), protocol(), options());
 }
 
@@ -348,7 +348,7 @@ void Connection::NodeSync(fit::callback<void(zx_status_t)> callback) {
   vnode_->Sync(Vnode::SyncCallback(std::move(callback)));
 }
 
-zx::status<VnodeAttributes> Connection::NodeGetAttr() {
+zx::result<VnodeAttributes> Connection::NodeGetAttr() {
   FS_PRETTY_TRACE_DEBUG("[NodeGetAttr] options: ", options());
 
   fs::VnodeAttributes attr;
@@ -358,7 +358,7 @@ zx::status<VnodeAttributes> Connection::NodeGetAttr() {
   return zx::ok(attr);
 }
 
-zx::status<> Connection::NodeSetAttr(fio::wire::NodeAttributeFlags flags,
+zx::result<> Connection::NodeSetAttr(fio::wire::NodeAttributeFlags flags,
                                      const fio::wire::NodeAttributes& attributes) {
   FS_PRETTY_TRACE_DEBUG("[NodeSetAttr] our options: ", options(), ", incoming flags: ", flags);
 
@@ -376,14 +376,14 @@ zx::status<> Connection::NodeSetAttr(fio::wire::NodeAttributeFlags flags,
   if (flags & fio::wire::NodeAttributeFlags::kModificationTime) {
     update.set_modification_time(attributes.modification_time);
   }
-  return zx::make_status(vnode_->SetAttributes(update));
+  return zx::make_result(vnode_->SetAttributes(update));
 }
 
-zx::status<fio::wire::OpenFlags> Connection::NodeGetFlags() {
+zx::result<fio::wire::OpenFlags> Connection::NodeGetFlags() {
   return zx::ok(options().ToIoV1Flags() & (kStatusFlags | fio::wire::kOpenRights));
 }
 
-zx::status<> Connection::NodeSetFlags(fio::wire::OpenFlags flags) {
+zx::result<> Connection::NodeSetFlags(fio::wire::OpenFlags flags) {
   auto options = VnodeConnectionOptions::FromIoV1Flags(flags);
   set_append(options.flags.append);
   return zx::ok();
@@ -408,8 +408,8 @@ zx_koid_t Connection::GetChannelOwnerKoid() {
   return owner_info.koid;
 }
 
-zx::status<fuchsia_io::wire::FilesystemInfo> Connection::NodeQueryFilesystem() {
-  zx::status<FilesystemInfo> info = vfs_->GetFilesystemInfo();
+zx::result<fuchsia_io::wire::FilesystemInfo> Connection::NodeQueryFilesystem() {
+  zx::result<FilesystemInfo> info = vfs_->GetFilesystemInfo();
   if (info.is_error()) {
     return info.take_error();
   }

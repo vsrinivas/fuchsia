@@ -73,9 +73,9 @@ class PciAllocation {
   // Create a VMO bounded by the base/size of this allocation using the
   // provided resource. This is used to provide VMOs for device BAR
   // allocations.
-  virtual zx::status<zx::vmo> CreateVmo() const;
+  virtual zx::result<zx::vmo> CreateVmo() const;
   // Create a resource for use with zx_ioports_request in the device driver.
-  virtual zx::status<zx::resource> CreateResource() const;
+  virtual zx::result<zx::resource> CreateResource() const;
 
  protected:
   explicit PciAllocation(zx::resource&& resource) : resource_(std::move(resource)) {}
@@ -142,7 +142,7 @@ class PciAllocator {
   // Request a region of address space spanning from |base| to |base| + |size|
   // for a downstream device or bridge. If |base| is nullopt then the region can be
   // allocated from any base.
-  virtual zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+  virtual zx::result<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
                                                               size_t size) = 0;
   // Provide this allocator with a PciAllocation, granting it ownership of that
   // range of address space for calls to Allocate.
@@ -161,7 +161,7 @@ class PciRootAllocator : public PciAllocator {
  public:
   PciRootAllocator(ddk::PcirootProtocolClient proto, pci_address_space_t type, bool low)
       : pciroot_(proto), type_(type), low_(low) {}
-  zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+  zx::result<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
                                                       size_t size) final;
 
  private:
@@ -180,7 +180,7 @@ class PciRootAllocator : public PciAllocator {
 class PciRegionAllocator : public PciAllocator {
  public:
   PciRegionAllocator() = default;
-  zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+  zx::result<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
                                                       size_t size) final;
   zx_status_t SetParentAllocation(std::unique_ptr<PciAllocation> alloc) final;
 

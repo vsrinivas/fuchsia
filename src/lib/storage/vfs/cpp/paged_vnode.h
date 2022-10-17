@@ -142,7 +142,7 @@ class PagedVnode : public Vnode, public fbl::Recyclable<PagedVnode> {
   //
   // When a mapping is requested, the derived class should call this function, create a
   // clone of the paged_vmo_ with the desired flags, and then call DidCloneVmo().
-  zx::status<> EnsureCreatePagedVmo(uint64_t size, uint32_t options = 0) __TA_REQUIRES(mutex_);
+  zx::result<> EnsureCreatePagedVmo(uint64_t size, uint32_t options = 0) __TA_REQUIRES(mutex_);
 
   // Call after successfully creating a paged_vmo() clone. This will ensure that the tracking
   // information for clones is set up:

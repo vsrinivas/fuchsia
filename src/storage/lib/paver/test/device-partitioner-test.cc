@@ -254,7 +254,7 @@ const gpt_partition_t* FindPartitionWithLabel(const gpt::GptDevice* gpt, std::st
   const gpt_partition_t* result = nullptr;
 
   for (uint32_t i = 0; i < gpt->EntryCount(); i++) {
-    zx::status<const gpt_partition_t*> gpt_part = gpt->GetPartition(i);
+    zx::result<const gpt_partition_t*> gpt_part = gpt->GetPartition(i);
     if (gpt_part.is_error()) {
       continue;
     }
@@ -511,7 +511,7 @@ class EfiDevicePartitionerTests : public GptDevicePartitionerTests {
   EfiDevicePartitionerTests() : GptDevicePartitionerTests(fbl::String(), 512) {}
 
   // Create a DevicePartition for a device.
-  zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+  zx::result<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
     fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root,
@@ -991,7 +991,7 @@ uint64_t CrosGptPriorityFlags(uint8_t priority) {
 uint8_t CrosGptHighestKernelPriority(const gpt::GptDevice* gpt) {
   uint8_t top_priority = 0;
   for (uint32_t i = 0; i < gpt::kPartitionCount; ++i) {
-    zx::status<const gpt_partition_t*> partition_or = gpt->GetPartition(i);
+    zx::result<const gpt_partition_t*> partition_or = gpt->GetPartition(i);
     if (partition_or.is_error()) {
       continue;
     }
@@ -1178,7 +1178,7 @@ class SherlockPartitionerTests : public GptDevicePartitionerTests {
   SherlockPartitionerTests() : GptDevicePartitionerTests("sherlock", 512) {}
 
   // Create a DevicePartition for a device.
-  zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+  zx::result<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
     fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::SherlockPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root,
@@ -1490,7 +1490,7 @@ class LuisPartitionerTests : public GptDevicePartitionerTests {
   LuisPartitionerTests() : GptDevicePartitionerTests("luis", 512) {}
 
   // Create a DevicePartition for a device.
-  zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+  zx::result<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
     fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::LuisPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root, device);
@@ -1646,7 +1646,7 @@ class NelsonPartitionerTests : public GptDevicePartitionerTests {
   NelsonPartitionerTests() : GptDevicePartitionerTests("nelson", kNelsonBlockSize) {}
 
   // Create a DevicePartition for a device.
-  zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+  zx::result<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
     fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::NelsonPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root, device);
@@ -1704,7 +1704,7 @@ class NelsonPartitionerTests : public GptDevicePartitionerTests {
   }
 
   void TestBootloaderRead(const PartitionSpec& spec, uint8_t tpl_a_data, uint8_t tpl_b_data,
-                          zx::status<>* out_status, uint8_t* out) {
+                          zx::result<>* out_status, uint8_t* out) {
     auto pauser = paver::BlockWatcherPauser::Create(GetSvcRoot());
     ASSERT_OK(pauser);
 
@@ -1962,7 +1962,7 @@ TEST_F(NelsonPartitionerTests, WriteBootloaderB) {
 TEST_F(NelsonPartitionerTests, ReadBootloaderAFail) {
   auto spec = PartitionSpec(paver::Partition::kBootloaderA, "bootloader");
   std::vector<uint8_t> read_buf(kBootloaderSize);
-  zx::status<> status = zx::ok();
+  zx::result<> status = zx::ok();
   ASSERT_NO_FATAL_FAILURE(TestBootloaderRead(spec, 0x03, kTplImageValue, &status, read_buf.data()));
   ASSERT_NOT_OK(status);
 }
@@ -1970,7 +1970,7 @@ TEST_F(NelsonPartitionerTests, ReadBootloaderAFail) {
 TEST_F(NelsonPartitionerTests, ReadBootloaderBFail) {
   auto spec = PartitionSpec(paver::Partition::kBootloaderB, "bootloader");
   std::vector<uint8_t> read_buf(kBootloaderSize);
-  zx::status<> status = zx::ok();
+  zx::result<> status = zx::ok();
   ASSERT_NO_FATAL_FAILURE(TestBootloaderRead(spec, kTplImageValue, 0x03, &status, read_buf.data()));
   ASSERT_NOT_OK(status);
 }
@@ -1978,7 +1978,7 @@ TEST_F(NelsonPartitionerTests, ReadBootloaderBFail) {
 TEST_F(NelsonPartitionerTests, ReadBootloaderASucceed) {
   auto spec = PartitionSpec(paver::Partition::kBootloaderA, "bootloader");
   std::vector<uint8_t> read_buf(kBootloaderSize);
-  zx::status<> status = zx::ok();
+  zx::result<> status = zx::ok();
   ASSERT_NO_FATAL_FAILURE(TestBootloaderRead(spec, kTplImageValue, 0x03, &status, read_buf.data()));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURE(ValidateBootloaderRead(read_buf.data(), kBL2ImageValue, kTplImageValue));
@@ -1987,7 +1987,7 @@ TEST_F(NelsonPartitionerTests, ReadBootloaderASucceed) {
 TEST_F(NelsonPartitionerTests, ReadBootloaderBSucceed) {
   std::vector<uint8_t> read_buf(kBootloaderSize);
   auto spec = PartitionSpec(paver::Partition::kBootloaderB, "bootloader");
-  zx::status<> status = zx::ok();
+  zx::result<> status = zx::ok();
   ASSERT_NO_FATAL_FAILURE(TestBootloaderRead(spec, 0x03, kTplImageValue, &status, read_buf.data()));
   ASSERT_OK(status);
   ASSERT_NO_FATAL_FAILURE(ValidateBootloaderRead(read_buf.data(), kBL2ImageValue, kTplImageValue));
@@ -1999,7 +1999,7 @@ class Vim3PartitionerTests : public GptDevicePartitionerTests {
   Vim3PartitionerTests() : GptDevicePartitionerTests("vim3", kVim3BlockSize) {}
 
   // Create a DevicePartition for a device.
-  zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
+  zx::result<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
     fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::Vim3Partitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root, device);

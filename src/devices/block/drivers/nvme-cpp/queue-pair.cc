@@ -14,7 +14,7 @@
 
 namespace nvme {
 
-zx::status<std::unique_ptr<QueuePair>> QueuePair::Create(zx::unowned_bti bti, size_t queue_id,
+zx::result<std::unique_ptr<QueuePair>> QueuePair::Create(zx::unowned_bti bti, size_t queue_id,
                                                          size_t max_entries, CapabilityReg& caps,
                                                          fdf::MmioBuffer& mmio) {
   auto completion_queue = Queue::Create(bti->borrow(), queue_id, max_entries, sizeof(Completion));
@@ -77,7 +77,7 @@ void QueuePair::CheckForNewCompletions() {
   }
 }
 
-zx::status<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
+zx::result<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
                                std::optional<zx::unowned_vmo> data_vmo, zx_off_t vmo_offset,
                                TransactionData::Completer& completer) {
   fbl::AutoLock lock(&submission_lock_);
@@ -149,7 +149,7 @@ zx::status<> QueuePair::Submit(cpp20::span<uint8_t> submission_data,
   return zx::ok();
 }
 
-zx::status<> QueuePair::PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages) {
+zx::result<> QueuePair::PreparePrpList(ddk::IoBuffer& buf, cpp20::span<const zx_paddr_t> pages) {
   const size_t addresses_per_page = zx_system_get_page_size() / sizeof(zx_paddr_t);
   size_t page_count = 0;
   // TODO(fxbug.dev/102133): improve this in cases where we would allocate a page with only one

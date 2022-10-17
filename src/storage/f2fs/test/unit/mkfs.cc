@@ -66,7 +66,7 @@ void DoMkfs(std::unique_ptr<Bcache> bcache, std::vector<const char *> &argv, boo
   MkfsOptions mkfs_options;
 
   zx_status_t status;
-  zx::status<std::unique_ptr<Bcache>> make_return;
+  zx::result<std::unique_ptr<Bcache>> make_return;
   if (status = ParseOptions(static_cast<int>(argv.size()), const_cast<char **>(argv.data()),
                             mkfs_options);
       status == ZX_OK) {
@@ -89,7 +89,7 @@ void ReadSuperblock(Bcache &bc, std::unique_ptr<Superblock> *out) {
   *out = std::move(*sb_or);
 }
 
-zx::status<std::unique_ptr<Superblock>> ReadSuperblock(Bcache &bc) {
+zx::result<std::unique_ptr<Superblock>> ReadSuperblock(Bcache &bc) {
   std::unique_ptr<Superblock> sb;
   ReadSuperblock(bc, &sb);
   return zx::ok(std::move(sb));

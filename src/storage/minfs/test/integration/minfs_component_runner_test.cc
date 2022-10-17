@@ -41,7 +41,7 @@ class MinfsComponentRunnerTest : public testing::Test {
   void StartServe() {
     runner_ = std::make_unique<ComponentRunner>(loop_.dispatcher());
     runner_->SetUnmountCallback([this]() { loop_.Quit(); });
-    zx::status status = runner_->ServeRoot(std::move(server_end_), {});
+    zx::result status = runner_->ServeRoot(std::move(server_end_), {});
     ASSERT_EQ(status.status_value(), ZX_OK);
   }
 
@@ -83,7 +83,7 @@ TEST_F(MinfsComponentRunnerTest, ServeAndConfigureStartsMinfs) {
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;
-  zx::status status = runner_->Configure(std::move(bcache_), options);
+  zx::result status = runner_->Configure(std::move(bcache_), options);
   ASSERT_EQ(status.status_value(), ZX_OK);
 
   std::atomic<bool> callback_called = false;
@@ -128,7 +128,7 @@ TEST_F(MinfsComponentRunnerTest, RequestsBeforeStartupAreQueuedAndServicedAfter)
   ASSERT_EQ(client_end.status_value(), ZX_OK);
 
   MountOptions options;
-  zx::status status = runner_->Configure(std::move(bcache_), options);
+  zx::result status = runner_->Configure(std::move(bcache_), options);
   ASSERT_EQ(status.status_value(), ZX_OK);
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);
   ASSERT_TRUE(query_complete);
@@ -154,7 +154,7 @@ TEST_F(MinfsComponentRunnerTest, LifecycleChannelShutsDownRunner) {
     loop_.Quit();
     unmount_callback_called = true;
   });
-  zx::status status =
+  zx::result status =
       runner_->ServeRoot(std::move(server_end_), std::move(lifecycle_endpoints->server));
   ASSERT_EQ(status.status_value(), ZX_OK);
   ASSERT_EQ(loop_.RunUntilIdle(), ZX_OK);

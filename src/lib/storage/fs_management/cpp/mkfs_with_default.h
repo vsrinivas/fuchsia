@@ -17,7 +17,7 @@ namespace fs_management {
 // Like Mkfs but creates a "default" volume (which will only work on multi-volume filesystems)
 // and will be encrypted using `crypt_client`, if set.
 // This should only be used for testing.
-zx::status<> MkfsWithDefault(const char* device_path, DiskFormat df, LaunchCallback cb,
+zx::result<> MkfsWithDefault(const char* device_path, DiskFormat df, LaunchCallback cb,
                              const MkfsOptions& options, zx::channel crypt_client);
 
 }  // namespace fs_management

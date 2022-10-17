@@ -58,7 +58,7 @@ struct Publisher : public fidl::WireServer<fuchsia_debugdata::Publisher> {
 
     dir->AddEntry(fidl::DiscoverableProtocolName<fuchsia_debugdata::Publisher>, node);
 
-    zx::status server_end = fidl::CreateEndpoints(client_end);
+    zx::result server_end = fidl::CreateEndpoints(client_end);
     ASSERT_OK(server_end.status_value());
 
     *vfs = std::make_unique<fs::SynchronousVfs>(dispatcher);
@@ -143,7 +143,7 @@ TEST(DebugDataTests, ConfirmMatchingFuchsiaIODefinitions) {
   static_assert(fuchsia_io_DirectoryOpenOrdinal ==
                 fidl::internal::WireOrdinal<fio::Directory::Open>::value);
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   fidl::internal::TransactionalRequest<fio::Directory::Open> request{
       {}, 0, fidl::StringView(), std::move(endpoints->server)};

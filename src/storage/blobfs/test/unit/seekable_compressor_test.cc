@@ -91,7 +91,7 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
                          size_t expected_size) {
   // 1. Sequential decompression of each range
   size_t offset = 0;
-  zx::status<CompressionMapping> mapping = zx::ok(CompressionMapping{});
+  zx::result<CompressionMapping> mapping = zx::ok(CompressionMapping{});
   while ((mapping = decompressor->MappingForDecompressedRange(offset, 1,
                                                               std::numeric_limits<size_t>::max()))
              .is_ok()) {
@@ -124,7 +124,7 @@ void DecompressionHelper(SeekableDecompressor* decompressor, unsigned* seed,
 void TestDecompressedRangeTrimming(SeekableDecompressor* decompressor, size_t chunk_size,
                                    size_t total_size) {
   // max_decompressed_len = 0
-  zx::status<CompressionMapping> mapping = decompressor->MappingForDecompressedRange(0, 1, 0);
+  zx::result<CompressionMapping> mapping = decompressor->MappingForDecompressedRange(0, 1, 0);
   ASSERT_TRUE(mapping.is_error());
 
   // max_decomressed_len less than a single chunk

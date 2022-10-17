@@ -11,7 +11,7 @@
 
 namespace mipi_dsi {
 
-zx::status<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
+zx::result<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
     uint32_t tlen, uint32_t rlen, bool is_dcs, fidl::AnyArena& allocator) {
   // Create a command packet
   uint8_t ch_id = kMipiDsiVirtualChanId;

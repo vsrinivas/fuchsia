@@ -62,7 +62,7 @@ static zx_status_t write_bytes(fidl::WireSyncClient<fuchsia_hardware_i2c::Device
   return status;
 }
 
-static zx::status<uint8_t> read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client,
+static zx::result<uint8_t> read_byte(fidl::WireSyncClient<fuchsia_hardware_i2c::Device> client,
                                      cpp20::span<uint8_t> address) {
   auto write_data = fidl::VectorView<uint8_t>::FromExternal(address.data(), address.size());
 

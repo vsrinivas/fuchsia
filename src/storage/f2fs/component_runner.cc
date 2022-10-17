@@ -31,7 +31,7 @@ ComponentRunner::~ComponentRunner() {
   TearDown();
 }
 
-zx::status<> ComponentRunner::ServeRoot(
+zx::result<> ComponentRunner::ServeRoot(
     fidl::ServerEnd<fuchsia_io::Directory> root,
     fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle) {
   LifecycleServer::Create(
@@ -66,7 +66,7 @@ zx::status<> ComponentRunner::ServeRoot(
   return zx::ok();
 }
 
-zx::status<> ComponentRunner::Configure(std::unique_ptr<Bcache> bcache,
+zx::result<> ComponentRunner::Configure(std::unique_ptr<Bcache> bcache,
                                         const MountOptions& options) {
   // Create Pager and PagerPool
   if (auto status = Init(); status.is_error()) {
@@ -165,7 +165,7 @@ void ComponentRunner::Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) {
   });
 }
 
-zx::status<fs::FilesystemInfo> ComponentRunner::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> ComponentRunner::GetFilesystemInfo() {
   return f2fs_->GetFilesystemInfo();
 }
 

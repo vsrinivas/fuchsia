@@ -21,7 +21,7 @@ using block_client::FakeBlockDevice;
 
 class Mapper : public MapperInterface {
  public:
-  zx::status<DeviceBlockRange> Map(BlockRange range) {
+  zx::result<DeviceBlockRange> Map(BlockRange range) {
     auto iter = mappings_.find(range.Start());
     if (iter != mappings_.end()) {
       return zx::ok(DeviceBlockRange(iter->second, 1));
@@ -30,7 +30,7 @@ class Mapper : public MapperInterface {
     }
   }
 
-  zx::status<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
+  zx::result<DeviceBlockRange> MapForWrite(PendingWork* transaction, BlockRange range,
                                            bool* allocated) {
     EXPECT_FALSE(transaction == nullptr);
     EXPECT_TRUE(*allocated == false);
@@ -116,7 +116,7 @@ TEST(LazyReaderTest, UnmappedBlockIsZeroed) {
 
 class MockReader : public LazyReader::ReaderInterface {
  public:
-  zx::status<uint64_t> Enqueue(BlockRange range) override {
+  zx::result<uint64_t> Enqueue(BlockRange range) override {
     if (return_error_for_enqueue_) {
       return zx::error(ZX_ERR_NO_MEMORY);
     }
@@ -125,7 +125,7 @@ class MockReader : public LazyReader::ReaderInterface {
   }
 
   // Issues the queued reads and returns the result.
-  zx::status<> RunRequests() override {
+  zx::result<> RunRequests() override {
     if (return_error_for_run_requests_) {
       return zx::error(ZX_ERR_IO);
     }

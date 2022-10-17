@@ -44,7 +44,7 @@ zx_status_t RemoteBlockDevice::FifoTransaction(block_fifo_request_t* requests, s
   return fifo_client_.Transaction(requests, count);
 }
 
-zx::status<std::string> RemoteBlockDevice::GetDevicePath() const {
+zx::result<std::string> RemoteBlockDevice::GetDevicePath() const {
   auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device_.get()))
                   ->GetTopologicalPath();
   if (auto fidl_error = resp.status(); fidl_error != ZX_OK)
@@ -148,7 +148,7 @@ zx_status_t RemoteBlockDevice::Create(zx::channel device, std::unique_ptr<Remote
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<RemoteBlockDevice>> RemoteBlockDevice::Create(int fd) {
+zx::result<std::unique_ptr<RemoteBlockDevice>> RemoteBlockDevice::Create(int fd) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Node>();
   if (!endpoints.is_ok()) {
     return endpoints.take_error();

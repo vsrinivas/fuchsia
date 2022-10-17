@@ -37,7 +37,7 @@ class CompositeNodeManager {
   // created for this driver url, did not match the number of nodes in the `matched_driver`.
   // In either case the node is not kept tracked of by the CompositeNodeManager and should be
   // orphaned by the client.
-  zx::status<Node*> HandleMatchedCompositeInfo(
+  zx::result<Node*> HandleMatchedCompositeInfo(
       Node& node, const fuchsia_driver_index::wire::MatchedCompositeInfo& matched_driver);
 
   void Inspect(inspect::Node& root) const;
@@ -46,7 +46,7 @@ class CompositeNodeManager {
   // Get an existing composite parent set that can add the `composite_info`, or creates
   // a new composite parent set if all existing ones are occupied already.
   // Returns an iterator to the existing or newly created one in the internal map.
-  zx::status<ParentSetIterator> AcquireCompositeParentSet(
+  zx::result<ParentSetIterator> AcquireCompositeParentSet(
       std::string_view node_name,
       const fuchsia_driver_index::wire::MatchedCompositeInfo& composite_info);
 

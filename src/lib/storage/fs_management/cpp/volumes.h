@@ -19,7 +19,7 @@ namespace fs_management {
 // directory.  The channel will be closed on failure.
 //
 // Currently this is only supported for Fxfs.
-__EXPORT zx::status<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+__EXPORT zx::result<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                                    std::string_view name,
                                    fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
                                    zx::channel crypt_client = {});
@@ -31,7 +31,7 @@ __EXPORT zx::status<> CreateVolume(fidl::UnownedClientEnd<fuchsia_io::Directory>
 // directory.  The channel will be closed on failure.
 //
 // Currently this is only supported for Fxfs.
-__EXPORT zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+__EXPORT zx::result<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                                  std::string_view name,
                                  fidl::ServerEnd<fuchsia_io::Directory> outgoing_dir,
                                  zx::channel crypt_client = {});
@@ -40,7 +40,7 @@ __EXPORT zx::status<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> e
 // a Crypt service instance, in which case the volume is decrypted using that service.
 //
 // Currently this is only supported for Fxfs.
-__EXPORT zx::status<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+__EXPORT zx::result<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                                   std::string_view name, zx::channel crypt_client = {});
 
 }  // namespace fs_management

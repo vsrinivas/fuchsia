@@ -10,7 +10,7 @@
 
 namespace compat {
 
-zx::status<fuchsia_device_manager::wire::CompositeDeviceDescriptor> CreateComposite(
+zx::result<fuchsia_device_manager::wire::CompositeDeviceDescriptor> CreateComposite(
     fidl::AnyArena& arena, const composite_device_desc_t* comp_desc);
 }
 

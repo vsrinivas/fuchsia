@@ -206,7 +206,7 @@ void F2fs::DoRecoverData(VnodeF2fs &vnode, NodePage &page) {
   ZX_DEBUG_ASSERT(ni.ino == page.InoOfNode());
   ZX_DEBUG_ASSERT(dnode_page.GetPage<NodePage>().OfsOfNode() == page.OfsOfNode());
 
-  zx::status<uint32_t> result;
+  zx::result<uint32_t> result;
   if (result = GetNodeManager().GetOfsInDnode(vnode, start); result.is_error()) {
     return;
   }

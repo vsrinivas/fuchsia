@@ -191,7 +191,7 @@ bool is_board_with_amlogic_secure() {
   return false;
 }
 
-zx::status<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_service() {
+zx::result<fidl::WireSyncClient<fuchsia_sysmem::Allocator>> connect_to_sysmem_service() {
   auto client_end = component::Connect<fuchsia_sysmem::Allocator>();
   ZX_ASSERT(client_end.is_ok());
   if (!client_end.is_ok()) {

@@ -142,7 +142,7 @@ zx_status_t StartComponent(const Options& _options) {
       .pager_threads = config.pager_threads(),
   };
   // blocks until blobfs exits
-  zx::status status = blobfs::StartComponent(options, std::move(outgoing_dir),
+  zx::result status = blobfs::StartComponent(options, std::move(outgoing_dir),
                                              std::move(lifecycle_request), std::move(vmex));
   if (status.is_error()) {
     return ZX_ERR_INTERNAL;
@@ -241,7 +241,7 @@ int usage() {
   return ZX_ERR_INVALID_ARGS;
 }
 
-zx::status<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
+zx::result<Options> ProcessArgs(int argc, char** argv, CommandFunction* func) {
   Options options{};
 
   // This option has no short flag, use int value beyond a char.

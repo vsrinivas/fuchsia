@@ -11,44 +11,44 @@
 
 namespace service {
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(const char* path) {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(const char* path) {
   return ::service::Connect<fuchsia_io::Directory>(path);
 }
 
 namespace internal {
 
-zx::status<zx::channel> ConnectRaw(const char* path) {
+zx::result<zx::channel> ConnectRaw(const char* path) {
   zx::channel client_end, server_end;
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
   }
-  if (zx::status<> status = ConnectRaw(std::move(server_end), path); status.is_error()) {
+  if (zx::result<> status = ConnectRaw(std::move(server_end), path); status.is_error()) {
     return status.take_error();
   }
   return zx::ok(std::move(client_end));
 }
 
-zx::status<> ConnectRaw(zx::channel server_end, const char* path) {
+zx::result<> ConnectRaw(zx::channel server_end, const char* path) {
   if (zx_status_t status = fdio_service_connect(path, server_end.release()); status != ZX_OK) {
     return zx::error(status);
   }
   return zx::ok();
 }
 
-zx::status<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                                      const char* protocol_name) {
   zx::channel client_end, server_end;
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
   }
-  if (zx::status<> status = ConnectAtRaw(svc_dir, std::move(server_end), protocol_name);
+  if (zx::result<> status = ConnectAtRaw(svc_dir, std::move(server_end), protocol_name);
       status.is_error()) {
     return status.take_error();
   }
   return zx::ok(std::move(client_end));
 }
 
-zx::status<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
+zx::result<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                           zx::channel server_end, const char* protocol_name) {
   if (zx_status_t status =
           fdio_service_connect_at(svc_dir.handle()->get(), protocol_name, server_end.release());
@@ -58,19 +58,19 @@ zx::status<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
   return zx::ok();
 }
 
-zx::status<zx::channel> CloneRaw(zx::unowned_channel&& node) {
+zx::result<zx::channel> CloneRaw(zx::unowned_channel&& node) {
   zx::channel client_end, server_end;
   zx_status_t status = zx::channel::create(0, &client_end, &server_end);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  if (zx::status<> status = CloneRaw(std::move(node), std::move(server_end)); status.is_error()) {
+  if (zx::result<> status = CloneRaw(std::move(node), std::move(server_end)); status.is_error()) {
     return status.take_error();
   }
   return zx::ok(std::move(client_end));
 }
 
-zx::status<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end) {
+zx::result<> CloneRaw(zx::unowned_channel&& node, zx::channel server_end) {
   if (zx_status_t status = fdio_service_clone_to(node->get(), server_end.release());
       status != ZX_OK) {
     return zx::error(status);
@@ -91,7 +91,7 @@ constexpr uint64_t kMaxFilename = fuchsia_io::wire::kMaxFilename;
 // Max path length will be two path components, separated by a file separator.
 constexpr uint64_t kMaxPath = (2 * kMaxFilename) + 1;
 
-zx::status<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* buffer,
+zx::result<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* buffer,
                                                  fidl::StringView service,
                                                  fidl::StringView instance) {
   if (service.empty() || service.size() > kMaxFilename) {
@@ -119,7 +119,7 @@ zx::status<fidl::StringView> ValidateAndJoinPath(fidl::Array<char, kMaxPath>* bu
 
 namespace internal {
 
-zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
+zx::result<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
                                fidl::internal::AnyTransport remote) {
   constexpr fuchsia_io::wire::OpenFlags flags =
       fuchsia_io::wire::OpenFlags::kRightReadable | fuchsia_io::wire::OpenFlags::kRightWritable;
@@ -127,16 +127,16 @@ zx::status<> DirectoryOpenFunc(zx::unowned_channel dir, fidl::StringView path,
   fidl::ServerEnd<fuchsia_io::Node> node_end(remote.release<fidl::internal::ChannelTransport>());
   fidl::WireResult<fuchsia_io::Directory::Open> result =
       fidl::WireCall<fuchsia_io::Directory>(dir_end)->Open(flags, 0755u, path, std::move(node_end));
-  return zx::make_status(result.status());
+  return zx::make_result(result.status());
 }
 
 }  // namespace internal
 
-zx::status<> OpenNamedServiceAt(fidl::UnownedClientEnd<fuchsia_io::Directory> dir,
+zx::result<> OpenNamedServiceAt(fidl::UnownedClientEnd<fuchsia_io::Directory> dir,
                                 cpp17::string_view service, cpp17::string_view instance,
                                 zx::channel remote) {
   fidl::Array<char, kMaxPath> path_buffer;
-  zx::status<fidl::StringView> path_result =
+  zx::result<fidl::StringView> path_result =
       ValidateAndJoinPath(&path_buffer, fidl::StringView::FromExternal(service),
                           fidl::StringView::FromExternal(instance));
   if (!path_result.is_ok()) {

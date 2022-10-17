@@ -37,7 +37,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
 
   // Creates a new `TunDevice` with `config`.
   // `teardown` is called when all the bound client channels are closed.
-  static zx::status<std::unique_ptr<TunDevice>> Create(
+  static zx::result<std::unique_ptr<TunDevice>> Create(
       fit::callback<void(TunDevice*)> teardown, const fuchsia_net_tun::wire::DeviceConfig& config);
   ~TunDevice() override;
 
@@ -69,7 +69,7 @@ class TunDevice : public fbl::DoublyLinkedListable<std::unique_ptr<TunDevice>>,
     Port(Port&&) = delete;
     ~Port() override;
 
-    static zx::status<std::unique_ptr<Port>> Create(TunDevice* parent,
+    static zx::result<std::unique_ptr<Port>> Create(TunDevice* parent,
                                                     const DevicePortConfig& config);
     // MacAdapterParent implementation:
     void OnMacStateChanged(MacAdapter* adapter) override;

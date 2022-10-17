@@ -207,7 +207,7 @@ void GuestEthernet::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_list,
     const buffer_region& region = buffer.data_list[0];
 
     // Get the caller-specified region.
-    zx::status<cpp20::span<uint8_t>> memory_region =
+    zx::result<cpp20::span<uint8_t>> memory_region =
         GetIoRegion(region.vmo, region.offset, region.length);
     if (memory_region.is_error()) {
       TxComplete(buffer.id, memory_region.error_value());
@@ -233,7 +233,7 @@ void GuestEthernet::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffe
     const rx_space_buffer_t& buffer = buffers_list[i];
 
     // Ensure the specified region is valid.
-    zx::status<cpp20::span<uint8_t>> region =
+    zx::result<cpp20::span<uint8_t>> region =
         GetIoRegion(/*vmo_id=*/buffer.region.vmo, /*offset=*/buffer.region.offset,
                     /*length=*/buffer.region.length);
     if (region.is_error()) {
@@ -347,7 +347,7 @@ void GuestEthernet::RxComplete(uint32_t buffer_id, size_t length) {
   });
 }
 
-zx::status<cpp20::span<uint8_t>> GuestEthernet::GetIoRegion(uint8_t vmo_id, uint64_t offset,
+zx::result<cpp20::span<uint8_t>> GuestEthernet::GetIoRegion(uint8_t vmo_id, uint64_t offset,
                                                             uint64_t length) {
   // Ensure the VMO ID matches what we have mapped in.
   if (vmo_id != vmo_id_) {

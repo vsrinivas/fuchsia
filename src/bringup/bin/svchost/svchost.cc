@@ -36,8 +36,8 @@
 #include "sysmem.h"
 
 namespace {
-zx::status<zx::job> GetRootJob(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
-  zx::status client = component::ConnectAt<fuchsia_kernel::RootJob>(svc_root);
+zx::result<zx::job> GetRootJob(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
+  zx::result client = component::ConnectAt<fuchsia_kernel::RootJob>(svc_root);
   if (client.is_error()) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.kernel.RootJob\n");
     return client.take_error();
@@ -49,8 +49,8 @@ zx::status<zx::job> GetRootJob(fidl::UnownedClientEnd<fuchsia_io::Directory> svc
   }
   return zx::ok(std::move(result.value().job));
 }
-zx::status<zx::resource> GetRootResource(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
-  zx::status client = component::ConnectAt<fuchsia_boot::RootResource>(svc_root);
+zx::result<zx::resource> GetRootResource(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
+  zx::result client = component::ConnectAt<fuchsia_boot::RootResource>(svc_root);
   if (client.is_error()) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.boot.RootResource\n");
     return client.take_error();
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
   svc::Outgoing outgoing(dispatcher);
 
   // Parse boot arguments.
-  zx::status boot_args = component::ConnectAt<fuchsia_boot::Arguments>(caller.directory());
+  zx::result boot_args = component::ConnectAt<fuchsia_boot::Arguments>(caller.directory());
   if (boot_args.is_error()) {
     fprintf(stderr, "svchost: unable to connect to fuchsia.boot.Arguments: %s\n",
             boot_args.status_string());

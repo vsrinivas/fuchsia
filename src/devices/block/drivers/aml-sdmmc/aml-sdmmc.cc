@@ -228,7 +228,7 @@ zx_status_t AmlSdmmc::WaitForInterrupt(sdmmc_req_t* req) {
   return ZX_OK;
 }
 
-zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInterruptNew(
+zx::result<std::array<uint32_t, AmlSdmmc::kResponseCount>> AmlSdmmc::WaitForInterruptNew(
     const sdmmc_req_new_t& req) {
   zx_status_t status = WaitForInterruptImpl();
 
@@ -720,7 +720,7 @@ zx_status_t AmlSdmmc::SetupDataDescs(sdmmc_req_t* req, aml_sdmmc_desc_t* desc,
   return ZX_OK;
 }
 
-zx::status<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> AmlSdmmc::SetupDataDescsNew(
+zx::result<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> AmlSdmmc::SetupDataDescsNew(
     const sdmmc_req_new_t& req, aml_sdmmc_desc_t* const cur_desc) {
   const uint32_t req_blk_len = log2_ceil(req.blocksize);
   if (req_blk_len > AmlSdmmcCfg::kMaxBlkLen) {
@@ -768,7 +768,7 @@ zx::status<std::pair<aml_sdmmc_desc_t*, std::vector<fzl::PinnedVmo>>> AmlSdmmc::
   return zx::ok(std::pair{desc - 1, std::move(pinned_vmos)});
 }
 
-zx::status<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t& req,
+zx::result<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t& req,
                                                            const sdmmc_buffer_region_t& buffer,
                                                            vmo_store::StoredVmo<OwnedVmoInfo>& vmo,
                                                            aml_sdmmc_desc_t* const cur_desc) {
@@ -802,7 +802,7 @@ zx::status<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t
 
     const size_t last_offset = offset;
     for (size_t i = 0; i < region_count; i++) {
-      zx::status<aml_sdmmc_desc_t*> next_desc = PopulateDescriptors(req, desc, regions[i]);
+      zx::result<aml_sdmmc_desc_t*> next_desc = PopulateDescriptors(req, desc, regions[i]);
       if (next_desc.is_error()) {
         return next_desc;
       }
@@ -821,7 +821,7 @@ zx::status<aml_sdmmc_desc_t*> AmlSdmmc::SetupOwnedVmoDescs(const sdmmc_req_new_t
   return zx::ok(desc);
 }
 
-zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedVmoDescs(
+zx::result<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedVmoDescs(
     const sdmmc_req_new_t& req, const sdmmc_buffer_region_t& buffer,
     aml_sdmmc_desc_t* const cur_desc) {
   const bool is_read = req.cmd_flags & SDMMC_CMD_READ;
@@ -852,7 +852,7 @@ zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedV
       region.size -= end_offset;
     }
 
-    zx::status<aml_sdmmc_desc_t*> next_desc = PopulateDescriptors(req, desc, region);
+    zx::result<aml_sdmmc_desc_t*> next_desc = PopulateDescriptors(req, desc, region);
     if (next_desc.is_error()) {
       return zx::error(next_desc.error_value());
     }
@@ -862,7 +862,7 @@ zx::status<std::pair<aml_sdmmc_desc_t*, fzl::PinnedVmo>> AmlSdmmc::SetupUnownedV
   return zx::ok(std::pair{desc, std::move(pinned_vmo)});
 }
 
-zx::status<aml_sdmmc_desc_t*> AmlSdmmc::PopulateDescriptors(const sdmmc_req_new_t& req,
+zx::result<aml_sdmmc_desc_t*> AmlSdmmc::PopulateDescriptors(const sdmmc_req_new_t& req,
                                                             aml_sdmmc_desc_t* const cur_desc,
                                                             fzl::PinnedVmo::Region region) {
   if (region.phys_addr > UINT32_MAX || (region.phys_addr + region.size) > UINT32_MAX) {
@@ -1228,7 +1228,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     AML_SDMMC_INFO("Tuning results [%02u]: %s", i, results.c_str());
   }
 
-  zx::status<TuneSettings> tuning_settings;
+  zx::result<TuneSettings> tuning_settings;
   if (board_config_.use_new_tuning) {
     tuning_settings = PerformNewTuning({adj_delay_results, adj_delay_results + clk_div});
   } else {
@@ -1256,7 +1256,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
   return ZX_OK;
 }
 
-zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformNewTuning(
+zx::result<AmlSdmmc::TuneSettings> AmlSdmmc::PerformNewTuning(
     cpp20::span<const TuneResults> adj_delay_results) {
   TuneWindow largest_failing_window = {};
   uint32_t failing_adj_delay = 0;
@@ -1292,7 +1292,7 @@ zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformNewTuning(
 
   // TODO(fxbug.dev/68436): Get rid if the old tuning method once we have confidence in the new one.
   if (!adj_delay_results[best_adj_delay].all_passed()) {
-    const zx::status<TuneSettings> old_results = PerformOldTuning(adj_delay_results);
+    const zx::result<TuneSettings> old_results = PerformOldTuning(adj_delay_results);
     if (old_results.is_ok()) {
       const uint32_t new_tuning_distance = DistanceToFailingPoint(results, adj_delay_results);
       const uint32_t old_tuning_distance = DistanceToFailingPoint(*old_results, adj_delay_results);
@@ -1316,7 +1316,7 @@ zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformNewTuning(
   return zx::ok(results);
 }
 
-zx::status<AmlSdmmc::TuneSettings> AmlSdmmc::PerformOldTuning(
+zx::result<AmlSdmmc::TuneSettings> AmlSdmmc::PerformOldTuning(
     cpp20::span<const TuneResults> adj_delay_results) {
   // The delay line values don't actually wrap, but treating them like they do is the current tuning
   // behavior. Preserve that behavior so as to not affect any of the devices that haven't been
@@ -1464,7 +1464,7 @@ zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_r
 
   start_reg.set_desc_busy(1).set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2).WriteTo(&mmio_);
 
-  zx::status<std::array<uint32_t, AmlSdmmc::kResponseCount>> response = WaitForInterruptNew(*req);
+  zx::result<std::array<uint32_t, AmlSdmmc::kResponseCount>> response = WaitForInterruptNew(*req);
   if (response.is_error()) {
     return response.error_value();
   }

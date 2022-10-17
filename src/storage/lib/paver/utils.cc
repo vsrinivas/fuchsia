@@ -57,7 +57,7 @@ BlockWatcherPauser::~BlockWatcherPauser() {
   }
 }
 
-zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
+zx::result<BlockWatcherPauser> BlockWatcherPauser::Create(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
   auto local = component::ConnectAt<fuchsia_fshost::BlockWatcher>(svc_root);
   if (!local.is_ok()) {
@@ -72,11 +72,11 @@ zx::status<BlockWatcherPauser> BlockWatcherPauser::Create(
   return zx::ok(std::move(pauser));
 }
 
-zx::status<> BlockWatcherPauser::Pause() {
+zx::result<> BlockWatcherPauser::Pause() {
   const uint32_t old_count = g_pause_count.fetch_add(1);
   if (old_count == 0) {
     auto result = watcher_->Pause();
-    auto status = zx::make_status(result.ok() ? result.value().status : result.status());
+    auto status = zx::make_result(result.ok() ? result.value().status : result.status());
 
     valid_ = status.is_ok();
     return status;
@@ -86,7 +86,7 @@ zx::status<> BlockWatcherPauser::Pause() {
   return zx::ok();
 }
 
-zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
+zx::result<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const char* path,
                                       fit::function<bool(const zx::channel&)> should_filter_file,
                                       zx_duration_t timeout) {
   ZX_ASSERT(path != nullptr);
@@ -140,7 +140,7 @@ zx::status<zx::channel> OpenPartition(const fbl::unique_fd& devfs_root, const ch
 
 constexpr char kBlockDevPath[] = "class/block/";
 
-zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
+zx::result<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
     const fbl::unique_fd& devfs_root, std::optional<Uuid> unique_guid,
     std::optional<Uuid> type_guid, zx_duration_t timeout) {
   ZX_ASSERT(unique_guid || type_guid);
@@ -174,7 +174,7 @@ zx::status<fidl::ClientEnd<partition::Partition>> OpenBlockPartition(
 
 constexpr char kSkipBlockDevPath[] = "class/skip-block/";
 
-zx::status<fidl::ClientEnd<skipblock::SkipBlock>> OpenSkipBlockPartition(
+zx::result<fidl::ClientEnd<skipblock::SkipBlock>> OpenSkipBlockPartition(
     const fbl::unique_fd& devfs_root, const Uuid& type_guid, zx_duration_t timeout) {
   auto cb = [&](const zx::channel& chan) {
     auto result = fidl::WireCall<skipblock::SkipBlock>(zx::unowned(chan))->GetPartitionInfo();
@@ -202,7 +202,7 @@ bool HasSkipBlockDevice(const fbl::unique_fd& devfs_root) {
 // partition. Does not rebind partition drivers.
 //
 // At most one of |unique_guid| and |type_guid| may be nullptr.
-zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<Uuid> unique_guid,
+zx::result<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<Uuid> unique_guid,
                                 std::optional<Uuid> type_guid) {
   auto status = OpenBlockPartition(devfs_root, unique_guid, type_guid, g_wipe_timeout);
   if (status.is_error()) {
@@ -223,7 +223,7 @@ zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<
   // Rely on vmos being 0 initialized.
   zx::vmo vmo;
   {
-    auto status = zx::make_status(
+    auto status = zx::make_result(
         zx::vmo::create(fbl::round_up(block_size, zx_system_get_page_size()), 0, &vmo));
     if (status.is_error()) {
       ERROR("Warning: Could not create vmo: %s\n", status.status_string());
@@ -244,22 +244,22 @@ zx::status<> WipeBlockPartition(const fbl::unique_fd& devfs_root, std::optional<
   return zx::ok();
 }
 
-zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name) {
+zx::result<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_name) {
   zx::channel local, remote;
-  auto status = zx::make_status(zx::channel::create(0, &local, &remote));
+  auto status = zx::make_result(zx::channel::create(0, &local, &remote));
   if (status.is_error()) {
     return status.take_error();
   }
 
   fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
-  status = zx::make_status(
+  status = zx::make_result(
       fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release()));
   if (status.is_error()) {
     return status.take_error();
   }
 
   auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBoardName();
-  status = zx::make_status(result.ok() ? result.value().status : result.status());
+  status = zx::make_result(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }
@@ -270,22 +270,22 @@ zx::status<> IsBoard(const fbl::unique_fd& devfs_root, std::string_view board_na
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor) {
+zx::result<> IsBootloader(const fbl::unique_fd& devfs_root, std::string_view vendor) {
   zx::channel local, remote;
-  zx::status<> status = zx::make_status(zx::channel::create(0, &local, &remote));
+  zx::result<> status = zx::make_result(zx::channel::create(0, &local, &remote));
   if (status.is_error()) {
     return status.take_error();
   }
 
   fdio_cpp::UnownedFdioCaller caller(devfs_root.get());
-  status = zx::make_status(
+  status = zx::make_result(
       fdio_service_connect_at(caller.borrow_channel(), "sys/platform", remote.release()));
   if (status.is_error()) {
     return status.take_error();
   }
 
   auto result = fidl::WireCall<fuchsia_sysinfo::SysInfo>(zx::unowned(local))->GetBootloaderVendor();
-  status = zx::make_status(result.ok() ? result.value().status : result.status());
+  status = zx::make_result(result.ok() ? result.value().status : result.status());
   if (status.is_error()) {
     return status.take_error();
   }

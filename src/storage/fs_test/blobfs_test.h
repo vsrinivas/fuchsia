@@ -31,7 +31,7 @@ class BlobfsFilesystem : public FilesystemImplWithDefaultMake<BlobfsFilesystem> 
 
   // Opens an existing blobfs file system.  Currently, this only works with ram nand devices, not
   // ram disks.  The data is provided via the vmo provided within the options.
-  zx::status<std::unique_ptr<FilesystemInstance>> Open(
+  zx::result<std::unique_ptr<FilesystemInstance>> Open(
       const TestFilesystemOptions& options) const override;
 };
 

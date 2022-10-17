@@ -66,7 +66,7 @@ class IntelThermal : public DeviceType, fidl::WireServer<fuchsia_hardware_acpi::
   float trip_points_[fuchsia_hardware_thermal::wire::kMaxTripPoints] __TA_GUARDED(lock_) = {0};
   std::mutex lock_;
 
-  zx::status<uint64_t> EvaluateInteger(const char* name);
+  zx::result<uint64_t> EvaluateInteger(const char* name);
 };
 
 }  // namespace intel_thermal

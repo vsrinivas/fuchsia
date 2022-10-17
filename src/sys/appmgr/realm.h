@@ -267,7 +267,7 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   fidl::InterfaceHandle<fuchsia::io::Directory> OpenInfoDir();
 
   // Called by `FindComponent`. This function returns realm path in reverse order.
-  zx::status<fuchsia::sys::internal::SourceIdentity> FindComponentInternal(zx_koid_t process_koid);
+  zx::result<fuchsia::sys::internal::SourceIdentity> FindComponentInternal(zx_koid_t process_koid);
 
   // Registers an exception channel for crash introspection.
   // This internally adds realm label to passed |component_info| and calls either it's own parent

@@ -66,7 +66,7 @@ class TestServer : public fidl::WireServer<fidl_test::TestProtocol> {};
 //
 
 TEST(BindServerTestCase, DispatcherWasShutDown) {
-  zx::status endpoints = fidl::CreateEndpoints<fidl_test::TestProtocol>();
+  zx::result endpoints = fidl::CreateEndpoints<fidl_test::TestProtocol>();
   ASSERT_OK(endpoints.status_value());
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
@@ -83,7 +83,7 @@ TEST(BindServerTestCase, DispatcherWasShutDown) {
 
 TEST(BindServerTestCase, InsufficientChannelRights) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  zx::status endpoints = fidl::CreateEndpoints<fidl_test::TestProtocol>();
+  zx::result endpoints = fidl::CreateEndpoints<fidl_test::TestProtocol>();
   ASSERT_OK(endpoints.status_value());
 
   auto [client_end, server_end] = std::move(*endpoints);
@@ -110,7 +110,7 @@ TEST(BindServerTestCase, PeerAlreadyClosed) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
-  zx::status endpoints = fidl::CreateEndpoints<fidl_test::TestProtocol>();
+  zx::result endpoints = fidl::CreateEndpoints<fidl_test::TestProtocol>();
   ASSERT_OK(endpoints.status_value());
 
   endpoints->client.reset();

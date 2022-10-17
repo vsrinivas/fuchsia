@@ -27,7 +27,7 @@ __EXPORT void* FindRealSyscall(const char* name) {
 }
 
 __EXPORT
-zx::status<zx_handle_t> fake_object_create_typed(zx_obj_type_t type) {
+zx::result<zx_handle_t> fake_object_create_typed(zx_obj_type_t type) {
   auto obj = fbl::MakeRefCounted<Object>(type);
   if (auto res = FakeHandleTable().Add(std::move(obj)); res.is_ok()) {
     return zx::success(res.value());
@@ -37,10 +37,10 @@ zx::status<zx_handle_t> fake_object_create_typed(zx_obj_type_t type) {
 }
 
 __EXPORT
-zx::status<zx_handle_t> fake_object_create() { return fake_object_create_typed(ZX_OBJ_TYPE_NONE); }
+zx::result<zx_handle_t> fake_object_create() { return fake_object_create_typed(ZX_OBJ_TYPE_NONE); }
 
 __EXPORT
-zx::status<zx_koid_t> fake_object_get_koid(zx_handle_t handle) {
+zx::result<zx_koid_t> fake_object_get_koid(zx_handle_t handle) {
   if (auto res = FakeHandleTable().Get(handle); res.is_ok()) {
     return zx::success(res->get_koid());
   } else {
@@ -98,11 +98,11 @@ zx_status_t zx_handle_replace(zx_handle_t handle, zx_rights_t rights, zx_handle_
     return REAL_SYSCALL(zx_handle_replace)(handle, rights, out);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     return get_res.status_value();
   }
-  zx::status add_res = fake_object::FakeHandleTable().Add(std::move(get_res.value()));
+  zx::result add_res = fake_object::FakeHandleTable().Add(std::move(get_res.value()));
   ZX_ASSERT(add_res.is_ok());
   *out = add_res.value();
   ZX_ASSERT(fake_object::FakeHandleTable().Remove(handle).is_ok());
@@ -118,7 +118,7 @@ zx_status_t zx_object_get_child(zx_handle_t handle, uint64_t koid, zx_rights_t r
     return REAL_SYSCALL(zx_object_get_child)(handle, koid, rights, out);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -134,7 +134,7 @@ zx_status_t zx_object_get_info(zx_handle_t handle, uint32_t topic, void* buffer,
                                             avail_count);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -149,7 +149,7 @@ zx_status_t zx_object_get_property(zx_handle_t handle, uint32_t property, void* 
     return REAL_SYSCALL(zx_object_get_property)(handle, property, value, value_size);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -163,7 +163,7 @@ zx_status_t zx_object_set_profile(zx_handle_t handle, zx_handle_t profile, uint3
     return REAL_SYSCALL(zx_object_set_profile)(handle, profile, options);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -178,7 +178,7 @@ zx_status_t zx_object_set_property(zx_handle_t handle, uint32_t property, const 
     return REAL_SYSCALL(zx_object_set_property)(handle, property, value, value_size);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -206,7 +206,7 @@ zx_status_t zx_object_signal_peer(zx_handle_t handle, uint32_t clear_mask, uint3
     return REAL_SYSCALL(zx_object_signal_peer)(handle, clear_mask, set_mask);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -221,7 +221,7 @@ zx_status_t zx_object_wait_one(zx_handle_t handle, zx_signals_t signals, zx_time
     return REAL_SYSCALL(zx_object_wait_one)(handle, signals, deadline, observed);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();
@@ -236,7 +236,7 @@ zx_status_t zx_object_wait_async(zx_handle_t handle, zx_handle_t port, uint64_t 
     return REAL_SYSCALL(zx_object_wait_async)(handle, port, key, signals, options);
   }
 
-  zx::status get_res = fake_object::FakeHandleTable().Get(handle);
+  zx::result get_res = fake_object::FakeHandleTable().Get(handle);
   if (!get_res.is_ok()) {
     printf("%s: Bad handle = %#x, status = %d\n", __func__, handle, get_res.status_value());
     return get_res.status_value();

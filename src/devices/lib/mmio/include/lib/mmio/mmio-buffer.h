@@ -89,7 +89,7 @@ class MmioBuffer {
     return status;
   }
 
-  static zx::status<MmioBuffer> Create(zx_off_t offset, size_t size, zx::vmo vmo,
+  static zx::result<MmioBuffer> Create(zx_off_t offset, size_t size, zx::vmo vmo,
                                        uint32_t cache_policy) {
     mmio_buffer_t mmio;
     zx_status_t status = mmio_buffer_init(&mmio, offset, size, vmo.release(), cache_policy);
@@ -99,7 +99,7 @@ class MmioBuffer {
     return zx::ok(MmioBuffer(mmio));
   }
 
-  static zx::status<MmioBuffer> Create(zx_paddr_t base, size_t size, const zx::resource& resource,
+  static zx::result<MmioBuffer> Create(zx_paddr_t base, size_t size, const zx::resource& resource,
                                        uint32_t cache_policy) {
     mmio_buffer_t mmio;
     zx_status_t status = mmio_buffer_init_physical(&mmio, base, size, resource.get(), cache_policy);
@@ -128,7 +128,7 @@ class MmioBuffer {
     return status;
   }
 
-  zx::status<MmioPinnedBuffer> Pin(const zx::bti& bti) {
+  zx::result<MmioPinnedBuffer> Pin(const zx::bti& bti) {
     mmio_pinned_buffer_t pinned;
     zx_status_t status = mmio_buffer_pin(&mmio_, bti.get(), &pinned);
     if (status != ZX_OK) {

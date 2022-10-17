@@ -22,7 +22,7 @@ namespace device_group {
 // CompositeDevice object underneath the interface.
 class DeviceGroupV1 : public DeviceGroup {
  public:
-  static zx::status<std::unique_ptr<DeviceGroupV1>> Create(
+  static zx::result<std::unique_ptr<DeviceGroupV1>> Create(
       DeviceGroupCreateInfo create_info,
       fuchsia_device_manager::wire::DeviceGroupDescriptor group_desc, DriverLoader* driver_loader);
 
@@ -31,7 +31,7 @@ class DeviceGroupV1 : public DeviceGroup {
 
  private:
   // DeviceGroup interface:
-  zx::status<std::optional<DeviceOrNode>> BindNodeImpl(
+  zx::result<std::optional<DeviceOrNode>> BindNodeImpl(
       fuchsia_driver_index::wire::MatchedDeviceGroupInfo info,
       const DeviceOrNode& device_or_node) override;
 

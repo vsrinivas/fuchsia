@@ -22,7 +22,7 @@ namespace test = ::llcpptest_protocol_test;
 // of synchronous calls reflect the errors that happens in practice.
 
 TEST(SyncClientErrorTest, PeerClosed) {
-  zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
+  zx::result endpoints = fidl::CreateEndpoints<test::EnumMethods>();
   ASSERT_OK(endpoints.status_value());
   fidl::WireSyncClient client{std::move(endpoints->client)};
   endpoints->server.reset();
@@ -32,7 +32,7 @@ TEST(SyncClientErrorTest, PeerClosed) {
 }
 
 TEST(SyncClientErrorTest, EncodeError) {
-  zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
+  zx::result endpoints = fidl::CreateEndpoints<test::EnumMethods>();
   ASSERT_OK(endpoints.status_value());
   fidl::WireSyncClient client{std::move(endpoints->client)};
   endpoints->server.reset();
@@ -49,7 +49,7 @@ TEST(SyncClientErrorTest, EncodeError) {
 }
 
 TEST(SyncClientErrorTest, DecodeError) {
-  zx::status endpoints = fidl::CreateEndpoints<test::EnumMethods>();
+  zx::result endpoints = fidl::CreateEndpoints<test::EnumMethods>();
   ASSERT_OK(endpoints.status_value());
   std::thread replier{[&] {
     zx_signals_t observed;
@@ -86,7 +86,7 @@ TEST(SyncClientErrorTest, DecodeError) {
 }
 
 TEST(SyncClientErrorTest, DecodeErrorWithErrorSyntax) {
-  zx::status endpoints = fidl::CreateEndpoints<test_error_methods::ErrorMethods>();
+  zx::result endpoints = fidl::CreateEndpoints<test_error_methods::ErrorMethods>();
   ASSERT_OK(endpoints.status_value());
   std::thread replier{[&] {
     zx_signals_t observed;

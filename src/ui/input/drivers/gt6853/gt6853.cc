@@ -223,7 +223,7 @@ zx_status_t Gt6853Device::Init() {
     return status;
   }
 
-  zx::status<fuchsia_mem::wire::Range> config = GetConfigFileVmo();
+  zx::result<fuchsia_mem::wire::Range> config = GetConfigFileVmo();
   if (config.is_error()) {
     return config.status_value();
   }
@@ -284,7 +284,7 @@ zx_status_t Gt6853Device::Init() {
 }
 
 zx_status_t Gt6853Device::DownloadConfigIfNeeded(const fuchsia_mem::wire::Range& config_file) {
-  zx::status<uint8_t> sensor_id = ReadReg8(Register::kSensorIdReg);
+  zx::result<uint8_t> sensor_id = ReadReg8(Register::kSensorIdReg);
   if (sensor_id.is_error()) {
     zxlogf(ERROR, "Failed to read sensor ID register: %d", sensor_id.error_value());
     return sensor_id.error_value();
@@ -300,7 +300,7 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded(const fuchsia_mem::wire::Range&
     return status;
   }
 
-  zx::status<uint64_t> config_offset = GetConfigOffset(mapped_config, sensor_id.value() & 0xf);
+  zx::result<uint64_t> config_offset = GetConfigOffset(mapped_config, sensor_id.value() & 0xf);
   if (config_offset.is_error()) {
     return config_offset.error_value();
   }
@@ -331,7 +331,7 @@ zx_status_t Gt6853Device::DownloadConfigIfNeeded(const fuchsia_mem::wire::Range&
   return SendConfig(config);
 }
 
-zx::status<uint64_t> Gt6853Device::GetConfigOffset(const fzl::VmoMapper& mapped_config,
+zx::result<uint64_t> Gt6853Device::GetConfigOffset(const fzl::VmoMapper& mapped_config,
                                                    const uint8_t sensor_id) {
   constexpr size_t kConfigTableHeaderSize = 16;
   if (mapped_config.size() < kConfigTableHeaderSize) {
@@ -501,7 +501,7 @@ zx_status_t Gt6853Device::UpdateFirmwareIfNeeded() {
   }
 
   FirmwareSubsysInfo subsys_entries[kMaxSubsysCount];
-  zx::status<size_t> entry_count = ParseFirmwareInfo(mapped_fw, subsys_entries);
+  zx::result<size_t> entry_count = ParseFirmwareInfo(mapped_fw, subsys_entries);
   if (entry_count.is_error()) {
     return entry_count.error_value();
   }
@@ -520,7 +520,7 @@ zx_status_t Gt6853Device::UpdateFirmwareIfNeeded() {
   return FinishFirmwareUpdate();
 }
 
-zx::status<size_t> Gt6853Device::ParseFirmwareInfo(const fzl::VmoMapper& mapped_fw,
+zx::result<size_t> Gt6853Device::ParseFirmwareInfo(const fzl::VmoMapper& mapped_fw,
                                                    FirmwareSubsysInfo* out_subsys_entries) {
   constexpr size_t kFirmwareHeaderSize = 32;
   constexpr size_t kSubsysCountOffset = 27;
@@ -604,7 +604,7 @@ zx_status_t Gt6853Device::PrepareFirmwareUpdate(
     return ZX_ERR_IO_INVALID;
   }
 
-  zx::status<> status = Write(Register::kCpuRunFrom, kCpuRunFromFlash, sizeof(kCpuRunFromFlash));
+  zx::result<> status = Write(Register::kCpuRunFrom, kCpuRunFromFlash, sizeof(kCpuRunFromFlash));
   if (status.is_error()) {
     return status.error_value();
   }
@@ -659,7 +659,7 @@ zx_status_t Gt6853Device::PrepareFirmwareUpdate(
 }
 
 zx_status_t Gt6853Device::LoadIsp(const FirmwareSubsysInfo& isp_info) {
-  zx::status status = WriteReg8(Register::kBankSelect, 0);
+  zx::result status = WriteReg8(Register::kBankSelect, 0);
   if (status.is_error()) {
     return status.error_value();
   }
@@ -781,7 +781,7 @@ zx_status_t Gt6853Device::SendFirmwarePacket(const uint8_t type, const uint8_t* 
   constexpr uint8_t kFlashStatusCheckError = 0xdd;
   constexpr zx::duration kFlashWritingWait = zx::msec(55);
 
-  zx::status<> status = WriteAndCheck(Register::kIspBuffer, packet, size);
+  zx::result<> status = WriteAndCheck(Register::kIspBuffer, packet, size);
   if (status.is_error()) {
     zxlogf(ERROR, "Failed to send firmware packet: %d", status.error_value());
     return status.error_value();
@@ -840,7 +840,7 @@ zx_status_t Gt6853Device::SendFirmwarePacket(const uint8_t type, const uint8_t* 
 zx_status_t Gt6853Device::FinishFirmwareUpdate() {
   constexpr zx::duration kResetHoldTime = zx::msec(80);
 
-  zx::status<> status = WriteReg8(Register::kCpuCtrl, kCpuCtrlHoldSs51);
+  zx::result<> status = WriteReg8(Register::kCpuCtrl, kCpuCtrlHoldSs51);
   if (status.is_error()) {
     return status.error_value();
   }
@@ -864,20 +864,20 @@ zx_status_t Gt6853Device::FinishFirmwareUpdate() {
   return ZX_OK;
 }
 
-zx::status<uint8_t> Gt6853Device::ReadReg8(const Register reg) {
+zx::result<uint8_t> Gt6853Device::ReadReg8(const Register reg) {
   const uint16_t address = htobe16(static_cast<uint16_t>(reg));
   uint8_t value = 0;
   zx_status_t status = i2c_.WriteReadSync(reinterpret_cast<const uint8_t*>(&address),
                                           sizeof(address), &value, sizeof(value));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read from 0x%02x: %d", address, status);
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
   return zx::ok(value);
 }
 
-zx::status<> Gt6853Device::Read(const Register reg, uint8_t* buffer, const size_t size) {
+zx::result<> Gt6853Device::Read(const Register reg, uint8_t* buffer, const size_t size) {
   uint16_t address = static_cast<uint16_t>(reg);
   size_t remaining = size;
 
@@ -888,7 +888,7 @@ zx::status<> Gt6853Device::Read(const Register reg, uint8_t* buffer, const size_
                                             sizeof(be_address), buffer, transfer_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to read %zu bytes from 0x%02x: %d", transfer_size, address, status);
-      return zx::error_status(status);
+      return zx::error_result(status);
     }
 
     address += transfer_size;
@@ -899,7 +899,7 @@ zx::status<> Gt6853Device::Read(const Register reg, uint8_t* buffer, const size_
   return zx::ok();
 }
 
-zx::status<> Gt6853Device::WriteReg8(const Register reg, const uint8_t value) {
+zx::result<> Gt6853Device::WriteReg8(const Register reg, const uint8_t value) {
   const uint16_t address = static_cast<uint16_t>(reg);
   const uint8_t buffer[] = {
       static_cast<uint8_t>(address >> 8),
@@ -909,12 +909,12 @@ zx::status<> Gt6853Device::WriteReg8(const Register reg, const uint8_t value) {
   zx_status_t status = i2c_.WriteSync(buffer, sizeof(buffer));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to write 0x%02x to 0x%02x: %d", value, address, status);
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
   return zx::ok();
 }
 
-zx::status<> Gt6853Device::Write(const Register reg, const uint8_t* buffer, const size_t size) {
+zx::result<> Gt6853Device::Write(const Register reg, const uint8_t* buffer, const size_t size) {
   uint16_t address = static_cast<uint16_t>(reg);
   size_t remaining = size;
 
@@ -929,7 +929,7 @@ zx::status<> Gt6853Device::Write(const Register reg, const uint8_t* buffer, cons
     zx_status_t status = i2c_.WriteSync(write_buffer, sizeof(be_address) + transfer_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to write %zu bytes to 0x%02x: %d", transfer_size, address, status);
-      return zx::error_status(status);
+      return zx::error_result(status);
     }
 
     address += transfer_size;
@@ -940,8 +940,8 @@ zx::status<> Gt6853Device::Write(const Register reg, const uint8_t* buffer, cons
   return zx::ok();
 }
 
-zx::status<> Gt6853Device::WriteAndCheck(Register reg, const uint8_t* buffer, size_t size) {
-  zx::status<> write_status = Write(reg, buffer, size);
+zx::result<> Gt6853Device::WriteAndCheck(Register reg, const uint8_t* buffer, size_t size) {
+  zx::result<> write_status = Write(reg, buffer, size);
   if (write_status.is_error()) {
     return write_status;
   }
@@ -958,11 +958,11 @@ zx::status<> Gt6853Device::WriteAndCheck(Register reg, const uint8_t* buffer, si
                                             sizeof(be_address), read_buffer, transfer_size);
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to read %zu bytes from 0x%02x: %d", transfer_size, address, status);
-      return zx::error_status(status);
+      return zx::error_result(status);
     }
 
     if (memcmp(read_buffer, buffer, transfer_size) != 0) {
-      return zx::error_status(ZX_ERR_IO_DATA_INTEGRITY);
+      return zx::error_result(ZX_ERR_IO_DATA_INTEGRITY);
     }
 
     address += transfer_size;
@@ -976,7 +976,7 @@ zx::status<> Gt6853Device::WriteAndCheck(Register reg, const uint8_t* buffer, si
 int Gt6853Device::Thread() {
   zx::time timestamp;
   while (interrupt_.wait(&timestamp) == ZX_OK) {
-    zx::status<uint8_t> status = ReadReg8(Register::kEventStatusReg);
+    zx::result<uint8_t> status = ReadReg8(Register::kEventStatusReg);
     if (status.is_error()) {
       zxlogf(ERROR, "Failed to read event status register");
       return thrd_error;

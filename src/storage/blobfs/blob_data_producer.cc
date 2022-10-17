@@ -14,7 +14,7 @@ namespace blobfs {
 
 uint64_t SimpleBlobDataProducer::GetRemainingBytes() const { return data_.size(); }
 
-zx::status<cpp20::span<const uint8_t>> SimpleBlobDataProducer::Consume(uint64_t max) {
+zx::result<cpp20::span<const uint8_t>> SimpleBlobDataProducer::Consume(uint64_t max) {
   auto result = data_.subspan(0, std::min(max, data_.size()));
   data_ = data_.subspan(result.size());
   return zx::ok(result);
@@ -31,7 +31,7 @@ uint64_t MergeBlobDataProducer::GetRemainingBytes() const {
   return first_.GetRemainingBytes() + padding_ + second_.GetRemainingBytes();
 }
 
-zx::status<cpp20::span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max) {
+zx::result<cpp20::span<const uint8_t>> MergeBlobDataProducer::Consume(uint64_t max) {
   if (first_.GetRemainingBytes() > 0) {
     auto data = first_.Consume(max);
     if (data.is_error()) {
@@ -88,7 +88,7 @@ DecompressBlobDataProducer::DecompressBlobDataProducer(
       buffer_size_(buffer_size),
       compressed_data_start_(static_cast<const uint8_t*>(compressed_data_start)) {}
 
-zx::status<DecompressBlobDataProducer> DecompressBlobDataProducer::Create(
+zx::result<DecompressBlobDataProducer> DecompressBlobDataProducer::Create(
     BlobCompressor& compressor, uint64_t decompressed_size) {
   ZX_ASSERT_MSG(compressor.algorithm() == CompressionAlgorithm::kChunked, "%u",
                 compressor.algorithm());
@@ -110,7 +110,7 @@ uint64_t DecompressBlobDataProducer::GetRemainingBytes() const {
   return decompressed_remaining_ + buffer_avail_;
 }
 
-zx::status<cpp20::span<const uint8_t>> DecompressBlobDataProducer::Consume(uint64_t max) {
+zx::result<cpp20::span<const uint8_t>> DecompressBlobDataProducer::Consume(uint64_t max) {
   if (buffer_avail_ == 0) {
     if (zx_status_t status = Decompress(); status != ZX_OK) {
       return zx::error(status);

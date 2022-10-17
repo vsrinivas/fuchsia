@@ -24,7 +24,7 @@ class AcpiMemoryRegion {
   // contained within a memory region in the system's ACPI (Advanced
   // Configuration and Power Interface) tables that is marked as NVS (saved
   // during the Non-Volatile Sleep state)
-  static zx::status<AcpiMemoryRegion> Create(zx_paddr_t region_base, size_t region_size);
+  static zx::result<AcpiMemoryRegion> Create(zx_paddr_t region_base, size_t region_size);
 
   // Creates an empty memory region without any backing VMO.
   constexpr AcpiMemoryRegion() = default;

@@ -74,21 +74,21 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
   return true;
 }
 
-zx::status<uint64_t> TestFidlClient::CreateImage() {
+zx::result<uint64_t> TestFidlClient::CreateImage() {
   return ImportImageWithSysmem(displays_[0].image_config_);
 }
 
-zx::status<uint64_t> TestFidlClient::CreateLayer() {
+zx::result<uint64_t> TestFidlClient::CreateLayer() {
   fbl::AutoLock lock(mtx());
   return CreateLayerLocked();
 }
 
-zx::status<TestFidlClient::EventInfo> TestFidlClient::CreateEvent() {
+zx::result<TestFidlClient::EventInfo> TestFidlClient::CreateEvent() {
   fbl::AutoLock lock(mtx());
   return CreateEventLocked();
 }
 
-zx::status<uint64_t> TestFidlClient::CreateLayerLocked() {
+zx::result<uint64_t> TestFidlClient::CreateLayerLocked() {
   ZX_DEBUG_ASSERT(dc_);
   auto reply = dc_->CreateLayer();
   if (!reply.ok()) {
@@ -103,7 +103,7 @@ zx::status<uint64_t> TestFidlClient::CreateLayerLocked() {
   return zx::ok(reply.value().layer_id);
 }
 
-zx::status<TestFidlClient::EventInfo> TestFidlClient::CreateEventLocked() {
+zx::result<TestFidlClient::EventInfo> TestFidlClient::CreateEventLocked() {
   zx::event event;
   if (auto status = zx::event::create(0u, &event); status != ZX_OK) {
     zxlogf(ERROR, "Failed to create zx::event: %d", status);
@@ -293,13 +293,13 @@ fuchsia_hardware_display::wire::ConfigStamp TestFidlClient::GetRecentAppliedConf
   return result.value().stamp;
 }
 
-zx::status<uint64_t> TestFidlClient::ImportImageWithSysmem(
+zx::result<uint64_t> TestFidlClient::ImportImageWithSysmem(
     const fhd::wire::ImageConfig& image_config) {
   fbl::AutoLock lock(mtx());
   return ImportImageWithSysmemLocked(image_config);
 }
 
-zx::status<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
+zx::result<uint64_t> TestFidlClient::ImportImageWithSysmemLocked(
     const fhd::wire::ImageConfig& image_config) {
   // Create all the tokens.
   fidl::WireSyncClient<sysmem::BufferCollectionToken> local_token;

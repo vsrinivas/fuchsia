@@ -20,7 +20,7 @@ namespace paver {
 // fvm sparse reader library.
 class StreamReader : public fvm::ReaderInterface {
  public:
-  static zx::status<std::unique_ptr<StreamReader>> Create(zx::channel stream);
+  static zx::result<std::unique_ptr<StreamReader>> Create(zx::channel stream);
 
   virtual ~StreamReader() = default;
 

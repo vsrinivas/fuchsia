@@ -117,14 +117,14 @@ class F2fs final {
                 std::unique_ptr<Superblock> sb, const MountOptions &mount_options,
                 PlatformVfs *vfs);
 
-  static zx::status<std::unique_ptr<F2fs>> Create(FuchsiaDispatcher dispatcher,
+  static zx::result<std::unique_ptr<F2fs>> Create(FuchsiaDispatcher dispatcher,
                                                   std::unique_ptr<f2fs::Bcache> bc,
                                                   const MountOptions &options, PlatformVfs *vfs);
 
-  static zx::status<std::unique_ptr<Superblock>> LoadSuperblock(f2fs::Bcache &bc);
+  static zx::result<std::unique_ptr<Superblock>> LoadSuperblock(f2fs::Bcache &bc);
 
 #ifdef __Fuchsia__
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo();
   DirEntryCache &GetDirEntryCache() { return dir_entry_cache_; }
   InspectTree &GetInspectTree() { return *inspect_tree_; }
   void Sync(SyncCallback closure);
@@ -137,7 +137,7 @@ class F2fs final {
     return vnode_cache_.Lookup(ino, out);
   }
 
-  zx::status<std::unique_ptr<f2fs::Bcache>> TakeBc() {
+  zx::result<std::unique_ptr<f2fs::Bcache>> TakeBc() {
     if (!bc_) {
       return zx::error(ZX_ERR_UNAVAILABLE);
     }
@@ -266,7 +266,7 @@ class F2fs final {
 
   VnodeF2fs &GetNodeVnode() { return *node_vnode_; }
   VnodeF2fs &GetMetaVnode() { return *meta_vnode_; }
-  zx::status<fbl::RefPtr<VnodeF2fs>> GetRootVnode() {
+  zx::result<fbl::RefPtr<VnodeF2fs>> GetRootVnode() {
     if (root_vnode_) {
       return zx::ok(root_vnode_);
     }
@@ -275,7 +275,7 @@ class F2fs final {
 
   // For testing
   void SetVfsForTests(std::unique_ptr<PlatformVfs> vfs) { vfs_for_tests_ = std::move(vfs); }
-  zx::status<std::unique_ptr<PlatformVfs>> TakeVfsForTests() {
+  zx::result<std::unique_ptr<PlatformVfs>> TakeVfsForTests() {
     if (vfs_for_tests_) {
       return zx::ok(std::move(vfs_for_tests_));
     }
@@ -287,10 +287,10 @@ class F2fs final {
   // Flush all dirty data Pages for dirty vnodes that meet |operation|.if_vnode and if_page.
   pgoff_t SyncDirtyDataPages(WritebackOperation &operation);
 
-  zx::status<std::vector<LockedPage>> MakeReadOperations(std::vector<LockedPage> pages,
+  zx::result<std::vector<LockedPage>> MakeReadOperations(std::vector<LockedPage> pages,
                                                          std::vector<block_t> addrs, PageType type,
                                                          bool is_sync = true);
-  zx::status<LockedPage> MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
+  zx::result<LockedPage> MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
                                            bool is_sync = true);
   zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
   zx_status_t MakeTrimOperation(block_t blk_addr, block_t nblocks);
@@ -300,7 +300,7 @@ class F2fs final {
     writer_->ScheduleSubmitPages(completion, type);
   }
   void ScheduleWriteback();
-  zx::status<> WaitForWriteback() {
+  zx::result<> WaitForWriteback() {
     if (!writeback_flag_.try_acquire_for(kWriteTimeOut)) {
       return zx::error(ZX_ERR_TIMED_OUT);
     }

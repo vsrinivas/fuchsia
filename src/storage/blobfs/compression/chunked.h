@@ -90,7 +90,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
                                         std::unique_ptr<SeekableDecompressor>* out);
 
   // Helper function to calculate a CompressionMapping from a given |seek_table|.
-  static zx::status<CompressionMapping> MappingForDecompressedRange(
+  static zx::result<CompressionMapping> MappingForDecompressedRange(
       const chunked_compression::SeekTable& seek_table, size_t offset, size_t len,
       size_t max_decompressed_len);
 
@@ -100,7 +100,7 @@ class SeekableChunkedDecompressor : public SeekableDecompressor {
                               const void* compressed_buf, size_t max_compressed_size,
                               size_t offset) final;
 
-  zx::status<CompressionMapping> MappingForDecompressedRange(
+  zx::result<CompressionMapping> MappingForDecompressedRange(
       size_t offset, size_t len, size_t max_decompressed_len) const final;
 
   CompressionAlgorithm algorithm() const final { return CompressionAlgorithm::kChunked; }

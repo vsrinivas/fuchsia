@@ -291,7 +291,7 @@ void SpiFidlChild::DeassertCs(DeassertCsCompleter::Sync& completer) { spi_->Deas
 
 zx_status_t SpiFidlChild::SetUpOutgoingDirectory(
     fidl::ServerEnd<fuchsia_io::Directory> server_end) {
-  zx::status status =
+  zx::result status =
       outgoing_.AddProtocol(this, fidl::DiscoverableProtocolName<fuchsia_hardware_spi::Device>);
   if (status.is_error()) {
     return status.status_value();

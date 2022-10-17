@@ -77,7 +77,7 @@ class FakeNvmeController {
   const std::map<uint32_t, FakeNvmeNamespace&>& namespaces() const { return namespaces_; }
 
   // Returns IRQ number |index|, and creates it if it doesn't yet exist.
-  zx::status<zx::interrupt> GetOrCreateInterrupt(size_t index);
+  zx::result<zx::interrupt> GetOrCreateInterrupt(size_t index);
 
  private:
   // Controller-side information about a queue.

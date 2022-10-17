@@ -78,7 +78,7 @@ class FsManager {
   void RegisterDevicePath(MountPoint point, std::string_view device_path);
 
   // Creates a connection to the /fs dir in the outgoing directory.
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetFsDir();
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> GetFsDir();
 
   // Asynchronously shut down all the filesystems managed by fshost and then signal the main thread
   // to exit. Calls |callback| when complete. The Shutdown process would block until
@@ -124,10 +124,10 @@ class FsManager {
 
   zx_status_t DetachMount(std::string_view name);
 
-  zx::status<std::string> GetDevicePath(uint64_t fs_id);
+  zx::result<std::string> GetDevicePath(uint64_t fs_id);
 
   // Returns the filesystem root for the given mount point.
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory>> GetRoot(MountPoint point) const;
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory>> GetRoot(MountPoint point) const;
 
  private:
   class MountEntry {

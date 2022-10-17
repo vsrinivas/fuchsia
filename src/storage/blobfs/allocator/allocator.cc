@@ -38,7 +38,7 @@ Allocator::Allocator(SpaceManager* space_manager, RawBitmap block_map,
       space_manager_(space_manager),
       node_map_(std::move(node_map)) {}
 
-zx::status<InodePtr> Allocator::GetNode(uint32_t node_index) {
+zx::result<InodePtr> Allocator::GetNode(uint32_t node_index) {
   if (node_index >= node_map_.size() / kBlobfsInodeSize) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -106,7 +106,7 @@ const zx::vmo& Allocator::GetBlockMapVmo() const {
 
 const zx::vmo& Allocator::GetNodeMapVmo() const { return node_map_.vmo(); }
 
-zx::status<ReservedNode> Allocator::ReserveNode() {
+zx::result<ReservedNode> Allocator::ReserveNode() {
   TRACE_DURATION("blobfs", "ReserveNode");
   return BaseAllocator::ReserveNode();
 }
@@ -188,19 +188,19 @@ zx_status_t Allocator::GrowNodeMap(size_t size) {
 
 void Allocator::DropInodePtr() { node_map_grow_mutex_.unlock_shared(); }
 
-zx::status<> Allocator::AddBlocks(uint64_t block_count) {
+zx::result<> Allocator::AddBlocks(uint64_t block_count) {
   if (zx_status_t status = space_manager_->AddBlocks(block_count, &GetBlockBitmap());
       status != ZX_OK) {
     LogAllocationFailure(block_count);
-    return zx::make_status(status);
+    return zx::make_result(status);
   }
   return zx::ok();
 }
 
-zx::status<> Allocator::AddNodes() {
+zx::result<> Allocator::AddNodes() {
   zx_status_t status = space_manager_->AddInodes(this);
   if (status != ZX_OK) {
-    return zx::make_status(status);
+    return zx::make_result(status);
   }
 
   auto inode_count = space_manager_->Info().inode_count;
@@ -216,7 +216,7 @@ zx::status<> Allocator::AddNodes() {
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to grow bitmap for inodes";
   }
-  return zx::make_status(status);
+  return zx::make_result(status);
 }
 
 }  // namespace blobfs

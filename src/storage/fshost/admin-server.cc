@@ -175,7 +175,7 @@ void AdminServer::WriteDataFile(WriteDataFileRequestView request,
   }
 }
 
-zx::status<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
+zx::result<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
   // Recovery builds set `fvm_ramdisk`, Zedboot builds set `netboot`.  Either way, the data volume
   // won't be automatically mounted in this configuration, which is all we need to ensure.
   if (!config_.fvm_ramdisk() && !config_.netboot()) {

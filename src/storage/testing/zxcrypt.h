@@ -15,7 +15,7 @@ namespace storage {
 // volume, waiting for the block device to appear before returning.
 //
 // Returns the path to the newly created zxcrypt volume.
-zx::status<std::string> CreateZxcryptVolume(const std::string& device_path);
+zx::result<std::string> CreateZxcryptVolume(const std::string& device_path);
 
 }  // namespace storage
 

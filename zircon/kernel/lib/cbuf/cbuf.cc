@@ -65,7 +65,7 @@ size_t Cbuf::WriteChar(char c) {
   return 1;
 }
 
-zx::status<char> Cbuf::ReadChar(bool block) {
+zx::result<char> Cbuf::ReadChar(bool block) {
   while (true) {
     {
       AutoSpinLock guard(&lock_);

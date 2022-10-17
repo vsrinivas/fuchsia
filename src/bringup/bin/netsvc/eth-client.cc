@@ -16,7 +16,7 @@
 #define IORING_TRACE(fmt...)
 #endif
 
-zx::status<std::unique_ptr<EthClient>> EthClient::Create(
+zx::result<std::unique_ptr<EthClient>> EthClient::Create(
     async_dispatcher_t* dispatcher, fidl::ClientEnd<fuchsia_hardware_ethernet::Device> client_end,
     zx::vmo io_vmo, void* io_mem, fit::closure on_rx, fit::closure on_status,
     fit::closure on_closed) {
@@ -170,7 +170,7 @@ zx_status_t EthClient::WaitTx(zx::time deadline) {
   return ZX_OK;
 }
 
-zx::status<fuchsia_hardware_ethernet::wire::DeviceStatus> EthClient::GetStatus() {
+zx::result<fuchsia_hardware_ethernet::wire::DeviceStatus> EthClient::GetStatus() {
   fidl::WireResult result = device_->GetStatus();
   if (!result.ok()) {
     return zx::error(result.status());

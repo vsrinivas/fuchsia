@@ -95,7 +95,7 @@ class TestLoaderService : public loader::LoaderServiceBase {
  private:
   TestLoaderService(async_dispatcher_t* dispatcher) : LoaderServiceBase(dispatcher, "dlfcn_test") {}
 
-  virtual zx::status<zx::vmo> LoadObjectImpl(std::string name) override {
+  virtual zx::result<zx::vmo> LoadObjectImpl(std::string name) override {
     ++load_object_calls_;
 
     if (name != TEST_NAME) {

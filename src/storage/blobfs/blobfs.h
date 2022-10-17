@@ -76,7 +76,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // The dispatcher should be for the current thread that blobfs is running on. The vfs is required
   // for paging but can be null in host configurations. The optional root VM resource is needed to
   // create executable blobs. See vmex_resource() getter.
-  static zx::status<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
+  static zx::result<std::unique_ptr<Blobfs>> Create(async_dispatcher_t* dispatcher,
                                                     std::unique_ptr<BlockDevice> device,
                                                     fs::PagedVfs* vfs = nullptr,
                                                     const MountOptions& options = MountOptions(),
@@ -108,7 +108,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
 
   // Returns filesystem specific information.
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo();
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo();
 
   fs_inspect::NodeOperations& node_operations() { return inspect_tree_.node_operations(); }
 
@@ -126,7 +126,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   // BlockIteratorProvider interface.
   //
   // Allows clients to acquire a block iterator for a given node index.
-  zx::status<BlockIterator> BlockIteratorByNodeIndex(uint32_t node_index) final;
+  zx::result<BlockIterator> BlockIteratorByNodeIndex(uint32_t node_index) final;
 
   static constexpr size_t WriteBufferBlockCount() {
     // Hardcoded to 10 MB; may be replaced by a more device-specific option
@@ -150,7 +150,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
 
   Allocator* GetAllocator() { return allocator_.get(); }
 
-  zx::status<InodePtr> GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
+  zx::result<InodePtr> GetNode(uint32_t node_index) { return allocator_->GetNode(node_index); }
 
   // Invokes "open" on the root directory.
   // Acts as a special-case to bootstrap filesystem mounting.
@@ -206,7 +206,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
     return pager_backed_cache_policy_;
   }
 
-  zx::status<std::unique_ptr<Superblock>> ReadBackupSuperblock();
+  zx::result<std::unique_ptr<Superblock>> ReadBackupSuperblock();
 
   // Updates fragmentation metric properties in |out_metrics|. The calculated statistics can also be
   // obtained directly providing |out_stats|.
@@ -243,7 +243,7 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
          DecompressorCreatorConnector* decompression_connector, bool use_streaming_writes,
          bool allow_offline_compression);
 
-  static zx::status<std::unique_ptr<fs::Journal>> InitializeJournal(
+  static zx::result<std::unique_ptr<fs::Journal>> InitializeJournal(
       fs::TransactionHandler* transaction_handler, VmoidRegistry* registry, uint64_t journal_start,
       uint64_t journal_length, fs::JournalSuperblock journal_superblock);
 

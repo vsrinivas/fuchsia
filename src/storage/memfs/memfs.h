@@ -53,7 +53,7 @@ class Memfs : public fs::ManagedVfs {
   zx_status_t GrowVMO(zx::vmo& vmo, size_t current_size, size_t request_size, size_t* actual_size);
 
   // fs::FuchsiaVfs override:
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() override;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() override;
 
  private:
   explicit Memfs(async_dispatcher_t* dispatcher);

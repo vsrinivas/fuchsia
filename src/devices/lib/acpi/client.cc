@@ -14,7 +14,7 @@
 #include "util.h"
 
 namespace acpi {
-zx::status<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Client::Connect(zx_device_t* parent) {
+zx::result<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Client::Connect(zx_device_t* parent) {
   auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_acpi::Device>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
@@ -36,7 +36,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_acpi::Device>> Client::Connect(zx_de
   return zx::ok(std::move(endpoints->client));
 }
 
-zx::status<Client> Client::Create(zx_device_t* parent) {
+zx::result<Client> Client::Create(zx_device_t* parent) {
   auto end = Connect(parent);
   if (end.is_error()) {
     return end.take_error();
@@ -50,7 +50,7 @@ Client Client::Create(fidl::WireSyncClient<fuchsia_hardware_acpi::Device> client
   return Client(std::move(client));
 }
 
-zx::status<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_index,
+zx::result<Object> Client::CallDsm(Uuid uuid, uint64_t revision, uint64_t func_index,
                                    std::optional<fuchsia_hardware_acpi::wire::Object> params) {
   std::array<fuchsia_hardware_acpi::wire::Object, 4> args;
   fidl::Arena arena;

@@ -45,7 +45,7 @@ const char* DeviceStatusToString(network::internal::DeviceStatus status) {
 
 namespace network {
 
-zx::status<std::unique_ptr<NetworkDeviceInterface>> NetworkDeviceInterface::Create(
+zx::result<std::unique_ptr<NetworkDeviceInterface>> NetworkDeviceInterface::Create(
     async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent) {
   return internal::DeviceInterface::Create(dispatcher, parent);
 }
@@ -64,7 +64,7 @@ uint16_t TransformFifoDepth(uint16_t device_depth) {
   return std::min(kMaxFifoDepth, static_cast<uint16_t>(device_depth << 1));
 }
 
-zx::status<std::unique_ptr<DeviceInterface>> DeviceInterface::Create(
+zx::result<std::unique_ptr<DeviceInterface>> DeviceInterface::Create(
     async_dispatcher_t* dispatcher, ddk::NetworkDeviceImplProtocolClient parent) {
   fbl::AllocChecker ac;
   std::unique_ptr<DeviceInterface> device(new (&ac) DeviceInterface(dispatcher, parent));
@@ -153,14 +153,14 @@ zx_status_t DeviceInterface::Init() {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx::status tx_queue = TxQueue::Create(this);
+  zx::result tx_queue = TxQueue::Create(this);
   if (tx_queue.is_error()) {
     LOGF_ERROR("init: device failed to start Tx Queue: %s", tx_queue.status_string());
     return tx_queue.status_value();
   }
   tx_queue_ = std::move(tx_queue.value());
 
-  zx::status rx_queue = RxQueue::Create(this);
+  zx::result rx_queue = RxQueue::Create(this);
   if (rx_queue.is_error()) {
     LOGF_ERROR("init: device failed to start Rx Queue: %s", rx_queue.status_string());
     return rx_queue.status_value();
@@ -261,7 +261,7 @@ void DeviceInterface::NetworkDeviceIfcAddPort(uint8_t port_id,
   port_client.GetMac(&mac_proto);
   ddk::MacAddrProtocolClient mac_client(&mac_proto);
   if (mac_client.is_valid()) {
-    zx::status status = MacAddrDeviceInterface::Create(mac_client);
+    zx::result status = MacAddrDeviceInterface::Create(mac_client);
     if (status.is_error()) {
       LOGF_ERROR("failed to instantiate MAC information for port %d: %s", port_id,
                  status.status_string());
@@ -380,8 +380,8 @@ void DeviceInterface::GetInfo(GetInfoCompleter::Sync& completer) {
 
 void DeviceInterface::OpenSession(OpenSessionRequestView request,
                                   OpenSessionCompleter::Sync& completer) {
-  zx::status sync_result = [this, &request]()
-      -> zx::status<std::tuple<netdev::wire::DeviceOpenSessionResponse, uint8_t, zx::vmo>> {
+  zx::result sync_result = [this, &request]()
+      -> zx::result<std::tuple<netdev::wire::DeviceOpenSessionResponse, uint8_t, zx::vmo>> {
     fbl::AutoLock tx_lock(&tx_lock_);
     fbl::AutoLock lock(&control_lock_);
     // We're currently tearing down and can't open any new sessions.
@@ -389,14 +389,14 @@ void DeviceInterface::OpenSession(OpenSessionRequestView request,
       return zx::error(ZX_ERR_UNAVAILABLE);
     }
 
-    zx::status endpoints = fidl::CreateEndpoints<netdev::Session>();
+    zx::result endpoints = fidl::CreateEndpoints<netdev::Session>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
 
     fidl::StringView& name = request->session_name;
     netdev::wire::SessionInfo& session_info = request->session_info;
-    zx::status session_creation =
+    zx::result session_creation =
         Session::Create(dispatcher_, session_info, name, this, std::move(endpoints->server));
     if (session_creation.is_error()) {
       return session_creation.take_error();
@@ -419,7 +419,7 @@ void DeviceInterface::OpenSession(OpenSessionRequestView request,
       return zx::error(status);
     }
 
-    zx::status registration = vmo_store_.Register(std::move(vmo));
+    zx::result registration = vmo_store_.Register(std::move(vmo));
     if (registration.is_error()) {
       return registration.take_error();
     }
@@ -916,11 +916,11 @@ void DeviceInterface::NotifyPortRxFrame(uint8_t base_id, uint64_t frame_length) 
   });
 }
 
-zx::status<AttachedPort> DeviceInterface::AcquirePort(
+zx::result<AttachedPort> DeviceInterface::AcquirePort(
     netdev::wire::PortId port_id, cpp20::span<const netdev::wire::FrameType> rx_frame_types) {
   return WithPort(port_id.base,
                   [this, &rx_frame_types, salt = port_id.salt](
-                      const std::unique_ptr<DevicePort>& port) -> zx::status<AttachedPort> {
+                      const std::unique_ptr<DevicePort>& port) -> zx::result<AttachedPort> {
                     if (port == nullptr || port->id().salt != salt) {
                       return zx::error(ZX_ERR_NOT_FOUND);
                     }
@@ -963,7 +963,7 @@ void DeviceInterface::OnPortTeardownComplete(DevicePort& port) {
 void DeviceInterface::ReleaseVmo(Session& session) {
   uint8_t vmo;
   vmo = session.ClearDataVmo();
-  zx::status result = vmo_store_.Unregister(vmo);
+  zx::result result = vmo_store_.Unregister(vmo);
   if (result.is_error()) {
     // Avoid notifying the device implementation if unregistration fails.
     // A non-ok return here means we're either attempting to double-release a VMO or the sessions

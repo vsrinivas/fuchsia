@@ -118,11 +118,11 @@ bool virtual_alloc_smoke_test() {
   VirtualAlloc alloc(vm_page_state::ALLOC);
   ASSERT_OK(alloc.Init(vmar->base(), vmar->size(), 1, PAGE_SIZE_SHIFT));
 
-  zx::status<vaddr_t> result = alloc.AllocPages(8);
+  zx::result<vaddr_t> result = alloc.AllocPages(8);
   ASSERT_TRUE(result.is_ok());
   EXPECT_TRUE(TouchPages(*result, 8));
 
-  zx::status<vaddr_t> result2 = alloc.AllocPages(8);
+  zx::result<vaddr_t> result2 = alloc.AllocPages(8);
   ASSERT_TRUE(result2.is_ok());
   EXPECT_NE(*result, *result2);
   EXPECT_TRUE(TouchPages(*result2, 8));
@@ -153,7 +153,7 @@ bool virtual_alloc_valid_size_test() {
     ASSERT_EQ(ZX_ERR_INVALID_ARGS, alloc.Init(vmar->base(), 33 * PAGE_SIZE, 16, PAGE_SIZE_SHIFT));
     // Succeeds, and should support a single page of allocation.
     EXPECT_OK(alloc.Init(vmar->base(), 34 * PAGE_SIZE, 16, PAGE_SIZE_SHIFT));
-    zx::status<vaddr_t> result = alloc.AllocPages(1);
+    zx::result<vaddr_t> result = alloc.AllocPages(1);
     EXPECT_TRUE(result.is_ok());
     // Should not be able to do additional allocations.
     EXPECT_FALSE(alloc.AllocPages(1).is_ok());
@@ -168,9 +168,9 @@ bool virtual_alloc_valid_size_test() {
     // allocations of 1 page we should have a layout of
     // [bitmap(1)] [padding(16)] [allocation(1)] [padding(16)] [allocation(1)] [padding(16) = 51.
     ASSERT_OK(alloc.Init(vmar->base(), 51 * PAGE_SIZE, 16, PAGE_SIZE_SHIFT));
-    zx::status<vaddr_t> result1 = alloc.AllocPages(1);
+    zx::result<vaddr_t> result1 = alloc.AllocPages(1);
     EXPECT_TRUE(result1.is_ok());
-    zx::status<vaddr_t> result2 = alloc.AllocPages(1);
+    zx::result<vaddr_t> result2 = alloc.AllocPages(1);
     EXPECT_TRUE(result2.is_ok());
     EXPECT_FALSE(alloc.AllocPages(1).is_ok());
     alloc.FreePages(*result1, 1);

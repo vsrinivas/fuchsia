@@ -24,8 +24,8 @@ bool FastbootBase::MatchCommand(std::string_view cmd, std::string_view ref) {
   }
 }
 
-zx::status<> FastbootBase::SendResponse(ResponseType resp_type, std::string_view message,
-                                        Transport* transport, zx::status<> status_code) {
+zx::result<> FastbootBase::SendResponse(ResponseType resp_type, std::string_view message,
+                                        Transport* transport, zx::result<> status_code) {
   const char* type = nullptr;
   if (resp_type == ResponseType::kOkay) {
     type = "OKAY";
@@ -50,7 +50,7 @@ zx::status<> FastbootBase::SendResponse(ResponseType resp_type, std::string_view
 #endif
   }
 
-  if (zx::status<> ret = transport->Send(std::string_view{resp_buffer, strlen(resp_buffer)});
+  if (zx::result<> ret = transport->Send(std::string_view{resp_buffer, strlen(resp_buffer)});
       ret.is_error()) {
     return zx::error(ret.status_value());
   }
@@ -58,20 +58,20 @@ zx::status<> FastbootBase::SendResponse(ResponseType resp_type, std::string_view
   return status_code;
 }
 
-zx::status<> FastbootBase::SendDataResponse(size_t data_size, Transport* transport) {
+zx::result<> FastbootBase::SendDataResponse(size_t data_size, Transport* transport) {
   char resp_buffer[kMaxCommandPacketSize + 1] = {0};
   snprintf(resp_buffer, sizeof(resp_buffer), "DATA%08zx", data_size);
   return transport->Send(std::string_view{resp_buffer, strlen(resp_buffer)});
 }
 
-zx::status<> FastbootBase::ProcessPacket(Transport* transport) {
+zx::result<> FastbootBase::ProcessPacket(Transport* transport) {
   if (!transport->PeekPacketSize()) {
     return zx::ok();
   }
 
   if (state_ == State::kCommand) {
     char command[kMaxCommandPacketSize + 1] = {0};
-    zx::status<size_t> ret = transport->ReceivePacket(command, sizeof(command));
+    zx::result<size_t> ret = transport->ReceivePacket(command, sizeof(command));
     if (!ret.is_ok()) {
       return SendResponse(ResponseType::kFail, "Fail to read command", transport,
                           zx::error(ret.status_value()));
@@ -91,7 +91,7 @@ zx::status<> FastbootBase::ProcessPacket(Transport* transport) {
 
     size_t offset = total_download_size() - remaining_download_size();
     uint8_t* start = reinterpret_cast<uint8_t*>(download_buffer_) + offset;
-    if (zx::status<size_t> ret = transport->ReceivePacket(start, transport->PeekPacketSize());
+    if (zx::result<size_t> ret = transport->ReceivePacket(start, transport->PeekPacketSize());
         ret.is_error()) {
       ClearDownload();
       return SendResponse(ResponseType::kFail, "Failed to receive download packet", transport,
@@ -129,7 +129,7 @@ void FastbootBase::ExtractCommandArgs(std::string_view cmd, const char* delimete
   }
 }
 
-zx::status<> FastbootBase::Download(std::string_view cmd, Transport* transport) {
+zx::result<> FastbootBase::Download(std::string_view cmd, Transport* transport) {
   ClearDownload();
   CommandArgs args;
   ExtractCommandArgs(cmd, ":", args);
@@ -142,7 +142,7 @@ zx::status<> FastbootBase::Download(std::string_view cmd, Transport* transport) 
     return SendResponse(ResponseType::kFail, "Empty size download is not allowed", transport);
   }
 
-  zx::status<void*> buffer = GetDownloadBuffer(total_download_size_);
+  zx::result<void*> buffer = GetDownloadBuffer(total_download_size_);
   if (buffer.is_error()) {
     ClearDownload();
     return SendResponse(ResponseType::kFail, "Failed to prepare download", transport,

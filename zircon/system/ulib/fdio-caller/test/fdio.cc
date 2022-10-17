@@ -67,7 +67,7 @@ class Harness {
   void Setup() {
     ASSERT_EQ(loop_.StartThread(), ZX_OK);
 
-    zx::status<ScopedMemfs> memfs = ScopedMemfs::Create(loop_.dispatcher());
+    zx::result<ScopedMemfs> memfs = ScopedMemfs::Create(loop_.dispatcher());
     ASSERT_TRUE(memfs.is_ok());
     memfs_ = std::make_unique<ScopedMemfs>(std::move(*memfs));
     memfs_->set_cleanup_timeout(zx::sec(3));

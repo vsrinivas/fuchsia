@@ -30,7 +30,7 @@ class FakeAllocation : public PciAllocation {
   }
   zx_paddr_t base() const final { return base_; }
   size_t size() const final { return size_; }
-  zx::status<zx::vmo> CreateVmo() const final {
+  zx::result<zx::vmo> CreateVmo() const final {
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(size_, 0, &vmo);
     if (status != ZX_OK) {
@@ -39,7 +39,7 @@ class FakeAllocation : public PciAllocation {
     return zx::ok(std::move(vmo));
   }
 
-  zx::status<zx::resource> CreateResource() const final {
+  zx::result<zx::resource> CreateResource() const final {
     zx_handle_t handle = ZX_HANDLE_INVALID;
     ZX_DEBUG_ASSERT(fake_root_resource_create(&handle) == ZX_OK);
     auto resource = zx::resource(handle);
@@ -53,7 +53,7 @@ class FakeAllocation : public PciAllocation {
 
 class FakeAllocator : public PciAllocator {
  public:
-  zx::status<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+  zx::result<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
                                                       size_t size) final {
     auto allocation = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
     return zx::ok(std::move(allocation));

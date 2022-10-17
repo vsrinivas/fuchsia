@@ -55,8 +55,8 @@ TEST(SynchronousVfs, CanOnlySetDispatcherOnce) {
 }
 
 static void CheckClosesConnection(fs::FuchsiaVfs* vfs, async::TestLoop* loop) {
-  zx::status a = fidl::CreateEndpoints<fuchsia_io::Directory>();
-  zx::status b = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result a = fidl::CreateEndpoints<fuchsia_io::Directory>();
+  zx::result b = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(a.status_value());
   ASSERT_OK(b.status_value());
 

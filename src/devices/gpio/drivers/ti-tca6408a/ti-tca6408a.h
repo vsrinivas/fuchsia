@@ -57,9 +57,9 @@ class TiTca6408a : public DeviceType, public ddk::GpioImplProtocol<TiTca6408a, d
     return index >= pin_index_offset_ && index < (pin_index_offset_ + kPinCount);
   }
 
-  zx::status<uint8_t> ReadBit(Register reg, uint32_t index);
-  zx::status<> SetBit(Register reg, uint32_t index);
-  zx::status<> ClearBit(Register reg, uint32_t index);
+  zx::result<uint8_t> ReadBit(Register reg, uint32_t index);
+  zx::result<> SetBit(Register reg, uint32_t index);
+  zx::result<> ClearBit(Register reg, uint32_t index);
 
   ddk::I2cChannel i2c_;
   const uint32_t pin_index_offset_;

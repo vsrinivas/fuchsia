@@ -497,7 +497,7 @@ TEST(ExceptionTest, Trigger) {
       exception.reset();
 
       if (exceptions[i].crashes) {
-        zx::status<zx::exception> result = catcher.ExpectException(child);
+        zx::result<zx::exception> result = catcher.ExpectException(child);
         ASSERT_TRUE(result.is_ok());
         ASSERT_OK(child.kill());
       }
@@ -888,7 +888,7 @@ void receive_test(uint32_t create_flags, uint32_t expected_type, bool has_proces
 
   test_exceptions::ExceptionCatcher catcher(*zx::job::default_job());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -932,7 +932,7 @@ TEST(ExceptionTest, ExceptionResume) {
   // Close the new exception without marking it handled so it bubbles up.
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -956,7 +956,7 @@ TEST(ExceptionTest, ExceptionStateProperty) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -990,7 +990,7 @@ TEST(ExceptionTest, ExceptionStatePropertyBadArgs) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1018,7 +1018,7 @@ TEST(ExceptionTest, ExceptionStrategy) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1039,7 +1039,7 @@ TEST(ExceptionTest, ExceptionStrategyBadArgs) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1056,7 +1056,7 @@ TEST(ExceptionTest, CloseChannelWithException) {
   // control to the next handler.
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception_channel.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1080,7 +1080,7 @@ TEST(ExceptionTest, CloseChannelWithoutException) {
 
   test_exceptions::ExceptionCatcher catcher(loop.process());
   exception.reset();
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1161,7 +1161,7 @@ TEST(ExceptionTest, ExceptionChannelOrder) {
     ReadException(channel, ZX_EXCP_FATAL_PAGE_FAULT);
   }
 
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1194,7 +1194,7 @@ TEST(ExceptionTest, ExceptionChannelOrderWithSecondChanceDebugging) {
     ReadException(exception_channels[i], ZX_EXCP_FATAL_PAGE_FAULT);
   }
 
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }
@@ -1232,7 +1232,7 @@ TEST(ExceptionTest, DebugChannelClosedBeforeSecondChance) {
     ReadException(exception_channels[i], ZX_EXCP_FATAL_PAGE_FAULT);
   }
 
-  zx::status<zx::exception> result = catcher.ExpectException(loop.aux_thread());
+  zx::result<zx::exception> result = catcher.ExpectException(loop.aux_thread());
   ASSERT_TRUE(result.is_ok());
   EXPECT_OK(loop.process().kill());
 }

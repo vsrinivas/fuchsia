@@ -64,19 +64,19 @@ class ExceptionCatcher {
 
   // Blocks until an exception is received. It then returns the exception. This will
   // return an error if the task exits without throwing an exception.
-  zx::status<zx::exception> ExpectException();
+  zx::result<zx::exception> ExpectException();
 
   // Same as ExpectException() but only matches exceptions on |thread|.
   //
   // Any non-|thread| exceptions received will be held until they are
   // handled or the catcher is stopped.
-  zx::status<zx::exception> ExpectException(const zx::thread& thread);
+  zx::result<zx::exception> ExpectException(const zx::thread& thread);
 
   // Same as ExpectException() but only matches exceptions on |process|.
   //
   // Any non-|process| exceptions received will be held until they are
   // handled or the catcher is stopped.
-  zx::status<zx::exception> ExpectException(const zx::process& process);
+  zx::result<zx::exception> ExpectException(const zx::process& process);
 
  private:
   struct ActiveException {
@@ -84,7 +84,7 @@ class ExceptionCatcher {
     zx::exception exception;
   };
 
-  zx::status<zx::exception> ExpectException(zx_koid_t pid, zx_koid_t tid);
+  zx::result<zx::exception> ExpectException(zx_koid_t pid, zx_koid_t tid);
 
   zx::channel exception_channel_;
   std::list<ActiveException> active_exceptions_;

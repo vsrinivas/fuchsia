@@ -48,8 +48,8 @@ class Ina231Device : public DeviceType,
  private:
   enum class Register : uint8_t;
 
-  zx::status<uint16_t> Read16(Register reg) TA_REQ(i2c_lock_);
-  zx::status<> Write16(Register reg, uint16_t value) TA_REQ(i2c_lock_);
+  zx::result<uint16_t> Read16(Register reg) TA_REQ(i2c_lock_);
+  zx::result<> Write16(Register reg, uint16_t value) TA_REQ(i2c_lock_);
 
   const uint32_t shunt_resistor_uohms_;
   async::Loop loop_;

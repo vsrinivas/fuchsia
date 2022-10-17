@@ -49,7 +49,7 @@ class SystemTemperatureSensor : public TemperatureSensor {
 };
 
 std::unique_ptr<TemperatureSensor> CreateSystemTemperatureSensor(std::string_view device_path) {
-  zx::status<zx::channel> channel = OpenDeviceChannel(device_path);
+  zx::result<zx::channel> channel = OpenDeviceChannel(device_path);
   if (channel.is_error()) {
     fprintf(stderr, "Could not open device: %s\n", channel.status_string());
     return nullptr;

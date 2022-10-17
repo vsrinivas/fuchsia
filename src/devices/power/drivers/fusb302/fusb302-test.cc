@@ -33,7 +33,7 @@ class Fusb302Test : public Fusb302 {
     return InitHw();
   }
   zx_status_t FifoTransmit(const PdMessage& message) { return Fusb302::FifoTransmit(message); }
-  zx::status<PdMessage> FifoReceive() { return Fusb302::FifoReceive(); }
+  zx::result<PdMessage> FifoReceive() { return Fusb302::FifoReceive(); }
 
   zx::vmo inspect_vmo() { return inspect_.DuplicateVmo(); }
 };

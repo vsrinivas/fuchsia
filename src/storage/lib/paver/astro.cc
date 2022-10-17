@@ -100,13 +100,13 @@ bool AstroPartitioner::CanSafelyUpdateLayout(std::shared_ptr<Context> context) {
   return true;
 }
 
-zx::status<> AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_root,
+zx::result<> AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_root,
                                                  AbrWearLevelingOption abr_wear_leveling_opt,
                                                  Context* context) {
   return context->Initialize<AstroPartitionerContext>(
-      [&]() -> zx::status<std::unique_ptr<AstroPartitionerContext>> {
+      [&]() -> zx::result<std::unique_ptr<AstroPartitionerContext>> {
         std::optional<sysconfig::SyncClient> client;
-        if (auto status = zx::make_status(sysconfig::SyncClient::Create(devfs_root, &client));
+        if (auto status = zx::make_result(sysconfig::SyncClient::Create(devfs_root, &client));
             status.is_error()) {
           ERROR("Failed to initialize context. %s\n", status.status_string());
           return status.take_error();
@@ -129,11 +129,11 @@ zx::status<> AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_roo
       });
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
+zx::result<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<Context> context) {
   auto boot_arg_client = OpenBootArgumentClient(svc_root);
-  zx::status<> status = IsBoard(devfs_root, "astro");
+  zx::result<> status = IsBoard(devfs_root, "astro");
   if (status.is_error()) {
     return status.take_error();
   }
@@ -155,7 +155,7 @@ zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
   // context.Call() or InitializeContext to avoid dead lock.
   if (option == AbrWearLevelingOption::ON && CanSafelyUpdateLayout(context)) {
     if (auto status = context->Call<AstroPartitionerContext>([](auto* ctx) {
-          return zx::make_status(ctx->client_->UpdateLayout(
+          return zx::make_result(ctx->client_->UpdateLayout(
               ::sysconfig::SyncClientAbrWearLeveling::GetAbrWearLevelingSupportedLayout()));
         });
         status.is_error()) {
@@ -199,13 +199,13 @@ bool AstroPartitioner::SupportsPartition(const PartitionSpec& spec) const {
                      [&](const PartitionSpec& supported) { return SpecMatches(spec, supported); });
 }
 
-zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> AstroPartitioner::AddPartition(
     const PartitionSpec& spec) const {
   ERROR("Cannot add partitions to an astro.\n");
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
+zx::result<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
     const PartitionSpec& spec) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -277,23 +277,23 @@ zx::status<std::unique_ptr<PartitionClient>> AstroPartitioner::FindPartition(
   }
 }
 
-zx::status<> AstroPartitioner::Flush() const {
+zx::result<> AstroPartitioner::Flush() const {
   return context_ ? context_->Call<AstroPartitionerContext>(
-                        [&](auto* ctx) { return zx::make_status(ctx->client_->Flush()); })
+                        [&](auto* ctx) { return zx::make_result(ctx->client_->Flush()); })
                   : zx::ok();
 }
 
-zx::status<> AstroPartitioner::WipeFvm() const { return skip_block_->WipeFvm(); }
+zx::result<> AstroPartitioner::WipeFvm() const { return skip_block_->WipeFvm(); }
 
-zx::status<> AstroPartitioner::InitPartitionTables() const {
+zx::result<> AstroPartitioner::InitPartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> AstroPartitioner::WipePartitionTables() const {
+zx::result<> AstroPartitioner::WipePartitionTables() const {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> AstroPartitioner::ValidatePayload(const PartitionSpec& spec,
+zx::result<> AstroPartitioner::ValidatePayload(const PartitionSpec& spec,
                                                cpp20::span<const uint8_t> data) const {
   if (!SupportsPartition(spec)) {
     ERROR("Unsupported partition %s\n", spec.ToString().c_str());
@@ -303,13 +303,13 @@ zx::status<> AstroPartitioner::ValidatePayload(const PartitionSpec& spec,
   return zx::ok();
 }
 
-zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitionerFactory::New(
+zx::result<std::unique_ptr<DevicePartitioner>> AstroPartitionerFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
 }
 
-zx::status<std::unique_ptr<abr::Client>> AstroAbrClientFactory::New(
+zx::result<std::unique_ptr<abr::Client>> AstroAbrClientFactory::New(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   auto status = AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
@@ -329,10 +329,10 @@ zx::status<std::unique_ptr<abr::Client>> AstroAbrClientFactory::New(
   return abr::AbrPartitionClient::Create(std::move(status_or_part.value()));
 }
 
-zx::status<size_t> AstroSysconfigPartitionClientBuffered::GetBlockSize() {
-  return context_->Call<AstroPartitionerContext, size_t>([&](auto* ctx) -> zx::status<size_t> {
+zx::result<size_t> AstroSysconfigPartitionClientBuffered::GetBlockSize() {
+  return context_->Call<AstroPartitionerContext, size_t>([&](auto* ctx) -> zx::result<size_t> {
     size_t size;
-    auto status = zx::make_status(ctx->client_->GetPartitionSize(partition_, &size));
+    auto status = zx::make_result(ctx->client_->GetPartitionSize(partition_, &size));
     if (status.is_error()) {
       return status.take_error();
     }
@@ -340,10 +340,10 @@ zx::status<size_t> AstroSysconfigPartitionClientBuffered::GetBlockSize() {
   });
 }
 
-zx::status<size_t> AstroSysconfigPartitionClientBuffered::GetPartitionSize() {
-  return context_->Call<AstroPartitionerContext, size_t>([&](auto* ctx) -> zx::status<size_t> {
+zx::result<size_t> AstroSysconfigPartitionClientBuffered::GetPartitionSize() {
+  return context_->Call<AstroPartitionerContext, size_t>([&](auto* ctx) -> zx::result<size_t> {
     size_t size;
-    auto status = zx::make_status(ctx->client_->GetPartitionSize(partition_, &size));
+    auto status = zx::make_result(ctx->client_->GetPartitionSize(partition_, &size));
     if (status.is_error()) {
       return status.take_error();
     }
@@ -351,32 +351,32 @@ zx::status<size_t> AstroSysconfigPartitionClientBuffered::GetPartitionSize() {
   });
 }
 
-zx::status<> AstroSysconfigPartitionClientBuffered::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> AstroSysconfigPartitionClientBuffered::Read(const zx::vmo& vmo, size_t size) {
   return context_->Call<AstroPartitionerContext>(
-      [&](auto* ctx) { return zx::make_status(ctx->client_->ReadPartition(partition_, vmo, 0)); });
+      [&](auto* ctx) { return zx::make_result(ctx->client_->ReadPartition(partition_, vmo, 0)); });
 }
 
-zx::status<> AstroSysconfigPartitionClientBuffered::Write(const zx::vmo& vmo, size_t size) {
-  return context_->Call<AstroPartitionerContext>([&](auto* ctx) -> zx::status<> {
+zx::result<> AstroSysconfigPartitionClientBuffered::Write(const zx::vmo& vmo, size_t size) {
+  return context_->Call<AstroPartitionerContext>([&](auto* ctx) -> zx::result<> {
     size_t partition_size;
-    auto status = zx::make_status(ctx->client_->GetPartitionSize(partition_, &partition_size));
+    auto status = zx::make_result(ctx->client_->GetPartitionSize(partition_, &partition_size));
     if (status.is_error()) {
       return status.take_error();
     }
     if (size != partition_size) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
-    return zx::make_status(ctx->client_->WritePartition(partition_, vmo, 0));
+    return zx::make_result(ctx->client_->WritePartition(partition_, vmo, 0));
   });
 }
 
-zx::status<> AstroSysconfigPartitionClientBuffered::Trim() {
+zx::result<> AstroSysconfigPartitionClientBuffered::Trim() {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> AstroSysconfigPartitionClientBuffered::Flush() {
+zx::result<> AstroSysconfigPartitionClientBuffered::Flush() {
   return context_->Call<AstroPartitionerContext>(
-      [&](auto* ctx) { return zx::make_status(ctx->client_->Flush()); });
+      [&](auto* ctx) { return zx::make_result(ctx->client_->Flush()); });
 }
 
 fidl::ClientEnd<fuchsia_hardware_block::Block> AstroSysconfigPartitionClientBuffered::GetChannel() {
@@ -385,14 +385,14 @@ fidl::ClientEnd<fuchsia_hardware_block::Block> AstroSysconfigPartitionClientBuff
 
 fbl::unique_fd AstroSysconfigPartitionClientBuffered::block_fd() { return fbl::unique_fd(); }
 
-zx::status<size_t> Bl2PartitionClient::GetBlockSize() {
+zx::result<size_t> Bl2PartitionClient::GetBlockSize() {
   // Technically this is incorrect, but we deal with alignment so this is okay.
   return zx::ok(kBl2Size);
 }
 
-zx::status<size_t> Bl2PartitionClient::GetPartitionSize() { return zx::ok(kBl2Size); }
+zx::result<size_t> Bl2PartitionClient::GetPartitionSize() { return zx::ok(kBl2Size); }
 
-zx::status<> Bl2PartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> Bl2PartitionClient::Read(const zx::vmo& vmo, size_t size) {
   // Create a vmo to read a full block.
   auto status = SkipBlockPartitionClient::GetBlockSize();
   if (status.is_error()) {
@@ -401,7 +401,7 @@ zx::status<> Bl2PartitionClient::Read(const zx::vmo& vmo, size_t size) {
   const size_t block_size = status.value();
 
   zx::vmo full;
-  if (auto status = zx::make_status(zx::vmo::create(block_size, 0, &full)); status.is_error()) {
+  if (auto status = zx::make_result(zx::vmo::create(block_size, 0, &full)); status.is_error()) {
     return status.take_error();
   }
 
@@ -411,18 +411,18 @@ zx::status<> Bl2PartitionClient::Read(const zx::vmo& vmo, size_t size) {
 
   // Copy correct region (pages 1 - 65) to the VMO.
   auto buffer = std::make_unique<uint8_t[]>(block_size);
-  if (auto status = zx::make_status(full.read(buffer.get(), kNandPageSize, kBl2Size));
+  if (auto status = zx::make_result(full.read(buffer.get(), kNandPageSize, kBl2Size));
       status.is_error()) {
     return status.take_error();
   }
-  if (auto status = zx::make_status(vmo.write(buffer.get(), 0, kBl2Size)); status.is_error()) {
+  if (auto status = zx::make_result(vmo.write(buffer.get(), 0, kBl2Size)); status.is_error()) {
     return status.take_error();
   }
 
   return zx::ok();
 }
 
-zx::status<> Bl2PartitionClient::Write(const zx::vmo& vmo, size_t size) {
+zx::result<> Bl2PartitionClient::Write(const zx::vmo& vmo, size_t size) {
   if (size != kBl2Size) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }

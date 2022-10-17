@@ -96,7 +96,7 @@ void StartupService::Start(StartRequestView request, StartCompleter::Sync& compl
     completer.ReplyError(status);
     return;
   }
-  zx::status<> res = configure_(
+  zx::result<> res = configure_(
       std::move(device), MergeComponentConfigIntoMountOptions(
                              component_config_, ParseMountOptions(std::move(request->options))));
   if (res.is_error()) {

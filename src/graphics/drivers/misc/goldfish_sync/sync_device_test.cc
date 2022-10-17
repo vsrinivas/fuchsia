@@ -243,7 +243,7 @@ TEST_F(SyncDeviceTest, TriggerHostWait) {
     ctrl_regs->batch_guestcommand = 0xffffffffu;
   }
 
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_goldfish::SyncTimeline>();
   ASSERT_TRUE(endpoints.is_ok());
   ASSERT_OK(dut->CreateTimeline(std::move(endpoints->server)));
 

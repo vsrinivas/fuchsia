@@ -19,10 +19,10 @@ using IrqFragmentDeviceType = ddk::Device<IrqFragment>;
 class IrqFragment : public IrqFragmentDeviceType,
                     public fidl::WireServer<fuchsia_hardware_interrupt::Provider> {
  public:
-  static zx::status<> Create(async_dispatcher_t* dispatcher, acpi::Device& parent,
+  static zx::result<> Create(async_dispatcher_t* dispatcher, acpi::Device& parent,
                              uint32_t irq_index, uint32_t acpi_device_id);
 
-  zx::status<> Init(uint32_t device_id);
+  zx::result<> Init(uint32_t device_id);
 
   void DdkRelease() { delete this; }
 

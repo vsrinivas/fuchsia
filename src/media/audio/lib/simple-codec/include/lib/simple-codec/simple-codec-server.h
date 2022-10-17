@@ -73,7 +73,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
 
   // Called during Create(), it must return DriverIds or an error. Any resources allocated here must
   // be released before destruction, for instance in the Shutdown hook or the class destructor.
-  virtual zx::status<DriverIds> Initialize() = 0;
+  virtual zx::result<DriverIds> Initialize() = 0;
   // Called right before deallocation of the driver in DdkRelease() and also if there is an error
   // during creation in Create().
   virtual zx_status_t Shutdown() = 0;
@@ -91,7 +91,7 @@ class SimpleCodecServer : public SimpleCodecServerDeviceType,
   virtual zx_status_t Stop() = 0;
   virtual zx_status_t Start() = 0;
   virtual DaiSupportedFormats GetDaiFormats() = 0;
-  virtual zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) = 0;
+  virtual zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) = 0;
   virtual GainFormat GetGainFormat() = 0;
   virtual GainState GetGainState() = 0;
   virtual void SetGainState(GainState state) = 0;

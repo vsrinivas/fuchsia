@@ -53,7 +53,7 @@ class NodeManager {
   // track the results.
   virtual void Bind(Node& node, std::shared_ptr<BindResultTracker> result_tracker) = 0;
 
-  virtual zx::status<DriverHost*> CreateDriverHost() = 0;
+  virtual zx::result<DriverHost*> CreateDriverHost() = 0;
 };
 
 enum class Collection {
@@ -79,7 +79,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
 
   ~Node() override;
 
-  static zx::status<std::shared_ptr<Node>> CreateCompositeNode(
+  static zx::result<std::shared_ptr<Node>> CreateCompositeNode(
       std::string_view node_name, std::vector<Node*> parents,
       std::vector<std::string> parents_names,
       std::vector<fuchsia_driver_framework::wire::NodeProperty> properties,
@@ -104,7 +104,7 @@ class Node : public fidl::WireServer<fuchsia_driver_framework::NodeController>,
       fidl::ServerEnd<fuchsia_driver_framework::NodeController> controller,
       fidl::ServerEnd<fuchsia_driver_framework::Node> node);
 
-  zx::status<> StartDriver(
+  zx::result<> StartDriver(
       fuchsia_component_runner::wire::ComponentStartInfo start_info,
       fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller);
 

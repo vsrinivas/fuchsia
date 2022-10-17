@@ -14,7 +14,7 @@ struct DevicetreeItem {
   zx::vmo vmo;
   uint32_t size;
 
-  static zx::status<DevicetreeItem> Get() {
+  static zx::result<DevicetreeItem> Get() {
     fuchsia::boot::ItemsSyncPtr items;
     if (zx_status_t status = fdio_service_connect("/svc/fuchsia.boot.Items",
                                                   items.NewRequest().TakeChannel().release());

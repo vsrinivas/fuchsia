@@ -18,7 +18,7 @@ class Device {
   explicit Device(DeviceArgs&& args) : Device(args) {}
   explicit Device(DeviceArgs& args) {}
 
-  zx::status<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
+  zx::result<> AddDevice(const char* name, cpp20::span<zx_device_prop_t> props,
                          cpp20::span<zx_device_str_prop_t> str_props, uint32_t flags);
 
   zx_status_t DdkAddComposite(const char* name, composite_device_desc_t* desc) {

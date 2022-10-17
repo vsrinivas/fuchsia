@@ -39,7 +39,7 @@ class TpmLpc : public DeviceType, public ddk::TpmImplProtocol<TpmLpc, ddk::base_
   zx_status_t Bind(std::unique_ptr<TpmLpc>* dev);
   void DdkRelease();
 
-  zx::status<> PerformTransfer(uint16_t address, fidl::VectorView<uint8_t>& buf, bool do_write);
+  zx::result<> PerformTransfer(uint16_t address, fidl::VectorView<uint8_t>& buf, bool do_write);
 
   // Setup the TPM FIDL Server.
   void TpmImplConnectServer(zx::channel server);

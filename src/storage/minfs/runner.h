@@ -24,7 +24,7 @@ class Runner final : public PlatformVfs {
   Runner(const Runner&) = delete;
   Runner& operator=(const Runner&) = delete;
 
-  static zx::status<std::unique_ptr<Runner>> Create(FuchsiaDispatcher dispatcher,
+  static zx::result<std::unique_ptr<Runner>> Create(FuchsiaDispatcher dispatcher,
                                                     std::unique_ptr<Bcache> bc,
                                                     const MountOptions& options);
 
@@ -33,10 +33,10 @@ class Runner final : public PlatformVfs {
 #ifdef __Fuchsia__
   // ManagedVfs implementation.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
   void OnNoConnections() final;
 
-  zx::status<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
+  zx::result<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
 #endif
 
   void SetUnmountCallback(fit::closure on_unmount) { on_unmount_ = std::move(on_unmount); }

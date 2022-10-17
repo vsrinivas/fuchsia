@@ -18,7 +18,7 @@ class FakeDdkSysmem {
   fake_ddk::Bind& ddk() { return ddk_; }
 
   bool Init();
-  zx::status<fidl::ClientEnd<fuchsia_sysmem::Allocator>> Connect();
+  zx::result<fidl::ClientEnd<fuchsia_sysmem::Allocator>> Connect();
 
  protected:
   bool initialized_ = false;

@@ -133,7 +133,7 @@ TEST_F(BufferTest, CopyBuffer) {
     b_rx.PushRxSpace(space);
   }
 
-  zx::status status = b_rx.CopyFrom(b_tx);
+  zx::result status = b_rx.CopyFrom(b_tx);
   ASSERT_OK(status.status_value());
   EXPECT_EQ(status.value(), 10ul);
 

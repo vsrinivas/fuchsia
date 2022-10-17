@@ -38,7 +38,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   void fbl_recycle() { RecycleNode(); }
 
  private:
-  zx::status<> CanUnlink() const final;
+  zx::result<> CanUnlink() const final;
 
   // minfs::Vnode interface.
   blk_t GetBlockCount() const final;
@@ -70,20 +70,20 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
 
   // Returns the number of blocks required to persist uncached data of size |length|
   // starting at |offset|.
-  zx::status<uint32_t> GetRequiredBlockCount(size_t offset, size_t length);
+  zx::result<uint32_t> GetRequiredBlockCount(size_t offset, size_t length);
 
   // Returns the number of blocks required to persist data of size |length|
   // starting at |offset| with caching enabled.
-  zx::status<uint32_t> GetRequiredBlockCountForDirtyCache(size_t offset, size_t length,
+  zx::result<uint32_t> GetRequiredBlockCountForDirtyCache(size_t offset, size_t length,
                                                           uint32_t uncached_block_count);
 
-  using WalkWriteBlockHandlerType = std::function<zx::status<>(uint32_t, bool, bool)>;
+  using WalkWriteBlockHandlerType = std::function<zx::result<>(uint32_t, bool, bool)>;
   // Walks all the dirty blocks that need to be written and calls |handler| on
   // each of those blocks.
-  zx::status<> WalkFileBlocks(size_t offset, size_t length, WalkWriteBlockHandlerType& handler);
+  zx::result<> WalkFileBlocks(size_t offset, size_t length, WalkWriteBlockHandlerType& handler);
 
   // Marks blocks of |length| starting at file |offset| as pending for a given |transaction|.
-  zx::status<> MarkRequiredBlocksPending(size_t offset, size_t length,
+  zx::result<> MarkRequiredBlocksPending(size_t offset, size_t length,
                                          const Transaction& transaction);
 
   bool IsDirty() const final;
@@ -91,28 +91,28 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // Returns true if the file dirty cache needs to be flushed. An error here
   // implies that the |length| and |offset| write don't fit in the current
   // filesystem limits - see minfs::GetRequiredBlockCount.
-  zx::status<bool> ShouldFlush(bool is_truncate, size_t length, size_t offset);
+  zx::result<bool> ShouldFlush(bool is_truncate, size_t length, size_t offset);
 
   // Flushes dirty cache if ShouldFlush returns true.
-  zx::status<> CheckAndFlush(bool is_truncate, size_t length, size_t offset);
+  zx::result<> CheckAndFlush(bool is_truncate, size_t length, size_t offset);
 
   // Flush all the pending writes.
-  zx::status<> FlushCachedWrites() __TA_EXCLUDES(mutex_) final;
+  zx::result<> FlushCachedWrites() __TA_EXCLUDES(mutex_) final;
 
   // Drops all cached writes.
   void DropCachedWrites() final;
 
   // Flushes(sends the transaction to journaling layer to be written to journal and disk) or caches
   // current transaction.
-  zx::status<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false)
+  zx::result<> FlushTransaction(std::unique_ptr<Transaction> transaction, bool force_flush = false)
       __TA_EXCLUDES(mutex_);
 
   // Sends the transaction to journaling layer to be written to journal and disk.
-  zx::status<> ForceFlushTransaction(std::unique_ptr<Transaction> transaction);
+  zx::result<> ForceFlushTransaction(std::unique_ptr<Transaction> transaction);
 
   // Returns a transaction either by converting CachedBlockTransaction to Transaction
   // or by creating a new transaction.
-  zx::status<std::unique_ptr<Transaction>> GetTransaction(uint32_t reserve_blocks);
+  zx::result<std::unique_ptr<Transaction>> GetTransaction(uint32_t reserve_blocks);
 #ifdef __Fuchsia__
   // Allocate all data blocks pending in |allocation_state_|.
   void AllocateAndCommitData(std::unique_ptr<Transaction> transaction);
@@ -120,7 +120,7 @@ class File final : public VnodeMinfs, public fbl::Recyclable<File> {
   // For all data blocks in the range |start| to |start + count|, reserve specific blocks in
   // the allocator to be swapped in at the time the old blocks are swapped out. Metadata blocks
   // are expected to have been allocated previously.
-  zx::status<> BlocksSwap(Transaction* state, blk_t start, blk_t count, blk_t* bno);
+  zx::result<> BlocksSwap(Transaction* state, blk_t start, blk_t count, blk_t* bno);
 
   // Describes pending allocation data for the vnode. This should only be accessed while a valid
   // Transaction object is held, as it may be modified asynchronously by the DataBlockAssigner

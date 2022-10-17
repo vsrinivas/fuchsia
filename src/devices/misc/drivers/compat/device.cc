@@ -647,7 +647,7 @@ zx_status_t Device::MessageOp(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   return ops_->message(compat_symbol_.context, msg, txn);
 }
 
-zx::status<uint32_t> Device::SetPerformanceStateOp(uint32_t state) {
+zx::result<uint32_t> Device::SetPerformanceStateOp(uint32_t state) {
   if (!HasOp(ops_, &zx_protocol_device_t::set_performance_state)) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -881,9 +881,9 @@ zx_status_t Device::ConnectRuntime(const char* service_name, const char* protoco
   return ConnectFragmentFidl("default", service_name, protocol_name, std::move(server_token));
 }
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> Device::ServeRuntimeConnectorProtocol() {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> Device::ServeRuntimeConnectorProtocol() {
   auto& outgoing = driver()->outgoing();
-  zx::status<> status = outgoing.component().AddProtocol<fdf::RuntimeConnector>(this);
+  zx::result<> status = outgoing.component().AddProtocol<fdf::RuntimeConnector>(this);
   if (status.is_error()) {
     return status.take_error();
   }

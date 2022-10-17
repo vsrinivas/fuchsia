@@ -30,7 +30,7 @@ static const char* GetHWID(const GoogleBinaryBlockHeader* gbb) {
   return hwid;
 }
 
-static zx::status<fidl::ClientEnd<fuchsia_nand::Broker>> ConnectToBroker(
+static zx::result<fidl::ClientEnd<fuchsia_nand::Broker>> ConnectToBroker(
     const fbl::unique_fd& devfs_root, zx::channel& device) {
   // Get the topological path of the NAND device so we can figure out where the broker is.
   auto path = fidl::WireCall(fidl::UnownedClientEnd<fuchsia_device::Controller>(device.borrow()))
@@ -113,7 +113,7 @@ static zx_status_t ValidateGbb(GoogleBinaryBlockHeader* hdr, size_t buffer_size)
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Create(
+zx::result<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Create(
     const fbl::unique_fd& devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     zx::duration timeout) {
   // Connect to the flashmap manager service.
@@ -171,7 +171,7 @@ zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Cr
                            std::move(fwparam_client.value()));
 }
 
-zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::CreateWithClients(
+zx::result<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::CreateWithClients(
     fidl::ClientEnd<fuchsia_nand_flashmap::Flashmap> flashmap,
     fidl::ClientEnd<fuchsia_acpi_chromeos::Device> cros_acpi,
     fidl::ClientEnd<fuchsia_vboot::FirmwareParam> fwparam) {
@@ -184,7 +184,7 @@ zx::status<std::unique_ptr<FlashmapPartitionClient>> FlashmapPartitionClient::Cr
   return zx::ok(std::move(client));
 }
 
-zx::status<> FlashmapPartitionClient::Init() {
+zx::result<> FlashmapPartitionClient::Init() {
   ZX_DEBUG_ASSERT(areas_.empty());
   auto areas = flashmap_->GetAreas();
   if (!areas.ok()) {
@@ -204,12 +204,12 @@ zx::status<> FlashmapPartitionClient::Init() {
   return zx::ok();
 }
 
-zx::status<size_t> FlashmapPartitionClient::GetPartitionSize() {
+zx::result<size_t> FlashmapPartitionClient::GetPartitionSize() {
   // The first area covers the entire flash.
   return zx::ok(areas_[0].size);
 }
 
-zx::status<> FlashmapPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+zx::result<> FlashmapPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   // We can't read the entire flash - things like the ME firmware are inaccessible (so any kind of
   // comparison by the paver would be meaningless).
   // For now, we don't implement this.
@@ -217,7 +217,7 @@ zx::status<> FlashmapPartitionClient::Read(const zx::vmo& vmo, size_t size) {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
+zx::result<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size) {
   if (vmo_size < areas_[0].size) {
     ERROR("FlashmapPartitionClient expects a full firmware image. (got 0x%zx)\n", vmo_size);
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -285,7 +285,7 @@ zx::status<> FlashmapPartitionClient::Write(const zx::vmo& vmo, size_t vmo_size)
   return ABUpdate(new_image);
 }
 
-zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
+zx::result<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   // First: determine which slot we booted from.
   auto active_slot = cros_acpi_->GetActiveApFirmware();
   if (!active_slot.ok() || active_slot->is_error()) {
@@ -415,7 +415,7 @@ zx::status<> FlashmapPartitionClient::ABUpdate(fzl::VmoMapper& new_image) {
   return zx::ok();
 }
 
-zx::status<> FlashmapPartitionClient::FullUpdate(fzl::VmoMapper& new_image) {
+zx::result<> FlashmapPartitionClient::FullUpdate(fzl::VmoMapper& new_image) {
   // TODO(fxbug.dev/81685): implement this.
   return zx::ok();
 }
@@ -460,7 +460,7 @@ std::optional<FlashmapArea> FlashmapPartitionClient::FindArea(const char* name) 
   return std::nullopt;
 }
 
-zx::status<bool> FlashmapPartitionClient::NeedsUpdate(const fzl::VmoMapper& new_image,
+zx::result<bool> FlashmapPartitionClient::NeedsUpdate(const fzl::VmoMapper& new_image,
                                                       const FlashmapArea& region) {
   auto result = flashmap_->Read(fidl::StringView::FromExternal(region.name), 0, region.size);
   if (!result.ok() || result->is_error()) {

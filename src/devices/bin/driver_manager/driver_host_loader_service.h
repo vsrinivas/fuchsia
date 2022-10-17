@@ -19,7 +19,7 @@ class DriverHostLoaderService : public loader::LoaderService {
   DriverHostLoaderService(async_dispatcher_t* dispatcher, fbl::unique_fd lib_fd, std::string name)
       : LoaderService(dispatcher, std::move(lib_fd), std::move(name)) {}
 
-  virtual zx::status<zx::vmo> LoadObjectImpl(std::string path) override;
+  virtual zx::result<zx::vmo> LoadObjectImpl(std::string path) override;
 };
 
 #endif  // SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_HOST_LOADER_SERVICE_H_

@@ -44,12 +44,12 @@ zx_status_t FvmOverwriteWithDevfs(int devfs_root_fd, const char* relative_path, 
 // accessible (by watching for a corresponding block device).
 //
 // Returns an open fd to the new partition on success, -1 on error.
-zx::status<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* request);
-zx::status<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int fvm_fd,
+zx::result<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* request);
+zx::result<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int fvm_fd,
                                                          const alloc_req_t* request);
 
 // Query the volume manager for info.
-zx::status<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd);
+zx::result<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd);
 
 // A set of optional matchers for |open_partition| and friends.
 // At least one must be specified.
@@ -75,9 +75,9 @@ struct PartitionMatcher {
 // At least one of the GUIDs must be non-null.
 //
 // Returns an open fd to the partition on success, -1 on error.
-zx::status<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_duration_t timeout,
+zx::result<fbl::unique_fd> OpenPartition(const PartitionMatcher* matcher, zx_duration_t timeout,
                                          std::string* out_path);
-zx::status<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
+zx::result<fbl::unique_fd> OpenPartitionWithDevfs(int devfs_root_fd,
                                                   const PartitionMatcher* matcher,
                                                   zx_duration_t timeout,
                                                   std::string* out_path_relative);

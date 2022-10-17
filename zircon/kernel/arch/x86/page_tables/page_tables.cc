@@ -536,7 +536,7 @@ zx_status_t X86PageTableBase::GetMappingL0(volatile pt_entry_t* table, vaddr_t v
  * @return true if the caller (i.e. the next level up page table) might need to
  * free this page table.
  */
-zx::status<bool> X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
+zx::result<bool> X86PageTableBase::RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
                                                  EnlargeOperation enlarge,
                                                  const MappingCursor& start_cursor,
                                                  MappingCursor* new_cursor,
@@ -1105,7 +1105,7 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count,
   __UNINITIALIZED ConsistencyManager cm(this);
   // This needs to be initialized to some value as gcc cannot work out that it can elide the default
   // constructor.
-  zx::status<bool> status = zx::ok(true);
+  zx::result<bool> status = zx::ok(true);
   {
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);

@@ -52,7 +52,7 @@ class AllocatorForTesting : public BaseAllocator {
   using BaseAllocator::GetNodeBitmap;
 
   // blobfs::NodeFinder interface.
-  zx::status<InodePtr> GetNode(uint32_t node_index) final {
+  zx::result<InodePtr> GetNode(uint32_t node_index) final {
     if (node_index >= node_map_.size()) {
       return zx::error(ZX_ERR_OUT_OF_RANGE);
     }
@@ -61,21 +61,21 @@ class AllocatorForTesting : public BaseAllocator {
 
  protected:
   // blobfs::BaseAllocator interface.
-  zx::status<> AddBlocks(uint64_t block_count) final {
+  zx::result<> AddBlocks(uint64_t block_count) final {
     if (!allow_growing_) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
     RawBitmap& block_bitmap = GetBlockBitmap();
-    return zx::make_status(block_bitmap.Grow(block_bitmap.size() + block_count));
+    return zx::make_result(block_bitmap.Grow(block_bitmap.size() + block_count));
   }
 
-  zx::status<> AddNodes() final {
+  zx::result<> AddNodes() final {
     if (!allow_growing_) {
       return zx::error(ZX_ERR_NOT_SUPPORTED);
     }
     size_t new_node_count = node_map_.size() + 1;
     node_map_.resize(new_node_count);
-    return zx::make_status(GetNodeBitmap().Grow(new_node_count));
+    return zx::make_result(GetNodeBitmap().Grow(new_node_count));
   }
 
  private:

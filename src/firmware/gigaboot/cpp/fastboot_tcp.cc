@@ -17,7 +17,7 @@ namespace gigaboot {
 namespace {
 constexpr uint16_t kFbServerPort = 5554;
 
-zx::status<> TcpInitialize(tcp6_socket &fb_tcp_socket) {
+zx::result<> TcpInitialize(tcp6_socket &fb_tcp_socket) {
   if (fb_tcp_socket.binding_protocol) {
     return zx::ok();
   }
@@ -69,7 +69,7 @@ class TcpTransport : public TcpTransportInterface {
   tcp6_socket &fb_tcp_socket_;
 };
 
-zx::status<> FastbootTcpMain() {
+zx::result<> FastbootTcpMain() {
   tcp6_socket fb_tcp_socket = {};
   auto init_res = TcpInitialize(fb_tcp_socket);
   if (init_res.is_error()) {

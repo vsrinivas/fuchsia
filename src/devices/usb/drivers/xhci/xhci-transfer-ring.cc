@@ -315,7 +315,7 @@ CRCR TransferRing::TransferRing::phys(uint8_t cap_length) {
   return cr;
 }
 
-zx::status<CRCR> TransferRing::TransferRing::PeekCommandRingControlRegister(uint8_t cap_length) {
+zx::result<CRCR> TransferRing::TransferRing::PeekCommandRingControlRegister(uint8_t cap_length) {
   fbl::AutoLock l(&mutex_);
   Control control = Control::FromTRB(trbs_);
   zx_status_t status = AllocInternal(control);
@@ -405,7 +405,7 @@ zx_status_t TransferRing::AllocateTRB(TRB** trb, State* state) {
   return ZX_OK;
 }
 
-zx::status<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
+zx::result<ContiguousTRBInfo> TransferRing::AllocateContiguous(size_t count) {
   if (count == 0) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }

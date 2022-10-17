@@ -19,13 +19,13 @@ class ZirconPhysmemReader final : public PhysMemReader {
  public:
   constexpr ZirconPhysmemReader() = default;
 
-  zx::status<const void*> PhysToPtr(uintptr_t phys, size_t length) final;
+  zx::result<const void*> PhysToPtr(uintptr_t phys, size_t length) final;
 };
 
 // Create a new AcpiParser, starting at the given Root System Description Pointer (RSDP),
 // and using Zircon's |paddr_to_physmap| implementation to convert physical addresses
 // to virtual addresses.
-zx::status<AcpiParser> AcpiParserInit(zx_paddr_t rsdp_pa);
+zx::result<AcpiParser> AcpiParserInit(zx_paddr_t rsdp_pa);
 
 }  // namespace acpi_lite
 

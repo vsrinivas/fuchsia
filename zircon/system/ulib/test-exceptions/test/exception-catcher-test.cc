@@ -89,7 +89,7 @@ TEST(ExceptionCatcher, CatchException) {
   ExceptionCatcher catcher(thread.get());
 
   ASSERT_OK(thread.StartAndCrash());
-  zx::status<zx::exception> result = catcher.ExpectException();
+  zx::result<zx::exception> result = catcher.ExpectException();
   ASSERT_TRUE(result.is_ok());
   ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
 }
@@ -99,7 +99,7 @@ TEST(ExceptionCatcher, CatchThreadException) {
   ExceptionCatcher catcher(thread.get());
 
   ASSERT_OK(thread.StartAndCrash());
-  zx::status<zx::exception> result = catcher.ExpectException(thread.get());
+  zx::result<zx::exception> result = catcher.ExpectException(thread.get());
   ASSERT_TRUE(result.is_ok());
   ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
 }
@@ -109,7 +109,7 @@ TEST(ExceptionCatcher, CatchProcessException) {
   ExceptionCatcher catcher(thread.get());
 
   ASSERT_OK(thread.StartAndCrash());
-  zx::status<zx::exception> result = catcher.ExpectException(*zx::process::self());
+  zx::result<zx::exception> result = catcher.ExpectException(*zx::process::self());
   ASSERT_TRUE(result.is_ok());
   ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
 }
@@ -124,7 +124,7 @@ TEST(ExceptionCatcher, CatchMultipleExceptions) {
   }
 
   for ([[maybe_unused]] auto& thread : threads) {
-    zx::status<zx::exception> result = catcher.ExpectException();
+    zx::result<zx::exception> result = catcher.ExpectException();
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
@@ -140,7 +140,7 @@ TEST(ExceptionCatcher, CatchMultipleThreadExceptions) {
   }
 
   for (auto& thread : threads) {
-    zx::status<zx::exception> result = catcher.ExpectException(thread.get());
+    zx::result<zx::exception> result = catcher.ExpectException(thread.get());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
@@ -156,7 +156,7 @@ TEST(ExceptionCatcher, CatchMultipleProcessExceptions) {
   }
 
   for ([[maybe_unused]] auto& thread : threads) {
-    zx::status<zx::exception> result = catcher.ExpectException(*zx::process::self());
+    zx::result<zx::exception> result = catcher.ExpectException(*zx::process::self());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
@@ -172,25 +172,25 @@ TEST(ExceptionCatcher, CatchMultipleThreadExceptionsAnyOrder) {
   }
 
   {
-    zx::status<zx::exception> result = catcher.ExpectException(threads[1].get());
+    zx::result<zx::exception> result = catcher.ExpectException(threads[1].get());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
 
   {
-    zx::status<zx::exception> result = catcher.ExpectException(threads[3].get());
+    zx::result<zx::exception> result = catcher.ExpectException(threads[3].get());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
 
   {
-    zx::status<zx::exception> result = catcher.ExpectException(threads[0].get());
+    zx::result<zx::exception> result = catcher.ExpectException(threads[0].get());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
 
   {
-    zx::status<zx::exception> result = catcher.ExpectException(threads[2].get());
+    zx::result<zx::exception> result = catcher.ExpectException(threads[2].get());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
@@ -208,7 +208,7 @@ TEST(ExceptionCatcher, UncaughtExceptionFailure) {
 
   EXPECT_EQ(ZX_ERR_CANCELED, catcher.Stop());
 
-  zx::status<zx::exception> result = process_catcher.ExpectException(thread.get());
+  zx::result<zx::exception> result = process_catcher.ExpectException(thread.get());
   ASSERT_TRUE(result.is_ok());
   ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
 }
@@ -218,12 +218,12 @@ TEST(ExceptionCatcher, ThreadTerminatedFailure) {
   ExceptionCatcher catcher(thread.get());
   ASSERT_OK(thread.StartAndCrash());
   {
-    zx::status<zx::exception> result = catcher.ExpectException(thread.get());
+    zx::result<zx::exception> result = catcher.ExpectException(thread.get());
     ASSERT_TRUE(result.is_ok());
     ASSERT_OK(ExitExceptionZxThread(std::move(result.value())));
   }
 
-  zx::status<zx::exception> result = catcher.ExpectException(thread.get());
+  zx::result<zx::exception> result = catcher.ExpectException(thread.get());
   ASSERT_EQ(result.status_value(), ZX_ERR_PEER_CLOSED);
 }
 

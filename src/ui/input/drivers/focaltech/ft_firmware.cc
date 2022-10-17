@@ -118,7 +118,7 @@ zx_status_t FtDevice::UpdateFirmwareIfNeeded(const FocaltechMetadata& metadata) 
   zx_status_t status;
   const uint8_t firmware_version = firmware[kFirmwareVersionOffset];
   for (int i = 0; i < kFirmwareDownloadRetries; i++) {
-    const zx::status<bool> firmware_status = CheckFirmwareAndStartRomboot(firmware_version);
+    const zx::result<bool> firmware_status = CheckFirmwareAndStartRomboot(firmware_version);
     if (firmware_status.is_error()) {
       status = firmware_status.error_value();
       Write8(kResetCommand);
@@ -151,10 +151,10 @@ zx_status_t FtDevice::UpdateFirmwareIfNeeded(const FocaltechMetadata& metadata) 
   return status;
 }
 
-zx::status<bool> FtDevice::CheckFirmwareAndStartRomboot(const uint8_t firmware_version) {
+zx::result<bool> FtDevice::CheckFirmwareAndStartRomboot(const uint8_t firmware_version) {
   bool firmware_valid = false;
   for (int i = 0; i < kGetChipCoreRetries; i++) {
-    const zx::status<uint8_t> chip_core = ReadReg8(kChipCoreReg);
+    const zx::result<uint8_t> chip_core = ReadReg8(kChipCoreReg);
     if (chip_core.is_ok() && chip_core.value() == kChipCoreFirmwareValid) {
       firmware_valid = true;
       break;
@@ -166,7 +166,7 @@ zx::status<bool> FtDevice::CheckFirmwareAndStartRomboot(const uint8_t firmware_v
     return zx::ok(true);
   }
 
-  const zx::status<uint8_t> current_firmware_version = ReadReg8(kFirmwareVersionReg);
+  const zx::result<uint8_t> current_firmware_version = ReadReg8(kFirmwareVersionReg);
   if (current_firmware_version.is_ok() && current_firmware_version.value() == firmware_version) {
     // Firmware is valid and the version matches what the driver has, no need to update.
     zxlogf(INFO, "Firmware version is current, skipping download");
@@ -181,10 +181,10 @@ zx::status<bool> FtDevice::CheckFirmwareAndStartRomboot(const uint8_t firmware_v
 
   zx_status_t status;
   if ((status = StartRomboot()) != ZX_OK) {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
   if ((status = WaitForRomboot()) != ZX_OK) {
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
   return zx::ok(true);
 }
@@ -205,7 +205,7 @@ zx_status_t FtDevice::StartRomboot() {
 }
 
 zx_status_t FtDevice::WaitForRomboot() {
-  zx::status<uint16_t> boot_id;
+  zx::result<uint16_t> boot_id;
   for (int i = 0; i < kGetBootIdRetries; i++) {
     boot_id = GetBootId();
     if (boot_id.is_ok() && boot_id.value() == kRombootId) {
@@ -225,13 +225,13 @@ zx_status_t FtDevice::WaitForRomboot() {
   return ZX_OK;
 }
 
-zx::status<uint16_t> FtDevice::GetBootId() {
+zx::result<uint16_t> FtDevice::GetBootId() {
   WriteReg16(kHidToStdReg, kHidToStdValue);
 
   zx_status_t status = Write8(kUnlockBootCommand);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to send unlock command: %s", zx_status_get_string(status));
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
   zx::nanosleep(zx::deadline_after(kBootIdWaitAfterUnlock));
@@ -239,9 +239,9 @@ zx::status<uint16_t> FtDevice::GetBootId() {
   return ReadReg16(kBootIdReg);
 }
 
-zx::status<bool> FtDevice::WaitForFlashStatus(const uint16_t expected_value, const int tries,
+zx::result<bool> FtDevice::WaitForFlashStatus(const uint16_t expected_value, const int tries,
                                               const zx::duration retry_sleep) {
-  zx::status<uint16_t> value;
+  zx::result<uint16_t> value;
   for (int i = 0; i < tries; i++) {
     value = ReadReg16(kFlashStatusReg);
     if (value.is_ok() && value.value() == expected_value) {
@@ -309,7 +309,7 @@ zx_status_t FtDevice::EraseFlash(const size_t size) {
 
   zx::nanosleep(zx::deadline_after(kEraseWait));
 
-  const zx::status<bool> erase_done = WaitForFlashStatus(kFlashEraseDone, 50, zx::msec(400));
+  const zx::result<bool> erase_done = WaitForFlashStatus(kFlashEraseDone, 50, zx::msec(400));
   if (erase_done.is_error()) {
     return erase_done.error_value();
   }
@@ -336,7 +336,7 @@ zx_status_t FtDevice::SendFirmware(cpp20::span<const uint8_t> firmware) {
     zx::nanosleep(zx::deadline_after(zx::msec(1)));
 
     const uint16_t expected_status = ExpectedWriteStatus(address, send_size);
-    const zx::status<bool> write_done = WaitForFlashStatus(expected_status, 100, zx::msec(1));
+    const zx::result<bool> write_done = WaitForFlashStatus(expected_status, 100, zx::msec(1));
     if (write_done.is_error()) {
       return write_done.error_value();
     }
@@ -377,7 +377,7 @@ zx_status_t FtDevice::CheckFirmwareEcc(const size_t size, const uint8_t expected
 
     zx::nanosleep(zx::deadline_after(CalculateEccSleep(check_size)));
 
-    const zx::status<bool> ecc_done = WaitForFlashStatus(kFlashEccDone, 10, zx::msec(50));
+    const zx::result<bool> ecc_done = WaitForFlashStatus(kFlashEccDone, 10, zx::msec(50));
     if (ecc_done.is_error()) {
       return ecc_done.error_value();
     }
@@ -390,7 +390,7 @@ zx_status_t FtDevice::CheckFirmwareEcc(const size_t size, const uint8_t expected
     address += check_size;
   }
 
-  const zx::status<uint8_t> ecc = ReadReg8(kFirmwareEccReg);
+  const zx::result<uint8_t> ecc = ReadReg8(kFirmwareEccReg);
   if (ecc.is_error()) {
     return ecc.error_value();
   }
@@ -403,23 +403,23 @@ zx_status_t FtDevice::CheckFirmwareEcc(const size_t size, const uint8_t expected
   return ZX_OK;
 }
 
-zx::status<uint8_t> FtDevice::ReadReg8(const uint8_t address) {
+zx::result<uint8_t> FtDevice::ReadReg8(const uint8_t address) {
   uint8_t value = 0;
   zx_status_t status = i2c_.ReadSync(address, &value, sizeof(value));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read from 0x%02x: %s", address, zx_status_get_string(status));
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
   return zx::ok(value);
 }
 
-zx::status<uint16_t> FtDevice::ReadReg16(const uint8_t address) {
+zx::result<uint16_t> FtDevice::ReadReg16(const uint8_t address) {
   uint8_t buffer[2];
   zx_status_t status = i2c_.ReadSync(address, buffer, sizeof(buffer));
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to read from 0x%02x: %s", address, zx_status_get_string(status));
-    return zx::error_status(status);
+    return zx::error_result(status);
   }
 
   return zx::ok(static_cast<uint16_t>((buffer[0] << 8) | buffer[1]));

@@ -34,40 +34,40 @@ class __EXPORT Fastboot : public FastbootBase {
   // Channel to svc.
   fidl::ClientEnd<fuchsia_io::Directory> svc_root_;
 
-  zx::status<> ProcessCommand(std::string_view cmd, Transport *transport) override;
-  zx::status<void *> GetDownloadBuffer(size_t total_download_size) override;
+  zx::result<> ProcessCommand(std::string_view cmd, Transport *transport) override;
+  zx::result<void *> GetDownloadBuffer(size_t total_download_size) override;
   void DoClearDownload() override;
 
-  zx::status<> GetVar(const std::string &command, Transport *transport);
-  zx::status<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
-  zx::status<std::string> GetVarSlotCount(const std::vector<std::string_view> &, Transport *);
-  zx::status<std::string> GetVarIsUserspace(const std::vector<std::string_view> &, Transport *);
-  zx::status<std::string> GetVarHwRevision(const std::vector<std::string_view> &, Transport *);
-  zx::status<> Flash(const std::string &command, Transport *transport);
-  zx::status<> SetActive(const std::string &command, Transport *transport);
-  zx::status<> Reboot(const std::string &command, Transport *transport);
-  zx::status<> RebootBootloader(const std::string &command, Transport *transport);
-  zx::status<> Continue(const std::string &command, Transport *transport);
-  zx::status<> OemAddStagedBootloaderFile(const std::string &command, Transport *transport);
+  zx::result<> GetVar(const std::string &command, Transport *transport);
+  zx::result<std::string> GetVarMaxDownloadSize(const std::vector<std::string_view> &, Transport *);
+  zx::result<std::string> GetVarSlotCount(const std::vector<std::string_view> &, Transport *);
+  zx::result<std::string> GetVarIsUserspace(const std::vector<std::string_view> &, Transport *);
+  zx::result<std::string> GetVarHwRevision(const std::vector<std::string_view> &, Transport *);
+  zx::result<> Flash(const std::string &command, Transport *transport);
+  zx::result<> SetActive(const std::string &command, Transport *transport);
+  zx::result<> Reboot(const std::string &command, Transport *transport);
+  zx::result<> RebootBootloader(const std::string &command, Transport *transport);
+  zx::result<> Continue(const std::string &command, Transport *transport);
+  zx::result<> OemAddStagedBootloaderFile(const std::string &command, Transport *transport);
 
-  zx::status<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
-  zx::status<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
+  zx::result<fidl::WireSyncClient<fuchsia_paver::Paver>> ConnectToPaver();
+  zx::result<fidl::WireSyncClient<fuchsia_hardware_power_statecontrol::Admin>>
   ConnectToPowerStateControl();
-  zx::status<fidl::WireSyncClient<fuchsia_paver::BootManager>> FindBootManager();
-  zx::status<> WriteFirmware(fuchsia_paver::wire::Configuration config,
+  zx::result<fidl::WireSyncClient<fuchsia_paver::BootManager>> FindBootManager();
+  zx::result<> WriteFirmware(fuchsia_paver::wire::Configuration config,
                              std::string_view firmware_type, Transport *transport,
                              fidl::WireSyncClient<fuchsia_paver::DataSink> &data_sink);
-  zx::status<> WriteAsset(fuchsia_paver::wire::Configuration config,
+  zx::result<> WriteAsset(fuchsia_paver::wire::Configuration config,
                           fuchsia_paver::wire::Asset asset, Transport *transport,
                           fidl::WireSyncClient<fuchsia_paver::DataSink> &data_sink);
 
   struct CommandEntry {
     const char *name;
-    zx::status<> (Fastboot::*cmd)(const std::string &, Transport *);
+    zx::result<> (Fastboot::*cmd)(const std::string &, Transport *);
   };
 
   using VariableHashTable =
-      std::unordered_map<std::string, zx::status<std::string> (Fastboot::*)(
+      std::unordered_map<std::string, zx::result<std::string> (Fastboot::*)(
                                           const std::vector<std::string_view> &, Transport *)>;
 
   // A static table of command name to method mapping.
@@ -76,7 +76,7 @@ class __EXPORT Fastboot : public FastbootBase {
   // A static table of fastboot variable name to method mapping.
   static const VariableHashTable &GetVariableTable();
 
-  zx::status<fidl::ClientEnd<fuchsia_io::Directory> *> GetSvcRoot();
+  zx::result<fidl::ClientEnd<fuchsia_io::Directory> *> GetSvcRoot();
 
   fuchsia_mem::wire::Buffer GetWireBufferFromDownload();
 

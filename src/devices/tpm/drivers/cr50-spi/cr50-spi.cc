@@ -245,7 +245,7 @@ void Cr50SpiDevice::WakeUp() {
   last_command_time_ = zx::clock::get_monotonic();
 }
 
-zx::status<> Cr50SpiDevice::SendHeader(uint16_t address, size_t msg_length, bool writing) {
+zx::result<> Cr50SpiDevice::SendHeader(uint16_t address, size_t msg_length, bool writing) {
   // Start the transaction with the 4-byte magic header required by the TPM SPI protocol.
   uint8_t header[4];
   header[0] = msg_length - 1;
@@ -274,7 +274,7 @@ zx::status<> Cr50SpiDevice::SendHeader(uint16_t address, size_t msg_length, bool
   return zx::ok();
 }
 
-zx::status<> Cr50SpiDevice::FlowControl() {
+zx::result<> Cr50SpiDevice::FlowControl() {
   static constexpr zx::duration kFlowControlTimeout(ZX_MSEC(750 /* TPM_TIMEOUT_A */));
   // The TPM isn't ready until we get back a 1 in the last bit.
   // The Cr50 in practice always does at least 1 byte of flow control.
@@ -300,15 +300,15 @@ zx::status<> Cr50SpiDevice::FlowControl() {
   return zx::ok();
 }
 
-zx::status<> Cr50SpiDevice::DoSpiWrite(fidl::VectorView<uint8_t> &buf) {
+zx::result<> Cr50SpiDevice::DoSpiWrite(fidl::VectorView<uint8_t> &buf) {
   auto result = spi_->TransmitVector(buf);
   if (!result.ok()) {
     return zx::error(result.status());
   }
-  return zx::make_status(result.value().status);
+  return zx::make_result(result.value().status);
 }
 
-zx::status<> Cr50SpiDevice::DoSpiRead(fidl::VectorView<uint8_t> &buf) {
+zx::result<> Cr50SpiDevice::DoSpiRead(fidl::VectorView<uint8_t> &buf) {
   auto ret_vec = spi_->ReceiveVector(buf.count());
   if (!ret_vec.ok()) {
     return zx::error(ret_vec.status());
@@ -322,7 +322,7 @@ zx::status<> Cr50SpiDevice::DoSpiRead(fidl::VectorView<uint8_t> &buf) {
   return zx::ok();
 }
 
-zx::status<> Cr50SpiDevice::DoXfer(uint16_t address, fidl::VectorView<uint8_t> &buf,
+zx::result<> Cr50SpiDevice::DoXfer(uint16_t address, fidl::VectorView<uint8_t> &buf,
                                    bool do_write) {
   zxlogf(DEBUG, "%sing %zu bytes at 0x%x", do_write ? "writ" : "read", buf.count(), address);
   WakeUp();

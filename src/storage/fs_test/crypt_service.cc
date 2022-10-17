@@ -14,7 +14,7 @@
 
 namespace fs_test {
 
-zx::status<> SetUpCryptWithRandomKeys(
+zx::result<> SetUpCryptWithRandomKeys(
     fidl::UnownedClientEnd<fuchsia_io::Directory> service_directory) {
   fidl::WireSyncClient<fuchsia_fxfs::CryptManagement> client;
   if (auto management_service_or =
@@ -51,7 +51,7 @@ zx::status<> SetUpCryptWithRandomKeys(
   return zx::ok();
 }
 
-zx::status<zx::channel> GetCryptService() {
+zx::result<zx::channel> GetCryptService() {
   static bool initialized = false;
   if (!initialized) {
     auto service_endpoints_or = fidl::CreateEndpoints<fuchsia_io::Directory>();

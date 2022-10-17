@@ -120,7 +120,7 @@ zx_status_t Bus::Initialize() {
 
 // Maps a vmo as an mmio_buffer to be used as this Bus driver's ECAM region
 // for config space access.
-zx::status<fdf::MmioBuffer> Bus::MapEcam(zx::vmo ecam_vmo) {
+zx::result<fdf::MmioBuffer> Bus::MapEcam(zx::vmo ecam_vmo) {
   size_t size;
   zx_status_t status = ecam_vmo.get_size(&size);
   if (status != ZX_OK) {

@@ -260,7 +260,7 @@ void DriverRunner::PublishDeviceGroupManager(component::OutgoingDirectory& outgo
   ZX_ASSERT(result.is_ok());
 }
 
-zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
+zx::result<> DriverRunner::StartRootDriver(std::string_view url) {
   return StartDriver(*root_node_, url, fdi::DriverPackageType::kBase);
 }
 
@@ -311,7 +311,7 @@ void DriverRunner::TryBindAllOrphansUntracked() {
   TryBindAllOrphans(std::move(empty_callback));
 }
 
-zx::status<> DriverRunner::StartDriver(Node& node, std::string_view url,
+zx::result<> DriverRunner::StartDriver(Node& node, std::string_view url,
                                        fdi::DriverPackageType package_type) {
   zx::event token;
   zx_status_t status = zx::event::create(0, &token);
@@ -538,8 +538,8 @@ void DriverRunner::Bind(Node& node, std::shared_ptr<BindResultTracker> result_tr
   driver_index_->MatchDriver(node.CreateAddArgs(arena)).Then(std::move(match_callback));
 }
 
-zx::status<DriverHost*> DriverRunner::CreateDriverHost() {
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+zx::result<DriverHost*> DriverRunner::CreateDriverHost() {
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -565,7 +565,7 @@ zx::status<DriverHost*> DriverRunner::CreateDriverHost() {
   return zx::ok(driver_host_ptr);
 }
 
-zx::status<> DriverRunner::CreateComponent(std::string name, Collection collection, std::string url,
+zx::result<> DriverRunner::CreateComponent(std::string name, Collection collection, std::string url,
                                            CreateComponentOpts opts) {
   fidl::Arena arena;
   fdecl::wire::Child child_decl(arena);

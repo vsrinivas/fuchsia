@@ -30,7 +30,7 @@ class MapPinTest : public ::testing::Test {
         ::vmo_store::PinOptions{GetBti(), ZX_BTI_PERM_READ | ZX_BTI_PERM_WRITE, true}};
   }
 
-  static zx::status<size_t> CreateAndRegister(VmoStore& store, size_t vmo_size = kVmoSize) {
+  static zx::result<size_t> CreateAndRegister(VmoStore& store, size_t vmo_size = kVmoSize) {
     zx::vmo vmo;
     zx_status_t status = zx::vmo::create(vmo_size, 0, &vmo);
     if (status != ZX_OK) {
@@ -53,7 +53,7 @@ class MapPinTest : public ::testing::Test {
 
 TEST_F(MapPinTest, Map) {
   VmoStore store(DefaultMapOptions());
-  zx::status result = CreateAndRegister(store);
+  zx::result result = CreateAndRegister(store);
   ASSERT_OK(result.status_value());
   size_t key = result.value();
   auto* stored = store.GetVmo(key);
@@ -73,7 +73,7 @@ TEST_F(MapPinTest, VmarManagerMap) {
   auto options = DefaultMapOptions();
   options.map->vmar = vmar;
   VmoStore store(std::move(options));
-  zx::status result = CreateAndRegister(store);
+  zx::result result = CreateAndRegister(store);
   ASSERT_OK(result.status_value());
   size_t key = result.value();
   // Assert that the mapped data is within the range of the vmar.
@@ -85,7 +85,7 @@ TEST_F(MapPinTest, VmarManagerMap) {
 
 TEST_F(MapPinTest, Pin) {
   VmoStore store(DefaultPinOptions());
-  zx::status result = CreateAndRegister(store);
+  zx::result result = CreateAndRegister(store);
   ASSERT_OK(result.status_value());
   size_t key = result.value();
   auto* vmo = store.GetVmo(key);
@@ -131,7 +131,7 @@ TEST_F(MapPinTest, PinSingleRegion) {
   options.pin->index = false;
   VmoStore store(std::move(options));
   // Create and register a VMO with a single page.
-  zx::status result = CreateAndRegister(store, ZX_PAGE_SIZE);
+  zx::result result = CreateAndRegister(store, ZX_PAGE_SIZE);
   ASSERT_OK(result.status_value());
   size_t key = result.value();
   auto* vmo = store.GetVmo(key);
@@ -179,7 +179,7 @@ TEST_F(MapPinTest, PinSingleRegion) {
 
 TEST_F(MapPinTest, NoMapOrPin) {
   VmoStore store(Options{cpp17::nullopt, cpp17::nullopt});
-  zx::status result = CreateAndRegister(store);
+  zx::result result = CreateAndRegister(store);
   ASSERT_OK(result.status_value());
   size_t key = result.value();
   auto* vmo = store.GetVmo(key);

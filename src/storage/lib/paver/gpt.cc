@@ -33,7 +33,7 @@ constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
 
 }  // namespace
 
-zx::status<Uuid> GptPartitionType(Partition type, PartitionScheme s) {
+zx::result<Uuid> GptPartitionType(Partition type, PartitionScheme s) {
   if (s == PartitionScheme::kLegacy) {
     switch (type) {
       case Partition::kBootloaderA:
@@ -100,7 +100,7 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, std::str
   return type == Uuid(part.type) && FilterByName(part, name);
 }
 
-zx::status<> RebindGptDriver(
+zx::result<> RebindGptDriver(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     zx::unowned_channel chan) {  // NOLINT(performance-unnecessary-value-param)
   auto pauser = BlockWatcherPauser::Create(svc_root);
@@ -109,7 +109,7 @@ zx::status<> RebindGptDriver(
   }
   auto result = fidl::WireCall<fuchsia_device::Controller>(std::move(chan))
                     ->Rebind(fidl::StringView("gpt.so"));
-  return zx::make_status(result.ok() ? (result->is_error() ? result->error_value() : ZX_OK)
+  return zx::make_result(result.ok() ? (result->is_error() ? result->error_value() : ZX_OK)
                                      : result.status());
 }
 
@@ -176,7 +176,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
   return true;
 }
 
-zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::InitializeProvidedGptDevice(
+zx::result<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::InitializeProvidedGptDevice(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     fbl::unique_fd gpt_device) {
   auto pauser = BlockWatcherPauser::Create(svc_root);
@@ -224,7 +224,7 @@ zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
                                          std::move(gpt), *(response.info)));
 }
 
-zx::status<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::InitializeGpt(
+zx::result<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::InitializeGpt(
     fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   if (block_device) {
@@ -321,7 +321,7 @@ struct PartitionPosition {
   size_t length;  // In Blocks
 };
 
-zx::status<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindFirstFit(
+zx::result<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindFirstFit(
     size_t bytes_requested) const {
   LOG("Looking for space\n");
   // Gather GPT-related information.
@@ -339,7 +339,7 @@ zx::status<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindF
   partitions[partition_count++].length = reserved_blocks;
 
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    zx::status<const gpt_partition_t*> p = gpt_->GetPartition(i);
+    zx::result<const gpt_partition_t*> p = gpt_->GetPartition(i);
     if (p.is_error()) {
       continue;
     }
@@ -378,7 +378,7 @@ zx::status<GptDevicePartitioner::FindFirstFitResult> GptDevicePartitioner::FindF
   return zx::error(ZX_ERR_NO_RESOURCES);
 }
 
-zx::status<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, const Uuid& type,
+zx::result<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, const Uuid& type,
                                                           uint64_t offset, uint64_t blocks) const {
   Uuid guid = Uuid::Generate();
 
@@ -391,7 +391,7 @@ zx::status<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, cons
     ERROR("Failed to sync GPT\n");
     return zx::error(ZX_ERR_IO);
   }
-  if (auto status = zx::make_status(gpt_->ClearPartition(offset, 1)); status.is_error()) {
+  if (auto status = zx::make_result(gpt_->ClearPartition(offset, 1)); status.is_error()) {
     ERROR("Failed to clear first block of new partition\n");
     return status.take_error();
   }
@@ -403,7 +403,7 @@ zx::status<Uuid> GptDevicePartitioner::CreateGptPartition(const char* name, cons
   return zx::ok(guid);
 }
 
-zx::status<std::unique_ptr<PartitionClient>> GptDevicePartitioner::AddPartition(
+zx::result<std::unique_ptr<PartitionClient>> GptDevicePartitioner::AddPartition(
     const char* name, const Uuid& type, size_t minimum_size_bytes,
     size_t optional_reserve_bytes) const {
   auto status = FindFirstFit(minimum_size_bytes);
@@ -447,10 +447,10 @@ zx::status<std::unique_ptr<PartitionClient>> GptDevicePartitioner::AddPartition(
   return zx::ok(new BlockPartitionClient(std::move(status_or_part.value())));
 }
 
-zx::status<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::FindPartition(
+zx::result<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::FindPartition(
     FilterCallback filter) const {
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    zx::status<gpt_partition_t*> p = gpt_->GetPartition(i);
+    zx::result<gpt_partition_t*> p = gpt_->GetPartition(i);
     if (p.is_error()) {
       continue;
     }
@@ -468,10 +468,10 @@ zx::status<GptDevicePartitioner::FindPartitionResult> GptDevicePartitioner::Find
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
+zx::result<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
   bool modify = false;
   for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
-    zx::status<const gpt_partition_t*> p = gpt_->GetPartition(i);
+    zx::result<const gpt_partition_t*> p = gpt_->GetPartition(i);
     if (p.is_error() || !filter(**p)) {
       continue;
     }
@@ -499,11 +499,11 @@ zx::status<> GptDevicePartitioner::WipePartitions(FilterCallback filter) const {
   return zx::ok();
 }
 
-zx::status<> GptDevicePartitioner::WipeFvm() const {
+zx::result<> GptDevicePartitioner::WipeFvm() const {
   return WipeBlockPartition(devfs_root_, std::nullopt, Uuid(GUID_FVM_VALUE));
 }
 
-zx::status<> GptDevicePartitioner::WipePartitionTables() const {
+zx::result<> GptDevicePartitioner::WipePartitionTables() const {
   return WipePartitions([](const gpt_partition_t&) { return true; });
 }
 

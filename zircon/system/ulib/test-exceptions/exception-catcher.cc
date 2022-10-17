@@ -61,12 +61,12 @@ zx_status_t ExceptionCatcher::Stop() {
 }
 
 __EXPORT
-zx::status<zx::exception> ExceptionCatcher::ExpectException() {
+zx::result<zx::exception> ExceptionCatcher::ExpectException() {
   return ExpectException(ZX_KOID_INVALID, ZX_KOID_INVALID);
 }
 
 __EXPORT
-zx::status<zx::exception> ExceptionCatcher::ExpectException(const zx::thread& thread) {
+zx::result<zx::exception> ExceptionCatcher::ExpectException(const zx::thread& thread) {
   zx_koid_t tid;
   zx_status_t status = GetKoid(thread, &tid);
   if (status != ZX_OK) {
@@ -76,7 +76,7 @@ zx::status<zx::exception> ExceptionCatcher::ExpectException(const zx::thread& th
 }
 
 __EXPORT
-zx::status<zx::exception> ExceptionCatcher::ExpectException(const zx::process& process) {
+zx::result<zx::exception> ExceptionCatcher::ExpectException(const zx::process& process) {
   zx_koid_t pid;
   zx_status_t status = GetKoid(process, &pid);
   if (status != ZX_OK) {
@@ -85,7 +85,7 @@ zx::status<zx::exception> ExceptionCatcher::ExpectException(const zx::process& p
   return ExpectException(pid, ZX_KOID_INVALID);
 }
 
-zx::status<zx::exception> ExceptionCatcher::ExpectException(zx_koid_t pid, zx_koid_t tid) {
+zx::result<zx::exception> ExceptionCatcher::ExpectException(zx_koid_t pid, zx_koid_t tid) {
   // First check if we've already seen this exception on a previous call.
   for (auto iter = active_exceptions_.begin(); iter != active_exceptions_.end(); ++iter) {
     if (ExceptionMatches(iter->info, pid, tid)) {

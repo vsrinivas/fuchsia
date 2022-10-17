@@ -51,7 +51,7 @@ bool Session::ShouldTakeOverPrimary(const Session* current_primary) const {
   return descriptor_count_ > current_primary->descriptor_count_;
 }
 
-zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Create(
+zx::result<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Create(
     async_dispatcher_t* dispatcher, netdev::wire::SessionInfo& info, fidl::StringView name,
     DeviceInterface* parent, fidl::ServerEnd<netdev::Session> control) {
   // Validate required session fields.
@@ -71,7 +71,7 @@ zx::status<std::pair<std::unique_ptr<Session>, netdev::wire::Fifos>> Session::Cr
     return zx::error(ZX_ERR_NO_MEMORY);
   }
 
-  zx::status fifos = session->Init();
+  zx::result fifos = session->Init();
   if (fifos.is_error()) {
     LOGF_ERROR("failed to init session %s: %s", session->name(), fifos.status_string());
     return fifos.take_error();
@@ -116,7 +116,7 @@ Session::~Session() {
   LOGF_TRACE("%s: Session destroyed", name());
 }
 
-zx::status<netdev::wire::Fifos> Session::Init() {
+zx::result<netdev::wire::Fifos> Session::Init() {
   // Map the data and descriptors VMO:
 
   if (zx_status_t status = descriptors_.Map(
@@ -218,7 +218,7 @@ void Session::OnUnbind(fidl::UnbindInfo info, fidl::ServerEnd<netdev::Session> c
     for (uint8_t i = 0; i < MAX_PORTS; i++) {
       // We can ignore the return from detaching, this port is about to get
       // destroyed.
-      zx::status<bool> __UNUSED result = DetachPortLocked(i, std::nullopt);
+      zx::result<bool> __UNUSED result = DetachPortLocked(i, std::nullopt);
     }
     dying_ = true;
   }
@@ -490,7 +490,7 @@ zx_status_t Session::AttachPort(netdev::wire::PortId port_id,
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  zx::status<AttachedPort> acquire_port = parent_->AcquirePort(port_id, frame_types);
+  zx::result<AttachedPort> acquire_port = parent_->AcquirePort(port_id, frame_types);
   if (acquire_port.is_error()) {
     parent_->control_lock().Release();
     return acquire_port.status_value();
@@ -539,7 +539,7 @@ zx_status_t Session::DetachPort(netdev::wire::PortId port_id) {
   return ZX_OK;
 }
 
-zx::status<bool> Session::DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt) {
+zx::result<bool> Session::DetachPortLocked(uint8_t port_id, std::optional<uint8_t> salt) {
   if (port_id >= attached_ports_.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
@@ -562,7 +562,7 @@ zx::status<bool> Session::DetachPortLocked(uint8_t port_id, std::optional<uint8_
 }
 
 bool Session::OnPortDestroyed(uint8_t port_id) {
-  zx::status status = DetachPortLocked(port_id, std::nullopt);
+  zx::result status = DetachPortLocked(port_id, std::nullopt);
   // Tolerate errors on port destruction, just means we weren't attached to this port.
   if (status.is_error()) {
     return false;

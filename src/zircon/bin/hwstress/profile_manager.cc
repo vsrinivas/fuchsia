@@ -49,7 +49,7 @@ ProfileManager::ProfileManager(fuchsia::scheduler::ProfileProviderSyncPtr profil
 zx_status_t ProfileManager::SetThreadAffinity(const zx::thread& thread, uint32_t mask) {
   return CreateAndApplyProfile<uint32_t>(
       &affinity_profiles_, mask,
-      [this](uint32_t mask) -> zx::status<zx::profile> {
+      [this](uint32_t mask) -> zx::result<zx::profile> {
         zx::profile profile;
         zx_status_t server_status;
         zx_status_t status =
@@ -72,7 +72,7 @@ zx_status_t ProfileManager::SetThreadAffinity(std::thread* thread, uint32_t mask
 zx_status_t ProfileManager::SetThreadPriority(const zx::thread& thread, uint32_t priority) {
   return CreateAndApplyProfile<uint32_t>(
       &priority_profiles_, priority,
-      [this](uint32_t priority) -> zx::status<zx::profile> {
+      [this](uint32_t priority) -> zx::result<zx::profile> {
         zx::profile profile;
         zx_status_t server_status;
         zx_status_t status = profile_provider_->GetProfile(

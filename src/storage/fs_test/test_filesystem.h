@@ -16,9 +16,9 @@ namespace fs_test {
 class TestFilesystem {
  public:
   // Creates and returns a mounted test file system.
-  static zx::status<TestFilesystem> Create(const TestFilesystemOptions& options);
+  static zx::result<TestFilesystem> Create(const TestFilesystemOptions& options);
   // Opens an existing instance of a file system.
-  static zx::status<TestFilesystem> Open(const TestFilesystemOptions& options);
+  static zx::result<TestFilesystem> Open(const TestFilesystemOptions& options);
 
   TestFilesystem(TestFilesystem&&) = default;
   TestFilesystem& operator=(TestFilesystem&&) = default;
@@ -32,20 +32,20 @@ class TestFilesystem {
   fs_management::MountOptions DefaultMountOptions() const;
 
   // Mounts the file system (only necessary after calling Unmount).
-  zx::status<> Mount(const fs_management::MountOptions& mount_options);
-  zx::status<> Mount() { return Mount(DefaultMountOptions()); }
+  zx::result<> Mount(const fs_management::MountOptions& mount_options);
+  zx::result<> Mount() { return Mount(DefaultMountOptions()); }
 
   // Unmounts a mounted file system.
-  zx::status<> Unmount();
+  zx::result<> Unmount();
 
   // Runs fsck on the file system. Does not automatically unmount, so Unmount should be
   // called first if that is required.
-  zx::status<> Fsck();
+  zx::result<> Fsck();
 
   // Formats a file system instance.
-  zx::status<> Format() { return filesystem_->Format(options_); }
+  zx::result<> Format() { return filesystem_->Format(options_); }
 
-  zx::status<std::string> DevicePath() const;
+  zx::result<std::string> DevicePath() const;
 
   const Filesystem::Traits& GetTraits() const { return options_.filesystem->GetTraits(); }
 
@@ -65,7 +65,7 @@ class TestFilesystem {
 
   void Reset() { filesystem_->Reset(); }
 
-  zx::status<fuchsia_io::wire::FilesystemInfo> GetFsInfo() const;
+  zx::result<fuchsia_io::wire::FilesystemInfo> GetFsInfo() const;
 
   // Obtain a snapshot from the underlying filesystem's inspect tree. Will cause an assertion if
   // the Inspect service could not be connected to or does not exist.
@@ -73,7 +73,7 @@ class TestFilesystem {
 
  private:
   // Creates a mount point for the instance, mounts it and returns a TestFilesystem.
-  static zx::status<TestFilesystem> FromInstance(const TestFilesystemOptions& options,
+  static zx::result<TestFilesystem> FromInstance(const TestFilesystemOptions& options,
                                                  std::unique_ptr<FilesystemInstance> instance);
 
   TestFilesystem(TestFilesystemOptions options, std::unique_ptr<FilesystemInstance> filesystem,

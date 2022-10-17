@@ -221,7 +221,7 @@ struct PublishRequest {
 constexpr std::string_view kData = "12345670123";
 constexpr size_t kDataOffset = 0xAD;
 
-zx::status<zx::vmo> MakeTestVmo(uint32_t data_offset) {
+zx::result<zx::vmo> MakeTestVmo(uint32_t data_offset) {
   zx::vmo vmo;
   if (auto status = zx::vmo::create(4096, 0, &vmo); status != ZX_OK) {
     return zx::error(status);

@@ -19,7 +19,7 @@ FakeMacDeviceImpl::FakeMacDeviceImpl() {
   EXPECT_OK(zx::event::create(0, &event_));
 }
 
-zx::status<std::unique_ptr<MacAddrDeviceInterface>> FakeMacDeviceImpl::CreateChild() {
+zx::result<std::unique_ptr<MacAddrDeviceInterface>> FakeMacDeviceImpl::CreateChild() {
   auto protocol = proto();
   return MacAddrDeviceInterface::Create(ddk::MacAddrProtocolClient(&protocol));
 }

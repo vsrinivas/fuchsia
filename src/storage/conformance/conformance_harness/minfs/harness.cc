@@ -54,7 +54,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
 
     // One connection must be maintained to avoid filesystem termination.
     auto root_server = root_client_.NewRequest();
-    zx::status status =
+    zx::result status =
         runner_->ServeRoot(fidl::ServerEnd<fuchsia_io::Directory>(root_server.TakeChannel()));
     ZX_ASSERT(status.is_ok());
   }

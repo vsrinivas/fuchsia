@@ -6,7 +6,7 @@
 
 namespace minfs {
 
-zx::status<std::unique_ptr<LazyBuffer>> LazyBuffer::Create(Bcache* bcache, const char* name,
+zx::result<std::unique_ptr<LazyBuffer>> LazyBuffer::Create(Bcache* bcache, const char* name,
                                                            uint32_t block_size) {
   std::unique_ptr<LazyBuffer> buffer(new LazyBuffer(block_size));
   auto status = buffer->buffer_.Attach(name, bcache);
@@ -26,7 +26,7 @@ void LazyBuffer::Shrink(size_t block_count) {
   }
 }
 
-zx::status<> LazyBuffer::Read(ByteRange range, Reader* reader) {
+zx::result<> LazyBuffer::Read(ByteRange range, Reader* reader) {
   if (range.Length() == 0)
     return zx::ok();
   uint64_t required_blocks = BytesToBlocks(range, buffer_.BlockSize()).End();
@@ -37,16 +37,16 @@ zx::status<> LazyBuffer::Read(ByteRange range, Reader* reader) {
   return lazy_reader_.Read(range, reader);
 }
 
-zx::status<> LazyBuffer::Flush(PendingWork* transaction, MapperInterface* mapper,
+zx::result<> LazyBuffer::Flush(PendingWork* transaction, MapperInterface* mapper,
                                BaseBufferView* view, const Writer& writer) {
   // TODO(fxbug.dev/50606): If this or the transaction fails, this will leave memory in an
   // indeterminate state. For now, this is no worse than it has been for some time.
   view->set_dirty(false);
   return EnumerateBlocks(
       view->GetByteRange(), buffer_.BlockSize(),
-      [this, transaction, mapper, &writer](BlockRange range) -> zx::status<uint64_t> {
+      [this, transaction, mapper, &writer](BlockRange range) -> zx::result<uint64_t> {
         bool allocated;
-        zx::status<DeviceBlockRange> device_range =
+        zx::result<DeviceBlockRange> device_range =
             mapper->MapForWrite(transaction, range, &allocated);
         if (device_range.is_error())
           return device_range.take_error();

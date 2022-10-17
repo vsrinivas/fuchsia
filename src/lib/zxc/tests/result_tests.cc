@@ -138,50 +138,50 @@ static_assert(fit::result<fit::failed, std::optional<test_members>> {
 } -> b == 20);
 
 // Status-only, no value.
-static_assert(zx::status<>{zx::ok()}.is_ok() == true);
-static_assert(zx::status<>{zx::ok()}.is_error() == false);
-static_assert(zx::status<>{zx::ok()}.status_value() == ZX_OK);
+static_assert(zx::result<>{zx::ok()}.is_ok() == true);
+static_assert(zx::result<>{zx::ok()}.is_error() == false);
+static_assert(zx::result<>{zx::ok()}.status_value() == ZX_OK);
 
-static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
-static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
-static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
-static_assert(zx::status<>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::result<>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
+static_assert(zx::result<>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
+static_assert(zx::result<>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::result<>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() == ZX_ERR_INVALID_ARGS);
 
-static_assert(zx::status<>{zx::make_status(ZX_OK)}.is_ok() == true);
-static_assert(zx::status<>{zx::make_status(ZX_OK)}.is_error() == false);
-static_assert(zx::status<>{zx::make_status(ZX_OK)}.status_value() == ZX_OK);
+static_assert(zx::result<>{zx::make_result(ZX_OK)}.is_ok() == true);
+static_assert(zx::result<>{zx::make_result(ZX_OK)}.is_error() == false);
+static_assert(zx::result<>{zx::make_result(ZX_OK)}.status_value() == ZX_OK);
 
-static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.is_ok() == false);
-static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.is_error() == true);
-static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.error_value() ==
+static_assert(zx::result<>{zx::make_result(ZX_ERR_INVALID_ARGS)}.is_ok() == false);
+static_assert(zx::result<>{zx::make_result(ZX_ERR_INVALID_ARGS)}.is_error() == true);
+static_assert(zx::result<>{zx::make_result(ZX_ERR_INVALID_ARGS)}.error_value() ==
               ZX_ERR_INVALID_ARGS);
-static_assert(zx::status<>{zx::make_status(ZX_ERR_INVALID_ARGS)}.status_value() ==
+static_assert(zx::result<>{zx::make_result(ZX_ERR_INVALID_ARGS)}.status_value() ==
               ZX_ERR_INVALID_ARGS);
 
 // Status or value.
-static_assert(zx::status<int>{zx::ok(10)}.is_ok() == true);
-static_assert(zx::status<int>{zx::ok(10)}.is_error() == false);
-static_assert(zx::status<int>{zx::ok(10)}.status_value() == ZX_OK);
-static_assert(zx::status<int>{zx::ok(10)}.value() == 10);
-static_assert(*zx::status<int>{zx::ok(10)} == 10);
+static_assert(zx::result<int>{zx::ok(10)}.is_ok() == true);
+static_assert(zx::result<int>{zx::ok(10)}.is_error() == false);
+static_assert(zx::result<int>{zx::ok(10)}.status_value() == ZX_OK);
+static_assert(zx::result<int>{zx::ok(10)}.value() == 10);
+static_assert(*zx::result<int>{zx::ok(10)} == 10);
 
-static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
-static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
-static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
-static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() ==
+static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_ok() == false);
+static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.is_error() == true);
+static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::result<int>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() ==
               ZX_ERR_INVALID_ARGS);
 
 // Status or value via make_status.
-static_assert(zx::make_status(ZX_OK, 10).is_ok() == true);
-static_assert(zx::make_status(ZX_OK, 10).is_error() == false);
-static_assert(zx::make_status(ZX_OK, 10).status_value() == ZX_OK);
-static_assert(zx::make_status(ZX_OK, 10).value() == 10);
-static_assert(*zx::make_status(ZX_OK, 10) == 10);
+static_assert(zx::make_result(ZX_OK, 10).is_ok() == true);
+static_assert(zx::make_result(ZX_OK, 10).is_error() == false);
+static_assert(zx::make_result(ZX_OK, 10).status_value() == ZX_OK);
+static_assert(zx::make_result(ZX_OK, 10).value() == 10);
+static_assert(*zx::make_result(ZX_OK, 10) == 10);
 
-static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).is_ok() == false);
-static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).is_error() == true);
-static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).error_value() == ZX_ERR_INVALID_ARGS);
-static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).status_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::make_result(ZX_ERR_INVALID_ARGS, 0).is_ok() == false);
+static_assert(zx::make_result(ZX_ERR_INVALID_ARGS, 0).is_error() == true);
+static_assert(zx::make_result(ZX_ERR_INVALID_ARGS, 0).error_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::make_result(ZX_ERR_INVALID_ARGS, 0).status_value() == ZX_ERR_INVALID_ARGS);
 
 struct default_constructible {
   default_constructible() = default;
@@ -586,27 +586,27 @@ TEST(LibZxCommon, Abort) {
 
   // Validate that attempting to use ZX_OK as an explicit error aborts.
   ASSERT_DEATH(([] {
-    zx::status<> status{zx::error_status(ZX_OK)};
+    zx::result<> status{zx::error_result(ZX_OK)};
     (void)status;
   }));
 
   // Validate that forwarding ZX_OK does not abort.
   ASSERT_NO_DEATH(([] {
-    zx::status<> status{zx::make_status(ZX_OK)};
+    zx::result<> status{zx::make_result(ZX_OK)};
     EXPECT_FALSE(status.is_error());
     EXPECT_TRUE(status.is_ok());
   }));
 
-  // Validate that accessing the error of a non-error zx::status through
+  // Validate that accessing the error of a non-error zx::result through
   // status_value() does not abort.
   ASSERT_NO_DEATH(([] {
-    zx::status<int> status{zx::ok(10)};
+    zx::result<int> status{zx::ok(10)};
     EXPECT_FALSE(status.is_error());
     EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.status_value());
   }));
   ASSERT_NO_DEATH(([] {
-    const zx::status<int> status{zx::ok(10)};
+    const zx::result<int> status{zx::ok(10)};
     EXPECT_FALSE(status.is_error());
     EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.status_value());
@@ -614,19 +614,19 @@ TEST(LibZxCommon, Abort) {
 
   // Validate the other error accessors abort.
   ASSERT_DEATH(([] {
-    zx::status<int> status{zx::ok(10)};
+    zx::result<int> status{zx::ok(10)};
     EXPECT_FALSE(status.is_error());
     EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.error_value());
   }));
   ASSERT_DEATH(([] {
-    const zx::status<int> status{zx::ok(10)};
+    const zx::result<int> status{zx::ok(10)};
     EXPECT_FALSE(status.is_error());
     EXPECT_TRUE(status.is_ok());
     EXPECT_EQ(ZX_OK, status.error_value());
   }));
   ASSERT_DEATH(([] {
-    zx::status<int> status{zx::ok(10)};
+    zx::result<int> status{zx::ok(10)};
     EXPECT_FALSE(status.is_error());
     EXPECT_TRUE(status.is_ok());
     status.take_error();
@@ -1023,22 +1023,22 @@ TEST(LibZxCommon, ErrorResults) {
 
 TEST(LibZxCommon, StatusString) {
   {
-    zx::status<> status = zx::ok();
+    zx::result<> status = zx::ok();
     EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_OK));
   }
 
   {
-    zx::status<> status = zx::error(ZX_ERR_NO_MEMORY);
+    zx::result<> status = zx::error(ZX_ERR_NO_MEMORY);
     EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
   }
 
   {
-    zx::status<int> status = zx::ok(10);
+    zx::result<int> status = zx::ok(10);
     EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_OK));
   }
 
   {
-    zx::status<int> status = zx::error(ZX_ERR_NO_MEMORY);
+    zx::result<int> status = zx::error(ZX_ERR_NO_MEMORY);
     EXPECT_STREQ(status.status_string(), zx_status_get_string(ZX_ERR_NO_MEMORY));
   }
 }
@@ -1133,14 +1133,14 @@ TEST(LibZxCommon, MakeStatusWithValueType) {
 
   {
     int n;
-    auto status = zx::make_status(divide(9, 3, &n), n);
+    auto status = zx::make_result(divide(9, 3, &n), n);
     ASSERT_TRUE(status.is_ok());
     ASSERT_EQ(status.value(), 3);
   }
 
   {
     int n;
-    auto status = zx::make_status(divide(9, 0, &n), n);
+    auto status = zx::make_result(divide(9, 0, &n), n);
     ASSERT_TRUE(status.is_error());
     ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
   }
@@ -1158,7 +1158,7 @@ TEST(LibZxCommon, MakeStatusWithReferenceType) {
   {
     int v;
     int& r = v;
-    auto status = zx::make_status(divide(9, 3, r), r);
+    auto status = zx::make_result(divide(9, 3, r), r);
     ASSERT_TRUE(status.is_ok());
     ASSERT_EQ(status.value(), 3);
   }
@@ -1166,7 +1166,7 @@ TEST(LibZxCommon, MakeStatusWithReferenceType) {
   {
     int v;
     int& r = v;
-    auto status = zx::make_status(divide(9, 0, r), r);
+    auto status = zx::make_result(divide(9, 0, r), r);
     ASSERT_TRUE(status.is_error());
     ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
   }
@@ -1194,14 +1194,14 @@ TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
 
   {
     Num n(0);
-    auto status = zx::make_status(divide(9, 3, n), std::move(n));
+    auto status = zx::make_result(divide(9, 3, n), std::move(n));
     ASSERT_TRUE(status.is_ok());
     ASSERT_EQ(status.value().v, 3);
   }
 
   {
     Num n(0);
-    auto status = zx::make_status(divide(9, 0, n), std::move(n));
+    auto status = zx::make_result(divide(9, 0, n), std::move(n));
     ASSERT_TRUE(status.is_error());
     ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
   }

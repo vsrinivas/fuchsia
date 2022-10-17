@@ -37,7 +37,7 @@ int Mount(std::unique_ptr<minfs::Bcache> bcache, const minfs::MountOptions& opti
   fidl::ServerEnd<fuchsia_io::Directory> root(
       zx::channel(zx_take_startup_handle(PA_DIRECTORY_REQUEST)));
 
-  zx::status status = Mount(std::move(bcache), options, std::move(root));
+  zx::result status = Mount(std::move(bcache), options, std::move(root));
   if (status.is_error()) {
     if (options.verbose) {
       FX_LOGS(ERROR) << "Failed to mount: " << status.status_string();
@@ -72,7 +72,7 @@ int StartComponent(std::unique_ptr<minfs::Bcache> bc, const minfs::MountOptions&
   fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request(
       std::move(lifecycle_channel));
 
-  zx::status status = minfs::StartComponent(std::move(outgoing_dir), std::move(lifecycle_request));
+  zx::result status = minfs::StartComponent(std::move(outgoing_dir), std::move(lifecycle_request));
   if (status.is_error()) {
     return EXIT_FAILURE;
   }

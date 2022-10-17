@@ -39,15 +39,15 @@ class MacDeviceTest : public ::testing::Test {
     if (device_) {
       return ZX_ERR_INTERNAL;
     }
-    zx::status device = impl_.CreateChild();
+    zx::result device = impl_.CreateChild();
     if (device.is_ok()) {
       device_ = std::move(device.value());
     }
     return device.status_value();
   }
 
-  zx::status<fidl::WireSyncClient<netdev::MacAddressing>> OpenInstance() {
-    zx::status endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
+  zx::result<fidl::WireSyncClient<netdev::MacAddressing>> OpenInstance() {
+    zx::result endpoints = fidl::CreateEndpoints<netdev::MacAddressing>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -89,7 +89,7 @@ MATCHER_P(MacEq, value, "") {
 
 TEST_F(MacDeviceTest, GetAddress) {
   ASSERT_OK(CreateDevice());
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
   fidl::WireResult result = client->GetUnicastAddress();
@@ -129,7 +129,7 @@ TEST_F(MacDeviceTest, StartupModePromiscuous) {
 TEST_F(MacDeviceTest, SetBadMode) {
   impl_.features().supported_modes = MODE_MULTICAST_FILTER;
   ASSERT_OK(CreateDevice());
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
@@ -140,7 +140,7 @@ TEST_F(MacDeviceTest, SetBadMode) {
 
 TEST_F(MacDeviceTest, SetPromiscuous) {
   ASSERT_OK(CreateDevice());
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
@@ -154,7 +154,7 @@ TEST_F(MacDeviceTest, SetPromiscuous) {
 
 TEST_F(MacDeviceTest, SetMulticastPromiscuous) {
   ASSERT_OK(CreateDevice());
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
@@ -168,7 +168,7 @@ TEST_F(MacDeviceTest, SetMulticastPromiscuous) {
 
 TEST_F(MacDeviceTest, InvalidMulticastAddress) {
   ASSERT_OK(CreateDevice());
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
@@ -194,7 +194,7 @@ TEST_F(MacDeviceTest, AddRemoveMulticastFilter) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
@@ -217,7 +217,7 @@ TEST_F(MacDeviceTest, OverflowsIntoMulticastPromiscuous) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 
@@ -236,11 +236,11 @@ TEST_F(MacDeviceTest, MostPermissiveClientWins) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  zx::status open_result1 = OpenInstance();
+  zx::result open_result1 = OpenInstance();
   ASSERT_OK(open_result1.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& cli1 = open_result1.value();
 
-  zx::status open_result2 = OpenInstance();
+  zx::result open_result2 = OpenInstance();
   ASSERT_OK(open_result2.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& cli2 = open_result2.value();
 
@@ -272,7 +272,7 @@ TEST_F(MacDeviceTest, FallsBackToDefaultMode) {
   ASSERT_OK(CreateDevice());
   ASSERT_EQ(impl_.mode(), MODE_MULTICAST_FILTER);
 
-  zx::status open_result = OpenInstance();
+  zx::result open_result = OpenInstance();
   ASSERT_OK(open_result.status_value());
   fidl::WireSyncClient<netdev::MacAddressing>& client = open_result.value();
 

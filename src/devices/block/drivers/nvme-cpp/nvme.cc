@@ -332,7 +332,7 @@ void Nvme::InitializeNamespaces() {
           }));
 }
 
-zx::status<fpromise::promise<Completion, Completion>> Nvme::IdentifyNamespace(uint32_t id,
+zx::result<fpromise::promise<Completion, Completion>> Nvme::IdentifyNamespace(uint32_t id,
                                                                               zx::vmo& data) {
   IdentifySubmission submission;
   submission.set_opcode(IdentifySubmission::kOpcode);

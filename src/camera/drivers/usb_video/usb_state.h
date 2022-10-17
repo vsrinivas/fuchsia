@@ -32,7 +32,7 @@ struct UsbDeviceInfo {
 // RAII wrapper around the usb_request_t
 class UsbRequest {
  public:
-  static zx::status<UsbRequest> Create(usb_protocol_t* usb, uint8_t ep_addr, uint64_t size);
+  static zx::result<UsbRequest> Create(usb_protocol_t* usb, uint8_t ep_addr, uint64_t size);
   UsbRequest(const UsbRequest& u) = delete;
   UsbRequest(UsbRequest&& u) : req_(u.req_) { u.req_ = nullptr; }
   ~UsbRequest();

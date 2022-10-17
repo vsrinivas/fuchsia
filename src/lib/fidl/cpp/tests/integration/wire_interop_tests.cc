@@ -138,7 +138,7 @@ class UnifiedClientToWireServerBase : public zxtest::Test, public MockData {
   UnifiedClientToWireServerBase() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() final {
-    zx::status client_end =
+    zx::result client_end =
         fidl::CreateEndpoints<fidl_cpp_wire_interop_test::Interop>(&server_end_);
     ASSERT_OK(client_end.status_value());
     client_.Bind(std::move(*client_end), loop_.dispatcher(), GetEventHandler());
@@ -434,7 +434,7 @@ class WireClientToNaturalServerBase : public zxtest::Test, public MockData {
   WireClientToNaturalServerBase() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() final {
-    zx::status client_end =
+    zx::result client_end =
         fidl::CreateEndpoints<fidl_cpp_wire_interop_test::Interop>(&server_end_);
     ASSERT_OK(client_end.status_value());
     client_.Bind(std::move(*client_end), loop_.dispatcher(), GetEventHandler());
@@ -701,7 +701,7 @@ class UnifiedSyncClientToWireServer : public zxtest::Test, public MockData {
   UnifiedSyncClientToWireServer() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
   void SetUp() final {
-    zx::status client_end =
+    zx::result client_end =
         fidl::CreateEndpoints<fidl_cpp_wire_interop_test::Interop>(&server_end_);
     ASSERT_OK(client_end.status_value());
     client_.Bind(std::move(*client_end));

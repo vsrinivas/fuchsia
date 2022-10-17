@@ -210,8 +210,8 @@ zx_status_t SdioControllerDevice::AddDevice() {
   fbl::AutoLock lock(&lock_);
 
   zx_status_t st = DdkAdd(ddk::DeviceAddArgs("sdmmc-sdio")
-                  .set_inspect_vmo(inspector_.DuplicateVmo())
-                  .set_flags(DEVICE_ADD_NON_BINDABLE));
+                              .set_inspect_vmo(inspector_.DuplicateVmo())
+                              .set_flags(DEVICE_ADD_NON_BINDABLE));
   if (st != ZX_OK) {
     zxlogf(ERROR, "Failed to add sdio device, retcode = %d", st);
     return st;
@@ -758,7 +758,7 @@ void SdioControllerDevice::SdioRunDiagnostics() {
   char cccr_string[(0x17 * 3) + 1];  // 0x17 octets plus spaces plus null byte
   char* next_byte = cccr_string;
   for (uint32_t addr = 0; addr < 0x17; addr++) {
-    zx::status<uint8_t> byte = ReadCccrByte(addr);
+    zx::result<uint8_t> byte = ReadCccrByte(addr);
     if (byte.is_ok()) {
       next_byte += snprintf(next_byte, 4, " %02x", byte.value());
     } else {
@@ -769,7 +769,7 @@ void SdioControllerDevice::SdioRunDiagnostics() {
   zxlogf(INFO, "CCCR:%s", cccr_string);
 }
 
-zx::status<uint8_t> SdioControllerDevice::ReadCccrByte(uint32_t addr) {
+zx::result<uint8_t> SdioControllerDevice::ReadCccrByte(uint32_t addr) {
   uint8_t byte = 0;
   zx_status_t status = SdioDoRwByteLocked(false, 0, addr, 0, &byte);
   if (status != ZX_OK) {
@@ -778,7 +778,7 @@ zx::status<uint8_t> SdioControllerDevice::ReadCccrByte(uint32_t addr) {
   return zx::ok(byte);
 }
 
-zx::status<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwTxnRequest(
+zx::result<SdioControllerDevice::SdioTxnPosition> SdioControllerDevice::DoOneRwTxnRequest(
     uint8_t fn_idx, const sdio_rw_txn_new_t& txn, SdioTxnPosition current_position) {
   const uint32_t func_blk_size = funcs_[fn_idx].cur_blk_size;
   const bool mbs = hw_info_.caps & SDIO_CARD_MULTI_BLOCK;
@@ -880,7 +880,7 @@ zx_status_t SdioControllerDevice::SdioDoRwTxnNew(uint8_t fn_idx, const sdio_rw_t
   };
 
   while (!current_position.buffers.empty()) {
-    zx::status<SdioTxnPosition> status = DoOneRwTxnRequest(fn_idx, *txn, current_position);
+    zx::result<SdioTxnPosition> status = DoOneRwTxnRequest(fn_idx, *txn, current_position);
     if (status.is_error()) {
       return status.error_value();
     }

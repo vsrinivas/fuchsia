@@ -70,9 +70,9 @@ std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& args)
   return os;
 }
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_pty::Device>> CreateVirtualConsole(
+zx::result<fidl::ClientEnd<fuchsia_hardware_pty::Device>> CreateVirtualConsole(
     const fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& client) {
-  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
   if (device_endpoints.is_error()) {
     return device_endpoints.take_error();
   }
@@ -100,7 +100,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     if (args.empty()) {
       continue;
     }
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (endpoints.is_error()) {
       FX_PLOGS(FATAL, endpoints.status_value()) << "failed to create endpoints";
     }
@@ -182,7 +182,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
       fidl::WireSyncClient(fidl::ClientEnd<fuchsia_io::Node>(std::move(channel)));
 
   while (true) {
-    zx::status node = fidl::CreateEndpoints<fuchsia_io::Node>();
+    zx::result node = fidl::CreateEndpoints<fuchsia_io::Node>();
     if (node.is_error()) {
       FX_PLOGS(FATAL, node.status_value()) << "failed to create node endpoints";
     }
@@ -193,7 +193,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
       FX_PLOGS(FATAL, result.status()) << "failed to clone stdio handle";
     }
 
-    zx::status directory = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result directory = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (directory.is_error()) {
       FX_PLOGS(FATAL, directory.status_value()) << "failed to create directory endpoints";
     }
@@ -203,7 +203,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
       FX_PLOGS(FATAL, status) << "failed to serve root directory";
     }
 
-    zx::status process =
+    zx::result process =
         launcher.LaunchShell(std::move(directory->client), node->client.TakeChannel(), term, cmd);
     if (process.is_error()) {
       FX_PLOGS(FATAL, process.status_value()) << "failed to launch shell";
@@ -228,13 +228,13 @@ int main(int argv, char** argc) {
 
   FX_LOGS(INFO) << "running";
 
-  zx::status boot_args = component::Connect<fuchsia_boot::Arguments>();
+  zx::result boot_args = component::Connect<fuchsia_boot::Arguments>();
   if (boot_args.is_error()) {
     FX_PLOGS(FATAL, boot_args.status_value())
         << "failed to connect to " << fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>;
   }
 
-  zx::status get_args = console_launcher::GetArguments(boot_args.value());
+  zx::result get_args = console_launcher::GetArguments(boot_args.value());
   if (get_args.is_error()) {
     FX_PLOGS(FATAL, get_args.status_value()) << "failed to get arguments";
   }
@@ -262,7 +262,7 @@ int main(int argv, char** argc) {
   // directory to which entries are added once they are ready for blocking
   // operations.
   for (size_t i = 0; i < flat->count; ++i) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (endpoints.is_error()) {
       FX_PLOGS(FATAL, endpoints.status_value()) << "failed to create endpoints";
     }
@@ -356,7 +356,7 @@ int main(int argv, char** argc) {
 
   fs::ManagedVfs vfs(dispatcher);
 
-  zx::status result = console_launcher::ConsoleLauncher::Create();
+  zx::result result = console_launcher::ConsoleLauncher::Create();
   if (result.is_error()) {
     FX_PLOGS(FATAL, result.status_value()) << "failed to create console launcher";
   }
@@ -366,7 +366,7 @@ int main(int argv, char** argc) {
 
   if (!args.virtcon_disable) {
     zx_status_t status = [&]() {
-      zx::status virtcon = component::Connect<fuchsia_virtualconsole::SessionManager>();
+      zx::result virtcon = component::Connect<fuchsia_virtualconsole::SessionManager>();
       if (virtcon.is_error()) {
         FX_PLOGS(ERROR, virtcon.status_value())
             << "failed to connect to "
@@ -376,7 +376,7 @@ int main(int argv, char** argc) {
       fidl::WireSyncClient client{std::move(virtcon.value())};
 
       if (args.virtual_console_need_debuglog) {
-        zx::status session = CreateVirtualConsole(client);
+        zx::result session = CreateVirtualConsole(client);
         if (session.is_error()) {
           return session.status_value();
         }
@@ -386,7 +386,7 @@ int main(int argv, char** argc) {
         });
       }
 
-      zx::status session = CreateVirtualConsole(client);
+      zx::result session = CreateVirtualConsole(client);
       if (session.is_error()) {
         return session.status_value();
       }
@@ -411,7 +411,7 @@ int main(int argv, char** argc) {
                      std::make_move_iterator(autorun.end()));
     }
 
-    zx::status fd = console_launcher::WaitForFile(args.device.path.c_str(), zx::time::infinite());
+    zx::result fd = console_launcher::WaitForFile(args.device.path.c_str(), zx::time::infinite());
     if (fd.is_error()) {
       FX_PLOGS(FATAL, fd.status_value())
           << "failed to wait for console '" << args.device.path << "'";
@@ -429,7 +429,7 @@ int main(int argv, char** argc) {
     // virtio-console driver should just speak that instead of this shim
     // interface.
     if (args.device.is_virtio) {
-      zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+      zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
       if (endpoints.is_error()) {
         FX_PLOGS(FATAL, endpoints.status_value()) << "failed to create pty endpoints";
       }
@@ -441,7 +441,7 @@ int main(int argv, char** argc) {
       }
       stdio = std::move(endpoints->client).TakeChannel();
     } else {
-      zx::status channel = caller.take_channel();
+      zx::result channel = caller.take_channel();
       if (channel.is_error()) {
         FX_PLOGS(FATAL, channel.status_value()) << "failed to get console channel";
       }

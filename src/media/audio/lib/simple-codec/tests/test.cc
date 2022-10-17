@@ -30,7 +30,7 @@ class TestCodec : public SimpleCodecServer {
   explicit TestCodec(zx_device_t* parent) : SimpleCodecServer(parent) {}
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
   zx_status_t Shutdown() override { return ZX_OK; }
-  zx::status<DriverIds> Initialize() override {
+  zx::result<DriverIds> Initialize() override {
     return zx::ok(DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
   }
   zx_status_t Reset() override { return ZX_ERR_NOT_SUPPORTED; }
@@ -42,7 +42,7 @@ class TestCodec : public SimpleCodecServer {
   bool IsBridgeable() override { return false; }
   void SetBridgedMode(bool enable_bridged_mode) override {}
   DaiSupportedFormats GetDaiFormats() override { return {}; }
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   GainFormat GetGainFormat() override {
@@ -70,7 +70,7 @@ class TestCodecWithSignalProcessing : public SimpleCodecServer,
   codec_protocol_t GetProto() { return {&this->codec_protocol_ops_, this}; }
 
   zx_status_t Shutdown() override { return ZX_OK; }
-  zx::status<DriverIds> Initialize() override {
+  zx::result<DriverIds> Initialize() override {
     return zx::ok(DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
   }
   zx_status_t Reset() override { return ZX_ERR_NOT_SUPPORTED; }
@@ -137,7 +137,7 @@ class TestCodecWithSignalProcessing : public SimpleCodecServer,
         signal_fidl::SignalProcessing_SetTopology_Response()));
   }
   DaiSupportedFormats GetDaiFormats() override { return {}; }
-  zx::status<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
+  zx::result<CodecFormatInfo> SetDaiFormat(const DaiFormat& format) override {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
   GainFormat GetGainFormat() override { return {}; }
@@ -308,7 +308,7 @@ TEST_F(SimpleCodecTest, SetDaiFormat) {
 
   DaiFormat format = {.sample_format = audio_fidl::DaiSampleFormat::PCM_SIGNED,
                       .frame_format = FrameFormat::I2S};
-  zx::status<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
+  zx::result<CodecFormatInfo> codec_format_info = client.SetDaiFormat(std::move(format));
   ASSERT_EQ(codec_format_info.status_value(), ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -432,7 +432,7 @@ TEST_F(SimpleCodecTest, Inspect) {
 TEST_F(SimpleCodecTest, InspectNoUniqueId) {
   struct TestCodecNoUniqueId : public TestCodec {
     explicit TestCodecNoUniqueId(zx_device_t* parent) : TestCodec(parent) {}
-    zx::status<DriverIds> Initialize() override {
+    zx::result<DriverIds> Initialize() override {
       return zx::ok(
           DriverIds{.vendor_id = 0, .device_id = 0, .instance_count = kTestInstanceCount});
     }

@@ -67,13 +67,13 @@ class DataSinkImpl {
   DataSinkImpl(fbl::unique_fd devfs_root, std::unique_ptr<DevicePartitioner> partitioner)
       : devfs_root_(std::move(devfs_root)), partitioner_(std::move(partitioner)) {}
 
-  zx::status<fuchsia_mem::wire::Buffer> ReadAsset(fuchsia_paver::wire::Configuration configuration,
+  zx::result<fuchsia_mem::wire::Buffer> ReadAsset(fuchsia_paver::wire::Configuration configuration,
                                                   fuchsia_paver::wire::Asset asset);
 
-  zx::status<> WriteAsset(fuchsia_paver::wire::Configuration configuration,
+  zx::result<> WriteAsset(fuchsia_paver::wire::Configuration configuration,
                           fuchsia_paver::wire::Asset asset, fuchsia_mem::wire::Buffer payload);
 
-  zx::status<> WriteOpaqueVolume(fuchsia_mem::wire::Buffer payload);
+  zx::result<> WriteOpaqueVolume(fuchsia_mem::wire::Buffer payload);
 
   // FIDL llcpp unions don't currently support memory ownership so we need to
   // return something that does own the underlying memory.
@@ -84,14 +84,14 @@ class DataSinkImpl {
                                                 fidl::StringView type,
                                                 fuchsia_mem::wire::Buffer payload);
 
-  zx::status<fuchsia_mem::wire::Buffer> ReadFirmware(
+  zx::result<fuchsia_mem::wire::Buffer> ReadFirmware(
       fuchsia_paver::wire::Configuration configuration, fidl::StringView type);
 
-  zx::status<> WriteVolumes(zx::channel payload_stream);
+  zx::result<> WriteVolumes(zx::channel payload_stream);
 
-  zx::status<> WriteBootloader(fuchsia_mem::wire::Buffer payload);
+  zx::result<> WriteBootloader(fuchsia_mem::wire::Buffer payload);
 
-  zx::status<zx::channel> WipeVolume();
+  zx::result<zx::channel> WipeVolume();
 
   DevicePartitioner* partitioner() { return partitioner_.get(); }
 
@@ -126,7 +126,7 @@ class DataSink : public fidl::WireServer<fuchsia_paver::DataSink> {
 
   void WriteOpaqueVolume(WriteOpaqueVolumeRequestView request,
                          WriteOpaqueVolumeCompleter::Sync& completer) override {
-    zx::status<> res = sink_.WriteOpaqueVolume(std::move(request->payload));
+    zx::result<> res = sink_.WriteOpaqueVolume(std::move(request->payload));
     if (res.is_ok()) {
       completer.ReplySuccess();
     } else {
@@ -183,7 +183,7 @@ class DynamicDataSink : public fidl::WireServer<fuchsia_paver::DynamicDataSink> 
 
   void WriteOpaqueVolume(WriteOpaqueVolumeRequestView request,
                          WriteOpaqueVolumeCompleter::Sync& completer) override {
-    zx::status<> res = sink_.WriteOpaqueVolume(std::move(request->payload));
+    zx::result<> res = sink_.WriteOpaqueVolume(std::move(request->payload));
     if (res.is_ok()) {
       completer.ReplySuccess();
     } else {

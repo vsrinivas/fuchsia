@@ -75,7 +75,7 @@ TxQueue::SessionTransaction::SessionTransaction(cpp20::span<tx_buffer_t> buffers
   available_ = queue_->parent_->IsDataPlaneOpen() ? queue_->in_flight_->available() : 0;
 }
 
-zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
+zx::result<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
   // The Tx queue capacity is based on the underlying device's tx queue capacity.
   auto capacity = parent->info().tx_depth;
 
@@ -87,13 +87,13 @@ zx::status<std::unique_ptr<TxQueue>> TxQueue::Create(DeviceInterface* parent) {
 
   fbl::AutoLock lock(&queue->parent_->tx_lock());
 
-  zx::status return_queue = RingQueue<uint32_t>::Create(capacity);
+  zx::result return_queue = RingQueue<uint32_t>::Create(capacity);
   if (return_queue.is_error()) {
     return return_queue.take_error();
   }
   queue->return_queue_ = std::move(return_queue.value());
 
-  zx::status in_flight = IndexedSlab<InFlightBuffer>::Create(capacity);
+  zx::result in_flight = IndexedSlab<InFlightBuffer>::Create(capacity);
   if (in_flight.is_error()) {
     return in_flight.take_error();
   }

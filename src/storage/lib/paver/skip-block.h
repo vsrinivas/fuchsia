@@ -24,11 +24,11 @@ class SkipBlockDevicePartitioner {
   explicit SkipBlockDevicePartitioner(fbl::unique_fd devfs_root)
       : devfs_root_(std::move(devfs_root)) {}
 
-  zx::status<std::unique_ptr<SkipBlockPartitionClient>> FindPartition(const uuid::Uuid& type) const;
+  zx::result<std::unique_ptr<SkipBlockPartitionClient>> FindPartition(const uuid::Uuid& type) const;
 
-  zx::status<std::unique_ptr<PartitionClient>> FindFvmPartition() const;
+  zx::result<std::unique_ptr<PartitionClient>> FindFvmPartition() const;
 
-  zx::status<> WipeFvm() const;
+  zx::result<> WipeFvm() const;
 
   fbl::unique_fd& devfs_root() { return devfs_root_; }
 
@@ -42,12 +42,12 @@ class SkipBlockPartitionClient : public PartitionClient {
       fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock> partition)
       : partition_(std::move(partition)) {}
 
-  zx::status<size_t> GetBlockSize() override;
-  zx::status<size_t> GetPartitionSize() override;
-  zx::status<> Read(const zx::vmo& vmo, size_t size) override;
-  zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) override;
-  zx::status<> Trim() override;
-  zx::status<> Flush() override;
+  zx::result<size_t> GetBlockSize() override;
+  zx::result<size_t> GetPartitionSize() override;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) override;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) override;
+  zx::result<> Trim() override;
+  zx::result<> Flush() override;
 
   fidl::ClientEnd<fuchsia_hardware_skipblock::SkipBlock> GetChannel();
 
@@ -60,10 +60,10 @@ class SkipBlockPartitionClient : public PartitionClient {
   SkipBlockPartitionClient& operator=(SkipBlockPartitionClient&&) = delete;
 
  protected:
-  zx::status<> WriteBytes(const zx::vmo& vmo, zx_off_t offset, size_t vmo_size);
+  zx::result<> WriteBytes(const zx::vmo& vmo, zx_off_t offset, size_t vmo_size);
 
  private:
-  zx::status<> ReadPartitionInfo();
+  zx::result<> ReadPartitionInfo();
 
   fidl::WireSyncClient<fuchsia_hardware_skipblock::SkipBlock> partition_;
   std::optional<fuchsia_hardware_skipblock::wire::PartitionInfo> partition_info_;

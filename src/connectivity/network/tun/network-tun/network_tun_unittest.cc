@@ -27,10 +27,10 @@ namespace {
 constexpr zx::duration kTimeout = zx::duration::infinite();
 constexpr uint8_t kDefaultTestPort = 2;
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWatcher(
+zx::result<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWatcher(
     const fidl::ClientEnd<fuchsia_hardware_network::Device>& device,
     fuchsia_hardware_network::wire::PortId port, uint32_t buffer) {
-  zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   if (port_endpoints.is_error()) {
     return port_endpoints.take_error();
   }
@@ -42,7 +42,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
     }
   }
 
-  zx::status watcher_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::StatusWatcher>();
+  zx::result watcher_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::StatusWatcher>();
   if (watcher_endpoints.is_error()) {
     return watcher_endpoints.take_error();
   }
@@ -58,20 +58,20 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::StatusWatcher>> GetStatusWa
   return zx::ok(std::move(watcher_endpoints->client));
 }
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_network::MacAddressing>> GetMacAddressing(
+zx::result<fidl::ClientEnd<fuchsia_hardware_network::MacAddressing>> GetMacAddressing(
     fidl::WireSyncClient<fuchsia_net_tun::Device>& tun,
     fuchsia_hardware_network::wire::PortId port_id) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
 
-  zx::status device = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  zx::result device = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
   if (device.is_error()) {
     return device.take_error();
   }
 
-  zx::status port = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+  zx::result port = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   if (port.is_error()) {
     return port.take_error();
   }
@@ -92,9 +92,9 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_network::MacAddressing>> GetMacAddre
   return zx::ok(std::move(endpoints->client));
 }
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_network::PortWatcher>> GetPortWatcher(
+zx::result<fidl::ClientEnd<fuchsia_hardware_network::PortWatcher>> GetPortWatcher(
     fidl::ClientEnd<fuchsia_hardware_network::Device>& device) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::PortWatcher>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::PortWatcher>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -153,7 +153,7 @@ struct OwnedPortEvent {
   std::optional<fuchsia_hardware_network::wire::PortId> port_id;
 };
 
-zx::status<OwnedPortEvent> WatchPorts(
+zx::result<OwnedPortEvent> WatchPorts(
     fidl::WireSyncClient<fuchsia_hardware_network::PortWatcher>& port_watcher) {
   fidl::WireResult result = port_watcher->Watch();
   if (!result.ok()) {
@@ -162,9 +162,9 @@ zx::status<OwnedPortEvent> WatchPorts(
   return zx::ok(OwnedPortEvent(result.value().event));
 }
 
-zx::status<fuchsia_hardware_network::wire::PortId> GetPortId(
+zx::result<fuchsia_hardware_network::wire::PortId> GetPortId(
     fit::function<zx_status_t(fidl::ServerEnd<fuchsia_hardware_network::Port>)> get_port) {
-  zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -184,24 +184,24 @@ zx::status<fuchsia_hardware_network::wire::PortId> GetPortId(
   return zx::ok(port_info.id());
 }
 
-zx::status<fuchsia_hardware_network::wire::PortId> GetPortId(
+zx::result<fuchsia_hardware_network::wire::PortId> GetPortId(
     const fidl::ClientEnd<fuchsia_net_tun::Port>& tun_port) {
   return GetPortId([&tun_port](fidl::ServerEnd<fuchsia_hardware_network::Port> server) {
     return fidl::WireCall(tun_port)->GetPort(std::move(server)).status();
   });
 }
 
-zx::status<
+zx::result<
     std::tuple<fuchsia_hardware_network::wire::PortId, fuchsia_hardware_network::wire::PortId>>
 GetPairPortIds(uint8_t port_id, const fidl::ClientEnd<fuchsia_net_tun::DevicePair>& tun_pair) {
-  zx::status left =
+  zx::result left =
       GetPortId([&tun_pair, &port_id](fidl::ServerEnd<fuchsia_hardware_network::Port> server) {
         return fidl::WireCall(tun_pair)->GetLeftPort(port_id, std::move(server)).status();
       });
   if (left.is_error()) {
     return left.take_error();
   }
-  zx::status right =
+  zx::result right =
       GetPortId([&tun_pair, &port_id](fidl::ServerEnd<fuchsia_hardware_network::Port> server) {
         return fidl::WireCall(tun_pair)->GetRightPort(port_id, std::move(server)).status();
       });
@@ -223,8 +223,8 @@ class SimpleClient {
 
   SimpleClient() = default;
 
-  zx::status<fidl::ServerEnd<fuchsia_hardware_network::Device>> NewRequest() {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  zx::result<fidl::ServerEnd<fuchsia_hardware_network::Device>> NewRequest() {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
     if (!endpoints.is_ok()) {
       return endpoints.take_error();
     }
@@ -420,7 +420,7 @@ class SimpleClient {
   }
 
   zx_status_t WaitOnline(fuchsia_hardware_network::wire::PortId port) {
-    zx::status watcher = GetStatusWatcher(device().client_end(), port, 5);
+    zx::result watcher = GetStatusWatcher(device().client_end(), port, 5);
     if (watcher.is_error()) {
       return watcher.error_value();
     }
@@ -498,8 +498,8 @@ class TunTest : public gtest::RealLoopFixture {
     tun_ctl_loop_.Shutdown();
   }
 
-  zx::status<fidl::WireSyncClient<fuchsia_net_tun::Control>> Connect() {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Control>();
+  zx::result<fidl::WireSyncClient<fuchsia_net_tun::Control>> Connect() {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Control>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
@@ -556,13 +556,13 @@ class TunTest : public gtest::RealLoopFixture {
     return config;
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_net_tun::Device>> CreateDevice(
+  zx::result<fidl::ClientEnd<fuchsia_net_tun::Device>> CreateDevice(
       fuchsia_net_tun::wire::DeviceConfig config) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Device>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Device>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    zx::status tun = Connect();
+    zx::result tun = Connect();
     if (tun.is_error()) {
       return tun.take_error();
     }
@@ -574,17 +574,17 @@ class TunTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(endpoints->client));
   }
 
-  zx::status<
+  zx::result<
       std::pair<fidl::ClientEnd<fuchsia_net_tun::Device>, fidl::ClientEnd<fuchsia_net_tun::Port>>>
   CreateDeviceAndPort(fuchsia_net_tun::wire::DeviceConfig device_config,
                       fuchsia_net_tun::wire::DevicePortConfig port_config) {
-    zx::status device = CreateDevice(std::move(device_config));
+    zx::result device = CreateDevice(std::move(device_config));
     if (device.is_error()) {
       return device.take_error();
     }
     fidl::WireSyncClient client{std::move(*device)};
 
-    zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Port>();
+    zx::result port_endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Port>();
     if (port_endpoints.is_error()) {
       return port_endpoints.take_error();
     }
@@ -597,13 +597,13 @@ class TunTest : public gtest::RealLoopFixture {
     return zx::ok(std::make_pair(client.TakeClientEnd(), std::move(port_endpoints->client)));
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_net_tun::DevicePair>> CreatePair(
+  zx::result<fidl::ClientEnd<fuchsia_net_tun::DevicePair>> CreatePair(
       fuchsia_net_tun::wire::DevicePairConfig config) {
-    zx::status endpoints = fidl::CreateEndpoints<fuchsia_net_tun::DevicePair>();
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_net_tun::DevicePair>();
     if (endpoints.is_error()) {
       return endpoints.take_error();
     }
-    zx::status tun = Connect();
+    zx::result tun = Connect();
     if (tun.is_error()) {
       return tun.take_error();
     }
@@ -615,10 +615,10 @@ class TunTest : public gtest::RealLoopFixture {
     return zx::ok(std::move(endpoints->client));
   }
 
-  zx::status<fidl::ClientEnd<fuchsia_net_tun::DevicePair>> CreatePairAndPort(
+  zx::result<fidl::ClientEnd<fuchsia_net_tun::DevicePair>> CreatePairAndPort(
       fuchsia_net_tun::wire::DevicePairConfig device_config,
       fuchsia_net_tun::wire::DevicePairPortConfig port_config) {
-    zx::status pair_status = CreatePair(std::move(device_config));
+    zx::result pair_status = CreatePair(std::move(device_config));
     if (pair_status.is_error()) {
       return pair_status.take_error();
     }
@@ -654,13 +654,13 @@ class CapturingEventHandler : public fidl::WireAsyncEventHandler<T> {
 };
 
 TEST_F(TunTest, InvalidPortConfigs) {
-  zx::status status = CreateDevice(DefaultDeviceConfig());
+  zx::result status = CreateDevice(DefaultDeviceConfig());
   ASSERT_OK(status.status_value());
   fidl::WireSyncClient device{std::move(status.value())};
 
   auto wait_for_error = [this,
                          &device](fuchsia_net_tun::wire::DevicePortConfig config) -> zx_status_t {
-    zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Port>();
+    zx::result port_endpoints = fidl::CreateEndpoints<fuchsia_net_tun::Port>();
     if (port_endpoints.is_error()) {
       return port_endpoints.status_value();
     }
@@ -723,10 +723,10 @@ TEST_F(TunTest, InvalidPortConfigs) {
 }
 
 TEST_F(TunTest, ConnectNetworkDevice) {
-  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
   ASSERT_OK(device_endpoints.status_value());
 
-  zx::status client_end = CreateDevice(DefaultDeviceConfig());
+  zx::result client_end = CreateDevice(DefaultDeviceConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient tun{std::move(client_end.value())};
   ASSERT_OK(tun->GetDevice(std::move(device_endpoints->server)).status());
@@ -737,14 +737,14 @@ TEST_F(TunTest, ConnectNetworkDevice) {
 }
 
 TEST_F(TunTest, Teardown) {
-  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
   ASSERT_OK(device_endpoints.status_value());
-  zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   ASSERT_OK(port_endpoints.status_value());
-  zx::status mac_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
+  zx::result mac_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::MacAddressing>();
   ASSERT_OK(mac_endpoints.status_value());
 
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
@@ -752,7 +752,7 @@ TEST_F(TunTest, Teardown) {
 
   ASSERT_OK(tun->GetDevice(std::move(device_endpoints->server)).status());
 
-  zx::status port_id = GetPortId(port_client_end);
+  zx::result port_id = GetPortId(port_client_end);
   ASSERT_OK(port_id.status_value());
   ASSERT_OK(fidl::WireCall(device_endpoints->client)
                 ->GetPort(port_id.value(), std::move(port_endpoints->server))
@@ -787,15 +787,15 @@ TEST_F(TunTest, Teardown) {
 }
 
 TEST_F(TunTest, Status) {
-  zx::status device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
+  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Device>();
   ASSERT_OK(device_endpoints.status_value());
 
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const netdev::wire::PortId port_id = maybe_port_id.value();
 
@@ -805,7 +805,7 @@ TEST_F(TunTest, Status) {
   ASSERT_OK(tun->GetDevice(std::move(device_endpoints->server)).status());
   fidl::WireSyncClient device{std::move(device_endpoints->client)};
 
-  zx::status port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
+  zx::result port_endpoints = fidl::CreateEndpoints<fuchsia_hardware_network::Port>();
   ASSERT_OK(port_endpoints.status_value());
   {
     fidl::WireResult result = device->GetPort(port_id, std::move(port_endpoints->server));
@@ -821,7 +821,7 @@ TEST_F(TunTest, Status) {
     ASSERT_EQ(port_status.flags(), fuchsia_hardware_network::wire::StatusFlags());
   }
 
-  zx::status watcher_status = GetStatusWatcher(device.client_end(), port_id, 5);
+  zx::result watcher_status = GetStatusWatcher(device.client_end(), port_id, 5);
   ASSERT_OK(watcher_status.status_value());
   fidl::WireSyncClient watcher{std::move(watcher_status.value())};
   {
@@ -860,18 +860,18 @@ TEST_F(TunTest, Mac) {
   fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
   fuchsia_net::wire::MacAddress unicast = port_config.mac();
 
-  zx::status device_and_port = CreateDeviceAndPort(DefaultDeviceConfig(), std::move(port_config));
+  zx::result device_and_port = CreateDeviceAndPort(DefaultDeviceConfig(), std::move(port_config));
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
   fidl::WireSyncClient tun{std::move(device_client_end)};
   fidl::WireSyncClient tun_port{std::move(port_client_end)};
 
-  zx::status mac_status = GetMacAddressing(tun, port_id);
+  zx::result mac_status = GetMacAddressing(tun, port_id);
   ASSERT_OK(mac_status.status_value());
   fidl::WireSyncClient mac{std::move(mac_status.value())};
 
@@ -927,18 +927,18 @@ TEST_F(TunTest, NoMac) {
   // Remove mac information.
   port_config.set_mac(nullptr);
 
-  zx::status device_and_port = CreateDeviceAndPort(DefaultDeviceConfig(), std::move(port_config));
+  zx::result device_and_port = CreateDeviceAndPort(DefaultDeviceConfig(), std::move(port_config));
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
   fidl::WireSyncClient tun{std::move(device_client_end)};
   fidl::WireSyncClient tun_port{std::move(port_client_end)};
 
-  zx::status mac_status = GetMacAddressing(tun, port_id);
+  zx::result mac_status = GetMacAddressing(tun, port_id);
   ASSERT_OK(mac_status.status_value());
 
   // Mac channel should be closed because we created tun without a mac information.
@@ -960,19 +960,19 @@ TEST_F(TunTest, SimpleRxTx) {
   port_config.set_online(true);
   device_config.set_blocking(false);
 
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(std::move(device_config), std::move(port_config));
   ASSERT_OK(device_and_port.status_value());
   auto [device_client_end, port_client_end] = std::move(device_and_port.value());
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
   fidl::WireSyncClient tun{std::move(device_client_end)};
 
   SimpleClient client;
-  zx::status request = client.NewRequest();
+  zx::result request = client.NewRequest();
   ASSERT_OK(request.status_value());
   ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
@@ -1087,19 +1087,19 @@ TEST_F(TunTest, SimpleRxTx) {
 TEST_F(TunTest, PairRxTx) {
   SimpleClient left, right;
 
-  zx::status left_request = left.NewRequest();
+  zx::result left_request = left.NewRequest();
   ASSERT_OK(left_request.status_value());
-  zx::status right_request = right.NewRequest();
+  zx::result right_request = right.NewRequest();
   ASSERT_OK(right_request.status_value());
 
-  zx::status client_end =
+  zx::result client_end =
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair{std::move(client_end.value())};
   ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
   ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
-  zx::status maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
+  zx::result maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
   ASSERT_OK(maybe_port_id.status_value());
   const auto [left_port_id, right_port_id] = maybe_port_id.value();
 
@@ -1134,19 +1134,19 @@ TEST_F(TunTest, PairRxTx) {
 TEST_F(TunTest, PairOnlineSignal) {
   SimpleClient left, right;
 
-  zx::status left_request = left.NewRequest();
+  zx::result left_request = left.NewRequest();
   ASSERT_OK(left_request.status_value());
-  zx::status right_request = right.NewRequest();
+  zx::result right_request = right.NewRequest();
   ASSERT_OK(right_request.status_value());
 
-  zx::status client_end =
+  zx::result client_end =
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair{std::move(client_end.value())};
   ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
   ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
-  zx::status maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
+  zx::result maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
   ASSERT_OK(maybe_port_id.status_value());
   const auto [left_port_id, right_port_id] = maybe_port_id.value();
 
@@ -1156,11 +1156,11 @@ TEST_F(TunTest, PairOnlineSignal) {
   constexpr uint32_t kWatcherBufferLength = 2;
 
   // Online status should be false for both sides before a session is opened.
-  zx::status left_watcher_status =
+  zx::result left_watcher_status =
       GetStatusWatcher(left.device().client_end(), left_port_id, kWatcherBufferLength);
   ASSERT_OK(left_watcher_status.status_value());
   fidl::WireSyncClient left_watcher{std::move(left_watcher_status.value())};
-  zx::status right_watcher_status =
+  zx::result right_watcher_status =
       GetStatusWatcher(right.device().client_end(), right_port_id, kWatcherBufferLength);
   ASSERT_OK(right_watcher_status.status_value());
   fidl::WireSyncClient right_watcher =
@@ -1206,21 +1206,21 @@ TEST_F(TunTest, PairOnlineSignal) {
 TEST_F(TunTest, PairFallibleWrites) {
   SimpleClient left, right;
 
-  zx::status left_request = left.NewRequest();
+  zx::result left_request = left.NewRequest();
   ASSERT_OK(left_request.status_value());
-  zx::status right_request = right.NewRequest();
+  zx::result right_request = right.NewRequest();
   ASSERT_OK(right_request.status_value());
 
   fuchsia_net_tun::wire::DevicePairConfig config = DefaultDevicePairConfig();
   config.set_fallible_transmit_left(true);
 
-  zx::status client_end = CreatePairAndPort(std::move(config), DefaultDevicePairPortConfig());
+  zx::result client_end = CreatePairAndPort(std::move(config), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair{std::move(client_end.value())};
   ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
   ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
-  zx::status maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
+  zx::result maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
   ASSERT_OK(maybe_port_id.status_value());
   const auto [left_port_id, right_port_id] = maybe_port_id.value();
 
@@ -1245,19 +1245,19 @@ TEST_F(TunTest, PairFallibleWrites) {
 TEST_F(TunTest, PairInfallibleWrites) {
   SimpleClient left, right;
 
-  zx::status left_request = left.NewRequest();
+  zx::result left_request = left.NewRequest();
   ASSERT_OK(left_request.status_value());
-  zx::status right_request = right.NewRequest();
+  zx::result right_request = right.NewRequest();
   ASSERT_OK(right_request.status_value());
 
-  zx::status client_end =
+  zx::result client_end =
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair{std::move(client_end.value())};
   ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
   ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
-  zx::status maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
+  zx::result maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
   ASSERT_OK(maybe_port_id.status_value());
   const auto [left_port_id, right_port_id] = maybe_port_id.value();
 
@@ -1283,7 +1283,7 @@ TEST_F(TunTest, PairInfallibleWrites) {
 }
 
 TEST_F(TunTest, RejectsMissingFrameFields) {
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
 
   ASSERT_OK(device_and_port.status_value());
@@ -1361,12 +1361,12 @@ TEST_F(TunTest, RejectsMissingFrameFields) {
 }
 
 TEST_F(TunTest, RejectsIfOffline) {
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(DefaultDeviceConfig(), DefaultDevicePortConfig());
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
@@ -1374,7 +1374,7 @@ TEST_F(TunTest, RejectsIfOffline) {
   fidl::WireSyncClient tun_port{std::move(port_client_end)};
 
   SimpleClient client;
-  zx::status request = client.NewRequest();
+  zx::result request = client.NewRequest();
   ASSERT_OK(request.status_value());
   ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
@@ -1452,19 +1452,19 @@ TEST_F(TunTest, RejectsIfOffline) {
 TEST_F(TunTest, PairEcho) {
   SimpleClient left, right;
 
-  zx::status left_request = left.NewRequest();
+  zx::result left_request = left.NewRequest();
   ASSERT_OK(left_request.status_value());
-  zx::status right_request = right.NewRequest();
+  zx::result right_request = right.NewRequest();
   ASSERT_OK(right_request.status_value());
 
-  zx::status client_end =
+  zx::result client_end =
       CreatePairAndPort(DefaultDevicePairConfig(), DefaultDevicePairPortConfig());
   ASSERT_OK(client_end.status_value());
   fidl::WireSyncClient device_pair{std::move(client_end.value())};
   ASSERT_OK(device_pair->GetLeft(std::move(left_request.value())).status());
   ASSERT_OK(device_pair->GetRight(std::move(right_request.value())).status());
 
-  zx::status maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
+  zx::result maybe_port_id = GetPairPortIds(kDefaultTestPort, device_pair.client_end());
   ASSERT_OK(maybe_port_id.status_value());
   const auto [left_port_id, right_port_id] = maybe_port_id.value();
 
@@ -1544,12 +1544,12 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
   // buffer into FIDL and fails because we've removed the VMOs. If the call was blocking it'd block
   // forever and we wouldn't be able to use a sync client here.
   device_config.set_blocking(false);
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(std::move(device_config), std::move(port_config));
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
@@ -1557,7 +1557,7 @@ TEST_F(TunTest, ReportsInternalTxErrors) {
   fidl::WireSyncClient tun_port{std::move(port_client_end)};
 
   SimpleClient client;
-  zx::status request = client.NewRequest();
+  zx::result request = client.NewRequest();
   ASSERT_OK(request.status_value());
   ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
@@ -1611,19 +1611,19 @@ TEST_F(TunTest, ChainsRxBuffers) {
   base_device_config.set_min_rx_buffer_length(kRxBufferSize);
   device_config.set_base(alloc_, std::move(base_device_config));
 
-  zx::status device_and_port =
+  zx::result device_and_port =
       CreateDeviceAndPort(std::move(device_config), std::move(port_config));
   ASSERT_OK(device_and_port.status_value());
   auto& [device_client_end, port_client_end] = *device_and_port;
 
-  zx::status maybe_port_id = GetPortId(port_client_end);
+  zx::result maybe_port_id = GetPortId(port_client_end);
   ASSERT_OK(maybe_port_id.status_value());
   const fuchsia_hardware_network::wire::PortId port_id = maybe_port_id.value();
 
   fidl::WireSyncClient tun{std::move(device_client_end)};
 
   SimpleClient client;
-  zx::status request = client.NewRequest();
+  zx::result request = client.NewRequest();
   ASSERT_OK(request.status_value());
   ASSERT_OK(tun->GetDevice(std::move(request.value())).status());
   ASSERT_OK(client.OpenSession());
@@ -1680,22 +1680,22 @@ MATCHER_P(IsRemovedPortEvent, port, "") {
 }
 
 TEST_F(TunTest, AddRemovePorts) {
-  zx::status device_result = CreateDevice(DefaultDeviceConfig());
+  zx::result device_result = CreateDevice(DefaultDeviceConfig());
   ASSERT_OK(device_result.status_value());
   fidl::WireSyncClient tun{std::move(*device_result)};
 
   fidl::ClientEnd<fuchsia_hardware_network::Device> device;
   {
-    zx::status server_end = fidl::CreateEndpoints(&device);
+    zx::result server_end = fidl::CreateEndpoints(&device);
     ASSERT_OK(server_end.status_value());
     ASSERT_OK(tun->GetDevice(std::move(*server_end)).status());
   }
-  zx::status port_watcher_result = GetPortWatcher(device);
+  zx::result port_watcher_result = GetPortWatcher(device);
   ASSERT_OK(port_watcher_result.status_value());
   fidl::WireSyncClient port_watcher{std::move(*port_watcher_result)};
 
   {
-    zx::status event = WatchPorts(port_watcher);
+    zx::result event = WatchPorts(port_watcher);
     ASSERT_OK(event.status_value());
     ASSERT_THAT(event.value(), IsIdlePortEvent());
   }
@@ -1720,18 +1720,18 @@ TEST_F(TunTest, AddRemovePorts) {
 
   for (auto& port : ports) {
     SCOPED_TRACE(port.name);
-    zx::status server_end = fidl::CreateEndpoints(&port.client_end);
+    zx::result server_end = fidl::CreateEndpoints(&port.client_end);
     ASSERT_OK(server_end.status_value());
     fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
     port_config.base().set_id(port.id.base);
     ASSERT_OK(tun->AddPort(std::move(port_config), std::move(*server_end)).status());
 
-    zx::status port_id = GetPortId(port.client_end);
+    zx::result port_id = GetPortId(port.client_end);
     ASSERT_OK(port_id.status_value());
     ASSERT_EQ(port_id.value().base, port.id.base);
     port.id = port_id.value();
 
-    zx::status event = WatchPorts(port_watcher);
+    zx::result event = WatchPorts(port_watcher);
     ASSERT_OK(event.status_value());
     ASSERT_THAT(event.value(), IsAddedPortEvent(port.id));
   }
@@ -1739,7 +1739,7 @@ TEST_F(TunTest, AddRemovePorts) {
   // Adding the same port again returns the appropriate error.
   {
     fidl::ClientEnd<fuchsia_net_tun::Port> client_end;
-    zx::status server_end = fidl::CreateEndpoints(&client_end);
+    zx::result server_end = fidl::CreateEndpoints(&client_end);
     ASSERT_OK(server_end.status_value());
     fuchsia_net_tun::wire::DevicePortConfig port_config = DefaultDevicePortConfig();
     port_config.base().set_id(ports[0].id.base);
@@ -1763,14 +1763,14 @@ TEST_F(TunTest, AddRemovePorts) {
       port.client_end.reset();
     }
 
-    zx::status event = WatchPorts(port_watcher);
+    zx::result event = WatchPorts(port_watcher);
     ASSERT_OK(event.status_value());
     ASSERT_THAT(event.value(), IsRemovedPortEvent(port.id));
   }
 }
 
 TEST_F(TunTest, AddRemovePairPorts) {
-  zx::status pair_result = CreatePair(DefaultDevicePairConfig());
+  zx::result pair_result = CreatePair(DefaultDevicePairConfig());
   ASSERT_OK(pair_result.status_value());
   fidl::WireSyncClient tun{std::move(*pair_result)};
 
@@ -1785,18 +1785,18 @@ TEST_F(TunTest, AddRemovePairPorts) {
   };
   for (auto& end : ends) {
     SCOPED_TRACE(end.name);
-    zx::status server_end = fidl::CreateEndpoints(&end.device);
+    zx::result server_end = fidl::CreateEndpoints(&end.device);
     ASSERT_OK(server_end.status_value());
     if (end.left) {
       ASSERT_OK(tun->GetLeft(std::move(*server_end)).status());
     } else {
       ASSERT_OK(tun->GetRight(std::move(*server_end)).status());
     }
-    zx::status port_watcher_result = GetPortWatcher(end.device);
+    zx::result port_watcher_result = GetPortWatcher(end.device);
     ASSERT_OK(port_watcher_result.status_value());
     end.watcher = fidl::WireSyncClient(std::move(*port_watcher_result));
 
-    zx::status event = WatchPorts(end.watcher);
+    zx::result event = WatchPorts(end.watcher);
     ASSERT_OK(event.status_value());
 
     ASSERT_THAT(event.value(), IsIdlePortEvent());
@@ -1826,7 +1826,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->is_ok()) << zx_status_get_string(result->error_value());
 
-    zx::status port_id = GetPairPortIds(port.base_id, tun.client_end());
+    zx::result port_id = GetPairPortIds(port.base_id, tun.client_end());
     ASSERT_OK(port_id.status_value());
     const auto [left_id, right_id] = port_id.value();
     ASSERT_EQ(left_id.base, port.base_id);
@@ -1836,7 +1836,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
 
     for (auto& end : ends) {
       SCOPED_TRACE(end.name);
-      zx::status event = WatchPorts(end.watcher);
+      zx::result event = WatchPorts(end.watcher);
       ASSERT_OK(event.status_value());
       const fuchsia_hardware_network::wire::PortId port_id = [&port, &end]() {
         if (end.left) {
@@ -1867,7 +1867,7 @@ TEST_F(TunTest, AddRemovePairPorts) {
 
     for (auto& end : ends) {
       SCOPED_TRACE(end.name);
-      zx::status event = WatchPorts(end.watcher);
+      zx::result event = WatchPorts(end.watcher);
       ASSERT_OK(event.status_value());
       const fuchsia_hardware_network::wire::PortId port_id = [&port, &end]() {
         if (end.left) {

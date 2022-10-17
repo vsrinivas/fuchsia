@@ -412,7 +412,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   // This requires that we've buffered enough data to decode the seek table.
   if (write_info_->data_format == CompressionAlgorithm::kChunked &&
       write_info_->streaming_decompressor == nullptr) {
-    zx::status status = InitializeDecompressor(write_info_->bytes_written + to_write);
+    zx::result status = InitializeDecompressor(write_info_->bytes_written + to_write);
     if (status.is_error()) {
       return status.error_value();
     }
@@ -439,7 +439,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
   // Update the Merkle tree with the incoming data. If the blob is pre-compressed, we use the
   // decompressor to update the Merkle tree via a callback, otherwise we update it directly..
   if (write_info_->streaming_decompressor) {
-    zx::status status =
+    zx::result status =
         write_info_->streaming_decompressor->Update({static_cast<const uint8_t*>(data), to_write});
     if (status.is_error()) {
       return status.error_value();
@@ -514,7 +514,7 @@ zx_status_t Blob::Commit() {
   } else if (write_info_->compressor) {
     // In this case, we've decided against compressing because there are no savings, so we have to
     // decompress.
-    zx::status producer_or =
+    zx::result producer_or =
         DecompressBlobDataProducer::Create(*write_info_->compressor, blob_size_);
     if (producer_or.is_error()) {
       return producer_or.error_value();
@@ -847,7 +847,7 @@ zx_status_t Blob::LoadPagedVmosFromDisk() {
     set_overridden_cache_policy(*cache_policy);
   }
 
-  zx::status<LoaderInfo> load_info_or =
+  zx::result<LoaderInfo> load_info_or =
       blobfs_->loader().LoadBlob(map_index_, &blobfs_->blob_corruption_notifier());
   if (load_info_or.is_error())
     return load_info_or.error_value();
@@ -1089,7 +1089,7 @@ zx_status_t Blob::Truncate(size_t len) {
 
 #ifdef __Fuchsia__
 
-zx::status<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
+zx::result<std::string> Blob::GetDevicePath() const { return blobfs_->Device()->GetDevicePath(); }
 
 zx_status_t Blob::GetVmo(fuchsia_io::wire::VmoFlags flags, zx::vmo* out_vmo) {
   static_assert(sizeof flags == sizeof(uint32_t),
@@ -1329,7 +1329,7 @@ zx_status_t Blob::InitializeBlobLayout() {
   ZX_DEBUG_ASSERT(blob_size_ > 0);
   ZX_DEBUG_ASSERT(write_info_->data_size > 0);
 
-  zx::status blob_layout_or = BlobLayout::CreateFromSizes(
+  zx::result blob_layout_or = BlobLayout::CreateFromSizes(
       GetBlobLayoutFormat(blobfs_->Info()), blob_size_, write_info_->data_size, kBlobfsBlockSize);
   if (blob_layout_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout_or.status_string();
@@ -1454,7 +1454,7 @@ zx_status_t Blob::WriteRemainingDataForDeprecatedFormat() {
   return ZX_OK;
 }
 
-zx::status<bool> Blob::InitializeDecompressor(size_t buff_pos) {
+zx::result<bool> Blob::InitializeDecompressor(size_t buff_pos) {
   // Try to load the seek table and initialize the decompressor.
   chunked_compression::HeaderReader reader;
   // We don't know the size of the file yet, so we have to pass the max value of a size_t.
@@ -1495,10 +1495,10 @@ zx::status<bool> Blob::InitializeDecompressor(size_t buff_pos) {
   if (zx_status_t status = InitializeMerkleBuffer(); status != ZX_OK) {
     return zx::error(status);
   }
-  zx::status decompressor_or = StreamingChunkedDecompressor::Create(
+  zx::result decompressor_or = StreamingChunkedDecompressor::Create(
       *blobfs_->decompression_connector(), write_info_->seek_table,
       [&merkle_tree_creator =
-           write_info_->merkle_tree_creator](cpp20::span<const uint8_t> data) -> zx::status<> {
+           write_info_->merkle_tree_creator](cpp20::span<const uint8_t> data) -> zx::result<> {
         if (zx_status_t status = merkle_tree_creator.Append(data.data(), data.size());
             status != ZX_OK) {
           FX_LOGS(ERROR) << "MerkleTreeCreator::Append failed: " << zx_status_get_string(status);

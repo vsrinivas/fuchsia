@@ -15,7 +15,7 @@ namespace netemul {
 // be enumerated under '/dev'.
 //
 // If successful, returns a `fbl::unique_fd` handle to the '/dev' directory.
-zx::status<fbl::unique_fd> StartDriverTestRealm();
+zx::result<fbl::unique_fd> StartDriverTestRealm();
 
 }  // namespace netemul
 

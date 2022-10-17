@@ -10,7 +10,7 @@
 
 namespace fs_management {
 
-zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
     std::string_view component_url, std::string_view component_child_name,
     std::optional<std::string_view> component_collection_name) {
   auto realm_client_end = component::Connect<fuchsia_component::Realm>();
@@ -72,7 +72,7 @@ zx::status<fidl::ClientEnd<fuchsia_io::Directory>> ConnectFsComponent(
   return zx::ok(std::move(client_end));
 }
 
-zx::status<> DestroyFsComponent(std::string_view component_child_name,
+zx::result<> DestroyFsComponent(std::string_view component_child_name,
                                 std::string_view component_collection_name) {
   auto realm_client_end = component::Connect<fuchsia_component::Realm>();
   if (realm_client_end.is_error())

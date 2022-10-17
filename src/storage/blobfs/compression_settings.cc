@@ -27,7 +27,7 @@ const char* CompressionAlgorithmToString(CompressionAlgorithm algorithm) {
   return "INVALID";
 }
 
-zx::status<CompressionAlgorithm> AlgorithmForInode(const Inode& inode) {
+zx::result<CompressionAlgorithm> AlgorithmForInode(const Inode& inode) {
   static_assert(kBlobFlagMaskAnyCompression == kBlobFlagChunkCompressed, "Missing algorithm case");
 
   switch (inode.header.flags & kBlobFlagMaskAnyCompression) {

@@ -128,7 +128,7 @@ static uint64_t Align(uint64_t offset, uint8_t alignment_log2, uint64_t first_al
   return ROUNDUP(offset - first_aligned_offset, 1UL << (offset_alignment)) + first_aligned_offset;
 }
 
-zx::status<uint64_t> PmmArena::FindLastNonFree(uint64_t offset, size_t count) const {
+zx::result<uint64_t> PmmArena::FindLastNonFree(uint64_t offset, size_t count) const {
   uint64_t i = offset + count - 1;
   do {
     if (!page_array_[i].is_free() || page_array_[i].is_loaned()) {
@@ -180,7 +180,7 @@ vm_page_t* PmmArena::FindFreeContiguous(size_t count, uint8_t alignment_log2) {
       // Is the candidate region free?  Walk the pages of the region back to
       // front, stopping at the first non-free page.
 
-      zx::status<uint64_t> last_non_free = FindLastNonFree(candidate, count);
+      zx::result<uint64_t> last_non_free = FindLastNonFree(candidate, count);
       if (last_non_free.is_error()) {
         // Candidate region is free.  We're done.
         search_hint_ = (candidate + count) % arena_count;

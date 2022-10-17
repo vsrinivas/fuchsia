@@ -24,7 +24,7 @@ class RingQueue {
   // Creates a new queue with the given capacity and stores it in `out`.
   // Returns an error if the provided capacity is invalid, or it failed to allocate the required
   // memory.
-  static zx::status<std::unique_ptr<RingQueue<T>>> Create(uint32_t capacity) {
+  static zx::result<std::unique_ptr<RingQueue<T>>> Create(uint32_t capacity) {
     if (capacity == 0) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
@@ -89,7 +89,7 @@ class IndexedSlab {
   // Creates a new slab with the given capacity and stores it in `out`.
   // Returns an error if the provided capacity is invalid, or it failed to allocate the required
   // memory.
-  static zx::status<std::unique_ptr<IndexedSlab<T>>> Create(uint32_t capacity) {
+  static zx::result<std::unique_ptr<IndexedSlab<T>>> Create(uint32_t capacity) {
     if (capacity == 0) {
       return zx::error(ZX_ERR_INVALID_ARGS);
     }

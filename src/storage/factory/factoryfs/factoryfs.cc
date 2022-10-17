@@ -66,7 +66,7 @@ zx_status_t Factoryfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out) {
   return ZX_OK;
 }
 
-zx::status<fs::FilesystemInfo> Factoryfs::GetFilesystemInfo() {
+zx::result<fs::FilesystemInfo> Factoryfs::GetFilesystemInfo() {
   fs::FilesystemInfo info;
 
   info.block_size = kFactoryfsBlockSize;
@@ -97,7 +97,7 @@ std::unique_ptr<BlockDevice> Factoryfs::Reset() {
   return std::move(block_device_);
 }
 
-zx::status<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dispatcher,
+zx::result<std::unique_ptr<Factoryfs>> Factoryfs::Create(async_dispatcher_t* dispatcher,
                                                          std::unique_ptr<BlockDevice> device,
                                                          MountOptions* options,
                                                          fs::FuchsiaVfs* vfs) {
@@ -220,7 +220,7 @@ zx_status_t Factoryfs::ParseEntries(Callback callback, void* parse_data) {
   return ZX_ERR_NOT_FOUND;
 }
 
-zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
+zx::result<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
     const std::string_view path) {
   if (path.empty()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
@@ -268,7 +268,7 @@ zx::status<std::unique_ptr<DirectoryEntryManager>> Factoryfs::LookupInternal(
   return zx::ok(std::move(out_entry));
 }
 
-zx::status<fbl::RefPtr<fs::Vnode>> Factoryfs::Lookup(const std::string_view path) {
+zx::result<fbl::RefPtr<fs::Vnode>> Factoryfs::Lookup(const std::string_view path) {
   auto iter = open_vnodes_cache_.find(path);
   if (iter != open_vnodes_cache_.end()) {
     return zx::ok(fbl::RefPtr(iter->second));

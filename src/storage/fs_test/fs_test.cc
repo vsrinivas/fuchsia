@@ -54,7 +54,7 @@ namespace {
 constexpr zx_duration_t kDeviceWaitTime = zx::sec(30).get();
 
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
-zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
+zx::result<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
     const TestFilesystemOptions& options) {
   if (options.use_ram_nand) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -63,18 +63,18 @@ zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
   zx::vmo vmo;
   if (options.vmo->is_valid()) {
     uint64_t vmo_size;
-    auto status = zx::make_status(options.vmo->get_size(&vmo_size));
+    auto status = zx::make_result(options.vmo->get_size(&vmo_size));
     if (status.is_error()) {
       return status.take_error();
     }
-    status = zx::make_status(options.vmo->create_child(ZX_VMO_CHILD_SLICE, 0, vmo_size, &vmo));
+    status = zx::make_result(options.vmo->create_child(ZX_VMO_CHILD_SLICE, 0, vmo_size, &vmo));
     if (status.is_error()) {
       return status.take_error();
     }
   } else {
     fzl::VmoMapper mapper;
     auto status =
-        zx::make_status(mapper.CreateAndMap(options.device_block_size * options.device_block_count,
+        zx::make_result(mapper.CreateAndMap(options.device_block_size * options.device_block_count,
                                             ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
     if (status.is_error()) {
       std::cout << "Unable to create VMO for ramdisk: " << status.status_string() << std::endl;
@@ -111,7 +111,7 @@ zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
 }
 
 // Creates a ram-nand device.  It does not create an FVM partition; that is left to the caller.
-zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
+zx::result<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
     const TestFilesystemOptions& options) {
   constexpr int kPageSize = 4096;
   constexpr int kPagesPerBlock = 64;
@@ -121,7 +121,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   zx::vmo vmo;
   if (options.vmo->is_valid()) {
     uint64_t vmo_size;
-    auto status = zx::make_status(options.vmo->get_size(&vmo_size));
+    auto status = zx::make_result(options.vmo->get_size(&vmo_size));
     if (status.is_error()) {
       return status.take_error();
     }
@@ -135,7 +135,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
       std::cout << "Bad device parameters" << std::endl;
       return zx::error(ZX_ERR_INVALID_ARGS);
     }
-    status = zx::make_status(options.vmo->create_child(ZX_VMO_CHILD_SLICE, 0, vmo_size, &vmo));
+    status = zx::make_result(options.vmo->create_child(ZX_VMO_CHILD_SLICE, 0, vmo_size, &vmo));
     if (status.is_error()) {
       return status.take_error();
     }
@@ -147,7 +147,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   }
 
   auto status =
-      zx::make_status(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
+      zx::make_result(wait_for_device("/dev/sys/platform/00:00:2e/nand-ctl", kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Failed waiting for /dev/sys/platform/00:00:2e/nand-ctl to appear: "
               << status.status_string() << std::endl;
@@ -168,14 +168,14 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
           },
       .fail_after = options.fail_after,
   };
-  status = zx::make_status(ramdevice_client::RamNand::Create(&config, &ram_nand));
+  status = zx::make_result(ramdevice_client::RamNand::Create(&config, &ram_nand));
   if (status.is_error()) {
     std::cout << "RamNand::Create failed: " << status.status_string() << std::endl;
     return status.take_error();
   }
 
   std::string ftl_path = std::string(ram_nand->path()) + "/ftl/block";
-  status = zx::make_status(wait_for_device(ftl_path.c_str(), kDeviceWaitTime));
+  status = zx::make_result(wait_for_device(ftl_path.c_str(), kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Timed out waiting for RamNand" << std::endl;
     return status.take_error();
@@ -193,12 +193,12 @@ std::string StripTrailingSlash(const std::string& in) {
   }
 }
 
-zx::status<> FsUnbind(const std::string& mount_path) {
+zx::result<> FsUnbind(const std::string& mount_path) {
   fdio_ns_t* ns;
-  if (auto status = zx::make_status(fdio_ns_get_installed(&ns)); status.is_error()) {
+  if (auto status = zx::make_result(fdio_ns_get_installed(&ns)); status.is_error()) {
     return status;
   }
-  if (auto status = zx::make_status(fdio_ns_unbind(ns, StripTrailingSlash(mount_path).c_str()));
+  if (auto status = zx::make_result(fdio_ns_unbind(ns, StripTrailingSlash(mount_path).c_str()));
       status.is_error()) {
     std::cout << "Unable to unbind: " << status.status_string() << std::endl;
     return status;
@@ -207,7 +207,7 @@ zx::status<> FsUnbind(const std::string& mount_path) {
 }
 
 // Returns device and device path.
-zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
+zx::result<std::pair<RamDevice, std::string>> CreateRamDevice(
     const TestFilesystemOptions& options) {
   RamDevice ram_device;
   std::string device_path;
@@ -266,9 +266,9 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
   }
 }
 
-zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
+zx::result<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
                       const fs_management::MkfsOptions& options, bool create_default_volume) {
-  zx::status<> status;
+  zx::result<> status;
   if (create_default_volume) {
     auto crypt_client = GetCryptService();
     if (crypt_client.is_error())
@@ -277,7 +277,7 @@ zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat 
         fs_management::MkfsWithDefault(device_path.c_str(), format, fs_management::LaunchStdioSync,
                                        options, *std::move(crypt_client));
   } else {
-    status = zx::make_status(
+    status = zx::make_result(
         fs_management::Mkfs(device_path.c_str(), format, fs_management::LaunchStdioSync, options));
   }
   if (status.is_error()) {
@@ -288,7 +288,7 @@ zx::status<> FsFormat(const std::string& device_path, fs_management::DiskFormat 
   return zx::ok();
 }
 
-zx::status<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
+zx::result<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
                      fs_management::NamespaceBinding>>
 FsMount(const std::string& device_path, const std::string& mount_path,
         fs_management::DiskFormat format, const fs_management::MountOptions& mount_options,
@@ -343,7 +343,7 @@ FsMount(const std::string& device_path, const std::string& mount_path,
 }
 
 // Returns device and device path.
-zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options) {
+zx::result<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystemOptions& options) {
   if (!options.vmo->is_valid()) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -385,7 +385,7 @@ zx::status<std::pair<RamDevice, std::string>> OpenRamDevice(const TestFilesystem
     device_path.append("/fvm/fs-test-partition-p-1/block");
   }
 
-  auto status = zx::make_status(wait_for_device(device_path.c_str(), kDeviceWaitTime));
+  auto status = zx::make_result(wait_for_device(device_path.c_str(), kDeviceWaitTime));
   if (status.is_error()) {
     std::cout << "Timed out waiting for partition to show up" << std::endl;
     return status.take_error();
@@ -489,7 +489,7 @@ std::vector<TestFilesystemOptions> MapAndFilterAllTestFilesystems(
 // -- FilesystemInstance --
 
 // Default implementation
-zx::status<> FilesystemInstance::Unmount(const std::string& mount_path) {
+zx::result<> FilesystemInstance::Unmount(const std::string& mount_path) {
   // Detach from the namespace.
   if (auto status = FsUnbind(mount_path); status.is_error()) {
     std::cerr << "FsUnbind failed: " << status.status_string() << std::endl;
@@ -515,7 +515,7 @@ class BlobfsInstance : public FilesystemInstance {
   BlobfsInstance(RamDevice device, std::string device_path)
       : device_(std::move(device)), device_path_(std::move(device_path)) {}
 
-  zx::status<> Format(const TestFilesystemOptions& options) override {
+  zx::result<> Format(const TestFilesystemOptions& options) override {
     fs_management::MkfsOptions mkfs_options;
     mkfs_options.deprecated_padded_blobfs_format =
         options.blob_layout_format == blobfs::BlobLayoutFormat::kDeprecatedPaddedMerkleTreeAtStart;
@@ -524,7 +524,7 @@ class BlobfsInstance : public FilesystemInstance {
                     /*create_default_volume=*/false);
   }
 
-  zx::status<> Mount(const std::string& mount_path,
+  zx::result<> Mount(const std::string& mount_path,
                      const fs_management::MountOptions& options) override {
     auto res = FsMount(device_path_, mount_path, fs_management::kDiskFormatBlobfs, options,
                        /*is_multi_volume=*/false);
@@ -535,19 +535,19 @@ class BlobfsInstance : public FilesystemInstance {
     return zx::ok();
   }
 
-  zx::status<> Fsck() override {
+  zx::result<> Fsck() override {
     fs_management::FsckOptions options{
         .verbose = false,
         .never_modify = true,
         .always_modify = false,
         .force = true,
     };
-    return zx::make_status(fs_management::Fsck(device_path_.c_str(),
+    return zx::make_result(fs_management::Fsck(device_path_.c_str(),
                                                fs_management::kDiskFormatBlobfs, options,
                                                fs_management::LaunchStdioSync));
   }
 
-  zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
+  zx::result<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
   storage::RamDisk* GetRamDisk() override { return std::get_if<storage::RamDisk>(&device_); }
   ramdevice_client::RamNand* GetRamNand() override {
     return std::get_if<ramdevice_client::RamNand>(&device_);
@@ -573,7 +573,7 @@ std::unique_ptr<FilesystemInstance> BlobfsFilesystem::Create(RamDevice device,
   return std::make_unique<BlobfsInstance>(std::move(device), std::move(device_path));
 }
 
-zx::status<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Open(
+zx::result<std::unique_ptr<FilesystemInstance>> BlobfsFilesystem::Open(
     const TestFilesystemOptions& options) const {
   auto result = OpenRamDevice(options);
   if (result.is_error()) {

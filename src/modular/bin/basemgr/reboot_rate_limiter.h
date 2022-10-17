@@ -68,12 +68,12 @@ class RebootRateLimiter {
   //
   // Note that if the elapsed time since the last reboot is greater than
   // |tracking_file_ttl|, this function will reset the tracking file.
-  zx::status<bool> CanReboot(TimePoint timepoint = SystemClock::now());
+  zx::result<bool> CanReboot(TimePoint timepoint = SystemClock::now());
 
   // Updates the file at |tracking_file_path| to contain the time passed in
   // via |timepoint|, and the reboot counter incremented by 1. This function
   // will create the file if it is not present, setting the counter to 1.
-  zx::status<> UpdateTrackingFile(TimePoint timepoint = SystemClock::now());
+  zx::result<> UpdateTrackingFile(TimePoint timepoint = SystemClock::now());
 
  private:
   // Base number used for calculating exponential backoff delay. The idea here
@@ -92,7 +92,7 @@ class RebootRateLimiter {
   static constexpr char kTimestampFormat[] = "%F %T";
 
   static std::string SerializeLastReboot(TimePoint timepoint, size_t reboots);
-  static zx::status<std::pair<TimePoint, size_t>> DeserializeLastReboot(std::string_view payload);
+  static zx::result<std::pair<TimePoint, size_t>> DeserializeLastReboot(std::string_view payload);
 
   std::string tracking_file_path_;
   size_t backoff_base_;

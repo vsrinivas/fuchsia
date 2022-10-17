@@ -6,29 +6,29 @@
 
 namespace paver {
 
-zx::status<size_t> SysconfigPartitionClient::GetBlockSize() {
+zx::result<size_t> SysconfigPartitionClient::GetBlockSize() {
   size_t size;
-  auto status = zx::make_status(client_.GetPartitionSize(partition_, &size));
+  auto status = zx::make_result(client_.GetPartitionSize(partition_, &size));
   if (status.is_error()) {
     return status.take_error();
   }
   return zx::ok(size);
 }
 
-zx::status<size_t> SysconfigPartitionClient::GetPartitionSize() {
+zx::result<size_t> SysconfigPartitionClient::GetPartitionSize() {
   size_t size;
-  auto status = zx::make_status(client_.GetPartitionSize(partition_, &size));
+  auto status = zx::make_result(client_.GetPartitionSize(partition_, &size));
   if (status.is_error()) {
     return status.take_error();
   }
   return zx::ok(size);
 }
 
-zx::status<> SysconfigPartitionClient::Read(const zx::vmo& vmo, size_t size) {
-  return zx::make_status(client_.ReadPartition(partition_, vmo, 0));
+zx::result<> SysconfigPartitionClient::Read(const zx::vmo& vmo, size_t size) {
+  return zx::make_result(client_.ReadPartition(partition_, vmo, 0));
 }
 
-zx::status<> SysconfigPartitionClient::Write(const zx::vmo& vmo, size_t size) {
+zx::result<> SysconfigPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   size_t partition_size;
   if (auto status = client_.GetPartitionSize(partition_, &partition_size); status != ZX_OK) {
     return zx::error(status);
@@ -37,12 +37,12 @@ zx::status<> SysconfigPartitionClient::Write(const zx::vmo& vmo, size_t size) {
   if (size != partition_size) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
-  return zx::make_status(client_.WritePartition(partition_, vmo, 0));
+  return zx::make_result(client_.WritePartition(partition_, vmo, 0));
 }
 
-zx::status<> SysconfigPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPPORTED); }
+zx::result<> SysconfigPartitionClient::Trim() { return zx::error(ZX_ERR_NOT_SUPPORTED); }
 
-zx::status<> SysconfigPartitionClient::Flush() { return zx::ok(); }
+zx::result<> SysconfigPartitionClient::Flush() { return zx::ok(); }
 
 fidl::ClientEnd<fuchsia_hardware_block::Block> SysconfigPartitionClient::GetChannel() { return {}; }
 

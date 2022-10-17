@@ -55,7 +55,7 @@ zx_status_t Shtv3Device::Create(void* ctx, zx_device_t* parent) {
 void Shtv3Device::DdkRelease() { delete this; }
 
 void Shtv3Device::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
-  const zx::status<float> status = ReadTemperature();
+  const zx::result<float> status = ReadTemperature();
   completer.Reply(status.is_error() ? status.error_value() : ZX_OK, status.value_or(0.0f));
 }
 
@@ -70,7 +70,7 @@ zx_status_t Shtv3Device::Init() {
   return ZX_OK;
 }
 
-zx::status<float> Shtv3Device::ReadTemperature() {
+zx::result<float> Shtv3Device::ReadTemperature() {
   zx_status_t status = Write16(kStartMeasurementCommand);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to send measurement command: %d", status);
@@ -78,7 +78,7 @@ zx::status<float> Shtv3Device::ReadTemperature() {
   }
 
   // Only read the temperature measurement, skip the CRC and humidity bytes.
-  zx::status<uint16_t> temp_data = zx::ok(0);
+  zx::result<uint16_t> temp_data = zx::ok(0);
   for (int i = 0; i < kMeasurementRetries; i++) {
     if ((temp_data = Read16()).is_ok()) {
       break;
@@ -96,7 +96,7 @@ zx::status<float> Shtv3Device::ReadTemperature() {
   return zx::ok((temp_value / 65536) - 45);
 }
 
-zx::status<uint16_t> Shtv3Device::Read16() {
+zx::result<uint16_t> Shtv3Device::Read16() {
   uint16_t value;
   zx_status_t status =
       i2c_.WriteReadSync(nullptr, 0, reinterpret_cast<uint8_t*>(&value), sizeof(value));

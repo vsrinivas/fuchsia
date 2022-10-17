@@ -473,7 +473,7 @@ TEST(GenAPITestCase, UnbindPreventsSubsequentCalls) {
 }
 
 fidl::Endpoints<Values> CreateEndpointsWithoutClientWriteRight() {
-  zx::status endpoints = fidl::CreateEndpoints<Values>();
+  zx::result endpoints = fidl::CreateEndpoints<Values>();
   EXPECT_OK(endpoints.status_value());
   if (!endpoints.is_ok())
     return {};
@@ -787,7 +787,7 @@ TEST(AllClients, SendErrorLeadsToBindingTeardown) {
 TEST(AllClients, DrainAllMessageInPeerClosedSendError) {
   auto do_test = [](auto&& client_instance_indicator) {
     using ClientType = cpp20::remove_cvref_t<decltype(client_instance_indicator)>;
-    zx::status endpoints = fidl::CreateEndpoints<Values>();
+    zx::result endpoints = fidl::CreateEndpoints<Values>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = std::move(*endpoints);
 

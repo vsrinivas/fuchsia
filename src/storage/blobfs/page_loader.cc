@@ -142,7 +142,7 @@ void SetDeadlineProfile(const std::vector<zx::unowned_thread>& threads) {
 PageLoader::Worker::Worker(size_t decompression_buffer_size, BlobfsMetrics* metrics)
     : decompression_buffer_size_(decompression_buffer_size), metrics_(metrics) {}
 
-zx::status<std::unique_ptr<PageLoader::Worker>> PageLoader::Worker::Create(
+zx::result<std::unique_ptr<PageLoader::Worker>> PageLoader::Worker::Create(
     std::unique_ptr<WorkerResources> resources, size_t decompression_buffer_size,
     BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector) {
   ZX_DEBUG_ASSERT(metrics != nullptr && resources->uncompressed_buffer != nullptr &&
@@ -358,7 +358,7 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(
   // iteration for the majority of cases, since the decompression buffer is 256MB.
   while (current_decompressed_offset < desired_decompressed_end) {
     size_t current_decompressed_length = desired_decompressed_end - current_decompressed_offset;
-    zx::status<CompressionMapping> mapping_status = info.decompressor->MappingForDecompressedRange(
+    zx::result<CompressionMapping> mapping_status = info.decompressor->MappingForDecompressedRange(
         current_decompressed_offset, current_decompressed_length, decompression_buffer_size_);
 
     if (!mapping_status.is_ok()) {
@@ -496,7 +496,7 @@ PagerErrorStatus PageLoader::Worker::TransferChunkedPages(
 PageLoader::PageLoader(std::vector<std::unique_ptr<Worker>> workers)
     : workers_(std::move(workers)) {}
 
-zx::status<std::unique_ptr<PageLoader>> PageLoader::Create(
+zx::result<std::unique_ptr<PageLoader>> PageLoader::Create(
     std::vector<std::unique_ptr<WorkerResources>> resources, size_t decompression_buffer_size,
     BlobfsMetrics* metrics, DecompressorCreatorConnector* decompression_connector) {
   std::vector<std::unique_ptr<PageLoader::Worker>> workers;
@@ -514,7 +514,7 @@ zx::status<std::unique_ptr<PageLoader>> PageLoader::Create(
 
   // Initialize and start the watchdog.
   pager->watchdog_ = fs_watchdog::CreateWatchdog();
-  zx::status<> watchdog_status = pager->watchdog_->Start();
+  zx::result<> watchdog_status = pager->watchdog_->Start();
   if (!watchdog_status.is_ok()) {
     FX_LOGS(ERROR) << "Could not start pager watchdog";
     return zx::error(watchdog_status.status_value());

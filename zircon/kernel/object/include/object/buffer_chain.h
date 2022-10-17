@@ -109,7 +109,7 @@ class BufferChain {
     const size_t num_buffers = (size + kRawDataSize - 1) / kRawDataSize;
 
     // Allocate a list of pages.
-    zx::status<page_cache::PageCache::AllocateResult> unused_pages_result =
+    zx::result<page_cache::PageCache::AllocateResult> unused_pages_result =
         page_cache_.Allocate(num_buffers);
     if (unused_pages_result.is_error()) {
       return nullptr;
@@ -148,9 +148,7 @@ class BufferChain {
   }
 
   // Free unused pages.
-  void FreeUnusedBuffers() {
-    page_cache_.Free(ktl::move(unused_pages_));
-  }
+  void FreeUnusedBuffers() { page_cache_.Free(ktl::move(unused_pages_)); }
 
   // Skips the specified number of bytes, so they won't be consumed by Append or AppendKernel.
   //

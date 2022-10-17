@@ -67,7 +67,7 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
 
     // Create our compat context, and serve our device when it's created.
     compat::Context::ConnectAndCreate(
-        &context(), dispatcher(), [this](zx::status<std::shared_ptr<compat::Context>> context) {
+        &context(), dispatcher(), [this](zx::result<std::shared_ptr<compat::Context>> context) {
           if (!context.is_ok()) {
             FDF_LOG(ERROR, "Call to Context::ConnectAndCreate failed: %s", context.status_string());
             node().reset();

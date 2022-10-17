@@ -58,7 +58,7 @@ enum KeySource {
 // Returns ZX_ERR_NOT_FOUND if the config file was not present
 // Returns ZX_ERR_IO if the config file could not be read
 // Returns ZX_ERR_BAD_STATE if the config value was not recognized.
-zx::status<KeySourcePolicy> SelectKeySourcePolicy();
+zx::result<KeySourcePolicy> SelectKeySourcePolicy();
 
 fbl::Vector<KeySource> ComputeEffectiveCreatePolicy(KeySourcePolicy ksp);
 fbl::Vector<KeySource> ComputeEffectiveUnsealPolicy(KeySourcePolicy ksp);

@@ -192,7 +192,7 @@ void StreamFileConnection::Seek(SeekRequestView request, SeekCompleter::Sync& co
 }
 
 void StreamFileConnection::GetFlags(GetFlagsCompleter::Sync& completer) {
-  zx::status result = GetFlagsInternal();
+  zx::result result = GetFlagsInternal();
   if (result.is_error()) {
     completer.Reply(result.status_value(), {});
   } else {
@@ -205,8 +205,8 @@ void StreamFileConnection::SetFlags(SetFlagsRequestView request,
   completer.Reply(SetFlagsInternal(request->flags).status_value());
 }
 
-zx::status<fuchsia_io::wire::OpenFlags> StreamFileConnection::GetFlagsInternal() {
-  zx::status flags = NodeGetFlags();
+zx::result<fuchsia_io::wire::OpenFlags> StreamFileConnection::GetFlagsInternal() {
+  zx::result flags = NodeGetFlags();
   if constexpr (ZX_DEBUG_ASSERT_IMPLEMENTED) {
     // Validate that the connection's append mode and the stream's append mode match.
     if (flags.is_ok()) {
@@ -223,10 +223,10 @@ zx::status<fuchsia_io::wire::OpenFlags> StreamFileConnection::GetFlagsInternal()
   return flags;
 }
 
-zx::status<> StreamFileConnection::SetFlagsInternal(fuchsia_io::wire::OpenFlags flags) {
+zx::result<> StreamFileConnection::SetFlagsInternal(fuchsia_io::wire::OpenFlags flags) {
   auto new_options = VnodeConnectionOptions::FromIoV1Flags(flags);
   bool append = new_options.flags.append;
-  auto status = zx::make_status(stream_.set_prop_mode_append(append));
+  auto status = zx::make_result(stream_.set_prop_mode_append(append));
   if (status.is_ok()) {
     set_append(append);
   }

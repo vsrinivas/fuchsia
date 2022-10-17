@@ -39,7 +39,7 @@ class JournalIntegrationTest : public JournalIntegrationFixture {
 constexpr uint64_t kCreateEntryCutoff{UINT64_C(4) * JournalIntegrationTest::kDiskBlocksPerFsBlock};
 
 TEST_F(JournalIntegrationTest, FsckWithRepairDoesReplayJournal) {
-  zx::status<std::unique_ptr<Bcache>> bcache_or =
+  zx::result<std::unique_ptr<Bcache>> bcache_or =
       zx::ok(CutOffDevice(write_count() - kCreateEntryCutoff));
 
   bcache_or = Fsck(std::move(bcache_or.value()), FsckOptions{.repair = true});
@@ -54,14 +54,14 @@ TEST_F(JournalIntegrationTest, FsckWithRepairDoesReplayJournal) {
 }
 
 TEST_F(JournalIntegrationTest, FsckWithReadOnlyDoesNotReplayJournal) {
-  zx::status<std::unique_ptr<Bcache>> bcache_or =
+  zx::result<std::unique_ptr<Bcache>> bcache_or =
       zx::ok(CutOffDevice(write_count() - kCreateEntryCutoff));
   EXPECT_TRUE(Fsck(std::move(bcache_or.value()), FsckOptions{.repair = false, .read_only = true})
                   .is_error());
 }
 
 TEST_F(JournalIntegrationTest, CreateWithRepairDoesReplayJournal) {
-  zx::status<std::unique_ptr<Bcache>> bcache_or =
+  zx::result<std::unique_ptr<Bcache>> bcache_or =
       zx::ok(CutOffDevice(write_count() - kCreateEntryCutoff));
 
   MountOptions options = {};
@@ -106,7 +106,7 @@ class JournalUnlinkTest : public JournalIntegrationFixture {
 constexpr uint64_t kUnlinkCutoff{UINT64_C(3) * JournalUnlinkTest::kDiskBlocksPerFsBlock};
 
 TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
-  zx::status<std::unique_ptr<Bcache>> bcache_or =
+  zx::result<std::unique_ptr<Bcache>> bcache_or =
       zx::ok(CutOffDevice(write_count() - kUnlinkCutoff));
   bcache_or = Fsck(std::move(bcache_or.value()), FsckOptions{.repair = true});
   EXPECT_TRUE(bcache_or.is_ok());
@@ -119,7 +119,7 @@ TEST_F(JournalUnlinkTest, FsckWithRepairDoesReplayJournal) {
 }
 
 TEST_F(JournalUnlinkTest, ReadOnlyFsckDoesNotReplayJournal) {
-  zx::status<std::unique_ptr<Bcache>> bcache_or =
+  zx::result<std::unique_ptr<Bcache>> bcache_or =
       zx::ok(CutOffDevice(write_count() - kUnlinkCutoff));
   bcache_or = Fsck(std::move(bcache_or.value()), FsckOptions{.repair = false, .read_only = true});
   EXPECT_TRUE(bcache_or.is_error());
@@ -156,7 +156,7 @@ class JournalGrowFvmTest : public JournalIntegrationFixture {
 constexpr uint64_t kGrowFvmCutoff{UINT64_C(32) * JournalGrowFvmTest::kDiskBlocksPerFsBlock};
 
 TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
-  zx::status<std::unique_ptr<Bcache>> bcache_or = zx::ok(CutOffDevice(write_count()));
+  zx::result<std::unique_ptr<Bcache>> bcache_or = zx::ok(CutOffDevice(write_count()));
   bcache_or = Fsck(std::move(bcache_or.value()), FsckOptions{.repair = true});
   EXPECT_TRUE(bcache_or.is_ok());
   auto fs_or = Runner::Create(dispatcher(), std::move(bcache_or.value()), MountOptions());
@@ -166,7 +166,7 @@ TEST_F(JournalGrowFvmTest, GrowingWithJournalReplaySucceeds) {
 
 TEST_F(JournalGrowFvmTest, GrowingWithNoReplaySucceeds) {
   // In this test, 1 fewer block means the replay will fail.
-  zx::status<std::unique_ptr<Bcache>> bcache_or =
+  zx::result<std::unique_ptr<Bcache>> bcache_or =
       zx::ok(CutOffDevice(write_count() - kGrowFvmCutoff - kDiskBlocksPerFsBlock));
 
   bcache_or = Fsck(std::move(bcache_or.value()), FsckOptions{.repair = true});

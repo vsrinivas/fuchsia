@@ -70,7 +70,7 @@ IntelDsp::~IntelDsp() {
   }
 }
 
-zx::status<> IntelDsp::ParseNhlt() {
+zx::result<> IntelDsp::ParseNhlt() {
   std::array<fuchsia_hardware_acpi::wire::Object, 3> args;
   // Reference:
   // Intel Smart Sound Technology NHLT Specification
@@ -129,7 +129,7 @@ zx::status<> IntelDsp::ParseNhlt() {
   // Fetch actual NHLT data.
   memcpy(buffer.begin(), static_cast<uint8_t*>(mapper.start()) + resource.offset, buffer.size());
   // Parse NHLT.
-  zx::status<std::unique_ptr<Nhlt>> nhlt =
+  zx::result<std::unique_ptr<Nhlt>> nhlt =
       Nhlt::FromBuffer(cpp20::span<const uint8_t>(buffer.begin(), buffer.end()));
   if (!nhlt.is_ok()) {
     return zx::error(nhlt.status_value());
@@ -143,8 +143,8 @@ zx::status<> IntelDsp::ParseNhlt() {
   return zx::ok();
 }
 
-zx::status<> IntelDsp::Init(zx_device_t* dsp_dev) {
-  zx::status result = Bind(dsp_dev, "intel-sst-dsp");
+zx::result<> IntelDsp::Init(zx_device_t* dsp_dev) {
+  zx::result result = Bind(dsp_dev, "intel-sst-dsp");
   if (!result.is_ok()) {
     LOG(ERROR, "Error binding DSP device");
     return zx::error(result.status_value());
@@ -467,7 +467,7 @@ zx_status_t IntelDsp::ProcessSetStreamFmt(Channel* channel, const ihda_proto::Se
   return res;
 }
 
-zx::status<> IntelDsp::SetupDspDevice() {
+zx::result<> IntelDsp::SetupDspDevice() {
   const fuchsia_hardware_pci::wire::DeviceInfo& hda_dev_info = controller_->dev_info();
   snprintf(log_prefix_, sizeof(log_prefix_), "IHDA DSP %02x:%02x.%01x", hda_dev_info.bus_id,
            hda_dev_info.dev_id, hda_dev_info.func_id);
@@ -532,7 +532,7 @@ zx_status_t IntelDsp::Suspend(uint8_t requested_state, bool enable_wake, uint8_t
   }
 }
 
-zx::status<> IntelDsp::InitializeDsp() {
+zx::result<> IntelDsp::InitializeDsp() {
   auto cleanup = fit::defer([this]() { DeviceShutdown(); });
 
   // Enable Audio DSP

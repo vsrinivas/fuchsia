@@ -21,7 +21,7 @@ fbl::Array<const zx_device_prop_t> NodeToProps(Node* node);
 // match one node.
 class CompositeDeviceFragment {
  public:
-  static zx::status<CompositeDeviceFragment> Create(
+  static zx::result<CompositeDeviceFragment> Create(
       fuchsia_device_manager::DeviceFragment fragment);
 
   // Try to bind the node against this fragment. This returns true if the node
@@ -48,7 +48,7 @@ class CompositeDeviceAssembler {
  public:
   // Create a CompositeDeviceAssembler. `node_manager` is unowned and must outlive
   // the assembler class.
-  static zx::status<std::unique_ptr<CompositeDeviceAssembler>> Create(
+  static zx::result<std::unique_ptr<CompositeDeviceAssembler>> Create(
       std::string name, fuchsia_device_manager::CompositeDeviceDescriptor descriptor,
       NodeManager* node_manager, async_dispatcher_t* dispatcher);
 

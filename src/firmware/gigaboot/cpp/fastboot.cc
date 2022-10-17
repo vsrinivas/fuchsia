@@ -31,7 +31,7 @@ static constexpr std::optional<AbrSlotIndex> ParseAbrSlotStr(std::string_view st
   }
 }
 
-zx::status<> Fastboot::ProcessCommand(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::ProcessCommand(std::string_view cmd, fastboot::Transport *transport) {
   auto cmd_table = GetCommandCallbackTable();
   for (const CommandCallbackEntry &ele : cmd_table) {
     if (MatchCommand(cmd, ele.name.data())) {
@@ -43,7 +43,7 @@ zx::status<> Fastboot::ProcessCommand(std::string_view cmd, fastboot::Transport 
 
 void Fastboot::DoClearDownload() {}
 
-zx::status<void *> Fastboot::GetDownloadBuffer(size_t total_download_size) {
+zx::result<void *> Fastboot::GetDownloadBuffer(size_t total_download_size) {
   return zx::ok(download_buffer_.data());
 }
 
@@ -78,19 +78,19 @@ cpp20::span<Fastboot::CommandCallbackEntry> Fastboot::GetCommandCallbackTable() 
   return cmd_entries;
 }
 
-zx::status<> Fastboot::Reboot(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::Reboot(std::string_view cmd, fastboot::Transport *transport) {
   return DoReboot(RebootMode::kNormal, cmd, transport);
 }
 
-zx::status<> Fastboot::RebootBootloader(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::RebootBootloader(std::string_view cmd, fastboot::Transport *transport) {
   return DoReboot(RebootMode::kBootloader, cmd, transport);
 }
 
-zx::status<> Fastboot::RebootRecovery(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::RebootRecovery(std::string_view cmd, fastboot::Transport *transport) {
   return DoReboot(RebootMode::kRecovery, cmd, transport);
 }
 
-zx::status<> Fastboot::DoReboot(RebootMode reboot_mode, std::string_view cmd,
+zx::result<> Fastboot::DoReboot(RebootMode reboot_mode, std::string_view cmd,
                                 fastboot::Transport *transport) {
   if (!SetRebootMode(reboot_mode)) {
     return SendResponse(ResponseType::kFail, "Failed to set reboot mode", transport,
@@ -98,7 +98,7 @@ zx::status<> Fastboot::DoReboot(RebootMode reboot_mode, std::string_view cmd,
   }
 
   // ResetSystem() below won't return. Thus sends a OKAY response first in case we succeed.
-  zx::status<> res = SendResponse(ResponseType::kOkay, "", transport);
+  zx::result<> res = SendResponse(ResponseType::kOkay, "", transport);
   if (res.is_error()) {
     return res;
   }
@@ -113,7 +113,7 @@ zx::status<> Fastboot::DoReboot(RebootMode reboot_mode, std::string_view cmd,
   return zx::ok();
 }
 
-zx::status<> Fastboot::SetActive(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::SetActive(std::string_view cmd, fastboot::Transport *transport) {
   CommandArgs args;
   ExtractCommandArgs(cmd, ":", args);
 
@@ -145,7 +145,7 @@ struct overload : Ts... {
 template <class... Ts>
 overload(Ts...) -> overload<Ts...>;
 
-zx::status<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transport) {
   CommandArgs args;
   ExtractCommandArgs(cmd, ":", args);
   if (args.num_args < 2) {
@@ -168,13 +168,13 @@ zx::status<> Fastboot::GetVar(std::string_view cmd, fastboot::Transport *transpo
   return SendResponse(ResponseType::kFail, "Unknown variable", transport);
 }
 
-zx::status<> Fastboot::GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *transport) {
+zx::result<> Fastboot::GetVarMaxDownloadSize(const CommandArgs &, fastboot::Transport *transport) {
   char size_str[16] = {0};
   snprintf(size_str, sizeof(size_str), "0x%08zx", download_buffer_.size());
   return SendResponse(ResponseType::kOkay, size_str, transport);
 }
 
-zx::status<> Fastboot::GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *transport) {
+zx::result<> Fastboot::GetVarCurrentSlot(const CommandArgs &, fastboot::Transport *transport) {
   AbrOps abr_ops = GetAbrOps();
 
   char const *slot_str;
@@ -197,7 +197,7 @@ zx::status<> Fastboot::GetVarCurrentSlot(const CommandArgs &, fastboot::Transpor
   return SendResponse(ResponseType::kOkay, slot_str, transport);
 }
 
-zx::status<> Fastboot::GetVarSlotLastSetActive(const CommandArgs &,
+zx::result<> Fastboot::GetVarSlotLastSetActive(const CommandArgs &,
                                                fastboot::Transport *transport) {
   AbrOps abr_ops = GetAbrOps();
   AbrSlotIndex slot;
@@ -211,7 +211,7 @@ zx::status<> Fastboot::GetVarSlotLastSetActive(const CommandArgs &,
   return SendResponse(ResponseType::kOkay, slot_str, transport);
 }
 
-zx::status<> Fastboot::GetVarSlotRetryCount(const CommandArgs &args,
+zx::result<> Fastboot::GetVarSlotRetryCount(const CommandArgs &args,
                                             fastboot::Transport *transport) {
   if (args.num_args < 3) {
     return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
@@ -235,7 +235,7 @@ zx::status<> Fastboot::GetVarSlotRetryCount(const CommandArgs &args,
   return SendResponse(ResponseType::kOkay, retry_str, transport);
 }
 
-zx::status<> Fastboot::GetVarSlotSuccessful(const CommandArgs &args,
+zx::result<> Fastboot::GetVarSlotSuccessful(const CommandArgs &args,
                                             fastboot::Transport *transport) {
   if (args.num_args < 3) {
     return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
@@ -256,7 +256,7 @@ zx::status<> Fastboot::GetVarSlotSuccessful(const CommandArgs &args,
   return SendResponse(ResponseType::kOkay, info.is_marked_successful ? "yes" : "no", transport);
 }
 
-zx::status<> Fastboot::GetVarSlotUnbootable(const CommandArgs &args,
+zx::result<> Fastboot::GetVarSlotUnbootable(const CommandArgs &args,
                                             fastboot::Transport *transport) {
   if (args.num_args < 3) {
     return SendResponse(ResponseType::kFail, "Not enough arguments", transport);
@@ -277,7 +277,7 @@ zx::status<> Fastboot::GetVarSlotUnbootable(const CommandArgs &args,
   return SendResponse(ResponseType::kOkay, info.is_bootable ? "no" : "yes", transport);
 }
 
-zx::status<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transport) {
   CommandArgs args;
   ExtractCommandArgs(cmd, ":", args);
   if (args.num_args < 2) {
@@ -299,7 +299,7 @@ zx::status<> Fastboot::Flash(std::string_view cmd, fastboot::Transport *transpor
   return SendResponse(ResponseType::kOkay, "", transport);
 }
 
-zx::status<> Fastboot::Continue(std::string_view cmd, fastboot::Transport *transport) {
+zx::result<> Fastboot::Continue(std::string_view cmd, fastboot::Transport *transport) {
   continue_ = true;
   return SendResponse(ResponseType::kOkay, "", transport);
 }
@@ -310,7 +310,7 @@ class PacketTransport : public fastboot::Transport {
   PacketTransport(TcpTransportInterface &interface, size_t packet_size)
       : interface_(&interface), packet_size_(packet_size) {}
 
-  zx::status<size_t> ReceivePacket(void *dst, size_t capacity) override {
+  zx::result<size_t> ReceivePacket(void *dst, size_t capacity) override {
     if (packet_size_ > capacity) {
       return zx::error(ZX_ERR_BUFFER_TOO_SMALL);
     }
@@ -325,7 +325,7 @@ class PacketTransport : public fastboot::Transport {
   // Peek the size of the next packet.
   size_t PeekPacketSize() override { return packet_size_; }
 
-  zx::status<> Send(std::string_view packet) override {
+  zx::result<> Send(std::string_view packet) override {
     // Prepend a length prefix.
     size_t size = packet.size();
     uint64_t be_size = ToBigEndian(size);
@@ -379,7 +379,7 @@ void FastbootTcpSession(TcpTransportInterface &interface, Fastboot &fastboot) {
 
     // Construct and pass a packet transport to fastboot.
     PacketTransport packet(interface, packet_length);
-    zx::status<> ret = fastboot.ProcessPacket(&packet);
+    zx::result<> ret = fastboot.ProcessPacket(&packet);
     if (ret.is_error()) {
       printf("Failed to process fastboot packet\n");
       return;

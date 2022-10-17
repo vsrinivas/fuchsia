@@ -25,11 +25,11 @@ PersistentStorage::PersistentStorage(block_client::BlockDevice* device, Superblo
       metadata_(std::move(metadata)),
       block_size_(block_size) {}
 
-zx::status<> PersistentStorage::AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* out) {
-  return zx::make_status(device_->BlockAttachVmo(vmo, &out->GetReference(device_)));
+zx::result<> PersistentStorage::AttachVmo(const zx::vmo& vmo, storage::OwnedVmoid* out) {
+  return zx::make_result(device_->BlockAttachVmo(vmo, &out->GetReference(device_)));
 }
 
-zx::status<> PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
+zx::result<> PersistentStorage::Extend(PendingWork* write_transaction, WriteData data,
                                        GrowMapCallback grow_map) {
   TRACE_DURATION("minfs", "Minfs::PersistentStorage::Extend");
   ZX_DEBUG_ASSERT(write_transaction != nullptr);

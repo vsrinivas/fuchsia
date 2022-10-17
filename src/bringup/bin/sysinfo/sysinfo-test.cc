@@ -11,7 +11,7 @@ namespace sysinfo {
 
 TEST(SysinfoTest, GetBoardName) {
   // Get the resource handle from the driver.
-  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  zx::result client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
   ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardName().
@@ -24,7 +24,7 @@ TEST(SysinfoTest, GetBoardName) {
 
 TEST(SysinfoTest, GetBoardRevision) {
   // Get the resource handle from the driver.
-  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  zx::result client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
   ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetBoardRevision().
@@ -36,7 +36,7 @@ TEST(SysinfoTest, GetBoardRevision) {
 
 TEST(SysinfoTest, GetBootloaderVendor) {
   // Get the resource handle from the driver.
-  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  zx::result client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
   ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetBootloaderVendor().
@@ -48,7 +48,7 @@ TEST(SysinfoTest, GetBootloaderVendor) {
 
 TEST(SysinfoTest, GetInterruptControllerInfo) {
   // Get the resource handle from the driver.
-  zx::status client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
+  zx::result client_end = component::Connect<fuchsia_sysinfo::SysInfo>();
   ASSERT_OK(client_end.status_value());
 
   // Test fuchsia::sysinfo::SysInfo.GetInterruptControllerInfo().

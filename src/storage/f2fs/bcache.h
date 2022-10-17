@@ -32,8 +32,8 @@ namespace f2fs {
 
 #ifdef __Fuchsia__
 class Bcache;
-zx::status<std::unique_ptr<Bcache>> CreateBcache(zx::channel device, bool* out_readonly = nullptr);
-zx::status<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
+zx::result<std::unique_ptr<Bcache>> CreateBcache(zx::channel device, bool* out_readonly = nullptr);
+zx::result<std::unique_ptr<Bcache>> CreateBcache(std::unique_ptr<block_client::BlockDevice> device,
                                                  bool* out_readonly = nullptr);
 class Bcache : public fs::DeviceTransactionHandler, public storage::VmoidRegistry {
 #else   // __Fuchsia__
@@ -65,7 +65,7 @@ class Bcache : public fs::TransactionHandler {
 #ifdef __Fuchsia__
   // This factory allows building this object from a BlockDevice. Bcache can take ownership of the
   // device (the first Create method), or not (the second Create method).
-  static zx::status<std::unique_ptr<Bcache>> Create(
+  static zx::result<std::unique_ptr<Bcache>> Create(
       std::unique_ptr<block_client::BlockDevice> device, uint64_t max_blocks, block_t block_size);
 
   zx_status_t Flush() override { return DeviceTransactionHandler::Flush(); }

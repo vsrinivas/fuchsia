@@ -106,19 +106,19 @@ struct Options {
 class WatchdogInterface {
  public:
   // Spins up a thread and prepares the watchdog to track operations.
-  virtual zx::status<> Start() = 0;
+  virtual zx::result<> Start() = 0;
 
   // Shuts down the watchdog. It is callers responsibility to ensure that all
   // operations are untracked. Shutdown asserts that there are no tracked
   // operations.
-  virtual zx::status<> ShutDown() = 0;
+  virtual zx::result<> ShutDown() = 0;
 
   // Starts tracking the operation |tracker|. |tracker| is unowned. |tracker| is
   // expected to live at least till it is removed.
-  virtual zx::status<> Track(OperationTracker* tracker) = 0;
+  virtual zx::result<> Track(OperationTracker* tracker) = 0;
 
   // Untrack the operation represented by |tracker_id|.
-  virtual zx::status<> Untrack(OperationTrackerId tracker_id) = 0;
+  virtual zx::result<> Untrack(OperationTrackerId tracker_id) = 0;
 
   virtual ~WatchdogInterface() = default;
 };

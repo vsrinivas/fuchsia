@@ -14,7 +14,7 @@
 
 namespace hwstress {
 
-zx::status<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, CacheMode mode) {
+zx::result<std::unique_ptr<MemoryRange>> MemoryRange::Create(uint64_t size, CacheMode mode) {
   ZX_ASSERT(size % zx_system_get_page_size() == 0);
 
   // Create the VMO.

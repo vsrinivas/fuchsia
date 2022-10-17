@@ -220,7 +220,7 @@ DirEntry *Dir::FindEntrySafe(std::string_view name, fbl::RefPtr<Page> *res_page)
   return FindEntry(name, res_page);
 }
 
-zx::status<DirEntry> Dir::FindEntry(std::string_view name) {
+zx::result<DirEntry> Dir::FindEntry(std::string_view name) {
   DirEntry *de = nullptr;
 
 #ifdef __Fuchsia__

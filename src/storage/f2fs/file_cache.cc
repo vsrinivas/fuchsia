@@ -196,7 +196,7 @@ zx_status_t Page::VmoOpUnlock(bool evict) {
   return ZX_OK;
 }
 
-zx::status<bool> Page::VmoOpLock() {
+zx::result<bool> Page::VmoOpLock() {
   ZX_DEBUG_ASSERT(InTreeContainer());
   ZX_DEBUG_ASSERT(IsLocked());
   if (!SetFlag(PageFlag::kPageVmoLocked)) {
@@ -208,7 +208,7 @@ zx::status<bool> Page::VmoOpLock() {
 // Do nothing on Linux.
 zx_status_t Page::VmoOpUnlock(bool evict) { return ZX_OK; }
 
-zx::status<bool> Page::VmoOpLock() { return zx::ok(true); }
+zx::result<bool> Page::VmoOpLock() { return zx::ok(true); }
 #endif  // __Fuchsia__
 
 #ifdef __Fuchsia__
@@ -246,7 +246,7 @@ zx_status_t FileCache::AddPageUnsafe(const fbl::RefPtr<Page> &page) {
   return ZX_OK;
 }
 
-zx::status<std::vector<LockedPage>> FileCache::GetPages(const pgoff_t start, const pgoff_t end) {
+zx::result<std::vector<LockedPage>> FileCache::GetPages(const pgoff_t start, const pgoff_t end) {
   std::lock_guard tree_lock(tree_lock_);
   std::vector<LockedPage> locked_pages(end - start);
   auto exist_pages = GetLockedPagesUnsafe(start, end);
@@ -268,7 +268,7 @@ zx::status<std::vector<LockedPage>> FileCache::GetPages(const pgoff_t start, con
   return zx::ok(std::move(locked_pages));
 }
 
-zx::status<std::vector<LockedPage>> FileCache::GetPages(const std::vector<pgoff_t> &page_offsets) {
+zx::result<std::vector<LockedPage>> FileCache::GetPages(const std::vector<pgoff_t> &page_offsets) {
   std::lock_guard tree_lock(tree_lock_);
   if (page_offsets.empty()) {
     return zx::ok(std::vector<LockedPage>(0));
@@ -334,7 +334,7 @@ zx_status_t FileCache::FindPage(const pgoff_t index, fbl::RefPtr<Page> *out) {
   return ZX_OK;
 }
 
-zx::status<LockedPage> FileCache::GetPageUnsafe(const pgoff_t index) {
+zx::result<LockedPage> FileCache::GetPageUnsafe(const pgoff_t index) {
   while (true) {
     auto raw_ptr = page_tree_.find(index).CopyPointer();
     fbl::RefPtr<Page> page;
@@ -364,7 +364,7 @@ zx::status<LockedPage> FileCache::GetPageUnsafe(const pgoff_t index) {
   return zx::error(ZX_ERR_NOT_FOUND);
 }
 
-zx::status<LockedPage> FileCache::GetLockedPage(fbl::RefPtr<Page> page) {
+zx::result<LockedPage> FileCache::GetLockedPage(fbl::RefPtr<Page> page) {
   if (page->TryLock()) {
     tree_lock_.unlock();
     {

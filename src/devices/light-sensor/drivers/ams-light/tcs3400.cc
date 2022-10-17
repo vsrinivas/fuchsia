@@ -140,7 +140,7 @@ fuchsia_input_report::wire::FeatureReport Tcs3400FeatureReport::ToFidlFeatureRep
       .Build();
 }
 
-zx::status<Tcs3400InputReport> Tcs3400Device::ReadInputRpt() {
+zx::result<Tcs3400InputReport> Tcs3400Device::ReadInputRpt() {
   Tcs3400InputReport report{.event_time = zx::clock::get_monotonic()};
 
   bool saturatedReading = false;
@@ -283,7 +283,7 @@ int Tcs3400Device::Thread() {
         zx_interrupt_ack(irq_.get());  // rearm interrupt at the IRQ level
 
         {
-          const zx::status<Tcs3400InputReport> report = ReadInputRpt();
+          const zx::result<Tcs3400InputReport> report = ReadInputRpt();
           if (report.is_error()) {
             irq_rearm_timeout = zx_deadline_after(INTERRUPTS_HYSTERESIS);
             break;
@@ -324,7 +324,7 @@ int Tcs3400Device::Thread() {
         }
 
         {
-          const zx::status<Tcs3400InputReport> report = ReadInputRpt();
+          const zx::result<Tcs3400InputReport> report = ReadInputRpt();
           if (report.is_ok()) {
             readers_.SendReportToAllReaders(*report);
             fbl::AutoLock lock(&input_lock_);
@@ -527,7 +527,7 @@ void Tcs3400Device::WaitForNextReader() {
 }
 
 // static
-zx::status<Tcs3400Device*> Tcs3400Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
+zx::result<Tcs3400Device*> Tcs3400Device::CreateAndGetDevice(void* ctx, zx_device_t* parent) {
   ddk::I2cChannel channel(parent, "i2c");
   if (!channel.is_valid()) {
     return zx::error(ZX_ERR_NO_RESOURCES);

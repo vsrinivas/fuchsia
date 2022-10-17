@@ -13,6 +13,6 @@
 
 // Returns a new AcpiParser instance, that uses a physical memory reader, that the transformation
 // from physical address to virtual address is identity.
-zx::status<acpi_lite::AcpiParser> MakeAcpiParser(uint64_t acpi_rsdp);
+zx::result<acpi_lite::AcpiParser> MakeAcpiParser(uint64_t acpi_rsdp);
 
 #endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ACPI_H_

@@ -103,8 +103,8 @@ class PlatformBus : public PlatformBusType,
     uint32_t length;
   };
   // Returns ZX_ERR_NOT_FOUND when boot item wasn't found.
-  zx::status<BootItemResult> GetBootItem(uint32_t type, uint32_t extra);
-  zx::status<fbl::Array<uint8_t>> GetBootItemArray(uint32_t type, uint32_t extra);
+  zx::result<BootItemResult> GetBootItem(uint32_t type, uint32_t extra);
+  zx::result<fbl::Array<uint8_t>> GetBootItemArray(uint32_t type, uint32_t extra);
 
   inline ddk::GpioImplProtocolClient* gpio() { return &*gpio_; }
 
@@ -124,11 +124,11 @@ class PlatformBus : public PlatformBusType,
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PlatformBus);
 
-  zx::status<zbi_board_info_t> GetBoardInfo();
+  zx::result<zbi_board_info_t> GetBoardInfo();
   zx_status_t Init();
 
-  zx::status<> NodeAddInternal(fuchsia_hardware_platform_bus::Node& node);
-  zx::status<> ValidateResources(fuchsia_hardware_platform_bus::Node& node);
+  zx::result<> NodeAddInternal(fuchsia_hardware_platform_bus::Node& node);
+  zx::result<> ValidateResources(fuchsia_hardware_platform_bus::Node& node);
 
   fidl::ClientEnd<fuchsia_boot::Items> items_svc_;
 

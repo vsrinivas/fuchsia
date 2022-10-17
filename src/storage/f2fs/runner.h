@@ -21,22 +21,22 @@ class Runner final : public PlatformVfs {
 
   ~Runner() override;
 
-  static zx::status<std::unique_ptr<Runner>> Create(FuchsiaDispatcher dispatcher,
+  static zx::result<std::unique_ptr<Runner>> Create(FuchsiaDispatcher dispatcher,
                                                     std::unique_ptr<f2fs::Bcache> bc,
                                                     const MountOptions& options);
 
-  static zx::status<std::unique_ptr<Runner>> CreateRunner(FuchsiaDispatcher dispatcher);
+  static zx::result<std::unique_ptr<Runner>> CreateRunner(FuchsiaDispatcher dispatcher);
 
 #ifdef __Fuchsia__
   void SetUnmountCallback(fit::closure closure) { on_unmount_ = std::move(closure); }
 
   // Serves the root directory of the filesystem using |root| as the server-end of an IPC
   // connection.
-  zx::status<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
+  zx::result<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
 
   // fs::PagedVfs implementation.
   void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
-  zx::status<fs::FilesystemInfo> GetFilesystemInfo() final;
+  zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
   void OnNoConnections() final;
 #endif  // __Fuchsia__
 

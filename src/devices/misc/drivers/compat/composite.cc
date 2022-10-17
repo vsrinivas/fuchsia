@@ -61,7 +61,7 @@ fuchsia_device_manager::wire::DeviceStrProperty convert_device_str_prop(
 
 }  // namespace
 
-zx::status<fuchsia_device_manager::wire::CompositeDeviceDescriptor> CreateComposite(
+zx::result<fuchsia_device_manager::wire::CompositeDeviceDescriptor> CreateComposite(
     fidl::AnyArena& arena, const composite_device_desc_t* comp_desc) {
   fidl::VectorView<fuchsia_device_manager::wire::DeviceFragment> compvec(
       arena, comp_desc->fragments_count);

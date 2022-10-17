@@ -55,7 +55,7 @@ TEST(ServiceProxyDirTest, Simple) {
           }));
   ASSERT_OK(loop.StartThread());
 
-  zx::status endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(endpoints.status_value());
 
   ASSERT_OK(vfs->ServeDirectory(std::move(dir), std::move(endpoints->server)));
@@ -72,7 +72,7 @@ TEST(ServiceProxyDirTest, Simple) {
       }));
   ASSERT_OK(loop.StartThread());
 
-  zx::status proxy_endpoints = fidl::CreateEndpoints<fio::Directory>();
+  zx::result proxy_endpoints = fidl::CreateEndpoints<fio::Directory>();
   ASSERT_OK(proxy_endpoints.status_value());
 
   ASSERT_OK(vfs->ServeDirectory(std::move(proxy_dir), std::move(proxy_endpoints->server)));
@@ -80,7 +80,7 @@ TEST(ServiceProxyDirTest, Simple) {
 
   // First check the service served directly by the proxy.
   {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
     ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(fidl::WireCall(proxy_endpoints->client)
@@ -119,7 +119,7 @@ TEST(ServiceProxyDirTest, Simple) {
 
   // Second check the service that's being proxied by the proxy.
   {
-    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+    zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
     ASSERT_OK(endpoints.status_value());
 
     ASSERT_OK(fidl::WireCall(proxy_endpoints->client)

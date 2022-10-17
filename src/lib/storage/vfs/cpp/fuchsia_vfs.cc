@@ -153,11 +153,11 @@ bool FuchsiaVfs::IsTokenAssociatedWithVnode(zx::event token) {
   return TokenToVnode(std::move(token), nullptr) == ZX_OK;
 }
 
-zx::status<bool> FuchsiaVfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
+zx::result<bool> FuchsiaVfs::EnsureExists(fbl::RefPtr<Vnode> vndir, std::string_view path,
                                           fbl::RefPtr<Vnode>* out_vn,
                                           fs::VnodeConnectionOptions options, uint32_t mode,
                                           Rights parent_rights) {
-  zx::status result = Vfs::EnsureExists(vndir, path, out_vn, options, mode, parent_rights);
+  zx::result result = Vfs::EnsureExists(vndir, path, out_vn, options, mode, parent_rights);
   if (result.is_ok() && result.value()) {
     vndir->Notify(path, fio::wire::WatchEvent::kAdded);
   }
@@ -182,7 +182,7 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
   // Local filesystem
   bool old_must_be_dir;
   {
-    zx::status result = TrimName(oldStr);
+    zx::result result = TrimName(oldStr);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -196,7 +196,7 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
   }
   bool new_must_be_dir;
   {
-    zx::status result = TrimName(newStr);
+    zx::result result = TrimName(newStr);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -227,7 +227,7 @@ zx_status_t FuchsiaVfs::Rename(zx::event token, fbl::RefPtr<Vnode> oldparent,
   return ZX_OK;
 }
 
-zx::status<FilesystemInfo> FuchsiaVfs::GetFilesystemInfo() {
+zx::result<FilesystemInfo> FuchsiaVfs::GetFilesystemInfo() {
   return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
@@ -243,7 +243,7 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
     return ZX_ERR_ACCESS_DENIED;
   }
   {
-    zx::status result = TrimName(oldStr);
+    zx::result result = TrimName(oldStr);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -258,7 +258,7 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
     }
   }
   {
-    zx::status result = TrimName(newStr);
+    zx::result result = TrimName(newStr);
     if (result.is_error()) {
       return result.status_value();
     }
@@ -284,7 +284,7 @@ zx_status_t FuchsiaVfs::Link(zx::event token, fbl::RefPtr<Vnode> oldparent, std:
 
 zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
                               VnodeConnectionOptions options) {
-  zx::status result = vnode->ValidateOptions(options);
+  zx::result result = vnode->ValidateOptions(options);
   if (result.is_error()) {
     return result.status_value();
   }
@@ -327,7 +327,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
 
   // Send an |fuchsia.io/OnOpen| event if requested.
   if (options->flags.describe) {
-    zx::status<VnodeRepresentation> result = internal::Describe(vnode, protocol, *options);
+    zx::result<VnodeRepresentation> result = internal::Describe(vnode, protocol, *options);
     if (result.is_error()) {
       // Ignore errors since there is nothing we can do if this fails.
       [[maybe_unused]] auto unused_result =
@@ -408,7 +408,7 @@ zx_status_t FuchsiaVfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
   VnodeConnectionOptions options;
   options.flags.directory = true;
   options.rights = rights;
-  zx::status validated_options = vn->ValidateOptions(options);
+  zx::result validated_options = vn->ValidateOptions(options);
   if (validated_options.is_error()) {
     return validated_options.status_value();
   }
