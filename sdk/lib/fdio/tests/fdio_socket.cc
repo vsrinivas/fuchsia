@@ -41,6 +41,12 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_posix_socket::wire::kStreamSocketProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  }
+
   void Close(CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
@@ -51,15 +57,17 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
     completer.ReplySuccess();
   }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-    fuchsia_io::wire::StreamSocket stream_socket;
-    zx_status_t status =
-        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &stream_socket.socket);
-    if (status != ZX_OK) {
+  void Describe2(Describe2Completer::Sync& completer) override {
+    zx::socket peer;
+    if (const zx_status_t status =
+            peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &peer);
+        status != ZX_OK) {
       return completer.Close(status);
     }
-    completer.Reply(
-        fuchsia_io::wire::NodeInfoDeprecated::WithStreamSocket(std::move(stream_socket)));
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_posix_socket::wire::StreamSocketDescribe2Response::Builder(alloc)
+                        .socket(std::move(peer))
+                        .Build());
   }
 
   void Connect(ConnectRequestView request, ConnectCompleter::Sync& completer) override {

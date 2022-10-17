@@ -4,7 +4,7 @@
 
 #include "src/lib/storage/block_client/cpp/remote_block_device.h"
 
-#include <fidl/fuchsia.io/cpp/wire.h>
+#include <fidl/fuchsia.io/cpp/wire_test_base.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -71,7 +71,7 @@ class MockBlockDevice {
   zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
     dispatcher_ = dispatcher;
     channel_ = zx::unowned(channel);
-    mock_node_ = std::make_unique<MockNode>(this);
+    mock_server_ = std::make_unique<MockFile>(this);
     // Create buffer for read / write calls
     buffer_.resize(kBlockSize * kBlockCount);
     return fidl_bind(dispatcher_, channel.release(), FidlDispatch, this, nullptr);
@@ -109,7 +109,7 @@ class MockBlockDevice {
     }
     auto incoming_msg = fidl::IncomingHeaderAndMessage::FromEncodedCMessage(msg);
     FidlTransaction ftxn(incoming_msg.header()->txid, zx::unowned(channel_));
-    return fidl::WireTryDispatch<fio::Node>(mock_node_.get(), incoming_msg, &ftxn) ==
+    return fidl::WireTryDispatch<fio::File>(mock_server_.get(), incoming_msg, &ftxn) ==
                    fidl::DispatchResult::kFound
                ? ZX_OK
                : ZX_ERR_PEER_CLOSED;
@@ -129,30 +129,26 @@ class MockBlockDevice {
     return &kOps;
   }
 
-  // This implementation of Node is decidedly non-standard and incomplete, but it is
-  // sufficient to test the cloning behavior used below.
-  class MockNode : public fidl::WireServer<fio::Node> {
+  class MockFile : public fidl::testing::WireTestBase<fio::File> {
    public:
-    explicit MockNode(MockBlockDevice* self) : self_(self) {}
+    explicit MockFile(MockBlockDevice* self) : self_(self) {}
+
+    void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+      FAIL() << "unexpected call to: " << name;
+      completer.Close(ZX_ERR_NOT_SUPPORTED);
+    }
 
     void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override {
       self_->Bind(self_->dispatcher_, request->object.TakeChannel());
     }
 
-    void Close(CloseCompleter::Sync& completer) override {}
-    void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-      fio::wire::FileObject file;
-      completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
-          fidl::ObjectView<decltype(file)>::FromExternal(&file)));
+    void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
+
+    void Query(QueryCompleter::Sync& completer) override {
+      const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;
+      uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+      completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
     }
-    void Query(QueryCompleter::Sync& completer) override {}
-    void GetConnectionInfo(GetConnectionInfoCompleter::Sync& completer) override {}
-    void Sync(SyncCompleter::Sync& completer) override {}
-    void GetAttr(GetAttrCompleter::Sync& completer) override {}
-    void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) override {}
-    void GetFlags(GetFlagsCompleter::Sync& completer) override {}
-    void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) override {}
-    void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) override {}
 
    private:
     MockBlockDevice* self_;
@@ -203,7 +199,7 @@ class MockBlockDevice {
   async_dispatcher_t* dispatcher_ = nullptr;
   zx::unowned_channel channel_;
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
-  std::unique_ptr<MockNode> mock_node_;
+  std::unique_ptr<MockFile> mock_server_;
   std::vector<uint8_t> buffer_;
 };
 

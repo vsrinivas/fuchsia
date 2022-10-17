@@ -35,11 +35,13 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
     zxio_tests::TestFileServerBase::Close(completer);
   }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-    fio::wire::FileObject file_object;
-    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
-        fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
+
+  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -80,15 +82,13 @@ class File : public zxtest::Test {
     if (client_end.is_error()) {
       return client_end.status_value();
     }
-    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->DescribeDeprecated();
+    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->Describe2();
     if (result.status() != ZX_OK) {
       return result.status();
     }
-    auto& response = result.value();
-    EXPECT_TRUE(response.info.is_file());
-    fio::wire::FileObject& file = response.info.file();
-
-    return zxio_file_init(&file_, std::move(file.event), std::move(file.stream),
+    fio::wire::FileInfo& file = result.value();
+    return zxio_file_init(&file_, file.has_observer() ? std::move(file.observer()) : zx::event{},
+                          file.has_stream() ? std::move(file.stream()) : zx::stream{},
                           fidl::ClientEnd<fio::Node>{client_end.value().TakeChannel()});
   }
 
@@ -111,15 +111,14 @@ class TestServerEvent final : public CloseCountingFileServer {
 
   const zx::event& event() const { return event_; }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-    fio::wire::FileObject file_object;
-    zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &file_object.event);
-    if (status != ZX_OK) {
+  void Describe2(Describe2Completer::Sync& completer) final {
+    zx::event event;
+    if (zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &event); status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
-        fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+    fidl::Arena alloc;
+    completer.Reply(fio::wire::FileInfo::Builder(alloc).observer(std::move(event)).Build());
   }
 
  private:
@@ -299,15 +298,14 @@ class TestServerStream final : public CloseCountingFileServer {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-    fio::wire::FileObject file_object;
-    zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &file_object.stream);
-    if (status != ZX_OK) {
+  void Describe2(Describe2Completer::Sync& completer) final {
+    zx::stream stream;
+    if (zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &stream); status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);
       return;
     }
-    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
-        fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+    fidl::Arena alloc;
+    completer.Reply(fio::wire::FileInfo::Builder(alloc).stream(std::move(stream)).Build());
   }
 
  private:

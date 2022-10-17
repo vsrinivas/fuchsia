@@ -24,8 +24,10 @@ class TestDirectoryServer : public zxio_tests::TestDirectoryServerBase {
 
   void Init(zx::event token) { token_ = std::move(token); }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_io::wire::kDirectoryProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
   void Open(OpenRequestView request, OpenCompleter::Sync& completer) final {

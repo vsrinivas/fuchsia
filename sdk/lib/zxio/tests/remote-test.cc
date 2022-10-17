@@ -21,7 +21,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
+class TestServerBase : public fidl::testing::WireTestBase<fio::File> {
  public:
   TestServerBase() = default;
   ~TestServerBase() override = default;
@@ -39,11 +39,13 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
     completer.Close(ZX_OK);
   }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-    fio::wire::FileObject file_object;
-    completer.Reply(fio::wire::NodeInfoDeprecated::WithFile(
-        fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file_object)));
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
+
+  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -58,7 +60,8 @@ class Remote : public zxtest::Test {
     ASSERT_OK(control_client_end.status_value());
     ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
     ASSERT_OK(zxio_remote_init(&remote_, std::move(eventpair_to_client_),
-                               std::move(control_client_end.value()), /*is_tty=*/false));
+                               fidl::ClientEnd<fio::Node>{control_client_end.value().TakeChannel()},
+                               /*is_tty=*/false));
   }
 
   template <typename ServerImpl>
@@ -87,7 +90,7 @@ class Remote : public zxtest::Test {
 
  protected:
   zxio_storage_t remote_;
-  fidl::ServerEnd<fio::Node> control_server_;
+  fidl::ServerEnd<fio::File> control_server_;
 
   zx::eventpair eventpair_on_server_;
   zx::eventpair eventpair_to_client_;
@@ -137,29 +140,29 @@ class CloneTest : public zxtest::Test {
   CloneTest() : server_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() final {
-    zx::status node_ends = fidl::CreateEndpoints<fio::Node>();
-    ASSERT_OK(node_ends.status_value());
-    node_client_end_ = std::move(node_ends->client);
+    zx::status server_end = fidl::CreateEndpoints(&client_end_);
+    ASSERT_OK(server_end.status_value());
 
     node_server_.set_clone_func(
         [this](TestCloneServer::CloneRequestView request,
                TestCloneServer::CloneCompleter::Sync& completer) { Clone(request, completer); });
 
-    fidl::BindServer(server_loop_.dispatcher(), std::move(node_ends->server), &node_server_);
+    fidl::BindServer(server_loop_.dispatcher(), std::move(server_end.value()), &node_server_);
 
     ASSERT_OK(server_loop_.StartThread("fake-filesystem"));
   }
 
   void TearDown() final { server_loop_.Shutdown(); }
 
-  fidl::ClientEnd<fio::Node> TakeClientEnd() { return std::move(node_client_end_); }
+  fidl::ClientEnd<fio::File> TakeClientEnd() { return std::move(client_end_); }
 
  private:
   void Clone(TestCloneServer::CloneRequestView request,
              TestCloneServer::CloneCompleter::Sync& completer) {
     auto server = std::make_unique<TestServerBase>();
     auto binding_ref =
-        fidl::BindServer(server_loop_.dispatcher(), std::move(request->object), server.get());
+        fidl::BindServer(server_loop_.dispatcher(),
+                         fidl::ServerEnd<fio::File>{request->object.TakeChannel()}, server.get());
     cloned_servers_.push_back(std::move(server));
 
     if (request->flags & fio::wire::OpenFlags::kDescribe) {
@@ -174,7 +177,7 @@ class CloneTest : public zxtest::Test {
   }
 
   TestCloneServer node_server_;
-  fidl::ClientEnd<fio::Node> node_client_end_;
+  fidl::ClientEnd<fio::File> client_end_;
   async::Loop server_loop_;
   std::vector<std::unique_ptr<TestServerBase>> cloned_servers_;
 };
@@ -189,10 +192,8 @@ TEST_F(CloneTest, Clone) {
 
   fidl::ClientEnd<fio::Node> clone_client(std::move(clone));
 
-  const fidl::WireResult describe_response = fidl::WireCall(clone_client)->DescribeDeprecated();
-  ASSERT_OK(describe_response.status());
-
-  EXPECT_TRUE(describe_response.value().info.is_file());
+  const fidl::WireResult response = fidl::WireCall(clone_client)->Close();
+  ASSERT_OK(response.status());
 }
 
 }  // namespace

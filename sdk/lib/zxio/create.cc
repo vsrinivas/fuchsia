@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fit/defer.h>
 #include <lib/zx/handle.h>
@@ -88,6 +89,109 @@ class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio
 
 }  // namespace
 
+zx::status<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
+    fidl::AnyArena& alloc, const fidl::ClientEnd<fio::Node>& node) {
+  const fidl::WireResult result = fidl::WireCall(node)->Query();
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  const fidl::WireResponse response = result.value();
+  const std::string_view got{reinterpret_cast<const char*>(response.protocol.data()),
+                             response.protocol.count()};
+  if (got == std::string_view{fio::wire::kFileProtocolName}) {
+    const fidl::UnownedClientEnd<fio::File> file(node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(file)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithFile(
+        alloc, fio::wire::FileObject{
+                   .event = response.has_observer() ? std::move(response.observer()) : zx::event{},
+                   .stream = response.has_stream() ? std::move(response.stream()) : zx::stream{},
+               }));
+  }
+  if (got == std::string_view{fio::wire::kDirectoryProtocolName}) {
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithDirectory({}));
+  }
+  if (got == std::string_view{fuchsia_hardware_pty::wire::kDeviceProtocolName}) {
+    const fidl::UnownedClientEnd<fuchsia_hardware_pty::Device> device(node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(device)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithTty({
+        .event = response.has_event() ? zx::eventpair{response.event().release()} : zx::eventpair{},
+    }));
+  }
+  if (got == std::string_view{fuchsia_posix_socket::wire::kDatagramSocketProtocolName}) {
+    const fidl::UnownedClientEnd<fuchsia_posix_socket::DatagramSocket> socket(
+        node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithDatagramSocket(
+        alloc,
+        fio::wire::DatagramSocket{
+            .socket = response.has_socket() ? std::move(response.socket()) : zx::socket{},
+            .tx_meta_buf_size = response.has_tx_meta_buf_size() ? response.tx_meta_buf_size() : 0,
+            .rx_meta_buf_size = response.has_rx_meta_buf_size() ? response.rx_meta_buf_size() : 0,
+        }));
+  }
+  if (got == std::string_view{fuchsia_posix_socket::wire::kStreamSocketProtocolName}) {
+    const fidl::UnownedClientEnd<fuchsia_posix_socket::StreamSocket> socket(
+        node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithStreamSocket(fio::wire::StreamSocket{
+        .socket = response.has_socket() ? std::move(response.socket()) : zx::socket{},
+    }));
+  }
+  if (got == std::string_view{fuchsia_posix_socket::wire::kSynchronousDatagramSocketProtocolName}) {
+    const fidl::UnownedClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> socket(
+        node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithSynchronousDatagramSocket(
+        fio::wire::SynchronousDatagramSocket{
+            .event = response.has_event() ? std::move(response.event()) : zx::eventpair{},
+        }));
+  }
+  if (got == std::string_view{fuchsia_posix_socket_packet::wire::kSocketProtocolName}) {
+    const fidl::UnownedClientEnd<fuchsia_posix_socket_packet::Socket> socket(
+        node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithPacketSocket(fio::wire::PacketSocket{
+        .event = response.has_event() ? std::move(response.event()) : zx::eventpair{},
+    }));
+  }
+  if (got == std::string_view{fuchsia_posix_socket_raw::wire::kSocketProtocolName}) {
+    const fidl::UnownedClientEnd<fuchsia_posix_socket_raw::Socket> socket(node.borrow().channel());
+    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    if (!result.ok()) {
+      return zx::error(result.status());
+    }
+    fidl::WireResponse response = result.value();
+    return zx::ok(fio::wire::NodeInfoDeprecated::WithRawSocket(fio::wire::RawSocket{
+        .event = response.has_event() ? std::move(response.event()) : zx::eventpair{},
+    }));
+  }
+  return zx::ok(fio::wire::NodeInfoDeprecated::WithService({}));
+}
+
 zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_basic_t* handle_info,
                                   zxio_storage_t* storage) {
   zx::handle handle(raw_handle);
@@ -96,11 +200,13 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
   }
   switch (handle_info->type) {
     case ZX_OBJ_TYPE_CHANNEL: {
+      fidl::Arena alloc;
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      return zxio_with_nodeinfo(std::move(node), [storage](fidl::ClientEnd<fio::Node> node,
-                                                           fio::wire::NodeInfoDeprecated& info) {
-        return zxio_create_with_nodeinfo(std::move(node), info, storage);
-      });
+      zx::status node_info = zxio_get_nodeinfo(alloc, node);
+      if (node_info.is_error()) {
+        return node_info.status_value();
+      }
+      return zxio_create_with_nodeinfo(std::move(node), node_info.value(), storage);
     }
     case ZX_OBJ_TYPE_LOG: {
       zxio_debuglog_init(storage, zx::debuglog(std::move(handle)));

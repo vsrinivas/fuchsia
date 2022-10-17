@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.io/cpp/wire_test_base.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
@@ -90,8 +90,8 @@ class CreateWithTypeSynchronousDatagramSocketTest : public CreateWithTypeBaseWit
 // Tests that calling zxio_create_with_type() with an invalid storage pointer
 // still closes all the handles known for the type.
 TEST_F(CreateWithTypeSynchronousDatagramSocketTest, InvalidStorage) {
-  zx_handle_t event_handle = event().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t event_handle = event().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
                                       event_handle, channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -100,7 +100,7 @@ TEST_F(CreateWithTypeSynchronousDatagramSocketTest, InvalidStorage) {
 }
 
 TEST_F(CreateWithTypeSynchronousDatagramSocketTest, InvalidEvent) {
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
                                       ZX_HANDLE_INVALID, channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -108,7 +108,7 @@ TEST_F(CreateWithTypeSynchronousDatagramSocketTest, InvalidEvent) {
 }
 
 TEST_F(CreateWithTypeSynchronousDatagramSocketTest, InvalidChannel) {
-  zx_handle_t event_handle = event().release();
+  const zx_handle_t event_handle = event().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_SYNCHRONOUS_DATAGRAM_SOCKET,
                                       event_handle, ZX_HANDLE_INVALID),
                 ZX_ERR_INVALID_ARGS);
@@ -118,7 +118,7 @@ TEST_F(CreateWithTypeSynchronousDatagramSocketTest, InvalidChannel) {
 class CreateWithTypeDirectoryTest : public CreateWithTypeBaseWithEventTest {};
 
 TEST_F(CreateWithTypeDirectoryTest, InvalidStorage) {
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DIR, channel_handle),
                 ZX_ERR_INVALID_ARGS);
   AssertChannelClosed();
@@ -132,7 +132,7 @@ TEST_F(CreateWithTypeDirectoryTest, InvalidChannel) {
 class CreateWithTypeNodeTest : public CreateWithTypeBaseWithEventTest {};
 
 TEST_F(CreateWithTypeNodeTest, InvalidStorage) {
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_NODE, channel_handle),
                 ZX_ERR_INVALID_ARGS);
   AssertChannelClosed();
@@ -167,8 +167,8 @@ class CreateWithTypeBaseWithSocketTest : public CreateWithTypeBaseTest {
 class CreateWithTypeStreamSocketTest : public CreateWithTypeBaseWithSocketTest {};
 
 TEST_F(CreateWithTypeStreamSocketTest, InvalidStorage) {
-  zx_handle_t socket_handle = socket().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t socket_handle = socket().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket_handle,
                                       &info(), /*is_connected=*/false, channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -177,7 +177,7 @@ TEST_F(CreateWithTypeStreamSocketTest, InvalidStorage) {
 }
 
 TEST_F(CreateWithTypeStreamSocketTest, InvalidSocket) {
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, ZX_HANDLE_INVALID,
                                       &info(), /*is_connected=*/false, channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -185,7 +185,7 @@ TEST_F(CreateWithTypeStreamSocketTest, InvalidSocket) {
 }
 
 TEST_F(CreateWithTypeStreamSocketTest, InvalidChannel) {
-  zx_handle_t socket_handle = socket().release();
+  const zx_handle_t socket_handle = socket().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket_handle,
                                       &info(), /*is_connected=*/false, ZX_HANDLE_INVALID),
                 ZX_ERR_INVALID_ARGS);
@@ -193,8 +193,8 @@ TEST_F(CreateWithTypeStreamSocketTest, InvalidChannel) {
 }
 
 TEST_F(CreateWithTypeStreamSocketTest, InvalidInfo) {
-  zx_handle_t socket_handle = socket().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t socket_handle = socket().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_STREAM_SOCKET, socket_handle,
                                       nullptr, /*is_connected=*/false, channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -211,8 +211,8 @@ class CreateWithTypeDatagramSocketTest : public CreateWithTypeBaseWithSocketTest
 };
 
 TEST_F(CreateWithTypeDatagramSocketTest, InvalidStorage) {
-  zx_handle_t socket_handle = socket().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t socket_handle = socket().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket_handle,
                                       &info(), &prelude_size(), channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -221,7 +221,7 @@ TEST_F(CreateWithTypeDatagramSocketTest, InvalidStorage) {
 }
 
 TEST_F(CreateWithTypeDatagramSocketTest, InvalidSocket) {
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET,
                                       ZX_HANDLE_INVALID, &info(), &prelude_size(), channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -229,8 +229,8 @@ TEST_F(CreateWithTypeDatagramSocketTest, InvalidSocket) {
 }
 
 TEST_F(CreateWithTypeDatagramSocketTest, InvalidInfo) {
-  zx_handle_t socket_handle = socket().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t socket_handle = socket().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket_handle,
                                       nullptr, &prelude_size(), channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -239,8 +239,8 @@ TEST_F(CreateWithTypeDatagramSocketTest, InvalidInfo) {
 }
 
 TEST_F(CreateWithTypeDatagramSocketTest, PreludeSize) {
-  zx_handle_t socket_handle = socket().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t socket_handle = socket().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket_handle,
                                       &info(), nullptr, channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -249,7 +249,7 @@ TEST_F(CreateWithTypeDatagramSocketTest, PreludeSize) {
 }
 
 TEST_F(CreateWithTypeDatagramSocketTest, InvalidChannel) {
-  zx_handle_t socket_handle = socket().release();
+  const zx_handle_t socket_handle = socket().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_DATAGRAM_SOCKET, socket_handle,
                                       &info(), &prelude_size(), ZX_HANDLE_INVALID),
                 ZX_ERR_INVALID_ARGS);
@@ -259,7 +259,7 @@ TEST_F(CreateWithTypeDatagramSocketTest, InvalidChannel) {
 class CreateWithTypePipeTest : public CreateWithTypeBaseWithSocketTest {};
 
 TEST_F(CreateWithTypePipeTest, InvalidStorage) {
-  zx_handle_t socket_handle = socket().release();
+  const zx_handle_t socket_handle = socket().release();
   ASSERT_STATUS(zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_PIPE, socket_handle, &info()),
                 ZX_ERR_INVALID_ARGS);
   AssertSocketClosed();
@@ -272,7 +272,7 @@ TEST_F(CreateWithTypePipeTest, InvalidSocket) {
 }
 
 TEST_F(CreateWithTypePipeTest, InvalidInfo) {
-  zx_handle_t socket_handle = socket().release();
+  const zx_handle_t socket_handle = socket().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_PIPE, socket_handle, nullptr),
                 ZX_ERR_INVALID_ARGS);
   AssertSocketClosed();
@@ -281,8 +281,8 @@ TEST_F(CreateWithTypePipeTest, InvalidInfo) {
 class CreateWithTypeRawSocketTest : public CreateWithTypeBaseWithEventTest {};
 
 TEST_F(CreateWithTypeRawSocketTest, InvalidStorage) {
-  zx_handle_t event_handle = event().release();
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t event_handle = event().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(
       zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_RAW_SOCKET, event_handle, channel_handle),
       ZX_ERR_INVALID_ARGS);
@@ -291,7 +291,7 @@ TEST_F(CreateWithTypeRawSocketTest, InvalidStorage) {
 }
 
 TEST_F(CreateWithTypeRawSocketTest, InvalidEvent) {
-  zx_handle_t channel_handle = channel().release();
+  const zx_handle_t channel_handle = channel().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_RAW_SOCKET, ZX_HANDLE_INVALID,
                                       channel_handle),
                 ZX_ERR_INVALID_ARGS);
@@ -299,7 +299,7 @@ TEST_F(CreateWithTypeRawSocketTest, InvalidEvent) {
 }
 
 TEST_F(CreateWithTypeRawSocketTest, InvalidChannel) {
-  zx_handle_t event_handle = event().release();
+  const zx_handle_t event_handle = event().release();
   ASSERT_STATUS(zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_RAW_SOCKET, event_handle,
                                       ZX_HANDLE_INVALID),
                 ZX_ERR_INVALID_ARGS);
@@ -329,7 +329,7 @@ class CreateWithTypeVmoTest : public CreateWithTypeBaseTest {
 };
 
 TEST_F(CreateWithTypeVmoTest, InvalidStorage) {
-  zx_handle_t child_handle = child().release();
+  const zx_handle_t child_handle = child().release();
   ASSERT_STATUS(
       zxio_create_with_type(nullptr, ZXIO_OBJECT_TYPE_VMO, child_handle, stream().release()),
       ZX_ERR_INVALID_ARGS);
@@ -343,7 +343,7 @@ TEST_F(CreateWithTypeVmoTest, InvalidVmo) {
 }
 
 TEST_F(CreateWithTypeVmoTest, InvalidStream) {
-  zx_handle_t child_handle = child().release();
+  const zx_handle_t child_handle = child().release();
   ASSERT_STATUS(
       zxio_create_with_type(&storage(), ZXIO_OBJECT_TYPE_VMO, child_handle, ZX_HANDLE_INVALID),
       ZX_ERR_INVALID_ARGS);
@@ -393,23 +393,24 @@ class CreateTestBase : public zxtest::Test {
   async::Loop control_loop_;
 };
 
-using CreateTest = CreateTestBase<zxio_tests::DescribeNodeServer>;
 using CreateWithOnOpenTest = CreateTestBase<zxio_tests::CloseOnlyNodeServer>;
 
-using DescribeCompleter = fidl::WireServer<::fuchsia_io::Node>::DescribeDeprecatedCompleter;
-
-class SyncNodeServer : public zxio_tests::DescribeNodeServer {
+class SyncNodeServer : public zxio_tests::CloseOnlyNodeServer {
  public:
   void Sync(SyncCompleter::Sync& completer) final { completer.ReplySuccess(); }
 };
 
-using CreateDirectoryTest = CreateTestBase<SyncNodeServer>;
+class SyncDirectoryServer : public SyncNodeServer {
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_io::wire::kDirectoryProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  }
+};
+
+using CreateDirectoryTest = CreateTestBase<SyncDirectoryServer>;
 
 TEST_F(CreateDirectoryTest, Directory) {
-  node_server().set_describe_function([](DescribeCompleter::Sync& completer) mutable {
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithDirectory({}));
-  });
-
   StartServerThread();
 
   ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
@@ -455,31 +456,19 @@ TEST_F(CreateDirectoryWithOnOpenTest, Directory) {
 }
 
 class TestFileServerWithDescribe : public zxio_tests::TestReadFileServer {
- public:
-  void set_file(fuchsia_io::wire::FileObject file) { file_ = std::move(file); }
-
  protected:
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithFile(
-        fidl::ObjectView<decltype(file_)>::FromExternal(&file_)));
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
- private:
-  fuchsia_io::wire::FileObject file_;
+  void Describe2(Describe2Completer::Sync& completer) final { completer.Reply({}); }
 };
 
 using CreateFileTest = CreateTestBase<TestFileServerWithDescribe>;
 
 TEST_F(CreateFileTest, File) {
-  zx::event file_event;
-  ASSERT_OK(zx::event::create(0u, &file_event));
-  zx::stream stream;
-
-  node_server().set_file({
-      .event = std::move(file_event),
-      .stream = std::move(stream),
-  });
-
   StartServerThread();
 
   ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
@@ -576,11 +565,17 @@ TEST(CreateWithTypeWrapperTest, Pipe) {
   ASSERT_OK(zxio_close(zxio));
 }
 
-TEST_F(CreateTest, Service) {
-  node_server().set_describe_function([](DescribeCompleter::Sync& completer) mutable {
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithService({}));
-  });
+class ServiceServer : public zxio_tests::CloseOnlyNodeServer {
+  void Query(QueryCompleter::Sync& completer) final {
+    constexpr std::string_view kProtocol = "some.unknown.service";
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  }
+};
 
+using CreateServiceTest = CreateTestBase<ServiceServer>;
+
+TEST_F(CreateServiceTest, Service) {
   StartServerThread();
 
   ASSERT_OK(zxio_create(TakeClientChannel().release(), storage()));
@@ -598,15 +593,42 @@ TEST_F(CreateWithOnOpenTest, Service) {
   ASSERT_OK(zxio_close(zxio()));
 }
 
-TEST_F(CreateTest, Tty) {
-  zx::eventpair event0, event1;
-  ASSERT_OK(zx::eventpair::create(0, &event0, &event1));
-  node_server().set_describe_function(
-      [event1 = std::move(event1)](DescribeCompleter::Sync& completer) mutable {
-        completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithTty({
-            .event = std::move(event1),
-        }));
-      });
+class DeviceServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::Device> {
+ public:
+  zx::eventpair event;
+
+ private:
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) final {
+    ADD_FAILURE("unexpected message received: %s", name.c_str());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  // Exercised by |zxio_close|.
+  void Close(CloseCompleter::Sync& completer) final {
+    completer.ReplySuccess();
+    // After the reply, we should close the connection.
+    completer.Close(ZX_OK);
+  }
+
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_hardware_pty::wire::kDeviceProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  }
+
+  void Describe2(Describe2Completer::Sync& completer) final {
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                        .event(std::move(event))
+                        .Build());
+  }
+};
+
+using CreateTtyTest = CreateTestBase<DeviceServer>;
+
+TEST_F(CreateTtyTest, Tty) {
+  zx::eventpair event;
+  ASSERT_OK(zx::eventpair::create(0, &event, &node_server().event));
 
   StartServerThread();
 
@@ -614,13 +636,13 @@ TEST_F(CreateTest, Tty) {
 
   // Closing the zxio object should close our eventpair's peer event.
   zx_signals_t pending = 0;
-  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_NE(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED)
       << "pending is " << std::showbase << std::hex << pending;
 
   ASSERT_OK(zxio_close(zxio()));
 
-  ASSERT_STATUS(event0.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(event.wait_one(0u, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);
   EXPECT_EQ(pending & ZX_EVENTPAIR_PEER_CLOSED, ZX_EVENTPAIR_PEER_CLOSED)
       << "pending is " << std::showbase << std::hex << pending;
 }

@@ -42,16 +42,18 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.Close(ZX_ERR_NOT_SUPPORTED);
   }
 
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  }
+
   void Close(CloseCompleter::Sync& completer) override {
     completer.ReplySuccess();
     completer.Close(ZX_OK);
   }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) override {
-    fuchsia_io::wire::FileObject fo;
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithFile(
-        fidl::ObjectView<fuchsia_io::wire::FileObject>::FromExternal(&fo)));
-  }
+  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
 
   void GetAttr(GetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, {

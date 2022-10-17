@@ -28,23 +28,6 @@ class CloseOnlyNodeServer : public fidl::testing::WireTestBase<fuchsia_io::Node>
   }
 };
 
-// Implementation of a fuchsia_io::Node server that implements Close() and
-// defers Describe() to a provided callback and creates a test failure for all
-// other messages.
-class DescribeNodeServer : public CloseOnlyNodeServer {
- public:
-  using DescribeFunc = fit::function<void(DescribeDeprecatedCompleter::Sync& completer)>;
-
-  void set_describe_function(DescribeFunc describe) { describe_ = std::move(describe); }
-
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
-    describe_(completer);
-  }
-
- private:
-  DescribeFunc describe_;
-};
-
 }  // namespace zxio_tests
 
 #endif  // LIB_ZXIO_TESTS_TEST_NODE_SERVER_H_

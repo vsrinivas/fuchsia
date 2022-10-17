@@ -300,8 +300,7 @@ impl VmoFileConnection {
                 }
             }
             fio::FileRequest::Describe2 { responder } => {
-                let _ = responder;
-                todo!("https://fxbug.dev/77623");
+                let () = responder.send(fio::FileInfo::EMPTY)?;
             }
             fio::FileRequest::GetConnectionInfo { responder } => {
                 let _ = responder;

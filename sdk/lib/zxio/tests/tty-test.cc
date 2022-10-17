@@ -28,7 +28,13 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     completer.Close(ZX_OK);
   }
 
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final {
+  void Query(QueryCompleter::Sync& completer) final {
+    const std::string_view kProtocol = fuchsia_hardware_pty::wire::kDeviceProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  }
+
+  void Describe2(Describe2Completer::Sync& completer) final {
     zx::eventpair event;
     zx_status_t status = event1_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
     if (status != ZX_OK) {
@@ -36,9 +42,10 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
       completer.Close(status);
       return;
     }
-    completer.Reply(fuchsia_io::wire::NodeInfoDeprecated::WithTty({
-        .event = std::move(event),
-    }));
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                        .event(std::move(event))
+                        .Build());
   }
 
   void SetWindowSize(SetWindowSizeRequestView request,

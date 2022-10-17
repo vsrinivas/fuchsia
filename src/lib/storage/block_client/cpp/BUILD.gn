@@ -131,7 +131,7 @@ test("block_client_unit_test") {
   deps = [
     ":cpp",
     ":fake_device",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire_testing",
     "//sdk/lib/fdio",
     "//src/lib/fxl/test:gtest_main",
     "//src/storage/fvm",

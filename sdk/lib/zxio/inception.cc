@@ -25,12 +25,13 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, zxio_storage_alloc all
   zxio_object_type_t type = ZXIO_OBJECT_TYPE_NONE;
   switch (handle_info.type) {
     case ZX_OBJ_TYPE_CHANNEL: {
+      fidl::Arena alloc;
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      return zxio_with_nodeinfo(
-          std::move(node), [allocator, out_context](fidl::ClientEnd<fio::Node> node,
-                                                    fio::wire::NodeInfoDeprecated& info) {
-            return zxio_create_with_allocator(std::move(node), info, allocator, out_context);
-          });
+      zx::status node_info = zxio_get_nodeinfo(alloc, node);
+      if (node_info.is_error()) {
+        return node_info.status_value();
+      }
+      return zxio_create_with_allocator(std::move(node), node_info.value(), allocator, out_context);
     }
     case ZX_OBJ_TYPE_LOG: {
       type = ZXIO_OBJECT_TYPE_DEBUGLOG;
