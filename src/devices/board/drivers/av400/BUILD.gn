@@ -5,6 +5,10 @@
 import("//build/bind/bind.gni")
 import("//build/drivers.gni")
 
+declare_args() {
+  av400_has_codec = true
+}
+
 driver_bind_rules("av400-emmc-bind") {
   rules = "bind/av400-emmc.bind"
   header_output = "av400-emmc-bind.h"
@@ -113,14 +117,23 @@ driver_bind_rules("spi_1_bind") {
   ]
 }
 
-driver_bind_rules("tdm-i2s-bind") {
-  rules = "bind/tdm-i2s.bind"
-  header_output = "tdm-i2s-bind.h"
+driver_bind_rules("tdm-i2s-test-codec-bind") {
+  rules = "bind/tdm-i2s-test-codec.bind"
+  header_output = "tdm-i2s-test-codec-bind.h"
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform.a5",
     "//src/devices/bind/fuchsia.codec",
     "//src/devices/bind/fuchsia.gpio",
     "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
+driver_bind_rules("tdm-i2s-bind") {
+  rules = "bind/tdm-i2s.bind"
+  header_output = "tdm-i2s-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
   ]
 }
 
@@ -275,6 +288,12 @@ fuchsia_driver("av400-driver") {
   # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+
+  if (av400_has_codec) {
+    defines = [ "TEST_CODEC" ]
+    deps += [ ":tdm-i2s-test-codec-bind_header" ]
+    deps -= [ ":tdm-i2s-bind_header" ]
+  }
 }
 
 fuchsia_driver_component("av400") {

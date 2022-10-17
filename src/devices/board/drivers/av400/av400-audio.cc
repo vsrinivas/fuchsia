@@ -18,8 +18,14 @@
 #include <ti/ti-audio.h>
 
 #include "av400.h"
+
+#ifdef TEST_CODEC
 #include "src/devices/board/drivers/av400/audio-tas5707-stereo-bind.h"
+#include "src/devices/board/drivers/av400/tdm-i2s-test-codec-bind.h"
+#else
 #include "src/devices/board/drivers/av400/tdm-i2s-bind.h"
+#endif
+
 #include "src/devices/bus/lib/platform-bus-composites/platform-bus-composite.h"
 
 namespace av400 {
@@ -210,6 +216,7 @@ zx_status_t Av400::AudioInit() {
   gpio_impl_.SetAltFunction(A5_GPIOT(6), A5_GPIOT_6_MCLK_2_FN);  // MCLK
   gpio_impl_.SetDriveStrength(A5_GPIOT(6), ua, nullptr);
 
+#ifdef TEST_CODEC
   // Config I2S Codec
   zx_device_prop_t props[] = {{BIND_PLATFORM_DEV_VID, 0, PDEV_VID_TI},
                               {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_TI_TAS5707},
@@ -239,6 +246,7 @@ zx_status_t Av400::AudioInit() {
     zxlogf(ERROR, "%s DdkAddComposite failed %d", __FILE__, status);
     return status;
   }
+#endif
 
   // Config Tdmout Playback Device
   metadata::AmlConfig metadata = {};
@@ -267,13 +275,15 @@ zx_status_t Av400::AudioInit() {
   metadata.dai.type = metadata::DaiType::I2s;
   metadata.dai.bits_per_sample = 16;
   metadata.dai.bits_per_slot = 32;
-  metadata.codecs.number_of_codecs = 1;
-  metadata.codecs.types[0] = metadata::CodecType::Tas5707;
   metadata.ring_buffer.number_of_channels = 2;
   metadata.swaps = 0x10;
   metadata.lanes_enable_mask[0] = 3;
+#ifdef TEST_CODEC
+  metadata.codecs.number_of_codecs = 1;
+  metadata.codecs.types[0] = metadata::CodecType::Tas5707;
   metadata.codecs.channels_to_use_bitmask[0] = 0x1;
   metadata.codecs.ring_buffer_channels_to_use_bitmask[0] = 0x3;
+#endif
 
   std::vector<fpbus::Metadata> tdm_metadata{
       {{
