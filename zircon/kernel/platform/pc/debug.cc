@@ -329,13 +329,13 @@ void pc_resume_debug() {
 // entire FIFO's worth of bytes. Much more efficient than writing 1 byte
 // at a time (and then checking for FIFO to drain).
 static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* copied_CR,
-                                          size_t* wrote_bytes, bool map_NL) {
+                                          size_t* wrote_bytes) {
   size_t i, copy_bytes;
   char* s = (char*)str;
 
   copy_bytes = ktl::min(static_cast<size_t>(uart_fifo_depth), *len);
   for (i = 0; i < copy_bytes; i++) {
-    if (*s == '\n' && map_NL && !*copied_CR) {
+    if (*s == '\n' && !*copied_CR) {
       uart_write(0, '\r');
       *copied_CR = true;
       if (++i == copy_bytes)
@@ -365,8 +365,7 @@ static char* debug_platform_tx_FIFO_bytes(const char* str, size_t* len, bool* co
 // to achieve that).
 //
 // block : Blocking vs Non-Blocking
-// map_NL : If true, map a '\n' to '\r'+'\n'
-static void platform_dputs(const char* str, size_t len, bool block, bool map_NL) {
+static void platform_dputs(const char* str, size_t len, bool block) {
   bool copied_CR = false;
   size_t wrote;
 
@@ -390,7 +389,7 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
     }
     // Fifo is completely empty now, we can shove an entire
     // fifo's worth of Tx...
-    str = debug_platform_tx_FIFO_bytes(str, &len, &copied_CR, &wrote, map_NL);
+    str = debug_platform_tx_FIFO_bytes(str, &len, &copied_CR, &wrote);
     if (block && wrote > 0) {
       // If blocking/irq driven wakeps, enable rx/tx intrs
       uart_write(1, static_cast<uint8_t>((1 << 0) | ((uart_tx_irq_enabled ? 1 : 0)
@@ -401,13 +400,13 @@ static void platform_dputs(const char* str, size_t len, bool block, bool map_NL)
 
 void platform_dputs_thread(const char* str, size_t len) {
   if (platform_serial_enabled()) {
-    platform_dputs(str, len, true, true);
+    platform_dputs(str, len, true);
   }
 }
 
 void platform_dputs_irq(const char* str, size_t len) {
   if (platform_serial_enabled()) {
-    platform_dputs(str, len, false, true);
+    platform_dputs(str, len, false);
   }
 }
 

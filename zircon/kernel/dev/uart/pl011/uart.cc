@@ -224,7 +224,7 @@ static int pl011_uart_pgetc() {
   }
 }
 
-static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
+static void pl011_dputs(const char* str, size_t len, bool block) {
   bool copied_CR = false;
 
   // if tx irqs are disabled, override block/noblock argument
@@ -257,7 +257,7 @@ static void pl011_dputs(const char* str, size_t len, bool block, bool map_NL) {
 
     // stuff up to to_write number of chars into the fifo
     for (size_t i = 0; i < to_write; i++) {
-      if (!copied_CR && map_NL && *str == '\n') {
+      if (!copied_CR && *str == '\n') {
         copied_CR = true;
         UARTREG(uart_base, UART_DR) = '\r';
       } else {

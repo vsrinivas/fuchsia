@@ -23,9 +23,8 @@ int uart_getc(bool wait);
 
 /*
  * block : Blocking vs Non-Blocking
- * map_NL : If true, map a '\n' to '\r'+'\n'
  */
-void uart_puts(const char* str, size_t len, bool block, bool map_NL);
+void uart_puts(const char* str, size_t len, bool block);
 
 /* panic-time uart accessors, intended to be run with interrupts disabled */
 void uart_pputc(char c);

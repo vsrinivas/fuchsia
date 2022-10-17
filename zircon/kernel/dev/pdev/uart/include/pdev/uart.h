@@ -22,7 +22,7 @@ struct pdev_uart_ops {
   int (*pgetc)(void);
 
   void (*start_panic)(void);
-  void (*dputs)(const char* str, size_t len, bool block, bool map_NL);
+  void (*dputs)(const char* str, size_t len, bool block);
 };
 
 void pdev_register_uart(const struct pdev_uart_ops* ops);

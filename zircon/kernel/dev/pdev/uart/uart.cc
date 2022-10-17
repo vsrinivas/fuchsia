@@ -17,7 +17,7 @@ static int default_pgetc() { return ZX_ERR_NOT_SUPPORTED; }
 
 static void default_start_panic() {}
 
-static void default_dputs(const char* str, size_t len, bool block, bool map_NL) {}
+static void default_dputs(const char* str, size_t len, bool block) {}
 
 static const struct pdev_uart_ops default_ops = {
     .getc = default_getc,
@@ -35,17 +35,14 @@ void uart_init_early() {}
 
 bool uart_present() { return uart_ops != &default_ops; }
 
-void uart_putc(char c) { uart_ops->dputs(&c, 1, true, true); }
+void uart_putc(char c) { uart_ops->dputs(&c, 1, true); }
 
 int uart_getc(bool wait) { return uart_ops->getc(wait); }
 
 /*
  * block : Blocking vs Non-Blocking
- * map_NL : If true, map a '\n' to '\r'+'\n'
  */
-void uart_puts(const char* str, size_t len, bool block, bool map_NL) {
-  uart_ops->dputs(str, len, block, map_NL);
-}
+void uart_puts(const char* str, size_t len, bool block) { uart_ops->dputs(str, len, block); }
 
 void uart_pputc(char c) { uart_ops->pputc(c); }
 

@@ -473,14 +473,14 @@ void platform_dputs_thread(const char* str, size_t len) {
   if (uart_disabled) {
     return;
   }
-  uart_puts(str, len, true, true);
+  uart_puts(str, len, true);
 }
 
 void platform_dputs_irq(const char* str, size_t len) {
   if (uart_disabled) {
     return;
   }
-  uart_puts(str, len, false, true);
+  uart_puts(str, len, false);
 }
 
 int platform_dgetc(char* c, bool wait) {

@@ -175,7 +175,7 @@ static int dw8250_uart_getc(bool wait) {
   }
 }
 
-static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
+static void dw8250_dputs(const char* str, size_t len, bool block) {
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
@@ -195,7 +195,7 @@ static void dw8250_dputs(const char* str, size_t len, bool block, bool map_NL) {
         }
       });
     }
-    if (*str == '\n' && map_NL && !copied_CR) {
+    if (*str == '\n' && !copied_CR) {
       copied_CR = true;
       dw8250_uart_pputc('\r');
     } else {

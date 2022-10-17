@@ -256,7 +256,7 @@ static int motmot_uart_pgetc() {
   }
 }
 
-static void motmot_uart_dputs(const char* str, size_t len, bool block, bool map_NL) {
+static void motmot_uart_dputs(const char* str, size_t len, bool block) {
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
@@ -288,7 +288,7 @@ static void motmot_uart_dputs(const char* str, size_t len, bool block, bool map_
 
     // stuff up to to_write number of chars into the fifo
     for (size_t i = 0; i < to_write; i++) {
-      if (!copied_CR && map_NL && *str == '\n') {
+      if (!copied_CR && *str == '\n') {
         copied_CR = true;
         UARTREG(uart_base, UART_UTXH) = '\r';
       } else {

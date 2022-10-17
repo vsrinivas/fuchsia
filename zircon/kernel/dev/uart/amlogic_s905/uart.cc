@@ -247,7 +247,7 @@ static int s905_uart_getc(bool wait) {
  * (setting TXINTEN results in the generation of an interrupt
  * each time a byte is read from the Tx FIFO).
  */
-static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
+static void s905_dputs(const char* str, size_t len, bool block) {
   bool copied_CR = false;
 
   if (!uart_tx_irq_enabled) {
@@ -267,7 +267,7 @@ static void s905_dputs(const char* str, size_t len, bool block, bool map_NL) {
       });
     }
 
-    if (*str == '\n' && map_NL && !copied_CR) {
+    if (*str == '\n' && !copied_CR) {
       copied_CR = true;
       UARTREG(s905_uart_base, S905_UART_WFIFO) = '\r';
     } else {
