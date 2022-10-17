@@ -16,6 +16,7 @@ mod descriptor;
 mod peer_info;
 mod peer_task;
 mod peers;
+mod protocol;
 mod sdp_data;
 
 #[fuchsia::main]
