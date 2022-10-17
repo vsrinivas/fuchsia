@@ -7,6 +7,6 @@
 
 namespace netstack_syscall_test {
 
-void AddNonPassingTests(TestMap& tests) { AddSkippedTestsLoopbackTcpAcceptBacklog(tests); }
+void AddNonPassingTests(TestMap& tests) { FilterTestsForLoopbackTcpAcceptBacklogTarget(tests); }
 
 }  // namespace netstack_syscall_test

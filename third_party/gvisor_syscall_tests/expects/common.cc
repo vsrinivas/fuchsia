@@ -6,7 +6,7 @@
 
 namespace netstack_syscall_test {
 
-void AddSkippedTestsBacklogAcceptBacklogShared(TestMap& tests) {
+void SkipTestsRunByLoopbackTarget(TestMap& tests) {
   SkipTest(tests, "All/DualStackSocketTest.AddressOperations/*");
   SkipTest(tests, "SocketInetLoopbackTest.LoopbackAddressRangeConnect");
   SkipTest(tests, "BadSocketPairArgs.ValidateErrForBadCallsToSocketPair");
@@ -61,29 +61,31 @@ void AddSkippedTestsBacklogAcceptBacklogShared(TestMap& tests) {
            "AllFamilies/SocketMultiProtocolInetLoopbackTest.NoReusePortFollowingReusePort/*");
 }
 
-void AddSkippedTestsLoopbackTcpAcceptBacklog(TestMap& tests) {
-  AddSkippedTestsBacklogAcceptBacklogShared(tests);
+void SkipTestsRunByLoopbackTcpBacklogTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/*");
 }
 
-void AddSkippedTestsLoopbackTcpBacklog(TestMap& tests) {
-  AddSkippedTestsBacklogAcceptBacklogShared(tests);
+void SkipTestsRunByLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
 }
 
-void AddSkippedTestsLoopback(TestMap& tests) {
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/*");
+void FilterTestsForLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackTarget(tests);
+  SkipTestsRunByLoopbackTcpBacklogTarget(tests);
 }
 
-void AddSkippedTestsLoopbackIsolated(TestMap& tests) {
-  SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");
-  SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPLinger2TimeoutAfterClose/*");
+void FilterTestsForLoopbackTcpBacklogTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
 }
 
-void AddSkippedTestsFinWaitLingerTimeoutShared(TestMap& tests) {
+void FilterTestsForLoopbackTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpBacklogTarget(tests);
+}
+
+void SkipTestsRunByLoopbackIsolatedTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPActiveCloseTimeWaitTest/*");
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPActiveCloseTimeWaitReuseTest/*");
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitTest/*");
@@ -101,14 +103,27 @@ void AddSkippedTestsFinWaitLingerTimeoutShared(TestMap& tests) {
       "AllFamilies/SocketMultiProtocolInetLoopbackIsolatedTest.V6EphemeralPortReservedReuseAddr/*");
 }
 
-void AddSkippedTestsLoopbackIsolatedTcpFinWait(TestMap& tests) {
-  AddSkippedTestsFinWaitLingerTimeoutShared(tests);
+void SkipTestsRunByLoopbackIsolatedTcpFinWaitTarget(TestMap& tests) {
+  SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");
+}
+
+void SkipTestsRunByLoopbackIsolatedTcpLingerTimeoutTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPLinger2TimeoutAfterClose/*");
 }
 
-void AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(TestMap& tests) {
-  AddSkippedTestsFinWaitLingerTimeoutShared(tests);
-  SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");
+void FilterTestsForLoopbackIsolatedTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackIsolatedTcpFinWaitTarget(tests);
+  SkipTestsRunByLoopbackIsolatedTcpLingerTimeoutTarget(tests);
+}
+
+void FilterTestsForLoopbackIsolatedTcpFinWaitTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackIsolatedTarget(tests);
+  SkipTestsRunByLoopbackIsolatedTcpLingerTimeoutTarget(tests);
+}
+
+void FilterTestsForLoopbackIsolatedTcpLingerTimeoutTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackIsolatedTarget(tests);
+  SkipTestsRunByLoopbackIsolatedTcpFinWaitTarget(tests);
 }
 
 }  // namespace netstack_syscall_test

@@ -9,33 +9,29 @@
 
 namespace netstack_syscall_test {
 
-// The `tcp` and `tcp_blocking` tests have shared expectations when run
-// against Netstack2 stacks. This method adds those expectations to the test map.
-void AddCommonExpectsTcpNetstack2(TestMap& tests);
-
 // The `loopback` target runs only a subset of the tests in its included
 // source files. This method skips all tests besides that subset.
-void AddSkippedTestsLoopback(TestMap& tests);
+void FilterTestsForLoopbackTarget(TestMap& tests);
 
 // The `loopback_isolated_tcp_fin_wait` target runs only a subset of the tests in its
 // included source files. This method skips all tests besides that subset.
-void AddSkippedTestsLoopbackIsolatedTcpFinWait(TestMap& tests);
+void FilterTestsForLoopbackIsolatedTcpFinWaitTarget(TestMap& tests);
 
 // The `loopback_isolated_tcp_linger_timeout` target runs only a subset of the tests in its
 // included source files. This method skips all tests besides that subset.
-void AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(TestMap& tests);
+void FilterTestsForLoopbackIsolatedTcpLingerTimeoutTarget(TestMap& tests);
 
 // The `loopback_isolated` target runs only a subset of the tests in its
 // included source files. This method skips all tests besides that subset.
-void AddSkippedTestsLoopbackIsolated(TestMap& tests);
+void FilterTestsForLoopbackIsolatedTarget(TestMap& tests);
 
 // The `loopback_tcp_backlog` target runs only a subset of the tests in its included
 // source files. This method skips all tests besides that subset.
-void AddSkippedTestsLoopbackTcpBacklog(TestMap& tests);
+void FilterTestsForLoopbackTcpBacklogTarget(TestMap& tests);
 
 // The `loopback_tcp_accept_backlog` target runs only a subset of the tests in its included
 // source files. This method skips all tests besides that subset.
-void AddSkippedTestsLoopbackTcpAcceptBacklog(TestMap& tests);
+void FilterTestsForLoopbackTcpAcceptBacklogTarget(TestMap& tests);
 
 }  // namespace netstack_syscall_test
 

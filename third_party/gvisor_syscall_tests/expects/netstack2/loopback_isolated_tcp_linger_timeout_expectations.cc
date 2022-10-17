@@ -7,6 +7,8 @@
 
 namespace netstack_syscall_test {
 
-void AddNonPassingTests(TestMap& tests) { AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(tests); }
+void AddNonPassingTests(TestMap& tests) {
+  FilterTestsForLoopbackIsolatedTcpLingerTimeoutTarget(tests);
+}
 
 }  // namespace netstack_syscall_test

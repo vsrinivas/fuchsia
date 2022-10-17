@@ -7,6 +7,6 @@
 
 namespace netstack_syscall_test {
 
-void AddNonPassingTests(TestMap& tests) { AddSkippedTestsLoopbackIsolatedTcpFinWait(tests); }
+void AddNonPassingTests(TestMap& tests) { FilterTestsForLoopbackIsolatedTcpFinWaitTarget(tests); }
 
 }  // namespace netstack_syscall_test

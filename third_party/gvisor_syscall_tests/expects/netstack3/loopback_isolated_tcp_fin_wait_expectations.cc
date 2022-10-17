@@ -10,7 +10,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  AddSkippedTestsLoopbackIsolatedTcpFinWait(tests);
+  FilterTestsForLoopbackIsolatedTcpFinWaitTarget(tests);
 
   // Currently NS3 can't run the FinWait suite.
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPFinWait2Test/*");

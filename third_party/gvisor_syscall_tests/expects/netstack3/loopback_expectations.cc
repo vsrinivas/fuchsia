@@ -10,7 +10,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  AddSkippedTestsLoopback(tests);
+  FilterTestsForLoopbackTarget(tests);
 
   // Netstack3 does not have complete support for multicast sockets.
   ExpectFailure(tests, "BadSocketPairArgs.ValidateErrForBadCallsToSocketPair");

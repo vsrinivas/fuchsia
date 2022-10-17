@@ -8,7 +8,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-    AddSkippedTestsLoopbackIsolated(tests);
+    FilterTestsForLoopbackIsolatedTarget(tests);
 
     // Tests that flake in Fuchsia's CQ.
     // https://fxbug.dev/112131

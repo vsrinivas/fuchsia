@@ -10,7 +10,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  AddSkippedTestsLoopbackIsolatedTcpLingerTimeout(tests);
+  FilterTestsForLoopbackIsolatedTcpLingerTimeoutTarget(tests);
 
   // Currently NS3 can't run the Linger2Timeout suite.
   SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPLinger2TimeoutAfterClose/*");

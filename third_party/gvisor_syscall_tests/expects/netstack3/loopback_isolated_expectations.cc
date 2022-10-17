@@ -10,7 +10,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  AddSkippedTestsLoopbackIsolated(tests);
+  FilterTestsForLoopbackIsolatedTarget(tests);
 
   // Netstack3 does not support TCP (yet).
 

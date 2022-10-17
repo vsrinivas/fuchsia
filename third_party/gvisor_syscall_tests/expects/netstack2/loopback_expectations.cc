@@ -8,7 +8,7 @@
 namespace netstack_syscall_test {
 
 void AddNonPassingTests(TestMap& tests) {
-  AddSkippedTestsLoopback(tests);
+  FilterTestsForLoopbackTarget(tests);
 
   // https://fxbug.dev/35593
   ExpectFailure(tests, "BadSocketPairArgs.ValidateErrForBadCallsToSocketPair");
