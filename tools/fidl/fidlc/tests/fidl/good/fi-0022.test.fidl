@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.good.fi0022;
+
+type Foo = struct {
+    // The foo attribute is associated with the data1 field, not the uint32
+    // type.
+    @foo data1 uint32;
+    // The type of data2 is a newly declared anonymous structure, so that new
+    // type can have an attribute applied to it.
+    data2 @foo struct {};
+};

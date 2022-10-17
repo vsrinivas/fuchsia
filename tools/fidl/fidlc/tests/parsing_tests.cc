@@ -760,13 +760,8 @@ type t2 = strict t1;
 }
 
 TEST(ParsingTests, BadIdentifierAttributes) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Foo = struct {
-  data @foo uint32;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0022.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotAttachAttributeToIdentifier);
 }
 

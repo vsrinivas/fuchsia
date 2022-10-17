@@ -43,7 +43,7 @@ constexpr ErrorDef<20> ErrInvalidProtocolMember("invalid protocol member");
 constexpr RetiredDef<21> ErrExpectedProtocolMember(
     "merged ErrUnrecognizedProtocolMember (fi-0020) and ErrExpectedProtocolMember (fi-0021) into "
     "fi-0020 as ErrInvalidProtocolMember");
-constexpr UndocumentedErrorDef<22> ErrCannotAttachAttributeToIdentifier(
+constexpr ErrorDef<22> ErrCannotAttachAttributeToIdentifier(
     "cannot attach attributes to identifiers");
 constexpr UndocumentedErrorDef<23> ErrRedundantAttributePlacement(
     "cannot specify attributes on the type declaration and the corresponding layout at the same "
