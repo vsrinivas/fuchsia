@@ -705,6 +705,14 @@ impl PhyManagerApi for PhyManager {
                     }
                 }
             }
+            Defect::Iface(IfaceFailure::ApStartFailure { iface_id }) => {
+                for (_, phy_info) in self.phys.iter_mut() {
+                    if phy_info.ap_ifaces.contains(&iface_id) {
+                        phy_info.defects.add_event(defect);
+                        break;
+                    }
+                }
+            }
         }
     }
 }
@@ -3749,6 +3757,14 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
         }
 
+        // Log an AP interface failure.
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::ApStartFailure { iface_id: 246 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+
         // Verify that the defects have been logged.
         assert_eq!(phy_manager.phys[&0].defects.events.len(), 1);
         assert_eq!(
@@ -3764,6 +3780,11 @@ mod tests {
         assert_eq!(
             phy_manager.phys[&2].defects.events[0].value,
             Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: 789 })
+        );
+        assert_eq!(phy_manager.phys[&3].defects.events.len(), 1);
+        assert_eq!(
+            phy_manager.phys[&3].defects.events[0].value,
+            Defect::Iface(IfaceFailure::ApStartFailure { iface_id: 246 })
         );
     }
 
@@ -3809,6 +3830,51 @@ mod tests {
         }
 
         // Verify that the defects have been logged.
+        assert_eq!(phy_manager.phys[&0].defects.events.len(), 0);
+    }
+
+    /// Verify that client ifaces do not receive AP defects.
+    #[fuchsia::test]
+    fn test_clients_do_not_record_ap_defects() {
+        let mut exec = TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup();
+
+        let mut phy_manager = PhyManager::new(
+            test_values.monitor_proxy,
+            test_values.node,
+            test_values.telemetry_sender,
+        );
+
+        // Add some PHYs with interfaces.
+        let _ = phy_manager.phys.insert(0, PhyContainer::new(vec![]));
+
+        // Add a PHY with a client interface.
+        let security_support = fidl_common::SecuritySupport {
+            sae: fidl_common::SaeFeature {
+                driver_handler_supported: false,
+                sme_handler_supported: false,
+            },
+            mfp: fidl_common::MfpFeature { supported: false },
+        };
+        let _ = phy_manager
+            .phys
+            .get_mut(&0)
+            .expect("missing PHY")
+            .client_ifaces
+            .insert(123, security_support);
+
+        // Allow defects to be retained indefinitely.
+        phy_manager.phys.get_mut(&0).expect("missing PHY").defects = EventHistory::new(u32::MAX);
+
+        // Log an AP interface failure.
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::ApStartFailure { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+
+        // Verify that the defects have been not logged.
         assert_eq!(phy_manager.phys[&0].defects.events.len(), 0);
     }
 }

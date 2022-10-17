@@ -148,6 +148,8 @@ pub(crate) struct IfaceManagerService {
     telemetry_sender: TelemetrySender,
     // A sender to be cloned for each connection to send periodic data about connection quality.
     stats_sender: ConnectionStatsSender,
+    // A sender to be cloned for state machines to report defects to the IfaceManager.
+    defect_sender: mpsc::UnboundedSender<Defect>,
 }
 
 impl IfaceManagerService {
@@ -159,6 +161,7 @@ impl IfaceManagerService {
         saved_networks: Arc<dyn SavedNetworksManagerApi>,
         telemetry_sender: TelemetrySender,
         stats_sender: ConnectionStatsSender,
+        defect_sender: mpsc::UnboundedSender<Defect>,
     ) -> Self {
         IfaceManagerService {
             phy_manager: phy_manager.clone(),
@@ -173,6 +176,7 @@ impl IfaceManagerService {
             bss_selection_futures: FuturesUnordered::new(),
             telemetry_sender,
             stats_sender,
+            defect_sender,
         }
     }
 
@@ -325,6 +329,7 @@ impl IfaceManagerService {
             receiver.fuse(),
             self.ap_update_sender.clone(),
             self.telemetry_sender.clone(),
+            self.defect_sender.clone(),
         )
         .boxed();
 
@@ -1198,6 +1203,7 @@ pub(crate) async fn serve_iface_manager_requests(
     network_selector: Arc<NetworkSelector>,
     mut requests: mpsc::Receiver<IfaceManagerRequest>,
     mut stats_receiver: ConnectionStatsReceiver,
+    mut defect_receiver: mpsc::UnboundedReceiver<Defect>,
 ) -> Result<Void, Error> {
     // Client and AP state machines need to be allowed to run in order for several operations to
     // complete.  In such cases, futures can be added to this list to progress them once the state
@@ -1263,6 +1269,9 @@ pub(crate) async fn serve_iface_manager_requests(
                     network_selector.clone(),
                     &mut roaming_search_futures
                 );
+            },
+            defect = defect_receiver.select_next_some() => {
+                iface_manager.record_defect(defect).await
             },
             _connection_candidate = roaming_search_futures.select_next_some() => {
                 // TODO(fxbug.dev/84548): decide whether the best network found is better than the
@@ -1390,7 +1399,7 @@ mod tests {
             },
             mode_management::{
                 phy_manager::{self, PhyManagerError},
-                PhyFailure,
+                IfaceFailure, PhyFailure,
             },
             regulatory_manager::REGION_CODE_LEN,
             telemetry::{TelemetryEvent, TelemetrySender},
@@ -1482,6 +1491,8 @@ mod tests {
         pub telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
         pub stats_sender: ConnectionStatsSender,
         pub stats_receiver: ConnectionStatsReceiver,
+        pub defect_sender: mpsc::UnboundedSender<Defect>,
+        pub defect_receiver: mpsc::UnboundedReceiver<Defect>,
     }
 
     /// Create a TestValues for a unit test.
@@ -1514,6 +1525,7 @@ mod tests {
             telemetry_sender.clone(),
         ));
         let (stats_sender, stats_receiver) = mpsc::unbounded();
+        let (defect_sender, defect_receiver) = mpsc::unbounded();
 
         TestValues {
             monitor_service_proxy,
@@ -1530,6 +1542,8 @@ mod tests {
             telemetry_receiver,
             stats_sender,
             stats_receiver,
+            defect_sender,
+            defect_receiver,
         }
     }
 
@@ -1772,6 +1786,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
+            test_values.defect_sender.clone(),
         );
 
         if configured {
@@ -1828,6 +1843,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
+            test_values.defect_sender.clone(),
         );
 
         iface_manager.aps.push(ap_container);
@@ -2356,6 +2372,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Call connect on the IfaceManager
@@ -2490,6 +2507,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Call disconnect on the IfaceManager
@@ -2624,6 +2642,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Call stop_client_connections.
@@ -2735,6 +2754,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Call stop_client_connections.
@@ -2864,6 +2884,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         {
@@ -3069,6 +3090,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Call start_ap.
@@ -3202,6 +3224,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
         let fut = iface_manager.stop_ap(TEST_SSID.clone(), TEST_PASSWORD.as_bytes().to_vec());
         pin_mut!(fut);
@@ -3349,6 +3372,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         let fut = iface_manager.stop_all_aps();
@@ -3657,6 +3681,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         {
@@ -3762,6 +3787,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         {
@@ -3831,6 +3857,7 @@ mod tests {
             test_values.saved_networks,
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         {
@@ -3970,12 +3997,14 @@ mod tests {
         // Start the service loop
         let (mut sender, receiver) = mpsc::channel(1);
         let (_stats_sender, stats_receiver) = mpsc::unbounded();
+        let (_defect_sender, defect_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
             stats_receiver,
+            defect_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4045,12 +4074,14 @@ mod tests {
         // Start the service loop
         let (mut sender, receiver) = mpsc::channel(1);
         let (_stats_sender, stats_receiver) = mpsc::unbounded();
+        let (_defect_sender, defect_receiver) = mpsc::unbounded();
         let serve_fut = serve_iface_manager_requests(
             iface_manager,
             iface_manager_client,
             network_selector,
             receiver,
             stats_receiver,
+            defect_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4205,6 +4236,7 @@ mod tests {
             network_selector,
             receiver,
             stats_receiver,
+            test_values.defect_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4263,6 +4295,7 @@ mod tests {
             network_selector,
             receiver,
             stats_receiver,
+            test_values.defect_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4310,6 +4343,7 @@ mod tests {
             network_selector,
             receiver,
             stats_receiver,
+            test_values.defect_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4434,6 +4468,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Create other components to run the service.
@@ -4457,6 +4492,7 @@ mod tests {
             network_selector,
             receiver,
             test_values.stats_receiver,
+            test_values.defect_receiver,
         );
         pin_mut!(serve_fut);
 
@@ -4566,6 +4602,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Report a new interface.
@@ -4669,6 +4706,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Make start client connections request
@@ -4745,6 +4783,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Make stop client connections request
@@ -5001,6 +5040,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender,
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // Update the saved networks with knowledge of the test SSID and credentials.
@@ -5631,6 +5671,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender,
+            test_values.defect_sender,
         );
 
         // If the test calls for it, create an AP interface to test that the IfaceManager preserves
@@ -5715,6 +5756,7 @@ mod tests {
             test_values.saved_networks.clone(),
             test_values.telemetry_sender.clone(),
             test_values.stats_sender.clone(),
+            test_values.defect_sender.clone(),
         );
 
         {
@@ -5733,6 +5775,63 @@ mod tests {
             exec.run_until_stalled(&mut phy_manager_fut),
             Poll::Ready(phy_manager) => {
                 assert_eq!(phy_manager.defects, vec![Defect::Phy(PhyFailure::IfaceCreationFailure {phy_id: 2})])
+            }
+        );
+    }
+
+    /// Ensure that state machine defects are passed through to the PhyManager.
+    #[fuchsia::test]
+    fn test_record_state_machine_defect() {
+        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec);
+        let phy_manager = Arc::new(Mutex::new(FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            country_code: None,
+            client_connections_enabled: true,
+            client_ifaces: vec![],
+            defects: vec![],
+        }));
+        let iface_manager = IfaceManagerService::new(
+            phy_manager.clone(),
+            test_values.client_update_sender.clone(),
+            test_values.ap_update_sender.clone(),
+            test_values.monitor_service_proxy.clone(),
+            test_values.saved_networks.clone(),
+            test_values.telemetry_sender.clone(),
+            test_values.stats_sender.clone(),
+            test_values.defect_sender.clone(),
+        );
+
+        // Send a defect to the IfaceManager service loop.
+        test_values
+            .defect_sender
+            .unbounded_send(Defect::Iface(IfaceFailure::ApStartFailure { iface_id: 0 }))
+            .expect("failed to send defect notification");
+
+        // Run the IfaceManager service so that it can process the defect.
+        let iface_manager_client = Arc::new(Mutex::new(FakeIfaceManagerRequester::new()));
+        let (_, receiver) = mpsc::channel(0);
+        let serve_fut = serve_iface_manager_requests(
+            iface_manager,
+            iface_manager_client,
+            test_values.network_selector,
+            receiver,
+            test_values.stats_receiver,
+            test_values.defect_receiver,
+        );
+        pin_mut!(serve_fut);
+        assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
+
+        // Verify that the defect has been recorded.
+        let phy_manager_fut = phy_manager.lock();
+        pin_mut!(phy_manager_fut);
+        assert_variant!(
+            exec.run_until_stalled(&mut phy_manager_fut),
+            Poll::Ready(phy_manager) => {
+                assert_eq!(phy_manager.defects, vec![Defect::Iface(IfaceFailure::ApStartFailure {iface_id: 0})])
             }
         );
     }

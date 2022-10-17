@@ -5,6 +5,7 @@
 use {
     crate::{
         access_point::types,
+        mode_management::{Defect, IfaceFailure},
         telemetry::{TelemetryEvent, TelemetrySender},
         util::{
             listener::{
@@ -24,7 +25,7 @@ use {
         select,
         stream::{self, Fuse, FuturesUnordered, StreamExt, TryStreamExt},
     },
-    log::info,
+    log::{info, warn},
     parking_lot::Mutex,
     std::sync::Arc,
     void::ResultVoidErrExt,
@@ -207,10 +208,12 @@ impl ApStateTracker {
 }
 
 struct CommonStateDependencies {
+    iface_id: u16,
     proxy: fidl_sme::ApSmeProxy,
     req_stream: ReqStream,
     state_tracker: Arc<ApStateTracker>,
     telemetry_sender: TelemetrySender,
+    defect_sender: mpsc::UnboundedSender<Defect>,
 }
 
 pub async fn serve(
@@ -220,13 +223,16 @@ pub async fn serve(
     req_stream: Fuse<mpsc::Receiver<ManualRequest>>,
     message_sender: ApListenerMessageSender,
     telemetry_sender: TelemetrySender,
+    defect_sender: mpsc::UnboundedSender<Defect>,
 ) {
     let state_tracker = Arc::new(ApStateTracker::new(message_sender));
     let deps = CommonStateDependencies {
+        iface_id,
         proxy,
         req_stream,
         state_tracker: state_tracker.clone(),
         telemetry_sender,
+        defect_sender,
     };
     let state_machine = stopped_state(deps).into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
@@ -357,6 +363,13 @@ async fn starting_state(
         Ok(code) => {
             // Log a metric indicating that starting the AP failed.
             deps.telemetry_sender.send(TelemetryEvent::ApStartFailure);
+            if let Err(e) =
+                deps.defect_sender.unbounded_send(Defect::Iface(IfaceFailure::ApStartFailure {
+                    iface_id: deps.iface_id,
+                }))
+            {
+                warn!("Failed to log AP start defect: {}", e)
+            }
 
             // For any non-Success response, attempt to retry the start operation.  A successful
             // stop operation followed by an unsuccessful start operation likely indicates that the
@@ -555,6 +568,7 @@ mod tests {
         ap_req_sender: mpsc::Sender<ManualRequest>,
         update_receiver: mpsc::UnboundedReceiver<listener::ApMessage>,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
+        defect_receiver: mpsc::UnboundedReceiver<Defect>,
     }
 
     fn test_setup() -> TestValues {
@@ -565,15 +579,25 @@ mod tests {
         let sme_req_stream = sme_server.into_stream().expect("could not create SME request stream");
         let (telemetry_sender, telemetry_receiver) = mpsc::channel(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
+        let (defect_sender, defect_receiver) = mpsc::unbounded();
 
         let deps = CommonStateDependencies {
+            iface_id: 123,
             proxy: sme_proxy,
             req_stream: ap_req_stream.fuse(),
             state_tracker: Arc::new(ApStateTracker::new(update_sender)),
             telemetry_sender,
+            defect_sender,
         };
 
-        TestValues { deps, sme_req_stream, ap_req_sender, update_receiver, telemetry_receiver }
+        TestValues {
+            deps,
+            sme_req_stream,
+            ap_req_sender,
+            update_receiver,
+            telemetry_receiver,
+            defect_receiver,
+        }
     }
 
     fn create_network_id() -> types::NetworkIdentifier {
@@ -1722,6 +1746,12 @@ mod tests {
             test_values.telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::ApStartFailure))
         );
+
+        // A defect should be sent as well.
+        assert_variant!(
+            test_values.defect_receiver.try_next(),
+            Ok(Some(Defect::Iface(IfaceFailure::ApStartFailure { .. })))
+        );
     }
 
     #[fuchsia::test]
@@ -1800,6 +1830,12 @@ mod tests {
         assert_variant!(
             test_values.telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::ApStartFailure))
+        );
+
+        // A defect should be sent as well.
+        assert_variant!(
+            test_values.defect_receiver.try_next(),
+            Ok(Some(Defect::Iface(IfaceFailure::ApStartFailure { .. })))
         );
 
         // The start sender will be dropped in this transition.
@@ -1919,6 +1955,12 @@ mod tests {
             Ok(Some(TelemetryEvent::ApStartFailure))
         );
 
+        // A defect should be sent as well.
+        assert_variant!(
+            test_values.defect_receiver.try_next(),
+            Ok(Some(Defect::Iface(IfaceFailure::ApStartFailure { .. })))
+        );
+
         // The original start sender will be dropped in this transition.
         assert_variant!(exec.run_until_stalled(&mut start_receiver), Poll::Ready(Err(_)));
 
@@ -2021,6 +2063,12 @@ mod tests {
             test_values.telemetry_receiver.try_next(),
             Ok(Some(TelemetryEvent::ApStartFailure))
         );
+
+        // A defect should be sent as well.
+        assert_variant!(
+            test_values.defect_receiver.try_next(),
+            Ok(Some(Defect::Iface(IfaceFailure::ApStartFailure { .. })))
+        );
     }
 
     #[fuchsia::test]
@@ -2093,6 +2141,7 @@ mod tests {
             test_values.deps.req_stream,
             update_sender,
             test_values.deps.telemetry_sender,
+            test_values.deps.defect_sender,
         );
         pin_mut!(fut);
 
@@ -2115,6 +2164,7 @@ mod tests {
             test_values.deps.req_stream,
             update_sender,
             test_values.deps.telemetry_sender,
+            test_values.deps.defect_sender,
         );
         pin_mut!(fut);
 
@@ -2146,6 +2196,7 @@ mod tests {
             test_values.deps.req_stream,
             update_sender,
             test_values.deps.telemetry_sender,
+            test_values.deps.defect_sender,
         );
         pin_mut!(fut);
 

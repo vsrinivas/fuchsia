@@ -32,6 +32,7 @@ pub fn create_iface_manager(
     let (sender, receiver) = mpsc::channel(0);
     let iface_manager_sender = Arc::new(Mutex::new(iface_manager_api::IfaceManager { sender }));
     let (stats_sender, stats_receiver) = mpsc::unbounded();
+    let (defect_sender, defect_receiver) = mpsc::unbounded();
     let iface_manager = iface_manager::IfaceManagerService::new(
         phy_manager,
         client_update_sender,
@@ -40,6 +41,7 @@ pub fn create_iface_manager(
         saved_networks,
         telemetry_sender,
         stats_sender,
+        defect_sender,
     );
     let iface_manager_service = iface_manager::serve_iface_manager_requests(
         iface_manager,
@@ -47,6 +49,7 @@ pub fn create_iface_manager(
         network_selector,
         receiver,
         stats_receiver,
+        defect_receiver,
     );
 
     (iface_manager_sender, iface_manager_service)
@@ -63,6 +66,7 @@ pub enum IfaceFailure {
     CanceledScan { iface_id: u16 },
     FailedScan { iface_id: u16 },
     EmptyScanResults { iface_id: u16 },
+    ApStartFailure { iface_id: u16 },
 }
 
 // Interfaces will come and go and each one will receive a different ID.  The failures are
@@ -76,6 +80,7 @@ impl PartialEq for IfaceFailure {
             (IfaceFailure::CanceledScan { .. }, IfaceFailure::CanceledScan { .. }) => true,
             (IfaceFailure::FailedScan { .. }, IfaceFailure::FailedScan { .. }) => true,
             (IfaceFailure::EmptyScanResults { .. }, IfaceFailure::EmptyScanResults { .. }) => true,
+            (IfaceFailure::ApStartFailure { .. }, IfaceFailure::ApStartFailure { .. }) => true,
             _ => false,
         }
     }
@@ -351,6 +356,10 @@ mod tests {
         assert_eq!(
             IfaceFailure::EmptyScanResults { iface_id: rng.gen::<u16>() },
             IfaceFailure::EmptyScanResults { iface_id: rng.gen::<u16>() }
+        );
+        assert_eq!(
+            IfaceFailure::ApStartFailure { iface_id: rng.gen::<u16>() },
+            IfaceFailure::ApStartFailure { iface_id: rng.gen::<u16>() }
         );
     }
 }
