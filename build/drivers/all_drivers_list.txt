@@ -28,6 +28,7 @@
 //src/connectivity/ethernet/drivers/realtek-8211f:realtek-8211f-driver
 //src/connectivity/ethernet/drivers/rndis-function:rndis-function-driver
 //src/connectivity/ethernet/drivers/rndis-host:fuchsia_driver
+//src/connectivity/ethernet/drivers/third_party/igc:igc-driver
 //src/connectivity/ethernet/drivers/usb-cdc-ecm:usb-cdc-ecm-driver
 //src/connectivity/ethernet/drivers/usb-cdc-function:usb-cdc-function-driver
 //src/connectivity/ethernet/drivers/virtio:virtio_ethernet-driver

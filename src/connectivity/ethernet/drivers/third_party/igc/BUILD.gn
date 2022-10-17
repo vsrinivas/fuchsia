@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("igc_bind") {
+  rules = "igc.bind"
+  header_output = "igc_bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.driver.framework",
+    "//src/devices/bind/fuchsia.pci",
+  ]
+}
+
+fuchsia_driver("igc-driver") {
+  output_name = "igc"
+  sources = [
+    "igc_api.cc",
+    "igc_base.cc",
+    "igc_i225.cc",
+    "igc_mac.cc",
+    "igc_nvm.cc",
+    "igc_phy.cc",
+  ]
+  deps = [
+    ":igc_bind",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/mmio",
+    "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/fuchsia.hardware.pci:fuchsia.hardware.pci_banjo_cpp",
+    "//src/devices/pci/lib/pci",
+    "//src/lib/ddk",
+    "//src/lib/listnode",
+  ]
+}
+
+fuchsia_driver_component("igc") {
+  component_name = "igc"
+  deps = [ ":igc-driver" ]
+  info = "igc-info.json"
+  colocate = true
+  root_resource = true
+}

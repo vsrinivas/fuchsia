@@ -1,0 +1,12 @@
+{
+    "short_description": "FreeBSD Intel ethernet driver(NUC 11 and later)",
+    "manufacturer": "Intel",
+    "families": [],
+    "models": [
+        "I225-LM"
+    ],
+    "areas": [
+        "Connectivity",
+        "Ethernet"
+    ]
+}

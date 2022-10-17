@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.driver.framework;
+using fuchsia.pci;
+
+fuchsia.BIND_PROTOCOL == fuchsia.pci.BIND_PROTOCOL.DEVICE;
+fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
+
+accept fuchsia.BIND_PCI_DID {
+    0x15F2, // I225-LM
+}

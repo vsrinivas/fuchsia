@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include "igc_api.h"
 
 static void igc_reload_nvm_generic(struct igc_hw *hw);
@@ -475,7 +472,7 @@ s32 igc_write_nvm_spi(struct igc_hw *hw, u16 offset, u16 words, u16 *data)
 		/* Loop to allow for up to whole page write of eeprom */
 		while (widx < words) {
 			u16 word_out = data[widx];
-			word_out = (word_out >> 8) | (word_out << 8);
+			word_out = (u16)((word_out >> 8) | (word_out << 8));
 			igc_shift_out_eec_bits(hw, word_out, 16);
 			widx++;
 
@@ -717,4 +714,3 @@ static void igc_reload_nvm_generic(struct igc_hw *hw)
 	IGC_WRITE_REG(hw, IGC_CTRL_EXT, ctrl_ext);
 	IGC_WRITE_FLUSH(hw);
 }
-

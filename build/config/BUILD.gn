@@ -654,6 +654,7 @@ config("Wno-conversion") {
     "//src/connectivity/bluetooth/hci/vendor/intel:*",
     "//src/connectivity/bluetooth/tools/bt-hci-tool:*",
     "//src/connectivity/bluetooth/tools/bt-intel-tool:*",
+    "//src/connectivity/ethernet/drivers/third_party/igc:*",
     "//src/connectivity/network/tools/nc/third_party/openbsd-netcat:*",
     "//src/connectivity/openthread/drivers/ot-radio:*",
     "//src/connectivity/openthread/tests/fake-drivers/fake-ot-radio:*",

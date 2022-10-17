@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include "igc_api.h"
 
 static s32 igc_init_nvm_params_i225(struct igc_hw *hw);
@@ -46,7 +43,7 @@ static s32 igc_init_nvm_params_i225(struct igc_hw *hw)
 	if (size > 15)
 		size = 15;
 
-	nvm->word_size = 1 << size;
+	nvm->word_size = (u16)(1 << size);
 	nvm->opcode_bits = 8;
 	nvm->delay_usec = 1;
 	nvm->type = igc_nvm_eeprom_spi;

@@ -19,6 +19,7 @@ _bootfs_deps = [
   # Drivers
   "//src/connectivity/ethernet/drivers/gvnic",
   "//src/connectivity/ethernet/drivers/realtek-8111",
+  "//src/connectivity/ethernet/drivers/third_party/igc",
   "//src/devices/serial/drivers/uart16550",
   "//src/graphics/display/drivers/simple:simple.amd-kaveri",
   "//src/graphics/display/drivers/simple:simple.nv",

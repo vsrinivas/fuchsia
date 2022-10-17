@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include "igc_api.h"
 
 static s32 igc_wait_autoneg(struct igc_hw *hw);
@@ -948,7 +945,7 @@ void igc_power_down_phy_copper(struct igc_hw *hw)
 s32 igc_write_phy_reg_gpy(struct igc_hw *hw, u32 offset, u16 data)
 {
 	s32 ret_val;
-	u8 dev_addr = (offset & GPY_MMD_MASK) >> GPY_MMD_SHIFT;
+	u8 dev_addr = (u8)((offset & GPY_MMD_MASK) >> GPY_MMD_SHIFT);
 
 	DEBUGFUNC("igc_write_phy_reg_gpy");
 
@@ -982,7 +979,7 @@ s32 igc_write_phy_reg_gpy(struct igc_hw *hw, u32 offset, u16 data)
 s32 igc_read_phy_reg_gpy(struct igc_hw *hw, u32 offset, u16 *data)
 {
 	s32 ret_val;
-	u8 dev_addr = (offset & GPY_MMD_MASK) >> GPY_MMD_SHIFT;
+	u8 dev_addr = u8((offset & GPY_MMD_MASK) >> GPY_MMD_SHIFT);
 
 	DEBUGFUNC("igc_read_phy_reg_gpy");
 

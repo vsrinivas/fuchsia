@@ -4,9 +4,6 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD$");
-
 #include "igc_api.h"
 
 static void igc_config_collision_dist_generic(struct igc_hw *hw);
@@ -227,7 +224,7 @@ s32 igc_check_alt_mac_addr_generic(struct igc_hw *hw)
 	if (hw->bus.func == IGC_FUNC_1)
 		nvm_alt_mac_addr_offset += IGC_ALT_MAC_ADDRESS_OFFSET_LAN1;
 	for (i = 0; i < ETH_ADDR_LEN; i += 2) {
-		offset = nvm_alt_mac_addr_offset + (i >> 1);
+		offset = u16(nvm_alt_mac_addr_offset + (i >> 1));
 		ret_val = hw->nvm.ops.read(hw, offset, 1, &nvm_data);
 		if (ret_val) {
 			DEBUGOUT("NVM Read Error\n");

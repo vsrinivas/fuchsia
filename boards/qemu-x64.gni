@@ -17,6 +17,7 @@ board_package_labels += [ "//src/factory/factory_store_providers/config/qemu" ]
 # Additional drivers to support running as a virtualization guest.
 _bootfs_deps =
     _imports.virtio_drivers + [
+      "//src/connectivity/ethernet/drivers/third_party/igc",
       "//src/devices/tpm/drivers/tpm-lpc:tpm-lpc-driver",
       "//src/graphics/display/drivers/simple:simple.bochs",
       "//src/graphics/display/drivers/simple:simple.gga",
