@@ -99,9 +99,11 @@ driver host and then executed.
 
 The drivers stored in packages aren't available when driver manager starts, as
 those are stored on disk and drivers must be running before block devices for
-filesystems can appear. driver manager starts a thread that [waits on a
-synchronous open to the /system handle][wait-for-system], and once this open
-call succeeds it loads the drivers in the system package.
+filesystems can appear. Before the filesystems are loaded, only drivers in the
+Zircon Boot Image (ZBI) can be loaded and run. The Driver Index is a component
+that knows where all of the drivers live in the system. The Driver Index will
+let Driver Manager know when base packages have finished loading and it has
+found base drivers.
 
 #### fshost
 
