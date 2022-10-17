@@ -19,6 +19,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
 #include <ktl/atomic.h>
+#include <platform/efi_bootbyte.h>
 #include <platform/keyboard.h>
 
 #include <ktl/enforce.h>
@@ -35,6 +36,7 @@ static_assert(kQEMUExitCode != 0 && kQEMUExitCode % 2 != 0,
 
 static void reboot(void) {
   // select the default reboot reason
+  efi_bootbyte_set_reason(0u);
   x86_reboot_reason_func_t reboot_reason = x86_get_microarch_config()->reboot_reason;
   if (reboot_reason)
     reboot_reason(0u);
@@ -45,12 +47,14 @@ static void reboot(void) {
 }
 
 static void reboot_recovery() {
+  efi_bootbyte_set_reason(2u);
   x86_reboot_reason_func_t reboot_reason = x86_get_microarch_config()->reboot_reason;
   if (reboot_reason)
     reboot_reason(2u);
 }
 
 static void reboot_bootloader() {
+  efi_bootbyte_set_reason(4u);
   x86_reboot_reason_func_t reboot_reason = x86_get_microarch_config()->reboot_reason;
   if (reboot_reason)
     reboot_reason(4u);

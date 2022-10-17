@@ -9,6 +9,7 @@ import("//build/zircon/zircon_cpu.gni")
 source_set("platform") {
   sources = [
     "efi.cc",
+    "efi_bootbyte.cc",
     "efi_crashlog.cc",
     "efi_test.cc",
     "halt_helper.cc",
