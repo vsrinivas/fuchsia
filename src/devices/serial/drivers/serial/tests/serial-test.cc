@@ -240,44 +240,6 @@ TEST_F(SerialDeviceTest, DdkClose) {
   ASSERT_EQ(ZX_ERR_BAD_STATE, device()->DdkClose(0 /* flags */));
 }
 
-TEST_F(SerialDeviceTest, DdkRead) {
-  const char* expected = "test";
-  char buffer[kBufferLength];
-  size_t read_len;
-
-  // Try to read without opening.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, device()->DdkRead(buffer, kBufferLength, 0, &read_len));
-
-  // Test set up.
-  strcpy(serial_impl().read_buffer(), expected);
-  serial_impl().set_state_and_notify(SERIAL_STATE_READABLE);
-  ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
-
-  // Test.
-  ASSERT_EQ(ZX_OK, device()->DdkRead(buffer, kBufferLength, 0, &read_len));
-  ASSERT_EQ(4, read_len);
-  ASSERT_EQ(0, strncmp(expected, buffer, read_len));
-}
-
-TEST_F(SerialDeviceTest, DdkWrite) {
-  const char* data = "test";
-  const size_t kDataLen = 5;
-  char buffer[kBufferLength];
-  size_t write_len;
-
-  // Try to write without opening.
-  ASSERT_EQ(ZX_ERR_BAD_STATE, device()->DdkWrite(buffer, kBufferLength, 0, &write_len));
-
-  // Test set up.
-  ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
-  serial_impl().set_state_and_notify(SERIAL_STATE_WRITABLE);
-
-  // Test.
-  ASSERT_EQ(ZX_OK, device()->DdkWrite(data, kDataLen, 0, &write_len));
-  ASSERT_EQ(kDataLen, write_len);
-  ASSERT_EQ(0, memcmp(data, serial_impl().write_buffer(), write_len));
-}
-
 template <typename ServerImpl>
 zx::status<fidl::WireClient<typename ServerImpl::_EnclosingProtocol>> Connect(
     async_dispatcher_t* dispatcher, ServerImpl* impl) {

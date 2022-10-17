@@ -303,26 +303,6 @@ zx_status_t SerialDevice::DdkClose(uint32_t flags) {
   }
 }
 
-zx_status_t SerialDevice::DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual) {
-  fbl::AutoLock al(&lock_);
-
-  if (!open_) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  return serial_.Read(reinterpret_cast<uint8_t*>(buf), count, actual);
-}
-
-zx_status_t SerialDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual) {
-  fbl::AutoLock al(&lock_);
-
-  if (!open_) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  return serial_.Write(reinterpret_cast<const uint8_t*>(buf), count, actual);
-}
-
 void SerialDevice::GetClass(GetClassCompleter::Sync& completer) {
   completer.Reply(static_cast<fuchsia_hardware_serial::wire::Class>(serial_class_));
 }

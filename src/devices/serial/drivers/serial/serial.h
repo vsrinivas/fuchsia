@@ -21,9 +21,8 @@
 namespace serial {
 
 class SerialDevice;
-using DeviceType =
-    ddk::Device<SerialDevice, ddk::Openable, ddk::Closable, ddk::Readable, ddk::Writable,
-                ddk::Messageable<fuchsia_hardware_serial::Device>::Mixin>;
+using DeviceType = ddk::Device<SerialDevice, ddk::Openable, ddk::Closable,
+                               ddk::Messageable<fuchsia_hardware_serial::Device>::Mixin>;
 
 class SerialDevice : public DeviceType,
                      public ddk::SerialProtocol<SerialDevice, ddk::base_protocol> {
@@ -37,8 +36,6 @@ class SerialDevice : public DeviceType,
   // Device protocol implementation.
   zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
   zx_status_t DdkClose(uint32_t flags);
-  zx_status_t DdkRead(void* buf, size_t count, zx_off_t off, size_t* actual);
-  zx_status_t DdkWrite(const void* buf, size_t count, zx_off_t off, size_t* actual);
   void DdkRelease();
 
   // Serial protocol implementation.

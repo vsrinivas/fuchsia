@@ -5,10 +5,13 @@
 #include <dirent.h>
 #include <endian.h>
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.serial/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.peripheral/cpp/wire.h>
 #include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -40,19 +43,6 @@ class FtdiTest : public zxtest::Test {
     ASSERT_OK(bus_->ClearPeripheralDeviceFunctions());
 
     ASSERT_OK(bus_->Disable());
-  }
-
-  zx_status_t ReadWithTimeout(int fd, void* data, size_t size, size_t* actual) {
-    // time out in 50 milliseconds.
-    constexpr int timeout_length = 50000;
-    auto timeout = std::time(0) + timeout_length;
-    while (std::time(0) < timeout) {
-      *actual = read(fd, data, size);
-      if (*actual != 0) {
-        return ZX_OK;
-      }
-    }
-    return ZX_ERR_SHOULD_WAIT;
   }
 
  protected:
@@ -98,31 +88,47 @@ class FtdiTest : public zxtest::Test {
 };
 
 TEST_F(FtdiTest, ReadAndWriteTest) {
-  fbl::unique_fd fd(openat(bus_->GetRootFd(), devpath_.c_str(), O_RDWR));
-  ASSERT_GT(fd.get(), 0);
+  zx::status result = component::ConnectAt<fuchsia_hardware_serial::Device>(
+      fdio_cpp::UnownedFdioCaller(bus_->GetRootFd()).directory(), devpath_.c_str());
+  ASSERT_OK(result.status_value());
+  fidl::ClientEnd<fuchsia_hardware_serial::Device>& client_end = result.value();
 
-  uint8_t write_data[] = {1, 2, 3};
-  size_t bytes_sent = write(fd.get(), write_data, sizeof(write_data));
-  ASSERT_EQ(bytes_sent, sizeof(write_data));
+  auto assert_read_with_timeout = [&client_end](cpp20::span<uint8_t> write_data) {
+    for (zx::time deadline = zx::deadline_after(zx::sec(5));
+         zx::clock::get_monotonic() < deadline;) {
+      const fidl::WireResult result = fidl::WireCall(client_end)->Read();
+      ASSERT_OK(result.status());
+      const fit::result response = result.value();
+      ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+      cpp20::span data = response.value()->data.get();
+      if (data.empty()) {
+        continue;
+      }
+      ASSERT_EQ(data.size_bytes(), write_data.size_bytes());
+      ASSERT_BYTES_EQ(data.data(), write_data.data(), write_data.size_bytes());
+      return;
+    }
+    FAIL("timed out");
+  };
 
-  uint8_t read_data[3] = {};
-  zx_status_t status = ReadWithTimeout(fd.get(), read_data, sizeof(read_data), &bytes_sent);
-  ASSERT_OK(status);
-  ASSERT_EQ(bytes_sent, sizeof(read_data));
-  for (size_t i = 0; i < sizeof(write_data); i++) {
-    ASSERT_EQ(read_data[i], write_data[i]);
+  {
+    uint8_t write_data[] = {1, 2, 3};
+    const fidl::WireResult result =
+        fidl::WireCall(client_end)->Write(fidl::VectorView<uint8_t>::FromExternal(write_data));
+    ASSERT_OK(result.status());
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_NO_FATAL_FAILURE(assert_read_with_timeout(cpp20::span(write_data)));
   }
 
-  uint8_t write_data2[] = {5, 4, 3, 2, 1};
-  bytes_sent = write(fd.get(), write_data2, sizeof(write_data2));
-  ASSERT_EQ(bytes_sent, sizeof(write_data2));
-
-  uint8_t read_data2[5] = {};
-  status = ReadWithTimeout(fd.get(), read_data2, sizeof(read_data2), &bytes_sent);
-  ASSERT_OK(status);
-  ASSERT_EQ(bytes_sent, sizeof(read_data2));
-  for (size_t i = 0; i < sizeof(write_data2); i++) {
-    ASSERT_EQ(read_data2[i], write_data2[i]);
+  {
+    uint8_t write_data[] = {5, 4, 3, 2, 1};
+    const fidl::WireResult result =
+        fidl::WireCall(client_end)->Write(fidl::VectorView<uint8_t>::FromExternal(write_data));
+    ASSERT_OK(result.status());
+    const fit::result response = result.value();
+    ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+    ASSERT_NO_FATAL_FAILURE(assert_read_with_timeout(cpp20::span(write_data)));
   }
 }
 
