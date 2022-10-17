@@ -1281,7 +1281,22 @@ impl Document {
                         )));
                     }
                 },
-
+                Some(Value::Array(self_nested_vec)) => match value {
+                    // The include value is an array and can be merged
+                    Value::Array(include_nested_vec) => {
+                        let mut new_values = include_nested_vec.clone();
+                        self_nested_vec.append(&mut new_values);
+                    }
+                    _ => {
+                        // Cannot merge array and non-array
+                        return Err(Error::validate(format!(
+                            "manifest include had a conflicting `{}.{}`: {}",
+                            outer_key,
+                            key,
+                            include_path.display()
+                        )));
+                    }
+                },
                 _ => {
                     // Cannot merge object and non-object
                     return Err(Error::validate(format!(
@@ -3599,6 +3614,12 @@ mod tests {
         document(json!({ "facets": { "key": { "type": "some_type", "nested_key": { "runner": "some_runner", "type": "new type" }}}}))
         ; "double nested facet key"
     )]
+    #[test_case(
+        document(json!({ "facets": { "key": { "array_key": ["value_1", "value_2"] } } })),
+        document(json!({ "facets": { "key": { "array_key": ["value_3", "value_4"] } } })),
+        document(json!({ "facets": { "key": { "array_key": ["value_1", "value_2", "value_3", "value_4"] } } }))
+        ; "merge array values"
+    )]
     fn test_merge_from_facets(mut my: Document, mut other: Document, expected: Document) {
         my.merge_from(&mut other, &Path::new("some/path")).unwrap();
         assert_eq!(my.facets, expected.facets);
@@ -3633,6 +3654,12 @@ mod tests {
         document(json!({ "facets": { "key":  {"type":  {"key": "some.value" }}}})),
         "facets.key.type.key"
         ; "conflict third level keys"
+    )]
+    #[test_case(
+        document(json!({ "facets": { "key":  {"type": [ "value_1" ]}}})),
+        document(json!({ "facets": { "key":  {"type":  "value_2" }}})),
+        "facets.key.type"
+        ; "incompatible keys"
     )]
     fn test_merge_from_facet_error(mut my: Document, mut other: Document, field: &str) {
         assert_matches::assert_matches!(
