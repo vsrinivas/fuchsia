@@ -35,8 +35,6 @@ std::shared_ptr<GainControlServer> GainControlServer::Create(
   return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(args));
 }
 
-void GainControlServer::Advance(zx::time reference_time) { gain_control_.Advance(reference_time); }
-
 void GainControlServer::AddMixer(NodeId mixer_id, NodePtr mixer) {
   FX_CHECK(mixer->type() == Node::Type::kMixer);
   mixers_.emplace(mixer_id, std::move(mixer));
@@ -119,7 +117,8 @@ void GainControlServer::SetMute(SetMuteRequestView request, SetMuteCompleter::Sy
 GainControlServer::GainControlServer(Args args)
     : id_(args.id),
       name_(args.name),
-      gain_control_(std::move(args.reference_clock)),
+      reference_clock_(args.reference_clock),
+      gain_control_(UnreadableClock(std::move(args.reference_clock))),
       global_task_queue_(std::move(args.global_task_queue)) {
   FX_CHECK(global_task_queue_);
 }
@@ -135,6 +134,7 @@ void GainControlServer::ScheduleGain(zx::time reference_time, float gain_db,
           mixer_stage->gain_controls().Get(gain_id).ScheduleGain(reference_time, gain_db, ramp);
         });
   }
+  gain_control_.Advance(reference_clock_->now());
 }
 
 void GainControlServer::ScheduleMute(zx::time reference_time, bool is_muted) {
@@ -147,6 +147,7 @@ void GainControlServer::ScheduleMute(zx::time reference_time, bool is_muted) {
           mixer_stage->gain_controls().Get(gain_id).ScheduleMute(reference_time, is_muted);
         });
   }
+  gain_control_.Advance(reference_clock_->now());
 }
 
 void GainControlServer::SetGain(float gain_db, std::optional<GainRamp> ramp) {
@@ -159,6 +160,7 @@ void GainControlServer::SetGain(float gain_db, std::optional<GainRamp> ramp) {
           mixer_stage->gain_controls().Get(gain_id).SetGain(gain_db, ramp);
         });
   }
+  gain_control_.Advance(reference_clock_->now());
 }
 
 void GainControlServer::SetMute(bool is_muted) {
@@ -171,6 +173,7 @@ void GainControlServer::SetMute(bool is_muted) {
           mixer_stage->gain_controls().Get(gain_id).SetMute(is_muted);
         });
   }
+  gain_control_.Advance(reference_clock_->now());
 }
 
 }  // namespace media_audio

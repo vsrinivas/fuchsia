@@ -55,7 +55,7 @@ class GainControlServerTest : public ::testing::Test {
     wrapper_ = std::make_unique<TestServerAndClient<GainControlServer>>(
         thread_, GainControlServer::Args{
                      .id = GainControlId{1},
-                     .reference_clock = DefaultUnreadableClock(),
+                     .reference_clock = DefaultClock(),
                      .global_task_queue = global_task_queue_,
                  });
   }
@@ -126,7 +126,6 @@ TEST_F(GainControlServerTest, SetGainFails) {
     }
     EXPECT_EQ(result->error_value(), tc.expected_error);
 
-    server().Advance(zx::time(0));
     EXPECT_FLOAT_EQ(server().gain_control().state().gain_db, kUnityGainDb);
   }
 }
@@ -158,7 +157,6 @@ TEST_F(GainControlServerTest, SetGainSuccess) {
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_FALSE(result->is_error());
 
-  server().Advance(zx::time(0));
   EXPECT_FLOAT_EQ(server().gain_control().state().gain_db, 6.0f);
 }
 
@@ -194,7 +192,6 @@ TEST_F(GainControlServerTest, SetMuteFails) {
     }
     EXPECT_EQ(result->error_value(), tc.expected_error);
 
-    server().Advance(zx::time(0));
     EXPECT_EQ(server().gain_control().state().is_muted, false);
   }
 }
@@ -208,7 +205,6 @@ TEST_F(GainControlServerTest, SetMuteFailsMissingMuted) {
   ASSERT_TRUE(result->is_error());
   EXPECT_EQ(result->error_value(), GainError::kMissingRequiredField);
 
-  server().Advance(zx::time(0));
   EXPECT_EQ(server().gain_control().state().is_muted, false);
 }
 
@@ -217,7 +213,6 @@ TEST_F(GainControlServerTest, SetMuteSuccess) {
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_FALSE(result->is_error());
 
-  server().Advance(zx::time(0));
   EXPECT_EQ(server().gain_control().state().is_muted, true);
 }
 

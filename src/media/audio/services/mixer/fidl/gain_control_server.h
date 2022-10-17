@@ -15,7 +15,7 @@
 
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "lib/fidl/cpp/wire/wire_messaging_declarations.h"
-#include "src/media/audio/lib/clock/unreadable_clock.h"
+#include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/common/fidl_thread.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
@@ -37,7 +37,7 @@ class GainControlServer
     std::string_view name;
 
     // Reference clock of this gain control.
-    UnreadableClock reference_clock;
+    std::shared_ptr<Clock> reference_clock;
 
     // Global task queue to pass gain control commands into mixers.
     // TODO(fxbug.dev/87651): Consider using a dedicated `ThreadSafeQueue` in `MixerStage` instead.
@@ -47,12 +47,9 @@ class GainControlServer
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio::GainControl> server_end, Args args);
 
-  // Wraps `GainControl::Advance`.
+  // Adds a given `mixer` that uses this gain control with the given `mixer_id`.
   //
   // REQUIRED: `mixer->type() == Node::Type::kMixer`.
-  void Advance(zx::time reference_time);
-
-  // Adds a given `mixer` that uses this gain control with the given `mixer_id`.
   void AddMixer(NodeId mixer_id, NodePtr mixer);
 
   // Removes a mixer with the given `mixer_id`.
@@ -85,6 +82,7 @@ class GainControlServer
 
   const GainControlId id_;
   const std::string name_;
+  const std::shared_ptr<Clock> reference_clock_;
   GainControl gain_control_;
   std::shared_ptr<GlobalTaskQueue> global_task_queue_;
 

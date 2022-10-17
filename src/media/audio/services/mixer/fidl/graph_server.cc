@@ -805,14 +805,13 @@ void GraphServer::CreateGainControl(CreateGainControlRequestView request,
 
   // Register gain control.
   const auto id = NextGainControlId();
-  auto server =
-      GainControlServer::Create(realtime_fidl_thread_, std::move(request->control()),
-                                GainControlServer::Args{
-                                    .id = id,
-                                    .name = name,
-                                    .reference_clock = UnreadableClock(std::move(clock.value())),
-                                    .global_task_queue = global_task_queue_,
-                                });
+  auto server = GainControlServer::Create(realtime_fidl_thread_, std::move(request->control()),
+                                          GainControlServer::Args{
+                                              .id = id,
+                                              .name = name,
+                                              .reference_clock = std::move(clock.value()),
+                                              .global_task_queue = global_task_queue_,
+                                          });
   FX_CHECK(server);
   gain_controls_[id] = std::move(server);
 

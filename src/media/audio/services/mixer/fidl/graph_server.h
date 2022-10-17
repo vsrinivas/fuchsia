@@ -101,9 +101,6 @@ class GraphServer
   const std::shared_ptr<ClockRegistry> clock_registry_;
 
   // Gain controls mapping.
-  // TODO(fxbug.dev/87651): Set up an async loop in `realtime_fidl_thread_` to iterate each gain
-  // control in `gain_controls_`, and call `Advance` periodically (i.e. move `GainControlRegistry`
-  // functionality here).
   std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>> gain_controls_;
   GainControlId next_gain_control_id_ = 1;
 
