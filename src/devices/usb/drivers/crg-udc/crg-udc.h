@@ -419,8 +419,12 @@ class CrgUdc : public CrgUdcType, public ddk::UsbDciProtocol<CrgUdc, ddk::base_p
 
   zx::interrupt irq_;
   thrd_t irq_thread_;
-  // True if |irq_thread_| can be joined.
-  std::atomic_bool irq_thread_started_ = false;
+
+  // True if the irq thread may be joined.
+  std::atomic_bool thread_joinable_ = false;
+
+  // True if the irq thread should bail on next loop iteration.
+  std::atomic_bool thread_terminate_ = false;
 
   dwc2_metadata_t metadata_;
   bool connected_ = false;

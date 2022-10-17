@@ -1815,7 +1815,7 @@ void CrgUdc::DdkInit(ddk::InitTxn txn) {
       &irq_thread_, [](void* arg) -> int { return reinterpret_cast<CrgUdc*>(arg)->IrqThread(); },
       reinterpret_cast<void*>(this), "udc-interrupt-thread");
   if (rc == thrd_success) {
-    irq_thread_started_ = true;
+    thread_joinable_ = true;
     txn.Reply(ZX_OK);
   } else {
     txn.Reply(ZX_ERR_INTERNAL);
@@ -1849,7 +1849,7 @@ int CrgUdc::IrqThread() {
     return 0;
   }
 
-  while (1) {
+  while (!thread_terminate_) {
     wait_start_time_ = zx::clock::get_monotonic();
     auto wait_res = irq_.wait(&irq_timestamp_);
     irq_dispatch_timestamp_ = zx::clock::get_monotonic();
@@ -1861,7 +1861,7 @@ int CrgUdc::IrqThread() {
 
     // It doesn't seem that this inner loop should be necessary,
     // but without it we miss interrupts on some versions of the IP.
-    while (1) {
+    while (!thread_terminate_) {
       auto usbstatus = STATUS::Get().ReadFrom(mmio);
 
       if (usbstatus.sys_err() == 1) {
@@ -1893,9 +1893,10 @@ int CrgUdc::IrqThread() {
 }
 
 void CrgUdc::DdkUnbind(ddk::UnbindTxn txn) {
+  thread_terminate_ = true;
   irq_.destroy();
-  if (irq_thread_started_) {
-    irq_thread_started_ = false;
+  if (thread_joinable_) {
+    thread_joinable_ = false;
     thrd_join(irq_thread_, nullptr);
   }
   txn.Reply();
@@ -1905,12 +1906,13 @@ void CrgUdc::DdkRelease() { delete this; }
 
 void CrgUdc::DdkSuspend(ddk::SuspendTxn txn) {
   fbl::AutoLock lock(&lock_);
+  thread_terminate_ = true;
   irq_.destroy();
   shutting_down_ = true;
   lock.release();
 
-  if (irq_thread_started_) {
-    irq_thread_started_ = false;
+  if (thread_joinable_) {
+    thread_joinable_ = false;
     thrd_join(irq_thread_, nullptr);
   }
 
