@@ -418,7 +418,7 @@ zx_status_t CompositeDeviceFragment::Bind(const fbl::RefPtr<Device>& dev) {
   ZX_ASSERT(bound_device_ == nullptr);
 
   if (!dev->has_outgoing_directory()) {
-    zx_status_t status = dev->coordinator->bind_driver_manager()->BindDriverToDevice(
+    zx_status_t status = dev->coordinator->AttemptBind(
         MatchedDriverInfo{.driver = dev->coordinator->fragment_driver()}, dev);
     if (status != ZX_OK) {
       return status;
