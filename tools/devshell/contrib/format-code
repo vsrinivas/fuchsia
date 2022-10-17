@@ -120,7 +120,7 @@ function format-file() {
     *.c | *.cc | *.cpp | *.h | *.hh | *.hpp | *.proto | *.ts)
       format-cc-file "$1" ;;
 
-    *.bazel| *.bzl| BUILD| WORKSPACE)
+    *.bazel| *.bzl| *.bzlmod| BUILD| WORKSPACE)
       format-full-file "${BAZEL_FORMAT_CMD}" "$1" ;;
 
     *.cmx) format-full-file "${JSON_FMT_CMD}" "$1" ;;
