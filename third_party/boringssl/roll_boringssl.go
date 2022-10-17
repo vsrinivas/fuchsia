@@ -10,6 +10,7 @@
 package main
 
 import (
+	"bufio"
 	"bytes"
 	"flag"
 	"log"
@@ -17,6 +18,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strings"
 )
 
 // Returns the path to the boringssl directory.
@@ -58,10 +60,65 @@ func updateSources(dir, commit string) []byte {
 // Create the GN build files for the current sources.
 func generateGN(dir string) {
 	log.Printf("Generating build files...")
-	cmd := exec.Command("python", filepath.Join("src", "util", "generate_build_files.py"), "gn")
+	cmd := exec.Command("python3", filepath.Join("src", "util", "generate_build_files.py"), "gn")
 	cmd.Dir = dir
 	if err := cmd.Run(); err != nil {
 		log.Fatalf("%s failed: %s", cmd.Args, err)
+	}
+	exportTestData(dir)
+}
+
+func exportTestData(dir string) {
+	// To control aggregate test binary size, we compile the test data
+	// fixture as a shared library.  For linking to work when we do that,
+	// we need to set the visibility attribute on the symbol we intend to
+	// export, which is not done by the code from the default build file
+	// generator.  So we post-process it here, adding default visibility to
+	// the single function we intend to export.
+	log.Printf("Marking GetTestData exported for shared library usage...")
+	TEST_DATA_FILE := "crypto_test_data.cc"
+	TEST_DATA_FILE_PATH := filepath.Join(dir, TEST_DATA_FILE)
+	in, err := os.Open(TEST_DATA_FILE_PATH)
+	if err != nil {
+		log.Fatalf("Could not open %s: %s", TEST_DATA_FILE_PATH, err)
+	}
+	defer in.Close()
+	out, err := os.CreateTemp(dir, TEST_DATA_FILE)
+	if err != nil {
+		log.Fatalf("Could not create output file for writing: %s", err)
+	}
+	defer out.Close()
+	defer os.Remove(out.Name())
+
+	seen := false
+	scanner := bufio.NewScanner(in)
+	writer := bufio.NewWriter(out)
+	MATCH_PATTERN := "std::string GetTestData(const char *path)"
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, MATCH_PATTERN) {
+			line = "__attribute__((__visibility__(\"default\"))) " + line
+			seen = true
+		}
+		_, err := writer.WriteString(line + "\n")
+		if err != nil {
+			log.Fatalf("Could not write output to %s: %s", out.Name(), err)
+		}
+	}
+
+	if !seen {
+		log.Fatalf("Did not see any lines to modify in %s", TEST_DATA_FILE_PATH)
+	}
+
+	err = writer.Flush()
+	if err != nil {
+		log.Fatalf("Could not flush writes to %s: %s", out.Name(), err)
+	}
+
+	out.Close()
+	err = os.Rename(out.Name(), TEST_DATA_FILE_PATH)
+	if err != nil {
+		log.Fatalf("Could not rename %s to %s: %s", out.Name(), TEST_DATA_FILE_PATH, err)
 	}
 }
 

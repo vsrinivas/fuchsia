@@ -183,15 +183,25 @@ if (!is_kernel) {
 
   crypto_tests = []
   common_crypto_test_sources = [
-    "crypto_test_data.cc",
-
     # This test does nothing when BORINGSSL_SHARED_LIBRARY is defined and is
     # needed to resolve missing symbols. /shrug
     "src/crypto/test/abi_test.cc",
     "src/crypto/test/file_test_gtest.cc",
     "src/crypto/test/gtest_main.cc",
   ]
-  _crypto_test_sources = crypto_test_sources - common_crypto_test_sources
+  shared_library("crypto_test_data") {
+    # This file is enormous (embeds ~27MiB of data as of when this was written)
+    # and simply including it as a source file with each test results in debug
+    # builds taking up hundreds of megabytes after compression, since each
+    # binary embeds the full file contents.  To avoid excessive binary size
+    # bloat, we compile this as a shared library, so that each test binary will
+    # share a single copy of the test data.
+    sources = [ "crypto_test_data.cc" ]
+    configs += [ ":test_config" ]
+    visibility = [ ":*" ]
+  }
+  _crypto_test_sources = crypto_test_sources - common_crypto_test_sources -
+                         [ "crypto_test_data.cc" ]
   foreach(crypto_test_source, _crypto_test_sources) {
     name = get_path_info(crypto_test_source, "name")
     target_name = "${name}_crypto_test"
@@ -203,6 +213,7 @@ if (!is_kernel) {
       configs += [ ":test_config" ]
       deps = [
         ":crypto",
+        ":crypto_test_data",
         "//third_party/googletest:gtest",
       ]
     }

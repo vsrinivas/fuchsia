@@ -77,9 +77,7 @@ group("all") {
     "//src/ui/tools/tiles:tiles_tests",
     "//src/virtualization:tests",
     "//third_party/boringssl:boringssl_fuzzers",
-
-    # TODO(fxbug.dev/112143) reenable
-    #"//third_party/boringssl:boringssl_tests",
+    "//third_party/boringssl:boringssl_tests",
     "//third_party/libc-tests:nacl-libc-tests",
     "//third_party/pigweed:tests",
     "//tools/whereiscl:whereiscl_test($host_toolchain)",
