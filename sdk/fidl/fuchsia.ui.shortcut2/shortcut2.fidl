@@ -120,10 +120,15 @@ protocol Registry {
         /// The shortcut to register.
         ///
         /// See [Shortcut] for a detailed specification.
+        ///
+        /// Returns [ILLEGAL_ARGUMENT] if the specific shortcut is not
+        /// well-formed for any reason.  See details on [ILLEGAL_ARGUMENT]
+        /// for recommendations.
         shortcut Shortcut;
     }) -> (struct {}) error Error;
 };
 
+/// Specifies a single shortcut definition.
 type Shortcut = struct {
     /// The shortcut identifier.  The identifier MUST be unique per a connection
     /// to the Registry protocol.
