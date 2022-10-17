@@ -4,8 +4,6 @@
 
 #include "src/developer/forensics/crash_reports/snapshot_store.h"
 
-#include <lib/stdcompat/internal/erase.h>
-
 #include <fstream>
 
 #include "src/developer/forensics/crash_reports/constants.h"
@@ -114,7 +112,8 @@ void SnapshotStore::DeleteSnapshot(const SnapshotUuid& uuid) {
   DropArchive(data);
   RecordAsGarbageCollected(uuid);
   data_.erase(uuid);
-  cpp20::internal::remove_then_erase(insertion_order_, uuid);
+  insertion_order_.erase(std::remove(insertion_order_.begin(), insertion_order_.end(), uuid),
+                         insertion_order_.end());
 }
 
 void SnapshotStore::AddSnapshot(const SnapshotUuid& uuid, fuchsia::feedback::Attachment archive) {

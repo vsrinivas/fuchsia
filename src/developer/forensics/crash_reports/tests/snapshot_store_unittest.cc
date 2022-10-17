@@ -236,5 +236,40 @@ TEST_F(SnapshotStoreTest, Check_ReadPreviouslyGarbageCollected) {
   }
 }
 
+TEST_F(SnapshotStoreTest, Check_RemovesFromInsertionOrder) {
+  // Initialize SnapshotStore to only hold 2 default snapshot archives.
+  SetUpSnapshotStore(StorageSize::Bytes(2 * kDefaultArchiveKey.size()));
+
+  AddDefaultSnapshot();
+
+  const SnapshotUuid kTestUuid2 = kTestUuid + "2";
+  AddDefaultSnapshot(kTestUuid2);
+
+  ASSERT_FALSE(snapshot_store_->SizeLimitsExceeded());
+  ASSERT_TRUE(snapshot_store_->SnapshotExists(kTestUuid));
+  ASSERT_TRUE(snapshot_store_->SnapshotExists(kTestUuid2));
+
+  // Delete snapshots in different order than they were added.
+  snapshot_store_->DeleteSnapshot(kTestUuid2);
+  ASSERT_FALSE(snapshot_store_->SnapshotExists(kTestUuid2));
+
+  // Trigger garbage collection twice by going over size limit. If |kTestUuid2| wasn't removed from
+  // insertion_order_ (a FIFO queue), this would cause a CHECK-FAIL crash.
+  const SnapshotUuid kTestUuid3 = kTestUuid + "3";
+  AddDefaultSnapshot(kTestUuid3);
+
+  const SnapshotUuid kTestUuid4 = kTestUuid + "4";
+  AddDefaultSnapshot(kTestUuid4);
+
+  const SnapshotUuid kTestUuid5 = kTestUuid + "5";
+  AddDefaultSnapshot(kTestUuid5);
+
+  EXPECT_FALSE(snapshot_store_->SizeLimitsExceeded());
+  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid));
+  EXPECT_FALSE(snapshot_store_->SnapshotExists(kTestUuid3));
+  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid4));
+  EXPECT_TRUE(snapshot_store_->SnapshotExists(kTestUuid5));
+}
+
 }  // namespace
 }  // namespace forensics::crash_reports
