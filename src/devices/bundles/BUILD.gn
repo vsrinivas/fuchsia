@@ -149,7 +149,6 @@ group("manual_testing") {
     "//src/devices/block/bin/iotime",
     "//src/devices/gpio/drivers/gpio-test",
     "//src/devices/misc/drivers/test",
-    "//src/devices/serial/bin/serial-test",
     "//src/devices/tests/sysdev",
     "//src/devices/usb/bin/usb-fwloader",
     "//src/devices/usb/bin/xdc-test",
