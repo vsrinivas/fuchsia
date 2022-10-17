@@ -1,6 +1,12 @@
 [
     {
-        "path": "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/root.inspect",
+        "data_source": "Inspect",
+        "metadata": {
+            "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/test_component.cm",
+            "filename": "root.inspect",
+            "timestamp": "TIMESTAMP"
+        },
+        "moniker": "realm_builder\\:CHILD_NAME/test",
         "payload": {
             "root": {
                 "array:0xd": [
@@ -248,6 +254,7 @@
                     }
                 }
             }
-        }
+        },
+        "version": 1
     }
 ]

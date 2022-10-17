@@ -7,8 +7,9 @@ pub use crate::commands::{
 };
 
 #[cfg(target_os = "fuchsia")]
-pub use crate::commands::{list_files::*, show_file::*, target::*};
+pub use crate::commands::{list_files::*, target::*};
 
+mod constants;
 mod list;
 mod list_accessors;
 #[cfg(target_os = "fuchsia")]
@@ -16,8 +17,6 @@ mod list_files;
 mod logs;
 mod selectors;
 mod show;
-#[cfg(target_os = "fuchsia")]
-mod show_file;
 #[cfg(target_os = "fuchsia")]
 mod target;
 mod types;

@@ -65,6 +65,12 @@ pub struct ShowCommand {
     pub selectors: Vec<String>,
 
     #[argh(option)]
+    /// the filename we are interested in. If this is provided, the output will only
+    /// contain data from components which expose Inspect under the given file under
+    /// their out/diagnostics directory.
+    pub file: Option<String>,
+
+    #[argh(option)]
     /// A selector specifying what `fuchsia.diagnostics.ArchiveAccessor` to connect to.
     /// The selector will be in the form of:
     /// <moniker>:<directory>:fuchsia.diagnostics.ArchiveAccessorName
@@ -90,16 +96,27 @@ impl Command for ShowCommand {
         )
         .await?;
         let selectors = utils::expand_selectors(selectors)?;
-        let mut inspect_data = provider.snapshot::<Inspect>(&self.accessor, &selectors).await?;
-        for data in inspect_data.iter_mut() {
-            if let Some(hierarchy) = &mut data.payload {
-                hierarchy.sort();
+        let inspect_data_iter =
+            provider.snapshot::<Inspect>(&self.accessor, &selectors).await?.into_iter();
+        // Filter out by filename on the Inspect metadata.
+        let filter_fn: Box<dyn Fn(&InspectData) -> bool> = match &self.file {
+            Some(file) => {
+                let file_clone = file.to_owned();
+                Box::new(move |d: &InspectData| &d.metadata.filename == &file_clone)
             }
-        }
-        let mut results = inspect_data
-            .into_iter()
-            .map(|schema| ShowCommandResultItem(schema))
+            _ => Box::new(|_d: &InspectData| true),
+        };
+
+        let mut results = inspect_data_iter
+            .filter(filter_fn)
+            .map(|mut d: InspectData| {
+                if let Some(hierarchy) = &mut d.payload {
+                    hierarchy.sort();
+                }
+                ShowCommandResultItem(d)
+            })
             .collect::<Vec<_>>();
+
         results.sort();
         Ok(results)
     }

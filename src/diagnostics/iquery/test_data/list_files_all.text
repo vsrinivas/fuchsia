@@ -1,0 +1,8 @@
+archivist
+  fuchsia.inspect.Tree
+realm_builder:CHILD_NAME/basic
+  fuchsia.inspect.Tree
+realm_builder:CHILD_NAME/test
+  fuchsia.inspect.Tree
+  fuchsia.inspect.deprecated.Inspect
+  root.inspect

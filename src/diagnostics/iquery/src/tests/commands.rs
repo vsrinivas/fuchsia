@@ -7,8 +7,6 @@
 use crate::tests::utils::{self, AssertionOption, AssertionParameters, IqueryCommand, TestBuilder};
 use assert_matches::assert_matches;
 use iquery::types::Error;
-use std::path::Path;
-use tempfile::tempdir;
 
 // List command
 
@@ -105,20 +103,7 @@ async fn list_archive() {
 // List files command
 
 #[fuchsia::test]
-async fn list_files_empty_path_uses_cwd() {
-    let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
-    std::env::set_current_dir(Path::new("/hub")).expect("change dir");
-    test.assert(AssertionParameters {
-        command: IqueryCommand::ListFiles,
-        golden_basename: "list_files_cwd",
-        iquery_args: vec![&format!("children/realm_builder:{}/", test.instance_child_name())],
-        opts: vec![AssertionOption::Retry],
-    })
-    .await;
-}
-
-#[fuchsia::test]
-async fn list_files() {
+async fn list_files_basic() {
     let test = TestBuilder::new()
         .await
         .add_basic_component("basic")
@@ -129,11 +114,27 @@ async fn list_files() {
         .await;
     test.assert(AssertionParameters {
         command: IqueryCommand::ListFiles,
-        golden_basename: "list_files_test",
-        iquery_args: vec![&format!(
-            "/hub/children/realm_builder:{}/children/test/",
-            test.instance_child_name()
-        )],
+        golden_basename: "list_files_basic",
+        iquery_args: vec![&format!("./realm_builder:{}/basic", test.instance_child_name())],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
+}
+
+#[fuchsia::test]
+async fn list_files_all() {
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    test.assert(AssertionParameters {
+        command: IqueryCommand::ListFiles,
+        golden_basename: "list_files_all",
+        iquery_args: vec![],
         opts: vec![AssertionOption::Retry],
     })
     .await;
@@ -230,60 +231,6 @@ async fn selectors_archive() {
     .await;
 }
 
-// Show file
-
-#[fuchsia::test]
-async fn test_no_paths() {
-    let result = utils::execute_command(&["show-file"]).await;
-    assert_matches!(result, Err(Error::InvalidArguments(_)));
-}
-
-#[fuchsia::test]
-async fn test_invalid_location() {
-    let dir = tempdir().unwrap();
-    let file_path = dir.path().join("root.inspect").to_string_lossy().to_string();
-    let result = utils::execute_command(&["show-file", &file_path]).await;
-    assert_matches!(result, Err(Error::ReadLocation(path, _)) if path == file_path);
-}
-
-#[fuchsia::test]
-async fn show_file_test() {
-    let test = TestBuilder::new()
-        .await
-        .add_basic_component("basic")
-        .await
-        .add_test_component("test")
-        .await
-        .start()
-        .await;
-    test.assert(AssertionParameters {
-        command: IqueryCommand::ShowFile,
-        golden_basename: "show_file_test",
-        iquery_args: vec![
-            &format!("/hub/children/realm_builder:{}/children/basic/exec/out/diagnostics/fuchsia.inspect.Tree",
-                test.instance_child_name()),
-            &format!("/hub/children/realm_builder:{}/children/test/exec/out/diagnostics/*",
-                test.instance_child_name()),
-        ],
-        opts: vec![AssertionOption::Retry],
-    }).await;
-}
-
-#[fuchsia::test]
-async fn inspect_vmo_file_directly() {
-    let test = TestBuilder::new().await.add_test_component("test").await.start().await;
-    test.assert(AssertionParameters {
-        command: IqueryCommand::ShowFile,
-        golden_basename: "show_file_vmo",
-        iquery_args: vec![&format!(
-            "/hub/children/realm_builder:{}/children/test/exec/out/diagnostics/root.inspect",
-            test.instance_child_name()
-        )],
-        opts: vec![AssertionOption::Retry],
-    })
-    .await;
-}
-
 // Show
 
 #[fuchsia::test]
@@ -315,6 +262,112 @@ async fn show_test() {
 }
 
 #[fuchsia::test]
+async fn show_test_with_files_basic() {
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic-1")
+        .await
+        .add_basic_component("basic-2")
+        .await
+        .add_basic_component("basic-3")
+        .await
+        .start()
+        .await;
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_test",
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--file",
+            "fuchsia.inspect.Tree",
+            &format!("{}/basic-1:root/fuchsia.inspect.Health", prefix),
+            &format!("{}/basic-2:root:iquery", prefix),
+            &format!("{}/basic-3", prefix),
+        ],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
+}
+
+#[fuchsia::test]
+async fn show_test_with_file_deprecated_inspect() {
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_test_with_file_deprecated_inspect",
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--file",
+            "fuchsia.inspect.deprecated.Inspect",
+            &format!("{}/test", &prefix),
+        ],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
+}
+
+#[fuchsia::test]
+async fn show_test_with_file_root_inspect() {
+    let test = TestBuilder::new()
+        .await
+        .add_basic_component("basic")
+        .await
+        .add_test_component("test")
+        .await
+        .start()
+        .await;
+    let prefix = format!("realm_builder\\:{}", test.instance_child_name());
+    test.assert(AssertionParameters {
+        command: IqueryCommand::Show,
+        golden_basename: "show_test_with_file_root_inspect",
+        iquery_args: vec![
+            "--accessor",
+            "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+            "--file",
+            "root.inspect",
+            &format!("{}/test", &prefix),
+        ],
+        opts: vec![AssertionOption::Retry],
+    })
+    .await;
+}
+
+#[fuchsia::test]
+async fn show_test_with_invalid_file() {
+    TestBuilder::new()
+        .await
+        .add_basic_component("basic-1")
+        .await
+        .add_basic_component("basic-2")
+        .await
+        .add_basic_component("basic-3")
+        .await
+        .start()
+        .await;
+
+    let result = utils::execute_command(&[
+        "show",
+        "--accessor",
+        "archivist:expose:fuchsia.diagnostics.ArchiveAccessor",
+        "--file",
+        "some.random.file",
+    ])
+    .await;
+    assert_matches!(result, Ok(_));
+}
+
+#[fuchsia::test]
 async fn empty_result_on_null_payload() {
     let test = TestBuilder::new().await.add_basic_component("basic").await.start().await;
     let prefix = format!("realm_builder\\:{}", test.instance_child_name());
@@ -324,7 +377,7 @@ async fn empty_result_on_null_payload() {
 }
 
 #[fuchsia::test]
-async fn show_component_doesnt_exist() {
+async fn show_component_does_not_exist() {
     let result = utils::execute_command(&[
         "show",
         "--accessor",
@@ -332,7 +385,7 @@ async fn show_component_doesnt_exist() {
         "doesnt_exist",
     ])
     .await;
-    assert_matches!(result, Ok(_));
+    assert_matches!(result, Ok(s) if s == "");
 }
 
 #[fuchsia::test]

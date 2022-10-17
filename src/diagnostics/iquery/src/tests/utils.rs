@@ -78,7 +78,6 @@ pub enum IqueryCommand {
     ListFiles,
     Logs,
     Selectors,
-    ShowFile,
     Show,
 }
 
@@ -90,7 +89,6 @@ impl fmt::Display for IqueryCommand {
             Self::ListFiles => "list-files",
             Self::Logs => "logs",
             Self::Selectors => "selectors",
-            Self::ShowFile => "show-file",
             Self::Show => "show",
         };
         write!(f, "{}", s)
@@ -192,7 +190,7 @@ impl<'a> CommandAssertion<'a> {
         self.max_retry_time_seconds = 120;
     }
 
-    pub async fn assert(self) {
+    pub(crate) async fn assert(self) {
         let started = zx::Time::get_monotonic().into_nanos();
         let format_str = self.format.to_string();
         let command_str = self.command.to_string();
@@ -373,6 +371,10 @@ impl<'a> CommandAssertion<'a> {
             let replacement = format!("{} = TIMESTAMP", value);
             string = re.replace_all(&string, replacement.as_str()).to_string();
         }
+
+        // Remove tab characters.
+        let re = Regex::new(r#"\t"#).unwrap();
+        string = re.replace_all(&string, "").to_string();
 
         string
     }

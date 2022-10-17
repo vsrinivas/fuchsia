@@ -1,0 +1,22 @@
+[
+    {
+        "files": [
+            "fuchsia.inspect.Tree"
+        ],
+        "moniker": "archivist"
+    },
+    {
+        "files": [
+            "fuchsia.inspect.Tree"
+        ],
+        "moniker": "realm_builder:CHILD_NAME/basic"
+    },
+    {
+        "files": [
+            "fuchsia.inspect.Tree",
+            "fuchsia.inspect.deprecated.Inspect",
+            "root.inspect"
+        ],
+        "moniker": "realm_builder:CHILD_NAME/test"
+    }
+]

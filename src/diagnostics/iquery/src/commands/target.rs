@@ -57,7 +57,7 @@ impl DiagnosticsProvider for ArchiveAccessorProvider {
 }
 
 /// Helper method to connect to both the `RealmQuery` and the `RealmExplorer`.
-async fn connect_realm_protocols(
+pub(crate) async fn connect_realm_protocols(
 ) -> Result<(fsys2::RealmQueryProxy, fsys2::RealmExplorerProxy), Error> {
     let dir_proxy = fuchsia_fs::directory::open_in_namespace(
         "/svc",

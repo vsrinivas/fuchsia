@@ -25,6 +25,12 @@ pub struct ShowCommand {
     pub selectors: Vec<String>,
 
     #[argh(option)]
+    /// the filename we are interested in. If this is provided, the output will only
+    /// contain data from components which expose Inspect under the given file under
+    /// their out/diagnostics directory.
+    pub file: Option<String>,
+
+    #[argh(option)]
     /// the path from where to get the ArchiveAccessor connection. If the given path is a
     /// directory, the command will look for a `fuchsia.diagnostics.ArchiveAccessor` service file.
     /// If the given path is a service file, the command will attempt to connect to it as an
@@ -34,6 +40,11 @@ pub struct ShowCommand {
 
 impl From<ShowCommand> for iquery::commands::ShowCommand {
     fn from(cmd: ShowCommand) -> Self {
-        Self { manifest: cmd.manifest, selectors: cmd.selectors, accessor: cmd.accessor }
+        Self {
+            manifest: cmd.manifest,
+            selectors: cmd.selectors,
+            file: cmd.file,
+            accessor: cmd.accessor,
+        }
     }
 }

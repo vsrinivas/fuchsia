@@ -57,6 +57,12 @@ pub enum Error {
 
     #[error("Invalid selector: {0}")]
     InvalidSelector(String),
+
+    #[error("Invalid component: {0}")]
+    InvalidComponent(String),
+
+    #[error("Timeout")]
+    Timeout,
 }
 
 impl Error {

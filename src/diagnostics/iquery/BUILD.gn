@@ -41,11 +41,11 @@ if (is_fuchsia) {
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//third_party/rust_crates:glob",
   ]
 }
 
 iquery_sources = [
+  "src/commands/constants.rs",
   "src/commands/list.rs",
   "src/commands/list_accessors.rs",
   "src/commands/logs.rs",
@@ -62,7 +62,6 @@ if (is_fuchsia) {
   iquery_sources += [
     "src/command_line.rs",
     "src/commands/list_files.rs",
-    "src/commands/show_file.rs",
     "src/commands/target.rs",
     "src/constants.rs",
     "src/location.rs",
@@ -137,7 +136,6 @@ rustc_test("iquery_test") {
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
   ]
   sources = [
     "src/main.rs",
@@ -158,14 +156,10 @@ rustc_test("iquery_test") {
     "test_data/list_test.text",
     "test_data/list_with_url.json",
     "test_data/list_with_url.text",
-    "test_data/list_files_test.json",
-    "test_data/list_files_test.text",
-    "test_data/list_files_cwd.json",
-    "test_data/list_files_cwd.text",
-    "test_data/show_file_test.text",
-    "test_data/show_file_test.json",
-    "test_data/show_file_vmo.json",
-    "test_data/show_file_vmo.text",
+    "test_data/list_files_basic.json",
+    "test_data/list_files_basic.text",
+    "test_data/list_files_all.text",
+    "test_data/list_files_all.json",
     "test_data/selectors_archive.json",
     "test_data/selectors_archive.text",
     "test_data/selectors_filter_test.json",
@@ -178,10 +172,12 @@ rustc_test("iquery_test") {
     "test_data/show_archive.text",
     "test_data/show_filter_test.text",
     "test_data/show_filter_test.json",
-    "test_data/show_filter_no_selectors_test.text",
-    "test_data/show_filter_no_selectors_test.json",
     "test_data/show_test.json",
     "test_data/show_test.text",
+    "test_data/show_test_with_file_deprecated_inspect.json",
+    "test_data/show_test_with_file_deprecated_inspect.text",
+    "test_data/show_test_with_file_root_inspect.json",
+    "test_data/show_test_with_file_root_inspect.text",
     "test_data/log.json",
     "test_data/log.text",
   ]

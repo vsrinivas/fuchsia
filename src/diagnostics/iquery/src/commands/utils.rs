@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        commands::constants::{IQUERY_TIMEOUT, IQUERY_TIMEOUT_SECS},
         commands::{types::DiagnosticsProvider, Command, ListCommand},
         types::Error,
     },
@@ -14,7 +15,6 @@ use {
     itertools::Itertools,
     lazy_static::lazy_static,
     regex::Regex,
-    std::time::Duration,
 };
 
 lazy_static! {
@@ -89,7 +89,7 @@ pub fn expand_selectors(selectors: Vec<String>) -> Result<Vec<String>, Error> {
 }
 
 /// Helper method to get all `InstanceInfo` from the `RealmExplorer`.
-async fn get_instance_infos(
+pub(crate) async fn get_instance_infos(
     explorer_proxy: &mut fsys2::RealmExplorerProxy,
 ) -> Result<Vec<fsys2::InstanceInfo>, Error> {
     // Server creates a client_end iterator for us.
@@ -117,11 +117,17 @@ async fn get_instance_infos(
     Ok(output_vec)
 }
 
-async fn strip_leading_relative_moniker(moniker: &str) -> &str {
+/// Helper method to strip the leading "./" of a relative moniker.
+/// Does nothing if the string does not start with "./".
+pub async fn strip_leading_relative_moniker(moniker: &str) -> &str {
     return if moniker.starts_with("./") { &moniker[2..] } else { moniker };
 }
 
-const READDIR_TIMEOUT_SECONDS: u64 = 5;
+/// Helper method to append a "./" to moniker. Making it a relative moniker.
+/// Does nothing if the string starts with "./".
+pub async fn prepend_leading_moniker(moniker: &str) -> String {
+    return if moniker.starts_with("./") { moniker.to_owned() } else { format!("./{}", moniker) };
+}
 
 /// Get all the exposed `ArchiveAccessor` from any child component which
 /// directly exposes them or places them in its outgoing directory.
@@ -189,7 +195,7 @@ pub async fn get_accessor_selectors(
 
             let entries = fuchsia_fs::directory::readdir_recursive(
                 &out_dir_proxy,
-                Some(Duration::from_secs(READDIR_TIMEOUT_SECONDS).into()),
+                Some(IQUERY_TIMEOUT.into()),
             )
             .collect::<Vec<_>>()
             .await;
@@ -227,7 +233,7 @@ pub async fn get_accessor_selectors(
                     Err(fuchsia_fs::directory::Error::Timeout) => {
                         eprintln!(
                             "Warning: Read directory timed out after {} second(s).",
-                            READDIR_TIMEOUT_SECONDS
+                            IQUERY_TIMEOUT_SECS,
                         );
                     }
                     Err(e) => {

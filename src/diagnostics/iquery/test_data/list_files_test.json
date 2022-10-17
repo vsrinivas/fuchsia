@@ -1,5 +1,0 @@
-[
-    "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.Tree",
-    "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/fuchsia.inspect.deprecated.Inspect",
-    "/hub/children/realm_builder:CHILD_NAME/children/test/exec/out/diagnostics/root.inspect"
-]

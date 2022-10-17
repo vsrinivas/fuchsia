@@ -151,14 +151,14 @@ with Inspect included, see the following [example test driver][example_test_driv
 
 1. Done. Now you can view Inspect data for the driver.
 
-  - The device inspect file is hosted in /dev/diagnostics/class/<protocol>/xxx.inspect
+  - The device inspect file is hosted in `class/<protocol>/xxx.inspect`
   - Check the inspect data using `iquery`
 
     ```
-    fx iquery show-file /dev/diagnostics/class/ethernet/000.inspect
+    fx iquery show bootstrap/driver_manager --file class/ethernet/000.inspect
 
     // To view all of driver_manager and driver host
-    fx iquery show 'bootstrap/driver_manager'
+    fx iquery show bootstrap/driver_manager
     ```
 
 1. Run `fx snapshot` and check if your inspect data is present in `inspect.json`. Note that the

@@ -1,0 +1,71 @@
+[
+    {
+        "data_source": "Inspect",
+        "metadata": {
+            "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/test_component.cm",
+            "filename": "fuchsia.inspect.deprecated.Inspect",
+            "timestamp": "TIMESTAMP"
+        },
+        "moniker": "realm_builder\\:CHILD_NAME/test",
+        "payload": {
+            "root": {
+                "table:0x0": {
+                    "binary_data": "b64:IAAREgU=",
+                    "object_name": "Example Table",
+                    "row:0x1": {
+                        "cell:0x2": {
+                            "double_value": 11.11111111111111,
+                            "name": "(0,0)",
+                            "value": 0
+                        },
+                        "cell:0x3": {
+                            "double_value": 22.22222222222222,
+                            "name": "(0,1)",
+                            "value": 0
+                        },
+                        "cell:0x4": {
+                            "double_value": 33.333333333333336,
+                            "name": "(0,2)",
+                            "value": 0
+                        }
+                    },
+                    "row:0x5": {
+                        "cell:0x6": {
+                            "double_value": 44.44444444444444,
+                            "name": "(1,0)",
+                            "value": 0
+                        },
+                        "cell:0x7": {
+                            "double_value": 55.55555555555556,
+                            "name": "(1,1)",
+                            "value": 1
+                        },
+                        "cell:0x8": {
+                            "double_value": 66.66666666666667,
+                            "name": "(1,2)",
+                            "value": 2
+                        }
+                    },
+                    "row:0x9": {
+                        "cell:0xa": {
+                            "double_value": 77.77777777777777,
+                            "name": "(2,0)",
+                            "value": 0
+                        },
+                        "cell:0xb": {
+                            "double_value": 88.88888888888889,
+                            "name": "(2,1)",
+                            "value": 2
+                        },
+                        "cell:0xc": {
+                            "double_value": 100.0,
+                            "name": "(2,2)",
+                            "value": 4
+                        }
+                    }
+                }
+            }
+        },
+        "version": 1
+    }
+]

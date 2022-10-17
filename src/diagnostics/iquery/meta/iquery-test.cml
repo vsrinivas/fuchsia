@@ -44,12 +44,6 @@
             path: '/svc/fuchsia.sys2.RealmQuery.root',
         },
         {
-            directory: "hub",
-            from: "framework",
-            rights: [ "rw*" ],
-            path: "/hub",
-        },
-        {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "#archivist",
         },

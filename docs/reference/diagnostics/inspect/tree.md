@@ -146,31 +146,34 @@ what selectors can be used:
 These modes could be used together as follows:
 
 ```
-iquery show `iquery list | grep component_name`
+$ iquery show `iquery list | grep component_name`
 ```
 
 Alternatively `iquery` also allows to print the inspect data at a location. A
 location consists either of the path to a `.inspect` file, or the path to a
 directory containing `fuchsia.inspect.Tree`. `iquery` includes a utility command
-to list all files that contain inspect data (`list-files`). Note that these will be only data
-from v1 components given that v2 are not accessible through the filesystem at
-the moment.
+to list all files that contain inspect data (`list-files`).
 
 iquery's secondary mode of operation (triggered by `list-files`) recursively
-identifies locations for Inspect data from the given directorry path. The
+identifies locations for Inspect data from the given directory path. The
 two modes may be used together as follows:
 
 ```
-iquery show-file `iquery list-files /hub | grep -v system_objects | grep component_name`
+$ iquery list-files [component_moniker]
+bootstrap/driver_manager
+  class/display-controller/000.inspect
+  ... additional output
+
+
+$ iquery show --file 'class/display-controller/000.inspect'
 ```
 
-In the example above, `iquery` is run to find a list of Inspect
-locations that do not contain "system\_objects" and that do contain
-"component\_name". Then, `iquery` is run on the result of the first
-filter to recursively list data in the matching locations. You may instead write:
+In the example above, `iquery list-files` is ran to find a list of Inspect
+locations. Then, `iquery` is ran on one of the output to 
+recursively list data in the matching locations. You may instead write:
 
 ```
-fx iquery show --manifest component_name
+$ fx iquery show --manifest component_name
 ```
 
 ### Archivist {#archivist}

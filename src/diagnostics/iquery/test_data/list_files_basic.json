@@ -1,0 +1,8 @@
+[
+    {
+        "files": [
+            "fuchsia.inspect.Tree"
+        ],
+        "moniker": "realm_builder:CHILD_NAME/basic"
+    }
+]
