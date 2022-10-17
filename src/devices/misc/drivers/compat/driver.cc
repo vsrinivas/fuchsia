@@ -103,12 +103,19 @@ DriverList global_driver_list;
 
 zx_driver_t* DriverList::ZxDriver() { return static_cast<zx_driver_t*>(this); }
 
-void DriverList::AddDriver(Driver* driver) { drivers_.insert(driver); }
+void DriverList::AddDriver(Driver* driver) {
+  std::scoped_lock lock(kDriverGlobalsLock);
+  drivers_.insert(driver);
+}
 
-void DriverList::RemoveDriver(Driver* driver) { drivers_.erase(driver); }
+void DriverList::RemoveDriver(Driver* driver) {
+  std::scoped_lock lock(kDriverGlobalsLock);
+  drivers_.erase(driver);
+}
 
 void DriverList::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                      const char* msg, va_list args) {
+  std::scoped_lock lock(kDriverGlobalsLock);
   if (drivers_.empty()) {
     return;
   }
