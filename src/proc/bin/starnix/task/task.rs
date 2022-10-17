@@ -246,6 +246,10 @@ impl Task {
         self.mutable_state.write()
     }
 
+    pub fn kernel(&self) -> &Arc<Kernel> {
+        &self.thread_group.kernel
+    }
+
     pub fn creds(&self) -> Credentials {
         self.creds.read().clone()
     }
@@ -605,10 +609,6 @@ impl CurrentTask {
             syscall_restart_func: None,
             _not_sync: PhantomData,
         }
-    }
-
-    pub fn kernel(&self) -> &Arc<Kernel> {
-        &self.thread_group.kernel
     }
 
     pub fn task_arc_clone(&self) -> Arc<Task> {
