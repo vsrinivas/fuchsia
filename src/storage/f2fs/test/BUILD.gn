@@ -16,6 +16,30 @@ group("test") {
   ]
 }
 
+test_deps = [
+  "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+  "//sdk/lib/fdio",
+  "//sdk/lib/sys/inspect/cpp",
+  "//sdk/lib/syslog/cpp",
+  "//src/lib/chunked-compression",
+  "//src/lib/fxl/test:gtest_main",
+  "//src/lib/storage/block_client/cpp:fake_device",
+  "//src/lib/storage/fs_management",
+  "//src/storage/f2fs",
+  "//third_party/googletest:gmock",
+  "//third_party/googletest:gtest",
+  "//zircon/system/ulib/async-loop:async-loop-cpp",
+  "//zircon/system/ulib/async-loop:async-loop-default",
+  "//zircon/system/ulib/fidl-utils",
+  "//zircon/system/ulib/storage/buffer",
+  "//zircon/system/ulib/storage/operation",
+  "//zircon/system/ulib/sync",
+  "//zircon/third_party/ulib/cksum",
+  "//zircon/third_party/ulib/safemath",
+]
+
 test("f2fs_unit") {
   sources = [
     "unit/bcache.cc",
@@ -27,12 +51,10 @@ test("f2fs_unit") {
     "unit/file.cc",
     "unit/file_cache.cc",
     "unit/fsck.cc",
-    "unit/gc.cc",
     "unit/inline.cc",
     "unit/mkfs.cc",
     "unit/mmap.cc",
     "unit/mount.cc",
-    "unit/multithreading.cc",
     "unit/node.cc",
     "unit/orphan.cc",
     "unit/roll_forward_recovery.cc",
@@ -43,29 +65,7 @@ test("f2fs_unit") {
     "unit/vnode_cache.cc",
   ]
   public = [ "unit/unit_lib.h" ]
-  deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/inspect/cpp",
-    "//sdk/lib/syslog/cpp",
-    "//src/lib/chunked-compression",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/block_client/cpp:fake_device",
-    "//src/lib/storage/fs_management",
-    "//src/storage/f2fs",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fidl-utils",
-    "//zircon/system/ulib/storage/buffer",
-    "//zircon/system/ulib/storage/operation",
-    "//zircon/system/ulib/sync",
-    "//zircon/third_party/ulib/cksum",
-    "//zircon/third_party/ulib/safemath",
-  ]
+  deps = test_deps
 }
 
 fuchsia_unittest_component("f2fs-unittest") {
@@ -73,25 +73,30 @@ fuchsia_unittest_component("f2fs-unittest") {
   deps = [ ":f2fs_unit" ]
 }
 
+test("f2fs_slow_unit") {
+  sources = [
+    "unit/gc.cc",
+    "unit/multithreading.cc",
+    "unit/unit_lib.cc",
+  ]
+  public = [ "unit/unit_lib.h" ]
+  deps = test_deps
+}
+
+fuchsia_unittest_component("f2fs-slow-unittest") {
+  manifest = "f2fs_slow_unittest.cml"
+  deps = [ ":f2fs_slow_unit" ]
+}
+
 test("f2fs_component_runner_test") {
   output_name = "f2fs_component_runner_test"
   sources = [ "unit/component_runner_test.cc" ]
-  deps = [
-    "//sdk/fidl/fuchsia.fs:fuchsia.fs_cpp_wire",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/fdio",
-    "//sdk/lib/sys/component/cpp",
-    "//sdk/lib/sys/inspect/cpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/storage/block_client/cpp:fake_device",
-    "//src/storage/f2fs",
-    "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
-    "//zircon/system/ulib/async-loop",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/id_allocator",
-    "//zircon/system/ulib/zx",
-  ]
+  deps = test_deps + [
+           "//sdk/lib/sys/component/cpp",
+           "//src/storage/fidl/fuchsia.fs.startup:fuchsia.fs.startup_cpp_wire",
+           "//zircon/system/ulib/id_allocator",
+           "//zircon/system/ulib/zx",
+         ]
 }
 
 fuchsia_unittest_component("f2fs-component-runner-test") {
@@ -130,6 +135,7 @@ fs_test_suite("f2fs") {
   ]
   extra_components = [
     ":f2fs-unittest",
+    ":f2fs-slow-unittest",
     ":f2fs-component-runner-test",
   ]
 }
