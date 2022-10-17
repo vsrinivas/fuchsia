@@ -21,7 +21,9 @@
 
 namespace {
 constexpr int kReadIntervalMs = 1000;
-constexpr size_t kConsumerBufferSizeKb = 512;
+
+// TODO(fxb/112380): Tune value once buffer draining issues are resolved.
+constexpr size_t kConsumerBufferSizeKb = 20 * 1024;  // 20MB
 }  // namespace
 
 ConsumerAdapter::ConsumerAdapter(perfetto::TracingService* perfetto_service,
