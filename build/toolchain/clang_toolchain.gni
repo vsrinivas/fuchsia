@@ -62,12 +62,16 @@ template("clang_toolchain") {
            "clang_toolchain() must specify a \"toolchain_os\"")
 
     compiler_prefix = ""
+    if (defined(invoker.rust_rbe_enable)) {
+      rust_rbe_enable = invoker.rust_rbe_enable
+    }
     if (defined(invoker.cxx_rbe_enable)) {
       cxx_rbe_enable = invoker.cxx_rbe_enable
     }
     if (defined(invoker.use_goma)) {
       use_goma = invoker.use_goma
     }
+
     if (cxx_rbe_enable) {
       # Use reclient to remotely build C++.
       compiler_prefix = rebase_path(cxx_remote_wrapper, root_build_dir)
@@ -87,8 +91,10 @@ template("clang_toolchain") {
       }
       compiler_prefix += " -- "
       not_needed([ "use_goma" ])
+      _cxx_concurrent_jobs = concurrent_jobs.remote
     } else if (use_goma) {
       compiler_prefix = rebase_path(goma_dir, root_build_dir) + "/gomacc"
+      _cxx_concurrent_jobs = concurrent_jobs.remote
     } else {
       if (defined(invoker.use_ccache)) {
         use_ccache = invoker.use_ccache
@@ -96,6 +102,7 @@ template("clang_toolchain") {
       if (use_ccache) {
         compiler_prefix = "ccache "
       }
+      _cxx_concurrent_jobs = concurrent_jobs.local
     }
 
     prefix = rebased_clang_prefix
@@ -165,6 +172,8 @@ template("clang_toolchain") {
       _rustc_wrapper = rebase_path(rustc_remote_wrapper, root_build_dir) +
                        _rewrapper_flags + " -- "
     }
+
+    # TODO(http://fxbug.dev/111790): fix concurrency
     if (_rust_concurrent_jobs == "") {
       _rust_concurrent_jobs = concurrent_jobs.local
     }
@@ -229,7 +238,7 @@ template("clang_toolchain") {
     lib_dir_switch = "-L"
 
     tool("cc") {
-      forward_variables_from(concurrent_jobs.goma, "*")
+      forward_variables_from(_cxx_concurrent_jobs, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
       command_launcher =
@@ -243,7 +252,7 @@ template("clang_toolchain") {
     }
 
     tool("cxx") {
-      forward_variables_from(concurrent_jobs.goma, "*")
+      forward_variables_from(_cxx_concurrent_jobs, "*")
       depfile = "{{output}}.d"
       command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
       command_launcher =
@@ -257,7 +266,7 @@ template("clang_toolchain") {
     }
 
     tool("asm") {
-      forward_variables_from(concurrent_jobs.goma, "*")
+      forward_variables_from(_cxx_concurrent_jobs, "*")
       depfile = "{{output}}.d"
       command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
       command_launcher =
