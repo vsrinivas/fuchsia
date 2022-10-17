@@ -661,7 +661,9 @@ wlan::drivers::components::FrameContainer brcmf_sdio_acquire_rx_space(struct brc
 std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_single_rx_space(
     struct brcmf_sdio* bus);
 
-std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_internal_rx_space(
+wlan::drivers::components::FrameContainer brcmf_sdio_acquire_internal_rx_space(
+    struct brcmf_sdio* bus, size_t num);
+std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_single_internal_rx_space(
     struct brcmf_sdio* bus);
 wlan::drivers::components::FrameContainer brcmf_sdio_acquire_internal_rx_space_to_size(
     struct brcmf_sdio* bus, size_t size);
