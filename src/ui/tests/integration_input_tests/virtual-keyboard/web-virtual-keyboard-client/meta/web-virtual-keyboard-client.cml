@@ -33,6 +33,8 @@
                 "fuchsia.netstack.Netstack",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
+                "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input.ImeService",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.scenic.Scenic",

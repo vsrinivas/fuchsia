@@ -99,6 +99,51 @@ std::vector<T> merge(std::initializer_list<std::vector<T>> vecs) {
   return result;
 }
 
+std::vector<ui_testing::UITestRealm::Config> UIConfigurationsToTest() {
+  std::vector<ui_testing::UITestRealm::Config> configs;
+  std::vector<std::string> protocols_required = {
+      fuchsia::ui::scenic::Scenic::Name_,
+      fuchsia::accessibility::semantics::SemanticsManager::Name_,
+      fuchsia::ui::input3::Keyboard::Name_,
+      fuchsia::ui::input::ImeService::Name_,
+      fuchsia::input::virtualkeyboard::Manager::Name_,
+      fuchsia::input::virtualkeyboard::ControllerCreator::Name_};
+
+  // GFX x root presenter
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_input = true;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
+    config.ui_to_client_services = protocols_required;
+    configs.push_back(std::move(config));
+  }
+
+  // GFX x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_input = true;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = protocols_required;
+    configs.push_back(std::move(config));
+  }
+
+  // Flatland x scene manager
+  {
+    ui_testing::UITestRealm::Config config;
+    config.use_input = true;
+    config.use_flatland = true;
+    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
+    config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
+    config.ui_to_client_services = protocols_required;
+    config.ui_to_client_services.push_back(fuchsia::ui::composition::Flatland::Name_);
+    config.ui_to_client_services.push_back(fuchsia::ui::composition::Allocator::Name_);
+    configs.push_back(std::move(config));
+  }
+  return configs;
+}
+
 // This component implements the interface for a RealmBuilder
 // LocalComponent and the test.virtualkeyboard.InputPositionListener
 // protocol.
@@ -133,9 +178,8 @@ class InputPositionListenerServer : public InputPositionListener, public LocalCo
   fidl::BindingSet<InputPositionListener> bindings_;
 };
 
-class VirtualKeyboardBase
-    : public gtest::RealLoopFixture,
-      public ::testing::WithParamInterface<ui_testing::UITestRealm::SceneOwnerType> {
+class VirtualKeyboardBase : public gtest::RealLoopFixture,
+                            public ::testing::WithParamInterface<ui_testing::UITestRealm::Config> {
  protected:
   VirtualKeyboardBase() = default;
 
@@ -145,17 +189,7 @@ class VirtualKeyboardBase
 
   void SetUp() override {
     FX_LOGS(INFO) << "Setting up test case";
-    ui_testing::UITestRealm::Config config;
-    config.accessibility_owner = ui_testing::UITestRealm::AccessibilityOwnerType::FAKE;
-    config.use_input = true;
-    config.scene_owner = GetParam();
-    config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_,
-                                    fuchsia::accessibility::semantics::SemanticsManager::Name_,
-                                    fuchsia::ui::input3::Keyboard::Name_,
-                                    fuchsia::ui::input::ImeService::Name_,
-                                    fuchsia::input::virtualkeyboard::Manager::Name_,
-                                    fuchsia::input::virtualkeyboard::ControllerCreator::Name_};
-    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
+    ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(GetParam());
 
     // Build realm.
     FX_LOGS(INFO) << "Building realm";
@@ -420,6 +454,10 @@ class WebEngineTest : public VirtualKeyboardBase {
         {.capabilities = {Protocol{fuchsia::ui::scenic::Scenic::Name_}},
          .source = ParentRef(),
          .targets = {target}},
+        {.capabilities = {Protocol{fuchsia::ui::composition::Flatland::Name_},
+                          Protocol{fuchsia::ui::composition::Allocator::Name_}},
+         .source = ParentRef(),
+         .targets = {target}},
         {.capabilities = {Protocol{fuchsia::buildinfo::Provider::Name_}},
          .source = ChildRef{kBuildInfoProvider},
          .targets = {target, ChildRef{kWebContextProvider}}},
@@ -471,8 +509,7 @@ class WebEngineTest : public VirtualKeyboardBase {
 };
 
 INSTANTIATE_TEST_SUITE_P(WebEngineTestWithParams, WebEngineTest,
-                         ::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
-                                           ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER));
+                         ::testing::ValuesIn(UIConfigurationsToTest()));
 TEST_P(WebEngineTest, ShowAndHideKeyboard) {
   // Launch the chromium view.
   ui_test_manager()->InitializeScene();
