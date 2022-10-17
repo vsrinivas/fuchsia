@@ -2,7 +2,7 @@
     "temperature_drivers": [
         {
             "name": "soc_pll",
-            "topological_path": "/dev/aml-thermal-pll/thermal"
+            "topological_path": "/dev/sys/platform/05:05:a/aml-thermal-pll/thermal"
         },
         {
             "name": "therm_thread",

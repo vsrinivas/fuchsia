@@ -6,7 +6,7 @@
         },
         {
             "name": "soc_pll",
-            "topological_path": "/dev/aml-thermal-pll/thermal"
+            "topological_path": "/dev/sys/platform/05:04:a/aml-thermal-pll/thermal"
         },
         {
             "name": "therm_ambient",
