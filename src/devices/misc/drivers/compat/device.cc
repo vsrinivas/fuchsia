@@ -482,17 +482,21 @@ zx_status_t Device::CreateNode() {
   auto task =
       bridge.consumer.promise()
           .or_else([this](std::variant<zx_status_t, fdf::NodeError>& status) {
-            if (std::holds_alternative<zx_status_t>(status)) {
-              FDF_LOG(ERROR, "Failed to add device: status: '%s': %u", Name(),
-                      std::get<zx_status_t>(status));
-            } else if (std::holds_alternative<fdf::NodeError>(status)) {
-              if (std::get<fdf::NodeError>(status) == fdf::NodeError::kNodeRemoved) {
-                // This is not an error as it can happen if the parent driver is unbound while we
+            if (auto error = std::get_if<zx_status_t>(&status); error) {
+              if (*error == ZX_ERR_PEER_CLOSED) {
+                // This is a warning because it can happen during shutdown.
+                FDF_LOG(WARNING, "%s: Node channel closed while adding device", Name());
+              } else {
+                FDF_LOG(ERROR, "Failed to add device: %s: status: %s", Name(),
+                        zx_status_get_string(*error));
+              }
+            } else if (auto error = std::get_if<fdf::NodeError>(&status); error) {
+              if (*error == fdf::NodeError::kNodeRemoved) {
+                // This is a warning because it can happen if the parent driver is unbound while we
                 // are still setting up.
                 FDF_LOG(WARNING, "Failed to add device '%s' while parent was removed", Name());
               } else {
-                FDF_LOG(ERROR, "Failed to add device: NodeError: '%s': %u", Name(),
-                        std::get<fdf::NodeError>(status));
+                FDF_LOG(ERROR, "Failed to add device: NodeError: '%s': %u", Name(), *error);
               }
             }
           })
