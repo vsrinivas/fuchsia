@@ -2068,6 +2068,9 @@ zx_status_t FsckWorker::BuildSegmentManager() {
   if (auto status = BuildSitInfo(); status != ZX_OK) {
     return status;
   }
+  if (auto status = segment_manager_->BuildFreeSegmap(); status != ZX_OK) {
+    return status;
+  }
   if (auto status = BuildCurseg(); status != ZX_OK) {
     return status;
   }

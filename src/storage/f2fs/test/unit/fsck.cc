@@ -742,5 +742,43 @@ TEST(FsckTest, WrongDataExistFlag) {
   ASSERT_NE(node_block->i.i_inline & kDataExist, 0);
 }
 
+TEST(FsckTest, AllocateFreeSegmapInfoAfterSPO) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  {
+    std::unique_ptr<F2fs> fs;
+    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+    MountOptions options{};
+    FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+    fbl::RefPtr<VnodeF2fs> root;
+    FileTester::CreateRoot(fs.get(), &root);
+    fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+    // Checkpoint without unmount flag
+    fs->DoCheckpoint(false);
+
+    ASSERT_EQ(root_dir->Close(), ZX_OK);
+    root_dir = nullptr;
+
+    FileTester::SuddenPowerOff(std::move(fs), &bc);
+  }
+
+  FsckWorker fsck(std::move(bc), FsckOptions{.repair = false});
+
+  ASSERT_EQ(fsck.DoMount(), ZX_OK);
+
+  // Check FreeSegmapInfo is valid
+  ASSERT_NE(&fsck.GetSegmentManager().GetFreeSegmentInfo(), nullptr);
+  ASSERT_NE(fsck.GetSegmentManager().GetFreeSegmentInfo().free_segmap, nullptr);
+  ASSERT_NE(fsck.GetSegmentManager().GetFreeSegmentInfo().free_secmap, nullptr);
+  ASSERT_EQ(fsck.GetSegmentManager().GetFreeSegmentInfo().free_segments, 0U);
+  ASSERT_EQ(fsck.GetSegmentManager().GetFreeSegmentInfo().free_sections, 0U);
+
+  // fsck with valid FreeSegmapInfo
+  ASSERT_EQ(fsck.Run(), ZX_OK);
+}
+
 }  // namespace
 }  // namespace f2fs

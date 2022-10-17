@@ -252,6 +252,12 @@ class FsckWorker {
     return std::move(bc_);
   }
 
+  // For testing
+  SegmentManager &GetSegmentManager() const {
+    ZX_DEBUG_ASSERT(segment_manager_ != nullptr);
+    return *segment_manager_;
+  }
+
  private:
   // Saves the traverse context. It should be re-initialized every traverse.
   FsckInfo fsck_;
