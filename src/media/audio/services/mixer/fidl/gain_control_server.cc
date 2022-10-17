@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl_realtime/gain_control_server.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
+
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fpromise/result.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 #include <optional>
@@ -11,13 +15,14 @@
 #include "fidl/fuchsia.audio/cpp/markers.h"
 #include "fidl/fuchsia.audio/cpp/natural_types.h"
 #include "fidl/fuchsia.audio/cpp/wire_types.h"
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "lib/fpromise/result.h"
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/common/fidl_thread.h"
+#include "src/media/audio/services/mixer/fidl/node.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/gain_control.h"
+#include "src/media/audio/services/mixer/mix/mixer_stage.h"
 
 namespace media_audio {
 
@@ -31,6 +36,13 @@ std::shared_ptr<GainControlServer> GainControlServer::Create(
 }
 
 void GainControlServer::Advance(zx::time reference_time) { gain_control_.Advance(reference_time); }
+
+void GainControlServer::AddMixer(NodeId mixer_id, NodePtr mixer) {
+  FX_CHECK(mixer->type() == Node::Type::kMixer);
+  mixers_.emplace(mixer_id, std::move(mixer));
+}
+
+void GainControlServer::RemoveMixer(NodeId mixer_id) { mixers_.erase(mixer_id); }
 
 void GainControlServer::SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) {
   if (!request->has_how() || !request->has_when()) {
@@ -68,9 +80,9 @@ void GainControlServer::SetGain(SetGainRequestView request, SetGainCompleter::Sy
 
   const auto& when = request->when();
   if (when.is_immediately()) {
-    gain_control_.SetGain(gain_db, ramp);
+    SetGain(gain_db, ramp);
   } else if (when.is_timestamp()) {
-    gain_control_.ScheduleGain(zx::time(when.timestamp()), gain_db, ramp);
+    ScheduleGain(zx::time(when.timestamp()), gain_db, ramp);
   } else {
     FX_LOGS(WARNING) << "SetGain: Unsupported option for 'when'";
     completer.ReplyError(GainError::kUnsupportedOption);
@@ -91,9 +103,9 @@ void GainControlServer::SetMute(SetMuteRequestView request, SetMuteCompleter::Sy
   const bool is_muted = request->muted();
   const auto& when = request->when();
   if (when.is_immediately()) {
-    gain_control_.SetMute(is_muted);
+    SetMute(is_muted);
   } else if (when.is_timestamp()) {
-    gain_control_.ScheduleMute(zx::time(when.timestamp()), is_muted);
+    ScheduleMute(zx::time(when.timestamp()), is_muted);
   } else {
     FX_LOGS(WARNING) << "SetMute: Unsupported option for 'when'";
     completer.ReplyError(GainError::kUnsupportedOption);
@@ -105,6 +117,60 @@ void GainControlServer::SetMute(SetMuteRequestView request, SetMuteCompleter::Sy
 }
 
 GainControlServer::GainControlServer(Args args)
-    : name_(args.name), gain_control_(std::move(args.reference_clock)) {}
+    : id_(args.id),
+      name_(args.name),
+      gain_control_(std::move(args.reference_clock)),
+      global_task_queue_(std::move(args.global_task_queue)) {
+  FX_CHECK(global_task_queue_);
+}
+
+void GainControlServer::ScheduleGain(zx::time reference_time, float gain_db,
+                                     std::optional<GainRamp> ramp) {
+  gain_control_.ScheduleGain(reference_time, gain_db, ramp);
+  for (const auto& [mixer_id, mixer] : mixers_) {
+    global_task_queue_->Push(
+        mixer->thread()->id(),
+        [gain_id = id_, reference_time, gain_db, ramp,
+         mixer_stage = std::static_pointer_cast<MixerStage>(mixer->pipeline_stage())]() {
+          mixer_stage->gain_controls().Get(gain_id).ScheduleGain(reference_time, gain_db, ramp);
+        });
+  }
+}
+
+void GainControlServer::ScheduleMute(zx::time reference_time, bool is_muted) {
+  gain_control_.ScheduleMute(reference_time, is_muted);
+  for (const auto& [mixer_id, mixer] : mixers_) {
+    global_task_queue_->Push(
+        mixer->thread()->id(),
+        [gain_id = id_, reference_time, is_muted,
+         mixer_stage = std::static_pointer_cast<MixerStage>(mixer->pipeline_stage())]() {
+          mixer_stage->gain_controls().Get(gain_id).ScheduleMute(reference_time, is_muted);
+        });
+  }
+}
+
+void GainControlServer::SetGain(float gain_db, std::optional<GainRamp> ramp) {
+  gain_control_.SetGain(gain_db, ramp);
+  for (const auto& [mixer_id, mixer] : mixers_) {
+    global_task_queue_->Push(
+        mixer->thread()->id(),
+        [gain_id = id_, gain_db, ramp,
+         mixer_stage = std::static_pointer_cast<MixerStage>(mixer->pipeline_stage())]() {
+          mixer_stage->gain_controls().Get(gain_id).SetGain(gain_db, ramp);
+        });
+  }
+}
+
+void GainControlServer::SetMute(bool is_muted) {
+  gain_control_.SetMute(is_muted);
+  for (const auto& [mixer_id, mixer] : mixers_) {
+    global_task_queue_->Push(
+        mixer->thread()->id(),
+        [gain_id = id_, is_muted,
+         mixer_stage = std::static_pointer_cast<MixerStage>(mixer->pipeline_stage())]() {
+          mixer_stage->gain_controls().Get(gain_id).SetMute(is_muted);
+        });
+  }
+}
 
 }  // namespace media_audio

@@ -9,6 +9,10 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/vmo.h>
 
+#include <memory>
+#include <optional>
+#include <string>
+#include <string_view>
 #include <type_traits>
 
 #include "fidl/fuchsia.audio.mixer/cpp/common_types.h"
@@ -19,9 +23,9 @@
 #include "src/media/audio/services/mixer/common/memory_mapped_buffer.h"
 #include "src/media/audio/services/mixer/fidl/consumer_node.h"
 #include "src/media/audio/services/mixer/fidl/custom_node.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
-#include "src/media/audio/services/mixer/fidl_realtime/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
@@ -636,6 +640,7 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
 
   auto& source = source_it->second;
   auto& dest = dest_it->second;
+
   auto result =
       Node::CreateEdge(*global_task_queue_, detached_thread_, source, dest, options.take_value());
   if (!result.is_ok()) {
@@ -788,8 +793,10 @@ void GraphServer::CreateGainControl(CreateGainControlRequestView request,
   auto server =
       GainControlServer::Create(realtime_fidl_thread_, std::move(request->control()),
                                 GainControlServer::Args{
+                                    .id = id,
                                     .name = name,
                                     .reference_clock = UnreadableClock(std::move(clock.value())),
+                                    .global_task_queue = global_task_queue_,
                                 });
   FX_CHECK(server);
   gain_controls_[id] = std::move(server);
@@ -815,9 +822,11 @@ void GraphServer::DeleteGainControl(DeleteGainControlRequestView request,
     completer.ReplyError(fuchsia_audio_mixer::DeleteGainControlError::kInvalidId);
     return;
   }
-
-  // TODO(fxbug.dev/87651): Keep track of the use in `MixerNode`s and report `kStillInUse` error if
-  // any of the edges still use this gain control.
+  if (it->second->num_mixers() > 0ul) {
+    FX_LOGS(WARNING) << "DeleteGainControl: still in use";
+    completer.ReplyError(fuchsia_audio_mixer::DeleteGainControlError::kStillInUse);
+    return;
+  }
   gain_controls_.erase(it);
 
   fidl::Arena arena;

@@ -18,11 +18,11 @@
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/clock_registry.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
 #include "src/media/audio/services/mixer/fidl/graph_mix_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
-#include "src/media/audio/services/mixer/fidl_realtime/gain_control_server.h"
 
 namespace media_audio {
 

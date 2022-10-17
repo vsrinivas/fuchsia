@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl_realtime/gain_control_server.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 
 #include <fidl/fuchsia.audio/cpp/wire_types.h>
 
@@ -20,6 +20,12 @@
 #include "lib/fidl/cpp/wire/wire_types.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/common/global_task_queue.h"
+#include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
+#include "src/media/audio/services/mixer/fidl/mixer_node.h"
+#include "src/media/audio/services/mixer/fidl/ptr_decls.h"
+#include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
 
 namespace media_audio {
@@ -44,16 +50,31 @@ fidl::WireTableBuilder<fuchsia_audio::wire::GainControlSetMuteRequest> MakeDefau
 class GainControlServerTest : public ::testing::Test {
  public:
   void SetUp() {
+    global_task_queue_ = std::make_shared<GlobalTaskQueue>();
     thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
     wrapper_ = std::make_unique<TestServerAndClient<GainControlServer>>(
         thread_, GainControlServer::Args{
+                     .id = GainControlId{1},
                      .reference_clock = DefaultUnreadableClock(),
+                     .global_task_queue = global_task_queue_,
                  });
   }
 
   void TearDown() {
     // Close the client and wait until the server shuts down.
     wrapper_.reset();
+  }
+
+  NodePtr MakeDefaultMixer() {
+    return MixerNode::Create(MixerNode::Args{
+        .format = Format::CreateOrDie({
+            .sample_type = fuchsia_audio::SampleType::kFloat32,
+            .channels = 1,
+            .frames_per_second = 48000,
+        }),
+        .dest_buffer_frame_count = 1,
+        .detached_thread = std::make_shared<GraphDetachedThread>(global_task_queue_),
+    });
   }
 
   GainControlServer& server() { return wrapper_->server(); }
@@ -63,6 +84,7 @@ class GainControlServerTest : public ::testing::Test {
   fidl::Arena<> arena_;
 
  private:
+  std::shared_ptr<GlobalTaskQueue> global_task_queue_;
   std::shared_ptr<FidlThread> thread_;
   std::unique_ptr<TestServerAndClient<GainControlServer>> wrapper_;
 };
@@ -107,6 +129,28 @@ TEST_F(GainControlServerTest, SetGainFails) {
     server().Advance(zx::time(0));
     EXPECT_FLOAT_EQ(server().gain_control().state().gain_db, kUnityGainDb);
   }
+}
+
+TEST_F(GainControlServerTest, AddRemoveMixer) {
+  EXPECT_EQ(server().num_mixers(), 0ul);
+
+  // Add a mixer.
+  const auto mixer_id = NodeId{2};
+  server().AddMixer(mixer_id, MakeDefaultMixer());
+  EXPECT_EQ(server().num_mixers(), 1ul);
+
+  // Attempt to remove a mixer that does not exist.
+  const auto invalid_id = NodeId{3};
+  server().RemoveMixer(invalid_id);
+  EXPECT_EQ(server().num_mixers(), 1ul);
+
+  // Remove the added mixer.
+  server().RemoveMixer(mixer_id);
+  EXPECT_EQ(server().num_mixers(), 0ul);
+
+  // Attempt to remove that mixer again.
+  server().RemoveMixer(mixer_id);
+  EXPECT_EQ(server().num_mixers(), 0ul);
 }
 
 TEST_F(GainControlServerTest, SetGainSuccess) {

@@ -16,8 +16,6 @@ source_set("fidl_realtime") {
   ]
 
   sources = [
-    "gain_control_server.cc",
-    "gain_control_server.h",
     "stream_sink_client.cc",
     "stream_sink_client.h",
     "stream_sink_server.cc",
@@ -45,7 +43,6 @@ executable("fidl_realtime_unittests") {
   testonly = true
 
   sources = [
-    "gain_control_server_unittest.cc",
     "stream_sink_client_unittest.cc",
     "stream_sink_server_unittest.cc",
   ]
