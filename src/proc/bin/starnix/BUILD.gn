@@ -237,7 +237,6 @@ if (target_cpu == "x64" && !is_asan) {
       "types/device_type.rs",
       "types/errno.rs",
       "types/file_mode.rs",
-      "types/ioctl.rs",
       "types/mod.rs",
       "types/mount_flags.rs",
       "types/open_flags.rs",

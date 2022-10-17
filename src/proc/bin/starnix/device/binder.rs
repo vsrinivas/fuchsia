@@ -841,7 +841,7 @@ struct BinderThreadState {
     /// The stack of transactions that are active for this thread.
     transactions: Vec<TransactionRole>,
     /// The binder driver uses this queue to communicate with a binder thread. When a binder thread
-    /// issues a [`BINDER_IOCTL_WRITE_READ`] ioctl, it will read from this command queue.
+    /// issues a [`uapi::BINDER_WRITE_READ`] ioctl, it will read from this command queue.
     command_queue: VecDeque<Command>,
     /// The [`Waiter`] object the binder thread is waiting on when there are no commands in the
     /// command queue. If empty, the binder thread is not currently waiting.
@@ -1291,41 +1291,6 @@ impl std::fmt::Display for Handle {
     }
 }
 
-/// The ioctl character for all binder ioctls.
-const BINDER_IOCTL_CHAR: u8 = b'b';
-
-/// The ioctl for initiating a read-write transaction.
-const BINDER_IOCTL_WRITE_READ: u32 =
-    encode_ioctl_write_read::<binder_write_read>(BINDER_IOCTL_CHAR, 1);
-
-/// The ioctl for setting the maximum number of threads the process wants to create for binder work.
-const BINDER_IOCTL_SET_MAX_THREADS: u32 = encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 5);
-
-/// The ioctl for requests to become context manager.
-const BINDER_IOCTL_SET_CONTEXT_MGR: u32 = encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 7);
-
-/// The ioctl for informing the driver that a binder thread is exiting the thread pool.
-const BINDER_IOCTL_THREAD_EXIT: u32 = encode_ioctl_write::<i32>(BINDER_IOCTL_CHAR, 8);
-
-/// The ioctl for retrieving the kernel binder version.
-const BINDER_IOCTL_VERSION: u32 = encode_ioctl_write_read::<binder_version>(BINDER_IOCTL_CHAR, 9);
-
-/// The ioctl for reading all userspace binder objects with references held by the kernel.
-const BINDER_IOCTL_GET_NODE_DEBUG_INFO: u32 =
-    encode_ioctl_write_read::<binder_node_debug_info>(BINDER_IOCTL_CHAR, 11);
-
-/// The ioctl for requesting debug info (strong/weak ref counts) for a binder object.
-const BINDER_IOCTL_GET_NODE_INFO_FOR_REF: u32 =
-    encode_ioctl_write_read::<binder_node_info_for_ref>(BINDER_IOCTL_CHAR, 12);
-
-/// The ioctl for requests to become context manager, v2.
-const BINDER_IOCTL_SET_CONTEXT_MGR_EXT: u32 =
-    encode_ioctl_write::<flat_binder_object>(BINDER_IOCTL_CHAR, 13);
-
-// The ioctl for enabling one-way transaction spam detection.
-const BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION: u32 =
-    encode_ioctl_write::<u32>(BINDER_IOCTL_CHAR, 16);
-
 impl BinderDriver {
     fn new() -> Arc<Self> {
         Arc::new(Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) })
@@ -1377,7 +1342,7 @@ impl BinderDriver {
         user_arg: UserAddress,
     ) -> Result<SyscallResult, Errno> {
         match request {
-            BINDER_IOCTL_VERSION => {
+            uapi::BINDER_VERSION => {
                 // A thread is requesting the version of this binder driver.
 
                 if user_arg.is_null() {
@@ -1388,20 +1353,20 @@ impl BinderDriver {
                 current_task.mm.write_object(UserRef::new(user_arg), &response)?;
                 Ok(SUCCESS)
             }
-            BINDER_IOCTL_SET_CONTEXT_MGR | BINDER_IOCTL_SET_CONTEXT_MGR_EXT => {
+            uapi::BINDER_SET_CONTEXT_MGR | uapi::BINDER_SET_CONTEXT_MGR_EXT => {
                 // A process is registering itself as the context manager.
 
                 if user_arg.is_null() {
                     return error!(EINVAL);
                 }
 
-                // TODO: Read the flat_binder_object when ioctl is BINDER_IOCTL_SET_CONTEXT_MGR_EXT.
+                // TODO: Read the flat_binder_object when ioctl is uapi::BINDER_SET_CONTEXT_MGR_EXT.
 
                 *self.context_manager.write() =
                     Some(Arc::new(BinderObject::new(binder_proc, LocalBinderObject::default())));
                 Ok(SUCCESS)
             }
-            BINDER_IOCTL_WRITE_READ => {
+            uapi::BINDER_WRITE_READ => {
                 // A thread is requesting to exchange data with the binder driver.
 
                 if user_arg.is_null() {
@@ -1455,26 +1420,26 @@ impl BinderDriver {
                 current_task.mm.write_object(user_ref, &input)?;
                 Ok(SUCCESS)
             }
-            BINDER_IOCTL_SET_MAX_THREADS => {
+            uapi::BINDER_SET_MAX_THREADS => {
                 not_implemented!(current_task, "binder ignoring SET_MAX_THREADS ioctl");
                 Ok(SUCCESS)
             }
-            BINDER_IOCTL_ENABLE_ONEWAY_SPAM_DETECTION => {
+            uapi::BINDER_ENABLE_ONEWAY_SPAM_DETECTION => {
                 not_implemented!(
                     current_task,
                     "binder ignoring ENABLE_ONEWAY_SPAM_DETECTION ioctl"
                 );
                 Ok(SUCCESS)
             }
-            BINDER_IOCTL_THREAD_EXIT => {
+            uapi::BINDER_THREAD_EXIT => {
                 not_implemented!(current_task, "binder ignoring THREAD_EXIT ioctl");
                 Ok(SUCCESS)
             }
-            BINDER_IOCTL_GET_NODE_DEBUG_INFO => {
+            uapi::BINDER_GET_NODE_DEBUG_INFO => {
                 not_implemented!(current_task, "binder GET_NODE_DEBUG_INFO ioctl not supported");
                 error!(EOPNOTSUPP)
             }
-            BINDER_IOCTL_GET_NODE_INFO_FOR_REF => {
+            uapi::BINDER_GET_NODE_INFO_FOR_REF => {
                 not_implemented!(current_task, "binder GET_NODE_INFO_FOR_REF ioctl not supported");
                 error!(EOPNOTSUPP)
             }

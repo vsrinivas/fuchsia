@@ -5,7 +5,6 @@
 mod auth;
 mod device_type;
 mod file_mode;
-mod ioctl;
 mod mount_flags;
 mod open_flags;
 mod resource_limits;
@@ -26,7 +25,6 @@ pub use auth::*;
 pub use device_type::*;
 pub use errno::*;
 pub use file_mode::*;
-pub use ioctl::*;
 pub use mount_flags::*;
 pub use open_flags::*;
 pub use resource_limits::*;
