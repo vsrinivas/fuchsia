@@ -26,6 +26,7 @@ stdcompat_test_sources = [
   "iterator_test.cc",
   "memory_test.cc",
   "optional_test.cc",
+  "queue_test.cc",
   "source_location_test.cc",
   "span_test.cc",
   "string_view_test.cc",

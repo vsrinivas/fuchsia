@@ -17,6 +17,7 @@ zx_library("stdcompat") {
     "lib/stdcompat/algorithm.h",
     "lib/stdcompat/array.h",
     "lib/stdcompat/atomic.h",
+    "lib/stdcompat/queue.h",
     "lib/stdcompat/bit.h",
     "lib/stdcompat/cstddef.h",
     "lib/stdcompat/functional.h",

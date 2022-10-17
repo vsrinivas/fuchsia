@@ -11,7 +11,9 @@
 
 #include <array>
 #include <cstdint>
+#include <deque>
 #include <iostream>
+#include <queue>
 #include <vector>
 
 #include "gtest.h"
@@ -180,6 +182,14 @@ TEST(RemoveTest, IsAliasWhenStdIsAvailable) {
 
   check(std::vector<int>());
   check(std::array<int, 4>());
+}
+
+TEST(RemoveTest, WithSelfMoveAvoided) {
+  std::deque<std::string> container = {"value 1", "value 2"};
+  cpp20::remove(container.begin(), container.end(), "value 2");
+
+  ASSERT_EQ(container.size(), 2u);
+  ASSERT_EQ(container.front(), "value 1");
 }
 
 #if defined(__cpp_lib_constexpr_algorithms) && __cpp_lib_constexpr_algorithms >= 201806L && \

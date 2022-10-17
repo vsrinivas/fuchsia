@@ -119,7 +119,10 @@ constexpr ForwardIt remove_if(ForwardIt begin, ForwardIt end, Pred pred) {
   for (auto it = begin; it != end; ++it) {
     auto& value = *it;
     if (!pred(cpp17::as_const(value))) {
-      *remaining_end = std::move(value);
+      // Avoid self move.
+      if (remaining_end != it) {
+        *remaining_end = std::move(value);
+      }
       ++remaining_end;
     }
   }
