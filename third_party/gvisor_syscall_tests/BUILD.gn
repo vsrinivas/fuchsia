@@ -436,7 +436,7 @@ template("syscall_test_suite") {
 
   group("${suite_label}_${local_testing_suffix}") {
     testonly = true
-    public_deps = test_deps
+    public_deps = local_test_deps
   }
 }
 
