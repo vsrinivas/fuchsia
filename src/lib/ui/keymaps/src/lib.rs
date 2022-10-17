@@ -146,6 +146,16 @@ impl<'a> Keymap<'a> {
             Key::F10 => Some(NonPrintableKey::F10),
             Key::F11 => Some(NonPrintableKey::F11),
             Key::F12 => Some(NonPrintableKey::F12),
+
+            // Multimedia keys.
+            Key::AcFullScreenView => Some(NonPrintableKey::ZoomToggle),
+            Key::AcSelectTaskApplication => Some(NonPrintableKey::Select),
+            Key::BrightnessDown => Some(NonPrintableKey::BrightnessDown),
+            Key::BrightnessUp => Some(NonPrintableKey::BrightnessUp),
+            Key::PlayPause => Some(NonPrintableKey::MediaPlayPause),
+            Key::Mute => Some(NonPrintableKey::AudioVolumeMute),
+            Key::VolumeDown => Some(NonPrintableKey::AudioVolumeDown),
+            Key::VolumeUp => Some(NonPrintableKey::AudioVolumeUp),
             _ => None,
         }
         .map(|k| KeyMeaning::NonPrintableKey(k))
@@ -1192,6 +1202,14 @@ mod tests {
         LockStateKeys::new(),
         Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Alt));
         "test US QWERTY right Alt mapping")
+    ]
+    #[test_case(
+        &US_QWERTY,
+        Key::AcFullScreenView,
+        ModifierState::new(),
+        LockStateKeys::new(),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::ZoomToggle));
+        "Spot check multimedia keys")
     ]
     fn test_keymap_apply(
         keymap: &Keymap<'_>,
