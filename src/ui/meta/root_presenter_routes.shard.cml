@@ -1,0 +1,63 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard includes the portion of the root presenter layer that is
+// common across all production ui realms that include root presenter, but
+// differs from test ui realms.
+//
+// Production ui realms should include this shard directly.
+//
+// This shard should include:
+//
+// (1) Root presenter's child declaration. Note that other shards assume the name
+//     "root_presenter".
+// (2) Capability routes to root presenter that are the same for all production ui
+//     realms in which root presenter is present, but differ in test realms.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that are common to all production and test ui realms; these
+//     routes belong in root_presenter_base_routes.shard.cml.
+// (2) Routes to root presenter that differ among production ui realms.
+// (3) Routes **FROM** root presenter to other components in the ui realm; these
+//     routes belong in the target components' routing shards.
+{
+    include: [ "//src/ui/meta/root_presenter_base_routes.shard.cml" ],
+    children: [
+        {
+            name: "root_presenter",
+            url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cm",
+        },
+    ],
+    offer: [
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#root_presenter",
+            subdir: "root_presenter",
+        },
+        {
+            storage: "data",
+            from: "parent",
+            to: [ "#root_presenter" ],
+        },
+        {
+            protocol: [
+                "fuchsia.media.sounds.Player",
+                "fuchsia.recovery.FactoryReset",
+            ],
+            from: "parent",
+            to: [ "#root_presenter" ],
+        },
+        {
+            protocol: [
+                "fuchsia.accessibility.ColorTransform",
+                "fuchsia.accessibility.Magnifier",
+            ],
+            from: "#a11y_manager",
+            to: "#root_presenter",
+            dependency: "weak",
+        },
+    ],
+}

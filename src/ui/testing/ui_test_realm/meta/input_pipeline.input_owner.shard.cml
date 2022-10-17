@@ -28,15 +28,9 @@
             to: [ "#input-pipeline" ],
         },
         {
-            // Input pipeline will only ever be used with root presenter.
             protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
-            from: "#root-presenter",
+            from: "#root_presenter",
             to: [ "#input-pipeline" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text_manager",
-            to: [ "#root-presenter" ],
         },
         {
             protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],

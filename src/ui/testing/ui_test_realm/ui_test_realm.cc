@@ -66,7 +66,7 @@ constexpr auto kClientSubrealmName = "client-subrealm";
 // NOTE: These names must match the names in meta/*.cml.
 constexpr auto kA11yManagerName = "a11y-manager";
 constexpr auto kScenicName = "scenic";
-constexpr auto kRootPresenterName = "root-presenter";
+constexpr auto kRootPresenterName = "root_presenter";
 constexpr auto kSceneManagerName = "scene_manager";
 constexpr auto kInputPipelineName = "input-pipeline";
 constexpr auto kTextManagerName = "text_manager";

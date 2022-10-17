@@ -2,51 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/ui/testing/ui_test_realm/meta/scene_provider.shard.cml" ],
+    include: [
+        "//src/ui/meta/root_presenter_base_routes.shard.cml",
+        "//src/ui/testing/ui_test_realm/meta/scene_provider.shard.cml",
+    ],
     children: [
         {
-            name: "root-presenter",
+            name: "root_presenter",
             url: "#meta/root_presenter.cm",
         },
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: "#root-presenter",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#scenic",
-            to: "#root-presenter",
-        },
-        {
             protocol: [ "fuchsia.ui.policy.Presenter" ],
-            from: "#root-presenter",
+            from: "#root_presenter",
             to: [ "#scene-provider" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-                "fuchsia.recovery.FactoryResetStateNotifier",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.ui.accessibility.view.Registry",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.pointerinjector.configuration.Setup",
-                "fuchsia.ui.policy.DisplayBacklight",
-                "fuchsia.ui.policy.Presenter",
-            ],
-            from: "#root-presenter",
         },
     ],
 }

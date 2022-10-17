@@ -4,6 +4,7 @@
 {
     include: [
         "//src/ui/meta/a11y_routes.shard.cml",
+        "//src/ui/meta/root_presenter_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -13,21 +14,11 @@
             url: "fuchsia-pkg://fuchsia.com/input-pipeline#meta/input-pipeline.cm",
         },
         {
-            name: "root_presenter",
-            url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cm",
-        },
-        {
             name: "text_manager",
             url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
         },
     ],
     offer: [
-        {
-            directory: "config-data",
-            from: "parent",
-            to: "#root_presenter",
-            subdir: "root_presenter",
-        },
         {
             directory: "config-data",
             from: "parent",
@@ -40,11 +31,6 @@
             to: [ "#input_pipeline" ],
         },
         {
-            storage: "data",
-            from: "parent",
-            to: [ "#root_presenter" ],
-        },
-        {
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
@@ -52,7 +38,6 @@
             from: "parent",
             to: [
                 "#input_pipeline",
-                "#root_presenter",
                 "#text_manager",
             ],
         },
@@ -63,28 +48,6 @@
             ],
             from: "parent",
             to: [ "#input_pipeline" ],
-        },
-        {
-            protocol: [
-                "fuchsia.media.sounds.Player",
-                "fuchsia.recovery.FactoryReset",
-            ],
-            from: "parent",
-            to: [ "#root_presenter" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.keyboard.focus.Controller" ],
-            from: "#text_manager",
-            to: [ "#root_presenter" ],
-        },
-        {
-            protocol: [
-                "fuchsia.accessibility.ColorTransform",
-                "fuchsia.accessibility.Magnifier",
-            ],
-            from: "#a11y_manager",
-            to: "#root_presenter",
-            dependency: "weak",
         },
         {
             protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
@@ -103,10 +66,7 @@
                 "fuchsia.ui.scenic.Scenic",
             ],
             from: "#scenic",
-            to: [
-                "#input_pipeline",
-                "#root_presenter",
-            ],
+            to: [ "#input_pipeline" ],
         },
     ],
     expose: [
@@ -119,16 +79,6 @@
                 "fuchsia.ui.policy.DeviceListenerRegistry",
             ],
             from: "#input_pipeline",
-        },
-        {
-            protocol: [
-                "fuchsia.input.virtualkeyboard.ControllerCreator",
-                "fuchsia.input.virtualkeyboard.Manager",
-                "fuchsia.ui.brightness.ColorAdjustmentHandler",
-                "fuchsia.ui.policy.DisplayBacklight",
-                "fuchsia.ui.policy.Presenter",
-            ],
-            from: "#root_presenter",
         },
         {
             protocol: [
