@@ -145,8 +145,8 @@ protocol LogSink {
 
     /// Send this socket to be drained, using the structured logs format.
     ///
-    /// See //docs/reference/diagnostics/logs/encoding.md for what is expected to be received over
-    /// the socket.
+    /// See //docs/reference/platform-spec/diagnostics/logs-encoding.md for what is expected to be
+    /// received over the socket.
     ConnectStructured(resource struct {
         socket zx.handle:SOCKET;
     });
