@@ -120,7 +120,7 @@
             from: "#starnix_manager",
         },
         {
-            protocol: "fuchsia.hardware.serial.NewDeviceProxy",
+            protocol: "fuchsia.hardware.serial.DeviceProxy",
             from: "#debug_serial",
         },
         {

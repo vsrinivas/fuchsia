@@ -52,8 +52,7 @@ type Config = struct {
     baud_rate uint32;
 };
 
-/// Legacy synchronous device interface.
-/// New drivers should implement NewDevice instead.
+/// A serial device.
 protocol Device {
     /// Lookup what type of serial device this is.
     GetClass() -> (struct {
@@ -66,28 +65,21 @@ protocol Device {
     }) -> (struct {
         s zx.status;
     });
-};
 
-/// FIDL device utilizing the new asynchronous serial driver
-/// instead of the synchronous FDIO-backed read/write interface.
-/// New drivers should implement this instead of the Device interface above.
-protocol NewDevice {
-    compose Device;
-
-    /// Reads data from the serial port
+    /// Reads data from the serial port.
     Read() -> (struct {
         data vector<uint8>:MAX;
     }) error zx.status;
 
-    /// Writes data to the serial port
+    /// Writes data to the serial port.
     Write(struct {
         data vector<uint8>:MAX;
     }) -> (struct {}) error zx.status;
 };
 
 @discoverable
-protocol NewDeviceProxy {
+protocol DeviceProxy {
     GetChannel(resource struct {
-        req server_end:NewDevice;
+        req server_end:Device;
     });
 };

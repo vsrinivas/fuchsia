@@ -4,6 +4,7 @@
 
 #include "serial.h"
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <memory>
@@ -56,7 +57,6 @@ class FakeSerialImpl : public ddk::SerialImplProtocol<FakeSerialImpl> {
     return write_event_.wait_one(kEventWrittenSignal, deadline, pending);
   }
 
-  // Raw nand protocol:
   zx_status_t SerialImplGetInfo(serial_port_info_t* info) { return ZX_OK; }
 
   zx_status_t SerialImplConfig(uint32_t baud_rate, uint32_t flags) { return ZX_OK; }
@@ -276,6 +276,93 @@ TEST_F(SerialDeviceTest, DdkWrite) {
   ASSERT_EQ(ZX_OK, device()->DdkWrite(data, kDataLen, 0, &write_len));
   ASSERT_EQ(kDataLen, write_len);
   ASSERT_EQ(0, memcmp(data, serial_impl().write_buffer(), write_len));
+}
+
+template <typename ServerImpl>
+zx::status<fidl::WireClient<typename ServerImpl::_EnclosingProtocol>> Connect(
+    async_dispatcher_t* dispatcher, ServerImpl* impl) {
+  zx::status endpoints = fidl::CreateEndpoints<typename ServerImpl::_EnclosingProtocol>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+  auto& [client, server] = endpoints.value();
+  fidl::ServerBindingRef binding = fidl::BindServer(dispatcher, std::move(server), impl);
+  return zx::ok(fidl::WireClient(std::move(client), dispatcher));
+}
+
+TEST_F(SerialDeviceTest, Read) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx::status client = Connect(loop.dispatcher(), device());
+  ASSERT_OK(client.status_value());
+  fidl::WireClient<fuchsia_hardware_serial::Device>& fidl = client.value();
+
+  constexpr std::string_view data = "test";
+
+  // Try to read without opening.
+  fidl->Read().ThenExactlyOnce(
+      [](fidl::WireUnownedResult<fuchsia_hardware_serial::Device::Read>& result) {
+        ASSERT_OK(result.status());
+        const fit::result response = result.value();
+        ASSERT_TRUE(response.is_error());
+        ASSERT_STATUS(response.error_value(), ZX_ERR_BAD_STATE);
+      });
+  ASSERT_OK(loop.RunUntilIdle());
+
+  // Test set up.
+  *std::copy(data.begin(), data.end(), serial_impl().read_buffer()) = 0;
+  serial_impl().set_state_and_notify(SERIAL_STATE_READABLE);
+  ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
+
+  // Test.
+  fidl->Read().ThenExactlyOnce(
+      [want = data](fidl::WireUnownedResult<fuchsia_hardware_serial::Device::Read>& result) {
+        ASSERT_OK(result.status());
+        const fit::result response = result.value();
+        ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+        const cpp20::span data = response.value()->data.get();
+        const std::string_view got{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+        ASSERT_EQ(got, want);
+      });
+  ASSERT_OK(loop.RunUntilIdle());
+}
+
+TEST_F(SerialDeviceTest, Write) {
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx::status client = Connect(loop.dispatcher(), device());
+  ASSERT_OK(client.status_value());
+  fidl::WireClient<fuchsia_hardware_serial::Device>& fidl = client.value();
+
+  constexpr std::string_view data = "test";
+  uint8_t payload[data.size()];
+  std::copy(data.begin(), data.end(), payload);
+
+  // Try to write without opening.
+  fidl->Write(fidl::VectorView<uint8_t>::FromExternal(payload))
+      .ThenExactlyOnce([](fidl::WireUnownedResult<fuchsia_hardware_serial::Device::Write>& result) {
+        ASSERT_OK(result.status());
+        const fit::result response = result.value();
+        ASSERT_TRUE(response.is_error());
+        ASSERT_STATUS(response.error_value(), ZX_ERR_BAD_STATE);
+      });
+  ASSERT_OK(loop.RunUntilIdle());
+
+  // Test set up.
+  ASSERT_EQ(ZX_OK, device()->DdkOpen(nullptr /* dev_out */, 0 /* flags */));
+  serial_impl().set_state_and_notify(SERIAL_STATE_WRITABLE);
+
+  // Test.
+  fidl->Write(fidl::VectorView<uint8_t>::FromExternal(payload))
+      .ThenExactlyOnce(
+          [this,
+           want = data](fidl::WireUnownedResult<fuchsia_hardware_serial::Device::Write>& result) {
+            ASSERT_OK(result.status());
+            const fit::result response = result.value();
+            ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+            const std::string_view got{serial_impl().write_buffer(),
+                                       serial_impl().write_buffer_length()};
+            ASSERT_EQ(got, want);
+          });
+  ASSERT_OK(loop.RunUntilIdle());
 }
 
 TEST_F(SerialDeviceTest, OpenSocket) {

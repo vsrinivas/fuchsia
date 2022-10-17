@@ -44,6 +44,8 @@ class SerialDevice : public DeviceType,
   // Serial protocol implementation.
   zx_status_t SerialGetInfo(serial_port_info_t* info);
   zx_status_t SerialConfig(uint32_t baud_rate, uint32_t flags);
+  void Read(ReadCompleter::Sync& completer) override;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
   zx_status_t SerialOpenSocket(zx::socket* out_handle);
 
  private:

@@ -12,6 +12,7 @@ test("serial-unittest-bin") {
   deps = [
     "..:common",
     "//src/devices/testing/mock-ddk",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

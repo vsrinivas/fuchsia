@@ -24,10 +24,9 @@ namespace serial {
 
 class SerialDevice;
 using DeviceType =
-    ddk::Device<SerialDevice, ddk::Messageable<fuchsia_hardware_serial::NewDeviceProxy>::Mixin>;
+    ddk::Device<SerialDevice, ddk::Messageable<fuchsia_hardware_serial::DeviceProxy>::Mixin>;
 
-class SerialDevice : public DeviceType,
-                     public fidl::WireServer<fuchsia_hardware_serial::NewDevice> {
+class SerialDevice : public DeviceType, public fidl::WireServer<fuchsia_hardware_serial::Device> {
  public:
   explicit SerialDevice(zx_device_t* parent) : DeviceType(parent), serial_(parent) {}
 
@@ -56,7 +55,7 @@ class SerialDevice : public DeviceType,
   std::optional<async::Loop> loop_;
   std::optional<ReadCompleter::Async> read_completer_;
   std::optional<WriteCompleter::Async> write_completer_;
-  std::optional<fidl::ServerBindingRef<fuchsia_hardware_serial::NewDevice>> binding_;
+  std::optional<fidl::ServerBindingRef<fuchsia_hardware_serial::Device>> binding_;
   sync_completion_t on_unbind_;  // Signaled on Unbind() to allow DdkRelease() to proceed.
 };
 

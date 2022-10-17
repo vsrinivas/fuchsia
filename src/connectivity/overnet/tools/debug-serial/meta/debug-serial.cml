@@ -9,7 +9,7 @@
     },
     capabilities: [
         {
-            protocol: [ "fuchsia.hardware.serial.NewDeviceProxy" ],
+            protocol: [ "fuchsia.hardware.serial.DeviceProxy" ],
         },
     ],
     use: [
@@ -19,7 +19,7 @@
     ],
     expose: [
         {
-            protocol: [ "fuchsia.hardware.serial.NewDeviceProxy" ],
+            protocol: [ "fuchsia.hardware.serial.DeviceProxy" ],
             from: "self",
         },
     ],

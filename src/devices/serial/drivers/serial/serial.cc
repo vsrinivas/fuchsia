@@ -185,6 +185,46 @@ zx_status_t SerialDevice::SerialConfig(uint32_t baud_rate, uint32_t flags) {
   return serial_.Config(baud_rate, flags);
 }
 
+void SerialDevice::Read(ReadCompleter::Sync& completer) {
+  fbl::AutoLock al(&lock_);
+
+  if (!open_) {
+    completer.ReplyError(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  uint8_t data[fuchsia_io::wire::kMaxBuf];
+  size_t actual;
+  if (zx_status_t status = serial_.Read(data, sizeof(data), &actual); status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
+  }
+
+  completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(data, actual));
+}
+
+void SerialDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  fbl::AutoLock al(&lock_);
+
+  if (!open_) {
+    completer.ReplyError(ZX_ERR_BAD_STATE);
+    return;
+  }
+
+  cpp20::span data = request->data.get();
+  while (!data.empty()) {
+    size_t actual;
+    if (zx_status_t status = serial_.Write(data.data(), data.size_bytes(), &actual);
+        status != ZX_OK) {
+      completer.ReplyError(status);
+      return;
+    }
+    data = data.subspan(actual);
+  }
+
+  completer.ReplySuccess();
+}
+
 zx_status_t SerialDevice::SerialOpenSocket(zx::socket* out_handle) {
   fbl::AutoLock al(&lock_);
   if (open_) {

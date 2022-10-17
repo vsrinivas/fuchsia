@@ -6,7 +6,7 @@
 
 use anyhow::{Context as _, Error};
 use fidl_fuchsia_hardware_serial::{
-    Class, NewDeviceProxy_Request, NewDeviceProxy_RequestStream, NewDeviceRequest,
+    Class, DeviceProxy_Request, DeviceProxy_RequestStream, DeviceRequest,
 };
 use fidl_fuchsia_kernel::DebugResourceMarker;
 use fuchsia_async::{unblock, Time, Timer};
@@ -19,7 +19,7 @@ use zx::sys::{zx_debug_read, zx_debug_write};
 use zx::AsHandleRef;
 
 enum IncomingService {
-    NewDeviceProxy(NewDeviceProxy_RequestStream),
+    DeviceProxy(DeviceProxy_RequestStream),
 }
 
 async fn writer_task(mut rx: mpsc::Receiver<Vec<u8>>) -> Result<(), Error> {
@@ -65,7 +65,7 @@ async fn main() -> Result<(), Error> {
 
     let mut fs = ServiceFs::new_local();
     let mut svc_dir = fs.dir("svc");
-    svc_dir.add_fidl_service(IncomingService::NewDeviceProxy);
+    svc_dir.add_fidl_service(IncomingService::DeviceProxy);
     fs.take_and_serve_directory_handle()?;
 
     let debug_resource =
@@ -80,7 +80,7 @@ async fn main() -> Result<(), Error> {
         reader_task(tx_read, debug_resource),
         writer_task(rx_write),
         async move {
-            fs.for_each_concurrent(None, move |IncomingService::NewDeviceProxy(requests)| {
+            fs.for_each_concurrent(None, move |IncomingService::DeviceProxy(requests)| {
                 let tx_write = tx_write.clone();
                 requests.for_each_concurrent(None, move |request| {
                     let tx_write = tx_write.clone();
@@ -116,11 +116,11 @@ async fn main() -> Result<(), Error> {
 }
 
 async fn run_safe(
-    request: NewDeviceProxy_Request,
+    request: DeviceProxy_Request,
     write: &mut mpsc::Sender<Vec<u8>>,
     read: &mut mpsc::Receiver<Vec<u8>>,
 ) {
-    let NewDeviceProxy_Request::GetChannel { req: request, control_handle: _ } = request;
+    let DeviceProxy_Request::GetChannel { req: request, control_handle: _ } = request;
     let mut request = match request.into_stream() {
         Ok(request) => request,
         Err(e) => {
@@ -135,7 +135,7 @@ async fn run_safe(
 }
 
 async fn run(
-    requests: &mut (dyn Stream<Item = Result<NewDeviceRequest, fidl::Error>> + Unpin),
+    requests: &mut (dyn Stream<Item = Result<DeviceRequest, fidl::Error>> + Unpin),
     write: &mut mpsc::Sender<Vec<u8>>,
     read: &mut mpsc::Receiver<Vec<u8>>,
 ) -> Result<(), Error> {
@@ -146,7 +146,7 @@ async fn run(
         .try_for_each_concurrent(None, |req| async move {
             tracing::trace!("handle request: {:?}", req);
             match req {
-                NewDeviceRequest::Read { responder } => {
+                DeviceRequest::Read { responder } => {
                     if let Some(read) = read.lock().await.next().await {
                         tracing::trace!("got read: {:?}", read);
                         responder.send(&mut Ok(read))?;
@@ -154,7 +154,7 @@ async fn run(
                         tracing::info!("no read (read thread done?)");
                     }
                 }
-                NewDeviceRequest::Write { data, responder } => {
+                DeviceRequest::Write { data, responder } => {
                     const MAX_SEND_LENGTH: usize = 256;
                     let mut data: &[u8] = &data;
                     let mut write = write.lock().await;
@@ -165,10 +165,10 @@ async fn run(
                     write.send(data.to_vec()).await?;
                     responder.send(&mut Ok(()))?;
                 }
-                NewDeviceRequest::GetClass { responder } => {
+                DeviceRequest::GetClass { responder } => {
                     responder.send(Class::KernelDebug)?;
                 }
-                NewDeviceRequest::SetConfig { responder, .. } => {
+                DeviceRequest::SetConfig { responder, .. } => {
                     responder.send(zx::Status::NOT_SUPPORTED.into_raw())?;
                 }
             }
@@ -182,18 +182,18 @@ async fn run(
 mod test {
     use super::*;
     use fidl_fuchsia_hardware_serial::{
-        CharacterWidth, Config, FlowControl, NewDeviceMarker, NewDeviceProxy, Parity, StopWidth,
+        CharacterWidth, Config, DeviceMarker, DeviceProxy, FlowControl, Parity, StopWidth,
     };
     use fuchsia_async as fasync;
 
     struct TestProxy {
-        proxy: NewDeviceProxy,
+        proxy: DeviceProxy,
         writes: mpsc::Receiver<Vec<u8>>,
         reads: mpsc::Sender<Vec<u8>>,
     }
 
     fn test_proxy() -> Result<TestProxy, Error> {
-        let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<NewDeviceMarker>()?;
+        let (proxy, mut stream) = fidl::endpoints::create_proxy_and_stream::<DeviceMarker>()?;
         let (mut tx_wr, rx_wr) = mpsc::channel(1);
         let (tx_rd, mut rx_rd) = mpsc::channel(1);
         fasync::Task::local(async move { run(&mut stream, &mut tx_wr, &mut rx_rd).await.unwrap() })

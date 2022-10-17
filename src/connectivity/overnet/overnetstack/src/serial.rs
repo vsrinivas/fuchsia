@@ -5,7 +5,7 @@
 use anyhow::{format_err, Context as _, Error};
 use fidl::{endpoints::create_proxy, prelude::*};
 use fidl_fuchsia_hardware_serial::{
-    NewDeviceProxy, NewDeviceProxy_Marker, NewDeviceReadResult, NewDeviceWriteResult,
+    DeviceProxy, DeviceProxy_Marker, DeviceReadResult, DeviceWriteResult,
 };
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -33,11 +33,11 @@ pub async fn run_serial_link_handlers(
                 let text_desc = format!("{:?}", desc);
                 match desc {
                     Descriptor::Debug => {
-                        fuchsia_component::client::connect_to_protocol::<NewDeviceProxy_Marker>()?
+                        fuchsia_component::client::connect_to_protocol::<DeviceProxy_Marker>()?
                             .get_channel(svr)
                             .context(format!(
                                 "connecting to service {}",
-                                NewDeviceProxy_Marker::PROTOCOL_NAME
+                                DeviceProxy_Marker::PROTOCOL_NAME
                             ))?;
                     }
                     Descriptor::Device { ref path, mut config } => {
@@ -67,8 +67,8 @@ pub async fn run_serial_link_handlers(
         .await
 }
 
-type PendingRead = fidl::client::QueryResponseFut<NewDeviceReadResult>;
-type PendingWrite = fidl::client::QueryResponseFut<NewDeviceWriteResult>;
+type PendingRead = fidl::client::QueryResponseFut<DeviceReadResult>;
+type PendingWrite = fidl::client::QueryResponseFut<DeviceWriteResult>;
 type IOResult = Result<usize, std::io::Error>;
 
 enum ReadState {
@@ -100,13 +100,13 @@ fn convert_io_result<R>(
 }
 
 struct Dev {
-    proxy: NewDeviceProxy,
+    proxy: DeviceProxy,
     read_state: ReadState,
     write_state: WriteState,
 }
 
 impl Dev {
-    fn new(proxy: NewDeviceProxy) -> Dev {
+    fn new(proxy: DeviceProxy) -> Dev {
         Dev { proxy, read_state: ReadState::Idle, write_state: WriteState::Idle }
     }
 

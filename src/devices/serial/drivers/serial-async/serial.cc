@@ -68,19 +68,18 @@ void SerialDevice::GetChannel(GetChannelRequestView request, GetChannelCompleter
   loop_->StartThread("serial-thread");
 
   // Invoked when the channel is closed or on any binding-related error.
-  fidl::OnUnboundFn<fidl::WireServer<fuchsia_hardware_serial::NewDevice>> unbound_fn(
-      [](fidl::WireServer<fuchsia_hardware_serial::NewDevice>* dev, fidl::UnbindInfo,
-         fidl::ServerEnd<fuchsia_hardware_serial::NewDevice>) {
+  fidl::OnUnboundFn<fidl::WireServer<fuchsia_hardware_serial::Device>> unbound_fn(
+      [](fidl::WireServer<fuchsia_hardware_serial::Device>* dev, fidl::UnbindInfo,
+         fidl::ServerEnd<fuchsia_hardware_serial::Device>) {
         auto* device = static_cast<SerialDevice*>(dev);
         device->loop_->Quit();
         // Unblock DdkRelease() if it was invoked.
         sync_completion_signal(&device->on_unbind_);
       });
 
-  auto binding =
-      fidl::BindServer(loop_->dispatcher(), std::move(request->req),
-                       static_cast<fidl::WireServer<fuchsia_hardware_serial::NewDevice>*>(this),
-                       std::move(unbound_fn));
+  auto binding = fidl::BindServer(
+      loop_->dispatcher(), std::move(request->req),
+      static_cast<fidl::WireServer<fuchsia_hardware_serial::Device>*>(this), std::move(unbound_fn));
   binding_.emplace(std::move(binding));
 }
 

@@ -170,12 +170,12 @@ class SerialDeviceTest : public zxtest::Test {
  public:
   SerialDeviceTest();
   ~SerialDeviceTest();
-  fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& fidl() {
+  fidl::WireSyncClient<fuchsia_hardware_serial::Device>& fidl() {
     if (!fidl_.is_valid()) {
       // Connect
       auto connection =
-          fidl::WireSyncClient(tester_.ddk().FidlClient<fuchsia_hardware_serial::NewDeviceProxy>());
-      auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_serial::NewDevice>();
+          fidl::WireSyncClient(tester_.ddk().FidlClient<fuchsia_hardware_serial::DeviceProxy>());
+      auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_serial::Device>();
       // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
       (void)connection->GetChannel(std::move(endpoints->server));
       fidl_ = fidl::WireSyncClient(std::move(endpoints->client));
@@ -188,7 +188,7 @@ class SerialDeviceTest : public zxtest::Test {
   // DISALLOW_COPY_ASSIGN_AND_MOVE(SerialDeviceTest);
 
  private:
-  fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice> fidl_;
+  fidl::WireSyncClient<fuchsia_hardware_serial::Device> fidl_;
   SerialTester tester_;
   serial::SerialDevice* device_;
 };
@@ -205,7 +205,7 @@ SerialDeviceTest::SerialDeviceTest() {
 SerialDeviceTest::~SerialDeviceTest() { device_->DdkRelease(); }
 
 static zx_status_t SerialWrite(
-    const fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& interface,
+    const fidl::WireSyncClient<fuchsia_hardware_serial::Device>& interface,
     std::vector<uint8_t>* data) {
   zx_status_t status = interface->Write(fidl::VectorView<uint8_t>::FromExternal(*data)).status();
   if (status != ZX_OK) {
@@ -214,7 +214,7 @@ static zx_status_t SerialWrite(
   return ZX_OK;
 }
 
-static zx_status_t Read(const fidl::WireSyncClient<fuchsia_hardware_serial::NewDevice>& interface,
+static zx_status_t Read(const fidl::WireSyncClient<fuchsia_hardware_serial::Device>& interface,
                         std::vector<uint8_t>* data) {
   auto result = interface->Read();
   if (result.status() != ZX_OK) {
