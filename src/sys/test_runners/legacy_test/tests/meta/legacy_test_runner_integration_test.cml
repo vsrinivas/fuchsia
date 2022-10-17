@@ -27,4 +27,9 @@
             to: "#test_manager",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "legacy_test_runner_examples" ],
+        },
+    },
 }
