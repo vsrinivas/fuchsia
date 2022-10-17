@@ -30,6 +30,8 @@
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.device.NameProvider",
                 "fuchsia.fonts.Provider",
+                "fuchsia.hwinfo.Board",
+                "fuchsia.hwinfo.Device",
                 "fuchsia.hwinfo.Product",
                 "fuchsia.input.virtualkeyboard.ControllerCreator",
                 "fuchsia.intl.PropertyProvider",
