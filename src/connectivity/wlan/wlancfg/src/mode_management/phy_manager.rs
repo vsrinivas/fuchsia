@@ -697,7 +697,8 @@ impl PhyManagerApi for PhyManager {
             }
             Defect::Iface(IfaceFailure::CanceledScan { iface_id })
             | Defect::Iface(IfaceFailure::FailedScan { iface_id })
-            | Defect::Iface(IfaceFailure::EmptyScanResults { iface_id }) => {
+            | Defect::Iface(IfaceFailure::EmptyScanResults { iface_id })
+            | Defect::Iface(IfaceFailure::ConnectionFailure { iface_id }) => {
                 for (_, phy_info) in self.phys.iter_mut() {
                     if phy_info.client_ifaces.contains_key(&iface_id) {
                         phy_info.defects.add_event(defect);
@@ -3756,6 +3757,12 @@ mod tests {
             pin_mut!(defect_fut);
             assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
         }
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::ConnectionFailure { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
 
         // Log an AP interface failure.
         {
@@ -3766,10 +3773,14 @@ mod tests {
         }
 
         // Verify that the defects have been logged.
-        assert_eq!(phy_manager.phys[&0].defects.events.len(), 1);
+        assert_eq!(phy_manager.phys[&0].defects.events.len(), 2);
         assert_eq!(
             phy_manager.phys[&0].defects.events[0].value,
             Defect::Iface(IfaceFailure::CanceledScan { iface_id: 123 })
+        );
+        assert_eq!(
+            phy_manager.phys[&0].defects.events[1].value,
+            Defect::Iface(IfaceFailure::ConnectionFailure { iface_id: 123 })
         );
         assert_eq!(phy_manager.phys[&1].defects.events.len(), 1);
         assert_eq!(
@@ -3825,6 +3836,12 @@ mod tests {
         {
             let defect_fut = phy_manager
                 .record_defect(Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: 123 }));
+            pin_mut!(defect_fut);
+            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+        }
+        {
+            let defect_fut = phy_manager
+                .record_defect(Defect::Iface(IfaceFailure::ConnectionFailure { iface_id: 123 }));
             pin_mut!(defect_fut);
             assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
         }

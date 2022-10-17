@@ -67,6 +67,7 @@ pub enum IfaceFailure {
     FailedScan { iface_id: u16 },
     EmptyScanResults { iface_id: u16 },
     ApStartFailure { iface_id: u16 },
+    ConnectionFailure { iface_id: u16 },
 }
 
 // Interfaces will come and go and each one will receive a different ID.  The failures are
@@ -81,6 +82,9 @@ impl PartialEq for IfaceFailure {
             (IfaceFailure::FailedScan { .. }, IfaceFailure::FailedScan { .. }) => true,
             (IfaceFailure::EmptyScanResults { .. }, IfaceFailure::EmptyScanResults { .. }) => true,
             (IfaceFailure::ApStartFailure { .. }, IfaceFailure::ApStartFailure { .. }) => true,
+            (IfaceFailure::ConnectionFailure { .. }, IfaceFailure::ConnectionFailure { .. }) => {
+                true
+            }
             _ => false,
         }
     }
@@ -360,6 +364,10 @@ mod tests {
         assert_eq!(
             IfaceFailure::ApStartFailure { iface_id: rng.gen::<u16>() },
             IfaceFailure::ApStartFailure { iface_id: rng.gen::<u16>() }
+        );
+        assert_eq!(
+            IfaceFailure::ConnectionFailure { iface_id: rng.gen::<u16>() },
+            IfaceFailure::ConnectionFailure { iface_id: rng.gen::<u16>() }
         );
     }
 }

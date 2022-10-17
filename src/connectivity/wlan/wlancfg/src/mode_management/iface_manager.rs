@@ -87,6 +87,7 @@ async fn create_client_state_machine(
     connect_selection: Option<client_types::ConnectSelection>,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
+    defect_sender: mpsc::UnboundedSender<Defect>,
 ) -> Result<
     (
         Box<dyn client_fsm::ClientApi + Send>,
@@ -119,6 +120,7 @@ async fn create_client_state_machine(
         connect_selection,
         telemetry_sender,
         stats_sender,
+        defect_sender,
     );
 
     let metadata =
@@ -491,6 +493,7 @@ impl IfaceManagerService {
                     Some(selection),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
+                    self.defect_sender.clone(),
                 )
                 .await?;
                 client_iface.client_state_machine = Some(new_client);
@@ -580,6 +583,7 @@ impl IfaceManagerService {
                     Some(connect_selection.clone()),
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
+                    self.defect_sender.clone(),
                 )
                 .await?;
 
@@ -620,6 +624,7 @@ impl IfaceManagerService {
                     None,
                     self.telemetry_sender.clone(),
                     self.stats_sender.clone(),
+                    self.defect_sender.clone(),
                 )
                 .await?;
 

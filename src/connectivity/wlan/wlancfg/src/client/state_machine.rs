@@ -6,6 +6,7 @@ use {
     crate::{
         client::{bss_selection, types},
         config_management::{self, PastConnectionData, SavedNetworksManagerApi},
+        mode_management::{Defect, IfaceFailure},
         telemetry::{DisconnectInfo, TelemetryEvent, TelemetrySender},
         util::{
             listener::{
@@ -28,7 +29,7 @@ use {
         select,
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
-    log::{debug, error, info},
+    log::{debug, error, info, warn},
     std::{convert::TryFrom, sync::Arc},
     void::ResultVoidErrExt,
     wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, stats::SignalStrengthAverage},
@@ -115,6 +116,7 @@ pub async fn serve(
     connect_selection: Option<types::ConnectSelection>,
     telemetry_sender: TelemetrySender,
     stats_sender: ConnectionStatsSender,
+    defect_sender: mpsc::UnboundedSender<Defect>,
 ) {
     let next_network = connect_selection
         .map(|selection| ConnectingOptions { connect_selection: selection, attempt_counter: 0 });
@@ -132,6 +134,7 @@ pub async fn serve(
         telemetry_sender,
         iface_id,
         stats_sender,
+        defect_sender,
     };
     let state_machine =
         disconnecting_state(common_options, disconnect_options).into_state_machine();
@@ -162,6 +165,7 @@ struct CommonStateOptions {
     iface_id: u16,
     /// Used to send periodic connection stats used to determine whether or not to roam.
     stats_sender: mpsc::UnboundedSender<PeriodicConnectionStats>,
+    defect_sender: mpsc::UnboundedSender<Defect>,
 }
 
 /// Data that is periodically gathered for determining whether to roam
@@ -520,6 +524,17 @@ async fn connecting_state<'a>(
                         },
                         (code, _) => {
                             info!("Failed to connect: {:?}", code);
+
+                            // Defects should be logged for connection failures that are not due to
+                            // bad credentials.
+                            if let Err(e) = common_options
+                                .defect_sender
+                                .unbounded_send(Defect::Iface(IfaceFailure::ConnectionFailure {
+                                    iface_id: common_options.iface_id
+                                })) {
+                                warn!("Failed to log connection failure: {}", e);
+                            }
+
                             return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
@@ -932,6 +947,7 @@ mod tests {
         update_receiver: mpsc::UnboundedReceiver<listener::ClientListenerMessage>,
         telemetry_receiver: mpsc::Receiver<TelemetryEvent>,
         stats_receiver: mpsc::UnboundedReceiver<PeriodicConnectionStats>,
+        defect_receiver: mpsc::UnboundedReceiver<Defect>,
     }
 
     fn test_setup() -> TestValues {
@@ -945,6 +961,7 @@ mod tests {
         let (telemetry_sender, telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, stats_receiver) = mpsc::unbounded();
+        let (defect_sender, defect_receiver) = mpsc::unbounded();
 
         TestValues {
             common_options: CommonStateOptions {
@@ -955,6 +972,7 @@ mod tests {
                 telemetry_sender,
                 iface_id: 1,
                 stats_sender,
+                defect_sender,
             },
             sme_req_stream,
             saved_networks_manager,
@@ -962,6 +980,7 @@ mod tests {
             update_receiver,
             telemetry_receiver,
             stats_receiver,
+            defect_receiver,
         }
     }
 
@@ -1318,6 +1337,7 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
+        let (defect_sender, _defect_receiver) = mpsc::unbounded();
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
         let bss_description =
             random_fidl_bss_description!(Wpa2Wpa3, ssid: next_network_ssid.clone());
@@ -1368,6 +1388,7 @@ mod tests {
             telemetry_sender,
             iface_id: 1,
             stats_sender,
+            defect_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let fut = run_state_machine(initial_state);
@@ -1523,6 +1544,7 @@ mod tests {
         let (telementry_tx, _telemetry_rx) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telementry_tx);
         let (stats_tx, _stats_rx) = mpsc::unbounded();
+        let (defect_sender, _defect_receiver) = mpsc::unbounded();
 
         // Create an SSID and connect selection for the requested network of the test case.
         let ssid = types::Ssid::try_from("test").unwrap();
@@ -1559,6 +1581,7 @@ mod tests {
             telemetry_sender,
             iface_id: 1,
             stats_sender: stats_tx,
+            defect_sender,
         };
         let initial_state = connecting_state(common_options, connecting_options);
         let run_state_machine_future = run_state_machine(initial_state);
@@ -1710,6 +1733,12 @@ mod tests {
             }
         );
 
+        // A defect should be logged.
+        assert_variant!(
+            test_values.defect_receiver.try_next(),
+            Ok(Some(Defect::Iface(IfaceFailure::ConnectionFailure { iface_id: 1 })))
+        );
+
         // Check for a connected update
         let client_state_update = ClientStateUpdate {
             state: fidl_policy::WlanClientState::ConnectionsEnabled,
@@ -1754,6 +1783,7 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
+        let (defect_sender, mut defect_receiver) = mpsc::unbounded();
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
             req_stream: client_req_stream.fuse(),
@@ -1762,6 +1792,7 @@ mod tests {
             telemetry_sender,
             iface_id: 1,
             stats_sender,
+            defect_sender,
         };
 
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
@@ -1857,6 +1888,12 @@ mod tests {
             network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::GeneralFailure);
+
+        // A defect should be logged.
+        assert_variant!(
+            defect_receiver.try_next(),
+            Ok(Some(Defect::Iface(IfaceFailure::ConnectionFailure { iface_id: 1 })))
+        );
     }
 
     #[fuchsia::test]
@@ -1875,6 +1912,7 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
+        let (defect_sender, mut defect_receiver) = mpsc::unbounded();
 
         let common_options = CommonStateOptions {
             proxy: sme_proxy,
@@ -1884,6 +1922,7 @@ mod tests {
             telemetry_sender,
             iface_id: 1,
             stats_sender,
+            defect_sender,
         };
 
         let next_network_ssid = types::Ssid::try_from("bar").unwrap();
@@ -1982,6 +2021,9 @@ mod tests {
             network_config.perf_stats.connect_failures.get_recent_for_network(before_recording);
         let connect_failure = failures.pop().expect("Saved network is missing failure reason");
         assert_eq!(connect_failure.reason, FailureReason::CredentialRejected);
+
+        // No defect should have been observed.
+        assert_variant!(defect_receiver.try_next(), Ok(None));
     }
 
     #[fuchsia::test]
@@ -3143,6 +3185,7 @@ mod tests {
         let (telemetry_sender, _telemetry_receiver) = mpsc::channel::<TelemetryEvent>(100);
         let telemetry_sender = TelemetrySender::new(telemetry_sender);
         let (stats_sender, _stats_receiver) = mpsc::unbounded();
+        let (defect_sender, _defect_receiver) = mpsc::unbounded();
         let network_ssid = types::Ssid::try_from("foo").unwrap();
         let bss_description = random_bss_description!(Wpa2, ssid: network_ssid.clone());
         let connect_selection = types::ConnectSelection {
@@ -3180,6 +3223,7 @@ mod tests {
             telemetry_sender,
             iface_id: 1,
             stats_sender,
+            defect_sender,
         };
         let (connect_txn_proxy, connect_txn_stream) =
             create_proxy_and_stream::<fidl_sme::ConnectTransactionMarker>()
@@ -3955,6 +3999,7 @@ mod tests {
             Some(connect_req),
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
+            test_values.common_options.defect_sender,
         );
         pin_mut!(fut);
 
@@ -4017,6 +4062,7 @@ mod tests {
             Some(connect_req),
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
+            test_values.common_options.defect_sender,
         );
         pin_mut!(fut);
 
@@ -4076,6 +4122,7 @@ mod tests {
             Some(connect_req),
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
+            test_values.common_options.defect_sender,
         );
         pin_mut!(fut);
 
@@ -4168,6 +4215,7 @@ mod tests {
             Some(connect_req),
             test_values.common_options.telemetry_sender,
             test_values.common_options.stats_sender,
+            test_values.common_options.defect_sender,
         );
         pin_mut!(fut);
 
