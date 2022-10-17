@@ -9,7 +9,6 @@ use {
             ToResolveError as _, ToResolveStatus as _,
         },
         eager_package_manager::EagerPackageManager,
-        font_package_manager::FontPackageManager,
         repository_manager::RepositoryManager,
         repository_manager::{GetPackageError, GetPackageError::*, GetPackageHashError},
         rewrite_manager::RewriteManager,
@@ -22,10 +21,7 @@ use {
     fidl_contrib::protocol_connector::ProtocolSender,
     fidl_fuchsia_io as fio,
     fidl_fuchsia_metrics::MetricEvent,
-    fidl_fuchsia_pkg::{
-        self as fpkg, FontResolverRequest, FontResolverRequestStream, PackageResolverRequest,
-        PackageResolverRequestStream,
-    },
+    fidl_fuchsia_pkg::{self as fpkg, PackageResolverRequest, PackageResolverRequestStream},
     fidl_fuchsia_pkg_ext::{self as pkg, BlobId},
     fuchsia_cobalt_builders::MetricEventExt as _,
     fuchsia_pkg::PackageDirectory,
@@ -778,88 +774,6 @@ async fn resolve_and_reopen(
     Ok(resolution_context.into())
 }
 
-/// Run a service that only resolves registered font packages.
-pub async fn run_font_resolver_service(
-    font_package_manager: Arc<FontPackageManager>,
-    package_resolver: QueuedResolver,
-    stream: FontResolverRequestStream,
-    cobalt_sender: ProtocolSender<MetricEvent>,
-) -> Result<(), Error> {
-    stream
-        .map_err(anyhow::Error::new)
-        .try_for_each_concurrent(None, |event| async {
-            let mut cobalt_sender = cobalt_sender.clone();
-            let FontResolverRequest::Resolve { package_url, directory_request, responder } = event;
-            let start_time = Instant::now();
-            let response = resolve_font(
-                &font_package_manager,
-                &package_resolver,
-                package_url,
-                directory_request,
-                cobalt_sender.clone(),
-            )
-            .await;
-
-            let response_legacy =
-                response.clone().map(|_resolution_context| ()).map_err(|s| s.to_resolve_status());
-            cobalt_sender.send(
-                MetricEvent::builder(metrics::RESOLVE_MIGRATED_METRIC_ID)
-                    .with_event_codes((
-                        resolve_result_to_resolve_code(response_legacy),
-                        metrics::ResolveMigratedMetricDimensionResolverType::Font,
-                    ))
-                    .as_occurrence(1),
-            );
-
-            cobalt_sender.send(
-                MetricEvent::builder(metrics::RESOLVE_DURATION_MIGRATED_METRIC_ID)
-                    .with_event_codes((
-                        resolve_result_to_resolve_duration_code(&response),
-                        metrics::ResolveDurationMigratedMetricDimensionResolverType::Font,
-                    ))
-                    .as_integer(Instant::now().duration_since(start_time).as_micros() as i64),
-            );
-
-            responder.send(&mut response_legacy.map_err(|s| s.into_raw()))?;
-            Ok(())
-        })
-        .await
-}
-
-/// Resolve a single font package.
-async fn resolve_font<'a>(
-    font_package_manager: &'a Arc<FontPackageManager>,
-    package_resolver: &'a QueuedResolver,
-    package_url: String,
-    directory_request: ServerEnd<fio::DirectoryMarker>,
-    mut cobalt_sender: ProtocolSender<MetricEvent>,
-) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
-    let parsed_package_url = AbsolutePackageUrl::parse(&package_url)
-        .map_err(|e| handle_bad_package_url_error(e, &package_url))?;
-    let is_font_package = match &parsed_package_url {
-        AbsolutePackageUrl::Unpinned(unpinned) => font_package_manager.is_font_package(unpinned),
-        AbsolutePackageUrl::Pinned(_) => false,
-    };
-    cobalt_sender.send(
-        MetricEvent::builder(metrics::IS_FONT_PACKAGE_CHECK_MIGRATED_METRIC_ID)
-            .with_event_codes(if is_font_package {
-                metrics::IsFontPackageCheckMigratedMetricDimensionResult::Font
-            } else {
-                metrics::IsFontPackageCheckMigratedMetricDimensionResult::NotFont
-            })
-            .as_occurrence(1),
-    );
-    if is_font_package {
-        let _resolution_context =
-            resolve_and_reopen(&package_resolver, parsed_package_url, directory_request, None)
-                .await?;
-        Ok(fpkg::ResolutionContext { bytes: vec![] })
-    } else {
-        error!("font resolver asked to resolve non-font package: {}", package_url);
-        Err(pkg::ResolveError::PackageNotFound)
-    }
-}
-
 fn handle_bad_package_url_error(parse_error: ParseError, pkg_url: &str) -> pkg::ResolveError {
     error!("failed to parse package url {:?}: {:#}", pkg_url, anyhow!(parse_error));
     pkg::ResolveError::InvalidUrl
@@ -897,61 +811,6 @@ fn resolve_result_to_resolve_status_code(
         Err(pkg::ResolveError::UnavailableRepoMetadata) => EventCodes::UnavailableRepoMetadata,
         Err(pkg::ResolveError::InvalidUrl) => EventCodes::InvalidUrl,
         Err(pkg::ResolveError::InvalidContext) => EventCodes::InvalidContext,
-    }
-}
-
-fn resolve_result_to_resolve_code(
-    result: Result<(), Status>,
-) -> metrics::ResolveMigratedMetricDimensionResult {
-    use metrics::ResolveMigratedMetricDimensionResult as EventCodes;
-    match result {
-        Ok(()) => EventCodes::ZxOk,
-        Err(Status::INTERNAL) => EventCodes::ZxErrInternal,
-        Err(Status::NOT_SUPPORTED) => EventCodes::ZxErrNotSupported,
-        Err(Status::NO_RESOURCES) => EventCodes::ZxErrNoResources,
-        Err(Status::NO_MEMORY) => EventCodes::ZxErrNoMemory,
-        Err(Status::INTERRUPTED_RETRY) => EventCodes::ZxErrInternalIntrRetry,
-        Err(Status::INVALID_ARGS) => EventCodes::ZxErrInvalidArgs,
-        Err(Status::BAD_HANDLE) => EventCodes::ZxErrBadHandle,
-        Err(Status::WRONG_TYPE) => EventCodes::ZxErrWrongType,
-        Err(Status::BAD_SYSCALL) => EventCodes::ZxErrBadSyscall,
-        Err(Status::OUT_OF_RANGE) => EventCodes::ZxErrOutOfRange,
-        Err(Status::BUFFER_TOO_SMALL) => EventCodes::ZxErrBufferTooSmall,
-        Err(Status::BAD_STATE) => EventCodes::ZxErrBadState,
-        Err(Status::TIMED_OUT) => EventCodes::ZxErrTimedOut,
-        Err(Status::SHOULD_WAIT) => EventCodes::ZxErrShouldWait,
-        Err(Status::CANCELED) => EventCodes::ZxErrCanceled,
-        Err(Status::PEER_CLOSED) => EventCodes::ZxErrPeerClosed,
-        Err(Status::NOT_FOUND) => EventCodes::ZxErrNotFound,
-        Err(Status::ALREADY_EXISTS) => EventCodes::ZxErrAlreadyExists,
-        Err(Status::ALREADY_BOUND) => EventCodes::ZxErrAlreadyBound,
-        Err(Status::UNAVAILABLE) => EventCodes::ZxErrUnavailable,
-        Err(Status::ACCESS_DENIED) => EventCodes::ZxErrAccessDenied,
-        Err(Status::IO) => EventCodes::ZxErrIo,
-        Err(Status::IO_REFUSED) => EventCodes::ZxErrIoRefused,
-        Err(Status::IO_DATA_INTEGRITY) => EventCodes::ZxErrIoDataIntegrity,
-        Err(Status::IO_DATA_LOSS) => EventCodes::ZxErrIoDataLoss,
-        Err(Status::IO_NOT_PRESENT) => EventCodes::ZxErrIoNotPresent,
-        Err(Status::IO_OVERRUN) => EventCodes::ZxErrIoOverrun,
-        Err(Status::IO_MISSED_DEADLINE) => EventCodes::ZxErrIoMissedDeadline,
-        Err(Status::IO_INVALID) => EventCodes::ZxErrIoInvalid,
-        Err(Status::BAD_PATH) => EventCodes::ZxErrBadPath,
-        Err(Status::NOT_DIR) => EventCodes::ZxErrNotDir,
-        Err(Status::NOT_FILE) => EventCodes::ZxErrNotFile,
-        Err(Status::FILE_BIG) => EventCodes::ZxErrFileBig,
-        Err(Status::NO_SPACE) => EventCodes::ZxErrNoSpace,
-        Err(Status::NOT_EMPTY) => EventCodes::ZxErrNotEmpty,
-        Err(Status::STOP) => EventCodes::ZxErrStop,
-        Err(Status::NEXT) => EventCodes::ZxErrNext,
-        Err(Status::ASYNC) => EventCodes::ZxErrAsync,
-        Err(Status::PROTOCOL_NOT_SUPPORTED) => EventCodes::ZxErrProtocolNotSupported,
-        Err(Status::ADDRESS_UNREACHABLE) => EventCodes::ZxErrAddressUnreachable,
-        Err(Status::ADDRESS_IN_USE) => EventCodes::ZxErrAddressInUse,
-        Err(Status::NOT_CONNECTED) => EventCodes::ZxErrNotConnected,
-        Err(Status::CONNECTION_REFUSED) => EventCodes::ZxErrConnectionRefused,
-        Err(Status::CONNECTION_RESET) => EventCodes::ZxErrConnectionReset,
-        Err(Status::CONNECTION_ABORTED) => EventCodes::ZxErrConnectionAborted,
-        Err(_) => EventCodes::UnexpectedZxStatusValue,
     }
 }
 

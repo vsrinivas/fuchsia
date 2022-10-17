@@ -32,7 +32,6 @@ mod config;
 mod eager_package_manager;
 mod error;
 mod experiment;
-mod font_package_manager;
 mod inspect_util;
 mod metrics_util;
 mod ota_channel;
@@ -52,7 +51,6 @@ use crate::{
     cache::BasePackageIndex,
     config::Config,
     experiment::Experiments,
-    font_package_manager::{FontPackageManager, FontPackageManagerBuilder},
     ota_channel::ChannelInspectState,
     repository_manager::{RepositoryManager, RepositoryManagerBuilder},
     repository_service::RepositoryService,
@@ -85,8 +83,6 @@ const DYNAMIC_REPO_PATH: &str = "repositories.json";
 const STATIC_RULES_PATH: &str = "rewrites.json";
 // Relative to /data.
 const DYNAMIC_RULES_PATH: &str = "rewrites.json";
-
-const STATIC_FONT_REGISTRY_PATH: &str = "/config/data/font_packages.json";
 
 // Repository size is currently 100 KB. Allowing for 10x growth and assuming a
 // 4,096 B/s minimum bandwidth (the default minimum bandwidth used by rust-tuf
@@ -189,7 +185,6 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         }
     };
 
-    let font_package_manager = Arc::new(load_font_package_manager(cobalt_sender.clone()));
     let repo_manager = Arc::new(AsyncRwLock::new(
         load_repo_manager(
             inspector.root().create_child("repository_manager"),
@@ -292,23 +287,6 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
         }
     };
 
-    let font_resolver_cb = {
-        let package_resolver = package_resolver.clone();
-        let cobalt_sender = cobalt_sender.clone();
-        move |stream| {
-            fasync::Task::local(
-                resolver_service::run_font_resolver_service(
-                    Arc::clone(&font_package_manager),
-                    package_resolver.clone(),
-                    stream,
-                    cobalt_sender.clone(),
-                )
-                .unwrap_or_else(|e| error!("run_font_resolver_service failed: {:#}", anyhow!(e))),
-            )
-            .detach()
-        }
-    };
-
     let repo_cb = move |stream| {
         let repo_manager = Arc::clone(&repo_manager);
 
@@ -350,7 +328,6 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
     let mut fs = ServiceFs::new();
     fs.dir("svc")
         .add_fidl_service(resolver_cb)
-        .add_fidl_service(font_resolver_cb)
         .add_fidl_service(repo_cb)
         .add_fidl_service(rewrite_cb)
         .add_fidl_service(cup_cb);
@@ -509,36 +486,4 @@ async fn load_rewrite_manager(
             builder.build()
         }
     }
-}
-
-fn load_font_package_manager(mut cobalt_sender: ProtocolSender<MetricEvent>) -> FontPackageManager {
-    match FontPackageManagerBuilder::new().add_registry_file(STATIC_FONT_REGISTRY_PATH) {
-        Ok(builder) => {
-            cobalt_sender.send(
-                MetricEvent::builder(metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID)
-                    .with_event_codes(
-                        metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Success,
-                    )
-                    .as_occurrence(1),
-            );
-            builder
-        }
-        Err((builder, err)) => {
-            let dimension_result: metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult =
-                (&err).into();
-            cobalt_sender.send(
-                MetricEvent::builder(metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID)
-                    .with_event_codes(dimension_result)
-                    .as_occurrence(1),
-            );
-
-            if err.is_not_found() {
-                info!("no font package registry present: {:#}", anyhow!(err));
-            } else {
-                error!("error loading font package registry: {:#}", anyhow!(err));
-            }
-            builder
-        }
-    }
-    .build()
 }

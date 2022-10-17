@@ -14,7 +14,6 @@ use {
         Package, PackageBuilder, RepositoryBuilder,
     },
     lib::{make_repo, make_repo_config, MountsBuilder, TestEnv, TestEnvBuilder, EMPTY_REPO_PATH},
-    serde_json::json,
     std::{net::Ipv4Addr, sync::Arc},
 };
 
@@ -392,54 +391,6 @@ async fn update_tuf_client_error() {
         vec![metrics::UpdateTufClientMigratedMetricDimensionResult::MissingMetadata],
     )
     .await;
-}
-
-#[fuchsia::test]
-async fn font_manager_load_static_registry_success() {
-    let json = serde_json::to_string(&json!(["fuchsia-pkg://fuchsia.com/font1"])).unwrap();
-    let env = TestEnvBuilder::new()
-        .mounts(MountsBuilder::new().custom_config_data("font_packages.json", json).build())
-        .build()
-        .await;
-
-    env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Success],
-    )
-    .await;
-
-    env.stop().await;
-}
-
-#[fuchsia::test]
-async fn font_manager_load_static_registry_failure_io() {
-    let env = TestEnvBuilder::new().build().await;
-
-    env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Io],
-    )
-    .await;
-
-    env.stop().await;
-}
-
-#[fuchsia::test]
-async fn font_manager_load_static_registry_failure_parse() {
-    let env = TestEnvBuilder::new()
-        .mounts(
-            MountsBuilder::new().custom_config_data("font_packages.json", "invalid-json").build(),
-        )
-        .build()
-        .await;
-
-    env.assert_count_events(
-        metrics::FONT_MANAGER_LOAD_STATIC_REGISTRY_MIGRATED_METRIC_ID,
-        vec![metrics::FontManagerLoadStaticRegistryMigratedMetricDimensionResult::Parse],
-    )
-    .await;
-
-    env.stop().await;
 }
 
 #[fuchsia::test]
