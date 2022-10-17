@@ -45,7 +45,7 @@ constexpr RetiredDef<21> ErrExpectedProtocolMember(
     "fi-0020 as ErrInvalidProtocolMember");
 constexpr ErrorDef<22> ErrCannotAttachAttributeToIdentifier(
     "cannot attach attributes to identifiers");
-constexpr UndocumentedErrorDef<23> ErrRedundantAttributePlacement(
+constexpr ErrorDef<23> ErrRedundantAttributePlacement(
     "cannot specify attributes on the type declaration and the corresponding layout at the same "
     "time; please merge them into one location instead");
 constexpr ErrorDef<24> ErrDocCommentOnParameters("cannot have doc comment on parameters");

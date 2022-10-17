@@ -810,13 +810,8 @@ protocol ExampleProtocol {
 }
 
 TEST(AttributesTests, BadDuplicateAttributePlacement) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-@foo
-type Foo = @bar struct {};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0023.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrRedundantAttributePlacement);
 }
 

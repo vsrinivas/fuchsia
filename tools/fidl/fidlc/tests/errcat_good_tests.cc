@@ -81,6 +81,12 @@ TEST(ErrcatTests, Good0022) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0023) {
+  TestLibrary library;
+  library.AddFile("good/fi-0023.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0025) {
   SharedAmongstLibraries shared;
   TestLibrary dependency(&shared, "dependent.fidl", R"FIDL(library dependent;
