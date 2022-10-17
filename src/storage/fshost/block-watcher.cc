@@ -261,7 +261,8 @@ bool BlockWatcher::Callback(Watcher& watcher, int dirfd, fio::wire::WatchEvent e
 }
 
 zx_signals_t BlockWatcher::WaitForWatchMessages(cpp20::span<Watcher> watchers,
-                                                cpp20::span<uint8_t>& buf, Watcher** selected) {
+                                                cpp20::span<uint8_t>& buf,
+                                                Watcher** selected) const {
   *selected = nullptr;
   zx_status_t status;
   std::vector<zx_wait_item_t> wait_items;
@@ -322,6 +323,11 @@ zx_signals_t BlockWatcher::WaitForWatchMessages(cpp20::span<Watcher> watchers,
   }
 
   ZX_ASSERT_MSG(false, "watcher got event but nothing is pending");
+}
+
+bool BlockWatcher::IsPaused() const {
+  auto guard = std::lock_guard(lock_);
+  return is_paused_;
 }
 
 fbl::RefPtr<fs::Service> BlockWatcherServer::Create(async_dispatcher* dispatcher,

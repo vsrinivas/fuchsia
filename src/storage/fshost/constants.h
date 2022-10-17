@@ -10,23 +10,34 @@
 namespace fshost {
 
 // These need to match whatever our imaging tools do.
-inline constexpr std::string_view kBlobfsPartitionLabel = "blobfs";
-inline constexpr std::string_view kDataPartitionLabel = "data";
-inline constexpr std::string_view kLegacyDataPartitionLabel = "minfs";
+constexpr std::string_view kBlobfsPartitionLabel = "blobfs";
+constexpr std::string_view kDataPartitionLabel = "data";
+constexpr std::string_view kLegacyDataPartitionLabel = "minfs";
 
 // This is the path the to fshost admin service that shell tools should see.
-inline constexpr std::string_view kHubAdminServicePath =
+constexpr std::string_view kHubAdminServicePath =
     "/hub-v2/children/bootstrap/children/fshost/exec/out/svc/fuchsia.fshost.Admin";
 
 // Binaries for data partition filesystems are expected to be at well known locations.
-inline const char* kMinfsPath = "/pkg/bin/minfs";
-inline const char* kFxfsPath = "/pkg/bin/fxfs";
-inline const char* kF2fsPath = "/pkg/bin/f2fs";
-inline const char* kFactoryfsPath = "/pkg/bin/factoryfs";
+constexpr char kMinfsPath[] = "/pkg/bin/minfs";
+constexpr char kFxfsPath[] = "/pkg/bin/fxfs";
+constexpr char kF2fsPath[] = "/pkg/bin/f2fs";
+constexpr char kFactoryfsPath[] = "/pkg/bin/factoryfs";
 
 // These are default sizes of data partition.
-inline const uint64_t kDefaultMinfsMaxBytes = 24 * 1024 * 1024;
-inline const uint64_t kDefaultF2fsMinBytes = 100 * 1024 * 1024;
+constexpr uint64_t kDefaultMinfsMaxBytes = 24ull * 1024ull * 1024ull;
+constexpr uint64_t kDefaultF2fsMinBytes = 100ull * 1024ull * 1024ull;
+
+constexpr std::string_view kBlockDeviceClassPrefix = "/dev/class/block";
+constexpr std::string_view kNandDeviceClassPrefix = "/dev/class/nand";
+
+constexpr char kFVMDriverPath[] = "fvm.so";
+constexpr char kGPTDriverPath[] = "gpt.so";
+constexpr char kMBRDriverPath[] = "mbr.so";
+constexpr char kZxcryptDriverPath[] = "zxcrypt.so";
+constexpr char kBootpartDriverPath[] = "bootpart.so";
+constexpr char kBlockVerityDriverPath[] = "block-verity.so";
+constexpr char kNandBrokerDriverPath[] = "nand-broker.so";
 
 }  // namespace fshost
 

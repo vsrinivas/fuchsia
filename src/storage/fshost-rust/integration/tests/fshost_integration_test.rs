@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::create_proxy, fidl_fuchsia_io as fio, fshost_test_fixture::TestFixtureBuilder,
+    fidl::endpoints::create_proxy, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
+    fshost_test_fixture::TestFixtureBuilder, fuchsia_zircon as zx,
 };
 
 const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
@@ -88,6 +89,28 @@ async fn data_formatted_no_zxcrypt() {
         .await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
+
+    fixture.tear_down().await;
+}
+
+// Ensure WipeStorage is not supported in the normal mode of operation (i.e. when the `fvm_ramdisk`
+// option is false). WipeStorage should only function within a recovery context.
+#[fuchsia::test]
+async fn wipe_storage_not_supported() {
+    let fixture =
+        TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT).build().await;
+
+    let admin =
+        fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
+
+    let (_, blobfs_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
+
+    let result = admin
+        .wipe_storage(blobfs_server)
+        .await
+        .unwrap()
+        .expect_err("WipeStorage unexpectedly succeeded");
+    assert_eq!(zx::Status::from_raw(result), zx::Status::NOT_SUPPORTED);
 
     fixture.tear_down().await;
 }

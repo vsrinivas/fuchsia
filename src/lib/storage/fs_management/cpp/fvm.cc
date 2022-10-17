@@ -48,6 +48,9 @@ namespace {
 
 constexpr char kBlockDevPath[] = "/dev/class/block/";
 constexpr char kBlockDevRelativePath[] = "class/block/";
+
+constexpr int64_t kOpenPartitionTimeout = ZX_SEC(30);
+
 // Overwrites the FVM and waits for it to disappear from devfs.
 //
 // devfs_root_fd: (OPTIONAL) A connection to devfs. If supplied, |path| is relative to this root.
@@ -461,7 +464,7 @@ zx::status<fbl::unique_fd> FvmAllocatePartition(int fvm_fd, const alloc_req_t* r
       .type_guid = request->type,
       .instance_guid = request->guid,
   };
-  return OpenPartition(&matcher, ZX_SEC(10), nullptr);
+  return OpenPartition(&matcher, kOpenPartitionTimeout, nullptr);
 }
 
 __EXPORT
@@ -475,7 +478,7 @@ zx::status<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int 
       .type_guid = request->type,
       .instance_guid = request->guid,
   };
-  return OpenPartitionWithDevfs(devfs_root_fd, &matcher, ZX_SEC(10), nullptr);
+  return OpenPartitionWithDevfs(devfs_root_fd, &matcher, kOpenPartitionTimeout, nullptr);
 }
 
 __EXPORT

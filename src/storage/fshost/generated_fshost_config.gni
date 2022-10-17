@@ -3,6 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/components.gni")
+import("//build/images/args.gni")
+import("//build/images/fvm.gni")
 
 declare_args() {
   # blobfs_maximum_runtime_bytes is an upper bound on the partition size on the device. Partitions
@@ -100,6 +102,27 @@ template("generated_fshost_config") {
       no_zxcrypt = false
       ramdisk_prefix = "/dev/sys/platform/00:00:2d/ramctl/"
       sandbox_decompression = true
+
+      # Parameters from //build/images/fvm.gni
+      fvm_slice_size = fvm_slice_size
+
+      # Parameters from //build/images/args.gni
+      if (blobfs_product_minimum_inodes != false) {
+        # Product-level overrides take precedence over board-level overrides.
+        blobfs_initial_inodes = blobfs_product_minimum_inodes
+      } else if (blobfs_board_minimum_inodes != false) {
+        blobfs_initial_inodes = blobfs_board_minimum_inodes
+      } else {
+        blobfs_initial_inodes = 0
+      }
+      assert(blob_layout_format == "compact" ||
+                 blob_layout_format == "deprecated_padded",
+             "Unrecognized format for blob layout.")
+      if (blob_layout_format == "deprecated_padded") {
+        blobfs_use_deprecated_padded_format = true
+      } else {
+        blobfs_use_deprecated_padded_format = false
+      }
 
       # Build args
       allow_legacy_data_partition_names = allow_legacy_data_partition_names

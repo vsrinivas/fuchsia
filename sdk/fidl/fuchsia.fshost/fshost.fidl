@@ -8,6 +8,7 @@ using fuchsia.hardware.block;
 using fuchsia.io;
 
 /// Manages the block watcher.
+/// TODO(fxbug.dev/110342): Gracefully handle multiple users of the BlockWatcher API.
 @discoverable
 protocol BlockWatcher {
     /// Pauses the block watcher. This will return when the block watcher has stopped processing
@@ -68,5 +69,21 @@ protocol Admin {
     WriteDataFile(resource struct {
         filename string:fuchsia.io.MAX_PATH;
         payload zx.handle:VMO;
+    }) -> (struct {}) error zx.status;
+
+    /// Reprovision the first non-ramdisk FVM volume (based on class path index), and format/mount
+    /// the blob partition. The formatted Blobfs instance can be accessed via the client end of the
+    /// given `blobfs_root`.
+    ///
+    /// This function will pause the fshost block watcher regardless of success or failure.
+    /// Requires fshost to be started with the `fvm_ramdisk` config option set to true.
+    ///
+    /// **WARNING**: This will cause irreversible data loss. Use with caution.
+    ///
+    /// TODO(fxbug.dev/112142): This function unbinds all child drivers of the volume to be wiped.
+    /// This can race with the fshost block device manager, which attempts to bind the FVM driver
+    /// and unseal the zxcrypt volume.
+    WipeStorage(resource struct {
+        blobfs_root server_end:<fuchsia.io.Directory>;
     }) -> (struct {}) error zx.status;
 };

@@ -77,9 +77,11 @@ template("fshost_integration_test") {
     sources = [ invoker.source_root ]
     deps = [
       ":fshost_test_fixture",
+      "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia",
+      "//src/lib/zircon/rust:fuchsia-zircon",
     ]
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -156,10 +158,12 @@ fshost_integration_test("fshost-cpp-integration-test-fxfs-recovery") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//sdk/lib/device-watcher/rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
+    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/key-bag",
     "//src/lib/storage/ramdevice_client/rust",
@@ -178,10 +182,12 @@ fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//sdk/lib/device-watcher/rust",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
+    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/key-bag",
     "//src/lib/storage/ramdevice_client/rust",
