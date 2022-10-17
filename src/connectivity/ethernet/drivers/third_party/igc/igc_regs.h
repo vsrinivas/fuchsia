@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_REGS_H_
-#define _IGC_REGS_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_REGS_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_REGS_H_
 
 /* General Register Descriptions */
 #define IGC_CTRL		0x00000  /* Device Control - RW */
@@ -421,4 +422,5 @@
 #define IGC_TSSDP		0x0003C  /* Time Sync SDP Configuration Register - RW */
 
 
-#endif
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_REGS_H_
+// clang-format on

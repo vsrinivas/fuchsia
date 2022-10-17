@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// clang-format off
 #include "igc_api.h"
 
 static void igc_config_collision_dist_generic(struct igc_hw *hw);
@@ -1045,3 +1046,4 @@ s32 igc_disable_pcie_master_generic(struct igc_hw *hw)
 
 	return IGC_SUCCESS;
 }
+// clang-format on

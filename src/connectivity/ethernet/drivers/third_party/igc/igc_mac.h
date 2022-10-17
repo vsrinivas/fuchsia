@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_MAC_H_
-#define _IGC_MAC_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_MAC_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_MAC_H_
 
 void igc_init_mac_ops_generic(struct igc_hw *hw);
 void igc_null_mac_generic(struct igc_hw *hw);
@@ -45,4 +46,5 @@ s32  igc_check_alt_mac_addr_generic(struct igc_hw *hw);
 void igc_set_pcie_no_snoop_generic(struct igc_hw *hw, u32 no_snoop);
 void igc_write_vfta_generic(struct igc_hw *hw, u32 offset, u32 value);
 
-#endif
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_MAC_H_
+// clang-format on

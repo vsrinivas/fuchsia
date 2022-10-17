@@ -6,8 +6,11 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_API_H_
-#define _IGC_API_H_
+// Skip auto formatting for the original ported files, this reduces the annoyance in further
+// maintenance and uprev of this driver by keeping the line number consistency.
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_API_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_API_H_
 
 #include "igc_hw.h"
 
@@ -54,4 +57,5 @@ s32 igc_write_nvm(struct igc_hw *hw, u16 offset, u16 words, u16 *data);
 s32 igc_set_d3_lplu_state(struct igc_hw *hw, bool active);
 s32 igc_set_d0_lplu_state(struct igc_hw *hw, bool active);
 
-#endif /* _IGC_API_H_ */
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_API_H_
+// clang-format on

@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// clang-format off
 #include "igc_api.h"
 
 static void igc_reload_nvm_generic(struct igc_hw *hw);
@@ -714,3 +715,4 @@ static void igc_reload_nvm_generic(struct igc_hw *hw)
 	IGC_WRITE_REG(hw, IGC_CTRL_EXT, ctrl_ext);
 	IGC_WRITE_FLUSH(hw);
 }
+// clang-format on

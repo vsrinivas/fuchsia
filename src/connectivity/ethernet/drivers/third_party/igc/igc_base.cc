@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// clang-format off
 #include "igc_hw.h"
 #include "igc_i225.h"
 #include "igc_mac.h"
@@ -183,3 +184,4 @@ void igc_rx_fifo_flush_base(struct igc_hw *hw)
 	IGC_READ_REG(hw, IGC_RNBC);
 	IGC_READ_REG(hw, IGC_MPC);
 }
+// clang-format off

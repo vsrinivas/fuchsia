@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// clang-format off
 #include "igc_api.h"
 
 /**
@@ -714,3 +715,4 @@ void igc_power_down_phy(struct igc_hw *hw)
 	if (hw->phy.ops.power_down)
 		hw->phy.ops.power_down(hw);
 }
+// clang-format on

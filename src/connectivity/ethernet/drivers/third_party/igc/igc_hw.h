@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_HW_H_
-#define _IGC_HW_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_HW_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_HW_H_
 
 #include "igc_osdep.h"
 #include "igc_regs.h"
@@ -545,4 +546,5 @@ s32  igc_write_pcie_cap_reg(struct igc_hw *hw, u32 reg, u16 *value);
 void igc_read_pci_cfg(struct igc_hw *hw, u32 reg, u16 *value);
 void igc_write_pci_cfg(struct igc_hw *hw, u32 reg, u16 *value);
 
-#endif
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_HW_H_
+// clang-format on

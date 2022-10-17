@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_DEFINES_H_
-#define _IGC_DEFINES_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_DEFINES_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_DEFINES_H_
 
 /* Number of Transmit and Receive Descriptors must be a multiple of 8 */
 #define REQ_TX_DESCRIPTOR_MULTIPLE  8
@@ -1344,4 +1345,5 @@
 #ifndef ERROR_REPORT
 #define ERROR_REPORT(fmt)	do { } while (0)
 #endif /* ERROR_REPORT */
-#endif /* _IGC_DEFINES_H_ */
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_DEFINES_H_
+// clang-format on

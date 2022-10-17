@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_NVM_H_
-#define _IGC_NVM_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_NVM_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_NVM_H_
 
 void igc_init_nvm_ops_generic(struct igc_hw *hw);
 s32  igc_null_read_nvm(struct igc_hw *hw, u16 a, u16 b, u16 *c);
@@ -29,4 +30,5 @@ s32  igc_write_nvm_spi(struct igc_hw *hw, u16 offset, u16 words,
 s32  igc_update_nvm_checksum_generic(struct igc_hw *hw);
 void igc_release_nvm_generic(struct igc_hw *hw);
 
-#endif
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_NVM_H_
+// clang-format on

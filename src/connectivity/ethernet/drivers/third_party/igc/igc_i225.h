@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_I225_H_
-#define _IGC_I225_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_I225_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_I225_H_
 
 bool igc_get_flash_presence_i225(struct igc_hw *hw);
 s32 igc_update_flash_i225(struct igc_hw *hw);
@@ -109,4 +110,5 @@ s32 igc_set_eee_i225(struct igc_hw *hw, bool adv2p5G, bool adv1G,
 #define IGC_RXDADV_PKTTYPE_ETQF_MASK	0x00000070 /* ETQF has 8 indices */
 #define IGC_RXDADV_PKTTYPE_ETQF_SHIFT	4 /* Right-shift 4 bits */
 
-#endif
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_I225_H_
+// clang-format on

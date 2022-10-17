@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_BASE_H_
-#define _IGC_BASE_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_BASE_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_BASE_H_
 
 /* forward declaration */
 s32 igc_init_hw_base(struct igc_hw *hw);
@@ -128,4 +129,5 @@ union igc_adv_rx_desc {
 #define IGC_SRRCTL_BSIZEHDRSIZE_SHIFT		2  /* Shift _left_ */
 #define IGC_SRRCTL_DESCTYPE_ADV_ONEBUF	0x02000000
 
-#endif /* _IGC_BASE_H_ */
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_BASE_H_
+// clang-format on

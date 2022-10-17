@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// clang-format off
 #include "igc_api.h"
 
 static s32 igc_init_nvm_params_i225(struct igc_hw *hw);
@@ -1219,3 +1220,4 @@ out:
 
 	return IGC_SUCCESS;
 }
+// clang-format off

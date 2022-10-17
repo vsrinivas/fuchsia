@@ -4,6 +4,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 
+// clang-format off
 #include "igc_api.h"
 
 static s32 igc_wait_autoneg(struct igc_hw *hw);
@@ -1071,3 +1072,4 @@ s32 igc_write_xmdio_reg(struct igc_hw *hw, u16 addr, u8 dev_addr, u16 data)
 
 	return __igc_access_xmdio_reg(hw, addr, dev_addr, &data, false);
 }
+// clang-format on

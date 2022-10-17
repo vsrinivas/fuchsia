@@ -6,8 +6,9 @@
  * $FreeBSD$
  */
 
-#ifndef _IGC_PHY_H_
-#define _IGC_PHY_H_
+// clang-format off
+#ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_PHY_H_
+#define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_PHY_H_
 
 void igc_init_phy_ops_generic(struct igc_hw *hw);
 s32  igc_null_read_reg(struct igc_hw *hw, u32 offset, u16 *data);
@@ -130,4 +131,5 @@ s32  igc_read_phy_reg_gpy(struct igc_hw *hw, u32 offset, u16 *data);
 #define IFE_PMC_FORCE_MDIX		0x0040 /* 1=force MDI-X, 0=force MDI */
 #define IFE_PMC_AUTO_MDIX		0x0080 /* 1=enable auto, 0=disable */
 
-#endif
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_PHY_H_
+// clang-format on

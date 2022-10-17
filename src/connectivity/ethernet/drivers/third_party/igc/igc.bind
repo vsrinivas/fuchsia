@@ -11,3 +11,5 @@ fuchsia.BIND_PCI_VID == fuchsia.pci.BIND_PCI_VID.INTEL;
 accept fuchsia.BIND_PCI_DID {
     0x15F2, // I225-LM
 }
+
+fuchsia.BIND_COMPOSITE == 1;

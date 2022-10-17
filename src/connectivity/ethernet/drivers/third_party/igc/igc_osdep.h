@@ -6,6 +6,7 @@
  * $FreeBSD$
  */
 
+// clang-format off
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_OSDEP_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_OSDEP_H_
 
@@ -113,4 +114,5 @@ struct igc_osdep {
 #define IGC_WRITE_REG_ARRAY_WORD(hw, reg, index, value) \
   igc_writew((value), hw2membase(hw) + IGC_REGISTER((hw), (reg)) + ((index) << 1))
 
-#endif /* SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_OSDEP_H_ */
+#endif // SRC_CONNECTIVITY_ETHERNET_DRIVERS_THIRD_PARTY_IGC_IGC_OSDEP_H_
+// clang-format on
