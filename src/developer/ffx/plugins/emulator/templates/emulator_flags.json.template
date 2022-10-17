@@ -176,7 +176,11 @@
             "verbose",
         {{/if}}
         "kernel.serial=legacy",
-        "TERM=xterm-256color",
+        {{#if (eq runtime.console "console")}}
+            "TERM=xterm-256color",
+        {{else}}
+            "TERM=dumb",
+        {{/if}}
         "kernel.entropy-mixin=42ac2452e99c1c979ebfca03bce0cbb14126e4021a6199ccfeca217999c0aaa0",
         "kernel.halt-on-panic=true",
         "zircon.nodename={{runtime.name}}",
