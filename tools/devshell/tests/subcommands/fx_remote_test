@@ -48,6 +48,7 @@ BT_SET_UP() {
   ffx="$(btf::make_installed_hosttools_mock ffx)"
   cat > "${ffx}.mock_side_effects" << "EOF"
 echo "$@" 1>&2
+gs://fuchsia/development/9.20221011.1.1/
 if [[ "$@" == "config get repository.server.mode" ]]; then
   echo "\"ffx\""
 elif [[ "$@" == "config get repository.server.listen" ]]; then
@@ -65,7 +66,7 @@ TEST_fx-remote-config-file() {
   local out="${BT_TEMP_DIR}/output.log"
 
   BT_EXPECT ${fx} serve-remote "$testhost" "$testdir" >>${out} 2>&1
-  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${testhost}:${testdir}"
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${testhost}:${testdir}:"
 }
 
 # test if the cache file is used when no argument is given
@@ -74,7 +75,7 @@ TEST_fx-remote-default-args() {
   local testdir=~/myfuchsia/directory
   local out="${BT_TEMP_DIR}/output.log"
 
-  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
+  echo "${testhost}:${testdir}:" > "${BT_TEMP_DIR}/.fx-remote-config"
   BT_EXPECT ${fx} serve-remote >>${out} 2>&1
   btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$testhost"
 }
@@ -87,9 +88,9 @@ TEST_fx-remote-args-given() {
   local anotherhost=myhostname.my.server.com
   local out="${BT_TEMP_DIR}/output.log"
 
-  echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
+  echo "${testhost}:${testdir}:" > "${BT_TEMP_DIR}/.fx-remote-config"
   BT_EXPECT ${fx} serve-remote "$anotherhost" "${testdir}" >>${out} 2>&1
-  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}:"
   btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$anotherhost"
 }
 
@@ -113,8 +114,9 @@ TEST_fx-pave-remote-args-given() {
 
   echo "${testhost}:${testdir}" > "${BT_TEMP_DIR}/.fx-remote-config"
   BT_EXPECT ${fx} pave-remote --no-pave "$anotherhost" "${testdir}" >>${out} 2>&1
-  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}"
-  btf::does-mock-args-contain "${ssh_mock}.mock_state" "$anotherhost"
+  BT_EXPECT_FILE_CONTAINS "${BT_TEMP_DIR}/.fx-remote-config" "${anotherhost}:${testdir}:"
+  btf::does-mock-args-contain "${ssh_mock}.mock_state.1" "$anotherhost"
+  btf::does-mock-args-contain "${ssh_mock}.mock_state.2" "$anotherhost"
 }
 
 # test flash-remote if the fetched manifest from fx-remote is properly

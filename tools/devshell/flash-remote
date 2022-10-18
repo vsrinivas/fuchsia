@@ -119,6 +119,7 @@ if "${flash}"; then
   if is_feature_enabled "legacy_fastboot"; then
     fetch_or_build_tool ${host} ${dir} "${artifact_dir}" fastboot
   else
+    fx-info "Fetching or building ffx"
     fetch_or_build_tool ${host} ${dir} "${artifact_dir}" ffx
   fi
   cd "${artifact_dir}"

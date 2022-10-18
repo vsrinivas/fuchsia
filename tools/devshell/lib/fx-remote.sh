@@ -5,23 +5,37 @@
 
 # WARNING: This is not supposed to be directly executed by users.
 
+
 readonly _REMOTE_INFO_CACHE_FILE=".fx-remote-config"
 
 function load_remote_info {
   local current_host="$1"
   # if remote_host is not given, check if there's cached info
   if [[ -z "${current_host}" && -f "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}" ]]; then
-    cached="$(<${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE})"
-    remote_host=${cached%:*}
-    remote_dir=${cached#*:}
+
+    IFS=':' read -ra cached <<< "$(<${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE})"
+    remote_host=${cached[0]}
+    remote_dir=
+    remote_os=
+
+    if [[ "${#cached[@]}" -ge 2 ]]; then
+      remote_dir=${cached[1]}
+    fi
+    if [[ "${#cached[@]}" -ge 3 ]]; then
+      remote_os=${cached[2]}
+    fi
+
     {
       echo -n "Reusing remote_host=${remote_host}"
       if [[ -n "${remote_dir}" ]]; then
         echo -n " and remote-path=${remote_dir}"
       fi
+      if [[ -n "${remote_os}" ]]; then
+        echo -n " and remote_os=${remote_os}"
+      fi
       echo " from previous invocation, persisted in file //${_REMOTE_INFO_CACHE_FILE}"
     } >&2
-    echo "$remote_host" "$remote_dir"
+    echo "$remote_host" "$remote_dir" "$remote_os"
     return 0
   fi
   return 1
@@ -30,7 +44,12 @@ function load_remote_info {
 function save_remote_info {
   local remote_host="$1"
   local remote_dir="$2"
-  echo "${remote_host}:${remote_dir}" > "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}"
+  local remote_os
+  remote_os=$(ssh "${host}" "uname") || ( \
+    fx-error "Recieved error detecting remote host's operating system" && \
+    exit $?)
+
+  echo "${remote_host}:${remote_dir}:${remote_os}" > "${FUCHSIA_DIR}/${_REMOTE_INFO_CACHE_FILE}"
 }
 
 # Return the name of the build output directory on the remote
@@ -102,6 +121,23 @@ function fetch_or_build_tool {
   local remote_checkout="$2"
   local local_dir="$3"
   local tool_name="$4"
+
+  # If the remote OS does not equal the host OS, check if we have the tool
+  # built locally and if so, just use the locally built version.
+  local remote_os
+  remote_os=$(ssh "${host}" "uname") || ( \
+    fx-error "Recieved error detecting remote host's operating system" && \
+    exit $?)
+  local local_os
+  local_os=$(uname)
+
+  if [[ "${remote_os}" -ne "${local_os}" ]]; then
+    if [[ -f "$(get_host_tools_dir)/${tool_name}" ]]; then
+      fx-info "Using locally built ${tool_name}"
+      echo "$(get_host_tools_dir)/${tool_name}"
+      return
+    fi
+  fi
 
   local tool="$(ssh "${host}" "cd ${remote_checkout} && .jiri_root/bin/fx list-build-artifacts --build --allow-empty --os ${HOST_OS} --cpu ${HOST_CPU}" --name ${tool_name} tools)"
   if [[ -n "${tool}" ]] ; then
