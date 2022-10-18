@@ -39,7 +39,6 @@ if (!is_host) {
       # For compiled dart commands.
       "//scripts/fxtest:fxtest",
       "//scripts/status:status",
-      "//tools/blobstats:blobstats",
     ]
   }
 }
@@ -90,7 +89,6 @@ test_scripts = [
 
   # tests that currently can't be included in automation.
   # use 'fx self-test' to run them manually:
-  # "tests/subcommands/fx_blobstats_test",  # disabled because it depends on dart prebuilt
   # "tests/subcommands/fx_emu_test",   # disabled because stty call fails
   # "tests/subcommands/fx_serve_update_test",  # disabled because it depends on pm
   # "tests/subcommands/fx_test_test",  # disabled because it depends on dart prebuilt
@@ -150,7 +148,6 @@ host_script_test_data("fx_bash_tests") {
 
       files = [
         "//tools/devshell/build-metrics",
-        "//tools/devshell/contrib/blobstats",
         "//tools/devshell/contrib/ffx",
         "//tools/devshell/contrib/format-code",
         "//tools/devshell/contrib/lib/symbol-index.sh",
@@ -198,15 +195,6 @@ host_script_test_data("fx_bash_tests") {
         "//tools/devshell/shell",
         "//tools/devshell/symbolize",
         "//tools/devshell/test",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/blob.manifest",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/blobs.csv",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/blobs.json",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/packages.csv",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/snapshot_blobs.json",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/snapshot_meta.far",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif.so",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif_blobs.json",
-        "//tools/devshell/tests/subcommands/data/fx_blobstats_test/wlanif_meta.far",
         "//tools/devshell/tests/subcommands/data/fx_format_code_test/cplusplus.cc",
         "//tools/devshell/tests/subcommands/data/fx_format_code_test/gn.gn",
         "//tools/devshell/tests/subcommands/data/fx_format_code_test/gn.gni",

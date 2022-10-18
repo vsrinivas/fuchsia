@@ -57,7 +57,6 @@ group("tools") {
 group("build_infra") {
   public_deps = [
     "//tools/artifactory($host_toolchain)",
-    "//tools/blobstats($host_toolchain)",
     "//tools/build/ninjago/buildstats($host_toolchain)",
     "//tools/build/ninjago/ninjatrace($host_toolchain)",
 
@@ -154,7 +153,6 @@ group("tests_no_e2e") {
     "//tools/auto_owners:tests($host_toolchain)",
     "//tools/bindc:tests",
     "//tools/blackout:tests",
-    "//tools/blobstats:tests",
     "//tools/bootserver:tests($host_toolchain)",
     "//tools/botanist:tests($host_toolchain)",
     "//tools/build:tests($host_toolchain)",
