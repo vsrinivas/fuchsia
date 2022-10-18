@@ -27,12 +27,7 @@ Session::Session(async_dispatcher_t* dispatcher, void* buffer, size_t buffer_num
       buffer_num_bytes_(buffer_num_bytes),
       fifo_(std::move(fifo)),
       fifo_wait_(this, fifo_.get(), ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED),
-      categories_(std::move(categories)) {
-  // Build a quick lookup table for IsCategoryEnabled().
-  for (const auto& cat : categories_) {
-    enabled_category_set_.emplace(StringSetEntry(cat.c_str()));
-  }
-}
+      enabled_categories_(std::move(categories)) {}
 
 Session::~Session() {
   zx_status_t status =
@@ -227,12 +222,26 @@ zx_status_t Session::MarkBufferSaved(uint32_t wrapped_count, uint64_t durable_da
   return trace_engine_mark_buffer_saved(wrapped_count, durable_data_end);
 }
 
+bool DoesCategoryMatch(const std::string& category, const std::string& match_string) {
+  if (match_string.empty())
+    return false;
+  if (match_string.back() != '*')
+    return category == match_string;
+
+  const auto prefix_size = match_string.length() - 1;
+  return category.compare(0, prefix_size, match_string, 0, prefix_size) == 0;
+}
+
 bool Session::IsCategoryEnabled(const char* category) {
-  if (categories_.size() == 0) {
+  if (enabled_categories_.size() == 0) {
     // If none are specified, enable all categories.
     return true;
   }
-  return enabled_category_set_.find(StringSetEntry(category)) != enabled_category_set_.end();
+  for (const auto& enabled_category : enabled_categories_) {
+    if (DoesCategoryMatch(category, enabled_category))
+      return true;
+  }
+  return false;
 }
 
 void Session::SendFifoPacket(const trace_provider_packet_t* packet) {

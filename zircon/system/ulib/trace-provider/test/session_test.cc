@@ -46,8 +46,13 @@ TEST(SessionTest, AlertSent) {
                             &fifo_manager);
   ASSERT_EQ(ZX_OK, status);
 
-  std::vector<std::string> categories;
-  categories.push_back("test_category");
+  std::vector<std::string> categories = {
+      // Filter without wildcard
+      "test_category",
+      // Filter with wildcard
+      "wildcard*",
+      // Empty filter to make sure the wildcard matcher can handle the empty case
+      ""};
 
   internal::Session::InitializeEngine(loop.dispatcher(), TRACE_BUFFERING_MODE_CIRCULAR,
                                       std::move(buffer), std::move(fifo_provider), categories);
@@ -67,7 +72,7 @@ TEST(SessionTest, AlertSent) {
   ASSERT_EQ(ZX_ERR_SHOULD_WAIT, status);
 
   // Alert name neither min nor max length.
-  TRACE_ALERT("test_category", kAlertName.c_str());
+  TRACE_ALERT("wildcard_category", kAlertName.c_str());
 
   status = fifo_manager.read(sizeof(trace_provider_packet_t), &packet, 1, &actual);
   ASSERT_EQ(ZX_OK, status);
@@ -91,7 +96,7 @@ TEST(SessionTest, AlertSent) {
       sizeof(packet.data16) + sizeof(packet.data32) + sizeof(packet.data64));
 
   // Alert name of max length (14).
-  TRACE_ALERT("test_category", kAlertNameMax.c_str());
+  TRACE_ALERT("wildcard_category", kAlertNameMax.c_str());
 
   status = fifo_manager.read(sizeof(trace_provider_packet_t), &packet, 1, &actual);
   ASSERT_EQ(ZX_OK, status);

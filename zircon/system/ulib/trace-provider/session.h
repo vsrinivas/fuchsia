@@ -5,21 +5,15 @@
 #ifndef ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_
 #define ZIRCON_SYSTEM_ULIB_TRACE_PROVIDER_SESSION_H_
 
-#include <string.h>
-
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_set>
-#include <vector>
-
 #include <lib/async/cpp/wait.h>
 #include <lib/trace-provider/handler.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 
-#include "fnv1hash.h"
+#include <memory>
+#include <string>
+#include <vector>
 
 namespace trace {
 namespace internal {
@@ -63,28 +57,7 @@ class Session final : public trace::TraceHandler {
   size_t buffer_num_bytes_;
   zx::fifo fifo_;
   async::WaitMethod<Session, &Session::HandleFifo> fifo_wait_;
-  std::vector<std::string> const categories_;
-
-  using CString = const char*;
-
-  // For faster implementation of IsCategoryEnabled().
-  struct StringSetEntry {
-    StringSetEntry() : string(nullptr) {}
-    explicit StringSetEntry(const CString& string) : string(string) {}
-
-    const CString string;
-
-    std::size_t operator()(const StringSetEntry& key) const noexcept {
-      return fnv1a64str(key.string);
-    }
-
-    bool operator()(const StringSetEntry& lhs, const StringSetEntry& rhs) const {
-      return strcmp(lhs.string, rhs.string) == 0;
-    }
-  };
-
-  using StringSet = std::unordered_set<StringSetEntry, StringSetEntry, StringSetEntry>;
-  StringSet enabled_category_set_;
+  std::vector<std::string> enabled_categories_;
 
   Session(const Session&) = delete;
   Session(Session&&) = delete;
