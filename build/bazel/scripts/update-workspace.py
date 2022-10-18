@@ -438,7 +438,9 @@ readonly _OUTPUT_USER_ROOT="${{_SCRIPT_DIR}}/{output_user_root}"
 export BAZEL_FUCHSIA_NINJA_OUTPUT_DIR="{ninja_output_dir}"
 export BAZEL_FUCHSIA_NINJA_PREBUILT="{ninja_prebuilt}"
 
-cd "${{_WORKSPACE_DIR}}" && {bazel_bin_path} \
+# Setting $USER so `bazel` won't fail in environments with fake UIDs. Even if
+# the USER is not actually used. See https://fxbug.dev/112206#c9.
+cd "${{_WORKSPACE_DIR}}" && USER=unused-bazel-build-user {bazel_bin_path} \
       --nohome_rc \
       --output_base="${{_OUTPUT_BASE}}" \
       --output_user_root="${{_OUTPUT_USER_ROOT}}" \
