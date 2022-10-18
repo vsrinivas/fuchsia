@@ -3404,6 +3404,16 @@ impl ClientState {
                 collected_advertise: _,
                 dns_servers,
                 solicit_max_rt: _,
+            })
+            | ClientState::Renewing(Renewing {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                collected_advertise: _,
+                dns_servers,
+                first_renew_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
             }) => dns_servers.clone(),
             ClientState::InformationRequesting(InformationRequesting { retrans_timeout: _ })
             | ClientState::ServerDiscovery(ServerDiscovery {
@@ -3423,16 +3433,6 @@ impl ClientState {
                 first_request_time: _,
                 retrans_timeout: _,
                 retrans_count: _,
-                solicit_max_rt: _,
-            })
-            | ClientState::Renewing(Renewing {
-                client_id: _,
-                addresses: _,
-                server_id: _,
-                collected_advertise: _,
-                dns_servers: _,
-                first_renew_time: _,
-                retrans_timeout: _,
                 solicit_max_rt: _,
             }) => Vec::new(),
         }
@@ -4235,16 +4235,18 @@ pub(crate) mod testutil {
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         addresses_to_assign: Vec<TestIdentityAssociation>,
+        expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
         rng: R,
         now: Instant,
     ) -> ClientStateMachine<R> {
+        let expected_dns_servers_as_slice = expected_dns_servers.unwrap_or(&[]);
         let (mut client, actions) = testutil::assign_addresses_and_assert(
             client_id.clone(),
             server_id.clone(),
             addresses_to_assign.clone(),
-            &[],
+            expected_dns_servers_as_slice,
             rng,
             now,
         );
@@ -4264,17 +4266,30 @@ pub(crate) mod testutil {
             );
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         }
-        assert_matches!(
-            &actions[..],
-            [
-                Action::CancelTimer(ClientTimerType::Retransmission),
-                Action::ScheduleTimer(ClientTimerType::Renew, t1),
-                Action::ScheduleTimer(ClientTimerType::Rebind, t2)
-            ] => {
-                assert_eq!(*t1, Duration::from_secs(expected_t1_secs.get().into()));
-                assert_eq!(*t2, Duration::from_secs(expected_t2_secs.get().into()));
-            }
-        );
+        let (expected_oro, maybe_dns_server_action) =
+            if let Some(expected_dns_servers) = expected_dns_servers {
+                (
+                    Some([v6::OptionCode::DnsServers]),
+                    Some(Action::UpdateDnsServers(expected_dns_servers.to_vec())),
+                )
+            } else {
+                (None, None)
+            };
+        let expected_actions = [Action::CancelTimer(ClientTimerType::Retransmission)]
+            .into_iter()
+            .chain(maybe_dns_server_action)
+            .chain([
+                Action::ScheduleTimer(
+                    ClientTimerType::Renew,
+                    Duration::from_secs(expected_t1_secs.get().into()),
+                ),
+                Action::ScheduleTimer(
+                    ClientTimerType::Rebind,
+                    Duration::from_secs(expected_t2_secs.get().into()),
+                ),
+            ])
+            .collect::<Vec<_>>();
+        assert_eq!(actions, expected_actions);
 
         // Renew timeout should trigger a transition to Renewing, send a renew
         // message and schedule retransmission.
@@ -4304,7 +4319,7 @@ pub(crate) mod testutil {
         );
         assert_eq!(*got_client_id, client_id);
         assert_eq!(*got_server_id, server_id);
-        assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
+        assert_eq!(dns_servers, expected_dns_servers_as_slice);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
@@ -4324,7 +4339,7 @@ pub(crate) mod testutil {
             v6::MessageType::Renew,
             &client_id,
             Some(&server_id),
-            &[],
+            expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
             &expected_addresses_to_renew,
         );
         client
@@ -6159,11 +6174,30 @@ mod tests {
                 .into_iter()
                 .map(|&addr| TestIdentityAssociation::new_default(addr))
                 .collect(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
         );
+    }
+
+    #[test]
+    fn renewing_get_dns_servers() {
+        let client = testutil::send_renew_and_assert(
+            CLIENT_ID,
+            SERVER_ID[0],
+            CONFIGURED_ADDRESSES[0..2]
+                .into_iter()
+                .map(|&addr| TestIdentityAssociation::new_default(addr))
+                .collect(),
+            Some(&DNS_SERVERS),
+            T1,
+            T2,
+            StepRng::new(std::u64::MAX / 2, 0),
+            Instant::now(),
+        );
+        assert_eq!(client.get_dns_servers()[..], DNS_SERVERS);
     }
 
     #[test]
@@ -6209,6 +6243,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             addresses_to_assign.clone(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6292,6 +6327,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6383,6 +6419,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(addr)],
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6452,6 +6489,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             addresses.iter().copied().map(TestIdentityAssociation::new_default).collect(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6545,6 +6583,7 @@ mod tests {
                 .copied()
                 .map(TestIdentityAssociation::new_default)
                 .collect(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6637,6 +6676,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6724,6 +6764,7 @@ mod tests {
                 .copied()
                 .map(TestIdentityAssociation::new_default)
                 .collect(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6841,6 +6882,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
@@ -7072,6 +7114,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            None,
             T1,
             T2,
             StepRng::new(std::u64::MAX / 2, 0),
