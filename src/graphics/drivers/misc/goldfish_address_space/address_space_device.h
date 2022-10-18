@@ -26,8 +26,16 @@
 namespace goldfish {
 
 class AddressSpaceDevice;
-using DeviceType =
-    ddk::Device<AddressSpaceDevice,
+using DeviceType = ddk::Device<AddressSpaceDevice>;
+
+// This device is a child of a AddressSpaceDevice device and acts as a
+// passthrough for FIDL requests for AddressSpaceDevice. The reason this device
+// exists instead of making AddressSpaceDevice directly handle FIDL requests
+// is because DFv2 does not allow for a device to be both bindable and have
+// children.
+class AddressSpacePassthroughDevice;
+using PassthroughDeviceType =
+    ddk::Device<AddressSpacePassthroughDevice,
                 ddk::Messageable<fuchsia_hardware_goldfish::AddressSpaceDevice>::Mixin>;
 
 class AddressSpaceChildDriver;
@@ -36,8 +44,6 @@ using ChildDriverType =
                 ddk::Messageable<fuchsia_hardware_goldfish::AddressSpaceChildDriver>::Mixin>;
 
 class AddressSpaceDevice : public DeviceType {
-  using fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
-
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
@@ -54,13 +60,6 @@ class AddressSpaceDevice : public DeviceType {
   zx_status_t CreateChildDriver(ddk::IoBuffer* io_buffer, uint32_t* handle);
   uint32_t DestroyChildDriver(uint32_t handle);
   uint32_t ChildDriverPing(uint32_t handle);
-
-  // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>|
-  void OpenChildDriver(OpenChildDriverRequestView request,
-                       OpenChildDriverCompleter::Sync& completer) override {
-    zx_status_t result = OpenChildDriver(request->type, request->req.TakeChannel());
-    completer.Close(result);
-  }
 
   // Device protocol implementation.
   void DdkRelease();
@@ -84,6 +83,23 @@ class AddressSpaceDevice : public DeviceType {
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(AddressSpaceDevice);
+};
+
+class AddressSpacePassthroughDevice : public PassthroughDeviceType {
+  using fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
+
+ public:
+  explicit AddressSpacePassthroughDevice(AddressSpaceDevice* device);
+
+  // Device protocol implementation.
+  void DdkRelease();
+
+  // |fidl::WireServer<fuchsia_hardware_goldfish::AddressSpaceDevice>|
+  void OpenChildDriver(OpenChildDriverRequestView request,
+                       OpenChildDriverCompleter::Sync& completer) override;
+
+ private:
+  AddressSpaceDevice* const device_;
 };
 
 class AddressSpaceChildDriver : public ChildDriverType {

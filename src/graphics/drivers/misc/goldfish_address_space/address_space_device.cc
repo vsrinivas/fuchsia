@@ -144,15 +144,25 @@ zx_status_t AddressSpaceDevice::Bind() {
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_), REGISTER_PHYS_START_LOW);
   mmio_->Write32(static_cast<uint32_t>(dma_region_paddr_ >> 32), REGISTER_PHYS_START_HIGH);
 
+  status = DdkAdd(ddk::DeviceAddArgs("goldfish-address-space").set_flags(DEVICE_ADD_NON_BINDABLE));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to add goldfish-address-space device: %s", kTag,
+           zx_status_get_string(status));
+    return status;
+  }
+  // `goldfish-address-space` device must be added before creating the
+  // passthrough device.
+  auto passthrough_dev = std::make_unique<AddressSpacePassthroughDevice>(this);
+
   status = loop_.StartThread("goldfish-address-space-thread");
   outgoing_.emplace(loop_.dispatcher());
   outgoing_->svc_dir()->AddEntry(
       fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::AddressSpaceDevice>,
       fbl::MakeRefCounted<fs::Service>(
-          [device = this](
+          [device = this, impl = passthrough_dev.get()](
               fidl::ServerEnd<fuchsia_hardware_goldfish::AddressSpaceDevice> request) mutable {
             auto status =
-                fidl::BindSingleInFlightOnly(device->dispatcher_, std::move(request), device);
+                fidl::BindSingleInFlightOnly(device->dispatcher_, std::move(request), impl);
             if (status != ZX_OK) {
               zxlogf(ERROR, "%s: failed to bind channel: %s", kTag, zx_status_get_string(status));
             }
@@ -171,15 +181,23 @@ zx_status_t AddressSpaceDevice::Bind() {
     return status;
   }
 
+  // Add passthrough device
   std::array offers = {
       fidl::DiscoverableProtocolName<fuchsia_hardware_goldfish::AddressSpaceDevice>,
   };
+  status = passthrough_dev->DdkAdd(ddk::DeviceAddArgs("address-space-passthrough")
+                                       .set_flags(DEVICE_ADD_MUST_ISOLATE)
+                                       .set_fidl_protocol_offers(offers)
+                                       .set_outgoing_dir(endpoints->client.TakeChannel())
+                                       .set_proto_id(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to add address-space-passthrough device: %s", kTag,
+           zx_status_get_string(status));
+    return status;
+  }
 
-  return DdkAdd(ddk::DeviceAddArgs("goldfish-address-space")
-                    .set_flags(DEVICE_ADD_MUST_ISOLATE)
-                    .set_fidl_protocol_offers(offers)
-                    .set_outgoing_dir(endpoints->client.TakeChannel())
-                    .set_proto_id(ZX_PROTOCOL_GOLDFISH_ADDRESS_SPACE));
+  __UNUSED auto ptr = passthrough_dev.release();
+  return ZX_OK;
 }
 
 uint32_t AddressSpaceDevice::AllocateBlock(uint64_t* size, uint64_t* offset) {
@@ -302,6 +320,17 @@ uint32_t AddressSpaceDevice::CommandMmioLocked(uint32_t cmd) {
   mmio_->Write32(cmd, REGISTER_COMMAND);
   return mmio_->Read32(REGISTER_STATUS);
 }
+
+AddressSpacePassthroughDevice::AddressSpacePassthroughDevice(AddressSpaceDevice* device)
+    : PassthroughDeviceType(device->zxdev()), device_(device) {}
+
+void AddressSpacePassthroughDevice::OpenChildDriver(OpenChildDriverRequestView request,
+                                                    OpenChildDriverCompleter::Sync& completer) {
+  zx_status_t result = device_->OpenChildDriver(request->type, request->req.TakeChannel());
+  completer.Close(result);
+}
+
+void AddressSpacePassthroughDevice::DdkRelease() { delete this; }
 
 AddressSpaceChildDriver::AddressSpaceChildDriver(
     fuchsia_hardware_goldfish::wire::AddressSpaceChildDriverType type, AddressSpaceDevice* device,
