@@ -37,16 +37,18 @@ impl NonHermeticPkgList {
 impl Drop for NonHermeticPkgList {
     fn drop(&mut self) {
         let list = self.list.get_mut();
-        info!(
-            "Test '{}' uses non-hermetic packages. \
-        Please add below line to facets of your test manifest:
-        \"{}\": [ {} ]\
-        \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
-        for more information.",
-            self.test_url,
-            facet::TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY,
-            list.drain().join(", ")
-        );
+        if list.len() > 0 {
+            info!(
+                "Test '{}' uses non-hermetic packages. \
+            Please add below line to facets of your test manifest:
+            \"{}\": [ {} ]\
+            \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
+            for more information.",
+                self.test_url,
+                facet::TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY,
+                list.drain().join(", ")
+            );
+        }
     }
 }
 
