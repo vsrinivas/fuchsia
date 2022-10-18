@@ -145,6 +145,7 @@ sdk://fidl/fuchsia.update.channel
 sdk://fidl/fuchsia.update.channelcontrol
 sdk://fidl/fuchsia.update.config
 sdk://fidl/fuchsia.url
+sdk://fidl/fuchsia.version
 sdk://fidl/fuchsia.weave
 sdk://fidl/fuchsia.web
 sdk://fidl/fuchsia.wlan.common

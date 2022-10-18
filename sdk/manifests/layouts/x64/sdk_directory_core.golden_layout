@@ -917,6 +917,8 @@ fidl/fuchsia.update/overview.fidl
 fidl/fuchsia.update/update.fidl
 fidl/fuchsia.url/meta.json
 fidl/fuchsia.url/url.fidl
+fidl/fuchsia.version/meta.json
+fidl/fuchsia.version/version.fidl
 fidl/fuchsia.weave/auth.fidl
 fidl/fuchsia.weave/bootstrap.fidl
 fidl/fuchsia.weave/common.fidl

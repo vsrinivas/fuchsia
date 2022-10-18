@@ -5,6 +5,6 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.version") {
-  sdk_category = "internal"
+  sdk_category = "partner"
   sources = [ "version.fidl" ]
 }

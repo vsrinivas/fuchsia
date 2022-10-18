@@ -1,6 +1,12 @@
 [
     {
         "kind": "table/member",
+        "name": "fuchsia.component.resolution/Component.abi_revision",
+        "ordinal": "6",
+        "type": "uint64"
+    },
+    {
+        "kind": "table/member",
         "name": "fuchsia.component.resolution/Component.config_values",
         "ordinal": "4",
         "type": "fuchsia.mem/Data"

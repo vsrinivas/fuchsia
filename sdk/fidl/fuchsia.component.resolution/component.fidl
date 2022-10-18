@@ -4,6 +4,7 @@
 library fuchsia.component.resolution;
 
 using fuchsia.mem;
+using fuchsia.version;
 
 /// A component is a unit of executable software.
 ///
@@ -52,6 +53,10 @@ type Component = resource table {
     /// only be resolved via `ResolveWithContext`, which requires a valid
     /// resolution `Context`.
     5: resolution_context Context;
+
+    /// The target ABI revision of the resolved component.
+    @available(added=10)
+    6: abi_revision fuchsia.version.AbiRevision;
 };
 
 // TODO(fxbug.dev/100050): Change this length to something smaller once
