@@ -7,6 +7,7 @@ import("//build/rust/rustc_test.gni")
 rustc_test("simulate_scan") {
   edition = "2021"
   deps = [
+    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_rust",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
     "//src/connectivity/wlan/lib/ieee80211",
     "//src/connectivity/wlan/testing/hw-sim:wlan-hw-sim",

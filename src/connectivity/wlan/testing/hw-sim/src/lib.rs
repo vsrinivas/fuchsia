@@ -955,7 +955,8 @@ pub async fn loop_until_iface_is_found(helper: &mut test_utils::TestHelper) {
         pin_mut!(fut);
 
         let phy = helper.proxy();
-        let scan_event = test_utils::phy_event_from_beacons(&phy, &[]);
+        let scan_event =
+            EventHandlerBuilder::new().on_start_scan(ScanResults::new(&phy, vec![])).build();
 
         // Once a client interface is available for scanning, it takes up to around 30s for a scan
         // to complete (see fxb/109900). Allow at least double that amount of time to reduce

@@ -6,17 +6,17 @@ use {
         wlancfg_helper::{
             init_client_controller, start_ap_and_wait_for_confirmation, NetworkConfigBuilder,
         },
-        EventHandlerBuilder, ScanResults,
+        BeaconInfo, EventHandlerBuilder, ScanResults,
     },
     fidl::endpoints::create_proxy,
     fidl::prelude::*,
-    fidl_fuchsia_io as fio, fidl_fuchsia_wlan_common as fidl_common,
-    fidl_fuchsia_wlan_policy as fidl_policy, fidl_fuchsia_wlan_tap as wlantap,
+    fidl_fuchsia_io as fio, fidl_fuchsia_wlan_policy as fidl_policy,
+    fidl_fuchsia_wlan_tap as wlantap,
     fuchsia_async::{DurationExt, Time, TimeoutExt, Timer},
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::oneshot, FutureExt, StreamExt},
-    ieee80211::{Bssid, Ssid},
+    ieee80211::Ssid,
     pin_utils::pin_mut,
     std::{
         convert::TryFrom,
@@ -27,7 +27,7 @@ use {
         task::{Context, Poll},
     },
     tracing::{debug, info},
-    wlan_common::{bss::Protection, test_utils::ExpectWithin},
+    wlan_common::test_utils::ExpectWithin,
     wlan_dev::DeviceEnv,
     wlantap_client::Wlantap,
 };
@@ -254,46 +254,18 @@ impl RetryWithBackoff {
         self.sleep_unless_after_deadline_(true).await
     }
 }
-pub struct ScanTestBeacon {
-    pub channel: u8,
-    pub bssid: Bssid,
-    pub ssid: Ssid,
-    pub protection: Protection,
-    pub rssi: Option<i8>,
-}
-pub fn phy_event_from_beacons<'a>(
-    phy: &'a Arc<wlantap::WlantapPhyProxy>,
-    beacons: &[ScanTestBeacon],
-) -> impl FnMut(wlantap::WlantapPhyEvent) + 'a {
-    let results = beacons
-        .iter()
-        .map(|beacon| crate::BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: beacon.channel,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
-            bssid: beacon.bssid,
-            ssid: beacon.ssid.clone(),
-            protection: beacon.protection,
-            rssi_dbm: beacon.rssi.unwrap_or(0),
-            beacon_or_probe: crate::BeaconOrProbeResp::Beacon,
-        })
-        .collect();
-    let scan_results = ScanResults::new(phy, results);
-    EventHandlerBuilder::new().on_start_scan(scan_results).build()
-}
 
 pub type ScanResult = (Ssid, [u8; 6], bool, i8);
 
-pub async fn scan_for_networks(
+pub async fn scan_for_networks<'a>(
     phy: &Arc<wlantap::WlantapPhyProxy>,
-    beacons: &[ScanTestBeacon],
+    beacons: Vec<BeaconInfo<'a>>,
     helper: &mut TestHelper,
 ) -> Vec<ScanResult> {
     // Create a client controller.
     let (client_controller, _update_stream) = init_client_controller().await;
-    let scan_event = phy_event_from_beacons(phy, beacons);
+    let scan_event =
+        EventHandlerBuilder::new().on_start_scan(ScanResults::new(phy, beacons)).build();
     // Request a scan from the policy layer.
     let fut = async move {
         let (scan_proxy, server_end) = create_proxy().unwrap();

@@ -10,7 +10,6 @@ use {
     wlan_hw_sim::*,
 };
 
-const CHANNEL_1: u8 = 1;
 const BSS_WPA1: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x6f]);
 const BSS_WEP: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x72]);
 const BSS_MIXED: Bssid = Bssid([0x62, 0x73, 0x73, 0x66, 0x6f, 0x7a]);
@@ -31,37 +30,40 @@ async fn scan_legacy_privacy_off() {
     let () = loop_until_iface_is_found(&mut helper).await;
 
     let phy = helper.proxy();
-    let beacons = [
-        test_utils::ScanTestBeacon {
+    let beacons = vec![
+        BeaconInfo {
             channel: CHANNEL_1,
             bssid: BSS_WPA1,
             ssid: SSID_WPA1.clone(),
             protection: Protection::Wpa1,
-            rssi: None,
+            rssi_dbm: -30,
+            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        test_utils::ScanTestBeacon {
+        BeaconInfo {
             channel: CHANNEL_1,
             bssid: BSS_WEP,
             ssid: SSID_WEP.clone(),
             protection: Protection::Wep,
-            rssi: None,
+            rssi_dbm: -40,
+            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
-        test_utils::ScanTestBeacon {
+        BeaconInfo {
             channel: CHANNEL_1,
             bssid: BSS_MIXED,
             ssid: SSID_MIXED.clone(),
             protection: Protection::Wpa1Wpa2Personal,
-            rssi: None,
+            rssi_dbm: -50,
+            beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
     ];
 
-    let mut scan_results = test_utils::scan_for_networks(&phy, &beacons, &mut helper).await;
+    let mut scan_results = test_utils::scan_for_networks(&phy, beacons, &mut helper).await;
     scan_results.sort();
 
     let mut expected_aps = [
-        (SSID_WPA1.clone(), BSS_WPA1.0, false, 0),
-        (SSID_WEP.clone(), BSS_WEP.0, false, 0),
-        (SSID_MIXED.clone(), BSS_MIXED.0, true, 0),
+        (SSID_WPA1.clone(), BSS_WPA1.0, false, -30),
+        (SSID_WEP.clone(), BSS_WEP.0, false, -40),
+        (SSID_MIXED.clone(), BSS_MIXED.0, true, -50),
     ];
     expected_aps.sort();
     assert_eq!(&expected_aps, &scan_results[..]);
