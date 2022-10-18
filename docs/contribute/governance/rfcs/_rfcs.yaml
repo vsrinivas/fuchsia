@@ -2523,3 +2523,16 @@
   reviewers: ['johngro@google.com', 'dschuyler@google.com', 'abarth@google.com']
   submitted: '2022-07-29'
   reviewed: '2022-10-03'
+
+- name: 'RFC-0194'
+  title: 'Addendum: Sessions'
+  short_description: 'Addendum to RFC-0092 that ratifies decisions that were left open in RFC-0092.'
+  authors: ['thatguy@google.com']
+  file: '0194_addendum_sessions.md'
+  area: ['Sessions']
+  issue: ['']
+  gerrit_change_id: ['709745']
+  status: 'Accepted'
+  reviewers: ['emircan@google.com', 'jsankey@google.com', 'neelsa@google.com', 'sanjayc@google.com', 'yaar@google.com', 'dworsham@google.com', 'aaronwood@google.com', 'markdittmer@google.com']
+  submitted: '2022-08-09'
+  reviewed: '2022-10-17'

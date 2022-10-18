@@ -402,3 +402,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0192_device_trees_on_fuchsia.md
   - title: "RFC-0193: Supported C++ Versions"
     path: /docs/contribute/governance/rfcs/0193_supported_c++_versions.md
+  - title: "RFC-0194: Addendum: Sessions"
+    path: /docs/contribute/governance/rfcs/0194_addendum_sessions.md
