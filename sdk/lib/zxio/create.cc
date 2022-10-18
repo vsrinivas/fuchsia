@@ -12,7 +12,7 @@
 #include <lib/zxio/zxio.h>
 #include <stdarg.h>
 
-#include "sdk/lib/zxio/private.h"
+#include "private.h"
 
 namespace fio = fuchsia_io;
 

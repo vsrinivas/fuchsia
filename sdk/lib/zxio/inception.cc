@@ -9,7 +9,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include "sdk/lib/zxio/private.h"
+#include "private.h"
 
 namespace fio = fuchsia_io;
 

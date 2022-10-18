@@ -26,7 +26,7 @@
 
 #include <safemath/safe_conversions.h>
 
-#include "sdk/lib/zxio/private.h"
+#include "private.h"
 #include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 
 namespace fio = fuchsia_io;

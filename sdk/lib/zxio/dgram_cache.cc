@@ -15,7 +15,7 @@
 #include <utility>
 #include <vector>
 
-#include "sdk/lib/zxio/hash.h"
+#include "hash.h"
 
 namespace fnet = fuchsia_net;
 namespace fsocket = fuchsia_posix_socket;

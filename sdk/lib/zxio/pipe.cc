@@ -7,7 +7,7 @@
 #include <lib/zxio/ops.h>
 #include <sys/stat.h>
 
-#include "sdk/lib/zxio/private.h"
+#include "private.h"
 
 static zxio_pipe_t& zxio_get_pipe(zxio_t* io) { return *reinterpret_cast<zxio_pipe_t*>(io); }
 

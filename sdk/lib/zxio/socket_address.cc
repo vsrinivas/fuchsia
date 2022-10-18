@@ -18,7 +18,7 @@
 
 #include <netpacket/packet.h>
 
-#include "sdk/lib/zxio/hash.h"
+#include "hash.h"
 
 namespace fpacketsocket = fuchsia_posix_socket_packet;
 namespace fnet = fuchsia_net;
