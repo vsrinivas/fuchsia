@@ -1,0 +1,13 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+import("//build/cpp/sdk_source_set.gni")
+
+sdk_source_set("legacy-bind-constants") {
+  category = "experimental"
+  sdk_name = "legacy-bind-constants"
+
+  include_base = "//sdk"
+
+  sources = [ "legacy-bind-constants.h" ]
+}

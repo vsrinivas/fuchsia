@@ -56,6 +56,7 @@ __BEGIN_CDECLS
 // for drivers that only want to be bound on user request
 #define BI_ABORT_IF_AUTOBIND BI_ABORT_IF(NE, BIND_AUTOBIND, 0)
 
+// LINT.IfChange
 // global binding variables at 0x00XX
 #define BIND_FLAGS 0x0000          // value of the flags register
 #define BIND_PROTOCOL 0x0001       // primary protocol of the device
@@ -151,6 +152,7 @@ __BEGIN_CDECLS
 
 // Power sensor binding variables at 0x0A9X
 #define BIND_POWER_SENSOR_DOMAIN 0x0A90
+// LINT.ThenChange(/sdk/lib/driver/legacy-bind-constants/legacy-bind-constants.h)
 
 typedef struct zx_bind_inst {
   uint32_t op;
