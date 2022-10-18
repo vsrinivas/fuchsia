@@ -181,11 +181,6 @@ impl ClientMlme {
         Ok(())
     }
 
-    pub fn on_channel(&self) -> bool {
-        let channel = self.ctx.device.channel();
-        self.channel_state.main_channel.map(|c| c == channel).unwrap_or(false)
-    }
-
     pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: banjo_wlan_softmac::WlanRxInfo) {
         // TODO(fxbug.dev/44487): Send the entire frame to scanner.
         match mac::MacFrame::parse(frame, false) {
