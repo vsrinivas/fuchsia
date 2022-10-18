@@ -27,7 +27,6 @@
 
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/fcrypto/secret.h"
 #include "src/security/zxcrypt/client.h"
 
@@ -46,7 +45,7 @@ const size_t kKeyBytes = 32;  // Generate a 256-bit key for the zxcrypt volume
 
 class MockAdmin : public fuchsia::hardware::power::statecontrol::testing::Admin_TestBase {
  public:
-  bool suspend_called() { return suspend_called_; }
+  bool suspend_called() const { return suspend_called_; }
 
  private:
   void NotImplemented_(const std::string& name) override {
@@ -71,11 +70,10 @@ class FactoryResetTest : public Test {
   // Create an IsolatedDevmgr that can load device drivers such as fvm,
   // zxcrypt, etc.
   void SetUp() override {
-    devmgr_.reset(new IsolatedDevmgr());
     IsolatedDevmgr::Args args;
     args.disable_block_watcher = true;
 
-    ASSERT_EQ(IsolatedDevmgr::Create(&args, devmgr_.get()), ZX_OK);
+    ASSERT_EQ(IsolatedDevmgr::Create(&args, &devmgr_), ZX_OK);
 
     CreateRamdisk();
     CreateFvmPartition();
@@ -84,7 +82,7 @@ class FactoryResetTest : public Test {
   void TearDown() override { ASSERT_EQ(ramdisk_destroy(ramdisk_client_), ZX_OK); }
 
   bool PartitionHasFormat(fs_management::DiskFormat format) {
-    fbl::unique_fd fd(openat(devmgr_->devfs_root().get(), fvm_block_path_.c_str(), O_RDONLY));
+    fbl::unique_fd fd(openat(devmgr_.devfs_root().get(), fvm_block_path_.c_str(), O_RDONLY));
     return fs_management::DetectDiskFormat(fd.get()) == format;
   }
 
@@ -120,12 +118,19 @@ class FactoryResetTest : public Test {
     // Block reads and writes via fds must match the block size.
     ssize_t block_size;
     GetBlockSize(fd, &block_size);
-    std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
-    memset(block.get(), 0, block_size);
-    memcpy(block.get(), fs_management::kZxcryptMagic, sizeof(fs_management::kZxcryptMagic));
 
-    ssize_t res = write(fd.get(), block.get(), block_size);
-    ASSERT_EQ(res, block_size);
+    zx::vmo vmo;
+    {
+      zx_status_t status = zx::vmo::create(block_size, 0, &vmo);
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
+
+    {
+      zx_status_t status =
+          vmo.write(fs_management::kZxcryptMagic, 0, sizeof(fs_management::kZxcryptMagic));
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
+    ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(vmo), block_size, 0));
   }
 
   void CreateFakeBlobfs() {
@@ -140,12 +145,19 @@ class FactoryResetTest : public Test {
     // Block reads and writes via fds must match the block size.
     ssize_t block_size;
     GetBlockSize(fd, &block_size);
-    std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
-    memset(block.get(), 0, block_size);
-    memcpy(block.get(), fs_management::kBlobfsMagic, sizeof(fs_management::kBlobfsMagic));
 
-    ssize_t res = write(fd.get(), block.get(), block_size);
-    ASSERT_EQ(res, block_size);
+    zx::vmo vmo;
+    {
+      zx_status_t status = zx::vmo::create(block_size, 0, &vmo);
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
+
+    {
+      zx_status_t status =
+          vmo.write(fs_management::kBlobfsMagic, 0, sizeof(fs_management::kBlobfsMagic));
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
+    ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(vmo), block_size, 0));
   }
 
   void CreateFakeFxfs() {
@@ -156,25 +168,43 @@ class FactoryResetTest : public Test {
 
     ssize_t block_size;
     GetBlockSize(fd, &block_size);
-    std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
+
+    fdio_cpp::UnownedFdioCaller caller(fd.get());
+
+    zx::vmo vmo;
+    {
+      zx_status_t status = zx::vmo::create(block_size, 0, &vmo);
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
 
     // Initialize one megabyte of NULL for the A/B super block extents.
-    memset(block.get(), 0, block_size);
-    const int num_blocks = (1L << 20) / block_size;
-    for (int i = 0; i < num_blocks; i++) {
-      ssize_t res = write(fd.get(), block.get(), block_size);
-      ASSERT_EQ(res, block_size);
+    const size_t num_blocks = (1L << 20) / block_size;
+    for (size_t i = 0; i < num_blocks; i++) {
+      zx::vmo dup;
+      {
+        zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+        ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+      }
+      ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(dup), block_size, i * block_size));
     }
 
     // Add magic bytes at the correct offsets.
-    memcpy(block.get(), fs_management::kFxfsMagic, sizeof(fs_management::kFxfsMagic));
+    {
+      zx_status_t status =
+          vmo.write(fs_management::kFxfsMagic, 0, sizeof(fs_management::kFxfsMagic));
+      ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+    }
     for (off_t ofs : {0L, 512L << 10}) {
-      ASSERT_GE(lseek(fd.get(), ofs, SEEK_SET), 0);
-      ASSERT_EQ(write(fd.get(), block.get(), block_size), block_size);
+      zx::vmo dup;
+      {
+        zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+        ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+      }
+      ASSERT_NO_FATAL_FAILURE(WriteBlocks(fd, std::move(dup), block_size, ofs));
     }
   }
 
-  fbl::unique_fd devfs_root() { return devmgr_->devfs_root().duplicate(); }
+  fbl::unique_fd devfs_root() { return devmgr_.devfs_root().duplicate(); }
 
  private:
   void WaitForZxcrypt() {
@@ -186,7 +216,7 @@ class FactoryResetTest : public Test {
     WaitForDevice(data_block_path, &fd);
   }
 
-  void GetBlockSize(const fbl::unique_fd& fd, ssize_t* out_size) {
+  static void GetBlockSize(const fbl::unique_fd& fd, ssize_t* out_size) {
     fdio_cpp::UnownedFdioCaller caller(fd.get());
     ASSERT_TRUE(caller);
     const fidl::WireResult result =
@@ -195,6 +225,17 @@ class FactoryResetTest : public Test {
     const fidl::WireResponse response = result.value();
     ASSERT_EQ(response.status, ZX_OK) << zx_status_get_string(response.status);
     *out_size = response.info->block_size;
+  }
+
+  static void WriteBlocks(const fbl::unique_fd& fd, zx::vmo vmo, uint64_t length, uint64_t offset) {
+    fdio_cpp::UnownedFdioCaller caller(fd.get());
+    ASSERT_TRUE(caller);
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())
+            ->WriteBlocks(std::move(vmo), length, offset, 0);
+    ASSERT_TRUE(result.ok()) << result.status_string();
+    const fidl::WireResponse response = result.value();
+    ASSERT_EQ(response.status, ZX_OK) << zx_status_get_string(response.status);
   }
 
   void CreateRamdisk() {
@@ -207,7 +248,7 @@ class FactoryResetTest : public Test {
               ZX_OK);
   }
 
-  zx_status_t AttachDriver(const fbl::unique_fd& fd, std::string_view driver) {
+  static zx_status_t AttachDriver(const fbl::unique_fd& fd, std::string_view driver) {
     fdio_cpp::UnownedFdioCaller connection(fd.get());
     zx_status_t call_status = ZX_OK;
     auto resp = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
@@ -273,7 +314,7 @@ class FactoryResetTest : public Test {
 
   ramdisk_client_t* ramdisk_client_;
   std::string fvm_block_path_;
-  std::unique_ptr<IsolatedDevmgr> devmgr_;
+  IsolatedDevmgr devmgr_;
 };
 
 // Tests that FactoryReset can find the correct block device and overwrite its
@@ -290,7 +331,7 @@ TEST_F(FactoryResetTest, CanShredVolume) {
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
 
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
@@ -316,7 +357,7 @@ TEST_F(FactoryResetTest, ShredsVolumeWithInvalidSuperblockIfMagicPresent) {
       binding.AddBinding(&mock_admin).Bind();
 
   // Verify that we re-shred that superblock anyway when we run factory reset.
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatZxcrypt));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
@@ -337,7 +378,7 @@ TEST_F(FactoryResetTest, DoesntShredUnknownVolumeType) {
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
 
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatBlobfs));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
@@ -362,7 +403,7 @@ TEST_F(FactoryResetTest, ShredsFxfs) {
   fidl::InterfacePtr<fuchsia::hardware::power::statecontrol::Admin> admin =
       binding.AddBinding(&mock_admin).Bind();
 
-  factory_reset::FactoryReset reset((fbl::unique_fd(devfs_root())), std::move(admin));
+  factory_reset::FactoryReset reset(devfs_root(), std::move(admin));
   EXPECT_TRUE(PartitionHasFormat(fs_management::kDiskFormatFxfs));
   zx_status_t status = ZX_ERR_BAD_STATE;
   reset.Reset([&status](zx_status_t s) { status = s; });
