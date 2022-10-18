@@ -36,8 +36,7 @@ use {
         FutureExt, StreamExt,
     },
     log::{debug, error, info, warn},
-    std::{sync::Arc, unimplemented},
-    void::Void,
+    std::{convert::Infallible, sync::Arc, unimplemented},
 };
 
 // Maximum allowed interval between scans when attempting to reconnect client interfaces.  This
@@ -1209,7 +1208,7 @@ pub(crate) async fn serve_iface_manager_requests(
     mut requests: mpsc::Receiver<IfaceManagerRequest>,
     mut stats_receiver: ConnectionStatsReceiver,
     mut defect_receiver: mpsc::UnboundedReceiver<Defect>,
-) -> Result<Void, Error> {
+) -> Result<Infallible, Error> {
     // Client and AP state machines need to be allowed to run in order for several operations to
     // complete.  In such cases, futures can be added to this list to progress them once the state
     // machines have the opportunity to run.

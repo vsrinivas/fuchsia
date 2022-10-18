@@ -27,7 +27,6 @@ rustc_library("vfs") {
     "//third_party/rust_crates:slab",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:void",
   ]
 
   with_unit_tests = true

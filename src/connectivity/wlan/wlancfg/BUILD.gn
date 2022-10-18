@@ -62,7 +62,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:static_assertions",
     "//third_party/rust_crates:thiserror",
-    "//third_party/rust_crates:void",
   ]
 
   test_deps = [
@@ -155,7 +154,6 @@ rustc_binary("bin") {
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:void",
   ]
 
   sources = [ "src/main.rs" ]

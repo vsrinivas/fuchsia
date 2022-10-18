@@ -484,10 +484,9 @@ mod tests {
         futures::{future::BoxFuture, task::Poll, StreamExt},
         ieee80211::NULL_MAC_ADDR,
         pin_utils::pin_mut,
-        std::fs::File,
+        std::{convert::Infallible, fs::File},
         tempfile,
         test_case::test_case,
-        void::Void,
         wlan_common::assert_variant,
     };
 
@@ -500,7 +499,7 @@ mod tests {
         phys: Arc<PhyMap>,
         ifaces: Arc<IfaceMap>,
         watcher_service: watcher_service::WatcherService<PhyDevice, IfaceDevice>,
-        watcher_fut: BoxFuture<'static, Result<Void, Error>>,
+        watcher_fut: BoxFuture<'static, Result<Infallible, Error>>,
         new_iface_stream: mpsc::UnboundedReceiver<NewIface>,
         new_iface_sink: mpsc::UnboundedSender<NewIface>,
     }

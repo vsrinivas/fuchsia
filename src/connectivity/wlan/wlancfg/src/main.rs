@@ -30,8 +30,7 @@ use {
     log::{error, info, warn},
     pin_utils::pin_mut,
     rand::Rng,
-    std::sync::Arc,
-    void::Void,
+    std::{convert::Infallible, sync::Arc},
     wlan_common::hasher::WlanHasher,
     wlancfg_lib::{
         access_point::AccessPoint,
@@ -70,7 +69,7 @@ async fn serve_fidl(
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
     regulatory_receiver: oneshot::Receiver<()>,
     telemetry_sender: TelemetrySender,
-) -> Result<Void, Error> {
+) -> Result<Infallible, Error> {
     // Wait a bit for the country code to be set before serving the policy APIs.
     let regulatory_listener_timeout =
         fasync::Timer::new(REGULATORY_LISTENER_TIMEOUT_SEC.seconds().after_now());

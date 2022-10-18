@@ -8,8 +8,7 @@ use {
         ready,
         task::{Context, Poll},
     },
-    std::{marker::Unpin, pin::Pin},
-    void::Void,
+    std::{convert::Infallible, marker::Unpin, pin::Pin},
 };
 
 #[derive(Debug)]
@@ -24,7 +23,7 @@ pub struct StateMachine<E> {
 impl<E> Unpin for StateMachine<E> {}
 
 impl<E> Future for StateMachine<E> {
-    type Output = Result<Void, E>;
+    type Output = Result<Infallible, E>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         loop {

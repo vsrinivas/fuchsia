@@ -61,7 +61,7 @@ async fn serve_fidl(
 fn serve_phys(
     phys: Arc<device::PhyMap>,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
-) -> BoxFuture<'static, Result<void::Void, Error>> {
+) -> BoxFuture<'static, Result<std::convert::Infallible, Error>> {
     info!("Serving IsolatedDevMgr environment");
     let fut = device::serve_phys::<isolated_devmgr::IsolatedDeviceEnv>(phys, inspect_tree);
     Box::pin(fut)
@@ -71,7 +71,7 @@ fn serve_phys(
 fn serve_phys(
     phys: Arc<device::PhyMap>,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
-) -> BoxFuture<'static, Result<void::Void, Error>> {
+) -> BoxFuture<'static, Result<std::convert::Infallible, Error>> {
     info!("Serving real device environment");
     let fut = device::serve_phys::<wlan_dev::RealDeviceEnv>(phys, inspect_tree);
     Box::pin(fut)
@@ -112,8 +112,8 @@ async fn main() -> Result<(), Error> {
 
     let ((), (), (), ()) = try_join4(
         fidl_fut,
-        phy_server.map_ok(|_: void::Void| ()),
-        watcher_fut.map_ok(|_: void::Void| ()),
+        phy_server.map_ok(|_: std::convert::Infallible| ()),
+        watcher_fut.map_ok(|_: std::convert::Infallible| ()),
         new_iface_fut,
     )
     .await?;

@@ -30,8 +30,10 @@ use {
         stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
     },
     log::{debug, error, info, warn},
-    std::{convert::TryFrom, sync::Arc},
-    void::ResultVoidErrExt,
+    std::{
+        convert::{Infallible, TryFrom},
+        sync::Arc,
+    },
     wlan_common::{bss::BssDescription, energy::DecibelMilliWatt, stats::SignalStrengthAverage},
 };
 
@@ -141,10 +143,16 @@ pub async fn serve(
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() => {
-            match state_machine.void_unwrap_err() {
-                ExitReason(Err(e)) => error!("Client state machine for iface #{} terminated with an error: {:?}",
+            match state_machine {
+                Ok(v) => {
+                    // This should never happen because the `Infallible` type should be impossible
+                    // to create.
+                    let _: Infallible = v;
+                    unreachable!()
+                }
+                Err(ExitReason(Err(e))) => error!("Client state machine for iface #{} terminated with an error: {:?}",
                     iface_id, e),
-                ExitReason(Ok(_)) => info!("Client state machine for iface #{} exited gracefully",
+                Err(ExitReason(Ok(_))) => info!("Client state machine for iface #{} exited gracefully",
                     iface_id,),
             }
         }

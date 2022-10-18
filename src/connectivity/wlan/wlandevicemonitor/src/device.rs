@@ -13,8 +13,7 @@ use {
     },
     log::{error, info},
     pin_utils::pin_mut,
-    std::sync::Arc,
-    void::Void,
+    std::{convert::Infallible, sync::Arc},
 };
 
 use crate::{device_watch, inspect, watchable_map::WatchableMap};
@@ -62,7 +61,7 @@ pub type IfaceMap = WatchableMap<u16, IfaceDevice>;
 pub async fn serve_phys<Env: wlan_dev::DeviceEnv>(
     phys: Arc<PhyMap>,
     inspect_tree: Arc<inspect::WlanMonitorTree>,
-) -> Result<Void, Error> {
+) -> Result<Infallible, Error> {
     let new_phys = device_watch::watch_phy_devices::<Env>()?;
     pin_mut!(new_phys);
     let mut active_phys = FuturesUnordered::new();

@@ -46,7 +46,6 @@ wlandevicemonitor_deps = [
   "//third_party/rust_crates:log",
   "//third_party/rust_crates:parking_lot",
   "//third_party/rust_crates:pin-utils",
-  "//third_party/rust_crates:void",
 ]
 
 wlandevicemonitor_srcs = [

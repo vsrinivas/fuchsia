@@ -27,8 +27,7 @@ use {
     },
     log::{info, warn},
     parking_lot::Mutex,
-    std::sync::Arc,
-    void::ResultVoidErrExt,
+    std::{convert::Infallible, sync::Arc},
     wlan_common::{
         channel::{Cbw, Channel},
         RadioConfig,
@@ -238,9 +237,15 @@ pub async fn serve(
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
         state_machine = state_machine.fuse() => {
-            match state_machine.void_unwrap_err() {
-                ExitReason(Ok(())) => info!("AP state machine for iface #{} exited", iface_id),
-                ExitReason(Err(e)) => {
+            match state_machine {
+                Ok(v) => {
+                    // This should never happen because the `Infallible` type should be impossible
+                    // to create.
+                    let _: Infallible = v;
+                    unreachable!()
+                }
+                Err(ExitReason(Ok(()))) => info!("AP state machine for iface #{} exited", iface_id),
+                Err(ExitReason(Err(e))) => {
                     info!("AP state machine for iface #{} terminated with an error: {}", iface_id, e)
                 }
             }

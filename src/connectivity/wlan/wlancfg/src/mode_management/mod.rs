@@ -10,8 +10,7 @@ use {
     anyhow::Error,
     fuchsia_async as fasync,
     futures::{channel::mpsc, lock::Mutex, Future},
-    std::sync::Arc,
-    void::Void,
+    std::{convert::Infallible, sync::Arc},
 };
 
 mod iface_manager;
@@ -28,7 +27,8 @@ pub fn create_iface_manager(
     saved_networks: Arc<dyn SavedNetworksManagerApi>,
     network_selector: Arc<NetworkSelector>,
     telemetry_sender: TelemetrySender,
-) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Void, Error>>) {
+) -> (Arc<Mutex<iface_manager_api::IfaceManager>>, impl Future<Output = Result<Infallible, Error>>)
+{
     let (sender, receiver) = mpsc::channel(0);
     let iface_manager_sender = Arc::new(Mutex::new(iface_manager_api::IfaceManager { sender }));
     let (stats_sender, stats_receiver) = mpsc::unbounded();

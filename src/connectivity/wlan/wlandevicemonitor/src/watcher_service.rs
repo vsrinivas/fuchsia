@@ -14,8 +14,8 @@ use futures::try_join;
 use log::error;
 use parking_lot::Mutex;
 use std::collections::HashMap;
+use std::convert::Infallible;
 use std::sync::Arc;
-use void::Void;
 
 use crate::watchable_map::{MapEvent, WatchableMap};
 
@@ -26,7 +26,7 @@ pub fn serve_watchers<P, I>(
     ifaces: Arc<WatchableMap<u16, I>>,
     phy_events: UnboundedReceiver<MapEvent<u16, P>>,
     iface_events: UnboundedReceiver<MapEvent<u16, I>>,
-) -> (WatcherService<P, I>, impl Future<Output = Result<Void, anyhow::Error>>)
+) -> (WatcherService<P, I>, impl Future<Output = Result<Infallible, anyhow::Error>>)
 where
     P: 'static,
     I: 'static,
@@ -40,7 +40,7 @@ where
         let phy_fut = notify_phy_watchers(phy_events, &inner);
         let iface_fut = notify_iface_watchers(iface_events, &inner);
         let reaper_fut = reap_watchers(&inner, reaper_receiver);
-        try_join!(phy_fut, iface_fut, reaper_fut).map(|x: (Void, Void, Void)| x.0)
+        try_join!(phy_fut, iface_fut, reaper_fut).map(|x: (Infallible, Infallible, Infallible)| x.0)
     };
     (s, fut)
 }
@@ -147,7 +147,7 @@ fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::E
 async fn notify_phy_watchers<P, I>(
     mut events: UnboundedReceiver<MapEvent<u16, P>>,
     inner: &Mutex<Inner<P, I>>,
-) -> Result<Void, anyhow::Error> {
+) -> Result<Infallible, anyhow::Error> {
     while let Some(e) = events.next().await {
         match e {
             MapEvent::KeyInserted(id) => {
@@ -169,7 +169,7 @@ async fn notify_phy_watchers<P, I>(
 async fn notify_iface_watchers<P, I>(
     mut events: UnboundedReceiver<MapEvent<u16, I>>,
     inner: &Mutex<Inner<P, I>>,
-) -> Result<Void, anyhow::Error> {
+) -> Result<Infallible, anyhow::Error> {
     while let Some(e) = events.next().await {
         match e {
             MapEvent::KeyInserted(id) => inner
@@ -200,7 +200,7 @@ struct ReaperTask {
 async fn reap_watchers<P, I>(
     inner: &Mutex<Inner<P, I>>,
     watchers: UnboundedReceiver<ReaperTask>,
-) -> Result<Void, anyhow::Error> {
+) -> Result<Infallible, anyhow::Error> {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
     watchers
         .for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
@@ -441,7 +441,7 @@ mod tests {
         service: WatcherService<i32, i32>,
     }
 
-    fn setup() -> (Helper, impl Future<Output = Result<Void, anyhow::Error>>) {
+    fn setup() -> (Helper, impl Future<Output = Result<Infallible, anyhow::Error>>) {
         let (phys, phy_events) = WatchableMap::new();
         let (ifaces, iface_events) = WatchableMap::new();
         let phys = Arc::new(phys);

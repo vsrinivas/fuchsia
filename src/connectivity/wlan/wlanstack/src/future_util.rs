@@ -84,13 +84,15 @@ mod tests {
     use fuchsia_async as fasync;
     use futures::channel::mpsc;
     use futures::stream::{self, TryStreamExt};
-    use void::Void;
+    use std::convert::Infallible;
 
     #[test]
     fn empty() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
         let item = exec
-            .run_singlethreaded(stream::empty::<Result<(), Void>>().group_available().try_next())
+            .run_singlethreaded(
+                stream::empty::<Result<(), Infallible>>().group_available().try_next(),
+            )
             .unwrap_or_else(|x| match x {});
         assert!(item.is_none());
     }
@@ -98,7 +100,7 @@ mod tests {
     #[test]
     fn pending() {
         let mut exec = fasync::TestExecutor::new().expect("Failed to create an executor");
-        let always_pending = stream::poll_fn(|_lw| Poll::Pending::<Option<Result<(), Void>>>);
+        let always_pending = stream::poll_fn(|_lw| Poll::Pending::<Option<Result<(), Infallible>>>);
         let mut group_available = always_pending.group_available();
         let mut fut = group_available.try_next();
         assert_eq!(Poll::Pending, exec.run_until_stalled(&mut fut));
@@ -112,11 +114,13 @@ mod tests {
         send.unbounded_send(10i32).unwrap();
         send.unbounded_send(20i32).unwrap();
         let mut s = recv.map(Ok).group_available();
-        let item = exec.run_singlethreaded(s.try_next()).unwrap_or_else(|void: Void| match void {});
+        let item =
+            exec.run_singlethreaded(s.try_next()).unwrap_or_else(|void: Infallible| match void {});
         assert_eq!(Some(vec![10i32, 20i32]), item);
 
         send.unbounded_send(30i32).unwrap();
-        let item = exec.run_singlethreaded(s.try_next()).unwrap_or_else(|void: Void| match void {});
+        let item =
+            exec.run_singlethreaded(s.try_next()).unwrap_or_else(|void: Infallible| match void {});
         assert_eq!(Some(vec![30i32]), item);
     }
 

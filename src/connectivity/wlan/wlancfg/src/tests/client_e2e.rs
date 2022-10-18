@@ -41,9 +41,12 @@ use {
     lazy_static::lazy_static,
     log::info,
     pin_utils::pin_mut,
-    std::{convert::TryFrom, pin::Pin, sync::Arc},
+    std::{
+        convert::{Infallible, TryFrom},
+        pin::Pin,
+        sync::Arc,
+    },
     test_case::test_case,
-    void::Void,
     wlan_common::{assert_variant, random_fidl_bss_description},
 };
 
@@ -142,7 +145,7 @@ struct TestValues {
 // Internal policy objects, used for manipulating state within tests
 #[allow(clippy::type_complexity)]
 struct InternalObjects {
-    internal_futures: JoinAll<Pin<Box<dyn Future<Output = Result<Void, Error>>>>>,
+    internal_futures: JoinAll<Pin<Box<dyn Future<Output = Result<Infallible, Error>>>>>,
     _saved_networks: Arc<dyn SavedNetworksManagerApi>,
     phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -214,7 +217,7 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
         )
         // Map the output type of this future to match the other ones we want to combine with it
         .map(|_| {
-            let result: Result<Void, Error> =
+            let result: Result<Infallible, Error> =
                 Err(format_err!("scan_manager_service future exited unexpectedly"));
             result
         }),
@@ -222,7 +225,7 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
 
     let client_provider_lock = Arc::new(Mutex::new(()));
 
-    let serve_fut: Pin<Box<dyn Future<Output = Result<Void, Error>>>> = Box::pin(
+    let serve_fut: Pin<Box<dyn Future<Output = Result<Infallible, Error>>>> = Box::pin(
         serve_provider_requests(
             iface_manager.clone(),
             client_update_sender,
@@ -234,7 +237,7 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
         )
         // Map the output type of this future to match the other ones we want to combine with it
         .map(|_| {
-            let result: Result<Void, Error> =
+            let result: Result<Infallible, Error> =
                 Err(format_err!("serve_provider_requests future exited unexpectedly"));
             result
         }),
@@ -248,7 +251,7 @@ fn test_setup(exec: &mut TestExecutor) -> TestValues {
         >(client_update_receiver)
         // Map the output type of this future to match the other ones we want to combine with it
         .map(|_| {
-            let result: Result<Void, Error> =
+            let result: Result<Infallible, Error> =
                 Err(format_err!("serve_client_policy_listeners future exited unexpectedly"));
             result
         })

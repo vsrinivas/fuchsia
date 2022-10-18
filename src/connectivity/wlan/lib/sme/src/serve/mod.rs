@@ -16,9 +16,11 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc, future::FutureObj, prelude::*, select, stream::FuturesUnordered},
     log::{error, info, warn},
-    std::marker::Unpin,
-    std::sync::{Arc, Mutex},
-    void::Void,
+    std::{
+        convert::Infallible,
+        marker::Unpin,
+        sync::{Arc, Mutex},
+    },
     wlan_common::{
         hasher::WlanHasher,
         timer::{self, TimeEntry},
@@ -280,7 +282,7 @@ async fn serve_fidl<
     context: C,
     new_fidl_clients: mpsc::UnboundedReceiver<ServerEnd<T>>,
     event_handler: impl Fn(C, fidl::endpoints::Request<T>) -> Fut + Copy,
-) -> Result<Void, anyhow::Error> {
+) -> Result<Infallible, anyhow::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut fidl_clients = FuturesUnordered::new();
     loop {

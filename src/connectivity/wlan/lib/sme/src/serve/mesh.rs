@@ -16,10 +16,10 @@ use {
     log::error,
     pin_utils::pin_mut,
     std::{
+        convert::Infallible,
         sync::{Arc, Mutex},
         task::Poll,
     },
-    void::Void,
     wlan_common::timer::TimeEntry,
 };
 
@@ -51,7 +51,7 @@ pub fn serve(
 async fn serve_fidl<'a>(
     sme: &'a Mutex<Sme>,
     new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-) -> Result<Void, anyhow::Error> {
+) -> Result<Infallible, anyhow::Error> {
     let mut fidl_clients = FuturesUnordered::new();
     let mut new_fidl_clients = new_fidl_clients.fuse();
     loop {

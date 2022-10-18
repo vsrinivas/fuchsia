@@ -1055,12 +1055,6 @@ if (current_os == "fuchsia") {
   }
 }
 
-if (current_os == "fuchsia") {
-  group("void") {
-    public_deps = [ ":void-v1_0_2" ]
-  }
-}
-
 group("vte") {
   public_deps = [ ":vte-v0_3_3" ]
 }
@@ -11795,28 +11789,6 @@ rust_library("vk-sys-v0_7_0") {
     "--edition=2018",
     "-Cmetadata=51e1ef19b2b5f263",
     "-Cextra-filename=-51e1ef19b2b5f263",
-  ]
-
-  visibility = [ ":*" ]
-}
-
-rust_library("void-v1_0_2") {
-  crate_name = "void"
-  crate_root = "//third_party/rust_crates/vendor/void/src/lib.rs"
-  output_name = "void-3a0ca0e9ebe9ddab"
-  configs -= [ "//build/config/rust:2018_idioms" ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=3a0ca0e9ebe9ddab",
-    "-Cextra-filename=-3a0ca0e9ebe9ddab",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"std\"",
   ]
 
   visibility = [ ":*" ]

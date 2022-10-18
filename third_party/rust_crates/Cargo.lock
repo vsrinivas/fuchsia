@@ -1488,7 +1488,6 @@ dependencies = [
  "uuid 1.1.2",
  "valico",
  "vk-sys",
- "void",
  "vte",
  "waker-fn",
  "walkdir",
@@ -4573,12 +4572,6 @@ name = "vk-sys"
 version = "0.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "584003afc735800b0619a724332f37a28788f56fa9349874ee2f50874be0d239"
-
-[[package]]
-name = "void"
-version = "1.0.2"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6a02e4885ed3bc0f2de90ea6dd45ebcbb66dacffe03547fadbb0eeae2770887d"
 
 [[package]]
 name = "vte"

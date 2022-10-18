@@ -265,7 +265,6 @@ trust-dns-resolver = { version = "0.22.0", default-features = false, features = 
 ttf-parser = "0.10.1"
 unicode-normalization = "0.1"
 vk-sys = "0.7.0"
-void = "1.0.2"
 
 # Host-side only dependencies
 [target.'cfg(not(target_os = "fuchsia"))'.dependencies]

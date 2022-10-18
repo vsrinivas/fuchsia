@@ -9,14 +9,8 @@ use super::{read_only, read_write, InitVmoResult, VmoFile};
 use {
     fuchsia_zircon::{Status, Vmo},
     futures::future::BoxFuture,
-    std::sync::Arc,
-    void::Void,
+    std::{convert::Infallible, sync::Arc},
 };
-
-#[doc(hidden)]
-pub mod reexport {
-    pub use void::ResultVoidErrExt;
-}
 
 /// `simple_init_*` family of functions will set the capacity of the generated file to the larger
 /// of this value or the provided initial content size.  It removes some of the repetition from the
@@ -147,7 +141,7 @@ pub enum ReportInvalidVmoContentError {
 pub fn report_invalid_vmo_content(
     vmo: &Vmo,
     context: &str,
-) -> Result<Void, ReportInvalidVmoContentError> {
+) -> Result<Infallible, ReportInvalidVmoContentError> {
     // For debugging purposes we print the first 100 bytes.  This is an arbitrary choice.
     let mut buffer = Vec::with_capacity(100);
     buffer.resize(100, 0);
@@ -165,7 +159,7 @@ pub fn report_invalid_vmo_content(
 macro_rules! report_invalid_vmo_content {
     ($vmo:expr, $context:expr) => {{
         use $crate::file::vmo::asynchronous::test_utils::{
-            reexport::ResultVoidErrExt, report_invalid_vmo_content, ReportInvalidVmoContentError,
+            report_invalid_vmo_content, ReportInvalidVmoContentError,
         };
 
         match report_invalid_vmo_content($vmo, $context).void_unwrap_err() {

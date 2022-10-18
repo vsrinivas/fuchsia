@@ -22,11 +22,10 @@ use {
     std::{
         cell::RefCell,
         collections::HashMap,
-        convert::TryInto as _,
+        convert::{Infallible, TryInto as _},
         net::{IpAddr, Ipv4Addr, SocketAddr},
     },
     tracing::{debug, error, info, warn},
-    void::Void,
 };
 
 /// A buffer size in excess of the maximum allowable DHCP message size.
@@ -419,7 +418,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
 async fn define_msg_handling_loop_future<DS: DataStore>(
     sock: SocketWithId<<Server<DS> as SocketServerDispatcher>::Socket>,
     server: &RefCell<ServerDispatcherRuntime<Server<DS>>>,
-) -> Result<Void, Error> {
+) -> Result<Infallible, Error> {
     let SocketWithId { socket, iface_id } = sock;
     let mut handler = MessageHandler::new(server);
     let mut buf = vec![0u8; BUF_SZ];
@@ -563,7 +562,7 @@ where
         info!("Server starting");
         match futures::future::Abortable::new(msg_loops, abort_registration).await {
             Ok(Ok(v)) => {
-                let _: Vec<Void> = v;
+                let _: Vec<Infallible> = v;
                 Err(anyhow::anyhow!("Server futures finished unexpectedly"))
             }
             Ok(Err(error)) => {
