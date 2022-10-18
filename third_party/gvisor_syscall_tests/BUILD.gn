@@ -485,6 +485,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":${generic_test_label}",
+    ":${loopback_isolated_tcp_linger_timeout_test_label}",
     ":${loopback_isolated_test_label}",
     ":${loopback_tcp_accept_test_label}",
     ":${loopback_tcp_backlog_test_label}",
