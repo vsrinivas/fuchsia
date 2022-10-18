@@ -150,3 +150,32 @@ source_set("cleanpath") {
   ]
   deps = [ "//zircon/system/ulib/fbl" ]
 }
+
+# Extract Markdown documentation from the FDIO library. The extraction tool is experimental so this
+# is currently disabled by default. To use, set the condition to "true" and reference the
+# "docs" target from somewhere in the default build.
+if (false) {
+  import("//tools/cppdocgen/cpp_docgen.gni")
+
+  cpp_docgen("docs") {
+    headers = [
+      "include/lib/fdio/directory.h",
+      "include/lib/fdio/fd.h",
+      "include/lib/fdio/fdio.h",
+      "include/lib/fdio/io.h",
+      "include/lib/fdio/limits.h",
+      "include/lib/fdio/namespace.h",
+      "include/lib/fdio/spawn.h",
+      "include/lib/fdio/unsafe.h",
+      "include/lib/fdio/vfs.h",
+      "include/lib/fdio/watcher.h",
+    ]
+    overview = "README.md"
+
+    include_dir = "include"
+    library_name = "fdio"
+    toc_path = "/docs/lib/fdio"
+    out_dir = "$root_out_dir/docs/fdio"
+    deps = [ ":fdio" ]
+  }
+}

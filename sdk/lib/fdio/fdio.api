@@ -1,12 +1,12 @@
 {
   "pkg/fdio/include/lib/fdio/directory.h": "6b2f73d64e416c77867d9f715e316355",
-  "pkg/fdio/include/lib/fdio/fd.h": "15ec0586f5fc633fff2aae09e0ae326e",
-  "pkg/fdio/include/lib/fdio/fdio.h": "c3408d8468cce13563122f738b17ca7c",
-  "pkg/fdio/include/lib/fdio/io.h": "73dd239e8f73ce399a3439d90d028c55",
+  "pkg/fdio/include/lib/fdio/fd.h": "65de4156d6e76ebcd28d45df0865604c",
+  "pkg/fdio/include/lib/fdio/fdio.h": "ce4216b44cefffbec7b98795fc24687d",
+  "pkg/fdio/include/lib/fdio/io.h": "df5f169088d4a2b9658c68943ed8ad93",
   "pkg/fdio/include/lib/fdio/limits.h": "9b99b72bd188543dba96528bf5797ca8",
   "pkg/fdio/include/lib/fdio/namespace.h": "9053e7f5c667929e6cbd52548575a45e",
   "pkg/fdio/include/lib/fdio/private.h": "bfab891792785c49734bf3305006de8a",
-  "pkg/fdio/include/lib/fdio/spawn.h": "c01c21a604e8ca7a34f600af7d7e71fd",
+  "pkg/fdio/include/lib/fdio/spawn.h": "8e727ed35635118e7babf6bdd3c11145",
   "pkg/fdio/include/lib/fdio/unsafe.h": "5fd8854c8f834065e1bcd172f37b2374",
   "pkg/fdio/include/lib/fdio/vfs.h": "ed16c4f54a8662f4c1877df2d3c33337",
   "pkg/fdio/include/lib/fdio/watcher.h": "5dde48075d1ea390b7637650e00c5c99"

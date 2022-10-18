@@ -27,7 +27,13 @@ typedef struct fdio fdio_t;
 //
 // # Errors
 //
-// TODO: Catalog errors.
+//   * `ZX_ERR_BAD_HANDLE`: The input `handle` is invalid.
+//
+//   * `ZX_ERR_ACCESS_DENIED`: Then input `handle` does not have the necessary rights.
+//
+//   * `ZX_ERR_NO_MEMORY`: Memory allocation failed.
+//
+//   * `ZX_ERR_NOT_SUPPORTED`: The kernel object type is not valid for an FD.
 zx_status_t fdio_create(zx_handle_t handle, fdio_t** out_io) ZX_AVAILABLE_SINCE(1);
 
 // Creates an `fdio_t` that does nothing.
@@ -105,7 +111,7 @@ typedef struct zxio_storage zxio_storage_t;
 // To bind the `fdio_t` to a file descriptor, use `fdio_bind_to_fd`.
 //
 // Upon success, the caller receives ownership of one reference to `fdio_t`. Specifically, the
-// caller is responsible for calling `fdio_unsafe_release` upon success.
+// caller is responsible for calling `fdio_unsafe_release()` upon success.
 //
 // Upon failure, returns NULL.
 fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) ZX_AVAILABLE_SINCE(1);
