@@ -211,7 +211,7 @@ constexpr UndocumentedErrorDef<90, std::string_view, std::string_view, SourceSpa
         "by the canonical form '{}'");
 constexpr UndocumentedErrorDef<91, std::string_view, const flat::Type *> ErrInvalidStructMemberType(
     "struct field {} has an invalid default type {}");
-constexpr UndocumentedErrorDef<92> ErrTooManyTableOrdinals(
+constexpr ErrorDef<92> ErrTooManyTableOrdinals(
     "table contains too many ordinals; tables are limited to 64 ordinals");
 constexpr ErrorDef<93> ErrMaxOrdinalNotTable(
     "the 64th ordinal of a table may only contain a table type");
