@@ -10,6 +10,7 @@ use {
         organization::Oui,
     },
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211,
+    paste::paste,
     std::mem::size_of,
     zerocopy::{ByteSlice, LayoutVerified},
 };
@@ -21,6 +22,35 @@ macro_rules! validate {
         }
     };
 }
+
+macro_rules! simple_parse_func {
+    ( $ie_snake_case:ident ) => {
+        paste! {
+            pub fn [<parse_ $ie_snake_case>]<B: ByteSlice>(
+                raw_body: B,
+            ) -> FrameParseResult<LayoutVerified<B, [<$ie_snake_case:camel>]>> {
+                LayoutVerified::new(raw_body)
+                    .ok_or(FrameParseError::new(
+                        concat!(
+                            "Invalid length or alignment for ",
+                            stringify!([<$ie_snake_case:camel>]))))
+            }
+        }
+    };
+}
+
+// Each of the following creates a `parse_some_ie()` function associated with a `SomeIe` type.
+simple_parse_func!(dsss_param_set);
+simple_parse_func!(ht_capabilities);
+simple_parse_func!(ht_operation);
+simple_parse_func!(rm_enabled_capabilities);
+simple_parse_func!(vht_capabilities);
+simple_parse_func!(vht_operation);
+simple_parse_func!(wmm_info);
+simple_parse_func!(wmm_param);
+simple_parse_func!(channel_switch_announcement);
+simple_parse_func!(extended_channel_switch_announcement);
+simple_parse_func!(wide_bandwidth_channel_switch);
 
 pub fn parse_ssid<B: ByteSlice>(raw_body: B) -> FrameParseResult<B> {
     validate!(raw_body.len() <= (fidl_ieee80211::MAX_SSID_BYTE_LEN as usize), "SSID is too long");
@@ -50,13 +80,6 @@ pub fn parse_extended_supported_rates<B: ByteSlice>(
     Ok(LayoutVerified::new_slice_unaligned(raw_body).unwrap())
 }
 
-pub fn parse_dsss_param_set<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, DsssParamSet>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length of DSSS Paramater set element"))
-}
-
 pub fn parse_tim<B: ByteSlice>(raw_body: B) -> FrameParseResult<TimView<B>> {
     let (header, bitmap) = LayoutVerified::<B, TimHeader>::new_unaligned_from_prefix(raw_body)
         .ok_or(FrameParseError::new("Element body is too short to include a TIM header"))?;
@@ -78,27 +101,6 @@ pub fn parse_country<B: ByteSlice>(raw_body: B) -> FrameParseResult<CountryView<
         environment: CountryEnvironment(environment),
         subbands: reader.into_remaining(),
     })
-}
-
-pub fn parse_ht_capabilities<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, HtCapabilities>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length of HT Capabilities element"))
-}
-
-pub fn parse_ht_operation<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, HtOperation>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length of HT Operation element"))
-}
-
-pub fn parse_rm_enabled_capabilities<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, RmEnabledCapabilities>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length of RM Enabled Capabilities element"))
 }
 
 pub fn parse_mpm_open<B: ByteSlice>(raw_body: B) -> FrameParseResult<MpmOpenView<B>> {
@@ -219,55 +221,10 @@ pub fn parse_perr<B: ByteSlice>(raw_body: B) -> FrameParseResult<PerrView<B>> {
     Ok(PerrView { header, destinations })
 }
 
-pub fn parse_vht_capabilities<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, VhtCapabilities>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length of VHT Capabilities element"))
-}
-
-pub fn parse_vht_operation<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, VhtOperation>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length of VHT Operation element"))
-}
-
 pub fn parse_wpa_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<wpa::WpaIe> {
     wpa::from_bytes(&raw_body[..])
         .map(|(_, r)| r)
         .map_err(|_| FrameParseError::new("Failed to parse WPA IE"))
-}
-
-pub fn parse_wmm_info<B: ByteSlice>(raw_body: B) -> FrameParseResult<LayoutVerified<B, WmmInfo>> {
-    LayoutVerified::new(raw_body).ok_or(FrameParseError::new("Invalid length for WMM Info element"))
-}
-
-pub fn parse_wmm_param<B: ByteSlice>(raw_body: B) -> FrameParseResult<LayoutVerified<B, WmmParam>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length for WMM Param element"))
-}
-
-pub fn parse_channel_switch_announcement<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, ChannelSwitchAnnouncement>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length for Channel Switch Announcement element"))
-}
-
-pub fn parse_extended_channel_switch_announcement<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, ExtendedChannelSwitchAnnouncement>> {
-    LayoutVerified::new(raw_body).ok_or(FrameParseError::new(
-        "Invalid length for Extended Channel Switch Announcement element",
-    ))
-}
-
-pub fn parse_wide_bandwidth_channel_switch<B: ByteSlice>(
-    raw_body: B,
-) -> FrameParseResult<LayoutVerified<B, WideBandwidthChannelSwitch>> {
-    LayoutVerified::new(raw_body)
-        .ok_or(FrameParseError::new("Invalid length for Wide Bandwidth Channel Switch element"))
 }
 
 pub fn parse_transmit_power_envelope<B: ByteSlice>(
@@ -382,7 +339,48 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
 
 #[cfg(test)]
 mod tests {
-    use {super::*, crate::assert_variant, std::convert::TryInto, zerocopy::AsBytes};
+    use {
+        super::*,
+        crate::assert_variant,
+        std::convert::TryInto,
+        zerocopy::{AsBytes, FromBytes},
+    };
+
+    #[repr(C)]
+    #[derive(AsBytes, FromBytes)]
+    pub struct SomeIe {
+        some_field: u16,
+    }
+    simple_parse_func!(some_ie);
+
+    #[test]
+    pub fn simple_parse_func_ok() {
+        let some_ie = parse_some_ie(&[0xfa, 0xde][..]).unwrap();
+        assert_eq!(some_ie.some_field, 0xdefa);
+    }
+
+    #[test]
+    pub fn simple_parse_func_wrong_size() {
+        let err_too_short = parse_some_ie(&[0xfa][..]).err().unwrap();
+        assert_eq!("Invalid length or alignment for SomeIe", err_too_short.debug_message());
+        let err_too_long = parse_some_ie(&[0xfa, 0xde, 0xed][..]).err().unwrap();
+        assert_eq!("Invalid length or alignment for SomeIe", err_too_long.debug_message());
+    }
+
+    #[test]
+    pub fn simple_parse_func_wrong_alignment() {
+        // Construct valid length but incorrectly aligned SomeIe
+        struct Buf {
+            b: [u8; 3],
+            _t: u16, // Make Buf align to u16
+        }
+        let buf = Buf { b: [0x00, 0xfa, 0xde], _t: 0 };
+        let buf_slice = &buf.b[1..];
+        assert_eq!(buf_slice.len(), std::mem::size_of::<SomeIe>());
+
+        let err_not_aligned = parse_some_ie(buf_slice).err().unwrap();
+        assert_eq!("Invalid length or alignment for SomeIe", err_not_aligned.debug_message());
+    }
 
     #[test]
     pub fn ssid_ok() {
@@ -415,20 +413,6 @@ mod tests {
         let rates =
             parse_supported_rates(&[0u8; 9][..]).expect("rejected overloaded Supported Rates IE");
         assert_eq!(&rates[..], &[SupportedRate(0); 9][..],);
-    }
-
-    #[test]
-    pub fn dsss_param_set_ok() {
-        let r = parse_dsss_param_set(&[6u8][..]).expect("expected Ok");
-        assert_eq!(6, r.current_channel);
-    }
-
-    #[test]
-    pub fn dsss_param_set_wrong_size() {
-        let err = parse_dsss_param_set(&[][..]).err().expect("expected Err for empty slice");
-        assert_eq!("Invalid length of DSSS Paramater set element", err.debug_message());
-        let err = parse_dsss_param_set(&[1, 2][..]).err().expect("expected Err for long slice");
-        assert_eq!("Invalid length of DSSS Paramater set element", err.debug_message());
     }
 
     #[test]
@@ -651,14 +635,6 @@ mod tests {
     }
 
     #[test]
-    fn ht_capabilities_wrong_size() {
-        let err = parse_ht_capabilities(&[0u8; 25][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of HT Capabilities element", err.debug_message());
-        let err = parse_ht_capabilities(&[0u8; 27][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of HT Capabilities element", err.debug_message());
-    }
-
-    #[test]
     fn ht_capabilities_ok() {
         // HtCapabilities element without Element Id and length
         #[rustfmt::skip]
@@ -729,14 +705,6 @@ mod tests {
     }
 
     #[test]
-    fn ht_operation_wrong_size() {
-        let err = parse_ht_operation(&[0u8; 21][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of HT Operation element", err.debug_message());
-        let err = parse_ht_operation(&[0u8; 23][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of HT Operation element", err.debug_message());
-    }
-
-    #[test]
     fn ht_operation_ok() {
         // HtOperation element without Element Id and length
         #[rustfmt::skip]
@@ -762,14 +730,6 @@ mod tests {
 
         let basic_mcs_set = ht_op.basic_ht_mcs_set;
         assert_eq!(basic_mcs_set.0, 0x00000000_cdab0000_00000000_000000ff);
-    }
-
-    #[test]
-    fn rm_enabled_capabilities_wrong_size() {
-        let err = parse_rm_enabled_capabilities(&[0u8; 4][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of RM Enabled Capabilities element", err.debug_message());
-        let err = parse_rm_enabled_capabilities(&[0u8; 6][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of RM Enabled Capabilities element", err.debug_message());
     }
 
     #[test]
@@ -1264,14 +1224,6 @@ mod tests {
     }
 
     #[test]
-    fn vht_capabilities_wrong_size() {
-        let err = parse_vht_capabilities(&[0u8; 11][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of VHT Capabilities element", err.debug_message());
-        let err = parse_vht_capabilities(&[0u8; 13][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of VHT Capabilities element", err.debug_message());
-    }
-
-    #[test]
     fn vht_capabilities_ok() {
         // VhtCapabilities element without Element Id and length
         #[rustfmt::skip]
@@ -1297,14 +1249,6 @@ mod tests {
         assert_eq!(mcs_nss.rx_max_mcs().ss(6), Ok(VhtMcsSet::UP_TO_9));
         assert_eq!(mcs_nss.tx_max_mcs().ss(2), Ok(VhtMcsSet::UP_TO_8));
         assert_eq!(mcs_nss.tx_max_mcs().ss(6), Ok(VhtMcsSet::NONE));
-    }
-
-    #[test]
-    fn vht_operation_wrong_size() {
-        let err = parse_vht_operation(&[0u8; 4][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of VHT Operation element", err.debug_message());
-        let err = parse_vht_operation(&[0u8; 6][..]).err().expect("expected Err");
-        assert_eq!("Invalid length of VHT Operation element", err.debug_message());
     }
 
     #[test]
