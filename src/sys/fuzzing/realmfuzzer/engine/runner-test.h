@@ -44,6 +44,8 @@ class RealmFuzzerRunnerTest : public RunnerTest {
   ZxPromise<Input> GetTestInput() override;
   ZxPromise<> SetFeedback(Coverage coverage, FuzzResult fuzz_result, bool leak) override;
 
+  void TearDown() override;
+
  private:
   // Creates a fake target process and publishes it to the fake coverage component.
   ZxPromise<> PublishProcess();
@@ -73,7 +75,6 @@ class RealmFuzzerRunnerTest : public RunnerTest {
   std::unique_ptr<AsyncEventPair> eventpair_;
   FakeRealmFuzzerModule module_;
   std::unique_ptr<TestTarget> target_;
-  bool running_ = false;
   bool leak_suspected_ = false;
   Scope scope_;
 };

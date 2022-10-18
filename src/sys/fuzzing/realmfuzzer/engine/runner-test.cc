@@ -30,7 +30,6 @@ void RealmFuzzerRunnerTest::SetUp() {
   EXPECT_EQ(runner_impl->BindCoverageDataProvider(provider.TakeChannel()), ZX_OK);
 
   eventpair_ = std::make_unique<AsyncEventPair>(executor());
-  target_ = std::make_unique<TestTarget>(executor());
 }
 
 void RealmFuzzerRunnerTest::SetAdapterParameters(const std::vector<std::string>& parameters) {
@@ -42,10 +41,10 @@ ZxPromise<Input> RealmFuzzerRunnerTest::GetTestInput() {
   return target_adapter_->AwaitStart()
       .and_then([this, stash](Input& input) -> ZxResult<> {
         *stash = std::move(input);
-        if (running_) {
+        if (target_) {
           return fpromise::error(ZX_ERR_ALREADY_EXISTS);
         }
-        running_ = true;
+        target_ = std::make_unique<TestTarget>(executor());
         return fpromise::ok();
       })
       .and_then(PublishProcess())
@@ -164,7 +163,6 @@ ZxPromise<> RealmFuzzerRunnerTest::SetFeedback(Coverage coverage, FuzzResult fuz
           return fpromise::error(target.error());
         }
         if (fuzz_result == FuzzResult::NO_ERRORS) {
-          running_ = true;
           return fpromise::ok();
         }
         if (fuzz_result == FuzzResult::EXIT && !options()->detect_exits()) {
@@ -178,7 +176,6 @@ ZxPromise<> RealmFuzzerRunnerTest::SetFeedback(Coverage coverage, FuzzResult fuz
         if (!disconnect(context)) {
           return fpromise::pending();
         }
-        running_ = false;
         return fpromise::ok();
       })
       .wrap_with(scope_);
@@ -234,7 +231,7 @@ ZxPromise<> RealmFuzzerRunnerTest::ExitAsync(int32_t exitcode) {
   return target_->Exit(exitcode)
       .and_then([this] {
         eventpair_->Reset();
-        running_ = false;
+        target_.reset();
         return fpromise::ok();
       })
       .wrap_with(scope_);
@@ -244,10 +241,18 @@ ZxPromise<> RealmFuzzerRunnerTest::CrashAsync() {
   return target_->Crash()
       .and_then([this] {
         eventpair_->Reset();
-        running_ = false;
+        target_.reset();
         return fpromise::ok();
       })
       .wrap_with(scope_);
+}
+
+void RealmFuzzerRunnerTest::TearDown() {
+  if (target_) {
+    Schedule(ExitAsync(0));
+    RunUntilIdle();
+  }
+  RunnerTest::TearDown();
 }
 
 }  // namespace fuzzing
