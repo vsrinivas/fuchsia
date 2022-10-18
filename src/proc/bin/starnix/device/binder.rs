@@ -862,12 +862,10 @@ impl BinderThreadState {
     /// Enqueues `command` for the thread and wakes it up if necessary.
     pub fn enqueue_command(&mut self, command: Command) {
         self.command_queue.push_back(command);
-        self.waiter.access(|waiter| {
-            if let Some(waiter) = waiter {
-                // Wake up the thread that is waiting.
-                waiter.wake_immediately(FdEvents::POLLIN.mask(), WaitCallback::none());
-            }
-        });
+        if let Some(waiter) = self.waiter.take() {
+            // Wake up the thread that is waiting.
+            waiter.wake_immediately(FdEvents::POLLIN.mask(), WaitCallback::none());
+        }
         // Notify any threads that are waiting on events from the binder driver FD.
         if let Some(binder_proc) = self.process.upgrade() {
             binder_proc.waiters.lock().notify_events(FdEvents::POLLIN);

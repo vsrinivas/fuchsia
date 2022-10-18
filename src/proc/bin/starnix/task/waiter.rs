@@ -291,6 +291,14 @@ impl WaiterRef {
     pub fn access<R>(&self, f: impl FnOnce(Option<&Waiter>) -> R) -> R {
         f(self.0.upgrade().map(Waiter).as_ref())
     }
+
+    /// Take the Waiter out of this `WaiterRef`.
+    ///
+    /// This has the side effect of invalidating the `WaiterRef`.
+    pub fn take(&mut self) -> Option<Waiter> {
+        let waiter_impl = self.0.upgrade().take();
+        waiter_impl.map(Waiter)
+    }
 }
 
 impl std::fmt::Debug for WaiterRef {
