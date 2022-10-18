@@ -156,7 +156,21 @@ fn string_to_save(inspect_data: &str, timestamps: &Timestamps, max_save_length: 
         Value::Array(items) => {
             let entries = items.into_iter().try_fold(Map::new(), |mut entries, mut item| {
                 let moniker = item["moniker"].take();
-                let payload = item["payload"]["root"].take();
+                let payload = item["payload"].take();
+
+                // Use the "root" entry if there is one; otherwise treat the entire payload as
+                // the root.
+                let payload = match payload {
+                    Value::Object(mut payload) => {
+                        if let Some(root) = payload.remove("root") {
+                            root
+                        } else {
+                            payload.into()
+                        }
+                    }
+                    _ => payload,
+                };
+
                 match moniker {
                     Value::String(moniker) => match entries.entry(moniker) {
                         Entry::Occupied(mut o) => match (o.get_mut(), payload) {
@@ -462,6 +476,47 @@ mod tests {
                     "some/inspect/path": 1,
                     "a/duplicate/path": 3,
                     "other/inspect/path": 4
+                },
+            })
+        );
+    }
+
+    #[test]
+    fn string_to_save_non_root_paths() {
+        let inspect_data = json!([
+        {
+            "moniker": "core/fake-moniker",
+            "payload": {
+                "some/non-root/inspect/path": 55,
+            }
+        }, {
+            "moniker": "core/fake-moniker",
+            "payload": {
+                "other/non-root/inspect/path": 66,
+            }
+        }, {
+            "moniker": "core/fake-moniker",
+            "payload": {
+                "root": {
+                    "some/inspect/path": 34,
+                }
+            }
+        }]);
+
+        let str = string_to_save(&inspect_data.to_string(), &TIMESTAMPS, MAX_SAVE_LENGTH);
+        assert_eq!(
+            serde_json::from_str::<'_, Value>(&str).unwrap(),
+            json!({
+                "@timestamps": {
+                    "after_monotonic": 200,
+                    "after_utc": 111,
+                    "before_monotonic": 100,
+                    "before_utc": 110,
+                },
+                "core/fake-moniker": {
+                    "some/non-root/inspect/path": 55,
+                    "other/non-root/inspect/path": 66,
+                    "some/inspect/path": 34
                 },
             })
         );
