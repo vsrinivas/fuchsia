@@ -77,9 +77,6 @@ class DriverHost;
 // Device should not go through auto-bind process
 #define DEV_CTX_SKIP_AUTOBIND           static_cast<uint32_t>(fuchsia_driver_development::DeviceFlags::kSkipAutobind)
 
-// Device is a bus device.
-#define DEV_CTX_BUS_DEVICE           static_cast<uint32_t>(fuchsia_driver_development::DeviceFlags::kBusDevice)
-
 // clang-format on
 
 // Tags used for container membership identification

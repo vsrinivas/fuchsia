@@ -81,9 +81,6 @@ type DeviceFlags = strict bits : uint32 {
 
     /// Device should not go through auto-bind process.
     SKIP_AUTOBIND = 0x0100;
-
-    /// Device is a bus device.
-    BUS_DEVICE = 0x0200;
 };
 
 type DeviceInfo = table {

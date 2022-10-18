@@ -172,9 +172,9 @@ zx_status_t Device::Create(
   dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
   dev->Serve(std::move(coordinator_request));
 
-  // If we have bus device args we are, by definition, a bus device.
+  // If we have bus device args we must run in an isolated host.
   if (!dev->args_.empty()) {
-    dev->flags |= DEV_CTX_BUS_DEVICE | DEV_CTX_MUST_ISOLATE;
+    dev->flags |= DEV_CTX_MUST_ISOLATE;
   }
 
   if (dev->has_outgoing_directory()) {
