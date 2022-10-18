@@ -660,38 +660,22 @@ class VmObject : public VmHierarchyBase,
   // is mapped into.
   uint32_t share_count() const;
 
-  // Adds a child to this vmo and returns true if the dispatcher which matches
+  // Adds a child to this VMO and returns true if the dispatcher which matches
   // user_id should be notified about the first child being added.
   bool AddChildLocked(VmObject* child) TA_REQ(lock_);
 
   // Notifies the child observer that there is one child.
   void NotifyOneChild() TA_EXCL(lock_);
 
-  // Removes the child |child| from this vmo.
-  //
-  // Subclasses which override this function should be sure that ::DropChildLocked
-  // and ::OnUserChildRemoved are called where appropriate.
-  //
-  // |guard| must be this vmo's lock.
-  virtual void RemoveChild(VmObject* child, Guard<CriticalMutex>&& guard) TA_REQ(lock_);
+  // Removes the child |child| from this VMO and notifies the child observer if the new child count
+  // is zero. The |guard| must be this VMO's lock.
+  void RemoveChild(VmObject* child, Guard<CriticalMutex>&& guard) TA_REQ(lock_);
 
   // Drops |c| from the child list without going through the full removal
   // process. ::RemoveChild is probably what you want here.
   void DropChildLocked(VmObject* c) TA_REQ(lock_);
   void ReplaceChildLocked(VmObject* old, VmObject* new_child) TA_REQ(lock_);
   uint32_t num_children() const;
-
-  // Function that should be invoked when a userspace visible child of
-  // this vmo is removed. Updates state and notifies userspace if necessary.
-  //
-  // The guard passed to this function is the vmo's lock.
-  void OnUserChildRemoved(Guard<CriticalMutex>&& guard) TA_REQ(lock_);
-
-  // Called by AddChildLocked. VmObject::OnChildAddedLocked eventually needs to be invoked
-  // on the VmObject which is held by the dispatcher which matches |user_id|. Implementations
-  // should forward this call towards that VmObject and eventually call this class's
-  // implementation.
-  virtual bool OnChildAddedLocked() TA_REQ(lock_);
 
   // Calls the provided |func(const VmObject&)| on every VMO in the system,
   // from oldest to newest. Stops if |func| returns an error, returning the

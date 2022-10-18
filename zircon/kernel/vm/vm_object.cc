@@ -235,10 +235,8 @@ bool VmObject::AddChildLocked(VmObject* child) {
   children_list_.push_front(child);
   children_list_len_++;
 
-  return OnChildAddedLocked();
+  return children_list_len_ == 1;
 }
-
-bool VmObject::OnChildAddedLocked() { return children_list_len_ == 1; }
 
 void VmObject::NotifyOneChild() {
   canary_.Assert();
@@ -270,15 +268,6 @@ void VmObject::DropChildLocked(VmObject* c) {
 void VmObject::RemoveChild(VmObject* o, Guard<CriticalMutex>&& adopt) {
   canary_.Assert();
   DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
-  Guard<CriticalMutex> guard{AdoptLock, ktl::move(adopt)};
-
-  DropChildLocked(o);
-
-  OnUserChildRemoved(guard.take());
-}
-
-void VmObject::OnUserChildRemoved(Guard<CriticalMutex>&& adopt) {
-  DEBUG_ASSERT(adopt.wraps_lock(lock_ref().lock()));
 
   // The observer may call back into this object so we must release the shared lock to prevent any
   // self-deadlock. We explicitly release the lock prior to acquiring the child_observer_lock as
@@ -286,10 +275,13 @@ void VmObject::OnUserChildRemoved(Guard<CriticalMutex>&& adopt) {
   // whilst holding the child_observer_lock.
   {
     Guard<CriticalMutex> guard{AdoptLock, ktl::move(adopt)};
+    DropChildLocked(o);
+
     if (children_list_len_ != 0) {
       return;
     }
   }
+
   {
     Guard<Mutex> observer_guard{&child_observer_lock_};
 
