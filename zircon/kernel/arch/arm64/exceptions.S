@@ -430,6 +430,33 @@ END_FUNCTION(arm64_exc_shared_restore)
     b .Lpost_syscall
 .endm
 
+.macro speculation_clear_gprs
+    // x0 - x7 holds syscall args
+    mov x8, xzr
+    // x9 holds esr_el1
+    // x10 holds elr_el1
+    mov x11, xzr
+    mov x12, xzr
+    mov x13, xzr
+    mov x14, xzr
+    mov x15, xzr
+    // x16 holds syscall_num
+    mov x17, xzr
+    // x18 holds shadow stack
+    mov x19, xzr
+    // x20 holds percpu_ptr
+    mov x21, xzr
+    mov x22, xzr
+    mov x23, xzr
+    mov x24, xzr
+    mov x25, xzr
+    mov x26, xzr
+    mov x27, xzr
+    mov x28, xzr
+    mov x29, xzr
+    mov lr, xzr
+.endm
+
 //
 // Expected state prior to arm64_syscall_dispatcher branch:
 //
@@ -448,6 +475,12 @@ END_FUNCTION(arm64_exc_shared_restore)
 //
 LOCAL_FUNCTION_LABEL(arm64_syscall_dispatcher)
     start_isr_func_cfi
+    // Clear unused GPRs to constrain speculative execution with user-controlled values.
+    // While this is not a mitigation for any single vulnerability, this does make
+    //   constructing attacks more difficult - speculatively executed gadgets will
+    //   execute with most register state clear.
+    // TODO(fxbug.dev/12540): Add to synchronous exception path as well.
+    speculation_clear_gprs
     // Verify syscall number and call the unknown handler if bad.
     cmp  x16, #ZX_SYS_COUNT
     bhs  .Lunknown_syscall
