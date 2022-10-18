@@ -104,6 +104,7 @@ source_set("semantics_integration_test_fixture") {
     "//src/ui/a11y/lib/view",
     "//src/ui/a11y/lib/view/tests/mocks",
     "//src/ui/testing/ui_test_manager",
+    "//src/ui/testing/util",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

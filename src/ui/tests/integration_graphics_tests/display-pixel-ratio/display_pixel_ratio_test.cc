@@ -17,6 +17,7 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/util/device_pixel_ratio.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace integration_tests {
@@ -24,26 +25,6 @@ namespace {
 
 constexpr auto kViewProvider = "view-provider";
 constexpr float kEpsilon = 0.005f;
-
-constexpr float kAstroDisplayPixelDensity = 4.1668f;
-constexpr float kAstroExpectedScale = 1.f;
-constexpr float kSherlockDisplayPixelDensity = 5.2011f;
-constexpr float kSherlockExpectedScale = 1.f / 1.25f;
-constexpr float kTestPixelScaleDensity = 2 * kAstroDisplayPixelDensity;
-constexpr float kTestExpectedScale = 1.f / 2 * kAstroExpectedScale;
-
-struct DisplayProperties {
-  // Arbitrarily-chosen value.
-  float display_pixel_density = 0.f;
-
-  // This is the scale value that should result from a pixel density of |display_pixel_density|.
-  // Calculated in DisplayMetrics
-  // (https://cs.opensource.google/fuchsia/fuchsia/+/main:src/ui/lib/scene_management/src/display_metrics.rs).
-  float expected_scale = 0.f;
-
-  DisplayProperties(float display_pixel_density, float expected_scale)
-      : display_pixel_density(display_pixel_density), expected_scale(expected_scale) {}
-};
 
 }  // namespace
 
@@ -56,17 +37,15 @@ using component_testing::Route;
 
 // This test verifies that Root Presenter and Scene Manager propagate
 // 'config/data/display_pixel_density' correctly.
-class DisplayPixelRatioTest
-    : public gtest::RealLoopFixture,
-      public ::testing::WithParamInterface<
-          std::tuple<ui_testing::UITestRealm::SceneOwnerType, DisplayProperties>> {
+class DisplayPixelRatioTest : public gtest::RealLoopFixture,
+                              public ::testing::WithParamInterface<
+                                  std::tuple<ui_testing::UITestRealm::SceneOwnerType, float>> {
  public:
-  // Returns a list of display pixel densities with its corresponding expected scale value.
-  static std::vector<DisplayProperties> GetPixelDensityToScaleValues() {
-    std::vector<DisplayProperties> pixel_density;
-    pixel_density.emplace_back(kAstroDisplayPixelDensity, kAstroExpectedScale);
-    pixel_density.emplace_back(kSherlockDisplayPixelDensity, kSherlockExpectedScale);
-    pixel_density.emplace_back(kTestPixelScaleDensity, kTestExpectedScale);
+  static std::vector<float> GetPixelDensitiesToTest() {
+    std::vector<float> pixel_density;
+    pixel_density.emplace_back(ui_testing::kLowResolutionDisplayPixelDensity);
+    pixel_density.emplace_back(ui_testing::kMediumResolutionDisplayPixelDensity);
+    pixel_density.emplace_back(ui_testing::kHighResolutionDisplayPixelDensity);
     return pixel_density;
   }
 
@@ -76,7 +55,7 @@ class DisplayPixelRatioTest
     ui_testing::UITestRealm::Config config;
     config.scene_owner = std::get<0>(GetParam());  // scene owner.
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
-    config.display_pixel_density = std::get<1>(GetParam()).display_pixel_density;
+    config.display_pixel_density = std::get<1>(GetParam());
     config.display_usage = "near";
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
@@ -130,7 +109,7 @@ INSTANTIATE_TEST_SUITE_P(
     DisplayPixelRatioTestWithParams, DisplayPixelRatioTest,
     testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
                                        ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(DisplayPixelRatioTest::GetPixelDensityToScaleValues())));
+                     testing::ValuesIn(DisplayPixelRatioTest::GetPixelDensitiesToTest())));
 
 // This test leverage the coordinate test view to ensure that display pixel ratio is working
 // properly.
@@ -144,7 +123,8 @@ INSTANTIATE_TEST_SUITE_P(
 // |      RED       |     MAGENTA    |
 // |________________|________________|
 TEST_P(DisplayPixelRatioTest, TestScale) {
-  auto expected_scale = std::get<1>(GetParam()).expected_scale;
+  auto expected_scale =
+      ui_testing::GetExpectedPixelScale(std::get<1>(GetParam()), ui_testing::kDisplayUsageNear);
   EXPECT_NEAR(ClientViewScaleFactor(), 1.0f / expected_scale, kEpsilon);
 
   EXPECT_NEAR(test_view_->width() / display_width_, expected_scale, kEpsilon);
@@ -175,10 +155,10 @@ TEST_P(DisplayPixelRatioTest, TestScale) {
 
 class HistogramDataTest : public DisplayPixelRatioTest {
  public:
-  static std::vector<DisplayProperties> GetPixelDensityToScaleValues() {
-    std::vector<DisplayProperties> pixel_density;
-    pixel_density.emplace_back(kAstroDisplayPixelDensity, kAstroExpectedScale);
-    pixel_density.emplace_back(kTestPixelScaleDensity, kTestExpectedScale);
+  static std::vector<float> GetPixelDensitiesToTest() {
+    std::vector<float> pixel_density;
+    pixel_density.emplace_back(ui_testing::kLowResolutionDisplayPixelDensity);
+    pixel_density.emplace_back(ui_testing::kHighResolutionDisplayPixelDensity);
     return pixel_density;
   }
 };
@@ -187,13 +167,13 @@ INSTANTIATE_TEST_SUITE_P(
     HistogramDataTestWithParams, HistogramDataTest,
     testing::Combine(::testing::Values(ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER,
                                        ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER),
-                     testing::ValuesIn(HistogramDataTest::GetPixelDensityToScaleValues())));
+                     testing::ValuesIn(HistogramDataTest::GetPixelDensitiesToTest())));
 
-// TODO(fxb/111297): Add the histogram test for sherlock when better display pixel scale values are
-// provided by scene manager. Currently the pixel scale value for sherlock results in an odd value
+// TODO(fxb/111297): Add the histogram test for medium resolution when better display pixel scale
+// values are provided by scene manager. Currently that pixel scale value results in an odd value
 // for logical size (1024 is not divisible by 1.25) which will make assertion on pixel count
 // difficult.
-TEST_P(HistogramDataTest, AstroValidContentTest) {
+TEST_P(HistogramDataTest, TestPixelColorDistribution) {
   auto data = TakeScreenshot();
 
   // Width and height of the rectangle in the center is |display_width_|/4 and |display_height_|/4.

@@ -34,6 +34,7 @@
 #include "lib/sys/component/cpp/testing/realm_builder_types.h"
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/ui/a11y/lib/view/a11y_view_semantics.h"
+#include "src/ui/testing/util/device_pixel_ratio.h"
 
 namespace accessibility_test {
 
@@ -77,10 +78,8 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
   {
     ui_testing::UITestRealm::Config config;
 
-    // This value was chosen arbitrarily, and fed through root presenter's
-    // display model logic to compute the corresponding pixel scale.
-    config.display_pixel_density = 4.1668f;
-    config.display_usage = "close";
+    config.display_pixel_density = ui_testing::kMediumResolutionDisplayPixelDensity;
+    config.display_usage = ui_testing::kDisplayUsageNear;
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::ROOT_PRESENTER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
@@ -91,8 +90,8 @@ std::vector<ui_testing::UITestRealm::Config> SemanticsIntegrationTestV2::UIConfi
   {
     ui_testing::UITestRealm::Config config;
 
-    config.display_pixel_density = 4.1668f;
-    config.display_usage = "close";
+    config.display_pixel_density = ui_testing::kMediumResolutionDisplayPixelDensity;
+    config.display_usage = ui_testing::kDisplayUsageNear;
 
     config.scene_owner = ui_testing::UITestRealm::SceneOwnerType::SCENE_MANAGER;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
@@ -281,8 +280,9 @@ void SemanticsIntegrationTestV2::WaitForScaleFactor() {
     // allocated and logical coordinate spaces. The scale of this transform is
     // the inverse of the pixel scale for the view.
     auto display_pixel_density = GetParam().display_pixel_density;
+    auto display_usage = GetParam().display_usage;
     auto expected_root_node_scale =
-        1 / ExpectedPixelScaleForDisplayPixelDensity(display_pixel_density);
+        1 / ui_testing::GetExpectedPixelScale(display_pixel_density, display_usage);
 
     // TODO(fxb.dev/93943): Remove accommodation for transform field.
     return (node->has_transform() &&

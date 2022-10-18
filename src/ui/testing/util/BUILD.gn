@@ -5,10 +5,20 @@
 group("util") {
   testonly = true
   public_deps = [
+    ":device_pixel_ratio",
     ":portable_ui_test",
     ":screenshot_helper",
     ":test_view",
   ]
+}
+
+source_set("device_pixel_ratio") {
+  testonly = true
+  sources = [
+    "device_pixel_ratio.cc",
+    "device_pixel_ratio.h",
+  ]
+  deps = [ "//sdk/lib/syslog/cpp:cpp-macros" ]
 }
 
 source_set("test_view") {

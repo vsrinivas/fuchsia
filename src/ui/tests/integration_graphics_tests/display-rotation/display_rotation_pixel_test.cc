@@ -15,6 +15,7 @@
 
 #include "src/lib/testing/loop_fixture/real_loop_fixture.h"
 #include "src/ui/testing/ui_test_manager/ui_test_manager.h"
+#include "src/ui/testing/util/device_pixel_ratio.h"
 #include "src/ui/testing/util/gfx_test_view.h"
 
 namespace integration_tests {
@@ -45,8 +46,8 @@ class DisplayRotationPixelTestBase : public gtest::RealLoopFixture {
     config.display_rotation = rotation_;
 
     // This will result in DPR 1.
-    config.display_pixel_density = 4.1668f;
-    config.display_usage = "near";
+    config.display_pixel_density = ui_testing::kLowResolutionDisplayPixelDensity;
+    config.display_usage = ui_testing::kDisplayUsageNear;
     config.ui_to_client_services = {fuchsia::ui::scenic::Scenic::Name_};
     ui_test_manager_ = std::make_unique<ui_testing::UITestManager>(std::move(config));
 
