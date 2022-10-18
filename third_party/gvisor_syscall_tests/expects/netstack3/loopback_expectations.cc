@@ -74,12 +74,8 @@ void AddNonPassingTests(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenClose/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenUnbound/*");
 
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.AcceptedInheritsTCPUserTimeout/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCP/*");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPAcceptAfterReset/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPDeferAccept/*");
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPDeferAcceptTimeout/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPInfoState/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenCloseConnectingRead/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenCloseDuringConnect/*");
@@ -89,74 +85,6 @@ void AddNonPassingTests(TestMap& tests) {
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdownListen/*");
   ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPNonBlockingConnectClose/*");
   ExpectFailure(tests, "All/SocketInetReusePortTest.TcpPortReuseMultiThread/*");
-
-  // Dual-stack TCP sockets are not supported.
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Any_ConnectV4MappedAny");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Any_ConnectV4MappedAny");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Any_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Any_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Loopback_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Loopback_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedAny_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedAny_ConnectV4Loopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedAny_ConnectV4MappedAny");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedAny_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedLoopback_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedLoopback_ConnectV4Loopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4MappedLoopback_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV6Any_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV6Any_ConnectV4MappedAny");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV6Any_ConnectV4MappedLoopback");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV6Any_ConnectV4Loopback");
-
-  // Netstack3 does not yet follow the Linux/BSD convention that connecting to
-  // the unspecified address is equivalent to connecting to loopback.
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Any_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV4Loopback_ConnectV4Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV6Any_ConnectV6Any");
-  ExpectFailure(tests,
-                "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/"
-                "ListenV6Loopback_ConnectV6Any");
 
   // Netstack3 does not have complete support for multicast sockets.
   ExpectFailure(tests, "BadSocketPairArgs.ValidateErrForBadCallsToSocketPair");

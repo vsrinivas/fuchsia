@@ -23,12 +23,6 @@ void SkipTestsRunByLoopbackTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenShutdownConnectingRead/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPNonBlockingConnectClose/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPResetAfterClose/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.AcceptedInheritsTCPUserTimeout/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptAfterReset/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPDeferAccept/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPDeferAcceptTimeout/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPDeferAcceptTimeout/*");
-  SkipTest(tests, "All/SocketInetLoopbackTest.TCPDeferAcceptTimeout/*");
 
   SkipTest(tests, "All/SocketInetReusePortTest.TcpPortReuseMultiThread/*");
   SkipTest(tests, "All/SocketInetReusePortTest.UdpPortReuseMultiThread/*");
@@ -61,6 +55,13 @@ void SkipTestsRunByLoopbackTarget(TestMap& tests) {
            "AllFamilies/SocketMultiProtocolInetLoopbackTest.NoReusePortFollowingReusePort/*");
 }
 
+void SkipTestsRunByLoopbackTcpAcceptTarget(TestMap& tests) {
+  SkipTest(tests, "All/SocketInetLoopbackTest.AcceptedInheritsTCPUserTimeout/*");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptAfterReset/*");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPDeferAccept/*");
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPDeferAcceptTimeout/*");
+}
+
 void SkipTestsRunByLoopbackTcpBacklogTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklog/*");
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPBacklogAcceptAll/*");
@@ -70,19 +71,28 @@ void SkipTestsRunByLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
   SkipTest(tests, "All/SocketInetLoopbackTest.TCPAcceptBacklogSizes/*");
 }
 
+void FilterTestsForLoopbackTcpAcceptTarget(TestMap& tests) {
+  SkipTestsRunByLoopbackTarget(tests);
+  SkipTestsRunByLoopbackTcpBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
+}
+
 void FilterTestsForLoopbackTcpAcceptBacklogTarget(TestMap& tests) {
   SkipTestsRunByLoopbackTarget(tests);
   SkipTestsRunByLoopbackTcpBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptTarget(tests);
 }
 
 void FilterTestsForLoopbackTcpBacklogTarget(TestMap& tests) {
   SkipTestsRunByLoopbackTarget(tests);
   SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptTarget(tests);
 }
 
 void FilterTestsForLoopbackTarget(TestMap& tests) {
   SkipTestsRunByLoopbackTcpAcceptBacklogTarget(tests);
   SkipTestsRunByLoopbackTcpBacklogTarget(tests);
+  SkipTestsRunByLoopbackTcpAcceptTarget(tests);
 }
 
 void SkipTestsRunByLoopbackIsolatedTarget(TestMap& tests) {

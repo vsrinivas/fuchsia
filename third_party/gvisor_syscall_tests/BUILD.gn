@@ -94,6 +94,7 @@ static_library("gvisor_test_util") {
 generic_test_label = "generic"
 loopback_test_label = "loopback"
 loopback_tcp_accept_backlog_test_label = "loopback_tcp_accept_backlog"
+loopback_tcp_accept_test_label = "loopback_tcp_accept"
 loopback_tcp_backlog_test_label = "loopback_tcp_backlog"
 loopback_isolated_test_label = "loopback_isolated"
 loopback_isolated_tcp_fin_wait_test_label = "loopback_isolated_tcp_fin_wait"
@@ -457,6 +458,10 @@ syscall_test_suite(loopback_tcp_accept_backlog_test_label) {
   run_with_fast_udp = false
   test_srcs_target = ":${loopback_test_label}_socket_tests"
 }
+syscall_test_suite(loopback_tcp_accept_test_label) {
+  run_with_fast_udp = false
+  test_srcs_target = ":${loopback_test_label}_socket_tests"
+}
 syscall_test_suite(loopback_tcp_backlog_test_label) {
   run_with_fast_udp = false
   test_srcs_target = ":${loopback_test_label}_socket_tests"
@@ -501,6 +506,7 @@ group("local-testing") {
     ":${loopback_isolated_tcp_linger_timeout_test_label}_${local_testing_suffix}",
     ":${loopback_isolated_test_label}_${local_testing_suffix}",
     ":${loopback_tcp_accept_backlog_test_label}_${local_testing_suffix}",
+    ":${loopback_tcp_accept_test_label}_${local_testing_suffix}",
     ":${loopback_tcp_backlog_test_label}_${local_testing_suffix}",
     ":${loopback_test_label}_${local_testing_suffix}",
     ":${raw_packet_test_label}_${local_testing_suffix}",
