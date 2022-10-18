@@ -47,4 +47,9 @@
             to: "#driver_test_realm",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "driver_test_realm" ],
+        },
+    },
 }

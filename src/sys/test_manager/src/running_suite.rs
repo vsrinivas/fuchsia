@@ -38,9 +38,12 @@ use {
         prelude::*,
         FutureExt,
     },
+    lazy_static::lazy_static,
+    maplit::hashmap,
     moniker::RelativeMonikerBase,
+    resolver::AllowedPackages,
     std::{
-        collections::HashSet,
+        collections::{HashMap, HashSet},
         convert::{TryFrom, TryInto},
         sync::{
             atomic::{AtomicU32, Ordering},
@@ -484,25 +487,31 @@ impl CaseMatcher {
     }
 }
 
-fn get_allowed_package_value(
-    test_url: &str,
-    suite_facet: &facet::SuiteFacets,
-) -> resolver::AllowedPackages {
+lazy_static! {
+    // Exception map for specific test urls. This map would allow us to transition to world where
+    // hermetic resolver is default. The map will contain ctf and OOT test urls.
+    static ref TEST_URL_ALLOWED_PACKAGE_MAP: HashMap<&'static str, AllowedPackages> = hashmap! {
+        "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_10.20221012.0.1#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
+        "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_9.20221010.3.8#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
+    };
+}
+
+fn get_allowed_package_value(test_url: &str, suite_facet: &facet::SuiteFacets) -> AllowedPackages {
     if suite_facet.deprecated_allowed_packages.is_some() {
-        resolver::AllowedPackages::from_iter(
-            suite_facet.deprecated_allowed_packages.clone().unwrap(),
-        )
+        AllowedPackages::from_iter(suite_facet.deprecated_allowed_packages.clone().unwrap())
     } else if suite_facet.deprecated_allowed_all_packages.is_some() {
         match suite_facet.deprecated_allowed_all_packages {
-            Some(true) => resolver::AllowedPackages::all(test_url.to_string()),
-            Some(false) => resolver::AllowedPackages::zero_allowed_pkgs(),
+            Some(true) => AllowedPackages::all(test_url.to_string()),
+            Some(false) => AllowedPackages::zero_allowed_pkgs(),
             None => unreachable!(),
         }
+    } else if let Some(allowed_pkgs) = TEST_URL_ALLOWED_PACKAGE_MAP.get(test_url) {
+        allowed_pkgs.clone()
     } else {
         match suite_facet.collection {
-            HERMETIC_TESTS_COLLECTION => resolver::AllowedPackages::zero_allowed_pkgs(),
+            HERMETIC_TESTS_COLLECTION => AllowedPackages::zero_allowed_pkgs(),
             // based on the flag this can be ALL or zero list.
-            _ => resolver::AllowedPackages::default(test_url),
+            _ => AllowedPackages::default(test_url),
         }
     }
 }
@@ -1213,7 +1222,7 @@ mod tests {
 
         // default for hermetic realm is no other allowed package.
         assert_eq!(
-            resolver::AllowedPackages::zero_allowed_pkgs(),
+            AllowedPackages::zero_allowed_pkgs(),
             get_allowed_package_value(&url, &suite_facet)
         );
 
@@ -1221,27 +1230,27 @@ mod tests {
         // HERMETIC_TESTS_COLLECTION
         suite_facet.deprecated_allowed_all_packages = Some(true);
         assert_eq!(
-            resolver::AllowedPackages::all(url.to_string()),
+            AllowedPackages::all(url.to_string()),
             get_allowed_package_value(&url, &suite_facet)
         );
 
         suite_facet.deprecated_allowed_all_packages = Some(false);
         assert_eq!(
-            resolver::AllowedPackages::zero_allowed_pkgs(),
+            AllowedPackages::zero_allowed_pkgs(),
             get_allowed_package_value(&url, &suite_facet)
         );
 
         // deprecated_allowed_packages overrides deprecated_allowed_all_packages
         suite_facet.deprecated_allowed_packages = Some(vec!["pkg-one".to_owned()]);
         assert_eq!(
-            resolver::AllowedPackages::from_iter(["pkg-one".to_owned()]),
+            AllowedPackages::from_iter(["pkg-one".to_owned()]),
             get_allowed_package_value(&url, &suite_facet)
         );
 
         // test with other collections
         suite_facet.collection = SYSTEM_TESTS_COLLECTION;
         assert_eq!(
-            resolver::AllowedPackages::from_iter(["pkg-one".to_owned()]),
+            AllowedPackages::from_iter(["pkg-one".to_owned()]),
             get_allowed_package_value(&url, &suite_facet)
         );
 
@@ -1249,8 +1258,8 @@ mod tests {
         suite_facet.deprecated_allowed_all_packages = None;
         suite_facet.deprecated_allowed_packages = None;
         let expected = match resolver::ENFORCE_HERMETIC_RESOLUTION {
-            true => resolver::AllowedPackages::zero_allowed_pkgs(),
-            false => resolver::AllowedPackages::all(url.to_string()),
+            true => AllowedPackages::zero_allowed_pkgs(),
+            false => AllowedPackages::all(url.to_string()),
         };
         assert_eq!(expected, get_allowed_package_value(&url, &suite_facet));
     }

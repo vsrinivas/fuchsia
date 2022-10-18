@@ -82,6 +82,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:glob",
     "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
