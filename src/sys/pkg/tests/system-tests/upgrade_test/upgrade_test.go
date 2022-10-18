@@ -239,6 +239,16 @@ func doTestOTAs(
 				return fmt.Errorf("failed to create ota test client: %w", err)
 			}
 			*device = *newClient
+
+			if rpcClient != nil && *rpcClient != nil {
+				(*rpcClient).Close()
+				*rpcClient = nil
+			}
+
+			*rpcClient, err = device.StartRpcSession(ctx, repo)
+			if err != nil {
+				return fmt.Errorf("unable to connect to sl4f while retrying OTA: %w", err)
+			}
 		}
 
 		if !successfulNMinusOneToN {
