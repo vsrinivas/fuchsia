@@ -416,15 +416,16 @@ class TouchInputBase : public ui_testing::PortableUITest,
 
     auto actual_x = pixel_scale * last_event.local_x();
     auto actual_y = pixel_scale * last_event.local_y();
+    auto actual_component_name = last_event.component_name();
 
     FX_LOGS(INFO) << "Expecting event for component " << component_name << " at (" << expected_x
                   << ", " << expected_y << ")";
-    FX_LOGS(INFO) << "Received event for component " << component_name << " at (" << actual_x
+    FX_LOGS(INFO) << "Received event for component " << actual_component_name << " at (" << actual_x
                   << ", " << actual_y << "), accounting for pixel scale of " << pixel_scale;
 
     return CompareDouble(actual_x, expected_x, pixel_scale) &&
            CompareDouble(actual_y, expected_y, pixel_scale) &&
-           last_event.component_name() == component_name;
+           actual_component_name == component_name;
   }
 
   void InjectInput(TapLocation tap_location) {
