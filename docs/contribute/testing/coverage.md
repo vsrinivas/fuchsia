@@ -78,8 +78,8 @@ fx set core.x64 --variant coverage-rust --with //examples/rust:rust-examples
 fx build
 ```
 
-Above we set --variant coverage-rust because our example is a Rust test. If
-you're working with a C/C++ test then you need to set --variant coverage
+Above we set `--variant coverage-rust` because our example is a Rust test. If
+you're working with a C/C++ test then you need to set `--variant coverage`
 instead.
 
 Let's start an emulator which will be your target device and then start an
@@ -103,6 +103,12 @@ In your second terminal:
 fx serve
 ```
 
+Lastly we need to enable experimental test coverage support:
+
+```posix-terminal
+ffx config set coverage true
+```
+
 ### View coverage in the browser
 
 In this workflow we will run our test and produce a coverage report which we can
@@ -110,13 +116,11 @@ view in a browser.
 
 #### Execute your tests and export the coverage HTML report
 
-Note: add --variant coverage for cpp components.
-
-We execute our tests (in this case testing-lib-test) and generate an html
+We execute our tests (in this case `testing_lib_test`) and generate an html
 report.
 
 ```posix-terminal
-fx coverage --html-output-dir $HOME/fx_coverage testing-lib-test
+fx coverage --html-output-dir $HOME/fx_coverage testing_lib_test
 ```
 
 ### View coverage summary in the browser
@@ -126,11 +130,13 @@ summary page.
 
 ![Coverage Report Screenshot](report_screenshot.png)
 
+Clicking on any of the files will show you line coverage for that file. The
+"Count" column shows how many times a line was visited in testing, 1 or more. No
+value for "Count" means 0, i.e. the line wasn't covered.
+
 ### View coverage in VS Code
 
 Start this section only after you’ve prepared your test environment.
-
-Setup
 
 1. Install the [coverage-gutters] extension from Visual Studio Marketplace.
 1. Configure coverage-gutters by adding the following attributes to
@@ -138,19 +144,19 @@ Setup
 
 ```json
 {
-  "coverage-gutters.coverageBaseDir": ".",
-  "coverage-gutters.showLineCoverage": true,
-  "coverage-gutters.coverageFileNames": [ "lcov.info" ]
+    "coverage-gutters.coverageBaseDir": ".",
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.coverageFileNames": [ "lcov.info" ]
 }
 ```
 
-### Run test and view coverage
+### Run the test and view coverage
 
-First, lets execute the test and export the LCOV file, which VS Code will use to
-show coverage.
+Let's execute the test and export the LCOV file, which VS Code will use to show
+coverage.
 
 ```posix-terminal
-fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info testing-lib-test
+fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info testing_lib_test
 ```
 
 ### View coverage in VS Code
@@ -165,6 +171,15 @@ fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info testing-lib-test
 ![Display Coverage](display_coverage.png)
 
 ![VS Code Coverage](vscode_coverage.png)
+
+### Rerun the test on changes
+
+Lastly, you can use this command to monitor for filesystem changes and rerun
+the test every time you save your code.
+
+```posix-terminal
+fx -i coverage --lcov-output-path $FUCHSIA_DIR/lcov.info testing_lib_test
+```
 
 ## End-to-end (E2E) tests exclusion
 
@@ -460,6 +475,6 @@ Upcoming work:
 [llvm-coverage]: https://clang.llvm.org/docs/SourceBasedCodeCoverage.html
 [llvm-coverage-mapping-format]: https://llvm.org/docs/CoverageMappingFormat.html
 [llvm-profdata]: https://llvm.org/docs/CommandGuide/llvm-profdata.html
-[settings-json]: https://code.visualstudio.com/docs/getstarted/settings#_settings-editor
+[settings-json]: https://code.visualstudio.com/docs/getstarted/settings#_settingsjson
 [trf]: /docs/development/testing/components/test_runner_framework.md
 [vmo]: /docs/reference/kernel_objects/vm_object.md
