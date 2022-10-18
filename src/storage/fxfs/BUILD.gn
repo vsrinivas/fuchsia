@@ -18,6 +18,7 @@ import("//src/storage/testing/driver_test_realm.gni")
 fxfs_deps = [
   ":fxfs_macros",
   "//src/lib/async-utils",
+  "//src/lib/diagnostics/inspect/rust",
   "//src/lib/fuchsia-async",
   "//src/lib/storage/storage_device",
   "//src/storage/lib/interval_tree",
@@ -114,7 +115,6 @@ if (is_fuchsia) {
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/lib/diagnostics/inspect/runtime/rust",
-    "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_inspect",

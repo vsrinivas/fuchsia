@@ -34,8 +34,12 @@ pub static FXFS_ROOT_NODE: Lazy<Mutex<fuchsia_inspect::Node>> =
     Lazy::new(|| Mutex::new(fuchsia_inspect::component::inspector().root().create_child("fxfs")));
 
 /// "fs.detail" node on which all constructed metrics will be attached.
-static DETAIL_NODE: Lazy<Mutex<fuchsia_inspect::Node>> =
+pub static DETAIL_NODE: Lazy<Mutex<fuchsia_inspect::Node>> =
     Lazy::new(|| Mutex::new(FXFS_ROOT_NODE.lock().unwrap().create_child("fs.detail")));
+
+/// Node which contains an entry for each object store.
+pub static OBJECT_STORES_NODE: Lazy<Mutex<fuchsia_inspect::Node>> =
+    Lazy::new(|| Mutex::new(DETAIL_NODE.lock().unwrap().create_child("stores")));
 
 /// Generic type to help implementing scalar metrics. Use named type definitions instead (e.g.
 /// [`StringMetric`], [`UintMetric`]).

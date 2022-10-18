@@ -18,6 +18,7 @@ use {
         platform::{
             fuchsia::{
                 component::map_to_raw_status,
+                metrics::OBJECT_STORES_NODE,
                 volume::{FxVolumeAndRoot, DEFAULT_FLUSH_PERIOD},
             },
             RemoteCrypt,
@@ -162,8 +163,8 @@ impl VolumesDirectory {
         name: &str,
         store: Arc<ObjectStore>,
     ) -> Result<FxVolumeAndRoot, Error> {
+        store.track_statistics(&*OBJECT_STORES_NODE.lock().unwrap(), name);
         let store_id = store.store_object_id();
-        store.record_metrics(&format!("{}", store_id));
         let unique_id = zx::Event::create().expect("Failed to create event");
         let volume = FxVolumeAndRoot::new(store, unique_id.get_koid().unwrap().raw_koid()).await?;
         volume.volume().start_flush_task(DEFAULT_FLUSH_PERIOD);

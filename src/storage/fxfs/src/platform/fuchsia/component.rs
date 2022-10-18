@@ -9,7 +9,8 @@ use {
         log::*,
         object_store::volume::root_volume,
         platform::fuchsia::{
-            errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
+            errors::map_to_status, metrics::OBJECT_STORES_NODE, pager::PagerExecutor,
+            volumes_directory::VolumesDirectory,
         },
         serialized_types::LATEST_VERSION,
     },
@@ -294,6 +295,8 @@ impl Component {
             volumes.directory_node().clone(),
             /* overwrite: */ true,
         )?;
+
+        fs.root_store().track_statistics(&*OBJECT_STORES_NODE.lock().unwrap(), "__root");
 
         *state = State::Running(RunningState { fs, volumes, _inspect_tree: inspect_tree });
         info!("Mounted");

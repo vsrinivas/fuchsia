@@ -38,7 +38,6 @@ use {
             types::{Item, ItemRef, LayerIterator},
             LSMTree,
         },
-        metrics::{traits::Metric, StringMetric, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             allocator::SimpleAllocator,
@@ -56,6 +55,8 @@ use {
     anyhow::{anyhow, bail, ensure, Context, Error},
     assert_matches::assert_matches,
     async_trait::async_trait,
+    fuchsia_inspect::{ArrayProperty, LazyNode},
+    futures::FutureExt,
     once_cell::sync::OnceCell,
     scopeguard::ScopeGuard,
     serde::{Deserialize, Serialize},
@@ -445,29 +446,25 @@ pub struct ObjectStore {
     // Enable/disable tracing.
     trace: AtomicBool,
 
-    // Metrics associated with the store. Only set once the journal has been replayed.
-    metrics: OnceCell<ObjectStoreMetrics>,
+    // Informational counters for events occurring within the store.
+    counters: Mutex<ObjectStoreCounters>,
+
+    // While the object store is being tracked, the node is retained here.  See
+    // `Self::track_statistics`.
+    tracking: Mutex<Option<LazyNode>>,
 
     // Contains the last object ID and, optionally, a cipher to be used when generating new object
     // IDs.
     last_object_id: Mutex<LastObjectId>,
 }
 
-struct ObjectStoreMetrics {
-    _guid: StringMetric,
-    _store_id: UintMetric,
-}
-
-impl ObjectStoreMetrics {
-    pub fn new(store_name: impl AsRef<str>, store_id: u64, store_info: &StoreInfo) -> Self {
-        // TODO(fxbug.dev/94075): Support proper nesting of values.
-        let prefix = format!("obj_store_{}", store_name.as_ref());
-        let guid_string = Uuid::from_bytes(store_info.guid).to_string();
-        ObjectStoreMetrics {
-            _guid: StringMetric::new(format!("{}_guid", &prefix), guid_string),
-            _store_id: UintMetric::new(format!("{}_id", &prefix), store_id),
-        }
-    }
+#[derive(Clone, Default)]
+struct ObjectStoreCounters {
+    mutations_applied: u64,
+    mutations_dropped: u64,
+    num_flushes: u64,
+    last_flush_time: Option<std::time::SystemTime>,
+    persistent_layer_file_sizes: Vec<u64>,
 }
 
 impl ObjectStore {
@@ -497,7 +494,8 @@ impl ObjectStore {
             mutations_cipher: Mutex::new(mutations_cipher),
             lock_state: Mutex::new(lock_state),
             trace: AtomicBool::new(false),
-            metrics: OnceCell::new(),
+            counters: Mutex::new(ObjectStoreCounters::default()),
+            tracking: Mutex::new(None),
             last_object_id: Mutex::new(last_object_id),
         })
     }
@@ -533,7 +531,8 @@ impl ObjectStore {
             mutations_cipher: Mutex::new(None),
             lock_state: Mutex::new(LockState::Unencrypted),
             trace: AtomicBool::new(false),
-            metrics: OnceCell::new(),
+            counters: Mutex::new(ObjectStoreCounters::default()),
+            tracking: Mutex::new(None),
             last_object_id: Mutex::new(LastObjectId::default()),
         }
     }
@@ -654,6 +653,51 @@ impl ObjectStore {
             // The root parent store isn't the root store.
             false
         }
+    }
+
+    /// Creates a lazy inspect node named `str` under `parent` which will yield statistics for the
+    /// object store when queried.
+    pub fn track_statistics(self: &Arc<Self>, parent: &fuchsia_inspect::Node, name: &str) {
+        let this = Arc::downgrade(self);
+        *self.tracking.lock().unwrap() = Some(parent.create_lazy_child(name, move || {
+            let this_clone = this.clone();
+            async move {
+                let inspector = fuchsia_inspect::Inspector::new();
+                if let Some(this) = this_clone.upgrade() {
+                    let counters = this.counters.lock().unwrap();
+                    let root = inspector.root();
+                    root.record_string(
+                        "guid",
+                        Uuid::from_bytes(this.store_info().guid).to_string(),
+                    );
+                    root.record_uint("store_object_id", this.store_object_id);
+                    root.record_uint("mutations_applied", counters.mutations_applied);
+                    root.record_uint("mutations_dropped", counters.mutations_dropped);
+                    root.record_uint("num_flushes", counters.num_flushes);
+                    if let Some(last_flush_time) = counters.last_flush_time.as_ref() {
+                        root.record_uint(
+                            "last_flush_time_ms",
+                            last_flush_time
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or(std::time::Duration::ZERO)
+                                .as_millis()
+                                .try_into()
+                                .unwrap_or(0u64),
+                        );
+                    }
+                    let sizes = root.create_uint_array(
+                        "persistent_layer_file_sizes",
+                        counters.persistent_layer_file_sizes.len(),
+                    );
+                    for i in 0..counters.persistent_layer_file_sizes.len() {
+                        sizes.set(i, counters.persistent_layer_file_sizes[i]);
+                    }
+                    root.record(sizes);
+                }
+                Ok(inspector)
+            }
+            .boxed()
+        }));
     }
 
     pub fn device(&self) -> &Arc<dyn Device> {
@@ -1268,14 +1312,6 @@ impl ObjectStore {
         Ok(())
     }
 
-    /// Record metrics for this ObjectStore under the given `store_name`.
-    /// Acts as a no-op if called multiple times.
-    pub fn record_metrics(&self, store_name: impl AsRef<str>) {
-        self.metrics.get_or_init(|| {
-            ObjectStoreMetrics::new(store_name, self.store_object_id, &self.store_info())
-        });
-    }
-
     async fn open_layers(
         &self,
         object_ids: impl std::iter::IntoIterator<Item = u64>,
@@ -1283,14 +1319,17 @@ impl ObjectStore {
     ) -> Result<Vec<CachingObjectHandle<ObjectStore>>, Error> {
         let parent_store = self.parent_store.as_ref().unwrap();
         let mut handles = Vec::new();
+        let mut sizes = Vec::new();
         for object_id in object_ids {
             let handle = CachingObjectHandle::new(
                 ObjectStore::open_object(&parent_store, object_id, HandleOptions::default(), crypt)
                     .await
                     .context(format!("Failed to open layer file {}", object_id))?,
             );
+            sizes.push(handle.get_size());
             handles.push(handle);
         }
+        self.counters.lock().unwrap().persistent_layer_file_sizes = sizes;
         Ok(handles)
     }
 
@@ -1762,10 +1801,13 @@ impl JournalingObject for ObjectStore {
             }
             _ => bail!("unexpected mutation: {:?}", mutation),
         }
+        self.counters.lock().unwrap().mutations_applied += 1;
         Ok(())
     }
 
-    fn drop_mutation(&self, _mutation: Mutation, _transaction: &Transaction<'_>) {}
+    fn drop_mutation(&self, _mutation: Mutation, _transaction: &Transaction<'_>) {
+        self.counters.lock().unwrap().mutations_dropped += 1;
+    }
 
     /// Push all in-memory structures to the device. This is not necessary for sync since the
     /// journal will take care of it.  This is supposed to be called when there is either memory or

@@ -284,6 +284,14 @@ impl ObjectStore {
 
             (old_layers, Some(new_layers))
         };
+        let layer_file_sizes = if let Some(new_layers) = new_layers.as_ref() {
+            new_layers
+                .iter()
+                .map(|l| l.handle().map(ObjectHandle::get_size).unwrap_or(0))
+                .collect::<Vec<u64>>()
+        } else {
+            vec![]
+        };
 
         let mut serialized_info = Vec::new();
         new_store_info.serialize_with_version(&mut serialized_info)?;
@@ -348,6 +356,10 @@ impl ObjectStore {
             info!(store_id = self.store_object_id(), "OS: end flush");
         }
 
+        let mut counters = self.counters.lock().unwrap();
+        counters.num_flushes += 1;
+        counters.last_flush_time = Some(std::time::SystemTime::now());
+        counters.persistent_layer_file_sizes = layer_file_sizes;
         // Return the earliest version used by a struct in the tree
         Ok(self.tree.get_earliest_version())
     }
