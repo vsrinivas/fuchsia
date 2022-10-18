@@ -20,7 +20,7 @@ if `ERROR`s are expected then developers will set `max_severity = "ERROR"` in
 the test specification associated with the test.
 
 When this feature was first introduced, all overrides were set in a
-[single file][restrict-legacy]. Since then it became possible to set the
+single file. Since then it became possible to set the
 override specific to the test where the test itself is defined. The new approach
 is easier to maintain.
 
@@ -87,4 +87,3 @@ Reach out for questions or for status updates:
 [logs]: /docs/concepts/components/diagnostics/logs/README.md
 [logs-tests]: /docs/development/diagnostics/test_and_logs.md
 [max-severity-json]: https://fuchsia.googlesource.com/fuchsia/+/589aecf5a99689e33621137355b79dcebf6e0c48/garnet/bin/run_test_component/max_severity_fuchsia.json
-[restrict-legacy]: https://fuchsia.googlesource.com/fuchsia/+/66ed695f5c0fcf9ef642fb8736f3a85264e18bfd/docs/concepts/testing/test_component.md#restricting-log-severity
