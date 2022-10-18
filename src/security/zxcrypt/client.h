@@ -5,6 +5,7 @@
 #ifndef SRC_SECURITY_ZXCRYPT_CLIENT_H_
 #define SRC_SECURITY_ZXCRYPT_CLIENT_H_
 
+#include <fidl/fuchsia.hardware.block.encrypted/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
@@ -77,7 +78,7 @@ zx_status_t TryWithImplicitKeys(
 // zxcrypt device (named "zxcrypt" in the device tree).
 class __EXPORT EncryptedVolumeClient {
  public:
-  explicit EncryptedVolumeClient(zx::channel&& chan);
+  explicit EncryptedVolumeClient(zx::channel&& channel);
 
   // Request that the volume provided by the manager represented by |chan| be
   // formatted with the given key material/slot, destroying all previous data
@@ -116,7 +117,7 @@ class __EXPORT EncryptedVolumeClient {
 
  private:
   // The underlying zxcrypt device, accessed over FDIO
-  zx::channel chan_;
+  fidl::ClientEnd<fuchsia_hardware_block_encrypted::DeviceManager> client_end_;
 };
 
 // |zxcrypt::VolumeManager| manages access to a zxcrypt volume device.  In

@@ -7,7 +7,6 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/hardware/block/encrypted/c/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -187,21 +186,23 @@ zx_status_t TryWithImplicitKeys(
   return rc;
 }
 
-EncryptedVolumeClient::EncryptedVolumeClient(zx::channel&& chan) : chan_(std::move(chan)) {}
+EncryptedVolumeClient::EncryptedVolumeClient(zx::channel&& channel)
+    : client_end_(std::move(channel)) {}
 
 zx_status_t EncryptedVolumeClient::Format(const uint8_t* key, size_t key_len, uint8_t slot) {
-  zx_status_t rc;
-  zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerFormat(chan_.get(), key, key_len, slot,
-                                                                 &call_status)) != ZX_OK) {
-    xprintf("failed to call Format: %s\n", zx_status_get_string(rc));
-    return rc;
+  const fidl::WireResult result =
+      fidl::WireCall(client_end_)
+          ->Format(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(key), key_len),
+                   slot);
+  if (!result.ok()) {
+    xprintf("failed to call Format: %s\n", result.FormatDescription().c_str());
+    return result.status();
   }
-
-  if (call_status != ZX_OK) {
-    xprintf("failed to Format: %s\n", zx_status_get_string(call_status));
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    xprintf("failed to Format: %s\n", zx_status_get_string(response.status));
   }
-  return call_status;
+  return response.status;
 }
 
 zx_status_t EncryptedVolumeClient::FormatWithImplicitKey(uint8_t slot) {
@@ -212,18 +213,19 @@ zx_status_t EncryptedVolumeClient::FormatWithImplicitKey(uint8_t slot) {
 }
 
 zx_status_t EncryptedVolumeClient::Unseal(const uint8_t* key, size_t key_len, uint8_t slot) {
-  zx_status_t rc;
-  zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerUnseal(chan_.get(), key, key_len, slot,
-                                                                 &call_status)) != ZX_OK) {
-    xprintf("failed to call Unseal: %s\n", zx_status_get_string(rc));
-    return rc;
+  const fidl::WireResult result =
+      fidl::WireCall(client_end_)
+          ->Unseal(fidl::VectorView<uint8_t>::FromExternal(const_cast<uint8_t*>(key), key_len),
+                   slot);
+  if (!result.ok()) {
+    xprintf("failed to call Unseal: %s\n", result.FormatDescription().c_str());
+    return result.status();
   }
-
-  if (call_status != ZX_OK) {
-    xprintf("failed to Unseal: %s\n", zx_status_get_string(call_status));
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    xprintf("failed to Unseal: %s\n", zx_status_get_string(response.status));
   }
-  return call_status;
+  return response.status;
 }
 
 zx_status_t EncryptedVolumeClient::UnsealWithImplicitKey(uint8_t slot) {
@@ -234,31 +236,29 @@ zx_status_t EncryptedVolumeClient::UnsealWithImplicitKey(uint8_t slot) {
 }
 
 zx_status_t EncryptedVolumeClient::Seal() {
-  zx_status_t rc;
-  zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerSeal(chan_.get(), &call_status)) !=
-      ZX_OK) {
-    xprintf("failed to call Seal: %s\n", zx_status_get_string(rc));
-    return rc;
+  const fidl::WireResult result = fidl::WireCall(client_end_)->Seal();
+  if (!result.ok()) {
+    xprintf("failed to call Seal: %s\n", result.FormatDescription().c_str());
+    return result.status();
   }
-  if (call_status != ZX_OK) {
-    xprintf("failed to Seal: %s\n", zx_status_get_string(call_status));
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    xprintf("failed to Seal: %s\n", zx_status_get_string(response.status));
   }
-  return call_status;
+  return response.status;
 }
 
 zx_status_t EncryptedVolumeClient::Shred() {
-  zx_status_t rc;
-  zx_status_t call_status;
-  if ((rc = fuchsia_hardware_block_encrypted_DeviceManagerShred(chan_.get(), &call_status)) !=
-      ZX_OK) {
-    xprintf("failed to call Shred: %s\n", zx_status_get_string(rc));
-    return rc;
+  const fidl::WireResult result = fidl::WireCall(client_end_)->Shred();
+  if (!result.ok()) {
+    xprintf("failed to call Shred: %s\n", result.FormatDescription().c_str());
+    return result.status();
   }
-  if (call_status != ZX_OK) {
-    xprintf("failed to Shred: %s\n", zx_status_get_string(call_status));
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    xprintf("failed to Shred: %s\n", zx_status_get_string(response.status));
   }
-  return call_status;
+  return response.status;
 }
 
 VolumeManager::VolumeManager(fbl::unique_fd&& block_dev_fd, fbl::unique_fd&& devfs_root_fd)
@@ -328,9 +328,8 @@ zx_status_t VolumeManager::OpenClientWithCaller(fdio_cpp::UnownedFdioCaller& cal
   if (!fd) {
     // No manager device in the /dev tree yet.  Try binding the zxcrypt
     // driver and waiting for it to appear.
-    auto resp =
-        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(caller.borrow_channel()))
-            ->Bind(::fidl::StringView::FromExternal(kDriverLib));
+    auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                    ->Bind(::fidl::StringView::FromExternal(kDriverLib));
     rc = resp.status();
     if (rc == ZX_OK) {
       if (resp->is_error()) {
@@ -372,9 +371,7 @@ zx_status_t VolumeManager::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& 
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
   size_t path_len;
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(caller.borrow_channel()))
-          ->GetTopologicalPath();
+  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->GetTopologicalPath();
   rc = resp.status();
   if (rc == ZX_OK) {
     if (resp->is_error()) {

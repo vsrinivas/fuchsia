@@ -197,7 +197,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/performance/ktrace_provider:bin",
     "//src/power/thermd:bin",
     "//src/recovery/factory_reset:factory_reset_unittests",
-    "//src/security/zxcrypt:zxcrypt-client",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/dd",
     "//src/storage/bin/factoryfs",
