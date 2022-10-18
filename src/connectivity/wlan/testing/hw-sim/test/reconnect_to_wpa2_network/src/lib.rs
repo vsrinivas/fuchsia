@@ -12,7 +12,11 @@ use {
     futures::channel::oneshot,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::{bss::Protection, ie::rsn::cipher::CIPHER_CCMP_128},
+    wlan_common::{
+        bss::Protection,
+        channel::{Cbw, Channel},
+        ie::rsn::cipher::CIPHER_CCMP_128,
+    },
     wlan_hw_sim::*,
     wlan_rsn::{
         self,
@@ -67,7 +71,7 @@ fn handle_phy_event(
             &args,
             phy,
             &BeaconInfo {
-                channel: CHANNEL_1.clone(),
+                channel: Channel::new(1, Cbw::Cbw20),
                 bssid: bssid.clone(),
                 ssid: ssid.clone(),
                 protection: protection.clone(),

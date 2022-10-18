@@ -8,6 +8,7 @@ use {
     std::collections::hash_map::HashMap,
     wlan_common::{
         buffer_reader::BufferReader,
+        channel::Channel,
         mac::{FrameControl, FrameType, Msdu, MsduIterator},
     },
 };
@@ -193,11 +194,11 @@ impl<'a> Action<wlantap::TxArgs> for MatchTx<'a> {
 /// Rx forwards packets to the Rx queue of a device.
 pub struct Rx<'a> {
     proxy: &'a wlantap::WlantapPhyProxy,
-    channel: fidl_common::WlanChannel,
+    channel: Channel,
 }
 
 impl<'a> Rx<'a> {
-    pub fn send(proxy: &'a wlantap::WlantapPhyProxy, channel: fidl_common::WlanChannel) -> Self {
+    pub fn send(proxy: &'a wlantap::WlantapPhyProxy, channel: Channel) -> Self {
         Self { proxy, channel }
     }
 }

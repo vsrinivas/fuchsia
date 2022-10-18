@@ -9,7 +9,12 @@ use {
     futures::StreamExt,
     ieee80211::Bssid,
     pin_utils::pin_mut,
-    wlan_common::{bss::Protection, buffer_reader::BufferReader, mac},
+    wlan_common::{
+        bss::Protection,
+        buffer_reader::BufferReader,
+        channel::{Cbw, Channel},
+        mac,
+    },
     wlan_hw_sim::*,
 };
 
@@ -64,7 +69,7 @@ async fn verify_tx_and_rx(client: &mut ethernet::Client, helper: &mut test_utils
                         actual.clear();
                         actual.extend_from_slice(llc_frame.body);
                         rx_wlan_data_frame(
-                            &CHANNEL_1,
+                            &Channel::new(1, Cbw::Cbw20),
                             &CLIENT_MAC_ADDR,
                             &BSS.0,
                             &ETH_DST_MAC,

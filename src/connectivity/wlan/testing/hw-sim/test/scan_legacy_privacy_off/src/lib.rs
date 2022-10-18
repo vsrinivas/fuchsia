@@ -6,7 +6,10 @@ use {
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
     std::convert::TryFrom,
-    wlan_common::bss::Protection,
+    wlan_common::{
+        bss::Protection,
+        channel::{Cbw, Channel},
+    },
     wlan_hw_sim::*,
 };
 
@@ -32,7 +35,7 @@ async fn scan_legacy_privacy_off() {
     let phy = helper.proxy();
     let beacons = vec![
         BeaconInfo {
-            channel: CHANNEL_1,
+            channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_WPA1,
             ssid: SSID_WPA1.clone(),
             protection: Protection::Wpa1,
@@ -40,7 +43,7 @@ async fn scan_legacy_privacy_off() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: CHANNEL_1,
+            channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_WEP,
             ssid: SSID_WEP.clone(),
             protection: Protection::Wep,
@@ -48,7 +51,7 @@ async fn scan_legacy_privacy_off() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: CHANNEL_1,
+            channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_MIXED,
             ssid: SSID_MIXED.clone(),
             protection: Protection::Wpa1Wpa2Personal,

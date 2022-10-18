@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_common as fidl_common,
     ieee80211::{Bssid, Ssid},
     lazy_static::lazy_static,
     std::convert::TryFrom,
-    wlan_common::bss::Protection,
+    wlan_common::{
+        bss::Protection,
+        channel::{Cbw, Channel},
+    },
     wlan_hw_sim::*,
 };
 
@@ -39,11 +41,7 @@ async fn simulate_scan() {
     let phy = helper.proxy();
     let beacons = vec![
         BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: 1,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(1, Cbw::Cbw20),
             bssid: BSS_FOO,
             ssid: SSID_FOO.clone(),
             protection: Protection::Wpa2Personal,
@@ -51,11 +49,7 @@ async fn simulate_scan() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: 2,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(2, Cbw::Cbw20),
             bssid: BSS_FOO_2,
             ssid: SSID_FOO.clone(),
             protection: Protection::Open,
@@ -63,11 +57,7 @@ async fn simulate_scan() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: 3,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(3, Cbw::Cbw20),
             bssid: BSS_BAR,
             ssid: SSID_BAR.clone(),
             protection: Protection::Wpa2Personal,
@@ -75,11 +65,7 @@ async fn simulate_scan() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: 4,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(4, Cbw::Cbw20),
             bssid: BSS_BAR_2,
             ssid: SSID_BAR.clone(),
             protection: Protection::Wpa2Personal,
@@ -87,11 +73,7 @@ async fn simulate_scan() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: 5,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(5, Cbw::Cbw20),
             bssid: BSS_BAZ,
             ssid: SSID_BAZ.clone(),
             protection: Protection::Open,
@@ -99,11 +81,7 @@ async fn simulate_scan() {
             beacon_or_probe: BeaconOrProbeResp::Beacon,
         },
         BeaconInfo {
-            channel: fidl_common::WlanChannel {
-                primary: 6,
-                secondary80: 0,
-                cbw: fidl_common::ChannelBandwidth::Cbw20,
-            },
+            channel: Channel::new(6, Cbw::Cbw20),
             bssid: BSS_BAZ_2,
             ssid: SSID_BAZ.clone(),
             protection: Protection::Wpa2Personal,

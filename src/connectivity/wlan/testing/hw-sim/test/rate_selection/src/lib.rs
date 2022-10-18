@@ -15,7 +15,13 @@ use {
     std::collections::HashMap,
     std::task::Poll,
     tracing::info,
-    wlan_common::{appendable::Appendable, big_endian::BigEndianU16, bss::Protection, mac},
+    wlan_common::{
+        appendable::Appendable,
+        big_endian::BigEndianU16,
+        bss::Protection,
+        channel::{Cbw, Channel},
+        mac,
+    },
     wlan_hw_sim::*,
 };
 // Remedy for fxbug.dev/8165 (fxbug.dev/33151)
@@ -112,7 +118,15 @@ async fn eth_and_beacon_sender<'a>(
         // Send a beacon before that to stay connected.
         if (intervals_since_last_beacon * DATA_FRAME_INTERVAL_NANOS).nanos() >= 8765.millis() {
             intervals_since_last_beacon = 0;
-            send_beacon(&CHANNEL_1, &BSS_MINSTL, &AP_SSID, &Protection::Open, &phy, 0).unwrap();
+            send_beacon(
+                &Channel::new(1, Cbw::Cbw20),
+                &BSS_MINSTL,
+                &AP_SSID,
+                &Protection::Open,
+                &phy,
+                0,
+            )
+            .unwrap();
         }
         intervals_since_last_beacon += 1;
 

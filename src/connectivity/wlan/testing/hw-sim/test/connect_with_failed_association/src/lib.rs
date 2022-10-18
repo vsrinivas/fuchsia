@@ -8,7 +8,11 @@ use {
     fuchsia_zircon::DurationNum,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::mac,
+    wlan_common::{
+        bss::Protection,
+        channel::{Cbw, Channel},
+        mac,
+    },
     wlan_hw_sim::*,
 };
 
@@ -23,10 +27,12 @@ fn build_event_handler<'a>(
         .on_start_scan(ScanResults::new(
             &phy,
             vec![BeaconInfo {
-                channel: CHANNEL_1.clone(),
+                channel: Channel::new(1, Cbw::Cbw20),
                 bssid,
                 ssid: ssid.clone(),
-                ..std::default::Default::default()
+                protection: Protection::Wpa2Personal,
+                rssi_dbm: -30,
+                beacon_or_probe: BeaconOrProbeResp::Beacon,
             }],
         ))
         .on_tx(MatchTx::new().on_mgmt(move |frame: &Vec<u8>| {
@@ -34,12 +40,16 @@ fn build_event_handler<'a>(
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
                     match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                         Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_open_authentication_success(&CHANNEL_1, &bssid, &phy)
-                                .expect("Error sending fake authentication frame.");
+                            send_open_authentication_success(
+                                &Channel::new(1, Cbw::Cbw20),
+                                &bssid,
+                                &phy,
+                            )
+                            .expect("Error sending fake authentication frame.");
                         }
                         Some(mac::MgmtBody::AssociationReq { .. }) => {
                             send_association_response(
-                                &CHANNEL_1,
+                                &Channel::new(1, Cbw::Cbw20),
                                 &bssid,
                                 fidl_ieee80211::StatusCode::RefusedTemporarily.into(),
                                 &phy,

@@ -12,7 +12,12 @@ use {
     fuchsia_zircon::DurationNum,
     ieee80211::{Bssid, Ssid},
     pin_utils::pin_mut,
-    wlan_common::{bss::Protection, format::MacFmt as _, mac},
+    wlan_common::{
+        bss::Protection,
+        channel::{Cbw, Channel},
+        format::MacFmt as _,
+        mac,
+    },
     wlan_hw_sim::*,
 };
 
@@ -63,7 +68,7 @@ fn build_event_handler<'a>(
         .on_start_scan(ScanResults::new(
             phy,
             vec![BeaconInfo {
-                channel: CHANNEL_1.clone(),
+                channel: Channel::new(1, Cbw::Cbw20),
                 bssid,
                 ssid: ssid.clone(),
                 protection: Protection::Open,
@@ -76,12 +81,16 @@ fn build_event_handler<'a>(
                 Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
                     match mac::MgmtBody::parse({ mgmt_hdr.frame_ctrl }.mgmt_subtype(), body) {
                         Some(mac::MgmtBody::Authentication { .. }) => {
-                            send_open_authentication_success(&CHANNEL_1, &bssid, &phy)
-                                .expect("Error sending fake authentication frame.");
+                            send_open_authentication_success(
+                                &Channel::new(1, Cbw::Cbw20),
+                                &bssid,
+                                &phy,
+                            )
+                            .expect("Error sending fake authentication frame.");
                         }
                         Some(mac::MgmtBody::AssociationReq { .. }) => {
                             send_association_response(
-                                &CHANNEL_1,
+                                &Channel::new(1, Cbw::Cbw20),
                                 &bssid,
                                 fidl_ieee80211::StatusCode::Success.into(),
                                 &phy,
