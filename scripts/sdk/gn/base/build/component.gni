@@ -126,21 +126,38 @@ template("fuchsia_component") {
     _manifest_version = "v2"
   }
 
-  if (fuchsia_code_coverage && _manifest_version == "v2") {
-    merged_manifest = "${target_name}-coverage.cml"
-    cmc_merge(merged_manifest) {
-      forward_variables_from(invoker,
-                             [
-                               "deps",
-                               "testonly",
-                             ])
-      sources = [
-        "${fuchsia_sdk}/build/enable_coverage_data.cml",
-        manifest,
-      ]
-      output_name = merged_manifest
+  if (fuchsia_code_coverage) {
+    if (_manifest_version == "v1") {
+      merged_manifest = "${target_name}-coverage.cmx"
+      cmc_merge(merged_manifest) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        sources = [
+          "${fuchsia_sdk}/build/enable_coverage_data.cmx",
+          manifest,
+        ]
+        output_name = merged_manifest
+      }
+      manifest = "${target_out_dir}/${merged_manifest}"
+    } else if (_manifest_version == "v2") {
+      merged_manifest = "${target_name}-coverage.cml"
+      cmc_merge(merged_manifest) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                               ])
+        sources = [
+          "${fuchsia_sdk}/build/enable_coverage_data.cml",
+          manifest,
+        ]
+        output_name = merged_manifest
+      }
+      manifest = "${target_out_dir}/${merged_manifest}"
     }
-    manifest = "${target_out_dir}/${merged_manifest}"
   }
 
   # The component manifest validated using cmx_validation for v1,
