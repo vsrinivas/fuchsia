@@ -53,38 +53,42 @@ IgcDriver::IgcDriver(zx_device_t* parent)
   adapter_ = std::make_shared<struct adapter>();
 
   // Set up PCI.
-  pci_protocol_t* pci = &adapter_->osdep.pci;
+  adapter_->osdep.pci = ddk::Pci(parent, "pci");
+  auto& pci = adapter_->osdep.pci;
 
-  if ((status = device_get_fragment_protocol(parent, "pci", ZX_PROTOCOL_PCI,
-                                             &adapter_->osdep.pci)) != ZX_OK) {
-    zxlogf(ERROR, "Failed to get pci protocol: %d", status);
+  if (!pci.is_valid()) {
+    zxlogf(ERROR, "Failed to connect pci protocol.");
     return;
   }
 
-  status = pci_set_bus_mastering(pci, true);
+  status = pci.SetBusMastering(true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "cannot enable bus master %d", status);
     return;
   }
 
-  status = pci_get_bti(pci, 0, &adapter_->btih);
+  zx::bti bti;
+  status = pci.GetBti(0, &bti);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to get BTI");
     return;
   }
+  adapter_->btih = bti.release();
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_interrupt_mode(pci, 1, &adapter_->irq_mode);
+  status = pci.ConfigureInterruptMode(1, &adapter_->irq_mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to configure irqs");
     return;
   }
 
-  status = pci_map_interrupt(pci, 0, &adapter_->irqh);
+  zx::interrupt interrupt;
+  status = pci.MapInterrupt(0, &interrupt);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to map irq");
     return;
   }
+  adapter_->irqh = interrupt.release();
 
   vmo_store::Options options = {
       .map =
@@ -112,7 +116,7 @@ IgcDriver::IgcDriver(zx_device_t* parent)
 
 IgcDriver::~IgcDriver() {
   igc_reset_hw(&adapter_->hw);
-  pci_set_bus_mastering(&adapter_->osdep.pci, false);
+  adapter_->osdep.pci.SetBusMastering(false);
   io_buffer_release(&adapter_->desc_buffer);
   mmio_buffer_release(&adapter_->bar0_mmio);
   zx_handle_close(adapter_->btih);
@@ -257,14 +261,14 @@ zx_status_t IgcDriver::Init() {
 }
 
 void IgcDriver::IdentifyHardware() {
-  pci_protocol_t* pci = &adapter_->osdep.pci;
+  ddk::Pci& pci = adapter_->osdep.pci;
   struct igc_hw* hw = &adapter_->hw;
 
   // Make sure our PCI configuration space has the necessary stuff set.
-  pci_read_config16(pci, PCI_CONFIG_COMMAND, &hw->bus.pci_cmd_word);
+  pci.ReadConfig16(PCI_CONFIG_COMMAND, &hw->bus.pci_cmd_word);
 
-  pci_device_info_t pci_info;
-  zx_status_t status = pci_get_device_info(pci, &pci_info);
+  fuchsia_hardware_pci::wire::DeviceInfo pci_info;
+  zx_status_t status = pci.GetDeviceInfo(&pci_info);
   if (status != ZX_OK) {
     zxlogf(ERROR, "pci_get_device_info failure");
     return;
@@ -273,8 +277,8 @@ void IgcDriver::IdentifyHardware() {
   hw->vendor_id = pci_info.vendor_id;
   hw->device_id = pci_info.device_id;
   hw->revision_id = pci_info.revision_id;
-  pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_VENDOR_ID, &hw->subsystem_vendor_id);
-  pci_read_config16(pci, PCI_CONFIG_SUBSYSTEM_ID, &hw->subsystem_device_id);
+  pci.ReadConfig16(PCI_CONFIG_SUBSYSTEM_VENDOR_ID, &hw->subsystem_vendor_id);
+  pci.ReadConfig16(PCI_CONFIG_SUBSYSTEM_ID, &hw->subsystem_device_id);
 
   // Do shared code init and setup.
   if (igc_set_mac_type(hw)) {
@@ -284,13 +288,12 @@ void IgcDriver::IdentifyHardware() {
 }
 
 zx_status_t IgcDriver::AllocatePCIResources() {
-  pci_protocol_t* pci = &adapter_->osdep.pci;
+  ddk::Pci& pci = adapter_->osdep.pci;
 
-  // Map BAR0 memory.
-  zx_status_t status =
-      pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &adapter_->bar0_mmio);
+  // Map BAR0 memory
+  zx_status_t status = pci.MapMmio(0u, ZX_CACHE_POLICY_UNCACHED_DEVICE, &adapter_->bar0_mmio);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "pci_map_bar cannot map io %d", status);
+    zxlogf(ERROR, "PCI cannot map io %d", status);
     return status;
   }
 
@@ -838,8 +841,8 @@ int IgcDriver::IgcIrqThreadFunc(void* arg) {
         adapter->netdev_ifc.PortStatusChanged(kPortId, &status);
       }
     }
-    if (adapter->irq_mode == PCI_INTERRUPT_MODE_LEGACY) {
-      pci_ack_interrupt(&adapter->osdep.pci);
+    if (adapter->irq_mode == fuchsia_hardware_pci::InterruptMode::kLegacy) {
+      adapter->osdep.pci.AckInterrupt();
     }
   }
   return 0;

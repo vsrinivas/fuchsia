@@ -132,7 +132,7 @@ class IgcDriver : public ::ddk::NetworkDeviceImplProtocol<IgcDriver>,
 
     mmio_buffer_t bar0_mmio;
 
-    pci_interrupt_mode_t irq_mode;
+    fuchsia_hardware_pci::InterruptMode irq_mode;
   };
 
   // We store the buffer information for each rx_space_buffer in this struct, so that we can do

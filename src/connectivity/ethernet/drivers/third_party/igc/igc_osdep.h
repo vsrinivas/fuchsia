@@ -59,7 +59,7 @@ typedef int8_t s8;
 #define __le64 u64
 
 struct igc_osdep {
-  pci_protocol_t pci;
+  ddk::Pci pci;
   uintptr_t membase;
   uintptr_t iobase;
   uintptr_t flashbase;
