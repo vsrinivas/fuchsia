@@ -64,11 +64,19 @@ type LayoutInfo = table {
     /// pixels, as determined by this scale.  Clients should not necessarily re-layout their content
     /// when this value changes.
     ///
-    /// # Deprecation
+    /// # Removed
     ///
-    /// This arg is deprecated at API version 9 with addition of |device_pixel_ratio|.
-    @available(deprecated=9, note="use device_pixel_ratio")
+    /// This arg is deprecated at API version 9 with addition of |device_pixel_ratio| and is
+    /// removed at API version 11.
+    @available(deprecated=9, removed=11)
     2: pixel_scale fuchsia.math.SizeU;
+
+    // TODO(fxbug.dev/112059): Remove this.
+    // Due to issues with current FIDL syntactic rules, this slot needs to be reserved after having
+    // removed pixel_scale which previously occupied slot 2.
+    @available(added=11)
+    2: reserved;
+
     /// The ratio of display's physical pixels to device independent pixels. Each logical pixel of a
     /// View is displayed on-screen by one or more physical pixels, as determined by this scale.
     /// Clients should not necessarily re-layout their content when this value changes, but

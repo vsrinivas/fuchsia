@@ -142,7 +142,7 @@ TEST(HangingGetHelperTest, TableDuplicateDataIsIgnored) {
 
   LayoutInfo info;
   info.set_logical_size(SizeU{1, 2});
-  info.set_pixel_scale(SizeU{3, 4});
+  info.set_device_pixel_ratio({2.f, 3.f});
 
   {
     LayoutInfo info2;
