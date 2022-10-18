@@ -33,17 +33,24 @@ class AnnotationControllerImpl : public fuchsia::element::AnnotationController {
   void WatchAnnotations(WatchAnnotationsCallback callback) override;
 
  private:
-  // When true, |WatchAnnotations| returns immediately with the current annotations.
-  // It is set to false after |WatchAnnotations| returns, and set to true when
-  // annotations are updated.
-  bool have_pending_update_{true};
-
   // The ID of the story containing the element associated with this annotation controller.
-  std::string story_id_;
+  const std::string story_id_;
 
   SessionStorage* const session_storage_;  // Not owned.
 
-  fidl::BindingSet<fuchsia::element::AnnotationController> bindings_;
+  fidl::Binding<fuchsia::element::AnnotationController> binding_{this};
+
+  // True if WatchAnnotations() has been called by the client, indicating that
+  // the controller is subscribed to annotation updates.
+  bool watching_annotations_{false};
+
+  // True if the next WatchAnnotations() call should return immediately, with
+  // the current annotations state at the time.
+  bool have_pending_update_{true};
+
+  // Holds the WatchAnnotations() completion callback, to use to notify the
+  // client when an annotations update is next available.
+  WatchAnnotationsCallback watch_callback_;
 
   fxl::WeakPtrFactory<AnnotationControllerImpl> weak_factory_;
   FXL_DISALLOW_COPY_AND_ASSIGN(AnnotationControllerImpl);
