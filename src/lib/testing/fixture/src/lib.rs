@@ -9,7 +9,7 @@ use proc_macro::TokenStream;
 use quote::quote;
 use syn::spanned::Spanned as _;
 
-fn fixture_inner(wrapper_fn: syn::Ident, input: syn::ItemFn) -> Result<TokenStream, TokenStream> {
+fn fixture_inner(wrapper_fn: syn::Path, input: syn::ItemFn) -> Result<TokenStream, TokenStream> {
     let syn::ItemFn { attrs, sig, block, vis: _ } = input;
     let syn::Signature {
         ident: test_name,
@@ -119,7 +119,7 @@ fn fixture_inner(wrapper_fn: syn::Ident, input: syn::ItemFn) -> Result<TokenStre
 /// ```
 #[proc_macro_attribute]
 pub fn fixture(attrs: TokenStream, input: TokenStream) -> TokenStream {
-    let wrapper_fn = syn::parse_macro_input!(attrs as syn::Ident);
+    let wrapper_fn = syn::parse_macro_input!(attrs as syn::Path);
     let input = syn::parse_macro_input!(input as syn::ItemFn);
     match fixture_inner(wrapper_fn, input) {
         Ok(token_stream) => token_stream,

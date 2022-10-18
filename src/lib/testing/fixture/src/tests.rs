@@ -67,4 +67,18 @@ mod tests {
     fn generic_test(foo: Foo) {
         assert_eq!(foo, Foo::default());
     }
+
+    fn setup_with_uninferred_generic<T, const VALUE: usize>(
+        _test_name: &str,
+        test: impl FnOnce(&str, usize),
+    ) {
+        test(std::any::type_name::<T>(), VALUE)
+    }
+
+    #[fixture(setup_with_uninferred_generic::<u8, 3>)]
+    #[test]
+    fn uninferred_generic_test(name: &str, value: usize) {
+        assert_eq!(name, "u8");
+        assert_eq!(value, 3)
+    }
 }
