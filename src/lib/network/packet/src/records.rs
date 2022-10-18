@@ -1891,8 +1891,14 @@ pub mod options {
         // For an explanation of this format, see the "Options" section of
         // https://en.wikipedia.org/wiki/Transmission_Control_Protocol#TCP_segment_structure
         loop {
+            if bytes.len() == 0 {
+                return Ok(ParsedRecord::Done);
+            }
             let kind = match bytes.take_obj_front::<O::KindLenField>() {
-                None => return Ok(ParsedRecord::Done),
+                // Thanks to the preceding `if`, we know at this point that
+                // `bytes.len() > 0`. If `take_obj_front` returns `None`, that
+                // means that `bytes.len()` is shorter than `O::KindLenField`.
+                None => return Err(O::Error::SEQUENCE_FORMAT_ERROR),
                 Some(k) => {
                     // Can't do pattern matching with associated constants, so
                     // do it the good-ol' way:
@@ -2584,7 +2590,7 @@ pub mod options {
             // So we can assert that we'll fail cleanly in that case.
             //
             // Added as part of Change-Id
-            // Ibd46ac7384c7c5e0d74cb344b48c88876c351b1a
+            // Ibd46ac7384c7c5e0d74cb344b48c88876c351b1a.
             //
             // Before the small refactor in the Change-Id above, there was a
             // check during parsing that guaranteed that the length of the
@@ -2593,6 +2599,26 @@ pub mod options {
             // trying to access the length byte, which was a DoS vulnerability.
             assert_matches::assert_matches!(
                 Options::<_, DummyOptionsImpl>::parse(&[0x03, 0x03, 0x01, 0x03][..]),
+                Err(OptionParseErr)
+            );
+        }
+
+        #[test]
+        fn test_partial_kind_field() {
+            // Construct a sequence with only one byte where a two-byte kind
+            // field is expected.
+            //
+            // Added as part of Change-Id
+            // I468121f5712b73c4e704460f580f166c876ee7d6.
+            //
+            // Before the small refactor in the Change-Id above, we treated any
+            // failure to consume the kind field from the byte slice as
+            // indicating that there were no bytes left, and we would stop
+            // parsing successfully. This logic was correct when we only
+            // supported 1-byte kind fields, but it became incorrect once we
+            // introduced multi-byte kind fields.
+            assert_matches::assert_matches!(
+                Options::<_, DummyMultiByteKindOptionsImpl>::parse(&[0x00][..]),
                 Err(OptionParseErr)
             );
         }
