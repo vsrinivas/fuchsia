@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "//src/ui/testing/ui_test_realm/meta/text_manager.shard.cml" ],
+    include: [
+        "//src/ui/meta/input_pipeline_base_routes.shard.cml",
+        "//src/ui/testing/ui_test_realm/meta/text_manager.shard.cml",
+    ],
     children: [
         {
-            name: "input-pipeline",
+            name: "input_pipeline",
             url: "#meta/input-pipeline.cm",
         },
         {
@@ -20,21 +23,8 @@
     ],
     offer: [
         {
-            protocol: [
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#scenic",
-            to: [ "#input-pipeline" ],
-        },
-        {
-            protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
-            from: "#root_presenter",
-            to: [ "#input-pipeline" ],
-        },
-        {
             protocol: [ "fuchsia.input.injection.InputDeviceRegistry" ],
-            from: "#input-pipeline",
+            from: "#input_pipeline",
             to: [
                 "#input-helper",
                 "#input-synthesis",
@@ -50,14 +40,6 @@
         },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry",
-                "fuchsia.input.interaction.Notifier",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "#input-pipeline",
-        },
         {
             // TODO(fxbug.dev/107054): Remove these.
             protocol: [

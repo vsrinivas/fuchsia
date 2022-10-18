@@ -4,15 +4,12 @@
 {
     include: [
         "//src/ui/meta/a11y_routes.shard.cml",
+        "//src/ui/meta/input_pipeline_routes.shard.cml",
         "//src/ui/meta/root_presenter_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
     children: [
-        {
-            name: "input_pipeline",
-            url: "fuchsia-pkg://fuchsia.com/input-pipeline#meta/input-pipeline.cm",
-        },
         {
             name: "text_manager",
             url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
@@ -20,66 +17,20 @@
     ],
     offer: [
         {
-            directory: "config-data",
-            from: "parent",
-            to: "#input_pipeline",
-            subdir: "input-pipeline",
-        },
-        {
-            directory: "dev-input-report",
-            from: "parent",
-            to: [ "#input_pipeline" ],
-        },
-        {
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [
-                "#input_pipeline",
-                "#text_manager",
-            ],
-        },
-        {
-            protocol: [
-                "fuchsia.media.sounds.Player",
-                "fuchsia.recovery.FactoryReset",
-            ],
-            from: "parent",
-            to: [ "#input_pipeline" ],
+            to: [ "#text_manager" ],
         },
         {
             protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
             from: "#root_presenter",
             to: "#a11y_manager",
         },
-        {
-            protocol: [ "fuchsia.ui.pointerinjector.configuration.Setup" ],
-            from: "#root_presenter",
-            to: "#input_pipeline",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.focus.FocusChainListenerRegistry",
-                "fuchsia.ui.pointerinjector.Registry",
-                "fuchsia.ui.scenic.Scenic",
-            ],
-            from: "#scenic",
-            to: [ "#input_pipeline" ],
-        },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.input.injection.InputDeviceRegistry", // test-only
-                "fuchsia.input.interaction.Notifier",
-                "fuchsia.recovery.policy.Device",
-                "fuchsia.recovery.ui.FactoryResetCountdown",
-                "fuchsia.ui.policy.DeviceListenerRegistry",
-            ],
-            from: "#input_pipeline",
-        },
         {
             protocol: [
                 "fuchsia.ui.input.ImeService",
