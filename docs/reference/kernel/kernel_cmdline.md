@@ -347,7 +347,9 @@ true, the `live_usb` component does nothing.
 
 ## zircon.autorun.boot=\<command>
 
-This option requests that *command* be run at boot, after devmgr starts up.
+This option requests that *command* be run at boot.
+
+Commands should be absolute paths starting at the root '/'.
 
 Any `+` characters in *command* are treated as argument separators, allowing you
 to pass arguments to an executable.
@@ -356,9 +358,10 @@ This option is disabled if console.shell is false.
 
 ## zircon.autorun.system=\<command>
 
-This option requests that *command* be run once the system partition is mounted
-and *init* is launched. If there is no system bootfs or system partition, it
-will never be launched.
+This option requests that *command* be run once the system partition is mounted.
+If there is no system partition, it will never be launched.
+
+Commands should be absolute paths starting at the root '/'.
 
 Any `+` characters in *command* are treated as argument separators, allowing you
 to pass arguments to an executable.

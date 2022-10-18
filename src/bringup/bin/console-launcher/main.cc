@@ -100,6 +100,10 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     if (args.empty()) {
       continue;
     }
+    if (!cpp20::starts_with(std::string_view(args), "/")) {
+      FX_LOGS(ERROR) << name << " failed to run '" << args << "' command must be absolute path";
+      continue;
+    }
     zx::result endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (endpoints.is_error()) {
       FX_PLOGS(FATAL, endpoints.status_value()) << "failed to create endpoints";
