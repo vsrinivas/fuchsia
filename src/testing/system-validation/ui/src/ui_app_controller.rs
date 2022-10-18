@@ -3,12 +3,19 @@
 // found in the LICENSE file.
 
 use {
-    crate::screencapture::take_screenshot, crate::single_session_trace::SingleSessionTrace,
-    argh::FromArgs, fidl_fuchsia_session_scene as scene, fidl_fuchsia_ui_app as ui_app,
-    fuchsia_async as fasync, fuchsia_component::client::connect_to_protocol,
-    fuchsia_scenic as scenic, std::convert::TryInto, tracing::info,
+    crate::app_monitor::AppMonitor,
+    crate::screencapture::take_screenshot,
+    crate::single_session_trace::SingleSessionTrace,
+    argh::FromArgs,
+    fidl_fuchsia_session_scene as scene, fidl_fuchsia_ui_app as ui_app, fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_protocol,
+    fuchsia_scenic as scenic,
+    std::convert::TryInto,
+    std::sync::{Arc, Mutex},
+    tracing::info,
 };
 
+mod app_monitor;
 mod screencapture;
 mod single_session_trace;
 
@@ -26,6 +33,9 @@ struct RunTestCmd {
     run_duration_sec: Option<usize>,
 }
 
+// Note: Maybe we want to make this an argument.
+const SAMPLE_APP_MONIKER: &str = "./sample-app";
+
 #[fuchsia::main]
 async fn main() {
     let args: RunTestCmd = argh::from_env();
@@ -34,9 +44,9 @@ async fn main() {
         .expect("failed to connect to fuchsia.scene.Manager");
     let view_provider = connect_to_protocol::<ui_app::ViewProviderMarker>()
         .expect("failed to connect to ViewProvider");
-
     let mut link_token_pair = scenic::flatland::ViewCreationTokenPair::new().unwrap();
-
+    // let mut event_stream = EventStream::open().await.unwrap();
+    let app_monitor = AppMonitor::new(SAMPLE_APP_MONIKER.to_string());
     // Use view provider to initiate creation of the view which will be connected to the
     // viewport that we create below.
     view_provider
@@ -45,9 +55,12 @@ async fn main() {
             ..ui_app::CreateView2Args::EMPTY
         })
         .expect("Cannot invoke create_view2");
-
     let _root_view_created =
         scene_manager.present_root_view(&mut link_token_pair.viewport_creation_token);
+    app_monitor.wait_for_start_event().await;
+
+    let sample_app_stopped: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    app_monitor.monitor_for_stop_event(&sample_app_stopped);
 
     // Collect trace.
     let trace = SingleSessionTrace::new();
@@ -70,8 +83,11 @@ async fn main() {
         trace.terminate().await.unwrap();
     }
 
-    // TODO: Add a check that child view is still being shown.
-
-    info!("Taking screenshot");
+    info!("Taking screenshot.");
     take_screenshot().await;
+
+    info!("Checking that sample-app did not crash.");
+    if *sample_app_stopped.lock().unwrap() {
+        panic!("Sample app unexpectedly stopped");
+    }
 }

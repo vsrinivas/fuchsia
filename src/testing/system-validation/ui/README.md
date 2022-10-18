@@ -4,17 +4,18 @@ The directory contains system validation tests for graphic. The tests use existi
 
 System validation sets up the test with following capability routing relationships:
 
-`test_manager` <-- root
+```
+test_manager <-- root
     |  parent to
     V
-`system_validation_test_realm` (facet: `system-validation`) <-- system validation test root
+system_validation_test_realm (facet: system-validation) <-- system validation test root
     |  parent to
     V
-`test component` (`ui_app_controller.rs`)
+test component (`ui_app_controller.rs`)
     |  parent to
     V
-`sample-app` (ex: `flatland-view-provider.cm`)
-
+sample-app (ex: `flatland-view-provider.cm`)
+```
 
 # Run existing tests
 

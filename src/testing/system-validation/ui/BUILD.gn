@@ -12,6 +12,7 @@ rustc_binary("bin") {
   edition = "2018"
   source_root = "src/ui_app_controller.rs"
   sources = [
+    "src/app_monitor.rs",
     "src/screencapture.rs",
     "src/single_session_trace.rs",
     "src/ui_app_controller.rs",
@@ -29,6 +30,7 @@ rustc_binary("bin") {
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/performance/trace2json:bin",  # trace2json is a tool that'll be
                                          # available in "/pkg/bin/trace2json"
+    "//src/sys/lib/component-events",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:futures",

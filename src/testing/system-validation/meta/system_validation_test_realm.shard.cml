@@ -49,6 +49,14 @@
             from: "parent",
             to: "#system-validation-tests",
         },
+        {
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: "#system-validation-tests",
+        },
 
         // Test realms may offer subdirectories of config-data to test
         // components. See:

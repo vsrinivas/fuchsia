@@ -33,5 +33,12 @@
             ],
             from: "parent",
         },
+        {
+            event_stream: [
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+        },
     ],
 }
