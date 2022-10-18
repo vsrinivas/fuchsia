@@ -33,6 +33,8 @@ function __fx_env_main() {
     export FUCHSIA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." >/dev/null 2>&1 && pwd)"
   fi
 
+  export DEBUGINFOD_URLS="$(source "$FUCHSIA_DIR/tools/devshell/lib/vars.sh" && echo -n "$DEBUGINFOD_URLS")"
+
   # __update_path <suffix> <suffix>...
   # Removes old $PATH members who match any of the suffixes and then adds them
   # back prefixed by $FUCHSIA_DIR.

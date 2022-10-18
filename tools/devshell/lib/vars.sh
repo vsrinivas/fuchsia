@@ -23,6 +23,16 @@ unset devshell_lib_dir
 # in the names of any cached artifacts to make naming collisions less likely.
 export FX_CACHE_DIR="${FUCHSIA_DIR}/.fx"
 
+# This allows LLVM utilities to perform debuginfod lookups for public artifacts.
+# See https://sourceware.org/elfutils/Debuginfod.html.
+# TODO(111990): Replace this with a local authenticating proxy to support access
+#   control.
+public_url="https://storage.googleapis.com/fuchsia-artifacts"
+if [[ "$DEBUGINFOD_URLS" != *"$public_url"* ]]; then
+  export DEBUGINFOD_URLS="${DEBUGINFOD_URLS:+$DEBUGINFOD_URLS }$public_url"
+fi
+unset public_url
+
 if [[ "${FUCHSIA_DEVSHELL_VERBOSITY:-0}" -eq 1 ]]; then
   set -x
 fi

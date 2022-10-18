@@ -115,6 +115,8 @@ FX_CACHE_DIR         - A git-ignored directory that fx commands can use to
                          created them if they are specific to a single
                          command, to avoid name collisions.
 FUCHSIA_OUT_DIR      - (deprecated) "$FUCHSIA_DIR/out"
+DEBUGINFOD_URLS      - An HTTP(S) server that serves Fuchsia symbol information
+                         to LLVM and third-party utilities via debuginfod.
 ```
 
 `fx-config-read` and/or `fx` could set additional environment variables, but
