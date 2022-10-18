@@ -183,6 +183,11 @@ impl ObjectManager {
         inner.root_store_object_id = store_id;
     }
 
+    pub fn is_system_store(&self, store_id: u64) -> bool {
+        let inner = self.inner.read().unwrap();
+        store_id == inner.root_store_object_id || store_id == inner.root_parent_store_object_id
+    }
+
     /// When replaying the journal, we need to replay mutation records into the LSM tree, but we
     /// cannot properly open the store until all the records have been replayed since some of the
     /// records we replay might affect how we open, e.g. they might pertain to new layer files

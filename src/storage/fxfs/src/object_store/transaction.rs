@@ -98,10 +98,13 @@ pub trait TransactionHandler: Send + Sync {
     /// Implementations should perform any required journaling and then apply the mutations via
     /// ObjectManager's apply_mutation method.  Any mutations within the transaction should be
     /// removed so that drop_transaction can tell that the transaction was committed.  If
-    /// successful, returns the journal offset that the transaction was written to.
+    /// successful, returns the journal offset that the transaction was written to.  `callback` will
+    /// be called if the transaction commits successfully and whilst locks are held.  See the
+    /// comment in Transaction::commit_with_callback for the reason why it's the type that it is.
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
+        callback: &mut (dyn FnMut(u64) + Send),
     ) -> Result<u64, Error>;
 
     /// Drops a transaction (rolling back if not committed).  Committing a transaction should have
@@ -532,16 +535,27 @@ impl<'a> Transaction<'a> {
     /// Commits a transaction.  If successful, returns the journal offset of the transaction.
     pub async fn commit(mut self) -> Result<u64, Error> {
         debug!(txn = ?&self, "Commit");
-        self.handler.clone().commit_transaction(&mut self).await
+        self.handler.clone().commit_transaction(&mut self, &mut |_| {}).await
     }
 
-    /// Commits and then runs the callback whilst locks are held.  Specifically, any write locks and
-    /// upgraded transaction locks will be held, but other transactions can still be committed
-    /// whilst the callback is running.  The callback accepts a single parameter which is the
-    /// journal offset of the transaction.
-    pub async fn commit_with_callback<R>(mut self, f: impl FnOnce(u64) -> R) -> Result<R, Error> {
+    /// Commits and then runs the callback whilst locks are held.  The callback accepts a single
+    /// parameter which is the journal offset of the transaction.
+    pub async fn commit_with_callback<R: Send>(
+        mut self,
+        f: impl FnOnce(u64) -> R + Send,
+    ) -> Result<R, Error> {
         debug!(txn = ?&self, "Commit");
-        Ok(f(self.handler.clone().commit_transaction(&mut self).await?))
+        // It's not possible to pass an FnOnce via a trait without boxing it, but we don't want to
+        // do that (for performance reasons), hence the reason for the following.
+        let mut f = Some(f);
+        let mut result = None;
+        self.handler
+            .clone()
+            .commit_transaction(&mut self, &mut |offset| {
+                result = Some(f.take().unwrap()(offset));
+            })
+            .await?;
+        Ok(result.unwrap())
     }
 }
 

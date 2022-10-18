@@ -125,6 +125,9 @@ if (is_fuchsia) {
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:event-listener",
   ]
+  if (is_debug) {
+    fxfs_deps += [ "//zircon/system/ulib/backtrace-request/rust" ]
+  }
   fxfs_test_deps += [
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
@@ -239,6 +242,7 @@ fs_test_config("fxfs") {
   is_component = true
   is_multi_volume = true
   max_file_size = 9223372036854775807
+  supports_fsck_after_every_transaction = true
   supports_hard_links = true
   supports_inspect = true
   supports_resize = true

@@ -1481,11 +1481,16 @@ impl JournalingObject for SimpleAllocator {
 
         let layers =
             layers_from_handles(Box::new([CachingObjectHandle::new(layer_object_handle)])).await?;
-        transaction.commit_with_callback(|_| self.tree.set_layers(layers)).await?;
+        transaction
+            .commit_with_callback(|_| {
+                self.tree.set_layers(layers);
 
-        // At this point we've committed the new layers to disk so we can start using them.
-        // This means we can also switch to the new AllocatorInfo which clears marked_for_deletion.
-        self.inner.lock().unwrap().info = new_info;
+                // At this point we've committed the new layers to disk so we can start using them.
+                // This means we can also switch to the new AllocatorInfo which clears
+                // marked_for_deletion.
+                self.inner.lock().unwrap().info = new_info;
+            })
+            .await?;
 
         // Now close the layers and purge them.
         for layer in layer_set.layers {

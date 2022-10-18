@@ -142,9 +142,6 @@ pub(super) fn journal_handle_options() -> HandleOptions {
     HandleOptions { skip_journal_checks: true, ..Default::default() }
 }
 
-type PostCommitHook =
-    Option<Box<dyn Fn() -> futures::future::BoxFuture<'static, ()> + Send + Sync>>;
-
 /// The journal records a stream of mutations that are to be applied to other objects.  At mount
 /// time, these records can be replayed into memory.  It provides a way to quickly persist changes
 /// without having to make a large number of writes; they can be deferred to a later time (e.g.
@@ -155,11 +152,9 @@ pub struct Journal {
     handle: OnceCell<StoreObjectHandle<ObjectStore>>,
     super_block_manager: SuperBlockManager,
     inner: Mutex<Inner>,
-    commit_mutex: futures::lock::Mutex<()>,
     writer_mutex: futures::lock::Mutex<()>,
     sync_mutex: futures::lock::Mutex<()>,
     trace: AtomicBool,
-    post_commit_hook: PostCommitHook,
 }
 
 struct Inner {
@@ -231,15 +226,11 @@ pub struct JournalOptions {
     /// number and this number.  New super-blocks will be written every time about half of this
     /// amount is written to the journal.
     pub reclaim_size: u64,
-
-    /// A callback that runs after every transaction has been committed.  This will be called whilst
-    /// a lock is held which will block more transactions from being committed.
-    pub post_commit_hook: PostCommitHook,
 }
 
 impl Default for JournalOptions {
     fn default() -> Self {
-        JournalOptions { reclaim_size: DEFAULT_RECLAIM_SIZE, post_commit_hook: None }
+        JournalOptions { reclaim_size: DEFAULT_RECLAIM_SIZE }
     }
 }
 
@@ -267,11 +258,9 @@ impl Journal {
                 discard_offset: None,
                 reclaim_size: options.reclaim_size,
             }),
-            commit_mutex: futures::lock::Mutex::new(()),
             writer_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
             trace: AtomicBool::new(false),
-            post_commit_hook: options.post_commit_hook,
         }
     }
 
@@ -885,19 +874,14 @@ impl Journal {
         SuperBlock::shred(super_block_b_handle).await
     }
 
-    /// Commits a transaction.
+    /// Commits a transaction.  This is not thread safe; the caller must take appropriate locks.
     pub async fn commit(&self, transaction: &mut Transaction<'_>) -> Result<u64, Error> {
         if transaction.is_empty() {
             return Ok(self.inner.lock().unwrap().writer.journal_file_checkpoint().file_offset);
         }
 
-        let _guard = debug_assert_not_too_long!(self.commit_mutex.lock());
         self.pre_commit().await?;
-        let offset = debug_assert_not_too_long!(self.write_and_apply_mutations(transaction));
-        if let Some(hook) = self.post_commit_hook.as_ref() {
-            hook().await;
-        }
-        Ok(offset)
+        Ok(debug_assert_not_too_long!(self.write_and_apply_mutations(transaction)))
     }
 
     // Before we commit, we might need to extend the journal or write pending records to the

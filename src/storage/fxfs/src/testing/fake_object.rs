@@ -85,8 +85,10 @@ impl TransactionHandler for FakeObject {
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
+        callback: &mut (dyn FnMut(u64) + Send),
     ) -> Result<u64, Error> {
         std::mem::take(&mut transaction.mutations);
+        callback(0);
         Ok(0)
     }
 

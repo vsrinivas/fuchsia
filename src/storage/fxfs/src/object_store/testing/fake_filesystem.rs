@@ -124,6 +124,7 @@ impl TransactionHandler for FakeFilesystem {
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
+        callback: &mut (dyn FnMut(u64) + Send),
     ) -> Result<u64, Error> {
         let checkpoint = JournalCheckpoint {
             file_offset: self.num_syncs.load(Ordering::Relaxed),
@@ -133,6 +134,7 @@ impl TransactionHandler for FakeFilesystem {
         };
         self.lock_manager.commit_prepare(transaction).await;
         self.object_manager.apply_transaction(transaction, &checkpoint).await?;
+        callback(checkpoint.file_offset);
         Ok(0)
     }
 

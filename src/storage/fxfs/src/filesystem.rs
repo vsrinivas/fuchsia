@@ -7,6 +7,7 @@ use {
         crypt::Crypt,
         debug_assert_not_too_long,
         errors::FxfsError,
+        fsck::{fsck_volume_with_options, fsck_with_options, FsckOptions},
         log::*,
         metrics::{traits::Metric as _, traits::NumericMetric as _, UintMetric},
         object_store::{
@@ -29,11 +30,14 @@ use {
     anyhow::{Context, Error},
     async_trait::async_trait,
     fuchsia_async as fasync,
-    futures::channel::oneshot::{channel, Sender},
+    futures::{
+        channel::oneshot::{channel, Sender},
+        FutureExt,
+    },
     once_cell::sync::OnceCell,
     std::sync::{
         atomic::{self, AtomicBool},
-        Arc, Mutex,
+        Arc, Mutex, Weak,
     },
     storage_device::{Device, DeviceHolder},
 };
@@ -46,6 +50,9 @@ pub struct Info {
     pub used_bytes: u64,
 }
 
+pub type PostCommitHook =
+    Option<Box<dyn Fn() -> futures::future::BoxFuture<'static, ()> + Send + Sync>>;
+
 pub struct Options {
     /// True if the filesystem is read-only.
     pub read_only: bool,
@@ -54,11 +61,19 @@ pub struct Options {
     /// we can't end up with more than two live keys (so it must be bigger than the maximum possible
     /// size of unflushed journal contents).  This is exposed for testing purposes.
     pub roll_metadata_key_byte_count: u64,
+
+    /// A callback that runs after every transaction has been committed.  This will be called whilst
+    /// a lock is held which will block more transactions from being committed.
+    pub post_commit_hook: PostCommitHook,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Options { roll_metadata_key_byte_count: 128 * 1024 * 1024, read_only: false }
+        Options {
+            roll_metadata_key_byte_count: 128 * 1024 * 1024,
+            read_only: false,
+            post_commit_hook: None,
+        }
     }
 }
 
@@ -206,6 +221,7 @@ pub struct FxFilesystem {
     block_size: u64,
     objects: Arc<ObjectManager>,
     journal: Journal,
+    commit_mutex: futures::lock::Mutex<()>,
     lock_manager: LockManager,
     flush_task: Mutex<Option<fasync::Task<()>>>,
     device_sender: OnceCell<Sender<DeviceHolder>>,
@@ -226,6 +242,9 @@ pub struct OpenOptions {
 
     /// Called each time a new store is registered with ObjectManager.
     pub on_new_store: Option<Box<dyn Fn(&ObjectStore) + Send + Sync>>,
+
+    /// Run fsck after every transaction.
+    pub fsck_after_every_transaction: bool,
 
     /// Filesystem options.
     pub filesystem_options: Options,
@@ -252,6 +271,7 @@ impl FxFilesystem {
             block_size,
             objects: objects.clone(),
             journal,
+            commit_mutex: futures::lock::Mutex::new(()),
             lock_manager: LockManager::new(),
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
@@ -293,15 +313,28 @@ impl FxFilesystem {
         options: OpenOptions,
     ) -> Result<OpenFxFilesystem, Error> {
         let objects = Arc::new(ObjectManager::new(options.on_new_store));
+
+        let mut fsck_after_every_transaction = None;
+        let mut filesystem_options = options.filesystem_options;
+        if options.fsck_after_every_transaction {
+            let instance =
+                FsckAfterEveryTransaction::new(filesystem_options.post_commit_hook.take());
+            fsck_after_every_transaction = Some(instance.clone());
+            filesystem_options.post_commit_hook =
+                Some(Box::new(move || instance.clone().run().boxed()));
+        }
+
         let journal = Journal::new(objects.clone(), options.journal_options);
         let block_size = std::cmp::max(device.block_size().into(), MIN_BLOCK_SIZE);
         assert_eq!(block_size % MIN_BLOCK_SIZE, 0);
-        let read_only = options.filesystem_options.read_only;
+        let read_only = filesystem_options.read_only;
+
         let filesystem = Arc::new(FxFilesystem {
             device: OnceCell::new(),
             block_size,
             objects: objects.clone(),
             journal,
+            commit_mutex: futures::lock::Mutex::new(()),
             lock_manager: LockManager::new(),
             flush_task: Mutex::new(None),
             device_sender: OnceCell::new(),
@@ -309,8 +342,16 @@ impl FxFilesystem {
             trace: options.trace,
             graveyard: Graveyard::new(objects.clone()),
             completed_transactions: UintMetric::new("completed_transactions", 0),
-            options: options.filesystem_options,
+            options: filesystem_options,
         });
+
+        if let Some(fsck_after_every_transaction) = fsck_after_every_transaction {
+            fsck_after_every_transaction
+                .fs
+                .set(Arc::downgrade(&filesystem))
+                .unwrap_or_else(|_| unreachable!());
+        }
+
         if !read_only {
             // See comment in JournalRecord::DidFlushDevice for why we need to flush the device
             // before replay.
@@ -501,6 +542,7 @@ impl TransactionHandler for FxFilesystem {
     async fn commit_transaction(
         self: Arc<Self>,
         transaction: &mut Transaction<'_>,
+        callback: &mut (dyn FnMut(u64) + Send),
     ) -> Result<u64, Error> {
         trace_duration!("FxFilesystem::commit_transaction");
         debug_assert_not_too_long!(self.lock_manager.commit_prepare(&transaction));
@@ -513,8 +555,20 @@ impl TransactionHandler for FxFilesystem {
                 }));
             }
         }
+        let _guard = debug_assert_not_too_long!(self.commit_mutex.lock());
         let journal_offset = self.journal.commit(transaction).await?;
         self.completed_transactions.add(1);
+
+        // For now, call the callback whilst holding the lock.  Technically, we don't need to do
+        // that except if there's a post-commit-hook (which there usually won't be).  We can
+        // consider changing this if we need to for performance, but we'd need to double check that
+        // callers don't depend on this.
+        callback(journal_offset);
+
+        if let Some(hook) = self.options.post_commit_hook.as_ref() {
+            hook().await;
+        }
+
         Ok(journal_offset)
     }
 
@@ -569,6 +623,41 @@ pub async fn mkfs_with_default(
     }
     fs.close().await?;
     Ok(())
+}
+
+struct FsckAfterEveryTransaction {
+    fs: OnceCell<Weak<FxFilesystem>>,
+    old_hook: PostCommitHook,
+}
+
+impl FsckAfterEveryTransaction {
+    fn new(old_hook: PostCommitHook) -> Arc<Self> {
+        Arc::new(Self { fs: OnceCell::new(), old_hook })
+    }
+
+    async fn run(self: Arc<Self>) {
+        if let Some(fs) = self.fs.get().and_then(Weak::upgrade) {
+            let options = FsckOptions {
+                fail_on_warning: true,
+                no_lock: true,
+                quiet: true,
+                ..Default::default()
+            };
+            fsck_with_options(fs.clone(), &options).await.expect("fsck failed");
+            let object_manager = fs.object_manager();
+            for store in object_manager.unlocked_stores() {
+                let store_id = store.store_object_id();
+                if !object_manager.is_system_store(store_id) {
+                    fsck_volume_with_options(fs.as_ref(), &options, store_id, None)
+                        .await
+                        .expect("fsck_volume_with_options failed");
+                }
+            }
+        }
+        if let Some(old_hook) = self.old_hook.as_ref() {
+            old_hook().await;
+        }
+    }
 }
 
 #[cfg(test)]

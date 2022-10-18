@@ -55,6 +55,8 @@ pub struct FsckOptions<'a> {
     pub do_slow_passes: bool,
     /// A callback to be invoked for each detected error, e.g. to log the error.
     pub on_error: Box<dyn Fn(&FsckIssue) + Send + Sync + 'a>,
+    /// If true, suppress informational messages.
+    pub quiet: bool,
     /// Whether to be noisy as we do checks.
     pub verbose: bool,
     /// Don't take the write lock. The caller needs to guarantee the filesystem isn't changing.
@@ -68,6 +70,7 @@ impl Default for FsckOptions<'_> {
             halt_on_error: false,
             do_slow_passes: true,
             on_error: Box::new(FsckIssue::log),
+            quiet: false,
             verbose: false,
             no_lock: false,
         }
@@ -89,7 +92,9 @@ pub async fn fsck_with_options(
     filesystem: Arc<dyn Filesystem>,
     options: &FsckOptions<'_>,
 ) -> Result<(), Error> {
-    info!("Starting fsck");
+    if !options.quiet {
+        info!("Starting fsck");
+    }
 
     let _guard = if options.no_lock {
         None
@@ -199,7 +204,9 @@ pub async fn fsck_with_options(
         if warnings > 0 {
             warn!(count = warnings, "Fsck encountered warnings");
         } else {
-            info!("No issues detected");
+            if !options.quiet {
+                info!("No issues detected");
+            }
         }
         Ok(())
     }
@@ -222,7 +229,9 @@ pub async fn fsck_volume_with_options(
     store_id: u64,
     crypt: Option<Arc<dyn Crypt>>,
 ) -> Result<(), Error> {
-    info!(?store_id, "Starting volume fsck");
+    if !options.quiet {
+        info!(?store_id, "Starting volume fsck");
+    }
 
     let _guard = if options.no_lock {
         None
@@ -244,7 +253,9 @@ pub async fn fsck_volume_with_options(
         if warnings > 0 {
             warn!(count = warnings, "Volume fsck encountered warnings");
         } else {
-            info!("No issues detected");
+            if !options.quiet {
+                info!("No issues detected");
+            }
         }
         Ok(())
     }

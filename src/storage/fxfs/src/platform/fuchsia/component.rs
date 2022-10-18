@@ -266,7 +266,7 @@ impl Component {
         device: ClientEnd<BlockMarker>,
         options: StartOptions,
     ) -> Result<(), Error> {
-        info!("Received start request");
+        info!(?options, "Received start request");
         let mut state = self.state.lock().await;
         // TODO(fxbug.dev/93066): This is not very graceful.  It would be better for the client to
         // explicitly shut down all volumes first, and make this fail if there are remaining active
@@ -276,7 +276,10 @@ impl Component {
 
         let fs = FxFilesystem::open_with_options(
             DeviceHolder::new(BlockDevice::new(Box::new(client), options.read_only).await?),
-            OpenOptions::read_only(options.read_only),
+            OpenOptions {
+                fsck_after_every_transaction: options.fsck_after_every_transaction,
+                ..OpenOptions::read_only(options.read_only)
+            },
         )
         .await?;
         let root_volume = root_volume(fs.clone()).await?;

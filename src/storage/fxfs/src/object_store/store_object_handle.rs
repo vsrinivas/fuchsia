@@ -1283,7 +1283,7 @@ mod tests {
             crypt::{insecure::InsecureCrypt, Crypt},
             errors::FxfsError,
             filesystem::{
-                Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem, OpenOptions,
+                self, Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem, OpenOptions,
                 SyncOptions,
             },
             fsck::{fsck_volume_with_options, fsck_with_options, FsckOptions},
@@ -1293,7 +1293,6 @@ mod tests {
             object_store::{
                 allocator::Allocator,
                 directory::replace_child,
-                journal::JournalOptions,
                 object_record::Timestamp,
                 transaction::{Options, TransactionHandler},
                 volume::root_volume,
@@ -1846,7 +1845,7 @@ mod tests {
         let fs = FxFilesystem::open_with_options(
             device,
             OpenOptions {
-                journal_options: JournalOptions {
+                filesystem_options: filesystem::Options {
                     post_commit_hook: Some(Box::new(post_commit)),
                     ..Default::default()
                 },
