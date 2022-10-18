@@ -16,62 +16,71 @@
 
 namespace a11y {
 
-// The PointerStreamTrackerV2 tracks the life cycle of accessibility pointer streams arriving from
-// the OS input system. It can consume or reject tracked pointer streams. Please see
-// fuchsia.ui.input.accessibility.EventHandling| for more info on consuming / rejecting pointer
-// events.
-class PointerStreamTrackerV2 {
+// |InteractionTracker| tracks the life cycle of interactions arriving from Scenic.
+// It can consume or reject interactions.
+class InteractionTracker {
  public:
-  // Callback signature used to indicate when and how an pointer event sent to the arena was
-  // processed.
-  using OnStreamHandledCallback =
+  // Callback signature used to indicate how an interaction sent to the arena was handled.
+  using OnInteractionHandledCallback =
       fit::function<void(uint32_t device_id, uint32_t pointer_id,
                          fuchsia::ui::input::accessibility::EventHandling handled)>;
 
-  explicit PointerStreamTrackerV2(OnStreamHandledCallback on_stream_handled_callback);
-  ~PointerStreamTrackerV2() = default;
+  explicit InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback);
+  ~InteractionTracker() = default;
 
-  // Resets the handled status for subsequent pointer event streams.
+  // Resets the handled status for subsequent interactions.
   void Reset();
 
-  // Rejects all pointer event streams received by the tracker until reset.
+  // Rejects all interactions received by the tracker until reset.
   void RejectPointerEvents();
 
-  // Consumes all pointer event streams received by the tracker until reset.
+  // Consumes all interactions received by the tracker until reset.
   void ConsumePointerEvents();
 
-  // Adds or removes a pointer stream for the given event. For ADD events, also caches the callback
-  // from the input system to notify it later whether the stream was consumed or rejected.
+  // Process the given event, which may add or remove an interaction.
+  //
+  // For ADD events, also caches the callback from the input system to notify it
+  // later whether the interaction was consumed or rejected.
   void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
-  // Returns true if it has any ongoing pointer event streams which are not
-  // finished yet. A stream is considered finished when it sees and event with
-  // phase == REMOVE.
-  bool is_active() const { return !active_streams_.empty(); }
+  // Returns true if there are any open interactions.
+  // An interaction is considered closed when there is an event with phase == REMOVE.
+  bool is_active() const { return !open_interactions_.empty(); }
 
  private:
-  // Used to uniquely identify a pointer event stream. A pair is used rather
+  // Used to identify an interaction. A pair is used rather
   // than a structure for a comparable key for std::set.
-  using StreamID = std::pair</*device_id=*/uint32_t, /*pointer_id=*/uint32_t>;
+  using InteractionID = std::pair</*device_id=*/uint32_t, /*pointer_id=*/uint32_t>;
+
+  // Handle all open interactions, and enter a state where all future interactions
+  // will be handled in the same way.
   void InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling handled);
 
-  // Callback used to notify how each stream was handled.
-  OnStreamHandledCallback on_stream_handled_callback_;
+  // Callback used to notify how each interaction was handled.
+  //
+  // Note that this gets called once per event in the interaction, not only once per
+  // interaction.
+  OnInteractionHandledCallback on_interaction_handled_callback_;
 
-  // Holds how many times the |on_stream_handled_callback_| should be invoked per pointer event
-  // streams in order to notify the input system whether they were consumed / rejected. A pointer
-  // event stream is a sequence of pointer events that must start with an ADD phase event and end
+  // Holds how many times the |on_interaction_handled_callback_| should be invoked per interaction,
+  // in order to notify the input system whether they were consumed / rejected. An interaction
+  // is a sequence of pointer events that must start with an ADD phase event and end
   // with an REMOVE phase event. Since only one callback call is needed to notify the input system
-  // per stream, on an ADD event the count is increased.
+  // per interaction, on an ADD event the count is increased.
   //
   // Note: this is a map holding just a few keys and follows the map type selection guidance
   // described at:
   // https://chromium.googlesource.com/chromium/src/+/HEAD/base/containers/README.md#map-and-set-selection
-  std::map<StreamID, uint32_t> pointer_event_callbacks_;
+  std::map<InteractionID, uint32_t> pointer_event_callbacks_;
 
-  // Holds the streams in progress tracked by the tracker. A stream of pointer events is considered
-  // to be active when an event with phase ADD was seen, but not an event with phase REMOVE yet.
-  std::set<StreamID> active_streams_;
+  // Holds the currently open interactions. An interaction is considered open if an event
+  // with phase ADD was seen, but not an event with phase REMOVE yet.
+  std::set<InteractionID> open_interactions_;
+
+  // Whether the tracker is in "accept mode", "reject mode", or currently "undecided".
+  //
+  // Gets set when a user calls `ConsumePointerEvents` or `RejectPointerEvents`, and
+  // gets reset when a user calls `Reset`.
   std::optional<fuchsia::ui::input::accessibility::EventHandling> handled_;
 };
 
@@ -100,7 +109,7 @@ class GestureRecognizerV2;
 //
 // In this model, it is important to notice that there are two layers of abstraction:
 // 1. Raw pointer events, which come from the input system, arrive at the arena and are dispatched
-//    to recognizers via a PointerStreamTrackerV2.
+//    to recognizers via an InteractionTracker.
 // 2. Gestures, which are sequences of pointer events with a semantic meaning, are identified by
 //    recognizers.
 //
@@ -115,10 +124,9 @@ class GestureRecognizerV2;
 //
 // Recognizers should not destroy the arena.
 //
-// If any member claims a win, the input system is immediately notified that the pointer event
-// streams were consumed (as would be any new pointer event streams until the end of the gesture).
-// If no member claims a win, the input system is notified that the pointer event streams were
-// rejected.
+// If any member claims a win, the input system is immediately notified that the interactions
+// were consumed (as would be any new interactions until the end of the gesture).
+// If no member claims a win, the input system is notified that the interactions were rejected.
 //
 // Implementation notes: this arena is heavily influenced by Fluttter's gesture arena:
 // https://flutter.dev/docs/development/ui/advanced/gestures For those familiar how Flutter version
@@ -138,10 +146,11 @@ class GestureArenaV2 {
     kContestEndedAllDefeated,
   };
 
-  // This arena takes |on_stream_handled_callback|, which is called whenever a
-  // stream of pointer events is handled (e.g., is consumed or rejected).
+  // This arena takes |on_interaction_handled_callback|, which is called whenever an
+  // interaction is handled (e.g., is consumed or rejected).
   explicit GestureArenaV2(
-      PointerStreamTrackerV2::OnStreamHandledCallback on_stream_handled_callback = [](auto...) {});
+      InteractionTracker::OnInteractionHandledCallback on_interaction_handled_callback =
+          [](auto...) {});
   virtual ~GestureArenaV2() = default;
 
   // Adds a new recognizer to the arena. The new recognizer starts participating in the next
@@ -192,11 +201,11 @@ class GestureArenaV2 {
   // Resets the arena and notify members that a new contest has started.
   void StartNewContest();
 
-  // Informs Scenic of whether input event streams involved in the current contest should be
+  // Informs Scenic of whether interactions involved in the current contest should be
   // consumed or rejected.
   void HandleEvents(bool consumed_by_member);
 
-  PointerStreamTrackerV2 streams_;
+  InteractionTracker interactions_;
   std::list<ArenaMember> arena_members_;
   size_t undecided_members_ = 0;
 

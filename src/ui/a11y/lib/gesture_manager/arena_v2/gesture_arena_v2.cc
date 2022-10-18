@@ -19,63 +19,64 @@ using Phase = fuchsia::ui::input::PointerEventPhase;
 
 }  // namespace
 
-PointerStreamTrackerV2::PointerStreamTrackerV2(OnStreamHandledCallback on_stream_handled_callback)
-    : on_stream_handled_callback_(std::move(on_stream_handled_callback)) {
-  FX_DCHECK(on_stream_handled_callback_);
+InteractionTracker::InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback)
+    : on_interaction_handled_callback_(std::move(on_interaction_handled_callback)) {
+  FX_DCHECK(on_interaction_handled_callback_);
 }
 
-void PointerStreamTrackerV2::Reset() {
+void InteractionTracker::Reset() {
   handled_.reset();
   pointer_event_callbacks_.clear();
-  active_streams_.clear();
+  open_interactions_.clear();
 }
 
-void PointerStreamTrackerV2::RejectPointerEvents() {
+void InteractionTracker::RejectPointerEvents() {
   InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::REJECTED);
-  // It is also necessary to clear the active streams, because as they were rejected, the input
-  // system will not send the rest of the stream to us.
-  active_streams_.clear();
+  // It is also necessary to clear the open interactions, because as they were rejected,
+  // Scenic will not send us the remaining events from those interactions.
+  open_interactions_.clear();
 }
 
-void PointerStreamTrackerV2::ConsumePointerEvents() {
+void InteractionTracker::ConsumePointerEvents() {
   InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
 }
 
-void PointerStreamTrackerV2::InvokePointerEventCallbacks(
+void InteractionTracker::InvokePointerEventCallbacks(
     fuchsia::ui::input::accessibility::EventHandling handled) {
   handled_ = handled;
 
   for (const auto& kv : pointer_event_callbacks_) {
     const auto [device_id, pointer_id] = kv.first;
     for (uint32_t times = 1; times <= kv.second; ++times) {
-      on_stream_handled_callback_(device_id, pointer_id, handled);
+      on_interaction_handled_callback_(device_id, pointer_id, handled);
     }
   }
   pointer_event_callbacks_.clear();
 }
 
-void PointerStreamTrackerV2::OnEvent(const AccessibilityPointerEvent& pointer_event) {
-  // Note that at some point we must answer whether the pointer event stream was
+void InteractionTracker::OnEvent(const AccessibilityPointerEvent& pointer_event) {
+  // Note that at some point we must answer whether the interaction was
   // consumed / rejected. For this reason, for each ADD event we store the
-  // callback that will be responsible for signaling how the events were
-  // handled. It is important also to mention that for now, is all or nothing:
-  // consume or reject all pointer events that were sent to the arena, and not
-  // per a pointer event ID basis. Although this can be implemented, there is no
-  // use case for this right now.
-  const StreamID stream_id(pointer_event.device_id(), pointer_event.pointer_id());
+  // callback that will be responsible for signaling how that interaction was
+  // handled.
+  //
+  // It's worth mentioning that our handling is "all or nothing": we either
+  // consume or reject all events in an interaction. We also either consume
+  // all interactions, or reject all interactions, until the tracker is reset.
+  const InteractionID interaction_id(pointer_event.device_id(), pointer_event.pointer_id());
   switch (pointer_event.phase()) {
     case Phase::ADD: {
       if (handled_) {
-        on_stream_handled_callback_(pointer_event.device_id(), pointer_event.pointer_id(),
-                                    *handled_);
+        on_interaction_handled_callback_(pointer_event.device_id(), pointer_event.pointer_id(),
+                                         *handled_);
       } else {
-        pointer_event_callbacks_[stream_id]++;
+        pointer_event_callbacks_[interaction_id]++;
       }
-      active_streams_.insert(stream_id);
+      open_interactions_.insert(interaction_id);
       break;
     }
     case Phase::REMOVE:
-      active_streams_.erase(stream_id);
+      open_interactions_.erase(interaction_id);
       break;
     default:
       break;
@@ -140,8 +141,8 @@ class GestureArenaV2::ArenaContestMember : public ContestMemberV2 {
 };
 
 GestureArenaV2::GestureArenaV2(
-    PointerStreamTrackerV2::OnStreamHandledCallback on_stream_handled_callback)
-    : streams_(std::move(on_stream_handled_callback)), weak_ptr_factory_(this) {}
+    InteractionTracker::OnInteractionHandledCallback on_interaction_handled_callback)
+    : interactions_(std::move(on_interaction_handled_callback)), weak_ptr_factory_(this) {}
 
 void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
   // Initialize status to |kRejected| rather than |kUndecided| just for peace of mind for the case
@@ -162,7 +163,7 @@ void GestureArenaV2::OnEvent(const fuchsia::ui::input::accessibility::PointerEve
     StartNewContest();
   }
 
-  streams_.OnEvent(pointer_event);
+  interactions_.OnEvent(pointer_event);
   DispatchEvent(pointer_event);
 }
 
@@ -203,7 +204,7 @@ void GestureArenaV2::DispatchEvent(
 
 void GestureArenaV2::StartNewContest() {
   weak_ptr_factory_.InvalidateWeakPtrs();
-  streams_.Reset();
+  interactions_.Reset();
 
   undecided_members_ = arena_members_.size();
 
@@ -218,9 +219,9 @@ void GestureArenaV2::StartNewContest() {
 
 void GestureArenaV2::HandleEvents(bool consumed_by_member) {
   if (consumed_by_member) {
-    streams_.ConsumePointerEvents();
+    interactions_.ConsumePointerEvents();
   } else {
-    streams_.RejectPointerEvents();
+    interactions_.RejectPointerEvents();
   }
 }
 
@@ -233,6 +234,6 @@ bool GestureArenaV2::IsHeld() const {
   return false;
 }
 
-bool GestureArenaV2::IsIdle() const { return !(streams_.is_active() || IsHeld()); }
+bool GestureArenaV2::IsIdle() const { return !(interactions_.is_active() || IsHeld()); }
 
 }  // namespace a11y

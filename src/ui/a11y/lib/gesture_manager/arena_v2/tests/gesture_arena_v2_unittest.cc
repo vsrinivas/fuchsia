@@ -226,7 +226,7 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   arena.Add(&recognizers[0]);
   arena.Add(&recognizers[1]);
 
-  // ADD event, will have a callback later indicating weather the pointer event stream was consumed
+  // ADD event, will have a callback later indicating whether the interaction was consumed
   // or rejected.
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
@@ -343,8 +343,8 @@ TEST(GestureArenaTest, ConsumeAfterInteraction) {
   EXPECT_EQ(actual_pointer_id, 1);
 }
 
-// Ensures that while a consuming arena is held, subsequent streams are consumed as well.
-TEST(GestureArenaTest, ConsumeSubsequentStreams) {
+// Ensures that while a consuming arena is held, subsequent interactions are consumed as well.
+TEST(GestureArenaTest, ConsumeSubsequentInteractions) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
   std::optional<fuchsia::ui::input::accessibility::EventHandling> actual_handled;
