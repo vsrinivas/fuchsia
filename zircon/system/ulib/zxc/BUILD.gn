@@ -7,7 +7,10 @@ import("//build/zircon/migrated_targets.gni")
 zx_library("zxc") {
   sdk = "source"
   sdk_publishable = "experimental"
-  sdk_headers = [ "lib/zx/status.h" ]
+  sdk_headers = [
+    "lib/zx/status.h",
+    "lib/zx/stub.h",
+  ]
 
   sources = []
   deps = []
