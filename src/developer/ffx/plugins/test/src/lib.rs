@@ -194,8 +194,11 @@ async fn run_test<W: 'static + Write + Send + Sync>(
         }
     });
 
-    match run_test_suite_lib::run_tests_and_get_outcome(
-        builder_connector.connect().await,
+    let proxy = builder_connector.connect().await;
+
+    let start_time = std::time::Instant::now();
+    let result = match run_test_suite_lib::run_tests_and_get_outcome(
+        proxy,
         test_definitions,
         run_params,
         min_log_severity,
@@ -218,7 +221,9 @@ async fn run_test<W: 'static + Write + Send + Sync>(
             true => Err(anyhow!("There was an internal error running tests: {:?}", origin)),
             false => ffx_bail!("There was an error running tests: {:?}", origin),
         },
-    }
+    };
+    tracing::info!("run test suite duration: {:?}", start_time.elapsed().as_secs_f32());
+    result
 }
 
 /// Generate TestParams from |cmd|.

@@ -150,9 +150,11 @@ async fn main() {
         log_protocol: Some(LogsIteratorOption::ArchiveIterator),
     };
 
+    let proxy = fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
+        .expect("connecting to RunBuilderProxy");
+    let start_time = std::time::Instant::now();
     let outcome = run_test_suite_lib::run_tests_and_get_outcome(
-        fuchsia_component::client::connect_to_protocol::<RunBuilderMarker>()
-            .expect("connecting to RunBuilderProxy"),
+        proxy,
         vec![
             run_test_suite_lib::TestParams {
                 test_url,
@@ -174,6 +176,7 @@ async fn main() {
         futures::future::pending(),
     )
     .await;
+    tracing::info!("run test suite duration: {:?}", start_time.elapsed().as_secs_f32());
     if outcome != run_test_suite_lib::Outcome::Passed {
         println!("One or more test runs failed.");
     }
