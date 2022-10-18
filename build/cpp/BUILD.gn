@@ -143,7 +143,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/modular/lib/deprecated_svc",
     "//src/modular/lib/fidl:environment",
     "//src/power/shutdown-shim",
-    "//src/recovery/factory_reset:factory_reset_unittests",
     "//src/storage/fvm:fvm-integration",
     "//src/storage/fvm:test_support",
     "//src/storage/fvm/driver/test:fvm-driver-integration",

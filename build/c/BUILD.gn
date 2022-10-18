@@ -196,7 +196,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/media/audio/drivers/intel-hda/test:test_libs",
     "//src/performance/ktrace_provider:bin",
     "//src/power/thermd:bin",
-    "//src/recovery/factory_reset:factory_reset_unittests",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/dd",
     "//src/storage/bin/factoryfs",

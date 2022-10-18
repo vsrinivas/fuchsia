@@ -187,15 +187,14 @@ class FactoryResetTest : public Test {
   }
 
   void GetBlockSize(const fbl::unique_fd& fd, ssize_t* out_size) {
-    zx_status_t call_status;
     fdio_cpp::UnownedFdioCaller caller(fd.get());
     ASSERT_TRUE(caller);
-    fuchsia_hardware_block_BlockInfo block_info;
-    ASSERT_EQ(
-        fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status, &block_info),
-        ZX_OK);
-    ASSERT_EQ(call_status, ZX_OK);
-    *out_size = block_info.block_size;
+    const fidl::WireResult result =
+        fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+    ASSERT_TRUE(result.ok()) << result.status_string();
+    const fidl::WireResponse response = result.value();
+    ASSERT_EQ(response.status, ZX_OK) << zx_status_get_string(response.status);
+    *out_size = response.info->block_size;
   }
 
   void CreateRamdisk() {
@@ -211,9 +210,8 @@ class FactoryResetTest : public Test {
   zx_status_t AttachDriver(const fbl::unique_fd& fd, std::string_view driver) {
     fdio_cpp::UnownedFdioCaller connection(fd.get());
     zx_status_t call_status = ZX_OK;
-    auto resp =
-        fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(connection.borrow_channel()))
-            ->Bind(::fidl::StringView::FromExternal(driver.data(), driver.length()));
+    auto resp = fidl::WireCall(connection.borrow_as<fuchsia_device::Controller>())
+                    ->Bind(::fidl::StringView::FromExternal(driver.data(), driver.length()));
     zx_status_t io_status = resp.status();
     if (io_status != ZX_OK) {
       return io_status;
