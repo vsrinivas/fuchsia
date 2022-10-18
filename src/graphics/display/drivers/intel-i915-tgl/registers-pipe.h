@@ -777,14 +777,29 @@ class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t
   DEF_FIELD(12, 0, y_size);
 };
 
-// DE_PIPE_INTERRUPT
+// DE_PIPE_INTERRUPT (Display Engine Pipe Interrupts)
 //
 // Tiger Lake: IHD-OS-TGL-Vol 2c-12.21 Part 1 pages 361-364
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 448-450
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 444-446
-class PipeDeInterrupt : public hwreg::RegisterBase<PipeDeInterrupt, uint32_t> {
+class PipeInterrupt : public hwreg::RegisterBase<PipeInterrupt, uint32_t> {
  public:
+  // The attached transcoder experienced an underrun.
+  DEF_BIT(31, underrun);
+
+  // Active high level while the attached transcoder is in vertical sync.
   DEF_BIT(1, vsync);
+
+  // Active high level while the attached transcoder is in vertical blank.
+  //
+  // This is the VBlank (vertical blank) signal used by the pipe and planes.
+  // In particular, this causes the double-buffered pipe and plane registers to
+  // update.
+  //
+  // By default, the (unmodified) transcoder vertical blank always starts at the
+  // end of the vertical active. If the transcoder's vertical blank start is set
+  // to a value higher than vertical active, the pipe's vertical blank signal
+  // starts later than the (modified) transcoder vertical blank.
   DEF_BIT(0, vblank);
 };
 
@@ -876,12 +891,14 @@ class CscOffset : public hwreg::RegisterBase<CscOffset, uint32_t> {
 // An instance of PipeRegs represents the registers for a particular pipe.
 class PipeRegs {
  public:
-  static constexpr uint32_t kStatusReg = 0x44400;
-  static constexpr uint32_t kMaskReg = 0x44404;
-  static constexpr uint32_t kIdentityReg = 0x44408;
-  static constexpr uint32_t kEnableReg = 0x4440c;
+  enum class InterruptRegister : uint32_t {
+    kStatus = 0x44400,
+    kMask = 0x44404,
+    kIdentity = 0x44408,
+    kEnable = 0x4440c,
+  };
 
-  PipeRegs(Pipe pipe) : pipe_(pipe) {}
+  explicit PipeRegs(Pipe pipe) : pipe_(pipe) {}
 
   hwreg::RegisterAddr<tgl_registers::PipeSourceSize> PipeSourceSize() {
     return GetReg<tgl_registers::PipeSourceSize>();
@@ -948,8 +965,9 @@ class PipeRegs {
                                                                  0x800 * pipe_ + num * 0x100);
   }
 
-  hwreg::RegisterAddr<tgl_registers::PipeDeInterrupt> PipeDeInterrupt(uint32_t type) {
-    return hwreg::RegisterAddr<tgl_registers::PipeDeInterrupt>(type + 0x10 * pipe_);
+  hwreg::RegisterAddr<tgl_registers::PipeInterrupt> PipeInterrupt(InterruptRegister register_type) {
+    return hwreg::RegisterAddr<tgl_registers::PipeInterrupt>(static_cast<uint32_t>(register_type) +
+                                                             0x10 * pipe_);
   }
 
   hwreg::RegisterAddr<tgl_registers::CursorBase> CursorBase() {

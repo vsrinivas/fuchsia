@@ -246,7 +246,9 @@ class PipeScalerWinSize : public hwreg::RegisterBase<PipeScalerWinSize, uint32_t
 // DE_PIPE_INTERRUPT
 class PipeDeInterrupt : public hwreg::RegisterBase<PipeDeInterrupt, uint32_t> {
  public:
+  DEF_BIT(31, underrun);
   DEF_BIT(1, vsync);
+  DEF_BIT(0, vblank);
 };
 
 // CUR_BASE

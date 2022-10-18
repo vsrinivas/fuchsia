@@ -136,7 +136,7 @@ bool DisplayDevice::Resume() {
     if (!DdiModeset(info_)) {
       return false;
     }
-    controller_->interrupts()->EnablePipeVsync(pipe_->pipe_id(), true);
+    controller_->interrupts()->EnablePipeInterrupts(pipe_->pipe_id(), /*enable=*/true);
   }
   return pipe_ != nullptr;
 }

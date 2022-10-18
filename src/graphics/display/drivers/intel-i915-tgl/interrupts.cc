@@ -15,6 +15,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
 namespace i915_tgl {
@@ -302,23 +303,32 @@ int Interrupts::IrqLoop() {
 
 void Interrupts::HandlePipeInterrupt(tgl_registers::Pipe pipe, zx_time_t timestamp) {
   tgl_registers::PipeRegs regs(pipe);
-  auto identity = regs.PipeDeInterrupt(regs.kIdentityReg).ReadFrom(mmio_space_);
-  identity.WriteTo(mmio_space_);
+  auto interrupt_identity =
+      regs.PipeInterrupt(tgl_registers::PipeRegs::InterruptRegister::kIdentity)
+          .ReadFrom(mmio_space_);
 
-  if (identity.vsync()) {
+  // Interrupt Identity Registers (IIR) are R/WC (Read/Write Clear), meaning
+  // that indicator bits are cleared by writing 1s to them. Writing the value we
+  // just read declares that we've handled all the interrupts reported there.
+  interrupt_identity.WriteTo(mmio_space_);
+
+  if (interrupt_identity.underrun()) {
+    zxlogf(WARNING, "Transcoder overrrun on pipe %d", pipe);
+  }
+  if (interrupt_identity.vsync()) {
     pipe_vsync_callback_(pipe, timestamp);
   }
 }
 
-void Interrupts::EnablePipeVsync(tgl_registers::Pipe pipe, bool enable) {
+void Interrupts::EnablePipeInterrupts(tgl_registers::Pipe pipe, bool enable) {
   tgl_registers::PipeRegs regs(pipe);
-  auto mask_reg = regs.PipeDeInterrupt(regs.kMaskReg).FromValue(0);
-  mask_reg.set_vsync(!enable);
-  mask_reg.WriteTo(mmio_space_);
+  auto interrupt_mask =
+      regs.PipeInterrupt(tgl_registers::PipeRegs::InterruptRegister::kMask).FromValue(0);
+  interrupt_mask.set_underrun(!enable).set_vsync(!enable).WriteTo(mmio_space_);
 
-  auto enable_reg = regs.PipeDeInterrupt(regs.kEnableReg).FromValue(0);
-  enable_reg.set_vsync(enable);
-  enable_reg.WriteTo(mmio_space_);
+  auto interrupt_enable =
+      regs.PipeInterrupt(tgl_registers::PipeRegs::InterruptRegister::kEnable).FromValue(0);
+  interrupt_enable.set_underrun(enable).set_vsync(enable).WriteTo(mmio_space_);
 }
 
 zx_status_t Interrupts::SetGpuInterruptCallback(

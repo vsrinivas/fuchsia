@@ -87,6 +87,9 @@ void Interrupts::HandlePipeInterrupt(registers::Pipe pipe, zx_time_t timestamp) 
   auto identity = regs.PipeDeInterrupt(regs.kIdentityReg).ReadFrom(mmio_space_);
   identity.WriteTo(mmio_space_);
 
+  if (identity.underrun()) {
+    zxlogf(WARNING, "Transcoder overrrun on pipe %d", pipe);
+  }
   if (identity.vsync()) {
     pipe_vsync_callback_(pipe, timestamp);
   }
@@ -95,11 +98,11 @@ void Interrupts::HandlePipeInterrupt(registers::Pipe pipe, zx_time_t timestamp) 
 void Interrupts::EnablePipeVsync(registers::Pipe pipe, bool enable) {
   registers::PipeRegs regs(pipe);
   auto mask_reg = regs.PipeDeInterrupt(regs.kMaskReg).FromValue(0);
-  mask_reg.set_vsync(!enable);
+  mask_reg.set_underrun(!enable).set_vsync(!enable);
   mask_reg.WriteTo(mmio_space_);
 
   auto enable_reg = regs.PipeDeInterrupt(regs.kEnableReg).FromValue(0);
-  enable_reg.set_vsync(enable);
+  enable_reg.set_underrun(enable).set_vsync(enable);
   enable_reg.WriteTo(mmio_space_);
 }
 

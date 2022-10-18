@@ -25,8 +25,11 @@ namespace i915_tgl {
 
 class Interrupts {
  public:
-  // Callbacks that are invoked on various interrupt types. All callbacks are run on the internal
-  // irq thread and implementations must guarantee their own thread-safety.
+  // Callbacks that are invoked on various interrupt types.
+  //
+  // All interrupt callbacks are currently run on the same thread (the internal
+  // thread dedicated to handling interrupt). However, implementations must be
+  // thread-safe, and not rely on any assumptions around the threading model.
   using PipeVsyncCallback = fit::function<void(tgl_registers::Pipe, zx_time_t)>;
   using HotplugCallback = fit::function<void(tgl_registers::Ddi ddi, bool long_pulse)>;
 
@@ -42,9 +45,15 @@ class Interrupts {
   void Resume();
   void Destroy();
 
-  // Initiate or stop vsync interrupt delivery from the given |pipe|. When enabled, interrupts will
-  // be notified on the internal irq thread via the PipeVsyncCallback that was provided in Init.
-  void EnablePipeVsync(tgl_registers::Pipe pipe, bool enable);
+  // Enable or disable interrupt generation from `pipe`.
+  //
+  // This method enables and disables all the pipe-level interrupts that we are
+  // prepared to handle.
+  //
+  // Transcoder VSync (vertical sync) interrupts trigger callbacks to the
+  // PipeVsyncCallback provided to `Init()`. The callbacks are performed on the
+  // internal thread dedicated to interrupt handling.
+  void EnablePipeInterrupts(tgl_registers::Pipe pipe, bool enable);
 
   // The GPU driver uses this to plug into the interrupt stream.
   //

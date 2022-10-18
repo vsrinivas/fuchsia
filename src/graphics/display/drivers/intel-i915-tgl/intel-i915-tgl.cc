@@ -1954,7 +1954,7 @@ void Controller::DdkInit(ddk::InitTxn txn) {
     {
       fbl::AutoLock lock(&display_lock_);
       for (Pipe* pipe : *pipe_manager_) {
-        interrupts()->EnablePipeVsync(pipe->pipe_id(), true);
+        interrupts()->EnablePipeInterrupts(pipe->pipe_id(), /*enabled=*/true);
       }
     }
 
@@ -2289,7 +2289,7 @@ Controller::~Controller() {
   if (mmio_space() && pipe_manager_.get()) {
     for (Pipe* pipe : *pipe_manager_) {
       fbl::AutoLock lock(&display_lock_);
-      interrupts()->EnablePipeVsync(pipe->pipe_id(), true);
+      interrupts()->EnablePipeInterrupts(pipe->pipe_id(), /*enable=*/true);
     }
   }
   // Release anything leaked by the gpu-core client.
