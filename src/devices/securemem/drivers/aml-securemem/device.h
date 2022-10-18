@@ -40,7 +40,6 @@ class AmlogicSecureMemDevice : public AmlogicSecureMemDeviceBase,
 
   zx_status_t Bind();
 
-  zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkRelease() { delete this; }
 

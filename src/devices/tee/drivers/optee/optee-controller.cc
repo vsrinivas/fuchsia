@@ -548,11 +548,6 @@ zx_status_t OpteeController::Bind() {
   return ZX_OK;
 }
 
-zx_status_t OpteeController::DdkOpen(zx_device_t** out_dev, uint32_t flags) {
-  // Do not set out_dev because this Controller will handle the FIDL messages
-  return ZX_OK;
-}
-
 void OpteeController::DdkSuspend(ddk::SuspendTxn txn) {
   loop_.Quit();
   loop_.JoinThreads();

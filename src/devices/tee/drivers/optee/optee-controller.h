@@ -112,7 +112,7 @@ class OpteeControllerBase {
 class OpteeController;
 using DeviceType =
     ddk::Device<OpteeController, ddk::Messageable<fuchsia_hardware_tee::DeviceConnector>::Mixin,
-                ddk::Openable, ddk::Suspendable, ddk::Unbindable>;
+                ddk::Suspendable, ddk::Unbindable>;
 class OpteeController : public OpteeControllerBase,
                         public DeviceType,
                         public ddk::TeeProtocol<OpteeController, ddk::base_protocol>,
@@ -128,7 +128,6 @@ class OpteeController : public OpteeControllerBase,
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   zx_status_t Bind();
 
-  zx_status_t DdkOpen(zx_device_t** out_dev, uint32_t flags);
   void DdkSuspend(ddk::SuspendTxn txn);
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
