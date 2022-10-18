@@ -14,6 +14,7 @@ use {
     async_trait::async_trait,
     fidl_fuchsia_wlan_sme as fidl_sme,
     futures::channel::{mpsc, oneshot},
+    log::warn,
 };
 
 #[async_trait]
@@ -74,9 +75,6 @@ pub trait IfaceManagerApi {
         &mut self,
         country_code: Option<[u8; REGION_CODE_LEN]>,
     ) -> Result<(), Error>;
-
-    /// Logs a defect encountered while attempting to control an interface.
-    async fn report_defect(&mut self, defect: Defect) -> Result<(), Error>;
 }
 
 #[derive(Clone)]
@@ -198,24 +196,22 @@ impl IfaceManagerApi for IfaceManager {
         self.sender.try_send(IfaceManagerRequest::SetCountry(req))?;
         receiver.await?
     }
-
-    async fn report_defect(&mut self, defect: Defect) -> Result<(), Error> {
-        let (responder, receiver) = oneshot::channel();
-        let req = ReportDefectRequest { defect, responder };
-        self.sender.try_send(IfaceManagerRequest::ReportDefect(req))?;
-        Ok(receiver.await?)
-    }
 }
 
 #[derive(Debug)]
 pub struct SmeForScan {
     proxy: fidl_sme::ClientSmeProxy,
     iface_id: u16,
+    defect_sender: mpsc::UnboundedSender<Defect>,
 }
 
 impl SmeForScan {
-    pub fn new(proxy: fidl_sme::ClientSmeProxy, iface_id: u16) -> Self {
-        SmeForScan { proxy, iface_id }
+    pub fn new(
+        proxy: fidl_sme::ClientSmeProxy,
+        iface_id: u16,
+        defect_sender: mpsc::UnboundedSender<Defect>,
+    ) -> Self {
+        SmeForScan { proxy, iface_id, defect_sender }
     }
 
     pub fn scan(
@@ -226,16 +222,24 @@ impl SmeForScan {
         self.proxy.scan(req, txn)
     }
 
-    pub fn format_aborted_scan_defect(&self) -> Defect {
-        Defect::Iface(IfaceFailure::CanceledScan { iface_id: self.iface_id })
+    pub fn log_aborted_scan_defect(&self) {
+        self.report_defect(Defect::Iface(IfaceFailure::CanceledScan { iface_id: self.iface_id }))
     }
 
-    pub fn format_failed_scan_defect(&self) -> Defect {
-        Defect::Iface(IfaceFailure::FailedScan { iface_id: self.iface_id })
+    pub fn log_failed_scan_defect(&self) {
+        self.report_defect(Defect::Iface(IfaceFailure::FailedScan { iface_id: self.iface_id }))
     }
 
-    pub fn format_empty_scan_defect(&self) -> Defect {
-        Defect::Iface(IfaceFailure::EmptyScanResults { iface_id: self.iface_id })
+    pub fn log_empty_scan_defect(&self) {
+        self.report_defect(Defect::Iface(IfaceFailure::EmptyScanResults {
+            iface_id: self.iface_id,
+        }))
+    }
+
+    fn report_defect(&self, defect: Defect) {
+        if let Err(e) = self.defect_sender.unbounded_send(defect) {
+            warn!("Failed to report defect {:?}: {:?}", defect, e)
+        }
     }
 }
 
@@ -272,7 +276,7 @@ impl From<client_types::ConnectSelection> for ConnectAttemptRequest {
 mod tests {
     use {
         super::*,
-        crate::{access_point::types, mode_management::PhyFailure},
+        crate::access_point::types,
         anyhow::format_err,
         fidl::endpoints::create_proxy,
         fidl_fuchsia_wlan_common as fidl_common, fuchsia_async as fasync,
@@ -387,8 +391,7 @@ mod tests {
                     responder, ..
                 })
                 | IfaceManagerRequest::AddIface(AddIfaceRequest { responder, .. })
-                | IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { responder, .. })
-                | IfaceManagerRequest::ReportDefect(ReportDefectRequest { responder, .. }) => {
+                | IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { responder, .. }) => {
                     handle_negative_test_responder(responder, failure_mode);
                 }
                 // Boolean responder values
@@ -843,7 +846,8 @@ mod tests {
             }))) => {
                 let (proxy, _) = create_proxy::<fidl_sme::ClientSmeMarker>()
                     .expect("failed to create scan sme proxy");
-                responder.send(Ok(SmeForScan{proxy, iface_id: 0})).expect("failed to send scan sme proxy");
+                let (defect_sender, _defect_receiver) = mpsc::unbounded();
+                responder.send(Ok(SmeForScan{proxy, iface_id: 0, defect_sender})).expect("failed to send scan sme proxy");
             }
         );
 
@@ -1337,70 +1341,14 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_report_defect_succeeds() {
-        let mut test_values = test_setup();
-        let defect = Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 });
-        let report_fut = test_values.iface_manager.report_defect(defect);
-        pin_mut!(report_fut);
-
-        assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Pending);
-
-        // Verify that the request has come through.
-        let next_message = test_values.receiver.next();
-        pin_mut!(next_message);
-
-        assert_variant!(
-            test_values.exec.run_until_stalled(&mut next_message),
-            Poll::Ready(Some(IfaceManagerRequest::ReportDefect(ReportDefectRequest {
-                defect, responder
-            }))) => {
-                assert_eq!(defect, Defect::Phy(PhyFailure::IfaceCreationFailure {phy_id: 2}));
-                responder.send(()).expect("failed to send defect response");
-            }
-        );
-
-        // Verify that the defect reporter receives the response.
-        assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Ready(Ok(())));
-    }
-
-    #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
-    #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
-    #[fuchsia::test(add_test_attr = false)]
-    fn report_defect_negative_test(failure_mode: NegativeTestFailureMode) {
-        let mut test_values = test_setup();
-
-        let defect = Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 });
-        let report_fut = test_values.iface_manager.report_defect(defect);
-        pin_mut!(report_fut);
-
-        let service_fut =
-            iface_manager_api_negative_test(test_values.receiver, failure_mode.clone());
-        pin_mut!(service_fut);
-
-        match failure_mode {
-            NegativeTestFailureMode::RequestFailure => {}
-            _ => {
-                // Run the request and the servicing of the request
-                assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Pending);
-                assert_variant!(
-                    test_values.exec.run_until_stalled(&mut service_fut),
-                    Poll::Ready(())
-                );
-            }
-        }
-
-        // Verify that the client gets the response
-        assert_variant!(test_values.exec.run_until_stalled(&mut report_fut), Poll::Ready(Err(_)));
-    }
-
-    #[fuchsia::test]
     fn test_sme_for_scan() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
 
         // Build an SME specifically for scanning.
         let (proxy, server_end) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create client SME");
-        let sme = SmeForScan::new(proxy, 0);
+        let (defect_sender, _defect_receiver) = mpsc::unbounded();
+        let sme = SmeForScan::new(proxy, 0, defect_sender);
         let mut sme_stream = server_end.into_stream().expect("faield to create SME stream");
 
         // Construct a scan request.
@@ -1432,21 +1380,26 @@ mod tests {
         // Build an SME specifically for scanning.
         let (proxy, _) =
             create_proxy::<fidl_sme::ClientSmeMarker>().expect("failed to create client SME");
+        let (defect_sender, mut defect_receiver) = mpsc::unbounded();
         let mut rng = rand::thread_rng();
         let iface_id = rng.gen::<u16>();
-        let sme = SmeForScan::new(proxy, iface_id);
+        let sme = SmeForScan::new(proxy, iface_id, defect_sender);
+
+        sme.log_aborted_scan_defect();
+        sme.log_failed_scan_defect();
+        sme.log_empty_scan_defect();
 
         assert_eq!(
-            sme.format_aborted_scan_defect(),
-            Defect::Iface(IfaceFailure::CanceledScan { iface_id })
+            defect_receiver.try_next().expect("missing canceled scan error"),
+            Some(Defect::Iface(IfaceFailure::CanceledScan { iface_id })),
         );
         assert_eq!(
-            sme.format_failed_scan_defect(),
-            Defect::Iface(IfaceFailure::FailedScan { iface_id })
+            defect_receiver.try_next().expect("missing failed scan error"),
+            Some(Defect::Iface(IfaceFailure::FailedScan { iface_id })),
         );
         assert_eq!(
-            sme.format_empty_scan_defect(),
-            Defect::Iface(IfaceFailure::EmptyScanResults { iface_id })
+            defect_receiver.try_next().expect("missing empty scan results error"),
+            Some(Defect::Iface(IfaceFailure::EmptyScanResults { iface_id })),
         );
     }
 }

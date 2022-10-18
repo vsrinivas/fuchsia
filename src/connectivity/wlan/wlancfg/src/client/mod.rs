@@ -470,7 +470,7 @@ mod tests {
         crate::{
             access_point::state_machine as ap_fsm,
             config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
-            mode_management::{iface_manager_api::SmeForScan, Defect},
+            mode_management::iface_manager_api::SmeForScan,
             telemetry::{TelemetryEvent, TelemetrySender},
             util::testing::fakes::{FakeSavedNetworksManager, FakeScanRequester},
         },
@@ -583,7 +583,8 @@ mod tests {
         }
 
         async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
-            Ok(SmeForScan::new(self.sme_proxy.clone(), 0))
+            let (defect_sender, _) = mpsc::unbounded();
+            Ok(SmeForScan::new(self.sme_proxy.clone(), 0, defect_sender))
         }
 
         async fn stop_client_connections(
@@ -631,10 +632,6 @@ mod tests {
             _country_code: Option<[u8; client_types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
-        }
-
-        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
-            unimplemented!();
         }
     }
 
@@ -1795,10 +1792,6 @@ mod tests {
             &mut self,
             _country_code: Option<[u8; client_types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
-            unimplemented!()
-        }
-
-        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
             unimplemented!()
         }
     }

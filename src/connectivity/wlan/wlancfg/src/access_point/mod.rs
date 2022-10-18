@@ -351,10 +351,7 @@ mod tests {
         super::*,
         crate::{
             client::types as client_types,
-            mode_management::{
-                iface_manager_api::{ConnectAttemptRequest, SmeForScan},
-                Defect,
-            },
+            mode_management::iface_manager_api::{ConnectAttemptRequest, SmeForScan},
             regulatory_manager::REGION_CODE_LEN,
         },
         async_trait::async_trait,
@@ -470,10 +467,6 @@ mod tests {
             _country_code: Option<[u8; REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
-        }
-
-        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
-            unimplemented!();
         }
     }
 

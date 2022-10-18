@@ -709,7 +709,7 @@ impl IfaceManagerService {
         let proxy = client_iface.sme_proxy.clone();
         let iface_id = client_iface.iface_id;
         self.clients.push(client_iface);
-        Ok(SmeForScan::new(proxy, iface_id))
+        Ok(SmeForScan::new(proxy, iface_id, self.defect_sender.clone()))
     }
 
     fn stop_client_connections(
@@ -1379,12 +1379,6 @@ pub(crate) async fn serve_iface_manager_requests(
                         let regulatory_fut =
                             initiate_set_country(&mut iface_manager, req);
                         operation_futures.push(regulatory_fut);
-                    }
-                    IfaceManagerRequest::ReportDefect(ReportDefectRequest { defect, responder }) => {
-                        iface_manager.record_defect(defect).await;
-                        if responder.send(()).is_err() {
-                            error!("could not respond to RecordDefectRequest");
-                        }
                     }
                 };
             }
@@ -4448,10 +4442,6 @@ mod tests {
         ) -> Result<(), Error> {
             unimplemented!()
         }
-
-        async fn report_defect(&mut self, _defect: Defect) -> Result<(), Error> {
-            unimplemented!()
-        }
     }
 
     #[fuchsia::test]
@@ -4896,34 +4886,6 @@ mod tests {
             req,
             stop_receiver,
             test_values.monitor_service_stream,
-            test_type,
-        );
-    }
-
-    #[test_case(TestType::Pass; "successfully reported defect")]
-    #[test_case(TestType::ClientError; "client dropped receiving end")]
-    #[fuchsia::test(add_test_attr = false)]
-    fn service_record_defect_test(test_type: TestType) {
-        let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
-
-        // Create an IfaceManager.
-        let (iface_manager, _) = create_iface_manager_with_client(&test_values, false);
-
-        // Record a defect.
-        let (responder, receiver) = oneshot::channel();
-        let req = ReportDefectRequest {
-            defect: Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 3 }),
-            responder,
-        };
-        let req = IfaceManagerRequest::ReportDefect(req);
-
-        run_service_test_with_unit_return(
-            &mut exec,
-            test_values.network_selector,
-            iface_manager,
-            req,
-            receiver,
             test_type,
         );
     }

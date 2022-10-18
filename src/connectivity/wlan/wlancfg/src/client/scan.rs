@@ -278,7 +278,7 @@ async fn perform_scan(
                 Err(fidl_policy::ScanErrorCode::GeneralError)
             })
             .await;
-        report_scan_defect(iface_manager.clone(), &sme_proxy, &scan_results).await;
+        report_scan_defect(&sme_proxy, &scan_results).await;
 
         match scan_results {
             Ok(results) => {
@@ -339,7 +339,7 @@ async fn perform_scan(
         let sme_scan_result = match sme_proxy.as_ref() {
             Ok(proxy) => {
                 let result = sme_scan(proxy, scan_request, telemetry_sender).await;
-                report_scan_defect(iface_manager.clone(), proxy, &result).await;
+                report_scan_defect(proxy, &result).await;
                 result
             }
             Err(err) => Err(*err),
@@ -419,7 +419,7 @@ async fn perform_directed_active_scan(
 
     let sme_result = sme_scan(&sme_proxy, scan_request, telemetry_sender).await;
 
-    report_scan_defect(iface_manager.clone(), &sme_proxy, &sme_result).await;
+    report_scan_defect(&sme_proxy, &sme_result).await;
 
     sme_result.map(|results| {
         let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
@@ -719,43 +719,17 @@ fn log_metric_for_scan_error(reason: &fidl_sme::ScanErrorCode, telemetry_sender:
 }
 
 async fn report_scan_defect(
-    iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     sme_proxy: &SmeForScan,
     scan_result: &Result<Vec<wlan_common::scan::ScanResult>, types::ScanError>,
 ) {
     match scan_result {
         Ok(results) => {
             if results.is_empty() {
-                if let Err(e) = iface_manager
-                    .lock()
-                    .await
-                    .report_defect(sme_proxy.format_empty_scan_defect())
-                    .await
-                {
-                    warn!("Unable to report empty scan results: {:?}", e)
-                }
+                sme_proxy.log_empty_scan_defect();
             }
         }
-        Err(types::ScanError::GeneralError) => {
-            if let Err(e) = iface_manager
-                .lock()
-                .await
-                .report_defect(sme_proxy.format_failed_scan_defect())
-                .await
-            {
-                warn!("Unable to reported failed scan: {:?}", e)
-            }
-        }
-        Err(types::ScanError::Cancelled) => {
-            if let Err(e) = iface_manager
-                .lock()
-                .await
-                .report_defect(sme_proxy.format_aborted_scan_defect())
-                .await
-            {
-                warn!("Unable to reported aborted scan: {:?}", e)
-            }
-        }
+        Err(types::ScanError::GeneralError) => sme_proxy.log_failed_scan_defect(),
+        Err(types::ScanError::Cancelled) => sme_proxy.log_aborted_scan_defect(),
     }
 }
 
@@ -800,12 +774,19 @@ mod tests {
     struct FakeIfaceManager {
         pub sme_proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy,
         pub wpa3_capable: bool,
-        pub defects: Vec<Defect>,
+        pub defect_sender: mpsc::UnboundedSender<Defect>,
+        pub defect_receiver: mpsc::UnboundedReceiver<Defect>,
     }
 
     impl FakeIfaceManager {
         pub fn new(proxy: fidl_fuchsia_wlan_sme::ClientSmeProxy) -> Self {
-            FakeIfaceManager { sme_proxy: proxy, wpa3_capable: true, defects: Vec::new() }
+            let (defect_sender, defect_receiver) = mpsc::unbounded();
+            FakeIfaceManager {
+                sme_proxy: proxy,
+                wpa3_capable: true,
+                defect_sender,
+                defect_receiver,
+            }
         }
     }
 
@@ -840,7 +821,7 @@ mod tests {
         }
 
         async fn get_sme_proxy_for_scan(&mut self) -> Result<SmeForScan, Error> {
-            Ok(SmeForScan::new(self.sme_proxy.clone(), 0))
+            Ok(SmeForScan::new(self.sme_proxy.clone(), 0, self.defect_sender.clone()))
         }
 
         async fn stop_client_connections(
@@ -878,11 +859,6 @@ mod tests {
             _country_code: Option<[u8; types::REGION_CODE_LEN]>,
         ) -> Result<(), Error> {
             unimplemented!()
-        }
-
-        async fn report_defect(&mut self, defect: Defect) -> Result<(), Error> {
-            self.defects.push(defect);
-            Ok(())
         }
     }
 
@@ -1313,19 +1289,25 @@ mod tests {
         exec: &mut fasync::TestExecutor,
         iface_manager: Arc<Mutex<FakeIfaceManager>>,
     ) -> Vec<Defect> {
-        let get_defects_fut = async move {
-            let iface_manager = iface_manager.lock().await;
-            iface_manager.defects.clone()
+        let defects_fut = async move {
+            let mut iface_manager = iface_manager.lock().await;
+            let mut defects = Vec::<Defect>::new();
+            while let Ok(Some(defect)) = iface_manager.defect_receiver.try_next() {
+                defects.push(defect)
+            }
+
+            defects
         };
-        pin_mut!(get_defects_fut);
-        assert_variant!(exec.run_until_stalled(&mut get_defects_fut), Poll::Ready(defects) => defects)
+        pin_mut!(defects_fut);
+        assert_variant!(exec.run_until_stalled(&mut defects_fut), Poll::Ready(defects) => defects)
     }
 
     #[fuchsia::test]
     fn sme_scan_with_passive_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
-        let sme_proxy = SmeForScan::new(sme_proxy, 0);
+        let (defect_sender, _) = mpsc::unbounded();
+        let sme_proxy = SmeForScan::new(sme_proxy, 0, defect_sender);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -1371,7 +1353,8 @@ mod tests {
     fn sme_scan_with_active_request() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
-        let sme_proxy = SmeForScan::new(sme_proxy, 0);
+        let (defect_sender, _) = mpsc::unbounded();
+        let sme_proxy = SmeForScan::new(sme_proxy, 0, defect_sender);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -1457,7 +1440,8 @@ mod tests {
     ) {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
-        let sme_proxy = SmeForScan::new(sme_proxy, 0);
+        let (defect_sender, _) = mpsc::unbounded();
+        let sme_proxy = SmeForScan::new(sme_proxy, 0, defect_sender);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -1504,7 +1488,8 @@ mod tests {
     fn sme_scan_channel_closed() {
         let mut exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let (sme_proxy, mut sme_stream) = exec.run_singlethreaded(create_sme_proxy());
-        let sme_proxy = SmeForScan::new(sme_proxy, 0);
+        let (defect_sender, _) = mpsc::unbounded();
+        let sme_proxy = SmeForScan::new(sme_proxy, 0, defect_sender);
         let (telemetry_sender, mut telemetry_receiver) = create_telemetry_sender_and_receiver();
 
         // Issue request to scan.
@@ -2794,7 +2779,7 @@ mod tests {
         };
 
         // Report the desired scan error or success.
-        let fut = report_scan_defect(iface_manager.clone(), &sme, &scan_result);
+        let fut = report_scan_defect(&sme, &scan_result);
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(()));
 
