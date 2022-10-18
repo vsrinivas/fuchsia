@@ -11,7 +11,6 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/cpp/create_with_type.h>
-#include <lib/zxio/cpp/socket_address.h>
 #include <lib/zxio/zxio.h>
 #include <zircon/types.h>
 

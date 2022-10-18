@@ -9,7 +9,6 @@
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fit/result.h>
 #include <lib/zx/socket.h>
-#include <lib/zxio/cpp/socket_address.h>
 #include <lib/zxio/cpp/transitional.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/null.h>
@@ -26,7 +25,9 @@
 
 #include <safemath/safe_conversions.h>
 
+#include "dgram_cache.h"
 #include "private.h"
+#include "socket_address.h"
 #include "src/connectivity/network/netstack/udp_serde/udp_serde.h"
 
 namespace fio = fuchsia_io;
@@ -1395,6 +1396,73 @@ void populate_from_fidl_hwaddr(const fpacketsocket::wire::HardwareAddress& addr,
     } break;
   }
 }
+
+// A helper structure to keep a packet info and any members' variants
+// allocations on the stack.
+class PacketInfo {
+ public:
+  zx_status_t LoadSockAddr(const sockaddr* addr, size_t addr_len) {
+    // Address length larger than sockaddr_storage causes an error for API compatibility only.
+    if (addr == nullptr || addr_len > sizeof(sockaddr_storage)) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    switch (addr->sa_family) {
+      case AF_PACKET: {
+        if (addr_len < sizeof(sockaddr_ll)) {
+          return ZX_ERR_INVALID_ARGS;
+        }
+        const auto& s = *reinterpret_cast<const sockaddr_ll*>(addr);
+        protocol_ = ntohs(s.sll_protocol);
+        interface_id_ = s.sll_ifindex;
+        switch (s.sll_halen) {
+          case 0:
+            eui48_storage_.reset();
+            return ZX_OK;
+          case ETH_ALEN: {
+            fnet::wire::MacAddress address;
+            static_assert(decltype(address.octets)::size() == ETH_ALEN,
+                          "eui48 address must have the same size as ETH_ALEN");
+            static_assert(sizeof(s.sll_addr) == ETH_ALEN + 2);
+            memcpy(address.octets.data(), s.sll_addr, ETH_ALEN);
+            eui48_storage_ = address;
+            return ZX_OK;
+          }
+          default:
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+      }
+      default:
+        return ZX_ERR_INVALID_ARGS;
+    }
+  }
+
+  template <typename F>
+  std::invoke_result_t<F, fidl::ObjectView<fuchsia_posix_socket_packet::wire::PacketInfo>> WithFIDL(
+      F fn) {
+    auto packet_info = [this]() -> fuchsia_posix_socket_packet::wire::PacketInfo {
+      return {
+          .protocol = protocol_,
+          .interface_id = interface_id_,
+          .addr =
+              [this]() {
+                if (eui48_storage_.has_value()) {
+                  return fuchsia_posix_socket_packet::wire::HardwareAddress::WithEui48(
+                      fidl::ObjectView<fuchsia_net::wire::MacAddress>::FromExternal(
+                          &eui48_storage_.value()));
+                }
+                return fuchsia_posix_socket_packet::wire::HardwareAddress::WithNone({});
+              }(),
+      };
+    }();
+    return fn(fidl::ObjectView<fuchsia_posix_socket_packet::wire::PacketInfo>::FromExternal(
+        &packet_info));
+  }
+
+ private:
+  decltype(fuchsia_posix_socket_packet::wire::PacketInfo::protocol) protocol_;
+  decltype(fuchsia_posix_socket_packet::wire::PacketInfo::interface_id) interface_id_;
+  std::optional<fuchsia_net::wire::MacAddress> eui48_storage_;
+};
 
 struct SynchronousDatagramSocket {
   using FidlSockAddr = SocketAddress;

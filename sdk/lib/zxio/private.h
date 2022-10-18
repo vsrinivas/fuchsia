@@ -12,7 +12,6 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zx/event.h>
-#include <lib/zxio/cpp/dgram_cache.h>
 #include <lib/zxio/cpp/vector.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/zxio.h>
@@ -20,6 +19,8 @@
 
 #include <algorithm>
 #include <functional>
+
+#include "dgram_cache.h"
 
 template <typename F>
 zx_status_t zxio_vmo_do_vector(size_t start, size_t length, size_t* offset,

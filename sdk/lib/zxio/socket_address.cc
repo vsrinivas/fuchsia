@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "socket_address.h"
+
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
-#include <lib/zxio/cpp/socket_address.h>
 #include <netinet/icmp6.h>
 #include <netinet/if_ether.h>
 #include <netinet/in.h>
@@ -150,39 +151,4 @@ size_t SocketAddress::hash() const {
                         },
                     },
                     storage_.value());
-}
-
-zx_status_t PacketInfo::LoadSockAddr(const sockaddr* addr, size_t addr_len) {
-  // Address length larger than sockaddr_storage causes an error for API compatibility only.
-  if (addr == nullptr || addr_len > sizeof(sockaddr_storage)) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-  switch (addr->sa_family) {
-    case AF_PACKET: {
-      if (addr_len < sizeof(sockaddr_ll)) {
-        return ZX_ERR_INVALID_ARGS;
-      }
-      const auto& s = *reinterpret_cast<const sockaddr_ll*>(addr);
-      protocol_ = ntohs(s.sll_protocol);
-      interface_id_ = s.sll_ifindex;
-      switch (s.sll_halen) {
-        case 0:
-          eui48_storage_.reset();
-          return ZX_OK;
-        case ETH_ALEN: {
-          fnet::wire::MacAddress address;
-          static_assert(decltype(address.octets)::size() == ETH_ALEN,
-                        "eui48 address must have the same size as ETH_ALEN");
-          static_assert(sizeof(s.sll_addr) == ETH_ALEN + 2);
-          memcpy(address.octets.data(), s.sll_addr, ETH_ALEN);
-          eui48_storage_ = address;
-          return ZX_OK;
-        }
-        default:
-          return ZX_ERR_NOT_SUPPORTED;
-      }
-    }
-    default:
-      return ZX_ERR_INVALID_ARGS;
-  }
 }

@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_DGRAM_CACHE_H_
-#define LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_DGRAM_CACHE_H_
+#ifndef LIB_ZXIO_DGRAM_CACHE_H_
+#define LIB_ZXIO_DGRAM_CACHE_H_
 
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fit/result.h>
 #include <lib/zx/eventpair.h>
-#include <lib/zxio/cpp/socket_address.h>
 #include <zircon/types.h>
 
 #include <list>
 #include <mutex>
 #include <optional>
 #include <unordered_map>
+
+#include "socket_address.h"
 
 using ErrOrOutCode = zx::result<int16_t>;
 
@@ -106,4 +107,4 @@ class RouteCache {
 std::optional<ErrOrOutCode> GetErrorWithClient(
     fidl::WireSyncClient<fuchsia_posix_socket::DatagramSocket>& client);
 
-#endif  // LIB_ZXIO_INCLUDE_LIB_ZXIO_CPP_DGRAM_CACHE_H_
+#endif  // LIB_ZXIO_DGRAM_CACHE_H_

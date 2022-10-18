@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "dgram_cache.h"
+
 #include <fidl/fuchsia.posix.socket/cpp/wire.h>
 #include <lib/fit/result.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
-#include <lib/zxio/cpp/dgram_cache.h>
-#include <lib/zxio/cpp/socket_address.h>
 #include <zircon/types.h>
 
 #include <optional>
@@ -16,6 +16,7 @@
 #include <vector>
 
 #include "hash.h"
+#include "socket_address.h"
 
 namespace fnet = fuchsia_net;
 namespace fsocket = fuchsia_posix_socket;

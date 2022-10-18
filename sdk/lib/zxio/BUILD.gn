@@ -36,9 +36,7 @@ library_headers("create_with_type") {
 # these two libraries.
 library_headers("inception") {
   headers = [
-    "lib/zxio/cpp/dgram_cache.h",
     "lib/zxio/cpp/inception.h",
-    "lib/zxio/cpp/socket_address.h",
     "lib/zxio/cpp/transitional.h",
   ]
 
