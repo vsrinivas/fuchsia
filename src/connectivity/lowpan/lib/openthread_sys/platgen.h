@@ -10,6 +10,7 @@
 #define OPENTHREAD_CONFIG_BORDER_ROUTER_ENABLE 1
 
 #include <openthread/backbone_router.h>
+#include <openthread/backbone_router_ftd.h>
 #include <openthread/border_agent.h>
 #include <openthread/border_router.h>
 #include <openthread/channel_manager.h>
