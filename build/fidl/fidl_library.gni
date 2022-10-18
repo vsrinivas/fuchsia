@@ -317,6 +317,8 @@ template("fidl_library") {
     deps = [ ":$compilation_target_name" ]
   }
 
+  sdk_id = "sdk://fidl/$library_name"
+
   group(main_target_name) {
     forward_variables_from(invoker,
                            [
@@ -324,10 +326,23 @@ template("fidl_library") {
                              "visibility",
                            ])
 
-    # Metadata to allow us to query all FIDL IR files.
     metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
+      # Metadata to allow us to query all FIDL IR files.
       fidl_json = [ rebase_path(fidl_ir_json, root_build_dir) ]
       generated_sources = fidl_json
+
+      if (is_fuchsia) {
+        component_catalog = [
+          {
+            sdk_id = sdk_id
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
     }
 
     public_deps = [
@@ -408,7 +423,7 @@ template("fidl_library") {
     }
 
     sdk_atom("${target_name}_sdk") {
-      id = "sdk://fidl/$library_name"
+      id = sdk_id
 
       category = sdk_category
 
@@ -430,8 +445,8 @@ template("fidl_library") {
 
       files = all_files
 
-      # Metadata to allow us to query all FIDL IR and source files.
       metadata = {
+        # Metadata to allow us to query all FIDL IR and source files.
         fidl_json = [ rebase_path(fidl_ir_json, root_build_dir) ]
         generated_sources = fidl_json
 

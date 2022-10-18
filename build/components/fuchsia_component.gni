@@ -71,7 +71,6 @@ template("fuchsia_component_manifest") {
                              [
                                "deps",
                                "manifest",
-                               "metadata",
                                "restricted_features",
                                "testonly",
                                "visibility",
@@ -88,12 +87,24 @@ template("fuchsia_component_manifest") {
         config_values_package_path = "meta/$component_name.cvf"
       }
 
-      if (!defined(metadata)) {
-        metadata = {
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
         }
+
+        component_manifest_path = [ manifest ]
+        component_manifest_path_barrier = []
+
+        if (!defined(component_catalog)) {
+          component_catalog = []
+        }
+        component_catalog += [
+          {
+            component_manifest_path = manifest
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
       }
-      metadata.component_manifest_path = [ manifest ]
-      metadata.component_manifest_path_barrier = []
     }
 
     # Add the manifest
@@ -320,24 +331,35 @@ template("fuchsia_component") {
       validate_target = ":$validate_target"
     }
 
-    # We want to adopt the outputs of the cm_label, so we
-    # copy them to a new directory.
-    copy(target_name) {
+    component_catalog_target = "${target_name}.component_catalog"
+    generated_file(component_catalog_target) {
       forward_variables_from(invoker,
                              [
-                               "data_deps",
-                               "deps",
                                "testonly",
+                               "deps",
+                               "public_deps",
                              ])
-      sources = get_target_outputs(cm_label)
-      outputs = [ "$target_out_dir/${target_name}_component_manifest/{{source_file_part}}" ]
-
+      outputs = [ "$target_out_dir/${component_catalog_target}.json" ]
+      output_conversion = "json"
+      data_keys = [ "component_catalog" ]
+      visibility = [ ":*" ]
       if (!defined(deps)) {
         deps = []
       }
-
       deps += [ cm_label ]
+    }
 
+    # We want to adopt the outputs of the cm_label, so we
+    # copy them to a new directory.
+    copy(target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      sources = get_target_outputs(cm_label)
+      outputs = [ "$target_out_dir/${target_name}_component_manifest/{{source_file_part}}" ]
+
+      deps = [
+        ":$component_catalog_target",
+        cm_label,
+      ]
       if (check_references) {
         deps += [ validate_target ]
       }

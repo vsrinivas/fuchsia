@@ -3019,6 +3019,15 @@ template("executable") {
             test_component_manifest_program_barrier = []
           }
         }
+
+        if (!defined(component_catalog)) {
+          component_catalog = [
+            {
+              has_cxx = true
+              label = get_label_info(":$target_name", "label_with_toolchain")
+            },
+          ]
+        }
       } else {
         tool_paths = [
           {

@@ -264,6 +264,15 @@ template("rustc_artifact") {
       if (defined(invoker.metadata)) {
         forward_variables_from(invoker.metadata, "*")
       }
+
+      if (is_fuchsia) {
+        component_catalog = [
+          {
+            has_rust = true
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
     }
 
     # pass through these variables unmodified

@@ -279,8 +279,8 @@ template("sdk_atom") {
   action(target_name) {
     forward_variables_from(invoker,
                            [
-                             "testonly",
                              "metadata",
+                             "testonly",
                            ])
 
     type = meta.schema

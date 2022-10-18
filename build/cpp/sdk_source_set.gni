@@ -73,6 +73,7 @@ template("sdk_source_set") {
     target_type = "static_library"
   }
 
+  sdk_id = "sdk://pkg/${invoker.sdk_name}"
   target(target_type, main_target_name) {
     forward_variables_from(invoker,
                            "*",
@@ -80,6 +81,7 @@ template("sdk_source_set") {
                              "api",
                              "category",
                              "include_base",
+                             "metadata",
                              "non_sdk_deps",
                              "sdk_name",
                              "source_dir",
@@ -87,6 +89,20 @@ template("sdk_source_set") {
 
     if (defined(visibility)) {
       visibility += [ ":$sdk_target_name" ]
+    }
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      if (is_fuchsia) {
+        component_catalog = [
+          {
+            sdk_id = sdk_id
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
     }
   }
 
@@ -222,7 +238,7 @@ template("sdk_source_set") {
                              "testonly",
                            ])
 
-    id = "sdk://pkg/${invoker.sdk_name}"
+    id = sdk_id
     category = invoker.category
 
     if (defined(api_reference)) {

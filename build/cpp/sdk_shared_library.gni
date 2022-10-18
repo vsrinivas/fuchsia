@@ -80,6 +80,7 @@ template("sdk_shared_library") {
   } else {
     atom_name = output_name
   }
+  sdk_id = "sdk://pkg/$atom_name"
 
   no_headers = defined(invoker.no_headers) && invoker.no_headers
 
@@ -150,6 +151,20 @@ template("sdk_shared_library") {
     # Request that the runtime deps be written out to a file. This file will be
     # used later to verify that all runtime deps are available in the SDK.
     write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
+
+    metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+      if (is_fuchsia) {
+        component_catalog = [
+          {
+            sdk_id = sdk_id
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
+    }
   }
 
   # Base path for source files of this library in SDKs.
@@ -338,7 +353,7 @@ template("sdk_shared_library") {
   sdk_atom(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
 
-    id = "sdk://pkg/$atom_name"
+    id = sdk_id
 
     category = invoker.category
 

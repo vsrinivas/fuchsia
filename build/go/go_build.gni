@@ -494,6 +494,13 @@ template("go_build") {
           },
         ]
 
+        component_catalog = [
+          {
+            has_go = true
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+
         # Used by the fuchsia_test_component_manifest() template.
         test_component_manifest_program = [
           {

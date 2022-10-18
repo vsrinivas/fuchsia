@@ -264,6 +264,13 @@ template("fuchsia_driver_component") {
           # Used by the create_all_drivers_doc template.
           fuchsia_driver_doc_file = [ doc_output ]
         }
+
+        component_catalog = [
+          {
+            has_driver = true
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
       }
     }
   } else {

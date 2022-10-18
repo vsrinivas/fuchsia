@@ -99,6 +99,13 @@ template("_flutter_asset_manifest") {
           label = get_label_info(target_name, "label_with_toolchain")
         },
       ]
+
+      component_catalog = [
+        {
+          has_dart = true
+          label = get_label_info(":$target_name", "label_with_toolchain")
+        },
+      ]
     }
   }
 }

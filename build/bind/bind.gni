@@ -775,6 +775,10 @@ template("bind_library") {
 
   group(target_name) {
     metadata = {
+      if (defined(invoker.metadata)) {
+        forward_variables_from(invoker.metadata, "*")
+      }
+
       sources = [ rebase_path(invoker.source, root_build_dir) ]
 
       # Adds metadata for test_spec().
@@ -783,6 +787,19 @@ template("bind_library") {
       # Adds metadata for bind_test().
       test_sources = rebase_path(get_target_outputs(":${test_data_target}"),
                                  root_build_dir)
+
+      if (is_fuchsia) {
+        component_catalog = [
+          {
+            if (defined(invoker.name)) {
+              sdk_id = "sdk://bind/${invoker.name}"
+            } else {
+              sdk_id = "sdk://bind/$target_name"
+            }
+            label = get_label_info(":$target_name", "label_with_toolchain")
+          },
+        ]
+      }
     }
 
     deps = [ ":${test_data_target}" ]
