@@ -109,6 +109,7 @@ impl<'a> Keymap<'a> {
             Key::Enter => Some(NonPrintableKey::Enter),
             Key::Tab => Some(NonPrintableKey::Tab),
             Key::Backspace => Some(NonPrintableKey::Backspace),
+            Key::Escape => Some(NonPrintableKey::Escape),
             Key::Up => Some(NonPrintableKey::Up),
             Key::Down => Some(NonPrintableKey::Down),
             Key::Left => Some(NonPrintableKey::Left),
@@ -147,7 +148,9 @@ impl<'a> Keymap<'a> {
             Key::F11 => Some(NonPrintableKey::F11),
             Key::F12 => Some(NonPrintableKey::F12),
 
-            // Multimedia keys.
+            // Multimedia keys, UI keys, browser keys etc.
+            Key::AcBack => Some(NonPrintableKey::BrowserBack),
+            Key::AcRefresh => Some(NonPrintableKey::BrowserRefresh),
             Key::AcFullScreenView => Some(NonPrintableKey::ZoomToggle),
             Key::AcSelectTaskApplication => Some(NonPrintableKey::Select),
             Key::BrightnessDown => Some(NonPrintableKey::BrightnessDown),
@@ -248,7 +251,7 @@ pub struct ModifierState {
 
 impl Default for ModifierState {
     fn default() -> Self {
-        Self { state: Modifiers::from_bits_allow_unknown(0) }
+        Self { state: Modifiers::empty() }
     }
 }
 
@@ -1244,6 +1247,95 @@ mod tests {
     ) {
         let actual = keymap.apply(key, &modifier_state, &lock_state);
         assert_eq!(expected, actual, "expected: {:?}, actual: {:?}", expected, actual);
+    }
+
+    #[test_case(
+        Key::AcBack,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::BrowserBack);
+        "BrowserBack"
+      )
+    ]
+    #[test_case(
+        Key::AcRefresh,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::BrowserRefresh);
+        "BrowserRefresh"
+    )
+    ]
+    #[test_case(
+        Key::AcFullScreenView,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::ZoomToggle);
+        "ZoomToggle"
+      )
+    ]
+    #[test_case(
+        Key::AcSelectTaskApplication,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::Select);
+        "Select"
+      )
+    ]
+    #[test_case(
+        Key::BrightnessDown,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::BrightnessDown);
+        "BrightnessDown"
+      )
+    ]
+    #[test_case(
+        Key::BrightnessUp,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::BrightnessUp);
+        "BrightnessUp"
+      )
+    ]
+    #[test_case(
+        Key::PlayPause,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::MediaPlayPause);
+        "MediaPlayPause"
+      )
+    ]
+    #[test_case(
+        Key::Mute,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::AudioVolumeMute);
+        "AudioVolumeMute"
+      )
+    ]
+    #[test_case(
+        Key::VolumeUp,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::AudioVolumeUp);
+        "AudioVolumeUp"
+      )
+    ]
+    #[test_case(
+        Key::VolumeDown,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::AudioVolumeDown);
+        "AudioVolumeDown"
+      )
+    ]
+    #[test_case(
+        Key::Escape,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::Escape);
+        "Escape"
+      )
+    ]
+    #[test_case(
+        Key::Enter,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::Enter);
+        "Enter"
+      )
+    ]
+    #[test_case(
+        Key::Tab,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::Tab);
+        "Tab"
+       )
+    ]
+    #[test_case(
+        Key::Backspace,
+        KeyMeaning::NonPrintableKey(NonPrintableKey::Backspace);
+        "Backspace"
+      )
+    ]
+    fn spot_check_key_meanings(key: Key, expected: KeyMeaning) {
+        let actual = US_QWERTY.apply(key, &ModifierState::new(), &LockStateKeys::new());
+        assert_eq!(Some(expected), actual);
     }
 
     // Test that the keys are ordered in the sequence they were pressed.
