@@ -79,8 +79,8 @@ This is a sensitive feature; we don't want arbitrary components to unilaterally
 decide to trigger a reboot when they terminate. Thus, its use will be restricted
 by an allowlist in `component_manager`'s security policy, which will be checked
 at runtime when the component starts. Also, we can use the
-[`unstable_features`][git-unstable-features] GN allowlist (renamed to
-`restricted_features`) to produce a build-time failure when the option is set on
+[`restricted_features`][git-restricted-features] GN allowlist to produce a
+build-time failure when the option is set on
 a child in a realm that's not authorized to use the feature.
 
 ## Implementation
@@ -487,13 +487,10 @@ revisions for the events API.
 [fidl-destroy]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#fuchsia.sys2/Realm.DestroyChild
 [fidl-reboot]: https://fuchsia.dev/reference/fidl/fuchsia.hardware.power.statecontrol#fuchsia.hardware.power.statecontrol/Admin.Reboot
 [fidl-shutdown]: https://fuchsia.dev/reference/fidl/fuchsia.sys2#fuchsia.sys2/SystemController.Shutdown
-[doc-events]: /docs/concepts/components/v2/capabilities/event.md
 [doc-graceful-reboot]: /docs/concepts/process/why_fuchsia_devices_reboot.md#graceful_reboot
 [doc-main-process-critical]: /docs/concepts/components/v2/elf_runner.md#using_the_elf_runner
 [doc-manifests]: /docs/concepts/components/v2/component_manifests.md
 [doc-migration-guide]: /docs/development/components/v2/migration/README.md
 [gerrit-rfc-component-events]: https://fuchsia-review.googlesource.com/c/fuchsia/+/535692
-[gerrit-rfc-starter]: https://fuchsia-review.googlesource.com/c/fuchsia/+/533701
 [gerrit-system-critical-prototype]: https://fuchsia-review.googlesource.com/c/fuchsia/+/539915
-[git-unstable-features]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cmc/build/unstable_features/
-[rfc-41]: /docs/contribute/governance/rfcs/0041_unifying_services_devices.md
+[git-restricted-features]: https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cmc/build/restricted_features
