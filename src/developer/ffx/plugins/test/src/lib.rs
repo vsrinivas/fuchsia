@@ -47,21 +47,23 @@ pub async fn test(
     let writer = Box::new(stdout());
     let remote_control =
         remote_control_result.map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
-    let (query_proxy, query_server_end) =
-        fidl::endpoints::create_proxy::<ftest_manager::QueryMarker>()?;
-    rcs::connect_with_timeout(
-        std::time::Duration::from_secs(45),
-        "core/test_manager:expose:fuchsia.test.manager.Query",
-        &remote_control,
-        query_server_end.into_channel(),
-    )
-    .await
-    .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
     match cmd.subcommand {
         TestSubCommand::Run(run) => {
             run_test(testing_lib::RunBuilderConnector::new(remote_control), writer, run).await
         }
-        TestSubCommand::List(list) => get_tests(query_proxy, writer, list).await,
+        TestSubCommand::List(list) => {
+            let (query_proxy, query_server_end) =
+                fidl::endpoints::create_proxy::<ftest_manager::QueryMarker>()?;
+            rcs::connect_with_timeout(
+                std::time::Duration::from_secs(45),
+                "core/test_manager:expose:fuchsia.test.manager.Query",
+                &remote_control,
+                query_server_end.into_channel(),
+            )
+            .await
+            .map_err(|e| ffx_error_with_code!(*SETUP_FAILED_CODE, "{:?}", e))?;
+            get_tests(query_proxy, writer, list).await
+        }
         TestSubCommand::Result(result) => result_command(result, writer).await,
     }
 }
