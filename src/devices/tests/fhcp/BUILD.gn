@@ -63,7 +63,7 @@ group("fhcp") {
 
 group("device-tests") {
   testonly = true
-  deps = [ "foobar:tests" ]
+  deps = [ "sample:tests" ]
 }
 
 group("tests") {

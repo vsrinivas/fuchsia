@@ -7,6 +7,6 @@
         "syslog/client.shard.cml",
     ],
     program: {
-        binary: "test/fhcp-foobar-test",
+        binary: "test/fhcp-sample-test",
     },
 }
