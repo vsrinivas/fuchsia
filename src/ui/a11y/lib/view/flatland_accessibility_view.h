@@ -72,6 +72,9 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   // Used to retrieve a11y view layout info.
   fuchsia::ui::composition::ParentViewportWatcherPtr parent_watcher_;
 
+  // True if we've received a CreateView request.
+  bool received_create_view_request_ = false;
+
   // True if the a11y view has been attached to the scene.
   bool is_initialized_ = false;
 

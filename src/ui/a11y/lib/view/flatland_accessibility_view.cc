@@ -189,7 +189,13 @@ FlatlandAccessibilityView::FlatlandAccessibilityView(
 void FlatlandAccessibilityView::CreateView(
     fuchsia::ui::views::ViewCreationToken a11y_view_token,
     fuchsia::ui::views::ViewportCreationToken proxy_viewport_token) {
+  // Crash a11y_manager if we've already received a CreateView request.
+  // See fxbug.dev/110402 for more discussion.
+  FX_CHECK(!received_create_view_request_)
+      << "Receiving more than one `CreateView` request in a single run of a11y_manager is unsupported. See fxbug.dev/110402.";
+
   FX_LOGS(INFO) << "A11y received `CreateView` request";
+  received_create_view_request_ = true;
 
   // We can't create the proxy viewport until we receive layout info from
   // scenic, so we'll store the proxy viewport creation token to use later.
