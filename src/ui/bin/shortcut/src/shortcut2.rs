@@ -6,7 +6,7 @@
 
 use anyhow::{self, Context, Result};
 use fidl_fuchsia_ui_focus::FocusChain;
-use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning, NonPrintableKey};
+use fidl_fuchsia_ui_input3::{KeyEvent, KeyEventType, KeyMeaning};
 use fidl_fuchsia_ui_shortcut2 as fs2;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_zircon::{self as zx, AsHandleRef};
@@ -434,7 +434,7 @@ const UPPERCASE_Z: u32 = 'Z' as u32;
 const UPPERCASE_LATIN: std::ops::RangeInclusive<u32> = UPPERCASE_A..=UPPERCASE_Z;
 
 /// The range of 7-bit ASCII.
-const ASCII: std::ops::RangeInclusive<u32> = 0..=0x7f;
+const PRINTABLE_ASCII: std::ops::RangeInclusive<u32> = 0x20..=0x7f;
 
 /// Converts the key meaning into one with lowercase code point if such a point
 /// exists.  Else passes the code point unchanged.
@@ -469,14 +469,10 @@ fn validate_shortcut(shortcut: &fs2::Shortcut) -> Result<()> {
         .map(|k: &KeyMeaning| -> Result<()> {
             match k {
                 KeyMeaning::Codepoint(c) => {
-                    // For now, allow Latin shortcuts, but no uppercases.
+                    // For now, allow printable Latin shortcuts, but no uppercases.
                     // Nonprintable keys that have an ASCII code should be
                     // registered using NonPrintableKey.
-                    // TODO(fxbug.dev/112343): Add other ambiguous code points
-                    // here, too.
-                    if *c == ('\t' as u32) {
-                        Err(anyhow::anyhow!("use {:?}: {:?}", NonPrintableKey::Tab, k))
-                    } else if ASCII.contains(c) && !UPPERCASE_LATIN.contains(c) {
+                    if PRINTABLE_ASCII.contains(c) && !UPPERCASE_LATIN.contains(c) {
                         Ok(())
                     } else {
                         Err(anyhow::anyhow!("malformed KeyMeaning: {:?}", k))
@@ -1095,5 +1091,14 @@ mod tests {
         // The shortcut has been handled; but only the parent handled it.
         assert_eq!(vec![fs2::Handled::Handled, fs2::Handled::NotHandled], result);
         assert_eq!(SHORTCUT_ID, child_receiver.next().await.unwrap());
+    }
+
+    #[test_case(vec![KeyMeaning::Codepoint('\t' as u32)]; "Tab") ]
+    #[test_case(vec![KeyMeaning::Codepoint('\n' as u32)]; "Newline") ]
+    #[test_case(vec![KeyMeaning::Codepoint(0x1f)]; "Last") ]
+    fn test_invalid_shortcuts(keys: Vec<KeyMeaning>) {
+        let shortcut = fs2::Shortcut { id: 42, key_meanings: keys, options: fs2::Options::EMPTY };
+        let result = validate_shortcut(&shortcut);
+        assert!(result.is_err(), "result: {:?}", &result);
     }
 }
