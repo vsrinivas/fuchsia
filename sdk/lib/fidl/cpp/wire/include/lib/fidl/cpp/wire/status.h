@@ -40,7 +40,7 @@ enum class Reason {
   // The value zero is reserved as a sentinel value that indicates an
   // uninitialized reason; it will never be returned to user code.
   // NOLINTNEXTLINE
-  __DoNotUse [[deprecated("Add a `default:` case in switch statements")]] = 0,
+  __DoNotUse = 0,
 
   // The user invoked `Unbind()`.
   //
