@@ -145,5 +145,5 @@ impl net_cli::NetCliDepsConnector for Connector {
 async fn main() -> Result<(), Error> {
     let () = logger_init()?;
     let command: net_cli::Command = argh::from_env();
-    net_cli::do_root(command, &Connector).await
+    net_cli::do_root(ffx_writer::Writer::new(None), command, &Connector).await
 }

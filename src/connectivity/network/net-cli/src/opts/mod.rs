@@ -334,7 +334,7 @@ pub struct IfIpForwardSet {
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
-/// lists network interfaces
+/// lists network interfaces (supports ffx machine output)
 pub struct IfList {
     #[argh(positional)]
     pub name_pattern: Option<String>,
@@ -409,7 +409,7 @@ pub struct NeighClear {
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
-/// lists neighbor table entries
+/// lists neighbor table entries (supports ffx machine output)
 pub struct NeighList {
     #[argh(switch)]
     /// format output as JSON
@@ -428,7 +428,7 @@ pub struct NeighDel {
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "watch")]
-/// watches neighbor table entries for state changes
+/// watches neighbor table entries for state changes (supports ffx machine output)
 pub struct NeighWatch {
     #[argh(switch)]
     /// format output as newline-delimited JSON
@@ -573,7 +573,7 @@ fn subnet_mask_to_prefix_length(addr: std::net::IpAddr) -> u8 {
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
-/// lists devices
+/// lists devices (supports ffx machine output)
 pub struct RouteList {
     #[argh(switch)]
     /// format output as JSON

@@ -19,6 +19,7 @@ ffx_plugin("ffx_net") {
     "//sdk/fidl/fuchsia.netstack:fuchsia.netstack_rust",
     "//src/connectivity/network/net-cli:lib",
     "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",

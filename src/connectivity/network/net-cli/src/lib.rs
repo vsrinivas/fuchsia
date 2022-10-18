@@ -90,20 +90,19 @@ pub trait NetCliDepsConnector:
 }
 
 pub async fn do_root<C: NetCliDepsConnector>(
+    mut out: ffx_writer::Writer,
     Command { cmd }: Command,
     connector: &C,
 ) -> Result<(), Error> {
     match cmd {
         CommandEnum::If(opts::If { if_cmd: cmd }) => {
-            do_if(std::io::stdout(), cmd, connector).await.context("failed during if command")
+            do_if(&mut out, cmd, connector).await.context("failed during if command")
         }
         CommandEnum::Route(opts::Route { route_cmd: cmd }) => {
-            do_route(std::io::stdout(), cmd, connector).await.context("failed during route command")
+            do_route(&mut out, cmd, connector).await.context("failed during route command")
         }
         CommandEnum::Filter(opts::Filter { filter_cmd: cmd }) => {
-            do_filter(&mut std::io::stdout(), cmd, connector)
-                .await
-                .context("failed during filter command")
+            do_filter(out, cmd, connector).await.context("failed during filter command")
         }
         CommandEnum::Log(opts::Log { log_cmd: cmd }) => {
             do_log(cmd, connector).await.context("failed during log command")
@@ -115,12 +114,10 @@ pub async fn do_root<C: NetCliDepsConnector>(
             do_dhcpd(cmd, connector).await.context("failed during dhcpd command")
         }
         CommandEnum::Neigh(opts::Neigh { neigh_cmd: cmd }) => {
-            do_neigh(cmd, connector).await.context("failed during neigh command")
+            do_neigh(out, cmd, connector).await.context("failed during neigh command")
         }
         CommandEnum::Dns(opts::dns::Dns { dns_cmd: cmd }) => {
-            do_dns(&mut std::io::stdout(), cmd, connector)
-                .await
-                .context("failed during dns command")
+            do_dns(out, cmd, connector).await.context("failed during dns command")
         }
     }
 }
@@ -254,8 +251,8 @@ fn extract_ip_forwarding(
     }
 }
 
-async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
-    mut out: W,
+async fn do_if<C: NetCliDepsConnector>(
+    out: &mut ffx_writer::Writer,
     cmd: opts::IfEnum,
     connector: &C,
 ) -> Result<(), Error> {
@@ -287,7 +284,9 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 })
                 .collect();
             let () = response.sort_by_key(|ser::InterfaceView { nicid, .. }| *nicid);
-            if json {
+            if out.is_machine() {
+                out.machine(&response)?;
+            } else if json {
                 serde_json::to_writer(out, &response).context("serialize")?;
             } else {
                 write_tabulated_interfaces_info(out, response.into_iter())
@@ -304,7 +303,7 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                 info!("Added interface {}", id);
             }
             Err(e) => {
-                writeln!(out, "{}", e)?;
+                out.line(e)?;
             }
         },
         opts::IfEnum::Del(opts::IfDel { interface }) => {
@@ -365,14 +364,13 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
                     })
                     .context("get configuration")?;
 
-                writeln!(
-                    out,
+                out.line(format!(
                     "IP forwarding for {:?} is {} on interface {}",
                     ip_version,
                     extract_ip_forwarding(configuration, ip_version)
                         .context("extract IP forwarding configuration")?,
                     id
-                )?;
+                ))?;
             }
             opts::IfIpForwardEnum::Set(opts::IfIpForwardSet { interface, ip_version, enable }) => {
                 let id = interface.find_nicid(connector).await.context("find nicid")?;
@@ -610,8 +608,8 @@ async fn do_if<W: std::io::Write, C: NetCliDepsConnector>(
     Ok(())
 }
 
-async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
-    mut out: W,
+async fn do_route<C: NetCliDepsConnector>(
+    out: &mut ffx_writer::Writer,
     cmd: opts::RouteEnum,
     connector: &C,
 ) -> Result<(), Error> {
@@ -620,13 +618,17 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
         opts::RouteEnum::List(opts::RouteList { json }) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
-            if json {
+            if out.is_machine() || json {
                 let response: Vec<_> = response
                     .into_iter()
                     .map(fstack_ext::ForwardingEntry::from)
                     .map(ser::ForwardingEntry::from)
                     .collect();
-                let () = serde_json::to_writer(out, &response).context("serialize")?;
+                if out.is_machine() {
+                    out.machine(&response).context("serialize")?;
+                } else {
+                    let () = serde_json::to_writer(out, &response).context("serialize")?;
+                }
             } else {
                 let mut t = Table::new();
                 t.set_format(format::FormatBuilder::new().padding(2, 2).build());
@@ -640,8 +642,8 @@ async fn do_route<W: std::io::Write, C: NetCliDepsConnector>(
                     let () = add_row(&mut t, row![subnet, next_hop, device_id, metric]);
                 }
 
-                let _lines_printed: usize = t.print(&mut out)?;
-                writeln!(out)?;
+                let _lines_printed: usize = t.print(out)?;
+                out.line("")?;
             }
         }
         opts::RouteEnum::Add(route) => {
@@ -779,6 +781,7 @@ async fn do_dhcpd<C: NetCliDepsConnector>(
 }
 
 async fn do_neigh<C: NetCliDepsConnector>(
+    out: ffx_writer::Writer,
     cmd: opts::NeighEnum,
     connector: &C,
 ) -> Result<(), Error> {
@@ -812,25 +815,15 @@ async fn do_neigh<C: NetCliDepsConnector>(
         }
         opts::NeighEnum::List(opts::NeighList { json }) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
-            let () = print_neigh_entries(
-                &mut std::io::stdout(),
-                false, /* watch_for_changes */
-                view,
-                json,
-            )
-            .await
-            .context("error listing neighbor entries")?;
+            let () = print_neigh_entries(out, false /* watch_for_changes */, view, json)
+                .await
+                .context("error listing neighbor entries")?;
         }
         opts::NeighEnum::Watch(opts::NeighWatch { json_lines }) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
-            let () = print_neigh_entries(
-                &mut std::io::stdout(),
-                true, /* watch_for_changes */
-                view,
-                json_lines,
-            )
-            .await
-            .context("error watching for changes to the neighbor table")?;
+            let () = print_neigh_entries(out, true /* watch_for_changes */, view, json_lines)
+                .await
+                .context("error watching for changes to the neighbor table")?;
         }
         opts::NeighEnum::Config(opts::NeighConfig { neigh_config_cmd }) => match neigh_config_cmd {
             opts::NeighConfigEnum::Get(opts::NeighGetConfig { interface, ip_version }) => {
@@ -961,8 +954,8 @@ fn jsonify_neigh_iter_item(
     }
 }
 
-async fn print_neigh_entries<W: std::io::Write>(
-    mut out: W,
+async fn print_neigh_entries(
+    mut out: ffx_writer::Writer,
     watch_for_changes: bool,
     view: fneighbor::ViewProxy,
     json: bool,
@@ -976,11 +969,12 @@ async fn print_neigh_entries<W: std::io::Write>(
         .open_entry_iterator(it_server, fneighbor::EntryIteratorOptions::EMPTY)
         .context("error opening a connection to the entry iterator")?;
 
+    let out_ref = &mut out;
     if watch_for_changes {
         neigh_entry_stream(it, watch_for_changes)
             .map_ok(|item| {
                 write_neigh_entry(
-                    &mut out,
+                    out_ref,
                     item,
                     /* include_entry_state= */ watch_for_changes,
                     json,
@@ -992,7 +986,7 @@ async fn print_neigh_entries<W: std::io::Write>(
     } else {
         let results: Vec<Result<fneighbor::EntryIteratorItem, _>> =
             neigh_entry_stream(it, watch_for_changes).collect().await;
-        if json {
+        if out.is_machine() || json {
             let jsonified_items: Value =
                 itertools::process_results(results.into_iter(), |items| {
                     itertools::process_results(
@@ -1005,7 +999,11 @@ async fn print_neigh_entries<W: std::io::Write>(
                         |json_values| Value::from_iter(json_values),
                     )
                 })??;
-            write!(out, "{}", jsonified_items)?;
+            if out.is_machine() {
+                out.machine(&jsonified_items)?;
+            } else {
+                out.write(&jsonified_items)?;
+            }
         } else {
             itertools::process_results(results.into_iter(), |mut items| {
                 items.try_for_each(|item| {
@@ -1104,14 +1102,19 @@ fn write_tabular_neigh_entry<W: std::io::Write>(
     Ok(())
 }
 
-fn write_neigh_entry<W: std::io::Write>(
-    mut f: W,
+fn write_neigh_entry(
+    f: &mut ffx_writer::Writer,
     item: fneighbor::EntryIteratorItem,
     include_entry_state: bool,
     json: bool,
 ) -> Result<(), Error> {
-    if json {
-        writeln!(f, "{}", jsonify_neigh_iter_item(item, include_entry_state)?)?
+    if f.is_machine() || json {
+        let entry = jsonify_neigh_iter_item(item, include_entry_state)?;
+        if f.is_machine() {
+            f.machine(&entry)?;
+        } else {
+            f.line(&entry)?;
+        }
     } else {
         write_tabular_neigh_entry(f, item, include_entry_state)?
     }
@@ -1513,8 +1516,9 @@ mod tests {
                 .expect("responder.send should succeed");
             Ok(())
         };
+        let mut out = ffx_writer::Writer::new_test(None);
         let do_if_fut = do_if(
-            std::io::sink(),
+            &mut out,
             opts::IfEnum::IpForward(opts::IfIpForward {
                 cmd: opts::IfIpForwardEnum::Set(opts::IfIpForwardSet {
                     interface: interface1.identifier(false /* use_ifname */),
@@ -1552,7 +1556,7 @@ mod tests {
                 .expect("responder.send should succeed");
             Ok(())
         };
-        let mut output_buf = Vec::new();
+        let mut output_buf = ffx_writer::Writer::new_test(None);
         let do_if_fut = do_if(
             &mut output_buf,
             opts::IfEnum::IpForward(opts::IfIpForward {
@@ -1566,9 +1570,9 @@ mod tests {
         let ((), ()) = futures::future::try_join(do_if_fut, requests_fut)
             .await
             .expect("getting interface ip forwarding should succeed");
-        let got_output: &str = std::str::from_utf8(&output_buf).unwrap();
+        let got_output = output_buf.test_output().unwrap();
         pretty_assertions::assert_eq!(
-            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(&got_output),
             trim_whitespace_for_comparison(&format!(
                 "IP forwarding for {:?} is {} on interface {}",
                 ip_version, enable, interface1.nicid
@@ -1662,9 +1666,9 @@ mod tests {
             stack: stack_proxy,
             ..Default::default()
         };
-
+        let mut out = ffx_writer::Writer::new_test(None);
         let do_if_fut = do_if(
-            std::io::sink(),
+            &mut out,
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Add(opts::IfAddrAdd {
                     interface: interface1.identifier(false /* use_ifname */),
@@ -1801,9 +1805,10 @@ mod tests {
             ..Default::default()
         };
 
+        let mut out = ffx_writer::Writer::new_test(None);
         // Make the first request.
         let succeeds = do_if(
-            std::io::sink(),
+            &mut out,
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     interface: interface1.identifier(use_ifname),
@@ -1840,9 +1845,10 @@ mod tests {
             ((), ()) = futures::future::join(handler_fut, succeeds).fuse() => {},
         }
 
+        let mut out = ffx_writer::Writer::new_test(None);
         // Make the second request.
         let fails = do_if(
-            std::io::sink(),
+            &mut out,
             opts::IfEnum::Addr(opts::IfAddr {
                 addr_cmd: opts::IfAddrEnum::Del(opts::IfAddrDel {
                     interface: interface2.identifier(use_ifname),
@@ -1966,7 +1972,12 @@ mac             -
         let (interfaces_state, interfaces_state_stream) =
             fidl::endpoints::create_proxy_and_stream::<finterfaces::StateMarker>().unwrap();
 
-        let mut output: Vec<u8> = Vec::new();
+        let mut output = if json {
+            ffx_writer::Writer::new_test(Some(ffx_writer::Format::Json))
+        } else {
+            ffx_writer::Writer::new_test(None)
+        };
+        let output_ref = &mut output;
 
         let do_if_fut = async {
             let connector = TestConnector {
@@ -1975,7 +1986,7 @@ mac             -
                 ..Default::default()
             };
             do_if(
-                &mut output,
+                output_ref,
                 opts::IfEnum::List(opts::IfList { name_pattern: None, json }),
                 &connector,
             )
@@ -2078,15 +2089,15 @@ mac             -
             });
         let ((), (), ()) = futures::future::join3(do_if_fut, watcher_fut, debug_fut).await;
 
-        let got_output: &str = std::str::from_utf8(&output).unwrap();
+        let got_output = output.test_output().unwrap();
 
         if json {
-            let got: Value = serde_json::from_str(got_output).unwrap();
+            let got: Value = serde_json::from_str(&got_output).unwrap();
             let want: Value = serde_json::from_str(&wanted_output).unwrap();
             pretty_assertions::assert_eq!(got, want);
         } else {
             pretty_assertions::assert_eq!(
-                trim_whitespace_for_comparison(got_output),
+                trim_whitespace_for_comparison(&got_output),
                 trim_whitespace_for_comparison(&wanted_output),
             );
         }
@@ -2145,7 +2156,8 @@ mac             -
         let (stack, mut requests) =
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
         let connector = TestConnector { stack: Some(stack), ..Default::default() };
-        let op = do_route(std::io::sink(), cmd.clone(), &connector);
+        let mut out = ffx_writer::Writer::new_test(None);
+        let op = do_route(&mut out, cmd.clone(), &connector);
         let op_succeeds = async move {
             let () = match cmd {
                 opts::RouteEnum::List(opts::RouteList { json: _ }) => {
@@ -2245,7 +2257,11 @@ mac             -
             fidl::endpoints::create_proxy_and_stream::<fstack::StackMarker>().unwrap();
         let connector = TestConnector { stack: Some(stack_controller), ..Default::default() };
 
-        let mut output: Vec<u8> = Vec::new();
+        let mut output = if json {
+            ffx_writer::Writer::new_test(Some(ffx_writer::Format::Json))
+        } else {
+            ffx_writer::Writer::new_test(None)
+        };
 
         let do_route_fut =
             do_route(&mut output, opts::RouteEnum::List(opts::RouteList { json }), &connector);
@@ -2293,15 +2309,15 @@ mac             -
             .await
             .expect("listing forwarding table entries should succeed");
 
-        let got_output: &str = std::str::from_utf8(&output).unwrap();
+        let got_output = output.test_output().unwrap();
 
         if json {
-            let got: Value = serde_json::from_str(got_output).unwrap();
+            let got: Value = serde_json::from_str(&got_output).unwrap();
             let want: Value = serde_json::from_str(&wanted_output).unwrap();
             pretty_assertions::assert_eq!(got, want);
         } else {
             pretty_assertions::assert_eq!(
-                trim_whitespace_for_comparison(got_output),
+                trim_whitespace_for_comparison(&got_output),
                 trim_whitespace_for_comparison(&wanted_output),
             );
         }
@@ -2344,8 +2360,9 @@ mac             -
             always_answer_with_interfaces(interfaces_state_requests, interface_fidls);
 
         let bridge_id = 4;
+        let mut out = ffx_writer::Writer::new_test(None);
         let bridge = do_if(
-            std::io::sink(),
+            &mut out,
             opts::IfEnum::Bridge(opts::IfBridge {
                 interfaces: bridge_ifs
                     .iter()
@@ -2413,11 +2430,11 @@ mac             -
             let mut stream = neigh_entry_stream(it, watch_for_changes);
 
             let item_to_string = |item| {
-                let mut buf = Vec::new();
+                let mut buf = ffx_writer::Writer::new_test(None);
                 let () =
                     write_neigh_entry(&mut buf, item, watch_for_changes, /* json= */ false)
                         .expect("write_neigh_entry should succeed");
-                String::from_utf8(buf).expect("string should be UTF-8")
+                buf.test_output().expect("string should be UTF-8")
             };
 
             // Check each string sent by get_neigh_entries
@@ -2620,12 +2637,16 @@ mac             -
             ..fneighbor::Entry::EMPTY
         });
 
-        let mut output: Vec<u8> = Vec::new();
+        let mut output = if json {
+            ffx_writer::Writer::new_test(Some(ffx_writer::Format::Json))
+        } else {
+            ffx_writer::Writer::new_test(None)
+        };
         write_neigh_entry(&mut output, entry, include_entry_state, json)
             .expect("write_neigh_entry should succeed");
-        let got_output: &str = std::str::from_utf8(&output).unwrap();
+        let got_output = output.test_output().unwrap();
         pretty_assertions::assert_eq!(
-            trim_whitespace_for_comparison(got_output),
+            trim_whitespace_for_comparison(&got_output),
             trim_whitespace_for_comparison(wanted_output),
         );
     }
