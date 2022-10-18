@@ -37,6 +37,7 @@ rustc_library("lib") {
     "//third_party/rust_crates:serde_derive",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
   ]
 
@@ -49,7 +50,10 @@ rustc_library("lib") {
     "src/persist_server.rs",
   ]
 
-  test_deps = [ "//src/lib/fuchsia" ]
+  test_deps = [
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:test-case",
+  ]
 }
 
 # Rules defining the Persistence component.

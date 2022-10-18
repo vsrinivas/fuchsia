@@ -14,8 +14,9 @@ use {
     futures::{channel::mpsc, SinkExt, StreamExt},
     inspect_fetcher::InspectFetcher,
     parking_lot::Mutex,
-    serde_json::{self, json, Map, Value},
+    serde_json::{self, json, map::Entry, Map, Value},
     std::{collections::HashMap, sync::Arc},
+    thiserror::Error,
     tracing::*,
 };
 
@@ -119,6 +120,25 @@ struct Timestamps {
     after_utc: i64,
 }
 
+fn value_type_name(value: &Value) -> &'static str {
+    match value {
+        Value::Array(_) => "array",
+        Value::Null => "null",
+        Value::Bool(_) => "bool",
+        Value::Number(_) => "number",
+        Value::String(_) => "string",
+        Value::Object(_) => "object",
+    }
+}
+
+#[derive(Debug, Error)]
+enum FoldError {
+    #[error("Unable to merge existing {existing} entry with retrieved {retrieved} payload")]
+    MergeError { existing: &'static str, retrieved: &'static str },
+    #[error("Moniker {0:?} wasn't string")]
+    MonikerNotString(Value),
+}
+
 fn string_to_save(inspect_data: &str, timestamps: &Timestamps, max_save_length: usize) -> String {
     fn compose_error(timestamps: &Timestamps, description: String) -> Value {
         json!({
@@ -134,31 +154,46 @@ fn string_to_save(inspect_data: &str, timestamps: &Timestamps, max_save_length: 
     let timestamps_length = TIMESTAMPS_KEY.len() + json_timestamps.to_string().len() + 4;
     let mut save_string = match json_inspect {
         Value::Array(items) => {
-            let mut entries = Map::new();
-            items
-                .into_iter()
-                .map(|mut item| {
-                    let moniker = item["moniker"].take();
-                    let payload = item["payload"]["root"].take();
-                    match moniker {
-                        Value::String(moniker) => match (entries.get_mut(&moniker), payload) {
-                            (Some(Value::Object(root_map)), Value::Object(payload)) => {
-                                for (k, v) in payload.into_iter() {
-                                    root_map[&k] = v;
-                                }
+            let entries = items.into_iter().try_fold(Map::new(), |mut entries, mut item| {
+                let moniker = item["moniker"].take();
+                let payload = item["payload"]["root"].take();
+                match moniker {
+                    Value::String(moniker) => match entries.entry(moniker) {
+                        Entry::Occupied(mut o) => match (o.get_mut(), payload) {
+                            (Value::Object(root_map), Value::Object(payload)) => {
+                                root_map.extend(payload)
                             }
-                            (_, payload) => {
-                                entries.insert(moniker, payload);
+                            // Merging in Null is a no-op.
+                            (_, Value::Null) => (),
+                            // Replace Null values with new values.
+                            (map_value @ Value::Null, payload) => {
+                                *map_value = payload;
+                            }
+                            (obj, payload) => {
+                                return Err(FoldError::MergeError {
+                                    existing: value_type_name(&obj),
+                                    retrieved: value_type_name(&payload),
+                                });
                             }
                         },
-                        bad_moniker => {
-                            error!("Moniker {:?} wasn't string", bad_moniker);
+                        Entry::Vacant(v) => {
+                            let _ = v.insert(payload);
                         }
-                    }
-                })
-                .for_each(drop);
-            entries.insert(TIMESTAMPS_KEY.to_string(), json_timestamps);
-            Value::Object(entries)
+                    },
+                    bad_moniker => return Err(FoldError::MonikerNotString(bad_moniker)),
+                };
+                Ok(entries)
+            });
+            match entries {
+                Ok(mut entries) => {
+                    entries.insert(TIMESTAMPS_KEY.to_string(), json_timestamps);
+                    Value::Object(entries)
+                }
+                Err(e) => {
+                    let msg = format!("Fold error: {}", e);
+                    compose_error(timestamps, msg)
+                }
+            }
         }
         _ => {
             error!("Inspect wasn't an array");
@@ -315,3 +350,120 @@ enum FetchState {
 }
 
 // Todo(71350): Add unit tests for backoff-time logic.
+
+#[cfg(test)]
+mod tests {
+    use test_case::test_case;
+
+    use super::*;
+
+    const TIMESTAMPS: Timestamps =
+        Timestamps { after_monotonic: 200, after_utc: 111, before_monotonic: 100, before_utc: 110 };
+
+    const MAX_SAVE_LENGTH: usize = 1000;
+
+    #[test_case(false; "null second")]
+    #[test_case(true; "null first")]
+    fn string_to_save_ignores_null_payload(permute: bool) {
+        let mut inspect_data = [
+            json!({
+                "moniker": "core/fake-moniker",
+                "payload": {
+                    "root": {
+                        "some/inspect/path": 55,
+                    }
+                }
+            }),
+            json!(
+                {
+                    "moniker": "core/fake-moniker",
+                    "payload": {
+                        "root": null,
+                    }
+                }
+            ),
+        ];
+        if permute {
+            inspect_data.reverse();
+        }
+        let inspect_data = Value::Array(Vec::from(inspect_data));
+        let str = string_to_save(&inspect_data.to_string(), &TIMESTAMPS, MAX_SAVE_LENGTH);
+        assert_eq!(
+            serde_json::from_str::<'_, Value>(&str).unwrap(),
+            json!({
+                "@timestamps": {
+                    "after_monotonic": 200,
+                    "after_utc": 111,
+                    "before_monotonic": 100,
+                    "before_utc": 110,
+                },
+                "core/fake-moniker": {"some/inspect/path": 55},
+            })
+        );
+    }
+
+    #[test]
+    fn string_to_save_fails_heterogenous_payload() {
+        let inspect_data = json!([
+            {
+                "moniker": "core/fake-moniker",
+                "payload": {
+                    "root": {
+                        "some/inspect/path": 55,
+                    }
+                }
+            },
+            {
+                "moniker": "core/fake-moniker",
+                "payload": {
+                    "root": 32,
+                }
+            }
+        ]);
+        let str = string_to_save(&inspect_data.to_string(), &TIMESTAMPS, MAX_SAVE_LENGTH);
+        let values = serde_json::from_str::<'_, Map<_, _>>(&str).unwrap();
+        let message = values[":error"]["description"].as_str().unwrap();
+        assert!(message.contains("Unable to merge"));
+    }
+
+    #[test]
+    fn string_to_save_merges_data() {
+        let inspect_data = json!([
+            {
+                "moniker": "core/fake-moniker",
+                "payload": {
+                    "root": {
+                        "some/inspect/path": 1,
+                        "a/duplicate/path": 2,
+                    }
+                }
+            },
+            {
+                "moniker": "core/fake-moniker",
+                "payload": {
+                    "root": {
+                        "a/duplicate/path": 3,
+                        "other/inspect/path": 4,
+                    }
+                }
+            }
+        ]);
+        let str = string_to_save(&inspect_data.to_string(), &TIMESTAMPS, MAX_SAVE_LENGTH);
+        assert_eq!(
+            serde_json::from_str::<'_, Value>(&str).unwrap(),
+            json!({
+                "@timestamps": {
+                    "after_monotonic": 200,
+                    "after_utc": 111,
+                    "before_monotonic": 100,
+                    "before_utc": 110,
+                },
+                "core/fake-moniker": {
+                    "some/inspect/path": 1,
+                    "a/duplicate/path": 3,
+                    "other/inspect/path": 4
+                },
+            })
+        );
+    }
+}
