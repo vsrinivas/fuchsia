@@ -31,10 +31,9 @@ std::optional<std::reference_wrapper<const Devnode>> lookup(const Devnode& paren
         return {};
     }
   }
-  for (auto& child : parent.children().unpublished) {
-    if (child.name() == name) {
-      return std::reference_wrapper(child);
-    }
+  const auto it = parent.children().unpublished.find(name);
+  if (it != parent.children().unpublished.end()) {
+    return it->second.get();
   }
   return {};
 }

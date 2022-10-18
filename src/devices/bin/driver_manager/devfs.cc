@@ -232,9 +232,11 @@ Devnode::Devnode(Devfs& devfs, PseudoDir& parent, Target target, fbl::String nam
     : devfs_(devfs),
       parent_(&parent),
       node_(fbl::MakeRefCounted<VnodeImpl>(*this, std::move(target))),
-      name_(std::move(name)) {
-  parent.unpublished.push_back(this);
-}
+      name_([this, &parent, name = std::move(name)]() {
+        auto [it, inserted] = parent.unpublished.emplace(name, *this);
+        ZX_ASSERT(inserted);
+        return it->first;
+      }()) {}
 
 std::optional<std::reference_wrapper<fs::Vnode>> Devfs::Lookup(PseudoDir& parent,
                                                                std::string_view name) {
@@ -249,17 +251,16 @@ std::optional<std::reference_wrapper<fs::Vnode>> Devfs::Lookup(PseudoDir& parent
         ZX_PANIC("%s", zx_status_get_string(status));
     }
   }
-  for (auto& child : parent.unpublished) {
-    if (child.name() == name) {
-      return child.node();
-    }
+  const auto it = parent.unpublished.find(name);
+  if (it != parent.unpublished.end()) {
+    return it->second.get().node();
   }
   return {};
 }
 
 Devnode::~Devnode() {
-  for (Devnode& child : children().unpublished) {
-    child.parent_ = nullptr;
+  for (auto [key, child] : children().unpublished) {
+    child.get().parent_ = nullptr;
   }
   children().unpublished.clear();
 
@@ -269,19 +270,16 @@ Devnode::~Devnode() {
     return;
   }
   PseudoDir& parent = *parent_;
-  if (InContainer()) {
-    RemoveFromContainer();
-  } else {
-    const std::string_view name = this->name();
-    switch (const zx_status_t status = parent.RemoveEntry(name, node_.get()); status) {
-      case ZX_OK:
-      case ZX_ERR_NOT_FOUND:
-        // Our parent may have been removed before us.
-        break;
-      default:
-        ZX_PANIC("RemoveEntry(%.*s): %s", static_cast<int>(name.size()), name.data(),
-                 zx_status_get_string(status));
-    }
+  const std::string_view name = this->name();
+  parent.unpublished.erase(name);
+  switch (const zx_status_t status = parent.RemoveEntry(name, node_.get()); status) {
+    case ZX_OK:
+    case ZX_ERR_NOT_FOUND:
+      // Our parent may have been removed before us.
+      break;
+    default:
+      ZX_PANIC("RemoveEntry(%.*s): %s", static_cast<int>(name.size()), name.data(),
+               zx_status_get_string(status));
   }
 }
 
@@ -289,15 +287,13 @@ void Devnode::publish() {
   ZX_ASSERT(parent_ != nullptr);
   PseudoDir& parent = *parent_;
 
-  // NB: We can't blindly erase from the unpublished list because it is an error to erase a
-  // `fbl::DoublyLinkedListable` from a `fbl::DoublyLinkedList` which it is not an entry in.
-  if (std::none_of(parent.unpublished.begin(), parent.unpublished.end(),
-                   [this](Devnode& child) { return &child == this; })) {
-    const std::string_view name = this->name();
-    ZX_PANIC("'%.*s' not in parent's unpublished list", static_cast<int>(name.size()), name.data());
-  }
-  RemoveFromContainer();
-  MustAddEntry(parent, name(), node_);
+  const std::string_view name = this->name();
+  const auto it = parent.unpublished.find(name);
+  ZX_ASSERT(it != parent.unpublished.end());
+  ZX_ASSERT(&it->second.get() == this);
+  parent.unpublished.erase(it);
+
+  MustAddEntry(parent, name, node_);
 }
 
 void Devfs::publish(Device& device) {
@@ -341,10 +337,9 @@ zx::result<fbl::String> ProtoNode::seq_name() {
           return zx::error(status);
       }
     }
-    if (std::any_of(children().unpublished.begin(), children().unpublished.end(),
-                    [&dest](Devnode& child) { return child.name() == dest; })) {
+    if (children().unpublished.find(dest) != children().unpublished.end()) {
       continue;
-    };
+    }
     return zx::ok(dest);
   }
   return zx::error(ZX_ERR_ALREADY_EXISTS);
@@ -471,10 +466,9 @@ zx_status_t Devnode::export_dir(fidl::ClientEnd<fio::Directory> service_dir,
         default:
           return zx::error(status);
       }
-      for (auto& child : children.unpublished) {
-        if (child.name() == name) {
-          return zx::ok(&child);
-        }
+      const auto it = children.unpublished.find(name);
+      if (it != children.unpublished.end()) {
+        return zx::ok(&it->second.get());
       }
       return zx::ok(nullptr);
     }();

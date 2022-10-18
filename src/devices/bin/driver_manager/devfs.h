@@ -11,7 +11,6 @@
 
 #include <variant>
 
-#include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
@@ -22,8 +21,7 @@ class Devfs;
 class Device;
 class PseudoDir;
 
-class Devnode
-    : public fbl::DoublyLinkedListable<Devnode*, fbl::NodeOptions::AllowRemoveFromContainer> {
+class Devnode {
  public:
   using ExportOptions = fuchsia_device_fs::wire::ExportOptions;
   struct NoRemote {
@@ -144,7 +142,8 @@ class Devnode
 
 class PseudoDir : public fs::PseudoDir {
  public:
-  fbl::DoublyLinkedList<Devnode*> unpublished;
+  std::unordered_map<fbl::String, std::reference_wrapper<Devnode>, std::hash<std::string_view>>
+      unpublished;
 
  private:
   PseudoDir() : fs::PseudoDir(false) {}
