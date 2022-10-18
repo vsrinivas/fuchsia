@@ -238,10 +238,7 @@ bool VmObject::AddChildLocked(VmObject* child) {
   return OnChildAddedLocked();
 }
 
-bool VmObject::OnChildAddedLocked() {
-  ++user_child_count_;
-  return user_child_count_ == 1;
-}
+bool VmObject::OnChildAddedLocked() { return children_list_len_ == 1; }
 
 void VmObject::NotifyOneChild() {
   canary_.Assert();
@@ -289,10 +286,7 @@ void VmObject::OnUserChildRemoved(Guard<CriticalMutex>&& adopt) {
   // whilst holding the child_observer_lock.
   {
     Guard<CriticalMutex> guard{AdoptLock, ktl::move(adopt)};
-
-    DEBUG_ASSERT(user_child_count_ > 0);
-    --user_child_count_;
-    if (user_child_count_ != 0) {
+    if (children_list_len_ != 0) {
       return;
     }
   }
@@ -310,12 +304,6 @@ uint32_t VmObject::num_children() const {
   canary_.Assert();
   Guard<CriticalMutex> guard{&lock_};
   return children_list_len_;
-}
-
-uint32_t VmObject::num_user_children() const {
-  canary_.Assert();
-  Guard<CriticalMutex> guard{&lock_};
-  return user_child_count_;
 }
 
 // static

@@ -679,7 +679,6 @@ class VmObject : public VmHierarchyBase,
   // process. ::RemoveChild is probably what you want here.
   void DropChildLocked(VmObject* c) TA_REQ(lock_);
   void ReplaceChildLocked(VmObject* old, VmObject* new_child) TA_REQ(lock_);
-  uint32_t num_user_children() const;
   uint32_t num_children() const;
 
   // Function that should be invoked when a userspace visible child of
@@ -744,10 +743,6 @@ class VmObject : public VmHierarchyBase,
   uint32_t children_list_len_ TA_GUARDED(lock_) = 0;
 
   uint64_t user_id_ TA_GUARDED(lock_) = 0;
-  // The count of the number of children of this vmo as understood by userspace. This
-  // field only makes sense in VmObjects directly owned by dispatchers. In particular,
-  // it is not meaningful for hidden VmObjectPaged.
-  uint32_t user_child_count_ TA_GUARDED(lock_) = 0;
 
   // The user-friendly VMO name. For debug purposes only. That
   // is, there is no mechanism to get access to a VMO via this name.

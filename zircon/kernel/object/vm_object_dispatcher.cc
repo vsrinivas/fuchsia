@@ -188,7 +188,7 @@ zx_info_vmo_t VmoToInfoEntry(const VmObject* vmo, bool is_handle, zx_rights_t ha
   vmo->get_name(entry.name, sizeof(entry.name));
   entry.size_bytes = vmo->size();
   entry.parent_koid = vmo->parent_user_id();
-  entry.num_children = vmo->num_user_children();
+  entry.num_children = vmo->num_children();
   entry.num_mappings = vmo->num_mappings();
   entry.share_count = vmo->share_count();
   entry.flags = (vmo->is_paged() ? ZX_INFO_VMO_TYPE_PAGED : ZX_INFO_VMO_TYPE_PHYSICAL) |
