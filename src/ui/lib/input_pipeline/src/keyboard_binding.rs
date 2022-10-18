@@ -84,6 +84,19 @@ impl KeyboardEvent {
         }
     }
 
+    /// Centralizes the conversion from [KeyboardEvent] to `KeyEvent`.
+    pub(crate) fn from_key_event_at_time(&self, event_time: zx::Time) -> fidl_ui_input3::KeyEvent {
+        fidl_ui_input3::KeyEvent {
+            timestamp: Some(event_time.into_nanos()),
+            type_: Some(self.event_type),
+            key: Some(self.key),
+            modifiers: self.modifiers,
+            lock_state: self.lock_state,
+            repeat_sequence: Some(self.repeat_sequence),
+            key_meaning: self.key_meaning,
+            ..fidl_ui_input3::KeyEvent::EMPTY
+        }
+    }
     /// Converts [KeyboardEvent] into the same one, but with the specified settings.
     pub fn into_with_autorepeat_settings(
         self,
@@ -729,5 +742,31 @@ mod tests {
                 | Modifiers::META
                 | Modifiers::CTRL
         )
+    }
+
+    #[fuchsia::test]
+    fn conversion_fills_out_all_fields() {
+        use fidl_fuchsia_input::Key;
+        use fidl_ui_input3::{KeyMeaning, LockState, Modifiers, NonPrintableKey};
+        let event = KeyboardEvent::new(Key::A, KeyEventType::Pressed)
+            .into_with_modifiers(Some(Modifiers::all()))
+            .into_with_lock_state(Some(LockState::all()))
+            .into_with_repeat_sequence(42)
+            .into_with_key_meaning(Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)));
+
+        let actual = event.from_key_event_at_time(zx::Time::from_nanos(42));
+        assert_eq!(
+            actual,
+            fidl_fuchsia_ui_input3::KeyEvent {
+                timestamp: Some(42),
+                type_: Some(KeyEventType::Pressed),
+                key: Some(Key::A),
+                modifiers: Some(Modifiers::all()),
+                key_meaning: Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)),
+                repeat_sequence: Some(42),
+                lock_state: Some(LockState::all()),
+                ..fidl_fuchsia_ui_input3::KeyEvent::EMPTY
+            }
+        );
     }
 }

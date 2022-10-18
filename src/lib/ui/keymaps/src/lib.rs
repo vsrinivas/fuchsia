@@ -1211,6 +1211,30 @@ mod tests {
         Some(KeyMeaning::NonPrintableKey(NonPrintableKey::ZoomToggle));
         "Spot check multimedia keys")
     ]
+    #[test_case(
+        &US_QWERTY,
+        Key::Tab,
+        ModifierState::new(),
+        LockStateKeys::new(),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Tab));
+        "Tab")
+    ]
+    #[test_case(
+        &US_QWERTY,
+        Key::Enter,
+        ModifierState::new(),
+        LockStateKeys::new(),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Enter));
+        "Enter")
+    ]
+    #[test_case(
+        &US_QWERTY,
+        Key::Backspace,
+        ModifierState::new(),
+        LockStateKeys::new(),
+        Some(KeyMeaning::NonPrintableKey(NonPrintableKey::Backspace));
+        "Backspace")
+    ]
     fn test_keymap_apply(
         keymap: &Keymap<'_>,
         key: Key,
