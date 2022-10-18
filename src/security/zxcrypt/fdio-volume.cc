@@ -6,9 +6,9 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/encrypted/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fidl/fuchsia.hardware.block.encrypted/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -145,29 +145,26 @@ zx_status_t FdioVolume::Revoke(key_slot_t slot) {
 zx_status_t FdioVolume::Init() { return Volume::Init(); }
 
 zx_status_t FdioVolume::GetBlockInfo(BlockInfo* out) {
-  zx_status_t rc;
-  zx_status_t call_status;
   fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
-  fuchsia_hardware_block_BlockInfo block_info;
-  if ((rc = fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status,
-                                                &block_info)) != ZX_OK) {
-    return rc;
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  if (!result.ok()) {
+    return result.status();
   }
-  if (call_status != ZX_OK) {
-    return call_status;
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    return response.status;
   }
 
-  out->block_count = block_info.block_count;
-  out->block_size = block_info.block_size;
+  out->block_count = response.info->block_count;
+  out->block_size = response.info->block_size;
   return ZX_OK;
 }
 
 zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
-  zx_status_t rc;
-  zx_status_t call_status;
   fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
@@ -181,78 +178,77 @@ zx_status_t FdioVolume::GetFvmSliceSize(uint64_t* out) {
   // closed and we'll be unable to do other calls to it.  So before making
   // this call, we clone the channel.
   zx::channel channel(fdio_service_clone(caller.borrow_channel()));
+  fidl::ClientEnd<fuchsia_hardware_block_volume::Volume> client_end{std::move(channel)};
 
-  fuchsia_hardware_block_volume_VolumeManagerInfo manager_info;
-  fuchsia_hardware_block_volume_VolumeInfo volume_info;
-  if ((rc = fuchsia_hardware_block_volume_VolumeGetVolumeInfo(
-           channel.get(), &call_status, &manager_info, &volume_info)) != ZX_OK) {
-    if (rc == ZX_ERR_PEER_CLOSED) {
+  const fidl::WireResult result = fidl::WireCall(client_end)->GetVolumeInfo();
+  if (!result.ok()) {
+    if (result.is_peer_closed()) {
       // The channel being closed here means that the thing at the other
       // end of this channel does not speak the FVM protocol, and has
       // closed the channel on us.  Return the appropriate error to signal
       // that we shouldn't bother with any of the FVM codepaths.
       return ZX_ERR_NOT_SUPPORTED;
     }
-    return rc;
+    return result.status();
   }
-  if (call_status != ZX_OK) {
-    return call_status;
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    return response.status;
   }
 
-  *out = manager_info.slice_size;
+  *out = response.manager->slice_size;
   return ZX_OK;
 }
 
 zx_status_t FdioVolume::DoBlockFvmVsliceQuery(uint64_t vslice_start,
                                               SliceRegion ranges[Volume::MAX_SLICE_REGIONS],
                                               uint64_t* slice_count) {
-  static_assert(fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS == Volume::MAX_SLICE_REGIONS,
+  static_assert(fuchsia_hardware_block_volume::wire::kMaxSliceRequests == Volume::MAX_SLICE_REGIONS,
                 "block volume slice response count must match");
-  zx_status_t rc;
-  zx_status_t call_status;
   fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
-  fuchsia_hardware_block_volume_VsliceRange tmp_ranges[Volume::MAX_SLICE_REGIONS];
-  uint64_t range_count;
 
-  if ((rc = fuchsia_hardware_block_volume_VolumeQuerySlices(
-           caller.borrow_channel(), &vslice_start, 1, &call_status, tmp_ranges, &range_count)) !=
-      ZX_OK) {
-    return rc;
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+          ->QuerySlices(fidl::VectorView<uint64_t>::FromExternal(&vslice_start, 1));
+  if (!result.ok()) {
+    return result.status();
   }
-  if (call_status != ZX_OK) {
-    return call_status;
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    return response.status;
   }
 
-  if (range_count > Volume::MAX_SLICE_REGIONS) {
+  if (response.response_count > Volume::MAX_SLICE_REGIONS) {
     // Should be impossible.  Trust nothing.
     return ZX_ERR_BAD_STATE;
   }
 
-  *slice_count = range_count;
-  for (size_t i = 0; i < range_count; i++) {
-    ranges[i].allocated = tmp_ranges[i].allocated;
-    ranges[i].count = tmp_ranges[i].count;
+  *slice_count = response.response_count;
+  for (size_t i = 0; i < response.response_count; i++) {
+    ranges[i].allocated = response.response[i].allocated;
+    ranges[i].count = response.response[i].count;
   }
 
   return ZX_OK;
 }
 
 zx_status_t FdioVolume::DoBlockFvmExtend(uint64_t start_slice, uint64_t slice_count) {
-  zx_status_t rc;
-  zx_status_t call_status;
   fdio_cpp::UnownedFdioCaller caller(block_dev_fd_.get());
   if (!caller) {
     return ZX_ERR_BAD_STATE;
   }
-  if ((rc = fuchsia_hardware_block_volume_VolumeExtend(caller.borrow_channel(), start_slice,
-                                                       slice_count, &call_status)) != ZX_OK) {
-    return rc;
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_volume::Volume>())
+          ->Extend(start_slice, slice_count);
+  if (!result.ok()) {
+    return result.status();
   }
-  if (call_status != ZX_OK) {
-    return call_status;
+  const fidl::WireResponse response = result.value();
+  if (response.status != ZX_OK) {
+    return response.status;
   }
 
   return ZX_OK;
