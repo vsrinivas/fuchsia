@@ -12,12 +12,6 @@
     ],
     use: [
         {
-            directory: "hub",
-            from: "framework",
-            rights: [ "r*" ],
-            path: "/hub",
-        },
-        {
             directory: "dev-gpu",
             rights: [ "r*" ],
             path: "/dev/class/gpu",

@@ -764,9 +764,5 @@
             protocol: "fuchsia.test.manager.RunBuilder",
             from: "self",
         },
-        {
-            directory: "hub",
-            from: "framework",
-        },
     ],
 }
