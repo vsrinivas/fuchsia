@@ -115,6 +115,12 @@ pub enum PackagePathSegmentError {
 
     #[error("package path segments must consist of only digits (0 to 9), lower-case letters (a to z), hyphen (-), underscore (_), and period (.). this contained {character:?}")]
     InvalidCharacter { character: char },
+
+    #[error("package path segments cannot be a single period")]
+    DotSegment,
+
+    #[error("package path segments cannot be two periods")]
+    DotDotSegment,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Error)]

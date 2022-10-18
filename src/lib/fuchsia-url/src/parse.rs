@@ -11,7 +11,7 @@ use {
 pub const MAX_PACKAGE_PATH_SEGMENT_BYTES: usize = 255;
 pub const MAX_RESOURCE_PATH_SEGMENT_BYTES: usize = 255;
 
-/// Check if a string conforms to r"^[0-9a-z\-\._]{1,255}$"
+/// Check if a string conforms to r"^[0-9a-z\-\._]{1,255}$" and is neither "." nor ".."
 pub fn validate_package_path_segment(string: &str) -> Result<(), PackagePathSegmentError> {
     if string.is_empty() {
         return Err(PackagePathSegmentError::Empty);
@@ -23,6 +23,12 @@ pub fn validate_package_path_segment(string: &str) -> Result<(), PackagePathSegm
         !(b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-' || b == b'.' || b == b'_')
     }) {
         return Err(PackagePathSegmentError::InvalidCharacter { character: invalid_byte.into() });
+    }
+    if string == "." {
+        return Err(PackagePathSegmentError::DotSegment);
+    }
+    if string == ".." {
+        return Err(PackagePathSegmentError::DotDotSegment);
     }
 
     Ok(())
@@ -186,6 +192,19 @@ mod test_validate_package_path_segment {
     #[test]
     fn reject_empty_segment() {
         assert_eq!(validate_package_path_segment(""), Err(PackagePathSegmentError::Empty));
+    }
+
+    #[test]
+    fn reject_dot_segment() {
+        assert_eq!(validate_package_path_segment("."), Err(PackagePathSegmentError::DotSegment));
+    }
+
+    #[test]
+    fn reject_dot_dot_segment() {
+        assert_eq!(
+            validate_package_path_segment(".."),
+            Err(PackagePathSegmentError::DotDotSegment)
+        );
     }
 
     proptest! {

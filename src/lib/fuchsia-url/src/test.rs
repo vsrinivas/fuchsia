@@ -16,7 +16,14 @@ use {
 pub(crate) const ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE: &str = "[^/\0\\.\n]";
 
 prop_compose! {
-    pub(crate) fn random_package_segment()(s in r"[-0-9a-z\._]{1, 255}") -> String {
+    pub(crate) fn random_package_segment()
+        (s in r"[-0-9a-z\._]{1, 255}"
+            .prop_filter(
+                "Segments of '.' and '..' are not allowed",
+                |s| s != "." && s != ".."
+            )
+        )
+    -> String {
         s
     }
 }
