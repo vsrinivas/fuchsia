@@ -46,7 +46,7 @@ mod store_scanner;
 #[cfg(test)]
 mod tests;
 
-pub struct FsckOptions<F: Fn(&FsckIssue)> {
+pub struct FsckOptions<'a> {
     /// Whether to fail fsck if any warnings are encountered.
     pub fail_on_warning: bool,
     // Whether to halt after the first error encountered (fatal or not).
@@ -54,19 +54,22 @@ pub struct FsckOptions<F: Fn(&FsckIssue)> {
     /// Whether to perform slower, more complete checks.
     pub do_slow_passes: bool,
     /// A callback to be invoked for each detected error, e.g. to log the error.
-    pub on_error: F,
+    pub on_error: Box<dyn Fn(&FsckIssue) + Send + Sync + 'a>,
     /// Whether to be noisy as we do checks.
     pub verbose: bool,
+    /// Don't take the write lock. The caller needs to guarantee the filesystem isn't changing.
+    pub no_lock: bool,
 }
 
-impl Default for FsckOptions<fn(&FsckIssue)> {
+impl Default for FsckOptions<'_> {
     fn default() -> Self {
         Self {
             fail_on_warning: false,
             halt_on_error: false,
             do_slow_passes: true,
-            on_error: FsckIssue::log,
+            on_error: Box::new(FsckIssue::log),
             verbose: false,
+            no_lock: false,
         }
     }
 }
@@ -82,12 +85,17 @@ pub async fn fsck(filesystem: Arc<dyn Filesystem>) -> Result<(), Error> {
     fsck_with_options(filesystem, &FsckOptions::default()).await
 }
 
-pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
+pub async fn fsck_with_options(
     filesystem: Arc<dyn Filesystem>,
-    options: &FsckOptions<F>,
+    options: &FsckOptions<'_>,
 ) -> Result<(), Error> {
     info!("Starting fsck");
-    let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
+
+    let _guard = if options.no_lock {
+        None
+    } else {
+        Some(filesystem.write_lock(&[LockKey::Filesystem]).await)
+    };
 
     let mut fsck = Fsck::new(options);
 
@@ -124,10 +132,8 @@ pub async fn fsck_with_options<F: Fn(&FsckIssue)>(
     let mut iter = volume_directory.iter(&mut merger).await?;
 
     // TODO(fxbug.dev/96076): We could maybe iterate over stores concurrently.
-    let mut child_store_object_ids: HashSet<u64> = HashSet::new();
     while let Some((_, store_id, _)) = iter.get() {
         journal_checkpoint_ids.insert(store_id);
-        child_store_object_ids.insert(store_id);
         fsck.check_child_store_metadata(
             filesystem.as_ref(),
             store_id,
@@ -210,14 +216,19 @@ pub async fn fsck_volume(
     fsck_volume_with_options(filesystem, &FsckOptions::default(), store_id, crypt).await
 }
 
-pub async fn fsck_volume_with_options<F: Fn(&FsckIssue)>(
+pub async fn fsck_volume_with_options(
     filesystem: &dyn Filesystem,
-    options: &FsckOptions<F>,
+    options: &FsckOptions<'_>,
     store_id: u64,
     crypt: Option<Arc<dyn Crypt>>,
 ) -> Result<(), Error> {
     info!(?store_id, "Starting volume fsck");
-    let _guard = filesystem.write_lock(&[LockKey::Filesystem]).await;
+
+    let _guard = if options.no_lock {
+        None
+    } else {
+        Some(filesystem.write_lock(&[LockKey::Filesystem]).await)
+    };
 
     let mut fsck = Fsck::new(options);
     fsck.check_child_store(filesystem, store_id, crypt).await?;
@@ -249,16 +260,16 @@ impl<K: RangeKey + PartialEq> KeyExt for K {
     }
 }
 
-struct Fsck<'a, F: Fn(&FsckIssue)> {
-    options: &'a FsckOptions<F>,
+struct Fsck<'a> {
+    options: &'a FsckOptions<'a>,
     // A list of allocations generated based on all extents found across all scanned object stores.
     allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     errors: AtomicU64,
     warnings: AtomicU64,
 }
 
-impl<'a, F: Fn(&FsckIssue)> Fsck<'a, F> {
-    fn new(options: &'a FsckOptions<F>) -> Self {
+impl<'a> Fsck<'a> {
+    fn new(options: &'a FsckOptions<'a>) -> Self {
         Fsck {
             options,
             // TODO(fxbug.dev/95981): fix magic number

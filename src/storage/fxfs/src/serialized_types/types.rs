@@ -17,7 +17,7 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// If making a breaking change, please see EARLIEST_SUPPORTED_VERSION (below).
-pub const LATEST_VERSION: Version = Version { major: 22, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 23, minor: 0 };
 
 /// The earliest supported version of the on-disk filesystem format.
 ///

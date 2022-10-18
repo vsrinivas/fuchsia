@@ -255,8 +255,9 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                     ..Default::default()
                 })
                 .await?;
+            let mut needs_trim = false;
             if let Some(size) = metadata.content_size {
-                self.handle.truncate(&mut transaction, size).await?;
+                needs_trim = self.handle.truncate(&mut transaction, size).await?.0;
             }
             self.handle
                 .write_timestamps(
@@ -266,6 +267,9 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 )
                 .await?;
             transaction.commit_with_callback(|_| self.cache.complete_flush(flushable)).await?;
+            if needs_trim {
+                self.store().trim(self.object_id()).await?;
+            }
         }
         Ok(())
     }
@@ -404,8 +408,7 @@ mod tests {
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 allocator::Allocator,
-                extent_record::ExtentValue,
-                object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
+                object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
                 CachingObjectHandle, HandleOptions, ObjectStore,
             },
@@ -693,7 +696,6 @@ mod tests {
         let mut merger = layer_set.merger();
         let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         let mut found_tombstone = false;
-        let mut found_deleted_extent = false;
         while let Some(ItemRef { key: ObjectKey { object_id, data }, value, .. }) = iter.get() {
             if *object_id == object.object_id() {
                 match (data, value) {
@@ -702,14 +704,6 @@ mod tests {
                         assert!(!found_tombstone);
                         found_tombstone = true;
                     }
-                    // Deleted extent entry
-                    (
-                        ObjectKeyData::Attribute(0, AttributeKey::Extent(_)),
-                        ObjectValue::Extent(ExtentValue::None),
-                    ) => {
-                        assert!(!found_deleted_extent);
-                        found_deleted_extent = true;
-                    }
                     // We don't expect anything else.
                     _ => assert!(false, "Unexpected item {:?}", iter.get()),
                 }
@@ -717,7 +711,6 @@ mod tests {
             iter.advance().await.expect("advance failed");
         }
         assert!(found_tombstone);
-        assert!(found_deleted_extent);
 
         fs.close().await.expect("Close failed");
     }

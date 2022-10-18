@@ -6,7 +6,7 @@ use {
     crate::{
         buffer::{Buffer, BufferRef, MutableBufferRef},
         buffer_allocator::{BufferAllocator, MemBufferSource},
-        Device,
+        Device, DeviceHolder,
     },
     anyhow::{ensure, Error},
     async_trait::async_trait,
@@ -147,5 +147,19 @@ impl Device for FakeDevice {
 
     fn is_read_only(&self) -> bool {
         self.read_only.load(Ordering::Relaxed)
+    }
+
+    fn snapshot(&self) -> Result<DeviceHolder, Error> {
+        let allocator = BufferAllocator::new(
+            self.block_size() as usize,
+            Box::new(MemBufferSource::new(TRANSFER_HEAP_SIZE)),
+        );
+        Ok(DeviceHolder::new(Self {
+            allocator,
+            data: Mutex::new(self.data.lock().unwrap().clone()),
+            closed: AtomicBool::new(false),
+            operation_closure: Box::new(|_: Op| Ok(())),
+            read_only: AtomicBool::new(false),
+        }))
     }
 }

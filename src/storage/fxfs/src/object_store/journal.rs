@@ -142,6 +142,9 @@ pub(super) fn journal_handle_options() -> HandleOptions {
     HandleOptions { skip_journal_checks: true, ..Default::default() }
 }
 
+type PostCommitHook =
+    Option<Box<dyn Fn() -> futures::future::BoxFuture<'static, ()> + Send + Sync>>;
+
 /// The journal records a stream of mutations that are to be applied to other objects.  At mount
 /// time, these records can be replayed into memory.  It provides a way to quickly persist changes
 /// without having to make a large number of writes; they can be deferred to a later time (e.g.
@@ -156,6 +159,7 @@ pub struct Journal {
     writer_mutex: futures::lock::Mutex<()>,
     sync_mutex: futures::lock::Mutex<()>,
     trace: AtomicBool,
+    post_commit_hook: PostCommitHook,
 }
 
 struct Inner {
@@ -222,17 +226,20 @@ impl Inner {
     }
 }
 
-#[derive(Clone, Debug)]
 pub struct JournalOptions {
     /// In the steady state, the journal should fluctuate between being approximately half of this
     /// number and this number.  New super-blocks will be written every time about half of this
     /// amount is written to the journal.
     pub reclaim_size: u64,
+
+    /// A callback that runs after every transaction has been committed.  This will be called whilst
+    /// a lock is held which will block more transactions from being committed.
+    pub post_commit_hook: PostCommitHook,
 }
 
 impl Default for JournalOptions {
     fn default() -> Self {
-        JournalOptions { reclaim_size: DEFAULT_RECLAIM_SIZE }
+        JournalOptions { reclaim_size: DEFAULT_RECLAIM_SIZE, post_commit_hook: None }
     }
 }
 
@@ -264,6 +271,7 @@ impl Journal {
             writer_mutex: futures::lock::Mutex::new(()),
             sync_mutex: futures::lock::Mutex::new(()),
             trace: AtomicBool::new(false),
+            post_commit_hook: options.post_commit_hook,
         }
     }
 
@@ -885,7 +893,11 @@ impl Journal {
 
         let _guard = debug_assert_not_too_long!(self.commit_mutex.lock());
         self.pre_commit().await?;
-        Ok(debug_assert_not_too_long!(self.write_and_apply_mutations(transaction)))
+        let offset = debug_assert_not_too_long!(self.write_and_apply_mutations(transaction));
+        if let Some(hook) = self.post_commit_hook.as_ref() {
+            hook().await;
+        }
+        Ok(offset)
     }
 
     // Before we commit, we might need to extend the journal or write pending records to the
@@ -1018,11 +1030,11 @@ impl Journal {
     }
 
     /// Flushes any buffered journal data to the device.  Note that this does not flush the device
-    /// so it still does not guarantee data will have been persisted to lower layers.  If a
-    /// precondition is supplied, it is evaluated and the sync will be skipped if it returns false.
-    /// This allows callers to check a condition whilst a lock is held.  If a sync is performed,
-    /// this function returns the checkpoint that was flushed and the amount of borrowed metadata
-    /// space at the point it was flushed.
+    /// unless the flush_device option is set, in which case data should have been persisted to
+    /// lower layers.  If a precondition is supplied, it is evaluated and the sync will be skipped
+    /// if it returns false.  This allows callers to check a condition whilst a lock is held.  If a
+    /// sync is performed, this function returns the checkpoint that was flushed and the amount of
+    /// borrowed metadata space at the point it was flushed.
     pub async fn sync(
         &self,
         options: SyncOptions<'_>,
@@ -1091,7 +1103,7 @@ impl Journal {
             }
 
             // We need to write a DidFlushDevice record at some point, but if we are in the
-            // process of shutting down the filesystem, we want to leave to journal clean to
+            // process of shutting down the filesystem, we want to leave the journal clean to
             // avoid there being log messages complaining about unwritten journal data, so we
             // queue it up so that the next transaction will trigger this record to be written.
             // If we are shutting down, that will never happen but since the DidFlushDevice

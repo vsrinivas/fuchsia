@@ -25,7 +25,7 @@ use {
                 self, AssocObj, AssociatedObject, LockKey, Mutation, ObjectStoreMutation, Options,
                 Transaction,
             },
-            HandleOptions, ObjectStore,
+            HandleOptions, ObjectStore, TrimMode, TrimResult,
         },
         round::{round_down, round_up},
     },
@@ -540,12 +540,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             },
             async {
                 let mut deallocated = 0;
-                let aligned_size = round_up(self.txn_get_size(transaction), block_size)
-                    .ok_or(anyhow!(FxfsError::Inconsistent).context("flush: Bad size"))?;
                 for r in ranges {
-                    if r.start < aligned_size {
-                        deallocated += self.deallocate_old_extents(transaction, r.clone()).await?;
-                    }
+                    deallocated += self.deallocate_old_extents(transaction, r.clone()).await?;
                 }
                 Result::<_, Error>::Ok(deallocated)
             }
@@ -599,7 +595,8 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                     && range.start <= offset =>
                 {
                     let offset_within_extent = offset - range.start;
-                    let remaining_length_of_extent = (range.end - offset) as usize;
+                    let remaining_length_of_extent =
+                        (range.end.checked_sub(offset).ok_or(FxfsError::Inconsistent)?) as usize;
                     (
                         device_offset + offset_within_extent,
                         min(buf.len(), remaining_length_of_extent),
@@ -682,11 +679,12 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
         &'a self,
         transaction: &mut Transaction<'a>,
         size: u64,
-    ) -> Result<(), Error> {
+    ) -> Result<NeedsTrim, Error> {
         let old_size = self.txn_get_size(transaction);
+        let store = self.store();
         if self.trace.load(atomic::Ordering::Relaxed) {
             info!(
-                store_id = self.store().store_object_id(),
+                store_id = store.store_object_id(),
                 oid = self.object_id,
                 old_size,
                 orig_size = self.get_size(),
@@ -694,16 +692,44 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 "T",
             );
         }
+        let mut needs_trim = NeedsTrim(false);
         if size < old_size {
             let block_size = self.block_size();
             let aligned_size = round_up(size, block_size).ok_or(FxfsError::TooBig)?;
-            self.zero(
-                transaction,
-                aligned_size..round_up(old_size, block_size).ok_or_else(|| {
-                    anyhow!(FxfsError::Inconsistent).context("truncate: Bad size")
-                })?,
-            )
-            .await?;
+            if let TrimResult::Incomplete = store
+                .trim_some(
+                    transaction,
+                    self.object_id,
+                    self.attribute_id,
+                    TrimMode::FromOffset(size),
+                )
+                .await?
+            {
+                needs_trim = NeedsTrim(true);
+
+                // Add the object to the graveyard in case the following transactions don't get
+                // replayed.
+                let graveyard_id = store.graveyard_directory_object_id();
+                match store
+                    .tree
+                    .find(&ObjectKey::graveyard_entry(graveyard_id, self.object_id))
+                    .await?
+                {
+                    Some(ObjectItem { value: ObjectValue::Some, .. })
+                    | Some(ObjectItem { value: ObjectValue::Trim, .. }) => {
+                        // This object is already in the graveyard so we don't need to do anything.
+                    }
+                    _ => {
+                        transaction.add(
+                            store.store_object_id,
+                            Mutation::replace_or_insert_object(
+                                ObjectKey::graveyard_entry(graveyard_id, self.object_id),
+                                ObjectValue::Trim,
+                            ),
+                        );
+                    }
+                }
+            }
             let to_zero = aligned_size - size;
             if to_zero > 0 {
                 assert!(to_zero < block_size);
@@ -718,13 +744,13 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
                 // TODO(fxbug.dev/88676): This might cause an allocation when there needs be none;
                 // ideally this would know if the tail block is allocated and if it isn't, it should
                 // leave it be.
-                let mut buf = self.store().device.allocate_buffer(to_zero as usize);
+                let mut buf = store.device.allocate_buffer(to_zero as usize);
                 buf.as_mut_slice().fill(0);
                 self.txn_write(transaction, size, buf.as_ref()).await?;
             }
         }
         transaction.add_with_object(
-            self.store().store_object_id,
+            store.store_object_id,
             Mutation::replace_or_insert_object(
                 ObjectKey::attribute(self.object_id, self.attribute_id, AttributeKey::Size),
                 ObjectValue::attribute(size),
@@ -732,7 +758,7 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> StoreObjectHandle<S> {
             AssocObj::Borrowed(self),
         );
 
-        Ok(())
+        Ok(needs_trim)
     }
 
     // Must be multiple of block size.
@@ -1132,8 +1158,11 @@ impl<S: AsRef<ObjectStore> + Send + Sync + 'static> WriteObjectHandle for StoreO
 
     async fn truncate(&self, size: u64) -> Result<(), Error> {
         let mut transaction = self.new_transaction().await?;
-        StoreObjectHandle::truncate(self, &mut transaction, size).await?;
+        let needs_trim = StoreObjectHandle::truncate(self, &mut transaction, size).await?.0;
         transaction.commit().await?;
+        if needs_trim {
+            self.store().trim(self.object_id).await?;
+        }
         Ok(())
     }
 
@@ -1241,31 +1270,44 @@ impl<'a, S: AsRef<ObjectStore> + Send + Sync + 'static> WriteBytes for DirectWri
     }
 }
 
+/// When truncating an object, sometimes it might not be possible to complete the transaction in a
+/// single transaction, in which case the caller needs to finish trimming the object in subsequent
+/// transactions (by calling ObjectStore::trim).
+#[must_use]
+pub struct NeedsTrim(pub bool);
+
 #[cfg(test)]
 mod tests {
     use {
         crate::{
             crypt::{insecure::InsecureCrypt, Crypt},
-            filesystem::{Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem},
-            lsm_tree::types::{ItemRef, LayerIterator},
+            errors::FxfsError,
+            filesystem::{
+                Filesystem, FxFilesystem, JournalingObject, OpenFxFilesystem, OpenOptions,
+                SyncOptions,
+            },
+            fsck::{fsck_volume_with_options, fsck_with_options, FsckOptions},
             object_handle::{
                 GetProperties, ObjectHandle, ObjectProperties, ReadObjectHandle, WriteObjectHandle,
             },
             object_store::{
                 allocator::Allocator,
-                extent_record::ExtentValue,
-                object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
+                directory::replace_child,
+                journal::JournalOptions,
+                object_record::Timestamp,
                 transaction::{Options, TransactionHandler},
-                HandleOptions, ObjectStore, StoreObjectHandle,
+                volume::root_volume,
+                Directory, HandleOptions, ObjectStore, StoreObjectHandle,
+                TRANSACTION_MUTATION_THRESHOLD,
             },
             round::{round_down, round_up},
         },
         assert_matches::assert_matches,
         fuchsia_async as fasync,
-        futures::{channel::oneshot::channel, join},
+        futures::{channel::oneshot::channel, join, FutureExt},
         rand::Rng,
         std::{
-            ops::{Bound, Range},
+            ops::Range,
             sync::{Arc, Mutex},
             time::Duration,
         },
@@ -1310,7 +1352,9 @@ mod tests {
                 .await
                 .expect("write failed");
         }
-        object.truncate(&mut transaction, TEST_OBJECT_SIZE).await.expect("truncate failed");
+        assert!(
+            !object.truncate(&mut transaction, TEST_OBJECT_SIZE).await.expect("truncate failed").0
+        );
         transaction.commit().await.expect("commit failed");
         (fs, object)
     }
@@ -1390,20 +1434,23 @@ mod tests {
         // Arrange for there to be <extent><deleted-extent><extent>.
         let mut buf = object.allocate_buffer(TEST_DATA.len());
         buf.as_mut_slice().copy_from_slice(TEST_DATA);
-        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed"); // This adds an extent at 0..512.
+        // This adds an extent at 0..512.
+        object.write_or_append(Some(0), buf.as_ref()).await.expect("write failed");
         let mut transaction = fs
             .clone()
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        object.truncate(&mut transaction, 3).await.expect("truncate failed"); // This deletes 512..1024.
+        // This deletes 512..1024.
+        assert!(!object.truncate(&mut transaction, 3).await.expect("truncate failed").0);
         transaction.commit().await.expect("commit failed");
         let data = b"foo";
         let offset = 1500u64;
         let align = (offset % fs.block_size() as u64) as usize;
         let mut buf = object.allocate_buffer(align + data.len());
         buf.as_mut_slice()[align..].copy_from_slice(data);
-        object.write_or_append(Some(1500), buf.subslice(align..)).await.expect("write failed"); // This adds 1024..1536.
+        // This adds 1024..1536.
+        object.write_or_append(Some(1500), buf.subslice(align..)).await.expect("write failed");
 
         const LEN1: usize = 1503;
         let mut buf = object.allocate_buffer(LEN1);
@@ -1450,7 +1497,9 @@ mod tests {
         buffer.as_mut_slice().fill(0xaf);
         object.write_or_append(Some(bs as u64), buffer.as_ref()).await.expect("write failed");
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-        object.truncate(&mut transaction, 3 * bs as u64).await.expect("truncate failed");
+        assert!(
+            !object.truncate(&mut transaction, 3 * bs as u64).await.expect("truncate failed").0
+        );
         transaction.commit().await.expect("commit failed");
         object2.write_or_append(Some(bs as u64), ef_buffer.as_ref()).await.expect("write failed");
 
@@ -1671,7 +1720,13 @@ mod tests {
             .new_transaction(&[], Options::default())
             .await
             .expect("new_transaction failed");
-        object.truncate(&mut transaction, fs.block_size() as u64).await.expect("truncate failed");
+        assert!(
+            !object
+                .truncate(&mut transaction, fs.block_size() as u64)
+                .await
+                .expect("truncate failed")
+                .0
+        );
         transaction.commit().await.expect("commit failed");
         let allocated_after = allocator.get_allocated_bytes();
         assert!(
@@ -1680,6 +1735,187 @@ mod tests {
             allocated_before,
             allocated_after
         );
+        fs.close().await.expect("Close failed");
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_trim() {
+        // Format a new filesystem.
+        let device = DeviceHolder::new(FakeDevice::new(8192, TEST_DEVICE_BLOCK_SIZE));
+        let fs = FxFilesystem::new_empty(device).await.expect("new_empty failed");
+        root_volume(fs.clone())
+            .await
+            .expect("root_volume failed")
+            .new_volume("test", None)
+            .await
+            .expect("volume failed");
+        fs.close().await.expect("close failed");
+        let device = fs.take_device().await;
+        device.reopen(false);
+
+        // To test trim, we open the filesystem and set up a post commit hook that runs after every
+        // transaction.  When the hook triggers, we can fsck the volume, take a snapshot of the
+        // device and check that it gets replayed correctly on the snapshot.  We can check that the
+        // graveyard trims the file as expected.
+        #[derive(Default)]
+        struct Context {
+            store: Option<Arc<ObjectStore>>,
+            object_id: Option<u64>,
+        }
+        let shared_context = Arc::new(Mutex::new(Context::default()));
+
+        let shared_context_clone = shared_context.clone();
+        let post_commit = move || {
+            let store = shared_context_clone.lock().unwrap().store.as_ref().cloned().unwrap();
+            let shared_context = shared_context_clone.clone();
+            async move {
+                // First run fsck on the current filesystem.
+                let options = FsckOptions {
+                    fail_on_warning: true,
+                    no_lock: true,
+                    on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+                    ..Default::default()
+                };
+                let fs = store.filesystem();
+
+                fsck_with_options(fs.clone(), &options).await.expect("fsck_with_options failed");
+                fsck_volume_with_options(fs.as_ref(), &options, store.store_object_id(), None)
+                    .await
+                    .expect("fsck_volume_with_options failed");
+
+                // Now check that we can replay this correctly.
+                fs.sync(SyncOptions { flush_device: true, ..Default::default() })
+                    .await
+                    .expect("sync failed");
+                let device = fs.device().snapshot().expect("snapshot failed");
+                let fs = FxFilesystem::open(device).await.expect("open failed");
+
+                // If the "foo" file exists check that allocated size matches content size.
+                let root_vol = root_volume(fs.clone()).await.expect("root_volume failed");
+                let store = root_vol.volume("test", None).await.expect("volume failed");
+
+                let object_id = shared_context.lock().unwrap().object_id.clone();
+
+                if let Some(oid) = object_id {
+                    // For the second pass, the object should get tombstoned.
+                    loop {
+                        if let Err(e) =
+                            ObjectStore::open_object(&store, oid, HandleOptions::default(), None)
+                                .await
+                        {
+                            assert!(FxfsError::NotFound.matches(&e));
+                            break;
+                        }
+                        // The graveyard should eventually tombstone the object.
+                        fasync::Timer::new(std::time::Duration::from_millis(100)).await;
+                    }
+                } else {
+                    let root_directory = Directory::open(&store, store.root_directory_object_id())
+                        .await
+                        .expect("open failed");
+                    let oid = root_directory.lookup("foo").await.expect("lookup failed");
+                    if let Some((oid, _)) = oid {
+                        let object =
+                            ObjectStore::open_object(&store, oid, HandleOptions::default(), None)
+                                .await
+                                .expect("open_object failed");
+                        loop {
+                            let props =
+                                object.get_properties().await.expect("get_properties failed");
+                            if props.data_attribute_size > 0 || props.allocated_size == 0 {
+                                break;
+                            }
+                            // The object has been truncated, but still has some data allocated to
+                            // it.  The graveyard should trim the object eventually.
+                            fasync::Timer::new(std::time::Duration::from_millis(100)).await;
+                        }
+                    }
+                }
+
+                // Run fsck again.
+                fsck_with_options(fs.clone(), &options).await.expect("fsck_with_options failed");
+                fsck_volume_with_options(fs.as_ref(), &options, store.store_object_id(), None)
+                    .await
+                    .expect("fsck_volume_with_options failed");
+
+                fs.close().await.expect("close failed");
+            }
+            .boxed()
+        };
+
+        let fs = FxFilesystem::open_with_options(
+            device,
+            OpenOptions {
+                journal_options: JournalOptions {
+                    post_commit_hook: Some(Box::new(post_commit)),
+                    ..Default::default()
+                },
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("open failed");
+
+        let root_vol = root_volume(fs.clone()).await.expect("root_volume failed");
+        let store = root_vol.volume("test", None).await.expect("volume failed");
+
+        shared_context.lock().unwrap().store = Some(store.clone());
+
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+
+        let object;
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        object = root_directory
+            .create_child_file(&mut transaction, "foo")
+            .await
+            .expect("create_object failed");
+
+        // Two passes: first with a regular object, and then with that object moved into the
+        // graveyard.
+        let mut pass = 0;
+        loop {
+            // Create enough extents in it such that when we truncate the object
+            // it will require more than one transaction.
+            let buf = object.allocate_buffer(5);
+            for i in 0..TRANSACTION_MUTATION_THRESHOLD as u64 + 10 {
+                object
+                    .txn_write(&mut transaction, i * 2 * store.block_size(), buf.as_ref())
+                    .await
+                    .expect("write failed");
+            }
+            transaction.commit().await.expect("commit failed");
+
+            // This should take up more than one transaction.
+            WriteObjectHandle::truncate(&object, 0).await.expect("truncate failed");
+
+            if pass == 1 {
+                break;
+            }
+
+            // Store the object ID so that we can make sure the object is always tombstoned
+            // after remount (see above).
+            shared_context.lock().unwrap().object_id = Some(object.object_id());
+
+            transaction = fs
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+
+            // Move the object into the graveyard.
+            replace_child(&mut transaction, None, (&root_directory, "foo"))
+                .await
+                .expect("replace_child failed");
+            store.add_to_graveyard(&mut transaction, object.object_id());
+
+            pass += 1;
+        }
+
         fs.close().await.expect("Close failed");
     }
 
@@ -1727,37 +1963,18 @@ mod tests {
             .await
             .expect("purge failed");
 
-        assert_eq!(allocated_before - allocator.get_allocated_bytes(), fs.block_size() as u64,);
+        assert_eq!(allocated_before - allocator.get_allocated_bytes(), fs.block_size() as u64);
 
-        let layer_set = store.tree.layer_set();
-        let mut merger = layer_set.merger();
-        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
-        let mut found_tombstone = false;
-        let mut found_deleted_extent = false;
-        while let Some(ItemRef { key: ObjectKey { object_id, data }, value, .. }) = iter.get() {
-            if *object_id == object.object_id() {
-                match (data, value) {
-                    // Tombstone entry
-                    (ObjectKeyData::Object, ObjectValue::None) => {
-                        assert!(!found_tombstone);
-                        found_tombstone = true;
-                    }
-                    // Deleted extent entry
-                    (
-                        ObjectKeyData::Attribute(0, AttributeKey::Extent(_)),
-                        ObjectValue::Extent(ExtentValue::None),
-                    ) => {
-                        assert!(!found_deleted_extent);
-                        found_deleted_extent = true;
-                    }
-                    // We don't expect anything else.
-                    _ => assert!(false, "Unexpected item {:?}", iter.get()),
-                }
-            }
-            iter.advance().await.expect("advance failed");
-        }
-        assert!(found_tombstone);
-        assert!(found_deleted_extent);
+        fsck_with_options(
+            fs.clone(),
+            &FsckOptions {
+                fail_on_warning: true,
+                on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("fsck_with_options failed");
 
         fs.close().await.expect("Close failed");
     }
@@ -1852,7 +2069,7 @@ mod tests {
             writer.await;
             reader.await;
             let mut transaction = object.new_transaction().await.expect("new_transaction failed");
-            object.truncate(&mut transaction, 0).await.expect("truncate failed");
+            assert!(!object.truncate(&mut transaction, 0).await.expect("truncate failed").0);
             transaction.commit().await.expect("commit failed");
         }
         fs.close().await.expect("Close failed");
@@ -1892,10 +2109,13 @@ mod tests {
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         let before = after;
         let size = object.get_size();
-        object
-            .truncate(&mut transaction, size - fs.block_size() as u64)
-            .await
-            .expect("extend failed");
+        assert!(
+            !object
+                .truncate(&mut transaction, size - fs.block_size() as u64)
+                .await
+                .expect("extend failed")
+                .0
+        );
         transaction.commit().await.expect("commit failed");
         let after = object.get_properties().await.expect("get_properties failed").allocated_size;
         assert_eq!(after, before - fs.block_size() as u64);
@@ -1990,7 +2210,7 @@ mod tests {
         // an allocated range to the end of the device
         let mut transaction = object.new_transaction().await.expect("new_transaction failed");
         let size = 50 * fs.block_size() as u64;
-        object.truncate(&mut transaction, size).await.expect("extend failed");
+        assert!(!object.truncate(&mut transaction, size).await.expect("extend failed").0);
         transaction.commit().await.expect("commit failed");
 
         let (allocated, count) = object.is_allocated(end).await.expect("is_allocated failed");

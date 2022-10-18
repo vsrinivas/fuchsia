@@ -5,6 +5,7 @@
 use {
     crate::{
         async_enter,
+        errors::FxfsError,
         log::*,
         lsm_tree::{
             merge::{Merger, MergerIterator},
@@ -20,7 +21,7 @@ use {
             ObjectStore,
         },
     },
-    anyhow::{Context, Error},
+    anyhow::{anyhow, bail, Context, Error},
     fuchsia_async::{self as fasync},
     futures::{
         channel::{
@@ -55,6 +56,9 @@ pub struct Graveyard {
 enum Message {
     // Tombstone the object identified by <store-id>, <object-id>.
     Tombstone(u64, u64),
+
+    // Trims the identified object.
+    Trim(u64, u64),
 
     // When the flush message is processed, notifies sender.  This allows the receiver to know
     // that all preceding tombstone messages have been processed.
@@ -131,6 +135,11 @@ impl Graveyard {
                         error!(error = e.as_value(), store_id, oid = object_id, "Tombstone error");
                     }
                 }
+                Message::Trim(store_id, object_id) => {
+                    if let Err(e) = self.trim(store_id, object_id).await {
+                        error!(error = e.as_value(), store_id, oid = object_id, "Tombstone error");
+                    }
+                }
                 Message::Flush(sender) => {
                     let _ = sender.send(());
                 }
@@ -150,8 +159,13 @@ impl Graveyard {
         let mut merger = layer_set.merger();
         let graveyard_object_id = store.graveyard_directory_object_id();
         let mut iter = Self::iter(graveyard_object_id, &mut merger).await?;
-        while let Some((object_id, _)) = iter.get() {
-            self.queue_tombstone(store.store_object_id(), object_id);
+        let store_id = store.store_object_id();
+        while let Some((object_id, _, value)) = iter.get() {
+            match value {
+                ObjectValue::Some => self.queue_tombstone(store_id, object_id),
+                ObjectValue::Trim => self.queue_trim(store_id, object_id),
+                _ => bail!(anyhow!(FxfsError::Inconsistent).context("Bad graveyard value")),
+            }
             count += 1;
             iter.advance().await?;
         }
@@ -161,6 +175,10 @@ impl Graveyard {
     /// Queues an object for tombstoning.
     pub fn queue_tombstone(&self, store_id: u64, object_id: u64) {
         let _ = self.channel.unbounded_send(Message::Tombstone(store_id, object_id));
+    }
+
+    fn queue_trim(&self, store_id: u64, object_id: u64) {
+        let _ = self.channel.unbounded_send(Message::Trim(store_id, object_id));
     }
 
     /// Waits for all preceding queued tombstones to finish.
@@ -191,6 +209,14 @@ impl Graveyard {
             Options { skip_journal_checks: true, borrow_metadata_space: true, ..Default::default() }
         };
         store.tombstone(object_id, options).await.context("Failed to tombstone object")
+    }
+
+    async fn trim(&self, store_id: u64, object_id: u64) -> Result<(), Error> {
+        let store = self
+            .object_manager
+            .store(store_id)
+            .context(format!("Failed to get store {}", store_id))?;
+        store.trim(object_id).await.context("Failed to trim object")
     }
 
     /// Returns an iterator that will return graveyard entries skipping deleted ones.  Example
@@ -257,14 +283,15 @@ impl<'a, 'b> GraveyardIterator<'a, 'b> {
         }
     }
 
-    /// Returns a tuple (object_id, sequence).
-    pub fn get(&self) -> Option<(u64, u64)> {
+    /// Returns a tuple (object_id, sequence, value).
+    pub fn get(&self) -> Option<(u64, u64, ObjectValue)> {
         match self.iter.get() {
             Some(ItemRef {
                 key: ObjectKey { object_id: oid, data: ObjectKeyData::GraveyardEntry { object_id } },
+                value,
                 sequence,
                 ..
-            }) if *oid == self.object_id => Some((*object_id, sequence)),
+            }) if *oid == self.object_id => Some((*object_id, sequence, value.clone())),
             _ => None,
         }
     }
@@ -281,6 +308,7 @@ mod tests {
         super::Graveyard,
         crate::{
             filesystem::{Filesystem, FxFilesystem},
+            object_store::object_record::ObjectValue,
             object_store::transaction::{Options, TransactionHandler},
         },
         assert_matches::assert_matches,
@@ -314,9 +342,9 @@ mod tests {
             let mut iter = Graveyard::iter(root_store.graveyard_directory_object_id(), &mut merger)
                 .await
                 .expect("iter failed");
-            assert_matches!(iter.get().expect("missing entry"), (3, _));
+            assert_matches!(iter.get().expect("missing entry"), (3, _, ObjectValue::Some));
             iter.advance().await.expect("advance failed");
-            assert_matches!(iter.get().expect("missing entry"), (4, _));
+            assert_matches!(iter.get().expect("missing entry"), (4, _, ObjectValue::Some));
             iter.advance().await.expect("advance failed");
             assert_eq!(iter.get(), None);
         }
@@ -336,7 +364,7 @@ mod tests {
         let mut iter = Graveyard::iter(root_store.graveyard_directory_object_id(), &mut merger)
             .await
             .expect("iter failed");
-        assert_matches!(iter.get().expect("missing entry"), (3, _));
+        assert_matches!(iter.get().expect("missing entry"), (3, _, ObjectValue::Some));
         iter.advance().await.expect("advance failed");
         assert_eq!(iter.get(), None);
     }

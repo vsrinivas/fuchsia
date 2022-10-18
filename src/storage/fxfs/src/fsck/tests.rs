@@ -79,16 +79,15 @@ impl FsckTest {
         let options = FsckOptions {
             fail_on_warning: true,
             halt_on_error: test_options.halt_on_error,
-            do_slow_passes: true,
-            verbose: false,
-            on_error: |err| {
+            on_error: Box::new(|err| {
                 if err.is_error() {
                     eprintln!("Fsck error: {:?}", &err);
                 } else {
                     println!("Fsck warning: {:?}", &err);
                 }
                 self.errors.lock().unwrap().push(err.clone());
-            },
+            }),
+            ..Default::default()
         };
         if !test_options.skip_system_fsck {
             fsck_with_options(self.filesystem(), &options).await?;
@@ -222,6 +221,37 @@ async fn test_missing_graveyard() {
     );
 }
 */
+
+#[fasync::run_singlethreaded(test)]
+async fn test_bad_graveyard_value() {
+    let mut test = FsckTest::new().await;
+
+    {
+        let fs = test.filesystem();
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        let root_store = fs.root_store();
+        let graveyard_id = root_store.graveyard_directory_object_id();
+        transaction.add(
+            root_store.store_object_id(),
+            Mutation::replace_or_insert_object(
+                ObjectKey::graveyard_entry(graveyard_id, 1000),
+                ObjectValue::Attribute { size: 500 },
+            ),
+        );
+        transaction.commit().await.expect("commit failed");
+    }
+
+    test.remount().await.expect("Remount failed");
+    test.run(TestOptions::default()).await.expect_err("Fsck should fail");
+    assert_matches!(
+        test.errors()[..],
+        [FsckIssue::Error(FsckError::BadGraveyardValue(_, object_id))] if object_id == 1000
+    );
+}
 
 #[fasync::run_singlethreaded(test)]
 async fn test_extra_allocation() {
@@ -832,7 +862,8 @@ async fn test_overlapping_keys_in_layer_file() {
 #[fasync::run_singlethreaded(test)]
 async fn test_unexpected_record_in_layer_file() {
     let mut test = FsckTest::new().await;
-    // This test relies on the value below being something that doesn't deserialize to a valid ObjectValue.
+    // This test relies on the value below being something that doesn't deserialize to a valid
+    // ObjectValue.
     let store_id = {
         let fs = test.filesystem();
         let root_volume = root_volume(fs.clone()).await.unwrap();

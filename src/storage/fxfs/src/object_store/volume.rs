@@ -36,7 +36,8 @@ impl RootVolume {
         self.filesystem.object_manager().volume_directory()
     }
 
-    /// Creates a new volume.  This is not thread-safe.
+    /// Creates a new volume.  This is not thread-safe and will not check to see if the volume
+    /// already exists (and if it does, it will result in an inconsistent volume).
     pub async fn new_volume(
         &self,
         volume_name: &str,

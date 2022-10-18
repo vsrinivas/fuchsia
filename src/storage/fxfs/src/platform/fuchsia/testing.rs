@@ -136,12 +136,10 @@ impl TestFixture {
         let filesystem = FxFilesystem::open(device).await.expect("open failed");
         let options = FsckOptions {
             fail_on_warning: true,
-            halt_on_error: false,
-            do_slow_passes: true,
-            verbose: false,
-            on_error: |err: &FsckIssue| {
+            on_error: Box::new(|err: &FsckIssue| {
                 eprintln!("Fsck error: {:?}", err);
-            },
+            }),
+            ..Default::default()
         };
         fsck_with_options(filesystem.clone(), &options).await.expect("fsck failed");
         fsck_volume_with_options(

@@ -49,6 +49,7 @@ use {
                 Transaction, UpdateMutationsKey,
             },
         },
+        round::round_up,
         serialized_types::{Version, Versioned, VersionedLatest},
     },
     allocator::Allocator,
@@ -84,6 +85,9 @@ pub use transaction::Mutation;
 // For encrypted stores, the lower 32 bits of the object ID are encrypted to make side-channel
 // attacks more difficult. This mask can be used to extract the hi part of the object ID.
 const OBJECT_ID_HI_MASK: u64 = 0xffffffff00000000;
+
+// At time of writing, this threshold limits transactions that delete extents to about 10,000 bytes.
+const TRANSACTION_MUTATION_THRESHOLD: usize = 200;
 
 /// StoreObjectHandle stores an owner that must implement this trait, which allows the handle to get
 /// back to an ObjectStore and provides a callback for creating a data buffer for the handle.
@@ -892,92 +896,225 @@ impl ObjectStore {
         }
     }
 
-    // Purges an object that is in the graveyard.  This has no locking, so it's not safe to call
-    // this more than once simultaneously for a given object.
+    // Purges an object that is in the graveyard.
     pub async fn tombstone(&self, object_id: u64, txn_options: Options<'_>) -> Result<(), Error> {
-        let fs = self.filesystem();
-        let mut search_key = ObjectKey::extent(object_id, 0, 0..0);
-        // TODO(fxbug.dev/95976): There should be a test that runs fsck after each transaction.
-        loop {
-            let mut transaction = fs.clone().new_transaction(&[], txn_options).await?;
-            let next_key = self.delete_extents(&mut transaction, &search_key).await?;
-            if next_key.is_none() {
-                // Tombstone records *must* be merged so as to consume all other records for the
-                // object.
-                transaction.add(
-                    self.store_object_id,
-                    Mutation::merge_object(
-                        ObjectKey::object(search_key.object_id),
-                        ObjectValue::None,
-                    ),
-                );
+        self.trim_or_tombstone(object_id, true, txn_options).await
+    }
 
-                self.remove_from_graveyard(&mut transaction, search_key.object_id);
+    /// Trim extents beyond the end of a file for all attributes.  This will remove the entry from
+    /// the graveyard when done.
+    pub async fn trim(&self, object_id: u64) -> Result<(), Error> {
+        // For the root and root parent store, we would need to use the metadata reservation which
+        // we don't currently support, so assert that we're not those stores.
+        assert!(self.parent_store.as_ref().unwrap().parent_store.is_some());
+
+        self.trim_or_tombstone(
+            object_id,
+            false,
+            Options { borrow_metadata_space: true, ..Default::default() },
+        )
+        .await
+    }
+
+    async fn trim_or_tombstone(
+        &self,
+        object_id: u64,
+        for_tombstone: bool,
+        txn_options: Options<'_>,
+    ) -> Result<(), Error> {
+        let fs = self.filesystem();
+        let mut next_attribute = Some(0);
+        while let Some(attribute_id) = next_attribute.take() {
+            let mut transaction = fs
+                .clone()
+                .new_transaction(
+                    &[LockKey::object_attribute(self.store_object_id, object_id, attribute_id)],
+                    txn_options,
+                )
+                .await?;
+
+            match self
+                .trim_some(
+                    &mut transaction,
+                    object_id,
+                    attribute_id,
+                    if for_tombstone { TrimMode::Tombstone } else { TrimMode::UseSize },
+                )
+                .await?
+            {
+                TrimResult::Incomplete => next_attribute = Some(attribute_id),
+                TrimResult::Done(None) => {
+                    if for_tombstone
+                        || matches!(
+                            self.tree
+                                .find(&ObjectKey::graveyard_entry(
+                                    self.graveyard_directory_object_id(),
+                                    object_id,
+                                ))
+                                .await?,
+                            Some(Item { value: ObjectValue::Trim, .. })
+                        )
+                    {
+                        self.remove_from_graveyard(&mut transaction, object_id);
+                    }
+                }
+                TrimResult::Done(id) => next_attribute = id,
             }
-            transaction.commit().await?;
-            search_key = if let Some(next_key) = next_key {
-                next_key
-            } else {
-                break;
-            };
+
+            if !transaction.mutations.is_empty() {
+                transaction.commit().await?;
+            }
         }
         Ok(())
     }
 
-    // Makes progress on deleting part of a file but stops before a transaction gets too big.
-    async fn delete_extents(
+    /// Deletes extents for attribute `attribute_id` in object `object_id`.  Also see the comments
+    /// for TrimMode and TrimResult.
+    pub async fn trim_some(
         &self,
         transaction: &mut Transaction<'_>,
-        search_key: &ObjectKey,
-    ) -> Result<Option<ObjectKey>, Error> {
+        object_id: u64,
+        attribute_id: u64,
+        mode: TrimMode,
+    ) -> Result<TrimResult, Error> {
         let layer_set = self.tree.layer_set();
         let mut merger = layer_set.merger();
-        let allocator = self.allocator();
-        let mut iter = merger.seek(Bound::Included(search_key)).await?;
-        let mut delete_extent_mutation = None;
+
+        let aligned_offset = match mode {
+            TrimMode::FromOffset(offset) => {
+                round_up(offset, self.block_size).ok_or(FxfsError::Inconsistent)?
+            }
+            TrimMode::Tombstone => 0,
+            TrimMode::UseSize => {
+                let iter = merger
+                    .seek(Bound::Included(&ObjectKey::attribute(
+                        object_id,
+                        attribute_id,
+                        AttributeKey::Size,
+                    )))
+                    .await?;
+                if let Some(item_ref) = iter.get() {
+                    if item_ref.key.object_id != object_id {
+                        return Ok(TrimResult::Done(None));
+                    }
+
+                    if let ItemRef {
+                        key:
+                            ObjectKey {
+                                data:
+                                    ObjectKeyData::Attribute(size_attribute_id, AttributeKey::Size),
+                                ..
+                            },
+                        value: ObjectValue::Attribute { size },
+                        ..
+                    } = item_ref
+                    {
+                        // If we found a different attribute_id, return so we can get the
+                        // right lock.
+                        if *size_attribute_id != attribute_id {
+                            return Ok(TrimResult::Done(Some(*size_attribute_id)));
+                        }
+                        round_up(*size, self.block_size).ok_or(FxfsError::Inconsistent)?
+                    } else {
+                        // At time of writing, we should always see a size record here, but
+                        // asserting here would be brittle so just skip to the the next attribute
+                        // instead.
+                        return Ok(TrimResult::Done(Some(attribute_id + 1)));
+                    }
+                } else {
+                    // End of the tree.
+                    return Ok(TrimResult::Done(None));
+                }
+            }
+        };
+
         // Loop over the extents and deallocate them.
+        let mut iter = merger
+            .seek(Bound::Included(&ObjectKey::from_extent(
+                object_id,
+                attribute_id,
+                ExtentKey::search_key_from_offset(aligned_offset),
+            )))
+            .await?;
+        let mut end = 0;
+        let allocator = self.allocator();
+        let mut result = TrimResult::Done(None);
+        let mut deallocated = 0;
+
         while let Some(item_ref) = iter.get() {
-            if item_ref.key.object_id != search_key.object_id {
+            if item_ref.key.object_id != object_id {
                 break;
             }
-            if let ItemRef {
-                key:
-                    ObjectKey {
-                        data:
-                            ObjectKeyData::Attribute(
-                                attribute_id,
-                                AttributeKey::Extent(ExtentKey { range }),
-                            ),
-                        ..
-                    },
-                value: ObjectValue::Extent(ExtentValue::Some { device_offset, .. }),
+            if let ObjectKey {
+                data: ObjectKeyData::Attribute(extent_attribute_id, attribute_key),
                 ..
-            } = item_ref
+            } = item_ref.key
             {
-                let device_range = *device_offset..*device_offset + (range.end - range.start);
-                allocator.deallocate(transaction, self.store_object_id(), device_range).await?;
-                delete_extent_mutation = Some(Mutation::merge_object(
-                    ObjectKey::extent(search_key.object_id, *attribute_id, 0..range.end),
-                    ObjectValue::deleted_extent(),
-                ));
-                // Stop if the transaction is getting too big.  At time of writing, this threshold
-                // limits transactions to about 10,000 bytes.
-                const TRANSACTION_MUTATION_THRESHOLD: usize = 200;
-                if transaction.mutations.len() >= TRANSACTION_MUTATION_THRESHOLD {
-                    transaction.add(self.store_object_id, delete_extent_mutation.unwrap());
-                    return Ok(Some(ObjectKey::attribute(
-                        search_key.object_id,
-                        *attribute_id,
-                        AttributeKey::Extent(ExtentKey::search_key_from_offset(range.end)),
-                    )));
+                if *extent_attribute_id != attribute_id {
+                    result = TrimResult::Done(Some(*extent_attribute_id));
+                    break;
+                }
+                if let (
+                    AttributeKey::Extent(ExtentKey { range }),
+                    ObjectValue::Extent(ExtentValue::Some { device_offset, .. }),
+                ) = (attribute_key, item_ref.value)
+                {
+                    let start = std::cmp::max(range.start, aligned_offset);
+                    ensure!(start < range.end, FxfsError::Inconsistent);
+                    let device_offset = device_offset
+                        .checked_add(start - range.start)
+                        .ok_or(FxfsError::Inconsistent)?;
+                    end = range.end;
+                    let len = end - start;
+                    allocator
+                        .deallocate(
+                            transaction,
+                            self.store_object_id,
+                            device_offset..device_offset + len,
+                        )
+                        .await?;
+                    deallocated += len;
+                    // Stop if the transaction is getting too big.
+                    if transaction.mutations.len() >= TRANSACTION_MUTATION_THRESHOLD {
+                        result = TrimResult::Incomplete;
+                        break;
+                    }
                 }
             }
             iter.advance().await?;
         }
-        if let Some(m) = delete_extent_mutation {
-            transaction.add(self.store_object_id, m);
+
+        if matches!(mode, TrimMode::Tombstone) && matches!(result, TrimResult::Done(None)) {
+            // Tombstone records *must* be merged so as to consume all other records for the
+            // object.
+            transaction.add(
+                self.store_object_id,
+                Mutation::merge_object(ObjectKey::object(object_id), ObjectValue::None),
+            );
+        } else if deallocated > 0 {
+            transaction.add(
+                self.store_object_id,
+                Mutation::merge_object(
+                    ObjectKey::extent(object_id, attribute_id, aligned_offset..end),
+                    ObjectValue::deleted_extent(),
+                ),
+            );
+
+            // Update allocated size.
+            let mut mutation = self.txn_get_object_mutation(transaction, object_id).await?;
+            if let ObjectValue::Object { kind: ObjectKind::File { allocated_size, .. }, .. } =
+                &mut mutation.item.value
+            {
+                // The only way for these to fail are if the volume is inconsistent.
+                *allocated_size = allocated_size.checked_sub(deallocated).ok_or_else(|| {
+                    anyhow!(FxfsError::Inconsistent).context("Allocated size overflow")
+                })?;
+            } else {
+                panic!("Unexpected object value");
+            }
+            transaction.add(self.store_object_id, Mutation::ObjectStore(mutation));
         }
-        Ok(None)
+        Ok(result)
     }
 
     /// Returns all objects that exist in the parent store that pertain to this object store.
@@ -1518,7 +1655,18 @@ impl ObjectStore {
         );
     }
 
-    /// Removes the specified object from the graveyard.
+    /// Removes the specified object from the graveyard.  NB: Care should be taken when calling
+    /// this because graveyard entries are used for purging deleted files *and* for trimming
+    /// extents.  For example, consider the following sequence:
+    ///
+    ///     1. Add Trim graveyard entry.
+    ///     2. Replace with Some graveyard entry (see above).
+    ///     3. Remove graveyard entry.
+    ///
+    /// If the desire in #3 is just to cancel the effect of the Some entry, then #3 should
+    /// actually be:
+    ///
+    ///     3. Replace with Trim graveyard entry.
     fn remove_from_graveyard(&self, transaction: &mut Transaction<'_>, object_id: u64) {
         transaction.add(
             self.store_object_id,
@@ -1690,6 +1838,28 @@ fn layer_size_from_encrypted_mutations_size(size: u64) -> u64 {
 
 impl AssociatedObject for ObjectStore {}
 
+/// Argument to the trim_some method.
+pub enum TrimMode {
+    /// Trim extents beyond the current size.
+    UseSize,
+
+    /// Trim extents beyond the supplied offset.
+    FromOffset(u64),
+
+    /// Trim all extents and tombstone if complete.
+    Tombstone,
+}
+
+/// Result of the trim_some method.
+pub enum TrimResult {
+    /// We reached the limit of the transaction and more extents might follow.
+    Incomplete,
+
+    /// We finished this attribute.  Returns the ID of the next attribute for the same object if
+    /// there is one.
+    Done(Option<u64>),
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -1705,8 +1875,7 @@ mod tests {
             object_handle::{ObjectHandle, ReadObjectHandle, WriteObjectHandle, INVALID_OBJECT_ID},
             object_store::{
                 directory::Directory,
-                extent_record::{ExtentKey, ExtentValue},
-                object_record::{AttributeKey, ObjectKey, ObjectKeyData, ObjectValue},
+                object_record::{ObjectKey, ObjectValue},
                 transaction::{Options, TransactionHandler},
                 volume::root_volume,
                 HandleOptions, ObjectStore,
@@ -1906,19 +2075,8 @@ mod tests {
 
         root_store.tombstone(child_id, Options::default()).await.expect("tombstone failed");
 
-        let layers = root_store.tree.layer_set();
-        let search_key = ExtentKey::new(0..8192).search_key();
-        let mut merger = layers.merger();
-        let mut iter = merger
-            .seek(Bound::Included(&ObjectKey::extent(child_id, 0, search_key.range)))
-            .await
-            .expect("seek failed");
-        assert_matches!(
-            iter.get(),
-            Some(ItemRef { value: ObjectValue::Extent(ExtentValue::None), .. })
-        );
-        iter.advance().await.expect("advance failed");
-        assert_matches!(iter.get(), None);
+        // Let fsck check allocations.
+        fsck(fs.clone()).await.expect("fsck failed");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1949,46 +2107,25 @@ mod tests {
             child.object_id()
         };
 
-        let has_deleted_extent_records = |root_store: Arc<ObjectStore>, child_id| async move {
-            let layers = root_store.tree.layer_set();
-            let search_key = ExtentKey::new(0..1).search_key();
-            let mut merger = layers.merger();
-            let mut iter = merger
-                .seek(Bound::Included(&ObjectKey::extent(child_id, 0, search_key.range)))
-                .await
-                .expect("seek failed");
-            loop {
-                match iter.get() {
-                    None => return false,
-                    Some(ItemRef {
-                        key:
-                            ObjectKey {
-                                object_id,
-                                data:
-                                    ObjectKeyData::Attribute(0, AttributeKey::Extent(ExtentKey { .. })),
-                            },
-                        value: ObjectValue::Extent(ExtentValue::None),
-                        ..
-                    }) if *object_id == child_id => return true,
-                    _ => {}
-                }
-                iter.advance().await.expect("advance failed");
-            }
-        };
-
         root_store.tombstone(child_id, Options::default()).await.expect("tombstone failed");
         assert_matches!(
             root_store.tree.find(&ObjectKey::object(child_id)).await.expect("find failed"),
             Some(Item { value: ObjectValue::None, .. })
         );
-        assert!(has_deleted_extent_records(root_store.clone(), child_id).await);
 
         root_store.flush().await.expect("flush failed");
-        assert_matches!(
-            root_store.tree.find(&ObjectKey::object(child_id)).await.expect("find failed"),
-            None
-        );
-        assert!(!has_deleted_extent_records(root_store.clone(), child_id).await);
+
+        // There should be no records for the object.
+        let layers = root_store.tree.layer_set();
+        let mut merger = layers.merger();
+        let iter =
+            merger.seek(Bound::Included(&ObjectKey::object(child_id))).await.expect("seek failed");
+        match iter.get() {
+            None => {}
+            Some(ItemRef { key: ObjectKey { object_id, .. }, .. }) => {
+                assert_ne!(*object_id, child_id)
+            }
+        }
     }
 
     #[fasync::run_singlethreaded(test)]

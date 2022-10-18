@@ -5,7 +5,7 @@
 use {
     crate::{
         fsck::{
-            errors::{FsckError, FsckFatal, FsckIssue, FsckWarning},
+            errors::{FsckError, FsckFatal, FsckWarning},
             Fsck,
         },
         lsm_tree::types::{Item, ItemRef, LayerIterator, MutableLayer},
@@ -40,6 +40,8 @@ struct ScannedFile {
     parents: Vec<u64>,
     // The allocated size of the file (computed by summing up the extents for the file).
     allocated_size: u64,
+    // The object is in the graveyard which means extents beyond the end of the file are allowed.
+    in_graveyard: bool,
 }
 
 #[derive(Debug)]
@@ -70,17 +72,17 @@ enum ScannedObject {
     Tombstone,
 }
 
-struct ScannedStore<'a, F: Fn(&FsckIssue)> {
-    fsck: &'a Fsck<'a, F>,
+struct ScannedStore<'a> {
+    fsck: &'a Fsck<'a>,
     objects: BTreeMap<u64, ScannedObject>,
     root_objects: Vec<u64>,
     store_id: u64,
     is_root_store: bool,
 }
 
-impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
+impl<'a> ScannedStore<'a> {
     fn new(
-        fsck: &'a Fsck<'a, F>,
+        fsck: &'a Fsck<'a>,
         root_objects: impl AsRef<[u64]>,
         store_id: u64,
         is_root_store: bool,
@@ -155,6 +157,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                                         attributes: vec![],
                                         parents,
                                         allocated_size: 0,
+                                        in_graveyard: false,
                                     }),
                                 );
                             }
@@ -364,6 +367,7 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
                                         attributes: vec![],
                                         parents: vec![key.object_id],
                                         allocated_size: 0,
+                                        in_graveyard: false,
                                     }),
                                     ObjectDescriptor::Directory => {
                                         ScannedObject::Directory(ScannedDir {
@@ -442,10 +446,15 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
         Ok(())
     }
 
-    fn insert_graveyard_file(&mut self, object_id: u64) -> Result<(), Error> {
+    // A graveyard entry can either be for tombstoning a file (if `tombstone` is true), or for
+    // trimming a file.
+    fn handle_graveyard_entry(&mut self, object_id: u64, tombstone: bool) -> Result<(), Error> {
         match self.objects.get_mut(&object_id) {
-            Some(ScannedObject::File(ScannedFile { parents, .. })) => {
-                parents.push(INVALID_OBJECT_ID)
+            Some(ScannedObject::File(ScannedFile { parents, in_graveyard, .. })) => {
+                *in_graveyard = true;
+                if tombstone {
+                    parents.push(INVALID_OBJECT_ID)
+                }
             }
             Some(_) => {
                 self.fsck.error(FsckError::UnexpectedObjectInGraveyard(object_id))?;
@@ -468,16 +477,16 @@ impl<'a, F: Fn(&FsckIssue)> ScannedStore<'a, F> {
 
     // Returns an iterator over objects in BFS order (which means that orphaned objects won't be
     // scanned).
-    fn iter_bfs(&self) -> ScannedStoreIterator<'_, 'a, F> {
+    fn iter_bfs(&self) -> ScannedStoreIterator<'_, 'a> {
         ScannedStoreIterator(self, self.root_objects.clone())
     }
 }
 
 // Implements a BFS iterator for a store.  Orphaned objects and graveyard objects won't be
 // processed.
-struct ScannedStoreIterator<'iter, 'a, F: Fn(&FsckIssue)>(&'iter ScannedStore<'a, F>, Vec<u64>);
+struct ScannedStoreIterator<'iter, 'a>(&'iter ScannedStore<'a>, Vec<u64>);
 
-impl<'iter, 'a, F: Fn(&FsckIssue)> std::iter::Iterator for ScannedStoreIterator<'iter, 'a, F> {
+impl<'iter, 'a> std::iter::Iterator for ScannedStoreIterator<'iter, 'a> {
     type Item = &'iter ScannedObject;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -499,9 +508,9 @@ impl<'iter, 'a, F: Fn(&FsckIssue)> std::iter::Iterator for ScannedStoreIterator<
 // Scans all extents in the store, emitting synthesized allocations into |fsck.allocations| and
 // updating the sizes for files in |scanned|.
 // TODO(fxbug.dev/95475): Roll this back into main function.
-async fn scan_extents<'a, F: Fn(&FsckIssue)>(
+async fn scan_extents<'a>(
     store: &ObjectStore,
-    scanned: &mut ScannedStore<'a, F>,
+    scanned: &mut ScannedStore<'a>,
 ) -> Result<(), Error> {
     let store_id = store.store_object_id();
     let bs = store.block_size();
@@ -551,11 +560,14 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
                 }
                 match scanned.objects.get_mut(object_id) {
                     Some(ScannedObject::File(ScannedFile {
-                        attributes, allocated_size, ..
+                        attributes,
+                        allocated_size,
+                        in_graveyard,
+                        ..
                     })) => {
                         match attributes.iter().find(|(attr_id, _)| attr_id == attribute_id) {
                             Some((_, size)) => {
-                                if range.end > round_up(*size, bs).unwrap() {
+                                if !*in_graveyard && range.end > round_up(*size, bs).unwrap() {
                                     scanned.fsck.error(FsckError::ExtentExceedsLength(
                                         store_id,
                                         *object_id,
@@ -615,8 +627,8 @@ async fn scan_extents<'a, F: Fn(&FsckIssue)>(
 
 /// Scans an object store, accumulating all of its allocations into |fsck.allocations| and
 /// validating various object properties.
-pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
-    fsck: &Fsck<'_, F>,
+pub(super) async fn scan_store(
+    fsck: &Fsck<'_>,
     store: &ObjectStore,
     root_objects: impl AsRef<[u64]>,
 ) -> Result<(), Error> {
@@ -657,8 +669,12 @@ pub(super) async fn scan_store<F: Fn(&FsckIssue)>(
         Graveyard::iter(store.graveyard_directory_object_id(), &mut merger).await,
         FsckFatal::MalformedGraveyard,
     )?;
-    while let Some((object_id, _)) = iter.get() {
-        scanned.insert_graveyard_file(object_id)?;
+    while let Some((object_id, _, value)) = iter.get() {
+        match value {
+            ObjectValue::Some => scanned.handle_graveyard_entry(object_id, true)?,
+            ObjectValue::Trim => scanned.handle_graveyard_entry(object_id, false)?,
+            _ => fsck.error(FsckError::BadGraveyardValue(store_id, object_id))?,
+        }
         fsck.assert(iter.advance().await, FsckFatal::MalformedGraveyard)?;
     }
 

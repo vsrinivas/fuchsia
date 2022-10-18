@@ -113,14 +113,15 @@ pub async fn unlink(
 // Used to fsck after mutating operations.
 pub async fn fsck(fs: &OpenFxFilesystem, verbose: bool) -> Result<(), Error> {
     // Re-open the filesystem to ensure it's locked.
-    let options = fsck::FsckOptions {
-        fail_on_warning: false,
-        halt_on_error: false,
-        do_slow_passes: true,
-        on_error: |err| eprintln!("{:?}", err.to_string()),
-        verbose,
-    };
-    fsck::fsck_with_options(fs.deref().clone(), &options).await
+    fsck::fsck_with_options(
+        fs.deref().clone(),
+        &fsck::FsckOptions {
+            on_error: Box::new(|err| eprintln!("{:?}", err.to_string())),
+            verbose,
+            ..Default::default()
+        },
+    )
+    .await
 }
 
 /// Read a file's contents into a Vec and return it.

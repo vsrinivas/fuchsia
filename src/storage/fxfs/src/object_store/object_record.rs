@@ -84,6 +84,14 @@ impl ObjectKey {
         }
     }
 
+    /// Creates an ObjectKey from an extent.
+    pub fn from_extent(object_id: u64, attribute_id: u64, extent: ExtentKey) -> Self {
+        Self {
+            object_id,
+            data: ObjectKeyData::Attribute(attribute_id, AttributeKey::Extent(extent)),
+        }
+    }
+
     /// Creates an ObjectKey for a child.
     pub fn child(object_id: u64, name: &str) -> Self {
         Self { object_id, data: ObjectKeyData::Child { name: name.to_owned() } }
@@ -285,6 +293,10 @@ pub enum ObjectValue {
     /// A child of an object. |object_id| is the ID of the child, and |object_descriptor| describes
     /// the child.
     Child { object_id: u64, object_descriptor: ObjectDescriptor },
+    /// Graveyard entries can contain these entries which will cause a file that has extents beyond
+    /// EOF to be trimmed at mount time.  This is used in cases where shrinking a file can exceed
+    /// the bounds of a single transaction.
+    Trim,
 }
 
 impl ObjectValue {

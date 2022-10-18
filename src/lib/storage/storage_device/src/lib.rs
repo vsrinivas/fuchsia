@@ -4,7 +4,7 @@
 
 use {
     crate::buffer::{Buffer, BufferRef, MutableBufferRef},
-    anyhow::Error,
+    anyhow::{bail, Error},
     async_trait::async_trait,
     std::{ops::Deref, sync::Arc},
 };
@@ -26,30 +26,43 @@ pub trait Device: Send + Sync {
     /// Allocates a transfer buffer of at least |size| bytes for doing I/O with the device.
     /// The actual size of the buffer will be rounded up to a block-aligned size.
     fn allocate_buffer(&self, size: usize) -> Buffer<'_>;
+
     /// Returns the block size of the device. Buffers are aligned to block-aligned chunks.
     fn block_size(&self) -> u32;
+
     /// Returns the number of blocks of the device.
     // TODO(jfsulliv): Should this be async and go query the underlying device?
     fn block_count(&self) -> u64;
+
     /// Returns the size in bytes of the device.
     fn size(&self) -> u64 {
         self.block_size() as u64 * self.block_count()
     }
+
     /// Fills |buffer| with blocks read from |offset|.
     async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error>;
+
     /// Writes the contents of |buffer| to the device at |offset|.
     async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error>;
+
     /// Closes the block device. It is an error to continue using the device after this, but close
     /// itself is idempotent.
     async fn close(&self) -> Result<(), Error>;
+
     /// Flush the device.
     async fn flush(&self) -> Result<(), Error>;
+
     /// Reopens the device, making it usable again. (Only implemented for testing devices.)
     fn reopen(&self, _read_only: bool) {
         unreachable!();
     }
     /// Returns whether the device is read-only.
     fn is_read_only(&self) -> bool;
+
+    /// Returns a snapshot of the device.
+    fn snapshot(&self) -> Result<DeviceHolder, Error> {
+        bail!("Not supported");
+    }
 }
 
 // Arc<dyn Device> can easily be cloned and supports concurrent access, but sometimes exclusive

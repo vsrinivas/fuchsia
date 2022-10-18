@@ -224,6 +224,7 @@ pub enum FsckError {
     UnexpectedObjectInGraveyard(u64),
     UnexpectedRecordInObjectStore(u64, Key, Value),
     VolumeInChildStore(u64, u64),
+    BadGraveyardValue(u64, u64),
 }
 
 impl FsckError {
@@ -349,6 +350,9 @@ impl FsckError {
                     object_id, store_id
                 )
             }
+            FsckError::BadGraveyardValue(store_id, object_id) => {
+                format!("Bad graveyard value with key <{}, {}>", store_id, object_id)
+            }
         }
     }
 
@@ -440,6 +444,9 @@ impl FsckError {
             }
             FsckError::VolumeInChildStore(store_id, oid) => {
                 error!(store_id, oid, "Volume in child store");
+            }
+            FsckError::BadGraveyardValue(store_id, oid) => {
+                error!(store_id, oid, "Bad graveyard value");
             }
         }
     }

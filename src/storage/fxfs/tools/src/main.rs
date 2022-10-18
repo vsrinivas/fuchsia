@@ -200,11 +200,9 @@ async fn main() -> Result<(), Error> {
                     let fs = FxFilesystem::open_with_options(device, OpenOptions::read_only(true))
                         .await?;
                     let options = fsck::FsckOptions {
-                        fail_on_warning: false,
-                        halt_on_error: false,
-                        do_slow_passes: true,
-                        on_error: |err| eprintln!("{:?}", err.to_string()),
+                        on_error: Box::new(|err| eprintln!("{:?}", err.to_string())),
                         verbose: args.verbose,
+                        ..Default::default()
                     };
                     fsck::fsck_with_options(fs.deref().clone(), &options).await
                 }
