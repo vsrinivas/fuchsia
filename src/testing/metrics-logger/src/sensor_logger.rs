@@ -322,9 +322,6 @@ impl<T: Sensor<T>> SensorLogger<T> {
             .map_or(false, |t| time_stamp - t.statistics_start_time >= t.statistics_interval);
 
         let mut trace_args = Vec::new();
-        // TODO (fxbug.dev/100797): Remove temperature_logger category after the e2e test is
-        // transitioned.
-        let mut legacy_trace_args = Vec::new();
         let mut trace_args_statistics = vec![Vec::new(), Vec::new(), Vec::new()];
 
         let mut sensor_names = Vec::new();
@@ -355,16 +352,6 @@ impl<T: Sensor<T>> SensorLogger<T> {
                         self.drivers[index].name(),
                         value as f64,
                     ));
-
-                    match T::sensor_type() {
-                        SensorType::Temperature => {
-                            legacy_trace_args.push(fuchsia_trace::ArgValue::of(
-                                self.drivers[index].name(),
-                                value as f64,
-                            ));
-                        }
-                        SensorType::Power => (),
-                    }
 
                     if self.output_samples_to_syslog {
                         info!(
@@ -430,18 +417,6 @@ impl<T: Sensor<T>> SensorLogger<T> {
                     tracker.samples[index].clear();
                 }
             }
-        }
-
-        match T::sensor_type() {
-            SensorType::Temperature => {
-                fuchsia_trace::counter(
-                    fuchsia_trace::cstr!("temperature_logger"),
-                    fuchsia_trace::cstr!("temperature"),
-                    0,
-                    &legacy_trace_args,
-                );
-            }
-            SensorType::Power => (),
         }
 
         trace_args.push(fuchsia_trace::ArgValue::of("client_id", self.client_id.as_str()));
