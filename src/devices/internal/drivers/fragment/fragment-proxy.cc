@@ -15,7 +15,7 @@
 namespace fragment {
 
 zx_status_t FragmentProxy::Create(void* ctx, zx_device_t* parent, const char* name,
-                                  const char* args, zx_handle_t raw_rpc) {
+                                  zx_handle_t raw_rpc) {
   zx::channel rpc(raw_rpc);
   auto dev = std::make_unique<FragmentProxy>(parent, std::move(rpc));
   auto status = dev->DdkAdd("fragment-proxy", DEVICE_ADD_NON_BINDABLE);

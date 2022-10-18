@@ -1012,7 +1012,7 @@ void PlatformBus::DdkInit(ddk::InitTxn txn) {
   return txn.Reply(ZX_OK);  // This will make the device visible and able to be unbound.
 }
 
-zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,
                                 zx_handle_t handle) {
   return platform_bus::PlatformBus::Create(parent, name, zx::channel(handle));
 }

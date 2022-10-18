@@ -30,7 +30,7 @@ class Sysdev : public SysdevType {
  public:
   explicit Sysdev(zx_device_t* device) : SysdevType(device) {}
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
                             zx_handle_t items_svc_handle);
 
   // Device protocol implementation.
@@ -74,7 +74,7 @@ zx_status_t TestParent::Create(zx_device_t* parent) {
   return ZX_OK;
 }
 
-zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+zx_status_t Sysdev::Create(void* ctx, zx_device_t* parent, const char* name,
                            zx_handle_t items_svc_handle) {
   zx::channel items_svc(items_svc_handle);
   auto sysdev = std::make_unique<Sysdev>(parent);

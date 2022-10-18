@@ -172,7 +172,7 @@ fail:
 }
 
 zx_status_t PlatformProxy::Create(void* ctx, zx_device_t* parent, const char* name,
-                                  const char* args, zx_handle_t rpc_channel) {
+                                  zx_handle_t rpc_channel) {
   fbl::AllocChecker ac;
 
   auto proxy = fbl::make_unique_checked<PlatformProxy>(&ac, parent, rpc_channel);

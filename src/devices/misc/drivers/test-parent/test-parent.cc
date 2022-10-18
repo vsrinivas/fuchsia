@@ -51,14 +51,14 @@ class SysDevice : public SysDeviceType {
  public:
   explicit SysDevice(zx_device_t* device) : SysDeviceType(device) {}
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
                             zx_handle_t items_svc_handle);
 
   // Device protocol implementation.
   void DdkRelease() { delete this; }
 };
 
-zx_status_t SysDevice::Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+zx_status_t SysDevice::Create(void* ctx, zx_device_t* parent, const char* name,
                               zx_handle_t items_svc_handle) {
   auto sys_device = std::make_unique<SysDevice>(parent);
   zx_status_t status =

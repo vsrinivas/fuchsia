@@ -28,7 +28,7 @@ class PlatformProxy : public PlatformProxyType,
   explicit PlatformProxy(zx_device_t* parent, zx_handle_t rpc_channel)
       : PlatformProxyType(parent), rpc_channel_(rpc_channel) {}
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name,
                             zx_handle_t rpc_channel);
 
   // Device protocol implementation.

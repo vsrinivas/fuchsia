@@ -412,7 +412,7 @@ result<void, zx_status_t> Driver::StartDriver() {
     if (client_end.is_error()) {
       return error(client_end.status_value());
     }
-    zx_status_t status = record_->ops->create(context_, device_.ZxDevice(), "proxy", "",
+    zx_status_t status = record_->ops->create(context_, device_.ZxDevice(), "proxy",
                                               client_end->channel().release());
     if (status != ZX_OK) {
       FDF_LOG(ERROR, "Failed to load driver '%s', 'create' failed: %s", url_str.data(),

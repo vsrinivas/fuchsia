@@ -18,8 +18,7 @@ zx_status_t v1_test_init(void** out_ctx) {
   return ZX_OK;
 }
 
-zx_status_t v1_test_create(void* ctx, zx_device_t* dev, const char* name, const char*,
-                           zx_handle_t channel) {
+zx_status_t v1_test_create(void* ctx, zx_device_t* dev, const char* name, zx_handle_t channel) {
   zxlogf(INFO, "v1_test_create: %s", name);
   zx_handle_close(channel);
   static_cast<V1Test*>(ctx)->did_create = true;

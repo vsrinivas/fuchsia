@@ -64,8 +64,7 @@ class FragmentProxy : public FragmentProxyBase,
   FragmentProxy(zx_device_t* parent, zx::channel rpc)
       : FragmentProxyBase(parent), rpc_(std::move(rpc)) {}
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, const char* args,
-                            zx_handle_t raw_rpc);
+  static zx_status_t Create(void* ctx, zx_device_t* parent, const char* name, zx_handle_t raw_rpc);
 
   zx_status_t DdkGetProtocol(uint32_t, void*);
   void DdkRelease();

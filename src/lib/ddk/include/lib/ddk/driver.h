@@ -45,8 +45,7 @@ typedef struct zx_driver_ops {
   // instance in a new device host process
   //
   // This hook will only be executed on the devhost's main thread.
-  zx_status_t (*create)(void* ctx, zx_device_t* parent, const char* name, const char* args,
-                        zx_handle_t rpc_channel);
+  zx_status_t (*create)(void* ctx, zx_device_t* parent, const char* name, zx_handle_t rpc_channel);
 
   // Last call before driver is unloaded.
   //

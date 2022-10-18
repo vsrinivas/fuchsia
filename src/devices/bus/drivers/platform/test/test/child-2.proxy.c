@@ -42,7 +42,7 @@ static zx_protocol_device_t test_device_protocol = {
     .get_protocol = test_get_protocol,
     .release = test_release,
 };
-static zx_status_t test_create(void* ctx, zx_device_t* parent, const char* name, const char* args,
+static zx_status_t test_create(void* ctx, zx_device_t* parent, const char* name,
                                zx_handle_t rpc_channel) {
   zx_status_t status;
 

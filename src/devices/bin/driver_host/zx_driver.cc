@@ -51,7 +51,7 @@ zx_status_t zx_driver::CreateOp(internal::CreationContext* creation_context,
 
   async::PostTask(driver->dispatcher()->async_dispatcher(), [&]() {
     internal::set_creation_context(creation_context);
-    status = ops_->create(ctx_, parent.get(), name, args, rpc_channel);
+    status = ops_->create(ctx_, parent.get(), name, rpc_channel);
     internal::set_creation_context(nullptr);
     completion.Signal();
   });
