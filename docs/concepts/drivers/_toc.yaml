@@ -18,3 +18,5 @@ toc:
   path: /docs/concepts/drivers/driver_binding.md
 - title: "Driver communication"
   path: /docs/concepts/drivers/driver_communication.md
+- title: "Mapping a device's memory in a driver"
+  path: /docs/concepts/drivers/mapping-a-devices-memory-in-a-driver.md
