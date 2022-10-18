@@ -4,9 +4,16 @@
 
 import 'dart:convert' show json;
 
-import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
-import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
-    show Registry, RegistryProxy, Shortcut, Trigger, Listener, ListenerBinding;
+import 'package:fidl_fuchsia_ui_shortcut2/fidl_async.dart' as ui_shortcut
+    show
+        Registry,
+        RegistryProxy,
+        Options,
+        Handled,
+        Shortcut,
+        Listener,
+        ListenerBinding;
+import 'package:fidl_fuchsia_ui_input3/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
 import 'package:flutter/material.dart' show VoidCallback;
 import 'package:fuchsia_services/services.dart' show Incoming;
@@ -60,10 +67,12 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
   }
 
   @override
-  Future<bool> onShortcut(int id) async {
+  Future<ui_shortcut.Handled> onShortcut(int id) async {
     Shortcut shortcut = shortcuts.firstWhere((shortcut) => shortcut.id == id);
     shortcut.onKey?.call();
-    return shortcut.usePriority == true;
+    return shortcut.usePriority == true
+        ? ui_shortcut.Handled.handled
+        : ui_shortcut.Handled.notHandled;
   }
 
   Map<String, Set<String>> bindingDescription() {
@@ -103,17 +112,13 @@ class KeyboardShortcuts extends ui_shortcut.Listener {
 
         List<dynamic> chords = value;
         VoidCallback callback = actions[key]!;
-        return chords
-            .whereType<Map>()
-            .map((c) {
-              return Shortcut.parseJson(
-                object: c as Map<String, dynamic>,
-                onKey: callback,
-                action: key.toString(),
-              );
-            })
-            .expand((c) => c)
-            .toList();
+        return chords.whereType<Map>().map((c) {
+          return Shortcut.parseJson(
+            object: c as Map<String, dynamic>,
+            onKey: callback,
+            action: key.toString(),
+          );
+        }).toList();
       }
       return value;
     });
@@ -145,91 +150,91 @@ class Shortcut extends ui_shortcut.Shortcut {
   String? chord;
   String description;
   VoidCallback? onKey;
+  bool usePriority;
 
   Shortcut({
-    Key? key3,
-    List<Key>? keysRequired,
-    ui_shortcut.Trigger? trigger,
-    bool usePriority = true,
+    List<KeyMeaning> keyMeanings = const [],
+    this.usePriority = true,
     this.onKey,
     this.action,
     this.chord,
     this.description = '',
   }) : super(
             id: ++lastId,
-            keysRequired: keysRequired,
-            key3: key3,
-            usePriority: usePriority,
-            trigger: trigger);
+            keyMeanings: keyMeanings,
+            options: const ui_shortcut.Options());
 
-  static List<Shortcut> parseJson({
+  /// Parses shortcut JSON description into a Shortcut object.
+  Shortcut.parseJson({
     required Map<String, dynamic> object,
     required VoidCallback onKey,
     required String action,
-  }) {
-    return _keysRequiredFromArray(object['modifier'])
-        .map((keysRequired) => Shortcut(
-              key3: Key.$valueOf(object['char']),
-              keysRequired: keysRequired.isEmpty ? null : keysRequired,
-              trigger: object['char'] == null && object['modifier'] != null ||
-                      object['trigger'] == 'pressAndRelease'
-                  ? ui_shortcut.Trigger.keyPressedAndReleased
-                  : null,
-              usePriority: object['exclusive'] == true,
-              onKey: onKey,
-              action: action,
-              chord: object['chord'],
-              description: object['description'],
-            ))
-        .toList();
-  }
+  }) : this(
+          keyMeanings: _keysRequiredFromArray(object['shortcut']),
+          onKey: onKey,
+          usePriority: object['exclusive'] == true,
+          action: action,
+          chord: object['chord'],
+          description: object['description'],
+        );
 
   @override
   bool operator ==(dynamic other) =>
       other is Shortcut &&
       id == other.id &&
-      key3 == other.key3 &&
-      keysRequired == other.keysRequired &&
+      keyMeanings == other.keyMeanings &&
       usePriority == other.usePriority;
 
   @override
-  int get hashCode =>
-      id.hashCode ^
-      usePriority.hashCode ^
-      key3.hashCode ^
-      keysRequired.hashCode;
+  int get hashCode => id.hashCode ^ keyMeanings.hashCode ^ usePriority.hashCode;
 
-  @override
-  String toString() =>
-      'id: $id key3: $key3 keysRequired: $keysRequired action: $action';
-
-  static List<List<Key>> _keysRequiredFromArray(String? s) {
-    List<List<Key>> r = [[]];
+  /// Turns a descriptive string describing a keyboard shortcut, such as
+  /// `ctrl + alt + f` into a list of equivalent key meanings.
+  static List<KeyMeaning> _keysRequiredFromArray(String? s) {
+    List<KeyMeaning> r = [];
     if (s == null) {
       return r;
     }
-    var modifiers =
-        s.split('+').map((x) => x.trim()).map(_keyVariantsFromString);
-    // Convert list of modifier variants to a list of combinations.
-    for (var modifierVariant in modifiers) {
-      r = r.expand((i) => modifierVariant.map((j) => i + [j])).toList();
-    }
-    return r;
+    return s
+        .split('+')
+        .map((x) => x.trim())
+        .map(_keyMeaningFromString)
+        .toList();
   }
 
-  static List<Key> _keyVariantsFromString(String s) {
+  /// Recovers a KeyMeaning from a string that describes an individual key.
+  static KeyMeaning _keyMeaningFromString(String s) {
+    // First, try some special names.
     switch (s) {
-      case 'shift':
-        return [Key.leftShift, Key.rightShift];
-      case 'control':
       case 'ctrl':
-        return [Key.leftCtrl, Key.rightCtrl];
+        return KeyMeaning.withNonPrintableKey(NonPrintableKey.control);
       case 'alt':
-        return [Key.leftAlt, Key.rightAlt];
-      case 'meta':
-        return [Key.leftMeta, Key.rightMeta];
+        return KeyMeaning.withNonPrintableKey(NonPrintableKey.alt);
+      case 'altGr':
+      case 'altgr':
+        return KeyMeaning.withNonPrintableKey(NonPrintableKey.altGraph);
+      case 'esc':
+        return KeyMeaning.withNonPrintableKey(NonPrintableKey.escape);
+      case 'space':
+        return KeyMeaning.withCodepoint(' '.codeUnitAt(0));
+      case 'slash':
+        return KeyMeaning.withCodepoint('/'.codeUnitAt(0));
+      case 'plus':
+        // Our notation uses '+' as key separator, so have this special way
+        // to denote a plus.
+        return KeyMeaning.withCodepoint('+'.codeUnitAt(0));
       default:
-        throw Exception('Unsupported modifier encountered: $s');
+      // fallthrough
     }
+    // Then, try known nonprintable keys.
+    final NonPrintableKey? maybeNonprintable = NonPrintableKey.$valueOf(s);
+    if (maybeNonprintable != null) {
+      return KeyMeaning.withNonPrintableKey(maybeNonprintable);
+    }
+    // Then try 1-code point values.
+    if (s.length == 1) {
+      return KeyMeaning.withCodepoint(s.toLowerCase().codeUnitAt(0));
+    }
+    throw Exception('Unsupported key meaning encountered: "$s"');
   }
 }

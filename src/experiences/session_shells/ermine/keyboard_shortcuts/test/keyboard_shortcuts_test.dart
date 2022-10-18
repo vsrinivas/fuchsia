@@ -5,8 +5,9 @@
 import 'dart:convert' show json;
 
 import 'package:fidl/fidl.dart';
-import 'package:fidl_fuchsia_input/fidl_async.dart' show Key;
-import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut;
+import 'package:fidl_fuchsia_ui_input3/fidl_async.dart'
+    show KeyMeaning, NonPrintableKey;
+import 'package:fidl_fuchsia_ui_shortcut2/fidl_async.dart' as ui_shortcut;
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart' show ViewRef;
 import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 import 'package:mockito/mockito.dart';
@@ -30,6 +31,14 @@ void main() async {
     expect(verify(listenerBinding.wrap(captureAny)).captured.first, shortcuts);
   });
 
+  KeyMeaning cpKey(int codepoint) {
+    return KeyMeaning.withCodepoint(codepoint);
+  }
+
+  KeyMeaning npKey(NonPrintableKey key) {
+    return KeyMeaning.withNonPrintableKey(key);
+  }
+
   test('Register shortcuts', () {
     final registry = MockRegistry();
     final shortcuts = KeyboardShortcuts(
@@ -38,7 +47,7 @@ void main() async {
       bindings: json.encode(<String, dynamic>{
         'cancel': [
           {
-            'char': 'escape',
+            'shortcut': 'escape',
             'enabled': true,
           }
         ],
@@ -48,10 +57,11 @@ void main() async {
 
     verify(registry.registerShortcut(any)).called(1);
     expect(shortcuts.shortcuts.length, 1);
-    expect(shortcuts.shortcuts.first.key3, Key.escape);
+    expect(
+        shortcuts.shortcuts.first.keyMeanings, [npKey(NonPrintableKey.escape)]);
   });
 
-  test('Left and right modifier key provide single description', () {
+  test('Modifier keys produce a shortcut', () {
     final registry = MockRegistry();
     final shortcuts = KeyboardShortcuts(
       registry: registry,
@@ -59,8 +69,7 @@ void main() async {
       bindings: json.encode(<String, dynamic>{
         'cancel': [
           {
-            'char': 'escape',
-            'modifier': 'alt',
+            'shortcut': 'alt + escape',
             'chord': 'Escape + Alt',
             'description': 'Cancel Operation'
           }
@@ -69,9 +78,8 @@ void main() async {
       listenerBinding: MockListenerBinding(),
     );
 
-    // Just `alt` modifier registers 2 shortcuts for `leftAlt` and `rightAlt`.
-    verify(registry.registerShortcut(any)).called(2);
-    expect(shortcuts.shortcuts.length, 2);
+    verify(registry.registerShortcut(any)).called(1);
+    expect(shortcuts.shortcuts.length, 1);
     expect(
       RegExp(r'Escape\ \+\ Alt').allMatches(shortcuts.helpText()).length,
       1,
@@ -86,13 +94,13 @@ void main() async {
       bindings: json.encode(<String, dynamic>{
         'cancel': [
           {
-            'char': 'leftMeta',
+            'shortcut': 'meta',
             'enabled': true,
           }
         ],
         'overview': [
           {
-            'char': 'escape',
+            'shortcut': 'escape',
             'enabled': true,
             'modifier': 'meta',
           }
@@ -101,14 +109,10 @@ void main() async {
       listenerBinding: MockListenerBinding(),
     );
 
-    verify(registry.registerShortcut(any)).called(3);
-    expect(shortcuts.shortcuts.length, 3);
-    expect(shortcuts.shortcuts[0].key3, Key.leftMeta);
-    expect(shortcuts.shortcuts[1].key3, Key.escape);
-    expect(shortcuts.shortcuts[2].key3, Key.escape);
-    expect(shortcuts.shortcuts[0].keysRequired, null);
-    expect(shortcuts.shortcuts[1].keysRequired, [Key.leftMeta]);
-    expect(shortcuts.shortcuts[2].keysRequired, [Key.rightMeta]);
+    verify(registry.registerShortcut(any)).called(2);
+    expect(shortcuts.shortcuts.length, 2);
+    expect(shortcuts.shortcuts[0].keyMeanings, [npKey(NonPrintableKey.meta)]);
+    expect(shortcuts.shortcuts[1].keyMeanings, [npKey(NonPrintableKey.escape)]);
   });
 
   test('modifiers expand to required keys', () {
@@ -119,26 +123,110 @@ void main() async {
       bindings: json.encode(<String, dynamic>{
         'cancel': [
           {
-            'char': 'tab',
+            'shortcut': 'control + shift + tab',
             'enabled': true,
-            'modifier': 'control + shift',
           }
         ],
       }),
       listenerBinding: MockListenerBinding(),
     );
 
-    verify(registry.registerShortcut(any)).called(4);
-    expect(shortcuts.shortcuts.length, 4);
-    expect(shortcuts.shortcuts[0].key3, Key.tab);
-    expect(shortcuts.shortcuts[1].key3, Key.tab);
-    expect(shortcuts.shortcuts[2].key3, Key.tab);
-    expect(shortcuts.shortcuts[3].key3, Key.tab);
-    expect(shortcuts.shortcuts[0].keysRequired, [Key.leftCtrl, Key.leftShift]);
-    expect(shortcuts.shortcuts[1].keysRequired, [Key.leftCtrl, Key.rightShift]);
-    expect(shortcuts.shortcuts[2].keysRequired, [Key.rightCtrl, Key.leftShift]);
+    verify(registry.registerShortcut(any)).called(1);
+    expect(shortcuts.shortcuts.length, 1);
+    expect(shortcuts.shortcuts[0].keyMeanings, [
+      npKey(NonPrintableKey.control),
+      npKey(NonPrintableKey.shift),
+      npKey(NonPrintableKey.tab)
+    ]);
+  });
+
+  test('special key names are recognized correctly', () {
+    final registry = MockRegistry();
+    final shortcuts = KeyboardShortcuts(
+      registry: registry,
+      actions: {'cancel': () {}},
+      bindings: json.encode(<String, dynamic>{
+        'cancel': [
+          {
+            // We allow having more than a single printable character, but that
+            // doesn't make it a good idea to use.
+            'shortcut': 'altGr + space + plus + slash',
+            'enabled': true,
+          }
+        ],
+      }),
+      listenerBinding: MockListenerBinding(),
+    );
+
+    verify(registry.registerShortcut(any)).called(1);
+    expect(shortcuts.shortcuts.length, 1);
+    expect(shortcuts.shortcuts[0].keyMeanings, [
+      npKey(NonPrintableKey.altGraph),
+      cpKey(' '.codeUnitAt(0)),
+      cpKey('+'.codeUnitAt(0)),
+      cpKey('/'.codeUnitAt(0)),
+    ]);
+  });
+
+  test('keyboard keys are registered correctly', () {
+    final registry = MockRegistry();
+    final shortcuts = KeyboardShortcuts(
+      registry: registry,
+      actions: {'cancel': () {}},
+      bindings: json.encode(<String, dynamic>{
+        'cancel': [
+          {
+            'shortcut': 'control + shift + a',
+            'enabled': true,
+          },
+          {
+            'shortcut': 'control + shift + A',
+            'enabled': true,
+          },
+          {
+            // Fancy!
+            'shortcut': 'control + alt + ш',
+            'enabled': true,
+          }
+        ],
+      }),
+      listenerBinding: MockListenerBinding(),
+    );
+
+    verify(registry.registerShortcut(any)).called(3);
+    expect(shortcuts.shortcuts.length, 3);
+    final expectedSame = [
+      npKey(NonPrintableKey.control),
+      npKey(NonPrintableKey.shift),
+      cpKey('a'.codeUnitAt(0))
+    ];
+    // The letter case does not matter.
+    expect(shortcuts.shortcuts[0].keyMeanings, expectedSame);
+    expect(shortcuts.shortcuts[1].keyMeanings, expectedSame);
+    expect(shortcuts.shortcuts[2].keyMeanings, [
+      npKey(NonPrintableKey.control),
+      npKey(NonPrintableKey.alt),
+      cpKey('ш'.codeUnitAt(0))
+    ]);
+  });
+
+  test('malformed key', () {
+    final registry = MockRegistry();
     expect(
-        shortcuts.shortcuts[3].keysRequired, [Key.rightCtrl, Key.rightShift]);
+        () => KeyboardShortcuts(
+              registry: registry,
+              actions: {'cancel': () {}},
+              bindings: json.encode(<String, dynamic>{
+                'cancel': [
+                  {
+                    'shortcut': 'control + shift + xxx_not_a_key',
+                    'enabled': true,
+                  }
+                ],
+              }),
+              listenerBinding: MockListenerBinding(),
+            ),
+        throwsException);
   });
 
   test('Invoke shortcuts', () {
@@ -150,7 +238,7 @@ void main() async {
       bindings: json.encode(<String, dynamic>{
         'cancel': [
           {
-            'char': 'escape',
+            'shortcut': 'escape',
             'enabled': true,
           }
         ],
@@ -158,7 +246,7 @@ void main() async {
       listenerBinding: MockListenerBinding(),
     );
 
-    shortcuts.onShortcut(shortcuts.shortcuts.first.id!);
+    shortcuts.onShortcut(shortcuts.shortcuts.first.id);
 
     expect(invoked, true);
   });
