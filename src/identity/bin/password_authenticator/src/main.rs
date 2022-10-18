@@ -11,8 +11,6 @@ mod pinweaver;
 mod scrypt;
 mod state;
 mod storage_unlock_mechanism;
-#[cfg(test)]
-mod testing;
 
 use anyhow::{anyhow, Context, Error};
 use fidl::endpoints::RequestStream;

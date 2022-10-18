@@ -4,7 +4,6 @@
 
 //! Contains testing utilities.
 
-use crate::keys::Key;
 use async_trait::async_trait;
 use fuchsia_zircon::Status;
 use futures::lock::Mutex;
@@ -13,6 +12,9 @@ use storage_manager::minfs::disk::{
     testing::MockMinfs, DiskError, DiskManager, EncryptedBlockDevice, Partition,
 };
 use vfs::execution_scope::ExecutionScope;
+
+pub const KEY_LEN: usize = 32;
+pub type Key = [u8; KEY_LEN];
 
 /// A ref-counted counter that can be cloned and passed to a mock.
 /// The mock can increment the counter on some event, and the test can verify that the event

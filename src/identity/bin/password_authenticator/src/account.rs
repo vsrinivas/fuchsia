@@ -273,19 +273,17 @@ impl<SM: StorageManager + 'static> Account<SM> {
 mod test {
     use {
         super::*,
-        crate::{
-            keys::{Key, KEY_LEN},
-            testing::{
-                make_formatted_account_partition_any_key, CallCounter, Match, MockBlockDevice,
-                MockDiskManager, MockEncryptedBlockDevice as OtherMockEncryptedBlockDevice,
-                MockPartition, UnsealBehavior,
-            },
-        },
+        crate::keys::{Key, KEY_LEN},
         assert_matches::assert_matches,
         async_trait::async_trait,
         fidl_fuchsia_identity_account::{AccountMarker, AccountProxy},
         fuchsia_fs::{directory, file, node::OpenError},
         fuchsia_zircon::Status,
+        identity_testutil::{
+            make_formatted_account_partition_any_key, CallCounter, Match, MockBlockDevice,
+            MockDiskManager, MockEncryptedBlockDevice as OtherMockEncryptedBlockDevice,
+            MockPartition, UnsealBehavior,
+        },
         storage_manager::{
             minfs::{
                 disk::{DiskError, EncryptedBlockDevice},

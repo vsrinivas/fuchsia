@@ -45,6 +45,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//src/identity/lib/identity_testutil",
     "//src/lib/fuchsia",
     "//src/lib/storage/vfs/rust:vfs",
     "//third_party/rust_crates:assert_matches",
@@ -62,7 +63,6 @@ rustc_binary("bin") {
     "src/scrypt.rs",
     "src/state.rs",
     "src/storage_unlock_mechanism.rs",
-    "src/testing.rs",
   ]
 }
 

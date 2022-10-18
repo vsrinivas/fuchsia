@@ -806,17 +806,17 @@ mod test {
                 TEST_PINWEAVER_HE_SECRET, TEST_PINWEAVER_LE_SECRET,
             },
             scrypt::test::{TEST_SCRYPT_KEY, TEST_SCRYPT_PASSWORD},
-            testing::{
-                make_formatted_account_partition, make_formatted_account_partition_any_key,
-                make_formatted_account_partition_fail_shred, make_unformatted_account_partition,
-                Match, MockBlockDevice, MockDiskManager, MockEncryptedBlockDevice, MockPartition,
-                UnsealBehavior,
-            },
         },
         anyhow::anyhow,
         async_trait::async_trait,
         fidl_fuchsia_io as fio,
         fuchsia_zircon::Status,
+        identity_testutil::{
+            make_formatted_account_partition, make_formatted_account_partition_any_key,
+            make_formatted_account_partition_fail_shred, make_unformatted_account_partition, Match,
+            MockBlockDevice, MockDiskManager, MockEncryptedBlockDevice, MockPartition,
+            UnsealBehavior,
+        },
         lazy_static::lazy_static,
         storage_manager::minfs::{
             disk::{testing::MockMinfs, DiskError},
