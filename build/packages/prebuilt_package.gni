@@ -4,6 +4,7 @@
 
 import("//build/packages/package_metadata.gni")
 
+# Generates package metadata from a prebuilt FAR archive.
 #
 # Parameters
 #
@@ -27,48 +28,40 @@ import("//build/packages/package_metadata.gni")
 #     Usual GN meanings.
 #
 template("prebuilt_package") {
-  pkg_target_name = target_name
-  pkg_name = target_name
-  if (defined(invoker.package_name)) {
-    pkg_name = invoker.package_name
+  if (!defined(invoker.package_name)) {
+    invoker.package_name = target_name
   }
+
   repository = "fuchsia.com"
   if (defined(invoker.repository)) {
     repository = invoker.repository
   }
-  pkg_version = 0
-  manifest_target_name = target_name + ".manifest"
 
-  pkg_out_dir = target_out_dir + "/" + pkg_target_name
-  blobs_json = "$pkg_out_dir/blobs.json"
-  package_manifest_json = "$pkg_out_dir/package_manifest.json"
-  blobs_manifest = "$pkg_out_dir/blobs.manifest"
-  blobs_json_path = rebase_path(blobs_json, root_build_dir)
+  pkg_out_dir = "$target_out_dir/$target_name"
 
-  unpack_action_name = target_name + ".debug-archive"
+  _out_blobs_json = "$pkg_out_dir/blobs.json"
+  _out_blobs_manifest = "$pkg_out_dir/blobs.manifest"
+  _out_package_manifest_json = "$pkg_out_dir/package_manifest.json"
+  _out_meta_merkle = "$pkg_out_dir/meta.far.merkle"
 
-  group(unpack_action_name) {
-    metadata = {
-      prebuilt_packages = [
-        {
-          archive = invoker.archive
-          if (defined(invoker.package_name)) {
-            package_name = invoker.package_name
-          }
-        },
-      ]
-    }
+  define_package_metadata_target = "${target_name}_metadata"
+  define_package_metadata(define_package_metadata_target) {
+    _pkg_version_key = "${invoker.package_name}/0"
+    _blobs_json = rebase_path(_out_blobs_json, root_build_dir)
+    _meta_merkle = rebase_path(_out_meta_merkle, root_build_dir)
+
+    blob_manifest = _out_blobs_manifest
+    meta_far_merkle_index_entry = "$_pkg_version_key=$_meta_merkle"
+    package_name = invoker.package_name
+    package_output_manifest = _out_package_manifest_json
+    snapshot_entry = "$_pkg_version_key=$_blobs_json"
   }
 
-  metadata_target_name = "${target_name}_metadata"
-  define_package_metadata(metadata_target_name) {
-    package_name = pkg_name
-    snapshot_entry = "$pkg_name/$pkg_version=$blobs_json_path"
-    blob_manifest = blobs_manifest
-    meta_far_merkle_index_entry =
-        "$pkg_name/$pkg_version=" +
-        rebase_path("$pkg_out_dir/meta.far.merkle", root_build_dir)
-    package_output_manifest = package_manifest_json
+  main_target_name = target_name
+  manifest_target_name = "${target_name}.manifest"
+  group(manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = [ ":$main_target_name" ]
   }
 
   action(target_name) {
@@ -87,14 +80,13 @@ template("prebuilt_package") {
 
     script = "//build/packages/prebuilt_package.py"
 
-    meta_merkle = "$pkg_out_dir/meta.far.merkle"
     pm = "$host_out_dir/pm"
 
     args = [
       "--pm-tool",
       rebase_path(pm, root_build_dir),
       "--name",
-      pkg_name,
+      invoker.package_name,
       "--archive",
       rebase_path(archive, root_build_dir),
       "--workdir",
@@ -109,15 +101,14 @@ template("prebuilt_package") {
     ]
 
     outputs = [
-      blobs_manifest,
-      blobs_json,
-      package_manifest_json,
-      meta_merkle,
+      _out_blobs_manifest,
+      _out_blobs_json,
+      _out_package_manifest_json,
+      _out_meta_merkle,
     ]
 
     deps = [
-      ":$metadata_target_name",
-      ":$unpack_action_name($default_toolchain)",
+      ":$define_package_metadata_target",
       "//src/sys/pkg/bin/pm:pm_bin($host_toolchain)",
     ]
     if (defined(invoker.deps)) {
@@ -130,10 +121,5 @@ template("prebuilt_package") {
     #   blobs.json
     #   package_manifest.json
     repeatable = false
-  }
-
-  group(manifest_target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
-    public_deps = [ ":$pkg_target_name" ]
   }
 }
