@@ -110,7 +110,10 @@ class H264MultiDecoder : public VideoDecoder {
     std::optional<InternalBuffer> codec_data_;
     std::optional<InternalBuffer> aux_buf_;
     std::optional<InternalBuffer> lmem_;
-    std::vector<InternalBuffer> reference_mv_buffers_;
+    // The std::optional<> is so we can avoid moving out of an InternalBuffer and then back in,
+    // which InternalBuffer doesn't currently support.  This way we can just run the destructor and
+    // constructor of InternalBuffer instead.
+    std::vector<std::optional<InternalBuffer>> reference_mv_buffers_;
   };
 
   enum class DecoderState : uint32_t {

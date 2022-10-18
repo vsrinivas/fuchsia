@@ -1141,7 +1141,7 @@ void H264MultiDecoder::ConfigureDpb() {
         on_deck_reference_mv_buffers.emplace_back(std::move(mv_buffer));
       } else {
         ZX_DEBUG_ASSERT(frame->index < on_deck_reference_mv_buffers.size());
-        ZX_DEBUG_ASSERT(!on_deck_reference_mv_buffers[frame->index].present());
+        ZX_DEBUG_ASSERT(!on_deck_reference_mv_buffers[frame->index].has_value());
         on_deck_reference_mv_buffers[frame->index] = std::move(mv_buffer);
       }
     }
@@ -2505,10 +2505,13 @@ void H264MultiDecoder::InitializedFrames(std::vector<CodecFrame> frames, uint32_
     std::optional<InternalBuffer> on_deck_mv_buffer;
     if (on_deck_internal_buffers_.has_value() &&
         i < on_deck_internal_buffers_->reference_mv_buffers_.size() &&
-        on_deck_internal_buffers_->reference_mv_buffers_[i].present()) {
+        on_deck_internal_buffers_->reference_mv_buffers_[i].has_value()) {
+      ZX_DEBUG_ASSERT(on_deck_internal_buffers_->reference_mv_buffers_[i]->present());
       on_deck_mv_buffer = std::move(on_deck_internal_buffers_->reference_mv_buffers_[i]);
       ZX_DEBUG_ASSERT(on_deck_mv_buffer->present());
-      ZX_DEBUG_ASSERT(!on_deck_internal_buffers_->reference_mv_buffers_[i].present());
+      ZX_DEBUG_ASSERT(on_deck_internal_buffers_->reference_mv_buffers_[i].has_value());
+      ZX_DEBUG_ASSERT(!on_deck_internal_buffers_->reference_mv_buffers_[i]->present());
+      on_deck_internal_buffers_->reference_mv_buffers_[i].reset();
     }
     if (on_deck_mv_buffer.has_value()) {
       if (on_deck_mv_buffer->size() < colocated_buffer_size) {
@@ -3071,12 +3074,17 @@ H264MultiDecoder::InternalBuffers H264MultiDecoder::TakeInternalBuffers() {
   }
   if (on_deck_internal_buffers_.has_value()) {
     for (auto& on_deck_mv_buffer : on_deck_internal_buffers_->reference_mv_buffers_) {
-      if (!on_deck_mv_buffer.present()) {
+      if (!on_deck_mv_buffer.has_value()) {
         // The buffer that was here was obtained just above from video_frames_.
         continue;
       }
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer->present());
       result.reference_mv_buffers_.emplace_back(std::move(on_deck_mv_buffer));
-      ZX_DEBUG_ASSERT(!on_deck_mv_buffer.present());
+      ZX_DEBUG_ASSERT(on_deck_mv_buffer.has_value());
+      ZX_DEBUG_ASSERT(!on_deck_mv_buffer->present());
+      // Not strictly needed, but nice to avoid leaving !present() values around, and better to be
+      // consistent with other places where we need to avoid leaving has_value() but !present().
+      on_deck_mv_buffer.reset();
     }
   }
 
