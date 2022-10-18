@@ -35,7 +35,7 @@ void Protocol::CallHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* token, zx_
 }
 
 zx_status_t ProtocolConnect(zx::channel token, fdf::Channel channel) {
-  return fdf_token_exchange(token.release(), channel.release());
+  return fdf_token_transfer(token.release(), channel.release());
 }
 
 }  // namespace fdf

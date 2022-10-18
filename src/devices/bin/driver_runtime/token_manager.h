@@ -19,14 +19,14 @@ namespace driver_runtime {
 class TokenManager {
  public:
   // Id for identifying a token, which consists of a channel pair. We use the koid
-  // of the channel end that would be passed to |fdf_token_register|. If |fdf_token_exchange|
+  // of the channel end that would be passed to |fdf_token_register|. If |fdf_token_transfer|
   // is called first, we can retrieve the correct koid via the channel's |related_koid|.
   // This is simpler than dealing with 2 different koids for the token channel pair.
   using TokenId = zx_koid_t;
 
   // Implementation of fdf_token_*.
   zx_status_t Register(zx_handle_t token, fdf_dispatcher_t* dispatcher, fdf_token_t* fdf_token);
-  zx_status_t Exchange(zx_handle_t token, fdf_handle_t handle);
+  zx_status_t Transfer(zx_handle_t token, fdf_handle_t handle);
 
   void SetGlobalDispatcher(async_dispatcher_t* dispatcher) {
     // We only expect this to be set once when the DispatcherCoordinator is created.
@@ -35,17 +35,17 @@ class TokenManager {
   }
 
  private:
-  // Represents a pending token for which an exchange has not yet been completed.
-  // This means either |fdf_token_register| or |fdf_token_exchange| has been called, but not both.
+  // Represents a pending token for which an fdf handle transfer has not yet been completed.
+  // This means either |fdf_token_register| or |fdf_token_transfer| has been called, but not both.
   // Once both functions have been called for a token, this object will cease to exist.
   class PendingTokenInfo : public fbl::WAVLTreeContainable<std::unique_ptr<PendingTokenInfo>> {
    public:
     // The state the pending token is in.
     enum class State {
-      // The token exchange callback was registered before the exchange was requested.
+      // The token transfer callback was registered before the transfer was requested.
       kCallbackRegistered,
-      // The exchange was requested before the token exchange callback was registered.
-      kExchangeRequested,
+      // The transfer was requested before the token transfer callback was registered.
+      kTransferRequested,
     };
 
     PendingTokenInfo(State state, TokenId token_id, zx::channel token)
@@ -59,11 +59,11 @@ class TokenManager {
     // Required to instantiate fbl::DefaultKeyedObjectTraits.
     TokenId GetKey() const { return token_id_; }
 
-    // Called when a driver registers a token exchange callback.
+    // Called when a driver registers a token transfer callback.
     virtual zx_status_t OnCallbackRegister(fdf_dispatcher_t* dispatcher,
                                            fdf_token_t* fdf_token) = 0;
-    // Called when a driver requests a token exchange with |channel|.
-    virtual zx_status_t OnExchangeRequest(fdf::Channel channel) = 0;
+    // Called when a driver requests a token transfer for |channel|.
+    virtual zx_status_t OnTransferRequest(fdf::Channel channel) = 0;
     // Called when the peer channel handle of |token_| is closed.
     virtual void OnPeerClosed() = 0;
 
@@ -79,26 +79,26 @@ class TokenManager {
    private:
     const State state_;
 
-    // This is used to match a token exchange callback registration with a exchange request, or vice
+    // This is used to match a token transfer callback registration with a transfer request, or vice
     // versa. This is koid of the token that would be used to register the callback.
     TokenId token_id_;
 
     // The token that has been registered with the callback, or provided with the
-    // exchange request.
+    // transfer request.
     // This was chosen to be a channel rather than an eventpair, so that in future we could
-    // potentially send an epitaph if the channel peer was dropped before the exchange was
+    // potentially send an epitaph if the channel peer was dropped before the transfer was
     // completed.
     zx::channel token_;
 
     // This waits for any ZX_CHANNEL_PEER_CLOSED signal on the peer channel handle of |token|.
-    // If the signal is received before the exchange is completed, we will drop this
+    // If the signal is received before the transfer is completed, we will drop this
     // |PendingTokenInfo|, and in the case of this being a |RegisteredCallback| we will trigger the
     // callback with |ZX_ERR_CANCELED|.
     async::Wait wait_;
   };
 
-  // A token exchange callback that has been registered by a driver and is awaiting an
-  // exchange request.
+  // A token transfer callback that has been registered by a driver and is awaiting an
+  // transfer request.
   class RegisteredCallback : public PendingTokenInfo {
    public:
     RegisteredCallback(TokenId token_id, zx::channel token, fdf_dispatcher_t* dispatcher,
@@ -112,7 +112,7 @@ class TokenManager {
       // This should not be called twice for the same token.
       return ZX_ERR_BAD_STATE;
     }
-    zx_status_t OnExchangeRequest(fdf::Channel channel) override;
+    zx_status_t OnTransferRequest(fdf::Channel channel) override;
     void OnPeerClosed() override;
     fdf_dispatcher_t* dispatcher() override { return dispatcher_; }
 
@@ -121,24 +121,24 @@ class TokenManager {
     fdf_token_t* fdf_token_;
   };
 
-  // A token exchange request by a driver that is waiting for a corresponding token exchange
+  // A token transfer request by a driver that is waiting for a corresponding token transfer
   // callback registration.
-  class ExchangeRequest : public PendingTokenInfo {
+  class TransferRequest : public PendingTokenInfo {
    public:
-    ExchangeRequest(TokenId token_id, zx::channel token, fdf::Channel channel)
-        : PendingTokenInfo(State::kExchangeRequested, token_id, std::move(token)),
+    TransferRequest(TokenId token_id, zx::channel token, fdf::Channel channel)
+        : PendingTokenInfo(State::kTransferRequested, token_id, std::move(token)),
           channel_(std::move(channel)) {}
 
     // |PendingTokenInfo| implementation.
     zx_status_t OnCallbackRegister(fdf_dispatcher_t* dispatcher, fdf_token_t* fdf_token) override;
-    zx_status_t OnExchangeRequest(fdf::Channel channel) override {
+    zx_status_t OnTransferRequest(fdf::Channel channel) override {
       // This should not be called twice for the same token.
       return ZX_ERR_BAD_STATE;
     }
     void OnPeerClosed() override {
       // The protocol manager will remove us from |pending_tokens_|, but we don't need
-      // to do anything extra here. Since the exchange was not completed,
-      // the fdf |channel_| will be closed, and the client will find out the exchange
+      // to do anything extra here. Since the transfer was not completed,
+      // the fdf |channel_| will be closed, and the client will find out the transfer
       // failed once it reads or writes from their end of the fdf channel.
     }
 

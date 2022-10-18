@@ -29,14 +29,14 @@ __BEGIN_CDECLS
 //     fdf_handle_t channel_local, channel_remote;
 //     status = fdf_channel_create(0, &channel_local, &channel_remote);
 //     ...
-//     zx_status_t status = fdf_token_exchange(token_local, channel_remote);
+//     zx_status_t status = fdf_token_transfer(token_local, channel_remote);
 //     // The FDF handle |channel_remote| can be received by the parent
 //     // driver who has the other side of the token.
 //   }
 //
 //   // Parent driver
 //
-//   void token_exchange_handler(fdf_dispatcher_t* dispatcher, fdf_token_t* token_handler,
+//   void token_transfer_handler(fdf_dispatcher_t* dispatcher, fdf_token_t* token_handler,
 //                               zx_status_t status,
 //                               fdf_handle_t handle) {
 //     // Do something with the received FDF handle.
@@ -48,35 +48,36 @@ __BEGIN_CDECLS
 //     // Token received from child driver.
 //     ...
 //     // Register a handler for the token.
-//     fdf_token_t token_handler{token_exchange_handler};
+//     fdf_token_t token_handler{token_transfer_handler};
 //     zx_status_t status = fdf_token_register(token, driver_dispatcher(), &token_handler));
 //     ...
 //   }
 typedef struct fdf_token fdf_token_t;
 
-// Handles the transfer of the runtime handle which was exchanged for the registered token.
+// Handles the transfer of the fdf handle.
+//
 // If |status| is ZX_OK, transfers ownership of |handle|.
 //
-// The status is |ZX_OK| if the token was successfully exchanged.
+// The status is |ZX_OK| if the token was successfully transferred.
 // The status is |ZX_ERR_CANCELED| if the dispatcher was shut down before the
-// exchange was completed, or the peer token handle has been closed.
-typedef void(fdf_token_exchange_handler_t)(fdf_dispatcher_t* dispatcher, fdf_token_t* token,
+// transfer was completed, or the peer token handle has been closed.
+typedef void(fdf_token_transfer_handler_t)(fdf_dispatcher_t* dispatcher, fdf_token_t* token,
                                            zx_status_t status, fdf_handle_t handle);
 
-// Holds context for a registered token which is pending exchange for a runtime handle.
+// Holds context for a registered token which is waiting for an fdf handle to be transferred.
 //
 // After successfully registering the protocol, the client is responsible for retaining
-// the structure in memory (and unmodified) until the exchange handler runs.
+// the structure in memory (and unmodified) until the transfer handler runs.
 // Thereafter, this structure may be registered again or destroyed.
 struct fdf_token {
-  // The handler which will be called when a exchange is completed.
-  fdf_token_exchange_handler_t* handler;
+  // The handler which will be called when an fdf handle transfer is completed.
+  fdf_token_transfer_handler_t* handler;
 };
 
-// Registers a token exchange handler for |token|.
+// Registers a token transfer handler for |token|.
 //
-// The exchange handler will be scheduled to be called on the dispatcher when a client calls
-// |fdf_token_exchange| with the channel peer of |token|, If the connection has already been
+// The transfer handler will be scheduled to be called on the dispatcher when a client calls
+// |fdf_token_transfer| with the channel peer of |token|, If the connection has already been
 // requested, the handler will be scheduled immediately.
 //
 // Transfers ownership of |token| to the runtime.
@@ -94,8 +95,10 @@ struct fdf_token {
 zx_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
                                fdf_token_t* handler);
 
-// Exchanges |token| with a fdf handle. The token exchange handler which was,
-// or will be registered with the channel peer of |token| will receive |handle|.
+// Transfers the fdf handle to the owner of the channel peer of |token|.
+//
+// The token transfer handler which was, or will be registered with the
+// channel peer of |token| will receive |handle|.
 //
 // Transfers ownership of |token| to the runtime, and ownership of |handle| to
 // the driver who registered the token.
@@ -108,7 +111,7 @@ zx_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dispatcher,
 // or |handle| is not a valid FDF handle.
 //
 // ZX_ERR_BAD_STATE: The dispatcher is shutting down.
-zx_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle);
+zx_status_t fdf_token_transfer(zx_handle_t token, fdf_handle_t handle);
 
 __END_CDECLS
 

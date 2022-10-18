@@ -32,6 +32,6 @@ Symbols:
   - { Name: fdf_testing_push_driver, Type: Func }
   - { Name: fdf_testing_wait_until_all_dispatchers_destroyed, Type: Func }
   - { Name: fdf_testing_wait_until_all_dispatchers_idle, Type: Func }
-  - { Name: fdf_token_exchange, Type: Func }
   - { Name: fdf_token_register, Type: Func }
+  - { Name: fdf_token_transfer, Type: Func }
 ...

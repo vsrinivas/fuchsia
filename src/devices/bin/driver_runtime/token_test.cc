@@ -343,7 +343,7 @@ TEST_F(ProtocolTest, ConnectWrongTokenType) {
   zx::eventpair bad_token_local, bad_token_remote;
   ASSERT_OK(zx::eventpair::create(0, &bad_token_local, &bad_token_remote));
 
-  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fdf_token_exchange(bad_token_local.release(), fdf_local_.release()));
+  ASSERT_EQ(ZX_ERR_BAD_HANDLE, fdf_token_transfer(bad_token_local.release(), fdf_local_.release()));
 }
 
 void NotCalledHandler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
@@ -374,12 +374,6 @@ TEST_F(ProtocolTest, RegisterNoDispatcher) {
 
 struct ProtocolHandler : fdf_token_t {
   ProtocolHandler() : fdf_token_t{&Handler} {}
-
-  void OnExchange(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
-                  fdf_handle_t channel) {
-    ASSERT_OK(status);
-    completion.Signal();
-  }
 
   static void Handler(fdf_dispatcher_t* dispatcher, fdf_token_t* protocol, zx_status_t status,
                       fdf_handle_t channel) {

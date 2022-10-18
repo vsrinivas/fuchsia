@@ -1414,9 +1414,9 @@ zx_status_t DispatcherCoordinator::TokenRegister(zx_handle_t token, fdf_dispatch
 }
 
 // static
-zx_status_t DispatcherCoordinator::TokenExchange(zx_handle_t token, fdf_handle_t handle) {
+zx_status_t DispatcherCoordinator::TokenTransfer(zx_handle_t token, fdf_handle_t handle) {
   DispatcherCoordinator& coordinator = GetDispatcherCoordinator();
-  return coordinator.token_manager_.Exchange(token, handle);
+  return coordinator.token_manager_.Transfer(token, handle);
 }
 
 zx_status_t DispatcherCoordinator::AddDispatcher(fbl::RefPtr<Dispatcher> dispatcher) {

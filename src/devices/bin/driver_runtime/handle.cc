@@ -11,7 +11,7 @@
 
 namespace {
 
-// Masks for building a fdf_handle_t value.
+// Masks for building an fdf_handle_t value.
 //
 // handle value bit fields:
 //   [31..kHandleGenerationShift]                       : Generation number

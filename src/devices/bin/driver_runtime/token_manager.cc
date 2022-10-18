@@ -57,15 +57,15 @@ zx_status_t TokenManager::Register(zx_handle_t token, fdf_dispatcher_t* dispatch
 
   auto request = pending_tokens_.find(token_id);
   if (request.IsValid()) {
-    // An exchange request matching our |token_id| was previously requested,
-    // schedule the exchange callback to be called now.
+    // A transfer request matching our |token_id| was previously requested,
+    // schedule the transfer callback to be called now.
     auto pending_token_info = pending_tokens_.erase(request);
     ZX_ASSERT(pending_token_info);
-    ZX_ASSERT(pending_token_info->state() == PendingTokenInfo::State::kExchangeRequested);
+    ZX_ASSERT(pending_token_info->state() == PendingTokenInfo::State::kTransferRequested);
     return pending_token_info->OnCallbackRegister(dispatcher, fdf_token);
   }
 
-  // No exchange has been requested for this |token_id| yet.
+  // No transfer has been requested for this |token_id| yet.
   auto pending_token_info = std::make_unique<RegisteredCallback>(
       token_id, std::move(validated_token), dispatcher, fdf_token);
   // Listen for peer token handle closed in case they drop their token.
@@ -79,7 +79,7 @@ zx_status_t TokenManager::Register(zx_handle_t token, fdf_dispatcher_t* dispatch
   return ZX_OK;
 }
 
-zx_status_t TokenManager::Exchange(zx_handle_t token, fdf_handle_t handle) {
+zx_status_t TokenManager::Transfer(zx_handle_t token, fdf_handle_t handle) {
   // Retrieve the token id using the koid of the channel peer, so we can locate the
   // corresponding registered protocol.
   auto validate_status = ValidateToken(token, false /* use_primary_koid */);
@@ -103,15 +103,15 @@ zx_status_t TokenManager::Exchange(zx_handle_t token, fdf_handle_t handle) {
 
   auto registered_callback = pending_tokens_.find(token_id);
   if (registered_callback.IsValid()) {
-    // A token exchange callback matching our token was previously registered, schedule it to
+    // A token transfer callback matching our token was previously registered, schedule it to
     // be called.
     auto pending_token_info = pending_tokens_.erase(registered_callback);
     ZX_ASSERT(pending_token_info);
     ZX_ASSERT(pending_token_info->state() == PendingTokenInfo::State::kCallbackRegistered);
-    return pending_token_info->OnExchangeRequest(std::move(validated_fdf_channel));
+    return pending_token_info->OnTransferRequest(std::move(validated_fdf_channel));
   }
 
-  auto pending_token_info = std::make_unique<ExchangeRequest>(token_id, std::move(validated_token),
+  auto pending_token_info = std::make_unique<TransferRequest>(token_id, std::move(validated_token),
                                                               std::move(validated_fdf_channel));
   // Listen for peer token handle closed in case they drop their token.
   // It is safe to do this before inserting |pending_token_info| into the map as we are holding
@@ -125,9 +125,9 @@ zx_status_t TokenManager::Exchange(zx_handle_t token, fdf_handle_t handle) {
 }
 
 zx_status_t TokenManager::WaitOnPeerClosedLocked(PendingTokenInfo* pending_token) {
-  // For token exchange callback registrations, we want to use the dispatcher provided,
+  // For token transfer callback registrations, we want to use the dispatcher provided,
   // so that we will be automatically notified if the dispatcher shuts down.
-  // For token exchange requests, no dispatcher is provided, so we use the global dispatcher.
+  // For token transfer requests, no dispatcher is provided, so we use the global dispatcher.
   async_dispatcher_t* dispatcher =
       pending_token->dispatcher() ? pending_token->dispatcher() : global_dispatcher();
   ZX_ASSERT(dispatcher != nullptr);
@@ -160,14 +160,14 @@ void TokenManager::RegisteredCallback::OnPeerClosed() {
   ZX_ASSERT((status == ZX_OK) || (status == ZX_ERR_BAD_STATE));
 }
 
-zx_status_t TokenManager::RegisteredCallback::OnExchangeRequest(fdf::Channel channel) {
+zx_status_t TokenManager::RegisteredCallback::OnTransferRequest(fdf::Channel channel) {
   ZX_ASSERT(channel.is_valid());
   ZX_ASSERT(fdf_token_ != nullptr);
   ZX_ASSERT(dispatcher_ != nullptr);
   return dispatcher_->ScheduleTokenCallback(fdf_token_, ZX_OK, std::move(channel));
 }
 
-zx_status_t TokenManager::ExchangeRequest::OnCallbackRegister(fdf_dispatcher_t* dispatcher,
+zx_status_t TokenManager::TransferRequest::OnCallbackRegister(fdf_dispatcher_t* dispatcher,
                                                               fdf_token_t* fdf_token) {
   ZX_ASSERT(channel_.is_valid());
   ZX_ASSERT(fdf_token != nullptr);

@@ -166,8 +166,8 @@ __EXPORT zx_status_t fdf_token_register(zx_handle_t token, fdf_dispatcher_t* dis
   return driver_runtime::DispatcherCoordinator::TokenRegister(token, dispatcher, handler);
 }
 
-__EXPORT zx_status_t fdf_token_exchange(zx_handle_t token, fdf_handle_t handle) {
-  return driver_runtime::DispatcherCoordinator::TokenExchange(token, handle);
+__EXPORT zx_status_t fdf_token_transfer(zx_handle_t token, fdf_handle_t handle) {
+  return driver_runtime::DispatcherCoordinator::TokenTransfer(token, handle);
 }
 
 __EXPORT void fdf_env_register_driver_entry(const void* driver) {

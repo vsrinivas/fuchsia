@@ -219,14 +219,14 @@ class Dispatcher : public async_dispatcher_t,
   // Blocks the current thread until the dispatcher is idle.
   void WaitUntilIdle();
 
-  // Registers |token| as waiting to be exchanged for a fdf handle. This |token| is already
+  // Registers |token| as waiting for an fdf handle to be transferred. This |token| is already
   // registered with the token manager, but this allows the dispatcher to call the token
-  // exchange cancellation callback in the case where the dispatcher shuts down before the
-  // exchange is completed. This is as the token manager would not be able to queue a
+  // transfer cancellation callback in the case where the dispatcher shuts down before the
+  // transfer is completed. This is as the token manager would not be able to queue a
   // cancellation callback once the dispatcher is in a shutdown state.
   zx_status_t RegisterPendingToken(fdf_token_t* token);
-  // Queues a |CallbackRequest| for the token exchange callback and removes |token|
-  // from the pending list. This is called when |fdf_token_register| and |fdf_token_exchange|
+  // Queues a |CallbackRequest| for the token transfer callback and removes |token|
+  // from the pending list. This is called when |fdf_token_register| and |fdf_token_transfer|
   // have been called for the same token.
   // TODO(fxbug.dev/105578): replace fdf::Channel with a generic C++ handle type when available.
   zx_status_t ScheduleTokenCallback(fdf_token_t* token, zx_status_t status, fdf::Channel channel);
@@ -543,8 +543,8 @@ class Dispatcher : public async_dispatcher_t,
   // The observer that should be called when shutting down the dispatcher completes.
   fdf_dispatcher_shutdown_observer_t* shutdown_observer_ __TA_GUARDED(&callback_lock_) = nullptr;
 
-  // Tokens waiting to be exchanged for fdf handles that have been registered with the token manager
-  // on this dispatcher.
+  // Tokens registered with the token manager, that are waiting for fdf handles to
+  // be transferred,
   std::unordered_set<fdf_token_t*> registered_tokens_;
 
   fbl::Canary<fbl::magic("FDFD")> canary_;
@@ -569,7 +569,7 @@ class DispatcherCoordinator {
   // Implementation of fdf_protocol_*.
   static zx_status_t TokenRegister(zx_handle_t token, fdf_dispatcher_t* dispatcher,
                                    fdf_token_t* handler);
-  static zx_status_t TokenExchange(zx_handle_t token, fdf_handle_t channel);
+  static zx_status_t TokenTransfer(zx_handle_t token, fdf_handle_t channel);
 
   // Returns ZX_OK if |dispatcher| was added successfully.
   // Returns ZX_ERR_BAD_STATE if the driver is currently shutting down.
