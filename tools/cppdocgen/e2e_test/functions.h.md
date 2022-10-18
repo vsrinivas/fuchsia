@@ -23,7 +23,7 @@ This function has a custom title and two parameters.
 
 This documentation uses three slashes and the function has default params with templates.
 
-This also has a link to the [`CustomTitleFunction()`](functions.h.md#CustomTitleFunction) which should get rewritten, and
+This also has a link to the <code><a href="functions.h.md#CustomTitleFunction">CustomTitleFunction</a>()</code> which should get rewritten, and
 the [FIDL wire format](/docs/reference/fidl/language/wire-format) which should not.
 
 

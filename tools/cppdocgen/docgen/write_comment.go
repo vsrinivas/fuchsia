@@ -45,6 +45,7 @@ func trimMarkdownHeadings(s string) string {
 	return strings.TrimLeft(strings.TrimLeft(s, "#"), " ")
 }
 
+// See fixupLinks for a discussion on formatting.
 func getLinkDest(index *Index, input []byte) []byte {
 	// Strip everything after the "(" when doing a symbol lookup, but save it to put
 	// back at the end.
@@ -68,7 +69,11 @@ func getLinkDest(index *Index, input []byte) []byte {
 	}
 
 	if link != "" {
-		return []byte(fmt.Sprintf("[`%s%s`](%s)", key, trailing, link))
+		// A markdown link would be:
+		//   return []byte(fmt.Sprintf("[`%s%s`](%s)", key, trailing, link))
+		// but we use HTML for the reasons described above fixupLinks().
+		return []byte(fmt.Sprintf("<code><a href=\"%s\">%s</a>%s</code>",
+			link, escapeHtml(key), escapeHtml(trailing)))
 	}
 	return []byte{}
 }
@@ -84,10 +89,20 @@ func getLinkDest(index *Index, input []byte) []byte {
 // This does not handle [] links spread across multiple lines. The clang-doc output is line-based.
 // We could put the lines back together to handle this case, but the contents we handle are normally
 // single named C/C++ entities which can't have embedded whitespace anyway.
-func fixupLinks(index *Index, s string) string {
+//
+// We format our links as HTML <a href=...> which is handled well by docsite instead of Markdown.
+// This is because we have more control over what is and isn't linked. In markdown you can't
+// have a link inside code (because the [] are treated as literals). But if you want to have a
+// function call link with parameters like:
+//
+//	[something_get_that(handle, output_value)]
+//
+// we have to either linkify the whole thing (looks weird) or format as two parts:
+// [`text`](dest.md)`(params)` but devsite introduces a space between the two entities which
+// looks bad.
+func fixupLinks(index *Index, input []byte) []byte {
 	// Looking for the pattern:
 	//   <anything but "\"> "[" <anything>* <anything but "\"> "]" <anything but "(">
-	input := []byte(s)
 	output := make([]byte, 0, len(input))
 
 	// Tracks the location of the most recent non-escaped '[' in both the input and output.
@@ -124,7 +139,7 @@ func fixupLinks(index *Index, s string) string {
 			output = append(output, input[i])
 		}
 	}
-	return string(output)
+	return output
 }
 
 // writeComment formats the given comments to the output. The heading depth is the number of "#" to
@@ -154,7 +169,8 @@ func writeComment(index *Index, cs []clangdoc.CommentInfo, headingDepth int, f i
 			if len(line) > 0 && line[0] == '#' {
 				fmt.Fprintf(f, "%s", headingMarkerAtLevel(headingDepth))
 			}
-			fmt.Fprintf(f, "%s\n", fixupLinks(index, line))
+			f.Write(fixupLinks(index, []byte(line)))
+			fmt.Fprintf(f, "\n")
 		}
 	}
 }

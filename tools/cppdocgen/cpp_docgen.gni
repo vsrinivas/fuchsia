@@ -7,6 +7,9 @@ import("//tools/cppdocgen/clang_doc.gni")
 
 # Generates markdown documentation from the public headers of a library.
 #
+# By convention, call the docgen target for a library "docs", giving a full
+# label of the form "//sdk/lib/fdio:docs".
+#
 # PARAMETERS
 #
 #   headers [list of strings] (required)
@@ -40,7 +43,7 @@ import("//tools/cppdocgen/clang_doc.gni")
 #   out_zip [string] (required for zip output)
 #       Name of the zip file to generate with the generated markdown documentation.
 #
-# RAW .md FILE OUTPUT
+# RAW .md FILE OUTPUT (for manual testing only)
 #
 #   out_dir [string] (required for directory-based output)
 #       The name of the directory to put the output files in. Currently the build assumes the output

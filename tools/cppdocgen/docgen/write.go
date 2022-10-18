@@ -115,6 +115,8 @@ var htmlEscapes = map[rune]string{
 	'<': "&lt;",
 	'>': "&gt;",
 	'&': "&amp;",
+	// Required in attribute contexts, it can't hurt to always escape quotes.
+	'"': "&quot;",
 }
 
 func escapeHtml(s string) string {

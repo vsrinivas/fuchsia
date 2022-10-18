@@ -9,6 +9,11 @@ import (
 	"testing"
 )
 
+// Convenience wrapper around fixupLinks that takes/returns strings.
+func fixupStringLinks(index *Index, input string) string {
+	return string(fixupLinks(index, []byte(input)))
+}
+
 func TestFixupLinks(t *testing.T) {
 	index := makeEmptyIndex()
 
@@ -40,42 +45,42 @@ func TestFixupLinks(t *testing.T) {
 	index.RecordUsrs[indexedRecord.USR] = &indexedRecord
 
 	// Comment with no links.
-	output := fixupLinks(&index, "comment blah")
+	output := fixupStringLinks(&index, "comment blah")
 	if output != "comment blah" {
 		t.Errorf("Unlinked comment is wrong: %v\n", output)
 	}
 
 	// Comment with link and no matching name should be passed unchanged.
-	output = fixupLinks(&index, "comment [not_found_symbol] something")
+	output = fixupStringLinks(&index, "comment [not_found_symbol] something")
 	if output != "comment [not_found_symbol] something" {
 		t.Errorf("Not found link comment is wrong: %v\n", output)
 	}
 
 	// Comment with markdown link should be passed unchanged.
-	output = fixupLinks(&index, "comment [indexed_symbol](here.md)")
+	output = fixupStringLinks(&index, "comment [indexed_symbol](here.md)")
 	if output != "comment [indexed_symbol](here.md)" {
 		t.Errorf("Markdown comment is wrong: %v\n", output)
 	}
 
 	// Found symbol should be converted to the proper link.
-	output = fixupLinks(&index, "comment [indexed_symbol] more")
-	if output != "comment [`indexed_symbol`](filename.h.md#indexed_symbol) more" {
+	output = fixupStringLinks(&index, "comment [indexed_symbol] more")
+	if output != "comment <code><a href=\"filename.h.md#indexed_symbol\">indexed_symbol</a></code> more" {
 		t.Errorf("Linked comment is wrong: %v\n", output)
 	}
 
 	// Parens on the symbol should be included in the output but not count in the symbol lookup.
-	output = fixupLinks(&index, "comment [INDEXED_DEFINE()] more")
-	if output != "comment [`INDEXED_DEFINE()`](filename.h.md#INDEXED_DEFINE) more" {
+	output = fixupStringLinks(&index, "comment [INDEXED_DEFINE()] more")
+	if output != "comment <code><a href=\"filename.h.md#INDEXED_DEFINE\">INDEXED_DEFINE</a>()</code> more" {
 		t.Errorf("Linked comment is wrong: %v\n", output)
 	}
-	output = fixupLinks(&index, "comment [indexed_symbol(param)] more")
-	if output != "comment [`indexed_symbol(param)`](filename.h.md#indexed_symbol) more" {
+	output = fixupStringLinks(&index, "comment [indexed_symbol(param)] more")
+	if output != "comment <code><a href=\"filename.h.md#indexed_symbol\">indexed_symbol</a>(param)</code> more" {
 		t.Errorf("Linked comment is wrong: %v\n", output)
 	}
 
 	// Two links on the same line, this also checks records and enums.
-	output = fixupLinks(&index, "a [indexed_struct] b [IndexedEnum]")
-	if output != "a [`indexed_struct`](filename.h.md#indexed_struct) b [`IndexedEnum`](filename.h.md#IndexedEnum)" {
+	output = fixupStringLinks(&index, "a [indexed_struct] b [IndexedEnum]")
+	if output != "a <code><a href=\"filename.h.md#indexed_struct\">indexed_struct</a></code> b <code><a href=\"filename.h.md#IndexedEnum\">IndexedEnum</a></code>" {
 		t.Errorf("Linked comment is wrong: %v\n", output)
 	}
 }

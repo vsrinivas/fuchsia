@@ -15,30 +15,30 @@ The contents of this README file will comprise the top of the generated index.md
   - [e2e_test/grouping.h](grouping.h.md)
   - [e2e_test/namespace.h](namespace.h.md)
 
-## Classes
+## Classes and structures
 
-  - [BaseClass1](classes.h.md#BaseClass1)
-  - [BaseClass2](classes.h.md#BaseClass2)
-  - [myns::ClassInsideNamespace](namespace.h.md#myns::ClassInsideNamespace)
-  - [DerivedClass](classes.h.md#DerivedClass)
-  - [MyClass](grouping.h.md#MyClass)
-  - [SimpleTestClass](classes.h.md#SimpleTestClass)
-  - [SimpleTestStructure](basics.h.md#SimpleTestStructure)
-  - [StandaloneUnion](basics.h.md#StandaloneUnion)
-  - [myns::StructInsideNamespace](namespace.h.md#myns::StructInsideNamespace)
-  - [UnnamedStructTypedef](basics.h.md#UnnamedStructTypedef)
+  - [BaseClass1](classes.h.md#BaseClass1) class
+  - [BaseClass2](classes.h.md#BaseClass2) class
+  - [myns::ClassInsideNamespace](namespace.h.md#myns::ClassInsideNamespace) class
+  - [DerivedClass](classes.h.md#DerivedClass) class
+  - [MyClass](grouping.h.md#MyClass) class
+  - [SimpleTestClass](classes.h.md#SimpleTestClass) class
+  - [SimpleTestStructure](basics.h.md#SimpleTestStructure) struct
+  - [StandaloneUnion](basics.h.md#StandaloneUnion) union
+  - [myns::StructInsideNamespace](namespace.h.md#myns::StructInsideNamespace) struct
+  - [UnnamedStructTypedef](basics.h.md#UnnamedStructTypedef) struct
 
 ## Functions
 
-  - [CustomTitleFunction](functions.h.md#CustomTitleFunction)
-  - [GetStringFromVectors](functions.h.md#GetStringFromVectors)
-  - [GroupedExplicitlyOne](grouping.h.md#GroupedExplicitlyOne)
-  - [GroupedExplicitlyTwo](grouping.h.md#GroupedExplicitlyOne)
-  - [GroupedImplicitly](grouping.h.md#GroupedImplicitly)
-  - [myns::FunctionInsideNamespace](namespace.h.md#myns::FunctionInsideNamespace)
-  - [UndocumentedFunction](functions.h.md#UndocumentedFunction)
-  - [UngroupedOne](grouping.h.md#UngroupedOne)
-  - [UngroupedTwo](grouping.h.md#UngroupedTwo)
+  - [CustomTitleFunction(…)](functions.h.md#CustomTitleFunction)
+  - [GetStringFromVectors(…)](functions.h.md#GetStringFromVectors)
+  - [GroupedExplicitlyOne(…)](grouping.h.md#GroupedExplicitlyOne)
+  - [GroupedExplicitlyTwo(…)](grouping.h.md#GroupedExplicitlyOne)
+  - [GroupedImplicitly(…)](grouping.h.md#GroupedImplicitly)
+  - [myns::FunctionInsideNamespace()](namespace.h.md#myns::FunctionInsideNamespace)
+  - [UndocumentedFunction()](functions.h.md#UndocumentedFunction)
+  - [UngroupedOne()](grouping.h.md#UngroupedOne)
+  - [UngroupedTwo()](grouping.h.md#UngroupedTwo)
 
 ## Enums
 

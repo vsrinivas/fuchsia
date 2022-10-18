@@ -204,4 +204,29 @@ const_iterator cbegin();
 
 It is good practice to include as much of the name as practical in the title.
 This is what the user will be scanning for and it should match with the other
-titles which use the raw function/define names
+titles which use the raw function/define names. It's best to end the title with
+"macros" or "defines" to match the generated titles of other sections.
+
+In cases where there is a group of related defines that need individual
+documentation, the recommended formatting is to create a group (so they will all
+be under one heading with one section showing all the declarations in-order) and
+then include per-flag documentation in headings under that. The cppdocgen tool
+will indent the headings automatically to be within the group.
+
+```
+// Encabulator flag macros
+//
+// These macros define bits that can be used in the `flags` parameter of the
+// [enable_encabulator()] function.
+//
+// # ENCABULATOR_ENABLE_TURBO
+//
+// Enables the turbo mode of the encabulator. Etc...
+//
+//
+// # ENCABULATOR_ENABLE_MARZELVANES
+//
+// Documentation for this flag...
+#define ENCABULATOR_ENABLE_TURBO 1
+#define ENCABULATOR_ENABLE_MARZELVANES 2
+```

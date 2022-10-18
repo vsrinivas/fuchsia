@@ -58,7 +58,9 @@ func writeFunctionIndex(index *Index, f io.Writer) {
 		for _, g := range header.FunctionGroups {
 			link := functionGroupLink(g)
 			for _, fn := range g.Funcs {
-				allFuncs = append(allFuncs, indexLink{Name: functionFullName(fn), Link: link})
+				allFuncs = append(allFuncs, indexLink{
+					Name: functionFullName(fn) + functionEllipsesParens(fn),
+					Link: link})
 			}
 		}
 	}
@@ -86,7 +88,9 @@ func writeEnumIndex(index *Index, f io.Writer) {
 
 	allEnums := make([]indexLink, 0, len(index.Defines))
 	for _, e := range index.Enums {
-		allEnums = append(allEnums, indexLink{Name: enumFullName(e), Link: enumLink(e)})
+		allEnums = append(allEnums, indexLink{
+			Name: enumFullName(e),
+			Link: enumLink(e)})
 	}
 	writeListOfLinks(allEnums, f)
 }
@@ -95,7 +99,7 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 	if len(settings.OverviewContents) > 0 {
 		// The overview will comprise the top of the index and we will also take the
 		// page title from that.
-		f.Write(settings.OverviewContents)
+		f.Write(fixupLinks(index, settings.OverviewContents))
 		fmt.Fprintf(f, "\n")
 	} else {
 		fmt.Fprintf(f, "# %s\n\n", settings.LibName)
@@ -117,10 +121,10 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 	fmt.Fprintf(f, "\n")
 
 	if len(index.RecordUsrs) > 0 {
-		fmt.Fprintf(f, "## Classes\n\n")
+		fmt.Fprintf(f, "## Classes and structures\n\n")
 		for _, r := range index.AllRecords() {
-			// TODO(brettw) include class/struct/enum type when clang-doc is fixed.
-			fmt.Fprintf(f, "  - [%s](%s)\n", recordFullName(r), recordLink(index, r))
+			fmt.Fprintf(f, "  - [%s](%s) %s\n", recordFullName(r), recordLink(index, r),
+				recordKind(r))
 		}
 		fmt.Fprintf(f, "\n")
 	}
