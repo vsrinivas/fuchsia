@@ -1,7 +1,11 @@
+# See subdirectories for more specific OWNERS.
+# The following OWNERS should used for trivial cleanups only.
+#
+# COMPONENT: Media
+
+alperg@google.com
 dalesat@google.com
 dustingreen@google.com
 mpuryear@google.com
-schottm@google.com
+stefanbossbaly@google.com
 tombergan@google.com
-
-# COMPONENT: Media
