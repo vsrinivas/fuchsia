@@ -1313,82 +1313,6 @@ static bool vmo_clone_removes_write_test() {
   END_TEST;
 }
 
-static bool vmo_zero_scan_test() {
-  BEGIN_TEST;
-
-  AutoVmScannerDisable scanner_disable;
-
-  auto mem = testing::UserMemory::Create(PAGE_SIZE);
-  ASSERT_NONNULL(mem);
-
-  const auto& user_aspace = mem->aspace();
-  ASSERT_NONNULL(user_aspace);
-  ASSERT_TRUE(user_aspace->is_user());
-
-  // Initially uncommitted, which should not count as having zero pages.
-  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
-
-  // Validate that this mapping reads as zeros
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), 0u));
-  EXPECT_EQ(0, mem->get<int32_t>());
-
-  // Reading from the page should not have committed anything, zero or otherwise.
-  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
-
-  // IF we write to the page, this should make it committed.
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
-  mem->put<int32_t>(0);
-  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
-
-  // Check that changing the contents effects the zero page count.
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
-  mem->put<int32_t>(42);
-  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
-  mem->put<int32_t>(0);
-  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
-
-  // Scanning should drop permissions in the hardware page table from write to read-only.
-  paddr_t paddr_readable;
-  uint mmu_flags;
-  EXPECT_EQ(ZX_OK, user_aspace->SoftFault(mem->base(), VMM_PF_FLAG_WRITE));
-  mem->put<int32_t>(0);
-  zx_status_t status = user_aspace->arch_aspace().Query(mem->base(), &paddr_readable, &mmu_flags);
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_TRUE(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE);
-  mem->vmo()->ScanForZeroPages(false);
-  status = user_aspace->arch_aspace().Query(mem->base(), &paddr_readable, &mmu_flags);
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_FALSE(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE);
-
-  // Pinning the page should prevent it from being counted.
-  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
-  EXPECT_EQ(ZX_OK, mem->vmo()->CommitRangePinned(0, PAGE_SIZE, false));
-  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
-  mem->vmo()->Unpin(0, PAGE_SIZE);
-  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
-
-  // Creating a kernel mapping should prevent any counting from occurring.
-  VmAspace* kernel_aspace = VmAspace::kernel_aspace();
-  void* ptr;
-  status = kernel_aspace->MapObjectInternal(mem->vmo(), "test", 0, PAGE_SIZE, &ptr, 0,
-                                            VmAspace::VMM_FLAG_COMMIT, kArchRwFlags);
-  EXPECT_EQ(ZX_OK, status);
-  EXPECT_EQ(0u, mem->vmo()->ScanForZeroPages(false));
-  kernel_aspace->FreeRegion(reinterpret_cast<vaddr_t>(ptr));
-  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(false));
-
-  // Actually evict the page now and check that the attribution count goes down and the eviction
-  // event count goes up.
-  EXPECT_EQ(1u, mem->vmo()->AttributedPages().uncompressed);
-  EXPECT_EQ(0u, mem->vmo()->EvictionEventCount());
-  EXPECT_EQ(1u, mem->vmo()->ScanForZeroPages(true));
-  EXPECT_EQ(0u, mem->vmo()->AttributedPages().uncompressed);
-  EXPECT_EQ(1u, mem->vmo()->EvictionEventCount());
-
-  END_TEST;
-}
-
 static bool vmo_move_pages_on_access_test() {
   BEGIN_TEST;
 
@@ -2387,18 +2311,6 @@ static bool vmo_attribution_dedup_test() {
   expected_gen_count += 2;
   EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count,
                                                  AttributionCounts{2u, 0u}));
-
-  // Scan for zero pages, returning only the count (without triggering any reclamation). This should
-  // *not* change the generation count.
-  ASSERT_EQ(2u, vmo->ScanForZeroPages(false));
-  EXPECT_EQ(true, verify_object_page_attribution(vmo.get(), expected_gen_count,
-                                                 AttributionCounts{2u, 0u}));
-
-  // Scan for zero pages and reclaim them. This should change the generation count.
-  ASSERT_EQ(2u, vmo->ScanForZeroPages(true));
-  ++expected_gen_count;
-  EXPECT_EQ(true,
-            verify_object_page_attribution(vmo.get(), expected_gen_count, AttributionCounts{}));
 
   END_TEST;
 }
@@ -3710,19 +3622,6 @@ static bool vmo_dedup_dirty_test() {
   // No committed pages remaining.
   EXPECT_EQ(0u, vmo->AttributedPages().uncompressed);
 
-  // Commit the page again.
-  vmo->CommitRange(0, PAGE_SIZE);
-  page = vmo->DebugGetPage(0);
-
-  // The page is still clean.
-  EXPECT_TRUE(pmm_page_queues()->DebugPageIsReclaim(page));
-
-  // Zero scan should be able to dedup a clean page.
-  EXPECT_TRUE(vmo->ScanForZeroPages(true));
-
-  // No committed pages remaining.
-  EXPECT_EQ(0u, vmo->AttributedPages().uncompressed);
-
   // Write to the page making it dirty.
   uint8_t data = 0xff;
   status = vmo->Write(&data, 0, sizeof(data));
@@ -3734,7 +3633,6 @@ static bool vmo_dedup_dirty_test() {
 
   // We should not be able to dedup the page.
   EXPECT_FALSE(vmo->DebugGetCowPages()->DedupZeroPage(page, 0));
-  EXPECT_FALSE(vmo->ScanForZeroPages(true));
   EXPECT_EQ(1u, vmo->AttributedPages().uncompressed);
 
   END_TEST;
@@ -3766,7 +3664,6 @@ VM_UNITTEST(vmo_lookup_test)
 VM_UNITTEST(vmo_lookup_slice_test)
 VM_UNITTEST(vmo_lookup_clone_test)
 VM_UNITTEST(vmo_clone_removes_write_test)
-VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(vmo_move_pages_on_access_test)
 VM_UNITTEST(vmo_eviction_hints_test)
 VM_UNITTEST(vmo_always_need_evicts_loaned_test)

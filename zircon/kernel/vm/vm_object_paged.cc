@@ -166,31 +166,6 @@ bool VmObjectPaged::CanDedupZeroPagesLocked() {
   return true;
 }
 
-uint32_t VmObjectPaged::ScanForZeroPages(bool reclaim) {
-  canary_.Assert();
-
-  Guard<CriticalMutex> guard{lock()};
-
-  // Skip uncached VMOs as we cannot efficiently scan them.
-  if ((cache_policy_ & ZX_CACHE_POLICY_MASK) != ZX_CACHE_POLICY_CACHED) {
-    return 0;
-  }
-
-  // Skip any VMOs that have non user mappings as we cannot safely remove write permissions from
-  // them and indicates this VMO is actually in use by the kernel and we probably would not want to
-  // perform zero page de-duplication on it even if we could.
-  for (auto& m : mapping_list_) {
-    if (!m.aspace()->is_user()) {
-      return 0;
-    }
-    // Remove write from the mapping to ensure it's not being concurrently modified.
-    m.assert_object_lock();
-    m.AspaceRemoveWriteVmoRangeLocked(0, size_locked());
-  }
-
-  return cow_pages_locked()->ScanForZeroPagesLocked(reclaim);
-}
-
 zx_status_t VmObjectPaged::CreateCommon(uint32_t pmm_alloc_flags, uint32_t options, uint64_t size,
                                         fbl::RefPtr<VmObjectPaged>* obj) {
   DEBUG_ASSERT(!(options & (kContiguous | kCanBlockOnPageRequests)));

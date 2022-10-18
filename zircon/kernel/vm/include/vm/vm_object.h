@@ -712,19 +712,6 @@ class VmObject : public VmHierarchyBase,
   // Detaches the underlying page source, if present. Can be called multiple times.
   virtual void DetachSource() {}
 
-  // Walks through every VMO, calls ScanForZeroPages on them, and returns the sum. This function is
-  // very expensive and will hold the AllVmosLock mutex for the entire duration. Should not be
-  // called casually or when it is not suitable to block operations against all other VMOs for an
-  // extended period of time.
-  static uint32_t ScanAllForZeroPages(bool reclaim);
-
-  // Scans for pages that could validly be de-duped/decommitted back to the zero page. If `reclaim`
-  // is true the pages will actually be de-duped. In either case the number of found pages is
-  // returned. It is expected that this would hold the VMOs lock for an extended period of time
-  // and should only be called when it is suitable for block all VMO operations for an extended
-  // period of time.
-  virtual uint32_t ScanForZeroPages(bool reclaim) { return 0; }
-
  protected:
   explicit VmObject(fbl::RefPtr<VmHierarchyState> hierarchy_state_ptr);
 

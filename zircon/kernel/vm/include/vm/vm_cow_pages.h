@@ -483,10 +483,6 @@ class VmCowPages final
   using AttributionCounts = VmObject::AttributionCounts;
   AttributionCounts AttributedPagesInRangeLocked(uint64_t offset, uint64_t len) const TA_REQ(lock_);
 
-  // Scans this cow pages range for zero pages and frees them if |reclaim| is set to true. Returns
-  // the number of pages freed or scanned.
-  uint32_t ScanForZeroPagesLocked(bool reclaim) TA_REQ(lock_);
-
   enum class EvictionHintAction : uint8_t {
     Follow,
     Ignore,

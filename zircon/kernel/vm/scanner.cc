@@ -77,8 +77,6 @@ KCOUNTER(zero_scan_pages_scanned, "vm.scanner.zero_scan.total_pages_considered")
 KCOUNTER(zero_scan_pages_deduped, "vm.scanner.zero_scan.pages_deduped")
 
 void scanner_print_stats() {
-  uint64_t zero_pages = VmObject::ScanAllForZeroPages(false);
-  printf("[SCAN]: Found %lu zero pages across all of memory\n", zero_pages);
   PageQueues::Counts queue_counts = pmm_page_queues()->QueueCounts();
   for (size_t i = 0; i < PageQueues::kNumReclaim; i++) {
     printf("[SCAN]: Found %lu reclaimable pages in queue %zu\n", queue_counts.reclaim[i], i);

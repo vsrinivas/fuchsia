@@ -50,16 +50,6 @@ VmObject::~VmObject() {
   DEBUG_ASSERT(children_list_.is_empty());
 }
 
-uint32_t VmObject::ScanAllForZeroPages(bool reclaim) {
-  uint32_t count = 0;
-  Guard<CriticalMutex> guard{AllVmosLock::Get()};
-
-  for (auto& vmo : all_vmos_) {
-    count += vmo.ScanForZeroPages(reclaim);
-  }
-  return count;
-}
-
 void VmObject::AddToGlobalList() {
   Guard<CriticalMutex> guard{AllVmosLock::Get()};
   all_vmos_.push_back(this);

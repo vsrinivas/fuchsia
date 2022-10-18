@@ -221,8 +221,6 @@ class VmObjectPaged final : public VmObject {
   zx_status_t CreateChildSlice(uint64_t offset, uint64_t size, bool copy_name,
                                fbl::RefPtr<VmObject>* child_vmo) override;
 
-  uint32_t ScanForZeroPages(bool reclaim) override;
-
   // Returns whether or not zero pages can be safely deduped from this VMO. Zero pages cannot be
   // deduped if the VMO is in use for kernel mappings, or if the pages cannot be accessed from the
   // physmap due to not being cached.
