@@ -134,6 +134,9 @@ fuchsia_unittest_package(
     log_settings = {
       max_severity = "ERROR"
     }
+
+    # Force these tests to run on NUC + basic_envs in CQ. Do not remove.
+    environments = [ nuc_env ] + basic_envs
   }
 }
 
