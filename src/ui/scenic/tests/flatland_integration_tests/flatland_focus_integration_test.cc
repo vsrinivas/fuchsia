@@ -102,6 +102,7 @@ class FlatlandFocusIntegrationTest : public zxtest::Test,
     root_view_ref_ = fidl::Clone(identity.view_ref);
     ViewBoundProtocols protocols;
     protocols.set_view_focuser(root_focuser_.NewRequest());
+    protocols.set_view_ref_focused(root_focused_.NewRequest());
     root_session_->CreateView2(std::move(child_token), std::move(identity), std::move(protocols),
                                parent_viewport_watcher.NewRequest());
     BlockingPresent(root_session_);
@@ -112,6 +113,14 @@ class FlatlandFocusIntegrationTest : public zxtest::Test,
     EXPECT_TRUE(LastFocusChain()->has_focus_chain());
     ASSERT_EQ(LastFocusChain()->focus_chain().size(), 1u);
     EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain().front(), root_view_ref_);
+
+    // And the root's ViewRefFocused Watch call should fire, since it is now focused.
+    bool root_focused = false;
+    root_focused_->Watch([&root_focused](auto update) {
+      ASSERT_TRUE(update.has_focused());
+      root_focused = update.focused();
+    });
+    RunLoopUntil([&root_focused] { return root_focused; });
 
     observed_focus_chains_.clear();
   }
@@ -185,6 +194,7 @@ class FlatlandFocusIntegrationTest : public zxtest::Test,
   fuchsia::ui::composition::FlatlandPtr root_session_;
   fuchsia::ui::views::ViewRef root_view_ref_;
   fuchsia::ui::views::FocuserPtr root_focuser_;
+  fuchsia::ui::views::ViewRefFocusedPtr root_focused_;
   std::unique_ptr<RealmRoot> realm_;
 
  private:
@@ -628,6 +638,48 @@ TEST_F(FlatlandFocusIntegrationTest, ViewBoundChannels_ShouldSurviveViewDisconne
   RunLoopUntilIdle();
   EXPECT_TRUE(focused_alive);
   EXPECT_TRUE(focuser_alive);
+}
+
+TEST_F(FlatlandFocusIntegrationTest, ViewRefFocusedDisconnectedWhenSessionDies) {
+  // Set up the child view and attach to root.
+  auto [child_token, parent_token] = scenic::ViewCreationTokenPair::New();
+  fuchsia::ui::composition::FlatlandPtr child_session;
+  child_session = realm_->Connect<fuchsia::ui::composition::Flatland>();
+
+  fuchsia::ui::views::ViewRefFocusedPtr focused;
+  bool focused_alive = true;
+  focused.set_error_handler([&focused_alive](auto) { focused_alive = false; });
+
+  ViewBoundProtocols protocols;
+  protocols.set_view_ref_focused(focused.NewRequest());
+  fidl::InterfacePtr<ParentViewportWatcher> parent_viewport_watcher;
+  child_session->CreateView2(std::move(child_token), scenic::NewViewIdentityOnCreation(),
+                             std::move(protocols), parent_viewport_watcher.NewRequest());
+  BlockingPresent(child_session);
+
+  AttachToRoot(std::move(parent_token));
+
+  RunLoopUntilIdle();
+  EXPECT_TRUE(focused_alive);
+
+  // Kill Child session.
+  child_session->CreateTransform({.value = 0});
+  child_session->Present({});
+
+  // Trigger a new snapshot to be published.
+  BlockingPresent(root_session_);
+
+  RunLoopUntil([&focused_alive] { return !focused_alive; });  // Succeeds or times out.
+  EXPECT_FALSE(focused_alive);
+}
+
+TEST_F(FlatlandFocusIntegrationTest, ViewRefFocusedDisconnectDoesNotKillSession) {
+  root_session_.set_error_handler([](zx_status_t) { FAIL("Client shut down unexpectedly."); });
+
+  root_focused_.Unbind();
+
+  // Observe that the channel doesn't close after a blocking present.
+  BlockingPresent(root_session_);
 }
 
 #undef EXPECT_VIEW_REF_MATCH

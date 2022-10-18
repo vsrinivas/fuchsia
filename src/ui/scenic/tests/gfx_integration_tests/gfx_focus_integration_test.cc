@@ -451,8 +451,8 @@ TEST_F(GfxFocusIntegrationTest, ViewFocuserDisconnectDoesNotKillSession) {
 
   root_focuser_.Unbind();
 
-  // Wait "long enough" and observe that the session channel doesn't close.
-  RunLoopWithTimeout(kWaitTime);
+  // Observe that the channel doesn't close after a blocking present.
+  BlockingPresent(root_session_->session);
 }
 
 TEST_F(GfxFocusIntegrationTest, ViewRefFocused_HappyCase) {
@@ -482,6 +482,100 @@ TEST_F(GfxFocusIntegrationTest, ViewRefFocused_HappyCase) {
   ASSERT_TRUE(RequestFocusChange(root_focuser_, parent_view_ref));
 
   RunLoopUntil([&parent_focused] { return parent_focused; });
+}
+
+// Scene:
+//   root
+//     |
+//   parent
+//     |
+//   child
+//
+// 1. Set auto focus from parent to child.
+// 2. Move focus to parent.
+// 3. Observe focus moving directly to child.
+TEST_F(GfxFocusIntegrationTest, AutoFocus_RequestFocus_Interaction) {
+  EXPECT_EQ(CountReceivedFocusChains(), 0u);
+
+  // Create the parent View.
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  fuchsia::ui::views::FocuserPtr parent_focuser;
+  endpoints.set_view_focuser(parent_focuser.NewRequest());
+  scenic::Session parent_session = CreateSession(scenic(), std::move(endpoints));
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [parent_control_ref, parent_view_ref] = scenic::ViewRefPair::New();
+  ViewRef parent_view_ref_copy;
+  fidl::Clone(parent_view_ref, &parent_view_ref_copy);
+  scenic::View parent_view(&parent_session, std::move(parent_view_token),
+                           std::move(parent_control_ref), std::move(parent_view_ref_copy),
+                           "parent_view");
+
+  // Create the child view and connect it to the parent.
+  scenic::Session child_session = CreateSession(scenic(), {});
+  auto [child_view_token, child_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
+  ViewRef child_view_ref_copy;
+  fidl::Clone(child_view_ref, &child_view_ref_copy);
+  scenic::View child_view(&child_session, std::move(child_view_token), std::move(child_control_ref),
+                          std::move(child_view_ref_copy), "child_view");
+  scenic::ViewHolder child_view_holder(&parent_session, std::move(child_view_holder_token),
+                                       "child_holder");
+  parent_view.AddChild(child_view_holder);
+  BlockingPresent(child_session);
+  BlockingPresent(parent_session);
+  AttachToScene(std::move(parent_view_holder_token));
+
+  SetAutoFocus(parent_focuser, child_view_ref);
+
+  ASSERT_TRUE(RequestFocusChange(root_focuser_, parent_view_ref));
+  ASSERT_TRUE(RequestFocusChange(parent_focuser, parent_view_ref));
+  RunLoopUntil([this] { return CountReceivedFocusChains() == 1; });
+
+  EXPECT_EQ(LastFocusChain()->focus_chain().size(), 3u);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[1], parent_view_ref);
+  EXPECT_VIEW_REF_MATCH(LastFocusChain()->focus_chain()[2], child_view_ref);
+}
+
+TEST_F(GfxFocusIntegrationTest, ChildView_CreatedBeforeAttachingToRoot_ShouldNotKillFocuser) {
+  EXPECT_EQ(CountReceivedFocusChains(), 0u);
+
+  // Create the parent View.
+  fuchsia::ui::scenic::SessionEndpoints endpoints;
+  fuchsia::ui::views::FocuserPtr parent_focuser;
+  endpoints.set_view_focuser(parent_focuser.NewRequest());
+  scenic::Session parent_session = CreateSession(scenic(), std::move(endpoints));
+  auto [parent_view_token, parent_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [parent_control_ref, parent_view_ref] = scenic::ViewRefPair::New();
+  ViewRef parent_view_ref_copy;
+  fidl::Clone(parent_view_ref, &parent_view_ref_copy);
+  scenic::View parent_view(&parent_session, std::move(parent_view_token),
+                           std::move(parent_control_ref), std::move(parent_view_ref_copy),
+                           "parent_view");
+
+  // Create the child view and connect it to the parent.
+  fuchsia::ui::views::FocuserPtr child_focuser;
+  bool channel_alive = true;
+  child_focuser.set_error_handler([&channel_alive](auto) { channel_alive = false; });
+  fuchsia::ui::scenic::SessionEndpoints child_endpoints;
+  child_endpoints.set_view_focuser(child_focuser.NewRequest());
+  scenic::Session child_session = CreateSession(scenic(), std::move(child_endpoints));
+
+  auto [child_view_token, child_view_holder_token] = scenic::ViewTokenPair::New();
+  auto [child_control_ref, child_view_ref] = scenic::ViewRefPair::New();
+  ViewRef child_view_ref_copy;
+  fidl::Clone(child_view_ref, &child_view_ref_copy);
+  scenic::View child_view(&child_session, std::move(child_view_token), std::move(child_control_ref),
+                          std::move(child_view_ref_copy), "child_view");
+  scenic::ViewHolder child_view_holder(&parent_session, std::move(child_view_holder_token),
+                                       "child_holder");
+  BlockingPresent(child_session);
+  parent_view.AddChild(child_view_holder);
+  BlockingPresent(parent_session);
+  AttachToScene(std::move(parent_view_holder_token));
+
+  // The child_focuser should not die.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(channel_alive);
 }
 
 TEST_F(GfxFocusIntegrationTest, ViewRefFocusedDisconnectedWhenSessionDies) {
