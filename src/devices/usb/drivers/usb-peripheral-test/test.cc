@@ -7,11 +7,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/usb-peripheral-test.h>
-#include <zircon/device/usb-peripheral.h>
 
 #include <thread>
 
+#include <usb/peripheral-test.h>
+#include <usb/peripheral.h>
 #include <usbhost/usbhost.h>
 #include <zxtest/zxtest.h>
 

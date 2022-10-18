@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -21,6 +20,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
+#include <usb/peripheral.h>
 #include <usb/usb-request.h>
 
 #include "src/ui/input/drivers/usb-hid/function/two_endpoint_hid-bind.h"

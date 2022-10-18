@@ -15,8 +15,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/device/usb-peripheral-test.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -27,6 +25,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
+#include <usb/peripheral-test.h>
+#include <usb/peripheral.h>
 
 #include "src/devices/usb/drivers/usb-peripheral-test/usb_peripheral_test-bind.h"
 

@@ -14,7 +14,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -28,6 +27,7 @@
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <usb/hid.h>
+#include <usb/peripheral.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 

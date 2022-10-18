@@ -10,7 +10,6 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <zircon/device/usb-peripheral.h>
 
 #include <algorithm>
 #include <memory>
@@ -25,6 +24,7 @@
 #include <fbl/mutex.h>
 #include <usb/cdc.h>
 #include <usb/hid.h>
+#include <usb/peripheral.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>

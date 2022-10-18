@@ -83,6 +83,7 @@ fuchsia_driver("fake-asix-88179-driver") {
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
     "//src/devices/usb/lib/usb:hid",
+    "//src/devices/usb/lib/usb:peripheral",
     "//src/lib/ddk",
     "//src/lib/ddktl",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

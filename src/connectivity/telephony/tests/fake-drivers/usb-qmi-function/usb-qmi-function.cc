@@ -13,7 +13,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -21,6 +20,7 @@
 #include <memory>
 
 #include <usb/cdc.h>
+#include <usb/peripheral.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/telephony/tests/fake-drivers/usb-qmi-function/usb_qmi_function_bind.h"

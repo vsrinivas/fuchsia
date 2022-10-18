@@ -10,13 +10,14 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <atomic>
 #include <memory>
 #include <vector>
+
+#include <usb/peripheral.h>
 
 #include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-bus-tester-function-bind.h"
 

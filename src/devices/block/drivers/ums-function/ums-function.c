@@ -13,10 +13,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
+#include <usb/peripheral.h>
 #include <usb/ums.h>
 #include <usb/usb-request.h>
 

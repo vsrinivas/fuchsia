@@ -19,12 +19,12 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
 #include <usb/cdc.h>
+#include <usb/peripheral.h>
 #include <usb/usb.h>
 
 #define DEV_USB_PERIPHERAL_DIR "/dev/class/usb-peripheral"

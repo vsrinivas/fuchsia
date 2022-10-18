@@ -11,13 +11,13 @@
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 
 #include <limits>
 #include <memory>
 
 #include <fbl/algorithm.h>
+#include <usb/peripheral.h>
 #include <usb/request-cpp.h>
 #include <usb/usb.h>
 

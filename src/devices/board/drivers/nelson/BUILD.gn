@@ -470,6 +470,7 @@ fuchsia_driver("nelson-module-driver") {
     "//src/devices/power/drivers/ti-ina231:metadata",
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
+    "//src/devices/usb/lib/usb:peripheral",
     "//src/graphics/display/lib/device-protocol-display",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",

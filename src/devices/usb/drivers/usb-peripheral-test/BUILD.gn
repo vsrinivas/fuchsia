@@ -32,6 +32,8 @@ if (is_fuchsia) {
       "//sdk/banjo/fuchsia.hardware.usb.request:fuchsia.hardware.usb.request_banjo_cpp",
       "//src/devices/lib/driver",
       "//src/devices/usb/lib/usb",
+      "//src/devices/usb/lib/usb:peripheral",
+      "//src/devices/usb/lib/usb:peripheral-test",
       "//src/lib/ddk",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/sync",
@@ -65,6 +67,8 @@ if (is_fuchsia) {
     output_name = "usb-peripheral-test"
     sources = [ "test.cc" ]
     deps = [
+      "//src/devices/usb/lib/usb:peripheral",
+      "//src/devices/usb/lib/usb:peripheral-test",
       "//zircon/system/ulib/fbl",
       "//zircon/system/ulib/zxtest",
       "//zircon/third_party/ulib/usbhost",

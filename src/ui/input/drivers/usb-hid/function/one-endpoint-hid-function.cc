@@ -13,13 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 
 #include <fbl/algorithm.h>
+#include <usb/peripheral.h>
 #include <usb/usb-request.h>
 
 #include "src/ui/input/drivers/usb-hid/function/one_endpoint_hid-bind.h"

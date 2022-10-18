@@ -72,3 +72,13 @@ zx_library("cdc") {
   sdk = "source"
   sdk_headers = [ "usb/cdc.h" ]
 }
+
+zx_library("peripheral") {
+  sdk = "source"
+  sdk_headers = [ "usb/peripheral.h" ]
+}
+
+zx_library("peripheral-test") {
+  sdk = "source"
+  sdk_headers = [ "usb/peripheral-test.h" ]
+}

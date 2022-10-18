@@ -12,12 +12,12 @@
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>
 #include <string.h>
-#include <zircon/device/usb-peripheral.h>
 
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 #include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
+#include <usb/peripheral.h>
 #include <usb/usb.h>
 
 #include "nelson.h"

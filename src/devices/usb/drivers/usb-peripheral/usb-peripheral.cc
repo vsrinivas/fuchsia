@@ -18,7 +18,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
-#include <zircon/device/usb-peripheral.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 
@@ -28,6 +27,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <usb/cdc.h>
+#include <usb/peripheral.h>
 #include <usb/usb.h>
 
 #include "src/devices/usb/drivers/usb-peripheral/usb_peripheral-bind.h"
