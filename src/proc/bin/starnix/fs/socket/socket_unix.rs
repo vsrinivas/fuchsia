@@ -803,6 +803,10 @@ impl UnixSocketInner {
             return error!(ECONNRESET);
         }
         let mut info = if socket_type == SocketType::Stream {
+            if user_buffers.remaining() == 0 {
+                return Ok(MessageReadInfo::default());
+            }
+
             if flags.contains(SocketMessageFlags::PEEK) {
                 self.messages.peek_stream(current_task, user_buffers)?
             } else {

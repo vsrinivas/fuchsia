@@ -226,7 +226,7 @@ gvisor_tests = [
 
   # "socket_stream_blocking_local_test",
   # "socket_stream_blocking_tcp_test",
-  # "socket_stream_local_test",
+  "socket_stream_local_test",
   "socket_stream_nonblock_local_test",
 
   # "socket_stress_test",
