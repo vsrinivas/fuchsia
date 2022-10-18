@@ -17,10 +17,20 @@ esac
 
 case "$(uname -m)" in
   x86_64)
-    readonly REAL_HOST_CPU="x64"
+    readonly HOST_CPU="x64"
     ;;
-  aarch64 | arm64)
-    readonly REAL_HOST_CPU="arm64"
+  aarch64)
+    readonly HOST_CPU="arm64"
+    ;;
+  arm64)
+    # Redirect mac-arm64 to mac-x64 binaries until prebuilt
+    # arm64 binaries are available.
+    # fxb/73385
+    if [ "$HOST_OS" == "mac" ]; then
+      readonly HOST_CPU="x64"
+    else
+      readonly HOST_CPU="arm64"
+    fi
     ;;
   *)
     echo >&2 "Unknown architecture: $(uname -m)."
@@ -28,19 +38,7 @@ case "$(uname -m)" in
     ;;
 esac
 
-if [[ "$HOST_OS" == "mac" ]]; then
-  # Redirect mac-arm64 to mac-x64 binaries until prebuilt arm64 binaries are
-  # available for all packages.
-  # TODO(fxbug.dev/97767): Provide arm64 Mac versions of all packages.
-  readonly HOST_CPU="x64"
-else
-  readonly HOST_CPU="$REAL_HOST_CPU"
-fi
-
 readonly HOST_PLATFORM="${HOST_OS}-${HOST_CPU}"
-# Packages that *do* have a mac-arm64 version available can use
-# REAL_HOST_PLATFORM instead of HOST_PLATFORM.
-readonly REAL_HOST_PLATFORM="${HOST_OS}-${REAL_HOST_CPU}"
 
 readonly PREBUILT_3P_DIR="${FUCHSIA_DIR}/prebuilt/third_party"
 readonly PREBUILT_TOOLS_DIR="${FUCHSIA_DIR}/prebuilt/tools"
@@ -49,12 +47,12 @@ readonly PREBUILT_AEMU_DIR="${PREBUILT_3P_DIR}/android/aemu/release/${HOST_PLATF
 readonly PREBUILT_BUILDIFIER="${PREBUILT_3P_DIR}/buildifier/${HOST_PLATFORM}/buildifier"
 readonly PREBUILT_BUILDOZER="${PREBUILT_3P_DIR}/buildozer/${HOST_PLATFORM}/buildozer"
 readonly PREBUILT_BINUTILS_DIR="${PREBUILT_3P_DIR}/binutils-gdb/${HOST_PLATFORM}"
-readonly PREBUILT_CLANG_DIR="${PREBUILT_3P_DIR}/clang/${REAL_HOST_PLATFORM}"
+readonly PREBUILT_CLANG_DIR="${PREBUILT_3P_DIR}/clang/${HOST_PLATFORM}"
 readonly PREBUILT_CMAKE_DIR="${PREBUILT_3P_DIR}/cmake/${HOST_PLATFORM}"
 readonly PREBUILT_DART_DIR="${PREBUILT_3P_DIR}/dart/${HOST_PLATFORM}"
 readonly PREBUILT_EDK2_DIR="${PREBUILT_3P_DIR}/edk2"
 readonly PREBUILT_GCC_DIR="${PREBUILT_3P_DIR}/gcc/${HOST_PLATFORM}"
-readonly PREBUILT_GN="${PREBUILT_3P_DIR}/gn/${REAL_HOST_PLATFORM}/gn"
+readonly PREBUILT_GN="${PREBUILT_3P_DIR}/gn/${HOST_PLATFORM}/gn"
 readonly PREBUILT_GO_DIR="${PREBUILT_3P_DIR}/go/${HOST_PLATFORM}"
 readonly PREBUILT_GOMA_DIR="${PREBUILT_3P_DIR}/goma/${HOST_PLATFORM}"
 readonly PREBUILT_GRPCWEBPROXY_DIR="${PREBUILT_3P_DIR}/grpcwebproxy/${HOST_PLATFORM}"
