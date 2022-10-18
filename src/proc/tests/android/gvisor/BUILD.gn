@@ -224,8 +224,7 @@ gvisor_tests = [
   "socket_non_stream_blocking_local_test",
   "socket_non_stream_blocking_udp_test",
   "socket_stream_blocking_local_test",
-
-  # "socket_stream_blocking_tcp_test",
+  "socket_stream_blocking_tcp_test",
   "socket_stream_local_test",
   "socket_stream_nonblock_local_test",
 
