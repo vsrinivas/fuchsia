@@ -53,6 +53,7 @@ TestSetupArgs = namedtuple(
 SOURCE_DIR = "source"
 OUTDIR = "outdir"
 
+
 @contextmanager
 def setup_temp_dir(*args, **kwargs):
     temp_dir = tempfile.TemporaryDirectory()
@@ -132,11 +133,12 @@ class MakeLegacyConfig(unittest.TestCase):
         self.maxDiff = None
 
         # Patch in a mock for the fast_copy() fn
-        fast_copy_mock_fn, copies = mock_fast_copy_in(
-            assembly.assembly_input_bundle)
+        _, copies = mock_fast_copy_in(assembly.assembly_input_bundle)
 
         with setup_temp_dir() as setup_args:
-            shell_commands_file, image_assembly, driver_manifest_path, driver_component_file = setup_args
+            (
+                shell_commands_file, image_assembly, driver_manifest_path,
+                driver_component_file) = setup_args
             # Create the outdir path, and perform the "copying" into the
             # AssemblyInputBundle.
             aib, _, deps = make_legacy_config.copy_to_assembly_input_bundle(
@@ -379,7 +381,35 @@ class MakeLegacyConfig(unittest.TestCase):
                             destination='outdir/bootfs/another/file'),
                     ]))
 
-    @unittest.skip("This test doesn't assert anything yet")
-    def test_make_legacy_config_fails_duplicates(self):
+    def test_make_legacy_config_prevents_duplicates(self):
+        """
+        Asserts that the copy_to_assembly_input_bundle function has the side effect of
+        assigning packages found in both base and cache in the image assembly config to
+        only be added in base
+        """
         with setup_temp_dir() as setup_args:
-            aib, deps, shell_commands_file, image_assembly = setup_args
+            # Patch in a mock for the fast_copy() fn
+            mock_fast_copy_in(assembly.assembly_input_bundle)
+            _, image_assembly, _, _ = setup_args
+            manifest_path = make_package_manifest("cache_a", [], SOURCE_DIR)
+            image_assembly.base.add(manifest_path)
+
+            # Validates that package with name cache_a is in both the base and cache package sets
+            # in the image_assembly_config
+            duplicate_package = "cache_a"
+            self.assertIn(
+                "source/" + duplicate_package + ".json", image_assembly.base)
+            self.assertIn(
+                "source/" + duplicate_package + ".json", image_assembly.cache)
+
+            # Copies legacy config into AIB
+            aib, _, _ = make_legacy_config.copy_to_assembly_input_bundle(
+                image_assembly, [], OUTDIR, [], [], [])
+
+            # Asserts that the duplicate package is present in the base package set after
+            # being copied to the AIB
+            self.assertIn("packages/base/" + duplicate_package, aib.base)
+
+            # Asserts that the duplicate package is not present in the cache package set, since
+            # it's been added to base
+            self.assertNotIn("packages/base/" + duplicate_package, aib.cache)
