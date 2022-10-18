@@ -111,11 +111,6 @@
             to: "#sl4f",
         },
         {
-            protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
-            from: "#system-metrics-logger",
-            to: "#sl4f",
-        },
-        {
             protocol: "fuchsia.media.sounds.Player",
             from: "#soundplayer",
             to: "#sl4f",

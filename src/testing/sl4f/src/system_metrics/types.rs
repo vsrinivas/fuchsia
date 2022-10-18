@@ -16,6 +16,6 @@ pub struct StartLoggingForeverRequest {
 }
 
 #[derive(Serialize, Debug)]
-pub enum SystemMetricsLoggerResult {
+pub enum CpuLoadLoggerResult {
     Success,
 }

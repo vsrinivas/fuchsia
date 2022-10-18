@@ -304,14 +304,14 @@
             subdir: "class/ethernet",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-class-network",
             to: [
                 "#metrics-logger",
                 "#network",
             ],
-            subdir: "class/network",
+            subdir: "network",
         },
         {
             storage: "cache",
@@ -615,25 +615,25 @@
             subdir: "class/sysmem",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-temperature",
             to: "#metrics-logger",
-            subdir: "class/temperature",
+            subdir: "temperature",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-thermal",
             to: "#metrics-logger",
-            subdir: "class/thermal",
+            subdir: "thermal",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-power-sensor",
             to: "#metrics-logger",
-            subdir: "class/power-sensor",
+            subdir: "power-sensor",
         },
         {
             directory: "dev",
@@ -798,7 +798,7 @@
             source_availability: "unknown",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-gpu",
             to: [
@@ -806,7 +806,7 @@
                 "#starnix_manager",
                 "#vulkan_loader",
             ],
-            subdir: "class/gpu",
+            subdir: "gpu",
         },
         {
             directory: "dev",

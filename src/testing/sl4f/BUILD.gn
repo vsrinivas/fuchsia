@@ -98,7 +98,6 @@ rustc_library("lib") {
     "//src/testing/metrics-logger/fuchsia.metricslogger.test:fuchsia.metricslogger.test_rust",
     "//src/testing/sl4f/fidl:fuchsia.test.audio.recording_rust",
     "//src/testing/sl4f/fidl:fuchsia.testing.proxy_rust",
-    "//src/testing/system-metrics-logger/fuchsia.systemmetrics.test:fuchsia.systemmetrics.test_rust",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-channel",
     "//third_party/rust_crates:async-trait",

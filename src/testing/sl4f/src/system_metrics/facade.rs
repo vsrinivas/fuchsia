@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 use crate::system_metrics::types::{
-    StartLoggingForeverRequest, StartLoggingRequest, SystemMetricsLoggerResult,
+    CpuLoadLoggerResult, StartLoggingForeverRequest, StartLoggingRequest,
 };
 use anyhow::Error;
-use fidl_fuchsia_systemmetrics_test::SystemMetricsLoggerMarker;
+use fidl_fuchsia_metricslogger_test::{CpuLoad, Metric, MetricsLoggerMarker};
 use fuchsia_component::client::connect_to_protocol;
 use serde_json::{from_value, Value};
+
+const CLIENT_ID: &'static str = "sl4f_cpu_load";
 
 #[derive(Debug)]
 pub struct SystemMetricsFacade {}
@@ -18,41 +20,51 @@ impl SystemMetricsFacade {
         SystemMetricsFacade {}
     }
 
-    /// Start logging system metrics into trace events for a specified duration.
+    /// Start logging cpu load into trace events for a specified duration.
     ///
     /// [start_logging] is preferred over [start_logging_forever] for automated tests, so that the
     /// logging session will end after some time even if the test fails to stop it due to failing
     /// or crashing.
-    pub async fn start_logging(&self, args: Value) -> Result<SystemMetricsLoggerResult, Error> {
+    pub async fn start_logging(&self, args: Value) -> Result<CpuLoadLoggerResult, Error> {
         let params: StartLoggingRequest = from_value(args)?;
-        connect_to_protocol::<SystemMetricsLoggerMarker>()?
-            .start_logging(params.interval_ms, params.duration_ms)
+        connect_to_protocol::<MetricsLoggerMarker>()?
+            .start_logging(
+                CLIENT_ID,
+                &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: params.interval_ms })]
+                    .into_iter(),
+                params.duration_ms,
+                /* output_samples_to_syslog */ false,
+                /* output_stats_to_syslog */ false,
+            )
             .await?
-            .map_err(|e| format_err!("Received SystemMetricsLoggerError: {:?}", e))?;
-        Ok(SystemMetricsLoggerResult::Success)
+            .map_err(|e| format_err!("Received MetricsLoggerError: {:?}", e))?;
+        Ok(CpuLoadLoggerResult::Success)
     }
 
-    /// Start logging system metrics into trace events until a call to [stop_logging].
-    pub async fn start_logging_forever(
-        &self,
-        args: Value,
-    ) -> Result<SystemMetricsLoggerResult, Error> {
+    /// Start logging cpu load into trace events until a call to [stop_logging].
+    pub async fn start_logging_forever(&self, args: Value) -> Result<CpuLoadLoggerResult, Error> {
         let params: StartLoggingForeverRequest = from_value(args)?;
-        connect_to_protocol::<SystemMetricsLoggerMarker>()?
-            .start_logging_forever(params.interval_ms)
+        connect_to_protocol::<MetricsLoggerMarker>()?
+            .start_logging_forever(
+                CLIENT_ID,
+                &mut vec![&mut Metric::CpuLoad(CpuLoad { interval_ms: params.interval_ms })]
+                    .into_iter(),
+                /* output_samples_to_syslog */ false,
+                /* output_stats_to_syslog */ false,
+            )
             .await?
-            .map_err(|e| format_err!("Received SystemMetricsLoggerError: {:?}", e))?;
-        Ok(SystemMetricsLoggerResult::Success)
+            .map_err(|e| format_err!("Received MetricsLoggerError: {:?}", e))?;
+        Ok(CpuLoadLoggerResult::Success)
     }
 
-    /// Stop system metrics logging.
+    /// Stop cpu load logging.
     ///
-    /// This function will succeed even if system metrics logging is not in progress, so automated
+    /// This function will succeed even if cpu load logging is not in progress, so automated
     /// tests can call this before starting their logging session to clean up in case a prior test
     /// failed without stopping logging.
-    pub async fn stop_logging(&self, _args: Value) -> Result<SystemMetricsLoggerResult, Error> {
-        let logger = connect_to_protocol::<SystemMetricsLoggerMarker>()?;
-        logger.stop_logging().await?;
-        Ok(SystemMetricsLoggerResult::Success)
+    pub async fn stop_logging(&self, _args: Value) -> Result<CpuLoadLoggerResult, Error> {
+        let logger = connect_to_protocol::<MetricsLoggerMarker>()?;
+        logger.stop_logging(CLIENT_ID).await?;
+        Ok(CpuLoadLoggerResult::Success)
     }
 }

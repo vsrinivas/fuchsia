@@ -30,7 +30,7 @@ group("end_to_end_deps") {
     "//src/media/codec/examples:vp9_decoder_conformance_http",
 
     # Service that tests use to log cpu usage into traces
-    "//src/testing/system-metrics-logger",
+    "//src/testing/metrics-logger",
   ]
 }
 

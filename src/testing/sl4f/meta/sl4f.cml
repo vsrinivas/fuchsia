@@ -91,7 +91,6 @@
                 "fuchsia.sys.Launcher",
                 "fuchsia.sys2.EventSource",
                 "fuchsia.sysmem.Allocator",
-                "fuchsia.systemmetrics.test.SystemMetricsLogger",
                 "fuchsia.test.audio.recording.AudioRecordingControl",
                 "fuchsia.testing.proxy.TcpProxyControl",
                 "fuchsia.tracing.controller.Controller",
