@@ -59,6 +59,22 @@ wlan_start_result_t SoftAp::Start(const wlan_fullmac_start_req* req) {
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }
 
+  // Get the supported data rates for the specified band.
+  auto rate_req = IoctlRequest<mlan_ds_rate>(MLAN_IOCTL_RATE, MLAN_ACT_GET, 0,
+                                             {.sub_command = MLAN_OID_SUPPORTED_RATES});
+  auto& data_rates = rate_req.UserReq().param.rates;
+  auto& rate_band_cfg = rate_req.UserReq().param.rate_band_cfg;
+  rate_band_cfg.bss_mode = MLAN_BSS_MODE_INFRA;
+  rate_band_cfg.config_bands =
+      (band_from_channel(req->channel) == BAND_5GHZ) ? BAND_A : (BAND_B | BAND_G);
+  io_status = context_->ioctl_adapter_->IssueIoctlSync(&rate_req);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Rate req get failed: %d", io_status);
+  } else {
+    // Copy the data rates returned by the last ioctl request.
+    memcpy(bss_cfg.rates, data_rates, sizeof(bss_cfg.rates));
+  }
+
   // BSS get should have copied the default config into the ioctl buffer, just set ssid,
   // channel and band from the request
   start_req.IoctlReq().action = MLAN_ACT_SET;
@@ -83,6 +99,7 @@ wlan_start_result_t SoftAp::Start(const wlan_fullmac_start_req* req) {
     NXPF_ERR("BSS start req failed: %d", io_status);
     return WLAN_START_RESULT_NOT_SUPPORTED;
   }
+
   started_ = true;
   ssid_ = req->ssid;
   return WLAN_START_RESULT_SUCCESS;

@@ -109,6 +109,76 @@ TEST_F(SoftApTest, Start) {
   ASSERT_EQ(softap.Start(&request), WLAN_START_RESULT_BSS_ALREADY_STARTED_OR_JOINED);
 }
 
+// Ensure appropriate data rates are set based on the requested band when starting the Soft AP.
+TEST_F(SoftApTest, CheckRates) {
+  constexpr uint32_t kBssIndex = 1;
+  constexpr uint8_t kTest24GChannel = 9;
+  constexpr uint8_t kTest5GChannel = 36;
+  constexpr uint8_t band_a_rates[MLAN_SUPPORTED_RATES] = {12, 18, 24, 36, 176, 72, 96, 108};
+  constexpr uint8_t band_bg_rates[MLAN_SUPPORTED_RATES] = {130, 132, 139, 150, 12, 18,
+                                                           24,  36,  48,  72,  96, 108};
+
+  sync_completion_t ioctl_completion;
+
+  mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    if (req->req_id == MLAN_IOCTL_BSS) {
+      EXPECT_EQ(req->bss_index, kBssIndex);
+      auto bss = reinterpret_cast<const mlan_ds_bss*>(req->pbuf);
+      if (bss->sub_command == MLAN_OID_UAP_BSS_CONFIG) {
+        if (req->action == MLAN_ACT_SET) {
+          // BSS config set. Ensure SSID, channel and Band are correctly set.
+          EXPECT_EQ(bss->param.bss_config.ssid.ssid_len, sizeof(kTestSoftApSsid));
+          EXPECT_BYTES_EQ(bss->param.bss_config.ssid.ssid, kTestSoftApSsid,
+                          bss->param.bss_config.ssid.ssid_len);
+          EXPECT_EQ(bss->param.bss_config.bandcfg.chanWidth, CHAN_BW_20MHZ);
+          if (bss->param.bss_config.bandcfg.chanBand == BAND_2GHZ) {
+            EXPECT_BYTES_EQ(bss->param.bss_config.rates, band_bg_rates, MAX_DATA_RATES);
+          } else if (bss->param.bss_config.bandcfg.chanBand == BAND_5GHZ) {
+            EXPECT_BYTES_EQ(bss->param.bss_config.rates, band_a_rates, MAX_DATA_RATES);
+          }
+        }
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        return MLAN_STATUS_PENDING;
+      } else if (bss->sub_command == MLAN_OID_BSS_START) {
+        ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+        sync_completion_signal(&ioctl_completion);
+        return MLAN_STATUS_PENDING;
+      }
+    } else if ((req->req_id == MLAN_IOCTL_RATE) && (req->action == MLAN_ACT_GET)) {
+      auto rate_cfg = reinterpret_cast<mlan_ds_rate*>(req->pbuf);
+      EXPECT_EQ(rate_cfg->param.rate_band_cfg.bss_mode, MLAN_BSS_MODE_INFRA);
+      if (rate_cfg->param.rate_band_cfg.config_bands & BAND_A) {
+        memcpy(rate_cfg->param.rates, band_a_rates, sizeof(band_a_rates));
+      } else if (rate_cfg->param.rate_band_cfg.config_bands & (BAND_B | BAND_G)) {
+        memcpy(rate_cfg->param.rates, band_bg_rates, sizeof(band_bg_rates));
+      }
+      ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+      return MLAN_STATUS_PENDING;
+    }
+    // Return success for everything else.
+    return MLAN_STATUS_SUCCESS;
+  });
+
+  SoftAp softap(&test_ifc_, &context_, kBssIndex);
+
+  // Start the Soft AP on a 2.4Ghz channel
+  wlan_fullmac_start_req start_req = {.channel = kTest24GChannel};
+  memcpy(start_req.ssid.data, kTestSoftApSsid, sizeof(kTestSoftApSsid));
+  start_req.ssid.len = sizeof(kTestSoftApSsid);
+  ASSERT_EQ(softap.Start(&start_req), WLAN_START_RESULT_SUCCESS);
+  ASSERT_OK(sync_completion_wait(&ioctl_completion, ZX_TIME_INFINITE));
+
+  // Stop the Soft AP.
+  wlan_fullmac_stop_req stop_req;
+  memcpy(stop_req.ssid.data, kTestSoftApSsid, sizeof(kTestSoftApSsid));
+  stop_req.ssid.len = sizeof(kTestSoftApSsid);
+  ASSERT_EQ(softap.Stop(&stop_req), WLAN_STOP_RESULT_SUCCESS);
+
+  // Start the Soft AP on a 5Ghz channel
+  start_req.channel = kTest5GChannel;
+  ASSERT_EQ(softap.Start(&start_req), WLAN_START_RESULT_SUCCESS);
+}
+
 TEST_F(SoftApTest, Stop) {
   constexpr uint32_t kBssIndex = 1;
   wlan_fullmac_start_req start_req = {.channel = kTestChannel};
