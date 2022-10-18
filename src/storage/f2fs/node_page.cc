@@ -127,7 +127,7 @@ void NodePage::SetDentryMark(bool mark) {
   GetRawNode().footer.flag = CpuToLe(flag);
 }
 
-block_t NodePage::StartBidxOfNode() {
+block_t NodePage::StartBidxOfNode(const VnodeF2fs &vnode) {
   uint32_t node_ofs = OfsOfNode(), NumOfIndirectNodes = 0;
 
   if (node_ofs == kOfsInode) {
@@ -143,6 +143,6 @@ block_t NodePage::StartBidxOfNode() {
   }
 
   uint32_t bidx = node_ofs - NumOfIndirectNodes - 1;
-  return (GetVnode().GetAddrsPerInode() + safemath::CheckMul(bidx, kAddrsPerBlock)).ValueOrDie();
+  return (vnode.GetAddrsPerInode() + safemath::CheckMul(bidx, kAddrsPerBlock)).ValueOrDie();
 }
 }  // namespace f2fs

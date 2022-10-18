@@ -1216,5 +1216,27 @@ TEST_F(NodeManagerTest, GetDataBlockAddressesCrossMultiPage) {
   vnode.reset();
 }
 
+TEST_F(NodeManagerTest, DnodeBidxConsistency) {
+  // To test |StartBidxOfNode|, kTargetOffset must be bigger than kAddrsPerInode, which is 923.
+  constexpr pgoff_t kTargetOffset = 30000U;
+  fbl::RefPtr<fs::Vnode> test_file;
+  root_dir_->Create("test", S_IFREG, &test_file);
+  fbl::RefPtr<f2fs::File> vn = fbl::RefPtr<f2fs::File>::Downcast(std::move(test_file));
+
+  auto ofs_in_node_or = fs_->GetNodeManager().GetOfsInDnode(*vn, kTargetOffset);
+  ASSERT_TRUE(ofs_in_node_or.is_ok());
+
+  block_t start_bidx_of_node;
+  {
+    LockedPage dnode_page;
+    ASSERT_EQ(fs_->GetNodeManager().GetLockedDnodePage(*vn, kTargetOffset, &dnode_page), ZX_OK);
+    start_bidx_of_node = dnode_page.GetPage<NodePage>().StartBidxOfNode(*vn);
+  }
+  ASSERT_EQ(start_bidx_of_node + ofs_in_node_or.value(), kTargetOffset);
+
+  vn->Close();
+  vn = nullptr;
+}
+
 }  // namespace
 }  // namespace f2fs

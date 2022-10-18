@@ -160,6 +160,7 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
     sum = sum_node->entries[blkoff];
   }
 
+  fbl::RefPtr<VnodeF2fs> vnode_refptr;
   // Get the node page
   {
     LockedPage node_page;
@@ -168,13 +169,12 @@ void F2fs::CheckIndexInPrevNodes(block_t blkaddr) {
       FX_LOGS(ERROR) << "F2fs::CheckIndexInPrevNodes, GetNodePage Error!!!";
       return;
     }
-    bidx = node_page.GetPage<NodePage>().StartBidxOfNode() + LeToCpu(sum.ofs_in_node);
     ino = node_page.GetPage<NodePage>().InoOfNode();
+    ZX_ASSERT(VnodeF2fs::Vget(this, ino, &vnode_refptr) == ZX_OK);
+    bidx = node_page.GetPage<NodePage>().StartBidxOfNode(*vnode_refptr) + LeToCpu(sum.ofs_in_node);
   }
 
   // Deallocate previous index in the node page
-  fbl::RefPtr<VnodeF2fs> vnode_refptr;
-  VnodeF2fs::Vget(this, ino, &vnode_refptr);
   vnode_refptr->TruncateHole(bidx, bidx + 1);
 }
 
@@ -188,7 +188,7 @@ void F2fs::DoRecoverData(VnodeF2fs &vnode, NodePage &page) {
     return;
   }
 
-  start = page.StartBidxOfNode();
+  start = page.StartBidxOfNode(vnode);
   if (IsInode(page)) {
     end = start + vnode.GetAddrsPerInode();
   } else {
@@ -232,7 +232,7 @@ void F2fs::DoRecoverData(VnodeF2fs &vnode, NodePage &page) {
       // Write dummy data page
       GetSegmentManager().RecoverDataPage(sum, src, dest);
       vnode.SetDataBlkaddr(dnode_page.GetPage<NodePage>(), offset_in_dnode, dest);
-      vnode.UpdateExtentCache(dest, page.StartBidxOfNode());
+      vnode.UpdateExtentCache(dest, page.StartBidxOfNode(vnode));
     }
     ++offset_in_dnode;
   }

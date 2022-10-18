@@ -36,7 +36,7 @@ class NodePage : public Page, public fbl::Recyclable<NodePage> {
   // It returns the starting file offset that |node_page| indicates.
   // The file offset can be calcuated by using the node offset that |node_page| has.
   // See NodePage::IsDnode().
-  block_t StartBidxOfNode();
+  block_t StartBidxOfNode(const VnodeF2fs &vnode);
 
   void SetNid(size_t off, nid_t nid, bool is_inode);
   nid_t GetNid(size_t off, bool is_inode);

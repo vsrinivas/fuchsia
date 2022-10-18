@@ -27,7 +27,7 @@ zx_status_t CheckDataPage(F2fs *fs, pgoff_t data_blkaddr, uint32_t index) {
   return ret;
 }
 
-zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page) {
+zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page, const VnodeF2fs &vnode) {
   pgoff_t block_count = 0, start_index = 0, checked = 0;
 
   if (IsInode(node_page)) {
@@ -35,7 +35,8 @@ zx::result<pgoff_t> CheckNodePage(F2fs *fs, NodePage &node_page) {
   } else {
     block_count = kAddrsPerBlock;
   }
-  start_index = node_page.StartBidxOfNode();
+
+  start_index = node_page.StartBidxOfNode(vnode);
 
   for (pgoff_t index = 0; index < block_count; ++index) {
     block_t data_blkaddr = DatablockAddr(&node_page, index);
@@ -73,6 +74,7 @@ zx::result<fbl::RefPtr<VnodeF2fs>> CreateFileAndWritePages(Dir *dir_vnode,
   return zx::ok(std::move(fsync_vnode));
 }
 
+// TODO: |CheckFsyncedFile| should know the existence of vnode corresponding to |ino|.
 void CheckFsyncedFile(F2fs *fs, ino_t ino, pgoff_t data_page_count, pgoff_t node_page_count) {
   block_t data_blkaddr = fs->GetSegmentManager().NextFreeBlkAddr(CursegType::kCursegWarmNode);
   uint64_t curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
@@ -94,7 +96,14 @@ void CheckFsyncedFile(F2fs *fs, ino_t ino, pgoff_t data_page_count, pgoff_t node
       ASSERT_EQ(node_page->InoOfNode(), ino);
       ASSERT_TRUE(node_page->IsDentDnode());
     }
-    auto result = CheckNodePage(fs, *node_page);
+
+    fbl::RefPtr<VnodeF2fs> vnode;
+    if (auto err = VnodeF2fs::Vget(fs, ino, &vnode); err != ZX_OK) {
+      ASSERT_EQ(err, ZX_ERR_NOT_FOUND);
+      return;
+    }
+
+    auto result = CheckNodePage(fs, *node_page, *vnode);
     ASSERT_EQ(result.status_value(), ZX_OK);
     data_blkaddr = node_page->NextBlkaddrOfNode();
     checked_data_page_count += result.value();

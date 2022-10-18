@@ -311,7 +311,12 @@ zx::result<std::pair<nid_t, block_t>> GcManager::CheckDnode(const Summary &sum, 
 
   fs_->GetNodeManager().CheckNidRange(dnode_info.ino);
 
-  auto start_bidx = node_page.GetPage<NodePage>().StartBidxOfNode();
+  fbl::RefPtr<VnodeF2fs> vnode;
+  if (zx_status_t err = VnodeF2fs::Vget(fs_, dnode_info.ino, &vnode); err != ZX_OK) {
+    return zx::error(err);
+  }
+
+  auto start_bidx = node_page.GetPage<NodePage>().StartBidxOfNode(*vnode);
   block_t source_blkaddr = DatablockAddr(&node_page.GetPage<NodePage>(), ofs_in_node);
 
   if (source_blkaddr != blkaddr) {

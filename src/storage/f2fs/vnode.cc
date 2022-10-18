@@ -670,7 +670,7 @@ int VnodeF2fs::TruncateDataBlocksRange(NodePage &node_page, uint32_t ofs_in_node
     if (blkaddr == kNullAddr)
       continue;
     SetDataBlkaddr(node_page, ofs_in_node, kNullAddr);
-    UpdateExtentCache(kNullAddr, node_page.StartBidxOfNode() + ofs_in_node);
+    UpdateExtentCache(kNullAddr, node_page.StartBidxOfNode(*this) + ofs_in_node);
     fs()->GetSegmentManager().InvalidateBlocks(blkaddr);
     fs()->DecValidBlockCount(this, 1);
     ++nr_free;
