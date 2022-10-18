@@ -133,6 +133,16 @@ const INITIAL_RENEW_TIMEOUT: Duration = Duration::from_secs(10);
 /// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
 const MAX_RENEW_TIMEOUT: Duration = Duration::from_secs(600);
 
+/// Initial Rebind timeout `REB_TIMEOUT` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const INITIAL_REBIND_TIMEOUT: Duration = Duration::from_secs(10);
+
+/// Max Rebind timeout `REB_MAX_RT` from [RFC 8415, Section 7.6].
+///
+/// [RFC 8415, Section 7.6]: https://tools.ietf.org/html/rfc8415#section-7.6
+const MAX_REBIND_TIMEOUT: Duration = Duration::from_secs(600);
+
 /// Calculates retransmission timeout based on formulas defined in [RFC 8415, Section 15].
 /// A zero `prev_retrans_timeout` indicates this is the first transmission, so
 /// `initial_retrans_timeout` will be used.
@@ -734,6 +744,7 @@ enum OptionsError {
 enum RequestLeasesMessageType {
     Request,
     Renew,
+    Rebind,
 }
 
 impl std::fmt::Display for RequestLeasesMessageType {
@@ -741,6 +752,7 @@ impl std::fmt::Display for RequestLeasesMessageType {
         match self {
             Self::Request => write!(f, "Request"),
             Self::Renew => write!(f, "Renew"),
+            Self::Rebind => write!(f, "Rebind"),
         }
     }
 }
@@ -827,7 +839,9 @@ fn process_options<B: ByteSlice>(
             AllowedOptions { preference: true, information_refresh_time: false, ia_na: true }
         }
         ExchangeType::ReplyWithLeases(
-            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+            RequestLeasesMessageType::Request
+            | RequestLeasesMessageType::Renew
+            | RequestLeasesMessageType::Rebind,
         ) => {
             AllowedOptions {
                 preference: false,
@@ -1076,7 +1090,9 @@ fn process_options<B: ByteSlice>(
         }
         ExchangeType::AdvertiseToSolicit
         | ExchangeType::ReplyWithLeases(
-            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+            RequestLeasesMessageType::Request
+            | RequestLeasesMessageType::Renew
+            | RequestLeasesMessageType::Rebind,
         ) => {
             // If not set or 0, choose a value for T1 and T2, per RFC 8415, section
             // 18.2.4:
@@ -1894,16 +1910,39 @@ fn process_ia_na_error_status(
         (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NotOnLink) => {
             IaNaStatusError::Retry { without_hints: true }
         }
-        // NotOnLink is not expected in Reply to Renew. The server indicates
-        // that the IA is not appropriate for the link by setting lifetime 0,
-        // not by using NotOnLink status, per RFC 8415 section 18.3.4:
+        // NotOnLink is not expected in Reply to Renew/Rebind. The server
+        // indicates that the IA is not appropriate for the link by setting
+        // lifetime 0, not by using NotOnLink status.
+        //
+        // For Renewing, per RFC 8415 section 18.3.4:
         //
         //    If the server finds that any of the addresses in the IA are
         //    not appropriate for the link to which the client is attached,
         //    the server returns the address to the client with lifetimes of 0.
-        (RequestLeasesMessageType::Renew, v6::ErrorStatusCode::NotOnLink) => {
-            IaNaStatusError::Invalid
-        }
+        //
+        // For Rebinding, per RFC 8415 section 18.3.6:
+        //
+        //    If the server finds that the client entry for the IA and any of
+        //    the addresses or delegated prefixes are no longer appropriate for
+        //    the link to which the client's interface is attached according to
+        //    the server's explicit configuration information, the server
+        //    returns those addresses or delegated prefixes to the client with
+        //    lifetimes of 0.
+        (
+            RequestLeasesMessageType::Renew | RequestLeasesMessageType::Rebind,
+            v6::ErrorStatusCode::NotOnLink,
+        ) => IaNaStatusError::Invalid,
+
+        // Per RFC 18.2.10,
+        //
+        //   If the client receives a Reply message with a status code of
+        //   UnspecFail, the server is indicating that it was unable to process
+        //   the client's message due to an unspecified failure condition. If
+        //   the client retransmits the original message to the same server to
+        //   retry the desired operation, the client MUST limit the rate at
+        //   which it retransmits the message and limit the duration of the time
+        //   during which it retransmits the message (see Section 14.1).
+        //
         // When responding to Request messages, per section 18.3.2:
         //
         //    If the server [..] cannot assign any IP addresses to an IA,
@@ -1918,34 +1957,84 @@ fn process_ia_na_error_status(
         //    not assign any leases to an IA, the server returns the IA
         //    option containing a Status Code option with the NoAddrsAvail.
         //
+        // When responding to Rebind messages, per section 18.3.5:
+        //
+        //    -  If the server is configured to create new bindings as a result
+        //    of processing Rebind messages but the server will not assign any
+        //    leases to an IA, the server returns the IA option containing a
+        //    Status Code option (see Section 21.13) with the NoAddrsAvail or
+        //    NoPrefixAvail status code and a status message for a user.
+        //
         // Retry obtaining this IA_NA in subsequent messages.
+        //
+        // TODO(https://fxbug.dev/81086): implement rate limiting.
         (
-            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+            RequestLeasesMessageType::Request
+            | RequestLeasesMessageType::Renew
+            | RequestLeasesMessageType::Rebind,
             v6::ErrorStatusCode::NoAddrsAvail | v6::ErrorStatusCode::UnspecFail,
         ) => IaNaStatusError::Retry { without_hints: false },
-        (RequestLeasesMessageType::Renew, v6::ErrorStatusCode::NoBinding) => {
-            // Per RFC 8415 section 18.2.10.1:
-            //
-            //    When the client receives a Reply message in response
-            //    to a Renew or Rebind message, the client:
-            //
-            //    -  Sends a Request message to the server that responded
-            //    if any of the IAs in the Reply message contain the
-            //    NoBinding status code.  The client places IA options
-            //    in this message for all IAs.  The client continues to
-            //    use other bindings for which the server did not return
-            //    an error.
-            //
-            // The client removes the IA not found by the server,
-            // and transitions to Requesting after processing all the
-            // received IAs.
-            IaNaStatusError::Rerequest
-        }
-        (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NoBinding)
-        | (
-            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
-            v6::ErrorStatusCode::UseMulticast | v6::ErrorStatusCode::NoPrefixAvail,
+        // We do not support prefix delegation yet so we don't send any messages
+        // requesting/renewing/rebinding prefixes.
+        //
+        // TODO(https://fxbug.dev/80595): Do not consider this invalid once we
+        // support PD.
+        (
+            RequestLeasesMessageType::Request
+            | RequestLeasesMessageType::Renew
+            | RequestLeasesMessageType::Rebind,
+            v6::ErrorStatusCode::NoPrefixAvail,
         ) => IaNaStatusError::Invalid,
+
+        // Per RFC 8415 section 18.2.10.1:
+        //
+        //    When the client receives a Reply message in response to a Renew or
+        //    Rebind message, the client:
+        //
+        //    -  Sends a Request message to the server that responded if any of
+        //    the IAs in the Reply message contain the NoBinding status code.
+        //    The client places IA options in this message for all IAs.  The
+        //    client continues to use other bindings for which the server did
+        //    not return an error.
+        //
+        // The client removes the IA not found by the server, and transitions to
+        // Requesting after processing all the received IAs.
+        (
+            RequestLeasesMessageType::Renew | RequestLeasesMessageType::Rebind,
+            v6::ErrorStatusCode::NoBinding,
+        ) => IaNaStatusError::Rerequest,
+        (RequestLeasesMessageType::Request, v6::ErrorStatusCode::NoBinding) => {
+            IaNaStatusError::Invalid
+        }
+
+        // Per RFC 8415 section 18.2.10,
+        //
+        //   If the client receives a Reply message with a status code of
+        //   UseMulticast, the client records the receipt of the message and
+        //   sends subsequent messages to the server through the interface on
+        //   which the message was received using multicast. The client resends
+        //   the original message using multicast.
+        //
+        // We currently always multicast our messages so we do not expect the
+        // UseMulticast error.
+        //
+        // TODO(https://fxbug.dev/76764): Do not consider this an invalid error
+        // when unicasting messages.
+        (
+            RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew,
+            v6::ErrorStatusCode::UseMulticast,
+        ) => IaNaStatusError::Invalid,
+        // Per RFC 8415 section 16,
+        //
+        //   A server MUST discard any Solicit, Confirm, Rebind, or
+        //   Information-request messages it receives with a Layer 3 unicast
+        //   destination address.
+        //
+        // Since we must never unicast Rebind messages, we always multicast them
+        // so we consider a UseMulticast error invalid.
+        (RequestLeasesMessageType::Rebind, v6::ErrorStatusCode::UseMulticast) => {
+            IaNaStatusError::Invalid
+        }
     }
 }
 
@@ -1960,6 +2049,7 @@ enum StateAfterReplyWithLeases {
 
 #[derive(Debug)]
 struct ProcessedReplyWithLeases {
+    server_id: Vec<u8>,
     addresses: HashMap<v6::IAID, AddressEntry>,
     dns_servers: Option<Vec<Ipv6Addr>>,
     actions: Vec<Action>,
@@ -1980,11 +2070,18 @@ fn process_reply_with_leases<B: ByteSlice>(
     let ProcessedOptions { server_id: got_server_id, solicit_max_rt_opt, result } =
         process_options(&msg, ExchangeType::ReplyWithLeases(request_type), Some(client_id))?;
 
-    if got_server_id != server_id {
-        return Err(ReplyWithLeasesError::MismatchedServerId {
-            got: got_server_id,
-            want: server_id.to_vec(),
-        });
+    match request_type {
+        RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew => {
+            if got_server_id != server_id {
+                return Err(ReplyWithLeasesError::MismatchedServerId {
+                    got: got_server_id,
+                    want: server_id.to_vec(),
+                });
+            }
+        }
+        // Accept a message from any server if this is a reply to a rebind
+        // message.
+        RequestLeasesMessageType::Rebind => {}
     }
 
     // Always update SOL_MAX_RT, per RFC 8415, section 18.2.10:
@@ -2201,7 +2298,7 @@ fn process_reply_with_leases<B: ByteSlice>(
     } else {
         match request_type {
             RequestLeasesMessageType::Request => StateAfterReplyWithLeases::Assigned,
-            RequestLeasesMessageType::Renew => {
+            RequestLeasesMessageType::Renew | RequestLeasesMessageType::Rebind => {
                 if current_addresses.keys().any(|iaid| !addresses.contains_key(iaid)) {
                     // Stay in Renewing/Rebinding if any of the assigned IAs that the client
                     // is trying to renew are not included in the Reply, per RFC 8451 section
@@ -2298,7 +2395,13 @@ fn process_reply_with_leases<B: ByteSlice>(
         | StateAfterReplyWithLeases::Requesting => Vec::new(),
     };
 
-    Ok(ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state })
+    Ok(ProcessedReplyWithLeases {
+        server_id: got_server_id,
+        addresses,
+        dns_servers,
+        actions,
+        next_state,
+    })
 }
 
 /// Create a map of addresses entries to be requested, combining the IAs in the
@@ -2590,115 +2693,59 @@ impl Requesting {
             retrans_count,
             mut solicit_max_rt,
         } = self;
-        let ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state } =
-            match process_reply_with_leases(
-                client_id,
-                &server_id,
-                &current_addresses,
-                &mut solicit_max_rt,
-                &msg,
-                RequestLeasesMessageType::Request,
-            ) {
-                Ok(processed) => processed,
-                Err(e) => {
-                    match e {
-                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
-                            error_code,
-                            message,
-                        )) => {
-                            match error_code {
-                                v6::ErrorStatusCode::NotOnLink => {
-                                    // Per RFC 8415, section 18.2.10.1:
-                                    //
-                                    //    If the client receives a NotOnLink status from the server
-                                    //    in response to a Solicit (with a Rapid Commit option;
-                                    //    see Section 21.14) or a Request, the client can either
-                                    //    reissue the message without specifying any addresses or
-                                    //    restart the DHCP server discovery process (see Section 18).
-                                    //
-                                    // The client reissues the message without specifying addresses,
-                                    // leaving it up to the server to assign addresses appropriate
-                                    // for the client's link.
-                                    current_addresses.iter_mut().for_each(
-                                        |(_, current_address_entry)| {
-                                            // Discard all currently-assigned addresses.
-                                            discard_leases(current_address_entry);
+        let ProcessedReplyWithLeases {
+            server_id: got_server_id,
+            addresses,
+            dns_servers,
+            actions,
+            next_state,
+        } = match process_reply_with_leases(
+            client_id,
+            &server_id,
+            &current_addresses,
+            &mut solicit_max_rt,
+            &msg,
+            RequestLeasesMessageType::Request,
+        ) {
+            Ok(processed) => processed,
+            Err(e) => {
+                match e {
+                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(error_code, message)) => {
+                        match error_code {
+                            v6::ErrorStatusCode::NotOnLink => {
+                                // Per RFC 8415, section 18.2.10.1:
+                                //
+                                //    If the client receives a NotOnLink status from the server
+                                //    in response to a Solicit (with a Rapid Commit option;
+                                //    see Section 21.14) or a Request, the client can either
+                                //    reissue the message without specifying any addresses or
+                                //    restart the DHCP server discovery process (see Section 18).
+                                //
+                                // The client reissues the message without specifying addresses,
+                                // leaving it up to the server to assign addresses appropriate
+                                // for the client's link.
+                                current_addresses.iter_mut().for_each(
+                                    |(_, current_address_entry)| {
+                                        // Discard all currently-assigned addresses.
+                                        discard_leases(current_address_entry);
 
-                                            *current_address_entry =
-                                                AddressEntry::ToRequest(AddressToRequest::new(
-                                                    None,
-                                                    current_address_entry.configured_address(),
-                                                ));
-                                        },
-                                    );
-                                    // TODO(https://fxbug.dev/96674): append to actions to remove
-                                    // assigned addresses.
-                                    // TODO(https://fxbug.dev/96684): add actions to cancel
-                                    // preferred and valid lifetime timers for assigned addresses.
-                                    warn!(
-                                        "Reply to Request: retrying Request without hints due to \
+                                        *current_address_entry =
+                                            AddressEntry::ToRequest(AddressToRequest::new(
+                                                None,
+                                                current_address_entry.configured_address(),
+                                            ));
+                                    },
+                                );
+                                // TODO(https://fxbug.dev/96674): append to actions to remove
+                                // assigned addresses.
+                                // TODO(https://fxbug.dev/96684): add actions to cancel
+                                // preferred and valid lifetime timers for assigned addresses.
+                                warn!(
+                                    "Reply to Request: retrying Request without hints due to \
                                     NotOnLink error status code with message '{}'",
-                                        message,
-                                    );
-                                    return Requesting {
-                                        client_id,
-                                        addresses: current_addresses,
-                                        server_id,
-                                        collected_advertise,
-                                        first_request_time,
-                                        retrans_timeout,
-                                        retrans_count,
-                                        solicit_max_rt,
-                                    }
-                                    .send_and_reschedule_retransmission(
-                                        *msg.transaction_id(),
-                                        options_to_request,
-                                        rng,
-                                        now,
-                                    );
-                                }
-                                // Per RFC 8415, section 18.2.10:
-                                //
-                                //    If the client receives a Reply message with a status code
-                                //    of UnspecFail, the server is indicating that it was unable
-                                //    to process the client's message due to an unspecified
-                                //    failure condition.  If the client retransmits the original
-                                //    message to the same server to retry the desired operation,
-                                //    the client MUST limit the rate at which it retransmits
-                                //    the message and limit the duration of the time during
-                                //    which it retransmits the message (see Section 14.1).
-                                //
-                                // Ignore this Reply and rely on timeout for retransmission.
-                                // TODO(https://fxbug.dev/81086): implement rate limiting.
-                                v6::ErrorStatusCode::UnspecFail => {
-                                    warn!(
-                                    "ignoring Reply to Request: ignoring due to UnspecFail error
-                                    status code with message '{}'",
                                     message,
                                 );
-                                }
-                                // TODO(https://fxbug.dev/76764): implement unicast.
-                                // The client already uses multicast.
-                                v6::ErrorStatusCode::UseMulticast => {
-                                    warn!(
-                                        "ignoring Reply to Request: ignoring due to UseMulticast \
-                                        with message '{}', but Request was already using multicast",
-                                        message,
-                                    );
-                                }
-                                // Not expected as top level status.
-                                v6::ErrorStatusCode::NoAddrsAvail
-                                | v6::ErrorStatusCode::NoPrefixAvail
-                                | v6::ErrorStatusCode::NoBinding => {
-                                    warn!(
-                                    "ignoring Reply to Request due to unexpected top level error
-                                    {:?} with message '{}'",
-                                    error_code, message,
-                                );
-                                }
-                            }
-                            return Transition {
-                                state: ClientState::Requesting(Self {
+                                return Requesting {
                                     client_id,
                                     addresses: current_addresses,
                                     server_id,
@@ -2707,30 +2754,92 @@ impl Requesting {
                                     retrans_timeout,
                                     retrans_count,
                                     solicit_max_rt,
-                                }),
-                                actions: Vec::new(),
-                                transaction_id: None,
-                            };
+                                }
+                                .send_and_reschedule_retransmission(
+                                    *msg.transaction_id(),
+                                    options_to_request,
+                                    rng,
+                                    now,
+                                );
+                            }
+                            // Per RFC 8415, section 18.2.10:
+                            //
+                            //    If the client receives a Reply message with a status code
+                            //    of UnspecFail, the server is indicating that it was unable
+                            //    to process the client's message due to an unspecified
+                            //    failure condition.  If the client retransmits the original
+                            //    message to the same server to retry the desired operation,
+                            //    the client MUST limit the rate at which it retransmits
+                            //    the message and limit the duration of the time during
+                            //    which it retransmits the message (see Section 14.1).
+                            //
+                            // Ignore this Reply and rely on timeout for retransmission.
+                            // TODO(https://fxbug.dev/81086): implement rate limiting.
+                            v6::ErrorStatusCode::UnspecFail => {
+                                warn!(
+                                    "ignoring Reply to Request: ignoring due to UnspecFail error
+                                    status code with message '{}'",
+                                    message,
+                                );
+                            }
+                            // TODO(https://fxbug.dev/76764): implement unicast.
+                            // The client already uses multicast.
+                            v6::ErrorStatusCode::UseMulticast => {
+                                warn!(
+                                    "ignoring Reply to Request: ignoring due to UseMulticast \
+                                        with message '{}', but Request was already using multicast",
+                                    message,
+                                );
+                            }
+                            // Not expected as top level status.
+                            v6::ErrorStatusCode::NoAddrsAvail
+                            | v6::ErrorStatusCode::NoPrefixAvail
+                            | v6::ErrorStatusCode::NoBinding => {
+                                warn!(
+                                    "ignoring Reply to Request due to unexpected top level error
+                                    {:?} with message '{}'",
+                                    error_code, message,
+                                );
+                            }
                         }
-                        _ => {}
+                        return Transition {
+                            state: ClientState::Requesting(Self {
+                                client_id,
+                                addresses: current_addresses,
+                                server_id,
+                                collected_advertise,
+                                first_request_time,
+                                retrans_timeout,
+                                retrans_count,
+                                solicit_max_rt,
+                            }),
+                            actions: Vec::new(),
+                            transaction_id: None,
+                        };
                     }
-                    warn!("ignoring Reply to Request: {:?}", e);
-                    return Transition {
-                        state: ClientState::Requesting(Self {
-                            client_id,
-                            addresses: current_addresses,
-                            server_id,
-                            collected_advertise,
-                            first_request_time,
-                            retrans_timeout,
-                            retrans_count,
-                            solicit_max_rt,
-                        }),
-                        actions: Vec::new(),
-                        transaction_id: None,
-                    };
+                    _ => {}
                 }
-            };
+                warn!("ignoring Reply to Request: {:?}", e);
+                return Transition {
+                    state: ClientState::Requesting(Self {
+                        client_id,
+                        addresses: current_addresses,
+                        server_id,
+                        collected_advertise,
+                        first_request_time,
+                        retrans_timeout,
+                        retrans_count,
+                        solicit_max_rt,
+                    }),
+                    actions: Vec::new(),
+                    transaction_id: None,
+                };
+            }
+        };
+        assert_eq!(
+            server_id, got_server_id,
+            "should be invalid to accept a reply to Request with mismatched server ID"
+        );
 
         match next_state {
             StateAfterReplyWithLeases::StayRenewingRebinding => {
@@ -2926,8 +3035,54 @@ impl AddressAssigned {
     }
 }
 
+type Renewing = RenewingOrRebinding<false /* IS_REBINDING */>;
+type Rebinding = RenewingOrRebinding<true /* IS_REBINDING */>;
+
+impl Renewing {
+    /// Handles rebind timer, following [RFC 8415, Section 18.2.5].
+    ///
+    /// [RFC 8415, Section 18.2.5]: https://tools.ietf.org/html/rfc8415#section-18.2.4
+    fn rebind_timer_expired<R: Rng>(
+        self,
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+        now: Instant,
+    ) -> Transition {
+        let Self(RenewingOrRebindingInner {
+            client_id,
+            addresses,
+            server_id,
+            collected_advertise,
+            dns_servers,
+            start_time: _,
+            retrans_timeout: _,
+            solicit_max_rt,
+        }) = self;
+
+        // Start rebinding, per RFC 8415, section 18.2.5:
+        //
+        //   At time T2 (which will only be reached if the server to which the
+        //   Renew message was sent starting at time T1 has not responded), the
+        //   client initiates a Rebind/Reply message exchange with any available
+        //   server.
+        Rebinding::start(
+            transaction_id(),
+            client_id,
+            addresses,
+            server_id,
+            collected_advertise,
+            options_to_request,
+            dns_servers,
+            solicit_max_rt,
+            rng,
+            now,
+        )
+    }
+}
+
 #[derive(Debug)]
-struct Renewing {
+#[cfg_attr(test, derive(Clone))]
+struct RenewingOrRebindingInner {
     /// [Client Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// used for uniquely identifying the client in communication with servers.
     client_id: [u8; CLIENT_ID_LEN],
@@ -2945,18 +3100,33 @@ struct Renewing {
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// [elapsed time](https://datatracker.ietf.org/doc/html/rfc8415#section-21.9).
-    first_renew_time: Option<Instant>,
-    /// The renew retransmission timeout.
+    start_time: Option<Instant>,
+    /// The renew/rebind message retransmission timeout.
     retrans_timeout: Duration,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
     /// used by the client.
     solicit_max_rt: Duration,
 }
 
-impl Renewing {
-    /// Starts renewing, following [RFC 8415, Section 18.2.4].
+impl<const IS_REBINDING: bool> From<RenewingOrRebindingInner>
+    for RenewingOrRebinding<IS_REBINDING>
+{
+    fn from(inner: RenewingOrRebindingInner) -> Self {
+        Self(inner)
+    }
+}
+
+// TODO(https://github.com/rust-lang/rust/issues/76560): Use an enum for the
+// constant generic instead of a boolean for readability.
+#[derive(Debug)]
+struct RenewingOrRebinding<const IS_REBINDING: bool>(RenewingOrRebindingInner);
+
+impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
+    /// Starts renewing or rebinding, following [RFC 8415, Section 18.2.4] or
+    /// [RFC 8415, Section 18.2.5], respectively.
     ///
     /// [RFC 8415, Section 18.2.4]: https://tools.ietf.org/html/rfc8415#section-18.2.4
+    /// [RFC 8415, Section 18.2.5]: https://tools.ietf.org/html/rfc8415#section-18.2.5
     fn start<R: Rng>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
@@ -2969,29 +3139,36 @@ impl Renewing {
         rng: &mut R,
         now: Instant,
     ) -> Transition {
-        Self {
+        Self(RenewingOrRebindingInner {
             client_id,
             addresses,
             server_id,
             collected_advertise,
             dns_servers,
-            first_renew_time: None,
+            start_time: None,
             retrans_timeout: Duration::default(),
             solicit_max_rt,
-        }
+        })
         .send_and_schedule_retransmission(transaction_id, options_to_request, rng, now)
     }
 
-    /// Calculates timeout for retransmitting Renew using parameters specified
-    /// in [RFC 8415, Section 18.2.4].
+    /// Calculates timeout for retransmitting Renew/Rebind using parameters
+    /// specified in [RFC 8415, Section 18.2.4]/[RFC 8415, Section 18.2.5].
     ///
     /// [RFC 8415, Section 18.2.4]: https://tools.ietf.org/html/rfc8415#section-18.2.4
+    /// [RFC 8415, Section 18.2.5]: https://tools.ietf.org/html/rfc8415#section-18.2.5
     fn retransmission_timeout<R: Rng>(prev_retrans_timeout: Duration, rng: &mut R) -> Duration {
-        retransmission_timeout(prev_retrans_timeout, INITIAL_RENEW_TIMEOUT, MAX_RENEW_TIMEOUT, rng)
+        let (initial, max) = if IS_REBINDING {
+            (INITIAL_REBIND_TIMEOUT, MAX_REBIND_TIMEOUT)
+        } else {
+            (INITIAL_RENEW_TIMEOUT, MAX_RENEW_TIMEOUT)
+        };
+
+        retransmission_timeout(prev_retrans_timeout, initial, max, rng)
     }
 
-    /// Returns a transition to stay in `Renewing`, with actions to send a Renew and
-    /// schedule retransmission.
+    /// Returns a transition to stay in the current state, with actions to send
+    /// a message and schedule retransmission.
     fn send_and_schedule_retransmission<R: Rng>(
         self,
         transaction_id: [u8; 3],
@@ -2999,17 +3176,17 @@ impl Renewing {
         rng: &mut R,
         now: Instant,
     ) -> Transition {
-        let Self {
+        let Self(RenewingOrRebindingInner {
             client_id,
             addresses,
             server_id,
             collected_advertise,
             dns_servers,
-            first_renew_time,
+            start_time,
             retrans_timeout: prev_retrans_timeout,
             solicit_max_rt,
-        } = self;
-        let (start_time, elapsed_time) = match first_renew_time {
+        }) = self;
+        let (start_time, elapsed_time) = match start_time {
             None => (now, 0),
             Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
         };
@@ -3018,12 +3195,29 @@ impl Renewing {
             .chain(options_to_request.iter().cloned())
             .collect::<Vec<_>>();
 
-        let mut options = vec![
-            v6::DhcpOption::ServerId(&server_id),
-            v6::DhcpOption::ClientId(&client_id),
-            v6::DhcpOption::ElapsedTime(elapsed_time),
-            v6::DhcpOption::Oro(&oro),
-        ];
+        // As per RFC 8415 section 18.2.5,
+        //
+        //   The client constructs the Rebind message as described in Section
+        //   18.2.4, with the following differences:
+        //
+        //   -  The client sets the "msg-type" field to REBIND.
+        //
+        //   -  The client does not include the Server Identifier option (see
+        //      Section 21.3) in the Rebind message.
+        let (message_type, maybe_server_id_opt) = if IS_REBINDING {
+            (v6::MessageType::Rebind, None)
+        } else {
+            (v6::MessageType::Renew, Some(v6::DhcpOption::ServerId(&server_id)))
+        };
+
+        let mut options = maybe_server_id_opt
+            .into_iter()
+            .chain([
+                v6::DhcpOption::ClientId(&client_id),
+                v6::DhcpOption::ElapsedTime(elapsed_time),
+                v6::DhcpOption::Oro(&oro),
+            ])
+            .collect::<Vec<_>>();
 
         // TODO(https://fxbug.dev/86945): remove `iaaddr_options` construction
         // once `IanaSerializer::new()` takes options by value.
@@ -3051,22 +3245,30 @@ impl Renewing {
             )));
         }
 
-        let builder = v6::MessageBuilder::new(v6::MessageType::Renew, transaction_id, &options);
+        let builder = v6::MessageBuilder::new(message_type, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
-        let retrans_timeout = Renewing::retransmission_timeout(prev_retrans_timeout, rng);
+        let retrans_timeout = Self::retransmission_timeout(prev_retrans_timeout, rng);
 
         Transition {
-            state: ClientState::Renewing(Renewing {
-                client_id,
-                addresses,
-                server_id,
-                collected_advertise,
-                dns_servers,
-                first_renew_time: Some(start_time),
-                retrans_timeout,
-                solicit_max_rt,
-            }),
+            state: {
+                let inner = RenewingOrRebindingInner {
+                    client_id,
+                    addresses,
+                    server_id,
+                    collected_advertise,
+                    dns_servers,
+                    start_time: Some(start_time),
+                    retrans_timeout,
+                    solicit_max_rt,
+                };
+
+                if IS_REBINDING {
+                    ClientState::Rebinding(inner.into())
+                } else {
+                    ClientState::Renewing(inner.into())
+                }
+            },
             actions: vec![
                 Action::SendMessage(buf),
                 Action::ScheduleTimer(ClientTimerType::Retransmission, retrans_timeout),
@@ -3075,7 +3277,7 @@ impl Renewing {
         }
     }
 
-    /// Retransmits Renew.
+    /// Retransmits the renew or rebind message.
     fn retransmission_timer_expired<R: Rng>(
         self,
         transaction_id: [u8; 3],
@@ -3093,102 +3295,132 @@ impl Renewing {
         msg: v6::Message<'_, B>,
         now: Instant,
     ) -> Transition {
-        let Self {
+        let Self(RenewingOrRebindingInner {
             client_id,
             addresses: current_addresses,
             server_id,
             collected_advertise,
             dns_servers: current_dns_servers,
-            first_renew_time,
+            start_time,
             retrans_timeout,
             mut solicit_max_rt,
-        } = self;
-        let ProcessedReplyWithLeases { addresses, dns_servers, actions, next_state } =
-            match process_reply_with_leases(
-                client_id,
-                &server_id,
-                &current_addresses,
-                &mut solicit_max_rt,
-                &msg,
-                RequestLeasesMessageType::Renew,
-            ) {
-                Ok(processed) => processed,
-                Err(e) => {
-                    match e {
-                        // Per RFC 8415, section 18.2.10:
-                        //
-                        //    If the client receives a Reply message with a status code of
-                        //    UnspecFail, the server is indicating that it was unable to process
-                        //    the client's message due to an unspecified failure condition.  If
-                        //    the client retransmits the original message to the same server to
-                        //    retry the desired operation, the client MUST limit the rate at
-                        //    which it retransmits the message and limit the duration of the
-                        //    time during which it retransmits the message (see Section 14.1).
-                        //
-                        // TODO(https://fxbug.dev/81086): implement rate limiting. Without
-                        // rate limiting support, the client relies on the regular
-                        // retransmission mechanism to rate limit retransmission.
-                        // Similarly, for other status codes indicating failure that are not
-                        // expected in Reply to Renew, the client behaves as if the Reply
-                        // message had not been received. Note the RFC does not specify what
-                        // to do in this case; the client ignores the Reply in order to
-                        // preserve existing bindings.
-                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
-                            v6::ErrorStatusCode::UnspecFail,
-                            message,
-                        )) => {
-                            warn!(
-                                "ignoring Reply to Renew with status code UnspecFail \
+        }) = self;
+        let ProcessedReplyWithLeases {
+            server_id: got_server_id,
+            addresses,
+            dns_servers,
+            actions,
+            next_state,
+        } = match process_reply_with_leases(
+            client_id,
+            &server_id,
+            &current_addresses,
+            &mut solicit_max_rt,
+            &msg,
+            if IS_REBINDING {
+                RequestLeasesMessageType::Rebind
+            } else {
+                RequestLeasesMessageType::Renew
+            },
+        ) {
+            Ok(processed) => processed,
+            Err(e) => {
+                match e {
+                    // Per RFC 8415, section 18.2.10:
+                    //
+                    //    If the client receives a Reply message with a status code of
+                    //    UnspecFail, the server is indicating that it was unable to process
+                    //    the client's message due to an unspecified failure condition.  If
+                    //    the client retransmits the original message to the same server to
+                    //    retry the desired operation, the client MUST limit the rate at
+                    //    which it retransmits the message and limit the duration of the
+                    //    time during which it retransmits the message (see Section 14.1).
+                    //
+                    // TODO(https://fxbug.dev/81086): implement rate limiting. Without
+                    // rate limiting support, the client relies on the regular
+                    // retransmission mechanism to rate limit retransmission.
+                    // Similarly, for other status codes indicating failure that are not
+                    // expected in Reply to Renew, the client behaves as if the Reply
+                    // message had not been received. Note the RFC does not specify what
+                    // to do in this case; the client ignores the Reply in order to
+                    // preserve existing bindings.
+                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                        v6::ErrorStatusCode::UnspecFail,
+                        message,
+                    )) => {
+                        warn!(
+                            "ignoring Reply to Renew with status code UnspecFail \
                                 and message '{}'",
-                                message
-                            );
-                        }
-                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
-                            v6::ErrorStatusCode::UseMulticast,
-                            message,
-                        )) => {
-                            // TODO(https://fxbug.dev/76764): Implement unicast.
-                            warn!(
-                                "ignoring Reply to Renew with status code UseMulticast \
-                                and message '{}' as Reply was already sent as multicast",
-                                message
-                            );
-                        }
-                        ReplyWithLeasesError::StatusCodeError(StatusCodeError(
-                            error_code @ (v6::ErrorStatusCode::NoAddrsAvail
-                            | v6::ErrorStatusCode::NoBinding
-                            | v6::ErrorStatusCode::NotOnLink
-                            | v6::ErrorStatusCode::NoPrefixAvail),
-                            message,
-                        )) => {
-                            warn!(
-                                "ignoring Reply to Renew with unexpected status code {:?} \
-                                and message '{}'",
-                                error_code, message
-                            );
-                        }
-                        e @ (ReplyWithLeasesError::OptionsError(_)
-                        | ReplyWithLeasesError::MismatchedServerId { got: _, want: _ }
-                        | ReplyWithLeasesError::UnexpectedIaNa(_, _)) => {
-                            warn!("ignoring Reply to Renew: {}", e);
-                        }
+                            message
+                        );
                     }
-                    return Transition {
-                        state: ClientState::Renewing(Self {
+                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                        v6::ErrorStatusCode::UseMulticast,
+                        message,
+                    )) => {
+                        // TODO(https://fxbug.dev/76764): Implement unicast.
+                        warn!(
+                            "ignoring Reply to Renew with status code UseMulticast \
+                                and message '{}' as Reply was already sent as multicast",
+                            message
+                        );
+                    }
+                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                        error_code @ (v6::ErrorStatusCode::NoAddrsAvail
+                        | v6::ErrorStatusCode::NoBinding
+                        | v6::ErrorStatusCode::NotOnLink
+                        | v6::ErrorStatusCode::NoPrefixAvail),
+                        message,
+                    )) => {
+                        warn!(
+                            "ignoring Reply to Renew with unexpected status code {:?} \
+                                and message '{}'",
+                            error_code, message
+                        );
+                    }
+                    e @ (ReplyWithLeasesError::OptionsError(_)
+                    | ReplyWithLeasesError::MismatchedServerId { got: _, want: _ }
+                    | ReplyWithLeasesError::UnexpectedIaNa(_, _)) => {
+                        warn!("ignoring Reply to Renew: {}", e);
+                    }
+                }
+
+                return Transition {
+                    state: {
+                        let inner = RenewingOrRebindingInner {
                             client_id,
                             addresses: current_addresses,
                             server_id,
                             collected_advertise,
                             dns_servers: current_dns_servers,
-                            first_renew_time,
+                            start_time,
                             retrans_timeout,
                             solicit_max_rt,
-                        }),
-                        actions: Vec::new(),
-                        transaction_id: None,
-                    };
-                }
-            };
+                        };
+
+                        if IS_REBINDING {
+                            ClientState::Rebinding(inner.into())
+                        } else {
+                            ClientState::Renewing(inner.into())
+                        }
+                    },
+                    actions: Vec::new(),
+                    transaction_id: None,
+                };
+            }
+        };
+        if !IS_REBINDING {
+            assert_eq!(
+                server_id, got_server_id,
+                "should be invalid to accept a reply to Renew with mismatched server ID"
+            );
+        } else if server_id != got_server_id {
+            warn!(
+                "using Reply to Rebind message from different server; current={:?}, new={:?}",
+                server_id, got_server_id
+            );
+        }
+        let server_id = got_server_id;
 
         match next_state {
             StateAfterReplyWithLeases::RequestNextServer => {
@@ -3203,16 +3435,24 @@ impl Renewing {
                 )
             }
             StateAfterReplyWithLeases::StayRenewingRebinding => Transition {
-                state: ClientState::Renewing(Self {
-                    client_id,
-                    addresses,
-                    server_id,
-                    collected_advertise,
-                    dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
-                    first_renew_time,
-                    retrans_timeout,
-                    solicit_max_rt,
-                }),
+                state: {
+                    let inner = RenewingOrRebindingInner {
+                        client_id,
+                        addresses,
+                        server_id,
+                        collected_advertise,
+                        dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
+                        start_time,
+                        retrans_timeout,
+                        solicit_max_rt,
+                    };
+
+                    if IS_REBINDING {
+                        ClientState::Rebinding(inner.into())
+                    } else {
+                        ClientState::Renewing(inner.into())
+                    }
+                },
                 actions: Vec::new(),
                 transaction_id: None,
             },
@@ -3268,6 +3508,8 @@ enum ClientState {
     AddressAssigned(AddressAssigned),
     /// Creating and (re)transmitting a renew message, and awaiting reply.
     Renewing(Renewing),
+    /// Creating and (re)transmitting a rebind message, and awaiting reply.
+    Rebinding(Rebinding),
 }
 
 /// State transition, containing the next state, and the actions the client
@@ -3296,7 +3538,8 @@ impl ClientState {
             | ClientState::InformationReceived(_)
             | ClientState::Requesting(_)
             | ClientState::AddressAssigned(_)
-            | ClientState::Renewing(_) => {
+            | ClientState::Renewing(_)
+            | ClientState::Rebinding(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
@@ -3316,6 +3559,9 @@ impl ClientState {
                 s.reply_message_received(options_to_request, rng, msg, now)
             }
             ClientState::Renewing(s) => s.reply_message_received(options_to_request, rng, msg, now),
+            ClientState::Rebinding(s) => {
+                s.reply_message_received(options_to_request, rng, msg, now)
+            }
             ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
             | ClientState::AddressAssigned(_) => {
@@ -3345,6 +3591,9 @@ impl ClientState {
             ClientState::Renewing(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng, now)
             }
+            ClientState::Rebinding(s) => {
+                s.retransmission_timer_expired(transaction_id, options_to_request, rng, now)
+            }
             ClientState::InformationReceived(_) | ClientState::AddressAssigned(_) => {
                 unreachable!("received unexpected retransmission timeout in state {:?}.", self);
             }
@@ -3366,7 +3615,8 @@ impl ClientState {
             | ClientState::ServerDiscovery(_)
             | ClientState::Requesting(_)
             | ClientState::AddressAssigned(_)
-            | ClientState::Renewing(_) => {
+            | ClientState::Renewing(_)
+            | ClientState::Rebinding(_) => {
                 unreachable!("received unexpected refresh timeout in state {:?}.", self);
             }
         }
@@ -3385,8 +3635,29 @@ impl ClientState {
             | ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
             | ClientState::Requesting(_)
-            | ClientState::Renewing(_) => {
+            | ClientState::Renewing(_)
+            | ClientState::Rebinding(_) => {
                 unreachable!("received unexpected renew timeout in state {:?}.", self);
+            }
+        }
+    }
+
+    /// Handles rebind timeout.
+    fn rebind_timer_expired<R: Rng>(
+        self,
+        options_to_request: &[v6::OptionCode],
+        rng: &mut R,
+        now: Instant,
+    ) -> Transition {
+        match self {
+            ClientState::Renewing(s) => s.rebind_timer_expired(options_to_request, rng, now),
+            ClientState::InformationRequesting(_)
+            | ClientState::InformationReceived(_)
+            | ClientState::ServerDiscovery(_)
+            | ClientState::AddressAssigned(_)
+            | ClientState::Requesting(_)
+            | ClientState::Rebinding(_) => {
+                unreachable!("received unexpected rebind timeout in state {:?}.", self);
             }
         }
     }
@@ -3405,16 +3676,26 @@ impl ClientState {
                 dns_servers,
                 solicit_max_rt: _,
             })
-            | ClientState::Renewing(Renewing {
+            | ClientState::Renewing(RenewingOrRebinding(RenewingOrRebindingInner {
                 client_id: _,
                 addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 dns_servers,
-                first_renew_time: _,
+                start_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
-            }) => dns_servers.clone(),
+            }))
+            | ClientState::Rebinding(RenewingOrRebinding(RenewingOrRebindingInner {
+                client_id: _,
+                addresses: _,
+                server_id: _,
+                collected_advertise: _,
+                dns_servers,
+                start_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+            })) => dns_servers.clone(),
             ClientState::InformationRequesting(InformationRequesting { retrans_timeout: _ })
             | ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
@@ -3551,7 +3832,7 @@ impl<R: Rng> ClientStateMachine<R> {
                     old_state.renew_timer_expired(&options_to_request, rng, now)
                 }
                 ClientTimerType::Rebind => {
-                    todo!("https://fxbug.dev/76766: Implement Rebind state")
+                    old_state.rebind_timer_expired(&options_to_request, rng, now)
                 }
             };
         *state = Some(new_state);
@@ -4304,18 +4585,18 @@ pub(crate) mod testutil {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         // Assert that sending a renew starts a new transaction.
         assert_ne!(*transaction_id, old_transaction_id);
-        let Renewing {
+        let RenewingOrRebindingInner {
             client_id: got_client_id,
             server_id: got_server_id,
             dns_servers,
             collected_advertise,
             solicit_max_rt,
             addresses: _,
-            first_renew_time: _,
+            start_time: _,
             retrans_timeout: _,
         } = assert_matches!(
             state,
-            Some(ClientState::Renewing(renewing)) => renewing
+            Some(ClientState::Renewing(RenewingOrRebinding(inner))) => inner
         );
         assert_eq!(*got_client_id, client_id);
         assert_eq!(*got_server_id, server_id);
@@ -4342,6 +4623,96 @@ pub(crate) mod testutil {
             expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
             &expected_addresses_to_renew,
         );
+        client
+    }
+
+    /// Creates a stateful client, exchanges messages to assign the configured
+    /// addresses, and sends a Renew then Rebind message. Asserts the content of
+    /// the client state and of the rebind message, and returns the client in
+    /// Rebinding state.
+    ///
+    /// # Panics
+    ///
+    /// `send_rebind_and_assert` panics if address assignment fails, or if
+    /// sending a rebind fails.
+    pub(crate) fn send_rebind_and_assert<R: Rng + std::fmt::Debug>(
+        client_id: [u8; CLIENT_ID_LEN],
+        server_id: [u8; TEST_SERVER_ID_LEN],
+        addresses_to_assign: Vec<TestIdentityAssociation>,
+        expected_dns_servers: Option<&[Ipv6Addr]>,
+        expected_t1_secs: v6::NonZeroOrMaxU32,
+        expected_t2_secs: v6::NonZeroOrMaxU32,
+        rng: R,
+        now: Instant,
+    ) -> ClientStateMachine<R> {
+        let mut client = testutil::send_renew_and_assert(
+            client_id,
+            server_id,
+            addresses_to_assign.clone(),
+            expected_dns_servers,
+            expected_t1_secs,
+            expected_t2_secs,
+            rng,
+            now,
+        );
+        let old_transaction_id = client.transaction_id;
+
+        let actions = client.handle_timeout(ClientTimerType::Rebind, now);
+        let mut buf = assert_matches!(
+            &actions[..],
+            [
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, INITIAL_REBIND_TIMEOUT)
+            ] => buf
+        );
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
+        // Assert that sending a rebind starts a new transaction.
+        assert_ne!(*transaction_id, old_transaction_id);
+        let RenewingOrRebinding(RenewingOrRebindingInner {
+            client_id: got_client_id,
+            server_id: got_server_id,
+            dns_servers,
+            collected_advertise,
+            solicit_max_rt,
+            addresses: _,
+            start_time: _,
+            retrans_timeout: _,
+        }) = assert_matches!(
+            state,
+            Some(ClientState::Rebinding(rebinding)) => rebinding
+        );
+        let (expected_oro, expected_dns_servers) =
+            if let Some(expected_dns_servers) = expected_dns_servers {
+                (Some([v6::OptionCode::DnsServers]), expected_dns_servers)
+            } else {
+                (None, &[][..])
+            };
+        assert_eq!(*got_client_id, client_id);
+        assert_eq!(*got_server_id, server_id);
+        assert_eq!(dns_servers, expected_dns_servers);
+        assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
+        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
+        let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
+            .map(v6::IAID::new)
+            .zip(addresses_to_assign.iter().map(
+                |TestIdentityAssociation {
+                     address,
+                     preferred_lifetime: _,
+                     valid_lifetime: _,
+                     t1: _,
+                     t2: _,
+                 }| Some(*address),
+            ))
+            .collect();
+        testutil::assert_outgoing_stateful_message(
+            &mut buf,
+            v6::MessageType::Rebind,
+            &client_id,
+            None, /* expected_server_id */
+            expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
+            &expected_addresses_to_renew,
+        );
+
         client
     }
 }
@@ -6165,9 +6536,61 @@ mod tests {
         }
     }
 
-    #[test]
-    fn send_renew() {
-        let _client = testutil::send_renew_and_assert(
+    struct RenewRebindTest {
+        send_and_assert: fn(
+            [u8; CLIENT_ID_LEN],
+            [u8; TEST_SERVER_ID_LEN],
+            Vec<TestIdentityAssociation>,
+            Option<&[Ipv6Addr]>,
+            v6::NonZeroOrMaxU32,
+            v6::NonZeroOrMaxU32,
+            StepRng,
+            Instant,
+        ) -> ClientStateMachine<StepRng>,
+        message_type: v6::MessageType,
+        expect_server_id: bool,
+        with_state: fn(&Option<ClientState>) -> &RenewingOrRebindingInner,
+        allow_response_from_any_server: bool,
+    }
+
+    const RENEW_TEST: RenewRebindTest = RenewRebindTest {
+        send_and_assert: testutil::send_renew_and_assert,
+        message_type: v6::MessageType::Renew,
+        expect_server_id: true,
+        with_state: |state| {
+            assert_matches!(
+                state,
+                Some(ClientState::Renewing(RenewingOrRebinding(inner))) => inner
+            )
+        },
+        allow_response_from_any_server: false,
+    };
+
+    const REBIND_TEST: RenewRebindTest = RenewRebindTest {
+        send_and_assert: testutil::send_rebind_and_assert,
+        message_type: v6::MessageType::Rebind,
+        expect_server_id: false,
+        with_state: |state| {
+            assert_matches!(
+                state,
+                Some(ClientState::Rebinding(RenewingOrRebinding(inner))) => inner
+            )
+        },
+        allow_response_from_any_server: true,
+    };
+
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn send(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
+        let _client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES[0..2]
@@ -6182,9 +6605,18 @@ mod tests {
         );
     }
 
-    #[test]
-    fn renewing_get_dns_servers() {
-        let client = testutil::send_renew_and_assert(
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn get_dns_server(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
+        let client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES[0..2]
@@ -6232,14 +6664,23 @@ mod tests {
         assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
     }
 
-    #[test]
-    fn retransmit_renew() {
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn retransmit(
+        RenewRebindTest {
+            send_and_assert,
+            message_type,
+            expect_server_id,
+            with_state,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
         let addresses_to_assign = CONFIGURED_ADDRESSES[0..2]
             .into_iter()
             .map(|&addr| TestIdentityAssociation::new_default(addr))
             .collect::<Vec<_>>();
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             addresses_to_assign.clone(),
@@ -6251,19 +6692,16 @@ mod tests {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let expected_transaction_id = *transaction_id;
-        let Renewing {
+        let RenewingOrRebindingInner {
             collected_advertise,
             client_id: _,
             addresses: _,
             server_id: _,
             dns_servers: _,
-            first_renew_time: _,
+            start_time: _,
             retrans_timeout: _,
             solicit_max_rt: _,
-        } = assert_matches!(
-            state,
-            Some(ClientState::Renewing(renewing)) => renewing
-        );
+        } = with_state(state);
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
 
         // Assert renew is retransmitted on retransmission timeout.
@@ -6279,19 +6717,16 @@ mod tests {
         // Check that the retransmitted renew is part of the same transaction.
         assert_eq!(*transaction_id, expected_transaction_id);
         {
-            let Renewing {
+            let RenewingOrRebindingInner {
                 client_id,
                 server_id,
                 collected_advertise,
                 dns_servers,
                 solicit_max_rt,
                 addresses: _,
-                first_renew_time: _,
+                start_time: _,
                 retrans_timeout: _,
-            } = assert_matches!(
-                state,
-                Some(ClientState::Renewing(renewing )) => renewing
-            );
+            } = with_state(state);
             assert_eq!(client_id, &CLIENT_ID);
             assert_eq!(server_id[..], SERVER_ID[0]);
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
@@ -6312,20 +6747,33 @@ mod tests {
             .collect();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
-            v6::MessageType::Renew,
+            message_type,
             &CLIENT_ID,
-            Some(&SERVER_ID[0]),
+            expect_server_id.then(|| &SERVER_ID[0]),
             &[],
             &expected_addresses_to_renew,
         );
     }
 
-    #[test]
-    fn renewing_receive_reply_extends_lifetime() {
+    #[test_case(RENEW_TEST, &SERVER_ID[0], &SERVER_ID[0])]
+    #[test_case(REBIND_TEST, &SERVER_ID[0], &SERVER_ID[0])]
+    #[test_case(RENEW_TEST, &SERVER_ID[0], &SERVER_ID[1])]
+    #[test_case(REBIND_TEST, &SERVER_ID[0], &SERVER_ID[1])]
+    fn receive_reply_extends_lifetime(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state,
+            allow_response_from_any_server,
+        }: RenewRebindTest,
+        original_server_id: &[u8; TEST_SERVER_ID_LEN],
+        reply_server_id: &[u8],
+    ) {
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
-            SERVER_ID[0],
+            original_server_id.clone(),
             CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
             None,
             T1,
@@ -6333,8 +6781,7 @@ mod tests {
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
-        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
-            &client;
+        let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let iaaddr_opts = (0..)
             .map(v6::IAID::new)
             .zip(CONFIGURED_ADDRESSES)
@@ -6351,7 +6798,7 @@ mod tests {
             })
             .collect::<HashMap<_, _>>();
         let options =
-            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(reply_server_id)]
                 .into_iter()
                 .chain((0..).map(v6::IAID::new).take(CONFIGURED_ADDRESSES.len()).map(|iaid| {
                     v6::DhcpOption::Iana(v6::IanaSerializer::new(
@@ -6367,9 +6814,54 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+
+        // Make sure we are in renewing/rebinding before we handle the message.
+        let original_state = with_state(state).clone();
+
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
+
+        if original_server_id.as_slice() != reply_server_id && !allow_response_from_any_server {
+            // Renewing does not allow us to receive replies from a different
+            // server but Rebinding does. If we aren't allowed to accept a
+            // response from a different server, just make sure we are in the
+            // same state.
+            let RenewingOrRebindingInner {
+                client_id: original_client_id,
+                addresses: original_addresses,
+                server_id: original_server_id,
+                collected_advertise: original_collected_advertise,
+                dns_servers: original_dns_servers,
+                start_time: original_start_time,
+                retrans_timeout: original_retrans_timeout,
+                solicit_max_rt: original_solicit_max_rt,
+            } = original_state;
+            let RenewingOrRebindingInner {
+                client_id: new_client_id,
+                addresses: new_addresses,
+                server_id: new_server_id,
+                collected_advertise: new_collected_advertise,
+                dns_servers: new_dns_servers,
+                start_time: new_start_time,
+                retrans_timeout: new_retrans_timeout,
+                solicit_max_rt: new_solicit_max_rt,
+            } = with_state(state);
+            assert_eq!(&original_client_id, new_client_id);
+            assert_eq!(&original_addresses, new_addresses);
+            assert_eq!(&original_server_id, new_server_id);
+            assert_eq!(
+                original_collected_advertise.into_sorted_vec(),
+                new_collected_advertise.clone().into_sorted_vec()
+            );
+            assert_eq!(&original_dns_servers, new_dns_servers);
+            assert_eq!(&original_start_time, new_start_time);
+            assert_eq!(&original_retrans_timeout, new_retrans_timeout);
+            assert_eq!(&original_solicit_max_rt, new_solicit_max_rt);
+            assert_eq!(actions, []);
+            return;
+        }
+
         let expected_addresses = (0..)
             .map(v6::IAID::new)
             .zip(CONFIGURED_ADDRESSES.into_iter().map(|addr| {
@@ -6387,7 +6879,7 @@ mod tests {
                 solicit_max_rt,
             })) if client_id == &CLIENT_ID &&
                    *addresses == expected_addresses &&
-                   server_id.as_slice() == SERVER_ID[0] &&
+                   server_id.as_slice() == reply_server_id &&
                    dns_servers.as_slice() == &[] as &[Ipv6Addr] &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
         );
@@ -6407,15 +6899,29 @@ mod tests {
     // Tests that receiving a Reply with an error status code other than
     // UseMulticast results in only SOL_MAX_RT being updated, with the rest
     // of the message contents ignored.
-    #[test_case(v6::ErrorStatusCode::UnspecFail; "UnspecFail")]
-    #[test_case(v6::ErrorStatusCode::NoBinding; "NoBinding")]
-    #[test_case(v6::ErrorStatusCode::NotOnLink; "NotOnLink")]
-    #[test_case(v6::ErrorStatusCode::NoAddrsAvail; "NoAddrsAvail")]
-    #[test_case(v6::ErrorStatusCode::NoPrefixAvail; "NoPrefixAvail")]
-    fn renewing_receive_reply_with_error_status(error_status_code: v6::ErrorStatusCode) {
+    #[test_case(RENEW_TEST, v6::ErrorStatusCode::UnspecFail)]
+    #[test_case(RENEW_TEST, v6::ErrorStatusCode::NoBinding)]
+    #[test_case(RENEW_TEST, v6::ErrorStatusCode::NotOnLink)]
+    #[test_case(RENEW_TEST, v6::ErrorStatusCode::NoAddrsAvail)]
+    #[test_case(RENEW_TEST, v6::ErrorStatusCode::NoPrefixAvail)]
+    #[test_case(REBIND_TEST, v6::ErrorStatusCode::UnspecFail)]
+    #[test_case(REBIND_TEST, v6::ErrorStatusCode::NoBinding)]
+    #[test_case(REBIND_TEST, v6::ErrorStatusCode::NotOnLink)]
+    #[test_case(REBIND_TEST, v6::ErrorStatusCode::NoAddrsAvail)]
+    #[test_case(REBIND_TEST, v6::ErrorStatusCode::NoPrefixAvail)]
+    fn renewing_receive_reply_with_error_status(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+        error_status_code: v6::ErrorStatusCode,
+    ) {
         let time = Instant::now();
         let addr = CONFIGURED_ADDRESSES[0];
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(addr)],
@@ -6460,32 +6966,41 @@ mod tests {
             AddressEntry::new_assigned(addr, PREFERRED_LIFETIME, VALID_LIFETIME),
         ))
         .collect::<HashMap<_, _>>();
-        assert_matches!(
-            &state,
-            Some(ClientState::Renewing(Renewing {
-                client_id,
-                addresses,
-                server_id,
-                collected_advertise: _,
-                dns_servers,
-                first_renew_time: _,
-                retrans_timeout: _,
-                solicit_max_rt: got_sol_max_rt,
-            })) if *client_id == CLIENT_ID &&
-                   *addresses == expected_addresses &&
-                   *server_id == SERVER_ID[0] &&
-                   dns_servers.is_empty() &&
-                   *got_sol_max_rt == Duration::from_secs(sol_max_rt.into())
-        );
+        let RenewingOrRebindingInner {
+            client_id,
+            addresses,
+            server_id,
+            collected_advertise: _,
+            dns_servers,
+            start_time: _,
+            retrans_timeout: _,
+            solicit_max_rt: got_sol_max_rt,
+        } = with_state(state);
+        assert_eq!(*client_id, CLIENT_ID);
+        assert_eq!(*addresses, expected_addresses);
+        assert_eq!(*server_id, SERVER_ID[0]);
+        assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
+        assert_eq!(*got_sol_max_rt, Duration::from_secs(sol_max_rt.into()));
         assert_matches!(&actions[..], []);
     }
 
-    #[test_case(v6::IAID::new(0))]
-    #[test_case(v6::IAID::new(1))]
-    fn renewing_receive_reply_with_missing_ias(present_iaid: v6::IAID) {
+    #[test_case(RENEW_TEST, v6::IAID::new(0))]
+    #[test_case(RENEW_TEST, v6::IAID::new(1))]
+    #[test_case(REBIND_TEST, v6::IAID::new(0))]
+    #[test_case(REBIND_TEST, v6::IAID::new(1))]
+    fn receive_reply_with_missing_ias(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+        present_iaid: v6::IAID,
+    ) {
         let addresses = &CONFIGURED_ADDRESSES[0..2];
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             addresses.iter().copied().map(TestIdentityAssociation::new_default).collect(),
@@ -6547,23 +7062,20 @@ mod tests {
             })
             .collect();
         {
-            let Renewing {
+            let RenewingOrRebindingInner {
                 client_id,
                 addresses,
                 server_id,
                 collected_advertise: _,
                 dns_servers,
-                first_renew_time,
+                start_time,
                 retrans_timeout: _,
                 solicit_max_rt,
-            } = assert_matches!(
-                &state,
-                Some(ClientState::Renewing(renewing)) => renewing
-            );
+            } = with_state(state);
             assert_eq!(*client_id, CLIENT_ID);
             assert_eq!(*addresses, expected_addresses);
             assert_eq!(*server_id, SERVER_ID[0]);
-            assert!(first_renew_time.is_some());
+            assert!(start_time.is_some());
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
@@ -6571,11 +7083,19 @@ mod tests {
         assert_matches!(&actions[..], []);
     }
 
-    #[test]
-    fn renewing_receive_reply_with_missing_ia_address_for_assigned_entry_does_not_extend_lifetime()
-    {
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn receive_reply_with_missing_ia_address_for_assigned_entry_does_not_extend_lifetime(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES[0..2]
@@ -6669,10 +7189,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn renewing_receive_reply_with_different_address() {
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn receive_reply_with_different_address(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
@@ -6753,10 +7282,19 @@ mod tests {
         );
     }
 
-    #[test]
-    fn renewing_no_binding() {
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn no_binding(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES[0..2]
@@ -6875,10 +7413,19 @@ mod tests {
     // 3. an IA_NA with no options;
     //
     // results in T1 and T2 being calculated solely based on the first IA_NA.
-    #[test]
-    fn renewing_receive_reply_calculate_t1_t2() {
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
+    fn receive_reply_calculate_t1_t2(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
@@ -7106,11 +7653,20 @@ mod tests {
         let _actions = client.handle_timeout(timeout, time);
     }
 
-    #[test]
+    #[test_case(RENEW_TEST)]
+    #[test_case(REBIND_TEST)]
     #[should_panic(expected = "received unexpected refresh timeout")]
-    fn renewing_refresh_timeout_is_unreachable() {
+    fn refresh_timeout_is_unreachable(
+        RenewRebindTest {
+            send_and_assert,
+            message_type: _,
+            expect_server_id: _,
+            with_state: _,
+            allow_response_from_any_server: _,
+        }: RenewRebindTest,
+    ) {
         let time = Instant::now();
-        let mut client = testutil::send_renew_and_assert(
+        let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
