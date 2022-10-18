@@ -450,15 +450,14 @@ pub mod options {
     use net_types::UnicastAddress;
     use nonzero_ext::nonzero;
     use packet::records::options::{
-        LengthEncoding, OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl,
+        LengthEncoding, OptionBuilder, OptionLayout, OptionParseErr, OptionParseLayout, OptionsImpl,
     };
     use packet::BufferView as _;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
 
     use super::NonZeroNdpLifetime;
-    use crate::utils::NonZeroDuration;
-    use crate::U32;
+    use crate::{utils::NonZeroDuration, U32};
 
     /// A value representing an infinite lifetime for various NDP options'
     /// lifetime fields.
@@ -861,7 +860,7 @@ pub mod options {
 
     impl OptionParseLayout for NdpOptionsImpl {
         // TODO(fxbug.dev/52288): Return more verbose logs on parsing errors.
-        type Error = ();
+        type Error = OptionParseErr;
 
         // NDP options don't have END_OF_OPTIONS or NOP.
         const END_OF_OPTIONS: Option<u8> = None;
@@ -871,7 +870,7 @@ pub mod options {
     impl<'a> OptionsImpl<'a> for NdpOptionsImpl {
         type Option = NdpOption<'a>;
 
-        fn parse(kind: u8, mut data: &'a [u8]) -> Result<Option<NdpOption<'a>>, ()> {
+        fn parse(kind: u8, mut data: &'a [u8]) -> Result<Option<NdpOption<'a>>, OptionParseErr> {
             let kind = if let Ok(k) = NdpOptionType::try_from(kind) {
                 k
             } else {
@@ -882,7 +881,8 @@ pub mod options {
                 NdpOptionType::SourceLinkLayerAddress => NdpOption::SourceLinkLayerAddress(data),
                 NdpOptionType::TargetLinkLayerAddress => NdpOption::TargetLinkLayerAddress(data),
                 NdpOptionType::PrefixInformation => {
-                    let data = LayoutVerified::<_, PrefixInformation>::new(data).ok_or(())?;
+                    let data =
+                        LayoutVerified::<_, PrefixInformation>::new(data).ok_or(OptionParseErr)?;
                     NdpOption::PrefixInformation(data.into_ref())
                 }
                 NdpOptionType::RedirectedHeader => NdpOption::RedirectedHeader {
@@ -893,7 +893,7 @@ pub mod options {
                 )),
                 NdpOptionType::RecursiveDnsServer => {
                     if data.len() < MIN_RECURSIVE_DNS_SERVER_OPTION_LENGTH {
-                        return Err(());
+                        return Err(OptionParseErr);
                     }
 
                     // Skip the reserved bytes which immediately follow the kind and length
@@ -904,17 +904,17 @@ pub mod options {
                     // As per RFC 8106 section 5.1, the 32 bit lifetime field immediately
                     // follows the reserved field.
                     let (lifetime, data) =
-                        LayoutVerified::<_, U32>::new_from_prefix(data).ok_or(())?;
+                        LayoutVerified::<_, U32>::new_from_prefix(data).ok_or(OptionParseErr)?;
 
                     // As per RFC 8106 section 5.1, the list of addresses immediately
                     // follows the lifetime field.
                     let addresses = LayoutVerified::<_, [Ipv6Addr]>::new_slice_unaligned(data)
-                        .ok_or(())?
+                        .ok_or(OptionParseErr)?
                         .into_slice();
 
                     // As per RFC 8106 section 5.3.1, the addresses should all be unicast.
                     if !addresses.iter().all(UnicastAddress::is_unicast) {
-                        return Err(());
+                        return Err(OptionParseErr);
                     }
 
                     NdpOption::RecursiveDnsServer(RecursiveDnsServer::new(
@@ -935,13 +935,14 @@ pub mod options {
 
                     let mut buf = &mut data;
 
-                    let fixed = buf.take_obj_front::<RouteInfoFixed>().ok_or(())?;
+                    let fixed = buf.take_obj_front::<RouteInfoFixed>().ok_or(OptionParseErr)?;
 
                     // The preference is preceded and followed by two 3-bit reserved fields.
                     let preference = super::RoutePreference::try_from(
                         (fixed.preference_raw & ROUTE_INFORMATION_PREFERENCE_MASK)
                             >> ROUTE_INFORMATION_PREFERENCE_RESERVED_BITS_RIGHT,
-                    )?;
+                    )
+                    .map_err(|()| OptionParseErr)?;
 
                     // We need to check whether the remaining buffer length storing the prefix is
                     // valid.
@@ -956,14 +957,14 @@ pub mod options {
                     // (included) octets i.e. 0 to 16 bytes.
                     let buf_len = buf.len();
                     if buf_len % OPTION_BYTES_PER_LENGTH_UNIT != 0 {
-                        return Err(());
+                        return Err(OptionParseErr);
                     }
                     let length = buf_len / OPTION_BYTES_PER_LENGTH_UNIT;
                     match (fixed.prefix_length, length) {
                         (65..=128, 2) => {}
                         (1..=64, 1 | 2) => {}
                         (0, 0 | 1 | 2) => {}
-                        _ => return Err(()),
+                        _ => return Err(OptionParseErr),
                     }
 
                     let mut prefix_buf = [0; 16];
@@ -972,7 +973,7 @@ pub mod options {
                     let prefix = Ipv6Addr::from_bytes(prefix_buf);
 
                     NdpOption::RouteInformation(RouteInformation::new(
-                        Subnet::new(prefix, fixed.prefix_length).map_err(|_| ())?,
+                        Subnet::new(prefix, fixed.prefix_length).map_err(|_| OptionParseErr)?,
                         fixed.route_lifetime_seconds.get(),
                         preference,
                     ))

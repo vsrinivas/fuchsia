@@ -12,7 +12,8 @@ use core::convert::TryFrom;
 use core::marker::PhantomData;
 
 use packet::records::options::{
-    AlignedOptionBuilder, LengthEncoding, OptionBuilder, OptionLayout, OptionParseLayout,
+    AlignedOptionBuilder, LengthEncoding, OptionBuilder, OptionLayout, OptionParseErr,
+    OptionParseLayout,
 };
 use packet::records::{
     ParsedRecord, RecordParseResult, Records, RecordsContext, RecordsImpl, RecordsImplLayout,
@@ -568,7 +569,7 @@ impl OptionLayout for HopByHopOptionsImpl {
 }
 
 impl OptionParseLayout for HopByHopOptionsImpl {
-    type Error = ();
+    type Error = OptionParseErr;
     const END_OF_OPTIONS: Option<u8> = Some(0);
     const NOP: Option<u8> = Some(1);
 }

@@ -255,7 +255,7 @@ impl<B: ByteSlice, A: IpAddress> FromRaw<TcpSegmentRaw<B>, TcpParseArgs<A>> for 
             .ok_or_else(|_| debug_err!(ParseError::Format, "Incomplete options"))
             .and_then(|o| {
                 Options::try_from_raw(o)
-                    .map_err(|_| debug_err!(ParseError::Format, "Options validation failed"))
+                    .map_err(|e| debug_err!(e.into(), "Options validation failed"))
             })?;
         let body = raw.body;
 
@@ -826,7 +826,9 @@ impl<A: IpAddress> PacketBuilder for TcpSegmentBuilder<A> {
 
 /// Parsing and serialization of TCP options.
 pub mod options {
-    use packet::records::options::{OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl};
+    use packet::records::options::{
+        OptionBuilder, OptionLayout, OptionParseErr, OptionParseLayout, OptionsImpl,
+    };
     use packet::BufferViewMut as _;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
     use zerocopy::{AsBytes, FromBytes, LayoutVerified, Unaligned};
@@ -910,7 +912,7 @@ pub mod options {
     }
 
     impl OptionParseLayout for TcpOptionsImpl {
-        type Error = ();
+        type Error = OptionParseErr;
         const END_OF_OPTIONS: Option<u8> = Some(0);
         const NOP: Option<u8> = Some(1);
     }
@@ -918,38 +920,38 @@ pub mod options {
     impl<'a> OptionsImpl<'a> for TcpOptionsImpl {
         type Option = TcpOption<'a>;
 
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption<'a>>, ()> {
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<TcpOption<'a>>, OptionParseErr> {
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
                     unreachable!("records::options::Options promises to handle EOL and NOP")
                 }
                 self::OPTION_KIND_MSS => {
                     if data.len() != 2 {
-                        Err(())
+                        Err(OptionParseErr)
                     } else {
                         Ok(Some(TcpOption::Mss(NetworkEndian::read_u16(&data))))
                     }
                 }
                 self::OPTION_KIND_WINDOW_SCALE => {
                     if data.len() != 1 {
-                        Err(())
+                        Err(OptionParseErr)
                     } else {
                         Ok(Some(TcpOption::WindowScale(data[0])))
                     }
                 }
                 self::OPTION_KIND_SACK_PERMITTED => {
                     if !data.is_empty() {
-                        Err(())
+                        Err(OptionParseErr)
                     } else {
                         Ok(Some(TcpOption::SackPermitted))
                     }
                 }
                 self::OPTION_KIND_SACK => Ok(Some(TcpOption::Sack(
-                    LayoutVerified::new_slice(data).ok_or(())?.into_slice(),
+                    LayoutVerified::new_slice(data).ok_or(OptionParseErr)?.into_slice(),
                 ))),
                 self::OPTION_KIND_TIMESTAMP => {
                     if data.len() != 8 {
-                        Err(())
+                        Err(OptionParseErr)
                     } else {
                         let ts_val = NetworkEndian::read_u32(&data);
                         let ts_echo_reply = NetworkEndian::read_u32(&data[4..]);

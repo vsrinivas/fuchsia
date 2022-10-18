@@ -274,7 +274,7 @@ impl<B: ByteSlice> FromRaw<Ipv4PacketRaw<B>, ()> for Ipv4Packet<B> {
                 return debug_err!(Err(ParseError::Format.into()), "Incomplete options");
             }
             MaybeParsed::Complete(unchecked) => Options::try_from_raw(unchecked)
-                .map_err(|e| debug_err!(ParseError::Format, "malformed options: {:?}", e))?,
+                .map_err(|e| debug_err!(e, "malformed options: {:?}", e))?,
         };
 
         if hdr_prefix.version() != 4 {
@@ -933,7 +933,9 @@ pub(crate) fn reassemble_fragmented_packet<
 
 /// Parsing and serialization of IPv4 options.
 pub mod options {
-    use packet::records::options::{OptionBuilder, OptionLayout, OptionParseLayout, OptionsImpl};
+    use packet::records::options::{
+        OptionBuilder, OptionLayout, OptionParseErr, OptionParseLayout, OptionsImpl,
+    };
     use packet::BufferViewMut;
     use zerocopy::byteorder::{ByteOrder, NetworkEndian};
 
@@ -1001,7 +1003,7 @@ pub mod options {
     }
 
     impl OptionParseLayout for Ipv4OptionsImpl {
-        type Error = ();
+        type Error = OptionParseErr;
         const END_OF_OPTIONS: Option<u8> = Some(0);
         const NOP: Option<u8> = Some(1);
     }
@@ -1009,7 +1011,7 @@ pub mod options {
     impl<'a> OptionsImpl<'a> for Ipv4OptionsImpl {
         type Option = Ipv4Option<'a>;
 
-        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Ipv4Option<'a>>, ()> {
+        fn parse(kind: u8, data: &'a [u8]) -> Result<Option<Ipv4Option<'a>>, OptionParseErr> {
             let copied = kind & (1 << 7) > 0;
             match kind {
                 self::OPTION_KIND_EOL | self::OPTION_KIND_NOP => {
@@ -1024,12 +1026,12 @@ pub mod options {
                             },
                         }))
                     } else {
-                        Err(())
+                        Err(OptionParseErr)
                     }
                 }
                 kind => {
                     if data.len() > 38 {
-                        Err(())
+                        Err(OptionParseErr)
                     } else {
                         Ok(Some(Ipv4Option {
                             copied,

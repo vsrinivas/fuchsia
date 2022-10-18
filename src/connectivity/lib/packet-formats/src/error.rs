@@ -6,6 +6,7 @@
 
 use net_types::ip::IpAddress;
 use net_types::MulticastAddress;
+use packet::records::options::OptionParseErr;
 use thiserror::Error;
 
 use crate::icmp::IcmpIpExt;
@@ -31,6 +32,12 @@ pub enum ParseError {
     /// Packet is not formatted properly.
     #[error("Packet is not formatted properly")]
     Format,
+}
+
+impl From<OptionParseErr> for ParseError {
+    fn from(OptionParseErr: OptionParseErr) -> ParseError {
+        ParseError::Format
+    }
 }
 
 /// Action to take when an IP node fails to parse a received IP packet.
@@ -142,6 +149,12 @@ pub enum IpParseError<I: IcmpIpExt> {
 impl<I: IcmpIpExt> From<ParseError> for IpParseError<I> {
     fn from(error: ParseError) -> Self {
         IpParseError::Parse { error }
+    }
+}
+
+impl<I: IcmpIpExt> From<OptionParseErr> for IpParseError<I> {
+    fn from(error: OptionParseErr) -> Self {
+        IpParseError::Parse { error: error.into() }
     }
 }
 
