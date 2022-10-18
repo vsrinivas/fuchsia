@@ -25,6 +25,7 @@
                 "fuchsia.session.scene.Manager",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.shortcut2.Registry",
                 "fuchsia.ui.test.input.Registry",
                 "fuchsia.ui.test.scene.Controller",
             ],

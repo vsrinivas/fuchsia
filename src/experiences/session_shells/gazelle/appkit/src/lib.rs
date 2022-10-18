@@ -10,4 +10,16 @@ pub mod window;
 #[cfg(test)]
 mod tests;
 
-pub use {child_view::*, event::*, utils::*, window::*};
+pub use {
+    child_view::*,
+    event::*,
+    fidl_fuchsia_input::Key,
+    fidl_fuchsia_ui_input3::{
+        KeyEvent, KeyEventStatus, KeyEventType, KeyMeaning, KeyboardEvent, Modifiers,
+        NonPrintableKey,
+    },
+    fidl_fuchsia_ui_shortcut2::Shortcut,
+    pointer_fusion::*,
+    utils::*,
+    window::*,
+};

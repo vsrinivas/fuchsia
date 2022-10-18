@@ -81,5 +81,9 @@
             protocol: [ "fuchsia.ui.test.input.Registry" ],
             from: "#input-helper",
         },
+        {
+            protocol: [ "fuchsia.ui.shortcut2.Registry" ],
+            from: "#shortcut_manager",
+        },
     ],
 }

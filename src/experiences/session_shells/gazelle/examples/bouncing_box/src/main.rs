@@ -97,7 +97,7 @@ impl<T> App<T> {
             Event::WindowEvent { window_id: id, event: window_event } => {
                 let window = self.windows.get_mut(&id).unwrap();
                 match window_event {
-                    WindowEvent::Resized { width, height } => {
+                    WindowEvent::Resized { width, height, .. } => {
                         // Set the bouncer's size.
                         let size = fmath::SizeU { width, height };
                         self.bouncer.as_mut().map(|bouncer| bouncer.size = size);

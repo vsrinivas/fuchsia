@@ -8,13 +8,14 @@ use {
     fidl_fuchsia_element as felement,
     fidl_fuchsia_input::Key,
     fidl_fuchsia_ui_app as ui_app,
-    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus},
-    fidl_fuchsia_ui_test_input as ui_test_input, fidl_fuchsia_ui_test_scene as ui_test_scene,
-    fuchsia_async as fasync,
+    fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyMeaning, NonPrintableKey},
+    fidl_fuchsia_ui_shortcut2 as ui_shortcut2, fidl_fuchsia_ui_test_input as ui_test_input,
+    fidl_fuchsia_ui_test_scene as ui_test_scene, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic::flatland::ViewCreationTokenPair,
     futures::future::{AbortHandle, Abortable},
     futures::{StreamExt, TryStreamExt},
+    pointer_fusion::*,
     std::collections::HashMap,
     tracing::*,
 };
@@ -69,7 +70,7 @@ async fn test_appkit() -> Result<(), Error> {
         match event {
             Event::Init => {}
             Event::WindowEvent { window_id: id, event: window_event } => match window_event {
-                WindowEvent::Resized { width, height } => {
+                WindowEvent::Resized { width, height, .. } => {
                     app.width = width;
                     app.height = height;
                     if app.active_window.is_none() {
@@ -291,6 +292,10 @@ async fn create_child_view_spec(
                     let mut window = Window::new(event_sender.clone())
                         .with_view_creation_token(view_creation_token.take().unwrap());
                     window.create_view().expect("Failed to create window for child view");
+                    window.register_shortcuts(vec![create_shortcut(
+                        1,
+                        vec![KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)],
+                    )]);
                     _window_holder = Some(window);
                 }
                 Event::WindowEvent { event: window_event, .. } => match window_event {
@@ -299,7 +304,16 @@ async fn create_child_view_spec(
                             tap(mouse.clone());
                         }
                     }
-                    WindowEvent::Mouse { .. } => {
+                    WindowEvent::Pointer { event: PointerEvent { phase: Phase::Up, .. } } => {
+                        // Inject tab key to invoke keyboard shortcut.
+                        inject_text("\t".to_string(), keyboard.clone());
+                    }
+                    WindowEvent::Shortcut { id, responder } => {
+                        assert!(id == 1);
+                        responder
+                            .send(ui_shortcut2::Handled::Handled)
+                            .expect("Failed to respond to keyboard shortcut");
+
                         // Inject 'q' to quit.
                         inject_text("q".to_string(), keyboard.clone());
                     }
@@ -358,4 +372,12 @@ fn tap(mouse: ui_test_input::MouseProxy) {
             .expect("Failed to tap using fuchsia.ui.test.input.Mouse");
     })
     .detach();
+}
+
+fn create_shortcut(id: u32, keys: Vec<KeyMeaning>) -> ui_shortcut2::Shortcut {
+    ui_shortcut2::Shortcut {
+        id,
+        key_meanings: keys,
+        options: ui_shortcut2::Options { ..ui_shortcut2::Options::EMPTY },
+    }
 }

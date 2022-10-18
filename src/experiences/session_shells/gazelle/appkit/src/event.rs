@@ -5,7 +5,8 @@
 use {
     fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_element as felement, fidl_fuchsia_ui_input3 as ui_input3,
-    fidl_fuchsia_ui_pointer as fptr, fidl_fuchsia_ui_views as ui_views,
+    fidl_fuchsia_ui_shortcut2 as ui_shortcut2, fidl_fuchsia_ui_views as ui_views,
+    pointer_fusion::PointerEvent,
 };
 
 use crate::{child_view::ChildViewId, window::WindowId};
@@ -46,7 +47,7 @@ type NextPresentTimeInNanos = i64;
 #[derive(Debug)]
 pub enum WindowEvent {
     /// Window is resized. This is also the first event sent upon window creation.
-    Resized { width: u32, height: u32 },
+    Resized { width: u32, height: u32, pixel_ratio: f32 },
     /// Window needs to be redrawn. Sent upon receiving the next frame request from Flatland.
     NeedsRedraw { next_present_time: NextPresentTimeInNanos },
     /// Window has received or lost focus.
@@ -56,10 +57,10 @@ pub enum WindowEvent {
         event: ui_input3::KeyEvent,
         responder: ui_input3::KeyboardListenerOnKeyEventResponder,
     },
-    /// A mouse event received for this window.
-    Mouse { event: fptr::MouseEvent },
-    /// A touch event received for this window.
-    Touch { event: fptr::TouchEvent },
+    /// A registered keyboard shortcut is invoked by the user.
+    Shortcut { id: u32, responder: ui_shortcut2::ListenerOnShortcutResponder },
+    /// A pointer event received for this window.
+    Pointer { event: PointerEvent },
     /// Window was closed by the [GraphicalPresenter] presenting this window.
     Closed,
 }
