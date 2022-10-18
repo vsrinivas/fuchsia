@@ -103,9 +103,11 @@ protocol Foo {
 
 TEST(FlatAstTests, BadMultipleLibrariesSameName) {
   SharedAmongstLibraries shared;
-  TestLibrary library1(&shared, "one.fidl", "library example;");
+  TestLibrary library1(&shared);
+  library1.AddFile("bad/fi-0041-a.test.fidl");
   ASSERT_COMPILED(library1);
-  TestLibrary library2(&shared, "two.fidl", "library example;");
+  TestLibrary library2(&shared);
+  library2.AddFile("bad/fi-0041-b.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library2, fidl::ErrMultipleLibrariesWithSameName);
 }
 

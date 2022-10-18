@@ -88,17 +88,17 @@ constexpr ErrorDef<39, flat::Name, std::string_view> ErrDeclNameConflictsWithLib
     "library under a different name.");
 constexpr ErrorDef<40> ErrFilesDisagreeOnLibraryName(
     "Two files in the library disagree about the name of the library");
-constexpr UndocumentedErrorDef<41, std::vector<std::string_view>> ErrMultipleLibrariesWithSameName(
+constexpr ErrorDef<41, std::vector<std::string_view>> ErrMultipleLibrariesWithSameName(
     "There are multiple libraries named '{}'");
-constexpr UndocumentedErrorDef<42, std::vector<std::string_view>> ErrDuplicateLibraryImport(
+constexpr ErrorDef<42, std::vector<std::string_view>> ErrDuplicateLibraryImport(
     "Library {} already imported. Did you require it twice?");
-constexpr UndocumentedErrorDef<43, std::vector<std::string_view>> ErrConflictingLibraryImport(
+constexpr ErrorDef<43, std::vector<std::string_view>> ErrConflictingLibraryImport(
     "import of library '{}' conflicts with another library import");
-constexpr UndocumentedErrorDef<44, std::vector<std::string_view>, std::string_view>
+constexpr ErrorDef<44, std::vector<std::string_view>, std::string_view>
     ErrConflictingLibraryImportAlias(
         "import of library '{}' under alias '{}' conflicts with another library import");
-constexpr UndocumentedErrorDef<45, const raw::AttributeList *>
-    ErrAttributesNotAllowedOnLibraryImport("no attributes allowed on library import, found: {}");
+constexpr ErrorDef<45, const raw::AttributeList *> ErrAttributesNotAllowedOnLibraryImport(
+    "no attributes allowed on library import, found: {}");
 constexpr ErrorDef<46, std::vector<std::string_view>> ErrUnknownLibrary(
     "Could not find library named {}. Did you include its sources with --files?");
 constexpr ErrorDef<47, SourceSpan> ErrProtocolComposedMultipleTimes(

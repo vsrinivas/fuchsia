@@ -1,0 +1,12 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0043c;
+
+using test.bad.fi0043a as fi0043b; // conflict
+using fi0043b;
+
+type Foo = struct {
+    a fi0043b.Bar;
+    b fi0043b.Baz;
+};

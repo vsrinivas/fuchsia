@@ -303,19 +303,15 @@ service ExampleService {
 }
 
 TEST(AttributesTests, BadNoAttributeOnUsingNotEventDoc) {
-  TestLibrary library(R"FIDL(
-library example;
-
-/// nope
-@no_attribute_on_using
-@even_doc
-using we.should.not.care;
-
-)FIDL");
+  SharedAmongstLibraries shared;
+  TestLibrary dependency(&shared);
+  dependency.AddFile("bad/fi-0045-a.test.fidl");
+  ASSERT_COMPILED(dependency);
+  TestLibrary library(&shared);
+  library.AddFile("bad/fi-0045-b.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrAttributesNotAllowedOnLibraryImport);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "no_attribute_on_using");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "even_doc");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "doc comment");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "also_not_allowed");
 }
 
 // Test that a duplicate attribute is caught, and nicely reported.

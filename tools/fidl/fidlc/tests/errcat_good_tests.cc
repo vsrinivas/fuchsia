@@ -168,6 +168,64 @@ TEST(ErrcatTests, Good0039ac) {
   ASSERT_COMPILED(library);
 }
 
+TEST(ErrcatTests, Good0041a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0041-a.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0041b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0041-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0042) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency(&shared);
+  dependency.AddFile("good/fi-0042-a.test.fidl");
+  ASSERT_COMPILED(dependency);
+  TestLibrary library(&shared);
+  library.AddFile("good/fi-0042-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0043) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency1(&shared);
+  dependency1.AddFile("good/fi-0043-a.test.fidl");
+  ASSERT_COMPILED(dependency1);
+  TestLibrary dependency2(&shared);
+  dependency2.AddFile("good/fi-0043-b.test.fidl");
+  ASSERT_COMPILED(dependency2);
+  TestLibrary library(&shared);
+  library.AddFile("good/fi-0043-c.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0044) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency1(&shared);
+  dependency1.AddFile("good/fi-0044-a.test.fidl");
+  ASSERT_COMPILED(dependency1);
+  TestLibrary dependency2(&shared);
+  dependency2.AddFile("good/fi-0044-b.test.fidl");
+  ASSERT_COMPILED(dependency2);
+  TestLibrary library(&shared);
+  library.AddFile("good/fi-0044-c.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0045) {
+  SharedAmongstLibraries shared;
+  TestLibrary dependency(&shared);
+  dependency.AddFile("good/fi-0045-a.test.fidl");
+  ASSERT_COMPILED(dependency);
+  TestLibrary library(&shared);
+  library.AddFile("good/fi-0045-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
 TEST(ErrcatTests, Good0046) {
   TestLibrary library;
   library.AddFile("good/fi-0046.test.fidl");

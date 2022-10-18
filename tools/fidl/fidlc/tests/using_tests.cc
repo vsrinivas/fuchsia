@@ -147,19 +147,13 @@ type Foo = struct {
 
 TEST(UsingTests, BadDuplicateUsingNoAlias) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency(&shared, "dependent.fidl", R"FIDL(library dependent;
-)FIDL");
+  TestLibrary dependency(&shared);
+  dependency.AddFile("bad/fi-0042-a.test.fidl");
   ASSERT_COMPILED(dependency);
-
-  TestLibrary library(&shared, "example.fidl", R"FIDL(
-library example;
-
-using dependent;
-using dependent; // duplicated
-
-)FIDL");
+  TestLibrary library(&shared);
+  library.AddFile("bad/fi-0042-b.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateLibraryImport);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fi0042a");
 }
 
 TEST(UsingTests, BadDuplicateUsingFirstAlias) {
@@ -253,43 +247,33 @@ using dependent2 as dependent1; // conflict
 
 TEST(UsingTests, BadConflictingUsingAliasAndLibrary) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency1(&shared, "dependent1.fidl", R"FIDL(library dependent1;
-)FIDL");
+  TestLibrary dependency1(&shared);
+  dependency1.AddFile("bad/fi-0043-a.test.fidl");
   ASSERT_COMPILED(dependency1);
-  TestLibrary dependency2(&shared, "dependent2.fidl", R"FIDL(library dependent2;
-)FIDL");
+  TestLibrary dependency2(&shared);
+  dependency2.AddFile("bad/fi-0043-b.test.fidl");
   ASSERT_COMPILED(dependency2);
 
-  TestLibrary library(&shared, "example.fidl", R"FIDL(
-library example;
-
-using dependent1 as dependent2;
-using dependent2; // conflict
-
-)FIDL");
+  TestLibrary library(&shared);
+  library.AddFile("bad/fi-0043-c.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConflictingLibraryImport);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent2");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fi0043b");
 }
 
 TEST(UsingTests, BadConflictingUsingAliasAndAlias) {
   SharedAmongstLibraries shared;
-  TestLibrary dependency1(&shared, "dependent1.fidl", R"FIDL(library dependent1;
-)FIDL");
+  TestLibrary dependency1(&shared);
+  dependency1.AddFile("bad/fi-0044-a.test.fidl");
   ASSERT_COMPILED(dependency1);
-  TestLibrary dependency2(&shared, "dependent2.fidl", R"FIDL(library dependent2;
-)FIDL");
+  TestLibrary dependency2(&shared);
+  dependency2.AddFile("bad/fi-0044-b.test.fidl");
   ASSERT_COMPILED(dependency2);
 
-  TestLibrary library(&shared, "example.fidl", R"FIDL(
-library example;
-
-using dependent1 as foo;
-using dependent2 as foo; // conflict
-
-)FIDL");
+  TestLibrary library(&shared);
+  library.AddFile("bad/fi-0044-c.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrConflictingLibraryImportAlias);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dependent2");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fi0044b");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "dep");
 }
 
 TEST(UsingTests, BadUnusedUsing) {
