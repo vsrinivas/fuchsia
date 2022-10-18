@@ -209,16 +209,6 @@ The example below adds two static child components to the created realm:
 Note: Realm Builder interprets component sources defined using a relative URL
 to be contained in the same package as the test component.
 
-### Adding Legacy Components {#legacy-components}
-
-Realm Builder also supports adding Legacy Components to your realm:
-
-* {C++}
-
-    ```cpp
-    {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/realm_builder/cpp/sample.cc" region_tag="add_legacy_component_cpp" adjust_indentation="auto" %}
-    ```
-
 ### Adding Mock Components {#mock-components}
 
 Mock components allow tests to supply a local implementation that behaves as a
