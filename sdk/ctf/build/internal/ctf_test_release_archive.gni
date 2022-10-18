@@ -80,13 +80,11 @@ template("ctf_test_release_archive") {
     archive_name = invoker.archive_name
   }
 
-  _copy_srcs = get_target_outputs(":$fuchsia_package_archive_target")
-  _copy_dsts = [ "$root_out_dir/cts/{{source_file_part}}" ]
   copy_target = "${target_name}_copy"
   copy(copy_target) {
     testonly = true
-    sources = _copy_srcs
-    outputs = _copy_dsts
+    sources = get_target_outputs(":$fuchsia_package_archive_target")
+    outputs = [ "$root_out_dir/cts/{{source_file_part}}" ]
     deps = [ ":$fuchsia_package_archive_target" ]
   }
 
@@ -95,7 +93,8 @@ template("ctf_test_release_archive") {
     deps = [ ":$copy_target" ]
 
     metadata = {
-      cts_artifacts = rebase_path(_copy_dsts, root_out_dir)
+      _cts_artifacts = get_target_outputs(":$copy_target")
+      cts_artifacts = rebase_path(_cts_artifacts, root_out_dir)
       test_manifest = [
         {
           archive_name = invoker.archive_name
