@@ -28,16 +28,18 @@ DriverComponent::DriverComponent(
 
 void DriverComponent::RequestDriverStop() { request_remove_(ZX_OK); }
 
-void DriverComponent::StopDriver() {
+zx_status_t DriverComponent::StopDriver() {
   if (stop_in_progress_) {
-    return;
+    return ZX_OK;
   }
 
   auto result = driver_->Stop();
   if (!result.ok()) {
     LOGF(ERROR, "Failed to stop a driver: %s", result.FormatDescription().data());
+    return result.status();
   }
   stop_in_progress_ = true;
+  return ZX_OK;
 }
 
 void DriverComponent::on_fidl_error(fidl::UnbindInfo info) {

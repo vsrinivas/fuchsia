@@ -424,7 +424,10 @@ void Node::Remove() {
   // If we still have a driver bound to us, we tell it to stop.
   // (The Driver will call back into this Remove function once it stops).
   if (driver_component_ && driver_component_->is_alive()) {
-    driver_component_->StopDriver();
+    zx_status_t status = driver_component_->StopDriver();
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to stop node: %s", TopoName().c_str());
+    }
     return;
   }
 

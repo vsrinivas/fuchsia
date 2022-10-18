@@ -40,7 +40,7 @@ class DriverComponent : public fidl::WireServer<fuchsia_component_runner::Compon
   // This function should only be called after all of this Driver's children
   // have been stopped.
   // This should only be used by the Node class.
-  void StopDriver();
+  zx_status_t StopDriver();
 
  private:
   // This is called when fuchsia_driver_framework::Driver is closed.
