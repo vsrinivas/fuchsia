@@ -6,6 +6,8 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
+- title: "How to run performance tests"
+  path: /docs/development/performance/running_performance_tests.md
 - title: "Viewing Zircon microbenchmarks with Chromeperf"
   path: /docs/development/performance/chromeperf_user_guide.md
 - title: "Fuchsiaperf format for performance test results"
