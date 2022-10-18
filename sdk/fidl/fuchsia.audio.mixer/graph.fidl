@@ -35,18 +35,15 @@ protocol GraphCreator {
         /// Optional. Empty if not specified.
         2: name string:MAX_NAME_LENGTH;
 
-        /// Each graph has two threads dedicated to handling FIDL requests: a main
-        /// thread, which handles time-insensitive requests, and a real-time FIDL
-        /// thread, which handles time-sensitive requests. This field provides a
-        /// deadline profile for the real-time FIDL thread.
+        /// Deadline profile for the FIDL thread.
         ///
-        /// For example, all `[fuchsia.media2/StreamSink`] servers run on the
-        /// real-time FIDL thread. Packets sent on this protocol must be read
-        /// immediately, otherwise the caller may miss their deadline.
+        /// This is to ensure time-sensitive requests are handled properly.
+        /// For example, packets sent using `[fuchsia.media2/StreamSink`]
+        /// protocols must be read immediately, otherwise the caller may miss
+        /// their deadline.
         ///
-        /// Optional. If not specified, the real-time FIDL thread runs at a normal
-        /// priority.
-        3: realtime_fidl_thread_deadline_profile zx.handle:PROFILE;
+        /// Optional. If not specified, the FIDL thread runs at a normal priority.
+        3: fidl_thread_deadline_profile zx.handle:PROFILE;
 
         /// If specified, the graph will use synthetic clocks that are created
         /// and controlled over the given channel. This can be used to run the

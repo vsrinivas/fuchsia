@@ -208,11 +208,8 @@ class GraphServerTest : public ::testing::Test {
 
  private:
   std::shared_ptr<FidlThread> thread_ = FidlThread::CreateFromNewThread("test_fidl_thread");
-  std::shared_ptr<FidlThread> realtime_thread_ =
-      FidlThread::CreateFromNewThread("test_realtime_fidl_thread");
   TestServerAndClient<GraphServer> wrapper_{
       thread_, GraphServer::Args{
-                   .realtime_fidl_thread = realtime_thread_,
                    .clock_factory = std::make_shared<RealClockFactory>(),
                    .clock_registry = std::make_shared<ClockRegistry>(),
                }};

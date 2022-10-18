@@ -35,9 +35,6 @@ class GraphServer
     // For debugging only: may be empty or not unique.
     std::string name;
 
-    // The real-time FIDL thread.
-    std::shared_ptr<const FidlThread> realtime_fidl_thread;
-
     // Factory to create clocks used by this graph.
     std::shared_ptr<ClockFactory> clock_factory;
 
@@ -46,7 +43,7 @@ class GraphServer
   };
 
   // The returned server will live until the `server_end` channel is closed.
-  static std::shared_ptr<GraphServer> Create(std::shared_ptr<const FidlThread> main_fidl_thread,
+  static std::shared_ptr<GraphServer> Create(std::shared_ptr<const FidlThread> fidl_thread,
                                              fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end,
                                              Args args);
 
@@ -92,7 +89,6 @@ class GraphServer
   ThreadId NextThreadId();
 
   const std::string name_;
-  const std::shared_ptr<const FidlThread> realtime_fidl_thread_;
   const std::shared_ptr<GlobalTaskQueue> global_task_queue_ = std::make_shared<GlobalTaskQueue>();
   const std::shared_ptr<GraphDetachedThread> detached_thread_ =
       std::make_shared<GraphDetachedThread>(global_task_queue_);

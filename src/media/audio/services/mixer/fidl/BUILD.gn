@@ -43,6 +43,10 @@ source_set("fidl") {
     "reachability.h",
     "real_clock_factory.cc",
     "real_clock_factory.h",
+    "stream_sink_client.cc",
+    "stream_sink_client.h",
+    "stream_sink_server.cc",
+    "stream_sink_server.h",
     "synthetic_clock_factory.cc",
     "synthetic_clock_factory.h",
     "synthetic_clock_server.cc",
@@ -50,6 +54,7 @@ source_set("fidl") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.audio:fuchsia.audio_cpp_wire",
     "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_natural_ostream",
     "//sdk/fidl/fuchsia.audio.mixer:fuchsia.audio.mixer_cpp_wire",
     "//sdk/fidl/fuchsia.mediastreams:fuchsia.mediastreams_cpp_wire",
@@ -57,8 +62,8 @@ source_set("fidl") {
     "//sdk/lib/fit-promise",
     "//src/media/audio/services/common",
     "//src/media/audio/services/mixer/common",
-    "//src/media/audio/services/mixer/fidl_realtime",
     "//src/media/audio/services/mixer/mix",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/trace",
   ]
 
@@ -81,6 +86,8 @@ executable("fidl_unittests") {
     "producer_node_unittest.cc",
     "reachability_unittest.cc",
     "real_clock_factory_unittest.cc",
+    "stream_sink_client_unittest.cc",
+    "stream_sink_server_unittest.cc",
     "synthetic_clock_factory_unittest.cc",
     "synthetic_clock_server_unittest.cc",
   ]
@@ -93,8 +100,13 @@ executable("fidl_unittests") {
     "//src/media/audio/lib/processing:prebuilt_coefficient_tables",
     "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/fidl/testing",
+    "//src/media/audio/services/mixer/mix",
     "//src/media/audio/services/mixer/mix/testing",
     "//third_party/googletest:gmock",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/async-loop/testing:async-loop-testing",
+    "//zircon/system/ulib/sync:sync-cpp",
   ]
 }
 

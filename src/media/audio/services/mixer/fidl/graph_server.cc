@@ -26,8 +26,8 @@
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
-#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_client.h"
-#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
+#include "src/media/audio/services/mixer/fidl/stream_sink_client.h"
+#include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer_consumer_writer.h"
 #include "src/media/audio/services/mixer/mix/stream_sink_consumer_writer.h"
@@ -249,15 +249,13 @@ ParseCreateEdgeOptions(const GraphServer::CreateEdgeRequestView& request) {
 
 // static
 std::shared_ptr<GraphServer> GraphServer::Create(
-    std::shared_ptr<const FidlThread> main_fidl_thread,
+    std::shared_ptr<const FidlThread> fidl_thread,
     fidl::ServerEnd<fuchsia_audio_mixer::Graph> server_end, Args args) {
-  return BaseFidlServer::Create(std::move(main_fidl_thread), std::move(server_end),
-                                std::move(args));
+  return BaseFidlServer::Create(std::move(fidl_thread), std::move(server_end), std::move(args));
 }
 
 GraphServer::GraphServer(Args args)
     : name_(std::move(args.name)),
-      realtime_fidl_thread_(std::move(args.realtime_fidl_thread)),
       clock_factory_(std::move(args.clock_factory)),
       clock_registry_(std::move(args.clock_registry)) {}
 
@@ -292,7 +290,7 @@ void GraphServer::CreateProducer(CreateProducerRequestView request,
     media_ticks_per_ns = result.value().media_ticks_per_ns;
 
     auto server = StreamSinkServer::Create(
-        realtime_fidl_thread_, std::move(stream_sink.server_end()),
+        thread_ptr(), std::move(stream_sink.server_end()),
         StreamSinkServer::Args{
             .format = *format,
             .media_ticks_per_ns = media_ticks_per_ns,
@@ -395,11 +393,11 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
     const auto client = std::make_shared<StreamSinkClient>(StreamSinkClient::Args{
         .format = *format,
         .frames_per_packet = frames_per_packet,
-        .client = fidl::WireSharedClient(std::move(stream_sink.client_end()),
-                                         realtime_fidl_thread_->dispatcher()),
+        .client =
+            fidl::WireSharedClient(std::move(stream_sink.client_end()), thread().dispatcher()),
         .payload_buffers = {{0, std::move(result.value().payload_buffer)}},
         .recycled_packet_queue = packet_queue,
-        .thread = realtime_fidl_thread_,
+        .thread = thread_ptr(),
     });
 
     // This keeps `client` alive implicitly via the callbacks.
@@ -805,7 +803,7 @@ void GraphServer::CreateGainControl(CreateGainControlRequestView request,
 
   // Register gain control.
   const auto id = NextGainControlId();
-  auto server = GainControlServer::Create(realtime_fidl_thread_, std::move(request->control()),
+  auto server = GainControlServer::Create(thread_ptr(), std::move(request->control()),
                                           GainControlServer::Args{
                                               .id = id,
                                               .name = name,

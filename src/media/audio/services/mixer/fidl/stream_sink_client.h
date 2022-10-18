@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_CLIENT_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_CLIENT_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_CLIENT_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_CLIENT_H_
 
 #include <fidl/fuchsia.media2/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
@@ -91,4 +91,4 @@ class StreamSinkClient : public std::enable_shared_from_this<StreamSinkClient> {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_CLIENT_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_CLIENT_H_

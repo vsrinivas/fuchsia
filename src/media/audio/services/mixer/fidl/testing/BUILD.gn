@@ -15,11 +15,15 @@ source_set("testing") {
     "fake_graph.h",
     "graph_mix_thread_without_loop.cc",
     "graph_mix_thread_without_loop.h",
+    "test_stream_sink_server_and_client.h",
   ]
 
   public_deps = [
+    "//sdk/lib/syslog/cpp",
+    "//src/media/audio/services/common/testing",
     "//src/media/audio/services/mixer/common",
     "//src/media/audio/services/mixer/fidl",
     "//src/media/audio/services/mixer/mix/testing",
+    "//third_party/googletest:gtest",
   ]
 }

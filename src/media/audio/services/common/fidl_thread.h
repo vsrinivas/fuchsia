@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_REALTIME_FIDL_THREAD_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_REALTIME_FIDL_THREAD_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_FIDL_THREAD_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_FIDL_THREAD_H_
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
@@ -67,4 +67,4 @@ class FidlThread {
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_REALTIME_FIDL_THREAD_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_COMMON_FIDL_THREAD_H_

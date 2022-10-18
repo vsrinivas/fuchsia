@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_SERVER_H_
-#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_SERVER_H_
+#ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_SERVER_H_
+#define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_SERVER_H_
 
 #include <fidl/fuchsia.media2/cpp/wire.h>
 #include <zircon/errors.h>
@@ -75,4 +75,4 @@ class StreamSinkServer
 
 }  // namespace media_audio
 
-#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_REALTIME_STREAM_SINK_SERVER_H_
+#endif  // SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_STREAM_SINK_SERVER_H_

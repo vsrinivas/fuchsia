@@ -41,20 +41,20 @@ void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync
     args.name = "Graph" + std::to_string(num_graphs_);
   }
 
-  args.realtime_fidl_thread = FidlThread::CreateFromNewThread(args.name + "-RealtimeFidlThread");
-  if (request->has_realtime_fidl_thread_deadline_profile() &&
-      request->realtime_fidl_thread_deadline_profile().is_valid()) {
-    args.realtime_fidl_thread->PostTask(
-        [profile = std::move(request->realtime_fidl_thread_deadline_profile())]() {
-          if (auto status = zx::thread::self()->set_profile(profile, 0); status != ZX_OK) {
-            FX_PLOGS(WARNING, status) << "Failed to set deadline profile for 'RealtimeFidlThread'";
-          }
-        });
+  // TODO(fxbug.dev/87651): Should we be reusing `this->thread_ptr()` here?
+  auto fidl_thread = FidlThread::CreateFromNewThread(args.name + "-FidlThread");
+  if (request->has_fidl_thread_deadline_profile() &&
+      request->fidl_thread_deadline_profile().is_valid()) {
+    fidl_thread->PostTask([profile = std::move(request->fidl_thread_deadline_profile())]() {
+      if (auto status = zx::thread::self()->set_profile(profile, 0); status != ZX_OK) {
+        FX_PLOGS(WARNING, status) << "Failed to set deadline profile for 'FidlThread'";
+      }
+    });
   }
 
   if (request->has_synthetic_clock_realm()) {
-    auto realm = SyntheticClockRealmServer::Create(thread_ptr(),
-                                                   std::move(request->synthetic_clock_realm()));
+    auto realm =
+        SyntheticClockRealmServer::Create(fidl_thread, std::move(request->synthetic_clock_realm()));
     args.clock_factory = std::make_shared<SyntheticClockFactory>(realm->realm());
     args.clock_registry = realm->registry();
   } else {
@@ -64,7 +64,8 @@ void GraphCreatorServer::Create(CreateRequestView request, CreateCompleter::Sync
 
   // Create a server to control this graph.
   // The created object will live until `args.sever_end` is closed.
-  AddChildServer(GraphServer::Create(thread_ptr(), std::move(request->graph()), std::move(args)));
+  AddChildServer(
+      GraphServer::Create(std::move(fidl_thread), std::move(request->graph()), std::move(args)));
 
   fidl::Arena arena;
   completer.ReplySuccess(

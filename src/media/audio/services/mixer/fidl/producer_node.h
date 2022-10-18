@@ -14,7 +14,7 @@
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
-#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
+#include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/producer_stage.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
 #include "src/media/audio/services/mixer/mix/start_stop_control.h"

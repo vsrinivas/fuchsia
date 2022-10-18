@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/media/audio/services/mixer/fidl_realtime/stream_sink_server.h"
+#include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
 
 #include <lib/sync/cpp/completion.h>
 #include <lib/syslog/cpp/macros.h>
@@ -14,7 +14,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/services/common/logging.h"
-#include "src/media/audio/services/mixer/fidl_realtime/testing/test_stream_sink_server_and_client.h"
+#include "src/media/audio/services/mixer/fidl/testing/test_stream_sink_server_and_client.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/test_fence.h"
 

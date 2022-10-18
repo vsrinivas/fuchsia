@@ -10,7 +10,6 @@ source_set("testing") {
   visibility = [
     "../*",
     "//src/media/audio/services/mixer/fidl/*",
-    "//src/media/audio/services/mixer/fidl_realtime/*",
   ]
 
   sources = [
