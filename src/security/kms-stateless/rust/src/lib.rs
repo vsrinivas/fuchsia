@@ -12,7 +12,7 @@ const DERIVED_KEY_SIZE: usize = 16;
 const KEY_INFO_SIZE: usize = 32;
 const DEV_CLASS_TEE: &'static str = "/dev/class/tee/000";
 
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum TaKeysafeCommand {
     GetUserDataStorageKey = 8,
     RotateHardwareDerivedKey = 9,
