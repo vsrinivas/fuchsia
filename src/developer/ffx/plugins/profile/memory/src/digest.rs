@@ -545,4 +545,111 @@ mod tests {
             pretty_assertions::assert_eq!(process, *expected);
         }
     }
+
+    // Reproduce a case similar to how blobfs shares the VMOs containing the file content.
+    // `blobfs.cm` shares an unmodified child VMO with `app.cmx`.
+    // The children VMO has 0 committed pages.
+    // The test verifies that the shared memory charged to `app.cmx` is 0 despite the fact
+    // that it owns a VMO that has a parent with committed memory.
+    #[test]
+    fn code_pages_received_from_blobfs_test() {
+        let raw = raw::Digest {
+            time: 1234567,
+            kernel: raw::Kernel::default(),
+            processes: vec![
+                raw::Process::Headers(raw::ProcessHeaders::default()),
+                raw::Process::Data(raw::ProcessData {
+                    koid: 2,
+                    name: "blobfs.cm".to_string(),
+                    vmos: vec![1],
+                }),
+                raw::Process::Data(raw::ProcessData {
+                    koid: 3,
+                    name: "app.cmx".to_string(),
+                    vmos: vec![2],
+                }),
+            ],
+            vmo_names: vec!["blob-xxx".to_string(), "app.cmx".to_string()],
+            vmos: vec![
+                raw::Vmo::Headers(raw::VmoHeaders::default()),
+                raw::Vmo::Data(raw::VmoData {
+                    koid: 1,
+                    name: 0,
+                    parent_koid: 0,
+                    committed_bytes: 500,
+                    allocated_bytes: 1000,
+                }),
+                raw::Vmo::Data(raw::VmoData {
+                    koid: 2,
+                    name: 1,
+                    parent_koid: 1,
+                    committed_bytes: 0,
+                    allocated_bytes: 1000,
+                }),
+            ],
+        };
+        let expected_processes_per_koid = HashMap::from([
+            (
+                2,
+                processed::Process {
+                    koid: 2,
+                    name: "blobfs.cm".to_string(),
+                    memory: processed::RetainedMemory { private: 0, scaled: 250, total: 500 },
+                    name_to_memory: {
+                        let mut result = HashMap::new();
+                        result.insert(
+                            "blob-xxx".to_string(),
+                            processed::RetainedMemory { private: 0, scaled: 250, total: 500 },
+                        );
+                        result
+                    },
+                    vmos: {
+                        let mut result = HashSet::new();
+                        result.insert(1);
+                        result
+                    },
+                },
+            ),
+            (
+                3,
+                processed::Process {
+                    koid: 3,
+                    name: "app.cmx".to_string(),
+                    memory: processed::RetainedMemory { private: 0, scaled: 0, total: 0 },
+                    name_to_memory: {
+                        let mut result = HashMap::new();
+                        result.insert(
+                            "app.cmx".to_string(),
+                            processed::RetainedMemory { private: 0, scaled: 0, total: 0 },
+                        );
+                        result
+                    },
+                    vmos: {
+                        let mut result = HashSet::new();
+                        result.insert(2);
+                        result
+                    },
+                },
+            ),
+        ]);
+        let processed = processed::Digest::from(raw);
+        // Check that the process list is sorted
+        {
+            let mut pairs = processed.processes.windows(2);
+            while let Some([p1, p2]) = pairs.next() {
+                assert!(
+                    p1.memory.private >= p2.memory.private,
+                    "Processes are not presented in sorted order: {:?} < {:?}",
+                    p1.memory,
+                    p2.memory
+                );
+            }
+        }
+        for process in processed.processes {
+            let expected = expected_processes_per_koid
+                .get(&process.koid)
+                .expect(&format!("Digest contains unexpected process {:?}", process));
+            pretty_assertions::assert_eq!(process, *expected);
+        }
+    }
 }
