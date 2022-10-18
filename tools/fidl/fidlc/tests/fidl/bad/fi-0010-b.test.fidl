@@ -1,0 +1,4 @@
+library test.bad.fi0010b;
+
+@foo(bar.baz="Bar", zork="Zoom")
+type Empty = struct{};

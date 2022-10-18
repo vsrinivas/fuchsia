@@ -1,0 +1,5 @@
+library test.good.fi0010a;
+
+type Foo = struct {
+    value uint64;
+};

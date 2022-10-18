@@ -6,6 +6,7 @@
 
 #include <zxtest/zxtest.h>
 
+#include "fidl/diagnostics.h"
 #include "tools/fidl/fidlc/include/fidl/lexer.h"
 #include "tools/fidl/fidlc/include/fidl/parser.h"
 #include "tools/fidl/fidlc/include/fidl/raw_ast.h"
@@ -427,15 +428,10 @@ type Test = struct / {
 }
 
 TEST(ParsingTests, BadIdentifierTest) {
-  TestLibrary library(R"FIDL(
-library test;
-
-type test_ = struct {
-    uint8 uint8;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0010-a.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "test_");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Foo_");
 }
 
 class LocaleSwapper {
@@ -501,6 +497,37 @@ TEST(ParsingTests, GoodAttributeValueHasCorrectContents) {
   auto arg_value = static_cast<fidl::raw::LiteralConstant*>(arg->value.get());
   ASSERT_STREQ(static_cast<fidl::raw::StringLiteral*>(arg_value->literal.get())->MakeContents(),
                "Bar");
+}
+
+TEST(ParsingTests, BadAttributeWithDottedIdentifier) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0010-b.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidIdentifier);
+}
+
+TEST(ParsingTests, GoodAttributeWithMultipleParameters) {
+  TestLibrary library;
+  library.AddFile("good/fi-0010-b.test.fidl");
+
+  std::unique_ptr<fidl::raw::File> ast;
+  ASSERT_TRUE(library.Parse(&ast));
+
+  std::unique_ptr<fidl::raw::Attribute> attribute =
+      std::move(ast->type_decls.front()->attributes->attributes.front());
+  ASSERT_STREQ(attribute->maybe_name->span().data(), "foo");
+  ASSERT_TRUE(attribute->args.size() == 2);
+
+  std::unique_ptr<fidl::raw::AttributeArg> arg1 = std::move(attribute->args[0]);
+  ASSERT_EQ(arg1->maybe_name->span().data(), "bar");
+  auto arg1_value = static_cast<fidl::raw::LiteralConstant*>(arg1->value.get());
+  ASSERT_STREQ(static_cast<fidl::raw::StringLiteral*>(arg1_value->literal.get())->MakeContents(),
+               "Bar");
+
+  std::unique_ptr<fidl::raw::AttributeArg> arg2 = std::move(attribute->args[1]);
+  ASSERT_EQ(arg2->maybe_name->span().data(), "zork");
+  auto arg2_value = static_cast<fidl::raw::LiteralConstant*>(arg2->value.get());
+  ASSERT_STREQ(static_cast<fidl::raw::StringLiteral*>(arg2_value->literal.get())->MakeContents(),
+               "Zoom");
 }
 
 TEST(ParsingTests, GoodSimpleDocComment) {

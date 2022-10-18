@@ -1,0 +1,6 @@
+library test.bad.fi0010a;
+
+// Foo_ is not a valid identifier because it ends with '_'.
+type Foo_ = struct {
+    value uint64;
+};
