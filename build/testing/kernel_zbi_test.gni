@@ -14,7 +14,6 @@ import("//build/testing/zbi_test.gni")
 template("kernel_zbi_test") {
   zbi_test(target_name) {
     assert(current_cpu != "")
-
     deps = []
     forward_variables_from(invoker, "*")
     deps += [ "//zircon/kernel" ]

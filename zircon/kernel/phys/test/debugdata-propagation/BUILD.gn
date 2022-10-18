@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/testing/kernel_zbi_test.gni")
+import("//build/testing/zbi_test_executable.gni")
+import("//zircon/kernel/phys/test/turducken_zbi_test.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+
+if (current_toolchain != default_toolchain) {
+  zbi_executable("debugdata-provider") {
+    testonly = true
+    sources = [ "debugdata-provider.cc" ]
+    deps = [
+      "..:turducken",
+      "//src/lib/zbitl",
+      "//zircon/kernel/phys:symbolize",
+      "//zircon/kernel/phys/lib/boot-shim",
+    ]
+  }
+
+  mobius_turducken_test("debugdata-provider-turducken-zbi") {
+    kernel = ":debugdata-provider"
+  }
+}
+
+zbi_test_executable("early-boot-debugdata-test") {
+  testonly = true
+  sources = [ "debugdata-test.cc" ]
+  deps = [
+    "//src/lib/zbitl",
+    "//src/zircon/testing/standalone-test",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+kernel_zbi_test("early-boot-debugdata-kernel-zbi") {
+  # While only a single item is present in this list, it is recommeneded to set this to
+  # remind readers that order matters, kernel items are booted in the order they are seen in the container
+  # and the kernel items in the container is determined by the relative position in the dependency list.
+  # NOSORT
+  deps = [ ":early-boot-debugdata-test" ]
+}
+
+turducken_cuckoo_test("early-boot-debugdata-zbi-test") {
+  boot_zbi = ":debugdata-provider-turducken-zbi.zbi(//zircon/kernel/phys:kernel.phys_$target_cpu)"
+  next_zbi = ":early-boot-debugdata-kernel-zbi.zbi"
+}

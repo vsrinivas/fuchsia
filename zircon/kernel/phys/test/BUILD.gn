@@ -4,17 +4,25 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-if (current_toolchain != default_toolchain) {
-  import("//build/dist/generated_resource.gni")
-  import("//build/zbi/kernel_cmdline.gni")
-  import("//build/zbi/zbi_input.gni")
-  import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-  import("//zircon/kernel/phys/efi/efi_executable.gni")
-  import("//zircon/kernel/phys/qemu.gni")
-  import("//zircon/kernel/phys/zbi_executable.gni")
-  import("phys_zbi_test.gni")
-  import("turducken_zbi_test.gni")
+import("//build/dist/generated_resource.gni")
+import("//build/zbi/kernel_cmdline.gni")
+import("//build/zbi/zbi_input.gni")
+import("//src/bringup/lib/mexec/testing/zbi_test.gni")
+import("//src/bringup/lib/mexec/testing/zbi_test.gni")
+import("//zircon/kernel/phys/efi/efi_executable.gni")
+import("//zircon/kernel/phys/qemu.gni")
+import("//zircon/kernel/phys/zbi_executable.gni")
+import("phys_zbi_test.gni")
+import("turducken_zbi_test.gni")
 
+# Used for turducken_cuckoo_test(), instructing tuducken tests, when the tests finishes successfully
+# it should boot the next kernel item in the boot zbi.
+kernel_cmdline("turducken-boot-next") {
+  testonly = true
+  args = [ "turducken.boot-next=true" ]
+}
+
+if (current_toolchain != default_toolchain) {
   assert(toolchain_environment == "kernel.phys" || in_qemu_environment ||
              toolchain_environment == "kernel.efi",
          "phys/test/BUILD.gn evaluated in $current_toolchain")
@@ -343,13 +351,6 @@ if (current_toolchain != default_toolchain) {
     kernel = ":trampoline-boot-test"
   }
 
-  # Used for turducken_cuckoo_test(), instructing tuducken tests, when the tests finishes successfully
-  # it should boot the next kernel item in the boot zbi.
-  kernel_cmdline("turducken-boot-next") {
-    testonly = true
-    args = [ "turducken.boot-next=true" ]
-  }
-
   turducken_cuckoo_test("turducken-boot-next-zbi-test") {
     boot_zbi = ":turducken-zbi-test.zbi"
     next_zbi = ":zbi-hello-world-test.zbi"
@@ -381,8 +382,6 @@ if (current_toolchain != default_toolchain) {
     }
   }
 } else {  # current_toolchain == default_toolchain
-  import("//src/bringup/lib/mexec/testing/zbi_test.gni")
-
   # We create mexec-chainloading variations of all of the phys ZBI tests.
   test_deps = []
   foreach(test,
@@ -405,7 +404,11 @@ if (current_toolchain != default_toolchain) {
 
   group("test") {
     testonly = true
-    deps =
-        [ ":test(//zircon/kernel/phys:kernel.phys_$current_cpu)" ] + test_deps
+    deps = [
+             ":test(//zircon/kernel/phys:kernel.phys_$current_cpu)",
+
+             # Debug Data propagation to userspace.
+             "debugdata-propagation:early-boot-debugdata-zbi-test",
+           ] + test_deps
   }
 }
