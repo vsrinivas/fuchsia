@@ -10,9 +10,23 @@ group("test-driver") {
   deps = [ ":package" ]
 }
 
+resource("test_driver_file_under_64KB") {
+  sources = [ "resources/foo.txt" ]
+  outputs = [ "resources/foo.txt" ]
+}
+
+resource("test_driver_file_over_64KB") {
+  sources = [ "resources/flower.jpeg" ]
+  outputs = [ "resources/flower.jpeg" ]
+}
+
 fuchsia_component("component") {
   component_name = "test-driver"
   manifest = "meta/test_driver.cml"
+  deps = [
+    ":test_driver_file_over_64KB",
+    ":test_driver_file_under_64KB",
+  ]
 }
 
 fuchsia_package("package") {
