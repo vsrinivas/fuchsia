@@ -7,6 +7,7 @@ package result
 type ResultConfig struct {
 	FuchsiaDir        string      `json:"fuchsiaDir"`
 	OutDir            string      `json:"outDir"`
+	RootOutDir        string      `json:"rootOutDir"`
 	LicenseOutDir     string      `json:"licenseOutDir"`
 	Outputs           []string    `json:"outputs"`
 	Templates         []*Template `json:"templates"`
@@ -44,6 +45,9 @@ func NewConfig() *ResultConfig {
 func (c *ResultConfig) Merge(other *ResultConfig) {
 	if c.FuchsiaDir == "" {
 		c.FuchsiaDir = other.FuchsiaDir
+	}
+	if c.RootOutDir == "" {
+		c.RootOutDir = other.RootOutDir
 	}
 	if c.OutDir == "" {
 		c.OutDir = other.OutDir

@@ -88,11 +88,13 @@ func mainImpl() error {
 	ConfigVars["{BUILD_DIR}"] = *buildDir
 
 	// outDir
+	rootOutDir := *outDir
 	if *outDir != "" {
 		*outDir, err = filepath.Abs(*outDir)
 		if err != nil {
 			return fmt.Errorf("Failed to get absolute directory for *outDir %v: %v", *outDir, err)
 		}
+		rootOutDir = *outDir
 
 		if *outputLicenseFile {
 			productBoard := fmt.Sprintf("%v.%v", *buildInfoProduct, *buildInfoBoard)
@@ -108,6 +110,7 @@ func mainImpl() error {
 		}
 	}
 	ConfigVars["{OUT_DIR}"] = *outDir
+	ConfigVars["{ROOT_OUT_DIR}"] = rootOutDir
 
 	// licensesOutDir
 	if *licensesOutDir != "" {

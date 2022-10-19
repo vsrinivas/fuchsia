@@ -5,11 +5,14 @@
 package result
 
 import (
+	"archive/tar"
 	"bytes"
 	"compress/gzip"
 	"encoding/json"
 	"fmt"
+	"io"
 	"os"
+	"path"
 	"path/filepath"
 	"sort"
 	"strconv"
@@ -101,6 +104,10 @@ func SaveResults(cmdConfig interface{}, cmdMetrics MetricsInterface) (string, er
 		b.WriteString(fmt.Sprintf("Full summary and output files -> %s\n", Config.OutDir))
 	} else {
 		b.WriteString("Set the 'outputdir' arg in the config file to save detailed information to disk.\n")
+	}
+
+	if err := compressTarGZ(Config.OutDir, path.Join(Config.RootOutDir, "runFiles")); err != nil {
+		return "", err
 	}
 
 	return b.String(), nil
@@ -215,4 +222,44 @@ func compressGZ(path string) error {
 		return err
 	}
 	return writeFile(path+".gz", buf.Bytes())
+}
+
+func compressTarGZ(root string, out string) error {
+	buf := bytes.Buffer{}
+	zw := gzip.NewWriter(&buf)
+	tw := tar.NewWriter(zw)
+
+	filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		var header *tar.Header
+
+		if header, err = tar.FileInfoHeader(info, path); err != nil {
+			return err
+		}
+
+		header.Name, _ = filepath.Rel(Config.OutDir, path)
+		if err = tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			content, err := os.Open(path)
+			if err != nil {
+				return err
+			}
+
+			if _, err := io.Copy(tw, content); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	})
+
+	if err := tw.Close(); err != nil {
+		return err
+	}
+	if err := zw.Close(); err != nil {
+		return err
+	}
+	return writeFileRoot(out+".tar.gz", buf.Bytes(), "")
 }
