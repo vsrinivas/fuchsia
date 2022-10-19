@@ -136,7 +136,6 @@ if (toolchain_environment == "physmem" ||
     ]
     deps = [
       ":boot-mmu",
-      ":dev-init",
       ":tests",
       "code-patches:headers",
       "user-copy",
@@ -176,32 +175,6 @@ if (toolchain_environment == "physmem" ||
     # Everything in this file runs too early to use the full ABI.  Per-function
     # attribute suppression of sanitizer modes doesn't work for C++ lambda.
     configs += [ "//build/config/sanitizers:no_sanitizers" ]
-  }
-
-  source_set("dev-init") {
-    visibility = [ ":*" ]
-    sources = [
-      "dev-init-uart.cc",
-      "dev-init.cc",
-    ]
-    deps = [
-      "//zircon/kernel/dev/hdcp/amlogic_s912",
-      "//zircon/kernel/dev/hw_rng/amlogic_rng",
-      "//zircon/kernel/dev/hw_watchdog/generic32",
-      "//zircon/kernel/dev/interrupt/arm_gic/v2",
-      "//zircon/kernel/dev/interrupt/arm_gic/v3",
-      "//zircon/kernel/dev/power/as370",
-      "//zircon/kernel/dev/power/motmot",
-      "//zircon/kernel/dev/psci",
-      "//zircon/kernel/dev/timer/arm_generic",
-      "//zircon/kernel/dev/uart/amlogic_s905",
-      "//zircon/kernel/dev/uart/dw8250",
-      "//zircon/kernel/dev/uart/motmot",
-      "//zircon/kernel/dev/uart/pl011",
-      "//zircon/kernel/lib/ktl",
-      "//zircon/kernel/phys:handoff",
-      "//zircon/system/ulib/uart",
-    ]
   }
 
   source_set("tests") {

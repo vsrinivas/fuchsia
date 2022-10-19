@@ -154,7 +154,6 @@ zx_library("x86") {
     "uspace_entry.S",
   ]
   deps = [
-    ":dev-init",
     ":syscall",
     ":tests",
     "code-patches:headers",
@@ -230,16 +229,6 @@ source_set("syscall") {
     "code-patches:headers",
     "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/syscalls",
-  ]
-}
-
-source_set("dev-init") {
-  visibility = [ ":*" ]
-  sources = [ "dev-init.cc" ]
-  deps = [
-    "//zircon/kernel/phys:handoff",
-    "//zircon/kernel/platform/pc",
-    "//zircon/system/ulib/uart",
   ]
 }
 

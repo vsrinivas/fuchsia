@@ -13,6 +13,7 @@ zx_library("pc") {
     "cmos_bootbyte.cc",
     "console.cc",
     "debug.cc",
+    "dev-init.cc",
     "efi_expected.cc",
     "hpet.cc",
     "interrupts.cc",
@@ -52,9 +53,11 @@ zx_library("pc") {
     "//zircon/kernel/lib/topology",
     "//zircon/kernel/lib/unittest",
     "//zircon/kernel/phys:handoff",
+    "//zircon/kernel/phys:handoff",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/ram-crashlog",
     "//zircon/system/ulib/smbios",
+    "//zircon/system/ulib/uart",
     "//zircon/third_party/ulib/cksum",
   ]
   public_deps = [

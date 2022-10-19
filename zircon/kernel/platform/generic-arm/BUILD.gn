@@ -6,6 +6,8 @@
 
 source_set("generic-arm") {
   sources = [
+    "dev-init-uart.cc",
+    "dev-init.cc",
     "efi.cc",
     "platform.cc",
   ]
@@ -20,6 +22,7 @@ source_set("generic-arm") {
     "//zircon/kernel/dev/pcie",
     "//zircon/kernel/dev/pdev/power",
     "//zircon/kernel/dev/power/as370",
+    "//zircon/kernel/dev/power/motmot",
     "//zircon/kernel/dev/psci",
     "//zircon/kernel/dev/timer/arm_generic",
     "//zircon/kernel/dev/uart/amlogic_s905",
@@ -35,6 +38,7 @@ source_set("generic-arm") {
     "//zircon/kernel/lib/init",
     "//zircon/kernel/lib/instrumentation:headers",
     "//zircon/kernel/lib/jtrace:headers",
+    "//zircon/kernel/lib/ktl",
     "//zircon/kernel/lib/lockdep",
     "//zircon/kernel/lib/memory_limit",
     "//zircon/kernel/lib/persistent-debuglog",
@@ -44,5 +48,6 @@ source_set("generic-arm") {
     "//zircon/kernel/vm",
     "//zircon/system/ulib/explicit-memory",
     "//zircon/system/ulib/ram-crashlog",
+    "//zircon/system/ulib/uart",
   ]
 }

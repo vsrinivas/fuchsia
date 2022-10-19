@@ -11,11 +11,11 @@
 #include <phys/handoff.h>
 
 void DriverHandoffEarly(const PhysHandoff& handoff) {
-  ArchUartDriverHandoffEarly(gBootOptions->serial);
-  ArchDriverHandoffEarly(handoff.arch_handoff);
+  PlatformUartDriverHandoffEarly(gBootOptions->serial);
+  PlatformDriverHandoffEarly(handoff.arch_handoff);
 }
 
 void DriverHandoffLate(const PhysHandoff& handoff) {
-  ArchUartDriverHandoffLate(gBootOptions->serial);
-  ArchDriverHandoffLate(handoff.arch_handoff);
+  PlatformUartDriverHandoffLate(gBootOptions->serial);
+  PlatformDriverHandoffLate(handoff.arch_handoff);
 }

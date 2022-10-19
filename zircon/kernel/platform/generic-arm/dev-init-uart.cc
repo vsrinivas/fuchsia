@@ -58,10 +58,10 @@ void UartInitLate(uint32_t extra) {
 
 }  // namespace
 
-void ArchUartDriverHandoffEarly(const uart::all::Driver& serial) {
+void PlatformUartDriverHandoffEarly(const uart::all::Driver& serial) {
   ktl::visit([](const auto& uart) { UartInitEarly(uart.extra(), uart.config()); }, serial);
 }
 
-void ArchUartDriverHandoffLate(const uart::all::Driver& serial) {
+void PlatformUartDriverHandoffLate(const uart::all::Driver& serial) {
   ktl::visit([](const auto& uart) { UartInitLate(uart.extra()); }, serial);
 }

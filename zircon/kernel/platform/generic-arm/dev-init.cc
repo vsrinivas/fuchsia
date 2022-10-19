@@ -30,7 +30,7 @@ void ArmGicInitLate(const ktl::monostate& no_config) {}
 
 }  // namespace
 
-void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
+void PlatformDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
   // Configure the GIC first so that the remaining drivers can freely register
   // interrupt handlers.
   ktl::visit([](const auto& config) { ArmGicInitEarly(config); }, arch_handoff.gic_driver);
@@ -56,7 +56,7 @@ void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff) {
   }
 }
 
-void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {
+void PlatformDriverHandoffLate(const ArchPhysHandoff& arch_handoff) {
   // First, as above.
   ktl::visit([](const auto& config) { ArmGicInitLate(config); }, arch_handoff.gic_driver);
 

@@ -26,17 +26,17 @@ struct ArchPhysHandoff;
 void DriverHandoffEarly(const PhysHandoff& handoff);
 void DriverHandoffLate(const PhysHandoff& handoff);
 
-// Arch-specific subroutines of the above functions, respectively.
+// Platform-specific subroutines of the above functions, respectively.
 //
-// Defined in //zircon/kernel/arch/$cpu/dev-init.cc.
-void ArchDriverHandoffEarly(const ArchPhysHandoff& arch_handoff);
-void ArchDriverHandoffLate(const ArchPhysHandoff& arch_handoff);
+// Defined in //zircon/kernel/platform/*/dev-init.cc.
+void PlatformDriverHandoffEarly(const ArchPhysHandoff& arch_handoff);
+void PlatformDriverHandoffLate(const ArchPhysHandoff& arch_handoff);
 
-// Further arch-specific subroutines for the UART.
+// Further platform-specific subroutines for the UART.
 //
 // TODO(fxbug.dev/89182): These will go away when the UART driver can dealt
-// with directly as an arch-agnostic libuart type.
-void ArchUartDriverHandoffEarly(const uart::all::Driver& serial);
-void ArchUartDriverHandoffLate(const uart::all::Driver& serial);
+// with directly as a platform-agnostic libuart type.
+void PlatformUartDriverHandoffEarly(const uart::all::Driver& serial);
+void PlatformUartDriverHandoffLate(const uart::all::Driver& serial);
 
 #endif  // ZIRCON_KERNEL_INCLUDE_DEV_INIT_H_
