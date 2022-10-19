@@ -234,14 +234,13 @@ foreach(named_env, _all_named_fuchsia_envs) {
 guest_envs = all_fuchsia_envs - [
                aemu_env,
                qemu_env,
-
-               # TODO(https://fxbug.dev/86601): GCE theoretically supports
-               # virtualization, but it currently fails on Fuchsia.
-               gce_env,
              ]
 
-# Intersection of environments were both virtualization and vulkan are available.
-guest_vulkan_envs = guest_envs - [ nuc11_env ]
+# Set of environments where both virtualization and vulkan are available.
+guest_vulkan_envs = guest_envs - [
+                      nuc11_env,
+                      gce_env,
+                    ]
 
 basic_envs = []
 foreach(name, basic_env_names) {
