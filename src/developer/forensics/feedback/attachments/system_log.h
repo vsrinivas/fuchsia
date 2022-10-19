@@ -97,6 +97,13 @@ class SystemLog : public AttachmentProvider {
 
   ::fpromise::promise<AttachmentValue> Get(zx::duration timeout) override;
 
+  // Returns a promise to the system log and allows collection to be terminated early with |ticket|.
+  ::fpromise::promise<AttachmentValue> Get(uint64_t ticket, zx::duration timeout);
+
+  // Completes the system log collection promise associated with |ticket| early, if it hasn't
+  // already completed.
+  void ForceCompletion(uint64_t ticket, Error error);
+
  private:
   // Terminates the stream and flushes the in-memory buffer.
   void MakeInactive();
@@ -110,6 +117,9 @@ class SystemLog : public AttachmentProvider {
 
   zx::duration active_period_;
   bool is_active_{false};
+
+  std::map<uint64_t, std::function<void(Error)>> completers_;
+  uint64_t internal_ticket_{std::numeric_limits<uint64_t>::max()};
 
   async::TaskClosureMethod<SystemLog, &SystemLog::MakeInactive> make_inactive_{this};
   fxl::WeakPtrFactory<SystemLog> ptr_factory_{this};

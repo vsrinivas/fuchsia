@@ -228,13 +228,13 @@ auto CompletesAndConsume() {
 
         completer->complete_ok();
       },
-      [completer] {
+      [completer](const Error error) {
         if (!*(completer)) {
           return;
         }
 
-        FX_LOGS(WARNING) << " System log collection timed out";
-        completer->complete_error(Error::kTimeout);
+        FX_LOGS(WARNING) << "System log collection error" << ToString(error);
+        completer->complete_error(error);
       },
       std::move(bridge.consumer).promise_or(::fpromise::error(Error::kLogicError)));
 }
@@ -242,45 +242,69 @@ auto CompletesAndConsume() {
 }  // namespace
 
 ::fpromise::promise<AttachmentValue> SystemLog::Get(const zx::duration timeout) {
+  return Get(internal_ticket_--, timeout);
+}
+
+::fpromise::promise<AttachmentValue> SystemLog::Get(const uint64_t ticket,
+                                                    const zx::duration timeout) {
+  FX_CHECK(completers_.count(ticket) == 0) << "Ticket used twice: " << ticket;
+
   if (!is_active_) {
     is_active_ = true;
     source_.Start();
   }
 
-  auto [complete_ok, complete_timeout, consume] = CompletesAndConsume();
+  auto [complete_ok, complete_error, consume] = CompletesAndConsume();
+
+  completers_[ticket] = std::move(complete_error);
 
   // Cancel the outstanding |make_inactive_| because logs are being requested.
   make_inactive_.Cancel();
 
+  auto self = ptr_factory_.GetWeakPtr();
+
   // Complete the call after |timeout| elapses or a message with a timestamp greater than or equal
   // to the current uptime is added to |buffer_|.
-  async::PostDelayedTask(dispatcher_, std::move(complete_timeout), timeout);
+  async::PostDelayedTask(
+      dispatcher_,
+      [self, ticket] {
+        if (self) {
+          self->ForceCompletion(ticket, Error::kTimeout);
+        }
+      },
+      timeout);
   buffer_.ExecuteAfter(zx::nsec(clock_->Now().get()), std::move(complete_ok));
 
-  auto self = ptr_factory_.GetWeakPtr();
-  return consume.then(
-      [self](const ::fpromise::result<void, Error>& result) -> ::fpromise::result<AttachmentValue> {
-        if (!self) {
-          return ::fpromise::ok(AttachmentValue(Error::kLogicError));
-        }
+  return consume.then([self, ticket](const ::fpromise::result<void, Error>& result)
+                          -> ::fpromise::result<AttachmentValue> {
+    if (!self) {
+      return ::fpromise::ok(AttachmentValue(Error::kLogicError));
+    }
 
-        if (result.is_error() && result.error() == Error::kLogicError) {
-          FX_LOGS(FATAL) << "Log collection promise was incorrectly dropped";
-        }
+    if (result.is_error() && result.error() == Error::kLogicError) {
+      FX_LOGS(FATAL) << "Log collection promise was incorrectly dropped";
+    }
 
-        // Cancel the outstanding |make_inactive_| because the "active" period should be extended.
-        self->make_inactive_.Cancel();
-        self->make_inactive_.PostDelayed(self->dispatcher_, self->active_period_);
+    self->completers_.erase(ticket);
 
-        auto system_log = self->buffer_.ToString();
-        if (system_log.empty()) {
-          return ::fpromise::ok(AttachmentValue(Error::kMissingValue));
-        }
+    // Cancel the outstanding |make_inactive_| because the "active" period should be extended.
+    self->make_inactive_.Cancel();
+    self->make_inactive_.PostDelayed(self->dispatcher_, self->active_period_);
 
-        return ::fpromise::ok(result.is_ok()
-                                  ? AttachmentValue(std::move(system_log))
-                                  : AttachmentValue(std::move(system_log), result.error()));
-      });
+    auto system_log = self->buffer_.ToString();
+    if (system_log.empty()) {
+      return ::fpromise::ok(AttachmentValue(Error::kMissingValue));
+    }
+
+    return ::fpromise::ok(result.is_ok() ? AttachmentValue(std::move(system_log))
+                                         : AttachmentValue(std::move(system_log), result.error()));
+  });
+}
+
+void SystemLog::ForceCompletion(const uint64_t ticket, const Error error) {
+  if (completers_.count(ticket) != 0) {
+    completers_[ticket](error);
+  }
 }
 
 void SystemLog::MakeInactive() {

@@ -615,6 +615,8 @@ fuchsia_unittest_component("static_attachments_unittest") {
 }
 
 fuchsia_unittest_component("system_log_unittest") {
+  manifest = "meta/system_log_unittest.cml"
+
   deps = [ ":system_log_unittest_exe" ]
 }
 

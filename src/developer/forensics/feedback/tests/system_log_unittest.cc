@@ -92,6 +92,18 @@ class SystemLogTest : public UnitTestFixture {
     return result;
   }
 
+  async::Executor& GetExecutor() { return executor_; }
+
+  SystemLog& GetSystemLog() { return system_log_; }
+
+  ::fpromise::promise<AttachmentValue> CollectSystemLog(const uint64_t ticket,
+                                                        const zx::duration timeout = zx::sec(1)) {
+    return system_log_.Get(ticket, timeout).or_else([]() -> ::fpromise::result<AttachmentValue> {
+      FX_LOGS(FATAL) << "Bad path";
+      return ::fpromise::error();
+    });
+  }
+
  protected:
   static constexpr auto kActivePeriod = zx::hour(1);
   static constexpr auto kLogTimestamp = zx::sec(1234);
@@ -130,6 +142,52 @@ TEST_F(SystemLogTest, GetTerminatesDueToTimeout) {
   const auto log = CollectSystemLog(zx::min(1));
   ASSERT_TRUE(log.HasError());
   EXPECT_EQ(log.Error(), Error::kTimeout);
+
+  ASSERT_TRUE(log.HasValue());
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
+)");
+}
+
+TEST_F(SystemLogTest, GetTerminatesDueToForceCompletion) {
+  const uint64_t kTicket = 1234;
+  SetUpLogServer(Messages());
+
+  // Prime the clock so log collection won't be completed due to message timestamps.
+  RunLoopFor(kLogTimestamp + zx::sec(1));
+
+  AttachmentValue log(Error::kNotSet);
+  GetExecutor().schedule_task(CollectSystemLog(kTicket).and_then(
+      [&log](AttachmentValue& result) { log = std::move(result); }));
+
+  // Giving some time to actually collect some log data, so that system_log is not empty
+  RunLoopUntilIdle();
+
+  // Forcefully terminating log collection
+  GetSystemLog().ForceCompletion(kTicket, Error::kDefault);
+
+  RunLoopUntilIdle();
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kDefault);
+  EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
+[01234.000][00200][00300][tag_2] INFO: Message 2
+[01234.000][00200][00300][tag_3] INFO: Message 3
+)");
+}
+
+TEST_F(SystemLogTest, ForceCompletionCalledAfterTermination) {
+  const uint64_t kTicket = 1234;
+  SetUpLogServer(Messages());
+
+  AttachmentValue log(Error::kNotSet);
+  GetExecutor().schedule_task(CollectSystemLog(kTicket).and_then(
+      [&log](AttachmentValue& result) { log = std::move(result); }));
+
+  RunLoopFor(zx::sec(1));
+
+  GetSystemLog().ForceCompletion(kTicket, Error::kDefault);
+  ASSERT_FALSE(log.HasError());
 
   ASSERT_TRUE(log.HasValue());
   EXPECT_EQ(log.Value(), R"([01234.000][00200][00300][tag_1] INFO: Message 1
@@ -208,6 +266,18 @@ TEST_F(SystemLogTest, ActivePeriodResets) {
 
   RunLoopFor(kActivePeriod / 2);
   ASSERT_FALSE(LogServer().IsBound());
+}
+
+TEST_F(SystemLogTest, GetCalledWithSameTicket) {
+  const uint64_t kTicket = 1234;
+
+  // Expect a crash because a ticket cannot be reused.
+  ASSERT_DEATH(
+      {
+        const auto log1 = CollectSystemLog(kTicket);
+        const auto log2 = CollectSystemLog(kTicket);
+      },
+      "Ticket used twice: ");
 }
 
 class SimpleRedactor : public RedactorBase {
