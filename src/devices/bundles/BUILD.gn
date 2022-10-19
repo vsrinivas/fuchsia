@@ -114,7 +114,6 @@ group("utils") {
     # access.
     "//build/validate:non_production_tag",
     "//src/devices/bin/acpidump",
-    "//src/devices/bin/driver-registrar",
     "//src/devices/bin/driver_tools:driver_tools",
     "//src/devices/bin/lsdev",
     "//src/devices/bin/register-util",

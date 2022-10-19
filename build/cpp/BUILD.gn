@@ -26,7 +26,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/connectivity/telephony/tests/fake-drivers/at-fake-transport:fake_at_driver-driver",
     "//src/developer/memory/metrics",
     "//src/devices/bin/acpidump:src",
-    "//src/devices/bin/driver-registrar",
     "//src/devices/bin/driver_host:common",
     "//src/devices/bin/driver_host:driver_host_test",
     "//src/devices/bin/lsdev",

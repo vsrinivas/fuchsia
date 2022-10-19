@@ -6,7 +6,6 @@ group("bin") {
   deps = [
     "acpidump",
     "driver-index",
-    "driver-registrar",
     "driver_host",
     "driver_host2",
     "driver_manager",
