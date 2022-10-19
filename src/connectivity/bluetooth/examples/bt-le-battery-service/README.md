@@ -13,11 +13,11 @@ updates about the system's battery level.
 
 Add the example to your Fuchsia configuration. Note, because the component is eagerly started, make
 sure to include the package in the cached set of packages. For example, for the workstation
-configuration, add the `bt-le-battery-service` to the [legacy_cache_package_labels](https://cs.opensource.google/fuchsia/fuchsia/+/main:products/common/workstation.gni).
+configuration, add the `bt-le-battery-service` to the [legacy_cache_package_labels](/products/common/workstation.gni).
 
 Include the example [core_shard](meta/bt-le-battery-service.core_shard.cml) in your target
 product configuration. For example, for the workstation configuration, add the core
-shard to the `core_realm_shards` list in [workstation.gni](https://cs.opensource.google/fuchsia/fuchsia/+/main:products/common/workstation.gni).
+shard to the `core_realm_shards` list in [workstation.gni](/products/common/workstation.gni).
 
 ## Component configuration
 
