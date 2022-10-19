@@ -57,7 +57,13 @@ type ColorRgba = struct {
 /// client may lay out content properly before their first call to [`Present`].
 type LayoutInfo = table {
     /// The layout size of a View in logical pixels, defined by the parent's call to
-    /// [`SetViewportProperties`]. Clients should re-layout their content when this value changes.
+    /// [`SetViewportProperties`].
+    ///
+    /// The logical size also serves as the clip boundary of the View. Anything outside the clip
+    /// boundary will not be rendered. Hence, the View's Root Transform has a useful coordinate
+    /// space of (0, 0) to (logical_size.width, logical_size.height).
+    ///
+    /// Clients should re-layout their content when this value changes.
     1: logical_size fuchsia.math.SizeU;
     /// The ratio from physical display pixels to logical pixels, defined by the sizes and scale
     /// transforms of the parent: each logical pixel is displayed on-screen by one or more physical
@@ -657,6 +663,10 @@ protocol Flatland {
     /// There is only ever one Root. Since 0 is not a valid transform id (see [`CreateTransform`]),
     /// calling SetRootTransform(0) clears the current Root, destroying any previously released
     /// objects that are not referenced by the new root.
+    ///
+    /// Note that every View has a clip boundary equivalent to its logical size. Anything outside
+    /// that clip boundary will not be rendered. Hence, the Root Transform has a useful coordinate
+    /// space of (0, 0) to (logical_size.width, logical_size.height).
     ///
     /// Setting the root transform installs a full screen hit region on the root transform. Clients
     /// may remove this hit region if they don't want users to be able to interact with the root
