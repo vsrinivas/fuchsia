@@ -557,13 +557,15 @@ protocol Vmar {
     /// The supported operations are:
     ///
     /// **ZX_VMAR_OP_COMMIT** - Requires that *handle*, and the VMO handles used to create any affected
-    /// mappings, have the **ZX_RIGHT_WRITE** right. The operation's semantics are otherwise as described by
+    /// mappings, have the **ZX_RIGHT_WRITE** right and that the address range must not have any child VMARs.
+    /// The operation's semantics are otherwise as described by
     /// [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_COMMIT**.
     ///
     /// **ZX_VMO_OP_DECOMMIT** - Deprecated. Use **ZX_VMAR_OP_DECOMMIT** instead.
     ///
     /// **ZX_VMAR_OP_DECOMMIT** - Requires that *handle*, and the VMO handles used to create any affected
-    /// mappings, have the **ZX_RIGHT_WRITE** right. The operation's semantics are otherwise as described by
+    /// mappings, have the **ZX_RIGHT_WRITE** right and that the address range must not have any child VMARs.
+    /// The operation's semantics are otherwise as described by
     /// [`zx_vmo_op_range()`](/docs/reference/syscalls/vmo_op_range.md) **ZX_VMO_OP_DECOMMIT**.
     ///
     /// **ZX_VMAR_OP_MAP_RANGE** - Populates entries in the CPU page tables (or architectural equivalent)
@@ -609,7 +611,8 @@ protocol Vmar {
     /// spans unmapped regions.
     ///
     /// **ZX_ERR_INVALID_ARGS**  *buffer* is non-null, or *buffer_size* is non-zero, *op* is not a valid
-    /// operation, *size* is zero, or *address* was not page-aligned.
+    /// operation, *size* is zero, or *address* was not page-aligned, or *op* was one of
+    /// **ZX_VMAR_OP_COMMIT** or **ZX_VMAR_OP_DECOMMIT** and the requested range had subregions.
     ///
     /// **ZX_ERR_NOT_SUPPORTED**  *op* was not **ZX_VMO_OP_DECOMMIT**, or one or more mapped VMOs do not
     /// support the requested *op*.

@@ -635,6 +635,13 @@ zx_status_t VmAddressRegion::RangeOp(RangeOpType op, vaddr_t base, size_t len,
 
     zx_status_t result = ZX_OK;
     enumerator.pause();
+    // The commit and decommit ops check the maximal permissions of the mapping and can be thought
+    // of as acting as if they perform a protect to add write permissions. Since protect to add
+    // permissions through a parent VMAR is not valid we similarly forbid this notional protect by
+    // not allowing these operations if acting through a sub-vmar.
+    if ((op == RangeOpType::Commit || op == RangeOpType::Decommit) && mapping->parent_ != this) {
+      return ZX_ERR_INVALID_ARGS;
+    }
     guard.CallUnlocked([&result, &vmo, &mapping, op, mapping_offset, vmo_offset, size] {
       switch (op) {
         case RangeOpType::Commit:

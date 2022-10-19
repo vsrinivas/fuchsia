@@ -2270,61 +2270,38 @@ TEST(Vmar, RangeOpCommitVmoPages2) {
 
   // Decommit the second mapping; the presence of the first mapping should not cause the decommit op
   // to panic or to be invoked on the wrong range.
-  EXPECT_EQ(zx_vmar_op_range(root_vmar->get(), ZX_VMAR_OP_DECOMMIT, mapping_addr2, kMappingSize2,
-                             nullptr, 0u),
+  EXPECT_EQ(zx_vmar_op_range(vmar, ZX_VMAR_OP_DECOMMIT, mapping_addr2, kMappingSize2, nullptr, 0u),
             ZX_OK);
 }
 
-// Test that when performing a range op on a vmar with nested vmars that mappings not in the range
-// are correctly skipped (fxbug.dev/80034)
-TEST(Vmar, RangeOpDecommitNestedVmar) {
+// Test that commits and decommits are not allowed through a nested vmar.
+TEST(Vmar, BadRangeOpNestedVmar) {
   auto root_vmar = zx::vmar::root_self();
 
-  // Create a new vmar to manage that we will eventually call decommit on.
+  // Create an intermediate vmar.
 
-  zx::vmar decommit_vmar;
+  zx::vmar intermediate_vmar;
   uintptr_t addr;
   ASSERT_EQ(root_vmar->allocate(ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
-                                0, zx_system_get_page_size() * 8, &decommit_vmar, &addr),
+                                0, zx_system_get_page_size() * 8, &intermediate_vmar, &addr),
             ZX_OK);
 
-  // Create a child vmar in our test vmar to hold our mappings.
-  zx::vmar child_vmar;
-  uint64_t child_addr;
-  ASSERT_EQ(
-      decommit_vmar.allocate(
-          ZX_VM_CAN_MAP_SPECIFIC | ZX_VM_SPECIFIC | ZX_VM_CAN_MAP_READ | ZX_VM_CAN_MAP_WRITE,
-          zx_system_get_page_size() * 2, zx_system_get_page_size() * 4, &child_vmar, &child_addr),
-      ZX_OK);
-  EXPECT_EQ(addr + zx_system_get_page_size() * 2, child_addr);
+  // Place mapping in the intermediate vmar.
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
 
-  // Place two mappings in the child vmar, use different vmos to ensure the mappings cannot get
-  // merged.
-  zx::vmo vmo1, vmo2;
-  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo1));
-  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo2));
+  uint64_t mapping_addr;
+  ASSERT_OK(intermediate_vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
+                                  zx_system_get_page_size(), vmo, 0, zx_system_get_page_size(),
+                                  &mapping_addr));
 
-  uint64_t mapping1_addr, mapping2_addr;
-  ASSERT_OK(child_vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                           zx_system_get_page_size(), vmo1, 0, zx_system_get_page_size(),
-                           &mapping1_addr));
-  ASSERT_OK(child_vmar.map(ZX_VM_SPECIFIC | ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                           zx_system_get_page_size() * 2, vmo2, 0, zx_system_get_page_size(),
-                           &mapping2_addr));
-
-  EXPECT_EQ(addr + zx_system_get_page_size() * 3, mapping1_addr);
-  EXPECT_EQ(addr + zx_system_get_page_size() * 4, mapping2_addr);
-
-  // Write some data to both mappings.
-  *(volatile char*)mapping1_addr = 42;
-  *(volatile char*)mapping2_addr = 64;
-  // Now decommit the second mapping from the decommit vmar. It should ignore mapping1.
-  EXPECT_OK(decommit_vmar.op_range(ZX_VMAR_OP_DECOMMIT, mapping2_addr, zx_system_get_page_size(),
-                                   nullptr, 0));
-  // mapping 2 should have deommitted and now read as zero.
-  EXPECT_EQ(*(volatile char*)mapping2_addr, 0);
-  // mapping 1 should have been untouchd.
-  EXPECT_EQ(*(volatile char*)mapping1_addr, 42);
+  // Commit and decommit ops should not be allowed on the root vmar for this range.
+  EXPECT_EQ(
+      root_vmar->op_range(ZX_VMAR_OP_COMMIT, mapping_addr, zx_system_get_page_size(), nullptr, 0),
+      ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(
+      root_vmar->op_range(ZX_VMAR_OP_DECOMMIT, mapping_addr, zx_system_get_page_size(), nullptr, 0),
+      ZX_ERR_INVALID_ARGS);
 }
 
 // Test zx_vmar_op_range ZX_VMAR_OP_COMMIT.
@@ -2366,11 +2343,11 @@ TEST(Vmar, RangeOpCommit) {
   ASSERT_EQ(base_addr2, addr2);
 
   // Commit pages 1 and 2 in the parent.
-  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_COMMIT, addr1 + zx_system_get_page_size(),
-                          2 * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_OK(sub_vmar1.op_range(ZX_VMAR_OP_COMMIT, addr1 + zx_system_get_page_size(),
+                               2 * zx_system_get_page_size(), nullptr, 0));
   // Commit pages 2 and 3 in the clone.
-  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_COMMIT, addr2 + 2 * zx_system_get_page_size(),
-                          2 * zx_system_get_page_size(), nullptr, 0));
+  ASSERT_OK(sub_vmar2.op_range(ZX_VMAR_OP_COMMIT, addr2 + 2 * zx_system_get_page_size(),
+                               2 * zx_system_get_page_size(), nullptr, 0));
 
   // Both VMOs should now have 2 pages committed. We can query committed counts despite these pages
   // being zero because explicitly committed pages are not deduped by the zero scanner.
@@ -2381,7 +2358,7 @@ TEST(Vmar, RangeOpCommit) {
   EXPECT_EQ(2 * zx_system_get_page_size(), info.committed_bytes);
 
   // Commit all pages in the clone.
-  ASSERT_OK(vmar.op_range(ZX_VMAR_OP_COMMIT, addr2, kVmoSize, nullptr, 0));
+  ASSERT_OK(sub_vmar2.op_range(ZX_VMAR_OP_COMMIT, addr2, kVmoSize, nullptr, 0));
 
   // The clone should have all pages committed, but the parent should still have only 2.
   ASSERT_OK(vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr));
@@ -2414,10 +2391,6 @@ TEST(Vmar, RangeOpCommit) {
   ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr, kVmarSize, nullptr, 0));
   ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr,
                                             base_addr1 + kSubVmarSize - base_addr, nullptr, 0));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr2,
-                                            base_addr + kVmarSize - base_addr2, nullptr, 0));
-  ASSERT_EQ(ZX_ERR_BAD_STATE, vmar.op_range(ZX_VMAR_OP_COMMIT, base_addr1,
-                                            base_addr2 + kSubVmarSize - base_addr1, nullptr, 0));
 }
 
 TEST(Vmar, ProtectCowWritable) {
