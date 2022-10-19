@@ -101,6 +101,7 @@ group("test_infra") {
     "//tools/bootserver",
     "//tools/botanist",
     "//tools/testing/testrunner",
+    "//zircon/tools/zbi",
   ]
 
   foreach(tool, linux_x64_only_tools) {
