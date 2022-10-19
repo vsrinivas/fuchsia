@@ -136,6 +136,15 @@ void Dwc2::HandleInEpInterrupt() {
       diepint.set_reg_value(diepint.reg_value() & DIEPMSK::Get().ReadFrom(mmio).reg_value());
 
       if (diepint.xfercompl()) {
+
+        if (timeout_recovering_) {
+          // (special case) We're recovering from a diepint.timeout interrupt.
+          // TODO(105382) remove logging once timeout recovery has stabilized.
+          //   The current control logic should account for this.
+          zxlogf(ERROR, "(diepint.timeout recovery) IN-EP0 xfer-complete interrupt");
+          timeout_recovering_ = false;
+        }
+
         DIEPINT::Get(ep_num).FromValue(0).set_xfercompl(1).WriteTo(mmio);
 
         if (ep_num == DWC_EP0_IN) {
@@ -149,6 +158,43 @@ void Dwc2::HandleInEpInterrupt() {
         }
       }
 
+      // Timeout on receiving appropriate 2.0 token from host.
+      if (diepint.timeout() && ep_num == DWC_EP0_IN) {
+        switch (ep0_state_) {
+          case Ep0State::DATA_IN:
+            // TODO(105382) remove logging once timeout recovery has stabilized.
+            zxlogf(ERROR, "Got diepint.timeout for DATA_IN phase, attempting to recover...");
+
+            // The timeout is due to one of two cases:
+            //   1. The core never received an ACK to sent IN-data.
+            //   2. IN-data was lost in transmission to the host.
+            //
+            // (7.6.7)
+            // In the ACK-case, the core will receive a transfer-complete OUT interrupt and should
+            // flush the TX-FIFO. In this case, the current control transaction is terminal and
+            // there is nothing left to do. In the lost data case, the host will resend an IN-token
+            // and the core will receive a transfer-complete IN interrupt.
+            //
+            // Having cleared the timeout interrupt, depending on which case caused the timeout,
+            // we can expect either an IN or OUT EP0 transfer-complete interrupt to follow. See the
+            // special case logic in either diepint/doepint.xfercompl() branches.
+            timeout_recovering_ = true;
+            DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
+            break;
+          case Ep0State::DISCONNECTED:
+          case Ep0State::IDLE:
+          case Ep0State::DATA_OUT:
+          case Ep0State::STATUS_OUT:
+          case Ep0State::STATUS_IN:
+          case Ep0State::STALL:
+            // The other cases should either theoretically never happen, or handled by the core
+            // internally in dedicate-FIFO mode, but we'll log anyway.
+            zxlogf(ERROR, "Unhandled IN EP0 diepint.timeout at txn phase %d", ep0_state_);
+            DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
+            break;
+        }
+      }
+
       // TODO(voydanoff) Implement error recovery for these interrupts
       if (diepint.epdisabled()) {
         zxlogf(ERROR, "Unhandled interrupt diepint.epdisabled for ep_num %u", ep_num);
@@ -158,10 +204,10 @@ void Dwc2::HandleInEpInterrupt() {
         zxlogf(ERROR, "Unhandled interrupt diepint.ahberr for ep_num %u", ep_num);
         DIEPINT::Get(ep_num).ReadFrom(mmio).set_ahberr(1).WriteTo(mmio);
       }
-      if (diepint.timeout()) {
-        if (ep_num == DWC_EP0_IN) {
-          zxlogf(ERROR, "Unhandled IN EP0 diepint.timeout at txn phase %d", ep0_state_);
-        } else if (ep_num == DWC_EP0_OUT) {
+      if (diepint.timeout() && ep_num != DWC_EP0_IN) {
+        // Note the DWC_EP0_IN case is handled above.
+        if (ep_num == DWC_EP0_OUT) {
+          // This should theoretically never happen in dedicated-FIFO mode, but we'll log anyway.
           zxlogf(ERROR, "Unhandled OUT EP0 diepint.timeout at txn phase %d", ep0_state_);
         } else {
           zxlogf(ERROR, "Unhandled interrupt diepint.timeout for ep_num %u", ep_num);
@@ -232,14 +278,25 @@ void Dwc2::HandleOutEpInterrupt() {
         HandleEp0Setup();
       }
       if (doepint.xfercompl()) {
-        DOEPINT::Get(ep_num).FromValue(0).set_xfercompl(1).WriteTo(mmio);
+        if (timeout_recovering_) {
+          // (special case) We're recovering from an EP0 diepint.timeout interrupt.
 
-        if (ep_num == DWC_EP0_OUT) {
-          if (!doepint.setup()) {
-            HandleEp0TransferComplete();
-          }
+          // TODO(105382) remove logging once timeout recovery has stabilized.
+          zxlogf(ERROR, "(diepint.timeout recovery) OUT-EP0 xfer-complete interrupt");
+
+          FlushTxFifo(0);
+          ep0_state_ = Ep0State::IDLE; // Reset for next transaction.
+          timeout_recovering_ = false;
         } else {
-          HandleTransferComplete(ep_num);
+          DOEPINT::Get(ep_num).FromValue(0).set_xfercompl(1).WriteTo(mmio);
+
+          if (ep_num == DWC_EP0_OUT) {
+            if (!doepint.setup()) {
+              HandleEp0TransferComplete();
+            }
+          } else {
+            HandleTransferComplete(ep_num);
+          }
         }
       }
       // TODO(voydanoff) Implement error recovery for these interrupts
@@ -444,8 +501,10 @@ void Dwc2::FlushTxFifo(uint32_t fifo_num) {
   do {
     grstctl.ReadFrom(mmio);
     // Retry count of 10000 comes from Amlogic bootloader driver.
-    if (++count > 10000)
+    if (++count > 10000) {
+      zxlogf(ERROR, "took more than 10k cycles to TX-FIFO flush for FIFO-%d", fifo_num);
       break;
+    }
   } while (grstctl.txfflsh() == 1);
 
   zx::nanosleep(zx::deadline_after(zx::usec(1)));

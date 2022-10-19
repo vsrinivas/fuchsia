@@ -156,6 +156,8 @@ class Dwc2 : public Dwc2Type, public ddk::UsbDciProtocol<Dwc2, ddk::base_protoco
   dwc2_metadata_t metadata_;
   bool connected_ = false;
   bool configured_ = false;
+  // True if recovering from diepint.timeout interrupt.
+  bool timeout_recovering_ = false;
   // Raw IRQ timestamp from kernel
   zx::time irq_timestamp_;
   // Timestamp we were dispatched at
