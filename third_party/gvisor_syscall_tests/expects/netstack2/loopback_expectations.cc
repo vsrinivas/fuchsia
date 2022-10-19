@@ -12,8 +12,8 @@ void AddNonPassingTests(TestMap& tests) {
 
   // https://fxbug.dev/35593
   ExpectFailure(tests, "BadSocketPairArgs.ValidateErrForBadCallsToSocketPair");
-  // https://fxbug.dev/61714
-  ExpectFailure(tests, "All/SocketInetLoopbackTest.TCPListenShutdownListen/*");
+  // https://fxbug.dev/112593
+  SkipTest(tests, "All/SocketInetLoopbackTest.TCPListenShutdownListen/*");
   // https://fxbug.dev/35596
   // Deadlock? Test makes no progress even when run in isolation.
   SkipTest(tests, "All/SocketInetReusePortTest.TcpPortReuseMultiThread/*");
