@@ -311,6 +311,9 @@ int main(int argc, char** argv) {
     driver_runner.ScheduleBaseDriversBinding();
   }
 
+  // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
+  LOGF(INFO, "Drivers loaded and published");
+
   // Check if whatever launched devmgr gave a channel for component lifecycle events
   fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> component_lifecycle_request(
       zx::channel(zx_take_startup_handle(PA_LIFECYCLE)));
