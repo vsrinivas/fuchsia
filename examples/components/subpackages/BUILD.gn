@@ -39,25 +39,14 @@ fuchsia_component("parent-component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_component("echo_client_component") {
-  component_name = "echo_client"
+fuchsia_package_with_default_component("echo_client") {
   manifest = "meta/echo_client.cml"
   deps = [ "//examples/components/routing/rust/echo_client" ]
 }
 
-fuchsia_component("echo_server_component") {
-  component_name = "echo_server"
+fuchsia_package_with_default_component("echo_server") {
   manifest = "meta/echo_server.cml"
   deps = [ "//examples/components/routing/rust/echo_server" ]
-}
-
-fuchsia_package("echo_client_package") {
-  package_name = "echo_client"
-  deps = [ ":echo_client_component" ]
-}
-
-fuchsia_package("echo_server_package") {
-  deps = [ ":echo_server_component" ]
 }
 
 # Run with `fx test subpackage-examples`.
@@ -67,7 +56,7 @@ fuchsia_test_package("package-with-subs") {
 
   subpackages = [
     {
-      package = ":echo_client_package"
+      package = ":echo_client"
     },
     {
       # TODO(fxbug.dev/100060): It should be possible to rename the subpackage, by
@@ -76,7 +65,7 @@ fuchsia_test_package("package-with-subs") {
       # name is used to fill in the package name, so they must match.
       #
       #     name = "my-echo-server"
-      package = ":echo_server_package"
+      package = ":echo_server"
     },
   ]
 }

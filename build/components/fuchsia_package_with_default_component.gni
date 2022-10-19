@@ -1,0 +1,102 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("fuchsia_package_with_single_component.gni")
+
+# Defines a package that contains a single component with the default component
+# manifest path: `default.cm`. See:
+# https://fuchsia.dev/fuchsia-src/development/components/build
+#
+# Developers often define a package that contains a single component. This often
+# results in a component URL that requires two names (the package name and the
+# component name) to bundle a single software capability; for example:
+#
+# ```
+# fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm
+# ```
+#
+# To establish a convention, this template renames the component manifest
+# `default.cm`, so a user of this packaged component only needs to know the
+# package name, and can infer the component name if not explicitly provided.
+#
+# When using subpackages, separating components into independent packages is
+# convenient, and encouraged for stronger software encapsulation. Hermetic
+# tests can also be constructed as a test component with subpackaged component
+# dependencies.
+#
+# Note that a package with a `default.cm` component does not imply the package
+# contains no other components. Packages can define multiple components in the
+# same package using the `fuchsia_component()` and `fuchsia_package()`
+# templates, and within a multiple-component package, one of those components
+# can still be designated as that packages "default" component, by giving the
+# default component the `default.cm` manifest name.
+#
+# Example:
+# ```
+# executable("rot13_encoder_decoder") {
+#   sources = [ "rot13_encoder_decoder.cc" ]
+# }
+#
+# fuchsia_package_with_default_component("rot13") {
+#   manifest = "meta/rot13.cml"
+#   deps = [ ":rot13_encoder_decoder" ]
+# }
+# ```
+#
+# The resulting absolute component URL would be something similar to:
+#
+# ```
+# fuchsia-pkg://fuchsia.com/rot13#meta/default.cm
+# ```
+#
+# As a relative subpackaged component URL, the component reference would
+# typically be:
+#
+# ```
+# rot13#meta/default.cm
+# ```
+#
+# Parameters
+#
+#   package_name (optional)
+#     The name of the package.
+#     Type: string
+#     Default: target_name
+#
+#   manifest (required)
+#     The component manifest.
+#     Type: path
+#
+#   restricted_features (optional)
+#     The set of restricted CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //tools/cmc/build/restricted_features/BUILD.gn
+#     where each feature name is represented by a group of the same name.
+#     Type: list of strings
+#     Default: []
+#
+#   data_deps
+#   deps
+#   testonly
+#   visibility
+template("fuchsia_package_with_default_component") {
+  component_name = "default"
+
+  fuchsia_package_with_single_component(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "component_name",
+                             "data_deps",
+                             "deps",
+                             "disable_elf_binaries_checks",
+                             "is_shell_package",
+                             "manifest",
+                             "manifest_deps",
+                             "package_name",
+                             "restricted_features",
+                             "shell_commands",
+                             "testonly",
+                             "visibility",
+                           ])
+  }
+}

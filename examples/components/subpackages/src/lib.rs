@@ -21,8 +21,8 @@ async fn routes_from_echo() {
         // be renamed. At that time, update BUILD.gn to give the
         // echo_server_package an explicit name ("my-echo-server"), and replace
         // the following line with the commented out version below it:
-        .add_child("echo_server", "echo_server_package#meta/echo_server.cm", ChildOptions::new())
-        // .add_child("echo_server", "my-echo-server#meta/echo_server.cm",
+        .add_child("echo_server", "echo_server#meta/default.cm", ChildOptions::new())
+        // .add_child("echo_server", "my-echo-server#meta/default.cm",
         //            ChildOptions::new())
         .await
         .unwrap();
@@ -33,7 +33,7 @@ async fn routes_from_echo() {
     // the referenced package name, unless an explicit subpackage name is
     // declared.
     let echo_client = builder
-        .add_child("echo_client", "echo_client#meta/echo_client.cm", ChildOptions::new().eager())
+        .add_child("echo_client", "echo_client#meta/default.cm", ChildOptions::new().eager())
         .await
         .unwrap();
 
