@@ -47,8 +47,12 @@ python_binary("hermetic_inputs_for_image_assembly") {
   ]
 }
 
-python_binary("hermetic_inputs_for_update_and_flash") {
-  main_source = "hermetic_inputs_for_update_and_flash.py"
+python_binary("hermetic_inputs_from_assembly_outputs") {
+  main_source = "hermetic_inputs_from_assembly_outputs.py"
+  deps = [
+    "//build/python/modules/assembly",
+    "//build/python/modules/depfile",
+  ]
 }
 
 python_binary("make_legacy_config") {

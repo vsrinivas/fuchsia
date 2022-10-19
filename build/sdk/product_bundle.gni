@@ -52,6 +52,8 @@ template("product_bundle") {
 
   files = {
     hermetic_inputs = "${target_out_dir}/${target_name}_hermetic_inputs"
+    hermetic_inputs_depfile =
+        "${target_out_dir}/${target_name}_hermetic_inputs.d"
     outdir = "$target_out_dir/$target_name"
     product_bundle_manifest = "${outdir}/product_bundle.json"
     transfer_manifest = "${outdir}/transfer.json"
@@ -66,8 +68,9 @@ template("product_bundle") {
                            ])
 
     binary_label =
-        "//build/assembly/scripts:hermetic_inputs_for_update_and_flash"
+        "//build/assembly/scripts:hermetic_inputs_from_assembly_outputs"
 
+    depfile = files.hermetic_inputs_depfile
     inputs = [ invoker.partitions ]
     outputs = [ files.hermetic_inputs ]
 
@@ -76,6 +79,8 @@ template("product_bundle") {
       rebase_path(invoker.partitions, root_build_dir),
       "--output",
       rebase_path(files.hermetic_inputs, root_build_dir),
+      "--depfile",
+      rebase_path(files.hermetic_inputs_depfile, root_build_dir),
     ]
 
     if (defined(invoker.system_a) || defined(invoker.system_b) ||
