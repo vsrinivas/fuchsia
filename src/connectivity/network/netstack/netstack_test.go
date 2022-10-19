@@ -14,6 +14,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"runtime"
 	"sort"
 	"syscall/zx"
 	"testing"
@@ -1177,15 +1178,30 @@ func goroutineTopFunctionsToIgnore() []goleak.Option {
 // addGoleakCheck in each test produces more useful failure messages for
 // narrowing down which test is leaking a goroutine.
 func addGoleakCheck(t *testing.T) {
-	t.Helper()
-
 	opts := append(goroutineTopFunctionsToIgnore(), goleak.IgnoreCurrent())
 
 	t.Cleanup(func() {
-		goleak.VerifyNone(
-			t,
-			opts...,
-		)
+		// If the goleak check is run at a particularly unlucky time, it's possible
+		// to hit an error path in runtime.Stack() [1] that prevents goleak from
+		// parsing the runtime stack [2]. (goleak.VerifyNone() transitively calls
+		// runtime.Stack [3].)
+		//
+		// Fundamentally, this issue arises because goleak can't directly hook into
+		// the Go runtime and thus has to rely on well-formatted runtime debug
+		// output, for which there is no guarantee.
+		//
+		// In order to minimize this possibility, we wait until the runtime is in a
+		// less "interesting" state before trying to introspect it. We do so by
+		// yielding execution, which may allow other test goroutines to complete and
+		// make us less likely to hit the panic. The justification is only empirical
+		// -- we ran the tests many times and observed fewer panics when adding the
+		// yield.
+		//
+		// [1] https://cs.opensource.google/go/go/+/master:src/runtime/traceback.go;l=113;drc=f2656f20ea420ada5f15ef06ddf18d2797e18841
+		// [2] https://github.com/uber-go/goleak/blob/89d54f0adef2491e157717f756bf7f918943f3cc/internal/stack/stacks.go#L135
+		// [3] https://github.com/uber-go/goleak/blob/89d54f0adef2491e157717f756bf7f918943f3cc/internal/stack/stacks.go#L124
+		runtime.Gosched()
+		goleak.VerifyNone(t, opts...)
 	})
 }
 
