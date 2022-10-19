@@ -10,7 +10,6 @@ pub const TEST_ROOT_REALM_NAME: &'static str = "test_root";
 // TODO(fxbug.dev/100034): Delete these once we no longer need to hard code these in the code.
 pub const HERMETIC_ENVIRONMENT_NAME: &'static str = "hermetic";
 pub const HERMETIC_TESTS_COLLECTION: &'static str = "tests";
-pub const HERMETIC_TIER_2_TESTS_COLLECTION: &'static str = "tier-2-tests";
 pub const STARNIX_TESTS_COLLECTION: &'static str = "starnix-tests";
 pub const SYSTEM_TESTS_COLLECTION: &'static str = "system-tests";
 pub const CTS_TESTS_COLLECTION: &'static str = "cts-tests";
@@ -26,7 +25,6 @@ pub const SYSTEM_VALIDATION_COLLECTION: &'static str = "system-validation-tests"
 lazy_static! {
     pub static ref TEST_TYPE_REALM_MAP: HashMap<&'static str, &'static str> = [
         ("hermetic", HERMETIC_TESTS_COLLECTION),
-        ("hermetic-tier-2", HERMETIC_TIER_2_TESTS_COLLECTION),
         ("system", SYSTEM_TESTS_COLLECTION),
         ("cts", CTS_TESTS_COLLECTION),
         ("vulkan", VULKAN_TESTS_COLLECTION),

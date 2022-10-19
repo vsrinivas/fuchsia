@@ -31,9 +31,6 @@ const TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY: &'static str =
 const TEST_DEPRECATED_ALLOWED_ALL_PACKAGES_FACET_KEY: &'static str =
     "fuchsia.test.deprecated-allowed-all-packages";
 const HERMETIC_TEST_REALM: &'static str = "hermetic";
-// TODO(fxbug.dev/110507): This realm is deprecated. We will remove
-// this reference when it is no longer useful for burndown tracking.
-const HERMETIC_TIER_2_TEST_REALM: &'static str = "hermetic-tier-2";
 
 mod error;
 mod opts;
@@ -253,11 +250,7 @@ fn update_tags_with_test_entry(tags: &mut FuchsiaTestTags, test_entry: &TestEntr
     } else {
         match (build_rule, has_generated_manifest, wrapped_legacy_test, realm) {
             (_, _, true, _) => "wrapped_legacy",
-            (_, _, false, Some(realm))
-                if realm != HERMETIC_TEST_REALM && realm != HERMETIC_TIER_2_TEST_REALM =>
-            {
-                "system"
-            }
+            (_, _, false, Some(realm)) if realm != HERMETIC_TEST_REALM => "system",
             (Some("fuchsia_unittest_package"), true, _, _) => "unit",
             (Some("fuchsia_unittest_package"), false, _, _) => "integration",
             (Some("fuchsia_test_package"), true, _, _) => "unit",
@@ -820,52 +813,6 @@ mod tests {
                     TestTag { key: "legacy_test".to_string(), value: "".to_string() },
                     TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
                     TestTag { key: "realm".to_string(), value: "".to_string() },
-                    TestTag { key: "scope".to_string(), value: "integration".to_string() },
-                ],
-            ),
-            (
-                TestEntry {
-                    cpu: "x64".to_string(),
-                    os: "fuchsia".to_string(),
-                    wrapped_legacy_test: Some(false),
-                    build_rule: Some("fuchsia_test_package".to_string()),
-                    has_generated_manifest: Some(true),
-                    ..TestEntry::default()
-                },
-                FuchsiaTestTags {
-                    realm: Some("hermetic-tier-2".to_string()),
-                    hermetic: Some(true),
-                    ..FuchsiaTestTags::default()
-                },
-                vec![
-                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
-                    TestTag { key: "hermetic".to_string(), value: "true".to_string() },
-                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
-                    TestTag { key: "realm".to_string(), value: "hermetic-tier-2".to_string() },
-                    TestTag { key: "scope".to_string(), value: "unit".to_string() },
-                ],
-            ),
-            (
-                TestEntry {
-                    cpu: "x64".to_string(),
-                    os: "fuchsia".to_string(),
-                    wrapped_legacy_test: Some(false),
-                    build_rule: Some("fuchsia_test_package".to_string()),
-                    has_generated_manifest: Some(false),
-                    ..TestEntry::default()
-                },
-                FuchsiaTestTags {
-                    realm: Some("hermetic-tier-2".to_string()),
-                    hermetic: Some(true),
-                    ..FuchsiaTestTags::default()
-                },
-                vec![
-                    TestTag { key: "cpu".to_string(), value: "x64".to_string() },
-                    TestTag { key: "hermetic".to_string(), value: "true".to_string() },
-                    TestTag { key: "legacy_test".to_string(), value: "".to_string() },
-                    TestTag { key: "os".to_string(), value: "fuchsia".to_string() },
-                    TestTag { key: "realm".to_string(), value: "hermetic-tier-2".to_string() },
                     TestTag { key: "scope".to_string(), value: "integration".to_string() },
                 ],
             ),

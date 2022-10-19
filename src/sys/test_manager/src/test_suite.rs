@@ -4,9 +4,10 @@
 
 use {
     crate::{
-        above_root_capabilities::AboveRootCapabilitiesForTest, constants::TEST_TYPE_REALM_MAP,
-        debug_data_server, error::*, facet, facet::SuiteFacets, run_events::RunEvent,
-        running_suite, scheduler, scheduler::Scheduler, self_diagnostics,
+        above_root_capabilities::AboveRootCapabilitiesForTest,
+        constants::HERMETIC_TESTS_COLLECTION, debug_data_server, error::*, facet,
+        facet::SuiteFacets, run_events::RunEvent, running_suite, scheduler, scheduler::Scheduler,
+        self_diagnostics,
     },
     anyhow::Error,
     fidl::endpoints::ClientEnd,
@@ -464,10 +465,7 @@ where
         let resolver = suite.resolver.clone();
         let facet_result = get_facets_fn(test_url, resolver).await;
         let can_run_in_parallel = match &facet_result {
-            Ok(facets) => {
-                facets.collection == TEST_TYPE_REALM_MAP["hermetic"]
-                    || facets.collection == TEST_TYPE_REALM_MAP["hermetic-tier-2"]
-            }
+            Ok(facets) => facets.collection == HERMETIC_TESTS_COLLECTION,
             Err(_) => false,
         };
         suite.facets = facet::ResolveStatus::Resolved(facet_result);
@@ -689,13 +687,13 @@ mod tests {
         let get_facets_fn = |test_url, _resolver| async move {
             if test_url == "hermetic_suite".to_string() {
                 Ok(SuiteFacets {
-                    collection: TEST_TYPE_REALM_MAP["hermetic"],
+                    collection: HERMETIC_TESTS_COLLECTION,
                     deprecated_allowed_packages: None,
                     deprecated_allowed_all_packages: None,
                 })
             } else {
                 Ok(SuiteFacets {
-                    collection: TEST_TYPE_REALM_MAP["system"],
+                    collection: crate::constants::SYSTEM_TESTS_COLLECTION,
                     deprecated_allowed_packages: None,
                     deprecated_allowed_all_packages: None,
                 })
