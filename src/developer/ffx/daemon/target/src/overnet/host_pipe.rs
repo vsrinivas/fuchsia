@@ -93,22 +93,41 @@ impl HostPipeChild {
         stderr_buf: Rc<LogBuffer>,
         event_queue: events::Queue<TargetEvent>,
     ) -> Result<(Option<HostAddr>, HostPipeChild)> {
+        Self::new_inner(addr, id, stderr_buf, event_queue, false).await
+    }
+
+    #[cfg(feature = "circuit")]
+    async fn new_circuit(
+        addr: SocketAddr,
+        id: u64,
+        stderr_buf: Rc<LogBuffer>,
+        event_queue: events::Queue<TargetEvent>,
+    ) -> Result<(Option<HostAddr>, HostPipeChild)> {
+        Self::new_inner(addr, id, stderr_buf, event_queue, true).await
+    }
+
+    async fn new_inner(
+        addr: SocketAddr,
+        id: u64,
+        stderr_buf: Rc<LogBuffer>,
+        event_queue: events::Queue<TargetEvent>,
+        circuit: bool,
+    ) -> Result<(Option<HostAddr>, HostPipeChild)> {
+        let id_string = format!("{}", id);
+        let mut args = vec!["echo", "++ $SSH_CONNECTION ++", "&&", "remote_control_runner"];
+
+        if circuit {
+            args.push("--circuit");
+        }
+
+        args.push(id_string.as_str());
+
         // Before running remote_control_runner, we look up the environment
         // variable for $SSH_CONNECTION. This contains the IP address, including
         // scope_id, of the ssh client from the perspective of the ssh server.
         // This is useful because the target might need to use a specific
         // interface to talk to the host device.
-        let mut ssh = build_ssh_command(
-            addr,
-            vec![
-                "echo",
-                "++ $SSH_CONNECTION ++",
-                "&&",
-                "remote_control_runner",
-                format!("{}", id).as_str(),
-            ],
-        )
-        .await?;
+        let mut ssh = build_ssh_command(addr, args).await?;
 
         tracing::debug!("Spawning new ssh instance: {:?}", ssh);
 
@@ -122,7 +141,7 @@ impl HostPipeChild {
         // todo(fxb/108692) remove this use of the global hoist when we put the main one in the environment context
         // instead -- this one is very deeply embedded, but isn't used by tests (that I've found).
         let (pipe_rx, mut pipe_tx) = futures::AsyncReadExt::split(
-            overnet_pipe(hoist::hoist()).context("creating local overnet pipe")?,
+            overnet_pipe(hoist::hoist(), circuit).context("creating local overnet pipe")?,
         );
 
         let stdout =
@@ -310,6 +329,11 @@ impl HostPipeConnection {
         HostPipeConnection::new_with_cmd(target, HostPipeChild::new, RETRY_DELAY)
     }
 
+    #[cfg(feature = "circuit")]
+    pub fn new_circuit(target: Weak<Target>) -> impl Future<Output = Result<()>> {
+        HostPipeConnection::new_with_cmd(target, HostPipeChild::new_circuit, RETRY_DELAY)
+    }
+
     async fn new_with_cmd<F>(
         target: Weak<Target>,
         cmd_func: impl FnOnce(SocketAddr, u64, Rc<LogBuffer>, events::Queue<TargetEvent>) -> F
@@ -369,10 +393,17 @@ impl HostPipeConnection {
     }
 }
 
-fn overnet_pipe(overnet_instance: &dyn OvernetInstance) -> Result<fidl::AsyncSocket> {
+fn overnet_pipe(overnet_instance: &hoist::Hoist, circuit: bool) -> Result<fidl::AsyncSocket> {
     let (local_socket, remote_socket) = fidl::Socket::create(fidl::SocketOpts::STREAM)?;
     let local_socket = fidl::AsyncSocket::from_socket(local_socket)?;
-    overnet_instance.connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
+    if circuit {
+        #[cfg(feature = "circuit")]
+        overnet_instance.start_client_socket(remote_socket).detach();
+        #[cfg(not(feature = "circuit"))]
+        unreachable!("Circuit-switched overnet should be disabled")
+    } else {
+        overnet_instance.connect_as_mesh_controller()?.attach_socket_link(remote_socket)?;
+    }
 
     Ok(local_socket)
 }

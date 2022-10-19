@@ -106,6 +106,30 @@ impl Hoist {
         Self::with_cache_dir_maybe_router(&std::env::temp_dir(), None)
     }
 
+    /// Runs a circuit link over the given socket. Assumes it is connected as a client.
+    #[cfg(feature = "circuit")]
+    pub fn start_client_socket(&self, socket: fidl::Socket) -> Task<()> {
+        let router = Arc::clone(&self.node);
+        Task::spawn(async move {
+            if let Err(e) = async move {
+                let (mut rx, mut tx) = fuchsia_async::Socket::from_socket(socket)?.split();
+                circuit::multi_stream::multi_stream_node_connection_to_async(
+                    router.circuit_node(),
+                    &mut rx,
+                    &mut tx,
+                    false,
+                    circuit::Quality::LOCAL_SOCKET,
+                )
+                .await?;
+                Result::<(), Error>::Ok(())
+            }
+            .await
+            {
+                tracing::warn!("Client circuit failed: {:?}", e);
+            }
+        })
+    }
+
     pub fn node(&self) -> Arc<Router> {
         self.node.clone()
     }

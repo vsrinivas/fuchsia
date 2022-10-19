@@ -49,6 +49,7 @@ rustc_library("hoist") {
       "//third_party/rust_crates:tracing",
     ]
     test_deps += [ "//third_party/rust_crates:scopeguard" ]
+
     if (enable_circuit) {
       deps += [ "//src/connectivity/overnet/lib/circuit" ]
     }

@@ -881,9 +881,21 @@ impl Target {
 
         let weak_target = Rc::downgrade(self);
         self.host_pipe.borrow_mut().replace(Task::local(async move {
-            let r = HostPipeConnection::new(weak_target.clone()).await;
-            // XXX(raggi): decide what to do with this log data:
-            tracing::info!("HostPipeConnection returned: {:?}", r);
+            let legacy = async {
+                let r = HostPipeConnection::new(weak_target.clone()).await;
+                // XXX(raggi): decide what to do with this log data:
+                tracing::info!("HostPipeConnection returned: {:?}", r);
+            };
+            #[cfg(feature = "circuit")]
+            let circuit = async {
+                let r = HostPipeConnection::new_circuit(weak_target.clone()).await;
+                // XXX(raggi): decide what to do with this log data:
+                tracing::info!("Circuit HostPipeConnection returned: {:?}", r);
+            };
+            #[cfg(feature = "circuit")]
+            futures::future::join(legacy, circuit).await;
+            #[cfg(not(feature = "circuit"))]
+            legacy.await;
             weak_target.upgrade().and_then(|target| target.host_pipe.borrow_mut().take());
         }));
     }
