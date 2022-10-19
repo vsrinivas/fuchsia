@@ -849,27 +849,21 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
     ctrl2.ReadFrom(&regs_mmio_buffer_).set_execute_tuning(1).WriteTo(&regs_mmio_buffer_);
   }
 
-  sdmmc_req_t req = {
+  const sdmmc_req_new_t req = {
       .cmd_idx = cmd_idx,
       .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
       .arg = 0,
-      .blockcount = 0,
       .blocksize = blocksize,
-      .use_dma = false,
-      .dma_vmo = ZX_HANDLE_INVALID,
-      .virt_buffer = nullptr,
-      .virt_size = 0,
-      .buf_offset = 0,
-      .pmt = ZX_HANDLE_INVALID,
       .suppress_error_messages = true,
-      .response = {},
-      .status = ZX_ERR_BAD_STATE,
+      .client_id = 0,
+      .buffers_count = 0,
   };
+  uint32_t unused_response[4];
 
   for (int count = 0; (count < kMaxTuningCount) && ctrl2.execute_tuning(); count++) {
-    zx_status_t st = SdmmcRequest(&req);
+    zx_status_t st = SdmmcRequestNew(&req, unused_response);
     if (st != ZX_OK) {
-      zxlogf(ERROR, "sdhci: MMC_SEND_TUNING_BLOCK error, retcode = %d", req.status);
+      zxlogf(ERROR, "sdhci: MMC_SEND_TUNING_BLOCK error, retcode = %d", st);
       return st;
     }
 

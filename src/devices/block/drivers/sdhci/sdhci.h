@@ -35,6 +35,12 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     uint16_t attr;
     uint16_t length;
     uint64_t address;
+
+    uint64_t get_address() const {
+      uint64_t addr;
+      memcpy(&addr, &address, sizeof(addr));
+      return addr;
+    }
   } __PACKED;
   static_assert(sizeof(AdmaDescriptor96) == 12, "unexpected ADMA2 descriptor size");
 
@@ -177,32 +183,58 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   using SdmmcVmoStore = vmo_store::VmoStore<vmo_store::HashTableStorage<uint32_t, OwnedVmoInfo>>;
 
+  // Maintains a list of physical memory regions to be used for DMA. Input buffers are pinned if
+  // needed, and unpinned upon destruction.
   class DmaDescriptorBuilder {
    public:
     DmaDescriptorBuilder(const sdmmc_req_new_t& request, SdmmcVmoStore& registered_vmos,
-                         uint64_t dma_boundary_alignment)
+                         uint64_t dma_boundary_alignment, zx::unowned_bti bti)
         : request_(request),
           registered_vmos_(registered_vmos),
-          dma_boundary_alignment_(dma_boundary_alignment) {}
+          dma_boundary_alignment_(dma_boundary_alignment),
+          bti_(std::move(bti)) {}
+    ~DmaDescriptorBuilder() {
+      for (size_t i = 0; i < pmt_count_; i++) {
+        pmts_[i].unpin();
+      }
+    }
 
+    // Appends the physical memory regions for this buffer to the end of the list.
     zx_status_t ProcessBuffer(const sdmmc_buffer_region_t& buffer);
 
+    // Builds DMA descriptors of the template type in the array provided.
     template <typename DescriptorType>
-    zx_status_t BuildDmaDescriptors(cpp20::span<DescriptorType> descriptors);
+    zx_status_t BuildDmaDescriptors(cpp20::span<DescriptorType> out_descriptors);
 
-    size_t block_count() const { return request_.blocksize ? total_size_ / request_.blocksize : 0; }
+    size_t block_count() const {
+      ZX_DEBUG_ASSERT(request_.blocksize != 0);
+      return total_size_ / request_.blocksize;
+    }
     size_t descriptor_count() const { return descriptor_count_; }
 
    private:
-    zx_status_t AppendVmoRegions(cpp20::span<const fzl::PinnedVmo::Region> vmo_regions);
+    // Pins the buffer if needed, and fills out_regions with the physical addresses corresponding to
+    // the (owned or unowned) input buffer. Contiguous runs of pages are condensed into single
+    // regions so that the minimum number of DMA descriptors are required.
+    zx::status<size_t> GetPinnedRegions(uint32_t vmo_id, const sdmmc_buffer_region_t& buffer,
+                                        cpp20::span<fzl::PinnedVmo::Region> out_regions);
+    zx::status<size_t> GetPinnedRegions(zx::unowned_vmo vmo, const sdmmc_buffer_region_t& buffer,
+                                        cpp20::span<fzl::PinnedVmo::Region> out_regions);
+
+    // Appends the regions to the current list of regions being tracked by this object. Regions are
+    // split if needed according to hardware restrictions on size or alignment.
+    zx_status_t AppendRegions(cpp20::span<const fzl::PinnedVmo::Region> regions);
 
     const sdmmc_req_new_t& request_;
     SdmmcVmoStore& registered_vmos_;
     const uint64_t dma_boundary_alignment_;
-    std::array<fzl::PinnedVmo::Region, SDMMC_PAGES_COUNT> regions_;
+    std::array<fzl::PinnedVmo::Region, SDMMC_PAGES_COUNT> regions_ = {};
     size_t region_count_ = 0;
     size_t total_size_ = 0;
     size_t descriptor_count_ = 0;
+    std::array<zx::pmt, SDMMC_PAGES_COUNT> pmts_ = {};
+    size_t pmt_count_ = 0;
+    const zx::unowned_bti bti_;
   };
 
   static void PrepareCmd(sdmmc_req_t* req, TransferMode* transfer_mode, Command* command);
@@ -247,6 +279,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   void SgHandleInterrupt(InterruptStatus status) TA_REQ(mtx_);
   void SgCmdStageComplete() TA_REQ(mtx_);
   void SgTransferComplete() TA_REQ(mtx_);
+  void SgDataStageReadReady() TA_REQ(mtx_);
   void SgErrorRecovery() TA_REQ(mtx_);
   void SgCompleteRequest(zx_status_t status) TA_REQ(mtx_);
 
@@ -295,15 +328,17 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
   struct PendingRequest {
     PendingRequest() { Reset(); }
 
-    // Initializes the PendingRequest based on the command flags. cmd_done is set to false to
-    // indicate that there is now a request pending.
-    void SetCommandFlags(uint32_t request_cmd_flags) {
-      cmd_flags = request_cmd_flags;
+    // Initializes the PendingRequest based on the command index and flags. cmd_done is set to false
+    // to indicate that there is now a request pending.
+    void Init(const sdmmc_req_new_t& request) {
+      cmd_idx = request.cmd_idx;
+      cmd_flags = request.cmd_flags;
       cmd_done = false;
       // No data phase if there is no data present and no busy response.
       data_done = !(cmd_flags & (SDMMC_RESP_DATA_PRESENT | SDMMC_RESP_LEN_48B));
     }
 
+    uint32_t cmd_idx;
     // If false, a command is in progress on the bus, and the interrupt thread is waiting for the
     // command complete interrupt.
     bool cmd_done;
@@ -324,6 +359,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     void Reset() {
       cmd_done = true;
       data_done = true;
+      cmd_idx = 0;
       cmd_flags = 0;
       memset(response, 0, sizeof(response));
       status = ZX_ERR_IO;

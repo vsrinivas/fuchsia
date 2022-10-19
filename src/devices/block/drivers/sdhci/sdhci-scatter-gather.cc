@@ -65,7 +65,7 @@ zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_resp
   }
 
   DmaDescriptorBuilder builder(*req, registered_vmo_stores_[req->client_id],
-                               dma_boundary_alignment_);
+                               dma_boundary_alignment_, bti_.borrow());
 
   {
     fbl::AutoLock lock(&mtx_);
@@ -89,12 +89,22 @@ zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_resp
 }
 
 zx_status_t Sdhci::SgStartRequest(const sdmmc_req_new_t& request, DmaDescriptorBuilder& builder) {
+  using BlockSizeType = decltype(BlockSize::Get().FromValue(0).reg_value());
+  using BlockCountType = decltype(BlockCount::Get().FromValue(0).reg_value());
+
   TransferMode transfer_mode = TransferMode::Get().FromValue(0);
 
-  if (request.cmd_flags & SDMMC_RESP_DATA_PRESENT) {
-    using BlockSizeType = decltype(BlockSize::Get().FromValue(0).reg_value());
-    using BlockCountType = decltype(BlockCount::Get().FromValue(0).reg_value());
+  const bool is_tuning_request =
+      request.cmd_idx == MMC_SEND_TUNING_BLOCK || request.cmd_idx == SD_SEND_TUNING_BLOCK;
 
+  const auto blocksize = static_cast<BlockSizeType>(request.blocksize);
+
+  if (is_tuning_request) {
+    // The SDHCI controller has special logic to handle tuning transfers, so there is no need to set
+    // up any DMA buffers.
+    BlockSize::Get().FromValue(blocksize).WriteTo(&regs_mmio_buffer_);
+    BlockCount::Get().FromValue(0).WriteTo(&regs_mmio_buffer_);
+  } else if (request.cmd_flags & SDMMC_RESP_DATA_PRESENT) {
     if (request.blocksize > std::numeric_limits<BlockSizeType>::max()) {
       return ZX_ERR_OUT_OF_RANGE;
     }
@@ -114,7 +124,6 @@ zx_status_t Sdhci::SgStartRequest(const sdmmc_req_new_t& request, DmaDescriptorB
 
     transfer_mode.set_dma_enable(1).set_multi_block(builder.block_count() > 1 ? 1 : 0);
 
-    const auto blocksize = static_cast<BlockSizeType>(request.blocksize);
     const auto blockcount = static_cast<BlockCountType>(builder.block_count());
 
     BlockSize::Get().FromValue(blocksize).WriteTo(&regs_mmio_buffer_);
@@ -148,7 +157,7 @@ zx_status_t Sdhci::SgStartRequest(const sdmmc_req_new_t& request, DmaDescriptorB
   auto irq_mask = InterruptSignalEnable::Get().ReadFrom(&regs_mmio_buffer_);
   InterruptStatus::Get().FromValue(irq_mask.reg_value()).WriteTo(&regs_mmio_buffer_);
 
-  pending_request_.SetCommandFlags(request.cmd_flags);
+  pending_request_.Init(request);
 
   // Unmask and enable interrupts
   EnableInterrupts();
@@ -218,7 +227,7 @@ zx_status_t Sdhci::SgFinishRequest(const sdmmc_req_new_t& request, uint32_t out_
 
 template <typename DescriptorType>
 zx_status_t Sdhci::DmaDescriptorBuilder::BuildDmaDescriptors(
-    cpp20::span<DescriptorType> descriptors) {
+    cpp20::span<DescriptorType> out_descriptors) {
   if (total_size_ % request_.blocksize != 0) {
     zxlogf(ERROR, "Total buffer size (%lu) is not a multiple of the request block size (%u)",
            total_size_, request_.blocksize);
@@ -226,9 +235,9 @@ zx_status_t Sdhci::DmaDescriptorBuilder::BuildDmaDescriptors(
   }
 
   const cpp20::span<const fzl::PinnedVmo::Region> regions{regions_.data(), region_count_};
-  auto desc_it = descriptors.begin();
+  auto desc_it = out_descriptors.begin();
   for (const fzl::PinnedVmo::Region region : regions) {
-    if (desc_it == descriptors.end()) {
+    if (desc_it == out_descriptors.end()) {
       zxlogf(ERROR, "Not enough DMA descriptors to handle request");
       return ZX_ERR_OUT_OF_RANGE;
     }
@@ -253,7 +262,7 @@ zx_status_t Sdhci::DmaDescriptorBuilder::BuildDmaDescriptors(
     desc_it++;
   }
 
-  if (desc_it == descriptors.begin()) {
+  if (desc_it == out_descriptors.begin()) {
     zxlogf(ERROR, "No buffers were provided for the transfer");
     return ZX_ERR_INVALID_ARGS;
   }
@@ -262,57 +271,142 @@ zx_status_t Sdhci::DmaDescriptorBuilder::BuildDmaDescriptors(
   // descriptor as per the SDHCI ADMA2 spec.
   desc_it[-1].attr = Adma2DescriptorAttributes::Get(desc_it[-1].attr).set_end(1).reg_value();
 
-  descriptor_count_ = desc_it - descriptors.begin();
+  descriptor_count_ = desc_it - out_descriptors.begin();
   return ZX_OK;
 }
 
 zx_status_t Sdhci::DmaDescriptorBuilder::ProcessBuffer(const sdmmc_buffer_region_t& buffer) {
-  if (buffer.type == SDMMC_BUFFER_TYPE_VMO_HANDLE) {
-    // TODO(fxbug.dev/106851): Add support for unowned VMOs.
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   total_size_ += buffer.size;
 
+  fzl::PinnedVmo::Region region_buffer[SDMMC_PAGES_COUNT];
+  zx::status<size_t> region_count;
+  if (buffer.type == SDMMC_BUFFER_TYPE_VMO_HANDLE) {
+    region_count = GetPinnedRegions(zx::unowned_vmo(buffer.buffer.vmo), buffer,
+                                    {region_buffer, std::size(region_buffer)});
+  } else if (buffer.type == SDMMC_BUFFER_TYPE_VMO_ID) {
+    region_count =
+        GetPinnedRegions(buffer.buffer.vmo_id, buffer, {region_buffer, std::size(region_buffer)});
+  } else {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (region_count.is_error()) {
+    return region_count.error_value();
+  }
+
+  return AppendRegions({region_buffer, region_count.value()});
+}
+
+zx::status<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
+    uint32_t vmo_id, const sdmmc_buffer_region_t& buffer,
+    cpp20::span<fzl::PinnedVmo::Region> out_regions) {
   vmo_store::StoredVmo<OwnedVmoInfo>* const stored_vmo =
       registered_vmos_.GetVmo(buffer.buffer.vmo_id);
   if (stored_vmo == nullptr) {
     zxlogf(ERROR, "No VMO %u for client %u", buffer.buffer.vmo_id, request_.client_id);
-    return ZX_ERR_NOT_FOUND;
+    return zx::error(ZX_ERR_NOT_FOUND);
   }
 
-  // Make sure that this request would not cause the controller to violate the rights of the VMO, as
-  // we may not have an IOMMU to otherwise prevent it.
+  // Make sure that this request would not cause the controller to violate the rights of the VMO,
+  // as we may not have an IOMMU to otherwise prevent it.
   if (!(request_.cmd_flags & SDMMC_CMD_READ) &&
       !(stored_vmo->meta().rights & SDMMC_VMO_RIGHT_READ)) {
     // Write request, controller reads from this VMO and writes to the card.
     zxlogf(ERROR, "Request would cause controller to read from write-only VMO");
-    return ZX_ERR_ACCESS_DENIED;
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
   if ((request_.cmd_flags & SDMMC_CMD_READ) &&
       !(stored_vmo->meta().rights & SDMMC_VMO_RIGHT_WRITE)) {
     // Read request, controller reads from the card and writes to this VMO.
     zxlogf(ERROR, "Request would cause controller to write to read-only VMO");
-    return ZX_ERR_ACCESS_DENIED;
+    return zx::error(ZX_ERR_ACCESS_DENIED);
   }
 
-  fzl::PinnedVmo::Region region_buffer[SDMMC_PAGES_COUNT];
   size_t region_count = 0;
   const zx_status_t status =
       stored_vmo->GetPinnedRegions(buffer.offset + stored_vmo->meta().offset, buffer.size,
-                                   region_buffer, std::size(region_buffer), &region_count);
+                                   out_regions.data(), out_regions.size(), &region_count);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to get pinned regions: %s", zx_status_get_string(status));
-    return status;
+    return zx::error(status);
   }
 
-  return AppendVmoRegions({region_buffer, region_count});
+  return zx::ok(region_count);
 }
 
-zx_status_t Sdhci::DmaDescriptorBuilder::AppendVmoRegions(
-    const cpp20::span<const fzl::PinnedVmo::Region> vmo_regions) {
+zx::status<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
+    zx::unowned_vmo vmo, const sdmmc_buffer_region_t& buffer,
+    cpp20::span<fzl::PinnedVmo::Region> out_regions) {
+  const uint64_t kPageSize = zx_system_get_page_size();
+  const uint64_t kPageMask = kPageSize - 1;
+
+  if (pmt_count_ >= pmts_.size()) {
+    zxlogf(ERROR, "Too many unowned VMOs specified, maximum is %zu", pmts_.size());
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  const uint64_t page_offset = buffer.offset & kPageMask;
+  const uint64_t page_count = fbl::round_up(buffer.size + page_offset, kPageSize) / kPageSize;
+
+  const uint32_t options =
+      (request_.cmd_flags & SDMMC_CMD_READ) ? ZX_BTI_PERM_WRITE : ZX_BTI_PERM_READ;
+
+  zx_paddr_t phys[SDMMC_PAGES_COUNT];
+
+  if (page_count == 0) {
+    zxlogf(ERROR, "Buffer has no pages");
+    return zx::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (page_count > std::size(phys)) {
+    zxlogf(ERROR, "Buffer has too many pages, maximum is %zu", std::size(phys));
+    return zx::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
+  zx_status_t status = bti_->pin(options, *vmo, buffer.offset - page_offset, page_count * kPageSize,
+                                 phys, page_count, &pmts_[pmt_count_]);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to pin unowned VMO: %s", zx_status_get_string(status));
+    return zx::error(status);
+  }
+
+  pmt_count_++;
+
+  ZX_DEBUG_ASSERT(!out_regions.empty());  // This assumption simplifies the following logic.
+
+  out_regions[0].phys_addr = phys[0] + page_offset;
+  out_regions[0].size = kPageSize - page_offset;
+
+  // Check for any pages that happen to be both contiguous and increasing in physical addresses.
+  // Such pages, if there are any, can be combined into a single DMA descriptor to enable larger
+  // transfers.
+
+  size_t last_region = 0;
+  for (size_t paddr_count = 1; paddr_count < page_count; paddr_count++) {
+    if ((out_regions[last_region].phys_addr + out_regions[last_region].size) == phys[paddr_count]) {
+      // The current region is contiguous with this physical address, increase it by the page size.
+      out_regions[last_region].size += kPageSize;
+    } else if (++last_region < out_regions.size()) {
+      // The current region is not contiguous with this physical address, create a new region.
+      out_regions[last_region].phys_addr = phys[paddr_count];
+      out_regions[last_region].size = kPageSize;
+    } else {
+      // Ran out of regions.
+      zxlogf(ERROR, "Buffer has too many regions, maximum is %zu", out_regions.size());
+      return zx::error(ZX_ERR_OUT_OF_RANGE);
+    }
+  }
+
+  // Adjust the last region size based on the offset into the first page and the total size of the
+  // buffer.
+  out_regions[last_region].size -= (page_count * kPageSize) - buffer.size - page_offset;
+
+  return zx::ok(last_region + 1);
+}
+
+zx_status_t Sdhci::DmaDescriptorBuilder::AppendRegions(
+    const cpp20::span<const fzl::PinnedVmo::Region> regions) {
   fzl::PinnedVmo::Region current_region{0, 0};
-  for (auto vmo_regions_it = vmo_regions.begin();;) {
+  for (auto vmo_regions_it = regions.begin();;) {
     if (region_count_ >= regions_.size()) {
       return ZX_ERR_OUT_OF_RANGE;
     }
@@ -320,7 +414,7 @@ zx_status_t Sdhci::DmaDescriptorBuilder::AppendVmoRegions(
     // Current region is invalid, fetch a new one from the input list.
     if (current_region.size == 0) {
       // No more regions left to process.
-      if (vmo_regions_it == vmo_regions.end()) {
+      if (vmo_regions_it == regions.end()) {
         return ZX_OK;
       }
 
@@ -372,6 +466,9 @@ void Sdhci::SgHandleInterrupt(const InterruptStatus status) {
   if (status.transfer_complete()) {
     SgTransferComplete();
   }
+  if (status.buffer_read_ready()) {
+    SgDataStageReadReady();
+  }
   if (status.ErrorInterrupt()) {
     SgErrorRecovery();
   }
@@ -416,6 +513,17 @@ void Sdhci::SgCmdStageComplete() {
 void Sdhci::SgTransferComplete() {
   pending_request_.data_done = true;
   if (pending_request_.cmd_done) {
+    SgCompleteRequest(ZX_OK);
+  }
+}
+
+void Sdhci::SgDataStageReadReady() {
+  if ((pending_request_.cmd_idx == MMC_SEND_TUNING_BLOCK) ||
+      (pending_request_.cmd_idx == SD_SEND_TUNING_BLOCK)) {
+    // This is the final interrupt expected for tuning transfers, so mark both command and data
+    // phases complete.
+    pending_request_.cmd_done = true;
+    pending_request_.data_done = true;
     SgCompleteRequest(ZX_OK);
   }
 }
