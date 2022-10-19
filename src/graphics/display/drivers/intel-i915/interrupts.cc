@@ -88,7 +88,7 @@ void Interrupts::HandlePipeInterrupt(registers::Pipe pipe, zx_time_t timestamp) 
   identity.WriteTo(mmio_space_);
 
   if (identity.underrun()) {
-    zxlogf(WARNING, "Transcoder overrrun on pipe %d", pipe);
+    zxlogf(WARNING, "Transcoder underrun on pipe %d", pipe);
   }
   if (identity.vsync()) {
     pipe_vsync_callback_(pipe, timestamp);

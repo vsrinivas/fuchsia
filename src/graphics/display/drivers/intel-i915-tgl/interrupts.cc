@@ -313,7 +313,7 @@ void Interrupts::HandlePipeInterrupt(tgl_registers::Pipe pipe, zx_time_t timesta
   interrupt_identity.WriteTo(mmio_space_);
 
   if (interrupt_identity.underrun()) {
-    zxlogf(WARNING, "Transcoder overrrun on pipe %d", pipe);
+    zxlogf(WARNING, "Transcoder underrun on pipe %d", pipe);
   }
   if (interrupt_identity.vsync()) {
     pipe_vsync_callback_(pipe, timestamp);
