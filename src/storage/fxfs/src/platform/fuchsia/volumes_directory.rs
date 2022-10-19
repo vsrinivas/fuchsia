@@ -8,6 +8,7 @@ use {
         errors::FxfsError,
         fsck,
         log::*,
+        metrics::OBJECT_STORES_NODE,
         object_store::{
             allocator::Allocator,
             directory::ObjectDescriptor,
@@ -18,7 +19,6 @@ use {
         platform::{
             fuchsia::{
                 component::map_to_raw_status,
-                metrics::OBJECT_STORES_NODE,
                 volume::{FxVolumeAndRoot, DEFAULT_FLUSH_PERIOD},
             },
             RemoteCrypt,

@@ -8,7 +8,6 @@ mod directory;
 mod errors;
 pub mod file;
 pub mod log;
-pub mod metrics;
 pub mod node;
 pub mod pager;
 mod remote_crypt;

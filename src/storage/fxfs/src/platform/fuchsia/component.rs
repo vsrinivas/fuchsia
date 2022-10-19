@@ -7,10 +7,10 @@ use {
         filesystem::{mkfs, Filesystem, FxFilesystem, OpenFxFilesystem, OpenOptions},
         fsck,
         log::*,
+        metrics::OBJECT_STORES_NODE,
         object_store::volume::root_volume,
         platform::fuchsia::{
-            errors::map_to_status, metrics::OBJECT_STORES_NODE, pager::PagerExecutor,
-            volumes_directory::VolumesDirectory,
+            errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
         },
         serialized_types::LATEST_VERSION,
     },
