@@ -180,7 +180,10 @@ if (toolchain_environment == "physmem" ||
 
   source_set("dev-init") {
     visibility = [ ":*" ]
-    sources = [ "dev-init.cc" ]
+    sources = [
+      "dev-init-uart.cc",
+      "dev-init.cc",
+    ]
     deps = [
       "//zircon/kernel/dev/hdcp/amlogic_s912",
       "//zircon/kernel/dev/hw_rng/amlogic_rng",
