@@ -51,6 +51,7 @@ executable("isolated_persistent_storage_bin") {
   sources = [ "isolated_persistent_storage.cc" ]
 
   deps = [
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",

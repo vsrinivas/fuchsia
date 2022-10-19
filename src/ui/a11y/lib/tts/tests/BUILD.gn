@@ -15,6 +15,7 @@ executable("tts_manager_tests") {
   deps = [
     "//sdk/fidl/fuchsia.accessibility.tts:fuchsia.accessibility.tts_hlcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_hlcpp",
+    "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",

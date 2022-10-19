@@ -24,7 +24,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.test:fuchsia.test_hlcpp",
     "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/pkg_url",

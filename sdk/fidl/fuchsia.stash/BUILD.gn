@@ -26,7 +26,6 @@ fidl("fuchsia.stash") {
     "//src/connectivity/network/netstack:lib",
     "//src/connectivity/network/tests/integration/common:*",
     "//src/connectivity/wlan/*",
-    "//src/modular/lib/modular_test_harness/*",
     "//src/modular/tests/*",
     "//src/settings/service/*",
     "//src/settings/storage/*",

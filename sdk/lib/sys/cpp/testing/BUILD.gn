@@ -58,31 +58,8 @@ source_set("integration_fixture") {
   sources = [ "test_with_environment_fixture.h" ]
 
   public_deps = [
-    ":enclosing_environment",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//src/lib/testing/loop_fixture",
     "//zircon/system/ulib/async-loop/testing:async-loop-testing",
   ]
-}
-
-source_set("enclosing_environment") {
-  # TODO(fxbug.dev/82270): Consider renaming or refactoring this target.
-  testonly = true
-
-  sources = [
-    "component_interceptor.cc",
-    "component_interceptor.h",
-  ]
-
-  deps = [ "//third_party/rapidjson" ]
-
-  public_deps = [
-    ":cpp",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/vfs/cpp",
-    "//zircon/system/ulib/async-default",
-  ]
-
-  public_configs = [ "//sdk/config" ]
 }

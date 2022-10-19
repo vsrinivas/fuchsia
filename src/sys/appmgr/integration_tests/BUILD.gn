@@ -43,6 +43,7 @@ executable("realm_tests") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/fidl/fuchsia.sys.internal:fuchsia.sys.internal_hlcpp",
     "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

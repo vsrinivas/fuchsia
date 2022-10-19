@@ -34,7 +34,6 @@ source_set("deprecated_svc") {
     "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittest",
     "//src/modular/lib/fidl:app_client",
     "//src/modular/lib/lifecycle/cpp:lifecycle_impl",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
     "//src/virtualization/bin/guest_manager:lib",
   ]
 

@@ -811,7 +811,6 @@ config("Wno-conversion") {
     "//src/modular/bin/sessionmgr/storage:*",
     "//src/modular/lib/async/cpp:*",
     "//src/modular/lib/modular_config:*",
-    "//src/modular/lib/modular_test_harness/cpp:*",
     "//src/modular/tests:*",
     "//src/performance/lib/gperftools:*",
     "//src/performance/lib/gperftools/tests:*",

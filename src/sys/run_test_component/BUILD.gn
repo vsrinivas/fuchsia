@@ -69,7 +69,7 @@ executable("bin") {
     "//sdk/fidl/fuchsia.process:fuchsia.process_hlcpp",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
     "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:enclosing_environment",
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//sdk/lib/syslog/cpp",
     "//src/diagnostics/archivist/fidl:controller_hlcpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

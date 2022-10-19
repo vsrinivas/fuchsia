@@ -60,7 +60,6 @@ _idks = [
   "core",
   "core_testing",
   "e2e_testing",
-  "modular_testing",
 ]
 _verify_idk_deps = []
 foreach(idk, _idks) {

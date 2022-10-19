@@ -12,10 +12,7 @@ group("bundles") {
 
 group("tools") {
   testonly = true
-  public_deps = [
-    ":testing",
-    "//src/modular/bin/sessionctl",
-  ]
+  public_deps = [ "//src/modular/bin/sessionctl" ]
 }
 
 group("framework") {
@@ -25,26 +22,13 @@ group("framework") {
   ]
 }
 
-# Packages used for authoring and running integration tests.
-group("testing") {
-  testonly = true
-  public_deps = [ "//src/modular/bin/modular_test_harness" ]
-}
-
-# TODO: How is this group different from "testing" above?
 group("integration_testing") {
   testonly = true
-  public_deps = [
-    ":framework",
-    ":testing",
-  ]
+  public_deps = [ ":framework" ]
 }
 
 # Packages which contain tests.
 group("tests") {
   testonly = true
-  public_deps = [
-    ":testing",
-    "//src/modular:tests",
-  ]
+  public_deps = [ "//src/modular:tests" ]
 }

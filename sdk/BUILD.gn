@@ -17,7 +17,6 @@ _sdk_public_deps = [
   ":core",
   ":core_testing",
   ":e2e_testing",
-  ":modular_testing",
   ":zircon_sysroot",
 ]
 
@@ -78,7 +77,6 @@ group("archives") {
     ":core_testing_archive",
     ":e2e_testing_archive",
     ":fuchsia_dart_archive",
-    ":modular_testing_archive",
   ]
 }
 
@@ -89,7 +87,6 @@ merged_sdk("merged") {
     ":core_testing",
     ":e2e_testing",
     ":fuchsia_dart",
-    ":modular_testing",
   ]
 }
 
@@ -99,7 +96,6 @@ group("sdk.modular") {
   public_deps = [
     ":core.modular",
     ":host_tools.all",
-    ":modular_testing",
     ":zircon_sysroot",
     "//scripts/sdk/gn:gn.modular.tar.gz",
   ]
@@ -430,33 +426,6 @@ if (is_host) {
       "//zircon/tools/zbi:zbi_sdk",
     ]
   }
-}
-
-# The `modular_testing` SDK provides FIDL protocols and C++ libraries for writing hermetic
-# integration tests which use modular.
-#
-# The modular framework is deprecated: new products should use the session framework
-# instead. See //docs/concepts/session/introduction.md.
-#
-# This SDK has runtime dependencies on the following fuchsia packages:
-#  * environment_delegating_runner
-#  * modular_test_harness
-sdk("modular_testing") {
-  testonly = true
-
-  id = sdk_id
-
-  api = "manifests/modular_testing.manifest"
-
-  category = "partner"
-
-  deps = [
-    "//sdk/fidl/fuchsia.element:fuchsia.element_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.modular:fuchsia.modular_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_sdk($fidl_toolchain)",
-    "//sdk/fidl/fuchsia.ui.lifecycle:fuchsia.ui.lifecycle_sdk($fidl_toolchain)",
-    "//sdk/lib/modular/testing/cpp:cpp_sdk",
-  ]
 }
 
 # Firmware SDK.

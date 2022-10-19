@@ -30,7 +30,6 @@ sdk://pkg/fidl_cpp_sync
 sdk://pkg/fit
 sdk://pkg/fit-promise
 sdk://pkg/modular_cpp
-sdk://pkg/modular_testing_cpp
 sdk://pkg/stdcompat
 sdk://pkg/sys_cpp
 sdk://pkg/sys_service_cpp

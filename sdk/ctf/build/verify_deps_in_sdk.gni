@@ -6,7 +6,6 @@
 ALLOWED_SDKS = [
   "//sdk:core",
   "//sdk:e2e_testing",
-  "//sdk:modular_testing",
 ]
 
 # Verifies dependencies are released in an SDK.

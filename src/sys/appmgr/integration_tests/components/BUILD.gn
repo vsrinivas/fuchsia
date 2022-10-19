@@ -67,6 +67,7 @@ executable("components_binary_test_bin") {
   sources = [ "components_binary_test.cc" ]
 
   deps = [
+    "//sdk/lib/sys/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//sdk/lib/vfs/cpp",
     "//src/lib/fxl",

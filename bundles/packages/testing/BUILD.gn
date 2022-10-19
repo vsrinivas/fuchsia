@@ -7,15 +7,7 @@
 
 group("all") {
   testonly = true
-  public_deps = [
-    ":environment_delegating_runner",
-    ":run_test_component",
-  ]
-}
-
-group("environment_delegating_runner") {
-  testonly = true
-  public_deps = [ "//sdk/lib/sys/cpp/testing/environment_delegating_runner" ]
+  public_deps = [ ":run_test_component" ]
 }
 
 group("run_test_component") {

@@ -210,7 +210,6 @@ If you are working on an LSC:
 
 ```sh
 fx set terminal.x64 --with //bundles:kitchen_sink \
-                    --with //sdk:modular_testing
 ```
 
 ### symbolizer
