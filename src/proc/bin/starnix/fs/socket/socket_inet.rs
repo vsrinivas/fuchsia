@@ -115,7 +115,7 @@ impl InetSocket {
         };
 
         self.zxio
-            .sendmsg(addr, buf, cmsg, flags.bits())
+            .sendmsg(addr, buf, cmsg, flags.bits() & !MSG_DONTWAIT)
             .map_err(|status| from_status_like_fdio!(status))?
             .map_err(|out_code| errno_from_zxio_code!(out_code))
     }
@@ -126,7 +126,7 @@ impl InetSocket {
         flags: SocketMessageFlags,
     ) -> Result<RecvMessageInfo, Errno> {
         self.zxio
-            .recvmsg(iovec_length, flags.bits())
+            .recvmsg(iovec_length, flags.bits() & !MSG_DONTWAIT)
             .map_err(|status| from_status_like_fdio!(status))?
             .map_err(|out_code| errno_from_zxio_code!(out_code))
     }

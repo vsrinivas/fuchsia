@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/socket_ip_tcp_loopback_test",
-        args: [ "--gunit_filter=-*.RecvTimeoutReadSucceeds/*:*.RecvTimeoutNegSecRead/*:*.SendmsgRecvmsgMsgCtruncNoop/*:*.RecvmsgMsghdrFlagsNotClearedOnFailure/*:*.SetSocketRecvBufForceAboveMax/*:*.SetGetSendTimeoutLargerArg/*:*.SetGetRecvTimeoutLargerArg/*:*.RecvTimeoutUsecTooLarge/*:*.SendTimeoutUsecTooLarge/*:*.RecvTimeoutUsecNeg/*:*.SendTimeoutUsecNeg/*:*.RecvWaitAll/*:*.RecvWaitAllDontWait/*:*.RecvTimeoutWaitAll/*:*.SetAndGetBooleanSocketOptions/*:*.GetSetSocketRcvlowatOption/*" ],
+        args: [ "--gunit_filter=-*.RecvTimeoutReadSucceeds/*:*.RecvTimeoutNegSecRead/*:*.SendmsgRecvmsgMsgCtruncNoop/*:*.SetSocketRecvBufForceAboveMax/*:*.SetGetSendTimeoutLargerArg/*:*.SetGetRecvTimeoutLargerArg/*:*.RecvTimeoutUsecTooLarge/*:*.SendTimeoutUsecTooLarge/*:*.RecvTimeoutUsecNeg/*:*.SendTimeoutUsecNeg/*:*.RecvWaitAll/*:*.RecvWaitAllDontWait/*:*.RecvTimeoutWaitAll/*:*.SetAndGetBooleanSocketOptions/*:*.GetSetSocketRcvlowatOption/*" ],
     },
 }
