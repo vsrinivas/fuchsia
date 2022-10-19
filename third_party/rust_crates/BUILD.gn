@@ -626,11 +626,11 @@ if (!(current_os == "fuchsia")) {
 }
 
 group("proptest") {
-  public_deps = [ ":proptest-v0_9_3" ]
+  public_deps = [ ":proptest-v1_0_0" ]
 }
 
 group("proptest-derive") {
-  public_deps = [ ":proptest-derive-v0_1_1($host_toolchain)" ]
+  public_deps = [ ":proptest-derive-v0_3_0($host_toolchain)" ]
 }
 
 group("prost") {
@@ -7543,10 +7543,10 @@ rust_library("proc-macro2-v1_0_39") {
   visibility = [ ":*" ]
 }
 
-rust_library("proptest-v0_9_3") {
+rust_library("proptest-v1_0_0") {
   crate_name = "proptest"
   crate_root = "//third_party/rust_crates/vendor/proptest/src/lib.rs"
-  output_name = "proptest-5501bd7bbeeb32df"
+  output_name = "proptest-524e1e7f7004ea48"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -7555,12 +7555,12 @@ rust_library("proptest-v0_9_3") {
   deps += [ ":byteorder-v1_3_1" ]
   deps += [ ":lazy_static-v1_4_0" ]
   deps += [ ":num-traits-v0_2_14" ]
-  deps += [ ":quick-error-v1_2_2" ]
-  deps += [ ":rand-v0_6_5" ]
-  deps += [ ":rand_chacha-v0_1_1" ]
-  deps += [ ":rand_xorshift-v0_1_1" ]
+  deps += [ ":quick-error-v2_0_1" ]
+  deps += [ ":rand-v0_8_4" ]
+  deps += [ ":rand_chacha-v0_3_1" ]
+  deps += [ ":rand_xorshift-v0_3_0" ]
   deps += [ ":regex-syntax-v0_6_26" ]
-  deps += [ ":rusty-fork-v0_2_1" ]
+  deps += [ ":rusty-fork-v0_3_0" ]
   deps += [ ":tempfile-v3_2_0" ]
 
   rustenv = []
@@ -7568,8 +7568,8 @@ rust_library("proptest-v0_9_3") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=5501bd7bbeeb32df",
-    "-Cextra-filename=-5501bd7bbeeb32df",
+    "-Cmetadata=524e1e7f7004ea48",
+    "-Cextra-filename=-524e1e7f7004ea48",
     "--cfg=feature=\"bit-set\"",
     "--cfg=feature=\"break-dead-code\"",
     "--cfg=feature=\"default\"",
@@ -7586,10 +7586,10 @@ rust_library("proptest-v0_9_3") {
   visibility = [ ":*" ]
 }
 
-rust_proc_macro("proptest-derive-v0_1_1") {
+rust_proc_macro("proptest-derive-v0_3_0") {
   crate_name = "proptest_derive"
   crate_root = "//third_party/rust_crates/vendor/proptest-derive/src/lib.rs"
-  output_name = "proptest_derive-c677256b817d9125"
+  output_name = "proptest_derive-3ff04ca82bf92114"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -7602,8 +7602,8 @@ rust_proc_macro("proptest-derive-v0_1_1") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=c677256b817d9125",
-    "-Cextra-filename=-c677256b817d9125",
+    "-Cmetadata=3ff04ca82bf92114",
+    "-Cextra-filename=-3ff04ca82bf92114",
   ]
 
   visibility = [ ":*" ]
@@ -7884,7 +7884,6 @@ rust_library("rand-v0_6_5") {
     "-Cextra-filename=-49454de2a45e84d2",
     "--cfg=feature=\"alloc\"",
     "--cfg=feature=\"default\"",
-    "--cfg=feature=\"i128_support\"",
     "--cfg=feature=\"rand_os\"",
     "--cfg=feature=\"std\"",
     "--cfg=rustc_1_25",
@@ -8991,25 +8990,25 @@ rust_library("rustls-native-certs-v0_5_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("rusty-fork-v0_2_1") {
+rust_library("rusty-fork-v0_3_0") {
   crate_name = "rusty_fork"
   crate_root = "//third_party/rust_crates/vendor/rusty-fork/src/lib.rs"
-  output_name = "rusty_fork-ac04dd6dceaad5be"
+  output_name = "rusty_fork-ace06252817d912e"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":fnv-v1_0_6" ]
   deps += [ ":quick-error-v1_2_2" ]
   deps += [ ":tempfile-v3_2_0" ]
-  deps += [ ":wait-timeout-v0_1_5" ]
+  deps += [ ":wait-timeout-v0_2_0" ]
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=ac04dd6dceaad5be",
-    "-Cextra-filename=-ac04dd6dceaad5be",
+    "--edition=2018",
+    "-Cmetadata=ace06252817d912e",
+    "-Cextra-filename=-ace06252817d912e",
     "--cfg=feature=\"timeout\"",
     "--cfg=feature=\"wait-timeout\"",
   ]
@@ -11815,22 +11814,24 @@ rust_library("vte-v0_3_3") {
   visibility = [ ":*" ]
 }
 
-rust_library("wait-timeout-v0_1_5") {
+rust_library("wait-timeout-v0_2_0") {
   crate_name = "wait_timeout"
   crate_root = "//third_party/rust_crates/vendor/wait-timeout/src/lib.rs"
-  output_name = "wait_timeout-6681f14e0f8d09c3"
+  output_name = "wait_timeout-369c6a5702285b53"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":libc-v0_2_116" ]
+  if (true) {
+    deps += [ ":libc-v0_2_116" ]
+  }
 
   rustenv = []
 
   rustflags = [
     "--cap-lints=allow",
     "--edition=2015",
-    "-Cmetadata=6681f14e0f8d09c3",
-    "-Cextra-filename=-6681f14e0f8d09c3",
+    "-Cmetadata=369c6a5702285b53",
+    "-Cextra-filename=-369c6a5702285b53",
   ]
 
   visibility = [ ":*" ]

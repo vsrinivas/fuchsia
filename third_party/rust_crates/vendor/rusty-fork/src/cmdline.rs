@@ -1,5 +1,5 @@
 //-
-// Copyright 2018 Jason Lingle
+// Copyright 2018, 2020 Jason Lingle
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -11,7 +11,7 @@
 
 use std::env;
 
-use error::*;
+use crate::error::*;
 
 /// How a hyphen-prefixed argument passed to the parent process should be
 /// handled when constructing the command-line for the child process.
@@ -28,27 +28,33 @@ enum FlagType {
     Error(&'static str),
 }
 
-/// Table of all flags in the 2018-02-23 nightly build.
+/// Table of all flags in the 2020-05-26 nightly build.
 ///
 /// A number of these that affect output are dropped because we append our own
 /// options.
 static KNOWN_FLAGS: &[(&str, FlagType)] = &[
-    ("--ignored", FlagType::Pass(false)),
-    ("--test", FlagType::Pass(false)),
     ("--bench", FlagType::Pass(false)),
-    ("--list", FlagType::Error("Tests run but --list passed to process?")),
-    ("-h", FlagType::Error("Tests run but -h passed to process?")),
+    ("--color", FlagType::Pass(true)),
+    ("--ensure-time", FlagType::Drop(false)),
+    ("--exact", FlagType::Drop(false)),
+    ("--exclude-should-panic", FlagType::Pass(false)),
+    ("--force-run-in-process", FlagType::Pass(false)),
+    ("--format", FlagType::Drop(true)),
     ("--help", FlagType::Error("Tests run but --help passed to process?")),
+    ("--ignored", FlagType::Pass(false)),
+    ("--include-ignored", FlagType::Pass(false)),
+    ("--list", FlagType::Error("Tests run but --list passed to process?")),
     ("--logfile", FlagType::Drop(true)),
     ("--nocapture", FlagType::Drop(true)),
-    ("--test-threads", FlagType::Drop(true)),
-    ("--skip", FlagType::Drop(true)),
-    ("-q", FlagType::Drop(false)),
     ("--quiet", FlagType::Drop(false)),
-    ("--exact", FlagType::Drop(false)),
-    ("--color", FlagType::Pass(true)),
-    ("--format", FlagType::Drop(true)),
+    ("--report-time", FlagType::Drop(true)),
+    ("--show-output", FlagType::Pass(false)),
+    ("--skip", FlagType::Drop(true)),
+    ("--test", FlagType::Pass(false)),
+    ("--test-threads", FlagType::Drop(true)),
     ("-Z", FlagType::Pass(true)),
+    ("-h", FlagType::Error("Tests run but -h passed to process?")),
+    ("-q", FlagType::Drop(false)),
 ];
 
 fn look_up_flag_from_table(flag: &str) -> Option<FlagType> {
@@ -59,7 +65,7 @@ fn look_up_flag_from_table(flag: &str) -> Option<FlagType> {
 pub(crate) fn env_var_for_flag(flag: &str) -> String {
     let mut var = "RUSTY_FORK_FLAG_".to_owned();
     var.push_str(
-        &flag.trim_left_matches('-').to_uppercase().replace('-', "_"));
+        &flag.trim_start_matches('-').to_uppercase().replace('-', "_"));
     var
 }
 

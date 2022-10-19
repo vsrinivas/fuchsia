@@ -2845,19 +2845,19 @@ dependencies = [
 
 [[package]]
 name = "proptest"
-version = "0.9.3"
+version = "1.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "2afed8cbdc8a64b58a5c021757a782351ec1afee85be374872721c84d5da5d80"
+checksum = "1e0d9cc07f18492d879586c92b485def06bc850da3118075cd45d50e9c95b0e5"
 dependencies = [
  "bit-set",
  "bitflags",
  "byteorder",
  "lazy_static",
  "num-traits",
- "quick-error 1.2.2",
- "rand 0.6.5",
- "rand_chacha 0.1.1",
- "rand_xorshift 0.1.1",
+ "quick-error 2.0.1",
+ "rand 0.8.4",
+ "rand_chacha 0.3.1",
+ "rand_xorshift 0.3.0",
  "regex-syntax",
  "rusty-fork",
  "tempfile",
@@ -2865,9 +2865,9 @@ dependencies = [
 
 [[package]]
 name = "proptest-derive"
-version = "0.1.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "08b264c54525e760fc1d39c5b2bfc96923b922a752893053b4adaafe33fa9346"
+checksum = "90b46295382dc76166cb7cf2bb4a97952464e4b7ed5a43e6cd34e1fec3349ddc"
 dependencies = [
  "proc-macro2 0.4.27",
  "quote 0.6.11",
@@ -3455,9 +3455,9 @@ dependencies = [
 
 [[package]]
 name = "rusty-fork"
-version = "0.2.1"
+version = "0.3.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "9591f190d2852720b679c21f66ad929f9f1d7bb09d1193c26167586029d8489c"
+checksum = "cb3dcc6e454c328bb824492db107ab7c0ae8fcffe4ad210136ef014458c1bc4f"
 dependencies = [
  "fnv",
  "quick-error 1.2.2",
@@ -4584,9 +4584,9 @@ dependencies = [
 
 [[package]]
 name = "wait-timeout"
-version = "0.1.5"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "b9f3bf741a801531993db6478b95682117471f76916f5e690dd8d45395b09349"
+checksum = "9f200f5b12eb75f8c1ed65abd4b2db8a6e1b138a20de009dacee265a2498f3f6"
 dependencies = [
  "libc",
 ]

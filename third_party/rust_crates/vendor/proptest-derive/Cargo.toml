@@ -13,7 +13,7 @@
 [package]
 edition = "2018"
 name = "proptest-derive"
-version = "0.1.1"
+version = "0.3.0"
 authors = ["Mazdak Farrokhzad <twingoow@gmail.com>"]
 description = "Custom-derive for the Arbitrary trait of proptest.\n"
 homepage = "https://altsysrq.github.io/proptest-book/proptest-derive/index.html"
@@ -26,6 +26,10 @@ repository = "https://github.com/AltSysrq/proptest"
 
 [lib]
 proc-macro = true
+
+[[bench]]
+name = "large_enum"
+harness = false
 [dependencies.proc-macro2]
 version = "0.4"
 
@@ -39,15 +43,8 @@ features = ["visit", "extra-traits", "full"]
 version = "0.3.19"
 features = ["tmp", "stable"]
 
+[dev-dependencies.criterion]
+version = "0.2"
+
 [dev-dependencies.proptest]
-version = "0.9.3"
-[badges.appveyor]
-branch = "master"
-repository = "AltSysrq/proptest"
-service = "github"
-
-[badges.maintenance]
-status = "experimental"
-
-[badges.travis-ci]
-repository = "AltSysrq/proptest"
+version = "1.0.0"

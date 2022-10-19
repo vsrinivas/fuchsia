@@ -1,3 +1,121 @@
+## 1.0.0
+
+### Breaking Changes
+
+- The minimum supported Rust version has been increased to 1.50.0.
+
+- The version of the `rand` crate has been increased to 0.8.
+
+- Due to changes in the `getrandom` crate, if you wish to use proptest on the
+  `wasm32-unknown-unknown` target, you must manually add a dependency on that
+  crate and enable a feature that will allow it to work. Refer to the
+  `getrandom` crate documentation for more information.
+
+### Bug Fixes
+
+- `prop_shuffle()` can now produce all permutations.
+
+### New Features
+
+- Tuple strategies up to 12 elements are now supported, for parity with the
+  blanket implementations that `std` provides.
+
+## 0.10.1
+
+### New Features
+
+- Added `RngAlgorithm::Recorder` and supporting APIs which allow capturing
+  random data generated as part of generating a value or running a test.
+
+## 0.10.0
+
+### Breaking Changes
+
+- The version of the `rand` crate has been increased to 0.7.
+
+- The `proptest!` macro no longer accepts function bodies which implicitly
+  return a value (which would then be discarded).
+
+- The `TupleUnion` implementation in `proptest` 0.9 has been removed and
+  replaced with `LazyTupleUnion`. `prop_oneof!` is unaffected and continues
+  to be the recommended way to build a union of strategies.
+
+### New Features
+
+- Enabling the `hardware-rng` optional depndency (disabled by default) allows
+  obtaining non-deterministic random seeds even in `no_std` environments
+  provided the architecture is x86 or AMD64.
+
+- Added missing `?Sized` bound to `B` on the implementation of
+  `Arbitrary` for `std::borrow::Cow<'_, B>`.
+
+### Bug Fixes
+
+- `prop_assert!` and `prop_assume!` should now be usable in `no_std`
+  environments.
+
+### Other Notes
+
+- `rusty_fork` has been bumped to 0.3.0, which adds support for a number of
+  [new test flags](https://github.com/AltSysrq/rusty-fork/blob/master/CHANGELOG.md#improvements)
+  when running forked tests.
+
+- The `PassThrough` RNG algorithm now returns 0 instead of panicking when it
+  runs out of entropy.
+
+## 0.9.6
+
+### Bug Fixes
+
+- Fixed [#186](https://github.com/AltSysrq/proptest/issues/186),
+  a Rust future-compatibility issue.
+
+## 0.9.5
+
+### Bug Fixes
+
+- Fixed a Rust future-compatibility issue (https://github.com/rust-lang/rust/pull/65819).
+
+### New Additions
+
+## 0.9.4
+
+### Bug Fixes
+
+- The `unstable` feature one again works against the latest nightly.
+
+### Performance Improvements
+
+- Unions and the `prop_oneof!` combinator now generate value trees
+  lazily.
+
+  In previous versions of `proptest`, if a value tree for a
+  union variant was generated, so would value trees for earlier
+  variants -- as a result, union value tree generation was linear in the
+  number of variants.
+
+  In `proptest` 0.9.4 and above, value trees are only generated for
+  union variants that are picked. Union value tree generation is now
+  independent of the number of variants.
+
+### Deprecations
+
+- `TupleUnion` has been deprecated, and its implementation will be
+  replaced by `LazyTupleUnion`'s in 0.10.0.
+
+### Other Notes
+
+- The return type of `prop_oneof!` has changed from `TupleUnion` to
+  `LazyTupleUnion`. `prop_oneof!`'s return type is documented to not be
+  stable, and that continues to be the case.
+
+- Shrinking is now limited to four times as many iterations as configured
+  number of test cases by default.
+
+- `prop_assert_eq!` and `prop_assert_ne!` produce output more similar to the
+  `assert_eq!` and `assert_ne!` macros. This should also make it easier to
+  visually parse out the source location in the resulting messages.
+
 ## 0.9.3
 
 This is a minor release to correct some packaging errors. The licence files are
@@ -514,18 +632,18 @@ features.
   types in  `proptest_derive`. More on this later releases.
 
 - The strategies in `proptest::option` and `proptest::result` now accept a type
-  `Probability` which is a wrapper around `f64`. Convertions from types such as
+  `Probability` which is a wrapper around `f64`. Conversions from types such as
   `f64` are provided to make the interface ergonomic to use. Users may also use
   the `proptest::option::prob` function to explicitly construct the type.
 
 - The strategies in `proptest::collections` now accept a type `SizeRange`
-  which is a wrapper around `Range<usize>`. Convertions from types
+  which is a wrapper around `Range<usize>`. Conversions from types
   such as `usize` and `Range<usize>` are provided to make the interface
   ergonomic to use. Users may also use the `proptest::collections::size_bounds`
   function to explicitly construct the type.
 
 - A `.prop_map_into()` operation on all strategies that map
-  using `Into<OutputType>`. This is a clerarer and cheaper
+  using `Into<OutputType>`. This is a clearer and cheaper
   operation than using `.prop_map(OutputType::from)`.
 
 - A nonshrinking `LazyJust` strategy that can be used instead of `Just` when you

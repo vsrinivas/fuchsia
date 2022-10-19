@@ -44,20 +44,14 @@
 //!
 //! ```toml
 //! [dev-dependencies]
-//! rusty-fork = "0.2.1"
-//! ```
-//!
-//! and to your crate root add
-//!
-//! ```rust,ignore
-//! #[macro_use] extern crate rusty_fork;
+//! rusty-fork = "0.3.0"
 //! ```
 //!
 //! Then, you can simply wrap any test(s) to be isolated with the
 //! [`rusty_fork_test!`](macro.rusty_fork_test.html) macro.
 //!
 //! ```rust
-//! #[macro_use] extern crate rusty_fork;
+//! use rusty_fork::rusty_fork_test;
 //!
 //! rusty_fork_test! {
 //! # /* NOREADME
@@ -119,10 +113,7 @@
 //!
 //! <!-- ENDREADME -->
 
-extern crate fnv;
 #[macro_use] extern crate quick_error;
-extern crate tempfile;
-#[cfg(feature = "timeout")] extern crate wait_timeout;
 
 #[macro_use] mod sugar;
 #[macro_use] pub mod fork_test;
@@ -131,7 +122,7 @@ mod cmdline;
 mod fork;
 mod child_wrapper;
 
-pub use sugar::RustyForkId;
-pub use error::{Error, Result};
-pub use fork::fork;
-pub use child_wrapper::{ChildWrapper, ExitStatusWrapper};
+pub use crate::sugar::RustyForkId;
+pub use crate::error::{Error, Result};
+pub use crate::fork::fork;
+pub use crate::child_wrapper::{ChildWrapper, ExitStatusWrapper};

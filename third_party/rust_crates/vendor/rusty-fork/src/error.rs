@@ -9,7 +9,7 @@
 
 use std::io;
 
-use cmdline;
+use crate::cmdline;
 
 quick_error! {
     /// Enum for errors produced by the rusty-fork crate.

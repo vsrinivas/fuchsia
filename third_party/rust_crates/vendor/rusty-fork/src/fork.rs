@@ -17,9 +17,9 @@ use std::process;
 use fnv;
 use tempfile;
 
-use cmdline;
-use error::*;
-use child_wrapper::ChildWrapper;
+use crate::cmdline;
+use crate::error::*;
+use crate::child_wrapper::ChildWrapper;
 
 const OCCURS_ENV: &str = "RUSTY_FORK_OCCURS";
 const OCCURS_TERM_LENGTH: usize = 17; /* ':' plus 16 hexits */
@@ -109,9 +109,9 @@ where
 }
 
 fn fork_impl(test_name: &str, fork_id: String,
-             process_modifier: &mut FnMut (&mut process::Command),
-             in_parent: &mut FnMut (&mut ChildWrapper, &mut fs::File),
-             in_child: &mut FnMut ()) -> Result<()> {
+             process_modifier: &mut dyn FnMut (&mut process::Command),
+             in_parent: &mut dyn FnMut (&mut ChildWrapper, &mut fs::File),
+             in_child: &mut dyn FnMut ()) -> Result<()> {
     let mut occurs = env::var(OCCURS_ENV).unwrap_or_else(|_| String::new());
     if occurs.contains(&fork_id) {
         match panic::catch_unwind(panic::AssertUnwindSafe(in_child)) {

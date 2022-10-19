@@ -38,20 +38,14 @@ In `Cargo.toml`, add
 
 ```toml
 [dev-dependencies]
-rusty-fork = "0.2.1"
-```
-
-and to your crate root add
-
-```rust
-#[macro_use] extern crate rusty_fork;
+rusty-fork = "0.3.0"
 ```
 
 Then, you can simply wrap any test(s) to be isolated with the
 [`rusty_fork_test!`](macro.rusty_fork_test.html) macro.
 
 ```rust
-#[macro_use] extern crate rusty_fork;
+use rusty_fork::rusty_fork_test;
 
 rusty_fork_test! {
     #[test]

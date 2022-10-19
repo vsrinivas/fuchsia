@@ -15,11 +15,10 @@ use core::usize;
 
 multiplex_alloc!(::alloc::alloc, ::std::alloc);
 
-use crate::strategy::*;
-use crate::strategy::statics::static_map;
 use crate::arbitrary::*;
+use crate::strategy::statics::static_map;
+use crate::strategy::*;
 
-arbitrary!(self::alloc::CannotReallocInPlace; self::alloc::CannotReallocInPlace);
 arbitrary!(self::alloc::Global; self::alloc::Global);
 
 // Not Debug.
@@ -37,11 +36,11 @@ arbitrary!(self::alloc::Layout, SFnPtrMap<(Range<u8>, StrategyFor<usize>), Self>
     })
 );
 
-arbitrary!(self::alloc::AllocErr, Just<Self>; Just(self::alloc::AllocErr));
+arbitrary!(self::alloc::AllocError, Just<Self>; Just(self::alloc::AllocError));
 /* 2018-07-28 CollectionAllocErr is not currently available outside of using
  * the `alloc` crate, which would require a different nightly feature. For now,
  * disable.
-arbitrary!(alloc::collections::CollectionAllocErr, TupleUnion<(W<Just<Self>>, W<Just<Self>>)>;
+arbitrary!(alloc::collections::CollectionAllocErr, TupleUnion<(WA<Just<Self>>, WA<Just<Self>>)>;
            prop_oneof![Just(alloc::collections::CollectionAllocErr::AllocErr),
                        Just(alloc::collections::CollectionAllocErr::CapacityOverflow)]);
  */

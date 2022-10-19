@@ -99,6 +99,33 @@ tuple!(0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G);
 tuple!(0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H);
 tuple!(0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I);
 tuple!(0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I, 9: J);
+tuple!(
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K
+);
+tuple!(
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K,
+    11: L
+);
 
 #[cfg(test)]
 mod test {
@@ -119,13 +146,19 @@ mod test {
         for _ in 0..256 {
             // Find a failing test case
             let mut case = input.new_tree(&mut runner).unwrap();
-            if pass(case.current()) { continue; }
+            if pass(case.current()) {
+                continue;
+            }
 
             loop {
                 if pass(case.current()) {
-                    if !case.complicate() { break; }
+                    if !case.complicate() {
+                        break;
+                    }
                 } else {
-                    if !case.simplify() { break; }
+                    if !case.simplify() {
+                        break;
+                    }
                 }
             }
 

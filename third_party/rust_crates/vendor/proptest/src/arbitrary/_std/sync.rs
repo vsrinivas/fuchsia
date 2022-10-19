@@ -10,14 +10,14 @@
 //! Arbitrary implementations for `std::sync`.
 
 use std::fmt;
-use std::sync::*;
 use std::sync::mpsc::*;
+use std::sync::*;
 use std::thread;
 use std::time::Duration;
 
-use crate::strategy::*;
-use crate::strategy::statics::static_map;
 use crate::arbitrary::*;
+use crate::strategy::statics::static_map;
+use crate::strategy::*;
 
 // OnceState can not escape Once::call_once_force.
 // PoisonError depends implicitly on the lifetime on MutexGuard, etc.
@@ -40,7 +40,7 @@ arbitrary!(Barrier, SMapped<u16, Self>;  // usize would be extreme!
 );
 
 arbitrary!(BarrierWaitResult,
-    TupleUnion<(W<LazyJustFn<Self>>, W<LazyJustFn<Self>>)>;
+    TupleUnion<(WA<LazyJustFn<Self>>, WA<LazyJustFn<Self>>)>;
     prop_oneof![LazyJust::new(bwr_true), LazyJust::new(bwr_false)]
 );
 
@@ -49,7 +49,7 @@ lazy_just!(
     Once, Once::new
 );
 
-arbitrary!(WaitTimeoutResult, TupleUnion<(W<Just<Self>>, W<Just<Self>>)>;
+arbitrary!(WaitTimeoutResult, TupleUnion<(WA<Just<Self>>, WA<Just<Self>>)>;
     prop_oneof![Just(wtr_true()), Just(wtr_false())]
 );
 
@@ -60,16 +60,22 @@ fn bwr_true() -> BarrierWaitResult {
 fn bwr_false() -> BarrierWaitResult {
     let barrier = Arc::new(Barrier::new(2));
     let b2 = barrier.clone();
-    let jh = thread::spawn(move|| { b2.wait() });
+    let jh = thread::spawn(move || b2.wait());
     let bwr1 = barrier.wait();
     let bwr2 = jh.join().unwrap();
-    if bwr1.is_leader() { bwr2 } else { bwr1 }
+    if bwr1.is_leader() {
+        bwr2
+    } else {
+        bwr1
+    }
 }
 
 fn wtr_false() -> WaitTimeoutResult {
     let cvar = Arc::new(Condvar::new());
     let cvar2 = cvar.clone();
-    thread::spawn(move|| { cvar2.notify_one(); });
+    thread::spawn(move || {
+        cvar2.notify_one();
+    });
     let lock = Mutex::new(());
     let wt = cvar.wait_timeout(lock.lock().unwrap(), Duration::from_millis(1));
     let (_, wtr) = wt.unwrap();
@@ -90,14 +96,14 @@ arbitrary!([T: Arbitrary] SendError<T>, SMapped<T, Self>, T::Parameters;
     args => static_map(any_with::<T>(args), SendError)
 );
 
-arbitrary!(RecvTimeoutError, TupleUnion<(W<Just<Self>>, W<Just<Self>>)>;
+arbitrary!(RecvTimeoutError, TupleUnion<(WA<Just<Self>>, WA<Just<Self>>)>;
     prop_oneof![
         Just(RecvTimeoutError::Disconnected),
         Just(RecvTimeoutError::Timeout)
     ]
 );
 
-arbitrary!(TryRecvError, TupleUnion<(W<Just<Self>>, W<Just<Self>>)>;
+arbitrary!(TryRecvError, TupleUnion<(WA<Just<Self>>, WA<Just<Self>>)>;
     prop_oneof![
         Just(TryRecvError::Disconnected),
         Just(TryRecvError::Empty)
@@ -106,15 +112,12 @@ arbitrary!(TryRecvError, TupleUnion<(W<Just<Self>>, W<Just<Self>>)>;
 
 arbitrary!(
     [P: Clone + Default, T: Arbitrary<Parameters = P>] TrySendError<T>,
-    TupleUnion<(W<SMapped<T, Self>>, W<SMapped<T, Self>>)>, P;
+    TupleUnion<(WA<SMapped<T, Self>>, WA<SMapped<T, Self>>)>, P;
     args => prop_oneof![
         static_map(any_with::<T>(args.clone()), TrySendError::Disconnected),
         static_map(any_with::<T>(args), TrySendError::Full),
     ]
 );
-
-#[cfg(feature = "unstable")]
-lazy_just!(Select, Select::new);
 
 // If only half of a pair is generated then you will get a hang-up.
 // Thus the only meaningful impls are in pairs.
@@ -159,10 +162,5 @@ mod test {
         rx_txiter => (Sender<u8>, IntoIter<u8>),
         syncrx_tx => (SyncSender<u8>, Receiver<u8>),
         syncrx_txiter => (SyncSender<u8>, IntoIter<u8>)
-    );
-
-    #[cfg(feature = "unstable")]
-    no_panic_test!(
-        select => Select
     );
 }

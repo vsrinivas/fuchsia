@@ -9,12 +9,12 @@
 
 //! Arbitrary implementations for `std::sync`.
 
-use core::sync::atomic::*;
 use crate::std_facade::Arc;
+use core::sync::atomic::*;
 
-use crate::strategy::*;
-use crate::strategy::statics::static_map;
 use crate::arbitrary::*;
+use crate::strategy::statics::static_map;
+use crate::strategy::*;
 
 wrap_from!(Arc);
 
@@ -37,8 +37,8 @@ atomic!(AtomicI8, i8; AtomicI16, i16; AtomicI32, i32;
 atomic!(AtomicI64, i64; AtomicU64, u64);
 
 arbitrary!(Ordering,
-    TupleUnion<(W<Just<Self>>, W<Just<Self>>, W<Just<Self>>,
-                W<Just<Self>>, W<Just<Self>>)>;
+    TupleUnion<(WA<Just<Self>>, WA<Just<Self>>, WA<Just<Self>>,
+                WA<Just<Self>>, WA<Just<Self>>)>;
     prop_oneof![
         Just(Ordering::Relaxed),
         Just(Ordering::Release),

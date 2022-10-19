@@ -14,23 +14,21 @@ use std::process::{Child, Output};
 use std::time::Duration;
 
 #[cfg(feature = "timeout")]
-use wait_timeout::{self, ChildExt};
+use wait_timeout::ChildExt;
 
-/// Wraps `std::process::ExitStatus` and (if enabled)
-/// `wait_timeout::ExitStatus` to give a uniform interface to both.
+/// Wraps `std::process::ExitStatus`. Historically, this was due to the
+/// `wait_timeout` crate having its own `ExitStatus` type.
 ///
 /// Method documentation is copied from the [Rust std
 /// docs](https://doc.rust-lang.org/stable/std/process/struct.ExitStatus.html)
 /// and the [`wait_timeout`
-/// docs](https://docs.rs/wait-timeout/0.1.5/wait_timeout/struct.ExitStatus.html)
+/// docs](https://docs.rs/wait-timeout/0.1.5/wait_timeout/struct.ExitStatus.html).
 #[derive(Clone, Copy)]
 pub struct ExitStatusWrapper(ExitStatusEnum);
 
 #[derive(Debug, Clone, Copy)]
 enum ExitStatusEnum {
     Std(::std::process::ExitStatus),
-    #[cfg(feature = "timeout")]
-    Wt(wait_timeout::ExitStatus),
 }
 
 impl ExitStatusWrapper {
@@ -38,18 +36,11 @@ impl ExitStatusWrapper {
         ExitStatusWrapper(ExitStatusEnum::Std(es))
     }
 
-    #[cfg(feature = "timeout")]
-    fn wt(es: wait_timeout::ExitStatus) -> Self {
-        ExitStatusWrapper(ExitStatusEnum::Wt(es))
-    }
-
     /// Was termination successful? Signal termination is not considered a
     /// success, and success is defined as a zero exit status.
     pub fn success(&self) -> bool {
         match self.0 {
             ExitStatusEnum::Std(es) => es.success(),
-            #[cfg(feature = "timeout")]
-            ExitStatusEnum::Wt(es) => es.success(),
         }
     }
 
@@ -61,8 +52,6 @@ impl ExitStatusWrapper {
     pub fn code(&self) -> Option<i32> {
         match self.0 {
             ExitStatusEnum::Std(es) => es.code(),
-            #[cfg(feature = "timeout")]
-            ExitStatusEnum::Wt(es) => es.code(),
         }
     }
 
@@ -79,8 +68,6 @@ impl ExitStatusWrapper {
 
         match self.0 {
             ExitStatusEnum::Std(es) => es.signal(),
-            #[cfg(feature = "timeout")]
-            ExitStatusEnum::Wt(es) => es.unix_signal(),
         }
     }
 
@@ -101,8 +88,6 @@ impl fmt::Debug for ExitStatusWrapper {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.0 {
             ExitStatusEnum::Std(ref es) => fmt::Debug::fmt(es, f),
-            #[cfg(feature = "timeout")]
-            ExitStatusEnum::Wt(ref es) => fmt::Debug::fmt(es, f),
         }
     }
 }
@@ -111,8 +96,6 @@ impl fmt::Display for ExitStatusWrapper {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self.0 {
             ExitStatusEnum::Std(ref es) => fmt::Display::fmt(es, f),
-            #[cfg(feature = "timeout")]
-            ExitStatusEnum::Wt(ref es) => fmt::Display::fmt(es, f),
         }
     }
 }
@@ -257,7 +240,7 @@ impl ChildWrapper {
         if let Some(status) = self.exit_status {
             Ok(Some(status))
         } else {
-            let status = self.child.wait_timeout(dur)?.map(ExitStatusWrapper::wt);
+            let status = self.child.wait_timeout(dur)?.map(ExitStatusWrapper::std);
             self.exit_status = status;
             Ok(status)
         }

@@ -173,7 +173,7 @@ mod test_build_with_file_system {
     use assert_matches::assert_matches;
     use maplit::{btreemap, hashmap};
     use proptest::prelude::*;
-    use rand::{Rng as _, SeedableRng as _};
+    use rand::SeedableRng as _;
     use std::collections::{HashMap, HashSet};
     use std::fs::File;
     use std::io;
@@ -429,7 +429,7 @@ mod test_build {
     use super::*;
     use crate::{test::*, MetaPackage};
     use proptest::prelude::*;
-    use rand::{Rng as _, SeedableRng as _};
+    use rand::SeedableRng as _;
     use std::fs;
     use std::io::Write;
     use std::path::PathBuf;

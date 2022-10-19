@@ -12,14 +12,14 @@
 
 use std::ops::{Add, AddAssign};
 
+use proc_macro2::{Span, TokenStream};
+use quote::{ToTokens, TokenStreamExt};
 use syn;
 use syn::spanned::Spanned;
-use proc_macro2::{TokenStream, Span};
-use quote::{ToTokens, TokenStreamExt};
 
-use crate::util::self_ty;
-use crate::use_tracking::UseTracker;
 use crate::error::{Ctx, DeriveResult};
+use crate::use_tracking::UseTracker;
+use crate::util::self_ty;
 
 //==============================================================================
 // Config
@@ -30,6 +30,11 @@ use crate::error::{Ctx, DeriveResult};
 /// Keeping this lower than what `proptest` supports will also work
 /// but for optimality this should follow what `proptest` supports.
 const UNION_CHUNK_SIZE: usize = 9;
+
+/// The `MAX - 1` tuple length `Arbitrary` is implemented for. After this number,
+/// tuples are expanded as nested tuples of up to `MAX` elements. The value should
+/// be kept in sync with the largest impl in `proptest/src/arbitrary/tuples.rs`.
+const NESTED_TUPLE_CHUNK_SIZE: usize = 9;
 
 /// The name of the top parameter variable name given in `arbitrary_with`.
 /// Changing this is not a breaking change because a user is expected not
@@ -66,34 +71,41 @@ pub type ImplParts = (Params, Strategy, Ctor);
 impl Impl {
     /// Constructs a new `Impl` from the parts as described on the type.
     pub fn new(typ: syn::Ident, tracker: UseTracker, parts: ImplParts) -> Self {
-        Self { typ, tracker, parts }
+        Self {
+            typ,
+            tracker,
+            parts,
+        }
     }
 
     /// Linearises the impl into a sequence of tokens.
     /// This produces the actual Rust code for the impl.
     pub fn into_tokens(self, ctx: Ctx) -> DeriveResult<TokenStream> {
-        let Impl { typ, mut tracker, parts: (params, strategy, ctor) } = self;
+        let Impl {
+            typ,
+            mut tracker,
+            parts: (params, strategy, ctor),
+        } = self;
 
         /// A `Debug` bound on a type variable.
         fn debug_bound() -> syn::TypeParamBound {
-            parse_quote!( ::std::fmt::Debug )
+            parse_quote!(::std::fmt::Debug)
         }
 
         /// An `Arbitrary` bound on a type variable.
         fn arbitrary_bound() -> syn::TypeParamBound {
-            parse_quote!( _proptest::arbitrary::Arbitrary )
+            parse_quote!(_proptest::arbitrary::Arbitrary)
         }
 
         // Add bounds and get generics for the impl.
         tracker.add_bounds(ctx, &arbitrary_bound(), Some(debug_bound()))?;
         let generics = tracker.consume();
-        let (impl_generics, ty_generics, where_clause)
-          = generics.split_for_impl();
+        let (impl_generics, ty_generics, where_clause) =
+            generics.split_for_impl();
 
         let _top = call_site_ident(TOP_PARAM_NAME);
 
-        let _const = call_site_ident(
-            &format!("_IMPL_ARBITRARY_FOR_{}", typ));
+        let _const = call_site_ident(&format!("_IMPL_ARBITRARY_FOR_{}", typ));
 
         // Linearise everything. We're done after this.
         let q = quote! {
@@ -194,29 +206,37 @@ pub fn pair_regex_self(regex: syn::Expr) -> StratPair {
 /// The type and constructor for .prop_map:ing a set of strategies
 /// into the type we are implementing for. The closure for the
 /// `.prop_map(<closure>)` must also be given.
-pub fn pair_map((strats, ctors): (Vec<Strategy>, Vec<Ctor>), closure: MapClosure)
-    -> StratPair
-{
-    (Strategy::Map(strats.into()), Ctor::Map(ctors.into(), closure))
+pub fn pair_map(
+    (strats, ctors): (Vec<Strategy>, Vec<Ctor>),
+    closure: MapClosure,
+) -> StratPair {
+    (
+        Strategy::Map(strats.into()),
+        Ctor::Map(ctors.into(), closure),
+    )
 }
 
 /// The type and constructor for a union of strategies which produces a new
 /// strategy that used the given strategies with probabilities based on the
 /// assigned relative weights for each strategy.
-pub fn pair_oneof((strats, ctors): (Vec<Strategy>, Vec<(u32, Ctor)>))
-    -> StratPair
-{
+pub fn pair_oneof(
+    (strats, ctors): (Vec<Strategy>, Vec<(u32, Ctor)>),
+) -> StratPair {
     (Strategy::Union(strats.into()), Ctor::Union(ctors.into()))
 }
 
 /// Potentially apply a filter to a strategy type and its constructor.
-pub fn pair_filter(filter: Vec<syn::Expr>, ty: syn::Type, pair: StratPair)
-    -> StratPair
-{
-    filter.into_iter().fold(pair, |(strat, ctor), filter| (
-        Strategy::Filter(Box::new(strat), ty.clone()),
-        Ctor::Filter(Box::new(ctor), filter)
-    ))
+pub fn pair_filter(
+    filter: Vec<syn::Expr>,
+    ty: syn::Type,
+    pair: StratPair,
+) -> StratPair {
+    filter.into_iter().fold(pair, |(strat, ctor), filter| {
+        (
+            Strategy::Filter(Box::new(strat), ty.clone()),
+            Ctor::Filter(Box::new(ctor), filter),
+        )
+    })
 }
 
 //==============================================================================
@@ -263,7 +283,7 @@ impl AddAssign<syn::Type> for Params {
 
 impl ToTokens for Params {
     fn to_tokens(&self, tokens: &mut TokenStream) {
-        Tuple2(self.0.as_slice()).to_tokens(tokens)
+        NestedTuple(self.0.as_slice()).to_tokens(tokens)
     }
 }
 
@@ -344,20 +364,19 @@ impl ToTokens for Strategy {
             ),
             Value(ty) => quote_append!(tokens, fn() -> #ty ),
             Map(strats) => {
-                let field_tys = self.types();
-                let strats = strats.iter();
+                let types = self.types();
+                let field_tys = NestedTuple(&types);
+                let strats = NestedTuple(&strats);
                 quote_append!(tokens,
-                    _proptest::strategy::Map< ( #(#strats,)* ),
-                        fn( ( #(#field_tys,)* ) ) -> Self
+                    _proptest::strategy::Map< ( #strats ),
+                        fn( #field_tys ) -> Self
                     >
                 )
-            },
+            }
             Union(strats) => union_strat_to_tokens(tokens, strats),
-            Filter(strat, ty) => {
-                quote_append!(tokens,
-                    _proptest::strategy::Filter<#strat, fn(&#ty) -> bool>
-                )
-            },
+            Filter(strat, ty) => quote_append!(tokens,
+                _proptest::strategy::Filter<#strat, fn(&#ty) -> bool>
+            ),
         }
     }
 }
@@ -443,7 +462,10 @@ impl ToTokens for ToReg {
     fn to_tokens(&self, tokens: &mut TokenStream) {
         match *self {
             ToReg::Range(to) if to == 1 => param(0).to_tokens(tokens),
-            ToReg::Range(to) => Tuple((0..to).map(param)).to_tokens(tokens),
+            ToReg::Range(to) => {
+                let params: Vec<_> = (0..to).map(param).collect();
+                NestedTuple(&params).to_tokens(tokens)
+            },
             ToReg::API => call_site_ident(API_PARAM_NAME).to_tokens(tokens),
         }
     }
@@ -462,16 +484,18 @@ impl ToTokens for Ctor {
             Extract(ctor, to, from) => quote_append!(tokens, {
                 let #to = #from; #ctor
             }),
-            Arbitrary(ty, fv, span) => tokens.append_all(if let Some(fv) = fv {
-                let args = param(*fv);
-                quote_spanned!(*span=>
-                    _proptest::arbitrary::any_with::<#ty>(#args)
-                )
-            } else {
-                quote_spanned!(*span=>
-                    _proptest::arbitrary::any::<#ty>()
-                )
-            }),
+            Arbitrary(ty, fv, span) => {
+                tokens.append_all(if let Some(fv) = fv {
+                    let args = param(*fv);
+                    quote_spanned!(*span=>
+                        _proptest::arbitrary::any_with::<#ty>(#args)
+                    )
+                } else {
+                    quote_spanned!(*span=>
+                        _proptest::arbitrary::any::<#ty>()
+                    )
+                })
+            }
             Regex(ty, regex) => quote_append!(tokens,
                 <#ty as _proptest::string::StrategyFromRegex>::from_regex(#regex)
             ),
@@ -483,18 +507,55 @@ impl ToTokens for Ctor {
                     _proptest::strategy::LazyJust::new(move || #expr)
                 )
             ),
-            Map(ctors, closure) => {
-                let ctors = ctors.iter();
-                quote_append!(tokens,
-                    _proptest::strategy::Strategy::prop_map(
-                        ( #(#ctors,)* ),
-                        #closure
-                    )
-                );
-            },
+            Map(ctors, closure) => map_ctor_to_tokens(tokens, &ctors, closure),
             Union(ctors) => union_ctor_to_tokens(tokens, ctors),
         }
     }
+}
+
+struct NestedTuple<'a, T>(&'a [T]);
+
+impl<'a, T: ToTokens> ToTokens for NestedTuple<'a, T> {
+    fn to_tokens(&self, tokens: &mut TokenStream) {
+        let NestedTuple(elems) = self;
+        if elems.is_empty() {
+            quote_append!(tokens, ());
+        }
+        else if let [x] = elems {
+            x.to_tokens(tokens);
+        } else {
+            let chunks = elems.chunks(NESTED_TUPLE_CHUNK_SIZE);
+            Recurse(&chunks).to_tokens(tokens);
+        }
+
+        struct Recurse<'a, T: ToTokens>(&'a ::std::slice::Chunks<'a, T>);
+
+        impl<'a, T: ToTokens> ToTokens for Recurse<'a, T> {
+            fn to_tokens(&self, tokens: &mut TokenStream) {
+                let mut chunks = self.0.clone();
+                if let Some(head) = chunks.next() {
+                    if let [c] = head {
+                        // Only one element left - no need to nest.
+                        quote_append!(tokens, #c);
+                    } else {
+                        let tail = Recurse(&chunks);
+                        quote_append!(tokens, (#(#head,)* #tail));
+                    }
+                }
+            }
+        }
+    }
+}
+
+fn map_ctor_to_tokens(tokens: &mut TokenStream, ctors: &[Ctor], closure: &MapClosure) {
+    let ctors = NestedTuple(ctors);
+
+    quote_append!(tokens,
+        _proptest::strategy::Strategy::prop_map(
+            #ctors,
+            #closure
+        )
+    );
 }
 
 /// Tokenizes a weighted list of `Ctor`.
@@ -503,8 +564,8 @@ impl ToTokens for Ctor {
 /// supporting enums with an unbounded number of variants without any boxing
 /// (erasure) or dynamic dispatch.
 ///
-/// As `TupleUnion` is (currently) limited to 10 summands in the coproduct we
-/// can't just emit the entire thing linearly as this will fail on the 11:th
+/// As `TupleUnion` is (currently) limited to 10 summands in the coproduct
+/// we can't just emit the entire thing linearly as this will fail on the 11:th
 /// variant.
 ///
 /// A naive approach to solve might be to simply use a cons-list like so:
@@ -537,7 +598,9 @@ impl ToTokens for Ctor {
 ///         (19, ..)))
 /// ```
 fn union_ctor_to_tokens(tokens: &mut TokenStream, ctors: &[(u32, Ctor)]) {
-    if ctors.is_empty() { return; }
+    if ctors.is_empty() {
+        return;
+    }
 
     if let [(_, ctor)] = ctors {
         // This is not a union at all - user provided an enum with one variant.
@@ -547,7 +610,7 @@ fn union_ctor_to_tokens(tokens: &mut TokenStream, ctors: &[(u32, Ctor)]) {
 
     let mut chunks = ctors.chunks(UNION_CHUNK_SIZE);
     let chunk = chunks.next().unwrap();
-    let head = chunk.iter().map(|(w, c)| quote!( (#w, #c) ));
+    let head = chunk.iter().map(wrap_arc);
     let tail = Recurse(weight_sum(ctors) - weight_sum(chunk), chunks);
 
     quote_append!(tokens,
@@ -563,14 +626,15 @@ fn union_ctor_to_tokens(tokens: &mut TokenStream, ctors: &[(u32, Ctor)]) {
             if let Some(chunk) = chunks.next() {
                 if let [(w, c)] = chunk {
                     // Only one element left - no need to nest.
-                    quote_append!(tokens, (#w, #c) );
+                    quote_append!(tokens, (#w, ::std::sync::Arc::new(#c)) );
                 } else {
-                    let head = chunk.iter().map(|(w, c)| quote!( (#w, #c) ));
+                    let head = chunk.iter().map(wrap_arc);
                     let tail = Recurse(tweight - weight_sum(chunk), chunks);
                     quote_append!(tokens,
-                        (#tweight, _proptest::strategy::TupleUnion::new((
-                            #(#head,)* #tail
-                        )))
+                        (#tweight, ::std::sync::Arc::new(
+                            _proptest::strategy::TupleUnion::new((
+                                #(#head,)* #tail
+                            ))))
                     );
                 }
             }
@@ -582,12 +646,19 @@ fn union_ctor_to_tokens(tokens: &mut TokenStream, ctors: &[(u32, Ctor)]) {
         let Wrapping(x) = ctors.iter().map(|&(w, _)| Wrapping(w)).sum();
         x
     }
+
+    fn wrap_arc(arg: &(u32, Ctor)) -> TokenStream {
+        let (w, c) = arg;
+        quote!( (#w, ::std::sync::Arc::new(#c)) )
+    }
 }
 
 /// Tokenizes a weighted list of `Strategy`.
 /// For details, see `union_ctor_to_tokens`.
 fn union_strat_to_tokens(tokens: &mut TokenStream, strats: &[Strategy]) {
-    if strats.is_empty() { return; }
+    if strats.is_empty() {
+        return;
+    }
 
     if let [strat] = strats {
         // This is not a union at all - user provided an enum with one variant.
@@ -597,7 +668,7 @@ fn union_strat_to_tokens(tokens: &mut TokenStream, strats: &[Strategy]) {
 
     let mut chunks = strats.chunks(UNION_CHUNK_SIZE);
     let chunk = chunks.next().unwrap();
-    let head = chunk.iter().map(|s| quote!( (u32, #s) ));
+    let head = chunk.iter().map(wrap_arc);
     let tail = Recurse(chunks);
 
     quote_append!(tokens,
@@ -613,18 +684,23 @@ fn union_strat_to_tokens(tokens: &mut TokenStream, strats: &[Strategy]) {
             if let Some(chunk) = chunks.next() {
                 if let [s] = chunk {
                     // Only one element left - no need to nest.
-                    quote_append!(tokens, (u32, #s) );
+                    quote_append!(tokens, (u32, ::std::sync::Arc<#s>) );
                 } else {
-                    let head = chunk.iter().map(|s| quote!( (u32, #s) ));
+                    let head = chunk.iter().map(wrap_arc);
                     let tail = Recurse(chunks);
                     quote_append!(tokens,
-                        (u32, _proptest::strategy::TupleUnion<(
-                            #(#head,)* #tail
-                        )>)
+                        (u32,
+                         ::std::sync::Arc<_proptest::strategy::TupleUnion<(
+                             #(#head,)* #tail
+                         )>>)
                     );
                 }
             }
         }
+    }
+
+    fn wrap_arc(s: &Strategy) -> TokenStream {
+        quote!( (u32, ::std::sync::Arc<#s>) )
     }
 }
 
@@ -662,7 +738,7 @@ impl ToTokens for MapClosure {
 
         let MapClosure(path, fields) = self;
         let count = fields.len();
-        let tmps = (0..count).map(tmp_var);
+        let tmps: Vec<_> = (0..count).map(tmp_var).collect();
         let inits = fields.iter().enumerate().map(|(idx, field)| {
             let tv = tmp_var(idx);
             if let Some(name) = &field.ident {
@@ -672,7 +748,8 @@ impl ToTokens for MapClosure {
                 quote_spanned!(field.span()=> #name: #tv )
             }
         });
-        quote_append!(tokens, |( #(#tmps,)* )| #path { #(#inits),* } );
+        let tmps = NestedTuple(&tmps);
+        quote_append!(tokens, | #tmps | #path { #(#inits),* } );
     }
 }
 
@@ -690,7 +767,7 @@ fn fresh_var(prefix: &str, count: usize) -> FreshVar {
 /// variable on the stack.
 struct FreshVar<'a> {
     prefix: &'a str,
-    count: usize
+    count: usize,
 }
 
 impl<'a> ToTokens for FreshVar<'a> {

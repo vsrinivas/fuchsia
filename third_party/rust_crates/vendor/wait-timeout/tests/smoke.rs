@@ -1,7 +1,7 @@
 extern crate wait_timeout;
 
 use std::env;
-use std::process::{Command, Child};
+use std::process::{Command, Child, Stdio};
 use std::time::{Duration, Instant};
 
 use wait_timeout::ChildExt;
@@ -31,6 +31,16 @@ fn exit(code: u32) -> Child {
     }
     me.push("exit");
     t!(Command::new(me).arg(code.to_string()).spawn())
+}
+
+fn reader() -> Child {
+    let mut me = env::current_exe().unwrap();
+    me.pop();
+    if me.ends_with("deps") {
+        me.pop();
+    }
+    me.push("reader");
+    t!(Command::new(me).stdin(Stdio::piped()).spawn())
 }
 
 #[test]
@@ -63,6 +73,14 @@ fn smoke_timeout() {
     t!(child.kill());
     let status = t!(child.wait());
     assert!(!status.success());
+}
+
+#[test]
+fn smoke_reader() {
+    let mut child = reader();
+    let dur = Duration::from_millis(100);
+    let status = t!(child.wait_timeout(dur)).unwrap();
+    assert!(status.success());
 }
 
 #[test]

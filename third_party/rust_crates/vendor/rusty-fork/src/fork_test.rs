@@ -1,5 +1,5 @@
 //-
-// Copyright 2018 Jason Lingle
+// Copyright 2018, 2020 Jason Lingle
 //
 // Licensed under the Apache License, Version 2.0 <LICENSE-APACHE or
 // http://www.apache.org/licenses/LICENSE-2.0> or the MIT license
@@ -14,7 +14,7 @@
 
 use std::process::Command;
 
-use child_wrapper::ChildWrapper;
+use crate::child_wrapper::ChildWrapper;
 
 /// Run Rust tests in subprocesses.
 ///
@@ -22,7 +22,7 @@ use child_wrapper::ChildWrapper;
 /// functions.
 ///
 /// ```
-/// #[macro_use] extern crate rusty_fork;
+/// use rusty_fork::rusty_fork_test;
 ///
 /// rusty_fork_test! {
 /// # /*
@@ -45,7 +45,7 @@ use child_wrapper::ChildWrapper;
 /// the block, like so:
 ///
 /// ```
-/// #[macro_use] extern crate rusty_fork;
+/// use rusty_fork::rusty_fork_test;
 ///
 /// rusty_fork_test! {
 ///     #![rusty_fork(timeout_ms = 1000)]
@@ -90,8 +90,8 @@ macro_rules! rusty_fork_test {
                 supervise_fn;
 
             $crate::fork(
-                rusty_fork_test_name!($test_name),
-                rusty_fork_id!(),
+                $crate::rusty_fork_test_name!($test_name),
+                $crate::rusty_fork_id!(),
                 $crate::fork_test::no_configure_child,
                 supervise, body).expect("forking test failed")
         }

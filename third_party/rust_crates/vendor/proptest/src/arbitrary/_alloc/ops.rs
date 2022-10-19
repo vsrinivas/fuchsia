@@ -9,12 +9,12 @@
 
 //! Arbitrary implementations for `std::ops`.
 
-use core::ops::*;
 use crate::std_facade::Arc;
+use core::ops::*;
 
-use crate::strategy::*;
-use crate::strategy::statics::static_map;
 use crate::arbitrary::*;
+use crate::strategy::statics::static_map;
+use crate::strategy::*;
 
 arbitrary!(RangeFull; ..);
 wrap_ctor!(RangeFrom, |a| a..);
@@ -49,7 +49,7 @@ lift1!([PartialOrd] Range<A>; base => {
 #[cfg(feature = "unstable")]
 arbitrary!(
     [Y: Arbitrary, R: Arbitrary] GeneratorState<Y, R>,
-    TupleUnion<(W<SMapped<Y, Self>>, W<SMapped<R, Self>>)>,
+    TupleUnion<(WA<SMapped<Y, Self>>, WA<SMapped<R, Self>>)>,
     product_type![Y::Parameters, R::Parameters];
     args => {
         let product_unpack![y, r] = args;
@@ -65,12 +65,15 @@ use core::fmt;
 
 #[cfg(feature = "unstable")]
 impl<A: fmt::Debug + 'static, B: fmt::Debug + 'static>
-    functor::ArbitraryF2<A, B>
-for GeneratorState<A, B> {
+    functor::ArbitraryF2<A, B> for GeneratorState<A, B>
+{
     type Parameters = ();
 
-    fn lift2_with<AS, BS>(fst: AS, snd: BS, _args: Self::Parameters)
-        -> BoxedStrategy<Self>
+    fn lift2_with<AS, BS>(
+        fst: AS,
+        snd: BS,
+        _args: Self::Parameters,
+    ) -> BoxedStrategy<Self>
     where
         AS: Strategy<Value = A> + 'static,
         BS: Strategy<Value = B> + 'static,
@@ -78,7 +81,8 @@ for GeneratorState<A, B> {
         prop_oneof![
             fst.prop_map(GeneratorState::Yielded),
             snd.prop_map(GeneratorState::Complete)
-        ].boxed()
+        ]
+        .boxed()
     }
 }
 

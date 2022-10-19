@@ -265,7 +265,7 @@ macro_rules! prop_assume {
 
     ($expr:expr, $fmt:tt $(, $fmt_arg:expr),* $(,)?) => {
         if !$expr {
-            return ::std::result::Result::Err(
+            return ::core::result::Result::Err(
                 $crate::test_runner::TestCaseError::reject(
                     format!(concat!("{}:{}:{}: ", $fmt),
                             file!(), line!(), column!()
@@ -336,15 +336,17 @@ macro_rules! prop_oneof {
     ($weight0:expr => $item0:expr,
      $weight1:expr => $item1:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1))))
     };
 
     ($weight0:expr => $item0:expr,
      $weight1:expr => $item1:expr,
      $weight2:expr => $item2:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -352,8 +354,10 @@ macro_rules! prop_oneof {
      $weight2:expr => $item2:expr,
      $weight3:expr => $item3:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -362,9 +366,11 @@ macro_rules! prop_oneof {
      $weight3:expr => $item3:expr,
      $weight4:expr => $item4:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3),
-             ($weight4, $item4)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3)),
+             ($weight4, $crate::std_facade::Arc::new($item4))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -374,9 +380,12 @@ macro_rules! prop_oneof {
      $weight4:expr => $item4:expr,
      $weight5:expr => $item5:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3),
-             ($weight4, $item4), ($weight5, $item5)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3)),
+             ($weight4, $crate::std_facade::Arc::new($item4)),
+             ($weight5, $crate::std_facade::Arc::new($item5))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -387,10 +396,13 @@ macro_rules! prop_oneof {
      $weight5:expr => $item5:expr,
      $weight6:expr => $item6:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3),
-             ($weight4, $item4), ($weight5, $item5),
-             ($weight6, $item6)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3)),
+             ($weight4, $crate::std_facade::Arc::new($item4)),
+             ($weight5, $crate::std_facade::Arc::new($item5)),
+             ($weight6, $crate::std_facade::Arc::new($item6))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -402,10 +414,14 @@ macro_rules! prop_oneof {
      $weight6:expr => $item6:expr,
      $weight7:expr => $item7:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3),
-             ($weight4, $item4), ($weight5, $item5),
-             ($weight6, $item6), ($weight7, $item7)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3)),
+             ($weight4, $crate::std_facade::Arc::new($item4)),
+             ($weight5, $crate::std_facade::Arc::new($item5)),
+             ($weight6, $crate::std_facade::Arc::new($item6)),
+             ($weight7, $crate::std_facade::Arc::new($item7))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -418,11 +434,15 @@ macro_rules! prop_oneof {
      $weight7:expr => $item7:expr,
      $weight8:expr => $item8:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3),
-             ($weight4, $item4), ($weight5, $item5),
-             ($weight6, $item6), ($weight7, $item7),
-             ($weight8, $item8)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3)),
+             ($weight4, $crate::std_facade::Arc::new($item4)),
+             ($weight5, $crate::std_facade::Arc::new($item5)),
+             ($weight6, $crate::std_facade::Arc::new($item6)),
+             ($weight7, $crate::std_facade::Arc::new($item7)),
+             ($weight8, $crate::std_facade::Arc::new($item8))))
     };
 
     ($weight0:expr => $item0:expr,
@@ -436,11 +456,16 @@ macro_rules! prop_oneof {
      $weight8:expr => $item8:expr,
      $weight9:expr => $item9:expr $(,)?) => {
         $crate::strategy::TupleUnion::new(
-            (($weight0, $item0), ($weight1, $item1),
-             ($weight2, $item2), ($weight3, $item3),
-             ($weight4, $item4), ($weight5, $item5),
-             ($weight6, $item6), ($weight7, $item7),
-             ($weight8, $item8), ($weight9, $item9)))
+            (($weight0, $crate::std_facade::Arc::new($item0)),
+             ($weight1, $crate::std_facade::Arc::new($item1)),
+             ($weight2, $crate::std_facade::Arc::new($item2)),
+             ($weight3, $crate::std_facade::Arc::new($item3)),
+             ($weight4, $crate::std_facade::Arc::new($item4)),
+             ($weight5, $crate::std_facade::Arc::new($item5)),
+             ($weight6, $crate::std_facade::Arc::new($item6)),
+             ($weight7, $crate::std_facade::Arc::new($item7)),
+             ($weight8, $crate::std_facade::Arc::new($item8)),
+             ($weight9, $crate::std_facade::Arc::new($item9))))
     };
 
     ($($weight:expr => $item:expr),+ $(,)?) => {
@@ -712,7 +737,7 @@ macro_rules! prop_assert {
         if !$cond {
             let message = format!($($fmt)*);
             let message = format!("{} at {}:{}", message, file!(), line!());
-            return ::std::result::Result::Err(
+            return ::core::result::Result::Err(
                 $crate::test_runner::TestCaseError::fail(message));
         }
     };
@@ -752,7 +777,8 @@ macro_rules! prop_assert_eq {
         let right = $right;
         $crate::prop_assert!(
             left == right,
-            "assertion failed: `(left == right)` (left: `{:?}`, right: `{:?}`)",
+            "assertion failed: `(left == right)` \
+             \n  left: `{:?}`,\n right: `{:?}`",
             left, right);
     }};
 
@@ -762,8 +788,55 @@ macro_rules! prop_assert_eq {
         $crate::prop_assert!(
             left == right,
             concat!(
-                "assertion failed: `(left == right)` (left: `{:?}`, right: `{:?}`): ", $fmt),
+                "assertion failed: `(left == right)` \
+                 \n  left: `{:?}`, \n right: `{:?}`: ", $fmt),
             left, right $($args)*);
+    }};
+}
+
+/// Similar to `assert_ne!` from std, but returns a test failure instead of
+/// panicking if the condition fails.
+///
+/// See `prop_assert!` for a more in-depth discussion.
+///
+/// ## Example
+///
+/// ```
+/// use proptest::prelude::*;
+///
+/// proptest! {
+///   # /*
+///   #[test]
+///   # */
+///   fn test_addition(a in 0i32..100i32, b in 1i32..100i32) {
+///     // Use with default message
+///     prop_assert_ne!(a, a + b);
+///     // Can also provide custom message added after the common message
+///     prop_assert_ne!(a, a + b, "a = {}, b = {}", a, b);
+///   }
+/// }
+/// #
+/// # fn main() { test_addition(); }
+/// ```
+#[macro_export]
+macro_rules! prop_assert_ne {
+    ($left:expr, $right:expr) => {{
+        let left = $left;
+        let right = $right;
+        prop_assert!(
+            left != right,
+            "assertion failed: `(left != right)`\
+             \n  left: `{:?}`,\n right: `{:?}`",
+                     left, right);
+    }};
+
+    ($left:expr, $right:expr, $fmt:tt $($args:tt)*) => {{
+        let left = $left;
+        let right = $right;
+        prop_assert!(left != right, concat!(
+            "assertion failed: `(left != right)`\
+             \n  left: `{:?}`,\n right: `{:?}`: ", $fmt),
+                     left, right $($args)*);
     }};
 }
 
@@ -882,7 +955,7 @@ macro_rules! proptest_helper {
             $($mod)* |$crate::sugar::NamedArguments(
                 _, $crate::proptest_helper!(@_WRAPPAT ($($parm),*)))|
             {
-                $body;
+                let _: () = $body;
                 Ok(())
             })
         {
@@ -902,7 +975,7 @@ macro_rules! proptest_helper {
             $($mod)* |$crate::sugar::NamedArguments(
                 _, $crate::proptest_helper!(@_EXT _PAT ($($arg)*)))|
             {
-                $body;
+                let _: () = $body;
                 Ok(())
             })
         {
@@ -980,10 +1053,9 @@ macro_rules! proptest_helper {
 
 #[doc(hidden)]
 #[derive(Clone, Copy)]
-pub struct NamedArguments<N, V>(
-    #[doc(hidden)] pub N, #[doc(hidden)] pub V);
+pub struct NamedArguments<N, V>(#[doc(hidden)] pub N, #[doc(hidden)] pub V);
 
-impl<V : fmt::Debug> fmt::Debug for NamedArguments<&'static str, V> {
+impl<V: fmt::Debug> fmt::Debug for NamedArguments<&'static str, V> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "{} = ", self.0)?;
         self.1.fmt(f)
@@ -1049,61 +1121,21 @@ named_arguments_tuple!(0 AN AV 1 BN BV 2 CN CV 3 DN DV 4 EN EV
 named_arguments_tuple!(0 AN AV 1 BN BV 2 CN CV 3 DN DV 4 EN EV
                        5 FN FV 6 GN GV 7 HN HV 8 IN IV 9 JN JV);
 
-/// Similar to `assert_ne!` from std, but returns a test failure instead of
-/// panicking if the condition fails.
-///
-/// See `prop_assert!` for a more in-depth discussion.
-///
-/// ## Example
-///
-/// ```
-/// use proptest::prelude::*;
-///
-/// proptest! {
-///   # /*
-///   #[test]
-///   # */
-///   fn test_addition(a in 0i32..100i32, b in 1i32..100i32) {
-///     // Use with default message
-///     prop_assert_ne!(a, a + b);
-///     // Can also provide custom message added after the common message
-///     prop_assert_ne!(a, a + b, "a = {}, b = {}", a, b);
-///   }
-/// }
-/// #
-/// # fn main() { test_addition(); }
-/// ```
-#[macro_export]
-macro_rules! prop_assert_ne {
-    ($left:expr, $right:expr) => {{
-        let left = $left;
-        let right = $right;
-        prop_assert!(left != right, "assertion failed: `(left != right)` \
-                                     (left: `{:?}`, right: `{:?}`)",
-                     left, right);
-    }};
-
-    ($left:expr, $right:expr, $fmt:tt $($args:tt)*) => {{
-        let left = $left;
-        let right = $right;
-        prop_assert!(left != right, concat!(
-            "assertion failed: `(left != right)` \
-             (left: `{:?}`, right: `{:?}`): ", $fmt),
-                     left, right $($args)*);
-    }};
-}
-
 #[cfg(feature = "std")]
 #[doc(hidden)]
 pub fn force_no_fork(config: &mut crate::test_runner::Config) {
     if config.fork() {
-        eprintln!("proptest: Forking/timeout not supported in closure-style \
-                   invocations; ignoring");
+        eprintln!(
+            "proptest: Forking/timeout not supported in closure-style \
+             invocations; ignoring"
+        );
 
-        #[cfg(feature = "fork")] {
+        #[cfg(feature = "fork")]
+        {
             config.fork = false;
         }
-        #[cfg(feature = "timeout")] {
+        #[cfg(feature = "timeout")]
+        {
             config.timeout = 0;
         }
         assert!(!config.fork());
@@ -1111,7 +1143,7 @@ pub fn force_no_fork(config: &mut crate::test_runner::Config) {
 }
 
 #[cfg(not(feature = "std"))]
-pub fn force_no_fork(_: &mut crate::test_runner::Config) { }
+pub fn force_no_fork(_: &mut crate::test_runner::Config) {}
 
 #[cfg(test)]
 mod test {
@@ -1137,7 +1169,7 @@ mod test {
 
     prop_compose! {
         /// These are docs!
-        #[allow(dead_code)]
+        #[allow(dead_code, improper_ctypes_definitions)]
         pub [extern "C"] fn two_ints_pub_with_attrs
             (relative: i32)(a in 0..relative, b in relative..)
             -> (i32, i32)
@@ -1152,7 +1184,7 @@ mod test {
         // eventually work, but is not allowed right now since the generated
         // code contains local variables. `extern "C"` is accepted, even though
         // the result is useless since the return type isn't C-compatible.
-        #[allow(dead_code)]
+        #[allow(dead_code, improper_ctypes_definitions)]
         [extern "C"] fn with_modifier(relative: i32)(a in 0..relative) -> i32 {
             a
         }
@@ -1249,32 +1281,59 @@ mod test {
 
         println!("{:?}", NamedArguments("foo", &"bar"));
         println!("{:?}", NamedArguments(("foo",), &(1,)));
-        println!("{:?}", NamedArguments(("foo","bar"), &(1,2)));
-        println!("{:?}", NamedArguments(("a","b","c"), &(1,2,3)));
-        println!("{:?}", NamedArguments(("a","b","c","d"), &(1,2,3,4)));
-        println!("{:?}", NamedArguments(("a","b","c","d","e"),
-                                        &(1,2,3,4,5)));
-        println!("{:?}", NamedArguments(("a","b","c","d","e","f"),
-                                        &(1,2,3,4,5,6)));
-        println!("{:?}", NamedArguments(("a","b","c","d","e","f","g"),
-                                        &(1,2,3,4,5,6,7)));
-        println!("{:?}", NamedArguments(("a","b","c","d","e","f","g","h"),
-                                        &(1,2,3,4,5,6,7,8)));
-        println!("{:?}", NamedArguments(("a","b","c","d","e","f","g","h","i"),
-                                        &(1,2,3,4,5,6,7,8,9)));
-        println!("{:?}", NamedArguments(("a","b","c","d","e","f","g","h","i","j"),
-                                        &(1,2,3,4,5,6,7,8,9,10)));
-        println!("{:?}", NamedArguments((("a","b"),"c","d"), &((1,2),3,4)));
+        println!("{:?}", NamedArguments(("foo", "bar"), &(1, 2)));
+        println!("{:?}", NamedArguments(("a", "b", "c"), &(1, 2, 3)));
+        println!("{:?}", NamedArguments(("a", "b", "c", "d"), &(1, 2, 3, 4)));
+        println!(
+            "{:?}",
+            NamedArguments(("a", "b", "c", "d", "e"), &(1, 2, 3, 4, 5))
+        );
+        println!(
+            "{:?}",
+            NamedArguments(("a", "b", "c", "d", "e", "f"), &(1, 2, 3, 4, 5, 6))
+        );
+        println!(
+            "{:?}",
+            NamedArguments(
+                ("a", "b", "c", "d", "e", "f", "g"),
+                &(1, 2, 3, 4, 5, 6, 7)
+            )
+        );
+        println!(
+            "{:?}",
+            NamedArguments(
+                ("a", "b", "c", "d", "e", "f", "g", "h"),
+                &(1, 2, 3, 4, 5, 6, 7, 8)
+            )
+        );
+        println!(
+            "{:?}",
+            NamedArguments(
+                ("a", "b", "c", "d", "e", "f", "g", "h", "i"),
+                &(1, 2, 3, 4, 5, 6, 7, 8, 9)
+            )
+        );
+        println!(
+            "{:?}",
+            NamedArguments(
+                ("a", "b", "c", "d", "e", "f", "g", "h", "i", "j"),
+                &(1, 2, 3, 4, 5, 6, 7, 8, 9, 10)
+            )
+        );
+        println!(
+            "{:?}",
+            NamedArguments((("a", "b"), "c", "d"), &((1, 2), 3, 4))
+        );
     }
 
     #[test]
     fn oneof_all_counts() {
-        use crate::strategy::{Strategy, TupleUnion, Union, Just as J};
+        use crate::strategy::{Just as J, Strategy, TupleUnion, Union};
 
         fn expect_count(n: usize, s: impl Strategy<Value = i32>) {
-            use std::collections::HashSet;
             use crate::strategy::*;
             use crate::test_runner::*;
+            use std::collections::HashSet;
 
             let mut runner = TestRunner::default();
             let mut seen = HashSet::new();
@@ -1285,95 +1344,111 @@ mod test {
             assert_eq!(n, seen.len());
         }
 
-        fn assert_static<T>(v: TupleUnion<T>) -> TupleUnion<T> { v }
-        fn assert_dynamic<T: Strategy>(v: Union<T>) -> Union<T> { v }
+        fn assert_static<T>(v: TupleUnion<T>) -> TupleUnion<T> {
+            v
+        }
+        fn assert_dynamic<T: Strategy>(v: Union<T>) -> Union<T> {
+            v
+        }
 
         expect_count(1, prop_oneof![J(0i32)]);
-        expect_count(2, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-        ]));
-        expect_count(3, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-        ]));
-        expect_count(4, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-        ]));
-        expect_count(5, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-        ]));
-        expect_count(6, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-            J(5i32),
-        ]));
-        expect_count(7, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-            J(5i32),
-            J(6i32),
-        ]));
-        expect_count(8, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-            J(5i32),
-            J(6i32),
-            J(7i32),
-        ]));
-        expect_count(9, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-            J(5i32),
-            J(6i32),
-            J(7i32),
-            J(8i32),
-        ]));
-        expect_count(10, assert_static(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-            J(5i32),
-            J(6i32),
-            J(7i32),
-            J(8i32),
-            J(9i32),
-        ]));
-        expect_count(11, assert_dynamic(prop_oneof![
-            J(0i32),
-            J(1i32),
-            J(2i32),
-            J(3i32),
-            J(4i32),
-            J(5i32),
-            J(6i32),
-            J(7i32),
-            J(8i32),
-            J(9i32),
-            J(10i32),
-        ]));
+        expect_count(2, assert_static(prop_oneof![J(0i32), J(1i32),]));
+        expect_count(3, assert_static(prop_oneof![J(0i32), J(1i32), J(2i32),]));
+        expect_count(
+            4,
+            assert_static(prop_oneof![J(0i32), J(1i32), J(2i32), J(3i32),]),
+        );
+        expect_count(
+            5,
+            assert_static(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+            ]),
+        );
+        expect_count(
+            6,
+            assert_static(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+                J(5i32),
+            ]),
+        );
+        expect_count(
+            7,
+            assert_static(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+                J(5i32),
+                J(6i32),
+            ]),
+        );
+        expect_count(
+            8,
+            assert_static(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+                J(5i32),
+                J(6i32),
+                J(7i32),
+            ]),
+        );
+        expect_count(
+            9,
+            assert_static(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+                J(5i32),
+                J(6i32),
+                J(7i32),
+                J(8i32),
+            ]),
+        );
+        expect_count(
+            10,
+            assert_static(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+                J(5i32),
+                J(6i32),
+                J(7i32),
+                J(8i32),
+                J(9i32),
+            ]),
+        );
+        expect_count(
+            11,
+            assert_dynamic(prop_oneof![
+                J(0i32),
+                J(1i32),
+                J(2i32),
+                J(3i32),
+                J(4i32),
+                J(5i32),
+                J(6i32),
+                J(7i32),
+                J(8i32),
+                J(9i32),
+                J(10i32),
+            ]),
+        );
     }
 }
 

@@ -19,13 +19,13 @@
 
 use std::cmp;
 use std::collections::HashMap;
-use std::fs::File;
 use std::io::{self, Write, Read};
+use std::os::unix::net::UnixStream;
 use std::mem;
 use std::os::unix::prelude::*;
-use std::process::Child;
+use std::process::{Child, ExitStatus};
 use std::sync::{Once, ONCE_INIT, Mutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 use libc::{self, c_int};
 
@@ -34,15 +34,12 @@ static mut STATE: *mut State = 0 as *mut _;
 
 struct State {
     prev: libc::sigaction,
-    write: File,
-    read: File,
+    write: UnixStream,
+    read: UnixStream,
     map: Mutex<StateMap>,
 }
 
-type StateMap = HashMap<c_int, (File, Option<ExitStatus>)>;
-
-#[derive(Eq, PartialEq, Copy, Clone, Debug)]
-pub struct ExitStatus(c_int);
+type StateMap = HashMap<*mut Child, (UnixStream, Option<ExitStatus>)>;
 
 pub fn wait_timeout(child: &mut Child, dur: Duration)
                     -> io::Result<Option<ExitStatus>> {
@@ -69,7 +66,9 @@ impl State {
         unsafe {
             // Create our "self pipe" and then set both ends to nonblocking
             // mode.
-            let (read, write) = file_pair().unwrap();
+            let (read, write) = UnixStream::pair().unwrap();
+            read.set_nonblocking(true).unwrap();
+            write.set_nonblocking(true).unwrap();
 
             let mut state = Box::new(State {
                 prev: mem::zeroed(),
@@ -102,8 +101,9 @@ impl State {
                        -> io::Result<Option<ExitStatus>> {
         // First up, prep our notification pipe which will tell us when our
         // child has been reaped (other threads may signal this pipe).
-        let (read, write) = try!(file_pair());
-        let id = child.id() as c_int;
+        let (read, write) = UnixStream::pair()?;
+        read.set_nonblocking(true)?;
+        write.set_nonblocking(true)?;
 
         // Next, take a lock on the map of children currently waiting. Right
         // after this, **before** we add ourselves to the map, we check to see
@@ -115,11 +115,25 @@ impl State {
         // ourselves to the map and then block in `select` waiting for something
         // to happen.
         let mut map = self.map.lock().unwrap();
-        if let Some(status) = try!(try_wait(id)) {
+        if let Some(status) = child.try_wait()? {
             return Ok(Some(status))
         }
-        assert!(map.insert(id, (write, None)).is_none());
+        assert!(map.insert(child, (write, None)).is_none());
         drop(map);
+
+        // Make sure that no matter what when we exit our pointer is removed
+        // from the map.
+        struct Remove<'a> {
+            state: &'a State,
+            child: &'a mut Child,
+        }
+        impl<'a> Drop for Remove<'a> {
+            fn drop(&mut self) {
+                let mut map = self.state.map.lock().unwrap();
+                drop(map.remove(&(self.child as *mut Child)));
+            }
+        }
+        let remove = Remove { state: self, child };
 
 
         // Alright, we're guaranteed that we'll eventually get a SIGCHLD due
@@ -130,31 +144,38 @@ impl State {
         // Note that this happens in a loop for two reasons; we could
         // receive EINTR or we could pick up a SIGCHLD for other threads but not
         // actually be ready oureslves.
-        let end_time = now_ns();
+        let start = Instant::now();
+        let mut fds = [
+            libc::pollfd {
+                fd: self.read.as_raw_fd(),
+                events: libc::POLLIN,
+
+                revents: 0,
+            },
+            libc::pollfd {
+                fd: read.as_raw_fd(),
+                events: libc::POLLIN,
+                revents: 0,
+            },
+        ];
         loop {
-            let cur_time = now_ns();
-            let nanos = cur_time - end_time;
-            let elapsed = Duration::new(nanos / 1_000_000_000,
-                                        (nanos % 1_000_000_000) as u32);
+            let elapsed = start.elapsed();
             if elapsed >= dur {
                 break
             }
             let timeout = dur - elapsed;
-            let mut timeout = libc::timeval {
-                tv_sec: timeout.as_secs() as libc::time_t,
-                tv_usec: (timeout.subsec_nanos() / 1000) as libc::suseconds_t,
-            };
+            let timeout = timeout.as_secs().checked_mul(1_000)
+                .and_then(|amt| {
+                    amt.checked_add(timeout.subsec_nanos() as u64 / 1_000_000)
+                })
+                .unwrap_or(u64::max_value());
+            let timeout = cmp::min(<c_int>::max_value() as u64, timeout) as c_int;
             let r = unsafe {
-                let mut set: libc::fd_set = mem::uninitialized();
-                libc::FD_ZERO(&mut set);
-                libc::FD_SET(self.read.as_raw_fd(), &mut set);
-                libc::FD_SET(read.as_raw_fd(), &mut set);
-                let max = cmp::max(self.read.as_raw_fd(), read.as_raw_fd()) + 1;
-                libc::select(max, &mut set, 0 as *mut _, 0 as *mut _, &mut timeout)
+                libc::poll(fds.as_mut_ptr(), 2, timeout)
             };
             let timeout = match r {
                 0 => true,
-                1 | 2 => false,
+                n if n > 0 => false,
                 n => {
                     let err = io::Error::last_os_error();
                     if err.kind() == io::ErrorKind::Interrupted {
@@ -193,7 +214,8 @@ impl State {
         }
 
         let mut map = self.map.lock().unwrap();
-        let (_write, ret) = map.remove(&id).unwrap();
+        let (_write, ret) = map.remove(&(remove.child as *mut Child)).unwrap();
+        drop(map);
         Ok(ret)
     }
 
@@ -204,7 +226,7 @@ impl State {
                 continue
             }
 
-            *status = try_wait(k).unwrap();
+            *status = unsafe { (*k).try_wait().unwrap() };
             if status.is_some() {
                 notify(write);
             }
@@ -212,33 +234,7 @@ impl State {
     }
 }
 
-fn file_pair() -> io::Result<(File, File)> {
-    // TODO: CLOEXEC
-    unsafe {
-        let mut pipes = [0; 2];
-        if libc::pipe(pipes.as_mut_ptr()) != 0 {
-            return Err(io::Error::last_os_error())
-        }
-        let set = 1 as c_int;
-        assert_eq!(libc::ioctl(pipes[0], libc::FIONBIO, &set), 0);
-        assert_eq!(libc::ioctl(pipes[1], libc::FIONBIO, &set), 0);
-        Ok((File::from_raw_fd(pipes[0]), File::from_raw_fd(pipes[1])))
-    }
-}
-
-fn try_wait(id: c_int) -> io::Result<Option<ExitStatus>> {
-    let mut status = 0;
-    match unsafe { libc::waitpid(id, &mut status, libc::WNOHANG) } {
-        0 => Ok(None),
-        n if n < 0 => return Err(io::Error::last_os_error()),
-        n => {
-            assert_eq!(n, id);
-            Ok(Some(ExitStatus(status)))
-        }
-    }
-}
-
-fn drain(mut file: &File) -> bool {
+fn drain(mut file: &UnixStream) -> bool {
     let mut ret = false;
     let mut buf = [0u8; 16];
     loop {
@@ -256,7 +252,7 @@ fn drain(mut file: &File) -> bool {
     }
 }
 
-fn notify(mut file: &File) {
+fn notify(mut file: &UnixStream) {
     match file.write(&[1]) {
         Ok(..) => {}
         Err(e) => {
@@ -264,14 +260,6 @@ fn notify(mut file: &File) {
                 panic!("bad error on write fd: {}", e)
             }
         }
-    }
-}
-
-fn now_ns() -> u64 {
-    unsafe {
-        let mut now: libc::timeval = mem::zeroed();
-        libc::gettimeofday(&mut now, 0 as *mut _);
-        (now.tv_sec as u64 * 1_000_000_000) + (now.tv_usec as u64 * 1_000)
     }
 }
 
@@ -312,32 +300,6 @@ extern fn sigchld_handler(signum: c_int,
         } else {
             let action = mem::transmute::<usize, FnSigaction>(fnptr);
             action(signum, info, ptr)
-        }
-    }
-}
-
-impl ExitStatus {
-    pub fn success(&self) -> bool {
-        self.code() == Some(0)
-    }
-
-    pub fn code(&self) -> Option<i32> {
-        unsafe {
-            if libc::WIFEXITED(self.0) {
-                Some(libc::WEXITSTATUS(self.0))
-            } else {
-                None
-            }
-        }
-    }
-
-    pub fn unix_signal(&self) -> Option<i32> {
-        unsafe {
-            if !libc::WIFEXITED(self.0) {
-                Some(libc::WTERMSIG(self.0))
-            } else {
-                None
-            }
         }
     }
 }
