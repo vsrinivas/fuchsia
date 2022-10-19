@@ -1265,10 +1265,6 @@ impl ComponentInstanceInterface for ComponentInstance {
     fn new_route_mapper() -> NoopRouteMapper {
         NoopRouteMapper
     }
-
-    fn persistent_storage(&self) -> bool {
-        self.persistent_storage
-    }
 }
 
 impl std::fmt::Debug for ComponentInstance {

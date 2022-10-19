@@ -74,9 +74,6 @@ pub trait ComponentInstanceInterface: Sized + Send + Sync {
 
     /// Returns a new mapper for recording a capability route during routing.
     fn new_route_mapper() -> Self::DebugRouteMapper;
-
-    /// Returns the `persistent_storage` setting of this component instance.
-    fn persistent_storage(&self) -> bool;
 }
 
 /// A trait providing a representation of a resolved component instance.

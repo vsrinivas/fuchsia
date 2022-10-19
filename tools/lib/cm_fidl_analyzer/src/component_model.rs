@@ -268,7 +268,6 @@ impl ModelBuilderForAnalyzer {
                         model.policy_checker.clone(),
                         Arc::clone(&model.component_id_index),
                         runner_registry,
-                        false,
                     );
 
                     Self::add_descendants(

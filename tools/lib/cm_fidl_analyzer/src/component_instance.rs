@@ -46,7 +46,6 @@ pub struct ComponentInstanceForAnalyzer {
     pub(crate) environment: Arc<EnvironmentForAnalyzer>,
     policy_checker: GlobalPolicyChecker,
     component_id_index: Arc<ComponentIdIndex>,
-    persistent_storage: bool,
 }
 
 impl ComponentInstanceForAnalyzer {
@@ -72,7 +71,6 @@ impl ComponentInstanceForAnalyzer {
         policy_checker: GlobalPolicyChecker,
         component_id_index: Arc<ComponentIdIndex>,
         runner_registry: RunnerRegistry,
-        persistent_storage: bool,
     ) -> Arc<Self> {
         let environment =
             EnvironmentForAnalyzer::new_root(runner_registry, &runtime_config, &top_instance);
@@ -91,7 +89,6 @@ impl ComponentInstanceForAnalyzer {
             environment,
             policy_checker,
             component_id_index,
-            persistent_storage,
         })
     }
 
@@ -115,7 +112,6 @@ impl ComponentInstanceForAnalyzer {
             .expect("child moniker is guaranteed to be valid"),
         );
         let abs_moniker = instanced_moniker.clone().without_instance_ids();
-        let persistent_storage = parent.persistent_storage();
         Ok(Arc::new(Self {
             instanced_moniker,
             abs_moniker,
@@ -129,7 +125,6 @@ impl ComponentInstanceForAnalyzer {
             environment,
             policy_checker,
             component_id_index,
-            persistent_storage,
         }))
     }
 
@@ -221,10 +216,6 @@ impl ComponentInstanceInterface for ComponentInstanceForAnalyzer {
 
     fn new_route_mapper() -> RouteMapper {
         RouteMapper::new()
-    }
-
-    fn persistent_storage(&self) -> bool {
-        self.persistent_storage
     }
 }
 
@@ -318,7 +309,6 @@ mod tests {
             GlobalPolicyChecker::default(),
             Arc::new(ComponentIdIndex::default()),
             RunnerRegistry::default(),
-            false,
         );
 
         assert!(instance.lock_resolved_state().now_or_never().is_some())
