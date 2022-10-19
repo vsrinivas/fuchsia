@@ -15,8 +15,8 @@ zx_library("image-format") {
   sources = [ "image_format.cc" ]
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
-    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp_wire",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp",
+    "//sdk/fidl/fuchsia.sysmem2:fuchsia.sysmem2_cpp",
   ]
   deps = [
     "//sdk/lib/fidl",
