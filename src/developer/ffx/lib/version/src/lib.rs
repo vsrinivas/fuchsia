@@ -2,8 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_developer_ffx::VersionInfo;
 use std::ffi::CString;
+
+pub use fidl_fuchsia_developer_ffx::VersionInfo;
 
 /// The config key used to store the current build id
 pub const CURRENT_EXE_BUILDID: &str = "current.buildid";

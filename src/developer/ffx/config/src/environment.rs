@@ -181,6 +181,11 @@ impl EnvironmentContext {
         }
     }
 
+    /// Returns version info about the running ffx binary
+    pub fn build_info(&self) -> ffx_build_version::VersionInfo {
+        ffx_build_version::build_info()
+    }
+
     /// Returns a unique identifier denoting the version of the daemon binary.
     pub fn daemon_version_string(&self) -> Result<String> {
         buildid::get_build_id().map_err(Into::into)

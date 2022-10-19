@@ -5,7 +5,6 @@
 use analytics::{get_notice, opt_out_for_this_invocation};
 use anyhow::{Context, Result};
 use errors::{ffx_error, ResultExt};
-use ffx_core::Injector;
 use ffx_daemon_proxy::Injection;
 use ffx_lib_args::{forces_stdout_log, from_env, is_daemon, is_schema, redact_arg_values, Ffx};
 use ffx_metrics::{add_ffx_launch_and_timing_events, init_metrics_svc};
@@ -95,7 +94,7 @@ pub async fn run() -> Result<()> {
     let analytics_disabled = ffx_config::get("ffx.analytics.disabled").await.unwrap_or(false);
     let ffx_invoker = ffx_config::get("fuchsia.analytics.ffx_invoker").await.unwrap_or(None);
     let injection = Injection::new(hoist.clone(), app.machine, app.target().await?);
-    init_metrics_svc(injection.build_info().await?, ffx_invoker).await; // one time call to initialize app analytics
+    init_metrics_svc(context.build_info(), ffx_invoker).await; // one time call to initialize app analytics
     if analytics_disabled {
         opt_out_for_this_invocation().await?
     }

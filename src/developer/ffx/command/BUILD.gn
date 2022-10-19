@@ -15,7 +15,6 @@ rustc_library("lib") {
     "//src/developer/ffx:ffx_lib_args",
     "//src/developer/ffx:ffx_lib_suite",
     "//src/developer/ffx/config:lib",
-    "//src/developer/ffx/core:lib",
     "//src/developer/ffx/daemon/proxy:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/metrics:lib",

@@ -16,6 +16,7 @@ if (is_host) {
       "//src/connectivity/overnet/lib/hoist",
       "//src/developer/ffx/lib/buildid:lib",
       "//src/developer/ffx/lib/errors:lib",
+      "//src/developer/ffx/lib/version:lib",
       "//src/lib/analytics/rust:lib",
       "//src/lib/fuchsia-async",
       "//third_party/rust_crates:anyhow",
