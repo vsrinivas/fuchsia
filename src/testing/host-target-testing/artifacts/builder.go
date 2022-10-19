@@ -22,7 +22,7 @@ type Builder struct {
 
 // LookupBuildID looks up the latest build id for a given builder.
 func (b *Builder) GetLatestBuildID(ctx context.Context) (string, error) {
-	stdout, stderr, err := util.RunCommand(ctx, b.archive.lkgPath, "build", "-builder", b.name)
+	stdout, stderr, err := util.RunCommand(ctx, b.archive.lkgPath, "build", "-search-range", "100", "-builder", b.name)
 	if err != nil {
 		return "", fmt.Errorf("lkg failed: %w: %s", err, string(stderr))
 	}
