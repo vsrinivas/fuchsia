@@ -1,6 +1,7 @@
 # bt-bredr-profile
-`bt-bredr-profile` is a command-line front-end for the BR/EDR profile API ([fuchsia.bluetooth.bredr/Profile](../../../../../sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)). The tool supports establishing both L2CAP and RFCOMM channels, and provides an interface for sending data
-over these channels.
+`bt-bredr-profile` is a command-line front-end for the BR/EDR profile API ([fuchsia.bluetooth.bredr/Profile](/sdk/fidl/fuchsia.bluetooth.bredr/profile.fidl)).
+The tool supports establishing both L2CAP and RFCOMM channels, and provides an interface for sending
+data over these channels.
 
 ## Build
 Include `bt-bredr-profile` in your `fx set`:

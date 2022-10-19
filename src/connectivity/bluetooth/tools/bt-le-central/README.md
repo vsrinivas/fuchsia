@@ -1,6 +1,6 @@
 # bt-le-central
 `bt-le-central` is a tool for acting as a device in the LE central role by using the
-fuchsia.bluetooth.le and fuchsia.bluetooth.gatt FIDL APIs to discover and
+`fuchsia.bluetooth.le` and `fuchsia.bluetooth.gatt2` FIDL APIs to discover and
 connect to peripherals and their services.
 
 ## Test

@@ -14,10 +14,10 @@ Include the A2DP profile and tool in your build. For example, if using `fx set`,
 --with //src/connectivity/bluetooth/tools/bt-avdtp-tool
 ```
 
-Look at the [bt-a2dp README](../../profiles/bt-a2dp/README.md) for any additional dependencies that
+Look at the [bt-a2dp README](/src/connectivity/bluetooth/profiles/bt-a2dp/README.md) for any additional dependencies that
 may be needed.
 
-Include the [A2DP testonly core shard](../../profiles/bt-a2dp/meta/bt-a2dp-testonly.core_shard.cml)
+Include the [A2DP testonly core shard](/src/connectivity/bluetooth/profiles/bt-a2dp/meta/bt-a2dp-testonly.core_shard.cml)
 in your product configuration. This allows all testonly capabilities to be available to this tool.
 For example, if using `fx set`, add:
 
@@ -35,8 +35,8 @@ the device address shown in the `bt-cli` tool.
 * To see the available commands and their descriptions, type `help` in the CLI.
 * To see how to use a specific command, type `help _CommandName_` in the CLI.
 * Note that each avdtp-tool command must be proceeded by a peer id.
-* To change program arguments to the A2DP component, update the [default structured configuration file](../../profiles/bt-a2dp/config/default.json5). For example, to disable initiating outbound connections, set the
-`initiator_delay` to 0.
+* To change program arguments to the A2DP component, update the [default structured configuration file](/src/connectivity/bluetooth/profiles/bt-a2dp/config/default.json5).
+For example, to disable initiating outbound connections, set the `initiator_delay` to 0.
 
 This tool is not meant to be used in a production environment; it is sending out-of-band
 AVDTP commands to the A2DP component. This can cause A2DP to get into a bad or irrecoverable state.
