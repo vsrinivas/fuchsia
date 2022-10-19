@@ -86,8 +86,12 @@ func NewFFXInstance(
 	if err != nil {
 		return nil, err
 	}
+	absFFXPath, err := filepath.Abs(ffxPath)
+	if err != nil {
+		return nil, err
+	}
 	ffx := &FFXInstance{
-		ffxPath: ffxPath,
+		ffxPath: absFFXPath,
 		runner:  &subprocess.Runner{Dir: dir, Env: env},
 		stdout:  os.Stdout,
 		stderr:  os.Stderr,
@@ -182,7 +186,7 @@ func (f *FFXInstance) Stop() error {
 	// no more logs are written once the command returns.
 	for i := 0; i < 3; i++ {
 		var b bytes.Buffer
-		if err := runCommand(ctx, f.runner, &b, io.Discard, "pgrep", "ffx"); err != nil {
+		if err := runCommand(ctx, f.runner, &b, io.Discard, "pgrep", "-f", f.ffxPath); err != nil {
 			logger.Debugf(ctx, "failed to run \"pgrep ffx\": %s", err)
 			continue
 		}
