@@ -136,18 +136,18 @@ request.)";
 }  // namespace
 
 void ShowMessageFirstRunOfFirstTool(const ToolInfo& tool_info) {
-  std::cout << fxl::Substitute(kMessageFirstRunOfFirstTool, kParticipatingTools,
+  std::cerr << fxl::Substitute(kMessageFirstRunOfFirstTool, kParticipatingTools,
                                tool_info.tool_name, tool_info.disable_args, tool_info.status_args)
             << std::endl;
 }
 
 void ShowMessageFirstRunOfOtherTool(const ToolInfo& tool_info, AnalyticsStatus status) {
   if (status == AnalyticsStatus::kEnabled) {
-    std::cout << fxl::Substitute(kMessageFirstRunOfOtherToolEnabled, tool_info.tool_name,
+    std::cerr << fxl::Substitute(kMessageFirstRunOfOtherToolEnabled, tool_info.tool_name,
                                  tool_info.disable_args, tool_info.status_args)
               << std::endl;
   } else {
-    std::cout << fxl::Substitute(kMessageFirstRunOfOtherToolDisabled, tool_info.tool_name,
+    std::cerr << fxl::Substitute(kMessageFirstRunOfOtherToolDisabled, tool_info.tool_name,
                                  tool_info.enable_args, tool_info.status_args)
               << std::endl;
   }
