@@ -1034,28 +1034,56 @@ void AmlSdmmc::WaitForBus() const {
   }
 }
 
-zx_status_t AmlSdmmc::TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
+zx_status_t AmlSdmmc::TuningDoTransfer(zx::unowned_vmo received_block, size_t blk_pattern_size,
                                        uint32_t tuning_cmd_idx) {
-  sdmmc_req_t tuning_req = {};
-  tuning_req.cmd_idx = tuning_cmd_idx;
-  tuning_req.cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS;
-  tuning_req.arg = 0;
-  tuning_req.blockcount = 1;
-  tuning_req.blocksize = static_cast<uint16_t>(blk_pattern_size);
-  tuning_req.use_dma = false;
-  tuning_req.virt_buffer = tuning_res;
-  tuning_req.virt_size = blk_pattern_size;
-  tuning_req.suppress_error_messages = true;
-  return AmlSdmmc::SdmmcRequest(&tuning_req);
+  const sdmmc_buffer_region_t buffer = {
+      .buffer = {.vmo = received_block->get()},
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 0,
+      .size = blk_pattern_size,
+  };
+  const sdmmc_req_new_t tuning_req{
+      .cmd_idx = tuning_cmd_idx,
+      .cmd_flags = MMC_SEND_TUNING_BLOCK_FLAGS,
+      .arg = 0,
+      .blocksize = static_cast<uint32_t>(blk_pattern_size),
+      .suppress_error_messages = true,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+
+  uint32_t unused_response[4];
+  zx_status_t status = AmlSdmmc::SdmmcRequestNew(&tuning_req, unused_response);
+
+  // We are the SDMMC client in this case, and are therefore responsible for performing cache ops
+  // for DMA.
+  zx_status_t cache_status =
+      received_block->op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, blk_pattern_size, nullptr, 0);
+  if (cache_status != ZX_OK) {
+    AML_SDMMC_ERROR("Failed to invalidate tuning buffer: %s", zx_status_get_string(cache_status));
+    return cache_status;
+  }
+
+  return status;
 }
 
-bool AmlSdmmc::TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx) {
+bool AmlSdmmc::TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
+                                  zx::unowned_vmo received_block) {
   zx_status_t status = ZX_OK;
   size_t n;
   for (n = 0; n < AML_SDMMC_TUNING_TEST_ATTEMPTS; n++) {
+    status = TuningDoTransfer(received_block->borrow(), tuning_blk.size(), tuning_cmd_idx);
+    if (status != ZX_OK) {
+      break;
+    }
+
     uint8_t tuning_res[512] = {0};
-    status = TuningDoTransfer(tuning_res, tuning_blk.size(), tuning_cmd_idx);
-    if (status != ZX_OK || memcmp(tuning_blk.data(), tuning_res, tuning_blk.size()) != 0) {
+    if ((status = received_block->read(tuning_res, 0, tuning_blk.size())) != ZX_OK) {
+      AML_SDMMC_ERROR("Failed to read VMO: %s", zx_status_get_string(status));
+      break;
+    }
+    if (memcmp(tuning_blk.data(), tuning_res, tuning_blk.size()) != 0) {
       break;
     }
   }
@@ -1114,11 +1142,12 @@ AmlSdmmc::TuneWindow AmlSdmmc::ProcessTuningResultsInternal(
 }
 
 AmlSdmmc::TuneResults AmlSdmmc::TuneDelayLines(cpp20::span<const uint8_t> tuning_blk,
-                                               uint32_t tuning_cmd_idx) {
+                                               uint32_t tuning_cmd_idx,
+                                               zx::unowned_vmo received_block) {
   TuneResults results = {};
   for (uint32_t i = 0; i <= max_delay(); i++) {
     SetDelayLines(i);
-    if (TuningTestSettings(tuning_blk, tuning_cmd_idx)) {
+    if (TuningTestSettings(tuning_blk, tuning_cmd_idx, received_block->borrow())) {
       results.results |= 1ULL << i;
     }
   }
@@ -1209,6 +1238,26 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
 
   const uint32_t clk_div = AmlSdmmcClock::Get().ReadFrom(&mmio_).cfg_div();
 
+  zx::vmo received_block;
+  zx_status_t status = zx::vmo::create(tuning_blk.size(), 0, &received_block);
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("Failed to create VMO: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  // Commit the VMO and clean the cache up front so that the subsequent pin operation doesn't dirty
+  // the cache before DMA.
+  status = received_block.op_range(ZX_VMO_OP_COMMIT, 0, tuning_blk.size(), nullptr, 0);
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("Failed to commit VMO: %s", zx_status_get_string(status));
+    return status;
+  }
+  status = received_block.op_range(ZX_VMO_OP_CACHE_CLEAN, 0, tuning_blk.size(), nullptr, 0);
+  if (status != ZX_OK) {
+    AML_SDMMC_ERROR("Failed to clean cache: %s", zx_status_get_string(status));
+    return status;
+  }
+
   TuneResults adj_delay_results[AmlSdmmcClock::kMaxClkDiv] = {};
   for (uint32_t i = 0; i < clk_div; i++) {
     SetAdjDelay(i);
@@ -1216,7 +1265,7 @@ zx_status_t AmlSdmmc::SdmmcPerformTuning(uint32_t tuning_cmd_idx) {
     char property_name[28];  // strlen("tuning_results_adj_delay_63")
     snprintf(property_name, sizeof(property_name), "tuning_results_adj_delay_%u", i);
 
-    adj_delay_results[i] = TuneDelayLines(tuning_blk, tuning_cmd_idx);
+    adj_delay_results[i] = TuneDelayLines(tuning_blk, tuning_cmd_idx, received_block.borrow());
 
     const std::string results = adj_delay_results[i].ToString();
 
@@ -1465,17 +1514,15 @@ zx_status_t AmlSdmmc::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_r
   start_reg.set_desc_busy(1).set_desc_addr((static_cast<uint32_t>(desc_phys)) >> 2).WriteTo(&mmio_);
 
   zx::result<std::array<uint32_t, AmlSdmmc::kResponseCount>> response = WaitForInterruptNew(*req);
-  if (response.is_error()) {
-    return response.error_value();
+  if (response.is_ok()) {
+    memcpy(out_response, response.value().data(), sizeof(uint32_t) * AmlSdmmc::kResponseCount);
   }
-
-  memcpy(out_response, response.value().data(), sizeof(uint32_t) * AmlSdmmc::kResponseCount);
 
   fbl::AutoLock lock(&mtx_);
   pending_txn_ = false;
   txn_finished_.Signal();
 
-  return ZX_OK;
+  return response.status_value();
 }
 
 zx_status_t AmlSdmmc::Init(const pdev_device_info_t& device_info) {

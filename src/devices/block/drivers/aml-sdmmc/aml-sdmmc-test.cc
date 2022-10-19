@@ -25,7 +25,9 @@ namespace sdmmc {
 class TestAmlSdmmc : public AmlSdmmc {
  public:
   TestAmlSdmmc(const mmio_buffer_t& mmio, zx::bti bti)
-      : AmlSdmmc(fake_ddk::kFakeParent, std::move(bti), fdf::MmioBuffer(mmio),
+      // Pass BTI ownership to AmlSdmmc, but keep a copy of the handle so we can get a list of VMOs
+      // that are pinned when a request is made.
+      : AmlSdmmc(fake_ddk::kFakeParent, zx::bti(bti.get()), fdf::MmioBuffer(mmio),
                  fdf::MmioPinnedBuffer({&mmio, ZX_HANDLE_INVALID, 0x100}),
                  aml_sdmmc_config_t{
                      .supports_dma = true,
@@ -34,7 +36,8 @@ class TestAmlSdmmc : public AmlSdmmc {
                      .version_3 = true,
                      .prefs = 0,
                  },
-                 zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()) {}
+                 zx::interrupt(ZX_HANDLE_INVALID), ddk::GpioProtocolClient()),
+        bti_(bti.release()) {}
 
   zx_status_t TestDdkAdd() {
     // call parent's bind
@@ -54,6 +57,22 @@ class TestAmlSdmmc : public AmlSdmmc {
   void DdkRelease() { AmlSdmmc::DdkRelease(); }
 
   zx_status_t WaitForInterruptImpl() override {
+    fake_bti_pinned_vmo_info_t pinned_vmos[2];
+    size_t actual = 0;
+    zx_status_t status =
+        fake_bti_get_pinned_vmos(bti_->get(), pinned_vmos, std::size(pinned_vmos), &actual);
+    // In the tuning case there are exactly two VMOs pinned: one to hold the DMA descriptors, and
+    // one to hold the received tuning block. Write the expected tuning data to the second pinned
+    // VMO so that the tuning check always passes.
+    if (status == ZX_OK && actual == std::size(pinned_vmos) &&
+        pinned_vmos[0].size >= sizeof(aml_sdmmc_tuning_blk_pattern_4bit)) {
+      zx_vmo_write(pinned_vmos[1].vmo, aml_sdmmc_tuning_blk_pattern_4bit, pinned_vmos[1].offset,
+                   sizeof(aml_sdmmc_tuning_blk_pattern_4bit));
+    }
+    for (size_t i = 0; i < std::min(actual, std::size(pinned_vmos)); i++) {
+      zx_handle_close(pinned_vmos[i].vmo);
+    }
+
     if (request_index_ < request_results_.size() && request_results_[request_index_] == 0) {
       // Indicate a receive CRC error.
       mmio_.Write32(1, kAmlSdmmcStatusOffset);
@@ -104,6 +123,7 @@ class TestAmlSdmmc : public AmlSdmmc {
   // The optional interrupt status to set after a request is completed.
   std::optional<uint32_t> interrupt_status_;
   inspect::InspectTestHelper inspector_;
+  zx::unowned_bti bti_;
 };
 
 class AmlSdmmcTest : public zxtest::Test {
@@ -128,10 +148,9 @@ class AmlSdmmcTest : public zxtest::Test {
     bti_paddrs_[0] = zx_system_get_page_size();
 
     zx::bti bti;
-    ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, std::size(bti_paddrs_),
-                                          bti.reset_and_get_address()));
+    ASSERT_OK(fake_bti_create(bti.reset_and_get_address()));
 
-    dut_ = new TestAmlSdmmc(mmio_buffer, std::move(bti));
+    dut_.reset(new TestAmlSdmmc(mmio_buffer, std::move(bti)));
 
     dut_->set_board_config({
         .supports_dma = true,
@@ -152,13 +171,11 @@ class AmlSdmmcTest : public zxtest::Test {
     EXPECT_EQ(mmio_.Read32(kAmlSdmmcAdjustOffset), 0);
 
     mmio_.Write32(1, kAmlSdmmcCfgOffset);  // Set bus width 4.
-    memcpy(reinterpret_cast<uint8_t*>(registers_.get()) + kAmlSdmmcPingOffset,
-           aml_sdmmc_tuning_blk_pattern_4bit, sizeof(aml_sdmmc_tuning_blk_pattern_4bit));
   }
 
   void TearDown() override {
-    if (dut_ != nullptr) {
-      dut_->DdkRelease();
+    if (dut_) {
+      dut_.release()->DdkRelease();
     }
   }
 
@@ -176,6 +193,7 @@ class AmlSdmmcTest : public zxtest::Test {
   }
 
   void InitializeContiguousPaddrs(const size_t vmos) {
+    ResetDutWithFakeBtiPaddrs();
     // Start at 1 because one paddr has already been read to create the DMA descriptor buffer.
     for (size_t i = 0; i < vmos; i++) {
       bti_paddrs_[i + 1] = (i << 24) | zx_system_get_page_size();
@@ -183,6 +201,7 @@ class AmlSdmmcTest : public zxtest::Test {
   }
 
   void InitializeSingleVmoPaddrs(const size_t pages) {
+    ResetDutWithFakeBtiPaddrs();
     // Start at 1 because one paddr has already been read to create the DMA descriptor buffer.
     for (size_t i = 0; i < pages; i++) {
       bti_paddrs_[i + 1] = zx_system_get_page_size() * (i + 1);
@@ -190,15 +209,32 @@ class AmlSdmmcTest : public zxtest::Test {
   }
 
   void InitializeNonContiguousPaddrs(const size_t vmos) {
+    ResetDutWithFakeBtiPaddrs();
     for (size_t i = 0; i < vmos; i++) {
       bti_paddrs_[i + 1] = zx_system_get_page_size() * (i + 1) * 2;
     }
   }
 
+  void ResetDutWithFakeBtiPaddrs() {
+    mmio_buffer_t mmio_buffer = {
+        .vaddr = mmio_.get(),
+        .offset = 0,
+        .size = S912_SD_EMMC_B_LENGTH,
+        .vmo = ZX_HANDLE_INVALID,
+    };
+
+    zx::bti bti;
+    ASSERT_OK(fake_bti_create_with_paddrs(bti_paddrs_, std::size(bti_paddrs_),
+                                          bti.reset_and_get_address()));
+
+    dut_.release()->DdkRelease();
+    dut_.reset(new TestAmlSdmmc(mmio_buffer, std::move(bti)));
+  }
+
   zx_paddr_t bti_paddrs_[64] = {};
 
   fdf::MmioBuffer mmio_;
-  TestAmlSdmmc* dut_ = nullptr;
+  std::unique_ptr<TestAmlSdmmc> dut_;
 
  private:
   std::unique_ptr<uint8_t[]> registers_;
@@ -213,7 +249,7 @@ TEST_F(AmlSdmmcTest, DdkLifecycle) {
 
 TEST_F(AmlSdmmcTest, InitV3) {
   dut_->set_board_config({
-      .supports_dma = false,
+      .supports_dma = true,
       .min_freq = 400000,
       .max_freq = 120000000,
       .version_3 = true,
@@ -237,7 +273,7 @@ TEST_F(AmlSdmmcTest, InitV3) {
 
 TEST_F(AmlSdmmcTest, InitV2) {
   dut_->set_board_config({
-      .supports_dma = false,
+      .supports_dma = true,
       .min_freq = 400000,
       .max_freq = 120000000,
       .version_3 = false,
@@ -260,14 +296,6 @@ TEST_F(AmlSdmmcTest, InitV2) {
 }
 
 TEST_F(AmlSdmmcTest, TuningV3) {
-  dut_->set_board_config({
-      .supports_dma = false,
-      .min_freq = 400000,
-      .max_freq = 120000000,
-      .version_3 = true,
-      .prefs = 0,
-  });
-
   ASSERT_OK(dut_->Init({}));
 
   AmlSdmmcClock::Get().FromValue(0).set_cfg_div(10).WriteTo(&mmio_);
@@ -290,7 +318,7 @@ TEST_F(AmlSdmmcTest, TuningV3) {
 
 TEST_F(AmlSdmmcTest, TuningV2) {
   dut_->set_board_config({
-      .supports_dma = false,
+      .supports_dma = true,
       .min_freq = 400000,
       .max_freq = 120000000,
       .version_3 = false,
@@ -1179,9 +1207,9 @@ TEST_F(AmlSdmmcTest, RequestsFailAfterSuspend) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -1243,9 +1271,9 @@ TEST_F(AmlSdmmcTest, UnownedVmosBlockMode) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -1279,9 +1307,9 @@ TEST_F(AmlSdmmcTest, UnownedVmosNotBlockSizeMultiple) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmos[10] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -1342,11 +1370,12 @@ TEST_F(AmlSdmmcTest, UnownedVmosByteMode) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
+  InitializeContiguousPaddrs(1);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
-  InitializeContiguousPaddrs(1);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1402,11 +1431,12 @@ TEST_F(AmlSdmmcTest, UnownedVmoByteModeMultiBlock) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
+  InitializeContiguousPaddrs(1);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
-  InitializeContiguousPaddrs(1);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1434,12 +1464,13 @@ TEST_F(AmlSdmmcTest, UnownedVmoOffsetNotAligned) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeSingleVmoPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeSingleVmoPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1497,12 +1528,13 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferMultipleDescriptors) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeNonContiguousPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeNonContiguousPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1530,12 +1562,13 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferNotPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeNonContiguousPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeNonContiguousPaddrs(pages);
 
   sdmmc_buffer_region_t buffer = {
       .buffer =
@@ -1593,9 +1626,9 @@ TEST_F(AmlSdmmcTest, UnownedVmoSingleBufferPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < std::size(buffers); i++) {
@@ -1670,9 +1703,9 @@ TEST_F(AmlSdmmcTest, OwnedVmosBlockMode) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < std::size(buffers); i++) {
@@ -1707,9 +1740,9 @@ TEST_F(AmlSdmmcTest, OwnedVmosNotBlockSizeMultiple) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < std::size(buffers); i++) {
@@ -1771,11 +1804,12 @@ TEST_F(AmlSdmmcTest, OwnedVmosByteMode) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
+  InitializeContiguousPaddrs(1);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
-  InitializeContiguousPaddrs(1);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 0, 512, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
@@ -1832,11 +1866,12 @@ TEST_F(AmlSdmmcTest, OwnedVmoByteModeMultiBlock) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
+  InitializeContiguousPaddrs(1);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
   ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
-  InitializeContiguousPaddrs(1);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 2, 512, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
@@ -1865,12 +1900,13 @@ TEST_F(AmlSdmmcTest, OwnedVmoOffsetNotAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeSingleVmoPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeSingleVmoPaddrs(pages);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * zx_system_get_page_size()) - 8,
                                    SDMMC_VMO_RIGHT_WRITE));
 
@@ -1931,12 +1967,13 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferMultipleDescriptors) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeNonContiguousPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeNonContiguousPaddrs(pages);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 8, (pages * zx_system_get_page_size()) - 8,
                                    SDMMC_VMO_RIGHT_WRITE));
 
@@ -1966,12 +2003,13 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferNotPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeNonContiguousPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeNonContiguousPaddrs(pages);
   EXPECT_OK(dut_->SdmmcRegisterVmo(
       1, 0, std::move(vmo), 16, (pages * zx_system_get_page_size()) - 16, SDMMC_VMO_RIGHT_WRITE));
 
@@ -2031,12 +2069,13 @@ TEST_F(AmlSdmmcTest, OwnedVmoSingleBufferPageAligned) {
 }
 
 TEST_F(AmlSdmmcTest, OwnedVmoWritePastEnd) {
+  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
+  InitializeNonContiguousPaddrs(pages);
+
   ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmo;
-  const size_t pages = ((32 * 514) / zx_system_get_page_size()) + 1;
   ASSERT_OK(zx::vmo::create(pages * zx_system_get_page_size(), 0, &vmo));
-  InitializeNonContiguousPaddrs(pages);
   EXPECT_OK(dut_->SdmmcRegisterVmo(1, 0, std::move(vmo), 32, 32 * 384, SDMMC_VMO_RIGHT_WRITE));
 
   sdmmc_buffer_region_t buffer = {
@@ -2142,9 +2181,9 @@ TEST_F(AmlSdmmcTest, SeparateClientVmoSpaces) {
 }
 
 TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   zx::vmo vmos[5] = {};
   sdmmc_buffer_region_t buffers[10];
@@ -2262,6 +2301,8 @@ TEST_F(AmlSdmmcTest, RequestWithOwnedAndUnownedVmos) {
 }
 
 TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
+  ResetDutWithFakeBtiPaddrs();
+
   ASSERT_OK(dut_->Init({}));
 
   bti_paddrs_[1] = 0x1897'7000;
@@ -2331,9 +2372,9 @@ TEST_F(AmlSdmmcTest, ResetCmdInfoBits) {
 }
 
 TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < std::size(buffers); i++) {
@@ -2367,9 +2408,9 @@ TEST_F(AmlSdmmcTest, WriteToReadOnlyVmo) {
 }
 
 TEST_F(AmlSdmmcTest, ReadFromWriteOnlyVmo) {
-  ASSERT_OK(dut_->Init({}));
-
   InitializeContiguousPaddrs(10);
+
+  ASSERT_OK(dut_->Init({}));
 
   sdmmc_buffer_region_t buffers[10];
   for (uint32_t i = 0; i < std::size(buffers); i++) {

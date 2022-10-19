@@ -149,9 +149,10 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
                                   cpp20::span<const TuneResults> adj_delay_results);
   zx::result<TuneSettings> PerformNewTuning(cpp20::span<const TuneResults> adj_delay_results);
   zx::result<TuneSettings> PerformOldTuning(cpp20::span<const TuneResults> adj_delay_results);
-  zx_status_t TuningDoTransfer(uint8_t* tuning_res, size_t blk_pattern_size,
+  zx_status_t TuningDoTransfer(zx::unowned_vmo received_block, size_t blk_pattern_size,
                                uint32_t tuning_cmd_idx);
-  bool TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
+  bool TuningTestSettings(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
+                          zx::unowned_vmo received_block);
   // Sweeps from zero to param_max and creates a TuneWindow representing the largest span of values
   // for which check_param returned true.
   static TuneWindow ProcessTuningResults(uint32_t param_max,
@@ -162,7 +163,8 @@ class AmlSdmmc : public AmlSdmmcType, public ddk::SdmmcProtocol<AmlSdmmc, ddk::b
   static TuneWindow ProcessTuningResultsInternal(uint32_t param_max,
                                                  fit::function<bool(uint32_t)> check_param,
                                                  bool wrap);
-  TuneResults TuneDelayLines(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx);
+  TuneResults TuneDelayLines(cpp20::span<const uint8_t> tuning_blk, uint32_t tuning_cmd_idx,
+                             zx::unowned_vmo received_block);
 
   void SetAdjDelay(uint32_t adj_delay);
   void SetDelayLines(uint32_t delay);
