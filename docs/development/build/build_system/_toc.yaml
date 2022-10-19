@@ -25,8 +25,10 @@ toc:
     path: /docs/development/build/build_system/bundles.md
   - title: "Variants"
     path: /docs/development/build/build_system/variants.md
-  - title: "GN Template Best Practices"
-    path: /docs/development/build/build_system/best_practices.md
+  - title: "GN template best practices"
+    path: /docs/development/build/build_system/best_practices_templates.md
+  - title: "GN toolchain best practices"
+    path: /docs/development/build/build_system/best_practices_toolchains.md
 - title: "Build system internals"
   section:
   - include: /docs/development/build/build_system/internals/_toc.yaml

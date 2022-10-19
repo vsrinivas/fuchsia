@@ -408,7 +408,7 @@ A great Jedi once said: "Only a Sith deals in absolutes."
 [fxb-75451]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=75451
 [fxr-545687]: https://fuchsia-review.googlesource.com/c/fuchsia/+/545687
 [gn]: https://gn.googlesource.com/gn/
-[gn-best-rebase-path]: /docs/development/build/build_system/best_practices.md#prefer-relative-paths-from-rebase-path
+[gn-best-rebase-path]: /docs/development/build/build_system/best_practices_templates.md#prefer-relative-paths-from-rebase-path
 [gn-dev-thread]: https://groups.google.com/a/chromium.org/g/gn-dev/c/WOFiYgcGgjw/m/89f3H7nnAQAJ
 [gn-rebase-path]: https://gn.googlesource.com/gn/+/refs/heads/main/docs/reference.md#func_rebase_path
 [gn-root-build-dir]: https://gn.googlesource.com/gn/+/refs/heads/main/docs/reference.md#var_root_build_dir

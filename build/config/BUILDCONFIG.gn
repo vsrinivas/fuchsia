@@ -176,6 +176,7 @@ if (toolchain_variant.instrumented) {
       string_replace(toolchain_variant.name, "-fuzzer", "") + "/"
 }
 
+# [START toolchain_is_variables]
 is_android = false
 is_chromeos = false
 is_fuchsia = false
@@ -187,6 +188,8 @@ is_mac = false
 is_win = false
 is_component_build = false
 is_official_build = false
+
+# [END toolchain_is_variables]
 
 # This is set to allow third party projects to configure their GN build based
 # on the knowledge that they're being built in the Fuchsia tree. In the

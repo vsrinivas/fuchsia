@@ -10,7 +10,7 @@ This document details the best practices for creating GN templates, and each bes
 practice includes an example. These best practices are in addition to the best
 practices outlined in [Fuchsia build system policies](policies.md).
 
-Run `gn help template` for more information and more complete examples, and
+Run `fx gn help template` for more information and more complete examples, and see
 [GN Language and Operation](https://gn.googlesource.com/gn/+/HEAD/docs/language.md#templates)
 for more information on GN features.
 
