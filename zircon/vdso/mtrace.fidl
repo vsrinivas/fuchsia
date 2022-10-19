@@ -50,6 +50,8 @@ protocol Mtrace {
         kind uint32;
         action uint32;
         options uint32;
-        ptr MutableVectorVoid;
+        @inout
+        @voidptr
+        ptr vector<byte>;
     }) -> (struct {}) error status;
 };

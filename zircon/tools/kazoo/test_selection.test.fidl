@@ -8,7 +8,6 @@ library zx;
 
 alias ConstFutexPtr = int32;
 alias Futex = int32;
-alias MutableVectorVoid = vector<byte>;
 type Clock = strict enum : uint32 {
     MONOTONIC = 0;
     UTC = 1;
@@ -40,7 +39,9 @@ protocol Selection {
     @arg_reorder("handle,data,offset,data_size,actual")
     KtraceRead(resource struct {
         handle handle:RESOURCE;
-        data MutableVectorVoid;
+        @inout
+        @voidptr
+        data vector<byte>;
         offset uint32;
     }) -> (struct {
         actual usize;

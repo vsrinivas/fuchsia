@@ -634,7 +634,9 @@ protocol Vmo {
         op uint32;
         offset uint64;
         size uint64;
-        buffer MutableVectorVoid;
+        @inout
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 
     /// ## SUMMARY

@@ -15,14 +15,12 @@ type PortPacket = struct {};
 type WaitItem = struct {};
 
 alias ConstFutexPtr = int32;
-alias MutableVectorVoid = vector<byte>;
 alias VectorPaddr = vector<paddr>;
 
 @transport("Syscall")
 protocol Aliases {
     SomeFunc(resource struct {
         b ConstFutexPtr;
-        j MutableVectorVoid;
         n VectorPaddr;
     }) -> (struct {}) error status;
 };

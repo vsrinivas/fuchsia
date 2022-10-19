@@ -634,6 +634,8 @@ protocol Vmar {
         op uint32;
         address vaddr;
         size usize;
-        buffer MutableVectorVoid;
+        @inout
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 };

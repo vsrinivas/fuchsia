@@ -11,10 +11,6 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypePointer(Type(TypeZxBasicAlias("Futex"))), Constness::kConst);
     return true;
   }
-  if (name == "MutableVectorVoid") {
-    *type = Type(TypeVector(Type(TypeVoid{})), Constness::kMutable);
-    return true;
-  }
   if (name == "VectorPaddr") {
     *type = Type(TypeVector(Type(TypeZxBasicAlias("paddr"))), Constness::kConst);
     return true;

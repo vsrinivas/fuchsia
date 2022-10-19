@@ -6,7 +6,6 @@ library zx;
 // This file is copies of some syscalls that were interesting for the kernel
 // header generator.
 
-alias MutableVectorVoid = vector<handle>;
 alias VectorPaddr = vector<paddr>;
 
 @transport("Syscall")
@@ -34,7 +33,9 @@ protocol KernelCases {
         kind uint32;
         action uint32;
         options uint32;
-        ptr MutableVectorVoid;
+        @inout
+        @voidptr
+        ptr vector<byte>;
     }) -> (struct {}) error status;
 
     // vector of handles isn't turned into user_out_handle*, rather stays as

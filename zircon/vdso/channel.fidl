@@ -17,9 +17,7 @@ type HandleInfo = resource struct {
 type ChannelCallArgs = resource struct {
     wr_bytes vector<byte>;
     wr_handles vector<handle>;
-    // TODO(scottmg): MutableVectorVoid
     rd_bytes vector<byte>;
-    // TODO(scottmg): mutable_vector_handle
     rd_handles vector<handle>;
 };
 

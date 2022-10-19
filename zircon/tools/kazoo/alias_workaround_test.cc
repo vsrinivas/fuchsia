@@ -33,17 +33,13 @@ TEST(AliasWorkaround, Mappings) {
   // ConstFutexPtr
   CHECK_ARG("const zx_futex_t*", "b");
 
-  // MutableVectorVoid
-  CHECK_ARG("void*", "j");
-  CHECK_ARG("size_t", "j_size");
-
   // VectorPaddr
   CHECK_ARG("const zx_paddr_t*", "n");
   CHECK_ARG("size_t", "num_n");
 
 #undef CHECK_ARG
 
-  EXPECT_EQ(cur_arg, 5u);
+  EXPECT_EQ(cur_arg, 3u);
 }
 
 }  // namespace

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 library zx;
 
-alias MutableVectorVoid = vector<byte>;
-
 @transport("Syscall")
 protocol Kwrap {
     // Simple out ptr.
@@ -32,7 +30,9 @@ protocol Kwrap {
         op uint32;
         offset uint64;
         size uint64;
-        buffer MutableVectorVoid;
+        @inout
+        @voidptr
+        buffer vector<byte>;
     }) -> (struct {}) error status;
 
     // Output handle copied properly.
