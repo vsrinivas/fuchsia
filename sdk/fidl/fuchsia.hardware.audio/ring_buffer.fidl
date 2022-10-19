@@ -5,12 +5,56 @@ library fuchsia.hardware.audio;
 
 using zx;
 
+/// Delay information as returned by the driver.
+@available(added=HEAD)
+type DelayInfo = table {
+    /// The driver's best estimate of the delay internal to the hardware it abstracts for
+    /// the chosen format. If not included `internal_delay` is unknown. If unknown, the
+    /// client may treat `internal_delay` as it chooses, e.g. may autodetect it, consider
+    /// it zero, consider it a large number, etc.
+    ///
+    /// `internal_delay` must be taken into account by the client when determining either
+    /// the minimum lead time requirement (for playback) or the minimum capture delay (for
+    /// capture).
+    ///
+    /// The data plane contents must be produced and consumed at the rate specified by the drivers
+    /// configuration. However, some amount of buffering is required when moving data (for instance
+    /// reading from or writing into the ring buffer for StreamConfig and Dai drivers), and this
+    /// adds delay. In addition to this minimum buffering, more delay may be incurred by additional
+    /// processing done in hardware or software.
+    ///
+    /// In many cases the hardware abstracted by the driver mostly adds delay in the form of a
+    /// FIFO buffer used to transfer data in and out of an audio interconnect.
+    /// In these cases, when consuming playback data, the hardware reads ahead by enough samples
+    /// to fill the FIFO buffer; when producing capture data, samples are first held in the FIFO
+    /// buffer before they are committed it to main system memory.
+    /// In these cases `internal_delay` can be calculated based on the rate, frame size and the size
+    /// of a hardware FIFO block.
+    1: internal_delay zx.duration;
+
+    /// The driver's best estimate of the delay external to the hardware it abstracts for
+    /// the chosen format. If not included `external_delay` is unknown. If unknown, the
+    /// client may treat `external_delay` as it chooses, e.g. may autodetect it, consider
+    /// it zero, consider it a large number, etc.
+    ///
+    /// `external_delay` must be taken into account by the client when determining either
+    /// the minimum lead time requirement (for playback) or the minimum capture delay (for
+    /// capture).
+    2: external_delay zx.duration;
+};
+
 /// Properties of the ring buffer. These values don't change once the ring buffer is created.
 type RingBufferProperties = table {
     /// The driver's best estimate of the external delay present in the presentation pipeline for
     /// the chosen format. When precisely synchronizing presentation across multiple entities
     /// (e.g. devices), the external delay should be taken into account.
     /// If not included `external_delay` is unknown.
+    //
+    // # Deprecation
+    //
+    // Not needed anymore since the functionality is available via `WatchDelayInfo` below.
+    // Should match `DelayInfo` `external_delay` until it's removed.
+    @available(deprecated=9)
     1: external_delay zx.duration;
 
     /// Size (in bytes) representing a temporary buffer used by the driver in order to consume or
@@ -42,6 +86,12 @@ type RingBufferProperties = table {
     /// delays added by any software interfacing with the audio hardware do not occur under most
     /// scenarios, and must detect and report underruns. How an underrun is reported is not defined
     /// in this API.
+    //
+    // # Deprecation
+    //
+    // Not needed anymore since the functionality is available via `WatchDelayInfo` below.
+    // Should match `DelayInfo` `internal_delay` equivalent until it's removed.
+    @available(deprecated=9)
     2: fifo_depth uint32;
 
     /// When set to true, indicates that clients need to make sure that their data has been flushed
@@ -64,8 +114,8 @@ type RingBufferProperties = table {
 type RingBufferPositionInfo = struct {
     /// The driver's best estimate of the time (in the CLOCK_MONOTONIC timeline) at which the
     /// playback/capture pointer reached the position indicated by `position`.
-    /// external_delay impact should not be incorporated into 'timestamp'.
-    /// turn_on_delay impact should not be incorporated into 'timestamp'.
+    /// `turn_on_delay` impact should not be incorporated into 'timestamp'.
+    /// No delays indicated in `DelayInfo` should be incorporated.
     timestamp zx.time;
 
     /// The playback/capture pointer position (in bytes) in the ring buffer at time
@@ -164,4 +214,12 @@ protocol RingBuffer {
     }) -> (struct {
         set_time zx.time;
     }) error zx.status;
+
+    /// Get information about delays via a hanging get. The driver will immediately reply to the
+    /// first `WatchDelayInfo` sent by the client. The driver will not respond to subsequent client
+    /// `WatchDelayInfo` calls until the delay info changes from what was most recently reported.
+    @available(added=HEAD)
+    WatchDelayInfo() -> (struct {
+        delay_info DelayInfo;
+    });
 };

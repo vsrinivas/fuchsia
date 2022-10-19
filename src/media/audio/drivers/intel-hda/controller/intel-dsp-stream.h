@@ -52,12 +52,12 @@ class IntelDspStream : public codecs::IntelHDADaiBase,
   void Start(StartCompleter::Sync& completer) override;
   void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
-
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
   void SetActiveChannels(SetActiveChannelsRequestView request,
                          SetActiveChannelsCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
+  void WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) override;
 
  private:
   friend class fbl::RefPtr<IntelDspStream>;
@@ -69,6 +69,7 @@ class IntelDspStream : public codecs::IntelHDADaiBase,
   char log_prefix_[LOG_PREFIX_STORAGE] = {0};
   const DspStream stream_;
   fidl::ClientEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer_;
+  bool delay_info_updated_ = false;
 };
 
 }  // namespace intel_hda

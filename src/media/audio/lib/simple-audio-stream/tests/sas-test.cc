@@ -72,6 +72,7 @@ class MockSimpleAudio : public SimpleAudioStream {
   static constexpr uint32_t kTestFrameRate = 48000;
   static constexpr uint8_t kTestNumberOfChannels = 2;
   static constexpr uint32_t kTestFifoDepth = 16;
+  static constexpr int64_t kTestExternalDelay = 123456789;
   static constexpr uint32_t kTestClockDomain = audio_fidl::wire::kClockDomainExternal;
   static constexpr uint32_t kTestPositionNotify = 4;
   static constexpr float kTestGain = 1.2345f;
@@ -115,6 +116,7 @@ class MockSimpleAudio : public SimpleAudioStream {
 
     supported_formats_.push_back(std::move(format));
 
+    external_delay_nsec_ = kTestExternalDelay;
     fifo_depth_ = kTestFifoDepth;
     clock_domain_ = kTestClockDomain;
 
@@ -1143,6 +1145,35 @@ TEST_F(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   int result = -1;
   thrd_join(th, &result);
   ASSERT_EQ(result, 0);
+  server->DdkAsyncRemove();
+  EXPECT_TRUE(ddk_.Ok());
+  server->DdkRelease();
+}
+
+TEST_F(SimpleAudioTest, WatchDelays) {
+  auto server = SimpleAudioStream::Create<MockSimpleAudio>(fake_ddk::kFakeParent);
+  ASSERT_NOT_NULL(server);
+
+  auto stream_client = GetStreamClient(ddk_.FidlClient<audio_fidl::StreamConfigConnector>());
+  ASSERT_TRUE(stream_client.is_valid());
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(rb.status());
+  auto delay_info = fidl::WireCall<audio_fidl::RingBuffer>(local)->WatchDelayInfo();
+  ASSERT_OK(delay_info.status());
+  // Based on MockSimpleAudio::kTestFifoDepth = 16 and
+  // GetDefaultPcmFormat() = frame size of 4 bytes (4 frames per fifo) and frame rate 48'000;
+  // Hence a delay 4 / 48'000 = 83 usecs.
+  ASSERT_EQ(delay_info->delay_info.internal_delay(), 83'333);
+  ASSERT_EQ(delay_info->delay_info.external_delay(), MockSimpleAudio::kTestExternalDelay);
+
   server->DdkAsyncRemove();
   EXPECT_TRUE(ddk_.Ok());
   server->DdkRelease();

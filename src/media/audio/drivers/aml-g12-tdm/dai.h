@@ -77,6 +77,7 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   void GetProperties(
       ::fuchsia::hardware::audio::RingBuffer::GetPropertiesCallback callback) override;
   void WatchClockRecoveryPositionInfo(WatchClockRecoveryPositionInfoCallback callback) override;
+  void WatchDelayInfo(WatchDelayInfoCallback callback) override;
   void GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
               GetVmoCallback callback) override;
   void Start(StartCallback callback) override;
@@ -96,6 +97,8 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   ::fuchsia::hardware::audio::DaiFormat dai_format_ = {};
   bool rb_started_ = false;
   bool rb_fetched_ = false;
+  int64_t internal_delay_nsec_ = 0;
+  bool delay_info_sent_ = false;
   async::TaskClosureMethod<AmlG12TdmDai, &AmlG12TdmDai::ProcessRingNotification> notify_timer_{
       this};
   zx::vmo ring_buffer_vmo_;

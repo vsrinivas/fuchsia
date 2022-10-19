@@ -215,4 +215,13 @@ void FakeAudioDriver::Stop(fuchsia::hardware::audio::RingBuffer::StopCallback ca
   callback();
 }
 
+void FakeAudioDriver::WatchDelayInfo(
+    fuchsia::hardware::audio::RingBuffer::WatchDelayInfoCallback callback) {
+  if (delay_info_sent_) {
+    return;  // Only send delay state once, as if it never changed.
+  }
+  delay_info_sent_ = true;
+  callback({});
+}
+
 }  // namespace media::audio::testing

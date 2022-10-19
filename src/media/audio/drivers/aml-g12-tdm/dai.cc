@@ -73,6 +73,7 @@ void AmlG12TdmDai::Connect(ConnectRequestView request, ConnectCompleter::Sync& c
   dai_binding_->set_error_handler([this](zx_status_t status) -> void {
     zxlogf(INFO, "DAI protocol %s", zx_status_get_string(status));
     Stop([]() {});
+    delay_info_sent_ = false;
   });
 }
 
@@ -326,6 +327,20 @@ void AmlG12TdmDai::CreateRingBuffer(
     ::fuchsia::hardware::audio::DaiFormat dai_format,
     ::fuchsia::hardware::audio::Format ring_buffer_format,
     ::fidl::InterfaceRequest<::fuchsia::hardware::audio::RingBuffer> ring_buffer) {
+  if (ring_buffer_format.pcm_format().frame_rate == 0) {
+    zxlogf(ERROR, "Bad (zero) frame rate");
+    ring_buffer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  uint32_t bytes_per_frame = ring_buffer_format.pcm_format().bytes_per_sample *
+                             ring_buffer_format.pcm_format().number_of_channels;
+  if (bytes_per_frame == 0) {
+    zxlogf(ERROR, "Bad (zero) bytes per frame");
+    ring_buffer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
   // Stop and terminate a previous ring buffer.
   if (rb_started_) {
     Stop([]() {});
@@ -338,6 +353,11 @@ void AmlG12TdmDai::CreateRingBuffer(
     Stop([]() {});
   });
   dai_format_ = std::move(dai_format);
+
+  uint32_t fifo_depth_frames = (aml_audio_->fifo_depth() + bytes_per_frame - 1) / bytes_per_frame;
+  internal_delay_nsec_ = static_cast<uint64_t>(fifo_depth_frames) * 1'000'000'000 /
+                         static_cast<uint64_t>(ring_buffer_format.pcm_format().frame_rate);
+
   Reset([]() {});
 }
 
@@ -371,6 +391,17 @@ void AmlG12TdmDai::WatchClockRecoveryPositionInfo(WatchClockRecoveryPositionInfo
     zxlogf(ERROR, "no notifications per ring");
   }
   position_callback_ = std::move(callback);
+}
+
+void AmlG12TdmDai::WatchDelayInfo(WatchDelayInfoCallback callback) {
+  if (delay_info_sent_) {
+    return;  // Only send delay state once, as if it never changed.
+  }
+  delay_info_sent_ = true;
+  fuchsia::hardware::audio::DelayInfo delay_info = {};
+  // No external delay information is provided by this driver.
+  delay_info.set_internal_delay(internal_delay_nsec_);
+  callback(std::move(delay_info));
 }
 
 static zx_status_t dai_bind(void* ctx, zx_device_t* device) {

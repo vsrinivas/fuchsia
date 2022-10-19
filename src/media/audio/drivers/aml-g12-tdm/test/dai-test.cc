@@ -481,6 +481,27 @@ TEST_F(AmlG12TdmDaiTest, RingBufferOperations) {
     EXPECT_TRUE(properties.needs_cache_flush_or_invalidate());
   }
 
+  // Check delay state.
+  {
+    zx::channel local, remote;
+    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    ::fidl::InterfaceRequest<::fuchsia::hardware::audio::RingBuffer> ring_buffer_intf;
+    ring_buffer_intf.set_channel(std::move(remote));
+
+    client.dai_->CreateRingBuffer(std::move(dai_format), std::move(ring_buffer_format),
+                                  std::move(ring_buffer_intf));
+
+    ::fuchsia::hardware::audio::RingBuffer_SyncProxy ring_buffer(std::move(local));
+    ::fuchsia::hardware::audio::DelayInfo delay_info;
+    ASSERT_OK(ring_buffer.WatchDelayInfo(&delay_info));
+
+    EXPECT_FALSE(delay_info.has_external_delay());
+    // Based on FIFO depth = 1024 and
+    // PCM format = frame size of 4 bytes (256 frames per fifo) and frame rate 8'000.
+    // Hence a delay 256 / 8kHz = 32 msecs.
+    EXPECT_EQ(delay_info.internal_delay(), 32'000'000);
+  }
+
   // GetVmo then loose channel.
   {
     zx::channel local, remote;

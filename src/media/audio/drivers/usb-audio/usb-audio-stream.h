@@ -212,6 +212,7 @@ class UsbAudioStream : public UsbAudioStreamBase,
   void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
+  void WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
   void GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer);
@@ -292,6 +293,8 @@ class UsbAudioStream : public UsbAudioStreamBase,
   uint32_t iso_packet_rate_;
   uint32_t bytes_per_packet_;
   uint32_t fifo_bytes_;
+  bool delay_info_updated_ = false;
+  int64_t internal_delay_nsec_ = 0;
   uint32_t fractional_bpp_inc_;
   uint32_t fractional_bpp_acc_ __TA_GUARDED(req_lock_);
   uint32_t ring_buffer_offset_ __TA_GUARDED(req_lock_);

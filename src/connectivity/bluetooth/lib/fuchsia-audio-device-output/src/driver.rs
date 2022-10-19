@@ -187,6 +187,9 @@ pub struct SoftPcmOutput {
     /// Replied to gain state watch.
     gain_state_replied: bool,
 
+    /// Replied to delay info watch.
+    delay_info_replied: bool,
+
     /// Inspect node
     #[inspect(forward)]
     inspect: SoftPcmInspect,
@@ -264,6 +267,7 @@ impl SoftPcmOutput {
             frame_vmo: Arc::new(Mutex::new(frame_vmo::FrameVmo::new()?)),
             plug_state_replied: false,
             gain_state_replied: false,
+            delay_info_replied: false,
             inspect: Default::default(),
         };
 
@@ -482,6 +486,16 @@ impl SoftPcmOutput {
             }
             RingBufferRequest::SetActiveChannels { active_channels_bitmask: _, responder } => {
                 responder.send(&mut Err(zx::Status::NOT_SUPPORTED.into_raw()))?;
+            }
+            RingBufferRequest::WatchDelayInfo { responder } => {
+                if self.delay_info_replied == true {
+                    // We will never change delay state.
+                    responder.drop_without_shutdown();
+                    return Ok(());
+                }
+                let delay_info = DelayInfo::EMPTY;
+                responder.send(delay_info)?;
+                self.delay_info_replied = true;
             }
         }
         Ok(())
@@ -802,6 +816,40 @@ mod tests {
         assert!(result.is_ready());
 
         let result = exec.run_until_stalled(&mut ring_buffer.stop());
+        assert!(result.is_ready());
+    }
+
+    #[fixture(with_audio_frame_stream)]
+    #[fuchsia::test]
+    fn watch_delay_info(
+        mut exec: fasync::TestExecutor,
+        stream_config: StreamConfigProxy,
+        mut frame_stream: AudioFrameStream,
+    ) {
+        let mut frame_fut = frame_stream.next();
+        // Poll the frame stream, which should start the processing of proxy requests.
+        exec.run_until_stalled(&mut frame_fut).expect_pending("no frames at the start");
+        let _stream_config_properties = exec.run_until_stalled(&mut stream_config.get_properties());
+        let _formats = exec.run_until_stalled(&mut stream_config.get_supported_formats());
+        let (ring_buffer, server) = fidl::endpoints::create_proxy::<RingBufferMarker>()
+            .expect("creating ring buffer endpoint error");
+
+        #[rustfmt::skip]
+        let format = Format {
+            pcm_format: Some(fidl_fuchsia_hardware_audio::PcmFormat {
+                number_of_channels:      2u8,
+                sample_format:           SampleFormat::PcmSigned,
+                bytes_per_sample:        2u8,
+                valid_bits_per_sample:   16u8,
+                frame_rate:              44100,
+            }),
+            ..Format::EMPTY
+        };
+
+        let result = stream_config.create_ring_buffer(format, server);
+        assert!(result.is_ok());
+
+        let result = exec.run_until_stalled(&mut ring_buffer.watch_delay_info());
         assert!(result.is_ready());
     }
 }

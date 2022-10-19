@@ -202,6 +202,18 @@ zx_status_t IntelHDAStream::SetStreamFormat(async_dispatcher_t* dispatcher, uint
 
   // Record our new client channel
   bytes_per_frame_ = StreamFormat(encoded_fmt).bytes_per_frame();
+  if (StreamFormat(encoded_fmt).sample_rate() == 0) {
+    LOG(ERROR, "Bad (zero) sample rate");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (bytes_per_frame_ == 0) {
+    LOG(ERROR, "Bad (zero) bytes per frame");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  uint32_t fifo_depth_frames = (fifo_depth_ + bytes_per_frame_ - 1) / bytes_per_frame_;
+  internal_delay_nsec_ = static_cast<uint64_t>(fifo_depth_frames) * 1'000'000'000 /
+                         static_cast<uint64_t>(StreamFormat(encoded_fmt).sample_rate());
 
   return ZX_OK;
 }
@@ -269,6 +281,7 @@ void IntelHDAStream::DeactivateLocked() {
 
   // We are now stopped and unconfigured.
   running_ = false;
+  delay_info_updated_ = false;
   fifo_depth_ = 0;
   bytes_per_frame_ = 0;
 
@@ -575,6 +588,17 @@ void IntelHDAStream::WatchClockRecoveryPositionInfo(
     WatchClockRecoveryPositionInfoCompleter::Sync& completer) {
   fbl::AutoLock lock(&notif_lock_);
   position_completer_ = completer.ToAsync();
+}
+
+void IntelHDAStream::WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) {
+  if (!delay_info_updated_) {
+    delay_info_updated_ = true;
+    fidl::Arena allocator;
+    auto delay_info = audio_fidl::wire::DelayInfo::Builder(allocator);
+    // No external delay information is provided by this driver.
+    delay_info.internal_delay(internal_delay_nsec_);
+    completer.Reply(delay_info.Build());
+  }
 }
 
 void IntelHDAStream::ReleaseRingBufferLocked() {

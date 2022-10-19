@@ -100,6 +100,7 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
       fuchsia::hardware::audio::RingBuffer::SetActiveChannelsCallback callback) override {
     callback(fpromise::error(ZX_ERR_NOT_SUPPORTED));
   }
+  void WatchDelayInfo(fuchsia::hardware::audio::RingBuffer::WatchDelayInfoCallback callback) final;
 
   void PositionNotification();
 
@@ -114,6 +115,7 @@ class FakeAudioDriver : public fuchsia::hardware::audio::StreamConfig,
   bool cur_mute_ = false;
   bool plug_state_sent_ = false;
   bool gain_state_sent_ = false;
+  bool delay_info_sent_ = false;
   fuchsia::hardware::audio::PcmSupportedFormats formats_ = {};
   uint32_t clock_domain_ = fuchsia::hardware::audio::CLOCK_DOMAIN_MONOTONIC;
   size_t ring_buffer_size_;

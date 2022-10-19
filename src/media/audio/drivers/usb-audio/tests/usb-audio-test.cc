@@ -657,6 +657,36 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   fake_device.DdkRelease();
 }
 
+TEST(UsbAudioTest, DelayInfo) {
+  Binder tester;
+  FakeDevice fake_device(fake_ddk::kFakeParent);
+  ASSERT_OK(fake_device.Bind());
+  ASSERT_OK(UsbAudioDevice::DriverBind(fake_device.dev()));
+
+  auto stream_client = GetStreamClient(std::move(tester.FidlClient()));
+  ASSERT_TRUE(stream_client.is_valid());
+
+  auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
+  ASSERT_OK(endpoints.status_value());
+  auto [local, remote] = std::move(endpoints.value());
+
+  fidl::Arena allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  auto result = stream_client->CreateRingBuffer(std::move(format), std::move(remote));
+  ASSERT_OK(result.status());
+
+  auto delay_info = fidl::WireCall<audio_fidl::RingBuffer>(local)->WatchDelayInfo();
+  ASSERT_OK(delay_info.status());
+  // Internal delay of = 6 (MAX_OUTSTANDING_REQ) x 1 msecs per request.
+  ASSERT_EQ(delay_info.value().delay_info.internal_delay(), zx::msec(6).to_nsecs());
+  ASSERT_FALSE(delay_info.value().delay_info.has_external_delay());
+
+  fake_device.DdkAsyncRemove();
+  EXPECT_TRUE(tester.Ok());
+  fake_device.DdkRelease();
+}
+
 // TODO(fxbug.dev/84545): Fix flakes caused by this test.
 TEST(UsbAudioTest, DISABLED_RingBufferPropertiesAndStartOk) {
   Binder tester;

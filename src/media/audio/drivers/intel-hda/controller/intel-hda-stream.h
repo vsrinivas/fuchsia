@@ -92,6 +92,7 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
                          SetActiveChannelsCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
+  void WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) override;
 
   // Release the client ring buffer (if one has been assigned)
   void ReleaseRingBufferLocked() TA_REQ(channel_lock_);
@@ -152,6 +153,8 @@ class IntelHDAStream : public fbl::RefCounted<IntelHDAStream>,
   // Parameters determined after stream format configuration.
   uint16_t encoded_fmt_ = 0;
   uint16_t fifo_depth_ = 0;
+  bool delay_info_updated_ = false;
+  int64_t internal_delay_nsec_ = 0;
   uint32_t bytes_per_frame_ TA_GUARDED(channel_lock_) = 0;
 
   // Parameters determined after ring buffer allocation.

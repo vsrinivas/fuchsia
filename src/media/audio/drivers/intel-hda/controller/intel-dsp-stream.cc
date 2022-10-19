@@ -128,6 +128,16 @@ void IntelDspStream::WatchClockRecoveryPositionInfo(
   completer.Reply(result.value().position_info);
 }
 
+// Pass-through.
+void IntelDspStream::WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) {
+  auto result = fidl::WireCall(ring_buffer_)->WatchDelayInfo();
+  if (result.status() != ZX_OK) {
+    LOG(ERROR, "Error on Watch delay info res = %s", result.status_string());
+  }
+  // fxbug.dev(109819): Include any additional delay from SST.
+  completer.Reply(result.value().delay_info);
+}
+
 void IntelDspStream::OnResetLocked() {
   // TODO(84428): As part of redesign SST implement the ability to recover via a reset.
 }

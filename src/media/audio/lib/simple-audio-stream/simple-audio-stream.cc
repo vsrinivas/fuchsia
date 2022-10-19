@@ -272,6 +272,7 @@ void SimpleAudioStream::DeactivateRingBufferChannel(const Channel* channel) {
       state_.Set("deactivated");
     }
     rb_vmo_fetched_ = false;
+    delay_info_updated_ = false;
     expected_notifications_per_ring_.store(0);
     {
       fbl::AutoLock position_lock(&position_lock_);
@@ -379,6 +380,23 @@ void SimpleAudioStream::CreateRingBuffer(
     completer.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
+  uint32_t bytes_per_frame = static_cast<uint32_t>(pcm_format.bytes_per_sample) *
+                             static_cast<uint32_t>(pcm_format.number_of_channels);
+  if (pcm_format.frame_rate == 0) {
+    zxlogf(ERROR, "Bad (zero) frame rate");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (bytes_per_frame == 0) {
+    zxlogf(ERROR, "Bad (zero) frame size");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  uint32_t fifo_depth_frames = (fifo_depth_ + bytes_per_frame - 1) / bytes_per_frame;
+  internal_delay_nsec_ = static_cast<uint64_t>(fifo_depth_frames) * 1'000'000'000 /
+                         static_cast<uint64_t>(pcm_format.frame_rate);
+
   number_of_channels_.Set(pcm_format.number_of_channels);
   frame_rate_.Set(pcm_format.frame_rate);
   bits_per_slot_.Set(pcm_format.bytes_per_sample * 8);
@@ -466,6 +484,18 @@ void SimpleAudioStream::WatchClockRecoveryPositionInfo(
   fbl::AutoLock position_lock(&position_lock_);
   position_request_time_.Set(zx::clock::get_monotonic().get());
   position_completer_ = completer.ToAsync();
+}
+
+void SimpleAudioStream::WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) {
+  ScopedToken t(domain_token());
+  if (!delay_info_updated_) {
+    delay_info_updated_ = true;
+    fidl::Arena allocator;
+    auto delay_info = audio_fidl::wire::DelayInfo::Builder(allocator);
+    delay_info.internal_delay(internal_delay_nsec_);
+    delay_info.external_delay(external_delay_nsec_);
+    completer.Reply(delay_info.Build());
+  }
 }
 
 void SimpleAudioStream::SetGain(audio_fidl::wire::GainState target_state,

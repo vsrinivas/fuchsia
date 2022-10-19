@@ -557,6 +557,20 @@ void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::
       fifo_bytes_ += frame_size_;
     }
   }
+  if (req.frame_rate == 0) {
+    LOG(ERROR, "Bad (zero) frame rate");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  if (frame_size == 0) {
+    LOG(ERROR, "Bad (zero) frame size");
+    completer.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+
+  uint32_t fifo_depth_frames = (fifo_bytes_ + frame_size - 1) / frame_size;
+  internal_delay_nsec_ = static_cast<uint64_t>(fifo_depth_frames) * 1'000'000'000 /
+                         static_cast<uint64_t>(req.frame_rate);
 
   // Create a new ring buffer channel which can be used to move bulk data and
   // bind it to us.
@@ -624,6 +638,17 @@ void UsbAudioStream::WatchClockRecoveryPositionInfo(
   fbl::AutoLock req_lock(&req_lock_);
   position_completer_ = completer.ToAsync();
   position_request_time_.Set(zx::clock::get_monotonic().get());
+}
+
+void UsbAudioStream::WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) {
+  if (!delay_info_updated_) {
+    delay_info_updated_ = true;
+    fidl::Arena allocator;
+    auto delay_info = audio_fidl::wire::DelayInfo::Builder(allocator);
+    // No external delay information is provided by this driver.
+    delay_info.internal_delay(internal_delay_nsec_);
+    completer.Reply(delay_info.Build());
+  }
 }
 
 void UsbAudioStream::SetGain(audio_fidl::wire::GainState state,
@@ -1183,6 +1208,7 @@ void UsbAudioStream::DeactivateRingBufferChannelLocked(const Channel* channel) {
       state_.Set("stopping_deactivate");
     }
     rb_vmo_fetched_ = false;
+    delay_info_updated_ = false;
   }
 
   rb_channel_.reset();

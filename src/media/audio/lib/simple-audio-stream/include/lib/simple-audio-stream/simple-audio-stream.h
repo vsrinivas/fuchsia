@@ -410,6 +410,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   void Stop(StopCompleter::Sync& completer) override;
   void WatchClockRecoveryPositionInfo(
       WatchClockRecoveryPositionInfoCompleter::Sync& completer) override;
+  void WatchDelayInfo(WatchDelayInfoCompleter::Sync& completer) override;
 
   // fuchsia hardware audio Stream Interface (forwarded from StreamChannel)
   void GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer);
@@ -448,6 +449,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   // State used for protocol enforcement.
   bool rb_started_ __TA_GUARDED(domain_token()) = false;
   bool rb_vmo_fetched_ __TA_GUARDED(domain_token()) = false;
+  bool delay_info_updated_ __TA_GUARDED(domain_token()) = false;
 
   // |shutting_down_| is a boolean indicating whether |loop_| is about to be shut down.
   bool shutting_down_ __TA_GUARDED(channel_lock_) = false;
@@ -460,6 +462,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   fbl::Mutex position_lock_;
   std::optional<WatchClockRecoveryPositionInfoCompleter::Async> position_completer_
       __TA_GUARDED(position_lock_);
+  int64_t internal_delay_nsec_ __TA_GUARDED(domain_token()) = 0;
 
   async::Loop loop_;
   Token domain_token_;
