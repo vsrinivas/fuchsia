@@ -50,7 +50,7 @@ Inspect. Some examples include:
 
 * {C++}
 
-[Inspect library documentation](https://fuchsia-docs.firebaseapp.com/cpp/inspect/index.html)
+[Inspect library documentation](/sdk/lib/sys/inspect/cpp/component.h)
 
 * {Rust}
 
