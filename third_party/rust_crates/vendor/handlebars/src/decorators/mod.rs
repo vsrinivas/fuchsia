@@ -105,9 +105,9 @@ mod test {
             .register_template_string("t0", "{{*foo}}".to_string())
             .unwrap();
 
-        let data = btreemap! {
-            "hello".to_string() => "world".to_string()
-        };
+        let data = json!({
+            "hello": "world"
+        });
 
         assert!(handlebars.render("t0", &data).is_err());
 
@@ -132,9 +132,9 @@ mod test {
             .register_template_string("t0", "{{hello}}{{*foo}}{{hello}}".to_string())
             .unwrap();
 
-        let data = btreemap! {
-            "hello".to_string() => "world".to_string()
-        };
+        let data = json!({
+            "hello": "world"
+        });
 
         handlebars.register_decorator(
             "foo",
@@ -230,14 +230,14 @@ mod test {
                  _: &mut RenderContext<'_, '_>,
                  out: &mut dyn Output|
                  -> Result<(), RenderError> {
-                    let s = format!(
+                    write!(
+                        out,
                         "{}m",
                         h.param(0)
                             .as_ref()
                             .map(|v| v.value())
                             .unwrap_or(&to_json(0))
-                    );
-                    out.write(s.as_ref())?;
+                    )?;
                     Ok(())
                 },
             ),
@@ -262,15 +262,15 @@ mod test {
                                            _: &mut RenderContext<'_, '_>,
                                            out: &mut dyn Output|
                           -> Result<(), RenderError> {
-                        let s = format!(
+                        write!(
+                            out,
                             "{}{}",
                             h.param(0)
                                 .as_ref()
                                 .map(|v| v.value())
                                 .unwrap_or(&to_json(0)),
                             new_unit
-                        );
-                        out.write(s.as_ref())?;
+                        )?;
                         Ok(())
                     };
 

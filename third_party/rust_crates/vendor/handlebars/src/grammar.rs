@@ -4,38 +4,6 @@
 #[grammar = "grammar.pest"]
 pub struct HandlebarsParser;
 
-#[inline]
-pub(crate) fn whitespace_matcher(c: char) -> bool {
-    c == ' ' || c == '\t'
-}
-
-#[inline]
-pub(crate) fn newline_matcher(c: char) -> bool {
-    c == '\n' || c == '\r'
-}
-
-#[inline]
-pub(crate) fn strip_first_newline(s: &str) -> &str {
-    if let Some(s) = s.strip_prefix("\r\n") {
-        s
-    } else if let Some(s) = s.strip_prefix('\n') {
-        s
-    } else {
-        s
-    }
-}
-
-pub(crate) fn ends_with_empty_line(text: &str) -> bool {
-    let s = text.trim_end_matches(whitespace_matcher);
-    // also matches when text is just whitespaces
-    s.ends_with(newline_matcher) || s.is_empty()
-}
-
-pub(crate) fn starts_with_empty_line(text: &str) -> bool {
-    text.trim_start_matches(whitespace_matcher)
-        .starts_with(newline_matcher)
-}
-
 #[cfg(test)]
 mod test {
     use super::{HandlebarsParser, Rule};
@@ -240,6 +208,12 @@ mod test {
             "{{&html}}",
             "{{{html 1}}}",
             "{{{html p=true}}}",
+            "{{{~ html}}}",
+            "{{{html ~}}}",
+            "{{{~ html ~}}}",
+            "{{~{ html }~}}",
+            "{{~{ html }}}",
+            "{{{ html }~}}",
         ];
         for i in s.iter() {
             assert_rule!(Rule::html_expression, i);

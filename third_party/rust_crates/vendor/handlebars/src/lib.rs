@@ -1,5 +1,7 @@
-#![doc(html_root_url = "https://docs.rs/handlebars/4.2.1")]
+#![doc(html_root_url = "https://docs.rs/handlebars/4.3.5")]
 #![cfg_attr(docsrs, feature(doc_cfg))]
+#![allow(unknown_lints)]
+#![allow(clippy::result_large_err)]
 //! # Handlebars
 //!
 //! [Handlebars](http://handlebarsjs.com/) is a modern and extensible templating solution originally created in the JavaScript world. It's used by many popular frameworks like [Ember.js](http://emberjs.com) and Chaplin. It's also ported to some other platforms such as [Java](https://github.com/jknack/handlebars.java).
@@ -375,13 +377,8 @@
 #[macro_use]
 extern crate log;
 
-#[cfg(test)]
-#[macro_use]
-extern crate maplit;
 #[macro_use]
 extern crate pest_derive;
-#[macro_use]
-extern crate quick_error;
 #[cfg(test)]
 #[macro_use]
 extern crate serde_derive;

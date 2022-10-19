@@ -4,16 +4,11 @@ handlebars-rust
 [Handlebars templating language](https://handlebarsjs.com) implemented
 in Rust and for Rust.
 
-Handlebars-rust is the template engine that renders the official Rust website
-[rust-lang.org](https://www.rust-lang.org), [its
-book](https://doc.rust-lang.org/book/).
-
 [![CI](https://github.com/sunng87/handlebars-rust/actions/workflows/main.yml/badge.svg)](https://github.com/sunng87/handlebars-rust/actions/workflows/main.yml)
 [![](https://img.shields.io/crates/v/handlebars)](https://crates.io/crates/handlebars)
 [![](https://img.shields.io/crates/d/handlebars.svg)](https://crates.io/crates/handlebars)
 [![MIT licensed](https://img.shields.io/badge/license-MIT-blue.svg)](./LICENSE)
 [![Docs](https://docs.rs/handlebars/badge.svg)](https://docs.rs/crate/handlebars/)
-![rustc](https://img.shields.io/badge/rustc-1.51+-lightgray.svg)
 [![Donate](https://img.shields.io/badge/donate-liberapay-yellow.svg)](https://liberapay.com/Sunng/donate)
 
 ## Getting Started
@@ -55,6 +50,8 @@ Examples are provided in source tree to demo usage of various api.
   to use custom helpers.
 * [render_file](https://github.com/sunng87/handlebars-rust/blob/master/examples/render_file.rs)
   similar to render, but render to file instead of string
+* [helper_macro](https://github.com/sunng87/handlebars-rust/blob/master/examples/helper_macro.rs)
+  demos usage of `handlebars_helper!` to simplify helper development
 * [partials](https://github.com/sunng87/handlebars-rust/blob/master/examples/partials.rs)
   template inheritance with handlebars
 * [decorator](https://github.com/sunng87/handlebars-rust/blob/master/examples/decorator.rs)
@@ -71,7 +68,7 @@ Examples are provided in source tree to demo usage of various api.
 ## Minimum Rust Version Policy
 
 Handlebars will track Rust nightly and stable channel. When dropping
-support for previous stable versions, I will bump **major** version
+support for previous stable versions, I will bump **patch** version
 and clarify in CHANGELOG.
 
 ## Document
@@ -164,6 +161,13 @@ loaded from files or directory. This can be handy for template development.
 
 Handlebars 3.0 can be used in WebAssembly projects.
 
+#### Fully scriptable
+
+With [rhai](https://github.com/rhaiscript/rhai) script support, you
+can implement your own helper with the scripting language. Together
+with the template lanaguage itself, template development can be fully
+scriptable without changing rust code.
+
 ## Related Projects
 
 ### Web frameworks
@@ -174,8 +178,9 @@ Handlebars 3.0 can be used in WebAssembly projects.
   example](https://github.com/seanmonstar/warp/blob/master/examples/handlebars_template.rs)
 * Tower-web: [Built-in](https://github.com/carllerche/tower-web)
 * Actix: [handlebars
-  example](https://github.com/actix/examples/blob/master/template_engines/handlebars/src/main.rs)
+  example](https://github.com/actix/examples/blob/master/templating/handlebars/src/main.rs)
 * Tide: [tide-handlebars](https://github.com/No9/tide-handlebars)
+* Axum: [axum-template](https://github.com/Altair-Bueno/axum-template)
 
 ### Adopters
 

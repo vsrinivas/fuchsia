@@ -345,7 +345,7 @@ group("half") {
 }
 
 group("handlebars") {
-  public_deps = [ ":handlebars-v4_2_1" ]
+  public_deps = [ ":handlebars-v4_3_5" ]
 }
 
 group("heck") {
@@ -4679,28 +4679,28 @@ rust_library("half-v1_6_0") {
   visibility = [ ":*" ]
 }
 
-rust_library("handlebars-v4_2_1") {
+rust_library("handlebars-v4_3_5") {
   crate_name = "handlebars"
   crate_root = "//third_party/rust_crates/vendor/handlebars/src/lib.rs"
-  output_name = "handlebars-a76c34e7f359eb7e"
+  output_name = "handlebars-f0d384607bf539b0"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
   deps += [ ":log-v0_4_11" ]
   deps += [ ":pest-v2_1_3" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
-  deps += [ ":quick-error-v2_0_1" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_59" ]
+  deps += [ ":thiserror-v1_0_23" ]
 
   rustenv =
       [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2018",
-    "-Cmetadata=a76c34e7f359eb7e",
-    "-Cextra-filename=-a76c34e7f359eb7e",
+    "--edition=2021",
+    "-Cmetadata=f0d384607bf539b0",
+    "-Cextra-filename=-f0d384607bf539b0",
     "--cfg=feature=\"default\"",
   ]
 

@@ -20,9 +20,7 @@ use crate::support::str::{self, StringWriter};
 use crate::template::{Template, TemplateOptions};
 
 #[cfg(feature = "dir_source")]
-use std::path;
-#[cfg(feature = "dir_source")]
-use walkdir::{DirEntry, WalkDir};
+use walkdir::WalkDir;
 
 #[cfg(feature = "script_helper")]
 use rhai::Engine;
@@ -92,21 +90,6 @@ impl<'reg> Default for Registry<'reg> {
     fn default() -> Self {
         Self::new()
     }
-}
-
-#[cfg(feature = "dir_source")]
-fn filter_file(entry: &DirEntry, suffix: &str) -> bool {
-    let path = entry.path();
-
-    // ignore hidden files, emacs buffers and files with wrong suffix
-    !path.is_file()
-        || path
-            .file_name()
-            .map(|s| {
-                let ds = s.to_string_lossy();
-                ds.starts_with('.') || ds.starts_with('#') || !ds.ends_with(suffix)
-            })
-            .unwrap_or(true)
 }
 
 #[cfg(feature = "script_helper")]
@@ -307,7 +290,7 @@ impl<'reg> Registry<'reg> {
     #[cfg_attr(docsrs, doc(cfg(feature = "dir_source")))]
     pub fn register_templates_directory<P>(
         &mut self,
-        tpl_extension: &'static str,
+        tpl_extension: &str,
         dir_path: P,
     ) -> Result<(), TemplateError>
     where
@@ -315,31 +298,46 @@ impl<'reg> Registry<'reg> {
     {
         let dir_path = dir_path.as_ref();
 
-        let prefix_len = if dir_path
-            .to_string_lossy()
-            .ends_with(|c| c == '\\' || c == '/')
-        // `/` will work on windows too so we still need to check
-        {
-            dir_path.to_string_lossy().len()
-        } else {
-            dir_path.to_string_lossy().len() + 1
-        };
+        // Allowing dots at the beginning as to not break old
+        // applications.
+        let tpl_extension = tpl_extension.strip_prefix('.').unwrap_or(tpl_extension);
 
         let walker = WalkDir::new(dir_path);
         let dir_iter = walker
             .min_depth(1)
             .into_iter()
-            .filter(|e| e.is_ok() && !filter_file(e.as_ref().unwrap(), tpl_extension));
+            .filter_map(|e| e.ok().map(|e| e.into_path()))
+            // Checks if extension matches
+            .filter(|tpl_path| {
+                tpl_path
+                    .extension()
+                    .map(|extension| extension == tpl_extension)
+                    .unwrap_or(false)
+            })
+            // Rejects any hidden or temporary files.
+            .filter(|tpl_path| {
+                tpl_path
+                    .file_stem()
+                    .map(|stem| stem.to_string_lossy())
+                    .map(|stem| !(stem.starts_with('.') || stem.starts_with('#')))
+                    .unwrap_or(false)
+            })
+            .filter_map(|tpl_path| {
+                tpl_path
+                    .strip_prefix(dir_path)
+                    .ok()
+                    .map(|tpl_canonical_name| {
+                        tpl_canonical_name
+                            .with_extension("")
+                            .components()
+                            .map(|component| component.as_os_str().to_string_lossy())
+                            .collect::<Vec<_>>()
+                            .join("/")
+                    })
+                    .map(|tpl_canonical_name| (tpl_canonical_name, tpl_path))
+            });
 
-        for entry in dir_iter {
-            let entry = entry?;
-
-            let tpl_path = entry.path();
-            let tpl_file_path = entry.path().to_string_lossy();
-
-            let tpl_name = &tpl_file_path[prefix_len..tpl_file_path.len() - tpl_extension.len()];
-            // replace platform path separator with our internal one
-            let tpl_canonical_name = tpl_name.replace(path::MAIN_SEPARATOR, "/");
+        for (tpl_canonical_name, tpl_path) in dir_iter {
             self.register_template_file(&tpl_canonical_name, &tpl_path)?;
         }
 
@@ -372,7 +370,7 @@ impl<'reg> Registry<'reg> {
                 let data = file.data;
 
                 let tpl_content = String::from_utf8_lossy(data.as_ref());
-                self.register_template_string(&file_name.to_owned(), tpl_content)?;
+                self.register_template_string(file_name, tpl_content)?;
             }
         }
         Ok(())
@@ -481,7 +479,7 @@ impl<'reg> Registry<'reg> {
 
     /// Get a reference to the current *escape fn*.
     pub fn get_escape_fn(&self) -> &dyn Fn(&str) -> String {
-        &*self.escape_fn
+        self.escape_fn.as_ref()
     }
 
     /// Return `true` if a template is registered for the given name
@@ -611,7 +609,7 @@ impl<'reg> Registry<'reg> {
         T: Serialize,
     {
         let mut output = StringOutput::new();
-        let ctx = Context::wraps(&data)?;
+        let ctx = Context::wraps(data)?;
         self.render_to_output(name, &ctx, &mut output)?;
         output.into_string().map_err(RenderError::from)
     }
@@ -623,7 +621,7 @@ impl<'reg> Registry<'reg> {
         output.into_string().map_err(RenderError::from)
     }
 
-    /// Render a registered template and write some data to the `std::io::Write`
+    /// Render a registered template and write data to the `std::io::Write`
     pub fn render_to_write<T, W>(&self, name: &str, data: &T, writer: W) -> Result<(), RenderError>
     where
         T: Serialize,
@@ -632,6 +630,21 @@ impl<'reg> Registry<'reg> {
         let mut output = WriteOutput::new(writer);
         let ctx = Context::wraps(data)?;
         self.render_to_output(name, &ctx, &mut output)
+    }
+
+    /// Render a registered template using reusable `Context`, and write data to
+    /// the `std::io::Write`
+    pub fn render_with_context_to_write<W>(
+        &self,
+        name: &str,
+        ctx: &Context,
+        writer: W,
+    ) -> Result<(), RenderError>
+    where
+        W: Write,
+    {
+        let mut output = WriteOutput::new(writer);
+        self.render_to_output(name, ctx, &mut output)
     }
 
     /// Render a template string using current registry without registering it
@@ -644,7 +657,7 @@ impl<'reg> Registry<'reg> {
         Ok(writer.into_string())
     }
 
-    /// Render a template string using reused context data
+    /// Render a template string using reusable context data
     pub fn render_template_with_context(
         &self,
         template_string: &str,
@@ -667,6 +680,29 @@ impl<'reg> Registry<'reg> {
         out.into_string().map_err(RenderError::from)
     }
 
+    /// Render a template string using resuable context, and write data into
+    /// `std::io::Write`
+    pub fn render_template_with_context_to_write<W>(
+        &self,
+        template_string: &str,
+        ctx: &Context,
+        writer: W,
+    ) -> Result<(), RenderError>
+    where
+        W: Write,
+    {
+        let tpl = Template::compile2(
+            template_string,
+            TemplateOptions {
+                prevent_indent: self.prevent_indent,
+                ..Default::default()
+            },
+        )?;
+        let mut render_context = RenderContext::new(None);
+        let mut out = WriteOutput::new(writer);
+        tpl.render(self, ctx, &mut render_context, &mut out)
+    }
+
     /// Render a template string using current registry without registering it
     pub fn render_template_to_write<T, W>(
         &self,
@@ -678,17 +714,8 @@ impl<'reg> Registry<'reg> {
         T: Serialize,
         W: Write,
     {
-        let tpl = Template::compile2(
-            template_string,
-            TemplateOptions {
-                prevent_indent: self.prevent_indent,
-                ..Default::default()
-            },
-        )?;
         let ctx = Context::wraps(data)?;
-        let mut render_context = RenderContext::new(None);
-        let mut out = WriteOutput::new(writer);
-        tpl.render(self, &ctx, &mut render_context, &mut out)
+        self.render_template_with_context_to_write(template_string, &ctx, writer)
     }
 }
 

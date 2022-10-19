@@ -107,7 +107,7 @@ getrandom = { features = ["js"] }
 glob = "0.3.0"
 gpt = "3.0.0"
 half = "1.6.0"
-handlebars = "4.2.1"
+handlebars = "4.3.5"
 heck = "0.3.1"
 hex = "0.3.2"
 hmac = "0.11.0"
@@ -644,7 +644,7 @@ configs = [ "//build/config/fuchsia:libunwind" ]
 #
 # Keep this sorted alphabetically, please.
 
-[gn.package.handlebars."4.2.1"]
+[gn.package.handlebars."4.3.5"]
 # pest relies on this being set to find the grammar file
 env_vars = [ "CARGO_MANIFEST_DIR=../../third_party/rust_crates/vendor/handlebars" ]
 
