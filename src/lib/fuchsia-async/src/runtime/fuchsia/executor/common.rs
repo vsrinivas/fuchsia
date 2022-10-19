@@ -129,6 +129,7 @@ impl Inner {
         ArcWake::wake_by_ref(&waker);
     }
 
+    #[cfg_attr(trace_level_logging, track_caller)]
     pub fn spawn_local(self: &Arc<Self>, future: LocalFutureObj<'static, ()>) {
         if !self.is_local {
             panic!(

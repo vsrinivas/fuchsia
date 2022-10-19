@@ -7,12 +7,32 @@ use diagnostics_log::PublishOptions;
 use diagnostics_reader::{ArchiveReader, DiagnosticsHierarchy, Logs, Subscription};
 use fidl_fuchsia_diagnostics::{Interest, Severity};
 use fuchsia_async::{Task, Timer};
+use fuchsia_zircon::AsHandleRef as _;
 use futures::prelude::*;
 use std::time::Duration;
+use test_case::test_case;
 use tracing::trace;
 
+type MakeTaskFn = fn(std::pin::Pin<Box<dyn Future<Output = ()> + Send + 'static>>) -> Task<()>;
+
+// Provide a wrapper with a literal invocation of `Task::spawn`, because passing
+// `Task::spawn` into the test case interferes with `track_caller`.
+const TASK_SPAWN_LINE_NUM: u32 = line!() + 2;
+fn task_spawn(fut: impl Future<Output = ()> + Send + 'static) -> Task<()> {
+    Task::spawn(fut)
+}
+
+// Provide a wrapper with a literal invocation of `Task::local`, because passing
+// `Task::spawn` into the test case interferes with `track_caller`.
+const TASK_LOCAL_LINE_NUM: u32 = line!() + 2;
+fn task_local(fut: impl Future<Output = ()> + Send + 'static) -> Task<()> {
+    Task::local(fut)
+}
+
+#[test_case(task_spawn, TASK_SPAWN_LINE_NUM; "create_with_spawn")]
+#[test_case(task_local, TASK_LOCAL_LINE_NUM; "create_with_local")]
 #[fuchsia_async::run_singlethreaded(test)]
-async fn initialize_logging_and_find_hung_tasks() {
+async fn initialize_logging_and_find_hung_tasks(make_task: MakeTaskFn, make_task_line_num: u32) {
     // initialize logging at TRACE severity without spawning any tasks to the runtime
     let _ignore_external_severity_changes = diagnostics_log::init_publishing(PublishOptions {
         interest: Interest { min_severity: Some(Severity::Trace), ..Interest::EMPTY },
@@ -29,21 +49,23 @@ async fn initialize_logging_and_find_hung_tasks() {
 
     // create a task with a known source location that will hang until we send to this channel
     let (send, recv) = futures::channel::oneshot::channel();
-    let spawned_on_line = line!() + 1;
-    let _spawned = Task::spawn(async move {
+    let _spawned = make_task(Box::pin(async move {
         trace!("waiting for oneshot channel message");
         recv.await.unwrap();
         trace!("received oneshot channel message");
-    });
+    }));
     // the above task should be logged as spawned from this file and the above statement
-    let expected_source_prefix = format!("{}:{}:", file!(), spawned_on_line);
+    let expected_source_prefix = format!("{}:{}:", file!(), make_task_line_num);
 
     // check that we got the task spawn event
     let expected_id;
     match events.next().await {
         LogEvent::TaskSpawned { id, source } => {
             if !source.starts_with(&expected_source_prefix) {
-                panic!("expected source starting with {}, got {}", expected_source_prefix, source);
+                panic!(
+                    "TaskSpawned: expected source starting with {}, got {}",
+                    expected_source_prefix, source
+                );
             }
             expected_id = id;
         }
@@ -72,7 +94,10 @@ async fn initialize_logging_and_find_hung_tasks() {
     match events.next().await {
         LogEvent::TaskCompleted { id, source } => {
             if !source.starts_with(&expected_source_prefix) {
-                panic!("expected source starting with {}, got {}", expected_source_prefix, source);
+                panic!(
+                    "TaskCompleted: expected source starting with {}, got {}",
+                    expected_source_prefix, source
+                );
             }
             assert_eq!(id, expected_id);
         }
@@ -99,12 +124,16 @@ impl LogEvent {
 
 struct EventsFromLogs {
     logs: Subscription<Logs>,
+    pid: u64,
 }
 
 impl EventsFromLogs {
     async fn new() -> Self {
         let reader = ArchiveReader::new();
-        let mut events = EventsFromLogs { logs: reader.snapshot_then_subscribe::<Logs>().unwrap() };
+        let mut events = EventsFromLogs {
+            logs: reader.snapshot_then_subscribe::<Logs>().unwrap(),
+            pid: fuchsia_runtime::process_self().get_koid().unwrap().raw_koid(),
+        };
 
         // manually initializing the logging library with DEBUG or below emits this message
         events.next().await.expect_message("Logging initialized");
@@ -123,8 +152,14 @@ impl EventsFromLogs {
     }
 
     async fn next(&mut self) -> LogEvent {
-        let next = self.logs.next().await.unwrap().unwrap();
-
+        let next = loop {
+            // skip over logs from other processes. this ensures that logs messages from other test
+            // cases do not interfere with the current test case.
+            let next = self.logs.next().await.unwrap().unwrap();
+            if next.metadata.pid.unwrap() == self.pid {
+                break next;
+            }
+        };
         let payload = next.payload.unwrap();
         assert_eq!(payload.name, "root");
 

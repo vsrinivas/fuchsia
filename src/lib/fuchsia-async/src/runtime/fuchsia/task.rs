@@ -110,6 +110,7 @@ impl<T> Task<T> {
     ///
     /// NOTE: This is not supported with a [`SendExecutor`] and will cause a
     /// runtime panic. Use [`Task::spawn`] instead.
+    #[cfg_attr(trace_level_logging, track_caller)]
     pub fn local(future: impl Future<Output = T> + 'static) -> Task<T> {
         // Fuse is a combinator that will drop the underlying future as soon as it has been
         // completed to ensure resources are reclaimed as soon as possible. That gives callers that
