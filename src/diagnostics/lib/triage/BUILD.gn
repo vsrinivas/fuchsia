@@ -34,6 +34,7 @@ library_sources = [
   "src/lib.rs",
   "src/metrics.rs",
   "src/metrics/arithmetic.rs",
+  "src/metrics/context.rs",
   "src/metrics/fetch.rs",
   "src/metrics/metric_value.rs",
   "src/metrics/parse.rs",

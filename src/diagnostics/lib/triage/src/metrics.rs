@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub(crate) mod arithmetic;
+pub(crate) mod context;
 pub(crate) mod fetch;
 pub(crate) mod metric_value;
 pub(crate) mod parse;
