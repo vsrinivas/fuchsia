@@ -477,6 +477,7 @@ template("driver_bind_rules") {
                                "testonly",
                                "disable_autobind",
                                "disable_new_bytecode",
+                               "disable_fragment_gen",
                                "visibility",
                              ])
       header_output = "$header_output"
@@ -492,6 +493,7 @@ template("driver_bind_rules") {
                              "testonly",
                              "disable_autobind",
                              "disable_new_bytecode",
+                             "disable_fragment_gen",
                              "visibility",
                            ])
     bytecode_output = bind_output
