@@ -11,8 +11,12 @@ void AddNonPassingTests(TestMap& tests) {
     FilterTestsForLoopbackIsolatedTarget(tests);
 
     // Tests that flake in Fuchsia's CQ.
-    // https://fxbug.dev/112131
-    SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitReuseTest/ListenV4Loopback_ConnectV4MappedLoopback");
+    // https://fxbug.dev/112588
+    SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitReuseTest/*");
+    // https://fxbug.dev/112589
+    SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitTest/*");
+    // https://fxbug.dev/112590
+    SkipTest(tests, "AllFamilies/SocketMultiProtocolInetLoopbackIsolatedTest.V4EphemeralPortReservedReuseAddr/*");
 }
 
 }  // namespace netstack_syscall_test
