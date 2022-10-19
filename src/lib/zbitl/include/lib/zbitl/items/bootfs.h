@@ -530,19 +530,6 @@ class BootfsView {
   // Similar to the above, though with the whole path provided.
   iterator find(std::string_view filename) { return find({filename}); }
 
-  // TODO(joshuaseaton): Remove this once all callers can own and manage
-  // their own zbitl::Bootfs.
-  static fit::result<Error, BootfsView> Create(storage_type storage) {
-    static Bootfs<Storage> owned_reader;
-
-    if (auto result = Bootfs<storage_type>::Create(std::move(storage)); result.is_error()) {
-      return result.take_error();
-    } else {
-      owned_reader = std::move(result).value();
-    }
-    return fit::ok(owned_reader.root());
-  }
-
  private:
   // For use of Create().
   template <typename StorageType>
