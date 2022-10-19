@@ -8,6 +8,7 @@ use std::hash::{Hash, Hasher};
 use std::sync::{Arc, Weak};
 
 use once_cell::sync::OnceCell;
+use ref_cast::RefCast;
 
 use super::devpts::dev_pts_fs;
 use super::devtmpfs::dev_tmp_fs;

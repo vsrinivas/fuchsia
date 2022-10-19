@@ -2,9 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use ref_cast::RefCast;
 use std::sync::Arc;
 
 /// A wrapper around Arc with Hash implemented based on Arc::as_ptr().
+#[derive(RefCast)]
 #[repr(transparent)]
 pub struct ArcKey<T>(pub Arc<T>);
 impl<T> PartialEq for ArcKey<T> {
@@ -27,12 +29,6 @@ impl<T> std::ops::Deref for ArcKey<T> {
     type Target = Arc<T>;
     fn deref(&self) -> &Self::Target {
         &self.0
-    }
-}
-impl<T> ArcKey<T> {
-    pub fn ref_cast(arc: &Arc<T>) -> &ArcKey<T> {
-        // SAFETY: ArcKey is repr(transparent) and holds exactly an Arc<T>.
-        unsafe { &*(arc as *const Arc<T> as *const ArcKey<T>) }
     }
 }
 

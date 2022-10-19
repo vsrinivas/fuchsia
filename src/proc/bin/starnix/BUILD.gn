@@ -91,6 +91,7 @@ if (target_cpu == "x64" && !is_asan) {
       "//third_party/rust_crates:once_cell",
       "//third_party/rust_crates:parking_lot",
       "//third_party/rust_crates:paste",
+      "//third_party/rust_crates:ref-cast",
       "//third_party/rust_crates:regex",
       "//third_party/rust_crates:scopeguard",
       "//third_party/rust_crates:slab",
