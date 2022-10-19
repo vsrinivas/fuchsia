@@ -224,6 +224,12 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
       typ = Type(TypePointer(*typ), Constness::kMutable);
     }
   }
+
+  if (attributes.find("size32") != attributes.end()) {
+    ZX_ASSERT(typ->IsVector());
+    typ = Type(TypeVector(typ->DataAsVector().contained_type(), UseUint32ForVectorSizeTag{}),
+               typ->constness());
+  }
   return *typ;
 }
 

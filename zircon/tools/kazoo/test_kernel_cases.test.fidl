@@ -7,9 +7,7 @@ library zx;
 // header generator.
 
 alias MutableVectorVoid = vector<handle>;
-alias VectorHandleU32Size = vector<byte>;
 alias VectorPaddr = vector<paddr>;
-alias VectorVoidU32Size = vector<byte>;
 
 @transport("Syscall")
 protocol KernelCases {
@@ -44,9 +42,12 @@ protocol KernelCases {
     Read(resource struct {
         handle handle:CHANNEL;
         options uint32;
-    }) -> (struct {
-        bytes VectorVoidU32Size;
-        handles VectorHandleU32Size;
+    }) -> (resource struct {
+        @voidptr
+        @size32
+        bytes vector<byte>;
+        @size32
+        handles vector<handle>;
         actual_bytes uint32;
         actual_handles uint32;
     }) error status;

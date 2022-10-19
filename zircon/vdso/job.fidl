@@ -291,7 +291,9 @@ protocol Job {
         handle handle:JOB;
         options uint32;
         topic uint32;
-        policy VectorVoidU32Size;
+        @voidptr
+        @size32
+        policy vector<byte>;
     }) -> (struct {}) error status;
 
     /// ## Summary

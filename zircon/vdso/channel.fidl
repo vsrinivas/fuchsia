@@ -33,9 +33,13 @@ type HandleDisposition = resource struct {
 
 type ChannelCallEtcArgs = resource struct {
     wr_bytes vector<byte>;
-    wr_handles MutableVectorHandleDispositionU32Size;
+    @inout
+    @size32
+    wr_handles vector<HandleDisposition>;
     rd_bytes vector<byte>;
-    rd_handles MutableVectorHandleInfoU32Size;
+    @inout
+    @size32
+    rd_handles vector<HandleDisposition>;
 };
 
 @transport("Syscall")
@@ -232,8 +236,11 @@ protocol Channel {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
-        bytes VectorVoidU32Size;
-        handles VectorHandleU32Size;
+        @voidptr
+        @size32
+        bytes vector<byte>;
+        @size32
+        handles vector<handle>;
         actual_bytes uint32;
         actual_handles uint32;
     }) error status;
@@ -349,8 +356,11 @@ protocol Channel {
         handle handle:CHANNEL;
         options uint32;
     }) -> (resource struct {
-        bytes VectorVoidU32Size;
-        handles VectorHandleInfoU32Size;
+        @voidptr
+        @size32
+        bytes vector<byte>;
+        @size32
+        handles vector<HandleInfo>;
         actual_bytes uint32;
         actual_handles uint32;
     }) error status;
@@ -505,9 +515,12 @@ protocol Channel {
     Write(resource struct {
         handle handle:CHANNEL;
         options uint32;
-        bytes VectorVoidU32Size;
+        @voidptr
+        @size32
+        bytes vector<byte>;
         @release
-        handles VectorHandleU32Size;
+        @size32
+        handles vector<handle>;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -684,8 +697,12 @@ protocol Channel {
     WriteEtc(resource struct {
         handle handle:CHANNEL;
         options uint32;
-        bytes VectorVoidU32Size;
-        handles MutableVectorHandleDispositionU32Size;
+        @voidptr
+        @size32
+        bytes vector<byte>;
+        @inout
+        @size32
+        handles vector<HandleDisposition>;
     }) -> (struct {}) error status;
 
     @internal

@@ -9,7 +9,6 @@ library zx;
 alias ConstFutexPtr = int32;
 alias Futex = int32;
 alias MutableVectorVoid = vector<byte>;
-alias VectorVoidU32Size = vector<byte>;
 type Clock = strict enum : uint32 {
     MONOTONIC = 0;
     UTC = 1;
@@ -66,7 +65,9 @@ protocol Selection {
         handle handle:JOB;
         options uint32;
         topic uint32;
-        policy VectorVoidU32Size;
+        @voidptr
+        @size32
+        policy vector<byte>;
     }) -> (struct {}) error status;
 
     // Handling of enums.
