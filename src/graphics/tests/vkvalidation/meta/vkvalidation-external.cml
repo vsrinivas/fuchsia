@@ -16,4 +16,9 @@
             "VK_REQUIRE_LAYER_PATH=true",
         ],
     },
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "validation-server-pkg" ],
+        },
+    },
 }

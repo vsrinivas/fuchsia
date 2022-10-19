@@ -185,4 +185,12 @@
             ],
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "dart_aot_runner",
+                "dart_jit_runner",
+            ],
+        },
+    },
 }
