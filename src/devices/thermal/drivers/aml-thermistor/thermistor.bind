@@ -4,7 +4,9 @@
 
 using fuchsia.amlogic.platform;
 using fuchsia.google.platform;
+using fuchsia.platform;
 
+fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
 fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
 accept fuchsia.BIND_PLATFORM_DEV_PID {
   fuchsia.google.platform.BIND_PLATFORM_DEV_PID.ASTRO,

@@ -13,6 +13,7 @@ driver_bind_rules("aml-thermistor-bind") {
   deps = [
     "//src/devices/bind/fuchsia.amlogic.platform",
     "//src/devices/bind/fuchsia.google.platform",
+    "//src/devices/bind/fuchsia.platform",
   ]
 }
 
