@@ -8,7 +8,7 @@ use {
         config_management::{SavedNetworksManager, SavedNetworksManagerApi},
         legacy,
         mode_management::{
-            create_iface_manager,
+            create_iface_manager, device_monitor,
             iface_manager_api::IfaceManagerApi,
             phy_manager::{PhyManager, PhyManagerApi},
         },
@@ -288,14 +288,14 @@ fn add_phy(exec: &mut TestExecutor, test_values: &mut TestValues) {
     // Use the "legacy" module to mimic the wlancfg main module. When the main module
     // is refactored to remove the "legacy" module, we can also refactor this section.
     let legacy_client = legacy::IfaceRef::new();
-    let listener = legacy::device::Listener::new(
+    let listener = device_monitor::Listener::new(
         test_values.external_interfaces.monitor_service_proxy.clone(),
         legacy_client.clone(),
         test_values.internal_objects.phy_manager.clone(),
         test_values.internal_objects.iface_manager.clone(),
     );
     let add_phy_event = DeviceWatcherEvent::OnPhyAdded { phy_id: TEST_PHY_ID };
-    let add_phy_fut = legacy::device::handle_event(&listener, add_phy_event);
+    let add_phy_fut = device_monitor::handle_event(&listener, add_phy_event);
     pin_mut!(add_phy_fut);
     assert_variant!(exec.run_until_stalled(&mut add_phy_fut), Poll::Pending);
 

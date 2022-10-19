@@ -10,7 +10,6 @@ use {
 
 pub mod deprecated_client;
 pub mod deprecated_configuration;
-pub mod device;
 
 #[derive(Clone)]
 pub struct Iface {

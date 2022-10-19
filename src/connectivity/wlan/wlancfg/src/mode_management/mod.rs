@@ -13,6 +13,7 @@ use {
     std::{convert::Infallible, sync::Arc},
 };
 
+pub mod device_monitor;
 mod iface_manager;
 pub mod iface_manager_api;
 mod iface_manager_types;

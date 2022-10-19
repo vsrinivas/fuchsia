@@ -36,9 +36,9 @@ use {
         access_point::AccessPoint,
         client::{self, network_selection::NetworkSelector, scan},
         config_management::{SavedNetworksManager, SavedNetworksManagerApi},
-        legacy::{self, device, IfaceRef},
+        legacy::{self, IfaceRef},
         mode_management::{
-            create_iface_manager,
+            create_iface_manager, device_monitor,
             iface_manager_api::IfaceManagerApi,
             low_power_manager::PowerModeManager,
             phy_manager::{PhyManager, PhyManagerApi},
@@ -377,7 +377,7 @@ async fn run_all_futures() -> Result<(), Error> {
     );
 
     let legacy_client = IfaceRef::new();
-    let listener = device::Listener::new(
+    let device_event_listener = device_monitor::Listener::new(
         monitor_svc.clone(),
         legacy_client.clone(),
         phy_manager.clone(),
@@ -402,7 +402,7 @@ async fn run_all_futures() -> Result<(), Error> {
 
     let dev_watcher_fut = watcher_proxy
         .take_event_stream()
-        .try_for_each(|evt| device::handle_event(&listener, evt).map(Ok))
+        .try_for_each(|evt| device_monitor::handle_event(&device_event_listener, evt).map(Ok))
         .err_into()
         .and_then(|_| {
             let result: Result<(), Error> =
