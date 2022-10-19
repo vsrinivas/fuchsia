@@ -88,7 +88,7 @@ group("tests") {
     "lib/statemachine:wlan-statemachine-tests",
     "lib/wep_deprecated:wep-deprecated-tests",
     "testing/hw-sim:wlan-hw-sim-lib-tests",
-    "testing/hw-sim/test:tests",
+    "testing/hw-sim/test:wlan-hw-sim-component-tests",
     "testing/wlan-service-util:wlan-service-util-tests",
     "testing/wlantap-client",
     "testing/wlantap-driver:tests",

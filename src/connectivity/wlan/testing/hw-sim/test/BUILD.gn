@@ -154,7 +154,7 @@ hw_sim_test_components_for_all_privacies = [
   ":verify-wlan-inspect",
 ]
 
-fuchsia_test_package("wlan-hw-sim-test") {
+fuchsia_test_package("wlan-hw-sim-contemporary-privacy-tests") {
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -166,7 +166,7 @@ fuchsia_test_package("wlan-hw-sim-test") {
   deps += shared_deps
 }
 
-fuchsia_test_package("wlan-hw-sim-test-legacy-privacy") {
+fuchsia_test_package("wlan-hw-sim-legacy-privacy-tests") {
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -188,9 +188,7 @@ fuchsia_component("rate-selection") {
   deps = [ "rate_selection" ]
 }
 
-fuchsia_test_package("rate-selection-package") {
-  package_name = "rate-selection"
-
+fuchsia_test_package("wlan-hw-sim-rate-selection-tests") {
   test_specs = {
     environments = [ nuc_env ]
     log_settings = {
@@ -203,11 +201,11 @@ fuchsia_test_package("rate-selection-package") {
   deps += shared_deps
 }
 
-group("tests") {
+group("wlan-hw-sim-component-tests") {
   testonly = true
   deps = [
-    ":rate-selection-package",
-    ":wlan-hw-sim-test",
-    ":wlan-hw-sim-test-legacy-privacy",
+    ":wlan-hw-sim-contemporary-privacy-tests",
+    ":wlan-hw-sim-legacy-privacy-tests",
+    ":wlan-hw-sim-rate-selection-tests",
   ]
 }
