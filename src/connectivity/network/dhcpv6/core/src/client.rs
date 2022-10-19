@@ -2867,7 +2867,7 @@ impl Requesting {
                 // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
                 // assigned addresses.
                 Transition {
-                    state: ClientState::AddressAssigned(AddressAssigned {
+                    state: ClientState::Assigned(Assigned {
                         client_id,
                         addresses,
                         server_id,
@@ -2970,10 +2970,9 @@ fn to_configured_addresses(
     addresses.iter().map(|(iaid, addr_entry)| (*iaid, addr_entry.configured_address())).collect()
 }
 
-/// Provides methods for handling state transitions from address assigned
-/// state.
+/// Provides methods for handling state transitions from Assigned state.
 #[derive(Debug)]
-struct AddressAssigned {
+struct Assigned {
     /// [Client Identifier] used for uniquely identifying the client in
     /// communication with servers.
     ///
@@ -2998,7 +2997,7 @@ struct AddressAssigned {
     solicit_max_rt: Duration,
 }
 
-impl AddressAssigned {
+impl Assigned {
     /// Handles renew timer, following [RFC 8415, Section 18.2.4].
     ///
     /// [RFC 8415, Section 18.2.4]: https://tools.ietf.org/html/rfc8415#section-18.2.4
@@ -3460,7 +3459,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 // TODO(https://fxbug.dev/72701) Send AddressWatcher update with
                 // assigned addresses.
                 Transition {
-                    state: ClientState::AddressAssigned(AddressAssigned {
+                    state: ClientState::Assigned(Assigned {
                         client_id,
                         addresses,
                         server_id,
@@ -3505,7 +3504,7 @@ enum ClientState {
     /// reply.
     Requesting(Requesting),
     /// Client is waiting to renew, after receiving a valid reply to a previous request.
-    AddressAssigned(AddressAssigned),
+    Assigned(Assigned),
     /// Creating and (re)transmitting a renew message, and awaiting reply.
     Renewing(Renewing),
     /// Creating and (re)transmitting a rebind message, and awaiting reply.
@@ -3537,7 +3536,7 @@ impl ClientState {
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
             | ClientState::Requesting(_)
-            | ClientState::AddressAssigned(_)
+            | ClientState::Assigned(_)
             | ClientState::Renewing(_)
             | ClientState::Rebinding(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
@@ -3564,7 +3563,7 @@ impl ClientState {
             }
             ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::AddressAssigned(_) => {
+            | ClientState::Assigned(_) => {
                 Transition { state: self, actions: vec![], transaction_id: None }
             }
         }
@@ -3594,7 +3593,7 @@ impl ClientState {
             ClientState::Rebinding(s) => {
                 s.retransmission_timer_expired(transaction_id, options_to_request, rng, now)
             }
-            ClientState::InformationReceived(_) | ClientState::AddressAssigned(_) => {
+            ClientState::InformationReceived(_) | ClientState::Assigned(_) => {
                 unreachable!("received unexpected retransmission timeout in state {:?}.", self);
             }
         }
@@ -3614,7 +3613,7 @@ impl ClientState {
             ClientState::InformationRequesting(_)
             | ClientState::ServerDiscovery(_)
             | ClientState::Requesting(_)
-            | ClientState::AddressAssigned(_)
+            | ClientState::Assigned(_)
             | ClientState::Renewing(_)
             | ClientState::Rebinding(_) => {
                 unreachable!("received unexpected refresh timeout in state {:?}.", self);
@@ -3630,7 +3629,7 @@ impl ClientState {
         now: Instant,
     ) -> Transition {
         match self {
-            ClientState::AddressAssigned(s) => s.renew_timer_expired(options_to_request, rng, now),
+            ClientState::Assigned(s) => s.renew_timer_expired(options_to_request, rng, now),
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
@@ -3654,7 +3653,7 @@ impl ClientState {
             ClientState::InformationRequesting(_)
             | ClientState::InformationReceived(_)
             | ClientState::ServerDiscovery(_)
-            | ClientState::AddressAssigned(_)
+            | ClientState::Assigned(_)
             | ClientState::Requesting(_)
             | ClientState::Rebinding(_) => {
                 unreachable!("received unexpected rebind timeout in state {:?}.", self);
@@ -3668,7 +3667,7 @@ impl ClientState {
             ClientState::InformationReceived(InformationReceived { dns_servers }) => {
                 dns_servers.clone()
             }
-            ClientState::AddressAssigned(AddressAssigned {
+            ClientState::Assigned(Assigned {
                 client_id: _,
                 addresses: _,
                 server_id: _,
@@ -4293,8 +4292,8 @@ pub(crate) mod testutil {
     }
 
     /// Creates a stateful client and exchanges messages to assign the
-    /// configured addresses. Returns the client in AddressAssigned state and
-    /// the actions returned on transitioning to the AddressAssigned state.
+    /// configured addresses. Returns the client in Assigned state and
+    /// the actions returned on transitioning to the Assigned state.
     /// Asserts the content of the client state.
     ///
     /// # Panics
@@ -4380,7 +4379,7 @@ pub(crate) mod testutil {
                 );
                 addrs
             });
-        let AddressAssigned {
+        let Assigned {
             client_id: got_client_id,
             addresses,
             server_id: got_server_id,
@@ -4389,7 +4388,7 @@ pub(crate) mod testutil {
             solicit_max_rt,
         } = assert_matches!(
             &state,
-            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
+            Some(ClientState::Assigned(assigned)) => assigned
         );
         assert_eq!(*got_client_id, client_id);
         assert_eq!(*addresses, expected_addresses);
@@ -4534,7 +4533,7 @@ pub(crate) mod testutil {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let old_transaction_id = *transaction_id;
         {
-            let AddressAssigned {
+            let Assigned {
                 collected_advertise,
                 client_id: _,
                 addresses: _,
@@ -4543,7 +4542,7 @@ pub(crate) mod testutil {
                 solicit_max_rt: _,
             } = assert_matches!(
                 state,
-                Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
+                Some(ClientState::Assigned(assigned)) => assigned
             );
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         }
@@ -5813,7 +5812,7 @@ mod tests {
             ),
         ]);
         {
-            let AddressAssigned {
+            let Assigned {
                 client_id: _,
                 addresses,
                 server_id,
@@ -5822,7 +5821,7 @@ mod tests {
                 solicit_max_rt: _,
             } = assert_matches!(
                 state,
-                ClientState::AddressAssigned(address_assigned) => address_assigned
+                ClientState::Assigned(assigned) => assigned
             );
             assert_eq!(server_id[..], SERVER_ID[0]);
             assert_eq!(addresses, expected_addresses);
@@ -5898,10 +5897,10 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         match valid_ia {
             true =>
-            // The client should transition to AddressAssigned if the reply contains
+            // The client should transition to Assigned if the reply contains
             // a valid IA.
             {
-                let AddressAssigned {
+                let Assigned {
                     client_id: _,
                     addresses: _,
                     server_id: _,
@@ -5910,7 +5909,7 @@ mod tests {
                     solicit_max_rt: _,
                 } = assert_matches!(
                     state,
-                    ClientState::AddressAssigned(address_assigned) => address_assigned
+                    ClientState::Assigned(assigned) => assigned
                 );
                 assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             }
@@ -6038,7 +6037,7 @@ mod tests {
             let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
             let Transition { state, actions, transaction_id: _ } =
                 state.reply_message_received(&[], &mut rng, msg, time);
-            let AddressAssigned {
+            let Assigned {
                 client_id: _,
                 addresses: _,
                 server_id: _,
@@ -6047,7 +6046,7 @@ mod tests {
                 solicit_max_rt: _,
             } = assert_matches!(
                 state,
-                ClientState::AddressAssigned(address_assigned) => address_assigned
+                ClientState::Assigned(assigned) => assigned
             );
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             match (expected_t1, expected_t2) {
@@ -6333,7 +6332,7 @@ mod tests {
 
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let AddressAssigned {
+        let Assigned {
             collected_advertise,
             client_id: _,
             addresses: _,
@@ -6342,7 +6341,7 @@ mod tests {
             solicit_max_rt: _,
         } = assert_matches!(
             state,
-            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
+            Some(ClientState::Assigned(assigned)) => assigned
         );
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         assert_matches!(
@@ -6359,7 +6358,7 @@ mod tests {
     }
 
     #[test]
-    fn address_assigned_get_dns_servers() {
+    fn assigned_get_dns_servers() {
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
@@ -6519,14 +6518,14 @@ mod tests {
         let Transition { state, actions: _, transaction_id: _ } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         {
-            let AddressAssigned {
+            let Assigned {
                 collected_advertise,
                 solicit_max_rt,
                 client_id: _,
                 addresses: _,
                 server_id: _,
                 dns_servers: _,
-            } = assert_matches!(&state, ClientState::AddressAssigned(address_assigned) => address_assigned);
+            } = assert_matches!(&state, ClientState::Assigned(assigned) => assigned);
             assert!(
                 collected_advertise.is_empty(),
                 "collected_advertise = {:?}",
@@ -6648,7 +6647,7 @@ mod tests {
         );
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let AddressAssigned {
+        let Assigned {
             collected_advertise,
             client_id: _,
             addresses: _,
@@ -6657,7 +6656,7 @@ mod tests {
             solicit_max_rt: _,
         } = assert_matches!(
             state,
-            Some(ClientState::AddressAssigned(address_assigned)) => address_assigned
+            Some(ClientState::Assigned(assigned)) => assigned
         );
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         // Asserts that the actions do not include scheduling the renew timer.
@@ -6870,7 +6869,7 @@ mod tests {
             .collect();
         assert_matches!(
             &state,
-            Some(ClientState::AddressAssigned(AddressAssigned {
+            Some(ClientState::Assigned(Assigned {
                 client_id,
                 addresses,
                 server_id,
@@ -7159,11 +7158,11 @@ mod tests {
                 ),
             ),
         ]);
-        // Expect the client to transition to AddressAssigned and only extend
+        // Expect the client to transition to Assigned and only extend
         // the lifetime for one IA.
         assert_matches!(
             &state,
-            Some(ClientState::AddressAssigned(AddressAssigned{
+            Some(ClientState::Assigned(Assigned{
                 client_id,
                 addresses,
                 server_id,
@@ -7249,11 +7248,11 @@ mod tests {
                 Some(CONFIGURED_ADDRESSES[0]),
             )),
         )]);
-        // Expect the client to transition to AddressAssigned and assign the new
+        // Expect the client to transition to Assigned and assign the new
         // address.
         assert_matches!(
             &state,
-            Some(ClientState::AddressAssigned(AddressAssigned{
+            Some(ClientState::Assigned(Assigned{
                 client_id,
                 addresses,
                 server_id,
@@ -7649,7 +7648,7 @@ mod tests {
         );
 
         // Should panic if Refresh or Retransmission timeout is received while
-        // in AddressAssigned state.
+        // in Assigned state.
         let _actions = client.handle_timeout(timeout, time);
     }
 
