@@ -125,9 +125,8 @@ class Driver : public driver::DriverBase {
   // API resources.
   zx::resource root_resource_;
 
-  fidl::WireSharedClient<fuchsia_driver_compat::Device> parent_client_;
-  std::unordered_map<std::string, fidl::WireSharedClient<fuchsia_driver_compat::Device>>
-      parent_clients_;
+  fidl::WireClient<fuchsia_driver_compat::Device> parent_client_;
+  std::unordered_map<std::string, fidl::WireClient<fuchsia_driver_compat::Device>> parent_clients_;
 
   // NOTE: Must be the last member.
   fpromise::scope scope_;

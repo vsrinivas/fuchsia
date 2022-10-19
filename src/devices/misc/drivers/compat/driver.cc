@@ -76,7 +76,7 @@ zx_status_t AddMetadata(Device* device,
 }
 
 promise<void, zx_status_t> GetAndAddMetadata(
-    fidl::WireSharedClient<fuchsia_driver_compat::Device>& client, Device* device) {
+    fidl::WireClient<fuchsia_driver_compat::Device>& client, Device* device) {
   bridge<void, zx_status_t> bridge;
   client->GetMetadata().Then(
       [device, completer = std::move(bridge.completer)](
@@ -448,7 +448,7 @@ fpromise::promise<void, zx_status_t> Driver::ConnectToParentDevices() {
         std::vector<std::string> parents_names;
         for (auto& device : devices.value()) {
           if (device.name == "default") {
-            parent_client_ = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
+            parent_client_ = fidl::WireClient<fuchsia_driver_compat::Device>(
                 std::move(device.client), dispatcher());
             continue;
           }
@@ -460,7 +460,7 @@ fpromise::promise<void, zx_status_t> Driver::ConnectToParentDevices() {
           }
 
           parents_names.push_back(device.name);
-          parent_clients_[device.name] = fidl::WireSharedClient<fuchsia_driver_compat::Device>(
+          parent_clients_[device.name] = fidl::WireClient<fuchsia_driver_compat::Device>(
               std::move(device.client), dispatcher());
         }
         device_.set_fragments(std::move(parents_names));
