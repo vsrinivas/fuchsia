@@ -4,19 +4,27 @@
 
 # Soft transition when rolling LLVM with API changes. Clients can use LLVM_USING_OLD_PREBUILT macro
 # to detect the LLVM version.
-prebuilt_cipd_version = read_file(
-        "//prebuilt/third_party/llvm/${host_platform}/.versions/llvm.cipd_version",
-        "json")
-prebuilt_instance_id = prebuilt_cipd_version.instance_id
+#
+# Currently this is disabled because we're not doing a roll. To enable, set the condition to true
+# to enable the checking, and update the old_prebuilt_instance_ids to the old version you want to
+# detect.
+if (false) {
+  prebuilt_cipd_version = read_file(
+          "//prebuilt/third_party/llvm/${host_platform}/.versions/llvm.cipd_version",
+          "json")
+  prebuilt_instance_id = prebuilt_cipd_version.instance_id
 
-old_prebuilt_instance_ids = [
-  "vALtiR40qd73UUtaHO3yx58Z_3LIFEyOwHA4geG0118C",  # linux-amd64
-  "aR5Tf6CwhG57U-hV6XtKGY75evWZyiYrFIhBYp512MMC",  # linux-arm64
-  "kheygkqQ0zx5YXXssvXjO-16LqFYZDQoAYIbxVyV68AC",  # mac-amd64
-]
+  old_prebuilt_instance_ids = [
+    "vALtiR40qd73UUtaHO3yx58Z_3LIFEyOwHA4geG0118C",  # linux-amd64
+    "aR5Tf6CwhG57U-hV6XtKGY75evWZyiYrFIhBYp512MMC",  # linux-arm64
+    "kheygkqQ0zx5YXXssvXjO-16LqFYZDQoAYIbxVyV68AC",  # mac-amd64
+  ]
 
-using_old_prebuilt = old_prebuilt_instance_ids + [ prebuilt_instance_id ] -
-                     [ prebuilt_instance_id ] != old_prebuilt_instance_ids
+  using_old_prebuilt = old_prebuilt_instance_ids + [ prebuilt_instance_id ] -
+                       [ prebuilt_instance_id ] != old_prebuilt_instance_ids
+} else {
+  using_old_prebuilt = false
+}
 
 config("LLVM_config") {
   visibility = [ ":*" ]

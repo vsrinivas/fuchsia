@@ -210,7 +210,7 @@ class UnitIndexer {
 
   bool force_slow_path_ = false;  // See setter above.
 
-  DwarfDieScanner2 scanner_;
+  DwarfDieScanner scanner_;
   std::vector<NamedSymbolRef> indexable_;
 
   // Variable used for collecting the path of parents in AddDIE. This would make more sense as a
@@ -432,7 +432,7 @@ void UnitIndexer::AddEntryToIndex(uint32_t index_me, IndexNode* root) {
   IndexNode* index_from = root;
 
   // Collect the path from the current item (path_[0]) to its ultimate parent (path_.back()).
-  while (cur != DwarfDieScanner2::kNoParent && indexable_[cur].should_index()) {
+  while (cur != DwarfDieScanner::kNoParent && indexable_[cur].should_index()) {
     if (path_.size() > kMaxParentPath)
       return;  // Too many components, consider this item corrupt and don't index.
 

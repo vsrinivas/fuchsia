@@ -762,11 +762,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) co
   if (!main_decoder.Decode(die) || has_signature)
     return fxl::MakeRefCounted<Symbol>();
 
-#if defined(LLVM_USING_OLD_PREBUILT)
-  FX_CHECK(byte_size.hasValue());
-#else
   FX_CHECK(byte_size.has_value());
-#endif
 
   Enumeration::Map map;
   for (const llvm::DWARFDie& child : die) {

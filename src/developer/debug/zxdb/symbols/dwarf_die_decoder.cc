@@ -90,19 +90,12 @@ void DwarfDieDecoder::AddLineTableFile(llvm::dwarf::Attribute attribute,
           return;
 
         output->emplace();
-#if defined(LLVM_USING_OLD_PREBUILT)
         // Pass "" for the compilation directory so it doesn't rebase the file name. Our output
         // file names are always relative to the build (compilation) dir.
-        line_table->getFileNameByIndex(
-            form.getAsUnsignedConstant().getValue(), "",
-            llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath, output->getValue());
-        output->getValue() = NormalizePath(output->getValue());
-#else
         line_table->getFileNameByIndex(
             form.getAsUnsignedConstant().value(), "",
             llvm::DILineInfoSpecifier::FileLineInfoKind::RelativeFilePath, output->value());
         output->value() = NormalizePath(output->value());
-#endif
       });
 }
 

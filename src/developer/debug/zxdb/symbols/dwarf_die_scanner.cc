@@ -11,26 +11,22 @@
 
 namespace zxdb {
 
-DwarfDieScanner2::DwarfDieScanner2(llvm::DWARFUnit* unit) : unit_(unit) {
+DwarfDieScanner::DwarfDieScanner(llvm::DWARFUnit* unit) : unit_(unit) {
   die_count_ = unit_->getNumDIEs();
 
   // We prefer not to reallocate and normally the C++ component depth is < 8.
   tree_stack_.reserve(8);
 }
 
-DwarfDieScanner2::~DwarfDieScanner2() = default;
+DwarfDieScanner::~DwarfDieScanner() = default;
 
-const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
+const llvm::DWARFDebugInfoEntry* DwarfDieScanner::Prepare() {
   if (done())
     return nullptr;
 
   cur_die_ = unit_->getDIEAtIndex(die_index_).getDebugInfoEntry();
 
-#if defined(LLVM_USING_OLD_PREBUILT)
-  uint32_t parent_idx = cur_die_->getParentIdx().getValueOr(kNoParent);
-#else
   uint32_t parent_idx = cur_die_->getParentIdx().value_or(kNoParent);
-#endif
 
   while (!tree_stack_.empty() && tree_stack_.back().index != parent_idx)
     tree_stack_.pop_back();
@@ -57,18 +53,14 @@ const llvm::DWARFDebugInfoEntry* DwarfDieScanner2::Prepare() {
   return cur_die_;
 }
 
-void DwarfDieScanner2::Advance() {
+void DwarfDieScanner::Advance() {
   FX_DCHECK(!done());
 
   die_index_++;
 }
 
-uint32_t DwarfDieScanner2::GetParentIndex(uint32_t index) const {
-#if defined(LLVM_USING_OLD_PREBUILT)
-  return unit_->getDIEAtIndex(index).getDebugInfoEntry()->getParentIdx().getValueOr(kNoParent);
-#else
+uint32_t DwarfDieScanner::GetParentIndex(uint32_t index) const {
   return unit_->getDIEAtIndex(index).getDebugInfoEntry()->getParentIdx().value_or(kNoParent);
-#endif
 }
 
 }  // namespace zxdb

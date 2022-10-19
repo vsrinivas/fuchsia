@@ -37,14 +37,14 @@ namespace zxdb {
 // This class exists because in LLVM, getting the parent of a DIE used to require an inefficient
 // linear search. Since LLVM provides a direct way to get parent index, the necessity of this class
 // is largely elimiated.
-class DwarfDieScanner2 {
+class DwarfDieScanner {
  public:
   static constexpr uint32_t kNoParent = static_cast<uint32_t>(-1);
 
   // The unit pointer must outlive this class.
-  explicit DwarfDieScanner2(llvm::DWARFUnit* unit);
+  explicit DwarfDieScanner(llvm::DWARFUnit* unit);
 
-  ~DwarfDieScanner2();
+  ~DwarfDieScanner();
 
   // Call at the beginning of each iteration (when !done()) to get the current DIE. This is required
   // to be called before Advance() as it sets some internal state.
