@@ -4689,7 +4689,7 @@ rust_library("handlebars-v4_2_1") {
   deps += [ ":log-v0_4_11" ]
   deps += [ ":pest-v2_1_3" ]
   deps += [ ":pest_derive-v2_1_0($host_toolchain)" ]
-  deps += [ ":quick-error-v2_0_0" ]
+  deps += [ ":quick-error-v2_0_1" ]
   deps += [ ":serde-v1_0_116" ]
   deps += [ ":serde_json-v1_0_59" ]
 
@@ -7787,10 +7787,10 @@ rust_library("quick-error-v1_2_2") {
   visibility = [ ":*" ]
 }
 
-rust_library("quick-error-v2_0_0") {
+rust_library("quick-error-v2_0_1") {
   crate_name = "quick_error"
   crate_root = "//third_party/rust_crates/vendor/quick-error/src/lib.rs"
-  output_name = "quick_error-3a3190e4aad267f3"
+  output_name = "quick_error-68d04ccb9a9a55d5"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -7800,8 +7800,8 @@ rust_library("quick-error-v2_0_0") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=3a3190e4aad267f3",
-    "-Cextra-filename=-3a3190e4aad267f3",
+    "-Cmetadata=68d04ccb9a9a55d5",
+    "-Cextra-filename=-68d04ccb9a9a55d5",
   ]
 
   visibility = [ ":*" ]

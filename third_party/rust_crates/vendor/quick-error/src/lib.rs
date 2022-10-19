@@ -1,4 +1,4 @@
-#![warn(missing_docs)]
+#![warn(missing_docs, rust_2018_idioms)]
 //! A macro which makes errors easy to write
 //!
 //! Minimum type is like this:
@@ -356,7 +356,7 @@ macro_rules! quick_error {
         $($strdef)* $strname ( $internal );
 
         impl ::std::fmt::Display for $strname {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter)
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>)
                 -> ::std::fmt::Result
             {
                 ::std::fmt::Display::fmt(&self.0, f)
@@ -623,13 +623,13 @@ macro_rules! quick_error {
             $item:ident: $imode:tt [$(#[$imeta:meta])*] [$( $var:ident: $typ:ty ),*] {$( $funcs:tt )*}
         )*}
     ) => {
-        #[allow(unused)]
+        #[allow(unused_variables)]
         #[allow(unknown_lints)]  // no unused_doc_comments in older rust
         #[allow(renamed_and_removed_lints)]
         #[allow(unused_doc_comment)]
         #[allow(unused_doc_comments)]
         impl ::std::fmt::Display for $name {
-            fn fmt(&self, fmt: &mut ::std::fmt::Formatter)
+            fn fmt(&self, fmt: &mut ::std::fmt::Formatter<'_>)
                 -> ::std::fmt::Result
             {
                 match *self {
@@ -648,7 +648,7 @@ macro_rules! quick_error {
                 }
             }
         }
-        #[allow(unused)]
+        #[allow(unused_variables)]
         #[allow(unknown_lints)]  // no unused_doc_comments in older rust
         #[allow(renamed_and_removed_lints)]
         #[allow(unused_doc_comment)]
@@ -683,17 +683,17 @@ macro_rules! quick_error {
     (FIND_DISPLAY_IMPL $name:ident $item:ident: $imode:tt
         { display($self_:tt) -> ($( $exprs:tt )*) $( $tail:tt )*}
     ) => {
-        |quick_error!(IDENT $self_): &$name, f: &mut ::std::fmt::Formatter| { write!(f, $( $exprs )*) }
+        |quick_error!(IDENT $self_): &$name, f: &mut ::std::fmt::Formatter<'_>| { write!(f, $( $exprs )*) }
     };
     (FIND_DISPLAY_IMPL $name:ident $item:ident: $imode:tt
         { display($pattern:expr) $( $tail:tt )*}
     ) => {
-        |_, f: &mut ::std::fmt::Formatter| { write!(f, $pattern) }
+        |_, f: &mut ::std::fmt::Formatter<'_>| { write!(f, $pattern) }
     };
     (FIND_DISPLAY_IMPL $name:ident $item:ident: $imode:tt
         { display($pattern:expr, $( $exprs:tt )*) $( $tail:tt )*}
     ) => {
-        |_, f: &mut ::std::fmt::Formatter| { write!(f, $pattern, $( $exprs )*) }
+        |_, f: &mut ::std::fmt::Formatter<'_>| { write!(f, $pattern, $( $exprs )*) }
     };
     (FIND_DISPLAY_IMPL $name:ident $item:ident: $imode:tt
         { $t:tt $( $tail:tt )*}
@@ -705,7 +705,7 @@ macro_rules! quick_error {
     (FIND_DISPLAY_IMPL $name:ident $item:ident: $imode:tt
         { }
     ) => {
-        |self_: &$name, f: &mut ::std::fmt::Formatter| {
+        |self_: &$name, f: &mut ::std::fmt::Formatter<'_>| {
             write!(f, "{:?}", self_)
         }
     };
