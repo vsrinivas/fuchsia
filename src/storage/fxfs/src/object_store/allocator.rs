@@ -20,7 +20,6 @@ use {
             },
             LSMTree, LayerSet,
         },
-        metrics::{traits::Metric as _, UintMetric},
         object_handle::{ObjectHandle, ObjectHandleExt, INVALID_OBJECT_ID},
         object_store::{
             object_manager::ReservationUpdate,
@@ -38,6 +37,8 @@ use {
     anyhow::{anyhow, bail, ensure, Context, Error},
     async_trait::async_trait,
     either::Either::{Left, Right},
+    fuchsia_inspect::ArrayProperty,
+    futures::FutureExt,
     merge::{filter_marked_for_deletion, filter_tombstones, merge},
     serde::{Deserialize, Serialize},
     std::{
@@ -397,17 +398,11 @@ pub fn max_extent_size_for_block_size(block_size: u64) -> u64 {
     block_size * (DEFAULT_MAX_SERIALIZED_RECORD_SIZE - 64) / 9
 }
 
-struct SimpleAllocatorStats {
-    #[allow(dead_code)]
-    max_extent_size_bytes: UintMetric,
-}
-
-impl SimpleAllocatorStats {
-    fn new(max_extent_size_bytes: u64) -> Self {
-        Self {
-            max_extent_size_bytes: UintMetric::new("max_extent_size_bytes", max_extent_size_bytes),
-        }
-    }
+#[derive(Default)]
+struct SimpleAllocatorCounters {
+    num_flushes: u64,
+    last_flush_time: Option<std::time::SystemTime>,
+    persistent_layer_file_sizes: Vec<u64>,
 }
 
 // For now this just implements a simple strategy of returning the first gap it can find (no matter
@@ -422,8 +417,10 @@ pub struct SimpleAllocator {
     reserved_allocations: Arc<SkipListLayer<AllocatorKey, AllocatorValue>>,
     inner: Mutex<Inner>,
     allocation_mutex: futures::lock::Mutex<()>,
-    #[allow(dead_code)]
-    stats: SimpleAllocatorStats,
+    // While the allocator is being tracked, the node is retained here.  See
+    // `Self::track_statistics`.
+    tracking: Mutex<Option<fuchsia_inspect::LazyNode>>,
+    counters: Mutex<SimpleAllocatorCounters>,
 }
 
 /// Tracks the different stages of byte allocations for an individual owner.
@@ -598,7 +595,8 @@ impl SimpleAllocator {
                 committed_marked_for_deletion: BTreeMap::new(),
             }),
             allocation_mutex: futures::lock::Mutex::new(()),
-            stats: SimpleAllocatorStats::new(max_extent_size_bytes),
+            tracking: Mutex::new(None),
+            counters: Mutex::new(SimpleAllocatorCounters::default()),
         }
     }
 
@@ -718,6 +716,8 @@ impl SimpleAllocator {
                 }
                 inner.info = info;
             }
+            let layer_file_sizes = handles.iter().map(ObjectHandle::get_size).collect::<Vec<u64>>();
+            self.counters.lock().unwrap().persistent_layer_file_sizes = layer_file_sizes;
             self.tree
                 .append_layers(handles.into_boxed_slice())
                 .await
@@ -777,6 +777,53 @@ impl SimpleAllocator {
         let mut inner = self.inner.lock().unwrap();
         inner.remove_reservation(old_owner_object_id, amount);
         inner.add_reservation(None, amount);
+    }
+
+    /// Creates a lazy inspect node named `str` under `parent` which will yield statistics for the
+    /// allocator when queried.
+    pub fn track_statistics(self: &Arc<Self>, parent: &fuchsia_inspect::Node, name: &str) {
+        let this = Arc::downgrade(self);
+        *self.tracking.lock().unwrap() = Some(parent.create_lazy_child(name, move || {
+            let this_clone = this.clone();
+            async move {
+                let inspector = fuchsia_inspect::Inspector::new();
+                if let Some(this) = this_clone.upgrade() {
+                    let counters = this.counters.lock().unwrap();
+                    let root = inspector.root();
+                    root.record_uint("max_extent_size_bytes", this.max_extent_size_bytes);
+                    root.record_uint("bytes_total", this.device_size);
+                    {
+                        let inner = this.inner.lock().unwrap();
+                        root.record_int("bytes_allocated", inner.allocated_bytes());
+                        root.record_uint("bytes_reserved", inner.reserved_bytes());
+                        root.record_uint("bytes_used", inner.used_bytes());
+                        root.record_uint("bytes_unavailable", inner.unavailable_bytes());
+                    }
+                    root.record_uint("num_flushes", counters.num_flushes);
+                    if let Some(last_flush_time) = counters.last_flush_time.as_ref() {
+                        root.record_uint(
+                            "last_flush_time_ms",
+                            last_flush_time
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap_or(std::time::Duration::ZERO)
+                                .as_millis()
+                                .try_into()
+                                .unwrap_or(0u64),
+                        );
+                    }
+                    let sizes = root.create_uint_array(
+                        "persistent_layer_file_sizes",
+                        counters.persistent_layer_file_sizes.len(),
+                    );
+                    for i in 0..counters.persistent_layer_file_sizes.len() {
+                        sizes.set(i, counters.persistent_layer_file_sizes[i]);
+                    }
+                    root.record(sizes);
+                }
+                Ok(inspector)
+            }
+            .boxed()
+        }));
     }
 }
 
@@ -1469,6 +1516,7 @@ impl JournalingObject for SimpleAllocator {
         reservation_update = ReservationUpdate::new(tree::reservation_amount_from_layer_size(
             layer_object_handle.get_size(),
         ));
+        let layer_file_sizes = vec![layer_object_handle.get_size()];
 
         // It's important that EndFlush is in the same transaction that we write AllocatorInfo,
         // because we use EndFlush to make the required adjustments to allocated_bytes.
@@ -1501,6 +1549,10 @@ impl JournalingObject for SimpleAllocator {
             }
         }
 
+        let mut counters = self.counters.lock().unwrap();
+        counters.num_flushes += 1;
+        counters.last_flush_time = Some(std::time::SystemTime::now());
+        counters.persistent_layer_file_sizes = layer_file_sizes;
         // Return the earliest version used by a struct in the tree
         Ok(self.tree.get_earliest_version())
     }

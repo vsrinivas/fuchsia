@@ -7,7 +7,7 @@ use {
         filesystem::{mkfs, Filesystem, FxFilesystem, OpenFxFilesystem, OpenOptions},
         fsck,
         log::*,
-        metrics::OBJECT_STORES_NODE,
+        metrics::{DETAIL_NODE, OBJECT_STORES_NODE},
         object_store::volume::root_volume,
         platform::fuchsia::{
             errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
@@ -296,6 +296,7 @@ impl Component {
             /* overwrite: */ true,
         )?;
 
+        fs.allocator().track_statistics(&*DETAIL_NODE.lock().unwrap(), "allocator");
         fs.root_store().track_statistics(&*OBJECT_STORES_NODE.lock().unwrap(), "__root");
 
         *state = State::Running(RunningState { fs, volumes, _inspect_tree: inspect_tree });
