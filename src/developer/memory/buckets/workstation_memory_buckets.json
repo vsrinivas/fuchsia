@@ -30,6 +30,12 @@
         "vmo": ""
     },
     {
+        "event_code": 68,
+        "name": "Fxfs",
+        "process": "(fxfs|fxfs-crypt)\\.cm",
+        "vmo": ""
+    },
+    {
         "event_code": 29,
         "name": "BlobfsInactive",
         "process": "blobfs\\.cm",
