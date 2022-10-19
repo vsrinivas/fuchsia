@@ -26,7 +26,7 @@ import (
 	"fidl/fuchsia/unknown"
 )
 
-func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest, err error, node io.NodeWithCtx) error {
+func respond(ctx fidl.Context, flags io.OpenFlags, req io.NodeWithCtxInterfaceRequest, err error, node Node) error {
 	if err != nil {
 		defer func() {
 			_ = req.Close()
@@ -57,6 +57,7 @@ func logError(err error) {
 type Node interface {
 	getIO() (io.NodeWithCtx, func() error, error)
 	addConnection(ctx fidl.Context, flags io.OpenFlags, mode uint32, req io.NodeWithCtxInterfaceRequest) error
+	DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error)
 }
 
 func noop() error {
@@ -231,7 +232,7 @@ func (dir *DirectoryWrapper) addConnection(ctx fidl.Context, flags io.OpenFlags,
 	go Serve(context.Background(), &stub, req.Channel, ServeOptions{
 		OnError: logError,
 	})
-	return respond(ctx, flags, req, nil, ioDir)
+	return respond(ctx, flags, req, nil, dir)
 }
 
 var _ io.DirectoryWithCtx = (*directoryState)(nil)
@@ -257,7 +258,7 @@ func (*directoryState) Close(fidl.Context) (unknown.CloseableCloseResult, error)
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), nil
 }
 
-func (*directoryState) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
+func (*DirectoryWrapper) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
 	var nodeInfo io.NodeInfoDeprecated
 	nodeInfo.SetDirectory(io.DirectoryObject{})
 	return nodeInfo, nil
@@ -311,12 +312,12 @@ func (dirState *directoryState) Open(ctx fidl.Context, flags io.OpenFlags, mode 
 
 	if i := strings.Index(path, slash); i != -1 {
 		if node, ok := dirState.Directory.Get(path[:i]); ok {
-			node, cleanup, err := node.getIO()
+			proxy, cleanup, err := node.getIO()
 			if err != nil {
 				return err
 			}
 			defer cleanup()
-			if dir, ok := node.(io.DirectoryWithCtx); ok {
+			if dir, ok := proxy.(io.DirectoryWithCtx); ok {
 				return dir.Open(ctx, flags, mode, path[i+len(slash):], req)
 			}
 			return respond(ctx, flags, req, &zx.Error{Status: zx.ErrNotDir}, node)
@@ -599,7 +600,7 @@ func (fState *fileState) Close(fidl.Context) (unknown.CloseableCloseResult, erro
 	return unknown.CloseableCloseResultWithResponse(unknown.CloseableCloseResponse{}), fState.reader.Close()
 }
 
-func (fState *fileState) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
+func (*FileWrapper) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, error) {
 	var nodeInfo io.NodeInfoDeprecated
 	nodeInfo.SetFile(io.FileObject{})
 	return nodeInfo, nil

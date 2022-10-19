@@ -879,7 +879,7 @@ mod tests {
             .unwrap();
 
         // Make a dummy call to verify that the channel did get hooked up.
-        assert!(client_end.into_proxy().unwrap().describe_deprecated().await.is_ok());
+        let _: Vec<_> = client_end.into_proxy().unwrap().query().await.unwrap();
         Ok(())
     }
 

@@ -313,10 +313,11 @@ zx::result<> Connection::NodeClose() {
 }
 
 fidl::VectorView<uint8_t> Connection::NodeQuery() {
-  const std::string_view protocol = [this]() {
-    std::optional protocol = vnode()->GetProtocols().first();
-    ZX_ASSERT(protocol.has_value());
-    switch (protocol.value()) {
+  const std::string_view kProtocol = [this]() {
+    if (options().flags.node_reference) {
+      return fio::wire::kNodeProtocolName;
+    }
+    switch (protocol()) {
       case VnodeProtocol::kConnector: {
         return fio::wire::kNodeProtocolName;
       }
@@ -331,8 +332,8 @@ fidl::VectorView<uint8_t> Connection::NodeQuery() {
       }
     }
   }();
-  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(protocol.data()));
-  return fidl::VectorView<uint8_t>::FromExternal(data, protocol.size());
+  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+  return fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size());
 }
 
 zx::result<VnodeRepresentation> Connection::NodeDescribe() {

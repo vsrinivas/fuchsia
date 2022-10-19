@@ -190,13 +190,6 @@ mod tests {
         client_end.into_proxy().expect("Failed to convert ClientEnd to DirectoryProxy")
     }
 
-    fn is_directory(node_info: &fio::NodeInfoDeprecated) -> bool {
-        match node_info {
-            fio::NodeInfoDeprecated::Directory { .. } => true,
-            _ => false,
-        }
-    }
-
     fn is_closed_with_status(error: Error, status: Status) -> bool {
         match error {
             Error::ClientChannelClosed { status: s, .. } => s == status,
@@ -205,10 +198,7 @@ mod tests {
     }
 
     async fn assert_is_valid_storage(storage_proxy: &fio::DirectoryProxy) {
-        let maybe_node_info = storage_proxy.describe_deprecated().await;
-        assert!(maybe_node_info.is_ok());
-        let node_info = maybe_node_info.unwrap();
-        assert!(is_directory(&node_info));
+        assert_eq!(storage_proxy.query().await.unwrap(), fio::DIRECTORY_PROTOCOL_NAME.as_bytes());
     }
 
     #[fasync::run_singlethreaded(test)]

@@ -58,11 +58,15 @@ impl NodeType {
             path
         ))?;
         let dir_proxy = open_in_namespace(path_as_str, OpenFlags::RIGHT_READABLE)?;
-        Ok(match dir_proxy.describe_deprecated().await {
-            Ok(fio::NodeInfoDeprecated::Directory(_)) => NodeType::Directory,
-            Ok(fio::NodeInfoDeprecated::File(_)) => NodeType::File,
-            _ => NodeType::Unknown,
-        })
+        if let Ok(protocol) = dir_proxy.query().await {
+            if protocol == fio::DIRECTORY_PROTOCOL_NAME.as_bytes() {
+                return Ok(NodeType::Directory);
+            }
+            if protocol == fio::FILE_PROTOCOL_NAME.as_bytes() {
+                return Ok(NodeType::File);
+            }
+        }
+        Ok(NodeType::Unknown)
     }
 }
 

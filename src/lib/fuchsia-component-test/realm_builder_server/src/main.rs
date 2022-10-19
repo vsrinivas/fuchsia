@@ -129,8 +129,8 @@ impl RealmBuilderFactory {
                             return Err(err);
                         }
                     };
-                    if let Err(e) = pkg_dir.describe_deprecated().await.context(
-                        "Invoking `fuchsia.io/Directory.describe` on provided `pkg_dir` failed.",
+                    if let Err(e) = pkg_dir.query().await.context(
+                        "Invoking `fuchsia.unknown/Queryable.query` on provided `pkg_dir` failed.",
                     ) {
                         responder.send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;
                         return Err(e);
@@ -165,8 +165,8 @@ impl RealmBuilderFactory {
                     let pkg_dir = pkg_dir_handle
                         .into_proxy()
                         .context("Failed to convert `pkg_dir` ClientEnd to proxy.")?;
-                    if let Err(err) = pkg_dir.describe_deprecated().await.context(
-                        "Invoking `fuchsia.io/Directory.describe` on provided `pkg_dir` failed.",
+                    if let Err(err) = pkg_dir.query().await.context(
+                        "Invoking `fuchsia.unknown/Queryable.query` on provided `pkg_dir` failed.",
                     ) {
                         warn!(method = "RealmBuilderFactory.Create", message = %err);
                         responder.send(&mut Err(ftest::RealmBuilderError::InvalidPkgDirHandle))?;

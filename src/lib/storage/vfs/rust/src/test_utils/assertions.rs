@@ -294,10 +294,10 @@ macro_rules! assert_get_attr_path {
 
 // See comment at the top of the file for why this is a macro.
 #[macro_export]
-macro_rules! assert_describe {
+macro_rules! assert_query {
     ($proxy:expr, $expected:expr) => {
-        let node_info = $proxy.describe_deprecated().await.expect("describe failed");
-        assert_eq!(node_info, $expected);
+        let protocol = $proxy.query().await.expect("describe failed");
+        assert_eq!(protocol, $expected.as_bytes());
     };
 }
 

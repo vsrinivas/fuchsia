@@ -224,7 +224,7 @@ TEST_P(DirectoryPermissionTest, TestCloneWithBadFlags) {
         fidl::WireCall(fdio_caller.borrow_as<fio::Node>())
             ->Clone(fio::wire::OpenFlags::kCloneSameRights | right, std::move(endpoints->server));
     ASSERT_EQ(clone_result.status(), ZX_OK);
-    auto describe_result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
+    auto describe_result = fidl::WireCall(endpoints->client)->Query();
     ASSERT_EQ(describe_result.status(), ZX_ERR_PEER_CLOSED);
   }
 }
@@ -247,7 +247,7 @@ TEST_P(DirectoryPermissionTest, TestCloneCannotIncreaseRights) {
           ->Clone(fio::wire::OpenFlags::kRightReadable | fio::wire::OpenFlags::kRightWritable,
                   std::move(endpoints->server));
   ASSERT_EQ(clone_result.status(), ZX_OK);
-  auto describe_result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
+  auto describe_result = fidl::WireCall(endpoints->client)->Query();
   ASSERT_EQ(describe_result.status(), ZX_ERR_PEER_CLOSED);
 }
 

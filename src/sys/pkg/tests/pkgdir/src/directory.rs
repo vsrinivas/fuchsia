@@ -6,7 +6,10 @@ use {
     crate::{dirs_to_test, repeat_by_n, PackageSource},
     anyhow::{anyhow, Context as _, Error},
     assert_matches::assert_matches,
-    fidl::{endpoints::create_proxy, AsHandleRef},
+    fidl::{
+        endpoints::{create_proxy, Proxy as _},
+        AsHandleRef as _,
+    },
     fidl_fuchsia_io as fio,
     fuchsia_fs::directory::open_directory,
     fuchsia_fs::directory::{DirEntry, DirentKind},
@@ -631,12 +634,9 @@ fn generate_valid_file_paths(base: &str) -> Vec<String> {
 }
 
 async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> Result<(), Error> {
-    match node.describe_deprecated().await {
-        Ok(fio::NodeInfoDeprecated::Directory(directory_object)) => {
-            assert_eq!(directory_object, fio::DirectoryObject);
-        }
-        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => return Err(e).context("failed to call describe"),
+    let protocol = node.query().await.context("failed to call describe")?;
+    if protocol != fio::DIRECTORY_PROTOCOL_NAME.as_bytes() {
+        return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
     }
 
     if flag.intersects(fio::OpenFlags::DESCRIBE) {
@@ -662,68 +662,62 @@ async fn verify_content_file_opened(
     node: fio::NodeProxy,
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
+    let protocol = node.query().await.context("failed to call query")?;
     if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
-        match node.describe_deprecated().await {
-            Ok(fio::NodeInfoDeprecated::Service(_)) => (),
-            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => return Err(e).context("failed to call describe"),
+        if protocol != fio::NODE_PROTOCOL_NAME.as_bytes() {
+            return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
+        }
+        if flag.intersects(fio::OpenFlags::DESCRIBE) {
+            let event = node.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+            let event = event.context("event error")?;
+            match event {
+                fio::NodeEvent::OnOpen_ { s, info } => {
+                    let () = zx::Status::ok(s).context("OnOpen failed")?;
+                    let info = info.ok_or(anyhow!("missing info"))?;
+                    if *info != fio::NodeInfoDeprecated::Service(fio::Service) {
+                        return Err(anyhow!("wrong protocol returned: {:?}", info));
+                    }
+                }
+                event @ fio::NodeEvent::OnRepresentation { .. } => {
+                    return Err(anyhow!("unexpected event returned: {:?}", event));
+                }
+            }
         }
     } else {
-        match node.describe_deprecated().await {
-            Ok(fio::NodeInfoDeprecated::File(_)) => (),
-            Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => return Err(e).context("failed to call describe"),
+        if protocol != fio::FILE_PROTOCOL_NAME.as_bytes() {
+            return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
         }
-    }
-    if flag.intersects(fio::OpenFlags::DESCRIBE) {
+        let file = fio::FileProxy::new(node.into_channel().unwrap());
+        {
+            let fio::FileInfo { observer, .. } =
+                file.describe2().await.context("failed to call describe")?;
+            let observer = observer.ok_or(anyhow!("expected observer to be set"))?;
+            let _: zx::Signals = observer
+                .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
+                .context("FILE_SIGNAL_READABLE not set")?;
+        }
+
         if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
-            match node.take_event_stream().next().await {
-                Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
-                    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                    assert_eq!(*boxed, fio::NodeInfoDeprecated::Service(fio::Service));
-                    return Ok(());
+            let event = file.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+            let event = event.context("event error")?;
+            match event {
+                fio::FileEvent::OnOpen_ { s, info } => {
+                    let () = zx::Status::ok(s).context("OnOpen failed")?;
+                    let info = info.ok_or(anyhow!("missing info"))?;
+                    if let fio::NodeInfoDeprecated::File(fio::FileObject { event, stream: _ }) =
+                        *info
+                    {
+                        let event = event.ok_or(anyhow!("expected event to be set"))?;
+                        let _: zx::Signals = event
+                            .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
+                            .context("FILE_SIGNAL_READABLE not set")?;
+                    } else {
+                        return Err(anyhow!("wrong protocol returned: {:?}", info));
+                    }
                 }
-                Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => {
-                    assert_eq!(payload, fio::Representation::Connector(fio::ConnectorInfo::EMPTY));
-                    return Ok(());
+                event @ fio::FileEvent::OnRepresentation { .. } => {
+                    return Err(anyhow!("unexpected event returned: {:?}", event));
                 }
-                Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-                Some(Err(e)) => return Err(e).context("failed to call onopen"),
-                None => return Err(anyhow!("no events!")),
-            };
-        } else {
-            match node.take_event_stream().next().await {
-                Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
-                    assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                    match *boxed {
-                        fio::NodeInfoDeprecated::File(fio::FileObject {
-                            event: Some(event),
-                            stream: None,
-                        }) => {
-                            match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
-                                Ok(_) => return Ok(()),
-                                Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
-                            }
-                        }
-                        _ => return Err(anyhow!("expected fio::FileObject")),
-                    };
-                }
-                Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => {
-                    match payload {
-                        fio::Representation::File(fio::FileInfo {
-                            observer: Some(event), ..
-                        }) => {
-                            match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
-                                Ok(_) => return Ok(()),
-                                Err(_) => return Err(anyhow!("FILE_SIGNAL_READABLE not set")),
-                            }
-                        }
-                        _ => return Err(anyhow!("expected fio::FileObject")),
-                    };
-                }
-                Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-                Some(Err(e)) => return Err(e).context("failed to call onopen"),
-                None => return Err(anyhow!("no events!")),
             }
         }
     }
@@ -734,10 +728,9 @@ async fn verify_meta_as_file_opened(
     node: fio::NodeProxy,
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
-    match node.describe_deprecated().await {
-        Ok(fio::NodeInfoDeprecated::File(_)) => (),
-        Ok(other) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => return Err(e).context("failed to call describe"),
+    let protocol = node.query().await.context("failed to call describe")?;
+    if protocol != fio::FILE_PROTOCOL_NAME.as_bytes() {
+        return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
     }
 
     if flag.intersects(fio::OpenFlags::DESCRIBE) {
@@ -762,8 +755,8 @@ async fn verify_meta_as_file_opened(
 }
 
 async fn verify_open_failed(node: fio::NodeProxy) -> Result<(), Error> {
-    match node.describe_deprecated().await {
-        Ok(node_info) => Err(anyhow!("node should be closed: {:?}", node_info)),
+    match node.query().await {
+        Ok(protocol) => Err(anyhow!("node should be closed: {:?}", protocol)),
         Err(fidl::Error::ClientChannelClosed { status: _, protocol_name: _ }) => Ok(()),
         Err(e) => Err(e).context("failed with unexpected error"),
     }

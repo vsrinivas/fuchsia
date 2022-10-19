@@ -181,16 +181,18 @@ TEST(Service, OpeningServiceWithNodeReferenceFlag) {
 
   loop.StartThread();
 
-  auto open_result = fidl::WireCall(root->client)
-                         ->Open(fio::wire::OpenFlags::kNodeReference, 0755, fidl::StringView("abc"),
-                                std::move(abc->server));
-  EXPECT_EQ(open_result.status(), ZX_OK);
+  ASSERT_OK(fidl::WireCall(root->client)
+                ->Open(fio::wire::OpenFlags::kNodeReference, 0755, fidl::StringView("abc"),
+                       std::move(abc->server))
+                .status());
 
-  // The channel should speak |fuchsia.io/Node| instead of the custom service FIDL protocol. We
-  // verify it by calling describe on it, which should return correctly.
-  auto describe_result = fidl::WireCall(abc->client)->DescribeDeprecated();
-  ASSERT_EQ(ZX_OK, describe_result.status());
-  ASSERT_EQ(fio::wire::NodeInfoDeprecated::Tag::kService, describe_result.value().info.Which());
+  // The channel should speak |fuchsia.io/Node| instead of the custom service FIDL protocol.
+  const fidl::WireResult result = fidl::WireCall(abc->client)->Query();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  const cpp20::span data = response.protocol.get();
+  const std::string_view protocol{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+  ASSERT_EQ(protocol, fio::wire::kNodeProtocolName);
 
   loop.Shutdown();
 }

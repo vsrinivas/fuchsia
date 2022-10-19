@@ -54,10 +54,19 @@ TEST(FidlTests, TestFidlBasic) {
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/fidltmp/file-a", endpoints->server.TakeChannel().release()));
 
-  auto describe_result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
+  {
+    const fidl::WireResult result = fidl::WireCall(endpoints->client)->Query();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    const cpp20::span data = response.protocol.get();
+    const std::string_view protocol{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+    ASSERT_EQ(protocol, fio::wire::kFileProtocolName);
+  }
+  const fidl::WireResult describe_result =
+      fidl::WireCall(fidl::UnownedClientEnd<fio::File>(endpoints->client.borrow().channel()))
+          ->Describe2();
   ASSERT_OK(describe_result.status());
-  ASSERT_TRUE(describe_result->info.is_file());
-  ASSERT_EQ(describe_result->info.file().event.get(), ZX_HANDLE_INVALID);
+  ASSERT_FALSE(describe_result.value().has_observer());
   endpoints->client.TakeChannel().reset();
 
   sync_completion_t unmounted;

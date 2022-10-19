@@ -136,10 +136,12 @@ TEST(VmofileTests, test_vmofile_basic) {
   }
 
   {
-    auto describe_result = fidl::WireCall(file)->DescribeDeprecated();
-    ASSERT_OK(describe_result.status());
-    fio::wire::NodeInfoDeprecated* info = &describe_result->info;
-    ASSERT_TRUE(info->is_file());
+    const fidl::WireResult result = fidl::WireCall(file)->Query();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    const cpp20::span data = response.protocol.get();
+    const std::string_view protocol{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+    ASSERT_EQ(protocol, fio::wire::kFileProtocolName);
   }
 
   {
@@ -220,10 +222,12 @@ TEST(VmofileTests, test_vmofile_exec) {
   }
 
   {
-    auto describe_result = fidl::WireCall(file)->DescribeDeprecated();
-    ASSERT_OK(describe_result.status());
-    fio::wire::NodeInfoDeprecated* info = &describe_result->info;
-    ASSERT_TRUE(info->is_file());
+    const fidl::WireResult result = fidl::WireCall(file)->Query();
+    ASSERT_OK(result.status());
+    const fidl::WireResponse response = result.value();
+    const cpp20::span data = response.protocol.get();
+    const std::string_view protocol{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+    ASSERT_EQ(protocol, fio::wire::kFileProtocolName);
   }
 
   shutdown_vfs(std::move(vfs));

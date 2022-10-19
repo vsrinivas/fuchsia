@@ -285,12 +285,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn open_in_namespace_opens_real_node() {
         let file_node = open_in_namespace("/pkg/data/file", OpenFlags::RIGHT_READABLE).unwrap();
-        let info = file_node.describe_deprecated().await.unwrap();
-        assert_matches!(Kind::expect_file(info), Ok(()));
+        let protocol = file_node.query().await.unwrap();
+        assert_eq!(protocol, fio::FILE_PROTOCOL_NAME.as_bytes());
 
         let dir_node = open_in_namespace("/pkg/data", OpenFlags::RIGHT_READABLE).unwrap();
-        let info = dir_node.describe_deprecated().await.unwrap();
-        assert_eq!(Kind::expect_directory(info), Ok(()));
+        let protocol = dir_node.query().await.unwrap();
+        assert_eq!(protocol, fio::DIRECTORY_PROTOCOL_NAME.as_bytes());
     }
 
     #[fasync::run_singlethreaded(test)]

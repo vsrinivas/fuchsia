@@ -765,7 +765,7 @@ mod tests {
     async fn test_open_root_dir() {
         let fixture = TestFixture::new().await;
         let root = fixture.root();
-        root.describe_deprecated().await.expect("Describe failed");
+        let _: Vec<_> = root.query().await.expect("query failed");
         fixture.close().await;
     }
 
@@ -1216,7 +1216,7 @@ mod tests {
                     return;
                 }
                 let child = child_or.unwrap();
-                child.describe_deprecated().await.expect("describe failed");
+                let _: Vec<_> = child.query().await.expect("query failed");
                 match open_file(
                     &child,
                     fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_READABLE,
@@ -1226,7 +1226,7 @@ mod tests {
                 .await
                 {
                     Ok(grandchild) => {
-                        grandchild.describe_deprecated().await.expect("describe failed");
+                        let _: Vec<_> = grandchild.query().await.expect("query failed");
                         close_file_checked(grandchild).await;
                         // We added the child before the directory was deleted; go ahead and
                         // clean up.

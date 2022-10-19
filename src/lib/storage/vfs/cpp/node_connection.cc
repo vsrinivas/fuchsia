@@ -51,7 +51,13 @@ void NodeConnection::Close(CloseCompleter::Sync& completer) {
 }
 
 void NodeConnection::Query(QueryCompleter::Sync& completer) {
-  completer.Reply(Connection::NodeQuery());
+  if (options().flags.node_reference) {
+    const std::string_view kProtocol = fio::wire::kNodeProtocolName;
+    uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+    completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+  } else {
+    completer.Reply(Connection::NodeQuery());
+  }
 }
 
 void NodeConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {

@@ -97,7 +97,7 @@ async fn main() {
         OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
     )
     .unwrap();
-    let err = ro_hub.describe_deprecated().await.unwrap_err();
+    let err = ro_hub.query().await.unwrap_err();
     match err {
         fidl::Error::ClientChannelClosed { status: zx::Status::ACCESS_DENIED, .. } => {}
         err => panic!("Unexpected error: {:?}", err),

@@ -11,6 +11,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/vmo.h>
+#include <zircon/status.h>
 #include <zircon/types.h>
 
 #include <filesystem>
@@ -169,8 +170,10 @@ TEST(VulkanLoader, GoldfishSyncDeviceFs) {
                                              device_ptr.NewRequest().TakeChannel().release()));
 
     // Check that the directory is connected to something.
-    fuchsia::io::NodeInfoDeprecated result;
-    EXPECT_EQ(ZX_OK, device_ptr->DescribeDeprecated(&result)) << " class " << device_class;
+    std::vector<uint8_t> protocol;
+    zx_status_t status = device_ptr->Query(&protocol);
+    EXPECT_EQ(status, ZX_OK) << "class=" << device_class
+                             << " status=" << zx_status_get_string(status);
   }
 }
 

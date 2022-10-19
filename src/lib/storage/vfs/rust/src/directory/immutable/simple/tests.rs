@@ -8,8 +8,8 @@ use super::simple;
 
 // Macros are exported into the root of the crate.
 use crate::{
-    assert_channel_closed, assert_close, assert_describe, assert_event, assert_get_attr,
-    assert_read, assert_read_dirents, assert_read_dirents_err, assert_seek, assert_write,
+    assert_channel_closed, assert_close, assert_event, assert_get_attr, assert_query, assert_read,
+    assert_read_dirents, assert_read_dirents_err, assert_seek, assert_write,
     clone_as_directory_assert_err, clone_get_directory_proxy_assert_ok, clone_get_proxy_assert,
     open_as_directory_assert_err, open_as_file_assert_err, open_get_directory_proxy_assert_ok,
     open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
@@ -95,7 +95,7 @@ fn empty_directory_with_custom_inode_get_attr() {
 #[test]
 fn empty_directory_describe() {
     run_server_client(fio::OpenFlags::RIGHT_READABLE, simple(), |root| async move {
-        assert_describe!(root, fio::NodeInfoDeprecated::Directory(fio::DirectoryObject));
+        assert_query!(root, fio::DIRECTORY_PROTOCOL_NAME);
         assert_close!(root);
     });
 }

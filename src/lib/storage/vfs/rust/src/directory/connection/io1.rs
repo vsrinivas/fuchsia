@@ -469,7 +469,7 @@ mod tests {
 
         // The channel also be closed with a NOT_FOUND epitaph.
         assert_matches!(
-            node_proxy.describe_deprecated().await,
+            node_proxy.query().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
                 protocol_name: "(anonymous) Node",
@@ -547,7 +547,7 @@ mod tests {
 
         // The channel should be closed with a NOT_FOUND epitaph.
         assert_matches!(
-            node_proxy.describe_deprecated().await,
+            node_proxy.query().await,
             Err(fidl::Error::ClientChannelClosed {
                 status: zx::Status::NOT_FOUND,
                 protocol_name: "(anonymous) Node",

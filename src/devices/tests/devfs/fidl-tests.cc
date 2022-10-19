@@ -98,20 +98,24 @@ TEST(FidlTestCase, BasicDevClass) {
   zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/dev/class", endpoints->server.channel().release()));
-  const fidl::WireResult result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
+  const fidl::WireResult result = fidl::WireCall(endpoints->client)->Query();
   ASSERT_OK(result.status());
   const auto& response = result.value();
-  ASSERT_TRUE(response.info.is_directory());
+  const cpp20::span data = response.protocol.get();
+  const std::string_view protocol{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+  ASSERT_EQ(protocol, fio::wire::kDirectoryProtocolName);
 }
 
 TEST(FidlTestCase, BasicDevZero) {
   zx::result endpoints = fidl::CreateEndpoints<fio::Node>();
   ASSERT_OK(endpoints.status_value());
   ASSERT_OK(fdio_service_connect("/dev/zero", endpoints->server.channel().release()));
-  const fidl::WireResult result = fidl::WireCall(endpoints->client)->DescribeDeprecated();
+  const fidl::WireResult result = fidl::WireCall(endpoints->client)->Query();
   ASSERT_OK(result.status());
   const auto& response = result.value();
-  ASSERT_TRUE(response.info.is_file());
+  const cpp20::span data = response.protocol.get();
+  const std::string_view protocol{reinterpret_cast<const char*>(data.data()), data.size_bytes()};
+  ASSERT_EQ(protocol, fio::wire::kFileProtocolName);
 }
 
 using watch_buffer_t = struct {

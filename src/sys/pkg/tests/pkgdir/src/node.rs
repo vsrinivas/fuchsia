@@ -5,7 +5,7 @@
 use {
     crate::{dirs_to_test, Mode, PackageSource},
     anyhow::{anyhow, Context as _, Error},
-    fidl::AsHandleRef,
+    fidl::{endpoints::Proxy as _, AsHandleRef as _},
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
 };
 
@@ -231,13 +231,11 @@ async fn assert_describe_directory(package_root: &fio::DirectoryProxy, path: &st
 }
 
 async fn verify_describe_directory_success(node: fio::NodeProxy) -> Result<(), Error> {
-    match node.describe_deprecated().await {
-        Ok(fio::NodeInfoDeprecated::Directory(directory_object)) => {
-            assert_eq!(directory_object, fio::DirectoryObject);
-            Ok(())
-        }
-        Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => Err(e).context("failed to call describe"),
+    let protocol = node.query().await.context("failed to call query")?;
+    if protocol == fio::DIRECTORY_PROTOCOL_NAME.as_bytes() {
+        Ok(())
+    } else {
+        Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
     }
 }
 
@@ -246,7 +244,7 @@ async fn assert_describe_file(package_root: &fio::DirectoryProxy, path: &str) {
         let node = fuchsia_fs::directory::open_node(package_root, path, flag, 0).await.unwrap();
         if let Err(e) = verify_describe_content_file(node, flag).await {
             panic!(
-                "failed to verify describe. path: {:?}, flag: {:#x}, \
+                "failed to verify describe. path: {:?}, flag: {:?}, \
                     mode: {:#x}, error: {:#}",
                 path, flag, 0, e
             );
@@ -258,23 +256,30 @@ async fn verify_describe_content_file(
     node: fio::NodeProxy,
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
+    let protocol = node.query().await.context("failed to call query")?;
     if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
-        match node.describe_deprecated().await {
-            Ok(fio::NodeInfoDeprecated::Service(fio::Service)) => Ok(()),
-            Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => Err(e).context("failed to call describe"),
+        if protocol == fio::NODE_PROTOCOL_NAME.as_bytes() {
+            Ok(())
+        } else {
+            Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
         }
     } else {
-        match node.describe_deprecated().await {
-            Ok(fio::NodeInfoDeprecated::File(fio::FileObject {
-                event: Some(event),
-                stream: None,
-            })) => match event.wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST) {
-                Ok(_) => Ok(()),
-                Err(_) => Err(anyhow!("FILE_SIGNAL_READABLE not set")),
-            },
-            Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-            Err(e) => Err(e).context("failed to call describe"),
+        if protocol == fio::FILE_PROTOCOL_NAME.as_bytes() {
+            let fio::FileInfo { observer, .. } = fio::FileProxy::new(node.into_channel().unwrap())
+                .describe2()
+                .await
+                .context("failed to call describe")?;
+            match observer {
+                Some(observer) => {
+                    let _: zx::Signals = observer
+                        .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)
+                        .context("FILE_SIGNAL_READABLE not set")?;
+                    Ok(())
+                }
+                None => Err(anyhow!("expected observer to be set")),
+            }
+        } else {
+            Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
         }
     }
 }
@@ -286,7 +291,7 @@ async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &st
             .unwrap();
         if let Err(e) = verify_describe_meta_file_success(node).await {
             panic!(
-                "failed to verify describe. path: {:?}, flag: {:#x}, \
+                "failed to verify describe. path: {:?}, flag: {:?}, \
                     mode: fio::MODE_TYPE_FILE, error: {:#}",
                 path, flag, e
             );
@@ -295,10 +300,11 @@ async fn assert_describe_meta_file(package_root: &fio::DirectoryProxy, path: &st
 }
 
 async fn verify_describe_meta_file_success(node: fio::NodeProxy) -> Result<(), Error> {
-    match node.describe_deprecated().await {
-        Ok(fio::NodeInfoDeprecated::File(_)) => Ok(()),
-        Ok(other) => Err(anyhow!("wrong node type returned: {:?}", other)),
-        Err(e) => Err(e).context("failed to call describe"),
+    let protocol = node.query().await.context("failed to call describe")?;
+    if protocol == fio::FILE_PROTOCOL_NAME.as_bytes() {
+        Ok(())
+    } else {
+        Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)))
     }
 }
 

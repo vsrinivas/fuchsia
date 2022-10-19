@@ -8,18 +8,17 @@ use {
 };
 
 #[fasync::run_singlethreaded(test)]
-async fn directory_describe() {
+async fn directory_query() {
     let harness = TestHarness::new().await;
     let root = root_directory(vec![]);
     let test_dir = harness.get_directory(root, fio::OpenFlags::empty());
 
-    let node_info = test_dir.describe_deprecated().await.expect("describe failed");
-
-    assert!(matches!(node_info, fio::NodeInfoDeprecated::Directory { .. }));
+    let protocol = test_dir.query().await.expect("query failed");
+    assert_eq!(protocol, fio::DIRECTORY_PROTOCOL_NAME.as_bytes());
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn file_describe() {
+async fn file_query() {
     let harness = TestHarness::new().await;
 
     let root = root_directory(vec![file(TEST_FILE, vec![])]);
@@ -32,13 +31,12 @@ async fn file_describe() {
     )
     .await;
 
-    let node_info = file.describe_deprecated().await.expect("describe failed");
-
-    assert!(matches!(node_info, fio::NodeInfoDeprecated::File { .. }));
+    let protocol = file.query().await.expect("query failed");
+    assert_eq!(protocol, fio::FILE_PROTOCOL_NAME.as_bytes());
 }
 
 #[fasync::run_singlethreaded(test)]
-async fn vmo_file_describe() {
+async fn vmo_file_query() {
     let harness = TestHarness::new().await;
     if !harness.config.supports_vmo_file.unwrap_or_default() {
         return;
@@ -55,7 +53,6 @@ async fn vmo_file_describe() {
     )
     .await;
 
-    let node_info = file.describe_deprecated().await.expect("describe failed");
-
-    assert!(matches!(node_info, fio::NodeInfoDeprecated::File { .. }));
+    let protocol = file.query().await.expect("query failed");
+    assert_eq!(protocol, fio::FILE_PROTOCOL_NAME.as_bytes());
 }

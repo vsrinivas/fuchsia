@@ -6,6 +6,7 @@
 
 #include <lib/fdio/vfs.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <zircon/status.h>
 
 #include <test/placeholders/cpp/fidl.h>
 
@@ -93,13 +94,14 @@ TEST_F(ServiceTest, CanCloneNodeReference) {
   EXPECT_EQ(fuchsia::io::MODE_TYPE_SERVICE, attr.mode & fuchsia::io::MODE_TYPE_SERVICE);
 }
 
-TEST_F(ServiceTest, TestDescribe) {
+TEST_F(ServiceTest, TestQuery) {
   fuchsia::io::NodeSyncPtr ptr;
   dir_ptr()->Open(fuchsia::io::OpenFlags::NODE_REFERENCE, 0, service_name(), ptr.NewRequest());
 
-  fuchsia::io::NodeInfoDeprecated info;
-  ptr->DescribeDeprecated(&info);
-  EXPECT_TRUE(info.is_service());
+  std::vector<uint8_t> protocol;
+  zx_status_t status = ptr->Query(&protocol);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(std::string(protocol.begin(), protocol.end()), fuchsia::io::NODE_PROTOCOL_NAME);
 }
 
 TEST_F(ServiceTest, CanOpenAsAService) {

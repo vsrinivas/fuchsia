@@ -455,9 +455,9 @@ zx_status_t FsManager::AttachMount(std::string_view device_path,
     FX_PLOGS(WARNING, root.status_value()) << "Failed to get data root; shutting down filesystem";
     return root.error_value();
   }
-  auto res = fidl::WireCall(*root)->DescribeDeprecated();
+  auto res = fidl::WireCall(*root)->Query();
   if (!res.ok()) {
-    FX_PLOGS(WARNING, res.status()) << "Failed to describe data root; shutting down filesystem";
+    FX_PLOGS(WARNING, res.status()) << "Failed to roundtrip to data root; shutting down filesystem";
     return res.status();
   }
 

@@ -278,7 +278,7 @@ mod tests {
             ("read_write", OpenFlags::RIGHT_WRITABLE, true),
         ] {
             let file_proxy = open_file(&example_dir_proxy, &Path::new(file_name), flags)?;
-            match (should_succeed, file_proxy.describe_deprecated().await) {
+            match (should_succeed, file_proxy.query().await) {
                 (true, Ok(_)) => (),
                 (false, Err(_)) => continue,
                 (true, Err(e)) => {

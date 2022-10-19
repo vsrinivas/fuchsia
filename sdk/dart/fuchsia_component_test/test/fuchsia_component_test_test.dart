@@ -345,8 +345,8 @@ void main() {
         final scopedInstance = realmInstance.root;
         expect(scopedInstance.collectionName, defaultCollectionName);
         expect(scopedInstance.childName, startsWith('auto-'));
-        final nodeInfo = await scopedInstance.exposedDir.describeDeprecated();
-        expect(nodeInfo.$tag, fio.NodeInfoDeprecatedTag.directory);
+        final protocol = await scopedInstance.exposedDir.query();
+        expect(utf8.decode(protocol), fio.directoryProtocolName);
         scopedInstance.close();
       });
     });

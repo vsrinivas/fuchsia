@@ -1170,11 +1170,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_describe() {
         let env = init_mock_file(Box::new(always_succeed_callback), fio::OpenFlags::RIGHT_READABLE);
-        let info = env.proxy.describe_deprecated().await.unwrap();
-        match info {
-            fio::NodeInfoDeprecated::File { .. } => (),
-            _ => panic!("Expected fio::NodeInfoDeprecated::File, got {:?}", info),
-        };
+        let protocol = env.proxy.query().await.unwrap();
+        assert_eq!(protocol, fio::FILE_PROTOCOL_NAME.as_bytes());
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1665,19 +1662,12 @@ mod tests {
         let stream = create_stream(&vmo, flags);
         let env = init_mock_stream_file(&stream, flags);
 
-        let node_info = env.proxy.describe_deprecated().await.unwrap();
-        if let fio::NodeInfoDeprecated::File(fio::FileObject {
-            stream: Some(desc_stream), ..
-        }) = node_info
-        {
-            assert_eq!(
-                desc_stream.get_koid().unwrap(),
-                stream.get_koid().unwrap(),
-                "Describe should return a duplicate stream"
-            );
-        } else {
-            panic!("Expected fio::NodeInfo::File with stream, got {:?}", node_info);
-        }
+        let fio::FileInfo { stream: desc_stream, .. } = env.proxy.describe2().await.unwrap();
+        assert_eq!(
+            desc_stream.unwrap().get_koid().unwrap(),
+            stream.get_koid().unwrap(),
+            "Describe should return a duplicate stream"
+        );
     }
 
     #[fasync::run_singlethreaded(test)]

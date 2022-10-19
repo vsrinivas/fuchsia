@@ -180,9 +180,10 @@ TEST(VmoFile, ReadOnlyNoSharing) {
 
   // The file should appear as a regular file, the fact that a VMO is backing it
   // is hidden.
-  fuchsia::io::NodeInfoDeprecated info;
-  EXPECT_EQ(ZX_OK, file_ptr->DescribeDeprecated(&info));
-  ASSERT_TRUE(info.is_file());
+  std::vector<uint8_t> protocol;
+  zx_status_t status = file_ptr->Query(&protocol);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(std::string(protocol.begin(), protocol.end()), fuchsia::io::FILE_PROTOCOL_NAME);
 }
 
 TEST(VmoFile, WritableNoSharing) {
@@ -220,9 +221,10 @@ TEST(VmoFile, WritableNoSharing) {
 
   // The file should appear as a regular file, the fact that a VMO is backing it
   // is hidden.
-  fuchsia::io::NodeInfoDeprecated info;
-  EXPECT_EQ(ZX_OK, file_ptr->DescribeDeprecated(&info));
-  ASSERT_TRUE(info.is_file());
+  std::vector<uint8_t> protocol;
+  zx_status_t status = file_ptr->Query(&protocol);
+  ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(std::string(protocol.begin(), protocol.end()), fuchsia::io::FILE_PROTOCOL_NAME);
 }
 
 TEST(VmoFile, ReadOnlyDuplicate) {

@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:typed_data';
+import 'dart:convert' show utf8;
 
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_io/fidl_async.dart';
@@ -20,8 +21,8 @@ void main() {
   }
 
   Future<void> _assertDescribeFile(FileProxy proxy) async {
-    final response = await proxy.describeDeprecated();
-    expect(response.file, isNotNull);
+    var response = await proxy.query();
+    expect(utf8.decode(response), fileProtocolName);
   }
 
   Future<void> _assertDescribeVmo(
