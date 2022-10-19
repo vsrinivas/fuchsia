@@ -3,11 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        device::{BlockDevice, Device},
-        environment::Environment,
-        matcher, service,
-    },
+    crate::{device::Device, environment::Environment, matcher, service},
     anyhow::{format_err, Error},
     futures::{channel::mpsc, StreamExt},
 };
@@ -31,37 +27,27 @@ impl<E: Environment> Manager<E> {
     /// and then launch them appropriately.
     pub async fn device_handler(
         &mut self,
-        device_stream: impl futures::Stream<Item = String>,
+        device_stream: impl futures::Stream<Item = Box<dyn Device>>,
     ) -> Result<service::FshostShutdownResponder, Error> {
         let mut device_stream = Box::pin(device_stream).fuse();
         loop {
             // Wait for the next device to come in, or the shutdown signal to arrive.
-            let device_path = futures::select! {
+            let mut device = futures::select! {
                 responder = self.shutdown_rx.next() => {
                     let responder = responder
                         .ok_or_else(|| format_err!("shutdown signal stream ended unexpectedly"))?;
                     return Ok(responder);
                 },
                 maybe_device = device_stream.next() => {
-                    if let Some(device_path) = maybe_device {
-                        device_path
+                    if let Some(device) = maybe_device {
+                        device
                     } else {
                         anyhow::bail!("block watcher returned none unexpectedly");
                     }
                 },
             };
 
-            let mut device = match BlockDevice::new(device_path).await {
-                Err(e) => {
-                    tracing::error!("Unable to create device: {}", e);
-                    continue;
-                }
-                Ok(device) => device,
-            };
-
-            tracing::info!(path = %device.topological_path(), "Matching device");
-
-            match self.matcher.match_device(&mut device, &mut self.environment).await {
+            match self.matcher.match_device(device.as_mut(), &mut self.environment).await {
                 Ok(true) => {}
                 Ok(false) => tracing::info!(path = %device.topological_path(), "Ignored device"),
                 Err(e) => {

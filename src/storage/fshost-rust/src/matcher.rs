@@ -159,8 +159,13 @@ impl Matcher for BootpartMatcher {
         device: &mut dyn Device,
         env: &mut dyn Environment,
     ) -> Result<bool, Error> {
-        if device.get_block_info().await?.flags & BLOCK_FLAG_BOOTPART == 0 {
-            return Ok(false);
+        match device.get_block_info().await? {
+            Some(block_info) => {
+                if block_info.flags & BLOCK_FLAG_BOOTPART == 0 {
+                    return Ok(false);
+                }
+            }
+            None => return Ok(false),
         }
         env.attach_driver(device, BOOTPART_DRIVER_PATH).await?;
         Ok(true)
@@ -405,7 +410,8 @@ mod tests {
         anyhow::Error,
         async_trait::async_trait,
         fidl::encoding::Decodable,
-        fidl_fuchsia_hardware_block::{BlockInfo, BlockProxy},
+        fidl_fuchsia_device::ControllerProxy,
+        fidl_fuchsia_hardware_block::BlockInfo,
         std::sync::Mutex,
     };
 
@@ -458,8 +464,10 @@ mod tests {
 
     #[async_trait]
     impl Device for MockDevice {
-        async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error> {
-            Ok(BlockInfo { flags: self.block_flags, ..BlockInfo::new_empty() })
+        async fn get_block_info(
+            &self,
+        ) -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error> {
+            Ok(Some(BlockInfo { flags: self.block_flags, ..BlockInfo::new_empty() }))
         }
         fn is_nand(&self) -> bool {
             self.is_nand
@@ -482,7 +490,7 @@ mod tests {
                 .as_ref()
                 .unwrap_or_else(|| panic!("Unexpected call to partition_type")))
         }
-        fn proxy(&self) -> Result<BlockProxy, Error> {
+        fn proxy(&self) -> Result<ControllerProxy, Error> {
             unreachable!()
         }
         async fn get_child(&self, _suffix: &str) -> Result<Box<dyn Device>, Error> {

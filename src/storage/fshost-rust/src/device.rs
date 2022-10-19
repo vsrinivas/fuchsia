@@ -5,22 +5,23 @@
 pub mod constants;
 
 use {
-    anyhow::{anyhow, Context, Error},
+    anyhow::{anyhow, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_endpoints, Proxy},
-    fidl_fuchsia_device::ControllerMarker,
+    fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
     fidl_fuchsia_hardware_block::BlockProxy,
     fidl_fuchsia_hardware_block_volume::VolumeAndNodeProxy,
     fidl_fuchsia_io::OpenFlags,
     fs_management::format::{detect_disk_format, DiskFormat},
     fuchsia_component::client::connect_to_protocol_at_path,
-    fuchsia_zircon::{self as zx},
+    fuchsia_zircon as zx,
 };
 
 #[async_trait]
 pub trait Device: Send + Sync {
     /// Returns BlockInfo (the result of calling fuchsia.hardware.block/Block.Query).
-    async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error>;
+    async fn get_block_info(&self)
+        -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error>;
 
     /// True if this is a NAND device.
     fn is_nand(&self) -> bool;
@@ -39,12 +40,77 @@ pub trait Device: Send + Sync {
     async fn partition_type(&mut self) -> Result<&[u8; 16], Error>;
 
     /// Returns a proxy for the device.
-    fn proxy(&self) -> Result<BlockProxy, Error>;
+    fn proxy(&self) -> Result<ControllerProxy, Error>;
 
     /// Returns a new Device, which is a child of this device with the specified suffix. This
     /// function will return when the device is available. This function assumes the child device
     /// will show up in /dev/class/block.
     async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error>;
+}
+
+/// A nand device.
+#[derive(Clone, Debug)]
+pub struct NandDevice {
+    block_device: BlockDevice,
+}
+
+impl NandDevice {
+    pub async fn new(path: impl ToString) -> Result<Self, Error> {
+        Ok(NandDevice { block_device: BlockDevice::new(path).await? })
+    }
+}
+
+#[async_trait]
+impl Device for NandDevice {
+    fn is_nand(&self) -> bool {
+        true
+    }
+
+    async fn get_block_info(
+        &self,
+    ) -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error> {
+        Ok(None)
+    }
+
+    async fn content_format(&mut self) -> Result<DiskFormat, Error> {
+        Ok(DiskFormat::Unknown)
+    }
+
+    async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error> {
+        const DEV_CLASS_NAND: &str = "/dev/class/nand";
+        let dev_class_nand = fuchsia_fs::directory::open_in_namespace(
+            DEV_CLASS_NAND,
+            OpenFlags::RIGHT_READABLE | OpenFlags::RIGHT_WRITABLE,
+        )?;
+        let child_path = device_watcher::wait_for_device_with(
+            &dev_class_nand,
+            |device_watcher::DeviceInfo { filename, topological_path }| {
+                topological_path.strip_suffix(suffix).and_then(|topological_path| {
+                    (topological_path == self.topological_path())
+                        .then(|| format!("{}/{}", DEV_CLASS_NAND, filename))
+                })
+            },
+        )
+        .await?;
+        let nand_device = NandDevice::new(child_path).await?;
+        Ok(Box::new(nand_device))
+    }
+
+    fn topological_path(&self) -> &str {
+        self.block_device.topological_path()
+    }
+
+    async fn partition_label(&mut self) -> Result<&str, Error> {
+        self.block_device.partition_label().await
+    }
+
+    async fn partition_type(&mut self) -> Result<&[u8; 16], Error> {
+        self.block_device.partition_type().await
+    }
+
+    fn proxy(&self) -> Result<ControllerProxy, Error> {
+        self.block_device.proxy()
+    }
 }
 
 /// A block device.
@@ -102,10 +168,16 @@ impl BlockDevice {
 
 #[async_trait]
 impl Device for BlockDevice {
-    async fn get_block_info(&self) -> Result<fidl_fuchsia_hardware_block::BlockInfo, Error> {
+    async fn get_block_info(
+        &self,
+    ) -> Result<Option<fidl_fuchsia_hardware_block::BlockInfo>, Error> {
         let (status, info) = self.volume_proxy.get_info().await?;
         zx::Status::ok(status)?;
-        info.ok_or(anyhow!("Expected BlockInfo")).map(|i| *i)
+        if info.is_some() {
+            Ok(info.map(|i| *i))
+        } else {
+            Err(anyhow!("Expected BlockInfo"))
+        }
     }
 
     fn is_nand(&self) -> bool {
@@ -116,8 +188,7 @@ impl Device for BlockDevice {
         if let Some(format) = self.content_format {
             return Ok(format);
         }
-
-        let block_proxy = self.proxy().context("Failed to get proxy")?;
+        let block_proxy = BlockProxy::new(self.proxy()?.into_channel().unwrap());
         return Ok(detect_disk_format(&block_proxy).await);
     }
 
@@ -143,10 +214,10 @@ impl Device for BlockDevice {
         Ok(self.partition_type.as_ref().unwrap())
     }
 
-    fn proxy(&self) -> Result<BlockProxy, Error> {
+    fn proxy(&self) -> Result<ControllerProxy, Error> {
         let (client, server) = create_endpoints()?;
         self.volume_proxy.clone(OpenFlags::CLONE_SAME_RIGHTS, server)?;
-        Ok(BlockProxy::new(fidl::AsyncChannel::from_channel(client.into_channel())?))
+        Ok(ControllerProxy::new(fidl::AsyncChannel::from_channel(client.into_channel())?))
     }
 
     async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error> {
