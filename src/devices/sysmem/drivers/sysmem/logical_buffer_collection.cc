@@ -4,10 +4,13 @@
 
 #include "logical_buffer_collection.h"
 
+#include <fidl/fuchsia.sysmem2/cpp/fidl.h>
 #include <fidl/fuchsia.sysmem2/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/status.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/fit/defer.h>
 #include <lib/fpromise/result.h>
 #include <lib/image-format/image_format.h>
@@ -33,11 +36,10 @@
 #include "buffer_collection_token_group.h"
 #include "device.h"
 #include "koid_util.h"
-#include "lib/fidl/cpp/wire/status.h"
 #include "logging.h"
 #include "macros.h"
+#include "node_properties.h"
 #include "orphaned_node.h"
-#include "src/devices/sysmem/drivers/sysmem/node_properties.h"
 #include "usage_pixel_format_cost.h"
 #include "utils.h"
 
@@ -251,6 +253,124 @@ bool IsPotentiallyIncludedInInitialAllocation(const NodeProperties& node) {
     }
   }
   return potentially_included_in_initial_allocation;
+}
+
+// Use IsImageFormatConstraintsArrayPixelFormatDoNotCare() instead where the array is available,
+// since the array not having exactly 1 item means it's a malformed kDoNotCare, which this routine
+// can't check.
+fit::result<zx_status_t, bool> IsImageFormatConstraintsPixelFormatDoNotCare(
+    const fuchsia_sysmem2::wire::ImageFormatConstraints& x) {
+  if (!x.has_pixel_format()) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (!x.pixel_format().has_type()) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  if (x.pixel_format().type() != fuchsia_sysmem2::wire::PixelFormatType::kDoNotCare) {
+    return fit::ok(false);
+  }
+  if (x.pixel_format().has_format_modifier_value() &&
+      x.pixel_format().format_modifier_value() != fuchsia_sysmem2::kFormatModifierNone) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  return fit::ok(true);
+}
+
+fit::result<zx_status_t, bool> IsImageFormatConstraintsArrayPixelFormatDoNotCare(
+    const fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints>& x) {
+  uint32_t do_not_care_count = 0;
+  for (uint32_t i = 0; i < x.count(); ++i) {
+    auto element_result = IsImageFormatConstraintsPixelFormatDoNotCare(x[i]);
+    if (element_result.is_error()) {
+      return element_result;
+    }
+    if (element_result.value()) {
+      ++do_not_care_count;
+    }
+  }
+  if (do_not_care_count >= 1 && x.count() != 1) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  ZX_DEBUG_ASSERT(do_not_care_count <= 1);
+  return fit::ok(do_not_care_count != 0);
+}
+
+fit::result<zx_status_t, bool> IsColorSpaceArrayDoNotCare(
+    const fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>& x) {
+  if (x.count() == 0) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  uint32_t do_not_care_count = 0;
+  for (uint32_t i = 0; i < x.count(); ++i) {
+    if (!x[i].has_type()) {
+      return fit::error(ZX_ERR_INVALID_ARGS);
+    }
+    if (x[i].type() == fuchsia_sysmem2::wire::ColorSpaceType::kDoNotCare) {
+      ++do_not_care_count;
+    }
+  }
+  if (do_not_care_count >= 1 && x.count() != 1) {
+    return fit::error(ZX_ERR_INVALID_ARGS);
+  }
+  ZX_DEBUG_ASSERT(do_not_care_count <= 1);
+  return fit::ok(do_not_care_count != 0);
+}
+
+// Replicate the kDoNotCare to_update to correspond to the not kDoNotCare to_match.
+void ReplicatePixelFormatDoNotCare(
+    fidl::AnyArena& arena,
+    const fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints>& to_match,
+    fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints>& to_update) {
+  // Error result excluded by caller.
+  ZX_DEBUG_ASSERT(!IsImageFormatConstraintsArrayPixelFormatDoNotCare(to_match).value());
+  // Error result excluded by caller.
+  ZX_DEBUG_ASSERT(IsImageFormatConstraintsArrayPixelFormatDoNotCare(to_update).value());
+  ZX_DEBUG_ASSERT(to_update.count() == 1);
+  if (to_match.empty()) {
+    to_update.set_count(0);
+    return;
+  }
+  ZX_DEBUG_ASSERT(!to_match.empty());
+  auto stash = std::move(to_update[0]);
+  to_update.Allocate(arena, to_match.count());
+  to_update.set_count(to_match.count());
+  for (uint32_t i = 0; i < to_match.count(); ++i) {
+    to_update[i] = sysmem::V2CloneImageFormatConstraints(arena, stash);
+    to_update[i].set_pixel_format(arena,
+                                  sysmem::V2ClonePixelFormat(arena, to_match[i].pixel_format()));
+  }
+  ZX_DEBUG_ASSERT(to_update.count() == to_match.count());
+  ZX_DEBUG_ASSERT(!to_update.empty());
+  ZX_DEBUG_ASSERT(!to_match.empty());
+  ZX_DEBUG_ASSERT(to_update[0].pixel_format().type() == to_match[0].pixel_format().type());
+  ZX_DEBUG_ASSERT(to_update[0].pixel_format().has_format_modifier_value() ==
+                  to_match[0].pixel_format().has_format_modifier_value());
+  // The format_modifier_value (if any) also matches.
+}
+
+void ReplicateColorSpaceDoNotCare(
+    fidl::AnyArena& arena, const fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>& to_match,
+    fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>& to_update) {
+  // error result excluded by caller
+  ZX_DEBUG_ASSERT(!IsColorSpaceArrayDoNotCare(to_match).value());
+  // error result excluded by caller
+  ZX_DEBUG_ASSERT(IsColorSpaceArrayDoNotCare(to_update).value());
+  ZX_DEBUG_ASSERT(to_update.count() == 1);
+  if (to_match.empty()) {
+    to_update.set_count(0);
+    return;
+  }
+  ZX_DEBUG_ASSERT(!to_match.empty());
+  auto stash = std::move(to_update[0]);
+  to_update.Allocate(arena, to_match.count());
+  for (uint32_t i = 0; i < to_match.count(); ++i) {
+    to_update[i] = sysmem::V2CloneColorSpace(arena, stash);
+    to_update[i].set_type(to_match[i].type());
+  }
+  ZX_DEBUG_ASSERT(to_update.count() == to_match.count());
+  ZX_DEBUG_ASSERT(!to_update.empty());
+  ZX_DEBUG_ASSERT(!to_match.empty());
+  ZX_DEBUG_ASSERT(to_update[0].type() == to_match[0].type());
 }
 
 }  // namespace
@@ -2082,6 +2202,15 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
       return false;
     }
   }
+
+  auto is_pixel_format_do_not_care_result =
+      IsImageFormatConstraintsArrayPixelFormatDoNotCare(constraints.image_format_constraints());
+  // Here is where is_error() is "checked previously" for PixelFormatType re. DO_NOT_CARE.
+  if (is_pixel_format_do_not_care_result.is_error()) {
+    LogError(FROM_HERE, "malformed PixelFormat (possibly involving DO_NOT_CARE)");
+    return false;
+  }
+  bool is_pixel_format_do_not_care = is_pixel_format_do_not_care_result.value();
   for (uint32_t i = 0; i < constraints.image_format_constraints().count(); ++i) {
     if (!CheckSanitizeImageFormatConstraints(stage, constraints.image_format_constraints()[i])) {
       return false;
@@ -2089,6 +2218,65 @@ bool LogicalBufferCollection::CheckSanitizeBufferCollectionConstraints(
   }
 
   if (stage == CheckSanitizeStage::kAggregated) {
+    if (constraints.has_image_format_constraints()) {
+      if (is_pixel_format_do_not_care) {
+        // By design, sysmem does not arbitrarily select a colorspace from among all color spaces
+        // without any participant-specified pixel format constraints, as doing so would be likely
+        // to lead to unexpected changes to the resulting pixel format when additional pixel formats
+        // are added to PixelFormatType.
+        LogError(FROM_HERE, "at least one participant must specify PixelFormatType != DO_NOT_CARE");
+        return false;
+      }
+      for (uint32_t i = 0; i < constraints.image_format_constraints().count(); ++i) {
+        auto& ifc = constraints.image_format_constraints()[i];
+        auto is_color_space_do_not_care_result = IsColorSpaceArrayDoNotCare(ifc.color_spaces());
+        // maintained during accumulation
+        ZX_DEBUG_ASSERT(is_color_space_do_not_care_result.is_ok());
+        bool is_color_space_do_not_care = is_color_space_do_not_care_result.value();
+        if (is_color_space_do_not_care) {
+          // Both producers and consumers ("active" participants) are required to specify specific
+          // color_spaces by design, with the only exception being kPassThrough.
+          //
+          // Only more passive participants should ever specify ColorSpaceType kDoNotCare.  If an
+          // active participant really does not care, it can instead list all the color spaces.  In
+          // a few scenarios it may be fine for participants to all specify kPassThrough, if there's
+          // no reason to add a particular highly-custom and/or not-actually-color-as-such space to
+          // the ColorSpaceType enum, or if all participants are all truly intending to just pass
+          // through the color space no matter what it is with no need for sysmem to select a color
+          // space and the special scenario would otherwise involve (by intent of design) _all_ the
+          // participants wanting to set kDoNotCare (which would lead to this error).
+          //
+          // The preferred fix most of the time is specifying a specific color space in at least one
+          // participant.  Much less commonly, and only if actually necessary, kPassThrough can be
+          // used by all participants instead (see previous paragraph).
+          LogInfo(FROM_HERE,
+                  "per-PixelFormatType, at least one participant must specify ColorSpaceType != "
+                  "kDoNotCare - removing PixelFormatType: type: %u modifier: 0x%" PRIx64,
+                  ifc.pixel_format().type(),
+                  ifc.pixel_format().has_format_modifier_value()
+                      ? ifc.pixel_format().format_modifier_value()
+                      : 0ull);
+          // Remove by copying down last PixelFormat to this index and processing this index again,
+          // if this isn't already the last PixelFormat.
+          if (i != constraints.image_format_constraints().count() - 1) {
+            constraints.image_format_constraints()[i] = std::move(
+                constraints
+                    .image_format_constraints()[constraints.image_format_constraints().count() -
+                                                1]);
+            --i;
+          }
+          constraints.image_format_constraints().set_count(
+              constraints.image_format_constraints().count() - 1);
+          if (constraints.image_format_constraints().count() == 0) {
+            LogError(FROM_HERE,
+                     "after removing pixel format that remained ColorSpaceType kDoNotCare, zero "
+                     "pixel formats remaining");
+            return false;
+          }
+        }
+      }
+    }
+
     // Given the image constriant's pixel format, select the best color space
     for (auto& image_constraint : constraints.image_format_constraints()) {
       // We are guaranteed that color spaces are valid for the current pixel format
@@ -2211,16 +2399,23 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
     LogError(FROM_HERE, "PixelFormatType INVALID not allowed");
     return false;
   }
-  if (!ImageFormatIsSupported(constraints.pixel_format())) {
-    LogError(FROM_HERE, "Unsupported pixel format");
-    return false;
-  }
 
-  uint32_t min_bytes_per_row_given_min_width =
-      ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format()) *
-      constraints.min_coded_width();
-  constraints.min_bytes_per_row() =
-      std::max(constraints.min_bytes_per_row(), min_bytes_per_row_given_min_width);
+  auto is_pixel_format_do_not_care_result =
+      IsImageFormatConstraintsPixelFormatDoNotCare(constraints);
+  // checked previously
+  ZX_DEBUG_ASSERT(is_pixel_format_do_not_care_result.is_ok());
+  bool is_pixel_format_do_not_care = is_pixel_format_do_not_care_result.value();
+  if (!is_pixel_format_do_not_care) {
+    if (!ImageFormatIsSupported(constraints.pixel_format())) {
+      LogError(FROM_HERE, "Unsupported pixel format");
+      return false;
+    }
+    uint32_t min_bytes_per_row_given_min_width =
+        ImageFormatStrideBytesPerWidthPixel(constraints.pixel_format()) *
+        constraints.min_coded_width();
+    constraints.min_bytes_per_row() =
+        std::max(constraints.min_bytes_per_row(), min_bytes_per_row_given_min_width);
+  }
 
   if (!constraints.color_spaces().count()) {
     LogError(FROM_HERE, "color_spaces.count() == 0 not allowed");
@@ -2277,19 +2472,39 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
     return false;
   }
 
+  // Pre-check this to make error easier to diagnose vs. error from IsColorSpaceArrayDoNotCare(),
+  // since this requirement applies regardless of DO_NOT_CARE true or false.
   for (uint32_t i = 0; i < constraints.color_spaces().count(); ++i) {
-    if (!ImageFormatIsSupportedColorSpaceForPixelFormat(constraints.color_spaces()[i],
-                                                        constraints.pixel_format())) {
-      auto colorspace_type = constraints.color_spaces()[i].has_type()
-                                 ? constraints.color_spaces()[i].type()
-                                 : fuchsia_sysmem2::wire::ColorSpaceType::kInvalid;
-      LogError(FROM_HERE,
-               "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
-               "color_space.type: %u "
-               "pixel_format.type: %u",
-               sysmem::fidl_underlying_cast(colorspace_type),
-               sysmem::fidl_underlying_cast(constraints.pixel_format().type()));
+    if (!constraints.color_spaces()[i].has_type()) {
+      LogError(FROM_HERE, "color_spaces.type must be set");
       return false;
+    }
+  }
+
+  if (!is_pixel_format_do_not_care) {
+    auto is_color_space_do_not_care_result = IsColorSpaceArrayDoNotCare(constraints.color_spaces());
+    // Here is where is_error() is "checked previously" for ColorSpaceType re. DO_NOT_CARE.
+    if (is_color_space_do_not_care_result.is_error()) {
+      LogError(FROM_HERE, "malformed color_spaces re. DO_NOT_CARE");
+      return false;
+    }
+    bool is_color_space_do_not_care = is_color_space_do_not_care_result.value();
+    if (!is_color_space_do_not_care) {
+      for (uint32_t i = 0; i < constraints.color_spaces().count(); ++i) {
+        if (!ImageFormatIsSupportedColorSpaceForPixelFormat(constraints.color_spaces()[i],
+                                                            constraints.pixel_format())) {
+          auto colorspace_type = constraints.color_spaces()[i].has_type()
+                                     ? constraints.color_spaces()[i].type()
+                                     : fuchsia_sysmem2::wire::ColorSpaceType::kInvalid;
+          LogError(FROM_HERE,
+                   "!ImageFormatIsSupportedColorSpaceForPixelFormat() "
+                   "color_space.type: %u "
+                   "pixel_format.type: %u",
+                   sysmem::fidl_underlying_cast(colorspace_type),
+                   sysmem::fidl_underlying_cast(constraints.pixel_format().type()));
+          return false;
+        }
+      }
     }
   }
 
@@ -2511,6 +2726,33 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
   // acc.
   ZX_DEBUG_ASSERT(acc->count());
 
+  // Any pixel_format kDoNotCare can only happen with count() == 1, checked previously.  If both
+  // acc and c are indicating kDoNotCare, the result still needs to be kDoNotCare.  If only one of
+  // acc or c is indicating kDoNotCare, we need to fan out the kDoNotCare (via cloning) and replace
+  // each of the resulting pixel_format fields with the specific (not kDoNotCare) pixel_format(s)
+  // indicated by the other (of acc and c).  After this, accumulation can proceed as normal, with
+  // kDoNotCare (if still present) treated as any other normal PixelFormatType.  At the end of
+  // overall accumulation, we must check (elsewhere) that we're not left with only a single
+  // kDoNotCare pixel_format.
+  auto acc_is_do_not_care_result = IsImageFormatConstraintsArrayPixelFormatDoNotCare(*acc);
+  // maintained as we accumulate, largely thanks to each c having been checked previously
+  ZX_DEBUG_ASSERT(acc_is_do_not_care_result.is_ok());
+  bool acc_is_do_not_care = acc_is_do_not_care_result.value();
+  auto c_is_do_not_care_result = IsImageFormatConstraintsArrayPixelFormatDoNotCare(c);
+  // checked previously
+  ZX_DEBUG_ASSERT(c_is_do_not_care_result.is_ok());
+  auto c_is_do_not_care = c_is_do_not_care_result.value();
+  if (acc_is_do_not_care && !c_is_do_not_care) {
+    // replicate acc entries to correspond to c entries
+    ReplicatePixelFormatDoNotCare(table_set_.allocator(), c, *acc);
+  } else if (!acc_is_do_not_care && c_is_do_not_care) {
+    // replicate c entries to correspond to acc entries
+    ReplicatePixelFormatDoNotCare(table_set_.allocator(), *acc, c);
+  } else {
+    // Either both are pixel_format kDoNotCare, or neither are.
+    ZX_DEBUG_ASSERT(acc_is_do_not_care == c_is_do_not_care);
+  }
+
   for (uint32_t ai = 0; ai < acc->count(); ++ai) {
     bool is_found_in_c = false;
     for (size_t ci = 0; ci < c.count(); ++ci) {
@@ -2595,21 +2837,32 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormat(
   acc->max_coded_width_times_coded_height() =
       std::min(acc->max_coded_width_times_coded_height(), c.max_coded_width_times_coded_height());
 
+  // For these, see also the conditional statement below that ensures these are fixed up with any
+  // pixel-format-dependent adjustment.
   acc->coded_width_divisor() = std::max(acc->coded_width_divisor(), c.coded_width_divisor());
-  acc->coded_width_divisor() =
-      std::max(acc->coded_width_divisor(), ImageFormatCodedWidthMinDivisor(acc->pixel_format()));
-
   acc->coded_height_divisor() = std::max(acc->coded_height_divisor(), c.coded_height_divisor());
-  acc->coded_height_divisor() =
-      std::max(acc->coded_height_divisor(), ImageFormatCodedHeightMinDivisor(acc->pixel_format()));
-
   acc->bytes_per_row_divisor() = std::max(acc->bytes_per_row_divisor(), c.bytes_per_row_divisor());
-  acc->bytes_per_row_divisor() =
-      std::max(acc->bytes_per_row_divisor(), ImageFormatSampleAlignment(acc->pixel_format()));
-
   acc->start_offset_divisor() = std::max(acc->start_offset_divisor(), c.start_offset_divisor());
-  acc->start_offset_divisor() =
-      std::max(acc->start_offset_divisor(), ImageFormatSampleAlignment(acc->pixel_format()));
+
+  // When acc still has kDoNotCare (when this condition is false), we're guaranteed to either end up
+  // here again later in aggregation with the condition true, or to fail the overall aggregation if
+  // acc still has kDoNotCare at the end of aggregation.  This way, we know that we'll take the
+  // pixel format's contribution to these values into consideration before the end of aggregation,
+  // or we'll fail the aggregation anyway.
+  auto acc_is_pixel_format_do_not_care_result = IsImageFormatConstraintsPixelFormatDoNotCare(*acc);
+  // maintained during accumulation, largely thanks to each c having been checked previously
+  ZX_DEBUG_ASSERT(acc_is_pixel_format_do_not_care_result.is_ok());
+  bool acc_is_pixel_format_do_not_care = acc_is_pixel_format_do_not_care_result.value();
+  if (!acc_is_pixel_format_do_not_care) {
+    acc->coded_width_divisor() =
+        std::max(acc->coded_width_divisor(), ImageFormatCodedWidthMinDivisor(acc->pixel_format()));
+    acc->coded_height_divisor() = std::max(acc->coded_height_divisor(),
+                                           ImageFormatCodedHeightMinDivisor(acc->pixel_format()));
+    acc->bytes_per_row_divisor() =
+        std::max(acc->bytes_per_row_divisor(), ImageFormatSampleAlignment(acc->pixel_format()));
+    acc->start_offset_divisor() =
+        std::max(acc->start_offset_divisor(), ImageFormatSampleAlignment(acc->pixel_format()));
+  }
 
   acc->display_width_divisor() = std::max(acc->display_width_divisor(), c.display_width_divisor());
   acc->display_height_divisor() =
@@ -2645,6 +2898,32 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormat(
 bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
     fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>* acc,
     fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace> c) {
+  // Any ColorSpace kDoNotCare can only happen with count() == 1, checked previously.  If both acc
+  // and c are indicating kDoNotCare, the result still needs to be kDoNotCare.  If only one of acc
+  // or c is indicating kDoNotCare, we need to fan out the kDoNotCare into each color space
+  // indicated by the other (of acc and c).  After this, accumulation can proceed as normal, with
+  // kDoNotCare (if still present) treated as any other normal ColorSpaceType.  At the end of
+  // overall accumulation, we must check (elsewhere) that we're not left with only a single
+  // kDoNotCare ColorSpaceType.
+  auto acc_is_do_not_care_result = IsColorSpaceArrayDoNotCare(*acc);
+  // maintained during accumulation, largely thanks to having checked each c previously
+  ZX_DEBUG_ASSERT(acc_is_do_not_care_result.is_ok());
+  bool acc_is_do_not_care = acc_is_do_not_care_result.value();
+  auto c_is_do_not_care_result = IsColorSpaceArrayDoNotCare(c);
+  // checked previously
+  ZX_DEBUG_ASSERT(c_is_do_not_care_result.is_ok());
+  bool c_is_do_not_care = c_is_do_not_care_result.value();
+  if (acc_is_do_not_care && !c_is_do_not_care) {
+    // Replicate acc entries to correspond to c entries
+    ReplicateColorSpaceDoNotCare(table_set_.allocator(), c, *acc);
+  } else if (!acc_is_do_not_care && c_is_do_not_care) {
+    // replicate c entries to corresponding acc entries
+    ReplicateColorSpaceDoNotCare(table_set_.allocator(), *acc, c);
+  } else {
+    // Either both are ColorSpaceType kDoNotCare, or neither are.
+    ZX_DEBUG_ASSERT(acc_is_do_not_care == c_is_do_not_care);
+  }
+
   // Remove any color_space in acc that's not in c.  If zero color spaces
   // remain in acc, return false.
 

@@ -35,6 +35,7 @@ vk::SamplerYcbcrModelConversion GetYcbcrModelForColorSpace(ColorSpace color_spac
 
     case ColorSpace::kInvalid:
     case ColorSpace::kPassThrough:
+    case ColorSpace::kDoNotCare:
       FX_NOTREACHED() << "Invalid Color space";
       return vk::SamplerYcbcrModelConversion::eYcbcrIdentity;
   }
@@ -56,6 +57,7 @@ vk::SamplerYcbcrRange GetYcbcrRangeForColorSpace(ColorSpace color_space) {
 
     case ColorSpace::kInvalid:
     case ColorSpace::kPassThrough:
+    case ColorSpace::kDoNotCare:
       FX_NOTREACHED() << "Invalid Color space";
       return vk::SamplerYcbcrRange::eItuNarrow;
   }

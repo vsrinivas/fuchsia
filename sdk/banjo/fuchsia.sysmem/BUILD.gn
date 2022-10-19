@@ -11,6 +11,7 @@ fidl("fuchsia.sysmem") {
     "image_formats.fidl",
     "image_formats_deprecated.fidl",
     "metadata.fidl",
+    "overview.fidl",
     "usages.fidl",
   ]
   public_deps = [ "//zircon/vdso/zx" ]

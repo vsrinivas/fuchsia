@@ -6,15 +6,16 @@
 
 #include <lib/ddk/trace/event.h>
 #include <lib/sysmem-version/sysmem-version.h>
+#include <lib/zx/channel.h>
+#include <lib/zx/object.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 
 #include <atomic>
 
+#include <fbl/ref_ptr.h>
+
 #include "buffer_collection_token.h"
-#include "fbl/ref_ptr.h"
-#include "lib/zx/channel.h"
-#include "lib/zx/object.h"
 #include "logical_buffer_collection.h"
 #include "macros.h"
 #include "node_properties.h"
@@ -153,6 +154,7 @@ void BufferCollection::SetConstraints(SetConstraintsRequestView request,
   // enforced above
   ZX_DEBUG_ASSERT(!constraints_aux_buffers_ || local_constraints);
   ZX_DEBUG_ASSERT(request->has_constraints == !!local_constraints);
+
   {  // scope result
     auto result = sysmem::V2CopyFromV1BufferCollectionConstraints(
         table_set().allocator(), local_constraints ? &local_constraints.value() : nullptr,

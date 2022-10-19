@@ -527,6 +527,7 @@ class LinearFormats : public ImageFormatSet {
     ZX_DEBUG_ASSERT(pixel_format.has_type());
     switch (pixel_format.type()) {
       case PixelFormatType::kInvalid:
+      case PixelFormatType::kDoNotCare:
       case PixelFormatType::kMjpeg:
         return false;
       case PixelFormatType::kR8G8B8A8:
@@ -688,6 +689,7 @@ class ArmTELinearFormats : public ImageFormatSet {
       return false;
     switch (pixel_format.type()) {
       case PixelFormatType::kInvalid:
+      case PixelFormatType::kDoNotCare:
       case PixelFormatType::kMjpeg:
         return false;
       case PixelFormatType::kR8G8B8A8:
@@ -882,6 +884,7 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem2::wire::PixelFormat& pixel
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::kInvalid:
+    case PixelFormatType::kDoNotCare:
     case PixelFormatType::kMjpeg:
       // impossible; checked previously.
       ZX_DEBUG_ASSERT(false);
@@ -939,6 +942,7 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
   // This list should match the one in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
   switch (pixel_format.type()) {
     case PixelFormatType::kInvalid:
+    case PixelFormatType::kDoNotCare:
     case PixelFormatType::kMjpeg:
       // impossible; checked previously.
       ZX_DEBUG_ASSERT(false);
@@ -1025,6 +1029,7 @@ uint32_t ImageFormatCodedWidthMinDivisor(const fuchsia_sysmem2::wire::PixelForma
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::kInvalid:
+    case PixelFormatType::kDoNotCare:
     case PixelFormatType::kMjpeg:
       // impossible; checked previously.
       ZX_DEBUG_ASSERT(false);
@@ -1083,6 +1088,7 @@ uint32_t ImageFormatCodedHeightMinDivisor(const fuchsia_sysmem2::wire::PixelForm
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::kInvalid:
+    case PixelFormatType::kDoNotCare:
     case PixelFormatType::kMjpeg:
       // impossible; checked previously.
       ZX_DEBUG_ASSERT(false);
@@ -1143,6 +1149,7 @@ uint32_t ImageFormatSampleAlignment(const fuchsia_sysmem2::wire::PixelFormat& pi
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
   switch (pixel_format.type()) {
     case PixelFormatType::kInvalid:
+    case PixelFormatType::kDoNotCare:
     case PixelFormatType::kMjpeg:
       // impossible; checked previously.
       ZX_DEBUG_ASSERT(false);

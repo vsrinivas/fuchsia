@@ -221,6 +221,8 @@ ColorSpace FromSysmemColorSpace(fuchsia::sysmem::ColorSpaceType sysmem_color_spa
       return ColorSpace::kRec2100;
     case fuchsia::sysmem::ColorSpaceType::PASS_THROUGH:
       return ColorSpace::kPassThrough;
+    case fuchsia::sysmem::ColorSpaceType::DO_NOT_CARE:
+      return ColorSpace::kDoNotCare;
   }
 }
 

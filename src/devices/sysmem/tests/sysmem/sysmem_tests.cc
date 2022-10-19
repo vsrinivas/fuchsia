@@ -4675,13 +4675,13 @@ TEST(Sysmem, GroupPrefersFirstChild) {
   ASSERT_TRUE(all_children_present_result.ok());
 
   auto wait_result1 = root->WaitForBuffersAllocated();
-  ASSERT_TRUE(wait_result1.ok());
+  ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
   ASSERT_OK(wait_result1->status);
   auto info = std::move(wait_result1->buffer_collection_info);
   ASSERT_EQ(info.settings.buffer_settings.size_bytes, kFirstChildSize);
 
   auto wait_result2 = child_0->WaitForBuffersAllocated();
-  ASSERT_TRUE(wait_result2.ok());
+  ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
   ASSERT_OK(wait_result2->status);
   info = std::move(wait_result2->buffer_collection_info);
   ASSERT_EQ(info.settings.buffer_settings.size_bytes, kFirstChildSize);
@@ -5041,7 +5041,7 @@ TEST(Sysmem, Group_MiniStress) {
                     wait_result.ok() && wait_result->status == ZX_ERR_NOT_SUPPORTED);
           continue;
         }
-        ZX_ASSERT(wait_result.ok());
+        ZX_ASSERT(wait_result.ok() && wait_result->status == ZX_OK);
         ZX_ASSERT(wait_result->buffer_collection_info.settings.buffer_settings.size_bytes ==
                   kCompatibleSize);
       }
@@ -5119,7 +5119,7 @@ TEST(Sysmem, SkipUnreachableChildSelections) {
 
   for (auto& collection : success_collections) {
     auto wait_result = (*collection)->WaitForBuffersAllocated();
-    ASSERT_TRUE(wait_result.ok());
+    ASSERT_TRUE(wait_result.ok() && wait_result->status == ZX_OK);
     auto info = std::move(wait_result->buffer_collection_info);
     ASSERT_EQ(info.settings.buffer_settings.size_bytes, kCompatibleSize);
   }
@@ -5226,7 +5226,7 @@ TEST(Sysmem, GroupCreateChildrenSync) {
                     wait_result.ok() && wait_result->status == ZX_ERR_NOT_SUPPORTED);
         continue;
       }
-      ASSERT_TRUE(wait_result.ok());
+      ASSERT_TRUE(wait_result.ok() && wait_result->status == ZX_OK);
       ASSERT_OK(wait_result->status);
       auto info = std::move(wait_result->buffer_collection_info);
       // root and oddball both said min_buffer_count_for_camping 1
@@ -5290,6 +5290,427 @@ TEST(Sysmem, SetVerboseLogging) {
   auto check_token = create_initial_token();
   auto sync_result = check_token->Sync();
   ASSERT_TRUE(sync_result.ok());
+}
+
+TEST(Sysmem, PixelFormatDoNotCare_Success) {
+  auto token1 = create_initial_token();
+  auto token2 = create_token_under_token(token1);
+
+  auto collection1 = convert_token_to_collection(std::move(token1));
+  auto collection2 = convert_token_to_collection(std::move(token2));
+
+  fuchsia_sysmem::BufferCollectionConstraints c2;
+  c2.usage().cpu() = fuchsia_sysmem::kCpuUsageWriteOften;
+  c2.min_buffer_count_for_camping() = 1;
+  c2.has_buffer_memory_constraints() = true;
+  c2.buffer_memory_constraints().min_size_bytes() = 1;
+  c2.buffer_memory_constraints().max_size_bytes() = 512 * 1024 * 1024;
+  c2.image_format_constraints_count() = 1;
+  c2.image_format_constraints()[0] = {};
+  c2.image_format_constraints()[0].color_spaces_count() = 1;
+  c2.image_format_constraints()[0].color_space()[0].type() =
+      fuchsia_sysmem::ColorSpaceType::kRec709;
+  c2.image_format_constraints()[0].min_coded_width() = 32;
+  c2.image_format_constraints()[0].min_coded_height() = 32;
+
+  // clone / copy
+  auto c1 = c2;
+
+  c1.image_format_constraints()[0].pixel_format().type() =
+      fuchsia_sysmem::PixelFormatType::kDoNotCare;
+  c2.image_format_constraints()[0].pixel_format().type() = fuchsia_sysmem::PixelFormatType::kNv12;
+
+  ZX_ASSERT(!c1.image_format_constraints()[0].pixel_format().has_format_modifier());
+  ZX_ASSERT(!c2.image_format_constraints()[0].pixel_format().has_format_modifier());
+
+  fidl::Arena arena;
+  auto c1w = fidl::ToWire(arena, std::move(c1));
+  auto c2w = fidl::ToWire(arena, std::move(c2));
+
+  auto set_verbose_result = collection1->SetVerboseLogging();
+  ASSERT_TRUE(set_verbose_result.ok());
+
+  auto set_result1 = collection1->SetConstraints(true, std::move(c1w));
+  ASSERT_TRUE(set_result1.ok());
+
+  auto set_result2 = collection2->SetConstraints(true, std::move(c2w));
+  ASSERT_TRUE(set_result2.ok());
+
+  auto wait_result1 = collection1->WaitForBuffersAllocated();
+  auto wait_result2 = collection2->WaitForBuffersAllocated();
+
+  ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
+  ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
+
+  auto info1_w = std::move(wait_result1.value());
+  auto info2_w = std::move(wait_result2.value());
+
+  auto info1 = fidl::ToNatural(std::move(info1_w));
+  auto info2 = fidl::ToNatural(std::move(info2_w));
+
+  ASSERT_OK(info1.status());
+  ASSERT_OK(info2.status());
+
+  ASSERT_EQ(2, info1.buffer_collection_info().buffer_count());
+  ASSERT_EQ(
+      fuchsia_sysmem::PixelFormatType::kNv12,
+      info1.buffer_collection_info().settings().image_format_constraints().pixel_format().type());
+}
+
+TEST(Sysmem, PixelFormatDoNotCare_MultiplePixelFormatsFails) {
+  // pass 0 - verify success when single pixel format
+  // pass 1 - verify failure when multiple pixel formats
+  // pass 1 - verify failure when multiple pixel formats (kInvalid variant)
+  for (uint32_t pass = 0; pass < 3; ++pass) {
+    auto token1 = create_initial_token();
+    auto token2 = create_token_under_token(token1);
+
+    auto collection1 = convert_token_to_collection(std::move(token1));
+    auto collection2 = convert_token_to_collection(std::move(token2));
+
+    fuchsia_sysmem::BufferCollectionConstraints c2;
+    c2.usage().cpu() = fuchsia_sysmem::kCpuUsageWriteOften;
+    c2.min_buffer_count_for_camping() = 1;
+    c2.image_format_constraints_count() = 1;
+    c2.image_format_constraints()[0].color_spaces_count() = 1;
+    c2.image_format_constraints()[0].color_space()[0].type() =
+        fuchsia_sysmem::ColorSpaceType::kRec709;
+    c2.image_format_constraints()[0].min_coded_width() = 32;
+    c2.image_format_constraints()[0].min_coded_height() = 32;
+
+    // clone / copy
+    auto c1 = c2;
+
+    // Setting two pixel_format values will intentionally cause failure.
+    c1.image_format_constraints()[0].pixel_format().type() =
+        fuchsia_sysmem::PixelFormatType::kDoNotCare;
+    if (pass != 0) {
+      c1.image_format_constraints_count() = 2;
+      c1.image_format_constraints()[1] = c1.image_format_constraints()[0];
+      switch (pass) {
+        case 1:
+          c1.image_format_constraints()[1].pixel_format().type() =
+              fuchsia_sysmem::PixelFormatType::kNv12;
+          break;
+        case 2:
+          c1.image_format_constraints()[1].pixel_format().type() =
+              fuchsia_sysmem::PixelFormatType::kInvalid;
+          break;
+      }
+    }
+
+    c2.image_format_constraints()[0].pixel_format().type() = fuchsia_sysmem::PixelFormatType::kNv12;
+
+    fidl::Arena arena;
+    auto c1w = fidl::ToWire(arena, std::move(c1));
+    auto c2w = fidl::ToWire(arena, std::move(c2));
+
+    auto set_result2 = collection2->SetConstraints(true, std::move(c2w));
+    ASSERT_TRUE(set_result2.ok());
+    auto set_result1 = collection1->SetConstraints(true, std::move(c1w));
+    ASSERT_TRUE(set_result1.ok());
+
+    auto wait_result1 = collection1->WaitForBuffersAllocated();
+    auto wait_result2 = collection2->WaitForBuffersAllocated();
+
+    if (pass == 0) {
+      ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
+      ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
+      ASSERT_EQ(
+          fuchsia_sysmem::PixelFormatType::kNv12,
+          wait_result1->buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+    } else {
+      ASSERT_TRUE(!wait_result1.ok() || wait_result1->status != ZX_OK);
+      ASSERT_TRUE(!wait_result2.ok() || wait_result2->status != ZX_OK);
+    }
+  }
+}
+
+TEST(Sysmem, PixelFormatDoNotCare_UnconstrainedFails) {
+  // pass 0 - verify success when not all participants are unconstrained pixel format
+  // pass 1 - verify fialure when all participants are unconstrained pixel format
+  for (uint32_t pass = 0; pass < 2; ++pass) {
+    auto token1 = create_initial_token();
+    auto token2 = create_token_under_token(token1);
+
+    auto collection1 = convert_token_to_collection(std::move(token1));
+    auto collection2 = convert_token_to_collection(std::move(token2));
+
+    fuchsia_sysmem::BufferCollectionConstraints c2;
+    c2.usage().cpu() = fuchsia_sysmem::kCpuUsageWriteOften;
+    c2.min_buffer_count_for_camping() = 1;
+    c2.image_format_constraints_count() = 1;
+    c2.image_format_constraints()[0].color_spaces_count() = 1;
+    c2.image_format_constraints()[0].color_space()[0].type() =
+        fuchsia_sysmem::ColorSpaceType::kRec709;
+    c2.image_format_constraints()[0].min_coded_width() = 32;
+    c2.image_format_constraints()[0].min_coded_height() = 32;
+
+    // clone / copy
+    auto c1 = c2;
+
+    c1.image_format_constraints()[0].pixel_format().type() =
+        fuchsia_sysmem::PixelFormatType::kDoNotCare;
+    switch (pass) {
+      case 0:
+        c2.image_format_constraints()[0].pixel_format().type() =
+            fuchsia_sysmem::PixelFormatType::kNv12;
+        break;
+      case 1:
+        // Not constraining the pixel format overall will intentionally cause failure.
+        c2.image_format_constraints()[0].pixel_format().type() =
+            fuchsia_sysmem::PixelFormatType::kDoNotCare;
+        break;
+    }
+
+    fidl::Arena arena;
+    auto c1w = fidl::ToWire(arena, std::move(c1));
+    auto c2w = fidl::ToWire(arena, std::move(c2));
+
+    auto set_result1 = collection1->SetConstraints(true, std::move(c1w));
+    ASSERT_TRUE(set_result1.ok());
+    auto set_result2 = collection2->SetConstraints(true, std::move(c2w));
+    ASSERT_TRUE(set_result2.ok());
+
+    auto wait_result1 = collection1->WaitForBuffersAllocated();
+    auto wait_result2 = collection2->WaitForBuffersAllocated();
+
+    if (pass == 0) {
+      ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
+      ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
+      ASSERT_EQ(
+          fuchsia_sysmem::PixelFormatType::kNv12,
+          wait_result1->buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+    } else {
+      ASSERT_TRUE(!wait_result1.ok() || wait_result1->status != ZX_OK);
+      ASSERT_TRUE(!wait_result2.ok() || wait_result2->status != ZX_OK);
+    }
+  }
+}
+
+TEST(Sysmem, ColorSpaceDoNotCare_Success) {
+  auto token1 = create_initial_token();
+  auto token2 = create_token_under_token(token1);
+
+  auto collection1 = convert_token_to_collection(std::move(token1));
+  auto collection2 = convert_token_to_collection(std::move(token2));
+
+  fuchsia_sysmem::BufferCollectionConstraints c2;
+  c2.usage().cpu() = fuchsia_sysmem::kCpuUsageWriteOften;
+  c2.min_buffer_count_for_camping() = 1;
+  c2.image_format_constraints_count() = 1;
+  c2.image_format_constraints()[0].pixel_format().type() = fuchsia_sysmem::PixelFormatType::kNv12;
+  c2.image_format_constraints()[0].min_coded_width() = 32;
+  c2.image_format_constraints()[0].min_coded_height() = 32;
+
+  // clone / copy
+  auto c1 = c2;
+
+  c1.image_format_constraints()[0].color_spaces_count() = 1;
+  c1.image_format_constraints()[0].color_space()[0].type() =
+      fuchsia_sysmem::ColorSpaceType::kDoNotCare;
+
+  c2.image_format_constraints()[0].color_spaces_count() = 1;
+  c2.image_format_constraints()[0].color_space()[0].type() =
+      fuchsia_sysmem::ColorSpaceType::kRec709;
+
+  fidl::Arena arena;
+  auto c1w = fidl::ToWire(arena, std::move(c1));
+  auto c2w = fidl::ToWire(arena, std::move(c2));
+
+  auto set_result1 = collection1->SetConstraints(true, std::move(c1w));
+  ASSERT_TRUE(set_result1.ok());
+
+  auto set_result2 = collection2->SetConstraints(true, std::move(c2w));
+  ASSERT_TRUE(set_result2.ok());
+
+  auto wait_result1 = collection1->WaitForBuffersAllocated();
+  auto wait_result2 = collection2->WaitForBuffersAllocated();
+
+  ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
+  ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
+
+  auto info1_w = std::move(wait_result1.value());
+  auto info2_w = std::move(wait_result2.value());
+
+  auto info1 = fidl::ToNatural(std::move(info1_w));
+  auto info2 = fidl::ToNatural(std::move(info2_w));
+
+  ASSERT_OK(info1.status());
+  ASSERT_OK(info2.status());
+
+  ASSERT_EQ(2, info1.buffer_collection_info().buffer_count());
+  ASSERT_EQ(
+      fuchsia_sysmem::PixelFormatType::kNv12,
+      info1.buffer_collection_info().settings().image_format_constraints().pixel_format().type());
+  ASSERT_EQ(
+      fuchsia_sysmem::ColorSpaceType::kRec709,
+      info1.buffer_collection_info().settings().image_format_constraints().color_space()[0].type());
+}
+
+TEST(Sysmem, PixelFormatDoNotCare_OneColorSpaceElseFails) {
+  // In pass 0, c1 sets kDoNotCare (via ForceUnsetColorSpaceConstraint) and correctly sets a single
+  // kInvalid color space - in this pass we expect success.
+  //
+  // In pass 1, c1 sets kDoNotCare (via ForceUnsetColorSpaceConstraints) but incorrectly sets more
+  // than 1 color space - in this pass we expect failure.
+  //
+  // Pass 2 is a variant of pass 1 that sets the 2nd color space to kInvalid instead.
+  for (uint32_t pass = 0; pass < 3; ++pass) {
+    auto token1 = create_initial_token();
+    auto token2 = create_token_under_token(token1);
+
+    auto collection1 = convert_token_to_collection(std::move(token1));
+    auto collection2 = convert_token_to_collection(std::move(token2));
+
+    fuchsia_sysmem::BufferCollectionConstraints c2;
+    c2.usage().cpu() = fuchsia_sysmem::kCpuUsageWriteOften;
+    c2.min_buffer_count_for_camping() = 1;
+    c2.image_format_constraints_count() = 1;
+    c2.image_format_constraints()[0].pixel_format().type() = fuchsia_sysmem::PixelFormatType::kNv12;
+    c2.image_format_constraints()[0].min_coded_width() = 32;
+    c2.image_format_constraints()[0].min_coded_height() = 32;
+
+    // clone / copy
+    auto c1 = c2;
+
+    // Setting >= 2 color spaces where at least one is kDoNotCare will trigger failure, regardless
+    // of what the specific additional color space(s) are.
+    switch (pass) {
+      case 0:
+        c1.image_format_constraints()[0].color_spaces_count() = 1;
+        c1.image_format_constraints()[0].color_space()[0].type() =
+            fuchsia_sysmem::ColorSpaceType::kDoNotCare;
+        break;
+      case 1:
+        c1.image_format_constraints()[0].color_spaces_count() = 2;
+        c1.image_format_constraints()[0].color_space()[0].type() =
+            fuchsia_sysmem::ColorSpaceType::kDoNotCare;
+        c1.image_format_constraints()[0].color_space()[1].type() =
+            fuchsia_sysmem::ColorSpaceType::kRec709;
+        break;
+      case 2:
+        c1.image_format_constraints()[0].color_spaces_count() = 2;
+        c1.image_format_constraints()[0].color_space()[0].type() =
+            fuchsia_sysmem::ColorSpaceType::kInvalid;
+        c1.image_format_constraints()[0].color_space()[1].type() =
+            fuchsia_sysmem::ColorSpaceType::kDoNotCare;
+        break;
+    }
+
+    c2.image_format_constraints()[0].color_spaces_count() = 1;
+    c2.image_format_constraints()[0].color_space()[0].type() =
+        fuchsia_sysmem::ColorSpaceType::kRec709;
+
+    fidl::Arena arena;
+    auto c1w = fidl::ToWire(arena, std::move(c1));
+    auto c2w = fidl::ToWire(arena, std::move(c2));
+
+    auto set_result1 = collection1->SetConstraints(true, std::move(c1w));
+    ASSERT_TRUE(set_result1.ok());
+
+    auto set_result2 = collection2->SetConstraints(true, std::move(c2w));
+    ASSERT_TRUE(set_result2.ok());
+
+    auto wait_result1 = collection1->WaitForBuffersAllocated();
+    auto wait_result2 = collection2->WaitForBuffersAllocated();
+
+    if (pass == 0) {
+      ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
+      ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
+      ASSERT_EQ(
+          fuchsia_sysmem::ColorSpaceType::kRec709,
+          wait_result1->buffer_collection_info.settings.image_format_constraints.color_space[0]
+              .type);
+    } else {
+      ASSERT_TRUE(!wait_result1.ok() || wait_result1->status != ZX_OK);
+      ASSERT_TRUE(!wait_result2.ok() || wait_result2->status != ZX_OK);
+    }
+  }
+}
+
+TEST(Sysmem, ColorSpaceDoNotCare_UnconstrainedColorSpaceRemovesPixelFormat) {
+  // In pass 0, we verify that with a participant (2) that does constrain the color space, success.
+  //
+  // In pass 1, we verify that essentially "removing" the constraining participant (2) is enough to
+  // cause a failure, despite participant 1 setting the same constraints it did in pass 0 (including
+  // sending ForceUnsetColorSpaceConstraint()).
+  //
+  // This way, we know that the reason for the failure seen by participant 1 in pass 1 is the lack
+  // of any participant that constrains the color space, not just a problem with constraints set by
+  // participant 1 (in both passes).
+  for (uint32_t pass = 0; pass < 2; ++pass) {
+    // All the "decltype(1)" stuff is defined in both passes but only actually used in pass 0, not
+    // pass 1.
+
+    auto token1 = create_initial_token();
+    decltype(token1) token2;
+    if (pass == 0) {
+      token2 = create_token_under_token(token1);
+    }
+
+    auto collection1 = convert_token_to_collection(std::move(token1));
+    decltype(collection1) collection2;
+    if (pass == 0) {
+      collection2 = convert_token_to_collection(std::move(token2));
+    }
+
+    fuchsia_sysmem::BufferCollectionConstraints c1;
+    c1.usage().cpu() = fuchsia_sysmem::kCpuUsageWriteOften;
+    c1.min_buffer_count_for_camping() = 1;
+    c1.image_format_constraints_count() = 1;
+    c1.image_format_constraints()[0].pixel_format().type() = fuchsia_sysmem::PixelFormatType::kNv12;
+    // c1 is logically kDoNotCare, via ForceUnsetColorSpaceConstraint() sent below.  This field is
+    // copied but then overridden for c2 (pass 0 only).
+    c1.image_format_constraints()[0].min_coded_width() = 32;
+    c1.image_format_constraints()[0].min_coded_height() = 32;
+
+    // clone / copy
+    auto c2 = c1;
+    c1.image_format_constraints()[0].color_spaces_count() = 1;
+    c1.image_format_constraints()[0].color_space()[0] = fuchsia_sysmem::ColorSpaceType::kDoNotCare;
+    if (pass == 0) {
+      // c2 will constrain the pixel format (by setting a valid one here and not sending
+      // ForceUnsetColorSpaceConstraint() below).
+      c2.image_format_constraints()[0].color_spaces_count() = 1;
+      c2.image_format_constraints()[0].color_space()[0].type() =
+          fuchsia_sysmem::ColorSpaceType::kRec709;
+    }
+
+    fidl::Arena arena;
+    auto c1w = fidl::ToWire(arena, std::move(c1));
+    decltype(c1w) c2w;
+    if (pass == 0) {
+      c2w = fidl::ToWire(arena, std::move(c2));
+    }
+
+    auto set_result1 = collection1->SetConstraints(true, std::move(c1w));
+    ASSERT_TRUE(set_result1.ok());
+    if (pass == 0) {
+      auto set_result2 = collection2->SetConstraints(true, std::move(c2w));
+      ASSERT_TRUE(set_result2.ok());
+    }
+
+    auto wait_result1 = collection1->WaitForBuffersAllocated();
+    if (pass == 0) {
+      // Expected success because c2's constraining of the color space allows for c1's lack of
+      // constraining of the color space.
+      ASSERT_TRUE(wait_result1.ok() && wait_result1->status == ZX_OK);
+      auto wait_result2 = collection2->WaitForBuffersAllocated();
+      ASSERT_TRUE(wait_result2.ok() && wait_result2->status == ZX_OK);
+      // may as well check that the color space is indeed kRec709, but this is also checked by the
+      // _Success test above.
+      ASSERT_EQ(
+          fuchsia_sysmem::ColorSpaceType::kRec709,
+          wait_result1->buffer_collection_info.settings.image_format_constraints.color_space[0]
+              .type);
+    } else {
+      // Expect failed because c2's constraining of the color space is missing in pass 1, leaving
+      // the color space completely unconstrained.  By design, sysmem doesn't arbitrarily select a
+      // color space when the color space is completely unconstrained (at least for now).
+      ASSERT_TRUE(!wait_result1.ok() || wait_result1->status != ZX_OK);
+    }
+  }
 }
 
 int main(int argc, char** argv) {

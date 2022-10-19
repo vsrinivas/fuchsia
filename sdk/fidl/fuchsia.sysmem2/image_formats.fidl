@@ -118,6 +118,12 @@ type PixelFormatType = flexible enum : uint32 {
     /// Compatible with VK_FORMAT_A2B10G10R10_UNORM_PACK32.
     /// Compatible with ZX_PIXEL_FORMAT_ABGR_2_10_10_10.
     A2B10G10R10 = 116;
+
+    /// The sysmem client is explicitly indicating that the sysmem client does
+    /// not care which pixel format is chosen / used.  When setting this value,
+    /// the sysmem client must not set format_modifier_value.
+    @available(added=10)
+    DO_NOT_CARE = 0xFFFFFFFE;
 };
 
 /// Describes how the pixels within an image are meant to be presented.
@@ -172,8 +178,14 @@ type ColorSpaceType = flexible enum : uint32 {
     REC2020 = 7;
     /// 2100 YCbCr (not RGB, not ICtCp)
     REC2100 = 8;
+
     /// Either the pixel format doesn't represent a color, or it's in an
     /// application-specific colorspace that isn't describable by another entry
     /// in this enum.
     PASS_THROUGH = 9;
+
+    /// The sysmem client is explicitly indicating that the sysmem client does
+    /// not care which color space is chosen / used.
+    @available(added=10)
+    DO_NOT_CARE = 0xFFFFFFFE;
 };

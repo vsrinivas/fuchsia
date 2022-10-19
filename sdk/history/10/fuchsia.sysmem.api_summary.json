@@ -660,6 +660,11 @@
     },
     {
         "kind": "enum/member",
+        "name": "fuchsia.sysmem/ColorSpaceType.DO_NOT_CARE",
+        "value": "4294967294"
+    },
+    {
+        "kind": "enum/member",
         "name": "fuchsia.sysmem/ColorSpaceType.INVALID",
         "value": "0"
     },
@@ -1482,6 +1487,11 @@
         "kind": "enum/member",
         "name": "fuchsia.sysmem/PixelFormatType.BGRA32",
         "value": "101"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.sysmem/PixelFormatType.DO_NOT_CARE",
+        "value": "4294967294"
     },
     {
         "kind": "enum/member",

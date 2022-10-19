@@ -21,7 +21,7 @@ namespace escher {
 // variants of 2020 or 2100.  Similarly for the YcCbcCrc variant of 2020.
 // Similarly for the ICtCp variant of 2100.
 //
-enum class ColorSpace {
+enum class ColorSpace : uint32_t {
   // Not a valid color space type.
   kInvalid = 0,
   // sRGB
@@ -44,6 +44,9 @@ enum class ColorSpace {
   // application-specific colorspace that isn't describable by another entry
   // in this enum.
   kPassThrough = 9,
+  // The sysmem client is explicitly indicating that the sysmem client does
+  // not care which color space is chosen / used.
+  kDoNotCare = 0xFFFFFFFE,
 };
 
 // Textures created by Escher (e.g. output textures, textures for testing

@@ -222,6 +222,8 @@ std::ostream& operator<<(std::ostream& os, fuchsia::sysmem::ColorSpaceType value
       return os << "fuchsia::sysmem::ColorSpaceType::REC2100";
     case fuchsia::sysmem::ColorSpaceType::PASS_THROUGH:
       return os << "fuchsia::sysmem::ColorSpaceType::PASS_THROUGH";
+    case fuchsia::sysmem::ColorSpaceType::DO_NOT_CARE:
+      return os << "fuchsia::sysmem::ColorSpaceType::DO_NOT_CARE";
   }
 }
 

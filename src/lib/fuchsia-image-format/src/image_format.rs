@@ -225,7 +225,9 @@ pub fn image_format_minimum_row_bytes(
 
 pub fn image_format_stride_bytes_per_width_pixel(pixel_format: &fsysmem::PixelFormat) -> u32 {
     match pixel_format.type_ {
-        fsysmem::PixelFormatType::Invalid | fsysmem::PixelFormatType::Mjpeg => 0,
+        fsysmem::PixelFormatType::Invalid
+        | fsysmem::PixelFormatType::Mjpeg
+        | fsysmem::PixelFormatType::DoNotCare => 0,
         fsysmem::PixelFormatType::R8G8B8A8 => 4,
         fsysmem::PixelFormatType::Bgra32 => 4,
         fsysmem::PixelFormatType::Bgr24 => 3,
