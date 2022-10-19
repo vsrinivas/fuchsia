@@ -77,8 +77,10 @@ template("product_assembly_configuration") {
         "${target_name}.product_assembly_config.json.for_validation"
 
     base_package_set = "${target_name}.base_packages"
+    base_package_config_data = "${target_name}.base_packages.config_data"
     base_driver_package_set = "${target_name}.base_driver_packages"
     cache_package_set = "${target_name}.cache_packages"
+    cache_package_config_data = "${target_name}.cache_packages.config_data"
     board_driver_package_set = "${target_name}.board_driver_packages"
 
     # Base packages specified by the invoker, used to create the list of
@@ -134,6 +136,7 @@ template("product_assembly_configuration") {
 
     base_packages = []
     base_package_manifests = []
+    base_package_config_data_sources = []
     if (defined(invoker.base_packages)) {
       foreach(package, invoker.base_packages) {
         assert(defined(package.package_target),
@@ -148,6 +151,7 @@ template("product_assembly_configuration") {
         _config_data = []
         if (defined(package.config_data)) {
           foreach(c, package.config_data) {
+            base_package_config_data_sources += [ c.source ]
             _config_data += [
               {
                 source = rebase_path(c.source, root_build_dir)
@@ -171,6 +175,7 @@ template("product_assembly_configuration") {
 
     cache_packages = []
     cache_package_manifests = []
+    cache_package_config_data_sources = []
     if (defined(invoker.cache_packages)) {
       foreach(package, invoker.cache_packages) {
         assert(defined(package.package_target),
@@ -185,6 +190,7 @@ template("product_assembly_configuration") {
         _config_data = []
         if (defined(package.config_data)) {
           foreach(c, package.config_data) {
+            cache_package_config_data_sources += [ c.source ]
             _config_data += [
               {
                 source = rebase_path(c.source, root_build_dir)
@@ -322,6 +328,15 @@ template("product_assembly_configuration") {
     deps = labels.base_package_labels
   }
 
+  # Validate that the config data sources are all static files (not produced by
+  # any deps)
+  group_with_inputs(labels.base_package_config_data) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":${labels.target_name}" ]
+    inputs = files.base_package_config_data_sources
+    deps = []
+  }
+
   # Create a target for the base driver packages, so they appear in the dep
   # graph as distinct from the cache packages, and validate that they produce
   # all of the manifests whose paths were computed from the labels.
@@ -340,6 +355,15 @@ template("product_assembly_configuration") {
     visibility = [ ":${labels.target_name}" ]
     inputs = files.cache_package_manifests
     deps = labels.cache_package_labels
+  }
+
+  # Validate that the config data sources are all static files (not produced by
+  # any deps)
+  group_with_inputs(labels.cache_package_config_data) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":${labels.target_name}" ]
+    inputs = files.cache_package_config_data_sources
+    deps = []
   }
 
   # Create a target for the board-provided driver packages, so they appear in
@@ -371,8 +395,10 @@ template("product_assembly_configuration") {
     }
     deps += [
       ":${labels.base_driver_package_set}",
+      ":${labels.base_package_config_data}",
       ":${labels.base_package_set}",
       ":${labels.board_driver_package_set}",
+      ":${labels.cache_package_config_data}",
       ":${labels.cache_package_set}",
     ]
   }
