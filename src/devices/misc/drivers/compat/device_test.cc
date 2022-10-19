@@ -146,13 +146,13 @@ class DeviceTest : public gtest::TestLoopFixture {
     auto ns = CreateNamespace(std::move(svc->client));
     ASSERT_EQ(ZX_OK, ns.status_value());
 
-    auto logger = driver::Logger::Create(*ns, dispatcher(), "test-logger");
+    auto logger = driver::Logger::Create(*ns, dispatcher(), "test-logger", FUCHSIA_LOG_INFO, false);
     ASSERT_EQ(ZX_OK, logger.status_value());
     logger_ = std::move(*logger);
   }
 
  protected:
-  driver::Logger& logger() { return logger_; }
+  driver::Logger* logger() { return logger_.get(); }
 
   std::pair<std::unique_ptr<DevfsVnode>, fidl::WireClient<fuchsia_device::Controller>> CreateVnode(
       zx_device_t* device) {
@@ -184,7 +184,7 @@ class DeviceTest : public gtest::TestLoopFixture {
     return driver::Namespace::Create(entries);
   }
 
-  driver::Logger logger_;
+  std::unique_ptr<driver::Logger> logger_;
 };
 
 TEST_F(DeviceTest, ConstructDevice) {
@@ -971,7 +971,8 @@ TEST_F(DeviceTest, DeviceRebind) {
 
 TEST_F(DeviceTest, CreateNodeProperties) {
   fidl::Arena<512> arena;
-  driver::Logger logger;
+  auto logger = std::make_unique<driver::Logger>("", 0, zx::socket(),
+                                                 fidl::WireClient<fuchsia_logger::LogSink>());
   device_add_args_t args;
 
   zx_device_prop_t prop;
@@ -996,7 +997,7 @@ TEST_F(DeviceTest, CreateNodeProperties) {
   args.fidl_service_offers = &service_offer;
   args.fidl_service_offer_count = 1;
 
-  auto properties = compat::CreateProperties(arena, logger, &args);
+  auto properties = compat::CreateProperties(arena, *logger, &args);
 
   ASSERT_EQ(6ul, properties.size());
 

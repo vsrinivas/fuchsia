@@ -23,7 +23,7 @@ namespace driver::internal {
 //      fdf::UnownedDispatcher dispatcher,
 //      fidl::WireSharedClient<fuchsia_driver_framework::Node> node,
 //      driver::Namespace ns,
-//      driver::Logger logger)
+//      std::unique_ptr<driver::Logger> logger)
 template <typename T>
 zx_status_t Start(EncodedDriverStartArgs encoded_start_args, fdf_dispatcher_t* dispatcher,
                   void** driver) {

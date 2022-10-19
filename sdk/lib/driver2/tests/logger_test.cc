@@ -37,6 +37,7 @@ class TestLogSink : public flogger::testing::LogSink_TestBase {
 
  private:
   void ConnectStructured(::zx::socket socket) override { connect_handler_(std::move(socket)); }
+  void WaitForInterestChange(WaitForInterestChangeCallback callback) override {}
 
   void NotImplemented_(const std::string& name) override {
     printf("Not implemented: LogSink::%s\n", name.data());
@@ -131,7 +132,7 @@ TEST(LoggerTest, CreateAndLog) {
 
   svc_binding2.Bind(svc->server.TakeChannel(), loop.dispatcher());
 
-  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
+  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName, FUCHSIA_LOG_INFO, false);
   ASSERT_TRUE(logger.is_ok());
   loop.RunUntilIdle();
 
@@ -140,17 +141,17 @@ TEST(LoggerTest, CreateAndLog) {
   CheckLogUnreadable(log_socket);
 
   // Check state of logger after writing logs that were below |min_severity|.
-  FDF_LOGL(TRACE, logger.value(), kMessage);
+  FDF_LOGL(TRACE, *logger.value(), kMessage);
   CheckLogUnreadable(log_socket);
-  FDF_LOGL(DEBUG, logger.value(), kMessage);
+  FDF_LOGL(DEBUG, *logger.value(), kMessage);
   CheckLogUnreadable(log_socket);
 
   // Check state of logger after writing logs.
-  FDF_LOGL(INFO, logger.value(), kMessage);
+  FDF_LOGL(INFO, *logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_INFO);
-  FDF_LOGL(WARNING, logger.value(), kMessage);
+  FDF_LOGL(WARNING, *logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_WARNING);
-  FDF_LOGL(ERROR, logger.value(), kMessage);
+  FDF_LOGL(ERROR, *logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_ERROR);
 }
 
@@ -174,7 +175,7 @@ TEST(LoggerTest, Create_NoLogSink) {
   svc->server.TakeChannel().reset();
 
   // Setup logger.
-  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
+  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName, FUCHSIA_LOG_INFO, false);
   ASSERT_TRUE(logger.is_error());
 }
 
@@ -209,7 +210,7 @@ TEST(LoggerTest, SetSeverity) {
 
   svc_binding2.Bind(svc->server.TakeChannel(), loop.dispatcher());
 
-  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName);
+  auto logger = driver::Logger::Create(*ns, loop.dispatcher(), kName, FUCHSIA_LOG_INFO, false);
   ASSERT_TRUE(logger.is_ok());
   loop.RunUntilIdle();
 
@@ -218,23 +219,23 @@ TEST(LoggerTest, SetSeverity) {
   CheckLogUnreadable(log_socket);
 
   // Check severity after setting it.
-  logger.value().SetSeverity(FUCHSIA_LOG_INFO);
-  ASSERT_EQ(FUCHSIA_LOG_INFO, logger.value().GetSeverity());
+  logger.value()->SetSeverity(FUCHSIA_LOG_INFO);
+  ASSERT_EQ(FUCHSIA_LOG_INFO, logger.value()->GetSeverity());
 
   // Check state of logger after writing logs that were above or equal to min
   // severity.
-  FDF_LOGL(INFO, logger.value(), kMessage);
+  FDF_LOGL(INFO, *logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_INFO);
-  FDF_LOGL(WARNING, logger.value(), kMessage);
+  FDF_LOGL(WARNING, *logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_WARNING);
 
   // Check severity after setting it.
-  logger.value().SetSeverity(FUCHSIA_LOG_WARNING);
-  ASSERT_EQ(FUCHSIA_LOG_WARNING, logger.value().GetSeverity());
+  logger.value()->SetSeverity(FUCHSIA_LOG_WARNING);
+  ASSERT_EQ(FUCHSIA_LOG_WARNING, logger.value()->GetSeverity());
 
   // Check state of logger after writing logs that were below min severity.
-  FDF_LOGL(INFO, logger.value(), kMessage);
+  FDF_LOGL(INFO, *logger.value(), kMessage);
   CheckLogUnreadable(log_socket);
-  FDF_LOGL(WARNING, logger.value(), kMessage);
+  FDF_LOGL(WARNING, *logger.value(), kMessage);
   CheckLogReadable(log_socket, FX_LOG_WARNING);
 }

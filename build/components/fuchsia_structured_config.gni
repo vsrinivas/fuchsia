@@ -600,7 +600,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 #                                                        async_dispatcher_t* dispatcher,
 #                                                        fidl::WireSharedClient<fdf::Node> node,
 #                                                        driver::Namespace ns,
-#                                                        driver::Logger logger) {
+#                                                        std::unique_ptr<driver::Logger> logger) {
 #   auto config = Config::from_args(start_args);
 #   FDF_LOG(INFO, config.enable_foo);
 #   ...

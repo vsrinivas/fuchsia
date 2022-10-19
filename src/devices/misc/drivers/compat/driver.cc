@@ -127,7 +127,7 @@ Driver::Driver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver
     : driver::DriverBase("compat", std::move(start_args), std::move(driver_dispatcher)),
       executor_(dispatcher()),
       driver_path_(driver_path),
-      device_(device, ops, this, std::nullopt, inner_logger_, dispatcher()),
+      device_(device, ops, this, std::nullopt, nullptr, dispatcher()),
       sysmem_(this) {
   device_.Bind({std::move(node()), dispatcher()});
   global_driver_list.AddDriver(this);
@@ -383,6 +383,7 @@ result<void, zx_status_t> Driver::LoadDriver(std::tuple<zx::vmo, zx::vmo>& vmos)
     return error(inner_logger.status_value());
   }
   inner_logger_ = std::move(inner_logger.value());
+  device_.set_logger(inner_logger_.get());
 
   return ok();
 }
@@ -527,7 +528,9 @@ void* Driver::Context() const { return context_; }
 
 void Driver::Log(FuchsiaLogSeverity severity, const char* tag, const char* file, int line,
                  const char* msg, va_list args) {
-  inner_logger_.logvf(severity, tag, file, line, msg, args);
+  if (inner_logger_.get() != nullptr) {
+    inner_logger_->logvf(severity, tag, file, line, msg, args);
+  }
 }
 
 zx::result<zx::vmo> Driver::LoadFirmware(Device* device, const char* filename, size_t* size) {

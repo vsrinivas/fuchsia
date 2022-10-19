@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/driver2/logger.h>
 #include <lib/fdio/directory.h>
 
@@ -40,8 +39,11 @@ void Logger::BeginRecord(flog::LogBuffer& buffer, FuchsiaLogSeverity severity,
   buffer.WriteKeyValue("tag", "driver");
 }
 
-zx::result<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispatcher,
-                                  std::string_view name, FuchsiaLogSeverity min_severity) {
+zx::result<std::unique_ptr<Logger>> Logger::Create(const Namespace& ns,
+                                                   async_dispatcher_t* dispatcher,
+                                                   std::string_view name,
+                                                   FuchsiaLogSeverity min_severity,
+                                                   bool wait_for_initial_interest) {
   zx::socket client_end, server_end;
   zx_status_t status = zx::socket::create(ZX_SOCKET_DATAGRAM, &client_end, &server_end);
   if (status != ZX_OK) {
@@ -53,35 +55,65 @@ zx::result<Logger> Logger::Create(const Namespace& ns, async_dispatcher_t* dispa
     return ns_result.take_error();
   }
 
-  fidl::WireSharedClient<fuchsia_logger::LogSink> log_sink(std::move(*ns_result), dispatcher);
+  fidl::WireClient<fuchsia_logger::LogSink> log_sink(std::move(*ns_result), dispatcher);
   auto sink_result = log_sink->ConnectStructured(std::move(server_end));
   if (!sink_result.ok()) {
     return zx::error(sink_result.status());
   }
 
-  Logger logger;
-  logger.dropped_logs_ = 0;
-  logger.tag_ = name;
-  logger.severity_ = min_severity;
-  logger.socket_ = std::move(client_end);
+  auto logger =
+      std::make_unique<Logger>(name, min_severity, std::move(client_end), std::move(log_sink));
+
+  if (wait_for_initial_interest) {
+    auto interest_result = logger->log_sink_.sync()->WaitForInterestChange();
+    if (!interest_result.ok()) {
+      return zx::error(interest_result.status());
+    }
+    // We are guanteed to not call this twice to we can ignore the application error.
+    logger->HandleInterest(interest_result->value()->data);
+  }
+
+  logger->log_sink_->WaitForInterestChange().Then(
+      fit::bind_member(logger.get(), &Logger::OnInterestChange));
+
   return zx::ok(std::move(logger));
 }
 
 Logger::~Logger() = default;
 
-Logger::Logger(Logger&& other) noexcept {
-  dropped_logs_.store(other.dropped_logs_);
-  severity_.store(other.severity_);
-  socket_ = std::move(other.socket_);
-  tag_ = std::move(other.tag_);
+void Logger::HandleInterest(fuchsia_diagnostics::wire::Interest interest) {
+  if (interest.has_min_severity()) {
+    switch (interest.min_severity()) {
+      case fuchsia_diagnostics::Severity::kTrace:
+        severity_ = FUCHSIA_LOG_TRACE;
+        return;
+      case fuchsia_diagnostics::Severity::kDebug:
+        severity_ = FUCHSIA_LOG_DEBUG;
+        return;
+      case fuchsia_diagnostics::Severity::kInfo:
+        severity_ = FUCHSIA_LOG_INFO;
+        return;
+      case fuchsia_diagnostics::Severity::kWarn:
+        severity_ = FUCHSIA_LOG_WARNING;
+        return;
+      case fuchsia_diagnostics::Severity::kError:
+        severity_ = FUCHSIA_LOG_ERROR;
+        return;
+      case fuchsia_diagnostics::Severity::kFatal:
+        severity_ = FUCHSIA_LOG_FATAL;
+        return;
+    }
+  } else {
+    severity_ = default_severity_;
+  }
 }
 
-Logger& Logger::operator=(Logger&& other) noexcept {
-  dropped_logs_.store(other.dropped_logs_);
-  severity_.store(other.severity_);
-  socket_ = std::move(other.socket_);
-  tag_ = std::move(other.tag_);
-  return *this;
+void Logger::OnInterestChange(
+    fidl::WireUnownedResult<fuchsia_logger::LogSink::WaitForInterestChange>& result) {
+  if (result.ok()) {
+    HandleInterest(result->value()->data);
+    log_sink_->WaitForInterestChange().Then(fit::bind_member(this, &Logger::OnInterestChange));
+  }
 }
 
 uint32_t Logger::GetAndResetDropped() {

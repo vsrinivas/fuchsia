@@ -12,9 +12,9 @@
 #define KV(a, b) a, b
 
 // Structured logging internal macro
-#define FDF_SLOG_ETC(flag, args...)                                    \
-  do {                                                                 \
-    driver_internal::fx_slog(logger_, flag, __FILE__, __LINE__, args); \
+#define FDF_SLOG_ETC(flag, args...)                                     \
+  do {                                                                  \
+    driver_internal::fx_slog(*logger_, flag, __FILE__, __LINE__, args); \
   } while (0)
 
 // Structured logging macro

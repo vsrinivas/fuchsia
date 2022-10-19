@@ -95,12 +95,12 @@ class DriverBase {
 
   // This can be used to log in driver factories:
   // `FDF_LOGL(INFO, driver->logger(), "...");`
-  Logger& logger() { return logger_; }
+  Logger& logger() { return *logger_; }
 
  protected:
   // The logger can't be private because the logging macros rely on it.
   // NOLINTNEXTLINE(misc-non-private-member-variables-in-classes)
-  Logger logger_;
+  std::unique_ptr<Logger> logger_;
 
   fidl::ClientEnd<fuchsia_driver_framework::Node>& node() {
     auto& node = start_args_.node();

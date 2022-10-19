@@ -5,30 +5,39 @@
 #ifndef LIB_DRIVER2_LOGGER_H_
 #define LIB_DRIVER2_LOGGER_H_
 
+#include <fidl/fuchsia.logger/cpp/wire.h>
 #include <lib/driver2/namespace.h>
 #include <lib/syslog/structured_backend/cpp/fuchsia_syslog.h>
 #include <lib/zx/socket.h>
 
 #define FDF_LOGL(severity, logger, msg...) \
-  logger.logf((FUCHSIA_LOG_##severity), nullptr, __FILE__, __LINE__, msg)
-#define FDF_LOG(severity, msg...) FDF_LOGL(severity, logger_, msg)
+  (logger).logf((FUCHSIA_LOG_##severity), nullptr, __FILE__, __LINE__, msg)
+#define FDF_LOG(severity, msg...) FDF_LOGL(severity, *logger_, msg)
 
 namespace driver {
 
 // Provides a driver's logger.
 class Logger {
  public:
-  // Creates a logger with a given `name`, which will only send logs that are of
-  // at least `min_severity`.
-  static zx::result<Logger> Create(const Namespace& ns, async_dispatcher_t* dispatcher,
-                                   std::string_view name,
-                                   FuchsiaLogSeverity min_severity = FUCHSIA_LOG_INFO);
+  // Creates a logger with a given |name|, which will only send logs that are of
+  // at least |min_severity|.
+  // |dispatcher| must be single threaded or synchornized. Create must be called from the context of
+  // the |dispatcher|.
+  // If |wait_for_initial_interest| is true we this will synchronously query the
+  // fuchsia.logger/LogSink for the min severity it should expect, overriding the min_severity
+  // supplied.
+  static zx::result<std::unique_ptr<Logger>> Create(
+      const Namespace& ns, async_dispatcher_t* dispatcher, std::string_view name,
+      FuchsiaLogSeverity min_severity = FUCHSIA_LOG_INFO, bool wait_for_initial_interest = true);
 
-  Logger() = default;
+  Logger(std::string_view name, FuchsiaLogSeverity min_severity, zx::socket socket,
+         fidl::WireClient<fuchsia_logger::LogSink> log_sink)
+      : tag_(name),
+        socket_(std::move(socket)),
+        default_severity_(min_severity),
+        severity_(min_severity),
+        log_sink_(std::move(log_sink)) {}
   ~Logger();
-
-  Logger(Logger&& other) noexcept;
-  Logger& operator=(Logger&& other) noexcept;
 
   // Retrieves the number of dropped logs and resets it
   uint32_t GetAndResetDropped();
@@ -58,14 +67,21 @@ class Logger {
   Logger(const Logger& other) = delete;
   Logger& operator=(const Logger& other) = delete;
 
-  // For thread-safety these members should be treated as read-only.
-  // They are non-const only to allow move-assignment of Logger.
-  std::string tag_;
-  zx::socket socket_;
+  void HandleInterest(fuchsia_diagnostics::wire::Interest interest);
+  void OnInterestChange(
+      fidl::WireUnownedResult<fuchsia_logger::LogSink::WaitForInterestChange>& result);
+
+  // For thread-safety these members should be read-only.
+  const std::string tag_;
+  const zx::socket socket_;
+  const FuchsiaLogSeverity default_severity_;
   // Messages below this won't be logged. This field is thread-safe.
-  std::atomic<FuchsiaLogSeverity> severity_ = FUCHSIA_LOG_INFO;
+  std::atomic<FuchsiaLogSeverity> severity_;
   // Dropped log count. This is thread-safe and is reset on success.
-  std::atomic<uint32_t> dropped_logs_;
+  std::atomic<uint32_t> dropped_logs_ = 0;
+
+  // Used to learn about changes in severity.
+  fidl::WireClient<fuchsia_logger::LogSink> log_sink_;
 };
 
 }  // namespace driver

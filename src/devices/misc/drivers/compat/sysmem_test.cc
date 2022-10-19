@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.logger/cpp/wire_test_base.h>
 #include <fidl/fuchsia.sysmem/cpp/wire_test_base.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/async-testing/test_loop.h>
 #include <lib/driver2/logger.h>
 #include <lib/driver_compat/symbols.h>
+#include <lib/sync/cpp/completion.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
 #include <fbl/ref_ptr.h>
@@ -19,6 +22,41 @@ namespace {
 
 namespace fio = fuchsia_io;
 namespace frunner = fuchsia_component_runner;
+namespace flogger = fuchsia_logger;
+
+class TestLogSink : public fidl::testing::WireTestBase<flogger::LogSink> {
+ public:
+  TestLogSink() = default;
+
+  ~TestLogSink() {
+    if (completer_) {
+      completer_->ReplySuccess({});
+    }
+  }
+
+ private:
+  void ConnectStructured(ConnectStructuredRequestView request,
+                         ConnectStructuredCompleter::Sync& completer) override {
+    socket_ = std::move(request->socket);
+  }
+  void WaitForInterestChange(WaitForInterestChangeCompleter::Sync& completer) override {
+    if (first_call_) {
+      first_call_ = false;
+      completer.ReplySuccess({});
+    } else {
+      completer_ = completer.ToAsync();
+    }
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    printf("Not implemented: LogSink::%s\n", name.data());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  zx::socket socket_;
+  bool first_call_ = true;
+  std::optional<WaitForInterestChangeCompleter::Async> completer_;
+};
 
 class FakeSysmem : public fidl::testing::WireTestBase<fuchsia_sysmem::Allocator>,
                    public fbl::RefCounted<FakeSysmem> {
@@ -27,7 +65,7 @@ class FakeSysmem : public fidl::testing::WireTestBase<fuchsia_sysmem::Allocator>
     printf("Not implemented: Allocator::%s\n", name.data());
   }
 
-  size_t connection_count_ = 0;
+  std::atomic<size_t> connection_count_ = 0;
 };
 
 class SysmemTest : public gtest::DriverTestLoopFixture {
@@ -35,14 +73,22 @@ class SysmemTest : public gtest::DriverTestLoopFixture {
   void SetUp() override {
     DriverTestLoopFixture::SetUp();
     fake_sysmem_ = fbl::MakeRefCounted<FakeSysmem>();
+    vfs_loop_.StartThread("vfs-loop");
   }
 
   zx::result<std::vector<frunner::ComponentNamespaceEntry>> CreateNamespace() {
-    ns_server_ = component::OutgoingDirectory::Create(dispatcher());
+    ns_server_ = component::OutgoingDirectory::Create(vfs_loop_.dispatcher());
     auto add_protocol_result = ns_server_->AddProtocol<fuchsia_sysmem::Allocator>(
         [this](fidl::ServerEnd<fuchsia_sysmem::Allocator> server) {
           fidl::BindServer(dispatcher(), std::move(server), fake_sysmem_.get());
-          fake_sysmem_->connection_count_++;
+          fake_sysmem_->connection_count_ += 1;
+          completion_.Signal();
+        });
+    ZX_ASSERT(add_protocol_result.is_ok());
+
+    add_protocol_result = ns_server_->AddProtocol<fuchsia_logger::LogSink>(
+        [this](fidl::ServerEnd<fuchsia_logger::LogSink> server) {
+          fidl::BindServer(dispatcher(), std::move(server), std::make_unique<TestLogSink>());
         });
     ZX_ASSERT(add_protocol_result.is_ok());
 
@@ -64,13 +110,12 @@ class SysmemTest : public gtest::DriverTestLoopFixture {
   }
 
  protected:
-  bool RunTestLoopUntilIdle() { return test_loop_.RunUntilIdle(); }
+  async_dispatcher_t* dispatcher() { return vfs_loop_.dispatcher(); }
 
-  async_dispatcher_t* dispatcher() { return test_loop_.dispatcher(); }
-
+  libsync::Completion completion_;
   std::optional<component::OutgoingDirectory> ns_server_;
   fbl::RefPtr<FakeSysmem> fake_sysmem_;
-  async::TestLoop test_loop_;
+  async::Loop vfs_loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 
 TEST_F(SysmemTest, SysmemConnectAllocator) {
@@ -88,9 +133,16 @@ TEST_F(SysmemTest, SysmemConnectAllocator) {
                                       .ns = std::move(ns.value()),
                                       .outgoing_dir = std::move(outgoing->server),
                                       .config = std::nullopt});
-  compat::Driver drv(std::move(start_args), std::move(unowned_driver_dispatcher),
-                     compat::kDefaultDevice, nullptr, "/pkg/compat");
-  compat::Device dev(compat::kDefaultDevice, nullptr, &drv, std::nullopt, drv.logger(),
+
+  libsync::Completion completion;
+  std::optional<compat::Driver> drv;
+  async::PostTask(driver_dispatcher().async_dispatcher(), [&] {
+    drv.emplace(std::move(start_args), std::move(unowned_driver_dispatcher), compat::kDefaultDevice,
+                nullptr, "/pkg/compat");
+    completion.Signal();
+  });
+  completion.Wait();
+  compat::Device dev(compat::kDefaultDevice, nullptr, &*drv, std::nullopt, &drv->logger(),
                      driver_dispatcher().async_dispatcher());
 
   zx_device_t* zxdev = dev.ZxDevice();
@@ -100,7 +152,7 @@ TEST_F(SysmemTest, SysmemConnectAllocator) {
   zx::channel local, remote;
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &local, &remote));
   client.Connect(std::move(remote));
-  RunTestLoopUntilIdle();
+  completion_.Wait();
   ASSERT_EQ(1ul, fake_sysmem_->connection_count_);
   ShutdownDriverDispatcher();
 }

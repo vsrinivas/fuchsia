@@ -151,7 +151,7 @@ std::vector<fuchsia_driver_framework::wire::NodeProperty> CreateProperties(
 }
 
 Device::Device(device_t device, const zx_protocol_device_t* ops, Driver* driver,
-               std::optional<Device*> parent, driver::Logger& logger,
+               std::optional<Device*> parent, driver::Logger* logger,
                async_dispatcher_t* dispatcher)
     : name_(device.name),
       logger_(logger),
@@ -282,7 +282,7 @@ zx_status_t Device::Add(device_add_args_t* zx_args, zx_device_t** out) {
     }
   }
 
-  device->properties_ = CreateProperties(arena_, logger_, zx_args);
+  device->properties_ = CreateProperties(arena_, *logger_, zx_args);
   device->device_flags_ = zx_args->flags;
 
   bool has_init = HasOp(device->ops_, &zx_protocol_device_t::init);

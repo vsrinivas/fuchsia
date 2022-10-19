@@ -109,7 +109,7 @@ class Driver : public driver::DriverBase {
   driver::DevfsExporter devfs_exporter_;
   std::string node_name_;
 
-  driver::Logger inner_logger_;
+  std::unique_ptr<driver::Logger> inner_logger_;
   Device device_;
 
   // The next unique device id for devices. Starts at 1 because `device_` has id zero.

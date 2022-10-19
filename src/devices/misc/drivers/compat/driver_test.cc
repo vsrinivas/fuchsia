@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.device.fs/cpp/wire_test_base.h>
 #include <fidl/fuchsia.driver.framework/cpp/wire_test_base.h>
 #include <fidl/fuchsia.io/cpp/wire_test_base.h>
-#include <fidl/fuchsia.logger/cpp/wire.h>
+#include <fidl/fuchsia.logger/cpp/wire_test_base.h>
 #include <fidl/fuchsia.scheduler/cpp/wire_test_base.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -246,6 +246,40 @@ class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Expor
   }
 };
 
+class TestLogSink : public fidl::testing::WireTestBase<flogger::LogSink> {
+ public:
+  TestLogSink() = default;
+
+  ~TestLogSink() {
+    if (completer_) {
+      completer_->ReplySuccess({});
+    }
+  }
+
+ private:
+  void ConnectStructured(ConnectStructuredRequestView request,
+                         ConnectStructuredCompleter::Sync& completer) override {
+    socket_ = std::move(request->socket);
+  }
+  void WaitForInterestChange(WaitForInterestChangeCompleter::Sync& completer) override {
+    if (first_call_) {
+      first_call_ = false;
+      completer.ReplySuccess({});
+    } else {
+      completer_ = completer.ToAsync();
+    }
+  }
+
+  void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+    printf("Not implemented: LogSink::%s\n", name.data());
+    completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  zx::socket socket_;
+  bool first_call_ = true;
+  std::optional<WaitForInterestChangeCompleter::Async> completer_;
+};
+
 }  // namespace
 
 class DriverTest : public gtest::DriverTestLoopFixture {
@@ -309,9 +343,11 @@ class DriverTest : public gtest::DriverTestLoopFixture {
     {
       auto svc = fbl::MakeRefCounted<fs::PseudoDir>();
       svc->AddEntry(fidl::DiscoverableProtocolName<flogger::LogSink>,
-                    fbl::MakeRefCounted<fs::Service>([](zx::channel server) {
-                      return fdio_service_connect_by_name(
-                          fidl::DiscoverableProtocolName<flogger::LogSink>, server.release());
+                    fbl::MakeRefCounted<fs::Service>([this](zx::channel server) {
+                      fidl::ServerEnd<flogger::LogSink> server_end(std::move(server));
+                      fidl::BindServer(fidl_loop_.dispatcher(), std::move(server_end),
+                                       std::make_unique<TestLogSink>());
+                      return ZX_OK;
                     }));
 
       svc->AddEntry(fidl::DiscoverableProtocolName<fboot::RootResource>,
@@ -361,7 +397,7 @@ class DriverTest : public gtest::DriverTestLoopFixture {
       compat_dir->AddEntry("default", compat_default_dir);
       svc->AddEntry("fuchsia.driver.compat.Service", compat_dir);
 
-      vfs_.emplace(dispatcher());
+      vfs_.emplace(fidl_loop_.dispatcher());
       vfs_->ServeDirectory(svc, std::move(svc_endpoints->server));
     }
 
@@ -393,12 +429,19 @@ class DriverTest : public gtest::DriverTestLoopFixture {
          .config = std::nullopt});
 
     // Start driver.
-    auto result =
-        compat::DriverFactory::CreateDriver(std::move(start_args), driver_dispatcher().borrow());
-    EXPECT_EQ(ZX_OK, result.status_value());
-    auto* driver = result.value().release();
-    auto* casted = static_cast<compat::Driver*>(driver);
-    return std::unique_ptr<compat::Driver>(casted);
+    libsync::Completion completion;
+    std::unique_ptr<compat::Driver> compat_driver;
+
+    async::PostTask(driver_dispatcher().async_dispatcher(), [&] {
+      auto result =
+          compat::DriverFactory::CreateDriver(std::move(start_args), driver_dispatcher().borrow());
+      EXPECT_EQ(ZX_OK, result.status_value());
+      auto* driver = result.value().release();
+      compat_driver.reset(static_cast<compat::Driver*>(driver));
+      completion.Signal();
+    });
+    completion.Wait();
+    return compat_driver;
   }
 
   void RunUntilDispatchersIdle() {

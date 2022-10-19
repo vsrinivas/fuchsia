@@ -124,7 +124,7 @@ class DemoNumber : public driver::DriverBase {
     auto result =
         service.add_demo([this](fidl::ServerEnd<fuchsia_hardware_demo::Demo> request) -> void {
           // Bind each connection request to a fuchsia.hardware.demo/Demo server instance.
-          auto demo_impl = std::make_unique<DemoNumberServer>(&logger_);
+          auto demo_impl = std::make_unique<DemoNumberServer>(&logger());
           fidl::BindServer(dispatcher(), std::move(request), std::move(demo_impl),
                            std::mem_fn(&DemoNumberServer::OnUnbound));
         });
