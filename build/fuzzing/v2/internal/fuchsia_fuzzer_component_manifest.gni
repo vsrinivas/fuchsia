@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//tools/cmc/build/cmc.gni")
+
+# Creates a manifest for a fuzzer component.
+#
+# Creates a component manifest file from metadata added to a fuzzer binary target. This should be
+# invoked by a fuzzer component target with a dep on a fuzzer binary target that uses a metadata
+# template like `fuchsia_libfuzzer_component_metadata`.
+#
+# Parameters: deps, with the usual meaning.
+#
+# TODO(fxbug.dev/105707): Make the fuzzers more build system agnostic by adding explicitly manifests
+# and deprecating this logic.
+#
+template("fuchsia_fuzzer_component_manifest") {
+  assert(
+      defined(invoker.deps),
+      "`deps` must be specified when calling fuchsia_fuzzer_component_manifest($target_name)")
+
+  generated_target = "${target_name}_generated"
+  generated_file(generated_target) {
+    visibility = [ ":*" ]
+    testonly = true
+    deps = invoker.deps
+    data_keys = [ "fuchsia_fuzzer_component_manifest" ]
+    walk_keys = [ "fuchsia_fuzzer_component_manifest_barrier" ]
+    outputs = [ "$target_gen_dir/${target_name}.cml" ]
+    output_conversion = "json"
+  }
+
+  cmc_merge(target_name) {
+    visibility = [ ":*" ]
+    testonly = true
+    output_name = "${invoker.target_name}.cml"
+    deps = [ ":$generated_target" ]
+    sources = get_target_outputs(":$generated_target")
+  }
+}

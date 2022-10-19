@@ -1,0 +1,56 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+
+# Build a generic library fuzzer.
+#
+# Parameters:
+#
+#   target_type (optional)
+#     [string] Indicates which binary template to use to build the fuzzer. Defaults to "test".
+#
+#   target_configs (optional)
+#     [list] If specified, replace any forwarded `configs` with this list. The `library_fuzzer`
+#       template is typically invoked by other templates, which use `set_defaults`. This list should
+#       be set to the `configs` of those templates' invokers, which should be used in place of the
+#       defaults.
+#
+# Additional parameters match those for `target_type`.
+#
+template("library_fuzzer") {
+  target_type = "test"
+  if (defined(invoker.target_type)) {
+    target_type = invoker.target_type
+  }
+  target(target_type, target_name) {
+    variant_selector_target_type = "fuzzed_executable"
+    testonly = true
+    deps = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "target_configs",
+                             "target_type",
+                             "variant_selector_target_type",
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker, [ "visibility" ])
+    if (defined(invoker.target_configs)) {
+      configs = []
+      configs = invoker.target_configs
+    }
+    if (is_fuzzer) {
+      # Use libFuzzer via clang. This expects a sanitizer runtime to be available.
+      configs += [ "//build/config/fuzzer:engine" ]
+    } else if (is_host) {
+      # Use the gTest harness. This produces a standalone test that does not depend on any runtimes.
+      deps += [ "//src/lib/fuzzing/cpp:fuzzer_test" ]
+    } else {
+      # Use libFuzzer directly. This links the runtime without needing any sanitizer runtimes.
+      configs += [ "//src/sys/fuzzing/libfuzzer/testing:libfuzzer" ]
+    }
+  }
+}
