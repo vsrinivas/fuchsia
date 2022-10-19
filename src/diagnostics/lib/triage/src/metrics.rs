@@ -1722,11 +1722,7 @@ pub(crate) mod test {
         let invalid_expr = "1 *".to_string();
         assert_eq!(
             format!("{:?}", ExpressionContext::try_from(invalid_expr).err().unwrap()),
-            concat!(
-                "Expression Error: \n0: at line 0, in Tag:\n1 *\n   ^\n\n1: at line 0, in Alt:",
-                "\n1 *\n   ^\n\n2: at line 0, in Alt:\n1 *\n   ^\n\n3: at line 0, in Alt:\n1 *\n",
-                "   ^\n\n4: at line 0, in Alt:\n1 *\n^\n\n"
-            )
+            concat!("Expression Error: \n0: at line 0, in Eof:\n1 *\n  ^\n\n")
         );
 
         // Check expression correctly built from valid expression

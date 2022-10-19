@@ -3,9 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::metrics::{
-        internal_bug, variable::VariableName, ExpressionTree, Function, MathFunction, MetricValue,
-    },
+    crate::metrics::{variable::VariableName, ExpressionTree, Function, MathFunction, MetricValue},
     anyhow::{format_err, Error},
     nom::{
         branch::alt,
@@ -13,7 +11,7 @@ use {
         character::{complete::char, is_alphabetic, is_alphanumeric},
         combinator::{all_consuming, map, recognize},
         error::{convert_error, VerboseError},
-        multi::separated_list,
+        multi::{fold_many0, separated_list},
         number::complete::double,
         sequence::{delimited, pair, preceded, separated_pair, terminated, tuple},
         Err::{self, Incomplete},
@@ -277,150 +275,35 @@ fn expression_primitive<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, Verb
     res
 }
 
-// It's hard to parse a list of operator-separated expressions correctly,
-// given that they have to be evaluated from left to right.
-//
-// Recursive parse is tempting, something like:
-//   addsub = (addsub +/- muldiv) | muldiv
-// In a left-to-right-parsing combinator, the above causes infinite recursion.
-//
-//   addsub = (muldiv +/- addsub) | muldiv
-// This causes the expression tree to be built right-to-left.
-//
-// So what about an iterative approach?
-// nom's separated_list() doesn't return the separators, so it can't be used
-// when we care about the separators - as we do, for example, in a sequence
-// of expressions separated by either '+' or '-'.
-//
-// In the end, I rolled my own iterative parser that first recognizes
-//   item (separator item)*
-// and then builds the Expression tree.
-//
-// TODO(cphoenix): See whether it's cleaner to build the tree during the
-// recognize step (given that the Expression-type has to be set based on
-// the separator that's found)
-
-// This function produces lists of items and separators. Note that it takes
-// the input as a parameter and returns the parsed information (or error)
-// directly - it is not a combinator function. It must find at least one item,
-// or return Error.
-fn items_and_separators<'a, F, G, O1, O2>(
-    item_parser: F,
-    separator_parser: G,
-    i: &'a str,
-) -> IResult<&'a str, (std::vec::Vec<O1>, std::vec::Vec<O2>), VerboseError<&'a str>>
-where
-    F: Fn(&'a str) -> IResult<&'a str, O1, VerboseError<&'a str>>,
-    G: Fn(&'a str) -> IResult<&'a str, O2, VerboseError<&'a str>>,
-{
-    let mut items = Vec::new();
-    let mut operators = Vec::new();
-    let mut remainder = i;
-    {
-        // Fasten your seatbelts. Inside this block, we start by wrapping
-        // the given item_parser and separator_parser. The wrapped versions
-        // have side effects!
-        //
-        // When the inner parsers match, the wrapper adds their output to the
-        // appropriate vec. This does not allow backtracking, but that's OK.
-        // The whole items-and-separators succeeds or fails together; another
-        // way to say this is that every valid separator must be followed by
-        // a valid item, or the whole parse attempt is invalid and
-        // items_and_separators() will return Error.
-        //
-        // The wrappers borrow the vec's mutably, so they're inside a block to
-        // drop them when their work is done.
-        let mut item_parse = |i| match spaced(&item_parser)(i) {
-            Err(err) => Err(err),
-            Ok((r, exp)) => {
-                items.push(exp);
-                Ok((r, ()))
-            }
-        };
-        let mut separator_parse = |i| match preceded::<_, _, _, VerboseError<&'a str>, _, _>(
-            whitespace,
-            &separator_parser,
-        )(i)
-        {
-            Err(err) => Err(err),
-            Ok((r, exp)) => {
-                operators.push(exp);
-                Ok((r, ()))
-            }
-        };
-        // Now that the wrapped parsers are defined, we can match the first item,
-        // then loop looking for separators and additional items.
-        match item_parse(remainder) {
-            Err(e) => return Err(e),     // We must find at least one item.
-            Ok((r, _)) => remainder = r, // The parsed item is now in items.
-        }
-        loop {
-            match separator_parse(remainder) {
-                Err(_) => break, // Ending on an item, not finding a separator, is fine.
-                // Note how the remainder of each parse is fed into the next parse.
-                Ok((r, _)) => match item_parse(r) {
-                    // If we find a separator...
-                    Err(e) => return Err(e), // We'd better find an item after it.
-                    Ok((r, _)) => remainder = r,
-                },
-            }
-        }
-    }
-    // The parser-wrap block is closed, and we can use items and operators again.
-    // Build a happy-combinator-return type, a tuple with the first member being
-    // the remaining unparsed characters, and the second item being the result -
-    // in this case, a tuple containing the vec's of items and operators.
-    Ok((remainder, (items, operators)))
-}
-
-// This takes the lists of items and operators produced by items_and_separators()
-// and builds an Expression.
-fn build_expression<'a>(
-    mut items: Vec<ExpressionTree>,
-    mut operators: Vec<Function>,
-) -> ExpressionTree {
-    // We want to evaluate the leftmost operator first, which means it has to be
-    // lowest in the tree. The leftmost was parsed first, so it's lowest in the
-    // vec's. Popping is more efficient than deleting item 0 and shifting, so
-    // reverse the vec's before we start.
-    items.reverse();
-    operators.reverse();
-    let mut res =
-        items.pop().unwrap_or(ExpressionTree::Value(internal_bug("Bug in parser: zero items")));
-    for _i in 0..operators.len() {
-        let args = vec![
-            res,
-            items
-                .pop()
-                .unwrap_or(ExpressionTree::Value(internal_bug("Bug in parser: too few items"))),
-        ];
-        res = ExpressionTree::Function(operators.pop().unwrap(), args);
-    }
-    res
-}
-
 // Scans for primitive expressions separated by * and /.
 fn expression_muldiv<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
-    let (remainder, (items, operators)) = items_and_separators(
-        expression_primitive,
-        alt((
-            math!("*", Mul),
-            math!("//?", IntDivChecked),
-            math!("/?", FloatDivChecked),
-            math!("//", IntDiv),
-            math!("/", FloatDiv),
-        )),
-        i,
-    )?;
-    Ok((remainder, build_expression(items, operators)))
+    let (i, init) = expression_primitive(i)?;
+
+    fold_many0(
+        pair(
+            alt((
+                math!("*", Mul),
+                math!("//?", IntDivChecked),
+                math!("/?", FloatDivChecked),
+                math!("//", IntDiv),
+                math!("/", FloatDiv),
+            )),
+            expression_primitive,
+        ),
+        init,
+        |acc, (op, expr)| ExpressionTree::Function(op, vec![acc, expr]),
+    )(i)
 }
 
 // Scans for muldiv expressions (which may be a single primitive expression)
 // separated by + and -. Remember unary + and - will be recognized by number().
 fn expression_addsub<'a>(i: &'a str) -> IResult<&'a str, ExpressionTree, VerboseError<&'a str>> {
-    let (remainder, (items, operators)) =
-        items_and_separators(expression_muldiv, alt((math!("+", Add), math!("-", Sub))), i)?;
-    Ok((remainder, build_expression(items, operators)))
+    let (i, init) = expression_muldiv(i)?;
+    fold_many0(
+        pair(alt((math!("+", Add), math!("-", Sub))), expression_muldiv),
+        init,
+        |acc, (op, expr)| ExpressionTree::Function(op, vec![acc, expr]),
+    )(i)
 }
 
 // Top-level expression. Should match the entire expression string, and also
