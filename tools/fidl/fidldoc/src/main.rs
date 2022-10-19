@@ -356,9 +356,7 @@ fn get_library_description(maybe_attributes: &Vec<Value>) -> String {
     "".to_string()
 }
 
-// The toc.hbs template includes hardcoded values for library versions
-// Need to create a function that collects all library versions, sorts them,
-// and displays them in the template.
+// Parse the maybe_attributes field and extract the added version.
 fn get_library_added(maybe_attributes: &Vec<Value>) -> String {
     for attribute in maybe_attributes {
         if to_lower_snake_case(attribute["name"].as_str().unwrap_or("")) == ATTR_NAME_AVAILABLE {
@@ -595,6 +593,53 @@ mod test {
         ];
         let description = get_library_description(&maybe_attributes);
         assert_eq!(description, "Fuchsia Auth API".to_string());
+    }
+
+    #[test]
+    fn get_library_added_test() {
+        let maybe_attributes_7 = vec![
+            json!({"name": "not available", "value": "Not a version"}),
+            json!({"name": ATTR_NAME_AVAILABLE, "arguments": [
+                {
+                    "name": ATTR_NAME_ADDED,
+                    "type": "uint64",
+                    "value": {
+                        "kind": "literal",
+                        "value": "7",
+                        "expression": "7",
+                        "literal": {
+                            "kind": "numeric",
+                            "value": "7",
+                            "expression": "7"
+                        }
+                    },
+                },
+            ]}),
+        ];
+        let version_7 = get_library_added(&maybe_attributes_7);
+        assert_eq!(version_7, "7".to_string());
+
+        let maybe_attributes_head = vec![
+            json!({"name": ATTR_NAME_AVAILABLE, "arguments": [
+                {
+                    "name": ATTR_NAME_ADDED,
+                    "type": "uint64",
+                    "value": {
+                        "kind": "literal",
+                        "value": HEAD_VERSION_NUMBER.to_string(),
+                        "expression": HEAD_VERSION_NUMBER.to_string(),
+                        "literal": {
+                            "kind": "numeric",
+                            "value": HEAD_VERSION_NUMBER.to_string(),
+                            "expression": HEAD_VERSION_NUMBER.to_string()
+                        }
+                    },
+                },
+            ]}),
+            json!({"name": "not available", "value": "Not a version"}),
+        ];
+        let version_head = get_library_added(&maybe_attributes_head);
+        assert_eq!(version_head, "HEAD".to_string());
     }
 
     #[test]
