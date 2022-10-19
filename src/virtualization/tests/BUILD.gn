@@ -174,6 +174,8 @@ executable("virtualization_balloon_tests") {
     "lib",
     "lib:guest_console",
     "lib:test_main",
+    "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//sdk/lib/sys/cpp/testing:integration_fixture",
     "//src/lib/json_parser",

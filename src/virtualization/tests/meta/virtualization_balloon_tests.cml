@@ -6,4 +6,9 @@
     program: {
         binary: "bin/virtualization_balloon_tests",
     },
+    use: [
+        {
+            protocol: [ "fuchsia.kernel.Stats" ],
+        },
+    ],
 }
