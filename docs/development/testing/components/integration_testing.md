@@ -216,7 +216,7 @@ See the following `BUILD.gn` file that defines a `fuchsia_test_package()` target
 * {Rust}
 
   ```gn
-  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/BUILD.gn" region_tag="example_snippet" adjust_indentation="auto" highlight="23,24,25,26,27" %}
+  {% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/components/routing/integration_tests/rust/BUILD.gn" region_tag="example_snippet" adjust_indentation="auto" highlight="22,23,24,25,26" %}
   ```
 
 * {C++}
