@@ -219,8 +219,10 @@ if (is_fuchsia) {
     # and thus, should be run less concurrently with other large jobs.
     # See https://fxbug.dev/111094 for context.
     if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
+        toolchain_variant.tags ||
+        toolchain_variant.tags + [ "thinlto" ] - [ "thinlto" ] !=
         toolchain_variant.tags) {
-      pool = "//build/config:highmem"
+      pool = "//build/config:highmem($default_toolchain)"
     }
   }
 }

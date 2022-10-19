@@ -72,7 +72,6 @@ template("test") {
                            [
                              "host_args",
                              "output_name",
-                             "pool",
                              "target_name",
                              "testonly",
                            ])

@@ -2877,7 +2877,11 @@ template("executable") {
     # Explicitly forward visibility, implicitly forward everything else
     # (except metadata, handled below).
     # See comment in template("shared_library") above for details.
-    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           [
+                             "visibility",
+                             "pool",
+                           ])
     forward_variables_from(invoker,
                            "*",
                            [
