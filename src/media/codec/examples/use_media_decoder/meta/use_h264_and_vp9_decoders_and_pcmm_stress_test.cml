@@ -23,4 +23,9 @@
             ],
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "codec_runner_intel_gen" ],
+        },
+    },
 }
