@@ -8,6 +8,7 @@ use {
     cm_fidl_validator,
     cm_rust::NativeIntoFidl,
     fidl::endpoints::{create_endpoints, ServerEnd},
+    fidl::Vmo,
     fidl_fuchsia_component_config as fconfig, fidl_fuchsia_component_decl as fcdecl,
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_io as fio,
     fidl_fuchsia_mem as fmem, fuchsia_async as fasync,
@@ -179,7 +180,11 @@ impl Registry {
         while let Some(req) = stream.try_next().await? {
             match req {
                 fresolution::ResolverRequest::Resolve { component_url, responder } => {
-                    responder.send(&mut self.resolve(&component_url).await)?;
+                    let mut resolve_result = self.resolve(&component_url).await;
+                    responder.send(&mut resolve_result).map_err(|err| {
+                        warn!("FIDL error {err:?} responding to resolve request for component URL '{component_url} with ':\n{resolve_result:#?}");
+                        err
+                    })?;
                 }
                 fresolution::ResolverRequest::ResolveWithContext {
                     component_url,
@@ -333,11 +338,13 @@ impl Registry {
 }
 
 fn encode(mut component_decl: fcdecl::Component) -> Result<fmem::Data, Error> {
-    Ok(fmem::Data::Bytes(
-        fidl::encoding::encode_persistent_with_context(
-            &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
-            &mut component_decl,
-        )
-        .context("failed to encode ComponentDecl")?,
-    ))
+    let encoded = fidl::encoding::encode_persistent_with_context(
+        &fidl::encoding::Context { wire_format_version: fidl::encoding::WireFormatVersion::V2 },
+        &mut component_decl,
+    )
+    .context("failed to encode ComponentDecl")?;
+    let encoded_size = encoded.len() as u64;
+    let vmo = Vmo::create(encoded_size)?;
+    vmo.write(&encoded, 0)?;
+    Ok(fmem::Data::Buffer(fmem::Buffer { vmo, size: encoded_size }))
 }
