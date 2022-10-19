@@ -7,38 +7,14 @@
         "//src/ui/meta/input_pipeline_routes.shard.cml",
         "//src/ui/meta/root_presenter_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
+        "//src/ui/meta/text_manager_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
-    children: [
-        {
-            name: "text_manager",
-            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
-        },
-    ],
     offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#text_manager" ],
-        },
         {
             protocol: [ "fuchsia.ui.accessibility.view.Registry" ],
             from: "#root_presenter",
             to: "#a11y_manager",
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
         },
     ],
 }

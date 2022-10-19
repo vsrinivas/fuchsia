@@ -1,0 +1,43 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard is shared across all production and test UI realms that
+// contain text manager.
+//
+// It contains any capabilities that:
+//
+// (1) Text manager exposes from every production or test UI realm in
+//     which it's present.
+// (2) Text manager always consumes from the same source in every
+//     production or test UI realm in which it's present.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that have different sources in different ui realms.
+// (2) Text manager's child definition, as we may use a differnt url
+//     in test vs. production ui realms.
+// (3) Capabilities that other components consume from text manager.
+{
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#text_manager" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.ui.input.ImeService",
+                "fuchsia.ui.input3.Keyboard",
+                "fuchsia.ui.input3.KeyEventInjector",
+                "fuchsia.ui.keyboard.focus.Controller",
+            ],
+            from: "#text_manager",
+        },
+    ],
+}

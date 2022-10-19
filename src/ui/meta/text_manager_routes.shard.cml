@@ -1,0 +1,33 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This shard includes the portion of the input layer that is common across
+// all production ui realms that include text manager, but differs from test
+// ui realms.
+//
+// Production ui realms should include this shard directly.
+//
+// This shard should include:
+//
+// (1) Text manager's child declaration. Note that other shards assume the name
+//     "text_manager".
+// (2) Capability routes to text manager that are the same for all production ui
+//     realms in which text manager is present, but differ in test realms.
+//
+// This shard should **NOT** include:
+//
+// (1) Routes that are common to all production and test ui realms; these
+//     routes belong in text_manager_base_routes.shard.cml.
+// (2) Routes to text manager that differ among production ui realms.
+// (3) Routes **FROM** text manager to other components in the ui realm; these
+//     routes belong in the target components' routing shards.
+{
+    include: [ "//src/ui/meta/text_manager_base_routes.shard.cml" ],
+    children: [
+        {
+            name: "text_manager",
+            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
+        },
+    ],
+}

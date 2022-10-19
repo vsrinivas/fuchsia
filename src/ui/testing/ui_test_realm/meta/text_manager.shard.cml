@@ -2,27 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
+    include: [ "//src/ui/meta/text_manager_base_routes.shard.cml" ],
     children: [
         {
             name: "text_manager",
             url: "#meta/text_manager.cm",
-        },
-    ],
-    offer: [
-        {
-            protocol: "fuchsia.logger.LogSink",
-            from: "parent",
-            to: [ "#text_manager" ],
-        },
-    ],
-    expose: [
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
         },
     ],
 }

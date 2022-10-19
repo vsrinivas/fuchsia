@@ -6,14 +6,10 @@
         "//src/ui/meta/a11y_routes.shard.cml",
         "//src/ui/meta/scene_manager_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
+        "//src/ui/meta/text_manager_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
     children: [
-        {
-            // Centralized management of text entry.
-            name: "text_manager",
-            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
-        },
         {
             // Centralized management of virtual keyboard features.
             name: "virtual_keyboard_manager",
@@ -32,10 +28,7 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [
-                "#text_manager",
-                "#virtual_keyboard_manager",
-            ],
+            to: [ "#virtual_keyboard_manager" ],
         },
 
         // TODO(fxbug.dev/110642): Remove once gfx is deprecated.
@@ -56,15 +49,6 @@
         },
     ],
     expose: [
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
-        },
         {
             protocol: [
                 "fuchsia.input.virtualkeyboard.ControllerCreator",

@@ -6,6 +6,7 @@
         "//src/ui/meta/a11y_routes.shard.cml",
         "//src/ui/meta/scene_manager_routes.shard.cml",
         "//src/ui/meta/scenic_routes.shard.cml",
+        "//src/ui/meta/text_manager_routes.shard.cml",
         "syslog/client.shard.cml",
     ],
     children: [
@@ -14,11 +15,6 @@
             // TODO(fxbug.dev/104239): Configure presence via build flag.
             name: "shortcut_manager",
             url: "fuchsia-pkg://fuchsia.com/shortcut#meta/shortcut_manager.cm",
-        },
-        {
-            // Centralized management of text entry.
-            name: "text_manager",
-            url: "fuchsia-pkg://fuchsia.com/text_manager#meta/text_manager.cm",
         },
         {
             // Centralized management of virtual keyboard features.
@@ -35,7 +31,6 @@
             from: "parent",
             to: [
                 "#shortcut_manager",
-                "#text_manager",
                 "#virtual_keyboard_manager",
             ],
         },
@@ -80,15 +75,6 @@
                 "fuchsia.ui.shortcut2.Registry",
             ],
             from: "#shortcut_manager",
-        },
-        {
-            protocol: [
-                "fuchsia.ui.input.ImeService",
-                "fuchsia.ui.input3.Keyboard",
-                "fuchsia.ui.input3.KeyEventInjector",
-                "fuchsia.ui.keyboard.focus.Controller",
-            ],
-            from: "#text_manager",
         },
         {
             protocol: [
