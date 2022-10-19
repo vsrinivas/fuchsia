@@ -333,7 +333,7 @@ impl InformationRequesting {
             success_status_message,
             next_contact_time,
             preference: _,
-            addresses: _,
+            non_temporary_addresses: _,
             dns_servers,
         } = match result {
             Ok(options) => options,
@@ -421,30 +421,33 @@ pub(crate) struct IdentityAssociation {
 #[derive(Debug, Clone)]
 struct AdvertiseMessage {
     server_id: Vec<u8>,
-    addresses: HashMap<v6::IAID, IdentityAssociation>,
+    non_temporary_addresses: HashMap<v6::IAID, IdentityAssociation>,
     dns_servers: Vec<Ipv6Addr>,
     preference: u8,
     receive_time: Instant,
-    preferred_addresses_count: usize,
+    preferred_non_temporary_addresses_count: usize,
 }
 
 impl AdvertiseMessage {
     fn is_complete(
         &self,
-        configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_non_temporary_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: &[v6::OptionCode],
     ) -> bool {
         let Self {
             server_id: _,
-            addresses,
+            non_temporary_addresses,
             dns_servers,
             preference: _,
             receive_time: _,
-            preferred_addresses_count,
+            preferred_non_temporary_addresses_count,
         } = self;
-        addresses.len() >= configured_addresses.len()
-            && *preferred_addresses_count
-                == configured_addresses.values().filter(|&value| value.is_some()).count()
+        non_temporary_addresses.len() >= configured_non_temporary_addresses.len()
+            && *preferred_non_temporary_addresses_count
+                == configured_non_temporary_addresses
+                    .values()
+                    .filter(|&value| value.is_some())
+                    .count()
             && options_to_request.contains(&v6::OptionCode::DnsServers) == !dns_servers.is_empty()
     }
 }
@@ -462,30 +465,30 @@ impl Ord for AdvertiseMessage {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let Self {
             server_id: _,
-            addresses,
+            non_temporary_addresses,
             dns_servers,
             preference,
             receive_time,
-            preferred_addresses_count,
+            preferred_non_temporary_addresses_count,
         } = self;
         let Self {
             server_id: _,
-            addresses: other_addresses,
+            non_temporary_addresses: other_non_temporary_addresses,
             dns_servers: other_dns_server,
             preference: other_preference,
             receive_time: other_receive_time,
-            preferred_addresses_count: other_preferred_addresses_count,
+            preferred_non_temporary_addresses_count: other_preferred_non_temporary_addresses_count,
         } = other;
         (
-            addresses.len(),
-            *preferred_addresses_count,
+            non_temporary_addresses.len(),
+            *preferred_non_temporary_addresses_count,
             *preference,
             dns_servers.len(),
             *other_receive_time,
         )
             .cmp(&(
-                other_addresses.len(),
-                *other_preferred_addresses_count,
+                other_non_temporary_addresses.len(),
+                *other_preferred_non_temporary_addresses_count,
                 *other_preference,
                 other_dns_server.len(),
                 *receive_time,
@@ -697,7 +700,7 @@ struct Options {
     success_status_message: Option<String>,
     next_contact_time: NextContactTime,
     preference: Option<u8>,
-    addresses: HashMap<v6::IAID, IaNa>,
+    non_temporary_addresses: HashMap<v6::IAID, IaNa>,
     dns_servers: Option<Vec<Ipv6Addr>>,
 }
 
@@ -796,7 +799,7 @@ fn process_options<B: ByteSlice>(
     let mut server_id_option = None;
     let mut client_id_option = None;
     let mut preference = None;
-    let mut addresses = HashMap::new();
+    let mut non_temporary_addresses = HashMap::new();
     let mut status_code_option = None;
     let mut dns_servers = None;
     let mut refresh_time_option = None;
@@ -964,7 +967,7 @@ fn process_options<B: ByteSlice>(
                 //
                 //    A DHCP message may contain multiple IA_NA options
                 //    (though each must have a unique IAID).
-                match addresses.entry(iaid) {
+                match non_temporary_addresses.entry(iaid) {
                     Entry::Occupied(entry) => {
                         return Err(OptionsError::DuplicateIaNaId(
                             iaid,
@@ -1154,7 +1157,7 @@ fn process_options<B: ByteSlice>(
             success_status_message,
             next_contact_time,
             preference,
-            addresses,
+            non_temporary_addresses,
             dns_servers,
         }),
     })
@@ -1169,8 +1172,8 @@ struct ServerDiscovery {
     ///
     /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses the client is configured to negotiate, indexed by IAID.
-    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+    /// The non-temporary addresses the client is configured to negotiate.
+    configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
     /// The time of the first solicit. `None` before a solicit is sent. Used in
     /// calculating the [elapsed time].
     ///
@@ -1199,7 +1202,7 @@ impl ServerDiscovery {
     fn start<R: Rng>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: &[v6::OptionCode],
         solicit_max_rt: Duration,
         rng: &mut R,
@@ -1207,7 +1210,7 @@ impl ServerDiscovery {
     ) -> Transition {
         Self {
             client_id,
-            configured_addresses,
+            configured_non_temporary_addresses,
             first_solicit_time: None,
             retrans_timeout: Duration::default(),
             solicit_max_rt,
@@ -1245,7 +1248,7 @@ impl ServerDiscovery {
     ) -> Transition {
         let Self {
             client_id,
-            configured_addresses,
+            configured_non_temporary_addresses,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1263,7 +1266,7 @@ impl ServerDiscovery {
         // TODO(https://fxbug.dev/86945): remove `address_hint` construction
         // once `IanaSerializer::new()` takes options by value.
         let mut address_hint = HashMap::new();
-        for (iaid, addr_opt) in &configured_addresses {
+        for (iaid, addr_opt) in &configured_non_temporary_addresses {
             let entry = address_hint.insert(
                 *iaid,
                 addr_opt.map(|addr| {
@@ -1299,7 +1302,7 @@ impl ServerDiscovery {
         Transition {
             state: ClientState::ServerDiscovery(ServerDiscovery {
                 client_id,
-                configured_addresses,
+                configured_non_temporary_addresses,
                 first_solicit_time: Some(start_time),
                 retrans_timeout,
                 solicit_max_rt,
@@ -1325,7 +1328,7 @@ impl ServerDiscovery {
     ) -> Transition {
         let Self {
             client_id,
-            configured_addresses,
+            configured_non_temporary_addresses,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1342,16 +1345,19 @@ impl ServerDiscovery {
         if let Some(advertise) = collected_advertise.pop() {
             let AdvertiseMessage {
                 server_id,
-                addresses: advertised_addresses,
+                non_temporary_addresses: advertised_non_temporary_addresses,
                 dns_servers: _,
                 preference: _,
                 receive_time: _,
-                preferred_addresses_count: _,
+                preferred_non_temporary_addresses_count: _,
             } = advertise;
             return Requesting::start(
                 client_id,
                 server_id,
-                advertise_to_address_entries(advertised_addresses, configured_addresses),
+                advertise_to_address_entries(
+                    advertised_non_temporary_addresses,
+                    configured_non_temporary_addresses,
+                ),
                 &options_to_request,
                 collected_advertise,
                 solicit_max_rt,
@@ -1362,7 +1368,7 @@ impl ServerDiscovery {
 
         ServerDiscovery {
             client_id,
-            configured_addresses,
+            configured_non_temporary_addresses,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1381,7 +1387,7 @@ impl ServerDiscovery {
     ) -> Transition {
         let Self {
             client_id,
-            configured_addresses,
+            configured_non_temporary_addresses,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1397,7 +1403,7 @@ impl ServerDiscovery {
                     return Transition {
                         state: ClientState::ServerDiscovery(ServerDiscovery {
                             client_id,
-                            configured_addresses,
+                            configured_non_temporary_addresses,
                             first_solicit_time,
                             retrans_timeout,
                             solicit_max_rt,
@@ -1429,7 +1435,7 @@ impl ServerDiscovery {
             success_status_message,
             next_contact_time: _,
             preference,
-            mut addresses,
+            mut non_temporary_addresses,
             dns_servers,
         } = match result {
             Ok(options) => options,
@@ -1438,7 +1444,7 @@ impl ServerDiscovery {
                 return Transition {
                     state: ClientState::ServerDiscovery(ServerDiscovery {
                         client_id,
-                        configured_addresses,
+                        configured_non_temporary_addresses,
                         first_solicit_time,
                         retrans_timeout,
                         solicit_max_rt,
@@ -1458,7 +1464,7 @@ impl ServerDiscovery {
                 );
             }
         }
-        let addresses = addresses
+        let non_temporary_addresses = non_temporary_addresses
             .drain()
             .filter_map(|(iaid, ia_na)| {
                 let (success_status_message, ia_addr) = match ia_na {
@@ -1502,11 +1508,11 @@ impl ServerDiscovery {
                 })
             })
             .collect::<HashMap<_, _>>();
-        if addresses.is_empty() {
+        if non_temporary_addresses.is_empty() {
             return Transition {
                 state: ClientState::ServerDiscovery(ServerDiscovery {
                     client_id,
-                    configured_addresses,
+                    configured_non_temporary_addresses,
                     first_solicit_time,
                     retrans_timeout,
                     solicit_max_rt,
@@ -1518,11 +1524,13 @@ impl ServerDiscovery {
             };
         }
 
-        let preferred_addresses_count =
-            compute_preferred_address_count(&addresses, &configured_addresses);
+        let preferred_non_temporary_addresses_count = compute_preferred_address_count(
+            &non_temporary_addresses,
+            &configured_non_temporary_addresses,
+        );
         let advertise = AdvertiseMessage {
             server_id,
-            addresses,
+            non_temporary_addresses,
             dns_servers: dns_servers.unwrap_or(Vec::new()),
             // Per RFC 8415, section 18.2.1:
             //
@@ -1530,7 +1538,7 @@ impl ServerDiscovery {
             //   option is considered to have a preference value of 0.
             preference: preference.unwrap_or(0),
             receive_time: now,
-            preferred_addresses_count,
+            preferred_non_temporary_addresses_count,
         };
 
         let solicit_timeout = INITIAL_SOLICIT_TIMEOUT.as_secs_f64();
@@ -1562,22 +1570,25 @@ impl ServerDiscovery {
         //    received Advertise message without waiting for any additional
         //    Advertise messages.
         if (advertise.preference == ADVERTISE_MAX_PREFERENCE
-            && advertise.is_complete(&configured_addresses, options_to_request))
+            && advertise.is_complete(&configured_non_temporary_addresses, options_to_request))
             || is_retransmitting
         {
             let solicit_max_rt = get_common_value(&collected_sol_max_rt).unwrap_or(solicit_max_rt);
             let AdvertiseMessage {
                 server_id,
-                addresses: advertised_addresses,
+                non_temporary_addresses: advertised_non_temporary_addresses,
                 dns_servers: _,
                 preference: _,
                 receive_time: _,
-                preferred_addresses_count: _,
+                preferred_non_temporary_addresses_count: _,
             } = advertise;
             return Requesting::start(
                 client_id,
                 server_id,
-                advertise_to_address_entries(advertised_addresses, configured_addresses),
+                advertise_to_address_entries(
+                    advertised_non_temporary_addresses,
+                    configured_non_temporary_addresses,
+                ),
                 &options_to_request,
                 collected_advertise,
                 solicit_max_rt,
@@ -1591,7 +1602,7 @@ impl ServerDiscovery {
         Transition {
             state: ClientState::ServerDiscovery(ServerDiscovery {
                 client_id,
-                configured_addresses,
+                configured_non_temporary_addresses,
                 first_solicit_time,
                 retrans_timeout,
                 solicit_max_rt,
@@ -1758,8 +1769,8 @@ struct Requesting {
     /// [Client Identifier]:
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses entries negotiated by the client.
-    addresses: HashMap<v6::IAID, AddressEntry>,
+    /// The non-temporary addresses entries negotiated by the client.
+    non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
@@ -1801,29 +1812,32 @@ struct Requesting {
 ///    server.
 fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     client_id: [u8; CLIENT_ID_LEN],
-    addresses: HashMap<v6::IAID, AddressEntry>,
+    non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
     options_to_request: &[v6::OptionCode],
     mut collected_advertise: BinaryHeap<AdvertiseMessage>,
     solicit_max_rt: Duration,
     rng: &mut R,
     now: Instant,
 ) -> Transition {
-    let configured_addresses = to_configured_addresses(addresses);
+    let configured_non_temporary_addresses = to_configured_addresses(non_temporary_addresses);
     if let Some(advertise) = collected_advertise.pop() {
         // TODO(https://fxbug.dev/96674): Before selecting a different server,
         // add actions to remove the existing assigned addresses, if any.
         let AdvertiseMessage {
             server_id,
-            addresses: advertised_addresses,
+            non_temporary_addresses: advertised_non_temporary_addresses,
             dns_servers: _,
             preference: _,
             receive_time: _,
-            preferred_addresses_count: _,
+            preferred_non_temporary_addresses_count: _,
         } = advertise;
         return Requesting::start(
             client_id,
             server_id,
-            advertise_to_address_entries(advertised_addresses, configured_addresses),
+            advertise_to_address_entries(
+                advertised_non_temporary_addresses,
+                configured_non_temporary_addresses,
+            ),
             &options_to_request,
             collected_advertise,
             solicit_max_rt,
@@ -1836,7 +1850,7 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     return ServerDiscovery::start(
         transaction_id(),
         client_id,
-        configured_addresses,
+        configured_non_temporary_addresses,
         &options_to_request,
         solicit_max_rt,
         rng,
@@ -2050,7 +2064,7 @@ enum StateAfterReplyWithLeases {
 #[derive(Debug)]
 struct ProcessedReplyWithLeases {
     server_id: Vec<u8>,
-    addresses: HashMap<v6::IAID, AddressEntry>,
+    non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
     dns_servers: Option<Vec<Ipv6Addr>>,
     actions: Vec<Action>,
     next_state: StateAfterReplyWithLeases,
@@ -2062,7 +2076,7 @@ struct ProcessedReplyWithLeases {
 fn process_reply_with_leases<B: ByteSlice>(
     client_id: [u8; CLIENT_ID_LEN],
     server_id: &[u8],
-    current_addresses: &HashMap<v6::IAID, AddressEntry>,
+    current_non_temporary_addresses: &HashMap<v6::IAID, AddressEntry>,
     solicit_max_rt: &mut Duration,
     msg: &v6::Message<'_, B>,
     request_type: RequestLeasesMessageType,
@@ -2097,7 +2111,7 @@ fn process_reply_with_leases<B: ByteSlice>(
         success_status_message,
         next_contact_time,
         preference: _,
-        addresses,
+        non_temporary_addresses,
         dns_servers,
     } = result?;
 
@@ -2115,164 +2129,169 @@ fn process_reply_with_leases<B: ByteSlice>(
         }
     }
 
-    let (mut addresses, go_to_requesting) = addresses.into_iter().try_fold(
-        (HashMap::new(), false),
-        |(mut addresses, mut go_to_requesting), (iaid, ia_na)| {
-            let current_address_entry = match current_addresses.get(&iaid) {
-                Some(address_entry) => address_entry,
-                None => {
-                    // The RFC does not explicitly call out what to do with
-                    // IAs that were not requested by the client.
-                    //
-                    // Return an error to cause the entire message to be
-                    // ignored.
-                    return Err(ReplyWithLeasesError::UnexpectedIaNa(iaid, ia_na));
-                }
-            };
-            let (success_status_message, ia_addr) = match ia_na {
-                IaNa::Success { status_message, t1: _, t2: _, ia_addr } => {
-                    (status_message, ia_addr)
-                }
-                IaNa::Failure(StatusCodeError(error_code, msg)) => {
-                    if !msg.is_empty() {
-                        warn!(
-                            "Reply to {}: IA_NA with IAID {:?} \
-                            status code {:?} message: {}",
-                            request_type, iaid, error_code, msg
-                        );
+    let (mut non_temporary_addresses, go_to_requesting) =
+        non_temporary_addresses.into_iter().try_fold(
+            (HashMap::new(), false),
+            |(mut non_temporary_addresses, mut go_to_requesting), (iaid, ia_na)| {
+                let current_address_entry = match current_non_temporary_addresses.get(&iaid) {
+                    Some(address_entry) => address_entry,
+                    None => {
+                        // The RFC does not explicitly call out what to do with
+                        // IAs that were not requested by the client.
+                        //
+                        // Return an error to cause the entire message to be
+                        // ignored.
+                        return Err(ReplyWithLeasesError::UnexpectedIaNa(iaid, ia_na));
                     }
-                    discard_leases(&current_address_entry);
-                    let error = process_ia_na_error_status(request_type, error_code);
-                    let without_hints = match error {
-                        IaNaStatusError::Retry { without_hints } => without_hints,
-                        IaNaStatusError::Invalid => {
+                };
+                let (success_status_message, ia_addr) = match ia_na {
+                    IaNa::Success { status_message, t1: _, t2: _, ia_addr } => {
+                        (status_message, ia_addr)
+                    }
+                    IaNa::Failure(StatusCodeError(error_code, msg)) => {
+                        if !msg.is_empty() {
                             warn!(
+                                "Reply to {}: IA_NA with IAID {:?} \
+                            status code {:?} message: {}",
+                                request_type, iaid, error_code, msg
+                            );
+                        }
+                        discard_leases(&current_address_entry);
+                        let error = process_ia_na_error_status(request_type, error_code);
+                        let without_hints = match error {
+                            IaNaStatusError::Retry { without_hints } => without_hints,
+                            IaNaStatusError::Invalid => {
+                                warn!(
                                 "Reply to {}: received unexpected status code {:?} in IA_NA option \
                                 with IAID {:?}",
                                 request_type, error_code, iaid,
                             );
-                            false
-                        }
-                        IaNaStatusError::Rerequest => {
-                            go_to_requesting = true;
-                            false
-                        }
-                    };
-                    assert_eq!(
-                        addresses.insert(iaid, current_address_entry.to_request(without_hints)),
-                        None
-                    );
-                    return Ok((addresses, go_to_requesting));
-                }
-            };
-            if let Some(success_status_message) = success_status_message {
-                if !success_status_message.is_empty() {
-                    info!(
-                        "Reply to {}: IA_NA with IAID {:?} success status code message: {}",
-                        request_type, iaid, success_status_message,
-                    );
-                }
-            }
-            let IaAddress { address, lifetimes } = match ia_addr {
-                Some(ia_addr) => ia_addr,
-                None => {
-                    // The server has not included an IA Address option in the IA,
-                    // keep the previously recorded information, per RFC 8415
-                    // section 18.2.10.1:
-                    //
-                    //     -  Leave unchanged any information about leases the
-                    //        client has recorded in the IA but that were not
-                    //        included in the IA from the server.
-                    //
-                    // The address remains assigned until the end of its valid
-                    // lifetime, or it is requested later if it was not assigned.
-                    assert_eq!(addresses.insert(iaid, *current_address_entry), None);
-                    return Ok((addresses, go_to_requesting));
-                }
-            };
-            let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
-                Ok(lifetimes) => lifetimes,
-                Err(e) => {
-                    warn!(
-                        "Reply to {}: IA_NA with IAID {:?}: discarding leases: {}",
-                        request_type, iaid, e
-                    );
-                    discard_leases(&current_address_entry);
-                    assert_eq!(
-                        addresses.insert(
-                            iaid,
-                            AddressEntry::ToRequest(AddressToRequest::Configured(
-                                current_address_entry.configured_address(),
-                            )),
-                        ),
-                        None
-                    );
-                    return Ok((addresses, go_to_requesting));
-                }
-            };
-            // Per RFC 8415 section 21.13:
-            //
-            //    If the server finds that the client has included an
-            //    IA in the Request message for which the server already
-            //    has a binding that associates the IA with the client,
-            //    the server sends a Reply message with existing bindings,
-            //    possibly with updated lifetimes.  The server may update
-            //    the bindings according to its local policies.
-            match current_address_entry {
-                AddressEntry::Assigned(ia) => {
-                    // If the returned address does not match the address recorded by the client
-                    // remove old address and add new one; otherwise, extend the lifetimes of
-                    // the existing address.
-                    if address != ia.address() {
-                        // TODO(https://fxbug.dev/96674): Add
-                        // action to remove the previous address.
-                        // TODO(https://fxbug.dev/95265): Add action to add
-                        // the new address.
-                        // TODO(https://fxbug.dev/96684): Add actions to
-                        // schedule preferred and valid lifetime timers for
-                        // new address and cancel timers for old address.
-                        debug!(
-                            "Reply to {}: IA_NA with IAID {:?}: \
-                            Address does not match {:?}, removing previous address and \
-                            adding new address {:?}.",
-                            request_type,
-                            iaid,
-                            ia.address(),
-                            address,
+                                false
+                            }
+                            IaNaStatusError::Rerequest => {
+                                go_to_requesting = true;
+                                false
+                            }
+                        };
+                        assert_eq!(
+                            non_temporary_addresses
+                                .insert(iaid, current_address_entry.to_request(without_hints)),
+                            None
                         );
-                    } else {
-                        // The lifetime was extended, update preferred
-                        // and valid lifetime timers.
-                        // TODO(https://fxbug.dev/96684): add actions to
-                        // reschedule preferred and valid lifetime timers.
-                        debug!(
-                            "Reply to {}: IA_NA with IAID {:?}: \
-                            Lifetime is extended for address {:?}.",
-                            request_type,
-                            iaid,
-                            ia.address()
+                        return Ok((non_temporary_addresses, go_to_requesting));
+                    }
+                };
+                if let Some(success_status_message) = success_status_message {
+                    if !success_status_message.is_empty() {
+                        info!(
+                            "Reply to {}: IA_NA with IAID {:?} success status code message: {}",
+                            request_type, iaid, success_status_message,
                         );
                     }
                 }
-                AddressEntry::ToRequest(_) => {
-                    // TODO(https://fxbug.dev/95265): Add action to
-                    // add the new address.
+                let IaAddress { address, lifetimes } = match ia_addr {
+                    Some(ia_addr) => ia_addr,
+                    None => {
+                        // The server has not included an IA Address option in the IA,
+                        // keep the previously recorded information, per RFC 8415
+                        // section 18.2.10.1:
+                        //
+                        //     -  Leave unchanged any information about leases the
+                        //        client has recorded in the IA but that were not
+                        //        included in the IA from the server.
+                        //
+                        // The address remains assigned until the end of its valid
+                        // lifetime, or it is requested later if it was not assigned.
+                        assert_eq!(
+                            non_temporary_addresses.insert(iaid, *current_address_entry),
+                            None
+                        );
+                        return Ok((non_temporary_addresses, go_to_requesting));
+                    }
+                };
+                let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
+                    Ok(lifetimes) => lifetimes,
+                    Err(e) => {
+                        warn!(
+                            "Reply to {}: IA_NA with IAID {:?}: discarding leases: {}",
+                            request_type, iaid, e
+                        );
+                        discard_leases(&current_address_entry);
+                        assert_eq!(
+                            non_temporary_addresses.insert(
+                                iaid,
+                                AddressEntry::ToRequest(AddressToRequest::Configured(
+                                    current_address_entry.configured_address(),
+                                )),
+                            ),
+                            None
+                        );
+                        return Ok((non_temporary_addresses, go_to_requesting));
+                    }
+                };
+                // Per RFC 8415 section 21.13:
+                //
+                //    If the server finds that the client has included an
+                //    IA in the Request message for which the server already
+                //    has a binding that associates the IA with the client,
+                //    the server sends a Reply message with existing bindings,
+                //    possibly with updated lifetimes.  The server may update
+                //    the bindings according to its local policies.
+                match current_address_entry {
+                    AddressEntry::Assigned(ia) => {
+                        // If the returned address does not match the address recorded by the client
+                        // remove old address and add new one; otherwise, extend the lifetimes of
+                        // the existing address.
+                        if address != ia.address() {
+                            // TODO(https://fxbug.dev/96674): Add
+                            // action to remove the previous address.
+                            // TODO(https://fxbug.dev/95265): Add action to add
+                            // the new address.
+                            // TODO(https://fxbug.dev/96684): Add actions to
+                            // schedule preferred and valid lifetime timers for
+                            // new address and cancel timers for old address.
+                            debug!(
+                                "Reply to {}: IA_NA with IAID {:?}: \
+                            Address does not match {:?}, removing previous address and \
+                            adding new address {:?}.",
+                                request_type,
+                                iaid,
+                                ia.address(),
+                                address,
+                            );
+                        } else {
+                            // The lifetime was extended, update preferred
+                            // and valid lifetime timers.
+                            // TODO(https://fxbug.dev/96684): add actions to
+                            // reschedule preferred and valid lifetime timers.
+                            debug!(
+                                "Reply to {}: IA_NA with IAID {:?}: \
+                            Lifetime is extended for address {:?}.",
+                                request_type,
+                                iaid,
+                                ia.address()
+                            );
+                        }
+                    }
+                    AddressEntry::ToRequest(_) => {
+                        // TODO(https://fxbug.dev/95265): Add action to
+                        // add the new address.
+                    }
                 }
-            }
-            // Add the address entry as renewed by the
-            // server.
-            let entry = AddressEntry::Assigned(AssignedIa::new(
-                IdentityAssociation {
-                    address,
-                    preferred_lifetime,
-                    valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
-                },
-                current_address_entry.configured_address(),
-            ));
-            assert_eq!(addresses.insert(iaid, entry), None);
-            Ok((addresses, go_to_requesting))
-        },
-    )?;
+                // Add the address entry as renewed by the
+                // server.
+                let entry = AddressEntry::Assigned(AssignedIa::new(
+                    IdentityAssociation {
+                        address,
+                        preferred_lifetime,
+                        valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
+                    },
+                    current_address_entry.configured_address(),
+                ));
+                assert_eq!(non_temporary_addresses.insert(iaid, entry), None);
+                Ok((non_temporary_addresses, go_to_requesting))
+            },
+        )?;
 
     // Per RFC 8415, section 18.2.10.1:
     //
@@ -2287,7 +2306,7 @@ fn process_reply_with_leases<B: ByteSlice>(
     // configuration information only. This option is preferred when the
     // client operates in stateful mode, where the main goal for the
     // client is to negotiate addresses.
-    let next_state = if addresses.iter().all(|(_iaid, entry)| match entry {
+    let next_state = if non_temporary_addresses.iter().all(|(_iaid, entry)| match entry {
         AddressEntry::ToRequest(_) => true,
         AddressEntry::Assigned(_) => false,
     }) {
@@ -2299,7 +2318,10 @@ fn process_reply_with_leases<B: ByteSlice>(
         match request_type {
             RequestLeasesMessageType::Request => StateAfterReplyWithLeases::Assigned,
             RequestLeasesMessageType::Renew | RequestLeasesMessageType::Rebind => {
-                if current_addresses.keys().any(|iaid| !addresses.contains_key(iaid)) {
+                if current_non_temporary_addresses
+                    .keys()
+                    .any(|iaid| !non_temporary_addresses.contains_key(iaid))
+                {
                     // Stay in Renewing/Rebinding if any of the assigned IAs that the client
                     // is trying to renew are not included in the Reply, per RFC 8451 section
                     // 18.2.10.1:
@@ -2328,18 +2350,19 @@ fn process_reply_with_leases<B: ByteSlice>(
     };
     // Add configured addresses that were requested by the client but were
     // not received in this Reply.
-    for (iaid, addr_entry) in current_addresses {
-        let _: &mut AddressEntry = addresses.entry(*iaid).or_insert(match addr_entry {
-            AddressEntry::ToRequest(address_to_request) => {
-                AddressEntry::ToRequest(*address_to_request)
-            }
-            AddressEntry::Assigned(ia) => {
-                AddressEntry::Assigned(*ia)
-                // TODO(https://fxbug.dev/76765): handle assigned addresses
-                // on transitioning from `Renewing` to `Requesting` for IAs
-                // with `NoBinding` status.
-            }
-        });
+    for (iaid, addr_entry) in current_non_temporary_addresses {
+        let _: &mut AddressEntry =
+            non_temporary_addresses.entry(*iaid).or_insert(match addr_entry {
+                AddressEntry::ToRequest(address_to_request) => {
+                    AddressEntry::ToRequest(*address_to_request)
+                }
+                AddressEntry::Assigned(ia) => {
+                    AddressEntry::Assigned(*ia)
+                    // TODO(https://fxbug.dev/76765): handle assigned addresses
+                    // on transitioning from `Renewing` to `Requesting` for IAs
+                    // with `NoBinding` status.
+                }
+            });
     }
 
     // TODO(https://fxbug.dev/96674): Add actions to remove addresses.
@@ -2397,7 +2420,7 @@ fn process_reply_with_leases<B: ByteSlice>(
 
     Ok(ProcessedReplyWithLeases {
         server_id: got_server_id,
-        addresses,
+        non_temporary_addresses,
         dns_servers,
         actions,
         next_state,
@@ -2445,7 +2468,7 @@ impl Requesting {
     fn start<R: Rng>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: Vec<u8>,
-        addresses: HashMap<v6::IAID, AddressEntry>,
+        non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
         options_to_request: &[v6::OptionCode],
         collected_advertise: BinaryHeap<AdvertiseMessage>,
         solicit_max_rt: Duration,
@@ -2454,7 +2477,7 @@ impl Requesting {
     ) -> Transition {
         Self {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             first_request_time: None,
@@ -2512,7 +2535,7 @@ impl Requesting {
         let Self {
             client_id,
             server_id,
-            addresses,
+            non_temporary_addresses,
             collected_advertise,
             first_request_time,
             retrans_timeout: prev_retrans_timeout,
@@ -2533,7 +2556,7 @@ impl Requesting {
             vec![v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)];
 
         let mut iaaddr_options = HashMap::new();
-        for (iaid, addr_entry) in &addresses {
+        for (iaid, addr_entry) in &non_temporary_addresses {
             assert_matches!(
                 iaaddr_options.insert(
                     *iaid,
@@ -2584,7 +2607,7 @@ impl Requesting {
         Transition {
             state: ClientState::Requesting(Requesting {
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise,
                 first_request_time,
@@ -2639,7 +2662,7 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             first_request_time,
@@ -2650,7 +2673,7 @@ impl Requesting {
         if retrans_count != REQUEST_MAX_RC {
             return Self {
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise,
                 first_request_time,
@@ -2667,7 +2690,7 @@ impl Requesting {
         }
         request_from_alternate_server_or_restart_server_discovery(
             client_id,
-            addresses,
+            non_temporary_addresses,
             &options_to_request,
             collected_advertise,
             solicit_max_rt,
@@ -2685,7 +2708,7 @@ impl Requesting {
     ) -> Transition {
         let Self {
             client_id,
-            addresses: mut current_addresses,
+            non_temporary_addresses: mut current_non_temporary_addresses,
             server_id,
             collected_advertise,
             first_request_time,
@@ -2695,14 +2718,14 @@ impl Requesting {
         } = self;
         let ProcessedReplyWithLeases {
             server_id: got_server_id,
-            addresses,
+            non_temporary_addresses,
             dns_servers,
             actions,
             next_state,
         } = match process_reply_with_leases(
             client_id,
             &server_id,
-            &current_addresses,
+            &current_non_temporary_addresses,
             &mut solicit_max_rt,
             &msg,
             RequestLeasesMessageType::Request,
@@ -2724,7 +2747,7 @@ impl Requesting {
                                 // The client reissues the message without specifying addresses,
                                 // leaving it up to the server to assign addresses appropriate
                                 // for the client's link.
-                                current_addresses.iter_mut().for_each(
+                                current_non_temporary_addresses.iter_mut().for_each(
                                     |(_, current_address_entry)| {
                                         // Discard all currently-assigned addresses.
                                         discard_leases(current_address_entry);
@@ -2747,7 +2770,7 @@ impl Requesting {
                                 );
                                 return Requesting {
                                     client_id,
-                                    addresses: current_addresses,
+                                    non_temporary_addresses: current_non_temporary_addresses,
                                     server_id,
                                     collected_advertise,
                                     first_request_time,
@@ -2805,7 +2828,7 @@ impl Requesting {
                         return Transition {
                             state: ClientState::Requesting(Self {
                                 client_id,
-                                addresses: current_addresses,
+                                non_temporary_addresses: current_non_temporary_addresses,
                                 server_id,
                                 collected_advertise,
                                 first_request_time,
@@ -2823,7 +2846,7 @@ impl Requesting {
                 return Transition {
                     state: ClientState::Requesting(Self {
                         client_id,
-                        addresses: current_addresses,
+                        non_temporary_addresses: current_non_temporary_addresses,
                         server_id,
                         collected_advertise,
                         first_request_time,
@@ -2855,7 +2878,7 @@ impl Requesting {
                 warn!("Reply to Request: trying next server");
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    current_addresses,
+                    current_non_temporary_addresses,
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -2869,7 +2892,7 @@ impl Requesting {
                 Transition {
                     state: ClientState::Assigned(Assigned {
                         client_id,
-                        addresses,
+                        non_temporary_addresses,
                         server_id,
                         collected_advertise,
                         dns_servers: dns_servers.unwrap_or(Vec::new()),
@@ -2978,8 +3001,8 @@ struct Assigned {
     ///
     /// [Client Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses entries negotiated by the client.
-    addresses: HashMap<v6::IAID, AddressEntry>,
+    /// The non-temporary addresses entries negotiated by the client.
+    non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
@@ -3009,7 +3032,7 @@ impl Assigned {
     ) -> Transition {
         let Self {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             dns_servers,
@@ -3022,7 +3045,7 @@ impl Assigned {
         Renewing::start(
             transaction_id(),
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             options_to_request,
@@ -3049,7 +3072,7 @@ impl Renewing {
     ) -> Transition {
         let Self(RenewingOrRebindingInner {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             dns_servers,
@@ -3067,7 +3090,7 @@ impl Renewing {
         Rebinding::start(
             transaction_id(),
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             options_to_request,
@@ -3085,9 +3108,9 @@ struct RenewingOrRebindingInner {
     /// [Client Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// used for uniquely identifying the client in communication with servers.
     client_id: [u8; CLIENT_ID_LEN],
-    /// The addresses the client is initially configured to solicit, used when
-    /// server discovery is restarted.
-    addresses: HashMap<v6::IAID, AddressEntry>,
+    /// The non-temporary addresses the client is initially configured to
+    /// solicit, used when server discovery is restarted.
+    non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
     /// [Server Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// of the server selected during server discovery.
     server_id: Vec<u8>,
@@ -3129,7 +3152,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
     fn start<R: Rng>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        addresses: HashMap<v6::IAID, AddressEntry>,
+        non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
         server_id: Vec<u8>,
         collected_advertise: BinaryHeap<AdvertiseMessage>,
         options_to_request: &[v6::OptionCode],
@@ -3140,7 +3163,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
     ) -> Transition {
         Self(RenewingOrRebindingInner {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             dns_servers,
@@ -3177,7 +3200,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
     ) -> Transition {
         let Self(RenewingOrRebindingInner {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise,
             dns_servers,
@@ -3224,7 +3247,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         // TODO(https://fxbug.dev/74324): all addresses in the map should be
         // valid; invalid addresses to be removed part of the
         // AddressStateProvider work.
-        for (iaid, addr_entry) in &addresses {
+        for (iaid, addr_entry) in &non_temporary_addresses {
             assert_matches!(
                 iaaddr_options.insert(
                     *iaid,
@@ -3253,7 +3276,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             state: {
                 let inner = RenewingOrRebindingInner {
                     client_id,
-                    addresses,
+                    non_temporary_addresses,
                     server_id,
                     collected_advertise,
                     dns_servers,
@@ -3296,7 +3319,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
     ) -> Transition {
         let Self(RenewingOrRebindingInner {
             client_id,
-            addresses: current_addresses,
+            non_temporary_addresses: current_non_temporary_addresses,
             server_id,
             collected_advertise,
             dns_servers: current_dns_servers,
@@ -3306,14 +3329,14 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         }) = self;
         let ProcessedReplyWithLeases {
             server_id: got_server_id,
-            addresses,
+            non_temporary_addresses,
             dns_servers,
             actions,
             next_state,
         } = match process_reply_with_leases(
             client_id,
             &server_id,
-            &current_addresses,
+            &current_non_temporary_addresses,
             &mut solicit_max_rt,
             &msg,
             if IS_REBINDING {
@@ -3388,7 +3411,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     state: {
                         let inner = RenewingOrRebindingInner {
                             client_id,
-                            addresses: current_addresses,
+                            non_temporary_addresses: current_non_temporary_addresses,
                             server_id,
                             collected_advertise,
                             dns_servers: current_dns_servers,
@@ -3425,7 +3448,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             StateAfterReplyWithLeases::RequestNextServer => {
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
-                    current_addresses,
+                    current_non_temporary_addresses,
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -3437,7 +3460,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 state: {
                     let inner = RenewingOrRebindingInner {
                         client_id,
-                        addresses,
+                        non_temporary_addresses,
                         server_id,
                         collected_advertise,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
@@ -3461,7 +3484,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 Transition {
                     state: ClientState::Assigned(Assigned {
                         client_id,
-                        addresses,
+                        non_temporary_addresses,
                         server_id,
                         collected_advertise,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
@@ -3474,7 +3497,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             StateAfterReplyWithLeases::Requesting => Requesting::start(
                 client_id,
                 server_id,
-                addresses,
+                non_temporary_addresses,
                 &options_to_request,
                 collected_advertise,
                 solicit_max_rt,
@@ -3669,7 +3692,7 @@ impl ClientState {
             }
             ClientState::Assigned(Assigned {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 dns_servers,
@@ -3677,7 +3700,7 @@ impl ClientState {
             })
             | ClientState::Renewing(RenewingOrRebinding(RenewingOrRebindingInner {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 dns_servers,
@@ -3687,7 +3710,7 @@ impl ClientState {
             }))
             | ClientState::Rebinding(RenewingOrRebinding(RenewingOrRebindingInner {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 dns_servers,
@@ -3698,7 +3721,7 @@ impl ClientState {
             ClientState::InformationRequesting(InformationRequesting { retrans_timeout: _ })
             | ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
-                configured_addresses: _,
+                configured_non_temporary_addresses: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -3707,7 +3730,7 @@ impl ClientState {
             })
             | ClientState::Requesting(Requesting {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -3770,14 +3793,14 @@ impl<R: Rng> ClientStateMachine<R> {
 
     /// Starts the client in Stateful mode, as defined in [RFC 8415, Section 6.2].
     /// The client exchanges messages with servers to obtain addresses in
-    /// `configured_addresses`, and the configuration information in
+    /// `configured_non_temporary_addresses`, and the configuration information in
     /// `options_to_request`.
     ///
     /// [RFC 8415, Section 6.1]: https://tools.ietf.org/html/rfc8415#section-6.2
     pub fn start_stateful(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
         now: Instant,
@@ -3786,7 +3809,7 @@ impl<R: Rng> ClientStateMachine<R> {
             ServerDiscovery::start(
                 transaction_id,
                 client_id,
-                configured_addresses,
+                configured_non_temporary_addresses,
                 &options_to_request,
                 MAX_SOLICIT_TIMEOUT,
                 &mut rng,
@@ -3922,17 +3945,17 @@ pub(crate) mod testconsts {
     pub(crate) const SERVER_ID: [[u8; TEST_SERVER_ID_LEN]; 3] =
         [[100, 101, 102], [110, 111, 112], [120, 121, 122]];
 
-    pub(crate) const RENEW_ADDRESSES: [Ipv6Addr; 3] = [
+    pub(crate) const RENEW_NON_TEMPORARY_ADDRESSES: [Ipv6Addr; 3] = [
         std_ip_v6!("::ffff:4e45:123"),
         std_ip_v6!("::ffff:4e45:456"),
         std_ip_v6!("::ffff:4e45:789"),
     ];
-    pub(crate) const REPLY_ADDRESSES: [Ipv6Addr; 3] = [
+    pub(crate) const REPLY_NON_TEMPORARY_ADDRESSES: [Ipv6Addr; 3] = [
         std_ip_v6!("::ffff:5447:123"),
         std_ip_v6!("::ffff:5447:456"),
         std_ip_v6!("::ffff:5447:789"),
     ];
-    pub(crate) const CONFIGURED_ADDRESSES: [Ipv6Addr; 3] = [
+    pub(crate) const CONFIGURED_NON_TEMPORARY_ADDRESSES: [Ipv6Addr; 3] = [
         std_ip_v6!("::ffff:c00a:123"),
         std_ip_v6!("::ffff:c00a:456"),
         std_ip_v6!("::ffff:c00a:789"),
@@ -3997,7 +4020,7 @@ pub(crate) mod testutil {
     pub(crate) fn start_and_assert_server_discovery<R: Rng + std::fmt::Debug>(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
-        configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
         rng: R,
         now: Instant,
@@ -4005,7 +4028,7 @@ pub(crate) mod testutil {
         let (client, actions) = ClientStateMachine::start_stateful(
             transaction_id.clone(),
             client_id.clone(),
-            configured_addresses.clone(),
+            configured_non_temporary_addresses.clone(),
             options_to_request.clone(),
             rng,
             now,
@@ -4018,7 +4041,7 @@ pub(crate) mod testutil {
                 options_to_request: got_options_to_request,
                 state: Some(ClientState::ServerDiscovery(ServerDiscovery {
                     client_id: got_client_id,
-                    configured_addresses: got_configured_addresses,
+                    configured_non_temporary_addresses: got_configured_non_temporary_addresses,
                     first_solicit_time: Some(_),
                     retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
                     solicit_max_rt: MAX_SOLICIT_TIMEOUT,
@@ -4029,7 +4052,7 @@ pub(crate) mod testutil {
             } if *got_transaction_id == transaction_id &&
                  *got_options_to_request == options_to_request &&
                  *got_client_id == client_id &&
-                 *got_configured_addresses == configured_addresses &&
+                 *got_configured_non_temporary_addresses == configured_non_temporary_addresses &&
                  collected_advertise.is_empty() &&
                  collected_sol_max_rt.is_empty()
         );
@@ -4049,7 +4072,7 @@ pub(crate) mod testutil {
             &client_id,
             None,
             &options_to_request,
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
 
         client
@@ -4097,26 +4120,28 @@ pub(crate) mod testutil {
     impl AdvertiseMessage {
         pub(crate) fn new_default(
             server_id: [u8; TEST_SERVER_ID_LEN],
-            addresses: &[Ipv6Addr],
+            non_temporary_addresses: &[Ipv6Addr],
             dns_servers: &[Ipv6Addr],
-            configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+            configured_non_temporary_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
         ) -> AdvertiseMessage {
-            let addresses = (0..)
+            let non_temporary_addresses = (0..)
                 .map(v6::IAID::new)
-                .zip(addresses.iter().fold(Vec::new(), |mut addrs, address| {
+                .zip(non_temporary_addresses.iter().fold(Vec::new(), |mut addrs, address| {
                     addrs.push(IdentityAssociation::new_default(*address));
                     addrs
                 }))
                 .collect();
-            let preferred_addresses_count =
-                compute_preferred_address_count(&addresses, &configured_addresses);
+            let preferred_non_temporary_addresses_count = compute_preferred_address_count(
+                &non_temporary_addresses,
+                &configured_non_temporary_addresses,
+            );
             AdvertiseMessage {
                 server_id: server_id.to_vec(),
-                addresses,
+                non_temporary_addresses,
                 dns_servers: dns_servers.to_vec(),
                 preference: 0,
                 receive_time: Instant::now(),
-                preferred_addresses_count,
+                preferred_non_temporary_addresses_count,
             }
         }
     }
@@ -4173,7 +4198,7 @@ pub(crate) mod testutil {
     pub(crate) fn request_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
         now: Instant,
@@ -4181,9 +4206,9 @@ pub(crate) mod testutil {
         // Generate a transaction_id for the Solicit - Advertise message
         // exchange.
         let transaction_id = [1, 2, 3];
-        let configured_addresses = to_configured_addresses(
-            addresses_to_assign.len(),
-            addresses_to_assign.iter().map(
+        let configured_non_temporary_addresses = to_configured_addresses(
+            non_temporary_addresses_to_assign.len(),
+            non_temporary_addresses_to_assign.iter().map(
                 |TestIdentityAssociation {
                      address,
                      preferred_lifetime: _,
@@ -4201,7 +4226,7 @@ pub(crate) mod testutil {
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id.clone(),
             client_id.clone(),
-            configured_addresses.clone(),
+            configured_non_temporary_addresses.clone(),
             options_to_request.clone(),
             rng,
             now,
@@ -4215,10 +4240,10 @@ pub(crate) mod testutil {
         if !expected_dns_servers.is_empty() {
             options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
         }
-        let addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
-            (0..).map(v6::IAID::new).zip(addresses_to_assign).collect();
+        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
+            (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
         let mut iaaddr_opts = HashMap::new();
-        for (iaid, ia) in &addresses_to_assign {
+        for (iaid, ia) in &non_temporary_addresses_to_assign {
             assert_matches!(
                 iaaddr_opts.insert(
                     *iaid,
@@ -4232,7 +4257,7 @@ pub(crate) mod testutil {
                 None
             );
         }
-        for (iaid, ia) in &addresses_to_assign {
+        for (iaid, ia) in &non_temporary_addresses_to_assign {
             options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 *iaid,
                 testutil::get_value(ia.t1),
@@ -4262,7 +4287,7 @@ pub(crate) mod testutil {
             &client_id,
             Some(&server_id),
             &options_to_request,
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let request_transaction_id = *transaction_id;
@@ -4274,7 +4299,7 @@ pub(crate) mod testutil {
                 retrans_timeout,
                 retrans_count,
                 solicit_max_rt,
-                addresses: _,
+                non_temporary_addresses: _,
                 first_request_time: _,
             } = assert_matches!(&state, Some(ClientState::Requesting(requesting)) => requesting);
             assert_eq!(*got_client_id, client_id);
@@ -4302,7 +4327,7 @@ pub(crate) mod testutil {
     pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
         now: Instant,
@@ -4310,7 +4335,7 @@ pub(crate) mod testutil {
         let (mut client, transaction_id) = testutil::request_addresses_and_assert(
             client_id.clone(),
             server_id.clone(),
-            addresses_to_assign.clone(),
+            non_temporary_addresses_to_assign.clone(),
             expected_dns_servers,
             rng,
             now,
@@ -4321,10 +4346,10 @@ pub(crate) mod testutil {
         if !expected_dns_servers.is_empty() {
             options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
         }
-        let addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
-            (0..).map(v6::IAID::new).zip(addresses_to_assign).collect();
+        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
+            (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
         let mut iaaddr_opts = HashMap::new();
-        for (iaid, ia) in &addresses_to_assign {
+        for (iaid, ia) in &non_temporary_addresses_to_assign {
             assert_matches!(
                 iaaddr_opts.insert(
                     *iaid,
@@ -4338,7 +4363,7 @@ pub(crate) mod testutil {
                 None
             );
         }
-        for (iaid, ia) in &addresses_to_assign {
+        for (iaid, ia) in &non_temporary_addresses_to_assign {
             options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 *iaid,
                 testutil::get_value(ia.t1),
@@ -4354,8 +4379,9 @@ pub(crate) mod testutil {
         let actions = client.handle_message_receive(msg, now);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_addresses =
-            addresses_to_assign.iter().fold(HashMap::new(), |mut addrs, (iaid, ia)| {
+        let expected_non_temporary_addresses = non_temporary_addresses_to_assign.iter().fold(
+            HashMap::new(),
+            |mut addrs, (iaid, ia)| {
                 let TestIdentityAssociation {
                     address,
                     preferred_lifetime,
@@ -4378,10 +4404,11 @@ pub(crate) mod testutil {
                     None
                 );
                 addrs
-            });
+            },
+        );
         let Assigned {
             client_id: got_client_id,
-            addresses,
+            non_temporary_addresses,
             server_id: got_server_id,
             collected_advertise,
             dns_servers,
@@ -4391,7 +4418,7 @@ pub(crate) mod testutil {
             Some(ClientState::Assigned(assigned)) => assigned
         );
         assert_eq!(*got_client_id, client_id);
-        assert_eq!(*addresses, expected_addresses);
+        assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
         assert_eq!(*got_server_id, server_id);
         assert_eq!(dns_servers, expected_dns_servers);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -4424,7 +4451,7 @@ pub(crate) mod testutil {
         expected_client_id: &[u8; CLIENT_ID_LEN],
         expected_server_id: Option<&[u8; TEST_SERVER_ID_LEN]>,
         expected_oro: &[v6::OptionCode],
-        expected_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+        expected_non_temporary_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
     ) {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_eq!(msg.msg_type(), expected_msg_type);
@@ -4495,7 +4522,7 @@ pub(crate) mod testutil {
             }
             sent_addresses
         };
-        assert_eq!(&sent_addresses, expected_addresses);
+        assert_eq!(&sent_addresses, expected_non_temporary_addresses);
 
         // Check that there are no other options besides the expected non-IA and
         // IA options.
@@ -4514,7 +4541,7 @@ pub(crate) mod testutil {
     pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
@@ -4525,7 +4552,7 @@ pub(crate) mod testutil {
         let (mut client, actions) = testutil::assign_addresses_and_assert(
             client_id.clone(),
             server_id.clone(),
-            addresses_to_assign.clone(),
+            non_temporary_addresses_to_assign.clone(),
             expected_dns_servers_as_slice,
             rng,
             now,
@@ -4536,7 +4563,7 @@ pub(crate) mod testutil {
             let Assigned {
                 collected_advertise,
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 dns_servers: _,
                 solicit_max_rt: _,
@@ -4590,7 +4617,7 @@ pub(crate) mod testutil {
             dns_servers,
             collected_advertise,
             solicit_max_rt,
-            addresses: _,
+            non_temporary_addresses: _,
             start_time: _,
             retrans_timeout: _,
         } = assert_matches!(
@@ -4604,7 +4631,7 @@ pub(crate) mod testutil {
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
-            .zip(addresses_to_assign.iter().map(
+            .zip(non_temporary_addresses_to_assign.iter().map(
                 |TestIdentityAssociation {
                      address,
                      preferred_lifetime: _,
@@ -4637,7 +4664,7 @@ pub(crate) mod testutil {
     pub(crate) fn send_rebind_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
         expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
@@ -4647,7 +4674,7 @@ pub(crate) mod testutil {
         let mut client = testutil::send_renew_and_assert(
             client_id,
             server_id,
-            addresses_to_assign.clone(),
+            non_temporary_addresses_to_assign.clone(),
             expected_dns_servers,
             expected_t1_secs,
             expected_t2_secs,
@@ -4673,7 +4700,7 @@ pub(crate) mod testutil {
             dns_servers,
             collected_advertise,
             solicit_max_rt,
-            addresses: _,
+            non_temporary_addresses: _,
             start_time: _,
             retrans_timeout: _,
         }) = assert_matches!(
@@ -4693,7 +4720,7 @@ pub(crate) mod testutil {
         assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
-            .zip(addresses_to_assign.iter().map(
+            .zip(non_temporary_addresses_to_assign.iter().map(
                 |TestIdentityAssociation {
                      address,
                      preferred_lifetime: _,
@@ -4882,23 +4909,23 @@ mod tests {
     // configurations.
     #[test_case(1, std::iter::empty(), Vec::new(); "one_addr_no_hint")]
     #[test_case(
-        2, std::iter::once(CONFIGURED_ADDRESSES[0]), vec![v6::OptionCode::DnsServers];
+        2, std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), vec![v6::OptionCode::DnsServers];
         "two_addr_one_hint"
     )]
     #[test_case(
-        2, (&CONFIGURED_ADDRESSES[0..2]).iter().copied(), vec![v6::OptionCode::DnsServers];
+        2, (&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]).iter().copied(), vec![v6::OptionCode::DnsServers];
         "two_addr_two_hints"
     )]
     fn send_solicit(
         address_count: usize,
-        preferred_addresses: impl IntoIterator<Item = Ipv6Addr>,
+        preferred_non_temporary_addresses: impl IntoIterator<Item = Ipv6Addr>,
         options_to_request: Vec<v6::OptionCode>,
     ) {
         // The client is checked inside `start_and_assert_server_discovery`.
         let _client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             CLIENT_ID,
-            testutil::to_configured_addresses(address_count, preferred_addresses),
+            testutil::to_configured_addresses(address_count, preferred_non_temporary_addresses),
             options_to_request,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -4906,17 +4933,17 @@ mod tests {
     }
 
     #[test_case(
-        1, std::iter::empty(), std::iter::once(CONFIGURED_ADDRESSES[0]), 0;
+        1, std::iter::empty(), std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), 0;
         "zero"
     )]
     #[test_case(
-        2, CONFIGURED_ADDRESSES[0..2].iter().copied(), CONFIGURED_ADDRESSES[0..2].iter().copied(), 2;
+        2, CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2].iter().copied(), CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2].iter().copied(), 2;
         "two"
     )]
     #[test_case(
         4,
-        CONFIGURED_ADDRESSES.iter().copied(),
-        std::iter::once(CONFIGURED_ADDRESSES[0]).chain(REPLY_ADDRESSES.iter().copied()),
+        CONFIGURED_NON_TEMPORARY_ADDRESSES.iter().copied(),
+        std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]).chain(REPLY_NON_TEMPORARY_ADDRESSES.iter().copied()),
         1;
         "one"
     )]
@@ -4931,75 +4958,83 @@ mod tests {
             .map(v6::IAID::new)
             .zip(got_addresses.into_iter().map(IdentityAssociation::new_default))
             .collect();
-        let configured_addresses = testutil::to_configured_addresses(configure_count, hints);
+        let configured_non_temporary_addresses =
+            testutil::to_configured_addresses(configure_count, hints);
         assert_eq!(
-            super::compute_preferred_address_count(&got_addresses, &configured_addresses),
+            super::compute_preferred_address_count(
+                &got_addresses,
+                &configured_non_temporary_addresses
+            ),
             want,
         );
     }
 
     #[test]
     fn advertise_message_is_complete() {
-        let configured_addresses =
-            testutil::to_configured_addresses(2, std::iter::once(CONFIGURED_ADDRESSES[0]));
+        let configured_non_temporary_addresses = testutil::to_configured_addresses(
+            2,
+            std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+        );
 
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..2],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
-        assert!(advertise.is_complete(&configured_addresses, &[]));
+        assert!(advertise.is_complete(&configured_non_temporary_addresses, &[]));
 
         // Advertise is not complete: does not contain the solicited address
         // count.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..1],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
-        assert!(!advertise.is_complete(&configured_addresses, &[]));
+        assert!(!advertise.is_complete(&configured_non_temporary_addresses, &[]));
 
         // Advertise is not complete: does not contain the solicited preferred
         // address.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &REPLY_ADDRESSES[0..2],
+            &REPLY_NON_TEMPORARY_ADDRESSES[0..2],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
-        assert!(!advertise.is_complete(&configured_addresses, &[]));
+        assert!(!advertise.is_complete(&configured_non_temporary_addresses, &[]));
 
         // Advertise is complete: contains both the requested addresses and
         // the requested options.
         let options_to_request = [v6::OptionCode::DnsServers];
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..2],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
             &DNS_SERVERS,
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
-        assert!(advertise.is_complete(&configured_addresses, &options_to_request));
+        assert!(advertise.is_complete(&configured_non_temporary_addresses, &options_to_request));
     }
 
     #[test]
     fn advertise_message_ord() {
-        let configured_addresses =
-            testutil::to_configured_addresses(3, std::iter::once(CONFIGURED_ADDRESSES[0]));
+        let configured_non_temporary_addresses = testutil::to_configured_addresses(
+            3,
+            std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+        );
 
         // `advertise2` is complete, `advertise1` is not.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..2],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &CONFIGURED_ADDRESSES[0..3],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         assert!(advertise1 < advertise2);
 
@@ -5008,30 +5043,34 @@ mod tests {
         // configured preferred address.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..1],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &REPLY_ADDRESSES[0..2],
+            &REPLY_NON_TEMPORARY_ADDRESSES[0..2],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         assert!(advertise1 < advertise2);
 
         // Both advertise are complete, but `advertise1` was received first.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_ADDRESSES[0..3],
+            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &[CONFIGURED_ADDRESSES[0], REPLY_ADDRESSES[1], REPLY_ADDRESSES[2]],
+            &[
+                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                REPLY_NON_TEMPORARY_ADDRESSES[1],
+                REPLY_NON_TEMPORARY_ADDRESSES[2],
+            ],
             &[],
-            &configured_addresses,
+            &configured_non_temporary_addresses,
         );
         assert!(advertise1 > advertise2);
     }
@@ -5045,7 +5084,7 @@ mod tests {
     fn process_options_duplicates<'a>(opt: v6::DhcpOption<'a>) {
         let client_id = v6::duid_uuid();
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             60,
             &[],
@@ -5079,7 +5118,7 @@ mod tests {
     #[test]
     fn process_options_duplicate_ia_na_id() {
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             60,
             &[],
@@ -5224,7 +5263,11 @@ mod tests {
 
         let assigned_addresses = HashMap::from([(
             v6::IAID::new(0),
-            AddressEntry::new_assigned(CONFIGURED_ADDRESSES[0], PREFERRED_LIFETIME, VALID_LIFETIME),
+            AddressEntry::new_assigned(
+                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+                PREFERRED_LIFETIME,
+                VALID_LIFETIME,
+            ),
         )]);
         let mut solicit_max_rt = MAX_SOLICIT_TIMEOUT;
         let r = process_reply_with_leases(
@@ -5247,14 +5290,17 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             CLIENT_ID,
-            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
+            testutil::to_configured_addresses(
+                1,
+                std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            ),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             60,
             &[],
@@ -5283,7 +5329,7 @@ mod tests {
         // advertise with preference less than 255.
         assert!(client.handle_message_receive(msg, time).is_empty());
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             60,
             &[],
@@ -5314,7 +5360,7 @@ mod tests {
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
         let Requesting {
             client_id: _,
-            addresses: _,
+            non_temporary_addresses: _,
             server_id: _,
             collected_advertise: _,
             first_request_time: _,
@@ -5353,14 +5399,17 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             CLIENT_ID,
-            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
+            testutil::to_configured_addresses(
+                1,
+                std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            ),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
 
         let ia = IdentityAssociation {
-            address: CONFIGURED_ADDRESSES[0],
+            address: CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 PREFERRED_LIFETIME,
             )),
@@ -5390,7 +5439,7 @@ mod tests {
             state,
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
-                configured_addresses: _,
+                configured_non_temporary_addresses: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -5405,12 +5454,12 @@ mod tests {
                     collected_advertise.peek(),
                     Some(AdvertiseMessage {
                         server_id: _,
-                        addresses,
+                        non_temporary_addresses,
                         dns_servers: _,
                         preference: _,
                         receive_time: _,
-                        preferred_addresses_count: _,
-                    }) if *addresses == HashMap::from([(v6::IAID::new(0), ia)])
+                        preferred_non_temporary_addresses_count: _,
+                    }) if *non_temporary_addresses == HashMap::from([(v6::IAID::new(0), ia)])
                 )
             }
         }
@@ -5422,7 +5471,10 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             CLIENT_ID,
-            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
+            testutil::to_configured_addresses(
+                1,
+                std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            ),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5443,7 +5495,7 @@ mod tests {
         {
             let ServerDiscovery {
                 client_id: _,
-                configured_addresses: _,
+                configured_non_temporary_addresses: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -5457,7 +5509,7 @@ mod tests {
         }
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             60,
             &[],
@@ -5493,7 +5545,7 @@ mod tests {
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
         let Requesting {
             client_id: _,
-            addresses: _,
+            non_temporary_addresses: _,
             server_id: _,
             collected_advertise,
             first_request_time: _,
@@ -5512,7 +5564,10 @@ mod tests {
         let (mut _client, _transaction_id) = testutil::request_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            CONFIGURED_NON_TEMPORARY_ADDRESSES
+                .into_iter()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -5523,20 +5578,20 @@ mod tests {
     #[test]
     fn requesting_receive_reply_with_failure_status_code() {
         let options_to_request = vec![];
-        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
-        let advertised_addresses = [CONFIGURED_ADDRESSES[0]];
+        let configured_non_temporary_addresses = testutil::to_configured_addresses(1, vec![]);
+        let advertised_non_temporary_addresses = [CONFIGURED_NON_TEMPORARY_ADDRESSES[0]];
         let mut want_collected_advertise = [
             AdvertiseMessage::new_default(
                 SERVER_ID[1],
-                &CONFIGURED_ADDRESSES[1..=1],
+                &CONFIGURED_NON_TEMPORARY_ADDRESSES[1..=1],
                 &[],
-                &configured_addresses,
+                &configured_non_temporary_addresses,
             ),
             AdvertiseMessage::new_default(
                 SERVER_ID[2],
-                &CONFIGURED_ADDRESSES[2..=2],
+                &CONFIGURED_NON_TEMPORARY_ADDRESSES[2..=2],
                 &[],
-                &configured_addresses,
+                &configured_non_temporary_addresses,
             ),
         ]
         .into_iter()
@@ -5548,8 +5603,8 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
             advertise_to_address_entries(
-                testutil::to_default_ias_map(&advertised_addresses),
-                configured_addresses.clone(),
+                testutil::to_default_ias_map(&advertised_non_temporary_addresses),
+                configured_non_temporary_addresses.clone(),
             ),
             &options_to_request[..],
             want_collected_advertise.clone(),
@@ -5558,17 +5613,17 @@ mod tests {
             time,
         );
 
-        let expected_addresses = (0..)
+        let expected_non_temporary_addresses = (0..)
             .map(v6::IAID::new)
             .zip(
-                advertised_addresses
+                advertised_non_temporary_addresses
                     .iter()
                     .map(|addr| AddressEntry::ToRequest(AddressToRequest::new(Some(*addr), None))),
             )
             .collect::<HashMap<v6::IAID, AddressEntry>>();
         {
             let Requesting {
-                addresses: got_addresses,
+                non_temporary_addresses: got_non_temporary_addresses,
                 server_id,
                 collected_advertise,
                 client_id: _,
@@ -5578,7 +5633,7 @@ mod tests {
                 solicit_max_rt: _,
             } = assert_matches!(&state, ClientState::Requesting(requesting) => requesting);
             assert_eq!(server_id[..], SERVER_ID[0]);
-            assert_eq!(*got_addresses, expected_addresses);
+            assert_eq!(*got_non_temporary_addresses, expected_non_temporary_addresses);
             assert_eq!(
                 collected_advertise.clone().into_sorted_vec(),
                 want_collected_advertise.clone().into_sorted_vec()
@@ -5610,7 +5665,7 @@ mod tests {
         {
             let Requesting {
                 client_id: _,
-                addresses: got_addresses,
+                non_temporary_addresses: got_non_temporary_addresses,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -5623,7 +5678,7 @@ mod tests {
                 collected_advertise.clone().into_sorted_vec(),
                 want_collected_advertise.clone().into_sorted_vec()
             );
-            assert_eq!(*got_addresses, expected_addresses);
+            assert_eq!(*got_non_temporary_addresses, expected_non_temporary_addresses);
         }
         assert_eq!(got_transaction_id, None);
         assert_eq!(actions[..], []);
@@ -5651,14 +5706,14 @@ mod tests {
         let Transition { state, actions: _, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
 
-        let expected_addresses: HashMap<v6::IAID, AddressEntry> = HashMap::from([(
+        let expected_non_temporary_addresses: HashMap<v6::IAID, AddressEntry> = HashMap::from([(
             v6::IAID::new(0),
             AddressEntry::ToRequest(AddressToRequest::new(None, None)),
         )]);
         {
             let Requesting {
                 client_id: _,
-                addresses: got_addresses,
+                non_temporary_addresses: got_non_temporary_addresses,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -5674,7 +5729,7 @@ mod tests {
                 collected_advertise.clone().into_sorted_vec(),
                 want_collected_advertise.clone().into_sorted_vec()
             );
-            assert_eq!(*got_addresses, expected_addresses);
+            assert_eq!(*got_non_temporary_addresses, expected_non_temporary_addresses);
         }
         assert!(transaction_id.is_some());
 
@@ -5705,7 +5760,7 @@ mod tests {
                 server_id,
                 collected_advertise,
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 first_request_time: _,
                 retrans_timeout: _,
                 retrans_count: _,
@@ -5735,8 +5790,8 @@ mod tests {
     #[test]
     fn requesting_receive_reply_with_ia_not_on_link() {
         let options_to_request = vec![];
-        let configured_addresses =
-            testutil::to_configured_addresses(2, vec![CONFIGURED_ADDRESSES[0]]);
+        let configured_non_temporary_addresses =
+            testutil::to_configured_addresses(2, vec![CONFIGURED_NON_TEMPORARY_ADDRESSES[0]]);
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let time = Instant::now();
@@ -5744,8 +5799,8 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
             advertise_to_address_entries(
-                testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..2]),
-                configured_addresses.clone(),
+                testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]),
+                configured_non_temporary_addresses.clone(),
             ),
             &options_to_request[..],
             BinaryHeap::new(),
@@ -5759,7 +5814,7 @@ mod tests {
         // subsequent messages.
         let iana_options1 = [v6::DhcpOption::StatusCode(v6::ErrorStatusCode::NotOnLink.into(), "")];
         let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[1],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
             PREFERRED_LIFETIME.get(),
             VALID_LIFETIME.get(),
             &[],
@@ -5790,16 +5845,19 @@ mod tests {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
-        let expected_addresses = HashMap::from([
+        let expected_non_temporary_addresses = HashMap::from([
             (
                 iaid1,
-                AddressEntry::ToRequest(AddressToRequest::new(None, Some(CONFIGURED_ADDRESSES[0]))),
+                AddressEntry::ToRequest(AddressToRequest::new(
+                    None,
+                    Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+                )),
             ),
             (
                 iaid2,
                 AddressEntry::Assigned(AssignedIa::new(
                     IdentityAssociation {
-                        address: CONFIGURED_ADDRESSES[1],
+                        address: CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
                         preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                             PREFERRED_LIFETIME,
                         )),
@@ -5814,7 +5872,7 @@ mod tests {
         {
             let Assigned {
                 client_id: _,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise,
                 dns_servers: _,
@@ -5824,7 +5882,7 @@ mod tests {
                 ClientState::Assigned(assigned) => assigned
             );
             assert_eq!(server_id[..], SERVER_ID[0]);
-            assert_eq!(addresses, expected_addresses);
+            assert_eq!(non_temporary_addresses, expected_non_temporary_addresses);
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         }
         assert_matches!(
@@ -5852,7 +5910,7 @@ mod tests {
         valid_ia: bool,
     ) {
         let options_to_request = vec![];
-        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
+        let configured_non_temporary_addresses = testutil::to_configured_addresses(1, vec![]);
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
 
         let time = Instant::now();
@@ -5860,8 +5918,8 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
             advertise_to_address_entries(
-                testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..1]),
-                configured_addresses.clone(),
+                testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1]),
+                configured_non_temporary_addresses.clone(),
             ),
             &options_to_request[..],
             BinaryHeap::new(),
@@ -5872,7 +5930,7 @@ mod tests {
 
         // The client should discard the IAs with invalid lifetimes.
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             preferred_lifetime,
             valid_lifetime,
             &[],
@@ -5902,7 +5960,7 @@ mod tests {
             {
                 let Assigned {
                     client_id: _,
-                    addresses: _,
+                    non_temporary_addresses: _,
                     server_id: _,
                     collected_advertise,
                     dns_servers: _,
@@ -5919,7 +5977,7 @@ mod tests {
             {
                 let ServerDiscovery {
                     client_id: _,
-                    configured_addresses: _,
+                    configured_non_temporary_addresses: _,
                     first_solicit_time: _,
                     retrans_timeout: _,
                     solicit_max_rt: _,
@@ -5991,8 +6049,11 @@ mod tests {
                 CLIENT_ID,
                 SERVER_ID[0].to_vec(),
                 advertise_to_address_entries(
-                    testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..2]),
-                    testutil::to_configured_addresses(2, std::iter::once(CONFIGURED_ADDRESSES[0])),
+                    testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]),
+                    testutil::to_configured_addresses(
+                        2,
+                        std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+                    ),
                 ),
                 &[],
                 BinaryHeap::new(),
@@ -6002,13 +6063,13 @@ mod tests {
             );
 
             let iana_options1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                CONFIGURED_ADDRESSES[0],
+                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
                 ia1_preferred_lifetime,
                 ia1_valid_lifetime,
                 &[],
             ))];
             let iana_options2 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                CONFIGURED_ADDRESSES[1],
+                CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
                 ia2_preferred_lifetime,
                 ia2_valid_lifetime,
                 &[],
@@ -6039,7 +6100,7 @@ mod tests {
                 state.reply_message_received(&[], &mut rng, msg, time);
             let Assigned {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 collected_advertise,
                 dns_servers: _,
@@ -6095,14 +6156,17 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             transaction_id,
             CLIENT_ID,
-            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
+            testutil::to_configured_addresses(
+                1,
+                std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            ),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             60,
             &[],
@@ -6127,7 +6191,7 @@ mod tests {
             &client;
         let ServerDiscovery {
             client_id: _,
-            configured_addresses: _,
+            configured_non_temporary_addresses: _,
             first_solicit_time: _,
             retrans_timeout: _,
             solicit_max_rt: _,
@@ -6139,7 +6203,7 @@ mod tests {
         );
 
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[1],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
             60,
             60,
             &[],
@@ -6165,7 +6229,7 @@ mod tests {
         let ServerDiscovery {
             collected_advertise: want_collected_advertise,
             client_id: _,
-            configured_addresses: _,
+            configured_non_temporary_addresses: _,
             first_solicit_time: _,
             retrans_timeout: _,
             solicit_max_rt: _,
@@ -6192,7 +6256,7 @@ mod tests {
         {
             let Requesting {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -6221,7 +6285,7 @@ mod tests {
                 &client;
             let Requesting {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -6251,7 +6315,7 @@ mod tests {
             &client;
         let Requesting {
             client_id: _,
-            addresses: _,
+            non_temporary_addresses: _,
             server_id,
             collected_advertise,
             first_request_time: _,
@@ -6277,7 +6341,7 @@ mod tests {
                 &client;
             let Requesting {
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -6304,7 +6368,7 @@ mod tests {
         assert_matches!(state,
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
-                configured_addresses: _,
+                configured_non_temporary_addresses: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -6320,7 +6384,7 @@ mod tests {
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES[0..2]
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .iter()
                 .copied()
                 .map(TestIdentityAssociation::new_default)
@@ -6335,7 +6399,7 @@ mod tests {
         let Assigned {
             collected_advertise,
             client_id: _,
-            addresses: _,
+            non_temporary_addresses: _,
             server_id: _,
             dns_servers: _,
             solicit_max_rt: _,
@@ -6362,7 +6426,7 @@ mod tests {
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             &DNS_SERVERS,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -6386,15 +6450,15 @@ mod tests {
     #[test]
     fn update_sol_max_rt_on_reply_to_request() {
         let options_to_request = vec![];
-        let configured_addresses = testutil::to_configured_addresses(1, vec![]);
+        let configured_non_temporary_addresses = testutil::to_configured_addresses(1, vec![]);
         let mut rng = StepRng::new(std::u64::MAX / 2, 0);
         let time = Instant::now();
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
             advertise_to_address_entries(
-                testutil::to_default_ias_map(&CONFIGURED_ADDRESSES[0..1]),
-                configured_addresses.clone(),
+                testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1]),
+                configured_non_temporary_addresses.clone(),
             ),
             &options_to_request[..],
             BinaryHeap::new(),
@@ -6407,7 +6471,7 @@ mod tests {
                 collected_advertise,
                 solicit_max_rt,
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -6421,7 +6485,7 @@ mod tests {
         // If the reply does not contain a server ID, the reply should be
         // discarded and the `solicit_max_rt` should not be updated.
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
             120,
             &[],
@@ -6450,7 +6514,7 @@ mod tests {
                 collected_advertise,
                 solicit_max_rt,
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -6486,7 +6550,7 @@ mod tests {
                 collected_advertise,
                 solicit_max_rt,
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -6522,7 +6586,7 @@ mod tests {
                 collected_advertise,
                 solicit_max_rt,
                 client_id: _,
-                addresses: _,
+                non_temporary_addresses: _,
                 server_id: _,
                 dns_servers: _,
             } = assert_matches!(&state, ClientState::Assigned(assigned) => assigned);
@@ -6592,7 +6656,7 @@ mod tests {
         let _client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES[0..2]
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .into_iter()
                 .map(|&addr| TestIdentityAssociation::new_default(addr))
                 .collect(),
@@ -6618,7 +6682,7 @@ mod tests {
         let client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES[0..2]
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .into_iter()
                 .map(|&addr| TestIdentityAssociation::new_default(addr))
                 .collect(),
@@ -6639,7 +6703,7 @@ mod tests {
             vec![TestIdentityAssociation {
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
-                ..TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])
+                ..TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])
             }],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6650,7 +6714,7 @@ mod tests {
         let Assigned {
             collected_advertise,
             client_id: _,
-            addresses: _,
+            non_temporary_addresses: _,
             server_id: _,
             dns_servers: _,
             solicit_max_rt: _,
@@ -6674,7 +6738,7 @@ mod tests {
             allow_response_from_any_server: _,
         }: RenewRebindTest,
     ) {
-        let addresses_to_assign = CONFIGURED_ADDRESSES[0..2]
+        let non_temporary_addresses_to_assign = CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
             .into_iter()
             .map(|&addr| TestIdentityAssociation::new_default(addr))
             .collect::<Vec<_>>();
@@ -6682,7 +6746,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            addresses_to_assign.clone(),
+            non_temporary_addresses_to_assign.clone(),
             None,
             T1,
             T2,
@@ -6694,7 +6758,7 @@ mod tests {
         let RenewingOrRebindingInner {
             collected_advertise,
             client_id: _,
-            addresses: _,
+            non_temporary_addresses: _,
             server_id: _,
             dns_servers: _,
             start_time: _,
@@ -6722,7 +6786,7 @@ mod tests {
                 collected_advertise,
                 dns_servers,
                 solicit_max_rt,
-                addresses: _,
+                non_temporary_addresses: _,
                 start_time: _,
                 retrans_timeout: _,
             } = with_state(state);
@@ -6732,9 +6796,9 @@ mod tests {
             assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
-        let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
+        let expected_non_temporary_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
-            .zip(addresses_to_assign.iter().map(
+            .zip(non_temporary_addresses_to_assign.iter().map(
                 |TestIdentityAssociation {
                      address,
                      preferred_lifetime: _,
@@ -6750,7 +6814,7 @@ mod tests {
             &CLIENT_ID,
             expect_server_id.then(|| &SERVER_ID[0]),
             &[],
-            &expected_addresses_to_renew,
+            &expected_non_temporary_addresses_to_renew,
         );
     }
 
@@ -6773,7 +6837,10 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             original_server_id.clone(),
-            CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            CONFIGURED_NON_TEMPORARY_ADDRESSES
+                .into_iter()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
             None,
             T1,
             T2,
@@ -6783,7 +6850,7 @@ mod tests {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let iaaddr_opts = (0..)
             .map(v6::IAID::new)
-            .zip(CONFIGURED_ADDRESSES)
+            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
             .map(|(iaid, addr)| {
                 (
                     iaid,
@@ -6799,14 +6866,16 @@ mod tests {
         let options =
             [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(reply_server_id)]
                 .into_iter()
-                .chain((0..).map(v6::IAID::new).take(CONFIGURED_ADDRESSES.len()).map(|iaid| {
-                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                        iaid,
-                        RENEWED_T1.get(),
-                        RENEWED_T2.get(),
-                        std::slice::from_ref(iaaddr_opts.get(&iaid).unwrap()),
-                    ))
-                }))
+                .chain((0..).map(v6::IAID::new).take(CONFIGURED_NON_TEMPORARY_ADDRESSES.len()).map(
+                    |iaid| {
+                        v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                            iaid,
+                            RENEWED_T1.get(),
+                            RENEWED_T2.get(),
+                            std::slice::from_ref(iaaddr_opts.get(&iaid).unwrap()),
+                        ))
+                    },
+                ))
                 .collect::<Vec<_>>();
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -6828,7 +6897,7 @@ mod tests {
             // same state.
             let RenewingOrRebindingInner {
                 client_id: original_client_id,
-                addresses: original_addresses,
+                non_temporary_addresses: original_non_temporary_addresses,
                 server_id: original_server_id,
                 collected_advertise: original_collected_advertise,
                 dns_servers: original_dns_servers,
@@ -6838,7 +6907,7 @@ mod tests {
             } = original_state;
             let RenewingOrRebindingInner {
                 client_id: new_client_id,
-                addresses: new_addresses,
+                non_temporary_addresses: new_non_temporary_addresses,
                 server_id: new_server_id,
                 collected_advertise: new_collected_advertise,
                 dns_servers: new_dns_servers,
@@ -6847,7 +6916,7 @@ mod tests {
                 solicit_max_rt: new_solicit_max_rt,
             } = with_state(state);
             assert_eq!(&original_client_id, new_client_id);
-            assert_eq!(&original_addresses, new_addresses);
+            assert_eq!(&original_non_temporary_addresses, new_non_temporary_addresses);
             assert_eq!(&original_server_id, new_server_id);
             assert_eq!(
                 original_collected_advertise.into_sorted_vec(),
@@ -6861,9 +6930,9 @@ mod tests {
             return;
         }
 
-        let expected_addresses = (0..)
+        let expected_non_temporary_addresses = (0..)
             .map(v6::IAID::new)
-            .zip(CONFIGURED_ADDRESSES.into_iter().map(|addr| {
+            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(|addr| {
                 AddressEntry::new_assigned(addr, RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME)
             }))
             .collect();
@@ -6871,13 +6940,13 @@ mod tests {
             &state,
             Some(ClientState::Assigned(Assigned {
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise: _,
                 dns_servers,
                 solicit_max_rt,
             })) if client_id == &CLIENT_ID &&
-                   *addresses == expected_addresses &&
+                   *non_temporary_addresses == expected_non_temporary_addresses &&
                    server_id.as_slice() == reply_server_id &&
                    dns_servers.as_slice() == &[] as &[Ipv6Addr] &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
@@ -6919,7 +6988,7 @@ mod tests {
         error_status_code: v6::ErrorStatusCode,
     ) {
         let time = Instant::now();
-        let addr = CONFIGURED_ADDRESSES[0];
+        let addr = CONFIGURED_NON_TEMPORARY_ADDRESSES[0];
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
@@ -6960,14 +7029,14 @@ mod tests {
         assert_eq!(actions, &[]);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_addresses = std::iter::once((
+        let expected_non_temporary_addresses = std::iter::once((
             v6::IAID::new(0),
             AddressEntry::new_assigned(addr, PREFERRED_LIFETIME, VALID_LIFETIME),
         ))
         .collect::<HashMap<_, _>>();
         let RenewingOrRebindingInner {
             client_id,
-            addresses,
+            non_temporary_addresses,
             server_id,
             collected_advertise: _,
             dns_servers,
@@ -6976,7 +7045,7 @@ mod tests {
             solicit_max_rt: got_sol_max_rt,
         } = with_state(state);
         assert_eq!(*client_id, CLIENT_ID);
-        assert_eq!(*addresses, expected_addresses);
+        assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
         assert_eq!(*server_id, SERVER_ID[0]);
         assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
         assert_eq!(*got_sol_max_rt, Duration::from_secs(sol_max_rt.into()));
@@ -6997,12 +7066,16 @@ mod tests {
         }: RenewRebindTest,
         present_iaid: v6::IAID,
     ) {
-        let addresses = &CONFIGURED_ADDRESSES[0..2];
+        let non_temporary_addresses = &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2];
         let time = Instant::now();
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            addresses.iter().copied().map(TestIdentityAssociation::new_default).collect(),
+            non_temporary_addresses
+                .iter()
+                .copied()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
             None,
             T1,
             T2,
@@ -7015,7 +7088,7 @@ mod tests {
         // The server includes only the IA with ID equal to `present_iaid` in the
         // reply.
         let iaaddr_opt = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[present_iaid.get() as usize],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[present_iaid.get() as usize],
             RENEWED_PREFERRED_LIFETIME.get(),
             RENEWED_VALID_LIFETIME.get(),
             &[],
@@ -7042,9 +7115,9 @@ mod tests {
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         // Only the IA that is present will have its lifetimes updated.
-        let expected_addresses = (0..)
+        let expected_non_temporary_addresses = (0..)
             .map(v6::IAID::new)
-            .zip(addresses)
+            .zip(non_temporary_addresses)
             .map(|(iaid, &addr)| {
                 (
                     iaid,
@@ -7063,7 +7136,7 @@ mod tests {
         {
             let RenewingOrRebindingInner {
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise: _,
                 dns_servers,
@@ -7072,7 +7145,7 @@ mod tests {
                 solicit_max_rt,
             } = with_state(state);
             assert_eq!(*client_id, CLIENT_ID);
-            assert_eq!(*addresses, expected_addresses);
+            assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
             assert_eq!(*server_id, SERVER_ID[0]);
             assert!(start_time.is_some());
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
@@ -7097,7 +7170,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES[0..2]
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .iter()
                 .copied()
                 .map(TestIdentityAssociation::new_default)
@@ -7114,7 +7187,7 @@ mod tests {
             vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
         // The server includes an IA Address option in only one of the IAs.
         let iaaddr_opt_ia1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             RENEWED_PREFERRED_LIFETIME.get(),
             RENEWED_VALID_LIFETIME.get(),
             &[],
@@ -7140,11 +7213,11 @@ mod tests {
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_addresses = HashMap::from([
+        let expected_non_temporary_addresses = HashMap::from([
             (
                 v6::IAID::new(0),
                 AddressEntry::new_assigned(
-                    CONFIGURED_ADDRESSES[0],
+                    CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
                     RENEWED_PREFERRED_LIFETIME,
                     RENEWED_VALID_LIFETIME,
                 ),
@@ -7152,7 +7225,7 @@ mod tests {
             (
                 v6::IAID::new(1),
                 AddressEntry::new_assigned(
-                    CONFIGURED_ADDRESSES[1],
+                    CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
                     PREFERRED_LIFETIME,
                     VALID_LIFETIME,
                 ),
@@ -7164,13 +7237,13 @@ mod tests {
             &state,
             Some(ClientState::Assigned(Assigned{
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise: _,
                 dns_servers,
                 solicit_max_rt,
             })) if *client_id == CLIENT_ID &&
-                   *addresses == expected_addresses &&
+                   *non_temporary_addresses == expected_non_temporary_addresses &&
                    *server_id == SERVER_ID[0] &&
                    dns_servers == &[] as &[Ipv6Addr] &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
@@ -7203,7 +7276,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             None,
             T1,
             T2,
@@ -7217,7 +7290,7 @@ mod tests {
         // The server includes an IA Address with a different address than
         // previously assigned.
         let iaaddr_opt_ia = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            RENEW_ADDRESSES[0],
+            RENEW_NON_TEMPORARY_ADDRESSES[0],
             RENEWED_PREFERRED_LIFETIME.get(),
             RENEWED_VALID_LIFETIME.get(),
             &[],
@@ -7237,15 +7310,15 @@ mod tests {
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_addresses = HashMap::from([(
+        let expected_non_temporary_addresses = HashMap::from([(
             v6::IAID::new(0),
             AddressEntry::Assigned(AssignedIa::new(
                 IdentityAssociation::new_finite(
-                    RENEW_ADDRESSES[0],
+                    RENEW_NON_TEMPORARY_ADDRESSES[0],
                     RENEWED_PREFERRED_LIFETIME,
                     RENEWED_VALID_LIFETIME,
                 ),
-                Some(CONFIGURED_ADDRESSES[0]),
+                Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             )),
         )]);
         // Expect the client to transition to Assigned and assign the new
@@ -7254,13 +7327,13 @@ mod tests {
             &state,
             Some(ClientState::Assigned(Assigned{
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise: _,
                 dns_servers,
                 solicit_max_rt,
             })) if *client_id == CLIENT_ID &&
-                   *addresses == expected_addresses &&
+                   *non_temporary_addresses == expected_non_temporary_addresses &&
                    *server_id == SERVER_ID[0] &&
                    dns_servers == &[] as &[Ipv6Addr] &&
                    *solicit_max_rt == MAX_SOLICIT_TIMEOUT
@@ -7296,7 +7369,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES[0..2]
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .iter()
                 .copied()
                 .map(TestIdentityAssociation::new_default)
@@ -7313,7 +7386,7 @@ mod tests {
         // Build a reply with NoBinding status in one of the IA options.
         let iaaddr_opts = [
             vec![v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-                CONFIGURED_ADDRESSES[0],
+                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
                 RENEWED_PREFERRED_LIFETIME.get(),
                 RENEWED_VALID_LIFETIME.get(),
                 &[],
@@ -7343,11 +7416,11 @@ mod tests {
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_addresses = HashMap::from([
+        let expected_non_temporary_addresses = HashMap::from([
             (
                 v6::IAID::new(0),
                 AddressEntry::new_assigned(
-                    CONFIGURED_ADDRESSES[0],
+                    CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
                     RENEWED_PREFERRED_LIFETIME,
                     RENEWED_VALID_LIFETIME,
                 ),
@@ -7358,8 +7431,8 @@ mod tests {
             (
                 v6::IAID::new(1),
                 AddressEntry::ToRequest(AddressToRequest::new(
-                    Some(CONFIGURED_ADDRESSES[1]),
-                    Some(CONFIGURED_ADDRESSES[1]),
+                    Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1]),
+                    Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1]),
                 )),
             ),
         ]);
@@ -7367,7 +7440,7 @@ mod tests {
         {
             let Requesting {
                 client_id,
-                addresses,
+                non_temporary_addresses,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -7379,7 +7452,7 @@ mod tests {
                 Some(ClientState::Requesting(requesting)) => requesting
             );
             assert_eq!(*client_id, CLIENT_ID);
-            assert_eq!(*addresses, expected_addresses);
+            assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
             assert_eq!(*server_id, SERVER_ID[0]);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
@@ -7401,7 +7474,10 @@ mod tests {
             &CLIENT_ID,
             Some(&SERVER_ID[0]),
             &[],
-            &(0..2).map(v6::IAID::new).zip(CONFIGURED_ADDRESSES.into_iter().map(Some)).collect(),
+            &(0..2)
+                .map(v6::IAID::new)
+                .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(Some))
+                .collect(),
         );
     }
 
@@ -7427,7 +7503,10 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_ADDRESSES.into_iter().map(TestIdentityAssociation::new_default).collect(),
+            CONFIGURED_NON_TEMPORARY_ADDRESSES
+                .into_iter()
+                .map(TestIdentityAssociation::new_default)
+                .collect(),
             None,
             T1,
             T2,
@@ -7437,7 +7516,7 @@ mod tests {
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
         let ia_addr = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_ADDRESSES[0],
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             RENEWED_PREFERRED_LIFETIME.get(),
             RENEWED_VALID_LIFETIME.get(),
             &[],
@@ -7606,7 +7685,10 @@ mod tests {
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             v6::duid_uuid(),
-            testutil::to_configured_addresses(1, std::iter::once(CONFIGURED_ADDRESSES[0])),
+            testutil::to_configured_addresses(
+                1,
+                std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            ),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -7623,7 +7705,7 @@ mod tests {
         let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -7641,7 +7723,7 @@ mod tests {
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -7668,7 +7750,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_ADDRESSES[0])],
+            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             None,
             T1,
             T2,
@@ -7912,10 +7994,10 @@ mod tests {
     }
 
     #[test_case(None, None, false)]
-    #[test_case(None, Some(CONFIGURED_ADDRESSES[0]), true)]
-    #[test_case(Some(REPLY_ADDRESSES[0]), None, true)]
-    #[test_case(Some(REPLY_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]), true)]
-    #[test_case(Some(CONFIGURED_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]), false)]
+    #[test_case(None, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), true)]
+    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), None, true)]
+    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), true)]
+    #[test_case(Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), false)]
     fn create_non_configured_address(
         address: Option<Ipv6Addr>,
         configured_address: Option<Ipv6Addr>,
@@ -7927,9 +8009,9 @@ mod tests {
         );
     }
 
-    #[test_case(None, Some(CONFIGURED_ADDRESSES[0]))]
-    #[test_case(Some(REPLY_ADDRESSES[0]), None)]
-    #[test_case(Some(REPLY_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]))]
+    #[test_case(None, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
+    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), None)]
+    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
     fn non_configured_address_get_address(
         address: Option<Ipv6Addr>,
         configured_address: Option<Ipv6Addr>,
@@ -7941,9 +8023,9 @@ mod tests {
         }
     }
 
-    #[test_case(None, Some(CONFIGURED_ADDRESSES[0]))]
-    #[test_case(Some(REPLY_ADDRESSES[0]), None)]
-    #[test_case(Some(REPLY_ADDRESSES[0]), Some(CONFIGURED_ADDRESSES[0]))]
+    #[test_case(None, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
+    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), None)]
+    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
     fn non_configured_address_get_configured_address(
         address: Option<Ipv6Addr>,
         configured_address: Option<Ipv6Addr>,
@@ -7955,9 +8037,9 @@ mod tests {
         }
     }
 
-    #[test_case(REPLY_ADDRESSES[0], None, true)]
-    #[test_case(REPLY_ADDRESSES[0], Some(CONFIGURED_ADDRESSES[0]), true)]
-    #[test_case(CONFIGURED_ADDRESSES[0], Some(CONFIGURED_ADDRESSES[0]), false)]
+    #[test_case(REPLY_NON_TEMPORARY_ADDRESSES[0], None, true)]
+    #[test_case(REPLY_NON_TEMPORARY_ADDRESSES[0], Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), true)]
+    #[test_case(CONFIGURED_NON_TEMPORARY_ADDRESSES[0], Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), false)]
     fn create_non_configured_ia(
         address: Ipv6Addr,
         configured_address: Option<Ipv6Addr>,
@@ -7980,18 +8062,18 @@ mod tests {
 
     #[test]
     fn create_assigned_ia() {
-        let ia1 = IdentityAssociation::new_default(CONFIGURED_ADDRESSES[0]);
-        let assigned_ia = AssignedIa::new(ia1, Some(CONFIGURED_ADDRESSES[0]));
+        let ia1 = IdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
+        let assigned_ia = AssignedIa::new(ia1, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
         assert_eq!(assigned_ia, AssignedIa::Configured(ia1));
-        assert_eq!(assigned_ia.address(), CONFIGURED_ADDRESSES[0]);
+        assert_eq!(assigned_ia.address(), CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
 
-        let ia2 = IdentityAssociation::new_default(REPLY_ADDRESSES[0]);
-        let assigned_ia = AssignedIa::new(ia2, Some(CONFIGURED_ADDRESSES[0]));
+        let ia2 = IdentityAssociation::new_default(REPLY_NON_TEMPORARY_ADDRESSES[0]);
+        let assigned_ia = AssignedIa::new(ia2, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
         assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
-        assert_eq!(assigned_ia.address(), REPLY_ADDRESSES[0]);
+        assert_eq!(assigned_ia.address(), REPLY_NON_TEMPORARY_ADDRESSES[0]);
 
         let assigned_ia = AssignedIa::new(ia2, None);
         assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
-        assert_eq!(assigned_ia.address(), REPLY_ADDRESSES[0]);
+        assert_eq!(assigned_ia.address(), REPLY_NON_TEMPORARY_ADDRESSES[0]);
     }
 }
