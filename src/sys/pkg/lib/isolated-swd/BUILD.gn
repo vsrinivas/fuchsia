@@ -89,6 +89,7 @@ fuchsia_component("pkg-component") {
   deps = [
     "//src/sys/pkg/bin/fake-system-update-committer",
     "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
+    "//src/sys/pkg/bin/pkg-cache:config_values_from_gn-ignore-system-image",
   ]
 }
 
