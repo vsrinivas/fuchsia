@@ -318,7 +318,7 @@
         "kind": "const",
         "name": "fuchsia.feedback/MAX_EXCEPTION_MESSAGE_LENGTH",
         "type": "uint32",
-        "value": "2048"
+        "value": "4096"
     },
     {
         "kind": "const",
@@ -509,7 +509,7 @@
         "kind": "table/member",
         "name": "fuchsia.feedback/RuntimeCrashReport.exception_message",
         "ordinal": "2",
-        "type": "string:2048"
+        "type": "string:4096"
     },
     {
         "kind": "table/member",
