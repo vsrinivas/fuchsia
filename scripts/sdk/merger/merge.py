@@ -619,7 +619,7 @@ class InputAction(argparse.Action):
         setattr(namespace, self.dest, inputs)
 
 
-def main():
+def main(main_args=None):
     parser = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawTextHelpFormatter)
     parser.add_argument(
@@ -674,7 +674,7 @@ def main():
     hermetic_group.add_argument('--depfile', help='Path to the stamp file')
     hermetic_group.add_argument(
         '--hermetic-inputs-file', help='Path to the hermetic inputs file')
-    args = parser.parse_args()
+    args = parser.parse_args(main_args)
 
     # Convert --first-xx and --second-xxx options into the equivalent
     # --input-xxx ones.
