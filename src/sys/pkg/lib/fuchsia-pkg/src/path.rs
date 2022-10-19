@@ -103,6 +103,11 @@ mod test {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn display_from_str_round_trip(path in random_package_path()) {
             prop_assert_eq!(

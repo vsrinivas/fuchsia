@@ -136,6 +136,11 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn test_serialize_deserialize_is_identity(
             meta_package in random_meta_package(),

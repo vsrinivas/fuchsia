@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{errors::ParseError, parse::PackageName};
+use crate::{errors::ParseError, parse::PackageName, UrlParts};
 
 /// A relative URL locating a Fuchsia package. Used with a subpackage context.
 /// Has the form "<name>" where:
@@ -14,9 +14,31 @@ pub struct RelativePackageUrl {
 }
 
 impl RelativePackageUrl {
+    pub(crate) fn from_parts(parts: UrlParts) -> Result<Self, ParseError> {
+        let UrlParts { scheme, host, path, hash, resource } = parts;
+        if scheme.is_some() {
+            return Err(ParseError::CannotContainScheme);
+        }
+        if host.is_some() {
+            return Err(ParseError::HostMustBeEmpty);
+        }
+        if hash.is_some() {
+            return Err(ParseError::CannotContainHash);
+        }
+        if resource.is_some() {
+            return Err(ParseError::CannotContainResource);
+        }
+        let (name, variant) = crate::parse_path_to_name_and_variant(&path)?;
+        if variant.is_some() {
+            return Err(ParseError::RelativePathCannotSpecifyVariant);
+        }
+        Ok(Self { path: name })
+    }
+
     /// Parse a relative package URL.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
-        Ok(Self { path: url.parse().map_err(ParseError::InvalidName)? })
+        let parts = UrlParts::parse(url)?;
+        Ok(Self::from_parts(parts)?)
     }
 }
 
@@ -78,67 +100,26 @@ impl<'de> serde::Deserialize<'de> for RelativePackageUrl {
 
 #[cfg(test)]
 mod tests {
-    use {
-        super::*, crate::errors::PackagePathSegmentError, assert_matches::assert_matches,
-        std::convert::TryFrom as _,
-    };
+    use {super::*, assert_matches::assert_matches, std::convert::TryFrom as _};
 
     #[test]
     fn parse_err() {
         for (url, err) in [
-            (
-                "fuchsia-boot://example.org/name",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "fuchsia-pkg://",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "fuchsia-pkg://name",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "fuchsia-pkg:///name",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "example.org/name",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: '/',
-                }),
-            ),
-            (
-                "fuchsia-pkg://example.org/name",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "name/variant",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: '/',
-                }),
-            ),
-            (
-                "name#resource",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: '#',
-                }),
-            ),
+            ("fuchsia-boot://example.org/name", ParseError::CannotContainScheme),
+            ("fuchsia-pkg://", ParseError::CannotContainScheme),
+            ("fuchsia-pkg://name", ParseError::CannotContainScheme),
+            ("fuchsia-pkg:///name", ParseError::CannotContainScheme),
+            ("//example.org/name", ParseError::HostMustBeEmpty),
+            ("///name", ParseError::HostMustBeEmpty),
+            ("example.org/name", ParseError::RelativePathCannotSpecifyVariant),
+            ("fuchsia-pkg://example.org/name", ParseError::CannotContainScheme),
+            ("name/variant", ParseError::RelativePathCannotSpecifyVariant),
+            ("name#resource", ParseError::CannotContainResource),
+            (".", ParseError::MissingName),
+            ("..", ParseError::MissingName),
             (
                 "name?hash=0000000000000000000000000000000000000000000000000000000000000000",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: '?',
-                }),
+                ParseError::CannotContainHash,
             ),
         ] {
             assert_matches!(
@@ -167,11 +148,13 @@ mod tests {
 
     #[test]
     fn parse_ok() {
-        for url in ["name", "other3-name"] {
+        for url in ["name", "other3-name", "/name"] {
+            let normalized_url = url.trim_start_matches('/');
             let json_url = format!("\"{url}\"");
+            let normalized_json_url = format!("\"{normalized_url}\"");
 
             // Creation
-            let name = url.parse::<crate::PackageName>().unwrap();
+            let name = normalized_url.parse::<crate::PackageName>().unwrap();
             let validate = |parsed: &RelativePackageUrl| {
                 assert_eq!(parsed.path, name);
             };
@@ -183,14 +166,19 @@ mod tests {
             // Stringification
             assert_eq!(
                 RelativePackageUrl::parse(url).unwrap().to_string(),
-                url,
+                normalized_url,
                 "the url {:?}",
                 url
             );
-            assert_eq!(RelativePackageUrl::parse(url).unwrap().as_ref(), url, "the url {:?}", url);
+            assert_eq!(
+                RelativePackageUrl::parse(url).unwrap().as_ref(),
+                normalized_url,
+                "the url {:?}",
+                url
+            );
             assert_eq!(
                 serde_json::to_string(&RelativePackageUrl::parse(url).unwrap()).unwrap(),
-                json_url,
+                normalized_json_url,
                 "the url {:?}",
                 url
             );

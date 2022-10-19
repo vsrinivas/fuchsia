@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{errors::ParseError, AbsolutePackageUrl, RelativePackageUrl};
+use crate::{errors::ParseError, AbsolutePackageUrl, RelativePackageUrl, UrlParts};
 
 /// A URL locating a Fuchsia package. Can be either absolute or relative.
 /// See `AbsolutePackageUrl` and `RelativePackageUrl` for more details.
@@ -16,13 +16,12 @@ pub enum PackageUrl {
 impl PackageUrl {
     /// Parse a package URL.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
-        match AbsolutePackageUrl::parse(url) {
-            Ok(absolute) => Ok(Self::Absolute(absolute)),
-            Err(ParseError::UrlParseError(url::ParseError::RelativeUrlWithoutBase)) => {
-                Ok(Self::Relative(RelativePackageUrl::parse(url)?))
-            }
-            Err(e) => Err(e),
-        }
+        let parts = UrlParts::parse(url)?;
+        Ok(if parts.scheme.is_some() {
+            Self::Absolute(AbsolutePackageUrl::from_parts(parts)?)
+        } else {
+            Self::Relative(RelativePackageUrl::from_parts(parts)?)
+        })
     }
 }
 
@@ -129,14 +128,14 @@ mod tests {
     fn parse_ok_relative() {
         for url in ["name", "other3-name"] {
             let json_url = format!("\"{url}\"");
-            let validate = |parsed: &RelativePackageUrl| {
+            let validate = |parsed: &PackageUrl| {
                 assert_eq!(parsed.to_string(), url);
                 assert_eq!(serde_json::to_string(&parsed).unwrap(), json_url);
             };
-            validate(&RelativePackageUrl::parse(url).unwrap());
-            validate(&url.parse::<RelativePackageUrl>().unwrap());
-            validate(&RelativePackageUrl::try_from(url).unwrap());
-            validate(&serde_json::from_str::<RelativePackageUrl>(&json_url).unwrap());
+            validate(&PackageUrl::parse(url).unwrap());
+            validate(&url.parse::<PackageUrl>().unwrap());
+            validate(&PackageUrl::try_from(url).unwrap());
+            validate(&serde_json::from_str::<PackageUrl>(&json_url).unwrap());
         }
     }
 }

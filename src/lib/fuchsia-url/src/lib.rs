@@ -49,7 +49,7 @@ enum Scheme {
 
 #[derive(Debug, PartialEq, Eq)]
 struct UrlParts {
-    scheme: Scheme,
+    scheme: Option<Scheme>,
     host: Option<Host>,
     // a forward slash followed by zero or more validated path segments separated by forward slashes
     path: String,
@@ -60,12 +60,19 @@ struct UrlParts {
 
 impl UrlParts {
     fn parse(input: &str) -> Result<Self, ParseError> {
-        let url = url::Url::parse(input)?;
-
-        let scheme = match url.scheme() {
-            "fuchsia-pkg" => Scheme::FuchsiaPkg,
-            "fuchsia-boot" => Scheme::FuchsiaBoot,
-            _ => return Err(ParseError::InvalidScheme),
+        let (scheme, url) = match url::Url::parse(input) {
+            Ok(url) => (
+                Some(match url.scheme() {
+                    "fuchsia-pkg" => Scheme::FuchsiaPkg,
+                    "fuchsia-boot" => Scheme::FuchsiaBoot,
+                    _ => return Err(ParseError::InvalidScheme),
+                }),
+                url,
+            ),
+            Err(url::ParseError::RelativeUrlWithoutBase) => {
+                (None, url::Url::parse("relative://")?.join(input)?)
+            }
+            Err(e) => Err(e)?,
         };
 
         if url.port().is_some() {
@@ -314,10 +321,6 @@ mod test_url_parts {
     }
 
     test_parse_err! {
-        err_missing_scheme => {
-            url = "example.org",
-            err = ParseError::UrlParseError(_),
-        }
         err_invalid_scheme => {
             url = "bad-scheme://example.org",
             err = ParseError::InvalidScheme,
@@ -433,7 +436,7 @@ mod test_url_parts {
     test_parse_ok! {
         ok_fuchsia_pkg_scheme => {
             url =  "fuchsia-pkg://",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/",
             hash = None,
@@ -441,7 +444,7 @@ mod test_url_parts {
         }
         ok_fuchsia_boot_scheme => {
             url =  "fuchsia-boot://",
-            scheme = Scheme::FuchsiaBoot,
+            scheme = Some(Scheme::FuchsiaBoot),
             host = None,
             path = "/",
             hash = None,
@@ -449,7 +452,7 @@ mod test_url_parts {
         }
         ok_host => {
             url =  "fuchsia-pkg://example.org",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = Some(Host::parse("example.org".into()).unwrap()),
             path = "/",
             hash = None,
@@ -457,7 +460,7 @@ mod test_url_parts {
         }
         ok_path_single_segment => {
             url =  "fuchsia-pkg:///name",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/name",
             hash = None,
@@ -465,7 +468,7 @@ mod test_url_parts {
         }
         ok_path_multiple_segment => {
             url =  "fuchsia-pkg:///name/variant/other",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/name/variant/other",
             hash = None,
@@ -473,7 +476,7 @@ mod test_url_parts {
         }
         ok_hash => {
             url =  "fuchsia-pkg://?hash=0000000000000000000000000000000000000000000000000000000000000000",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/",
             hash = Some(
@@ -483,7 +486,7 @@ mod test_url_parts {
         }
         ok_resource_single_segment => {
             url =  "fuchsia-pkg://#resource",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/",
             hash = None,
@@ -491,7 +494,7 @@ mod test_url_parts {
         }
         ok_resource_multiple_segment => {
             url =  "fuchsia-pkg://#resource/again/third",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/",
             hash = None,
@@ -499,7 +502,7 @@ mod test_url_parts {
         }
         ok_resource_ignores_null => {
             url =  "fuchsia-pkg://#reso\x00urce",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/",
             hash = None,
@@ -507,7 +510,7 @@ mod test_url_parts {
         }
         ok_resource_encoded_control_character => {
             url =  "fuchsia-pkg://#reso%09urce",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = None,
             path = "/",
             hash = None,
@@ -517,8 +520,78 @@ mod test_url_parts {
             url =  "fuchsia-pkg://example.org/name\
             ?hash=0000000000000000000000000000000000000000000000000000000000000000\
             #resource",
-            scheme = Scheme::FuchsiaPkg,
+            scheme = Some(Scheme::FuchsiaPkg),
             host = Some(Host::parse("example.org".into()).unwrap()),
+            path = "/name",
+            hash = Some(
+                "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap()
+            ),
+            resource = Some("resource".into()),
+        }
+        ok_relative_path_single_segment => {
+            url =  "name",
+            scheme = None,
+            host = None,
+            path = "/name",
+            hash = None,
+            resource = None,
+        }
+        ok_relative_path_single_segment_leading_slash => {
+            url =  "/name",
+            scheme = None,
+            host = None,
+            path = "/name",
+            hash = None,
+            resource = None,
+        }
+        ok_relative_path_multiple_segment => {
+            url =  "name/variant/other",
+            scheme = None,
+            host = None,
+            path = "/name/variant/other",
+            hash = None,
+            resource = None,
+        }
+        ok_relative_path_multiple_segment_leading_slash => {
+            url =  "/name/variant/other",
+            scheme = None,
+            host = None,
+            path = "/name/variant/other",
+            hash = None,
+            resource = None,
+        }
+        ok_relative_hash => {
+            url =  "?hash=0000000000000000000000000000000000000000000000000000000000000000",
+            scheme = None,
+            host = None,
+            path = "/",
+            hash = Some(
+                "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap()
+            ),
+            resource = None,
+        }
+        ok_relative_resource_single_segment => {
+            url =  "#resource",
+            scheme = None,
+            host = None,
+            path = "/",
+            hash = None,
+            resource = Some("resource".into()),
+        }
+        ok_relative_resource_multiple_segment => {
+            url =  "#resource/again/third",
+            scheme = None,
+            host = None,
+            path = "/",
+            hash = None,
+            resource = Some("resource/again/third".into()),
+        }
+        ok_relative_all_fields => {
+            url =  "name\
+            ?hash=0000000000000000000000000000000000000000000000000000000000000000\
+            #resource",
+            scheme = None,
+            host = None,
             path = "/name",
             hash = Some(
                 "0000000000000000000000000000000000000000000000000000000000000000".parse().unwrap()

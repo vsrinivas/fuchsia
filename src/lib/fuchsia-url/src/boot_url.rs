@@ -25,7 +25,7 @@ impl BootUrl {
     fn try_from_parts(
         UrlParts { scheme, host, path, hash, resource }: UrlParts,
     ) -> Result<Self, ParseError> {
-        if scheme != Scheme::FuchsiaBoot {
+        if scheme.ok_or(ParseError::MissingScheme)? != Scheme::FuchsiaBoot {
             return Err(ParseError::InvalidScheme);
         }
 
@@ -226,6 +226,12 @@ mod tests {
     }
 
     test_parse_err! {
+        test_parse_missing_scheme => {
+            urls = [
+                "package",
+            ],
+            err = ParseError::MissingScheme,
+        }
         test_parse_invalid_scheme => {
             urls = [
                 "fuchsia-pkg://",

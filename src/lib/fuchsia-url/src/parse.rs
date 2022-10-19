@@ -208,6 +208,11 @@ mod test_validate_package_path_segment {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn reject_segment_too_long(ref s in r"[-_0-9a-z\.]{256, 300}")
         {
@@ -377,6 +382,11 @@ mod test_validate_resource_path {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn test_reject_empty_object_name(
             ref s in random_resource_path_with_regex_segment_str(5, "")) {
@@ -439,6 +449,11 @@ mod test_validate_resource_path {
 
     // Tests for valid paths
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn test_name_contains_dot(
             ref s in random_resource_path_with_regex_segment_string(

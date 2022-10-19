@@ -9,8 +9,14 @@ use {
 
 #[derive(PartialEq, Debug, Error)]
 pub enum ParseError {
+    #[error("missing scheme")]
+    MissingScheme,
+
     #[error("invalid scheme")]
     InvalidScheme,
+
+    #[error("cannot have a scheme")]
+    CannotContainScheme,
 
     #[error("invalid host")]
     InvalidHost,

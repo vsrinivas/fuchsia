@@ -309,6 +309,11 @@ mod test_build_with_file_system {
         );
     }
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn test_meta_far_directory_names_are_exactly_generated_files_and_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),
@@ -489,6 +494,11 @@ mod test_build {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn test_meta_far_contains_creation_manifest_far_contents(
             creation_manifest in random_creation_manifest(),

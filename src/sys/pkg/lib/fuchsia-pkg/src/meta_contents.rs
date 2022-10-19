@@ -257,6 +257,11 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn from_map_rejects_invalid_resource_path(
             ref path in random_resource_path(1, 3),

@@ -25,14 +25,21 @@ pub enum AbsolutePackageUrl {
 }
 
 impl AbsolutePackageUrl {
-    /// Parse a "fuchsia-pkg://" URL that locates an optionally pinned package.
-    pub fn parse(url: &str) -> Result<Self, ParseError> {
-        let UrlParts { scheme, host, path, hash, resource } = UrlParts::parse(url)?;
-        let repo = RepositoryUrl::new(scheme, host.ok_or(ParseError::MissingHost)?)?;
+    pub(crate) fn from_parts(parts: UrlParts) -> Result<Self, ParseError> {
+        let UrlParts { scheme, host, path, hash, resource } = parts;
+        let repo = RepositoryUrl::new(
+            scheme.ok_or(ParseError::MissingScheme)?,
+            host.ok_or(ParseError::MissingHost)?,
+        )?;
         if resource.is_some() {
             return Err(ParseError::CannotContainResource);
         }
         Self::new_with_path(repo, &path, hash)
+    }
+
+    /// Parse a "fuchsia-pkg://" URL that locates an optionally pinned package.
+    pub fn parse(url: &str) -> Result<Self, ParseError> {
+        Self::from_parts(UrlParts::parse(url)?)
     }
 
     /// Create an AbsolutePackageUrl from its component parts and a &str `path` that will be
@@ -165,6 +172,11 @@ mod tests {
     #[test]
     fn parse_err() {
         for (url, err) in [
+            ("example.org/name", ParseError::MissingScheme),
+            ("//example.org/name", ParseError::MissingScheme),
+            ("///name", ParseError::MissingScheme),
+            ("/name", ParseError::MissingScheme),
+            ("name", ParseError::MissingScheme),
             ("fuchsia-boot://example.org/name", ParseError::InvalidScheme),
             ("fuchsia-pkg://", ParseError::MissingHost),
             ("fuchsia-pkg://exaMple.org", ParseError::InvalidHost),

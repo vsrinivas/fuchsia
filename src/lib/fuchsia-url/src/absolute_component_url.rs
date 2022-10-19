@@ -38,13 +38,20 @@ impl AbsoluteComponentUrl {
         Ok(Self { package: AbsolutePackageUrl::new(repo, name, variant, hash), resource })
     }
 
-    /// Parse a "fuchsia-pkg://" URL that locates a component.
-    pub fn parse(url: &str) -> Result<Self, ParseError> {
-        let UrlParts { scheme, host, path, hash, resource } = UrlParts::parse(url)?;
-        let repo = RepositoryUrl::new(scheme, host.ok_or(ParseError::MissingHost)?)?;
+    pub(crate) fn from_parts(parts: UrlParts) -> Result<Self, ParseError> {
+        let UrlParts { scheme, host, path, hash, resource } = parts;
+        let repo = RepositoryUrl::new(
+            scheme.ok_or(ParseError::MissingScheme)?,
+            host.ok_or(ParseError::MissingHost)?,
+        )?;
         let package = AbsolutePackageUrl::new_with_path(repo, &path, hash)?;
         let resource = resource.ok_or(ParseError::MissingResource)?;
         Ok(Self { package, resource })
+    }
+
+    /// Parse a "fuchsia-pkg://" URL that locates a component.
+    pub fn parse(url: &str) -> Result<Self, ParseError> {
+        Self::from_parts(UrlParts::parse(url)?)
     }
 
     /// Create an `AbsoluteComponentUrl` from a package URL and a resource path.
@@ -66,7 +73,7 @@ impl AbsoluteComponentUrl {
         &self.package
     }
 
-    pub(crate) fn into_parts(self) -> (AbsolutePackageUrl, String) {
+    pub(crate) fn into_package_and_resource(self) -> (AbsolutePackageUrl, String) {
         let Self { package, resource } = self;
         (package, resource)
     }
@@ -145,6 +152,11 @@ mod tests {
     #[test]
     fn parse_err() {
         for (url, err) in [
+            ("example.org/name#resource", ParseError::MissingScheme),
+            ("//example.org/name#resource", ParseError::MissingScheme),
+            ("///name#resource", ParseError::MissingScheme),
+            ("/name#resource", ParseError::MissingScheme),
+            ("name#resource", ParseError::MissingScheme),
             ("fuchsia-boot://example.org/name#resource", ParseError::InvalidScheme),
             ("fuchsia-pkg:///name#resource", ParseError::MissingHost),
             ("fuchsia-pkg://exaMple.org/name#resource", ParseError::InvalidHost),

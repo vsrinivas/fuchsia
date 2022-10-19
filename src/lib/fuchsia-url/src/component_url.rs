@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{errors::ParseError, AbsoluteComponentUrl, PackageUrl, RelativeComponentUrl};
+use crate::{errors::ParseError, AbsoluteComponentUrl, PackageUrl, RelativeComponentUrl, UrlParts};
 
 /// A URL locating a Fuchsia component. Can be either absolute or relative.
 /// See `AbsoluteComponentUrl` and `RelativeComponentUrl` for more details.
@@ -16,17 +16,16 @@ pub struct ComponentUrl {
 impl ComponentUrl {
     /// Parse a Component URL.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
-        match AbsoluteComponentUrl::parse(url) {
-            Ok(absolute) => {
-                let (absolute, resource) = absolute.into_parts();
-                Ok(Self { package: absolute.into(), resource })
-            }
-            Err(ParseError::UrlParseError(url::ParseError::RelativeUrlWithoutBase)) => {
-                let (relative, resource) = RelativeComponentUrl::parse(url)?.into_parts();
-                Ok(Self { package: relative.into(), resource })
-            }
-            Err(e) => Err(e),
-        }
+        let parts = UrlParts::parse(url)?;
+        Ok(if parts.scheme.is_some() {
+            let (absolute, resource) =
+                AbsoluteComponentUrl::from_parts(parts)?.into_package_and_resource();
+            Self { package: absolute.into(), resource }
+        } else {
+            let (relative, resource) =
+                RelativeComponentUrl::from_parts(parts)?.into_package_and_resource();
+            Self { package: relative.into(), resource }
+        })
     }
 
     /// The package URL of this URL (this URL without the resource path).
@@ -137,14 +136,14 @@ mod tests {
     fn parse_ok_relative() {
         for url in ["name#resource", "other-name#resource%09"] {
             let json_url = format!("\"{url}\"");
-            let validate = |parsed: &RelativeComponentUrl| {
+            let validate = |parsed: &ComponentUrl| {
                 assert_eq!(parsed.to_string(), url);
                 assert_eq!(serde_json::to_string(&parsed).unwrap(), json_url);
             };
-            validate(&RelativeComponentUrl::parse(url).unwrap());
-            validate(&url.parse::<RelativeComponentUrl>().unwrap());
-            validate(&RelativeComponentUrl::try_from(url).unwrap());
-            validate(&serde_json::from_str::<RelativeComponentUrl>(&json_url).unwrap());
+            validate(&ComponentUrl::parse(url).unwrap());
+            validate(&url.parse::<ComponentUrl>().unwrap());
+            validate(&ComponentUrl::try_from(url).unwrap());
+            validate(&serde_json::from_str::<ComponentUrl>(&json_url).unwrap());
         }
     }
 }

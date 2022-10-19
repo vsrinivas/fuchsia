@@ -23,21 +23,17 @@ impl RepositoryUrl {
     /// Parse a "fuchsia-pkg://" URL that locates a package repository.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
         let UrlParts { scheme, host, path, hash, resource } = UrlParts::parse(url)?;
-
+        let scheme = scheme.ok_or(ParseError::MissingScheme)?;
         let host = host.ok_or(ParseError::MissingHost)?;
-
         if path != "/" {
             return Err(ParseError::ExtraPathSegments);
         }
-
         if hash.is_some() {
             return Err(ParseError::CannotContainHash);
         }
-
         if resource.is_some() {
             return Err(ParseError::CannotContainResource);
         }
-
         Self::new(scheme, host)
     }
 
@@ -113,6 +109,7 @@ mod tests {
     #[test]
     fn parse_err() {
         for (url, err) in [
+            ("example.org", ParseError::MissingScheme),
             ("fuchsia-boot://example.org", ParseError::InvalidScheme),
             ("fuchsia-pkg://", ParseError::MissingHost),
             ("fuchsia-pkg://exaMple.org", ParseError::InvalidHost),

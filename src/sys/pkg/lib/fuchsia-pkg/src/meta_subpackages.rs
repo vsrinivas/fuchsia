@@ -173,6 +173,11 @@ mod tests {
     }
 
     proptest! {
+        #![proptest_config(ProptestConfig{
+            failure_persistence: None,
+            ..Default::default()
+        })]
+
         #[test]
         fn serialize(
             ref path0 in random_relative_package_url(),

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{errors::ParseError, RelativePackageUrl};
+use crate::{errors::ParseError, RelativePackageUrl, UrlParts};
 
 /// A relative URL locating a Fuchsia component. Used with a subpackage context.
 /// Has the form "<name>#<resource>" where:
@@ -16,17 +16,17 @@ pub struct RelativeComponentUrl {
 }
 
 impl RelativeComponentUrl {
+    pub(crate) fn from_parts(parts: UrlParts) -> Result<Self, ParseError> {
+        let UrlParts { scheme, host, path, hash, resource } = parts;
+        let package =
+            RelativePackageUrl::from_parts(UrlParts { scheme, host, path, hash, resource: None })?;
+        let resource = resource.ok_or(ParseError::MissingResource)?;
+        Ok(Self { package, resource: resource.to_string() })
+    }
+
     /// Parse a relative component URL.
     pub fn parse(url: &str) -> Result<Self, ParseError> {
-        // RelativePackageUrls cannot contain '#'
-        let (package, resource) = url.split_once('#').ok_or(ParseError::MissingResource)?;
-        let package = package.parse()?;
-        let resource = percent_encoding::percent_decode_str(resource)
-            .decode_utf8()
-            .map_err(ParseError::ResourcePathPercentDecode)?;
-        let () = crate::parse::validate_resource_path(&resource)
-            .map_err(ParseError::InvalidResourcePath)?;
-        Ok(Self { package, resource: resource.to_string() })
+        Self::from_parts(UrlParts::parse(url)?)
     }
 
     /// The package URL of this URL (this URL without the resource path).
@@ -39,7 +39,7 @@ impl RelativeComponentUrl {
         &self.resource
     }
 
-    pub(crate) fn into_parts(self) -> (RelativePackageUrl, String) {
+    pub(crate) fn into_package_and_resource(self) -> (RelativePackageUrl, String) {
         let Self { package, resource } = self;
         (package, resource)
     }
@@ -100,33 +100,22 @@ mod tests {
     #[test]
     fn parse_err() {
         for (url, err) in [
-            (
-                "fuchsia-pkg://example.org/name#resource",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "fuchsia-pkg:///name#resource",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
-            (
-                "fuchsia-pkg://name#resource",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
-                    character: ':',
-                }),
-            ),
+            ("fuchsia-pkg://example.org/name#resource", ParseError::CannotContainScheme),
+            ("fuchsia-pkg:///name#resource", ParseError::CannotContainScheme),
+            ("fuchsia-pkg://name#resource", ParseError::CannotContainScheme),
+            ("//example.org/name#resource", ParseError::HostMustBeEmpty),
+            ("///name#resource", ParseError::HostMustBeEmpty),
             (
                 "nAme#resource",
-                ParseError::InvalidName(PackagePathSegmentError::InvalidCharacter {
+                ParseError::InvalidPathSegment(PackagePathSegmentError::InvalidCharacter {
                     character: 'A',
                 }),
             ),
             ("name", ParseError::MissingResource),
-            ("name#", ParseError::InvalidResourcePath(ResourcePathError::PathIsEmpty)),
-            ("#resource", ParseError::InvalidName(PackagePathSegmentError::Empty)),
+            ("name#", ParseError::MissingResource),
+            ("#resource", ParseError::MissingName),
+            (".#resource", ParseError::MissingName),
+            ("..#resource", ParseError::MissingName),
             (
                 "name#resource/",
                 ParseError::InvalidResourcePath(ResourcePathError::PathEndsWithSlash),
@@ -136,6 +125,8 @@ mod tests {
                 "name#resource%00",
                 ParseError::InvalidResourcePath(ResourcePathError::NameContainsNull),
             ),
+            ("extra/segment#resource", ParseError::RelativePathCannotSpecifyVariant),
+            ("too/many/segments#resource", ParseError::ExtraPathSegments),
         ] {
             assert_matches!(
                 RelativeComponentUrl::parse(url),
@@ -166,10 +157,14 @@ mod tests {
 
     #[test]
     fn parse_ok() {
-        for (url, package, resource) in
-            [("name#resource", "name", "resource"), ("name#reso%09urce", "name", "reso\turce")]
-        {
+        for (url, package, resource) in [
+            ("name#resource", "name", "resource"),
+            ("name#reso%09urce", "name", "reso\turce"),
+            ("/name#resource", "name", "resource"),
+        ] {
+            let normalized_url = url.trim_start_matches('/');
             let json_url = format!("\"{url}\"");
+            let normalized_json_url = format!("\"{normalized_url}\"");
 
             // Creation
             let validate = |parsed: &RelativeComponentUrl| {
@@ -182,10 +177,10 @@ mod tests {
             validate(&serde_json::from_str::<RelativeComponentUrl>(&json_url).unwrap());
 
             // Stringification
-            assert_eq!(RelativeComponentUrl::parse(url).unwrap().to_string(), url);
+            assert_eq!(RelativeComponentUrl::parse(url).unwrap().to_string(), normalized_url);
             assert_eq!(
                 serde_json::to_string(&RelativeComponentUrl::parse(url).unwrap()).unwrap(),
-                json_url,
+                normalized_json_url,
             );
         }
     }
