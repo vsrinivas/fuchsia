@@ -32,7 +32,6 @@ per-file make-integration-patch=thatguy@google.com
 per-file merge-package-config=chaselatta@google.com
 per-file mkinstaller=simonshields@google.com
 per-file move-docs=mangini@google.com
-per-file regen-goldens=mkember@google.com
 per-file             remove-update-source = file: /src/sys/pkg/OWNERS
 # per-file-COMPONENT remove-update-source = Packages
 per-file run-dart-action=zra@google.com
