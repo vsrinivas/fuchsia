@@ -148,7 +148,7 @@ zx_status_t x86_bringup_aps(uint32_t* apic_ids, uint32_t count) {
   uint failed_aps;
   failed_aps = aps_still_booting.exchange(0);
   if (failed_aps != 0) {
-    printf("Failed to boot CPUs: mask %x\n", failed_aps);
+    KERNEL_OOPS("Failed to boot CPUs: mask %x\n", failed_aps);
     for (uint i = 0; i < count; ++i) {
       int cpu = x86_apic_id_to_cpu_num(apic_ids[i]);
       uint mask = 1U << cpu;

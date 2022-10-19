@@ -197,17 +197,18 @@ static void topology_cpu_init(void) {
   // started. Since the secondary cpus are defined in the bootloader by humans
   // it is possible they don't match the hardware.
   constexpr auto check_cpus_booted = [](void*) -> int {
+    constexpr zx_duration_t kDuration = ZX_SEC(5);
     // We wait for secondary cpus to start up.
-    Thread::Current::SleepRelative(ZX_SEC(5));
+    Thread::Current::SleepRelative(kDuration);
 
     // Check that all cpus in the topology are now online.
     const auto online_mask = mp_get_online_mask();
     for (auto* node : system_topology::GetSystemTopology().processors()) {
       const auto& processor = node->entity.processor;
       for (int i = 0; i < processor.logical_id_count; i++) {
-        const auto logical_id = node->entity.processor.logical_ids[i];
+        const cpu_num_t logical_id = node->entity.processor.logical_ids[i];
         if ((cpu_num_to_mask(logical_id) & online_mask) == 0) {
-          printf("ERROR: CPU %d did not start!\n", logical_id);
+          KERNEL_OOPS("CPU %u did not start after %ld ms\n", logical_id, kDuration / ZX_MSEC(1));
         }
       }
     }
