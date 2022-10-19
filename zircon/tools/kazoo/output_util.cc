@@ -274,7 +274,7 @@ std::string GetGoName(const Type& type) {
     return "HandleInfo";
   if (name == "Off" || name == "zx_off_t")
     return "uint64";
-  if (name == "Iovec")
+  if (name == "zx_iovec_t")
     return "uintptr";
   if (name == "zx_pci_bar_t")
     return "uintptr";

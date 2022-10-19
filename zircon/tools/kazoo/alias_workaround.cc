@@ -15,9 +15,5 @@ bool AliasWorkaround(const std::string& name, const SyscallLibrary& library, Typ
     *type = Type(TypeVector(Type(TypeZxBasicAlias("paddr"))), Constness::kConst);
     return true;
   }
-  if (name == "VectorIovec") {
-    *type = Type(TypeVector(Type(TypeZxBasicAlias("Iovec"))), Constness::kConst);
-    return true;
-  }
   return false;
 }

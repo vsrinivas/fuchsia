@@ -14,8 +14,5 @@ library zx;
 // TODO(fidl)
 alias ConstFutexPtr = int32;
 
-// TODO(fidlc): vector<iovec>
-alias VectorIovec = vector<byte>;
-
 // TODO(fidlc): vector<paddr>
 alias VectorPaddr = vector<paddr>;

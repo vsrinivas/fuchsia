@@ -9,6 +9,12 @@ type StreamSeekOrigin = strict enum : uint32 {
     END = 2;
 };
 
+type Iovec = struct {
+    @voidptr
+    buffer experimental_pointer<byte>;
+    capacity usize;
+};
+
 @transport("Syscall")
 protocol Stream {
     /// ## Summary
@@ -183,7 +189,7 @@ protocol Stream {
     Writev(resource struct {
         handle handle:STREAM;
         options uint32;
-        vector VectorIovec;
+        vector vector<Iovec>;
     }) -> (struct {
         actual usize;
     }) error status;
@@ -276,7 +282,7 @@ protocol Stream {
         handle handle:STREAM;
         options uint32;
         offset off;
-        vector VectorIovec;
+        vector vector<Iovec>;
     }) -> (struct {
         actual usize;
     }) error status;
@@ -360,7 +366,7 @@ protocol Stream {
         handle handle:STREAM;
         options uint32;
     }) -> (struct {
-        vector VectorIovec;
+        vector vector<Iovec>;
         actual usize;
     }) error status;
 
@@ -443,7 +449,7 @@ protocol Stream {
         options uint32;
         offset off;
     }) -> (struct {
-        vector VectorIovec;
+        vector vector<Iovec>;
         actual usize;
     }) error status;
 
