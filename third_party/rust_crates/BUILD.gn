@@ -669,6 +669,10 @@ group("rayon") {
   public_deps = [ ":rayon-v1_3_0" ]
 }
 
+group("ref-cast") {
+  public_deps = [ ":ref-cast-v1_0_9" ]
+}
+
 group("regex") {
   public_deps = [ ":regex-v1_5_6" ]
 }
@@ -8392,6 +8396,50 @@ rust_library("redox_termios-v0_1_1") {
   aliased_deps = {
     syscall = ":redox_syscall-v0_1_51"
   }
+  visibility = [ ":*" ]
+}
+
+rust_library("ref-cast-v1_0_9") {
+  crate_name = "ref_cast"
+  crate_root = "//third_party/rust_crates/vendor/ref-cast/src/lib.rs"
+  output_name = "ref_cast-5f8a6c7128c29f04"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":ref-cast-impl-v1_0_9($host_toolchain)" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=5f8a6c7128c29f04",
+    "-Cextra-filename=-5f8a6c7128c29f04",
+  ]
+
+  visibility = [ ":*" ]
+}
+
+rust_proc_macro("ref-cast-impl-v1_0_9") {
+  crate_name = "ref_cast_impl"
+  crate_root = "//third_party/rust_crates/vendor/ref-cast-impl/src/lib.rs"
+  output_name = "ref_cast_impl-a620d94b17744ad"
+  configs -= [ "//build/config/rust:2018_idioms" ]
+
+  deps = []
+  deps += [ ":proc-macro2-v1_0_39" ]
+  deps += [ ":quote-v1_0_18" ]
+  deps += [ ":syn-v1_0_98" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=a620d94b17744ad",
+    "-Cextra-filename=-a620d94b17744ad",
+  ]
+
   visibility = [ ":*" ]
 }
 
