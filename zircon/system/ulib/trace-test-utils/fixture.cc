@@ -13,7 +13,9 @@
 #include <sys/types.h>
 #include <zircon/assert.h>
 
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
@@ -29,12 +31,14 @@ namespace {
 
 class Fixture : private trace::TraceHandler {
  public:
-  Fixture(attach_to_thread_t attach_to_thread, trace_buffering_mode_t mode, size_t buffer_size)
+  Fixture(attach_to_thread_t attach_to_thread, trace_buffering_mode_t mode, size_t buffer_size,
+          const std::vector<std::string>& accepted_categories)
       : attach_to_thread_(attach_to_thread),
         loop_(attach_to_thread == kAttachToThread ? &kAsyncLoopConfigAttachToCurrentThread
                                                   : &kAsyncLoopConfigNoAttachToCurrentThread),
         buffering_mode_(mode),
-        buffer_(new uint8_t[buffer_size], buffer_size) {
+        buffer_(new uint8_t[buffer_size], buffer_size),
+        categories_(accepted_categories) {
     zx_status_t status = zx::event::create(0u, &trace_stopped_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
     status = zx::event::create(0u, &buffer_full_);
@@ -43,6 +47,9 @@ class Fixture : private trace::TraceHandler {
     ZX_DEBUG_ASSERT(status == ZX_OK);
     ResetEngineState();
   }
+
+  Fixture(attach_to_thread_t attach_to_thread, trace_buffering_mode_t mode, size_t buffer_size)
+      : Fixture(attach_to_thread, mode, buffer_size, {}) {}
 
   ~Fixture() {
     TerminateEngine();
@@ -148,9 +155,7 @@ class Fixture : private trace::TraceHandler {
     return observed_buffer_full_durable_data_end_;
   }
 
-  const char* last_alert_name_received() const {
-    return last_alert_name_received_.c_str();
-  }
+  const char* last_alert_name_received() const { return last_alert_name_received_.c_str(); }
 
   void ResetBufferFullNotification() {
     observed_notify_buffer_full_callback_ = false;
@@ -165,7 +170,10 @@ class Fixture : private trace::TraceHandler {
  private:
   bool IsCategoryEnabled(const char* category) override {
     // All categories which begin with + are enabled.
-    return category[0] == '+';
+    if (category[0] == '+') {
+      return true;
+    }
+    return (std::find(categories_.begin(), categories_.end(), category) != categories_.end());
   }
 
   void TraceStopped(zx_status_t disposition) override {
@@ -204,6 +212,7 @@ class Fixture : private trace::TraceHandler {
   bool observed_notify_buffer_full_callback_;
   uint32_t observed_buffer_full_wrapped_count_;
   uint64_t observed_buffer_full_durable_data_end_;
+  std::vector<std::string> categories_;
 };
 
 Fixture* g_fixture{nullptr};
@@ -214,6 +223,13 @@ void fixture_set_up(attach_to_thread_t attach_to_thread, trace_buffering_mode_t 
                     size_t buffer_size) {
   ZX_DEBUG_ASSERT(!g_fixture);
   g_fixture = new Fixture(attach_to_thread, mode, buffer_size);
+}
+
+void fixture_set_up_with_categories(attach_to_thread_t attach_to_thread,
+                                    trace_buffering_mode_t mode, size_t buffer_size,
+                                    const std::vector<std::string>& categories) {
+  ZX_DEBUG_ASSERT(!g_fixture);
+  g_fixture = new Fixture(attach_to_thread, mode, buffer_size, categories);
 }
 
 void fixture_tear_down(void) {

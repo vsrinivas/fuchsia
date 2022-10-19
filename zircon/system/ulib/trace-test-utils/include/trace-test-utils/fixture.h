@@ -48,6 +48,10 @@ bool fixture_compare_n_records(size_t max_num_records, const char* expected,
 using trace::internal::trace_buffer_header;
 void fixture_snapshot_buffer_header(trace_buffer_header* header);
 
+void fixture_set_up_with_categories(attach_to_thread_t attach_to_thread,
+                                    trace_buffering_mode_t mode, size_t buffer_size,
+                                    const std::vector<std::string>& categories);
+
 #endif
 
 __BEGIN_CDECLS

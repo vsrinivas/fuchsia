@@ -16,6 +16,8 @@
 #include <trace-test-utils/fixture.h>
 
 #include "fixture_macros.h"
+#include "lib/trace-engine/types.h"
+#include "zxtest/zxtest.h"
 
 namespace {
 
@@ -309,6 +311,91 @@ TEST(Records, arg_value_null_ending_test) {
   const auto& unterminated_arg = records[9].GetEvent().arguments[0].value().GetString();
   EXPECT_EQ(unterminated_arg.length(), 5);
   EXPECT_STREQ(unterminated_arg.c_str(), "12345");
+
+  END_TRACE_TEST;
+}
+
+TEST(Records, multiple_categories_fixture_contents_test) {
+  std::vector<std::string> categories{"test_category_1", "test_category_2"};
+
+  BEGIN_TRACE_TEST_WITH_CATEGORIES(categories);
+
+  fixture_initialize_and_start_tracing();
+
+  // All but test_category_3 should show up in the trace
+  TRACE_DURATION_BEGIN("test_category_1", "name", "key", "literal");
+  TRACE_DURATION_BEGIN("test_category_2", "name");
+  TRACE_DURATION_BEGIN("test_category_3", "name");
+  TRACE_DURATION_BEGIN("+enabled", "name");
+  fbl::Vector<trace::Record> records;
+
+  fixture_stop_and_terminate_tracing();
+
+  EXPECT_TRUE(fixture_read_records(&records));
+
+  EXPECT_EQ(records.size(), 12);
+  EXPECT_TRUE(fixture_compare_raw_records(
+      records, 1, 6,
+      "String(index: 1, \"test_category_1\")\n"
+      "String(index: 2, \"process\")\n"
+      "KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n"
+      "Thread(index: 1, <>)\n"
+      "String(index: 3, \"name\")\n"
+      "String(index: 4, \"key\")\n"));
+
+  // The comparison in the fixture_compare_*_records functions does not distinguish between strings
+  // that match up to the first null character. These checks ensure that the terminal null character
+  // is not included in the string argument values.
+  const auto& category_1_event = records[7].GetEvent().category;
+  EXPECT_EQ(category_1_event.length(), 15);
+  EXPECT_STREQ(category_1_event.c_str(), "test_category_1");
+
+  const auto& category_2_string = records[8].GetString().string;
+  EXPECT_EQ(category_2_string.length(), 15);
+  EXPECT_STREQ("test_category_2", category_2_string);
+
+  const auto& category_2_event = records[9].GetEvent().category;
+  EXPECT_EQ(category_2_event.length(), 15);
+  EXPECT_STREQ(category_2_event.c_str(), "test_category_2");
+
+  const auto& enabled_string = records[10].GetString().string;
+  EXPECT_EQ(enabled_string.length(), 8);
+  EXPECT_STREQ("+enabled", enabled_string);
+
+  const auto& enabled_event = records[11].GetEvent().category;
+  EXPECT_EQ(enabled_event.length(), 8);
+  EXPECT_STREQ(enabled_event.c_str(), "+enabled");
+
+  END_TRACE_TEST;
+}
+
+TEST(Records, multiple_categories_filtered) {
+  std::vector<std::string> categories{"test_category_1", "test_category_2", "test_category_3"};
+
+  BEGIN_TRACE_TEST_WITH_CATEGORIES(categories);
+
+  fixture_initialize_and_start_tracing();
+
+  // All but test_category_3 should show up in the trace
+  TRACE_DURATION_BEGIN("test_category_1", "name", "key", "literal");
+  TRACE_DURATION_BEGIN("test_category_2", "name");
+  TRACE_DURATION_BEGIN("unmatched_category", "name");
+  TRACE_DURATION_BEGIN("test_category_3", "name");
+  fbl::Vector<trace::Record> records;
+
+  fixture_stop_and_terminate_tracing();
+
+  EXPECT_TRUE(fixture_read_records(&records));
+
+  unsigned int index = 0;
+  for (auto& rec : records) {
+    if (rec.type() == trace::RecordType::kEvent) {
+      EXPECT_STREQ(rec.GetEvent().category.c_str(), categories[index].c_str());
+      ++index;
+    }
+  }
+
+  EXPECT_EQ(index, categories.size());
 
   END_TRACE_TEST;
 }

@@ -24,6 +24,14 @@
 #ifndef NTRACE
 
 #ifdef __cplusplus
+#define BEGIN_TRACE_TEST_WITH_CATEGORIES_ETC(attach_to_thread, mode, buffer_size, categories) \
+  __attribute__((cleanup(fixture_scope_cleanup))) bool __scope = 0;                           \
+  (void)__scope;                                                                              \
+  fixture_set_up_with_categories((attach_to_thread), (mode), (buffer_size), (categories))
+#define BEGIN_TRACE_TEST_WITH_CATEGORIES(categories)                                    \
+  BEGIN_TRACE_TEST_WITH_CATEGORIES_ETC(kNoAttachToThread, TRACE_BUFFERING_MODE_ONESHOT, \
+                                       DEFAULT_BUFFER_SIZE_BYTES, (categories))
+
 #define ASSERT_RECORDS(expected_c, expected_cpp) \
   ASSERT_TRUE(fixture_compare_records(expected_c expected_cpp), "record mismatch")
 #define ASSERT_N_RECORDS(max_num_recs, expected_c, expected_cpp, records, skip_count)              \
