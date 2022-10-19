@@ -1,0 +1,74 @@
+[
+    {
+        "name": "AEMU",
+        "tests": [
+            {
+                "name": "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/bar#meta/bar.cm",
+                "path": "",
+                "label": "//src/something:bar(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            },
+            {
+                "name": "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/baz#meta/baz.cm",
+                "path": "",
+                "label": "//src/something:baz(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            },
+            {
+                "name": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+                "package_url": "fuchsia-pkg://fuchsia.com/foo#meta/foo.cm",
+                "path": "",
+                "label": "//src/something:foo(//build/toolchain/fuchsia:x64)",
+                "os": "fuchsia",
+                "cpu": "x64",
+                "log_settings": {},
+                "runs": 1,
+                "tags": [
+                    {
+                        "key": "expected_duration_milliseconds",
+                        "value": "0"
+                    }
+                ]
+            }
+        ],
+        "environment": {
+            "dimensions": {
+                "device_type": "AEMU"
+            },
+            "is_emu": true
+        },
+        "deps": [
+            "images.json",
+            "obj/build/images/flash/virtual_device_specification_recommended_flags.json.template",
+            "physical_device.json",
+            "product_bundle.json",
+            "sdk/manifest/core",
+            "virtual_device_min.json",
+            "virtual_device_recommended.json"
+        ],
+        "timeout_secs": 0,
+        "summary": {
+            "tests": null
+        }
+    }
+]
