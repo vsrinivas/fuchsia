@@ -1,0 +1,28 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "bt-fastpair-client",
+            url: "fuchsia-pkg://fuchsia.com/bt-fastpair-client#meta/bt-fastpair-client.cm",
+            startup: "eager",
+            environment: "#core-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [ "#bt-fastpair-client" ],
+        },
+        {
+            protocol: [
+                "fuchsia.bluetooth.fastpair.Provider",
+                "fuchsia.bluetooth.sys.Pairing",
+            ],
+            from: "#bluetooth-core",
+            to: [ "#bt-fastpair-client" ],
+        },
+    ],
+}

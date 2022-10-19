@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+rustc_binary("bin") {
+  edition = "2021"
+  output_name = "bt_fastpair_client"
+
+  deps = [
+    "//sdk/fidl/fuchsia.bluetooth.fastpair:fuchsia.bluetooth.fastpair_rust",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "src/main.rs" ]
+
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("component") {
+  component_name = "bt-fastpair-client"
+  manifest = "meta/bt-fastpair-client.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("bt-fastpair-client") {
+  deps = [ ":component" ]
+}
+
+# The core realm shard to be used by product integrators.
+core_shard("core-shard") {
+  shard_file = "meta/bt-fastpair-client.core_shard.cml"
+}

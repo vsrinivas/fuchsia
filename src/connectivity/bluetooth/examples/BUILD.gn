@@ -16,5 +16,6 @@ group("examples") {
   deps = [
     ":bt-shell-examples",
     "bt-device-id-client",
+    "bt-fastpair-client",
   ]
 }
