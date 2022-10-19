@@ -13,3 +13,8 @@
 #else
 #define assert(expr) ZX_ASSERT(expr)
 #endif
+
+// make sure static_assert() is defined, even in C
+#if !defined(__cplusplus) && !defined(static_assert)
+#define static_assert(e, msg) _Static_assert(e, msg)
+#endif
