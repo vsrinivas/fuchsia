@@ -233,6 +233,7 @@ if (target_cpu == "x64" && !is_asan) {
       "task/thread_group.rs",
       "task/waiter.rs",
       "testing.rs",
+      "types/arc_key.rs",
       "types/as_any.rs",
       "types/auth.rs",
       "types/device_type.rs",

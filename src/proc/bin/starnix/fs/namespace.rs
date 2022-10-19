@@ -26,111 +26,27 @@ use crate::types::*;
 ///
 /// The namespace records at which entries filesystems are mounted.
 pub struct Namespace {
-    root_mount: OnceCell<MountHandle>,
-    // The value in this hashmap is a vector because multiple mounts can be stacked on top of the
-    // same mount point. The last one in the vector shadows the others and is used for lookups.
-    // Unmounting will remove the last entry. Mounting will add an entry.
-    mount_points: RwLock<HashMap<NamespaceNode, Vec<MountHandle>>>,
+    root_mount: MountHandle,
 }
 
 impl Namespace {
     pub fn new(fs: FileSystemHandle) -> Arc<Namespace> {
-        // TODO(tbodt): We can avoid this OnceCell thing by using Arc::new_cyclic, but that's
-        // unstable.
-        let namespace = Arc::new(Self {
-            root_mount: OnceCell::new(),
-            mount_points: RwLock::new(HashMap::new()),
-        });
         let root = fs.root().clone();
-        if namespace
-            .root_mount
-            .set(Arc::new(Mount::new(
-                Arc::downgrade(&namespace),
-                None,
-                root,
-                MountFlags::empty(),
-                fs,
-            )))
-            .is_err()
-        {
-            panic!("there's no way namespace.root_mount could have been set");
-        }
-        namespace
+        Arc::new(Self { root_mount: Mount::new(root, MountFlags::empty(), fs) })
     }
+
     pub fn root(&self) -> NamespaceNode {
-        self.root_mount.get().unwrap().root()
+        self.root_mount.root()
     }
 
     pub fn clone_namespace(&self) -> Arc<Namespace> {
-        let namespace = Arc::new(Self {
-            root_mount: OnceCell::new(),
-            mount_points: RwLock::new(HashMap::new()),
-        });
-        let mut mount_mapping = HashMap::new();
-
-        fn _get_new_mount(
-            namespace: &Arc<Namespace>,
-            mount_mapping: &mut HashMap<*const Mount, Arc<Mount>>,
-            old_mount: &Arc<Mount>,
-        ) -> Arc<Mount> {
-            let key = Arc::as_ptr(old_mount);
-
-            // We can't use HashMap::entry() because the entry will mutably borrow the map which
-            // makes it impossible to have a mutable reference to pass to the recursive call
-            if let Some(mount) = mount_mapping.get(&key) {
-                return Arc::clone(mount);
-            }
-
-            // A guard against trying to clone the same Mount twice, which would result in either
-            // two Mounts that should be the same or infinite recursion.
-            // mount_
-
-            let new_mount = Mount::new(
-                Arc::downgrade(namespace),
-                old_mount.mountpoint.as_ref().map(|(mount, dir)| {
-                    (
-                        Arc::downgrade(&_get_new_mount(
-                            namespace,
-                            mount_mapping,
-                            &mount.upgrade().unwrap(),
-                        )),
-                        Arc::clone(dir),
-                    )
-                }),
-                Arc::clone(&old_mount.root),
-                old_mount._flags,
-                Arc::clone(&old_mount._fs),
-            );
-            let new_mount = Arc::new(new_mount);
-            mount_mapping.insert(key, Arc::clone(&new_mount));
-            new_mount
-        }
-        let mut get_new_mount =
-            |old_mount| _get_new_mount(&namespace, &mut mount_mapping, old_mount);
-
-        {
-            namespace.root_mount.set(get_new_mount(self.root_mount.get().unwrap())).unwrap();
-            let mut new_mount_points = namespace.mount_points.write();
-            for (node, mount_stack) in self.mount_points.read().iter() {
-                let node = NamespaceNode {
-                    mount: node.mount.as_ref().map(&mut get_new_mount),
-                    entry: Arc::clone(&node.entry),
-                };
-                let mount_stack = mount_stack.iter().map(&mut get_new_mount).collect();
-                new_mount_points.insert(node, mount_stack);
-            }
-        }
-
-        namespace
+        Arc::new(Self { root_mount: self.root_mount.clone_mount_tree() })
     }
 }
 
 impl fmt::Debug for Namespace {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("Namespace")
-            .field("root_mount", &self.root_mount)
-            .field("mount_points", &self.mount_points.read())
-            .finish()
+        f.debug_struct("Namespace").field("root_mount", &self.root_mount).finish()
     }
 }
 
@@ -140,26 +56,81 @@ impl fmt::Debug for Namespace {
 /// The client sees a composed directory structure that glues together the
 /// directories from the underlying FsNodes from those filesystems.
 struct Mount {
-    namespace: Weak<Namespace>,
-    mountpoint: Option<(Weak<Mount>, DirEntryHandle)>,
+    mountpoint: OnceCell<(Weak<Mount>, DirEntryHandle)>,
     root: DirEntryHandle,
     _flags: MountFlags,
     _fs: FileSystemHandle,
+
+    state: RwLock<MountState>,
+    // Mount used to contain a Weak<Namespace>. It no longer does because since the mount point
+    // hash was moved from Namespace to Mount, nothing actually uses it. Now that
+    // Namespace::clone_namespace() is implemented in terms of Mount::clone_mount_tree, it won't be
+    // trivial to add it back. I recommend turning the mountpoint field into an enum of Mountpoint
+    // or Namespace, maybe called "parent", and then traverse up to the top of the tree if you need
+    // to find a Mount's Namespace.
 }
 type MountHandle = Arc<Mount>;
 
+#[derive(Default)]
+struct MountState {
+    // The value in this hashmap is a vector because multiple mounts can be stacked on top of the
+    // same mount point. The last one in the vector shadows the others and is used for lookups.
+    // Unmounting will remove the last entry. Mounting will add an entry.
+    //
+    // The keys of this map are always descendants of this mount's root.
+    submounts: HashMap<ArcKey<DirEntry>, Vec<MountHandle>>,
+}
+
 impl Mount {
-    fn new(
-        namespace: Weak<Namespace>,
-        mountpoint: Option<(Weak<Mount>, DirEntryHandle)>,
-        root: DirEntryHandle,
-        flags: MountFlags,
-        fs: FileSystemHandle,
-    ) -> Self {
-        if let Some((_mount, node)) = mountpoint.as_ref() {
-            node.register_mount()
+    fn new(root: DirEntryHandle, flags: MountFlags, fs: FileSystemHandle) -> MountHandle {
+        Arc::new(Self {
+            mountpoint: OnceCell::new(),
+            root,
+            _flags: flags,
+            _fs: fs,
+            state: Default::default(),
+        })
+    }
+
+    fn clone_mount(&self) -> MountHandle {
+        Arc::new(Self {
+            mountpoint: OnceCell::new(),
+            root: Arc::clone(&self.root),
+            _flags: self._flags,
+            _fs: Arc::clone(&self._fs),
+            state: Default::default(),
+        })
+    }
+
+    fn clone_mount_tree(&self) -> MountHandle {
+        let clone = self.clone_mount();
+        {
+            let mut clone_state = clone.state.write();
+            for (dir, mount_stack) in &self.state.read().submounts {
+                for mount in mount_stack {
+                    clone.add_submount_locked(&mut clone_state, dir, mount.clone_mount_tree());
+                }
+            }
         }
-        Self { namespace, mountpoint, root, _flags: flags, _fs: fs }
+        clone
+    }
+
+    fn add_submount(self: &MountHandle, dir: &DirEntryHandle, mount: MountHandle) {
+        self.add_submount_locked(&mut self.state.write(), dir, mount)
+    }
+
+    fn add_submount_locked(
+        self: &MountHandle,
+        state: &mut MountState,
+        dir: &DirEntryHandle,
+        mount: MountHandle,
+    ) {
+        dir.register_mount();
+        mount
+            .mountpoint
+            .set((Arc::downgrade(self), Arc::clone(dir)))
+            .expect("add_submount can only take a newly created mount");
+        state.submounts.entry(ArcKey(dir.clone())).or_default().push(mount);
     }
 
     pub fn root(self: &MountHandle) -> NamespaceNode {
@@ -167,14 +138,14 @@ impl Mount {
     }
 
     fn mountpoint(&self) -> Option<NamespaceNode> {
-        let (ref mount, ref node) = &self.mountpoint.as_ref()?;
+        let (ref mount, ref node) = &self.mountpoint.get()?;
         Some(NamespaceNode { mount: Some(mount.upgrade()?), entry: node.clone() })
     }
 }
 
 impl Drop for Mount {
     fn drop(&mut self) {
-        if let Some((_mount, node)) = self.mountpoint.as_ref() {
+        if let Some((_mount, node)) = self.mountpoint.get() {
             node.unregister_mount()
         }
     }
@@ -182,10 +153,12 @@ impl Drop for Mount {
 
 impl fmt::Debug for Mount {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let state = self.state.read();
         f.debug_struct("Mount")
             .field("id", &(self as *const Mount))
             .field("mountpoint", &self.mountpoint)
             .field("root", &self.root)
+            .field("submounts", &state.submounts)
             .finish()
     }
 }
@@ -440,8 +413,10 @@ impl NamespaceNode {
                 };
             }
 
-            if let Some(namespace) = self.namespace() {
-                if let Some(mounts_at_point) = namespace.mount_points.read().get(&child) {
+            if let Some(ref mount) = child.mount {
+                if let Some(mounts_at_point) =
+                    mount.state.read().submounts.get(ArcKey::ref_cast(&child.entry))
+                {
                     if let Some(mount) = mounts_at_point.last() {
                         return Ok(mount.root());
                     }
@@ -503,10 +478,7 @@ impl NamespaceNode {
     }
 
     pub fn mount(&self, root: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
-        let namespace = self.namespace().expect("a mountpoint must be in a namespace");
-        let mut mounts_hash = namespace.mount_points.write();
-        let mounts_at_point = mounts_hash.entry(self.clone()).or_default();
-        let mount = self.mount.as_ref().unwrap();
+        let mount = self.mount.as_ref().expect("a mountpoint must be part of a mount");
         let (fs, root) = match root {
             WhatToMount::Fs(fs) => {
                 let root = fs.root().clone();
@@ -514,22 +486,18 @@ impl NamespaceNode {
             }
             WhatToMount::Dir(entry) => (entry.node.fs(), entry),
         };
-        mounts_at_point.push(Arc::new(Mount::new(
-            mount.namespace.clone(),
-            Some((Arc::downgrade(mount), self.entry.clone())),
-            root,
-            flags,
-            fs,
-        )));
+        let new_mount = Mount::new(root, flags, fs);
+        mount.add_submount(&self.entry, new_mount);
         Ok(())
     }
 
     /// Unmount the topmost filesystem from this mount point.
     /// Make sure you call this on the mount point and not the mount root (i.e. use escape_mount.)
     pub fn unmount(&self) -> Result<(), Errno> {
-        let namespace = self.namespace().expect("a mountpoint must be in a namespace");
-        let mut mounts_hash = namespace.mount_points.write();
-        let mounts_at_point = mounts_hash.get_mut(self).ok_or_else(|| errno!(EINVAL))?;
+        let mount = self.mount.as_ref().expect("a mountpoint must be part of a mount");
+        let mut mount_state = mount.state.write();
+        let mounts_at_point =
+            mount_state.submounts.get_mut(self.mount_hash_key()).ok_or_else(|| errno!(EINVAL))?;
         mounts_at_point.pop().ok_or_else(|| errno!(EINVAL))?;
         Ok(())
     }
@@ -542,8 +510,8 @@ impl NamespaceNode {
         NamespaceNode { mount: self.mount.clone(), entry }
     }
 
-    fn namespace(&self) -> Option<Arc<Namespace>> {
-        self.mount.as_ref().and_then(|mount| mount.namespace.upgrade())
+    fn mount_hash_key(&self) -> &ArcKey<DirEntry> {
+        ArcKey::ref_cast(&self.entry)
     }
 }
 
