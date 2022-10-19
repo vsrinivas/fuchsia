@@ -186,7 +186,7 @@ gvisor_tests = [
   # "socket_bind_to_device_distribution_test",
   # "socket_bind_to_device_sequence_test",
   # "socket_bind_to_device_test",
-  # "socket_blocking_ip_test",
+  "socket_blocking_ip_test",
   "socket_blocking_local_test",
 
   # "socket_capability_test",
