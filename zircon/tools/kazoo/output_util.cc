@@ -254,7 +254,7 @@ std::string GetGoName(const Type& type) {
   // tool that parsed abigen directly.
   // TODO(scottmg|dhobsd): Remove or rationalize these over time.
   std::string name = GetGoNameImpl(type);
-  if (name == "Futex")
+  if (name == "Futex" || name == "zx_futex_t")
     return "int32";
   if (name == "Koid")
     return "uint64";
@@ -276,6 +276,8 @@ std::string GetGoName(const Type& type) {
     return "uint64";
   if (name == "zx_iovec_t")
     return "uintptr";
+  if (name == "zx_paddr_t")
+    return "Paddr";
   if (name == "zx_pci_bar_t")
     return "uintptr";
   if (name == "zx_pci_init_arg_t")

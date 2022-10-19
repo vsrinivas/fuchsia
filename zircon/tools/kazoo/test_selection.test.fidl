@@ -6,7 +6,6 @@ library zx;
 // This file is copies of some syscalls that cover more unusual features (see
 // annotations at the method).
 
-alias ConstFutexPtr = int32;
 alias Futex = int32;
 type Clock = strict enum : uint32 {
     MONOTONIC = 0;
@@ -19,10 +18,12 @@ type Clock = strict enum : uint32 {
 protocol Selection {
     // Special futex handling.
     FutexRequeue(resource struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
         wake_count uint32;
         current_value Futex;
-        requeue_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        requeue_ptr experimental_pointer<Futex>;
         requeue_count uint32;
         new_requeue_owner handle;
     }) -> (struct {}) error status;

@@ -5,9 +5,6 @@ library zx;
 
 // This file is copies of some syscalls that were interesting for the kernel
 // header generator.
-
-alias VectorPaddr = vector<paddr>;
-
 @transport("Syscall")
 protocol KernelCases {
     // Output vector to out_ptr, and vector<paddr> staying zx_paddr_t (not
@@ -19,7 +16,8 @@ protocol KernelCases {
         offset uint64;
         size uint64;
     }) -> (resource struct {
-        addrs VectorPaddr;
+        @embedded_alias("zx/paddr")
+        addrs vector<paddr>;
         pmt handle:PMT;
     }) error status;
 

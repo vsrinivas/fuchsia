@@ -10,7 +10,6 @@
 
 #include <algorithm>
 
-#include "tools/kazoo/alias_workaround.h"
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/string_util.h"
 
@@ -168,11 +167,6 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     }
 
     const std::string name = StripLibraryName(full_name);
-    Type workaround_type;
-    if (AliasWorkaround(name, library, &workaround_type)) {
-      return workaround_type;
-    }
-
     return *library.TypeFromIdentifier(full_name);
   }
 
@@ -229,6 +223,17 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     ZX_ASSERT(typ->IsVector());
     typ = Type(TypeVector(typ->DataAsVector().contained_type(), UseUint32ForVectorSizeTag{}),
                typ->constness());
+  }
+
+  if (auto it = attributes.find("embedded_alias"); it != attributes.end()) {
+    ZX_ASSERT(typ->IsPointer() || typ->IsVector());
+
+    auto aliased = library.TypeFromIdentifier(it->second);
+    if (typ->IsPointer()) {
+      typ = Type(TypePointer(*aliased), typ->constness());
+    } else {
+      typ = Type(TypeVector(*aliased), typ->constness());
+    }
   }
   return *typ;
 }

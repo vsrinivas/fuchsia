@@ -11,7 +11,6 @@
 #include <type_traits>
 #include <utility>
 
-#include "tools/kazoo/alias_workaround.h"
 #include "tools/kazoo/output_util.h"
 #include "tools/kazoo/outputs.h"
 #include "tools/kazoo/string_util.h"
@@ -273,12 +272,6 @@ __BEGIN_CDECLS
   }
 
   for (const auto& alias : library.aliases()) {
-    Type workaround_type;
-    if (AliasWorkaround(alias->original_name(), library, &workaround_type)) {
-      // Hide workaround types
-      continue;
-    }
-
     auto names = formatter.Format(*alias);
     PrintDocComments(alias->description(), writer);
     writer->Printf("typedef %s %s;\n",

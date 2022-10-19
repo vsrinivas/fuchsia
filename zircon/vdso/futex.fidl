@@ -97,7 +97,8 @@ protocol Futexfuncs {
     /// [`zx_futex_wake()`]: futex_wake.md
     @blocking
     FutexWait(resource struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
         current_value Futex;
         new_futex_owner handle;
         deadline time;
@@ -160,7 +161,8 @@ protocol Futexfuncs {
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake_single_owner()`]: futex_wake_single_owner.md
     FutexWake(struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
         wake_count uint32;
     }) -> (struct {}) error status;
 
@@ -256,10 +258,12 @@ protocol Futexfuncs {
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake()`]: futex_wake.md
     FutexRequeue(resource struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
         wake_count uint32;
         current_value Futex;
-        requeue_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        requeue_ptr experimental_pointer<Futex>;
         requeue_count uint32;
         new_requeue_owner handle;
     }) -> (struct {}) error status;
@@ -308,7 +312,8 @@ protocol Futexfuncs {
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake()`]: futex_wake.md
     FutexWakeSingleOwner(struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
     }) -> (struct {}) error status;
 
     /// ## Summary
@@ -376,9 +381,11 @@ protocol Futexfuncs {
     /// [`zx_futex_wait()`]: futex_wait.md
     /// [`zx_futex_wake()`]: futex_wake.md
     FutexRequeueSingleOwner(resource struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
         current_value Futex;
-        requeue_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        requeue_ptr experimental_pointer<Futex>;
         requeue_count uint32;
         new_requeue_owner handle;
     }) -> (struct {}) error status;
@@ -427,7 +434,8 @@ protocol Futexfuncs {
     ///
     /// [futex objects](/docs/reference/kernel_objects/futex.md)
     FutexGetOwner(struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
     }) -> (struct {
         koid koid;
     }) error status;

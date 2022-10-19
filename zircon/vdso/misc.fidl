@@ -371,7 +371,8 @@ protocol Misc {
     @noreturn
     @vdsocall
     FutexWakeHandleCloseThreadExit(resource struct {
-        value_ptr ConstFutexPtr;
+        @embedded_alias("zx/Futex")
+        value_ptr experimental_pointer<Futex>;
         wake_count uint32;
         new_value int32;
         @release

@@ -19,8 +19,6 @@ zx_library("kazoo_lib") {
   configs += [ ":kazoo_config" ]
 
   sources = [
-    "alias_workaround.cc",
-    "alias_workaround.h",
     "c_ulib_header_output.cc",
     "category_output.cc",
     "cdecl_output.cc",
@@ -80,7 +78,6 @@ test("kazoo-unittests") {
   include_dirs = [ "$target_gen_dir/../.." ]
 
   sources = [
-    "alias_workaround_test.cc",
     "c_ulib_header_output_test.cc",
     "category_output_test.cc",
     "cdecl_output_test.cc",
@@ -122,7 +119,6 @@ zx_host_tool_action_foreach("test_files_fidl_to_json") {
   outputs = [ "$target_gen_dir/{{source_name_part}}.json" ]
 
   sources = [
-    "test_aliases.test.fidl",
     "test_go_nonblocking.test.fidl",
     "test_go_reserved_words.test.fidl",
     "test_kernel_cases.test.fidl",
