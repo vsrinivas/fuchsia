@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_ELFLDLTL_FUCHSIA_STATIC_PIE_H_
-#define SRC_LIB_ELFLDLTL_FUCHSIA_STATIC_PIE_H_
+#ifndef SRC_LIB_ELFLDLTL_TEST_FUCHSIA_STATIC_PIE_H_
+#define SRC_LIB_ELFLDLTL_TEST_FUCHSIA_STATIC_PIE_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -22,4 +22,4 @@ zx_status_t StaticPieRelro(zx_handle_t loaded_vmar);
 
 __END_CDECLS
 
-#endif  // SRC_LIB_ELFLDLTL_FUCHSIA_STATIC_PIE_H_
+#endif  // SRC_LIB_ELFLDLTL_TEST_FUCHSIA_STATIC_PIE_H_

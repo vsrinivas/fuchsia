@@ -125,8 +125,8 @@ struct alignas(4) InMemoryNote {
 
   bool operator==(const elfldltl::ElfNote& note) const {
     return note.type == header.type && note.name.size() == header.namesz &&
-           note.name == std::string_view{name.data(), name.size()}&& note.desc.size() ==
-               header.descsz &&
+           note.name == std::string_view{name.data(), name.size()} &&
+           note.desc.size() == header.descsz &&
            note.desc == elfldltl::ElfNote::Bytes{desc.data(), desc.size()};
   }
 };

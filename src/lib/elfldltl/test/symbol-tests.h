@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_ELFLDLTL_SYMBOL_TESTS_H_
-#define SRC_LIB_ELFLDLTL_SYMBOL_TESTS_H_
+#ifndef SRC_LIB_ELFLDLTL_TEST_SYMBOL_TESTS_H_
+#define SRC_LIB_ELFLDLTL_TEST_SYMBOL_TESTS_H_
 
 #include <lib/elfldltl/symbol.h>
 
@@ -125,4 +125,4 @@ inline constexpr auto kTestGnuHash<Addr64LE> = MakeTestGnuHash64<Addr64LE>();
 template <>
 inline constexpr auto kTestGnuHash<Addr64BE> = MakeTestGnuHash64<Addr64BE>();
 
-#endif  // SRC_LIB_ELFLDLTL_SYMBOL_TESTS_H_
+#endif  // SRC_LIB_ELFLDLTL_TEST_SYMBOL_TESTS_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_ELFLDLTL_LINUX_STATIC_PIE_H_
-#define SRC_LIB_ELFLDLTL_LINUX_STATIC_PIE_H_
+#ifndef SRC_LIB_ELFLDLTL_TEST_LINUX_STATIC_PIE_H_
+#define SRC_LIB_ELFLDLTL_TEST_LINUX_STATIC_PIE_H_
 
 #include <cstdint>
 
@@ -11,4 +11,4 @@
 // on execve.
 extern "C" void StaticPieSetup(uintptr_t* start_sp);
 
-#endif  // SRC_LIB_ELFLDLTL_LINUX_STATIC_PIE_H_
+#endif  // SRC_LIB_ELFLDLTL_TEST_LINUX_STATIC_PIE_H_

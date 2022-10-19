@@ -110,7 +110,7 @@ unified_only = [
   # These build their own separate test binaries in their own BUILD.gn files,
   # but are also included in the unified standalone test binary.
   "//zircon/system/ulib/c:unittests",
-  "//src/lib/elfldltl:unittests",
+  "//src/lib/elfldltl/test:unittests",
 ]
 assert(core_tests + core_tests_with_custom_manifests -
            core_tests_with_custom_manifests == core_tests,

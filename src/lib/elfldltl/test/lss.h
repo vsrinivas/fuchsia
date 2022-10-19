@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_ELFLDLTL_LSS_H_
-#define SRC_LIB_ELFLDLTL_LSS_H_
+#ifndef SRC_LIB_ELFLDLTL_TEST_LSS_H_
+#define SRC_LIB_ELFLDLTL_TEST_LSS_H_
 
 // This must be declared before the LSS header is included.
 [[gnu::visibility("hidden")]] inline int gSyscallErrno;
@@ -17,4 +17,4 @@
 #pragma GCC diagnostic pop
 #undef SYS_ERRNO
 
-#endif  // SRC_LIB_ELFLDLTL_LSS_H_
+#endif  // SRC_LIB_ELFLDLTL_TEST_LSS_H_

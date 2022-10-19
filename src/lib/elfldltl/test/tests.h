@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_ELFLDLTL_TESTS_H_
-#define SRC_LIB_ELFLDLTL_TESTS_H_
+#ifndef SRC_LIB_ELFLDLTL_TEST_TESTS_H_
+#define SRC_LIB_ELFLDLTL_TEST_TESTS_H_
 
 #include <lib/elfldltl/diagnostics.h>
 #include <lib/elfldltl/layout.h>
@@ -111,4 +111,4 @@ constexpr auto ExpectOkDiagnostics() {
   return elfldltl::Diagnostics(fail, elfldltl::DiagnosticsFlags{.extra_checking = true});
 }
 
-#endif  // SRC_LIB_ELFLDLTL_TESTS_H_
+#endif  // SRC_LIB_ELFLDLTL_TEST_TESTS_H_
