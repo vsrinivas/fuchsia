@@ -6,7 +6,7 @@
 #### CATEGORY=Run, inspect and debug
 ### start fuchsia in an emulator
 
-## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-v <build_variant>] [-g <port> [-r <fps>] [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [-p mouse|touch] [-H|--headless] [--audio] [--hidpi-scaling] [--software-gpu] [--debugger]
+## usage: fx emu [-a <mode>] [-c <text>] [-N [-I <ifname>]] [-u <path>] [-v <build_variant>] [-g <port> [-t <cmd>]] [-x <port> [-X <directory>]] [-e <directory>] [-w <size>] [-s <cpus>] [-m <mb>] [-k <authorized_keys_file>] [-K <kernel_image>] [-z <zbi_image>] [-f <fvm_image>] [-p mouse|touch] [-H|--headless] [--audio] [--hidpi-scaling] [--software-gpu] [--debugger]
 ##   -a <mode> acceleration mode (auto, off, kvm, hvf, hax), default is auto
 ##   -c <text> append item to kernel command line
 ##   -ds <size> extends the fvm image size to <size> bytes. Default is twice the original size
@@ -16,7 +16,6 @@
 ##   -v <build_variant> uses the build system variant to modify the total memory.
 ##   -e <directory> location of emulator, defaults to looking in prebuilt/third_party/android/aemu/release/PLATFORM
 ##   -g <port> enable gRPC service on port to control the emulator, default is 5556 when WebRTC service is enabled
-##   -r <fps> webrtc frame rate when using gRPC service, default is 30
 ##   -t <cmd> execute the given command to obtain turn configuration
 ##   -x <port> enable WebRTC HTTP service on port
 ##   -X <directory> location of grpcwebproxy, defaults to looking in prebuilt/third_party/grpcwebproxy
@@ -74,7 +73,6 @@ UPSCRIPT=
 DOWNSCRIPT=no
 WINDOW_SIZE="1280x800"
 GRPC=
-RTCFPS="30"
 TURNCFG=""
 GPU="auto"
 VULKAN=1
@@ -152,10 +150,6 @@ while [[ $# -ge 1 ]]; do
   -g)
     shift
     GRPC="$1"
-    ;;
-  -r)
-    shift
-    RTCFPS="$1"
     ;;
   -t)
     shift
@@ -463,7 +457,6 @@ if (( GRPC )); then
     exit 1
   fi
   OPTIONS+=("-grpc" "$GRPC")
-  OPTIONS+=("-rtcfps" "$RTCFPS")
   if [[ -n "$TURNCFG" ]]; then
     OPTIONS+=("-turncfg" "$TURNCFG")
   fi
