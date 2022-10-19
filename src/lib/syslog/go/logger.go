@@ -409,60 +409,62 @@ func (l *Logger) SetVerbosity(verbosity uint8) {
 	atomic.StoreInt32(&l.level, int32(severityFromVerbosity(verbosity)))
 }
 
+const DefaultCallDepth = 2
+
 func (l *Logger) Tracef(format string, a ...interface{}) error {
-	return l.logf(2, TraceLevel, "", format, a...)
+	return l.logf(DefaultCallDepth, TraceLevel, "", format, a...)
 }
 
 func (l *Logger) Debugf(format string, a ...interface{}) error {
-	return l.logf(2, DebugLevel, "", format, a...)
+	return l.logf(DefaultCallDepth, DebugLevel, "", format, a...)
 }
 
 func (l *Logger) Infof(format string, a ...interface{}) error {
-	return l.logf(2, InfoLevel, "", format, a...)
+	return l.logf(DefaultCallDepth, InfoLevel, "", format, a...)
 }
 
 func (l *Logger) Warnf(format string, a ...interface{}) error {
-	return l.logf(2, WarningLevel, "", format, a...)
+	return l.logf(DefaultCallDepth, WarningLevel, "", format, a...)
 }
 
 func (l *Logger) Errorf(format string, a ...interface{}) error {
-	return l.logf(2, ErrorLevel, "", format, a...)
+	return l.logf(DefaultCallDepth, ErrorLevel, "", format, a...)
 }
 
 func (l *Logger) Fatalf(format string, a ...interface{}) error {
-	return l.logf(2, FatalLevel, "", format, a...)
+	return l.logf(DefaultCallDepth, FatalLevel, "", format, a...)
 }
 
 func (l *Logger) VLogf(verbosity uint8, format string, a ...interface{}) error {
-	return l.logf(2, severityFromVerbosity(verbosity), "", format, a...)
+	return l.logf(DefaultCallDepth, severityFromVerbosity(verbosity), "", format, a...)
 }
 
 func (l *Logger) TraceTf(tag, format string, a ...interface{}) error {
-	return l.logf(2, TraceLevel, tag, format, a...)
+	return l.logf(DefaultCallDepth, TraceLevel, tag, format, a...)
 }
 
 func (l *Logger) DebugTf(tag, format string, a ...interface{}) error {
-	return l.logf(2, DebugLevel, tag, format, a...)
+	return l.logf(DefaultCallDepth, DebugLevel, tag, format, a...)
 }
 
 func (l *Logger) InfoTf(tag, format string, a ...interface{}) error {
-	return l.logf(2, InfoLevel, tag, format, a...)
+	return l.logf(DefaultCallDepth, InfoLevel, tag, format, a...)
 }
 
 func (l *Logger) WarnTf(tag, format string, a ...interface{}) error {
-	return l.logf(2, WarningLevel, tag, format, a...)
+	return l.logf(DefaultCallDepth, WarningLevel, tag, format, a...)
 }
 
 func (l *Logger) ErrorTf(tag, format string, a ...interface{}) error {
-	return l.logf(2, ErrorLevel, tag, format, a...)
+	return l.logf(DefaultCallDepth, ErrorLevel, tag, format, a...)
 }
 
 func (l *Logger) FatalTf(tag, format string, a ...interface{}) error {
-	return l.logf(2, FatalLevel, tag, format, a...)
+	return l.logf(DefaultCallDepth, FatalLevel, tag, format, a...)
 }
 
 func (l *Logger) VLogTf(verbosity uint8, tag, format string, a ...interface{}) error {
-	return l.logf(2, severityFromVerbosity(verbosity), tag, format, a...)
+	return l.logf(DefaultCallDepth, severityFromVerbosity(verbosity), tag, format, a...)
 }
 
 var defaultLogger = &Logger{
@@ -474,14 +476,12 @@ var defaultLogger = &Logger{
 	pid: uint64(os.Getpid()),
 }
 
-func logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
+func Logf(callDepth int, logLevel LogLevel, tag string, format string, a ...interface{}) error {
 	if l := GetDefaultLogger(); l != nil {
 		return l.logf(callDepth+1, logLevel, tag, format, a...)
 	}
 	return errors.New("default logger not initialized")
 }
-
-// Public APIs for default logger
 
 func GetDefaultLogger() *Logger {
 	return defaultLogger
@@ -502,57 +502,57 @@ func SetVerbosity(verbosity uint8) {
 }
 
 func Tracef(format string, a ...interface{}) error {
-	return logf(2, TraceLevel, "", format, a...)
+	return Logf(DefaultCallDepth, TraceLevel, "", format, a...)
 }
 
 func Debugf(format string, a ...interface{}) error {
-	return logf(2, DebugLevel, "", format, a...)
+	return Logf(DefaultCallDepth, DebugLevel, "", format, a...)
 }
 
 func Infof(format string, a ...interface{}) error {
-	return logf(2, InfoLevel, "", format, a...)
+	return Logf(DefaultCallDepth, InfoLevel, "", format, a...)
 }
 
 func Warnf(format string, a ...interface{}) error {
-	return logf(2, WarningLevel, "", format, a...)
+	return Logf(DefaultCallDepth, WarningLevel, "", format, a...)
 }
 
 func Errorf(format string, a ...interface{}) error {
-	return logf(2, ErrorLevel, "", format, a...)
+	return Logf(DefaultCallDepth, ErrorLevel, "", format, a...)
 }
 
 func Fatalf(format string, a ...interface{}) error {
-	return logf(2, FatalLevel, "", format, a...)
+	return Logf(DefaultCallDepth, FatalLevel, "", format, a...)
 }
 
 func VLogf(verbosity uint8, format string, a ...interface{}) error {
-	return logf(2, severityFromVerbosity(verbosity), "", format, a...)
+	return Logf(DefaultCallDepth, severityFromVerbosity(verbosity), "", format, a...)
 }
 
 func TraceTf(tag, format string, a ...interface{}) error {
-	return logf(2, TraceLevel, tag, format, a...)
+	return Logf(DefaultCallDepth, TraceLevel, tag, format, a...)
 }
 
 func DebugTf(tag, format string, a ...interface{}) error {
-	return logf(2, DebugLevel, tag, format, a...)
+	return Logf(DefaultCallDepth, DebugLevel, tag, format, a...)
 }
 
 func InfoTf(tag, format string, a ...interface{}) error {
-	return logf(2, InfoLevel, tag, format, a...)
+	return Logf(DefaultCallDepth, InfoLevel, tag, format, a...)
 }
 
 func WarnTf(tag, format string, a ...interface{}) error {
-	return logf(2, WarningLevel, tag, format, a...)
+	return Logf(DefaultCallDepth, WarningLevel, tag, format, a...)
 }
 
 func ErrorTf(tag, format string, a ...interface{}) error {
-	return logf(2, ErrorLevel, tag, format, a...)
+	return Logf(DefaultCallDepth, ErrorLevel, tag, format, a...)
 }
 
 func FatalTf(tag, format string, a ...interface{}) error {
-	return logf(2, FatalLevel, tag, format, a...)
+	return Logf(DefaultCallDepth, FatalLevel, tag, format, a...)
 }
 
 func VLogTf(verbosity uint8, tag, format string, a ...interface{}) error {
-	return logf(2, severityFromVerbosity(verbosity), tag, format, a...)
+	return Logf(DefaultCallDepth, severityFromVerbosity(verbosity), tag, format, a...)
 }
