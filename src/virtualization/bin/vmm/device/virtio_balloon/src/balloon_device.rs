@@ -14,8 +14,9 @@ use {
     machina_virtio_device::Device,
     machina_virtio_device::WrappedDescChainStream,
     std::io::Read,
-    virtio_device::chain::ReadableChain,
-    virtio_device::mem::DriverMem,
+    std::ops::Range,
+    virtio_device::chain::{ReadableChain, WritableChain},
+    virtio_device::mem::{DeviceRange, DriverMem, DriverRange},
     virtio_device::queue::DriverNotify,
     zerocopy::FromBytes,
 };
@@ -136,6 +137,56 @@ impl<B: BalloonBackend> BalloonDevice<B> {
         Ok(())
     }
 
+    pub fn process_free_page_report_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
+        &self,
+        mut chain: WritableChain<'a, 'b, N, M>,
+        vmo_range: Range<usize>,
+    ) -> Result<(), Error> {
+        fn untranslate<'a>(
+            range: DeviceRange<'a>,
+            vmo_range: &Range<usize>,
+        ) -> Result<DriverRange, Error> {
+            if range.get().start >= vmo_range.start && range.get().end <= vmo_range.end {
+                Ok(DriverRange(
+                    range.get().start - vmo_range.start..range.get().end - vmo_range.start,
+                ))
+            } else {
+                Err(anyhow!("Failed to untranslate range={:?} vmo_mapping={:?}", range, vmo_range))
+            }
+        }
+        // Here is an excerpt from the virtio spec
+        // 5.5.6.7 Free Page Reporting
+        // Free Page Reporting provides a mechanism similar to balloon
+        // inflation, however it does not provide a deflation queue. Reported
+        // free pages can be reused by the driver after the reporting request
+        // has been acknowledged without notifying the device. The driver will
+        // begin reporting free pages. When exactly and which free pages are
+        // reported is up to the driver.
+
+        // 1. The driver determines it has enough pages available to begin
+        // reporting free pages.
+        // 2. The driver gathers free pages into a scatter-gather list and adds
+        // them to the reporting_vq.
+        // 3. The device acknowledges the reporting request by using the
+        // reporting_vq descriptor.
+        //
+        // NB: Scatter-gather list contains descriptors which directly refer to
+        // ranges that are to be free'd
+        //
+        // Spec is not clear on this, but it doesn't specify the data format
+        // descriptors refer to so this is somewhat implied. I confirmed this by
+        // running experiments on debian and termina. Behaviour is consistent
+        // across linux kernel 5.10 and 5.15
+        let mut total_len = 0;
+        while let Some(range) = chain.next().transpose()? {
+            let range = untranslate(range, &vmo_range)?;
+            total_len += range.len();
+            self.backend.decommit_range(range.0.start as u64, range.len() as u64)?;
+        }
+        tracing::debug!("Reclaimed {} MiB", total_len / 1024 / 1024);
+        Ok(())
+    }
+
     pub fn process_stats_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
         chain: &mut ReadableChain<'a, 'b, N, M>,
     ) -> Vec<MemStat> {
@@ -225,25 +276,30 @@ mod tests {
         super::*,
         crate::wire::{LE16, LE64},
         std::ops::Range,
-        virtio_device::chain::ReadableChain,
-        virtio_device::fake_queue::{ChainBuilder, IdentityDriverMem, TestQueue},
+        virtio_device::chain::{ReadableChain, WritableChain},
+        virtio_device::fake_queue::{Chain, ChainBuilder, IdentityDriverMem, TestQueue},
+        virtio_device::ring::DescAccess,
     };
 
     pub struct TestBalloonBackend {
-        inner: VmoMemoryBackend,
+        inner: Option<VmoMemoryBackend>,
         calls: RefCell<Vec<Range<u64>>>,
     }
 
     impl TestBalloonBackend {
-        pub fn new(vmo: zx::Vmo) -> Self {
-            Self { inner: VmoMemoryBackend::new(vmo), calls: RefCell::new(Vec::new()) }
+        pub fn new(inner: Option<VmoMemoryBackend>) -> Self {
+            Self { inner, calls: RefCell::new(Vec::new()) }
         }
     }
 
     impl BalloonBackend for TestBalloonBackend {
         fn decommit_range(&self, offset: u64, size: u64) -> Result<(), zx::Status> {
             self.calls.borrow_mut().push(offset..offset + size);
-            self.inner.decommit_range(offset, size)
+            if let Some(inner) = &self.inner {
+                inner.decommit_range(offset, size)
+            } else {
+                Ok(())
+            }
         }
     }
 
@@ -261,15 +317,17 @@ mod tests {
             vmo.write(&ones, i * PAGE_SIZE as u64).unwrap();
         }
         // Process the chain.
-        let device = BalloonDevice::new(TestBalloonBackend::new(vmo));
+        let device = BalloonDevice::new(TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))));
 
-        let prev_commited_bytes = device.backend.inner.vmo.info().unwrap().committed_bytes;
+        let prev_commited_bytes =
+            device.backend.inner.as_ref().unwrap().vmo.info().unwrap().committed_bytes;
         // Process the request.
         device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
             .expect("Failed to process inflate chain");
 
-        let cur_commited_bytes = device.backend.inner.vmo.info().unwrap().committed_bytes;
+        let cur_commited_bytes =
+            device.backend.inner.as_ref().unwrap().vmo.info().unwrap().committed_bytes;
         assert_eq!(
             (prev_commited_bytes - cur_commited_bytes) / PAGE_SIZE as u64,
             pfns.len() as u64
@@ -277,7 +335,14 @@ mod tests {
 
         for i in 0..(vmo_size / PAGE_SIZE as u64) {
             let mut arr: [u8; PAGE_SIZE] = [2u8; PAGE_SIZE];
-            device.backend.inner.vmo.read(&mut arr, i * PAGE_SIZE as u64).unwrap();
+            device
+                .backend
+                .inner
+                .as_ref()
+                .unwrap()
+                .vmo
+                .read(&mut arr, i * PAGE_SIZE as u64)
+                .unwrap();
             let expected =
                 if pfns.contains(&(i as u32)) { [0u8; PAGE_SIZE] } else { [1u8; PAGE_SIZE] };
             assert_eq!(expected, arr);
@@ -300,7 +365,7 @@ mod tests {
 
         // Process the chain.
         let vmo = zx::Vmo::create(VMO_SIZE).unwrap();
-        let device = BalloonDevice::new(TestBalloonBackend::new(vmo));
+        let device = BalloonDevice::new(TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))));
 
         // Process the request.
         device.process_deflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem));
@@ -334,7 +399,7 @@ mod tests {
         state.fake_queue.publish(ChainBuilder::new().readable(&pfns, &mem).build()).unwrap();
         let vmo = zx::Vmo::create(VMO_SIZE).unwrap();
         // Process the chain.
-        let device = BalloonDevice::new(TestBalloonBackend::new(vmo));
+        let device = BalloonDevice::new(TestBalloonBackend::new(Some(VmoMemoryBackend::new(vmo))));
         // Process the request.
         assert!(device
             .process_inflate_chain(ReadableChain::new(state.queue.next_chain().unwrap(), &mem))
@@ -360,6 +425,48 @@ mod tests {
                 MemStat { tag: mem_stats[0].tag, val: mem_stats[0].val },
                 MemStat { tag: mem_stats[1].tag, val: mem_stats[1].val },
                 MemStat { tag: mem_stats[2].tag, val: mem_stats[2].val }
+            ]
+        );
+    }
+
+    #[fuchsia::test]
+    fn test_free_page_reporting() {
+        let mem = IdentityDriverMem::new();
+        let mut state = TestQueue::new(32, &mem);
+
+        let device = BalloonDevice::new(TestBalloonBackend::new(None));
+
+        let range0 = mem.new_range(512 * PAGE_SIZE).unwrap();
+        let range1 = mem.new_range(1024 * PAGE_SIZE).unwrap();
+
+        assert!(state
+            .fake_queue
+            .publish_indirect(
+                Chain::with_exact_data(&[
+                    (DescAccess::DeviceWrite, range0.get().start as u64, range0.len() as u32),
+                    (DescAccess::DeviceWrite, range1.get().start as u64, range1.len() as u32)
+                ]),
+                &mem
+            )
+            .is_some());
+
+        // Process the request.
+        let fake_vmo_range = 1024..usize::max_value();
+        device
+            .process_free_page_report_chain(
+                WritableChain::new(state.queue.next_chain().unwrap(), &mem)
+                    .expect("Writable chain must be available"),
+                fake_vmo_range.clone(),
+            )
+            .expect("Failed to process free page report chain");
+
+        assert_eq!(
+            device.backend.calls.into_inner(),
+            &[
+                (range0.get().start as u64 - fake_vmo_range.start as u64
+                    ..range0.get().end as u64 - fake_vmo_range.start as u64),
+                (range1.get().start as u64 - fake_vmo_range.start as u64
+                    ..range1.get().end as u64 - fake_vmo_range.start as u64),
             ]
         );
     }

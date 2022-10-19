@@ -7,6 +7,8 @@
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <virtio/virtio_ring.h>
+
 namespace {
 
 constexpr auto kComponentName = "virtio_balloon";
@@ -17,7 +19,9 @@ constexpr auto kComponentUrl = "fuchsia-pkg://fuchsia.com/virtio_balloon#meta/vi
 
 VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
     : VirtioComponentDevice("Virtio Balloon", phys_mem,
-                            VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM,
+                            VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_DEFLATE_ON_OOM |
+                                VIRTIO_BALLOON_F_PAGE_POISON | VIRTIO_BALLOON_F_PAGE_REPORTING |
+                                (1 << VIRTIO_RING_F_INDIRECT_DESC),
                             fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
@@ -59,8 +63,7 @@ zx_status_t VirtioBalloon::ConfigureQueue(uint16_t queue, uint16_t size, zx_gpad
 }
 
 zx_status_t VirtioBalloon::Ready(uint32_t negotiated_features) {
-  zx_status_t status = balloon_.sync()->Ready(negotiated_features).status();
-  return status;
+  return balloon_.sync()->Ready(negotiated_features).status();
 }
 
 void VirtioBalloon::GetBalloonSize(GetBalloonSizeCallback callback) {

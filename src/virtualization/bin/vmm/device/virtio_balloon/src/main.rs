@@ -15,7 +15,7 @@ use {
     futures::{future, StreamExt, TryFutureExt, TryStreamExt},
     machina_virtio_device::GuestBellTrap,
     tracing,
-    virtio_device::chain::ReadableChain,
+    virtio_device::chain::{ReadableChain, WritableChain},
 };
 
 async fn run_virtio_balloon(
@@ -39,20 +39,32 @@ async fn run_virtio_balloon(
     let (device, ready_responder) = machina_virtio_device::config_builder_from_stream(
         device_builder,
         &mut virtio_device_fidl,
-        &[wire::INFLATEQ, wire::DEFLATEQ, wire::STATSQ][..],
+        &[wire::INFLATEQ, wire::DEFLATEQ, wire::STATSQ, wire::REPORTINGVQ][..],
         &guest_mem,
     )
     .await
     .context("Failed to initialize device.")?;
 
+    let features = device.get_features();
+    tracing::debug!("Balloon negotiated features {}", features);
+    // Use truncate here to drop VIRTIO_RING_F_INDIRECT_DESC flag which will be
+    // set if we successfully negotiated indirect descriptor support
+    let negotiated_features = wire::VirtioBalloonFeatureFlags::from_bits_truncate(features);
+
     // Initialize all queues.
     let inflate_stream = device.take_stream(wire::INFLATEQ)?;
     let deflate_stream = device.take_stream(wire::DEFLATEQ)?;
     let stats_stream = device.take_stream(wire::STATSQ)?;
-    ready_responder.send()?;
 
-    let negotiated_features =
-        wire::VirtioBalloonFeatureFlags::from_bits(device.get_features()).unwrap();
+    let reporting_stream = if negotiated_features
+        .contains(wire::VirtioBalloonFeatureFlags::VIRTIO_BALLOON_F_PAGE_REPORTING)
+    {
+        Some(device.take_stream(wire::REPORTINGVQ)?)
+    } else {
+        None
+    };
+
+    ready_responder.send()?;
     let balloon_device = BalloonDevice::new(VmoMemoryBackend::new(vmo));
 
     let virtio_balloon_fidl: VirtioBalloonRequestStream = virtio_device_fidl.cast_stream();
@@ -60,6 +72,8 @@ async fn run_virtio_balloon(
         .map_err(|e| anyhow!("GuestBellTrap: {}", e));
 
     let (sender, receiver) = mpsc::channel(10);
+    let vmo_mapping = guest_mem.get_mapping().expect("GuestMem must have mapping");
+
     futures::try_join!(
         BalloonDevice::<VmoMemoryBackend>::run_virtio_balloon_stream(
             virtio_balloon_fidl,
@@ -85,6 +99,30 @@ async fn run_virtio_balloon(
             balloon_device.process_deflate_chain(ReadableChain::new(chain, &guest_mem));
             Ok(())
         })),
+        async {
+            if let Some(reporting_stream) = reporting_stream {
+                reporting_stream
+                    .map(|chain| Ok(chain))
+                    .try_for_each(|chain| {
+                        future::ready(match WritableChain::new(chain, &guest_mem) {
+                            Ok(chain) => balloon_device.process_free_page_report_chain(
+                                chain,
+                                vmo_mapping.0 as usize
+                                    ..vmo_mapping.0 as usize + vmo_mapping.1 as usize,
+                            ),
+                            Err(err) => {
+                                // Ignore this chain and continue processing.
+                                tracing::error!(%err,
+                                    "Device received a bad chain on the free page report queue");
+                                Ok(())
+                            }
+                        })
+                    })
+                    .await
+            } else {
+                Ok(())
+            }
+        },
     )?;
     Ok(())
 }

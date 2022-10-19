@@ -16,7 +16,7 @@
 
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
-static constexpr uint16_t kVirtioBalloonNumQueues = 3;
+static constexpr uint16_t kVirtioBalloonNumQueues = 4;
 
 class VirtioBalloon
     : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBalloonNumQueues,

@@ -44,6 +44,19 @@ bitflags! {
 pub const INFLATEQ: u16 = 0;
 pub const DEFLATEQ: u16 = 1;
 pub const STATSQ: u16 = 2;
+//
+// Linux virt queue negotiation increments queue index only for supported queue
+// In the case of the balloon we have page hinting queue using index 3, but we
+// don't use this queue. We use the following free page reporting queue which
+// has index 4 in the spec. But since we don't advertise free page hinting
+// support Linux will initialise free page reporting queue as number 3. See
+// https://elixir.bootlin.com/linux/v6.0/source/drivers/virtio/virtio_balloon.c#L527
+// and
+// https://elixir.bootlin.com/linux/v6.0/source/drivers/virtio/virtio_pci_common.c#L376
+// Hence the reason to use 3 here instead of what is defined in the spec
+// Alternative would be to advertise and don't use free page hinting
+//
+pub const REPORTINGVQ: u16 = 3;
 
 // 5.5.6 Device Operation
 // To supply memory to the balloon (aka. inflate):

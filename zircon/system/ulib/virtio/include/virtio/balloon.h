@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef VIRTIO_BALLOON_H_
+#define VIRTIO_BALLOON_H_
 
 #include <stdint.h>
 #include <zircon/compiler.h>
@@ -11,6 +12,9 @@
 #define VIRTIO_BALLOON_F_MUST_TELL_HOST   (1u << 0)
 #define VIRTIO_BALLOON_F_STATS_VQ         (1u << 1)
 #define VIRTIO_BALLOON_F_DEFLATE_ON_OOM   (1u << 2)
+#define VIRTIO_BALLOON_F_FREE_PAGE_HINT   (1u << 3)
+#define VIRTIO_BALLOON_F_PAGE_POISON      (1u << 4)
+#define VIRTIO_BALLOON_F_PAGE_REPORTING   (1u << 5)
 
 #define VIRTIO_BALLOON_S_SWAP_IN          0
 #define VIRTIO_BALLOON_S_SWAP_OUT         1
@@ -36,6 +40,10 @@ typedef struct virtio_balloon_stat {
 typedef struct virtio_balloon_config {
   uint32_t num_pages;
   uint32_t actual;
+  uint32_t free_page_hint_cmd_id;
+  uint32_t poison_val;
 } __PACKED virtio_balloon_config_t;
 
 __END_CDECLS
+
+#endif  // VIRTIO_BALLOON_H_

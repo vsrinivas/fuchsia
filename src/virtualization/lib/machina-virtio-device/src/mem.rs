@@ -60,6 +60,10 @@ impl GuestMem {
         self.mapping = Some((addr, vmo_size));
         Ok(())
     }
+
+    pub fn get_mapping(&self) -> Option<(usize, usize)> {
+        self.mapping
+    }
 }
 
 impl DriverMem for GuestMem {
