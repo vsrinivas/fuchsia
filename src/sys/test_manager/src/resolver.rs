@@ -5,8 +5,10 @@
 use {
     crate::facet,
     anyhow::Error,
-    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_sys as fv1sys,
-    fuchsia_async as fasync,
+    diagnostics_log as flog,
+    fidl::endpoints::ProtocolMarker,
+    fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_logger as flogger,
+    fidl_fuchsia_sys as fv1sys, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_url::{AbsoluteComponentUrl, ComponentUrl, PackageUrl},
@@ -106,6 +108,7 @@ impl PartialEq for AllowedPackages {
 
 async fn validate_hermetic_package(
     component_url_str: &str,
+    subscriber: Arc<dyn tracing::Subscriber + Send + Sync + 'static>,
     hermetic_test_package_name: &String,
     other_allowed_packages: &AllowedPackages,
 ) -> Result<(), fresolution::ResolverError> {
@@ -133,12 +136,14 @@ async fn validate_hermetic_package(
             if hermetic_test_package_name != package_name.as_ref()
                 && !allowed_packages.contains(package_name.as_ref())
             {
-                error!(
+                tracing::subscriber::with_default(subscriber, || {
+                    warn!(
                     "failed to resolve component {}: package {} is not in the test package allowlist: '{}, {}'
                     \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
                     for more information.",
                     &component_url_str, package_name, hermetic_test_package_name, allowed_packages.iter().join(", ")
                 );
+                });
                 return Err(fresolution::ResolverError::PackageNotFound);
             }
         }
@@ -151,6 +156,7 @@ async fn validate_hermetic_package(
 
 async fn serve_resolver(
     mut stream: fresolution::ResolverRequestStream,
+    subscriber: Arc<dyn tracing::Subscriber + Send + Sync + 'static>,
     hermetic_test_package_name: Arc<String>,
     other_allowed_packages: AllowedPackages,
     full_resolver: Arc<fresolution::ResolverProxy>,
@@ -160,6 +166,7 @@ async fn serve_resolver(
             fresolution::ResolverRequest::Resolve { component_url, responder } => {
                 let mut result = if let Err(err) = validate_hermetic_package(
                     &component_url,
+                    subscriber.clone(),
                     &hermetic_test_package_name,
                     &other_allowed_packages,
                 )
@@ -167,8 +174,11 @@ async fn serve_resolver(
                 {
                     Err(err)
                 } else {
+                    let subscriber = subscriber.clone();
                     full_resolver.resolve(&component_url).await.unwrap_or_else(|err| {
-                        error!("failed to resolve component {}: {:?}", component_url, err);
+                        tracing::subscriber::with_default(subscriber, || {
+                            warn!("failed to resolve component {}: {:?}", component_url, err);
+                        });
                         Err(fresolution::ResolverError::Internal)
                     })
                 };
@@ -185,6 +195,7 @@ async fn serve_resolver(
                 // been produced by Resolve call above.
                 let mut result = if let Err(err) = validate_hermetic_package(
                     &component_url,
+                    subscriber.clone(),
                     &hermetic_test_package_name,
                     &other_allowed_packages,
                 )
@@ -192,14 +203,17 @@ async fn serve_resolver(
                 {
                     Err(err)
                 } else {
+                    let subscriber = subscriber.clone();
                     full_resolver
                         .resolve_with_context(&component_url, &mut context)
                         .await
                         .unwrap_or_else(|err| {
-                            error!(
-                                "failed to resolve component {} with context {:?}: {:?}",
-                                component_url, context, err
-                            );
+                            tracing::subscriber::with_default(subscriber, || {
+                                warn!(
+                                    "failed to resolve component {} with context {:?}: {:?}",
+                                    component_url, context, err
+                                );
+                            });
                             Err(fresolution::ResolverError::Internal)
                         })
                 };
@@ -219,14 +233,24 @@ pub async fn serve_hermetic_resolver(
 ) -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     let mut tasks = vec![];
-
+    let log_proxy = handles
+        .connect_to_named_protocol::<flogger::LogSinkMarker>(flogger::LogSinkMarker::DEBUG_NAME)?;
+    let tags = ["test_resolver"];
+    let (log_publisher, _interest_listener) = flog::Publisher::new_with_proxy(
+        log_proxy,
+        flog::PublishOptions { interest: flog::interest(tracing::Level::INFO), tags: Some(&tags) },
+    )
+    .unwrap();
+    let log_publisher = Arc::new(log_publisher);
     fs.dir("svc").add_fidl_service(move |stream: fresolution::ResolverRequestStream| {
         let full_resolver = full_resolver.clone();
         let hermetic_test_package_name = hermetic_test_package_name.clone();
         let other_allowed_packages = other_allowed_packages.clone();
+        let log_publisher = log_publisher.clone();
         tasks.push(fasync::Task::local(async move {
             serve_resolver(
                 stream,
+                log_publisher,
                 hermetic_test_package_name,
                 other_allowed_packages,
                 full_resolver,
@@ -385,9 +409,11 @@ mod tests {
     ) -> (fasync::Task<()>, fresolution::ResolverProxy) {
         let (proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fresolution::ResolverMarker>().unwrap();
+        let subscriber = tracing::subscriber::NoSubscriber::default();
         let task = fasync::Task::local(async move {
             serve_resolver(
                 stream,
+                Arc::new(subscriber),
                 hermetic_test_package_name,
                 other_allowed_packages,
                 mock_full_resolver,
@@ -470,8 +496,7 @@ mod tests {
         drop(hermetic_resolver_proxy); // code should not crash
     }
 
-    // Logging disabled as this outputs ERROR log, which will fail the test.
-    #[fuchsia::test(logging = false)]
+    #[fuchsia::test]
     async fn test_package_not_allowed() {
         let (resolver_proxy, _) = create_proxy_and_stream::<fresolution::ResolverMarker>()
             .expect("failed to create mock full resolver proxy");
@@ -502,8 +527,7 @@ mod tests {
         );
     }
 
-    // Logging disabled as this outputs ERROR log, which will fail the test.
-    #[fuchsia::test(logging = false)]
+    #[fuchsia::test]
     async fn other_packages_allowed() {
         let (resolver_proxy, resolver_request_stream) =
             create_proxy_and_stream::<fresolution::ResolverMarker>()

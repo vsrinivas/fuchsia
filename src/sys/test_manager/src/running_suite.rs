@@ -540,7 +540,7 @@ async fn get_realm(
 
     let hermetic_test_package_name_clone = hermetic_test_package_name.clone();
     let other_allowed_packages_clone = other_allowed_packages.clone();
-    wrapper_realm
+    let resolver = wrapper_realm
         .add_local_child(
             HERMETIC_RESOLVER_REALM_NAME,
             move |handles| {
@@ -575,6 +575,7 @@ async fn get_realm(
             }),
         },
     ));
+
     wrapper_realm
         .replace_component_decl(HERMETIC_RESOLVER_REALM_NAME, hermetic_resolver_decl)
         .await?;
@@ -656,7 +657,8 @@ async fn get_realm(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                 .from(&archivist)
-                .to(&test_root),
+                .to(&test_root)
+                .to(&resolver),
         )
         .await?;
 
@@ -711,27 +713,32 @@ async fn get_realm(
                 .capability(
                     Capability::event_stream("started_v2")
                         .with_scope(&test_root)
-                        .with_scope(&enclosing_env),
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("stopped_v2")
                         .with_scope(&test_root)
-                        .with_scope(&enclosing_env),
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("destroyed_v2")
                         .with_scope(&test_root)
-                        .with_scope(&enclosing_env),
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("capability_requested_v2")
                         .with_scope(&test_root)
-                        .with_scope(&enclosing_env),
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
                 )
                 .capability(
                     Capability::event_stream("directory_ready_v2")
                         .with_scope(&test_root)
-                        .with_scope(&enclosing_env),
+                        .with_scope(&enclosing_env)
+                        .with_scope(&resolver),
                 )
                 .from(Ref::parent())
                 .to(&test_root),
