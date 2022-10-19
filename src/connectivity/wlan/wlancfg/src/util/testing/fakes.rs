@@ -12,8 +12,7 @@ use {
         },
     },
     async_trait::async_trait,
-    fidl_fuchsia_wlan_common as fidl_common, fidl_fuchsia_wlan_sme as fidl_sme,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl_fuchsia_wlan_sme as fidl_sme, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{channel::mpsc, lock::Mutex},
     log::info,
     rand::Rng,
@@ -49,7 +48,7 @@ pub struct ConnectResultRecord {
     pub credential: Credential,
     pub bssid: client_types::Bssid,
     pub connect_result: fidl_sme::ConnectResult,
-    pub discovered_in_scan: Option<fidl_common::ScanType>,
+    pub scan_type: client_types::ScanObservation,
 }
 
 /// Use a struct so that the option can be updated from None to Some to allow the response to be
@@ -204,7 +203,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
         credential: &Credential,
         bssid: client_types::Bssid,
         connect_result: fidl_sme::ConnectResult,
-        discovered_in_scan: Option<fidl_common::ScanType>,
+        scan_type: client_types::ScanObservation,
     ) {
         self.connect_results_recorded.try_lock().expect("failed to record connect result").push(
             ConnectResultRecord {
@@ -212,7 +211,7 @@ impl SavedNetworksManagerApi for FakeSavedNetworksManager {
                 credential: credential.clone(),
                 bssid,
                 connect_result,
-                discovered_in_scan,
+                scan_type,
             },
         );
     }

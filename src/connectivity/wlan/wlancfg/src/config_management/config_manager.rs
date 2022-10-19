@@ -18,7 +18,6 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     fidl_fuchsia_metrics::{MetricEvent, MetricEventPayload},
-    fidl_fuchsia_wlan_common::ScanType,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_async as fasync,
     futures::lock::Mutex,
@@ -111,7 +110,7 @@ pub trait SavedNetworksManagerApi: Send + Sync {
         credential: &Credential,
         bssid: types::Bssid,
         connect_result: fidl_sme::ConnectResult,
-        discovered_in_scan: Option<ScanType>,
+        scan_type: types::ScanObservation,
     );
 
     /// Record the disconnect from a network, to be used for things such as avoiding connections
@@ -401,7 +400,7 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
         credential: &Credential,
         bssid: types::Bssid,
         connect_result: fidl_sme::ConnectResult,
-        discovered_in_scan: Option<ScanType>,
+        scan_type: types::ScanObservation,
     ) {
         let mut saved_networks = self.saved_networks.lock().await;
         let networks = match saved_networks.get_mut(&id) {
@@ -420,14 +419,17 @@ impl SavedNetworksManagerApi for SavedNetworksManager {
                             network.has_ever_connected = true;
                             has_change = true;
                         }
-                        if let Some(scan_type) = discovered_in_scan {
-                            let connect_event = match scan_type {
-                                ScanType::Passive => HiddenProbEvent::ConnectPassive,
-                                ScanType::Active => HiddenProbEvent::ConnectActive,
-                            };
-                            network.update_hidden_prob(connect_event);
-                            // TODO(60619): Update the stash with new probability if it has changed
-                        }
+                        // Update hidden network probabiltiy
+                        match scan_type {
+                            types::ScanObservation::Passive => {
+                                network.update_hidden_prob(HiddenProbEvent::ConnectPassive);
+                            }
+                            types::ScanObservation::Active => {
+                                network.update_hidden_prob(HiddenProbEvent::ConnectActive);
+                            }
+                            types::ScanObservation::Unknown => {}
+                        };
+
                         if has_change {
                             // Update persistent storage since a config has changed.
                             let data = network_config_vec_to_persistent_data(networks);
@@ -1056,7 +1058,7 @@ mod tests {
                 &credential,
                 bssid,
                 fake_successful_connect_result(),
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
         assert!(saved_networks.lookup(&network_id).await.is_empty());
@@ -1079,7 +1081,7 @@ mod tests {
                 &credential,
                 bssid,
                 fake_successful_connect_result(),
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
 
@@ -1096,7 +1098,7 @@ mod tests {
                 &credential,
                 bssid,
                 fake_successful_connect_result(),
-                Some(ScanType::Active),
+                types::ScanObservation::Active,
             )
             .await;
         // We should now see that we connected to the network after an active scan.
@@ -1111,7 +1113,7 @@ mod tests {
                 &credential,
                 bssid,
                 fake_successful_connect_result(),
-                Some(ScanType::Passive),
+                types::ScanObservation::Passive,
             )
             .await;
         // The config should have a lower hidden probability after connecting after a passive scan.
@@ -1161,7 +1163,7 @@ mod tests {
                 &credential,
                 bssid,
                 fake_successful_connect_result(),
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
 
@@ -1195,7 +1197,7 @@ mod tests {
                     code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                     ..fake_successful_connect_result()
                 },
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
         assert!(saved_networks.lookup(&network_id).await.is_empty());
@@ -1217,7 +1219,7 @@ mod tests {
                     code: fidl_ieee80211::StatusCode::RefusedReasonUnspecified,
                     ..fake_successful_connect_result()
                 },
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
         saved_networks
@@ -1230,7 +1232,7 @@ mod tests {
                     is_credential_rejected: true,
                     ..fake_successful_connect_result()
                 },
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
 
@@ -1276,7 +1278,7 @@ mod tests {
                     code: fidl_ieee80211::StatusCode::Canceled,
                     ..fake_successful_connect_result()
                 },
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
         assert!(saved_networks.lookup(&network_id).await.is_empty());
@@ -1298,7 +1300,7 @@ mod tests {
                     code: fidl_ieee80211::StatusCode::Canceled,
                     ..fake_successful_connect_result()
                 },
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
 

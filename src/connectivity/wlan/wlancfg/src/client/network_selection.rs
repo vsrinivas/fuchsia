@@ -774,7 +774,7 @@ mod tests {
                 &credential_1.clone(),
                 bssid_1,
                 fake_successful_connect_result(),
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
 
@@ -790,7 +790,7 @@ mod tests {
                     is_credential_rejected: true,
                     ..fake_successful_connect_result()
                 },
-                None,
+                types::ScanObservation::Unknown,
             )
             .await;
 
@@ -1895,14 +1895,14 @@ mod tests {
             &credential_1.clone(),
             bssid_1.clone(),
             fake_successful_connect_result(),
-            Some(fidl_common::ScanType::Passive),
+            types::ScanObservation::Passive,
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone(),
             &credential_2.clone(),
             bssid_2.clone(),
             fake_successful_connect_result(),
-            Some(fidl_common::ScanType::Passive),
+            types::ScanObservation::Passive,
         ));
 
         // Prep the scan results
