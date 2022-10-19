@@ -53,6 +53,13 @@ constexpr uint64_t kHighlightRootTransformId = 21;
 constexpr uint64_t kProxyViewportTransformId = 22;
 constexpr uint64_t kProxyViewportContentId = 23;
 
+fuchsia::math::RectF SizeUToRectFAtOrigin(fuchsia::math::SizeU size) {
+  return fuchsia::math::RectF{.x = 0.,
+                              .y = 0.,
+                              .width = static_cast<float>(size.width),
+                              .height = static_cast<float>(size.height)};
+}
+
 // Setup that does not require LayoutInfo.
 fuchsia::ui::views::ViewRef InitialA11yViewSetup(
     fuchsia::ui::composition::Flatland* flatland_a11y,
@@ -88,6 +95,13 @@ void FinishA11yViewSetup(fuchsia::ui::composition::Flatland* flatland_a11y,
                          const fuchsia::math::SizeU& logical_size,
                          fuchsia::ui::views::ViewportCreationToken highlight_viewport_token) {
   FX_DCHECK(flatland_a11y);
+
+  // Change the default hit region to SEMANTICALLY_INVISIBLE.
+  flatland_a11y->SetHitRegions(
+      TransformId({.value = kA11yRootTransformId}),
+      {fuchsia::ui::composition::HitRegion{
+          SizeUToRectFAtOrigin(logical_size),
+          fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
 
   // Create the highlight viewport.
   fuchsia::ui::composition::ViewportProperties viewport_properties;
@@ -125,6 +139,9 @@ void HighlightViewSetup(
   // Set up the root transform.
   flatland_highlight->CreateTransform(TransformId({.value = kHighlightRootTransformId}));
   flatland_highlight->SetRootTransform(TransformId({.value = kHighlightRootTransformId}));
+
+  // Clear the default hit region.
+  flatland_highlight->SetHitRegions(TransformId({.value = kHighlightRootTransformId}), {});
 
   // Create the proxy viewport.
   fuchsia::ui::composition::ViewportProperties viewport_properties;
@@ -253,7 +270,7 @@ void FlatlandAccessibilityView::WatchForResizes() {
     FX_LOGS(INFO) << "A11y view received layout info; view has width = " << logical_size.width
                   << ", height = " << logical_size.height;
 
-    ResizeViewports(logical_size);
+    ResizeLayout(logical_size);
 
     // Report changes in view properties to observers.
     InvokeViewPropertiesChangedCallbacks(*layout_info_, &view_properties_changed_callbacks_);
@@ -262,7 +279,7 @@ void FlatlandAccessibilityView::WatchForResizes() {
   });
 }
 
-void FlatlandAccessibilityView::ResizeViewports(fuchsia::math::SizeU logical_size) {
+void FlatlandAccessibilityView::ResizeLayout(fuchsia::math::SizeU logical_size) {
   FX_DCHECK(layout_info_.has_value());
 
   fuchsia::ui::composition::ViewportProperties viewport_properties;
@@ -270,6 +287,12 @@ void FlatlandAccessibilityView::ResizeViewports(fuchsia::math::SizeU logical_siz
 
   flatland_a11y_.flatland()->SetViewportProperties(ContentId{.value = kHighlightViewportContentId},
                                                    fidl::Clone(viewport_properties));
+  flatland_a11y_.flatland()->SetHitRegions(
+      TransformId({.value = kA11yRootTransformId}),
+      {fuchsia::ui::composition::HitRegion{
+          SizeUToRectFAtOrigin(logical_size),
+          fuchsia::ui::composition::HitTestInteraction::SEMANTICALLY_INVISIBLE}});
+
   flatland_highlight_.flatland()->SetViewportProperties(ContentId{.value = kProxyViewportContentId},
                                                         std::move(viewport_properties));
 

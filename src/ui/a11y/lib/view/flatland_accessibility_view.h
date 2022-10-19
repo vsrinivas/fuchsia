@@ -58,7 +58,7 @@ class FlatlandAccessibilityView : public AccessibilityViewInterface,
   void WatchForResizes();
 
   // Helper method to handle layout changes.
-  void ResizeViewports(fuchsia::math::SizeU logical_size);
+  void ResizeLayout(fuchsia::math::SizeU logical_size);
 
   // Manages a11y view's flatland connection.
   FlatlandConnection flatland_a11y_;
