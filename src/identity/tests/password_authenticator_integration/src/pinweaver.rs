@@ -6,6 +6,7 @@ use {
     fidl_fuchsia_identity_account::{AccountManagerProxy, AccountMetadata, AccountProxy},
     fidl_fuchsia_io as fio,
     fuchsia_zircon::Status,
+    ramdisk_common::setup_ramdisk,
 };
 
 use {
@@ -70,7 +71,7 @@ async fn test_pinweaver_locked_account_can_be_unlocked_again() {
         .add_try_auth_success_response([0; 32], vec![0, 1, 2, 3], [1; 32])
         .build();
     let env = TestEnv::build_with_cr50_mock(Config::PinweaverOrScrypt, Some(mocks)).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let _ramdisk = setup_ramdisk(&env.realm_instance, FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
     let expected_content = b"some data";
@@ -156,7 +157,7 @@ async fn test_pinweaver_bad_password_cannot_unlock_account() {
         .add_try_auth_failed_response([0; 32], vec![0, 1, 2, 3], [1; 32])
         .build();
     let env = TestEnv::build_with_cr50_mock(Config::PinweaverOrScrypt, Some(mocks)).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let _ramdisk = setup_ramdisk(&env.realm_instance, FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
     // Provision the account.
@@ -208,7 +209,7 @@ async fn test_pinweaver_provision_and_remove_account_can_provision_again() {
         .add_try_auth_success_response([0; 32], vec![4, 5, 6, 7], [2; 32])
         .build();
     let env = TestEnv::build_with_cr50_mock(Config::PinweaverOrScrypt, Some(mocks)).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let _ramdisk = setup_ramdisk(&env.realm_instance, FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
     // Provision an account.
@@ -257,7 +258,7 @@ async fn test_pinweaver_consecutive_updates() {
     }
     let mocks = mock_builder.build();
     let env = TestEnv::build_with_cr50_mock(Config::PinweaverOrScrypt, Some(mocks)).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let _ramdisk = setup_ramdisk(&env.realm_instance, FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
     // Provision an account.
@@ -286,7 +287,7 @@ async fn test_pinweaver_unknown_label() {
         .add_remove_leaf_response([0; 32])
         .build();
     let env = TestEnv::build_with_cr50_mock(Config::PinweaverOrScrypt, Some(mocks)).await;
-    let _ramdisk = env.setup_ramdisk(FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    let _ramdisk = setup_ramdisk(&env.realm_instance, FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
     let account_manager = env.account_manager();
 
     // Provision an account.

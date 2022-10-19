@@ -1,0 +1,34 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("ramdisk_common") {
+  name = "ramdisk_common"
+  edition = "2021"
+  with_unit_tests = true
+
+  testonly = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
+    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/ramdevice_client",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/storage/testing/rust:storage-isolated-driver-manager",
+    "//third_party/rust_crates:rand",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}

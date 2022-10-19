@@ -10,16 +10,14 @@ rustc_test("driver") {
   edition = "2021"
 
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
-    "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_rust",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//sdk/fidl/fuchsia.identity.credential:fuchsia.identity.credential_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.tpm.cr50:fuchsia.tpm.cr50_rust",
     "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/identity/tests/ramdisk_common",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
@@ -27,13 +25,10 @@ rustc_test("driver") {
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/lib/fuchsia-fs",
-    "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:rand",
   ]
 
   source_root = "src/account_manager.rs"
