@@ -631,7 +631,7 @@ void Controller::InitDisplays() {
 
 void Controller::RemoveDisplay(std::unique_ptr<DisplayDevice> display) {
   // Invalidate and disable any ELD.
-  if (display->id() == eld_display_id_.value()) {
+  if (display->id() == eld_display_id_) {
     auto audio_pin = registers::AudioPinEldCPReadyStatus::Get().ReadFrom(mmio_space());
     audio_pin.set_eld_valid_a(0).set_audio_enable_a(0).WriteTo(mmio_space());
     eld_display_id_.reset();
