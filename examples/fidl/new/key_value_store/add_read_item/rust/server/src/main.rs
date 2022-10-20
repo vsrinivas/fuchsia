@@ -93,7 +93,8 @@ async fn run_server(stream: StoreRequestStream) -> Result<(), Error> {
                         })
                         .context("error sending reply")?;
                     println!("ReadItem response sent");
-                } // [END add_read_item]
+                } //
+                  // [END add_read_item]
             }
             Ok(())
         })

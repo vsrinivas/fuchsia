@@ -46,14 +46,13 @@ Client and server implementations for all languages change as well:
     <section style="padding: 0px;">
       <h3>Rust</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
-        <!-- TODO(fxbug.dev/111275): Add region based highlight "add_read_item" when possible -->
         <section>
           <h3 id="key_value_store-add_read_item-rust-client">Client</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/client/src/main.rs" highlight="45,46,47,48,49,50,51,52,53,54,55,56,57" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/client/src/main.rs" highlight="add_read_item" %}</pre>
         </section>
         <section>
           <h3 id="key_value_store-add_read_item-rust-server">Server</h3>
-          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/server/src/main.rs" highlight="76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93" %}</pre>
+          <pre class="prettyprint lang-rust">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/key_value_store/add_read_item/rust/server/src/main.rs" highlight="add_read_item" %}</pre>
         </section>
       </devsite-selector>
     </section>

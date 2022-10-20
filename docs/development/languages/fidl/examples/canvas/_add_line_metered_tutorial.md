@@ -88,14 +88,13 @@ Client and server implementations can then be written in any supported language:
     <section style="padding: 0px;">
       <h3>C++ (Wire)</h3>
       <devsite-selector style="margin: 0px; padding: 0px;">
-        <!-- TODO(fxbug.dev/111275): Add region based highlight "now_has_response" when possible -->
         <section>
           <h3 id="canvas-add_line_metered-cpp_wire-client">Client</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_wire/client/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_wire/client/main.cc" highlight="now_has_response" %}</pre>
         </section>
         <section>
           <h3 id="canvas-add_line_metered-cpp_wire-server">Server</h3>
-          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_wire/server/main.cc" %}</pre>
+          <pre class="prettyprint lang-cc">{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/new/canvas/add_line_metered/cpp_wire/server/main.cc" highlight="now_has_response" %}</pre>
         </section>
       </devsite-selector>
     </section>
