@@ -11,7 +11,7 @@ use {
         client::{Client, ClientFactory, ProgressResult, ProgressState},
         error::GcsError,
         gs_url::split_gs_url,
-        oauth2::new_refresh_token,
+        oauth2::{new_refresh_token, oob_new_refresh_token},
         token_store::{read_boto_refresh_token, write_boto_refresh_token, TokenStore},
     },
     std::path::{Path, PathBuf},
@@ -26,7 +26,7 @@ pub(crate) fn get_gcs_client_without_auth() -> Client {
 }
 
 /// Returns the path to the .boto (gsutil) configuration file.
-pub(crate) async fn get_boto_path<I>(ui: &I) -> Result<PathBuf>
+pub(crate) async fn get_boto_path<I>(use_secure_auth_flow: bool, ui: &I) -> Result<PathBuf>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -42,7 +42,9 @@ where
         ),
     };
     if !boto_path.is_file() {
-        update_refresh_token(&boto_path, ui).await.context("Set up refresh token")?
+        update_refresh_token(&boto_path, use_secure_auth_flow, ui)
+            .await
+            .context("Set up refresh token")?
     }
 
     Ok(boto_path)
@@ -68,7 +70,11 @@ pub(crate) fn get_gcs_client_with_auth(boto_path: &Path) -> Result<Client> {
 ///
 /// `gcs_url` is the full GCS url, e.g. "gs://bucket/path/to/file".
 /// The resulting data will be written to a directory at `local_dir`.
-pub(crate) async fn exists_in_gcs<I>(gcs_url: &str, ui: &I) -> Result<bool>
+pub(crate) async fn exists_in_gcs<I>(
+    gcs_url: &str,
+    use_secure_auth_flow: bool,
+    ui: &I,
+) -> Result<bool>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -76,19 +82,26 @@ where
     let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
     match client.exists(bucket, gcs_path).await {
         Ok(exists) => Ok(exists),
-        Err(_) => exists_in_gcs_with_auth(bucket, gcs_path, ui).await.context("fetch with auth"),
+        Err(_) => exists_in_gcs_with_auth(bucket, gcs_path, use_secure_auth_flow, ui)
+            .await
+            .context("fetch with auth"),
     }
 }
 
 /// Return true if the blob is available, using auth.
 ///
 /// Fallback from using `exists_in_gcs()` without auth.
-async fn exists_in_gcs_with_auth<I>(gcs_bucket: &str, gcs_path: &str, ui: &I) -> Result<bool>
+async fn exists_in_gcs_with_auth<I>(
+    gcs_bucket: &str,
+    gcs_path: &str,
+    use_secure_auth_flow: bool,
+    ui: &I,
+) -> Result<bool>
 where
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("exists_in_gcs_with_auth");
-    let boto_path = get_boto_path(ui).await?;
+    let boto_path = get_boto_path(use_secure_auth_flow, ui).await?;
 
     loop {
         let client = get_gcs_client_with_auth(&boto_path)?;
@@ -96,7 +109,9 @@ where
             Ok(exists) => return Ok(exists),
             Err(e) => match e.downcast_ref::<GcsError>() {
                 Some(GcsError::NeedNewRefreshToken) => {
-                    update_refresh_token(&boto_path, ui).await.context("Updating refresh token")?
+                    update_refresh_token(&boto_path, use_secure_auth_flow, ui)
+                        .await
+                        .context("Updating refresh token")?
                 }
                 Some(GcsError::NotFound(_, _)) => {
                     // Ok(false) should be returned rather than NotFound.
@@ -121,6 +136,7 @@ where
 pub(crate) async fn fetch_from_gcs<F, I>(
     gcs_url: &str,
     local_dir: &Path,
+    use_secure_auth_flow: bool,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -133,7 +149,7 @@ where
     let (bucket, gcs_path) = split_gs_url(gcs_url).context("Splitting gs URL.")?;
     if !client.fetch_all(bucket, gcs_path, &local_dir, progress).await.is_ok() {
         tracing::debug!("Failed without auth, trying auth {:?}", gcs_url);
-        fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, progress, ui)
+        fetch_from_gcs_with_auth(bucket, gcs_path, local_dir, use_secure_auth_flow, progress, ui)
             .await
             .context("fetch with auth")?;
     }
@@ -147,6 +163,7 @@ async fn fetch_from_gcs_with_auth<F, I>(
     gcs_bucket: &str,
     gcs_path: &str,
     local_dir: &Path,
+    use_secure_auth_flow: bool,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -155,7 +172,7 @@ where
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("fetch_from_gcs_with_auth");
-    let boto_path = get_boto_path(ui).await?;
+    let boto_path = get_boto_path(use_secure_auth_flow, ui).await?;
 
     loop {
         let client = get_gcs_client_with_auth(&boto_path)?;
@@ -168,7 +185,9 @@ where
             Ok(()) => break,
             Err(e) => match e.downcast_ref::<GcsError>() {
                 Some(GcsError::NeedNewRefreshToken) => {
-                    update_refresh_token(&boto_path, ui).await.context("Updating refresh token")?
+                    update_refresh_token(&boto_path, use_secure_auth_flow, ui)
+                        .await
+                        .context("Updating refresh token")?
                 }
                 Some(GcsError::NotFound(b, p)) => {
                     tracing::warn!("[gs://{}/{} not found]", b, p);
@@ -191,13 +210,18 @@ where
 /// Prompt the user to visit the OAUTH2 permissions web page and enter a new
 /// authorization code, then convert that to a refresh token and write that
 /// refresh token to the ~/.boto file.
-async fn update_refresh_token<I>(boto_path: &Path, _ui: &I) -> Result<()>
+async fn update_refresh_token<I>(boto_path: &Path, use_secure_auth_flow: bool, ui: &I) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
     tracing::debug!("update_refresh_token {:?}", boto_path);
     println!("\nThe refresh token in the {:?} file needs to be updated.", boto_path);
-    let refresh_token = new_refresh_token().await.context("get refresh token")?;
+    let refresh_token = if use_secure_auth_flow {
+        new_refresh_token(ui).await.context("get refresh token")?
+    } else {
+        oob_new_refresh_token().await.context("get oob refresh token")?
+    };
+    tracing::debug!("Writing boto file {:?}", boto_path);
     write_boto_refresh_token(boto_path, &refresh_token)?;
     Ok(())
 }
@@ -213,6 +237,8 @@ mod tests {
     async fn test_update_refresh_token() {
         let temp_file = NamedTempFile::new().expect("temp file");
         let ui = structured_ui::MockUi::new();
-        update_refresh_token(&temp_file.path(), &ui).await.expect("set refresh token");
+        update_refresh_token(&temp_file.path(), /*use_secure_auth_flow=*/ true, &ui)
+            .await
+            .expect("set refresh token");
     }
 }

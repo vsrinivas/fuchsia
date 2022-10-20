@@ -29,6 +29,10 @@ pub struct ListCommand {
     /// do no network IO, use the locally cached version or fail.
     #[argh(switch)]
     pub cached: bool,
+
+    /// use an insecure oauth2 token flow.
+    #[argh(switch)]
+    pub oob_auth: bool,
 }
 
 /// Retrieve image data.
@@ -42,6 +46,10 @@ pub struct GetCommand {
     /// force a download even if the bundle is already stored locally.
     #[argh(switch)]
     pub force: bool,
+
+    /// use an insecure oauth2 token flow.
+    #[argh(switch)]
+    pub oob_auth: bool,
 
     /// get (and cache) data for specific product bundle.
     #[argh(positional)]

@@ -16,6 +16,7 @@ if (is_host) {
       "//src/lib/fuchsia-async",
       "//src/lib/fuchsia-hyper:fuchsia-hyper",
       "//src/lib/gcs",
+      "//src/lib/structured_ui",
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:hyper",
     ]

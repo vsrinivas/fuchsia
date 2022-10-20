@@ -38,7 +38,11 @@ async fn auth_test() -> Result<()> {
         \nRead the code in //src/developer/ffx/lib/gcs/test/src/main.rs \
         to see what it does.\n"
     );
-    let refresh_token = new_refresh_token().await.context("get refresh token")?;
+    let mut input = std::io::stdin();
+    let mut output = std::io::stdout();
+    let mut err_out = std::io::stderr();
+    let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
+    let refresh_token = new_refresh_token(&mut ui).await.context("get refresh token")?;
     let token_store =
         TokenStore::new_with_auth(refresh_token, /*access_token=*/ None).expect("token_store");
 

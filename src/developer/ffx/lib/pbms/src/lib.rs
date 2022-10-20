@@ -81,7 +81,11 @@ pub async fn load_product_bundle(
 }
 
 /// For each non-local URL in ffx CONFIG_METADATA, fetch updated info.
-pub async fn update_metadata_all<I>(output_dir: &Path, ui: &mut I) -> Result<()>
+pub async fn update_metadata_all<I>(
+    output_dir: &Path,
+    use_secure_auth_flow: bool,
+    ui: &mut I,
+) -> Result<()>
 where
     I: structured_ui::Interface + Sync,
 {
@@ -96,6 +100,7 @@ where
         fetch_product_metadata(
             &repo_url,
             &output_dir.join(pb_dir_name(&repo_url)),
+            use_secure_auth_flow,
             &mut |_d, _f| Ok(ProgressResponse::Continue),
             ui,
         )
@@ -109,6 +114,7 @@ where
 pub async fn update_metadata_from<I>(
     product_url: &url::Url,
     output_dir: &Path,
+    use_secure_auth_flow: bool,
     ui: &mut I,
 ) -> Result<()>
 where
@@ -118,6 +124,7 @@ where
     fetch_product_metadata(
         &product_url,
         output_dir,
+        use_secure_auth_flow,
         &mut |_d, _f| Ok(ProgressResponse::Continue),
         ui,
     )
@@ -348,6 +355,7 @@ pub async fn is_pb_ready(product_url: &url::Url) -> Result<bool> {
 pub async fn get_product_data<I>(
     product_url: &url::Url,
     output_dir: &std::path::Path,
+    use_secure_auth_flow: bool,
     ui: &mut I,
     force: bool,
 ) -> Result<bool>
@@ -369,7 +377,7 @@ where
         should_get_data = false;
     }
     if should_get_data {
-        get_product_data_from_gcs(product_url, output_dir, ui)
+        get_product_data_from_gcs(product_url, output_dir, use_secure_auth_flow, ui)
             .await
             .context("reading pbms entries")
             .map(|_| true)
@@ -477,7 +485,9 @@ mod tests {
         let mut output = Vec::new();
         let mut err_out = Vec::new();
         let mut ui = structured_ui::TextUi::new(&mut input, &mut output, &mut err_out);
-        update_metadata_all(&output_dir, &mut ui).await.expect("get pbms");
+        update_metadata_all(&output_dir, /*use_secure_auth_flow=*/ true, &mut ui)
+            .await
+            .expect("get pbms");
         let urls = product_bundle_urls().await.expect("get pbms");
         assert!(!urls.is_empty());
     }

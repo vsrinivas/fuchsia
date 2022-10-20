@@ -15,6 +15,10 @@ pub struct GetCommand {
     #[argh(switch)]
     pub force: bool,
 
+    /// use an insecure oauth2 token flow.
+    #[argh(switch)]
+    pub oob_auth: bool,
+
     /// repositories will be named `NAME`. Defaults to the product bundle name.
     #[argh(option)]
     pub repository: Option<String>,

@@ -263,7 +263,7 @@ where
     tracing::debug!("pb_list");
     if !cmd.cached {
         let storage_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&storage_dir, ui).await?;
+        update_metadata_all(&storage_dir, !cmd.oob_auth, ui).await?;
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     if entries.is_empty() {
@@ -347,7 +347,7 @@ where
     }
 
     // Go ahead and download the product images.
-    if !get_product_data(&product_url, &output_dir, ui, cmd.force).await? {
+    if !get_product_data(&product_url, &output_dir, !cmd.oob_auth, ui, cmd.force).await? {
         return Ok(());
     }
 
@@ -383,7 +383,7 @@ where
 {
     if !cmd.cached {
         let base_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&base_dir, ui).await?;
+        update_metadata_all(&base_dir, !cmd.oob_auth, ui).await?;
     }
     let should_print = true;
     select_product_bundle(&cmd.product_bundle_name, ListingMode::AllBundles, should_print).await

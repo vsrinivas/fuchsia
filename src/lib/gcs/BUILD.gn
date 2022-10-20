@@ -11,14 +11,18 @@ rustc_library("lib") {
 
   deps = [
     "//src/lib/fuchsia-hyper:fuchsia-hyper",
+    "//src/lib/structured_ui",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:async-lock",
+    "//third_party/rust_crates:base64",
     "//third_party/rust_crates:http",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:once_cell",
+    "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:sha2",
     "//third_party/rust_crates:thiserror",
     "//third_party/rust_crates:tracing",
     "//third_party/rust_crates:url",

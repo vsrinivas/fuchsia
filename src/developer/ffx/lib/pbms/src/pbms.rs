@@ -35,6 +35,7 @@ pub(crate) const GS_SCHEME: &str = "gs";
 pub(crate) async fn fetch_product_metadata<F, I>(
     repo: &url::Url,
     output_dir: &Path,
+    use_secure_auth_flow: bool,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -50,7 +51,7 @@ where
     info.save(&output_dir.join("info"))?;
     tracing::debug!("Wrote info to {:?}", output_dir);
 
-    fetch_bundle_uri(&repo, output_dir, progress, ui)
+    fetch_bundle_uri(&repo, output_dir, use_secure_auth_flow, progress, ui)
         .await
         .context("fetch product bundle by URL")?;
     Ok(())
@@ -189,6 +190,7 @@ pub(crate) fn url_sans_fragment(product_url: &url::Url) -> Result<url::Url> {
 pub(crate) async fn get_product_data_from_gcs<I>(
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
+    use_secure_auth_flow: bool,
     ui: &I,
 ) -> Result<()>
 where
@@ -199,9 +201,15 @@ where
     let product_name = product_url.fragment().expect("URL with trailing product_name fragment.");
     let url = url_sans_fragment(product_url)?;
 
-    fetch_product_metadata(&url, local_repo_dir, &mut |_d, _f| Ok(ProgressResponse::Continue), ui)
-        .await
-        .context("fetching metadata")?;
+    fetch_product_metadata(
+        &url,
+        local_repo_dir,
+        use_secure_auth_flow,
+        &mut |_d, _f| Ok(ProgressResponse::Continue),
+        ui,
+    )
+    .await
+    .context("fetching metadata")?;
 
     let file_path = local_repo_dir.join("product_bundles.json");
     if !file_path.is_file() {
@@ -211,7 +219,14 @@ where
     entries.add_from_path(&file_path).context("adding entries from gcs")?;
     let product_bundle = find_product_bundle(&entries, &Some(product_name.to_string()))
         .context("finding product bundle")?;
-    fetch_data_for_product_bundle_v1(&product_bundle, &url, local_repo_dir, ui).await
+    fetch_data_for_product_bundle_v1(
+        &product_bundle,
+        &url,
+        local_repo_dir,
+        use_secure_auth_flow,
+        ui,
+    )
+    .await
 }
 
 /// Helper for `get_product_data()`, see docs there.
@@ -219,6 +234,7 @@ pub async fn fetch_data_for_product_bundle_v1<I>(
     product_bundle: &sdk_metadata::ProductBundleV1,
     product_url: &url::Url,
     local_repo_dir: &std::path::Path,
+    use_secure_auth_flow: bool,
     ui: &I,
 ) -> Result<()>
 where
@@ -240,13 +256,14 @@ where
 
             let base_url =
                 make_remote_url(product_url, &image.base_uri).context("image.base_uri")?;
-            if !exists_in_gcs(&base_url.as_str(), ui).await? {
+            if !exists_in_gcs(&base_url.as_str(), use_secure_auth_flow, ui).await? {
                 tracing::warn!("The base_uri does not exist: {}", base_url);
             }
             fetch_by_format(
                 &image.format,
                 &base_url,
                 &local_dir,
+                use_secure_auth_flow,
                 &|d, f| {
                     let mut progress = structured_ui::Progress::builder();
                     progress.title(&product_bundle.name);
@@ -278,6 +295,7 @@ where
             product_url,
             &local_dir,
             &product_bundle.packages,
+            use_secure_auth_flow,
             &|d, f| {
                 let mut progress = structured_ui::Progress::builder();
                 progress.title(&product_bundle.name);
@@ -330,6 +348,7 @@ async fn fetch_by_format<F, I>(
     format: &str,
     uri: &url::Url,
     local_dir: &Path,
+    use_secure_auth_flow: bool,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -339,7 +358,9 @@ where
 {
     tracing::debug!("fetch_by_format");
     match format {
-        "files" | "tgz" => fetch_bundle_uri(uri, &local_dir, progress, ui).await,
+        "files" | "tgz" => {
+            fetch_bundle_uri(uri, &local_dir, use_secure_auth_flow, progress, ui).await
+        }
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
         // This error could be a typo in the product bundle or a new image
@@ -362,6 +383,7 @@ where
 pub(crate) async fn fetch_bundle_uri<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
+    use_secure_auth_flow: bool,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -371,7 +393,7 @@ where
 {
     tracing::debug!("fetch_bundle_uri");
     if product_url.scheme() == GS_SCHEME {
-        fetch_from_gcs(product_url.as_str(), local_dir, progress, ui)
+        fetch_from_gcs(product_url.as_str(), local_dir, use_secure_auth_flow, progress, ui)
             .await
             .context("Downloading from GCS.")?;
     } else if product_url.scheme() == "http" || product_url.scheme() == "https" {
@@ -574,6 +596,7 @@ mod tests {
             "bad",
             &url,
             &Path::new("unused"),
+            /*use_secure_auth_flow=*/ true,
             &mut |_d, _f| Ok(ProgressResponse::Continue),
             &ui,
         )
@@ -589,6 +612,7 @@ mod tests {
         fetch_bundle_uri(
             &url,
             &Path::new("unused"),
+            /*use_secure_auth_flow=*/ true,
             &mut |_d, _f| Ok(ProgressResponse::Continue),
             &ui,
         )
