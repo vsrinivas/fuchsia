@@ -151,7 +151,7 @@ impl stream::SocketWorkerDispatcher for TestNonSyncCtx {
         self.ctx.register_listener(id, socket)
     }
 
-    fn unregister_listener(&mut self, id: ListenerId) -> fuchsia_zircon::Socket {
+    fn unregister_listener(&mut self, id: ListenerId) {
         self.ctx.unregister_listener(id)
     }
 }
