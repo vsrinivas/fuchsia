@@ -1,8 +1,6 @@
 # HLCPP tutorials
 
-Note: if you are developing within the **fuchsia.git** tree, you are recommended
-to use the [new C++ bindings][new-cpp] bindings, which offer better ergonomics,
-thread-safety, and performance.
+<<../../../../../_common/_hlcpp_notice.md>>
 
 This section includes the following tutorials for using the HLCPP
 FIDL bindings:
@@ -31,4 +29,3 @@ FIDL bindings:
 [fostr]: topics/fostr.md
 [multi-client]: topics/multiple-clients.md
 [services]: topics/services.md
-[new-cpp]: /docs/development/languages/fidl/tutorials/cpp/README.md

@@ -1,5 +1,7 @@
 # HLCPP bindings
 
+<<../../../_common/_hlcpp_notice.md>>
+
 ## Libraries {#libraries}
 
 Given the library declaration:

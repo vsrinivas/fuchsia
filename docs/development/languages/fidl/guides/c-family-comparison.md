@@ -263,6 +263,8 @@ Refer to the [New C++ tutorial][cpp-tutorial] to get started.
 
 ## High-level C++ bindings
 
+<<../../../../_common/_hlcpp_notice.md>>
+
 *   Optimized to meet the needs of high-level service programming.
 *   Represent data structures using idiomatic C++ types such as `std::vector`,
     `std::optional`, and `std::string`.
