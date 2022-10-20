@@ -41,7 +41,8 @@
   //
   "extensions": {
     "recommendations": [
-      // Fuchsia's own VSCode extension
+      // Fuchsia's own VSCode extension. Provides ZXDB support, a log view, and
+      // default target selection.
       "fuchsia-authors.vscode-fuchsia",
 
       // Fuchsia's own FIDL LSP extension
@@ -52,7 +53,35 @@
 
       // The GN language server from Microsoft
       "msedge-dev.gnls",
+
+      // The official Clang LSP for C/C++.
+      "llvm-vs-code-extensions.vscode-clangd",
+
+      // Provides GN syntax highlighting.
+      "npclaudiu.vscode-gn",
+
+      // Supports inserting and formatting C/C++ include guards as required
+      // in Fuchsia.
+      "akiramiyakoda.cppincludeguard",
+
+      // Adds JSON5 syntax highlighting (including *.cml files).
+      "mrmlnc.vscode-json5",
+
+      // Linkifies Fuchsia URLs (components, bugs, etc.)
+      "RichKadel.fuchsiaware",
     ],
+
+    "unwantedRecommendations": [
+      // Conflicts with vscode-clangd intellisense, and vscode-clangd is the
+      // preferred C++ extension.
+      "ms-vscode.cpptools",
+
+      // Redundant and conflicts with gnls, which is preferred.
+      "persidskiy.vscode-gnformat",
+
+      // Superseded by vscode-fuchsia, which provides zxdb support.
+      "fuchsia-authors.zxdb",
+    ]
   },
 
 
@@ -88,6 +117,15 @@
     "rust-analyzer.diagnostics.remapPrefix": {
       "../../": "${workspaceFolder}",
     },
+
+    ////////
+    // C/C++
+
+    // Formats C/C++ include guards to match Fuchsia style.
+    "C/C++ Include Guard.Comment Style": "Line",
+    "C/C++ Include Guard.Macro Type": "Filepath",
+    "C/C++ Include Guard.Suffix": "_H_",
+    "C/C++ Include Guard.Spaces After Endif": 2,
 
     ////////
     // Bazel
