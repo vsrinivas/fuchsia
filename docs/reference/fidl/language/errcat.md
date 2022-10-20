@@ -214,7 +214,7 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <!--
 
-// LINT.ThenChange(/tools/fidl/fidlc/include/fidl/diagnostics.h)
+// LINT.ThenChange(/tools/fidl/fidlc/tests/errcat_good_tests.cc)
 
 -->
 

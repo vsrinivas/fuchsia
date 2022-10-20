@@ -15,6 +15,8 @@
 
 namespace {
 
+// LINT.IfChange
+
 TEST(ErrcatTests, Good0003) {
   TestLibrary library;
   library.AddFile("good/fi-0003.test.fidl");
@@ -610,5 +612,7 @@ TEST(ErrcatTests, Good0162) {
   TestLibrary library;
   library.AddFile("good/fi-0162.test.fidl");
 }
+
+// LINT.ThenChange(/docs/reference/fidl/language/errcat.md)
 
 }  // namespace

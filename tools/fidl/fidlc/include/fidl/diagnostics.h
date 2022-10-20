@@ -9,7 +9,6 @@
 #include "tools/fidl/fidlc/include/fidl/source_span.h"
 #include "tools/fidl/fidlc/include/fidl/versioning_types.h"
 
-// LINT.IfChange
 namespace fidl {
 
 constexpr RetiredDef<0> ErrAlwaysRetired("error id fi-0000 was always retired");
@@ -440,6 +439,5 @@ constexpr UndocumentedErrorDef<183, const flat::AttributeArg *, std::string_view
         "cannot be added back at LEGACY if its parent is removed");
 
 }  // namespace fidl
-// LINT.ThenChange(/docs/reference/fidl/language/errcat.md)
 
 #endif  // TOOLS_FIDL_FIDLC_INCLUDE_FIDL_DIAGNOSTICS_H_
