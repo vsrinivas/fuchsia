@@ -12,7 +12,6 @@ use {
     archivist_config::Config,
     archivist_lib::{archivist::Archivist, constants, diagnostics, events::router::RouterOptions},
     argh::FromArgs,
-    fdio::service_connect,
     fuchsia_async::SendExecutor,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_inspect::component,
@@ -161,18 +160,11 @@ async fn async_main(config: Config) -> Result<(), Error> {
         archivist.start_draining_klog().await?;
     }
 
-    let mut services = vec![];
-
     for name in config.bind_services {
         info!("Connecting to service {}", name);
-        let (local, remote) = zx::Channel::create().expect("cannot create channels");
-        match service_connect(&format!("/svc/{}", name), remote) {
-            Ok(_) => {
-                services.push(local);
-            }
-            Err(e) => {
-                error!("Couldn't connect to service {}: {:?}", name, e);
-            }
+        let (_local, remote) = zx::Channel::create().expect("cannot create channels");
+        if let Err(e) = fdio::service_connect(&format!("/svc/{}", name), remote) {
+            error!("Couldn't connect to service {}: {:?}", name, e);
         }
     }
 
