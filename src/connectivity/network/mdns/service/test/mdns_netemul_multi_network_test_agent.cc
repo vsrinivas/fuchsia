@@ -42,18 +42,15 @@ const auto kRemoteV6LinkLocalAddr = inet::IpAddress(0xfe80, 0, 0, 0, 0, 0, 0, 0x
 const auto kLocalV6Addr = inet::IpAddress(0x2001, 0, 0, 0, 0, 0, 0, 0x001);
 const auto kRemoteV6Addr = inet::IpAddress(0x2001, 0, 0, 0, 0, 0, 0, 0x002);
 
-const auto remoteAddrs =
-    std::vector<inet::IpAddress>{kRemoteV4Addr, kRemoteV6LinkLocalAddr, kRemoteV6Addr};
-const auto localAddrs =
-    std::vector<inet::IpAddress>{kLocalV4Addr, kLocalV6LinkLocalAddr, kLocalV6Addr};
+const auto kRemoteTransceiverAddrs =
+    std::vector<inet::IpAddress>{kRemoteV4Addr, kRemoteV6LinkLocalAddr};
+const auto kLocalTransceiverAddrs =
+    std::vector<inet::IpAddress>{kLocalV4Addr, kLocalV6LinkLocalAddr};
 
 // All possible connections keyed on sender's address.
 std::unordered_map<inet::IpAddress, inet::IpAddress> connections(
     {{kLocalV4Addr, kRemoteV4Addr},
      {kRemoteV4Addr, kLocalV4Addr},
-
-     {kLocalV6Addr, kRemoteV6Addr},
-     {kRemoteV6Addr, kLocalV6Addr},
 
      {kLocalV6LinkLocalAddr, kRemoteV6LinkLocalAddr},
      {kRemoteV6LinkLocalAddr, kLocalV6LinkLocalAddr}});
@@ -97,8 +94,8 @@ class TestAgent {
           if (sending_) {
             return;
           }
-          // Wait for tranceivers to start on all interfaces.
-          for (const auto& addr : Addrs()) {
+          // Wait for transceivers to start on all interfaces.
+          for (const auto& addr : TransceiverAddrs()) {
             if (transceiver_.GetInterfaceTransceiver(addr) == nullptr) {
               return;
             }
@@ -163,15 +160,15 @@ class TestAgent {
           // Transceiver sends out requests on all interfaces. Each interface
           // has exactly one IP address, so one response should be received
           // for each address.
-          if (response_count_ >= Addrs().size() * kIterations) {
+          if (response_count_ >= TransceiverAddrs().size() * kIterations) {
             Quit(0);
           }
         },
         MdnsInterfaceTransceiver::Create);
   }
 
-  const std::vector<inet::IpAddress>& Addrs() {
-    return client_name_ == kLocalClientName ? localAddrs : remoteAddrs;
+  const std::vector<inet::IpAddress>& TransceiverAddrs() {
+    return client_name_ == kLocalClientName ? kLocalTransceiverAddrs : kRemoteTransceiverAddrs;
   }
 
   void OpenBus() {

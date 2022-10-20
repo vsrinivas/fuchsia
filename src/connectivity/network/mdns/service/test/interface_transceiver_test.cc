@@ -64,6 +64,7 @@ class MdnsInterfaceTransceiverTest : public MdnsInterfaceTransceiver {
   int SetOptionMulticastTtl() override { return 0; }
   int SetOptionFamilySpecific() override { return 0; }
   int Bind() override { return 0; }
+
   ssize_t SendTo(const void* buffer, size_t size, const inet::SocketAddress& address) override {
     send_to_buffer_ = buffer;
     send_to_size_ = size;
@@ -84,6 +85,7 @@ TEST(InterfaceTransceiverTest, Construct) {
   uint32_t nic_id = 1234;
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
 
   EXPECT_EQ(nic_address, under_test.address());
   EXPECT_EQ(nic_name, under_test.name());
@@ -101,6 +103,7 @@ TEST(InterfaceTransceiverTest, SendSimpleMessage) {
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
 
   auto ptr_resource = std::make_shared<DnsResource>("_test_name._whatever.", DnsType::kPtr);
   ptr_resource->time_to_live_ = 234;
@@ -141,6 +144,7 @@ TEST(InterfaceTransceiverTest, SendLeadingA) {
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -190,6 +194,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAAndAAAA) {
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -242,6 +247,7 @@ TEST(InterfaceTransceiverTest, SendTrailingAAndAAAA) {
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -294,6 +300,7 @@ TEST(InterfaceTransceiverTest, SendBracketingAAndAAAA) {
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -347,7 +354,7 @@ TEST(InterfaceTransceiverTest, SendLeadingAWithAlternate) {
   inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
 
   MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
-  under_test.SetAlternateAddress(alternate_address);
+  under_test.SetInterfaceAddresses({nic_address, alternate_address});
 
   auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
 
@@ -375,6 +382,90 @@ TEST(InterfaceTransceiverTest, SendLeadingAWithAlternate) {
   // 0070  00 00 00 00 00 02                                 ......
 
   std::vector<uint8_t> expected_message = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x0a, 0x5f, 0x74,
+      0x65, 0x73, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x09, 0x5f, 0x77, 0x68, 0x61, 0x74, 0x65,
+      0x76, 0x65, 0x72, 0x00, 0x00, 0x0c, 0x00, 0x01, 0x00, 0x00, 0x00, 0xea, 0x00, 0x11, 0x0e,
+      0x5f, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x70, 0x74, 0x72, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0xc0,
+      0x17, 0x0c, 0x5f, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x61, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0xc0,
+      0x17, 0x00, 0x01, 0x80, 0x01, 0x00, 0x00, 0x00, 0x78, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04,
+      0xc0, 0x3d, 0x00, 0x1c, 0x80, 0x01, 0x00, 0x00, 0x00, 0x78, 0x00, 0x10, 0x00, 0x01, 0x00,
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02,
+  };
+
+  EXPECT_EQ(expected_message.size(), under_test.send_to_size_);
+  EXPECT_EQ(0,
+            memcmp(expected_message.data(), under_test.send_to_buffer_, under_test.send_to_size_));
+  EXPECT_EQ(to_address, under_test.send_to_address_);
+}
+
+// Sends a message containing a leading A resource with a late-arriving alternate address.
+TEST(InterfaceTransceiverTest, SendLeadingAWithLateAlternate) {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  inet::IpAddress nic_address(1, 2, 3, 4);
+  inet::IpAddress alternate_address(1, 2);
+  std::string nic_name = "testnic";
+  uint32_t nic_id = 1234;
+
+  inet::SocketAddress to_address(inet::IpAddress(4, 3, 2, 1), inet::IpPort::From_uint16_t(4321));
+
+  MdnsInterfaceTransceiverTest under_test(nic_address, nic_name, nic_id, Media::kWired);
+  under_test.SetInterfaceAddresses({nic_address});
+
+  auto a_resource = std::make_shared<DnsResource>("_test_a_name._whatever.", DnsType::kA);
+
+  auto ptr_resource = std::make_shared<DnsResource>("_test_name._whatever.", DnsType::kPtr);
+  ptr_resource->time_to_live_ = 234;
+  ptr_resource->ptr_.pointer_domain_name_ = DnsName("_test_ptr_name._whatever.");
+
+  DnsMessage message;
+  message.additionals_.push_back(a_resource);
+  message.additionals_.push_back(ptr_resource);
+  message.UpdateCounts();
+
+  under_test.SendMessage(message, to_address);
+  EXPECT_NE(nullptr, under_test.send_to_buffer_);
+
+  // under_test.DumpSendToGolden();
+
+  // 0000  00 00 00 00 00 00 00 00  00 00 00 02 0a 5f 74 65  ............._te
+  // 0010  73 74 5f 6e 61 6d 65 09  5f 77 68 61 74 65 76 65  st_name._whateve
+  // 0020  72 00 00 0c 00 01 00 00  00 ea 00 11 0e 5f 74 65  r............_te
+  // 0030  73 74 5f 70 74 72 5f 6e  61 6d 65 c0 17 0c 5f 74  st_ptr_name..._t
+  // 0040  65 73 74 5f 61 5f 6e 61  6d 65 c0 17 00 01 80 01  est_a_name......
+  // 0050  00 00 00 78 00 04 01 02  03 04                    ...x......
+
+  std::vector<uint8_t> expected_message = {
+      0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x0a, 0x5f, 0x74,
+      0x65, 0x73, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x09, 0x5f, 0x77, 0x68, 0x61, 0x74, 0x65,
+      0x76, 0x65, 0x72, 0x00, 0x00, 0x0c, 0x00, 0x01, 0x00, 0x00, 0x00, 0xea, 0x00, 0x11, 0x0e,
+      0x5f, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x70, 0x74, 0x72, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0xc0,
+      0x17, 0x0c, 0x5f, 0x74, 0x65, 0x73, 0x74, 0x5f, 0x61, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0xc0,
+      0x17, 0x00, 0x01, 0x80, 0x01, 0x00, 0x00, 0x00, 0x78, 0x00, 0x04, 0x01, 0x02, 0x03, 0x04,
+  };
+
+  EXPECT_EQ(expected_message.size(), under_test.send_to_size_);
+  EXPECT_EQ(0,
+            memcmp(expected_message.data(), under_test.send_to_buffer_, under_test.send_to_size_));
+  EXPECT_EQ(to_address, under_test.send_to_address_);
+
+  // Alternate address set after |SendMessage| is called.
+  under_test.SetInterfaceAddresses({nic_address, alternate_address});
+
+  under_test.SendMessage(message, to_address);
+  EXPECT_NE(nullptr, under_test.send_to_buffer_);
+
+  // under_test.DumpSendToGolden();
+
+  // 0000  00 00 00 00 00 00 00 00  00 00 00 03 0a 5f 74 65  ............._te
+  // 0010  73 74 5f 6e 61 6d 65 09  5f 77 68 61 74 65 76 65  st_name._whateve
+  // 0020  72 00 00 0c 00 01 00 00  00 ea 00 11 0e 5f 74 65  r............_te
+  // 0030  73 74 5f 70 74 72 5f 6e  61 6d 65 c0 17 0c 5f 74  st_ptr_name..._t
+  // 0040  65 73 74 5f 61 5f 6e 61  6d 65 c0 17 00 01 80 01  est_a_name......
+  // 0050  00 00 00 78 00 04 01 02  03 04 c0 3d 00 1c 80 01  ...x.......=....
+  // 0060  00 00 00 78 00 10 00 01  00 00 00 00 00 00 00 00  ...x............
+  // 0070  00 00 00 00 00 02                                 ......
+
+  expected_message = {
       0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x0a, 0x5f, 0x74,
       0x65, 0x73, 0x74, 0x5f, 0x6e, 0x61, 0x6d, 0x65, 0x09, 0x5f, 0x77, 0x68, 0x61, 0x74, 0x65,
       0x76, 0x65, 0x72, 0x00, 0x00, 0x0c, 0x00, 0x01, 0x00, 0x00, 0x00, 0xea, 0x00, 0x11, 0x0e,

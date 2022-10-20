@@ -17,10 +17,12 @@ namespace mdns::test {
 
 constexpr std::array<uint8_t, 4> kIPv4Address1 = {1, 2, 3, 1};
 constexpr std::array<uint8_t, 4> kIPv4Address2 = {4, 5, 6, 1};
-constexpr std::array<uint8_t, 16> kIPv6Address1 = {0x01, 0x23, 0x45, 0x67, 0, 0, 0, 0,
-                                                   0,    0,    0,    0,    0, 0, 0, 1};
-constexpr std::array<uint8_t, 16> kIPv6Address2 = {0x89, 0xAB, 0xCD, 0xEF, 0, 0, 0, 0,
-                                                   0,    0,    0,    0,    0, 0, 0, 1};
+constexpr std::array<uint8_t, 16> kIPv6Address1 = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
+                                                   0,    0,    0, 0, 1, 2, 3, 4};
+constexpr std::array<uint8_t, 16> kIPv6Address2 = {0xfe, 0x80, 0, 0, 0, 0, 0, 0,
+                                                   0,    0,    0, 0, 4, 3, 2, 1};
+constexpr std::array<uint8_t, 16> kIPv6AddressNotLinkLocal = {0xff, 0x80, 0, 0, 0, 0, 0, 0,
+                                                              0,    0,    0, 0, 4, 3, 2, 1};
 constexpr uint8_t kIPv4PrefixLength = 24;
 constexpr uint8_t kIPv6PrefixLength = 64;
 constexpr uint8_t kID = 1;
@@ -61,6 +63,8 @@ std::vector<fuchsia::net::interfaces::Address> Addresses1() {
   addresses.reserve(2);
   InitAddress(addresses.emplace_back(), kIPv4Address1);
   InitAddress(addresses.emplace_back(), kIPv6Address1);
+  // To verify that non-link-local addresses do not cause a transceiver to be created.
+  InitAddress(addresses.emplace_back(), kIPv6AddressNotLinkLocal);
   return addresses;
 }
 
@@ -140,7 +144,8 @@ class MdnsTransceiverTests : public gtest::TestLoopFixture {
         v4_address1_(inet::IpAddress(ToFIDL(kIPv4Address1))),
         v4_address2_(inet::IpAddress(ToFIDL(kIPv4Address2))),
         v6_address1_(inet::IpAddress(ToFIDL(kIPv6Address1))),
-        v6_address2_(inet::IpAddress(ToFIDL(kIPv6Address2))) {
+        v6_address2_(inet::IpAddress(ToFIDL(kIPv6Address2))),
+        v6_address_not_link_local_(inet::IpAddress(ToFIDL(kIPv6AddressNotLinkLocal))) {
     properties_ = fuchsia::net::interfaces::Properties();
     properties_.set_id(kID);
     properties_.set_name(kName);
@@ -173,12 +178,14 @@ class MdnsTransceiverTests : public gtest::TestLoopFixture {
   InterfacesWatcherImpl fake_watcher_impl_;
   const std::unique_ptr<fidl::Binding<fuchsia::net::interfaces::Watcher>> binding_;
   fuchsia::net::interfaces::Properties properties_;
-  const inet::IpAddress v4_address1_, v4_address2_, v6_address1_, v6_address2_;
+  const inet::IpAddress v4_address1_, v4_address2_, v6_address1_, v6_address2_,
+      v6_address_not_link_local_;
 };
 
 TEST_F(MdnsTransceiverTests, IgnoreLoopback) {
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   properties_.set_device_class(
       fuchsia::net::interfaces::DeviceClass::WithLoopback(fuchsia::net::interfaces::Empty()));
@@ -192,11 +199,13 @@ TEST_F(MdnsTransceiverTests, IgnoreLoopback) {
 
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 }
 
 TEST_F(MdnsTransceiverTests, OnlineChange) {
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   RunLoopUntilIdle();
 
@@ -207,6 +216,7 @@ TEST_F(MdnsTransceiverTests, OnlineChange) {
 
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   fuchsia::net::interfaces::Properties online_false;
   online_false.set_id(kID);
@@ -218,6 +228,7 @@ TEST_F(MdnsTransceiverTests, OnlineChange) {
 
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   fuchsia::net::interfaces::Properties online_true;
   online_false.set_id(kID);
@@ -229,6 +240,7 @@ TEST_F(MdnsTransceiverTests, OnlineChange) {
 
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address1_), nullptr);
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 }
 
 TEST_F(MdnsTransceiverTests, AddressesChange) {
@@ -236,6 +248,7 @@ TEST_F(MdnsTransceiverTests, AddressesChange) {
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   RunLoopUntilIdle();
 
@@ -248,6 +261,7 @@ TEST_F(MdnsTransceiverTests, AddressesChange) {
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   fuchsia::net::interfaces::Properties addresses_change;
   addresses_change.set_id(kID);
@@ -261,6 +275,7 @@ TEST_F(MdnsTransceiverTests, AddressesChange) {
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 }
 
 TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
@@ -268,6 +283,7 @@ TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   RunLoopUntilIdle();
 
@@ -280,6 +296,7 @@ TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   fuchsia::net::interfaces::Properties offline_and_addresses_change;
   offline_and_addresses_change.set_id(kID);
@@ -295,6 +312,7 @@ TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 
   fuchsia::net::interfaces::Properties online_and_addresses_change;
   online_and_addresses_change.set_id(kID);
@@ -309,6 +327,7 @@ TEST_F(MdnsTransceiverTests, OnlineAndAddressesChange) {
   EXPECT_NE(transceiver_.GetInterfaceTransceiver(v6_address1_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v4_address2_), nullptr);
   EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address2_), nullptr);
+  EXPECT_EQ(transceiver_.GetInterfaceTransceiver(v6_address_not_link_local_), nullptr);
 }
 
 }  // namespace mdns::test

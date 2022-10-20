@@ -114,45 +114,27 @@ bool MdnsTransceiver::StartInterfaceTransceivers(const net::interfaces::Properti
       break;
   }
 
-  // Transceivers on an IPv4 address must have an alternate IPv6 address if there is any IPv6
-  // address configured on the interface (vice versa with IPv6 transceivers and an IPv4 alternate
-  // address). The choice of the address is arbitrary, so choose the first address of either IP
-  // version.
-  inet::IpAddress v4_addr, v6_addr;
-  for (const auto& net_interfaces_addr : properties.addresses()) {
-    const fuchsia::net::IpAddress& addr = net_interfaces_addr.addr().addr;
-    switch (addr.Which()) {
-      case fuchsia::net::IpAddress::kIpv4:
-        if (!v4_addr.is_valid()) {
-          v4_addr = MdnsFidlUtil::IpAddressFrom(addr);
-        }
-        break;
-      case fuchsia::net::IpAddress::kIpv6:
-        if (!v6_addr.is_valid()) {
-          v6_addr = MdnsFidlUtil::IpAddressFrom(addr);
-        }
-        break;
-      case fuchsia::net::IpAddress::Invalid:
-        FX_LOGS(ERROR) << "invalid address found in properties for interface id="
-                       << properties.id();
-        break;
-    }
-    if (v4_addr.is_valid() && v6_addr.is_valid()) {
-      break;
-    }
-  }
+  std::vector<inet::IpAddress> addresses;
+  std::transform(
+      properties.addresses().begin(), properties.addresses().end(), std::back_inserter(addresses),
+      [](const auto& address) { return MdnsFidlUtil::IpAddressFrom(address.addr().addr); });
 
   bool started = false;
   for (const auto& net_interfaces_addr : properties.addresses()) {
     const inet::IpAddress addr = MdnsFidlUtil::IpAddressFrom(net_interfaces_addr.addr().addr);
-    const inet::IpAddress& alternate_addr = addr.is_v4() ? v6_addr : v4_addr;
+    if (addr.is_v6() && !addr.is_link_local()) {
+      // Do not stand up transceivers for non-local V6 addresses.
+      continue;
+    }
+
     const uint64_t id = properties.id();
     // NB: fuchsia.net.interfaces/Properties reports IDs as uint64_t but we store them as uint32
     // for usage in POSIX APIs in transceivers. Ensure that the conversion is valid here.
     FX_DCHECK(id <= std::numeric_limits<uint32_t>::max()) << id << " doesn't fit in a uint32";
-    started |= EnsureInterfaceTransceiver(addr, alternate_addr, static_cast<uint32_t>(id), media,
+    started |= EnsureInterfaceTransceiver(addr, addresses, static_cast<uint32_t>(id), media,
                                           properties.name());
   }
+
   return started;
 }
 
@@ -284,10 +266,9 @@ void MdnsTransceiver::OnInterfacesEvent(fuchsia::net::interfaces::Event event) {
   }
 }
 
-bool MdnsTransceiver::EnsureInterfaceTransceiver(const inet::IpAddress& address,
-                                                 const inet::IpAddress& alternate_address,
-                                                 uint32_t id, Media media,
-                                                 const std::string& name) {
+bool MdnsTransceiver::EnsureInterfaceTransceiver(
+    const inet::IpAddress& address, const std::vector<inet::IpAddress>& interface_addresses,
+    uint32_t id, Media media, const std::string& name) {
   if (!address.is_valid()) {
     return false;
   }
@@ -302,9 +283,7 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(const inet::IpAddress& address,
 
     if (existing->name() == name && existing->id() == id) {
       // An interface transceiver already exists for this address, so we're done.
-      if (alternate_address.is_valid()) {
-        existing->SetAlternateAddress(alternate_address);
-      }
+      existing->SetInterfaceAddresses(interface_addresses);
       return false;
     }
 
@@ -321,9 +300,7 @@ bool MdnsTransceiver::EnsureInterfaceTransceiver(const inet::IpAddress& address,
     return result_on_fail;
   }
 
-  if (alternate_address.is_valid()) {
-    interface_transceiver->SetAlternateAddress(alternate_address);
-  }
+  interface_transceiver->SetInterfaceAddresses(interface_addresses);
 
   interface_transceivers_by_address_.emplace(address, std::move(interface_transceiver));
 

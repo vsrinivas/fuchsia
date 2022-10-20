@@ -89,10 +89,14 @@ void MdnsInterfaceTransceiver::Stop() {
   socket_fd_.reset();
 }
 
-void MdnsInterfaceTransceiver::SetAlternateAddress(const inet::IpAddress& alternate_address) {
-  FX_DCHECK(alternate_address.family() != address_.family());
+void MdnsInterfaceTransceiver::SetInterfaceAddresses(
+    const std::vector<inet::IpAddress>& interface_addresses) {
+  FX_DCHECK(!interface_addresses.empty());
 
-  alternate_address_ = alternate_address;
+  interface_addresses_ = interface_addresses;
+
+  // These resources are a cached version of |interface_addresses_|. Make sure they get regenerated.
+  interface_address_resources_.clear();
 }
 
 void MdnsInterfaceTransceiver::SendMessage(const DnsMessage& message,
@@ -237,16 +241,21 @@ std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAddressResource(
   return address_resource_;
 }
 
-std::shared_ptr<DnsResource> MdnsInterfaceTransceiver::GetAlternateAddressResource(
-    const std::string& host_full_name) {
-  FX_DCHECK(alternate_address_.is_valid());
+const std::vector<std::shared_ptr<DnsResource>>&
+MdnsInterfaceTransceiver::GetInterfaceAddressResources(const std::string& host_full_name) {
+  FX_DCHECK(!interface_addresses_.empty());
 
-  if (!alternate_address_resource_ ||
-      alternate_address_resource_->name_.dotted_string_ != host_full_name) {
-    alternate_address_resource_ = std::make_shared<DnsResource>(host_full_name, alternate_address_);
+  if (interface_address_resources_.empty() ||
+      interface_address_resources_[0]->name_.dotted_string_ != host_full_name) {
+    interface_address_resources_.clear();
+    std::transform(interface_addresses_.begin(), interface_addresses_.end(),
+                   std::back_inserter(interface_address_resources_),
+                   [&host_full_name](const inet::IpAddress& address) {
+                     return std::make_shared<DnsResource>(host_full_name, address);
+                   });
   }
 
-  return alternate_address_resource_;
+  return interface_address_resources_;
 }
 
 std::vector<std::shared_ptr<DnsResource>> MdnsInterfaceTransceiver::FixUpAddresses(
@@ -281,15 +290,12 @@ std::vector<std::shared_ptr<DnsResource>> MdnsInterfaceTransceiver::FixUpAddress
                });
 
   if (name.empty()) {
-    // No address records found.
+    // No placeholder address records found.
     return result;
   }
 
-  result.push_back(GetAddressResource(name));
-
-  if (alternate_address_.is_valid()) {
-    result.push_back(GetAlternateAddressResource(name));
-  }
+  auto& addr_resources = GetInterfaceAddressResources(name);
+  std::copy(addr_resources.begin(), addr_resources.end(), std::back_inserter(result));
 
   return result;
 }
