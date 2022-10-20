@@ -2,32 +2,62 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-load("@rules_fuchsia//fuchsia:assembly.bzl", "fuchsia_product_configuration")
+load(
+    "@rules_fuchsia//fuchsia:assembly.bzl",
+    "BUILD_TYPES",
+    "FEATURE_CONTROL",
+    "INPUT_DEVICE_TYPE",
+    "fuchsia_platform_identity_configuration",
+    "fuchsia_platform_input_configuration",
+    "fuchsia_product_configuration",
+)
 
 package(default_visibility = ["//build/bazel/assembly:__pkg__"])
 
 fuchsia_product_configuration(name = "bringup")
 
+fuchsia_platform_input_configuration(
+    name = "button_touchscreen",
+    supported_input_devices = [
+        INPUT_DEVICE_TYPE.BUTTON,
+        INPUT_DEVICE_TYPE.TOUCHSCREEN,
+    ],
+)
+
 fuchsia_product_configuration(
     name = "minimal",
-    build_type = "eng",
-
-    # TODO(jayzhuang): Add the following fields when they are supported.
-    # base_feature_set = "minimal"
+    build_type = BUILD_TYPES.USER,
+    input = ":button_touchscreen",
 )
 
 fuchsia_product_configuration(
     name = "core",
-    build_type = "eng",
+    build_type = BUILD_TYPES.ENG,
+    input = ":button_touchscreen",
+
+    # TODO(https://fxbug.dev/103248): Add driver packages when they are available in Bazel.
+)
+
+fuchsia_platform_input_configuration(
+    name = "keyboard_mouse_touchscreen",
+    supported_input_devices = [
+        INPUT_DEVICE_TYPE.KEYBOARD,
+        INPUT_DEVICE_TYPE.MOUSE,
+        INPUT_DEVICE_TYPE.TOUCHSCREEN,
+    ],
+)
+
+fuchsia_platform_identity_configuration(
+    name = "password_pinweaver_required",
+    password_pinweaver = FEATURE_CONTROL.REQUIRED,
 )
 
 fuchsia_product_configuration(
     name = "workstation_eng",
-    build_type = "eng",
+    build_type = BUILD_TYPES.ENG,
+    identity = ":password_pinweaver_required",
+    input = ":keyboard_mouse_touchscreen",
     session_url = "fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm",
-
-    # TODO(jayzhuang): Add the following fields when they are supported.
-    # password_pinweaver = "allowed"
 )
 
 # TODO(https://fxbug.dev/103248): Define targets for workstation_user and workstation_userdebug.
