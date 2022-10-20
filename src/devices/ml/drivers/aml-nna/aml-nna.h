@@ -17,7 +17,11 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
+#include <soc/aml-common/aml-power-domain.h>
 #include <soc/aml-common/aml-registers.h>
+
+constexpr uint32_t kNnaPowerDomainLegacy = 0;
+constexpr uint32_t kNnaPowerDomain = 1;
 
 namespace aml_nna {
 
@@ -26,8 +30,7 @@ using AmlNnaDeviceType = ddk::Device<AmlNnaDevice, ddk::GetProtocolable>;
 
 class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_NNA> {
  public:
-  // Each offset is the byte offset of the register in their respective mmio region.
-  struct NnaBlock {
+  struct NnaPowerDomainBlock {
     // Power Domain MMIO.
     uint32_t domain_power_sleep_offset;
     uint32_t domain_power_iso_offset;
@@ -42,25 +45,39 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
 
     // Reset MMIO.
     uint32_t reset_level2_offset;
-
+  };
+  // Each offset is the byte offset of the register in their respective mmio region.
+  struct NnaBlock {
+    // For the new chips from Amlogic, smc already supports the control of power domain
+    // So A5 uses smc to manage the NN power.
+    uint32_t nna_power_version;
+    union {
+      struct NnaPowerDomainBlock nna_regs;  // Access with mmio read/write.
+      uint32_t nna_domain_id;               // Access with smc call.
+    };
     // Hiu MMIO.
     uint32_t clock_control_offset;
+    uint32_t clock_core_control_bits;
+    uint32_t clock_axi_control_bits;
   };
 
   explicit AmlNnaDevice(zx_device_t* parent, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffer power_mmio,
                         fdf::MmioBuffer memory_pd_mmio, zx::channel reset, ddk::PDev pdev,
-                        NnaBlock nna_block)
+                        NnaBlock nna_block, zx::resource smc_monitor)
       : AmlNnaDeviceType(parent),
         pdev_(std::move(pdev)),
         hiu_mmio_(std::move(hiu_mmio)),
         power_mmio_(std::move(power_mmio)),
         memory_pd_mmio_(std::move(memory_pd_mmio)),
         reset_(std::move(reset)),
-        nna_block_(nna_block) {
+        nna_block_(nna_block),
+        smc_monitor_(std::move(smc_monitor)) {
     pdev_.GetProto(&parent_pdev_);
   }
   static zx_status_t Create(void* ctx, zx_device_t* parent);
   zx_status_t Init();
+
+  zx_status_t PowerDomainControl(bool turn_on);
 
   // Methods required by the ddk.
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -76,6 +93,9 @@ class AmlNnaDevice : public AmlNnaDeviceType, public ddk::EmptyProtocol<ZX_PROTO
   pdev_protocol_t parent_pdev_;
 
   NnaBlock nna_block_;
+
+  // Control PowerDomain
+  zx::resource smc_monitor_;
 };
 
 }  // namespace aml_nna

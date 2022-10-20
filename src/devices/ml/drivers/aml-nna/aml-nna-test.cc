@@ -46,9 +46,11 @@ class MockRegisters {
     reset_mock_->RegistersConnect(std::move(server_end));
 
     ddk::PDev pdev;
+    zx::resource smc_monitor;
     auto device = std::make_unique<AmlNnaDevice>(
         fake_parent_.get(), hiu_mock_.GetMmioBuffer(), power_mock_.GetMmioBuffer(),
-        memory_pd_mock_.GetMmioBuffer(), std::move(client_end), std::move(pdev), nna_block);
+        memory_pd_mock_.GetMmioBuffer(), std::move(client_end), std::move(pdev), nna_block,
+        std::move(smc_monitor));
     ASSERT_NOT_NULL(device);
     EXPECT_OK(device->Init());
 

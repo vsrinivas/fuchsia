@@ -97,6 +97,7 @@ class Av400 : public Av400Type {
   zx_status_t DmcInit();
   zx_status_t MailboxInit();
   zx_status_t DspInit();
+  zx_status_t NnaInit();
 
   int Thread();
 

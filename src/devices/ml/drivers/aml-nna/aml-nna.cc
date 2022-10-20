@@ -18,15 +18,12 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 
+#include "a5-nna-regs.h"
 #include "s905d3-nna-regs.h"
 #include "src/devices/ml/drivers/aml-nna/aml_nna_bind.h"
 #include "t931-nna-regs.h"
 
 namespace {
-
-// CLK Shifts
-constexpr uint32_t kClockCoreEnableShift = 8;
-constexpr uint32_t kClockAxiEnableShift = 24;
 
 // constexpr uint32_t kNna = 0;
 constexpr uint32_t kHiu = 1;
@@ -51,39 +48,61 @@ zx_status_t AmlNnaDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) 
 }
 
 zx_status_t AmlNnaDevice::Init() {
-  power_mmio_.ClearBits32(nna_block_.domain_power_sleep_bits, nna_block_.domain_power_sleep_offset);
+  if (nna_block_.nna_power_version == kNnaPowerDomain) {
+    zx_status_t status = PowerDomainControl(true);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "PowerDomainControl failed: %s\n", zx_status_get_string(status));
+      return status;
+    }
+  } else {
+    power_mmio_.ClearBits32(nna_block_.nna_regs.domain_power_sleep_bits,
+                            nna_block_.nna_regs.domain_power_sleep_offset);
 
-  memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg0_offset);
+    memory_pd_mmio_.Write32(0, nna_block_.nna_regs.hhi_mem_pd_reg0_offset);
 
-  memory_pd_mmio_.Write32(0, nna_block_.hhi_mem_pd_reg1_offset);
+    memory_pd_mmio_.Write32(0, nna_block_.nna_regs.hhi_mem_pd_reg1_offset);
 
-  // set bit[12]=0
-  auto clear_result = reset_->WriteRegister32(nna_block_.reset_level2_offset,
-                                              aml_registers::NNA_RESET2_LEVEL_MASK, 0);
-  if ((clear_result.status() != ZX_OK) || clear_result->is_error()) {
-    zxlogf(ERROR, "%s: Clear Reset Write failed\n", __func__);
-    return ZX_ERR_INTERNAL;
+    // set bit[12]=0
+    auto clear_result = reset_->WriteRegister32(nna_block_.nna_regs.reset_level2_offset,
+                                                aml_registers::NNA_RESET2_LEVEL_MASK, 0);
+    if ((clear_result.status() != ZX_OK) || clear_result->is_error()) {
+      zxlogf(ERROR, "Clear Reset Write failed");
+      return ZX_ERR_INTERNAL;
+    }
+
+    power_mmio_.ClearBits32(nna_block_.nna_regs.domain_power_iso_bits,
+                            nna_block_.nna_regs.domain_power_iso_offset);
+
+    // set bit[12]=1
+    auto set_result = reset_->WriteRegister32(nna_block_.nna_regs.reset_level2_offset,
+                                              aml_registers::NNA_RESET2_LEVEL_MASK,
+                                              aml_registers::NNA_RESET2_LEVEL_MASK);
+    if ((set_result.status() != ZX_OK) || set_result->is_error()) {
+      zxlogf(ERROR, "Set Reset Write failed");
+      return ZX_ERR_INTERNAL;
+    }
   }
-
-  power_mmio_.ClearBits32(nna_block_.domain_power_iso_bits, nna_block_.domain_power_iso_offset);
-
-  // set bit[12]=1
-  auto set_result =
-      reset_->WriteRegister32(nna_block_.reset_level2_offset, aml_registers::NNA_RESET2_LEVEL_MASK,
-                              aml_registers::NNA_RESET2_LEVEL_MASK);
-  if ((set_result.status() != ZX_OK) || set_result->is_error()) {
-    zxlogf(ERROR, "%s: Set Reset Write failed\n", __func__);
-    return ZX_ERR_INTERNAL;
-  }
-
   // Setup Clocks.
-  // Set clocks to 800 MHz (FCLK_DIV2P5 = 3, Divisor = 1)
   // VIPNANOQ Core clock
-  hiu_mmio_.SetBits32(((1 << kClockCoreEnableShift) | 3 << 9), nna_block_.clock_control_offset);
+  hiu_mmio_.SetBits32(nna_block_.clock_core_control_bits, nna_block_.clock_control_offset);
   // VIPNANOQ Axi clock
-  hiu_mmio_.SetBits32(((1 << kClockAxiEnableShift) | 3 << 25), nna_block_.clock_control_offset);
+  hiu_mmio_.SetBits32(nna_block_.clock_axi_control_bits, nna_block_.clock_control_offset);
 
   return ZX_OK;
+}
+
+zx_status_t AmlNnaDevice::PowerDomainControl(bool turn_on) {
+  ZX_ASSERT(smc_monitor_.is_valid());
+  static const zx_smc_parameters_t kSetPdCall =
+      aml_pd_smc::CreatePdSmcCall(nna_block_.nna_domain_id, turn_on ? 1 : 0);
+
+  zx_smc_result_t result;
+  zx_status_t status = zx_smc_call(smc_monitor_.get(), &kSetPdCall, &result);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Call zx_smc_call failed: %s", zx_status_get_string(status));
+  }
+
+  return status;
 }
 
 // static
@@ -136,6 +155,7 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
   }
 
   NnaBlock nna_block;
+  zx::resource smc_monitor;
   switch (info.pid) {
     case PDEV_PID_AMLOGIC_A311D:
     case PDEV_PID_AMLOGIC_T931:
@@ -143,6 +163,14 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
       break;
     case PDEV_PID_AMLOGIC_S905D3:
       nna_block = S905d3NnaBlock;
+      break;
+    case PDEV_PID_AMLOGIC_A5:
+      nna_block = A5NnaBlock;
+      status = pdev.GetSmc(0, &smc_monitor);
+      if (status != ZX_OK) {
+        zxlogf(ERROR, "unable to get sip monitor handle: %s", zx_status_get_string(status));
+        return status;
+      }
       break;
     default:
       zxlogf(ERROR, "unhandled PID 0x%x", info.pid);
@@ -153,7 +181,7 @@ zx_status_t AmlNnaDevice::Create(void* ctx, zx_device_t* parent) {
 
   auto device = std::unique_ptr<AmlNnaDevice>(new (&ac) AmlNnaDevice(
       parent, std::move(*hiu_mmio), std::move(*power_mmio), std::move(*memory_pd_mmio),
-      std::move(client_end), std::move(pdev), nna_block));
+      std::move(client_end), std::move(pdev), nna_block, std::move(smc_monitor)));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }

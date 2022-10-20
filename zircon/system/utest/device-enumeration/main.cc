@@ -287,6 +287,7 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
       "sys/platform/05:07:24/ram",
 
       "av400-buttons/hid-buttons",
+      "sys/platform/05:07:1c/aml-nna",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

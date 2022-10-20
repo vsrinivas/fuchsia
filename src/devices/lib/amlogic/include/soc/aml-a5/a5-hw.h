@@ -105,10 +105,19 @@
 #define A5_DMC_BASE 0xfe036000
 #define A5_DMC_LENGTH 0x400
 // NNA
+#define A5_NNA_BASE 0xfdb00000
+#define A5_NNA_LENGTH 0x40000
+
+#define A5_NNA_SRAM_BASE 0xf7000000
+#define A5_NNA_SRAM_LENGTH 0x200000
 
 // Power domain
+#define A5_POWER_DOMAIN_BASE 0xfe00c000
+#define A5_POWER_DOMAIN_LENGTH 0x400
 
 // Memory Power Domain
+#define A5_MEMORY_PD_BASE 0xfe00c000
+#define A5_MEMORY_PD_LENGTH 0x400
 
 // Reset
 #define A5_RESET_BASE 0xfe002000
@@ -157,6 +166,7 @@
 
 #define A5_DDR_BW_IRQ 110  // 78+32
 
+#define A5_NNA_IRQ 160        // 128+32
 #define A5_USB_IDDIG_IRQ 161  // 129+32
 #define A5_USB2DRD_IRQ 162    // 130+32
 
