@@ -51,6 +51,9 @@ template("fuchsia_fuzzer_package") {
       package_name = invoker.package_name
     }
 
+    # TODO(fxbug.dev/60168): Update consumers, then drop this automatic conversion.
+    package_name = string_replace(package_name, "_", "-")
+
     # Step 1: Generate components for fuzzer binaries.
     # TODO(fxbug.dev/105707): Make the fuzzers more build system agnostic by adding explicitly
     # manifests and deprecating this logic.
