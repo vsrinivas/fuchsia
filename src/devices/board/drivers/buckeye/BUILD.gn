@@ -1,0 +1,285 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/drivers.gni")
+
+declare_args() {
+  buckeye_has_codec = false
+}
+
+driver_bind_rules("buckeye-emmc-bind") {
+  rules = "bind/buckeye-emmc.bind"
+  header_output = "buckeye-emmc-bind.h"
+  bind_output = "buckeye-emmc-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("buckeye-sdio-bind") {
+  rules = "bind/buckeye-sdio.bind"
+  header_output = "buckeye-sdio-bind.h"
+  bind_output = "buckeye-sdio-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("pwm_init_bind") {
+  rules = "bind/pwm_init.bind"
+  header_output = "pwm_init_bind.h"
+  bind_output = "pwm_init_bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("buckeye-bind") {
+  rules = "bind/buckeye.bind"
+  header_output = "buckeye-bind.h"
+  tests = "bind-tests.json"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.hardware.platform.bus",
+  ]
+}
+
+driver_bind_rules("usb-phy-bind") {
+  rules = "bind/usb_phy.bind"
+  header_output = "usb-phy-bind.h"
+  bind_output = "usb-phy-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.registers",
+  ]
+}
+
+driver_bind_rules("xhci-bind") {
+  rules = "bind/xhci.bind"
+  header_output = "xhci-bind.h"
+  bind_output = "xhci-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
+driver_bind_rules("udc-phy-bind") {
+  rules = "bind/udc_phy.bind"
+  header_output = "udc-phy-bind.h"
+  bind_output = "udc-phy-bind.bc"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.usb.phy",
+  ]
+}
+
+driver_bind_rules("spi_1_bind") {
+  rules = "bind/spi_1.bind"
+  header_output = "spi_1_bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("spi_0_bind") {
+  rules = "bind/spi_0.bind"
+  header_output = "spi_0_bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.platform",
+  ]
+}
+
+driver_bind_rules("tdm-i2s-test-codec-bind") {
+  rules = "bind/tdm-i2s-test-codec.bind"
+  header_output = "tdm-i2s-test-codec-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.codec",
+    "//src/devices/bind/fuchsia.gpio",
+    "//src/devices/bind/fuchsia.ti.platform",
+  ]
+}
+
+driver_bind_rules("tdm-i2s-bind") {
+  rules = "bind/tdm-i2s.bind"
+  header_output = "tdm-i2s-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+driver_bind_rules("audio-tas5707-stereo-bind") {
+  rules = "bind/audio-tas5707-stereo.bind"
+  header_output = "audio-tas5707-stereo-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.i2c" ]
+}
+
+driver_bind_rules("buckeye-tee-bind") {
+  rules = "bind/buckeye-tee.bind"
+  header_output = "buckeye-tee-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.rpmb",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
+driver_bind_rules("buckeye-power-regulator-bind") {
+  rules = "bind/buckeye-power-regulator.bind"
+  header_output = "buckeye-power-regulator-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.pwm",
+  ]
+}
+
+driver_bind_rules("buckeye-power-domain-bind") {
+  rules = "bind/buckeye-power-domain.bind"
+  header_output = "buckeye-power-domain-bind.h"
+  deps = [ "//src/devices/bind/fuchsia.power" ]
+}
+
+driver_bind_rules("buckeye-cpu-bind") {
+  rules = "bind/buckeye-cpu.bind"
+  header_output = "buckeye-cpu-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform",
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.amlogic.platform.meson",
+    "//src/devices/bind/fuchsia.clock",
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.power",
+  ]
+}
+
+driver_bind_rules("buckeye-buttons-bind") {
+  rules = "bind/buckeye-buttons.bind"
+  header_output = "buckeye-buttons-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.amlogic.platform.a5",
+    "//src/devices/bind/fuchsia.gpio",
+  ]
+}
+
+fuchsia_driver("buckeye-driver") {
+  output_name = "buckeye"
+  configs += [
+    "//build/config:all_source",
+    "//build/config/fuchsia:enable_zircon_asserts",
+  ]
+  sources = [
+    "buckeye-audio.cc",
+    "buckeye-buttons.cc",
+    "buckeye-clk.cc",
+    "buckeye-cpu.cc",
+    "buckeye-emmc.cc",
+    "buckeye-gpio.cc",
+    "buckeye-i2c.cc",
+    "buckeye-power.cc",
+    "buckeye-pwm.cc",
+    "buckeye-ram.cc",
+    "buckeye-registers.cc",
+    "buckeye-rtc.cc",
+    "buckeye-sdio.cc",
+    "buckeye-spi.cc",
+    "buckeye-sysmem.cc",
+    "buckeye-tee.cc",
+    "buckeye-thermal.cc",
+    "buckeye-usb.cc",
+    "buckeye.cc",
+  ]
+  deps = [
+    ":audio-tas5707-stereo-bind_header",
+    ":buckeye-bind",
+    ":buckeye-buttons-bind_header",
+    ":buckeye-cpu-bind_header",
+    ":buckeye-emmc-bind_header",
+    ":buckeye-power-domain-bind_header",
+    ":buckeye-power-regulator-bind_header",
+    ":buckeye-sdio-bind_header",
+    ":buckeye-tee-bind_header",
+    ":pwm_init_bind_header",
+    ":spi_0_bind_header",
+    ":spi_1_bind_header",
+    ":tdm-i2s-bind_header",
+    ":udc-phy-bind_header",
+    ":usb-phy-bind_header",
+    ":xhci-bind_header",
+    "//sdk/banjo/fuchsia.hardware.clockimpl:fuchsia.hardware.clockimpl_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpio:fuchsia.hardware.gpio_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.gpioimpl:fuchsia.hardware.gpioimpl_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.sdmmc:fuchsia.hardware.sdmmc_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.usb.modeswitch:fuchsia.hardware.usb.modeswitch_banjo_cpp",
+    "//sdk/banjo/fuchsia.sysmem:fuchsia.sysmem_banjo_c",
+    "//sdk/fidl/fuchsia.hardware.platform.bus:fuchsia.hardware.platform.bus_cpp_driver",
+    "//sdk/fidl/fuchsia.hardware.serial:fuchsia.hardware.serial_c",
+    "//sdk/fidl/fuchsia.hardware.thermal:fuchsia.hardware.thermal_c",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//src/devices/bus/lib/platform-bus-composites",
+    "//src/devices/lib/amlogic",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/lib/fidl-metadata",
+    "//src/devices/lib/metadata:llcpp",
+    "//src/devices/lib/mmio",
+    "//src/devices/lib/ti",
+    "//src/devices/usb/lib/usb",
+    "//src/devices/usb/lib/usb:cdc",
+    "//src/devices/usb/lib/usb:peripheral",
+    "//src/lib/ddk",
+    "//src/lib/ddk:ddk-metadata-headers",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/zircon-internal",
+  ]
+
+  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
+  # Consider switching to the C++ bindings. See linked bug for details.
+  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
+
+  if (buckeye_has_codec) {
+    defines = [ "TEST_CODEC" ]
+    deps += [ ":tdm-i2s-test-codec-bind_header" ]
+    deps -= [ ":tdm-i2s-bind_header" ]
+  }
+}
+
+fuchsia_driver_component("buckeye") {
+  component_name = "buckeye"
+  deps = [ ":buckeye-driver" ]
+  info = "buckeye-info.json"
+  colocate = true
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":buckeye-bind_test" ]
+}

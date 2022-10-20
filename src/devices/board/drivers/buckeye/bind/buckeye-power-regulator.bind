@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite power_regulator;
+
+using fuchsia.amlogic.platform;
+using fuchsia.amlogic.platform.a5;
+using fuchsia.platform;
+using fuchsia.pwm;
+
+primary node "pdev" {
+    fuchsia.BIND_PROTOCOL == fuchsia.platform.BIND_PROTOCOL.DEVICE;
+    fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_VID.AMLOGIC;
+    fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_PID.A5;
+    fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.amlogic.platform.BIND_PLATFORM_DEV_DID.POWER;
+    fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID == 0;
+}
+
+node "pwm-f" {
+  fuchsia.BIND_PROTOCOL == fuchsia.pwm.BIND_PROTOCOL.PWM;
+  fuchsia.BIND_PWM_ID == fuchsia.amlogic.platform.a5.BIND_PWM_ID.PWM_F; // VDDCPU_PWM
+}
+

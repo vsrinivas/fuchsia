@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite buckeye_buttons;
+
+using fuchsia.amlogic.platform.a5;
+using fuchsia.gpio;
+
+primary node "mic-mute" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.a5.GPIOD_PIN_ID.PIN_3; // GPIO_MIC_MUTE
+}

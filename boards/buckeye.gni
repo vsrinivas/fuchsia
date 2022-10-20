@@ -1,0 +1,79 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//boards/arm64.gni")
+
+board_name = "buckeye"
+board_description = "speaker platform board"
+
+# TODO(fxbug.dev/101199): fake firmware path to workaround build system bug
+amlogic_decoder_firmware_path = "//fake"
+
+_common_bootfs_deps = [
+  "//src/connectivity/ethernet/drivers/ethernet",
+  "//src/devices/block/drivers/aml-sdmmc",
+  "//src/devices/block/drivers/bootpart",
+  "//src/devices/board/drivers/buckeye",
+  "//src/devices/clock/drivers/amlogic-clk",
+  "//src/devices/cpu/drivers/aml-cpu",
+  "//src/devices/gpio/drivers/aml-axg-gpio",
+  "//src/devices/i2c/drivers/aml-i2c",
+  "//src/devices/power/drivers/aml-meson-power",
+  "//src/devices/pwm/drivers/aml-pwm",
+  "//src/devices/pwm/drivers/aml-pwm-init",
+  "//src/devices/ram/drivers/aml-ram",
+  "//src/devices/registers/drivers/registers",
+  "//src/devices/rtc/drivers/aml-rtc",
+  "//src/devices/spi/drivers/aml-spi",
+  "//src/devices/sysmem/drivers/sysmem",
+  "//src/devices/tee/drivers/optee",
+  "//src/devices/thermal/drivers/aml-thermal-s905d2g",
+  "//src/devices/usb/drivers/aml-usb-crg-phy-v2",
+  "//src/devices/usb/drivers/crg-udc",
+  "//src/media/audio/drivers/aml-g12-pdm",
+  "//src/media/audio/drivers/aml-g12-tdm",
+  "//src/media/audio/drivers/codecs/tas5707",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
+board_package_labels += [ "//src/devices/sysmem/bin/sysmem_connector" ]
+
+firmware_prebuilts_path_suffix = ""
+firmware_prebuilts = [
+  {
+    type = ""
+    path = "//prebuilt/third_party/firmware/vim3/u-boot.bin.unsigned"
+    partition = "bootloader"
+  },
+]
+
+use_gigaboot = false
+use_vbmeta = true
+avb_key = "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_devkey_atx_psk.pem"
+avb_algorithm = "SHA512_RSA4096"
+avb_atx_metadata =
+    "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_dev_atx_metadata.bin"
+
+# partitions for fx flash to flash
+zircon_a_partition = "zircon_a"
+zircon_b_partition = "zircon_b"
+zircon_r_partition = "zircon_r"
+vbmeta_a_partition = "vbmeta_a"
+vbmeta_b_partition = "vbmeta_b"
+vbmeta_r_partition = "vbmeta_r"
+fvm_partition = "fvm"
+active_partition = "a"
+fastboot_product = "buckeye"
+
+# BUCKEYE has 8GB in total, give a safer value(3GB) temporarily
+fvm_emmc_partition_size = 3221225472
+
+# Supports only physical devices.
+board_is_emu = false
+board_is_phys = true

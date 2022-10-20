@@ -98,6 +98,7 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/block/drivers/ums-function:ums-function-driver",
     "//src/devices/board/drivers/astro:astro-driver",
     "//src/devices/board/drivers/av400:av400-driver",
+    "//src/devices/board/drivers/buckeye:buckeye-driver",
     "//src/devices/board/drivers/nelson:nelson-driver",
     "//src/devices/board/drivers/nelson:nelson-module-driver",
     "//src/devices/board/drivers/sherlock:luis-driver",

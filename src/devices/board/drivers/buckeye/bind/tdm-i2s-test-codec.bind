@@ -1,0 +1,21 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite tdm_i2s;
+
+using fuchsia.amlogic.platform.a5;
+using fuchsia.codec;
+using fuchsia.gpio;
+using fuchsia.ti.platform;
+
+primary node "gpio-enable" {
+  fuchsia.BIND_PROTOCOL == fuchsia.gpio.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_GPIO_PIN == fuchsia.amlogic.platform.a5.GPIOC_PIN_ID.PIN_9;  // RESET
+}
+
+node "codec-01" {
+  fuchsia.BIND_PROTOCOL == fuchsia.codec.BIND_PROTOCOL.DEVICE;
+  fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.ti.platform.BIND_PLATFORM_DEV_VID.TI;
+  fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.ti.platform.BIND_PLATFORM_DEV_DID.TAS5707;
+}
