@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::collections;
+
 use anyhow::{anyhow, bail, Context};
 use fidl::endpoints::{self, Proxy};
 use fidl_fuchsia_element as felement;
@@ -10,7 +12,7 @@ use fidl_fuchsia_ui_composition as ui_comp;
 use fidl_fuchsia_ui_views as ui_views;
 use fuchsia_scenic::flatland;
 use futures::{
-    future,
+    future, select,
     stream::{self, FusedStream},
     FutureExt, StreamExt,
 };
@@ -26,26 +28,40 @@ const BG_COLOR: ui_comp::ColorRgba =
 /// manipulation of the graphics on-screen without worrying about all the
 /// low-level details.
 ///
-/// Methods are all synchronous but may return Futures, indicating things that
-/// will happen eventually.
+/// A `View` may have multiple simultaneous windows, but only one window is
+/// "active" at any given time. The active window is attached to the scene and
+/// given focus whenever possible.
+///
+/// Methods are all synchronous but may return static-lifetime Futures,
+/// indicating things that will happen eventually.
 pub struct View {
     flatland: flatland::FlatlandProxy,
     id_generator: flatland::IdGenerator,
-    root_focuser: ui_views::FocuserProxy,
-    viewport_size: fmath::SizeU,
+    desktop_content_id: flatland::ContentId,
     frame_transform_id: flatland::TransformId,
-    window: Option<Window>,
+
+    /// ParentViewportWatcher for the viewport to which the overall window
+    /// manager is attached (not the viewport for any particular window).
+    parent_viewport_watcher: ui_comp::ParentViewportWatcherProxy,
+    root_focuser: ui_views::FocuserProxy,
+    viewport_size: Option<fmath::SizeU>,
+
+    /// All the open windows. At most one of them is `active` at any given time.
+    windows: collections::BTreeMap<WindowId, Window>,
+
+    /// Provides an ordering over all windows. The `back` entry is the active
+    /// one.
+    window_order: collections::VecDeque<WindowId>,
 }
 
 struct Window {
-    window_id: WindowId,
     child_view: Option<ui_views::ViewRef>,
 }
 
 impl View {
     /// Create a new WindowManager, build the UI, and attach to the given
     /// `view_creation_token`.
-    pub async fn new(
+    pub fn new(
         flatland: flatland::FlatlandProxy,
         mut view_creation_token: ui_views::ViewCreationToken,
     ) -> anyhow::Result<Self> {
@@ -66,13 +82,6 @@ impl View {
                 parent_viewport_watcher_request,
             )
             .context("creating root view")?;
-
-        let viewport_size = parent_viewport_watcher
-            .get_layout()
-            .await
-            .context("calling get_layout")?
-            .logical_size
-            .ok_or(anyhow!("get_layout didn't return logical_size"))?;
 
         // Create the "layout", such as it is.
         let mut id_generator = flatland::IdGenerator::new();
@@ -100,46 +109,63 @@ impl View {
             .set_root_transform(&mut root_transform_id.clone())
             .context("connecting root to scene")?;
 
-        let root_content_id = id_generator.next_content_id();
-        flatland.create_filled_rect(&mut root_content_id.clone()).context("creating desktop")?;
+        let desktop_content_id = id_generator.next_content_id();
+        flatland.create_filled_rect(&mut desktop_content_id.clone()).context("creating desktop")?;
         flatland
-            .set_content(&mut root_transform_id.clone(), &mut root_content_id.clone())
-            .context("installing desktop")?;
-        flatland
-            .set_solid_fill(
-                &mut root_content_id.clone(),
-                &mut BG_COLOR.clone(),
-                // TODO(fxbug.dev/110653): Mysteriously, Scenic blows up when
-                // you make a rectangle the size of the viewport, under very
-                // specific circumstances. When that bug is fixed, change this
-                // to just `viewport_size.clone()`.
-                &mut fmath::SizeU {
-                    width: viewport_size.width - 1,
-                    height: viewport_size.height - 1,
-                },
-            )
-            .context("filling desktop")?;
+            .set_content(&mut root_transform_id.clone(), &mut desktop_content_id.clone())
+            .context("attaching desktop")?;
 
         Ok(View {
             flatland,
             id_generator,
-            root_focuser: view_focuser,
-            viewport_size,
+            desktop_content_id,
             frame_transform_id,
-            window: None,
+            parent_viewport_watcher,
+            root_focuser: view_focuser,
+            viewport_size: None,
+            windows: collections::BTreeMap::new(),
+            window_order: collections::VecDeque::new(),
         })
+    }
+
+    /// The set of currently open windows.
+    pub fn window_ids(&self) -> Vec<WindowId> {
+        self.window_order.iter().copied().collect()
+    }
+
+    /// Hanging get for updates to the parent viewport's logical size.
+    pub fn query_viewport_size(
+        &self,
+    ) -> future::LocalBoxFuture<'static, anyhow::Result<fmath::SizeU>> {
+        self.parent_viewport_watcher
+            .get_layout()
+            .map(|response| {
+                response
+                    .context("calling get_layout")?
+                    .logical_size
+                    .ok_or(anyhow!("get_layout didn't return logical_size"))
+            })
+            .boxed_local()
+    }
+
+    /// Updates the viewport's logical size.
+    ///
+    /// Updates do not take effect until `update` is called.
+    pub fn set_viewport_size(&mut self, viewport_size: fmath::SizeU) {
+        self.viewport_size = Some(viewport_size);
     }
 
     /// Create a window for an application.
     ///
-    /// Returns an error if there's already an open window.
+    /// Updates do not take effect until `update` is called. Panics unless an
+    /// initial `viewport_size` has already been specified via
+    /// `set_viewport_size`.
     pub fn create_window(
         &mut self,
         mut viewport_creation_token: ui_views::ViewportCreationToken,
     ) -> anyhow::Result<CreateWindowResponse> {
-        if self.window.is_some() {
-            bail!("Only one window supported!")
-        }
+        let viewport_size =
+            self.viewport_size.expect("called create_window before setting initial viewport_size");
 
         let content_id = self.id_generator.next_content_id();
         let window_id = WindowId(content_id.value);
@@ -153,20 +179,15 @@ impl View {
                 &mut content_id.clone(),
                 &mut viewport_creation_token,
                 flatland::ViewportProperties {
-                    logical_size: Some(fidl_fuchsia_math::SizeU {
-                        width: self.viewport_size.width - 2 * (BORDER_WIDTH as u32),
-                        height: self.viewport_size.height - 2 * (BORDER_WIDTH as u32),
-                    }),
+                    logical_size: Some(Self::window_size(&viewport_size)),
                     ..flatland::ViewportProperties::EMPTY
                 },
                 child_view_watcher_server,
             )
             .context("creating window viewport")?;
-        self.flatland
-            .set_content(&mut self.frame_transform_id.clone(), &mut content_id.clone())
-            .context("attaching window viewport to frame")?;
 
-        self.window = Some(Window { window_id, child_view: None });
+        self.windows.insert(window_id, Window { child_view: None });
+        self.window_order.push_back(window_id);
 
         // Future that resolves when the child actually attaches to the
         // viewport.
@@ -176,7 +197,11 @@ impl View {
         // rendered its first frame).
         let on_child_view_attached = child_view_watcher
             .get_view_ref()
-            .map(|res| res.context("waiting for application's view_ref"))
+            .map(|res| match res {
+                Ok(view_ref) => Ok(Some(view_ref)),
+                Err(err) if err.is_closed() => Ok(None),
+                Err(err) => Err(err).context("waiting for application's view_ref"),
+            })
             .boxed_local();
 
         // Future that resolves when the child view is closed.
@@ -191,33 +216,22 @@ impl View {
         Ok(CreateWindowResponse { window_id, on_child_view_attached, on_child_view_closed })
     }
 
-    /// Associate a child `ViewRef` with the given `window_id`. This must be
-    /// done before you can call functions like `focus_window`.
+    /// Associate a child `ViewRef` with the given `window_id`. Until this is
+    /// called, focus cannot be automatically transferred to the window.
     pub fn register_window(
         &mut self,
         window_id: WindowId,
         child_view: ui_views::ViewRef,
     ) -> anyhow::Result<()> {
-        let window = match self.window.as_mut() {
+        let window = match self.windows.get_mut(&window_id) {
             Some(window) => window,
-            None => bail!(
-                "Tried to register window with ID {}, but there's no active window",
-                window_id.0
-            ),
+            None => bail!("Tried to register window {:?}, but there's no such window", window_id),
         };
-
-        if window.window_id != window_id {
-            bail!(
-                "Tried to register window with ID {}, but the active window has ID {}",
-                window_id.0,
-                window.window_id.0
-            );
-        }
 
         if window.child_view.is_some() {
             bail!(
-                "Tried to associate view with window {}, which already has view {:?}",
-                window_id.0,
+                "Tried to associate view with window {:?}, which already has view {:?}",
+                window_id,
                 &window.child_view
             )
         }
@@ -226,71 +240,12 @@ impl View {
         Ok(())
     }
 
-    /// Delegate focus to the view corresponding to the window with the given
-    /// `window_id`. Requires `register_view` to have already been called.
-    pub fn focus_window(&mut self, window_id: WindowId) -> anyhow::Result<FocusWindowResponse> {
-        let window = match self.window.as_mut() {
-            Some(window) => window,
-            None => bail!(
-                "Tried to give focus to window with ID {}, but there's no active window",
-                window_id.0
-            ),
-        };
-
-        if window.window_id != window_id {
-            bail!(
-                "Tried to give focus to window with ID {}, but the active window has ID {}",
-                window_id.0,
-                window.window_id.0
-            );
-        }
-
-        let child_view = match window.child_view.as_ref() {
-            Some(child_view) => child_view,
-            None => bail!(
-                "Tried to give focus to window with ID {}, but it hasn't been registered",
-                window_id.0
-            ),
-        };
-
-        let set_auto_focus_result =
-            self.root_focuser.set_auto_focus(ui_views::FocuserSetAutoFocusRequest {
-                view_ref: Some(fuchsia_scenic::duplicate_view_ref(child_view)?),
-                ..ui_views::FocuserSetAutoFocusRequest::EMPTY
-            });
-
-        let on_completed = async move {
-            set_auto_focus_result
-                .await
-                .context("setting auto_focus")?
-                .map_err(|err| anyhow!("auto focus error: {:?}", err))
-        }
-        .boxed_local();
-
-        Ok(FocusWindowResponse { on_completed })
-    }
-
     /// Dismiss the window with the given `window_id`.
     pub fn dismiss_window(&mut self, window_id: WindowId) -> anyhow::Result<DismissWindowResponse> {
-        let window = match self.window.as_ref() {
-            Some(window) => window,
-            None => bail!(
-                "Tried to dismiss window with ID {}, but there's no active window",
-                window_id.0
-            ),
+        if self.windows.remove(&window_id).is_none() {
+            bail!("Tried to dismiss window {:?}, but there's no such window", window_id)
         };
-
-        if window.window_id != window_id {
-            bail!(
-                "Tried to dismiss window with ID {}, but the active window has ID {}",
-                window_id.0,
-                window.window_id.0
-            );
-        }
-
-        self.flatland
-            .set_content(&mut self.frame_transform_id.clone(), &mut ui_comp::ContentId { value: 0 })
-            .context("detaching window viewport from frame")?;
+        self.window_order.retain(|w| w != &window_id);
 
         let release_viewport_result =
             self.flatland.release_viewport(&mut window_id.into_content_id());
@@ -302,13 +257,135 @@ impl View {
         }
         .boxed_local();
 
-        self.window = None;
         Ok(DismissWindowResponse { on_completed })
     }
 
-    pub fn active_window_id(&self) -> Option<WindowId> {
-        let window = self.window.as_ref()?;
-        Some(window.window_id)
+    /// Updates the flatland view hierarchy to match the View's model. Other
+    /// functions in this class generally only change the internal model; use
+    /// this to publish those changes to flatland.
+    ///
+    /// Note: this does not actually  call `flatland::present`, so generally
+    /// you'll want to call other functions to update the View's model, then
+    /// `update()` to push the changes to flatland, then `present()` to actually
+    /// show those changes on the screen.
+    ///
+    /// Panics unless an initial `viewport_size` has already been specified via
+    /// `set_viewport_size`.
+    pub fn update(&self) -> anyhow::Result<UpdateResponse> {
+        let viewport_size =
+            self.viewport_size.expect("called update before setting initial viewport_size");
+
+        self.flatland
+            .set_solid_fill(
+                &mut self.desktop_content_id.clone(),
+                &mut BG_COLOR.clone(),
+                &mut Self::desktop_size(&viewport_size),
+            )
+            .context("filling desktop")?;
+
+        match self.window_order.back() {
+            None => {
+                // There aren't any windows - just draw the desktop.
+                self.flatland
+                    .set_content(
+                        &mut self.frame_transform_id.clone(),
+                        &mut ui_comp::ContentId { value: 0 },
+                    )
+                    .context("detaching window viewport from frame")?;
+
+                let set_auto_focus_result =
+                    self.root_focuser.set_auto_focus(ui_views::FocuserSetAutoFocusRequest::EMPTY);
+
+                let on_completed = async move {
+                    set_auto_focus_result
+                        .await
+                        .context("setting auto_focus")?
+                        .map_err(|err| anyhow!("auto focus error: {:?}", err))
+                }
+                .boxed_local();
+
+                Ok(UpdateResponse { on_completed })
+            }
+            Some(active_window_id) => {
+                // There are windows - draw the active one.
+                let active_window = self
+                    .windows
+                    .get(active_window_id)
+                    .expect("windows and window_order fell out of sync");
+
+                // Only update the the viewport properties (notably the
+                // logical_size, which may have changed since the last update)
+                // if the active window actually has a child view. If the child
+                // view isn't present, scenic currently crashes when you try to
+                // update the viewport.
+                //
+                // TODO(fxbug.dev/112339): Update the viewport unconditionally,
+                // because this logic is a bit arbitrary.
+                if active_window.child_view.is_some() {
+                    self.flatland
+                        .set_viewport_properties(
+                            &mut active_window_id.into_content_id(),
+                            flatland::ViewportProperties {
+                                logical_size: Some(Self::window_size(&viewport_size)),
+                                ..flatland::ViewportProperties::EMPTY
+                            },
+                        )
+                        .context("creating window viewport")?;
+                }
+
+                self.flatland
+                    .set_content(
+                        &mut self.frame_transform_id.clone(),
+                        &mut active_window_id.into_content_id(),
+                    )
+                    .context("attaching window viewport to frame")?;
+
+                let set_auto_focus_result =
+                    self.root_focuser.set_auto_focus(ui_views::FocuserSetAutoFocusRequest {
+                        view_ref: match active_window.child_view.as_ref() {
+                            None => None,
+                            Some(child_view) => {
+                                Some(fuchsia_scenic::duplicate_view_ref(child_view)?)
+                            }
+                        },
+                        ..ui_views::FocuserSetAutoFocusRequest::EMPTY
+                    });
+
+                let on_completed = async move {
+                    set_auto_focus_result
+                        .await
+                        .context("setting auto_focus")?
+                        .map_err(|err| anyhow!("auto focus error: {:?}", err))
+                }
+                .boxed_local();
+
+                Ok(UpdateResponse { on_completed })
+            }
+        }
+    }
+
+    /// Calculates the size of the desktop background, based on the given
+    /// viewport_size.
+    fn desktop_size(viewport_size: &fmath::SizeU) -> fmath::SizeU {
+        // TODO(fxbug.dev/110653): Mysteriously, Scenic blows up when
+        // you make a rectangle the size of the viewport, under very
+        // specific circumstances. When that bug is fixed, change this
+        // to just `viewport_size.clone()`.
+        fmath::SizeU {
+            width: viewport_size.width.saturating_sub(1).clamp(1, u32::MAX),
+            height: viewport_size.height.saturating_sub(1).clamp(1, u32::MAX),
+        }
+    }
+
+    /// Calculates the size of the window, based on the given viewport_size.
+    fn window_size(viewport_size: &fmath::SizeU) -> fmath::SizeU {
+        fidl_fuchsia_math::SizeU {
+            width: viewport_size.width.saturating_sub(2 * (BORDER_WIDTH as u32)).clamp(1, u32::MAX),
+            height: viewport_size
+                .height
+                .saturating_sub(2 * (BORDER_WIDTH as u32))
+                .clamp(1, u32::MAX),
+        }
     }
 }
 
@@ -322,6 +399,7 @@ impl WindowId {
 }
 
 /// Response for the `create_window` call.
+#[must_use]
 pub struct CreateWindowResponse {
     /// ID for the window that was created.
     pub window_id: WindowId,
@@ -329,21 +407,27 @@ pub struct CreateWindowResponse {
     /// A future that resolves when a child view has actually been attached to
     /// the window. This `ViewRef` should then be passed back into
     /// `register_window`, so we can do things like give it focus.
-    pub on_child_view_attached: future::LocalBoxFuture<'static, anyhow::Result<ui_views::ViewRef>>,
+    ///
+    /// If the channel closes without providing a ViewRef, this resolves to
+    /// None.
+    pub on_child_view_attached:
+        future::LocalBoxFuture<'static, anyhow::Result<Option<ui_views::ViewRef>>>,
 
     /// A future that resolves when the `ChildViewWatcher` associated with the
     /// window closes.
     pub on_child_view_closed: future::LocalBoxFuture<'static, anyhow::Result<()>>,
 }
 
-/// Response for the `focus_window` call.
-pub struct FocusWindowResponse {
+/// Response for the `dismiss_window` call.
+#[must_use]
+pub struct DismissWindowResponse {
     /// A Future indicating the success/failure of the call.
     pub on_completed: future::LocalBoxFuture<'static, anyhow::Result<()>>,
 }
 
-/// Response for the `dismiss_window` call.
-pub struct DismissWindowResponse {
+/// Response for the `update` call.
+#[must_use]
+pub struct UpdateResponse {
     /// A Future indicating the success/failure of the call.
     pub on_completed: future::LocalBoxFuture<'static, anyhow::Result<()>>,
 }
@@ -363,8 +447,15 @@ pub struct Manager {
 
 impl Manager {
     /// Create a new `Manager` that manipulates the given `View`.
-    pub fn new(view: View) -> Self {
-        Self { view, background_tasks: stream::FuturesUnordered::new() }
+    pub async fn new(mut view: View) -> anyhow::Result<Self> {
+        let viewport_size = view.query_viewport_size().await.context("getting viewport size")?;
+
+        view.set_viewport_size(viewport_size);
+
+        let update_response = view.update()?;
+        update_response.on_completed.await?;
+
+        Ok(Self { view, background_tasks: stream::FuturesUnordered::new() })
     }
 
     /// Handle a `GraphicalPresenter::PresentView` request.
@@ -381,71 +472,80 @@ impl Manager {
             .viewport_creation_token
             .ok_or(anyhow!("view_spec didn't include viewport_creation_token"))?;
 
-        let view_controller_server = view_controller_request
-            .ok_or(anyhow!("request didn't include view_controller_request"))?;
-
-        // Dismiss the existing window, if any.
-        if let Some(window_id) = self.view.active_window_id() {
-            let dismiss_window_response = self.view.dismiss_window(window_id)?;
-            self.background_result(dismiss_window_response.on_completed);
-        }
-
+        let mut view_controller_request_stream = view_controller_request
+            .ok_or(anyhow!("request didn't include view_controller_request"))?
+            .into_stream()?;
         let CreateWindowResponse { window_id, on_child_view_attached, on_child_view_closed } =
             self.view.create_window(viewport_creation_token)?;
 
         // Register the child view once it is attached to the window.
         self.and_then_background_task(
             on_child_view_attached,
-            move |this: &mut Manager, child_view_ref: ui_views::ViewRef| {
-                if this.view.active_window_id() != Some(window_id) {
+            move |this: &mut Manager, child_view_ref: Option<ui_views::ViewRef>| {
+                // The window might already be closed, and that's okay.
+                if !this.view.window_ids().contains(&window_id) {
                     tracing::warn!(
-                        "Trying to register child view for {:?}, but the active window is {:?}",
-                        window_id,
-                        this.view.active_window_id()
+                        "Tried to attach view to window {:?}, which doesn't exist anymore",
+                        window_id
                     );
                     return Ok(());
                 }
 
-                this.view.register_window(window_id, child_view_ref)?;
-                let response = this.view.focus_window(window_id)?;
+                let child_view_ref = match child_view_ref {
+                    None => {
+                        tracing::warn!(
+                            "channel closed when awaiting view_ref for window {:?}",
+                            window_id
+                        );
+                        return Ok(());
+                    }
+                    Some(child_view_ref) => child_view_ref,
+                };
 
-                this.background_result(response.on_completed);
+                this.view.register_window(window_id, child_view_ref)?;
+
+                let update_response = this.view.update()?;
+                this.background_result(update_response.on_completed);
+
                 Ok(())
             },
         );
 
-        // A Future that resolves with `true` when the `ViewController` client
-        // calls `ViewController::Dismiss`, or `false` if the channel closes
-        // without a call to `Dismiss`. Logs any errors encountered along the
-        // way.
+        // A Future that resolves when the window should be dismissed. That is
+        // to say, when one of two things happens:
         //
-        // We observe this, and call `View::dismiss_window` when requested.
-        let was_dismissed = view_controller_server.into_stream()?.any(|request| match request {
-            Ok(felement::ViewControllerRequest::Dismiss { .. }) => futures::future::ready(true),
-            Err(err) => {
-                tracing::warn!("while reading ViewController request: {}", err);
-                futures::future::ready(false)
+        // 1. the `ViewController` client calls `ViewController::Dismiss`, or
+        // 2. the child view is closed.
+        let on_dismissed = async move {
+            let mut on_child_view_closed = on_child_view_closed.fuse();
+            loop {
+                select! {
+                    req = view_controller_request_stream.select_next_some() => {
+                        match req {
+                            Ok(felement::ViewControllerRequest::Dismiss { .. }) => return,
+                            Err(err) => {
+                                tracing::warn!("while reading ViewController request: {}", err);
+                                continue
+                            }
+                        }
+                    }
+                    _ = on_child_view_closed => return,
+                }
             }
-        });
+        };
 
-        self.background_task(was_dismissed, move |this: &mut Manager, was_dismissed| {
-            if was_dismissed && this.view.active_window_id() == Some(window_id) {
-                tracing::info!("Dismiss for window {:?} requested", window_id);
-                let dismiss_window_response = this.view.dismiss_window(window_id)?;
-                this.background_result(dismiss_window_response.on_completed);
-            }
+        self.background_task(on_dismissed, move |this: &mut Manager, ()| {
+            let dismiss_response = this.view.dismiss_window(window_id)?;
+            this.background_result(dismiss_response.on_completed);
+
+            let update_response = this.view.update()?;
+            this.background_result(update_response.on_completed);
+
             Ok(())
         });
 
-        // We also dismiss and clean-up the window if the child view is closed.
-        self.and_then_background_task(on_child_view_closed, move |this: &mut Manager, ()| {
-            if this.view.active_window_id() != Some(window_id) {
-                return Ok(());
-            }
-            let dismiss_window_response = this.view.dismiss_window(window_id)?;
-            this.background_result(dismiss_window_response.on_completed);
-            Ok(())
-        });
+        let update_response = self.view.update()?;
+        self.background_result(update_response.on_completed);
 
         Ok(())
     }
@@ -548,7 +648,9 @@ mod tests {
     use fidl_fuchsia_ui_test_scene as ui_test_scene;
     use fidl_fuchsia_ui_views as ui_views;
     use fuchsia_async as fasync;
-    use fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route};
+    use fuchsia_component_test::{
+        Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
+    };
     use fuchsia_scenic::flatland;
     use futures::{select, StreamExt};
 
@@ -566,8 +668,7 @@ mod tests {
         }
     }
 
-    #[fuchsia::test]
-    async fn test_wm_create_and_dismiss() -> Result<(), Error> {
+    async fn build_realm() -> anyhow::Result<RealmInstance> {
         let builder = RealmBuilder::new().await?;
 
         let test_ui_stack = builder
@@ -597,96 +698,128 @@ mod tests {
             .await?;
 
         let realm = builder.build().await?;
-        let flatland =
-            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?;
-        let scene_controller =
-            realm.root.connect_to_protocol_at_exposed_dir::<ui_test_scene::ControllerMarker>()?;
+        Ok(realm)
+    }
 
+    fn start_server_task(
+        realm: &RealmInstance,
+    ) -> anyhow::Result<(fasync::Task<anyhow::Result<()>>, felement::GraphicalPresenterProxy)> {
         let (graphical_presenter_proxy, graphical_presenter_request_stream) =
             endpoints::create_proxy_and_stream::<felement::GraphicalPresenterMarker>()?;
 
-        // A test server that loops on every frame.
-        async fn test_server(
-            flatland: flatland::FlatlandProxy,
-            scene_controller: ui_test_scene::ControllerProxy,
-            mut graphical_presenter_request_stream: felement::GraphicalPresenterRequestStream,
-        ) {
-            let (view_provider, view_provider_request_stream) =
-                endpoints::create_request_stream::<ui_app::ViewProviderMarker>()
-                    .expect("failed to create ViewProvider request stream");
+        let server_task = fasync::Task::local(test_server(
+            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+            realm.root.connect_to_protocol_at_exposed_dir::<ui_test_scene::ControllerMarker>()?,
+            graphical_presenter_request_stream,
+        ));
 
-            fasync::Task::spawn(async move {
-                let _view_ref_koid = scene_controller
-                    .attach_client_view(ui_test_scene::ControllerAttachClientViewRequest {
-                        view_provider: Some(view_provider),
-                        ..ui_test_scene::ControllerAttachClientViewRequest::EMPTY
-                    })
-                    .await
-                    .expect("failed to attach root client view");
-            })
-            .detach();
+        Ok((server_task, graphical_presenter_proxy))
+    }
 
-            // Set up the window manager.
-            let view_creation_token = view_provider_request_stream
-                .map(|request| {
-                    if let Ok(ui_app::ViewProviderRequest::CreateView2 { args, .. }) = request {
-                        args.view_creation_token.unwrap()
-                    } else {
-                        panic!("Unexpected request: {:?}", request)
-                    }
+    // A test server that loops on every frame.
+    async fn test_server(
+        flatland: flatland::FlatlandProxy,
+        scene_controller: ui_test_scene::ControllerProxy,
+        mut graphical_presenter_request_stream: felement::GraphicalPresenterRequestStream,
+    ) -> anyhow::Result<()> {
+        let (view_provider, view_provider_request_stream) =
+            endpoints::create_request_stream::<ui_app::ViewProviderMarker>()?;
+
+        let client_view_attached = fasync::Task::spawn(async move {
+            let _view_ref_koid = scene_controller
+                .attach_client_view(ui_test_scene::ControllerAttachClientViewRequest {
+                    view_provider: Some(view_provider),
+                    ..ui_test_scene::ControllerAttachClientViewRequest::EMPTY
                 })
-                .into_future()
                 .await
-                .0
-                .unwrap();
+                .expect("failed to attach root client view");
+        });
 
-            let mut server =
-                Manager::new(View::new(flatland.clone(), view_creation_token).await.unwrap());
-            let mut flatland_events = flatland.take_event_stream();
+        // Set up the window manager.
+        let view_creation_token = view_provider_request_stream
+            .map(|request| {
+                if let Ok(ui_app::ViewProviderRequest::CreateView2 { args, .. }) = request {
+                    args.view_creation_token.unwrap()
+                } else {
+                    panic!("Unexpected request: {:?}", request)
+                }
+            })
+            .into_future()
+            .await
+            .0
+            .unwrap();
 
-            loop {
-                flatland.present(flatland::PresentArgs::EMPTY).unwrap();
+        let mut server = Manager::new(View::new(flatland.clone(), view_creation_token)?).await?;
+        let mut flatland_events = flatland.take_event_stream();
 
-                await_next_on_frame_begin(&mut flatland_events).await;
-                select! {
-                    req = graphical_presenter_request_stream.next() => {
-                        if req.is_none() {
-                            return
-                        }
+        flatland.present(flatland::PresentArgs::EMPTY)?;
+        await_next_on_frame_begin(&mut flatland_events).await;
 
-                        let felement::GraphicalPresenterRequest::PresentView {
-                            view_spec,
-                            annotation_controller,
-                            view_controller_request,
-                            responder,
-                        } = req.unwrap().unwrap();
-                        server.present_view(
-                            view_spec,
-                            annotation_controller,
-                            view_controller_request
-                        )
-                        .unwrap();
-                        responder.send(&mut Ok(())).unwrap();
+        client_view_attached.await;
+
+        loop {
+            flatland.present(flatland::PresentArgs::EMPTY)?;
+            await_next_on_frame_begin(&mut flatland_events).await;
+
+            select! {
+                req = graphical_presenter_request_stream.next() => {
+                    if req.is_none() {
+                        break
                     }
-                    bg = server.select_background_task() => {
-                        bg.unwrap();
-                    }
+
+                    let felement::GraphicalPresenterRequest::PresentView {
+                        view_spec,
+                        annotation_controller,
+                        view_controller_request,
+                        responder,
+                    } = req.unwrap()?;
+                    server.present_view(
+                        view_spec,
+                        annotation_controller,
+                        view_controller_request
+                    )?;
+                    responder.send(&mut Ok(()))?;
+                }
+                bg = server.select_background_task() => {
+                    bg?;
                 }
             }
         }
 
-        async fn test_client(
-            flatland2: flatland::FlatlandProxy,
-            graphical_presenter_proxy: felement::GraphicalPresenterProxy,
-        ) {
-            // Create a window.
+        tracing::info!("finishing background tasks...");
+        loop {
+            flatland.present(flatland::PresentArgs::EMPTY)?;
+            await_next_on_frame_begin(&mut flatland_events).await;
+
+            select! {
+                bg = server.select_background_task() => {
+                    bg?;
+                }
+                complete => return Ok(())
+            }
+        }
+    }
+
+    struct TestWindow {
+        _flatland: flatland::FlatlandProxy,
+        _flatland_events: flatland::FlatlandEventStream,
+        view_controller: felement::ViewControllerProxy,
+        parent_viewport_watcher: flatland::ParentViewportWatcherProxy,
+        view_ref_focused: ui_views::ViewRefFocusedProxy,
+    }
+
+    impl TestWindow {
+        async fn create(
+            flatland: flatland::FlatlandProxy,
+            graphical_presenter_proxy: &felement::GraphicalPresenterProxy,
+        ) -> anyhow::Result<Self> {
             let flatland::ViewCreationTokenPair {
                 mut view_creation_token,
                 viewport_creation_token,
-            } = flatland::ViewCreationTokenPair::new().unwrap();
+            } = flatland::ViewCreationTokenPair::new()?;
 
-            let (view_controller_client, view_controller_server) =
-                endpoints::create_proxy::<felement::ViewControllerMarker>().unwrap();
+            let (view_controller, view_controller_server) =
+                endpoints::create_proxy::<felement::ViewControllerMarker>()?;
 
             let view_spec = felement::ViewSpec {
                 viewport_creation_token: Some(viewport_creation_token),
@@ -699,58 +832,257 @@ mod tests {
                 .unwrap()
                 .unwrap();
 
-            let (parent_viewport_watcher, parent_viewport_watcher_request) =
-                endpoints::create_proxy::<flatland::ParentViewportWatcherMarker>().unwrap();
+            let (parent_viewport_watcher, parent_viewport_watcher_server) =
+                endpoints::create_proxy::<flatland::ParentViewportWatcherMarker>()?;
 
-            let (view_ref_focused_proxy, view_ref_focused_server) =
-                endpoints::create_proxy::<fidl_fuchsia_ui_views::ViewRefFocusedMarker>().unwrap();
+            let (view_ref_focused, view_ref_focused_server) =
+                endpoints::create_proxy::<fidl_fuchsia_ui_views::ViewRefFocusedMarker>()?;
 
-            flatland2
-                .create_view2(
-                    &mut view_creation_token,
-                    &mut ui_views::ViewIdentityOnCreation::from(
-                        fuchsia_scenic::ViewRefPair::new().unwrap(),
-                    ),
-                    flatland::ViewBoundProtocols {
-                        view_ref_focused: Some(view_ref_focused_server),
-                        ..flatland::ViewBoundProtocols::EMPTY
-                    },
-                    parent_viewport_watcher_request,
-                )
-                .unwrap();
+            flatland.create_view2(
+                &mut view_creation_token,
+                &mut ui_views::ViewIdentityOnCreation::from(fuchsia_scenic::ViewRefPair::new()?),
+                flatland::ViewBoundProtocols {
+                    view_ref_focused: Some(view_ref_focused_server),
+                    ..flatland::ViewBoundProtocols::EMPTY
+                },
+                parent_viewport_watcher_server,
+            )?;
 
-            let mut events = flatland2.take_event_stream();
-            flatland2.present(flatland::PresentArgs::EMPTY).unwrap();
-            await_next_on_frame_begin(&mut events).await;
+            let mut flatland_events = flatland.take_event_stream();
 
-            // Wait for the child to be attached.
-            while parent_viewport_watcher.get_status().await.unwrap()
-                != ui_comp::ParentViewportStatus::ConnectedToDisplay
-            {}
+            flatland.present(flatland::PresentArgs::EMPTY)?;
+            await_next_on_frame_begin(&mut flatland_events).await;
 
-            // Wait for the child to get focus.
-            while view_ref_focused_proxy.watch().await.unwrap().focused != Some(true) {}
-
-            // Dismiss the view, and wait for the parent_viewport_watcher to close.
-            view_controller_client.dismiss().unwrap();
-            parent_viewport_watcher.on_closed().await.unwrap();
+            Ok(Self {
+                _flatland: flatland,
+                _flatland_events: flatland_events,
+                view_controller,
+                parent_viewport_watcher,
+                view_ref_focused,
+            })
         }
 
-        let server_task = fasync::Task::local(test_server(
-            flatland,
-            scene_controller,
-            graphical_presenter_request_stream,
-        ));
+        async fn until_status_is(&self, status: ui_comp::ParentViewportStatus) {
+            while self.parent_viewport_watcher.get_status().await.unwrap() != status {}
+        }
 
-        let client_task = fasync::Task::local(test_client(
+        async fn until_focused_is(&self, focused: bool) {
+            while self.view_ref_focused.watch().await.unwrap().focused.unwrap() != focused {}
+        }
+    }
+
+    #[fuchsia::test]
+    async fn no_windows() -> Result<(), Error> {
+        let realm = build_realm().await?;
+
+        let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+        // Delete the `GraphicalPresenterProxy`, which tells the server to shut
+        // down.
+        std::mem::drop(graphical_presenter_proxy);
+        server_task.await?;
+        realm.destroy().await?;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn create_and_dismiss() -> Result<(), Error> {
+        let realm = build_realm().await?;
+        let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+        // Create a window.
+        let window = TestWindow::create(
             realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
-            graphical_presenter_proxy,
-        ));
+            &graphical_presenter_proxy,
+        )
+        .await?;
 
-        // client_task completing deletes the `GraphicalPresenterProxy`, which
-        // tells the server to shut down.
-        client_task.await;
-        server_task.await;
+        // Wait for the child to be attached and focused.
+        window.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+        window.until_focused_is(true).await;
+
+        // Dismiss the view, and wait for the parent_viewport_watcher to close.
+        window.view_controller.dismiss()?;
+        window.parent_viewport_watcher.on_closed().await?;
+
+        // Delete the `GraphicalPresenterProxy`, which tells the server to shut
+        // down.
+        std::mem::drop(graphical_presenter_proxy);
+        server_task.await?;
+        realm.destroy().await?;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_active_window_stack() -> Result<(), Error> {
+        let realm = build_realm().await?;
+        let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+        // Create a window.
+        let window1 = TestWindow::create(
+            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+            &graphical_presenter_proxy,
+        )
+        .await?;
+
+        // Wait for the child to be attached and focused.
+        window1.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+        window1.until_focused_is(true).await;
+
+        // Create a second window. It should get focus, etc.
+        let window2 = TestWindow::create(
+            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+            &graphical_presenter_proxy,
+        )
+        .await?;
+        window2.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+        window2.until_focused_is(true).await;
+
+        // Check that window1 has lost focus and is detached.
+        window1.until_status_is(ui_comp::ParentViewportStatus::DisconnectedFromDisplay).await;
+        window1.until_focused_is(false).await;
+
+        // Dismiss window2.
+        window2.view_controller.dismiss()?;
+        window2.parent_viewport_watcher.on_closed().await?;
+
+        // window1 should reattach and gain focus.
+        window1.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+        window1.until_focused_is(true).await;
+
+        // Dismiss the view, and wait for the parent_viewport_watcher to close.
+        window1.view_controller.dismiss()?;
+        window1.parent_viewport_watcher.on_closed().await?;
+
+        // Delete the `GraphicalPresenterProxy`, which tells the server to shut
+        // down.
+        std::mem::drop(graphical_presenter_proxy);
+        server_task.await?;
+        realm.destroy().await?;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn test_dismiss_background_window() -> Result<(), Error> {
+        let realm = build_realm().await?;
+        let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+        // Create a window.
+        let window1 = TestWindow::create(
+            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+            &graphical_presenter_proxy,
+        )
+        .await?;
+
+        // Wait for the child to be attached and focused.
+        window1.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+        window1.until_focused_is(true).await;
+
+        // Create a second window.
+        let window2 = TestWindow::create(
+            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?,
+            &graphical_presenter_proxy,
+        )
+        .await?;
+        window2.until_status_is(ui_comp::ParentViewportStatus::ConnectedToDisplay).await;
+        window2.until_focused_is(true).await;
+
+        // Dismiss window1. We just want to make sure nothing crashes.
+        window1.view_controller.dismiss()?;
+        window1.parent_viewport_watcher.on_closed().await?;
+
+        // Dismiss window2.
+        window2.view_controller.dismiss()?;
+        window2.parent_viewport_watcher.on_closed().await?;
+
+        // Delete the `GraphicalPresenterProxy`, which tells the server to shut
+        // down.
+        std::mem::drop(graphical_presenter_proxy);
+        server_task.await?;
+        realm.destroy().await?;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn immediately_close() -> Result<(), Error> {
+        let realm = build_realm().await?;
+        let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+        // Call present_view with a viewport_creation_token whose
+        // view_creation_token is already closed.
+        let flatland::ViewCreationTokenPair { view_creation_token: _, viewport_creation_token } =
+            flatland::ViewCreationTokenPair::new()?;
+
+        let (_view_controller, view_controller_server) =
+            endpoints::create_proxy::<felement::ViewControllerMarker>()?;
+
+        let () = graphical_presenter_proxy
+            .present_view(
+                felement::ViewSpec {
+                    viewport_creation_token: Some(viewport_creation_token),
+                    ..felement::ViewSpec::EMPTY
+                },
+                None,
+                Some(view_controller_server),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        std::mem::drop(graphical_presenter_proxy);
+
+        server_task.await?;
+        realm.destroy().await?;
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn dismiss_before_attach() -> Result<(), Error> {
+        let realm = build_realm().await?;
+        let (server_task, graphical_presenter_proxy) = start_server_task(&realm)?;
+
+        let flatland::ViewCreationTokenPair { mut view_creation_token, viewport_creation_token } =
+            flatland::ViewCreationTokenPair::new()?;
+
+        let (view_controller, view_controller_server) =
+            endpoints::create_proxy::<felement::ViewControllerMarker>()?;
+
+        let () = graphical_presenter_proxy
+            .present_view(
+                felement::ViewSpec {
+                    viewport_creation_token: Some(viewport_creation_token),
+                    ..felement::ViewSpec::EMPTY
+                },
+                None,
+                Some(view_controller_server),
+            )
+            .await
+            .unwrap()
+            .unwrap();
+
+        view_controller.dismiss()?;
+
+        let (_parent_viewport_watcher, parent_viewport_watcher_request) =
+            endpoints::create_proxy::<flatland::ParentViewportWatcherMarker>()?;
+
+        let (_view_ref_focused, view_ref_focused_server) =
+            endpoints::create_proxy::<fidl_fuchsia_ui_views::ViewRefFocusedMarker>()?;
+
+        let flatland =
+            realm.root.connect_to_protocol_at_exposed_dir::<flatland::FlatlandMarker>()?;
+        flatland.create_view2(
+            &mut view_creation_token,
+            &mut ui_views::ViewIdentityOnCreation::from(fuchsia_scenic::ViewRefPair::new()?),
+            flatland::ViewBoundProtocols {
+                view_ref_focused: Some(view_ref_focused_server),
+                ..flatland::ViewBoundProtocols::EMPTY
+            },
+            parent_viewport_watcher_request,
+        )?;
+
+        std::mem::drop(graphical_presenter_proxy);
+
+        server_task.await?;
         realm.destroy().await?;
         Ok(())
     }

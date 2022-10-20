@@ -120,7 +120,8 @@ async fn main() -> anyhow::Result<()> {
 
     let mut graphical_presenter_requests = stream::SelectAll::new();
 
-    let mut manager = wm::Manager::new(wm::View::new(flatland.clone(), view_creation_token).await?);
+    let mut manager =
+        wm::Manager::new(wm::View::new(flatland.clone(), view_creation_token)?).await?;
     flatland.present(flatland::PresentArgs::EMPTY)?;
 
     let mut presentation_budget = 0;
