@@ -2232,7 +2232,7 @@ template("variant_target") {
   # IMPORTANT: The computations below are duplicated in several other
   # files. Please keep them in sync, see:
   #   //build/dist/packaged_shared_library.gni
-  #   //build/fuzzing/v1/fuzzer_package.gni
+  #   //build/fuzzing/fuzzer_package.gni
   #   //zircon/system/ulib/c/libc_toolchain.gni
   target_variant = false
   excluded_toolchain = false
