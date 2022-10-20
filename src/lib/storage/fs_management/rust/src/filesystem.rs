@@ -14,7 +14,7 @@ use {
     fdio::SpawnAction,
     fidl::{
         encoding::Decodable,
-        endpoints::{create_endpoints, create_proxy, ClientEnd, ServerEnd},
+        endpoints::{create_endpoints, create_proxy, ClientEnd, Proxy, ServerEnd},
     },
     fidl_fuchsia_component::{self as fcomponent, RealmMarker},
     fidl_fuchsia_component_decl as fdecl,
@@ -519,15 +519,14 @@ impl ServingSingleVolumeFilesystem {
 
 impl Drop for ServingSingleVolumeFilesystem {
     fn drop(&mut self) {
-        if let Some(process) = self.process.take() {
-            let _ = process.kill();
-        } else {
-            // For components, make a best effort attempt to shut down to the filesystem.
-            if let Ok(proxy) =
-                connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.exposed_dir)
-            {
-                let _ = proxy.shutdown();
-            }
+        // Make a best effort attempt to shut down the filesystem via the admin service.
+        if let Ok(proxy) =
+            connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.exposed_dir)
+        {
+            // Nothing to do if this returns an error.
+            let _ =
+                fidl_fuchsia_fs::AdminSynchronousProxy::new(proxy.into_channel().unwrap().into())
+                    .shutdown(zx::Time::INFINITE);
         }
     }
 }
@@ -688,11 +687,14 @@ impl ServingMultiVolumeFilesystem {
 
 impl Drop for ServingMultiVolumeFilesystem {
     fn drop(&mut self) {
-        // Make a best effort attempt to shut down to the filesystem.
+        // Make a best effort attempt to shut down the filesystem via the admin service.
         if let Ok(proxy) =
             connect_to_protocol_at_dir_root::<fidl_fuchsia_fs::AdminMarker>(&self.exposed_dir)
         {
-            let _ = proxy.shutdown();
+            // Nothing to do if this returns an error.
+            let _ =
+                fidl_fuchsia_fs::AdminSynchronousProxy::new(proxy.into_channel().unwrap().into())
+                    .shutdown(zx::Time::INFINITE);
         }
     }
 }
