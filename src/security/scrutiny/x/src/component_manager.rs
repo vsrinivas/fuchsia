@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use super::api::ComponentManager as ComponentManagerApi;
-use super::system::ComponentManagerConfiguration;
 use super::component_capability::ComponentCapability;
+use super::system::ComponentManagerConfiguration;
 use std::iter;
 
 /// TODO(fxbug.dev/111251): Implement for production System API.

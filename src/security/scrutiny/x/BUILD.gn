@@ -13,7 +13,20 @@ if (is_host) {
 
     sources = [
       "src/api.rs",
+      "src/blob.rs",
+      "src/component.rs",
+      "src/component_capability.rs",
+      "src/component_instance.rs",
+      "src/component_instance_capability.rs",
+      "src/component_manager.rs",
+      "src/component_resolver.rs",
+      "src/data_source.rs",
+      "src/hash.rs",
       "src/lib.rs",
+      "src/package.rs",
+      "src/package_resolver.rs",
+      "src/scrutiny.rs",
+      "src/system.rs",
     ]
   }
 }
