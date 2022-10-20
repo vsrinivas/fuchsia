@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/testing/environments.gni")
+
+# Defines a component that runs a H.264 conformance test using local files. The output of
+# the H.264 stream will be decoded into a YUV 4:2:0 stream. Once the decoding is complete
+# the outputted stream's md5 hash will be checked against the truth located in the
+# md5_file parameter.
+#
+# Parameters
+#
+#   h264_file (required)
+#     The path to the raw .h264 file. Each NAL should had a start code of 00 00 01 or 00 00 00 01
+#     Type: string
+#
+#   md5_file (required)
+#     The path to the md5 file that contains the md5 hash of the decoded YUV 4:2:0 stream.
+#     Type: string
+#
+#   test_specs (optional)
+#     Additional test specifications to apply to the test defined above.
+#     See `test_spec.gni`.
+#     Type: scope
+#
+template("h264_file_decoder_conformance_test") {
+  h264_resource_name = "${invoker.target_name}_h264"
+  resource(h264_resource_name) {
+    sources = [ invoker.h264_file ]
+    outputs = [ "data/foo.h264" ]
+  }
+
+  md5_resource_name = "${invoker.target_name}_md5"
+  resource(md5_resource_name) {
+    sources = [ invoker.md5_file ]
+    outputs = [ "data/foo.md5" ]
+  }
+
+  fuchsia_unittest_package(target_name) {
+    forward_variables_from(invoker, [ "test_specs" ])
+    manifest = "//src/media/codec/examples/use_media_decoder/meta/h264_decoder_conformance_test.cml"
+    deps = [
+      ":${h264_resource_name}",
+      ":${md5_resource_name}",
+      "//src/media/codec/examples/use_media_decoder:h264_decoder_conformance_test",
+    ]
+  }
+}
