@@ -377,4 +377,12 @@
             ],
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "flutter_aot_runner",
+                "flutter_jit_runner",
+            ],
+        },
+    },
 }

@@ -42,5 +42,9 @@
             path: "/config/ssl",
         },
     ],
-    offer: [],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "isolated-swd-components" ],
+        },
+    },
 }
