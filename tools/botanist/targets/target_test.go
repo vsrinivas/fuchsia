@@ -5,6 +5,8 @@
 package targets
 
 import (
+	"context"
+	"reflect"
 	"testing"
 )
 
@@ -36,4 +38,41 @@ func TestAddressLogic(t *testing.T) {
 			}
 		}
 	})
+}
+
+func TestDeriveTarget(t *testing.T) {
+	ctx := context.Background()
+
+	tests := []struct {
+		name           string
+		obj            string
+		expectedTarget reflect.Type
+	}{
+		{
+			name:           "derive aemu target",
+			obj:            `{"type": "aemu", "target": "x64"}`,
+			expectedTarget: reflect.TypeOf(&AEMUTarget{}),
+		},
+		{
+			name:           "derive qemu target",
+			obj:            `{"type": "qemu", "target": "arm64"}`,
+			expectedTarget: reflect.TypeOf(&QEMUTarget{}),
+		},
+		// Testing DeriveTargets for "device" and "gce" is complex given that
+		// the constructor functions for those two targets perform a good amount
+		// of side effects, for example, creating a "gce" target will try to
+		// initialize a gce instance.
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			actual, err := DeriveTarget(ctx, []byte(test.obj), Options{})
+			if err != nil {
+				t.Errorf("failed to derive target. err=%q", err)
+			}
+			if reflect.TypeOf(actual) != test.expectedTarget {
+				t.Errorf("expected target type %q, got %q", test.expectedTarget, reflect.TypeOf(actual))
+			}
+		})
+	}
 }
