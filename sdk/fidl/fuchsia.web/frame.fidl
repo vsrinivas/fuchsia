@@ -323,9 +323,10 @@ protocol Frame {
     ///
     /// Log lines are written to the [`fuchsia.logger/LogsSink`] configured
     /// for this [`fuchsia.web/Frame`], with severities mapped as follows:
-    /// - `debug()`, `log()` and `info()` are logged at `INFO` severity.
-    /// - `warn()` is logged at `WARN` severity.
-    /// - `error()` is logged at `ERROR` severity.
+    /// - `debug()`, `log()` and `info()` are logged at [`fuchsia.logger/LogLevelFilter.INFO`]
+    ///   severity.
+    /// - `warn()` is logged at [`fuchsia.logger/LogLevelFilter.WARN`] severity.
+    /// - `error()` is logged at [`fuchsia.logger/LogLevelFilter.ERROR`] severity.
     SetJavaScriptLogLevel(struct {
         level ConsoleLogLevel;
     });
@@ -357,6 +358,7 @@ protocol Frame {
 
     /// Supplies a set of [`UrlRequestRewriteRule`] to apply on every subsequent URL request.
     /// - `rules` are cumulative and applied in order.
+    /// - `rules` are only applied on the first URL request in a redirect chain.
     /// - `rules` will be validated before being applied. If `rules` are invalid, the [`Frame`]
     ///   will be closed with `ERR_INVALID_ARGS`.
     /// - [`Frame.SetUrlRequestRewriteRules`] must not be called again until its acknowledgement

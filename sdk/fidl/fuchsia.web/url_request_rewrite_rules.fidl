@@ -34,16 +34,16 @@ type UrlRequestRewrite = flexible union {
     /// Adds a set of headers to a URL request.
     1: add_headers UrlRequestRewriteAddHeaders;
 
-    /// Removes a header based on the presence of a pattern in the URL query.
+    /// Removes a header based on the presence of a pattern in the URL's query.
     2: remove_header UrlRequestRewriteRemoveHeader;
 
-    /// Substitutes a pattern in the URL query.
+    /// Substitutes a pattern in the URL's query.
     3: substitute_query_pattern UrlRequestRewriteSubstituteQueryPattern;
 
     /// Replaces a URL if the original URL ends with a pattern.
     4: replace_url UrlRequestRewriteReplaceUrl;
 
-    /// Appends to the URL query.
+    /// Appends to the URL's query.
     5: append_to_query UrlRequestRewriteAppendToQuery;
 };
 
@@ -56,7 +56,7 @@ type UrlRequestRewriteAddHeaders = table {
     1: headers vector<fuchsia.net.http.Header>:MAX_HEADERS_COUNT;
 };
 
-/// If `query_pattern` in the URL query, removes `header_name` from the list of headers. If
+/// If `query_pattern` is in the URL's query, removes `header_name` from the list of headers. If
 /// `query_pattern` is not set, removes `header_name` from the list of headers unconditionally.
 /// - `header_name` must be set.
 /// - `header_name` must be a valid HTTP header name, per
@@ -66,7 +66,7 @@ type UrlRequestRewriteRemoveHeader = table {
     2: header_name vector<uint8>:MAX_HEADERS_COUNT;
 };
 
-/// If `pattern` is found in the URL request query, replaces it with `substitution`.
+/// If `pattern` is found in the URL's query, replaces it with `substitution`.
 /// - `pattern` and `substitution` must be set.
 /// - `substitution` must be a valid
 ///   [URL-query string](https://url.spec.whatwg.org/#url-query-string).
@@ -85,7 +85,7 @@ type UrlRequestRewriteReplaceUrl = table {
     2: new_url Url;
 };
 
-/// Appends `query` to the URL query. If the URL request already has a query, `query` will be
+/// Appends `query` to the URL's query. If the URL request already has a query, `query` will be
 /// appended to it, preceded by `&`. Otherwise, the URL's query will be set to `query`.
 /// - `query` must be set.
 /// - `query` must be a valid [URL-query string](https://url.spec.whatwg.org/#url-query-string).

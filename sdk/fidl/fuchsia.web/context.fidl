@@ -263,7 +263,7 @@ type CreateFrameParams = resource table {
     /// `REQUIRE_USER_ACTIVATION`.
     /// [`CreateFrame`] will fail with `ZX_ERR_NOT_SUPPORTED` if the value specified is not
     /// supported by the [`Context`].
-    @deprecated("use fuchsia.web.SetContentAreaSettings instead")
+    @deprecated("use fuchsia.web/Frame.SetContentAreaSettings instead")
     3: autoplay_policy AutoplayPolicy;
 
     /// Enables automatic blocking of navigations to explicit sites, and specifies the error page
