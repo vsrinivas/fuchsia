@@ -1,0 +1,575 @@
+[submodule "build/secondary/third_party/protobuf"]
+	path = build/secondary/third_party/protobuf
+	url = https://fuchsia.googlesource.com/protobuf-gn
+	name = protobuf-gn
+	ignore = all
+[submodule "third_party/OpenCL-Headers"]
+	path = third_party/OpenCL-Headers
+	url = https://fuchsia.googlesource.com/third_party/github.com/KhronosGroup/OpenCL-Headers
+	name = third_party/OpenCL-Headers
+	ignore = all
+[submodule "third_party/OpenCL-ICD-Loader"]
+	path = third_party/OpenCL-ICD-Loader
+	url = https://fuchsia.googlesource.com/third_party/github.com/KhronosGroup/OpenCL-ICD-Loader
+	name = third_party/OpenCL-ICD-Loader
+	ignore = all
+[submodule "third_party/Vulkan-Headers"]
+	path = third_party/Vulkan-Headers
+	url = https://fuchsia.googlesource.com/third_party/Vulkan-Headers
+	name = third_party/Vulkan-Headers
+	ignore = all
+[submodule "third_party/Vulkan-Loader"]
+	path = third_party/Vulkan-Loader
+	url = https://fuchsia.googlesource.com/third_party/Vulkan-Loader
+	name = third_party/Vulkan-Loader
+	ignore = all
+[submodule "third_party/Vulkan-Tools"]
+	path = third_party/Vulkan-Tools
+	url = https://fuchsia.googlesource.com/third_party/Vulkan-Tools
+	name = third_party/Vulkan-Tools
+	ignore = all
+[submodule "third_party/Vulkan-ValidationLayers"]
+	path = third_party/Vulkan-ValidationLayers
+	url = https://fuchsia.googlesource.com/third_party/Vulkan-ValidationLayers
+	name = third_party/Vulkan-ValidationLayers
+	ignore = all
+[submodule "third_party/abseil-cpp"]
+	path = third_party/abseil-cpp
+	url = https://fuchsia.googlesource.com/third_party/abseil-cpp
+	name = third_party/abseil-cpp
+	ignore = all
+[submodule "third_party/acpica"]
+	path = third_party/acpica
+	url = https://fuchsia.googlesource.com/third_party/acpica
+	name = third_party/acpica
+	ignore = all
+[submodule "third_party/alacritty"]
+	path = third_party/alacritty
+	url = https://fuchsia.googlesource.com/third_party/github.com/alacritty/alacritty
+	name = third_party/alacritty
+	ignore = all
+[submodule "third_party/android/device/generic/goldfish-opengl"]
+	path = third_party/android/device/generic/goldfish-opengl
+	url = https://fuchsia.googlesource.com/third_party/android/device/generic/goldfish-opengl
+	name = third_party/android/device/generic/goldfish-opengl
+	ignore = all
+[submodule "third_party/android/platform/bionic"]
+	path = third_party/android/platform/bionic
+	url = https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/bionic
+	name = third_party/android.googlesource.com/platform/bionic
+	ignore = all
+[submodule "third_party/android/platform/external/aac"]
+	path = third_party/android/platform/external/aac
+	url = https://fuchsia.googlesource.com/third_party/android/platform/external/aac
+	name = third_party/android/platform/external/aac
+	ignore = all
+[submodule "third_party/android/platform/external/avb"]
+	path = third_party/android/platform/external/avb
+	url = https://fuchsia.googlesource.com/third_party/android/platform/external/avb
+	name = third_party/android/platform/external/avb
+	ignore = all
+[submodule "third_party/android/platform/system/bt"]
+	path = third_party/android/platform/system/bt
+	url = https://fuchsia.googlesource.com/third_party/android/platform/system/bt
+	name = third_party/android/platform/system/bt
+	ignore = all
+[submodule "third_party/android/platform/system/core"]
+	path = third_party/android/platform/system/core
+	url = https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/system/core
+	name = third_party/android.googlesource.com/platform/system/core
+	ignore = all
+[submodule "third_party/android/platform/system/libbase"]
+	path = third_party/android/platform/system/libbase
+	url = https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/system/libbase
+	name = third_party/android.googlesource.com/platform/system/libbase
+	ignore = all
+[submodule "third_party/android/platform/tools/test/connectivity"]
+	path = third_party/android/platform/tools/test/connectivity
+	url = https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/tools/test/connectivity/
+	name = third_party/android.googlesource.com/platform/tools/test/connectivity
+	ignore = all
+[submodule "third_party/bazel_rules_cc"]
+	path = third_party/bazel_rules_cc
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/rules_cc
+	name = third_party/bazel_rules_cc
+	ignore = all
+[submodule "third_party/bazel_rules_go"]
+	path = third_party/bazel_rules_go
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/rules_go
+	name = third_party/bazel_rules_go
+	ignore = all
+[submodule "third_party/bazel_rules_rust"]
+	path = third_party/bazel_rules_rust
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/rules_rust
+	name = third_party/bazel_rules_rust
+	ignore = all
+[submodule "third_party/bazel_skylib"]
+	path = third_party/bazel_skylib
+	url = https://fuchsia.googlesource.com/third_party/github.com/bazelbuild/bazel-skylib
+	name = third_party/bazel_skylib
+	ignore = all
+[submodule "third_party/bcmdhd"]
+	path = third_party/bcmdhd
+	url = https://fuchsia.googlesource.com/third_party/bcmdhd
+	name = third_party/bcmdhd
+	ignore = all
+[submodule "third_party/boringssl/src"]
+	path = third_party/boringssl/src
+	url = https://boringssl.googlesource.com/boringssl
+	name = boringssl
+	ignore = all
+[submodule "third_party/cobalt"]
+	path = third_party/cobalt
+	url = https://fuchsia.googlesource.com/cobalt
+	name = cobalt
+	ignore = all
+[submodule "third_party/cobalt_config"]
+	path = third_party/cobalt_config
+	url = https://fuchsia.googlesource.com/cobalt-registry
+	name = cobalt-registry
+	ignore = all
+[submodule "third_party/crashpad"]
+	path = third_party/crashpad
+	url = https://fuchsia.googlesource.com/third_party/crashpad
+	name = third_party/crashpad
+	ignore = all
+[submodule "third_party/curl"]
+	path = third_party/curl
+	url = https://fuchsia.googlesource.com/third_party/curl
+	name = third_party/curl
+	ignore = all
+[submodule "third_party/dart-pkg/git/flutter"]
+	path = third_party/dart-pkg/git/flutter
+	url = https://chromium.googlesource.com/external/github.com/flutter/flutter
+	name = external/github.com/flutter/flutter
+	ignore = all
+[submodule "third_party/dart-pkg/pub"]
+	path = third_party/dart-pkg/pub
+	url = https://fuchsia.googlesource.com/third_party/dart-pkg
+	name = third_party/dart-pkg
+	ignore = all
+[submodule "third_party/double-conversion"]
+	path = third_party/double-conversion
+	url = https://fuchsia.googlesource.com/third_party/google/double-conversion
+	name = third_party/google/double-conversion
+	ignore = all
+[submodule "third_party/etnaviv_gpu_tests"]
+	path = third_party/etnaviv_gpu_tests
+	url = https://fuchsia.googlesource.com/third_party/etnaviv_gpu_tests
+	name = third_party/etnaviv_gpu_tests
+	ignore = all
+[submodule "third_party/expat"]
+	path = third_party/expat
+	url = https://fuchsia.googlesource.com/third_party/expat
+	name = third_party/expat
+	ignore = all
+[submodule "third_party/flatbuffers"]
+	path = third_party/flatbuffers
+	url = https://fuchsia.googlesource.com/third_party/flatbuffers
+	name = third_party/flatbuffers
+	ignore = all
+[submodule "third_party/flite"]
+	path = third_party/flite
+	url = https://fuchsia.googlesource.com/third_party/flite
+	name = third_party/flite
+	ignore = all
+[submodule "third_party/fmtlib/src"]
+	path = third_party/fmtlib/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/fmtlib/fmt
+	name = third_party/fmtlib
+	ignore = all
+[submodule "third_party/freetype2"]
+	path = third_party/freetype2
+	url = https://fuchsia.googlesource.com/third_party/freetype2
+	name = third_party/freetype2
+	ignore = all
+[submodule "third_party/gflags"]
+	path = third_party/gflags
+	url = https://fuchsia.googlesource.com/third_party/gflags
+	name = third_party/gflags
+	ignore = all
+[submodule "third_party/github.com/ARM-software/HWCPipe"]
+	path = third_party/github.com/ARM-software/HWCPipe
+	url = https://fuchsia.googlesource.com/third_party/github.com/ARM-software/HWCPipe
+	name = third_party/github.com/ARM-software/HWCPipe
+	ignore = all
+[submodule "third_party/github.com/google/cppdap"]
+	path = third_party/github.com/google/cppdap
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/cppdap
+	name = third_party/github.com/google/cppdap
+	ignore = all
+[submodule "third_party/github.com/google/emboss/src"]
+	path = third_party/github.com/google/emboss/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/emboss
+	name = third_party/github.com/google/emboss
+	ignore = all
+[submodule "third_party/github.com/google/farmhash"]
+	path = third_party/github.com/google/farmhash
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/farmhash
+	name = third_party/github.com/google/farmhash
+	ignore = all
+[submodule "third_party/github.com/intel/intel-linux-processor-microcode-data-files"]
+	path = third_party/github.com/intel/intel-linux-processor-microcode-data-files
+	url = https://fuchsia.googlesource.com/third_party/github.com/intel/intel-linux-processor-microcode-data-files
+	name = third_party/github.com/intel/intel-linux-processor-microcode-data-files
+	ignore = all
+[submodule "third_party/glfw"]
+	path = third_party/glfw
+	url = https://fuchsia.googlesource.com/third_party/glfw
+	name = third_party/glfw
+	ignore = all
+[submodule "third_party/glm"]
+	path = third_party/glm
+	url = https://chromium.googlesource.com/external/github.com/g-truc/glm
+	name = external/github.com/g-truc/glm
+	ignore = all
+[submodule "third_party/glog"]
+	path = third_party/glog
+	url = https://fuchsia.googlesource.com/third_party/glog
+	name = third_party/glog
+	ignore = all
+[submodule "third_party/glslang"]
+	path = third_party/glslang
+	url = https://fuchsia.googlesource.com/third_party/glslang
+	name = third_party/glslang
+	ignore = all
+[submodule "third_party/go"]
+	path = third_party/go
+	url = https://fuchsia.googlesource.com/third_party/go
+	name = third_party/go
+	ignore = all
+[submodule "third_party/googletest/src"]
+	path = third_party/googletest/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/googletest
+	name = third_party/github.com/google/googletest
+	ignore = all
+[submodule "third_party/gperftools"]
+	path = third_party/gperftools
+	url = https://fuchsia.googlesource.com/third_party/github.com/gperftools/gperftools
+	name = third_party/github.com/gperftools/gperftools
+	ignore = all
+[submodule "third_party/grpc"]
+	path = third_party/grpc
+	url = https://fuchsia.googlesource.com/third_party/grpc
+	name = third_party/grpc
+	ignore = all
+[submodule "third_party/icu/default"]
+	path = third_party/icu/default
+	url = https://chromium.googlesource.com/chromium/deps/icu
+	name = chromium/deps/icu@default
+	ignore = all
+[submodule "third_party/icu/latest"]
+	path = third_party/icu/latest
+	url = https://chromium.googlesource.com/chromium/deps/icu
+	name = chromium/deps/icu@latest
+	ignore = all
+[submodule "third_party/icu/stable"]
+	path = third_party/icu/stable
+	url = https://chromium.googlesource.com/chromium/deps/icu
+	name = chromium/deps/icu@stable
+	ignore = all
+[submodule "third_party/imgtec-pvr-rgx-km"]
+	path = third_party/imgtec-pvr-rgx-km
+	url = https://fuchsia.googlesource.com/third_party/imgtec-pvr-rgx-km
+	name = third_party/imgtec-pvr-rgx-km
+	ignore = all
+[submodule "third_party/inih"]
+	path = third_party/inih
+	url = https://fuchsia.googlesource.com/third_party/inih
+	name = third_party/inih
+	ignore = all
+[submodule "third_party/intel/libva"]
+	path = third_party/intel/libva
+	url = https://fuchsia.googlesource.com/third_party/github.com/intel/libva
+	name = third_party/intel/libva
+	ignore = all
+[submodule "third_party/iperf"]
+	path = third_party/iperf
+	url = https://fuchsia.googlesource.com/third_party/iperf
+	name = third_party/iperf
+	ignore = all
+[submodule "third_party/jinja2/jinja2"]
+	path = third_party/jinja2/jinja2
+	url = https://fuchsia.googlesource.com/third_party/jinja2
+	name = third_party/jinja2
+	ignore = all
+[submodule "third_party/json5.vim"]
+	path = third_party/json5.vim
+	url = https://fuchsia.googlesource.com/third_party/github.com/gutenye/json5.vim
+	name = third_party/github.com/gutenye/json5.vim
+	ignore = all
+[submodule "third_party/libc-tests"]
+	path = third_party/libc-tests
+	url = https://fuchsia.googlesource.com/libc-tests
+	name = libc-tests
+	ignore = all
+[submodule "third_party/libffi"]
+	path = third_party/libffi
+	url = https://fuchsia.googlesource.com/third_party/github.com/libffi/libffi
+	name = third_party/github.com/libffi/libffi
+	ignore = all
+[submodule "third_party/libpcap/src"]
+	path = third_party/libpcap/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/the-tcpdump-group/libpcap
+	name = third_party/github.com/the-tcpdump-group/libpcap
+	ignore = all
+[submodule "third_party/libpng/src"]
+	path = third_party/libpng/src
+	url = https://fuchsia.googlesource.com/third_party/libpng
+	name = third_party/libpng
+	ignore = all
+[submodule "third_party/libxml2"]
+	path = third_party/libxml2
+	url = https://fuchsia.googlesource.com/third_party/libxml2
+	name = third_party/libxml2
+	ignore = all
+[submodule "third_party/libyuv"]
+	path = third_party/libyuv
+	url = https://fuchsia.googlesource.com/third_party/libyuv
+	name = third_party/libyuv
+	ignore = all
+[submodule "third_party/linux-syscall-support"]
+	path = third_party/linux-syscall-support
+	url = https://chromium.googlesource.com/linux-syscall-support
+	name = linux-syscall-support
+	ignore = all
+[submodule "third_party/llvm-libc/src"]
+	path = third_party/llvm-libc/src
+	url = https://llvm.googlesource.com/llvm-project/libc
+	name = llvm-project/libc
+	ignore = all
+[submodule "third_party/luci-go"]
+	path = third_party/luci-go
+	url = https://fuchsia.googlesource.com/third_party/luci-go
+	name = third_party/luci-go
+	ignore = all
+[submodule "third_party/lz4"]
+	path = third_party/lz4
+	url = https://fuchsia.googlesource.com/third_party/lz4
+	name = third_party/lz4
+	ignore = all
+[submodule "third_party/mako"]
+	path = third_party/mako
+	url = https://fuchsia.googlesource.com/third_party/mako
+	name = third_party/mako
+	ignore = all
+[submodule "third_party/markupsafe"]
+	path = third_party/markupsafe
+	url = https://fuchsia.googlesource.com/third_party/markupsafe
+	name = third_party/markupsafe
+	ignore = all
+[submodule "third_party/mesa"]
+	path = third_party/mesa
+	url = https://fuchsia.googlesource.com/third_party/mesa
+	name = third_party/mesa
+	ignore = all
+[submodule "third_party/micro-ecc"]
+	path = third_party/micro-ecc
+	url = https://fuchsia.googlesource.com/third_party/github.com/kmackay/micro-ecc
+	name = third_party/github.com/kmackay/micro-ecc
+	ignore = all
+[submodule "third_party/mini_chromium"]
+	path = third_party/mini_chromium
+	url = https://chromium.googlesource.com/chromium/mini_chromium
+	name = chromium/mini_chromium
+	ignore = all
+[submodule "third_party/nlassert/src"]
+	path = third_party/nlassert/src
+	url = https://fuchsia.googlesource.com/third_party/nlassert
+	name = third_party/nlassert
+	ignore = all
+[submodule "third_party/nlio"]
+	path = third_party/nlio
+	url = https://fuchsia.googlesource.com/third_party/nlio
+	name = third_party/nlio
+	ignore = all
+[submodule "third_party/ogg"]
+	path = third_party/ogg
+	url = https://fuchsia.googlesource.com/third_party/ogg
+	name = third_party/ogg
+	ignore = all
+[submodule "third_party/openssh-portable"]
+	path = third_party/openssh-portable
+	url = https://fuchsia.googlesource.com/third_party/openssh-portable
+	name = third_party/openssh-portable
+	ignore = all
+[submodule "third_party/openssl-ecjpake/src"]
+	path = third_party/openssl-ecjpake/src
+	url = https://fuchsia.googlesource.com/third_party/openssl-ecjpake
+	name = third_party/openssl-ecjpake
+	ignore = all
+[submodule "third_party/openthread"]
+	path = third_party/openthread
+	url = https://fuchsia.googlesource.com/third_party/openthread
+	name = third_party/openthread
+	ignore = all
+[submodule "third_party/openweave-core"]
+	path = third_party/openweave-core
+	url = https://fuchsia.googlesource.com/third_party/openweave-core
+	name = third_party/openweave-core
+	ignore = all
+[submodule "third_party/opus"]
+	path = third_party/opus
+	url = https://fuchsia.googlesource.com/third_party/xiph/opus
+	name = third_party/xiph/opus
+	ignore = all
+[submodule "third_party/parameterized/src"]
+	path = third_party/parameterized/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/wolever/parameterized
+	name = third_party/github.com/wolever/parameterized
+	ignore = all
+[submodule "third_party/pciids"]
+	path = third_party/pciids
+	url = https://fuchsia.googlesource.com/third_party/github.com/pciutils/pciids
+	name = third_party/github.com/pciutils/pciids
+	ignore = all
+[submodule "third_party/perfetto"]
+	path = third_party/perfetto
+	url = https://fuchsia.googlesource.com/third_party/android.googlesource.com/platform/external/perfetto/
+	name = third_party/perfetto
+	ignore = all
+[submodule "third_party/pigweed/src"]
+	path = third_party/pigweed/src
+	url = https://pigweed.googlesource.com/pigweed/pigweed
+	name = third_party/pigweed
+	ignore = all
+[submodule "third_party/processor-trace"]
+	path = third_party/processor-trace
+	url = https://fuchsia.googlesource.com/third_party/processor-trace
+	name = third_party/processor-trace
+	ignore = all
+[submodule "third_party/protobuf"]
+	path = third_party/protobuf
+	url = https://fuchsia.googlesource.com/third_party/protobuf
+	name = third_party/protobuf
+	ignore = all
+[submodule "third_party/pytoml"]
+	path = third_party/pytoml
+	url = https://fuchsia.googlesource.com/third_party/pytoml
+	name = third_party/pytoml
+	ignore = all
+[submodule "third_party/pyyaml/src"]
+	path = third_party/pyyaml/src
+	url = https://fuchsia.googlesource.com/third_party/pyyaml
+	name = third_party/pyyaml
+	ignore = all
+[submodule "third_party/quickjs"]
+	path = third_party/quickjs
+	url = https://fuchsia.googlesource.com/third_party/quickjs
+	name = third_party/quickjs
+	ignore = all
+[submodule "third_party/rapidjson"]
+	path = third_party/rapidjson
+	url = https://fuchsia.googlesource.com/third_party/rapidjson
+	name = third_party/rapidjson
+	ignore = all
+[submodule "third_party/re2/src"]
+	path = third_party/re2/src
+	url = https://fuchsia.googlesource.com/third_party/re2
+	name = third_party/re2
+	ignore = all
+[submodule "third_party/rust_crates/mirrors/quiche"]
+	path = third_party/rust_crates/mirrors/quiche
+	url = https://fuchsia.googlesource.com/third_party/rust-mirrors/quiche
+	name = third_party/rust-mirrors/quiche
+	ignore = all
+[submodule "third_party/rust_crates/mirrors/rustyline"]
+	path = third_party/rust_crates/mirrors/rustyline
+	url = https://fuchsia.googlesource.com/third_party/rust-mirrors/rustyline
+	name = third_party/rust-mirrors/rustyline
+	ignore = all
+[submodule "third_party/rust_crates/mirrors/serde_json5"]
+	path = third_party/rust_crates/mirrors/serde_json5
+	url = https://fuchsia.googlesource.com/third_party/github.com/google/serde_json5
+	name = third_party/github.com/google/serde_json5
+	ignore = all
+[submodule "third_party/safeside"]
+	path = third_party/safeside
+	url = https://fuchsia.googlesource.com/third_party/safeside
+	name = third_party/safeside
+	ignore = all
+[submodule "third_party/sbase"]
+	path = third_party/sbase
+	url = https://fuchsia.googlesource.com/third_party/sbase
+	name = third_party/sbase
+	ignore = all
+[submodule "third_party/scudo/gwp_asan"]
+	path = third_party/scudo/gwp_asan
+	url = https://llvm.googlesource.com/gwp-asan
+	name = gwp-asan
+	ignore = all
+[submodule "third_party/scudo/src"]
+	path = third_party/scudo/src
+	url = https://llvm.googlesource.com/scudo
+	name = scudo
+	ignore = all
+[submodule "third_party/sdk-integration"]
+	path = third_party/sdk-integration
+	url = https://fuchsia.googlesource.com/sdk-integration
+	name = third_party/sdk-integration
+	ignore = all
+[submodule "third_party/shaderc"]
+	path = third_party/shaderc
+	url = https://fuchsia.googlesource.com/third_party/shaderc
+	name = third_party/shaderc
+	ignore = all
+[submodule "third_party/spirv-cross"]
+	path = third_party/spirv-cross
+	url = https://fuchsia.googlesource.com/third_party/spirv-cross
+	name = third_party/spirv-cross
+	ignore = all
+[submodule "third_party/spirv-headers"]
+	path = third_party/spirv-headers
+	url = https://fuchsia.googlesource.com/third_party/spirv-headers
+	name = third_party/spirv-headers
+	ignore = all
+[submodule "third_party/spirv-tools"]
+	path = third_party/spirv-tools
+	url = https://fuchsia.googlesource.com/third_party/spirv-tools
+	name = third_party/spirv-tools
+	ignore = all
+[submodule "third_party/syzkaller"]
+	path = third_party/syzkaller
+	url = https://fuchsia.googlesource.com/third_party/syzkaller
+	name = third_party/syzkaller
+	ignore = all
+[submodule "third_party/tcpdump/src"]
+	path = third_party/tcpdump/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/the-tcpdump-group/tcpdump
+	name = third_party/github.com/the-tcpdump-group/tcpdump
+	ignore = all
+[submodule "third_party/tink"]
+	path = third_party/tink
+	url = https://fuchsia.googlesource.com/third_party/tink
+	name = third_party/tink
+	ignore = all
+[submodule "third_party/tpm2-tss/src"]
+	path = third_party/tpm2-tss/src
+	url = https://fuchsia.googlesource.com/third_party/github.com/tpm2-software/tpm2-tss
+	name = third_party/tpm2-tss
+	ignore = all
+[submodule "third_party/vboot_reference"]
+	path = third_party/vboot_reference
+	url = https://fuchsia.googlesource.com/third_party/vboot_reference
+	name = third_party/vboot_reference
+	ignore = all
+[submodule "third_party/wayland"]
+	path = third_party/wayland
+	url = https://fuchsia.googlesource.com/third_party/wayland
+	name = third_party/wayland
+	ignore = all
+[submodule "third_party/yxml"]
+	path = third_party/yxml
+	url = https://fuchsia.googlesource.com/third_party/yxml
+	name = third_party/yxml
+	ignore = all
+[submodule "third_party/zlib"]
+	path = third_party/zlib
+	url = https://fuchsia.googlesource.com/third_party/zlib
+	name = third_party/zlib
+	ignore = all
+[submodule "third_party/zstd/src"]
+	path = third_party/zstd/src
+	url = https://fuchsia.googlesource.com/third_party/zstd
+	name = third_party/zstd
+	ignore = all
