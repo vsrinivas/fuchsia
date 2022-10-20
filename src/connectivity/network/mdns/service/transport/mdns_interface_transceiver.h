@@ -53,14 +53,13 @@ class MdnsInterfaceTransceiver {
   // Stops the interface transceiver.
   virtual void Stop();
 
-  // Sets an alternate address for the interface.
-  void SetAlternateAddress(const inet::IpAddress& alternate_address);
+  // Sets the list of all addresses for the interface.
+  void SetInterfaceAddresses(const std::vector<inet::IpAddress>& interface_addresses);
 
   // Sends a message to the specified address. A V6 interface will send to
   // |MdnsAddresses::V6Multicast| if |address| is |MdnsAddresses::V4Multicast|. If any resource
   // section of the message contains one or more address placeholders, those placeholders will be
-  // replaced by address resource records for this interface (|address_| and, if valid,
-  // |alternate_address_|).
+  // replaced by address resource records for all this interface's addresses.
   void SendMessage(const DnsMessage& message, const inet::SocketAddress& address);
 
   // Sends a message containing only an address resource for this interface.
@@ -104,21 +103,21 @@ class MdnsInterfaceTransceiver {
   void InboundReady(zx_status_t status, uint32_t events);
 
   // Returns an address resource (A/AAAA) record with the given name and the
-  // address contained in |alternate_address_|, which must be valid.
+  // address contained in |address_|, which must be valid.
   std::shared_ptr<DnsResource> GetAddressResource(const std::string& host_full_name);
 
-  // Returns an address resource (A/AAAA) record with the given name and the
-  // address contained in |address_|, which must be valid.
-  std::shared_ptr<DnsResource> GetAlternateAddressResource(const std::string& host_full_name);
+  // Returns address resource (A/AAAA) records with the given name and the
+  // addresses contained in |interface_addresses_|.
+  const std::vector<std::shared_ptr<DnsResource>>& GetInterfaceAddressResources(
+      const std::string& host_full_name);
 
   // Returns a new vector with the same resources as |resources| except that any placeholder address
-  // records have been replaced by address records for |address_| and, if it's valid,
-  // |alternate_address_|.
+  // records have been replaced by address records for |interface_addresses_|.
   std::vector<std::shared_ptr<DnsResource>> FixUpAddresses(
       const std::vector<std::shared_ptr<DnsResource>>& resources);
 
   inet::IpAddress address_;
-  inet::IpAddress alternate_address_;
+  std::vector<inet::IpAddress> interface_addresses_;
   std::string name_;
   uint32_t id_;
   Media media_;
@@ -128,7 +127,7 @@ class MdnsInterfaceTransceiver {
   std::vector<uint8_t> outbound_buffer_;
   InboundMessageCallback inbound_message_callback_;
   std::shared_ptr<DnsResource> address_resource_;
-  std::shared_ptr<DnsResource> alternate_address_resource_;
+  std::vector<std::shared_ptr<DnsResource>> interface_address_resources_;
   uint64_t messages_received_ = 0;
   uint64_t bytes_received_ = 0;
   uint64_t messages_sent_ = 0;

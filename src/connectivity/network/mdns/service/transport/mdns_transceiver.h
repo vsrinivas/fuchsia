@@ -68,8 +68,8 @@ class MdnsTransceiver : public Mdns::Transceiver {
   // Ensures that an interface transceiver exists for |address| if |address|
   // is valid. Returns true if a change was made, false otherwise.
   bool EnsureInterfaceTransceiver(const inet::IpAddress& address,
-                                  const inet::IpAddress& alternate_address, uint32_t id,
-                                  Media media, const std::string& name);
+                                  const std::vector<inet::IpAddress>& interface_addresses,
+                                  uint32_t id, Media media, const std::string& name);
 
   // Determines if |address| identifies one of the NICs in |interface_transceivers_by_address_|.
   bool IsLocalInterfaceAddress(const inet::IpAddress& address);
