@@ -257,7 +257,7 @@ async fn do_if<C: NetCliDepsConnector>(
     connector: &C,
 ) -> Result<(), Error> {
     match cmd {
-        opts::IfEnum::List(opts::IfList { name_pattern, json }) => {
+        opts::IfEnum::List(opts::IfList { name_pattern }) => {
             let debug_interfaces =
                 connect_with_context::<fdebug::InterfacesMarker, _>(connector).await?;
             let interface_state =
@@ -286,8 +286,6 @@ async fn do_if<C: NetCliDepsConnector>(
             let () = response.sort_by_key(|ser::InterfaceView { nicid, .. }| *nicid);
             if out.is_machine() {
                 out.machine(&response)?;
-            } else if json {
-                serde_json::to_writer(out, &response).context("serialize")?;
             } else {
                 write_tabulated_interfaces_info(out, response.into_iter())
                     .context("error tabulating interface info")?;
@@ -615,20 +613,16 @@ async fn do_route<C: NetCliDepsConnector>(
 ) -> Result<(), Error> {
     let stack = connect_with_context::<fstack::StackMarker, _>(connector).await?;
     match cmd {
-        opts::RouteEnum::List(opts::RouteList { json }) => {
+        opts::RouteEnum::List(opts::RouteList {}) => {
             let response =
                 stack.get_forwarding_table().await.context("error retrieving forwarding table")?;
-            if out.is_machine() || json {
+            if out.is_machine() {
                 let response: Vec<_> = response
                     .into_iter()
                     .map(fstack_ext::ForwardingEntry::from)
                     .map(ser::ForwardingEntry::from)
                     .collect();
-                if out.is_machine() {
-                    out.machine(&response).context("serialize")?;
-                } else {
-                    let () = serde_json::to_writer(out, &response).context("serialize")?;
-                }
+                out.machine(&response).context("serialize")?;
             } else {
                 let mut t = Table::new();
                 t.set_format(format::FormatBuilder::new().padding(2, 2).build());
@@ -813,15 +807,15 @@ async fn do_neigh<C: NetCliDepsConnector>(
                 .context("failed during neigh del command")?;
             info!("Deleted entry {} for interface {}", ip, interface);
         }
-        opts::NeighEnum::List(opts::NeighList { json }) => {
+        opts::NeighEnum::List(opts::NeighList {}) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
-            let () = print_neigh_entries(out, false /* watch_for_changes */, view, json)
+            let () = print_neigh_entries(out, false /* watch_for_changes */, view)
                 .await
                 .context("error listing neighbor entries")?;
         }
-        opts::NeighEnum::Watch(opts::NeighWatch { json_lines }) => {
+        opts::NeighEnum::Watch(opts::NeighWatch {}) => {
             let view = connect_with_context::<fneighbor::ViewMarker, _>(connector).await?;
-            let () = print_neigh_entries(out, true /* watch_for_changes */, view, json_lines)
+            let () = print_neigh_entries(out, true /* watch_for_changes */, view)
                 .await
                 .context("error watching for changes to the neighbor table")?;
         }
@@ -958,7 +952,6 @@ async fn print_neigh_entries(
     mut out: ffx_writer::Writer,
     watch_for_changes: bool,
     view: fneighbor::ViewProxy,
-    json: bool,
 ) -> Result<(), Error> {
     let (it_client, it_server) =
         fidl::endpoints::create_endpoints::<fneighbor::EntryIteratorMarker>()
@@ -973,20 +966,15 @@ async fn print_neigh_entries(
     if watch_for_changes {
         neigh_entry_stream(it, watch_for_changes)
             .map_ok(|item| {
-                write_neigh_entry(
-                    out_ref,
-                    item,
-                    /* include_entry_state= */ watch_for_changes,
-                    json,
-                )
-                .context("error writing entry")
+                write_neigh_entry(out_ref, item, /* include_entry_state= */ watch_for_changes)
+                    .context("error writing entry")
             })
             .try_fold((), |(), r| futures::future::ready(r))
             .await?;
     } else {
         let results: Vec<Result<fneighbor::EntryIteratorItem, _>> =
             neigh_entry_stream(it, watch_for_changes).collect().await;
-        if out.is_machine() || json {
+        if out.is_machine() {
             let jsonified_items: Value =
                 itertools::process_results(results.into_iter(), |items| {
                     itertools::process_results(
@@ -999,11 +987,7 @@ async fn print_neigh_entries(
                         |json_values| Value::from_iter(json_values),
                     )
                 })??;
-            if out.is_machine() {
-                out.machine(&jsonified_items)?;
-            } else {
-                out.write(&jsonified_items)?;
-            }
+            out.machine(&jsonified_items)?;
         } else {
             itertools::process_results(results.into_iter(), |mut items| {
                 items.try_for_each(|item| {
@@ -1106,15 +1090,10 @@ fn write_neigh_entry(
     f: &mut ffx_writer::Writer,
     item: fneighbor::EntryIteratorItem,
     include_entry_state: bool,
-    json: bool,
 ) -> Result<(), Error> {
-    if f.is_machine() || json {
+    if f.is_machine() {
         let entry = jsonify_neigh_iter_item(item, include_entry_state)?;
-        if f.is_machine() {
-            f.machine(&entry)?;
-        } else {
-            f.line(&entry)?;
-        }
+        f.machine(&entry)?;
     } else {
         write_tabular_neigh_entry(f, item, include_entry_state)?
     }
@@ -1985,13 +1964,9 @@ mac             -
                 interfaces_state: Some(interfaces_state),
                 ..Default::default()
             };
-            do_if(
-                output_ref,
-                opts::IfEnum::List(opts::IfList { name_pattern: None, json }),
-                &connector,
-            )
-            .map(|res| res.expect("if list"))
-            .await
+            do_if(output_ref, opts::IfEnum::List(opts::IfList { name_pattern: None }), &connector)
+                .map(|res| res.expect("if list"))
+                .await
         };
         let watcher_stream = interfaces_state_stream
             .and_then(|req| match req {
@@ -2160,7 +2135,7 @@ mac             -
         let op = do_route(&mut out, cmd.clone(), &connector);
         let op_succeeds = async move {
             let () = match cmd {
-                opts::RouteEnum::List(opts::RouteList { json: _ }) => {
+                opts::RouteEnum::List(opts::RouteList {}) => {
                     panic!("test_modify_route should not take a List command")
                 }
                 opts::RouteEnum::Add(route) => {
@@ -2264,7 +2239,7 @@ mac             -
         };
 
         let do_route_fut =
-            do_route(&mut output, opts::RouteEnum::List(opts::RouteList { json }), &connector);
+            do_route(&mut output, opts::RouteEnum::List(opts::RouteList {}), &connector);
 
         let requests_fut = async {
             let responder = stack_requests
@@ -2431,9 +2406,8 @@ mac             -
 
             let item_to_string = |item| {
                 let mut buf = ffx_writer::Writer::new_test(None);
-                let () =
-                    write_neigh_entry(&mut buf, item, watch_for_changes, /* json= */ false)
-                        .expect("write_neigh_entry should succeed");
+                let () = write_neigh_entry(&mut buf, item, watch_for_changes)
+                    .expect("write_neigh_entry should succeed");
                 buf.test_output().expect("string should be UTF-8")
             };
 
@@ -2642,7 +2616,7 @@ mac             -
         } else {
             ffx_writer::Writer::new_test(None)
         };
-        write_neigh_entry(&mut output, entry, include_entry_state, json)
+        write_neigh_entry(&mut output, entry, include_entry_state)
             .expect("write_neigh_entry should succeed");
         let got_output = output.test_output().unwrap();
         pretty_assertions::assert_eq!(

@@ -338,9 +338,6 @@ pub struct IfIpForwardSet {
 pub struct IfList {
     #[argh(positional)]
     pub name_pattern: Option<String>,
-    #[argh(switch)]
-    /// format output as JSON
-    pub json: bool,
 }
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
@@ -410,11 +407,7 @@ pub struct NeighClear {
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
 /// lists neighbor table entries (supports ffx machine output)
-pub struct NeighList {
-    #[argh(switch)]
-    /// format output as JSON
-    pub json: bool,
-}
+pub struct NeighList {}
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "del")]
@@ -429,11 +422,7 @@ pub struct NeighDel {
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "watch")]
 /// watches neighbor table entries for state changes (supports ffx machine output)
-pub struct NeighWatch {
-    #[argh(switch)]
-    /// format output as newline-delimited JSON
-    pub json_lines: bool,
-}
+pub struct NeighWatch {}
 
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "config")]
@@ -574,11 +563,7 @@ fn subnet_mask_to_prefix_length(addr: std::net::IpAddr) -> u8 {
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(subcommand, name = "list")]
 /// lists devices (supports ffx machine output)
-pub struct RouteList {
-    #[argh(switch)]
-    /// format output as JSON
-    pub json: bool,
-}
+pub struct RouteList {}
 
 macro_rules! route_struct {
     ($ty_name:ident, $name:literal, $comment:expr) => {
