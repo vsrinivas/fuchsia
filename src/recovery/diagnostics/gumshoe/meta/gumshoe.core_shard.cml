@@ -1,0 +1,24 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "gumshoe",
+            url: "fuchsia-pkg://fuchsia.com/gumshoe#meta/gumshoe.cm",
+            startup: "eager",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: "#gumshoe",
+        },
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#network",
+            to: "#gumshoe",
+        },
+    ],
+}

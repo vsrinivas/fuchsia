@@ -1,0 +1,13 @@
+<html>
+    <head>
+        <title>{{title}}</title>
+        <link rel="stylesheet" href="/static/style.css">
+        <script src="/static/site.js"></script>
+    </head>
+    <body>
+        {{> @partial-block }}
+
+        <hr/>
+        Version: {{#if version}}{{version}}{{else}}UNAVAILABLE{{/if}}
+    </body>
+</html>

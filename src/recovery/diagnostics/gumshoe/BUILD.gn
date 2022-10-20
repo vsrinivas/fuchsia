@@ -1,0 +1,83 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/config.gni")
+import("//build/rust/rustc_binary.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+resource("templates") {
+  sources = [
+    "templates/404.hbs.html",
+    "templates/chrome.hbs.html",
+    "templates/index.hbs.html",
+    "templates/info.hbs.html",
+  ]
+  outputs = [ "templates/{{source_file_part}}" ]
+}
+
+resource("static") {
+  sources = [ "static/style.css" ]
+  outputs = [ "static/{{source_file_part}}" ]
+}
+
+rustc_binary("bin") {
+  output_name = "gumshoe"
+  with_unit_tests = true
+  edition = "2021"
+
+  deps = [
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-hyper",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:handlebars",
+    "//third_party/rust_crates:hyper",
+    "//third_party/rust_crates:mockall",
+    "//third_party/rust_crates:serde",
+  ]
+  sources = [
+    "src/device_info.rs",
+    "src/handlebars_utils.rs",
+    "src/main.rs",
+    "src/responder.rs",
+    "src/webserver.rs",
+  ]
+}
+
+fuchsia_package_with_single_component("gumshoe") {
+  manifest = "meta/gumshoe.cml"
+  deps = [
+    ":bin",
+    ":static",
+    ":templates",
+  ]
+}
+
+# Core shard added to core_realm_shards of product,
+# Example: /products/core.gni
+core_shard("gumshoe-core-shard") {
+  shard_file = "meta/gumshoe.core_shard.cml"
+}
+
+resource("test_inaccessible") {
+  sources = [ "test/secret.txt" ]
+  outputs = [ "inaccessible/{{source_file_part}}" ]
+}
+
+fuchsia_unittest_package("gumshoe-tests") {
+  deps = [
+    ":bin_test",
+    ":static",
+    ":test_inaccessible",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":gumshoe-tests" ]
+}
