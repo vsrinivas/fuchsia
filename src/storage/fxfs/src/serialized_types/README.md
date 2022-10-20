@@ -35,7 +35,7 @@ from a previous storage format version to the latest storage format version.
    (e.g. rename it from `Foo` to `FooV1`). Where appropriate, drop comments and
    restrict visibility of fields to private.
 2. Implement `From<OldVersion> for NewVersion` for their new version, e.g.
-   implement `From<FooV1> for Foo`
+   implement `From<FooV1> for Foo`, or use the Migrate derive macro.
 3. Bump the major component of `LATEST_VERSION` and set the minor component to zero.
 4. Update the `versioned_type!` invocation with the new major version as an open ended range
    at the start of the list. For example, if the new major version is 4 then change this:

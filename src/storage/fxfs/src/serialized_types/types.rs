@@ -5,8 +5,9 @@
 use crate::{
     lsm_tree::LayerInfo,
     object_store::{
-        transaction::Mutation, AllocatorInfo, AllocatorKey, AllocatorValue, EncryptedMutations,
-        JournalRecord, ObjectKey, ObjectValue, StoreInfo, SuperBlock, SuperBlockRecord,
+        allocator::AllocatorInfoV18, transaction::Mutation, AllocatorInfo, AllocatorKey,
+        AllocatorValue, EncryptedMutations, JournalRecord, ObjectKey, ObjectValue, StoreInfo,
+        SuperBlock, SuperBlockRecord,
     },
     serialized_types::{versioned_type, Version, Versioned, VersionedLatest},
 };
@@ -17,7 +18,7 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// If making a breaking change, please see EARLIEST_SUPPORTED_VERSION (below).
-pub const LATEST_VERSION: Version = Version { major: 23, minor: 0 };
+pub const LATEST_VERSION: Version = Version { major: 24, minor: 0 };
 
 /// The earliest supported version of the on-disk filesystem format.
 ///
@@ -28,7 +29,8 @@ pub const LATEST_VERSION: Version = Version { major: 23, minor: 0 };
 pub const EARLIEST_SUPPORTED_VERSION: Version = Version { major: 21, minor: 0 };
 
 versioned_type! {
-    18.. => AllocatorInfo,
+    24.. => AllocatorInfo
+    18.. => AllocatorInfoV18,
 }
 versioned_type! {
     1.. => AllocatorKey,

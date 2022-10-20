@@ -7,11 +7,15 @@
 #[macro_use]
 extern crate quote;
 
-use proc_macro::TokenStream;
-use quote::ToTokens;
-use std::collections::BTreeMap;
-use syn::parse::{Parse, ParseStream};
-use syn::{parse_macro_input, Result};
+use {
+    proc_macro::TokenStream,
+    quote::ToTokens,
+    std::collections::BTreeMap,
+    syn::{
+        parse::{Parse, ParseStream},
+        parse_macro_input, Data, Fields, Result,
+    },
+};
 
 /// Holds an open-ended version range like `3..` meaning version 3 and up.
 #[derive(Clone)]
@@ -158,4 +162,84 @@ pub fn versioned_type(input: TokenStream) -> TokenStream {
 pub fn derive_versioned(input: TokenStream) -> TokenStream {
     let syn::DeriveInput { ident, .. } = parse_macro_input!(input);
     TokenStream::from(quote! { impl Versioned for #ident {} })
+}
+
+/// Adds a From implementation to help migrate structs or enums.  This will support the following
+/// migrations:
+///
+///   1. Adding a new member to a struct where the member has a Default implementation.
+///   2. Changing an enum variant's fields where the all the fields implement From.
+///
+/// This will also work if a new variant is added to an enum, but if that's the only change, and
+/// it's added to the end of the exsting variants, it will automatically be backward compatible
+/// because it won't affect how bincode serializes the old variants.  There are some other changes
+/// that can be made that are safe with bincode serialization, such as converting from Option to
+/// Vec.
+#[proc_macro_derive(Migrate)]
+pub fn derive_migrate(input: TokenStream) -> TokenStream {
+    let input: syn::DeriveInput = parse_macro_input!(input);
+
+    let ident = input.ident;
+    let latest = format_ident!("{}", format!("{}", ident).rsplit_once('V').unwrap().0);
+
+    let out = match input.data {
+        Data::Enum(e) => {
+            let mut arms = quote! {};
+            for variant in e.variants {
+                let var_ident = variant.ident;
+                let (fields, result) = match variant.fields {
+                    Fields::Named(fields) => {
+                        let field_names: Vec<_> = fields.named.iter().map(|f| &f.ident).collect();
+                        (
+                            quote! { { #(#field_names),* } },
+                            quote! { #latest::#var_ident { #(#field_names: #field_names.into()),* } },
+                        )
+                    }
+                    Fields::Unnamed(fields) => {
+                        let len = fields.unnamed.len();
+                        let field_names: Vec<_> =
+                            (0..len).map(|i| format_ident!("f{}", i)).collect();
+                        (
+                            quote! { (#(#field_names),*) },
+                            quote! { #latest::#var_ident(#(#field_names.into()),*) },
+                        )
+                    }
+                    Fields::Unit => (quote! {}, quote! { #latest::#var_ident }),
+                };
+
+                arms.extend(quote! {
+                    #ident::#var_ident #fields => #result,
+                });
+            }
+
+            quote! {
+                impl From<#ident> for #latest {
+                    fn from(from: #ident) -> Self {
+                        match from {
+                            #arms
+                        }
+                    }
+                }
+            }
+        }
+        Data::Struct(s) => {
+            let field_names = s.fields.iter().map(|f| &f.ident);
+
+            quote! {
+                impl From<#ident> for #latest {
+                    fn from(from: #ident) -> Self {
+                        #latest {
+                            #(#field_names: from.#field_names.into()),*,
+                            ..Default::default()
+                        }
+                    }
+                }
+            }
+        }
+        _ => unimplemented!(),
+    };
+
+    // eprintln!("TOKENS: {}", out);
+
+    out.into()
 }
