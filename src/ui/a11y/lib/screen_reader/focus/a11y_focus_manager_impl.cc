@@ -102,10 +102,20 @@ void A11yFocusManagerImpl::UpdateFocus(zx_koid_t newly_focused_view, uint32_t ne
 
 void A11yFocusManagerImpl::OnViewFocus(zx_koid_t view_ref_koid) {
   current_input_focus_ = view_ref_koid;
+  TryFocusingView(view_ref_koid);
+}
 
+void A11yFocusManagerImpl::RestoreA11yFocusToInputFocus() {
+  if (current_input_focus_ != ZX_KOID_INVALID) {
+    TryFocusingView(current_input_focus_);
+  }
+}
+
+void A11yFocusManagerImpl::TryFocusingView(zx_koid_t view_ref_koid) {
   uint32_t newly_focused_node_id = kRootNodeId;
-  if (focused_node_in_view_map_.find(view_ref_koid) != focused_node_in_view_map_.end()) {
-    newly_focused_node_id = focused_node_in_view_map_[view_ref_koid];
+  if (auto it = focused_node_in_view_map_.find(view_ref_koid);
+      it != focused_node_in_view_map_.end()) {
+    newly_focused_node_id = it->second;
   }
 
   UpdateFocus(view_ref_koid, newly_focused_node_id);
@@ -166,7 +176,9 @@ void A11yFocusManagerImpl::UpdateHighlights(zx_koid_t newly_focused_view,
 void A11yFocusManagerImpl::ClearA11yFocus() {
   ClearHighlights();
 
+  focused_node_in_view_map_.erase(currently_focused_view_);
   currently_focused_view_ = ZX_KOID_INVALID;
+
   if (on_a11y_focus_updated_callback_) {
     on_a11y_focus_updated_callback_(GetA11yFocus());
   }

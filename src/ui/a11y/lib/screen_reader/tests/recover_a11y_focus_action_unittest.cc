@@ -11,6 +11,7 @@
 
 #include <gmock/gmock.h>
 
+#include "gtest/gtest.h"
 #include "src/ui/a11y/bin/a11y_manager/tests/util/util.h"
 #include "src/ui/a11y/lib/screen_reader/tests/mocks/mock_screen_reader_context.h"
 #include "src/ui/a11y/lib/screen_reader/tests/screen_reader_action_test_fixture.h"
@@ -21,6 +22,9 @@ namespace accessibility_test {
 namespace {
 
 using a11y::ScreenReaderContext;
+
+constexpr zx_koid_t NON_EXISTENT_KOID = 999999;
+constexpr uint32_t INVALID_NODE_ID = 999999;
 
 class RecoverA11YFocusActionTest : public ScreenReaderActionTest {
  public:
@@ -100,6 +104,45 @@ TEST_F(RecoverA11YFocusActionTest, InvalidFocusRecoversToFirstDescribableNode) {
   EXPECT_EQ(focus->node_id, 1u);
   EXPECT_TRUE(mock_speaker()->speak_node_ids().empty());
   EXPECT_TRUE(mock_screen_reader_context()->current_navigation_context().containers.empty());
+}
+
+TEST_F(RecoverA11YFocusActionTest, InvalidFocusTriesRestoringA11yFocusToInputFocusAndStops) {
+  // Sets the focus to a koid that does not exist, then run the action.
+  mock_a11y_focus_manager()->SetA11yFocus(NON_EXISTENT_KOID, 0,
+                                          [](bool result) { EXPECT_TRUE(result); });
+  // When RestoreA11yFocusToInputFocus is called, we'll get back to a valid
+  // view, but still an invalid node. Then, we'll recover to node 1, which does not belong to a
+  // container.
+  mock_a11y_focus_manager()->set_restore_a11y_focus_to_input_focus_value(
+      mock_semantic_provider()->koid(), INVALID_NODE_ID);
+
+  a11y::RecoverA11YFocusAction action(action_context(), mock_screen_reader_context());
+  action.Run({});
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsRestoreA11yFocusToInputFocusCalled());
+  EXPECT_FALSE(mock_a11y_focus_manager()->IsClearA11yFocusCalled());
+  auto focus = mock_a11y_focus_manager()->GetA11yFocus();
+  ASSERT_TRUE(focus);
+  EXPECT_EQ(mock_semantic_provider()->koid(), focus->view_ref_koid);
+  EXPECT_EQ(focus->node_id, 1u);
+}
+
+TEST_F(RecoverA11YFocusActionTest, InvalidFocusTriesRestoringA11yFocusToInputFocusAndFails) {
+  // Sets the focus to a koid that does not exist, then run the action.
+  mock_a11y_focus_manager()->SetA11yFocus(NON_EXISTENT_KOID, 0,
+                                          [](bool result) { EXPECT_TRUE(result); });
+  // When RestoreA11yFocusToInputFocus is called, we'll still be on the bad focus.
+  mock_a11y_focus_manager()->set_restore_a11y_focus_to_input_focus_value(NON_EXISTENT_KOID, 0);
+
+  a11y::RecoverA11YFocusAction action(action_context(), mock_screen_reader_context());
+  action.Run({});
+  RunLoopUntilIdle();
+
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsRestoreA11yFocusToInputFocusCalled());
+  EXPECT_TRUE(mock_a11y_focus_manager()->IsClearA11yFocusCalled());
+  auto focus = mock_a11y_focus_manager()->GetA11yFocus();
+  ASSERT_FALSE(focus);
 }
 
 }  // namespace

@@ -8,6 +8,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/inspect/cpp/inspect.h>
 
+#include <optional>
 #include <unordered_map>
 
 #include "src/ui/a11y/lib/focus_chain/accessibility_focus_chain_listener.h"
@@ -71,7 +72,14 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // |A11yFocusManager|
   //
-  // Clears existing a11y focus.
+  // Try to restore the a11y focus to the view in input focus, if possible.
+  // After this method completes, GetA11yFocus() will generally return a non-nullopt
+  // value (except in some rare situations).
+  void RestoreA11yFocusToInputFocus() override;
+
+  // |A11yFocusManager|
+  //
+  // Clears existing a11y focus, and forgets the current view's "last focused node".
   void ClearA11yFocus() override;
 
   // |A11yFocusManager|
@@ -97,6 +105,9 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // |AccessibilityFocusChainListener|
   void OnViewFocus(zx_koid_t view_ref_koid) override;
+
+  // Helper method that tries to move the a11y focus to a view.
+  void TryFocusingView(zx_koid_t view_ref_koid);
 
   // Helper function to update inspect info.
   void UpdateInspectProperties();

@@ -24,6 +24,10 @@ class RecoverA11YFocusAction : public ScreenReaderAction {
   void Run(GestureContext gesture_context) override;
 
  private:
+  // Check whether the focus is valid (i.e., the a11y focus exists and the
+  // focused node is still present).
+  bool FocusIsValid();
+
   fpromise::scope scope_;
 };
 

@@ -48,6 +48,11 @@ class A11yFocusManager {
   // Returns the current a11y focus, if any.
   virtual std::optional<A11yFocusInfo> GetA11yFocus() = 0;
 
+  // Try to restore the a11y focus to the view in input focus, if possible.
+  // After this method completes, GetA11yFocus() will generally return a non-nullopt
+  // value (except in some rare situations).
+  virtual void RestoreA11yFocusToInputFocus() = 0;
+
   // Tries to set the a11y focus.
   //
   // If the new focus is in a different view from the current input focus, then
@@ -60,7 +65,7 @@ class A11yFocusManager {
   // Otherwise, we'll call the callback with 'false'.
   virtual void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback) = 0;
 
-  // Clears existing a11y focus.
+  // Clears existing a11y focus, and forgets the current view's "last focused node".
   virtual void ClearA11yFocus() = 0;
 
   // If a node is in a11y focus, redraws the current highlights (useful if the

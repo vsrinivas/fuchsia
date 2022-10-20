@@ -357,6 +357,28 @@ TEST_F(A11yFocusManagerTest, NoFocusChainUpdateToVirtualKeyboardViewAndBack) {
   EXPECT_FALSE(mock_focus_chain_requester_.ReceivedViewRef());
 }
 
+TEST_F(A11yFocusManagerTest, RestoresA11yFocusToInputFocus) {
+  mock_focus_chain_requester_.set_will_change_focus(true);
+  bool success = false;
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_.koid(), 2u,
+                                    [&success](bool result) { success = result; });
+  CheckViewInFocus(view_ref_helper_, 2u);
+  EXPECT_TRUE(success);
+
+  // Request to transfer focus to view 2, which has a visible virtual keyboard.
+  ViewRefHelper view_ref_helper_2;
+  mock_view_source_.CreateView(view_ref_helper_2);
+  mock_virtual_keyboard_manager_.set_view_with_virtual_keyboard(view_ref_helper_2.koid());
+  mock_focus_chain_requester_.clear_view_ref();
+  a11y_focus_manager_->SetA11yFocus(view_ref_helper_2.koid(), 1u, [](bool result) {});
+
+  CheckViewInFocus(view_ref_helper_2, 1u);
+
+  // Restore focus to the view with input focus.
+  a11y_focus_manager_->RestoreA11yFocusToInputFocus();
+  CheckViewInFocus(view_ref_helper_, 2u);
+}
+
 TEST_F(A11yFocusManagerTest, ListensToFocusChainUpdates) {
   // The Focus Chain is updated and the Focus Chain Manager listens to the update.
   mock_focus_chain_registry_.SendViewRefKoid(view_ref_helper_.koid());
