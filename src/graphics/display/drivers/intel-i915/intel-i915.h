@@ -173,6 +173,16 @@ class Controller : public DeviceType,
 
   const std::unique_ptr<GttRegion>& GetGttRegion(uint64_t handle);
   void InitDisplays();
+
+  // Reads the memory latency information needed to confiugre pipes and planes.
+  //
+  // Returns false if a catastrophic error occurred, and pipes and planes cannot
+  // be safely configured.
+  bool ReadMemoryLatencyInfo();
+
+  // Disables the PCU (power controller)'s automated voltage adjustments.
+  void DisableSystemAgentGeyserville();
+
   std::unique_ptr<DisplayDevice> QueryDisplay(registers::Ddi ddi) __TA_REQUIRES(display_lock_);
   bool LoadHardwareState(registers::Ddi ddi, DisplayDevice* device) __TA_REQUIRES(display_lock_);
   zx_status_t AddDisplay(std::unique_ptr<DisplayDevice> display) __TA_REQUIRES(display_lock_);

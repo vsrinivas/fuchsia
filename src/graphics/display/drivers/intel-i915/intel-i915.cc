@@ -8,12 +8,14 @@
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/ddk/hw/inout.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/image-format/image_format.h>
+#include <lib/zx/status.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
@@ -29,6 +31,7 @@
 #include <memory>
 #include <utility>
 
+#include <fbl/auto_lock.h>
 #include <fbl/vector.h>
 
 #include "fuchsia/hardware/display/controller/c/banjo.h"
@@ -41,6 +44,7 @@
 #include "src/graphics/display/drivers/intel-i915/macros.h"
 #include "src/graphics/display/drivers/intel-i915/pch-engine.h"
 #include "src/graphics/display/drivers/intel-i915/pci-ids.h"
+#include "src/graphics/display/drivers/intel-i915/power-controller.h"
 #include "src/graphics/display/drivers/intel-i915/power.h"
 #include "src/graphics/display/drivers/intel-i915/registers-ddi.h"
 #include "src/graphics/display/drivers/intel-i915/registers-dpll.h"
@@ -558,6 +562,24 @@ void Controller::InitDisplays() {
   fbl::AutoLock lock(&display_lock_);
   BringUpDisplayEngine(false);
 
+  if (!ReadMemoryLatencyInfo()) {
+    return;
+  }
+
+  // This disables System Agent Geyserville (SAGV), which dynamically adjusts
+  // the system agent voltage and clock frequencies depending on system power
+  // and performance requirements.
+  //
+  // When SAGV is enabled, it could limit the display memory bandwidth (on Tiger
+  // Lake+) and block the display engine from accessing system memory for a
+  // certain amount of time (SAGV block time). Thus, SAGV must be disabled if
+  // the display engine's memory latency exceeds the SAGV block time.
+  //
+  // Here, we unconditionally disable SAGV to guarantee the correctness of
+  // the display engine memory accesses. However, this may cause the processor
+  // to consume more power, even to the point of exceeding its thermal envelope.
+  DisableSystemAgentGeyserville();
+
   for (const auto ddi : ddis_) {
     auto disp_device = QueryDisplay(ddi);
     if (disp_device) {
@@ -627,6 +649,75 @@ void Controller::InitDisplays() {
       }
     }
   }
+}
+
+bool Controller::ReadMemoryLatencyInfo() {
+  PowerController power_controller(&*mmio_space_);
+
+  const zx::result<std::array<uint8_t, 8>> memory_latency =
+      power_controller.GetRawMemoryLatencyDataUs();
+  if (memory_latency.is_error()) {
+    // We're not supposed to enable planes if we can't read the memory latency
+    // data. This makes the display driver fairly useless, so bail.
+    zxlogf(ERROR, "Error reading memory latency data from PCU firmware: %s",
+           memory_latency.status_string());
+    return false;
+  }
+  zxlogf(TRACE, "Raw PCU memory latency data: %u %u %u %u %u %u %u %u", memory_latency.value()[0],
+         memory_latency.value()[1], memory_latency.value()[2], memory_latency.value()[3],
+         memory_latency.value()[4], memory_latency.value()[5], memory_latency.value()[6],
+         memory_latency.value()[7]);
+
+  // Pre-Tiger Lake, the SAGV blocking time is always modeled to 30us.
+  const zx::result<uint32_t> blocking_time =
+      is_tgl(device_id_) ? power_controller.GetSystemAgentBlockTimeUsTigerLake()
+                         : power_controller.GetSystemAgentBlockTimeUsKabyLake();
+  if (blocking_time.is_error()) {
+    // We're not supposed to enable planes if we can't read the SAGV blocking
+    // time. This makes the display driver fairly useless, so bail.
+    zxlogf(ERROR, "Error reading SAGV blocking time from PCU firmware: %s",
+           blocking_time.status_string());
+    return false;
+  }
+  zxlogf(TRACE, "System Agent Geyserville blocking time: %u", blocking_time.value());
+
+  // The query below is only supported on Tiger Lake PCU firmware.
+  if (!is_tgl(device_id_)) {
+    return true;
+  }
+
+  const zx::result<MemorySubsystemInfo> memory_info =
+      power_controller.GetMemorySubsystemInfoTigerLake();
+  if (memory_info.is_error()) {
+    // We can handle this error by unconditionally disabling SAGV.
+    zxlogf(ERROR, "Error reading SAGV QGV point info from PCU firmware: %s",
+           blocking_time.status_string());
+    return true;
+  }
+
+  const MemorySubsystemInfo::GlobalInfo& global_info = memory_info.value().global_info;
+  zxlogf(TRACE, "PCU memory subsystem info: DRAM type %d, %d channels, %d SAGV points",
+         global_info.ram_type, global_info.memory_channel_count, global_info.agent_point_count);
+  for (int point_index = 0; point_index < global_info.agent_point_count; ++point_index) {
+    const MemorySubsystemInfo::AgentPoint& point_info = memory_info.value().points[point_index];
+    zxlogf(TRACE, "SAGV point %d info: DRAM clock %d kHz, tRP %d, tRCD %d, tRDPRE %d, tRAS %d",
+           point_index, point_info.dram_clock_khz, point_info.row_precharge_to_open_cycles,
+           point_info.row_access_to_column_access_delay_cycles, point_info.read_to_precharge_cycles,
+           point_info.row_activate_to_precharge_cycles);
+  }
+  return true;
+}
+
+void Controller::DisableSystemAgentGeyserville() {
+  PowerController power_controller(&*mmio_space_);
+
+  const zx::result<> sagv_disabled = power_controller.SetSystemAgentGeyservilleEnabled(
+      false, PowerController::RetryBehavior::kRetryUntilStateChanges);
+  if (sagv_disabled.is_error()) {
+    zxlogf(ERROR, "Failed to disable System Agent Geyserville. Display corruption may occur.");
+    return;
+  }
+  zxlogf(TRACE, "System Agent Geyserville disabled.");
 }
 
 void Controller::RemoveDisplay(std::unique_ptr<DisplayDevice> display) {

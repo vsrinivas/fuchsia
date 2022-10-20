@@ -34,6 +34,7 @@ source_set("common_srcs") {
     "interrupts.cc",
     "pch-engine.cc",
     "pipe.cc",
+    "power-controller.cc",
     "power.cc",
   ]
   public_deps = [
@@ -95,6 +96,8 @@ test("intel-i915-test") {
     "interrupts-unittest.cc",
     "pch-engine-unittest.cc",
     "pipe-unittest.cc",
+    "poll-until-unittest.cc",
+    "power-controller-unittest.cc",
     "power-unittest.cc",
     "registers-unittest.cc",
   ]
@@ -105,6 +108,7 @@ test("intel-i915-test") {
     "//src/devices/testing/fake-mmio-reg",
     "//src/devices/testing/mock-ddk",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
