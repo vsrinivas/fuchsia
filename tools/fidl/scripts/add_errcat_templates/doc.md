@@ -4,18 +4,12 @@
 
 {% include "docs/reference/fidl/language/error-catalog/label/_bad.md" %}
 
-```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlc/tests/fidl/bad/fi-${num}.test.fidl" exclude_regexp="\/\/ (Copyright 20|Use of|found in).*" %}
-```
-
+${bad_includecodes}
 <!-- TODO: 1 or 2 lines explaining how to fix this in the general case -->:
 
 {% include "docs/reference/fidl/language/error-catalog/label/_good.md" %}
 
-```fidl
-{% includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="tools/fidl/fidlc/tests/fidl/good/fi-${num}.test.fidl" exclude_regexp="\/\/ (Copyright 20|Use of|found in).*" %}
-```
+${good_includecodes}
+<!-- TODO(OPTIONAL): 1 paragraph summarizing strategies to avoid problem -->
 
-<!-- TODO(RECOMMENDED): 1 paragraph summarizing strategies to avoid problem -->
-
-<!-- TODO(OPTIONAL): 1 explaining why this is an error in the first place -->
+<!-- TODO(OPTIONAL): 1 paragraph explaining why this is an error at all -->

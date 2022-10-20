@@ -1,7 +1,7 @@
 // Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-library test.bad.fi${num};
+library test.bad.fi${flat_name};
 
 // TODO(${dns}): You'll need to grep the codebase for this error name (for example `ErrFoo`)
 // and extract the content of that error (everything after the library declaration) into this file,
@@ -14,5 +14,5 @@ library test.bad.fi${num};
 // With:
 //
 //   TestLibrary library;
-//   library.AddFile("bad/fi-${num}.test.fidl");
+//   library.AddFile("bad/${case_name}.test.fidl");
 //

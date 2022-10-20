@@ -18,6 +18,7 @@ ERRCAT_INDEX_FILE_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/errcat.md"
 REDIRECT_FILE_PATH = FUCHSIA_DIR / "docs/error/_redirects.yaml"
 DOCS_DIR_PATH = FUCHSIA_DIR / "docs/reference/fidl/language/error-catalog"
 DOC_TEMPLATE_PATH = FUCHSIA_DIR / "tools/fidl/scripts/add_errcat_templates/doc.md"
+INCLUDECODE_TEMPLATE_PATH = FUCHSIA_DIR / "tools/fidl/scripts/add_errcat_templates/includecode.md"
 
 # Paths for relevant fidc locations.
 FIDLC_DIAGNOSTICS_FILE_PATH = FUCHSIA_DIR / "tools/fidl/fidlc/include/fidl/diagnostics.h"
@@ -85,20 +86,29 @@ def insert_entry(path, entry_matcher, num, insert):
         if insert_before is not None:
             insert_lines_at_line_num(path, lines, insert_before + 2, insert)
 
-    return not already_exists
+    return int(not already_exists)
 
 
-def create_file(file_path, template_path, numeral):
+def substitute(template_path, subs):
+    subs['dns'] = DNS
+
+    # Create the file for this errcat entry, substituting the proper numeral along the way.
+    with open(template_path, 'r') as f:
+        template = Template(f.read())
+        return template.substitute(subs)
+
+
+def create_file(file_path, template_path, subs):
     # Only add this kind of file for this numeral if none exists.
     if file_path.is_file():
-        return False
+        return 0
 
     # Create the file for this errcat entry, substituting the proper numeral along the way.
     with open(template_path, 'r') as f:
         template = Template(f.read())
         with open(file_path, 'wt') as f:
-            f.write(template.substitute(num=numeral, dns=DNS))
-            return True
+            f.write(substitute(template_path, subs))
+            return 1
 
 
 def main(args):
@@ -114,13 +124,15 @@ def main(args):
     """
 
     progress = {
-        'index_entry_added': False,
-        'redirect_entry_added': False,
-        'markdown_file_created': False,
-        'bad_test_added': False,
-        'good_test_added': False,
-        'test_case_added': False,
-        'diagnostic_specialization_swapped': False,
+        'index_entry_added': 0,
+        'redirect_entry_added': 0,
+        'diagnostic_specialization_swapped': 0,
+        'markdown_file_created': 0,
+        'bad_tests_added': 0,
+        'bad_files_created': 0,
+        'good_tests_added': 0,
+        'good_files_created': 0,
+        'good_test_cases_added': 0,
     }
 
     # Create the error id string, taking care to appropriately inject leading zeroes.
@@ -138,27 +150,6 @@ def main(args):
         '- from: /fuchsia-src/error/fi-%s\n  to: /fuchsia-src/reference/fidl/language/errcat.md#fi-%s'
         % (ns, ns))
 
-    # Insert the good and bad tests into the BUILD.gn file. Yes, this does read/write the file twice
-    # consecutively, but that is okay.
-    progress['bad_test_added'] = insert_entry(
-        FIDLC_BUILD_GN_FILE_PATH, REGEX_BAD_TEST_ENTRY, n,
-        '    "fidl/bad/fi-%s.test.fidl",' % ns)
-    progress['good_test_added'] = insert_entry(
-        FIDLC_BUILD_GN_FILE_PATH, REGEX_GOOD_TEST_ENTRY, n,
-        '    "fidl/good/fi-%s.test.fidl",' % ns)
-
-    # Only add a test entry for the good test case if none exists. This will insert tests in
-    # alphabetical order, which is not ideal, but fine for the time being.
-    insert = textwrap.dedent(
-        """TEST(ErrcatTests, Good%s) {
-  TestLibrary library;
-  library.AddFile("good/fi-%s.test.fidl");
-  ASSERT_COMPILED(library);
-}
-""") % (ns, ns)
-    progress['test_case_added'] = insert_entry(
-        FIDLC_ERRCAT_TESTS_FILE_PATH, REGEX_ERRCAT_TEST_FILE_ENTRY, n, insert)
-
     # Replace the specialization used in diagnostics.h, if the error already exists in that file.
     with open(FIDLC_DIAGNOSTICS_FILE_PATH, 'rt') as f:
         text = f.read()
@@ -174,15 +165,95 @@ def main(args):
         with open(FIDLC_DIAGNOSTICS_FILE_PATH, "wt") as f:
             f.write(new_text)
 
-    # Add any new files we need.
+    # Create entries for each "bad" example: one new file per case with ascending alphabetical
+    # suffixes ("-a", "-b", etc), and a corresponding entry in the BUILD.gn file for the tests.
+    bad_includecodes = []
+    b = 0
+    while b < args.bad:
+        b = b + 1
+
+        # 97 is "a" in ASCII.
+        suffix = chr(b + 96) if args.bad > 1 else ""
+        case_name = "fi-%s%s" % (ns, ("-" + suffix) if suffix else "")
+        flat_name = "%s%s" % (ns, suffix)
+
+        # Insert this test file into the BUILD.gn file.
+        progress['bad_tests_added'] += insert_entry(
+            FIDLC_BUILD_GN_FILE_PATH, REGEX_BAD_TEST_ENTRY, n,
+            '    "fidl/bad/%s.test.fidl",' % case_name)
+
+        # Add any new files we need.
+        progress['bad_files_created'] += create_file(
+            FIDLC_BAD_TESTS_DIR_PATH / ("%s.test.fidl" % case_name),
+            FIDLC_BAD_TEMPLATE_PATH, {
+                'num': ns,
+                'case_name': case_name,
+                'flat_name': flat_name,
+            })
+
+        # Create the markdown entry for this case.
+        bad_includecodes.append(
+            substitute(
+                INCLUDECODE_TEMPLATE_PATH, {
+                    'kind': "bad",
+                    'case_name': case_name,
+                }))
+
+    # Create entries for each "good" example: one new file per case with ascending alphabetical
+    # suffixes ("-a", "-b", etc), a corresponding entry in the BUILD.gn file for the tests, and a
+    # new test in the errcat_good_tests.cc file.
+    good_includecodes = []
+    g = 0
+    while g < args.good:
+        g = g + 1
+
+        # 97 is "a" in ASCII.
+        suffix = chr(g + 96) if args.good > 1 else ""
+        case_name = "fi-%s%s" % (ns, ("-" + suffix) if suffix else "")
+        flat_name = "%s%s" % (ns, suffix)
+
+        # Insert this test file into the BUILD.gn file.
+        progress['good_tests_added'] += insert_entry(
+            FIDLC_BUILD_GN_FILE_PATH, REGEX_GOOD_TEST_ENTRY, n,
+            '    "fidl/good/%s.test.fidl",' % case_name)
+
+        # Add any new files we need.
+        progress['good_files_created'] += create_file(
+            FIDLC_GOOD_TESTS_DIR_PATH / ("%s.test.fidl" % case_name),
+            FIDLC_GOOD_TEMPLATE_PATH, {
+                'num': ns,
+                'case_name': case_name,
+                'flat_name': flat_name,
+            })
+
+        # Create the markdown entry for this case.
+        good_includecodes.append(
+            substitute(
+                INCLUDECODE_TEMPLATE_PATH, {
+                    'kind': "good",
+                    'case_name': case_name,
+                }))
+
+        # Only add a test entry for the good test case if none exists. This will insert tests in
+        # alphabetical order, which is not ideal, but fine for the time being.
+        insert = textwrap.dedent(
+            """TEST(ErrcatTests, Good%s) {
+TestLibrary library;
+library.AddFile("good/%s.test.fidl");
+ASSERT_COMPILED(library);
+}
+""") % (flat_name, case_name)
+        progress['good_test_cases_added'] += insert_entry(
+            FIDLC_ERRCAT_TESTS_FILE_PATH, REGEX_ERRCAT_TEST_FILE_ENTRY, n,
+            insert)
+
+    # Create the markdown file for the actual doc.
     progress['markdown_file_created'] = create_file(
-        DOCS_DIR_PATH / ("_fi-%s.md" % ns), DOC_TEMPLATE_PATH, ns)
-    progress['bad_test_created'] = create_file(
-        FIDLC_BAD_TESTS_DIR_PATH / ("fi-%s.test.fidl" % ns),
-        FIDLC_BAD_TEMPLATE_PATH, ns)
-    progress['good_test_created'] = create_file(
-        FIDLC_GOOD_TESTS_DIR_PATH / ("fi-%s.test.fidl" % ns),
-        FIDLC_GOOD_TEMPLATE_PATH, ns)
+        DOCS_DIR_PATH / ("_fi-%s.md" % ns), DOC_TEMPLATE_PATH, {
+            'num': ns,
+            'good_includecodes': '\n'.join(good_includecodes),
+            'bad_includecodes': '\n'.join(bad_includecodes),
+        })
 
     # Tell the user what a great job we've done.
     print()
@@ -199,18 +270,6 @@ def main(args):
         print(
             "  * Added new redirect entry for fi-%s to %s." %
             (ns, REDIRECT_FILE_PATH))
-    if progress['bad_test_added']:
-        print(
-            "  * A BUILD rule for the bad test case for fi-%s has been added to %s."
-            % (ns, FIDLC_BUILD_GN_FILE_PATH))
-    if progress['good_test_added']:
-        print(
-            "  * A BUILD rule for the good test case for fi-%s has been added to %s."
-            % (ns, FIDLC_BUILD_GN_FILE_PATH))
-    if progress['test_case_added']:
-        print(
-            "  * A good test case for fi-%s has been added to %s." %
-            (ns, FIDLC_ERRCAT_TESTS_FILE_PATH))
     if progress['diagnostic_specialization_swapped']:
         print(
             "  * The DiagnosticDef specialization for fi-%s in %s now prints a permalink."
@@ -219,23 +278,48 @@ def main(args):
         print(
             "  * Added new markdown file for fi-%s at %s/_fi-%s.md." %
             (ns, DOCS_DIR_PATH, ns))
+    if progress['bad_tests_added']:
+        print(
+            "  * A BUILD rule for the %d new bad test cases for fi-%s has been added to %s."
+            % (progress['bad_tests_added'], ns, FIDLC_BUILD_GN_FILE_PATH))
+    if progress['good_tests_added']:
+        print(
+            "  * A BUILD rule for the %d new good test case for fi-%s has been added to %s."
+            % (progress['good_tests_added'], ns, FIDLC_BUILD_GN_FILE_PATH))
+    if progress['good_test_cases_added']:
+        print(
+            "  * %d good test cases for fi-%s has been added to %s." % (
+                progress['good_test_cases_added'], ns,
+                FIDLC_ERRCAT_TESTS_FILE_PATH))
 
     # Add a line break, plus a horizontal rule, to emphasize the actionable reports.
-    if progress['bad_test_created'] or progress['good_test_created']:
+    if progress['bad_files_created'] or progress['good_files_created']:
         print(
             "\n----------------------------------------------------------------------\n"
         )
-    if progress['bad_test_created']:
+    if progress['bad_files_created']:
         print(
-            "  * Added bad example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(%s)!"
-            % (ns, FIDLC_BAD_TESTS_DIR_PATH, ns, DNS))
-    if progress['good_test_created']:
+            "  * Added %d bad examples for fi-%s at %s/fi-%s*.test.fidl. Resolve the TODO(%s)s!"
+            % (
+                progress['bad_files_created'], ns, FIDLC_BAD_TESTS_DIR_PATH, ns,
+                DNS))
+    if progress['good_files_created']:
         print(
-            "  * Added good example for fi-%s at %s/fi-%s.test.fidl. Please resolve the TODO(%s)!"
-            % (ns, FIDLC_GOOD_TESTS_DIR_PATH, ns, DNS))
+            "  * Added %d good examples for fi-%s at %s/fi-%s*.test.fidl. Resolve the TODO(%s)s!"
+            % (
+                progress['good_files_created'], ns, FIDLC_GOOD_TESTS_DIR_PATH,
+                ns, DNS))
     print()
 
     return 0
+
+
+def non_zero_unsigned_int(arg):
+    as_int = int(arg)
+    if as_int < 0:
+        raise argparse.ArgumentTypeError(
+            "'%s' must be a non-zero unsigned integer" % as_int)
+    return as_int
 
 
 if __name__ == '__main__':
@@ -246,4 +330,13 @@ if __name__ == '__main__':
         metavar='N',
         type=int,
         help='The numeral of the error being added to the errcat')
+    parser.add_argument(
+        "--bad",
+        type=non_zero_unsigned_int,
+        help='Number of "bad" examples to generate')
+    parser.add_argument(
+        "--good",
+        type=non_zero_unsigned_int,
+        help='Number of "good" examples to generate')
+    parser.set_defaults(good=1, bad=1)
     main(parser.parse_args())
