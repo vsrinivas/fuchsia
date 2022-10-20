@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 library fuchsia.developer.ffx;
 
+using fuchsia.version;
+
 const MAX_GIT_COMMIT_LENGTH uint16 = 40;
 const MAX_BUILD_VERSION_LENGTH uint16 = 100;
 const MAX_EXEC_PATH_LENGTH uint16 = 4096;
@@ -21,13 +23,13 @@ type VersionInfo = table {
     /// that an application expects the platform to provide. The number
     /// has no ordering relationship (higher is not newer or older).
     /// Can be mapped to an api_level using //sdk/version_history.json.
-    4: abi_revision uint64;
+    4: abi_revision fuchsia.version.AbiRevision;
 
     /// The API level denotes a set of APIs available when building an
     /// application for a given release of the FUCHSIA IDK. Higher number
     /// means newer.
     /// Can be mapped to an abi_revision using //sdk/version_history.json.
-    5: api_level uint64;
+    5: api_level fuchsia.version.ApiLevel;
 
     /// Path of the actual FFX executable. This allows us to make absolutely
     /// sure commands match the daemon they're communicating with.

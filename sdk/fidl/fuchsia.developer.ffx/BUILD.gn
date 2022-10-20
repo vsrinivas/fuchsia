@@ -29,6 +29,7 @@ fidl("fuchsia.developer.ffx") {
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.net",
     "//sdk/fidl/fuchsia.tracing.controller",
+    "//sdk/fidl/fuchsia.version",
     "//zircon/vdso/zx",
   ]
 
