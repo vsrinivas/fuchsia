@@ -233,7 +233,7 @@ func (cmd upCommand) execute(ctx context.Context, buildDir string) error {
 	}
 
 	// Upload the product bundles.
-	pbUploads, err := artifactory.ProductBundle2Uploads(m, blobDirName, imageNamespaceDir)
+	pbUploads, err := artifactory.ProductBundle2Uploads(m, blobDirName, cmd.namespace)
 	if err != nil {
 		return err
 	}
