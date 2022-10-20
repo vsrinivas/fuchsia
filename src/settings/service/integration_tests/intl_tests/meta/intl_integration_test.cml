@@ -31,4 +31,9 @@
             subdir: "intl_integration_test_pkg",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "stash" ],
+        },
+    },
 }
