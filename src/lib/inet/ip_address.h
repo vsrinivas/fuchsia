@@ -126,6 +126,9 @@ class IpAddress {
   // Indicates whether this address is a loopback address.
   bool is_loopback() const;
 
+  // Indicates whether this address is link-local (IPv4: in 169.254.0.0/16, IPv6: in fe80::/10).
+  bool is_link_local() const;
+
   // Returns this address as an |in_addr|. Only defined for V4 addresses.
   const in_addr& as_in_addr() const {
     FX_DCHECK(is_v4());
