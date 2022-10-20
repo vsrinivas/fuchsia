@@ -3756,7 +3756,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
 };
 
 
@@ -3798,7 +3798,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFields>> decoded_;
 };
 
@@ -3841,7 +3841,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnion>> decoded_;
 };
 
@@ -3884,7 +3884,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTable>> decoded_;
 };
 
@@ -3927,7 +3927,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayErr>> decoded_;
 };
 
@@ -3970,7 +3970,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
@@ -4013,7 +4013,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
@@ -4056,7 +4056,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 
@@ -4096,7 +4096,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWay>> decoded_;
 };
 
@@ -4139,7 +4139,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFields>> decoded_;
 };
 
@@ -4182,7 +4182,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnion>> decoded_;
 };
 
@@ -4225,7 +4225,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTable>> decoded_;
 };
 
@@ -4268,7 +4268,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayErr>> decoded_;
 };
 
@@ -4311,7 +4311,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayFieldsErr>> decoded_;
 };
 
@@ -4354,7 +4354,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayUnionErr>> decoded_;
 };
 
@@ -4397,7 +4397,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsDriverProtocol::FlexibleTwoWayTableErr>> decoded_;
 };
 
@@ -7227,7 +7227,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
 };
 
 
@@ -7269,7 +7269,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFields>> decoded_;
 };
 
@@ -7312,7 +7312,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnion>> decoded_;
 };
 
@@ -7355,7 +7355,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTable>> decoded_;
 };
 
@@ -7398,7 +7398,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayErr>> decoded_;
 };
 
@@ -7441,7 +7441,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
@@ -7484,7 +7484,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
@@ -7527,7 +7527,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsAjarDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 
@@ -9864,7 +9864,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
 };
 
 
@@ -9906,7 +9906,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFields>> decoded_;
 };
 
@@ -9949,7 +9949,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnion>> decoded_;
 };
 
@@ -9992,7 +9992,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTable>> decoded_;
 };
 
@@ -10035,7 +10035,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayErr>> decoded_;
 };
 
@@ -10078,7 +10078,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayFieldsErr>> decoded_;
 };
 
@@ -10121,7 +10121,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayUnionErr>> decoded_;
 };
 
@@ -10164,7 +10164,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_unknowninteractions::Unknown
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
       ::fidl::DecodedValue<::fidl::WireResponse<::test_unknowninteractions::UnknownInteractionsClosedDriverProtocol::StrictTwoWayTableErr>> decoded_;
 };
 

@@ -144,7 +144,7 @@ void DriverWaiter::HandleChannelRead(fdf_dispatcher_t* dispatcher, fdf::ChannelR
     return failure_handler_(unbind_info);
   }
 
-  fdf::Arena arena;
+  fdf::Arena arena(nullptr);
   DriverMessageStorageView storage_view{.arena = &arena};
   IncomingHeaderAndMessage msg = fidl::MessageRead(fdf::UnownedChannel(handle_), storage_view);
   if (!msg.ok()) {

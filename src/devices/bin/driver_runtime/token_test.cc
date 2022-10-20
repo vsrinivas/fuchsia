@@ -26,7 +26,7 @@ class TokenTest : public RuntimeTestCase {
   fdf::Dispatcher dispatcher_remote_;
   libsync::Completion dispatcher_remote_shutdown_completion_;
 
-  fdf::Arena arena_;
+  fdf::Arena arena_{nullptr};
 
   zx::channel token_local_, token_remote_;
 };

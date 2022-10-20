@@ -304,7 +304,7 @@ class [[nodiscard]] ::fdf::WireUnownedResult<::test_drivertwoway::TwoWay::Add> f
   }
 
  private:
-  ::fdf::Arena arena_;
+  ::fdf::Arena arena_{nullptr};
   ::fidl::DecodedValue<::fidl::WireResponse<::test_drivertwoway::TwoWay::Add>> decoded_;
 };
 

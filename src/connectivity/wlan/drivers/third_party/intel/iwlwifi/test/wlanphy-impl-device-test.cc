@@ -41,7 +41,8 @@ class WlanphyImplDeviceTest : public FakeUcodeTest {
                 {
                     .beacon_int = kListenInterval,
                 },
-        } {
+        },
+        test_arena_(nullptr) {
     device_ = sim_trans_.sim_device();
 
     // Create the FIDL endpoints, bind the client end to the test class, and the server end to

@@ -1187,7 +1187,7 @@ TEST_F(DispatcherTest, ChannelPeerWriteDuringShutdown) {
   for (uint32_t i = 0; i < kNumChannelPairs; i++) {
     // This will write the packet to the peer channel and attempt to call |QueueRegisteredCallback|
     // on the dispatcher.
-    fdf::Arena arena;
+    fdf::Arena arena(nullptr);
     ASSERT_EQ(ZX_OK,
               remote[i].Write(0, arena, nullptr, 0, cpp20::span<zx_handle_t>()).status_value());
   }
@@ -2223,7 +2223,7 @@ TEST_F(DispatcherTest, WaitUntilIdleWithAsyncLoopMultipleThreads) {
                                                    &local[i].complete_blocking_read));
   }
 
-  fdf::Arena arena;
+  fdf::Arena arena(nullptr);
   for (uint32_t i = 0; i < kNumClients; i++) {
     // Call is considered reentrant and will be queued on the async loop.
     auto write_status = remote[i].Write(0, arena, nullptr, 0, cpp20::span<zx_handle_t>());

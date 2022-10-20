@@ -356,7 +356,7 @@ zx_status_t SimInterface::SetMulticastPromisc(bool enable) {
   return if_impl_ops_->set_multicast_promisc(if_impl_ctx_, enable);
 }
 
-SimTest::SimTest() {
+SimTest::SimTest() : test_arena_(nullptr) {
   env_ = std::make_shared<simulation::Environment>();
   env_->AddStation(this);
 

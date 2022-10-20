@@ -26,7 +26,7 @@
 
 class ChannelTest : public RuntimeTestCase {
  protected:
-  ChannelTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+  ChannelTest() : arena_(nullptr), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override;
   void TearDown() override;

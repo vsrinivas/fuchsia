@@ -120,7 +120,7 @@ inline fdf::Arena TakeDriverArenaFromStorage(MessageStorageViewBase* storage_vie
 template <typename Derived>
 struct DriverMessageStorageBase {
   // |arena| backs both bytes and handles.
-  fdf::Arena arena;
+  fdf::Arena arena{nullptr};
 
   DriverMessageStorageView view() {
     return DriverMessageStorageView{

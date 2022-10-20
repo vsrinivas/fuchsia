@@ -34,7 +34,7 @@ struct TestServer : public fdf::WireServer<test_transport::TwoWayTest> {
   }
 
   fdf_arena_t* fdf_request_arena;
-  fdf::Arena fdf_response_arena;
+  fdf::Arena fdf_response_arena{nullptr};
 };
 
 TEST(DriverTransport, WireTwoWayAsync) {

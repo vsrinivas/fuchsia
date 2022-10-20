@@ -64,7 +64,7 @@ class [[nodiscard]] {{ .WireUnownedResult }} final : public {{ .BaseWireResult }
     }
 
    private:
-    ::fdf::Arena arena_;
+    ::fdf::Arena arena_{nullptr};
     {{- if .HasResponsePayload }}
       ::fidl::DecodedValue<{{ .WireResponse }}> decoded_;
     {{- end }}

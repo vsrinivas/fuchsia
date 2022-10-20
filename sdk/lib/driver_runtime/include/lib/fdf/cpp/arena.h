@@ -37,7 +37,7 @@ namespace fdf {
 //   // Use the allocated memory...
 class Arena {
  public:
-  explicit Arena(fdf_arena_t* arena = nullptr) : arena_(arena) {}
+  explicit Arena(fdf_arena_t* arena) : arena_(arena) {}
 
   // Creates an FDF Arena for allocating memory. This can never fail.
   //

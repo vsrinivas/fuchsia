@@ -47,7 +47,7 @@ constexpr zx_handle_t kDummyMlmeChannel = 73939133;  // An arbitrary value not Z
 class WlanSoftmacDeviceTest : public SingleApTest,
                               public fdf::WireServer<fuchsia_wlan_softmac::WlanSoftmacIfc> {
  public:
-  WlanSoftmacDeviceTest() {
+  WlanSoftmacDeviceTest() : test_arena_(nullptr) {
     mvmvif_ = reinterpret_cast<struct iwl_mvm_vif*>(calloc(1, sizeof(struct iwl_mvm_vif)));
     mvmvif_->mvm = iwl_trans_get_mvm(sim_trans_.iwl_trans());
     mvmvif_->mlme_channel = kDummyMlmeChannel;
