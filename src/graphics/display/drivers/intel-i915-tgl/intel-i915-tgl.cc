@@ -674,7 +674,7 @@ void Controller::InitDisplays() {
 bool Controller::ReadMemoryLatencyInfo() {
   PowerController power_controller(&*mmio_space_);
 
-  const zx::status<std::array<uint8_t, 8>> memory_latency =
+  const zx::result<std::array<uint8_t, 8>> memory_latency =
       power_controller.GetRawMemoryLatencyDataUs();
   if (memory_latency.is_error()) {
     // We're not supposed to enable planes if we can't read the memory latency
@@ -689,7 +689,7 @@ bool Controller::ReadMemoryLatencyInfo() {
          memory_latency.value()[7]);
 
   // Pre-Tiger Lake, the SAGV blocking time is always modeled to 30us.
-  const zx::status<uint32_t> blocking_time =
+  const zx::result<uint32_t> blocking_time =
       is_tgl(device_id_) ? power_controller.GetSystemAgentBlockTimeUsTigerLake()
                          : power_controller.GetSystemAgentBlockTimeUsKabyLake();
   if (blocking_time.is_error()) {
@@ -706,7 +706,7 @@ bool Controller::ReadMemoryLatencyInfo() {
     return true;
   }
 
-  const zx::status<MemorySubsystemInfo> memory_info =
+  const zx::result<MemorySubsystemInfo> memory_info =
       power_controller.GetMemorySubsystemInfoTigerLake();
   if (memory_info.is_error()) {
     // We can handle this error by unconditionally disabling SAGV.
@@ -731,7 +731,7 @@ bool Controller::ReadMemoryLatencyInfo() {
 void Controller::DisableSystemAgentGeyserville() {
   PowerController power_controller(&*mmio_space_);
 
-  const zx::status<> sagv_disabled = power_controller.SetSystemAgentGeyservilleEnabled(
+  const zx::result<> sagv_disabled = power_controller.SetSystemAgentGeyservilleEnabled(
       false, PowerController::RetryBehavior::kRetryUntilStateChanges);
   if (sagv_disabled.is_error()) {
     zxlogf(ERROR, "Failed to disable System Agent Geyserville. Display corruption may occur.");
