@@ -29,7 +29,7 @@ namespace {
 using fuchsia_hardware_acpi::Acpi;
 using fuchsia_hardware_acpi::wire::TableInfo;
 
-const char* kAcpiDevicePath = "/dev/sys/platform/platform-passthrough/acpi";
+const char* kAcpiDevicePath = "/dev/sys/platform/pt/acpi";
 const char* kAcpiDsdtTableName = "DSDT";
 
 template <typename T>

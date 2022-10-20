@@ -16,7 +16,7 @@ use {argh::FromArgs, lspci::filter::Filter};
 pub struct LspciCommand {
     // Show PCI Info
     /// path to the fuchsia.hardware.pci service
-    #[argh(positional, default = "String::from(\"sys/platform/platform-passthrough/PCI0/bus\")")]
+    #[argh(positional, default = "String::from(\"sys/platform/pt/PCI0/bus\")")]
     pub service: String,
 
     /// print verbose device configuration

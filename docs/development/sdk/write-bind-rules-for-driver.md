@@ -41,7 +41,7 @@ This command prints the properties of a node in the following format:
 
 ```none {:.devsite-disable-click-to-copy}
 Name     : i2c-child
-Moniker  : root.sys.platform.platform-passthrough.acpi.acpi-FWCF.i2c-child
+Moniker  : root.sys.platform.pt.acpi.acpi-FWCF.i2c-child
 Driver   : None
 3 Properties
 [ 1/  3] : Key "fuchsia.hardware.i2c"          Value Enum(fuchsia.hardware.i2c.Device.ZirconTransport)

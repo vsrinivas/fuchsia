@@ -77,7 +77,7 @@ func RebootWithCommand(t *testing.T, cmd string, eKind ExpectedRebootType, eActi
 	if arch == emulator.X64 {
 		// Ensure the ACPI driver comes up in case our command will need to interact with the platform
 		// driver for power operations.
-		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-_SB_-passthrough; echo ACPI_READY")
+		i.RunCommand("waitfor class=acpi topo=/dev/sys/platform/pt/acpi/acpi-_SB_/acpi-_SB_-passthrough; echo ACPI_READY")
 		i.WaitForLogMessage("ACPI_READY")
 	}
 

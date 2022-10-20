@@ -45,7 +45,7 @@ for example:
 
 ```none {:.devsite-disable-click-to-copy}
 $ ffx component show intel-i2c-dfv2
-               Moniker: /bootstrap/boot-drivers:root.sys.platform.platform-passthrough.pci.00_15_2.composite
+               Moniker: /bootstrap/boot-drivers:root.sys.platform.pt.pci.00_15_2.composite
                    URL: fuchsia-boot:///#meta/intel-i2c-dfv2.cm
                   Type: CML dynamic component
        Component State: Resolved
@@ -179,7 +179,7 @@ This command prints output similar to the following:
 $ ffx driver list-devices -v
 ...
 Name : acpi-I2C2
-Moniker : root.sys.platform.platform-passthrough.acpi.acpi-I2C2
+Moniker : root.sys.platform.pt.acpi.acpi-I2C2
 Driver : None
 6 Properties
 [ 1/ 6] : Key fuchsia.BIND_ACPI_ID Value 0x000034
@@ -190,7 +190,7 @@ Driver : None
 [ 6/ 6] : Key "fuchsia.driver.framework.dfv2" Value true
 ...
 Name : 00_15_2
-Moniker : root.sys.platform.platform-passthrough.pci.00_15_2
+Moniker : root.sys.platform.pt.pci.00_15_2
 Driver : None
 9 Properties
 [ 1/ 9] : Key fuchsia.BIND_PROTOCOL Value 0x00001f

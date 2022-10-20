@@ -342,7 +342,7 @@ Do the following:
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
-   Node 'root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
+   Node 'root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
    ```
 
 3. Verify that the `qemu_edu` driver is now loaded to the Fuchsia emulator
@@ -398,7 +398,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx component show qemu_edu.cm
-                  Moniker:  /bootstrap/universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl
+                  Moniker:  /bootstrap/universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl
                       URL:  fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
               Instance ID:  None
                      Type:  CML Component
@@ -424,7 +424,7 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --tags qemu-edu dump
    [2022-10-03 23:34:07.972][<ffx>]: logger started.
-   [161.225][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:179] edu device version major=1 minor=0
+   [161.225][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:179] edu device version major=1 minor=0
    ```
 
 ## 5. Build and run a tool {:#build-and-run-a-tool}
@@ -502,9 +502,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx log --tags qemu-edu dump
    [2022-10-03 23:34:07.972][<ffx>]: logger started.
-   [161.225][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:179] edu device version major=1 minor=0
-   [434.054][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:108] Replying with result=true
-   [444.714][universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_device.cc:124] Replying with factorial=479001600
+   [161.225][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:179] edu device version major=1 minor=0
+   [434.054][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/qemu_edu.cc:108] Replying with result=true
+   [444.714][universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_.pci-00_06.0-fidl][qemu-edu,driver][I]: [src/qemu_edu/drivers/edu_device.cc:124] Replying with factorial=479001600
    ```
 
    Notice that more messages are now logged from the `qemu-edu` driver.

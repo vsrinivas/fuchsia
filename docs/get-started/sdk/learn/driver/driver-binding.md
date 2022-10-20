@@ -232,7 +232,7 @@ INFO: Build completed successfully, 1 total action
 added repository bazel.pkg.component
 Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
 Successfully bound:
-Node 'root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
+Node 'root.sys.platform.pt.PCI0.bus.00_06_0_', Driver 'fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm'.
 ```
 
 Inspect the system log and verify that you can see `FDF_SLOG()` message from the
@@ -245,7 +245,7 @@ ffx log --filter qemu_edu
 ```none {:.devsite-disable-click-to-copy}
 [driver_index][driver_index,driver][I] Registered driver successfully: fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm.
 [driver_manager][driver_manager.cm][I]: [driver_runner.cc:959] Binding fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm to  00_06_0_
-{{ '<strong>' }}[universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [fuchsia-codelab/qemu_edu/qemu_edu.cc:28] edu driver loaded successfully{{ '</strong>' }}
+{{ '<strong>' }}[universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [fuchsia-codelab/qemu_edu/qemu_edu.cc:28] edu driver loaded successfully{{ '</strong>' }}
 [driver-hosts:driver-host-3][][I]: [../../src/devices/bin/driver_host2/driver_host.cc:349] Started driver url=fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
 ```
 
@@ -282,12 +282,12 @@ Inspect the device node once more using `ffx driver list-devices`, and verify
 that your driver is now listed as attached to the `edu` device node:
 
 ```posix-terminal
-ffx driver list-devices root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_ --verbose
+ffx driver list-devices root.sys.platform.pt.PCI0.bus.00_06_0_ --verbose
 ```
 
 ```none {:.devsite-disable-click-to-copy}
 Name     : 00_06_0_
-Moniker  : root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_
+Moniker  : root.sys.platform.pt.PCI0.bus.00_06_0_
 {{ '<strong>' }}Driver   : fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm{{ '</strong>' }}
 11 Properties
 [ 1/ 11] : Key fuchsia.BIND_FIDL_PROTOCOL     Value 0x000004

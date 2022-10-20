@@ -24,7 +24,7 @@ pub struct Args {
     /// [[<bus>]:][slot][.[<func>]]    Show only devices in selected slots
     pub filter: Option<filter::Filter>,
 
-    #[argh(option, default = "String::from(\"/dev/sys/platform/platform-passthrough/\")")]
+    #[argh(option, default = "String::from(\"/dev/sys/platform/pt/\")")]
     /// path to the parent directory of the fuchsia.hardware.pci service
     pub service: String,
 

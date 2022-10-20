@@ -898,11 +898,11 @@ zx_status_t PlatformBus::Init() {
       {BIND_PLATFORM_DEV_VID, 0, board_info_.vid()},
       {BIND_PLATFORM_DEV_PID, 0, board_info_.pid()},
   };
-  status = AddProtocolPassthrough("platform-passthrough", passthrough_props, this,
+  status = AddProtocolPassthrough("pt", passthrough_props, this,
                                   &protocol_passthrough_);
   if (status != ZX_OK) {
     // We log the error but we do nothing as we've already added the device successfully.
-    zxlogf(ERROR, "Error while adding platform-passthrough: %s", zx_status_get_string(status));
+    zxlogf(ERROR, "Error while adding pt: %s", zx_status_get_string(status));
   }
   return ZX_OK;
 }

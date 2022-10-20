@@ -33,15 +33,15 @@ root
 root.sys
 root.sys.platform
 root.sys.cpu-trace
-root.sys.platform.platform-passthrough
+root.sys.platform.pt
 root.sys.platform.00_00_2d
 root.sys.platform.00_00_2e
 root.sys.platform.00_00_2f
 root.sys.platform.00_00_30
 root.sys.platform.00_00_1b
 root.sys.cpu-trace.perfmon
-root.sys.platform.platform-passthrough.acpi
-root.sys.platform.platform-passthrough.PCI0
+root.sys.platform.pt.acpi
+root.sys.platform.pt.PCI0
 root.sys.platform.00_00_2d.ramctl
 root.sys.platform.00_00_2f.virtual_audio
 root.sys.platform.00_00_1b.sysmem
@@ -58,32 +58,32 @@ ffx driver list-devices | grep 'PCI'
 You'll see a shorter list similar to the following output:
 
 ```none {:.devsite-disable-click-to-copy}
-root.sys.platform.platform-passthrough.PCI0
-root.sys.platform.platform-passthrough.PCI0.bus
-root.sys.platform.platform-passthrough.PCI0.bus.00_00_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_00_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_01_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_01_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_02_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_02_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_03_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_03_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_04_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_04_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_05_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_05_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_06_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_07_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_07_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_0b_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_0b_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_1f_0
-root.sys.platform.platform-passthrough.PCI0.bus.00_1f_0_
-root.sys.platform.platform-passthrough.PCI0.bus.00_1f_2
-root.sys.platform.platform-passthrough.PCI0.bus.00_1f_2_
-root.sys.platform.platform-passthrough.PCI0.bus.00_1f_3
-root.sys.platform.platform-passthrough.PCI0.bus.00_1f_3_
+root.sys.platform.pt.PCI0
+root.sys.platform.pt.PCI0.bus
+root.sys.platform.pt.PCI0.bus.00_00_0
+root.sys.platform.pt.PCI0.bus.00_00_0_
+root.sys.platform.pt.PCI0.bus.00_01_0
+root.sys.platform.pt.PCI0.bus.00_01_0_
+root.sys.platform.pt.PCI0.bus.00_02_0
+root.sys.platform.pt.PCI0.bus.00_02_0_
+root.sys.platform.pt.PCI0.bus.00_03_0
+root.sys.platform.pt.PCI0.bus.00_03_0_
+root.sys.platform.pt.PCI0.bus.00_04_0
+root.sys.platform.pt.PCI0.bus.00_04_0_
+root.sys.platform.pt.PCI0.bus.00_05_0
+root.sys.platform.pt.PCI0.bus.00_05_0_
+root.sys.platform.pt.PCI0.bus.00_06_0
+root.sys.platform.pt.PCI0.bus.00_06_0_
+root.sys.platform.pt.PCI0.bus.00_07_0
+root.sys.platform.pt.PCI0.bus.00_07_0_
+root.sys.platform.pt.PCI0.bus.00_0b_0
+root.sys.platform.pt.PCI0.bus.00_0b_0_
+root.sys.platform.pt.PCI0.bus.00_1f_0
+root.sys.platform.pt.PCI0.bus.00_1f_0_
+root.sys.platform.pt.PCI0.bus.00_1f_2
+root.sys.platform.pt.PCI0.bus.00_1f_2_
+root.sys.platform.pt.PCI0.bus.00_1f_3
+root.sys.platform.pt.PCI0.bus.00_1f_3_
 ```
 
 These are the PCI device nodes in the current emulator instance.
@@ -119,19 +119,19 @@ device node is `00:06.0`:
 ```
 
 From the device list in the previous section, this means the `edu` device maps
-to the PCI device node `root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_`.
+to the PCI device node `root.sys.platform.pt.PCI0.bus.00_06_0_`.
 
 Explore the properties of this device node using the following command:
 
 ```posix-terminal
-ffx driver list-devices root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_ --verbose
+ffx driver list-devices root.sys.platform.pt.PCI0.bus.00_06_0_ --verbose
 ```
 
 The command prints output similar to the following:
 
 ```none {:.devsite-disable-click-to-copy}
 Name     : 00_06_0_
-{{ '<strong>' }}Moniker  : root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_{{ '</strong>' }}
+{{ '<strong>' }}Moniker  : root.sys.platform.pt.PCI0.bus.00_06_0_{{ '</strong>' }}
 Driver   : None
 11 Properties
 [ 1/ 11] : Key fuchsia.BIND_FIDL_PROTOCOL     Value 0x000004

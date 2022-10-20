@@ -176,7 +176,7 @@ create a devfs entry:
 ```
 
 Update the driver's `Run()` method to begin serving the `fuchsia.examples.qemuedu/Device` protocol
-to a new devfs entry at `/dev/sys/platform/platform-passthrough/PCI0/bus/00:06.0_/qemu-edu`, which
+to a new devfs entry at `/dev/sys/platform/pt/PCI0/bus/00:06.0_/qemu-edu`, which
 matches the device node's topological path:
 
 `qemu_edu/drivers/qemu_edu.cc`:

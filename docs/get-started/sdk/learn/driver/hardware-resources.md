@@ -308,7 +308,7 @@ ffx log --filter qemu_edu
 
 ```none {:.devsite-disable-click-to-copy}
 [driver_manager][driver_manager.cm][I]: [driver_runner.cc:959] Binding fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm to  00_06_0_
-{{ '<strong>' }}[universe-pkg-drivers:root.sys.platform.platform-passthrough.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [fuchsia-codelab/qemu_edu/qemu_edu.cc:75] edu device version major=1 minor=0 {{ '</strong>' }}
+{{ '<strong>' }}[universe-pkg-drivers:root.sys.platform.pt.PCI0.bus.00_06_0_][qemu-edu,driver][I]: [fuchsia-codelab/qemu_edu/qemu_edu.cc:75] edu device version major=1 minor=0 {{ '</strong>' }}
 ```
 
 Congratulations! Your driver can now access the PCI hardware resources provided

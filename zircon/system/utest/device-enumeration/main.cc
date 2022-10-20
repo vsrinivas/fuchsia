@@ -242,7 +242,7 @@ class DeviceEnumerationTest : public zxtest::Test {
 
 TEST_F(DeviceEnumerationTest, Av400Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/av400",
+      "sys/platform/pt/av400",
       "sys/platform/05:07:1/aml-axg-gpio",
       "sys/platform/05:07:1d",  // pwm
       "sys/platform/05:07:2c/clocks",
@@ -295,8 +295,8 @@ TEST_F(DeviceEnumerationTest, Av400Test) {
 TEST_F(DeviceEnumerationTest, GceArm64Test) {
   static const char* kDevicePaths[] = {
       // TODO(fxbug.dev/101529): Once we use userspace PCI, add PCI devices we expect to see.
-      "sys/platform/platform-passthrough/acpi",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_",
+      "sys/platform/pt/acpi",
+      "sys/platform/pt/acpi/acpi-_SB_",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -304,7 +304,7 @@ TEST_F(DeviceEnumerationTest, GceArm64Test) {
 
 TEST_F(DeviceEnumerationTest, QemuArm64Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/qemu-bus",
+      "sys/platform/pt/qemu-bus",
       "sys/platform/00:00:6/rtc",
       "sys/platform/pci/00:00.0",
   };
@@ -314,7 +314,7 @@ TEST_F(DeviceEnumerationTest, QemuArm64Test) {
 
 TEST_F(DeviceEnumerationTest, Vim3Test) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/vim3",
+      "sys/platform/pt/vim3",
       "sys/platform/00:00:1b/sysmem",
       "sys/platform/05:06:1/aml-axg-gpio",
       "sys/platform/05:06:14/clocks",
@@ -372,7 +372,7 @@ TEST_F(DeviceEnumerationTest, Vim3Test) {
 
 TEST_F(DeviceEnumerationTest, AstroTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/astro",
+      "sys/platform/pt/astro",
       "sys/platform/05:03:1/aml-axg-gpio",
       "sys/platform/05:03:1/aml-axg-gpio/gpio-5/astro-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c",
@@ -460,7 +460,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
 
 TEST_F(DeviceEnumerationTest, NelsonTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/nelson",
+      "sys/platform/pt/nelson",
       "sys/platform/05:05:1/aml-axg-gpio",
       "sys/platform/05:05:1:1/aml-axg-gpio",
       "sys/platform/05:05:1/aml-axg-gpio/gpio-5/nelson-buttons/hid-buttons",
@@ -563,7 +563,7 @@ TEST_F(DeviceEnumerationTest, NelsonTest) {
 
 TEST_F(DeviceEnumerationTest, SherlockTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/sherlock",
+      "sys/platform/pt/sherlock",
       "sys/platform/05:04:1/aml-axg-gpio",
       "sys/platform/05:00:14/clocks",
       "sys/platform/05:00:2/aml-i2c",
@@ -715,16 +715,16 @@ TEST_F(DeviceEnumerationTest, EveTest) {
 
 TEST_F(DeviceEnumerationTest, NucTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/platform-passthrough/PCI0/bus/00:02.0_/pci-00:02.0-fidl/intel_i915/intel-gpu-core",
-      "sys/platform/platform-passthrough/PCI0/bus/00:02.0_/pci-00:02.0-fidl/intel_i915/intel-display-controller/display-controller",
-      "sys/platform/platform-passthrough/PCI0/bus/00:14.0_/pci-00:14.0-fidl/xhci/usb-bus",
-      "sys/platform/platform-passthrough/PCI0/bus/00:15.0_/pci-00:15.0-fidl/i2c-bus-9d60",
-      "sys/platform/platform-passthrough/PCI0/bus/00:15.1_/pci-00:15.1-fidl/i2c-bus-9d61",
-      "sys/platform/platform-passthrough/PCI0/bus/00:17.0_/pci-00:17.0-fidl/ahci",
+      "sys/platform/pt/PCI0/bus/00:02.0_/pci-00:02.0-fidl/intel_i915/intel-gpu-core",
+      "sys/platform/pt/PCI0/bus/00:02.0_/pci-00:02.0-fidl/intel_i915/intel-display-controller/display-controller",
+      "sys/platform/pt/PCI0/bus/00:14.0_/pci-00:14.0-fidl/xhci/usb-bus",
+      "sys/platform/pt/PCI0/bus/00:15.0_/pci-00:15.0-fidl/i2c-bus-9d60",
+      "sys/platform/pt/PCI0/bus/00:15.1_/pci-00:15.1-fidl/i2c-bus-9d61",
+      "sys/platform/pt/PCI0/bus/00:17.0_/pci-00:17.0-fidl/ahci",
       // TODO(fxbug.dev/84037): Temporarily removed.
       // "pci-00:1f.3-fidl/intel-hda-000",
       // "pci-00:1f.3-fidl/intel-hda-controller",
-      "sys/platform/platform-passthrough/PCI0/bus/00:1f.6_/pci-00:1f.6-fidl/e1000",
+      "sys/platform/pt/PCI0/bus/00:1f.6_/pci-00:1f.6-fidl/e1000",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -822,12 +822,12 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
       "sys/platform/pci/00:1f.3/intel-hda-000/output-stream-001",
       "sys/platform/pci/00:02.0/intel_i915/intel-gpu-core/msd-intel-gen",
       "sys/platform/pci/00:02.0/intel_i915/display-controller",
-      "sys/platform/platform-passthrough/acpi/TSR0",
-      "sys/platform/platform-passthrough/acpi/TSR1",
-      "sys/platform/platform-passthrough/acpi/TSR2",
-      "sys/platform/platform-passthrough/acpi/TSR3",
-      "sys/platform/platform-passthrough/acpi/acpi-lid/hid-device/InputReport",
-      "sys/platform/platform-passthrough/acpi/acpi-pwrbtn/hid-device/InputReport",
+      "sys/platform/pt/acpi/TSR0",
+      "sys/platform/pt/acpi/TSR1",
+      "sys/platform/pt/acpi/TSR2",
+      "sys/platform/pt/acpi/TSR3",
+      "sys/platform/pt/acpi/acpi-lid/hid-device/InputReport",
+      "sys/platform/pt/acpi/acpi-pwrbtn/hid-device/InputReport",
       "sys/platform/pci/00:15.0/i2c-bus-9d60/000a/i2c-hid/hid-device/InputReport",
   };
 
@@ -838,8 +838,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   static const char* kDevicePaths[] = {
       "class/sysmem/000",
 
-      "sys/platform/platform-passthrough/acpi",
-      "sys/platform/platform-passthrough/acpi/acpi-pwrbtn",
+      "sys/platform/pt/acpi",
+      "sys/platform/pt/acpi/acpi-pwrbtn",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -851,9 +851,9 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
     // TODO(fxbug.dev/106517): Fix these devices and move them back.
     static const char* kDevicesThatFailInDfv2[] = {
-        "sys/platform/platform-passthrough/PCI0/bus/00:1f.2_/pci-00:1f.2-fidl/ahci",
-        "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-keyboard",
-        "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-mouse",
+        "sys/platform/pt/PCI0/bus/00:1f.2_/pci-00:1f.2-fidl/ahci",
+        "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-keyboard",
+        "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-mouse",
     };
 
     ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
@@ -870,22 +870,22 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
   }
 
   static const char* kAemuDevicePaths[] = {
-      "sys/platform/platform-passthrough/PCI0/bus/00:01.0_/pci-00:01.0-fidl/virtio-input",
-      "sys/platform/platform-passthrough/PCI0/bus/00:02.0_/pci-00:02.0-fidl/virtio-input",
-      "sys/platform/platform-passthrough/PCI0/bus/00:0b.0_/pci-00:0b.0-fidl/goldfish-address-space",
+      "sys/platform/pt/PCI0/bus/00:01.0_/pci-00:01.0-fidl/virtio-input",
+      "sys/platform/pt/PCI0/bus/00:02.0_/pci-00:02.0-fidl/virtio-input",
+      "sys/platform/pt/PCI0/bus/00:0b.0_/pci-00:0b.0-fidl/goldfish-address-space",
 
       // Verify goldfish pipe root device created.
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe",
       // Verify goldfish pipe child devices created.
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite/goldfish-sync",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite/goldfish-sync",
 
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control/goldfish-display",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite",
-      "sys/platform/platform-passthrough/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control/goldfish-display",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));
