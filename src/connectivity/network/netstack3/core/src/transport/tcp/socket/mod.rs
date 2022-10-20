@@ -1491,27 +1491,34 @@ mod tests {
         }
     }
 
+    #[derive(Clone, Debug, Default, Eq, PartialEq)]
+    pub(crate) struct ClientBuffers {
+        receive: Rc<RefCell<RingBuffer>>,
+        send: Rc<RefCell<Vec<u8>>>,
+    }
+
     impl TcpNonSyncContext for TcpNonSyncCtx {
         type ReceiveBuffer = Rc<RefCell<RingBuffer>>;
         type SendBuffer = TestSendBuffer;
-        type ReturnedBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
-        type ProvidedBuffers = (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>);
+        type ReturnedBuffers = ClientBuffers;
+        type ProvidedBuffers = ClientBuffers;
 
         fn on_new_connection(&mut self, _listener: ListenerId) {}
         fn new_passive_open_buffers(
         ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
-            let rb = Rc::new(RefCell::new(RingBuffer::default()));
-            let sb = Rc::new(RefCell::new(Vec::new()));
-            (Rc::clone(&rb), TestSendBuffer(Rc::clone(&sb), RingBuffer::default()), (rb, sb))
+            let client = ClientBuffers::default();
+            (
+                Rc::clone(&client.receive),
+                TestSendBuffer(Rc::clone(&client.send), RingBuffer::default()),
+                client,
+            )
         }
     }
 
-    impl IntoBuffers<Rc<RefCell<RingBuffer>>, TestSendBuffer>
-        for (Rc<RefCell<RingBuffer>>, Rc<RefCell<Vec<u8>>>)
-    {
+    impl IntoBuffers<Rc<RefCell<RingBuffer>>, TestSendBuffer> for ClientBuffers {
         fn into_buffers(self) -> (Rc<RefCell<RingBuffer>>, TestSendBuffer) {
-            let (rb, sb) = self;
-            (rb, TestSendBuffer(sb, Default::default()))
+            let Self { receive, send } = self;
+            (receive, TestSendBuffer(send, Default::default()))
         }
     }
 
@@ -1719,14 +1726,13 @@ mod tests {
         let backlog = NonZeroUsize::new(1).unwrap();
         let server = net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
             let conn = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
-            let conn =
+            let bound =
                 TcpSocketHandler::bind(sync_ctx, non_sync_ctx, conn, listen_addr, Some(PORT_1))
                     .expect("failed to bind the server socket");
-            TcpSocketHandler::listen(sync_ctx, non_sync_ctx, conn, backlog)
+            TcpSocketHandler::listen(sync_ctx, non_sync_ctx, bound, backlog)
         });
 
-        let client_rcv_end = Rc::new(RefCell::new(RingBuffer::default()));
-        let client_snd_end = Rc::new(RefCell::new(Vec::new()));
+        let client_ends = ClientBuffers::default();
         let client = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
             let conn = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
             if bind_client {
@@ -1743,7 +1749,7 @@ mod tests {
                     non_sync_ctx,
                     conn,
                     SocketAddr { ip: I::FAKE_CONFIG.remote_ip, port: PORT_1 },
-                    (Rc::clone(&client_rcv_end), Rc::clone(&client_snd_end)),
+                    client_ends.clone(),
                 )
                 .expect("failed to connect")
             } else {
@@ -1752,7 +1758,7 @@ mod tests {
                     non_sync_ctx,
                     conn,
                     SocketAddr { ip: I::FAKE_CONFIG.remote_ip, port: PORT_1 },
-                    (Rc::clone(&client_rcv_end), Rc::clone(&client_snd_end)),
+                    client_ends.clone(),
                 )
                 .expect("failed to connect")
             }
@@ -1781,7 +1787,7 @@ mod tests {
 
         // Step the test network until the handshake is done.
         net.run_until_idle(&mut maybe_drop_frame, handle_timer);
-        let (accepted, addr, (accepted_rcv_end, accepted_snd_end)) =
+        let (accepted, addr, accepted_ends) =
             net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
                 TcpSocketHandler::accept(sync_ctx, non_sync_ctx, server).expect("failed to accept")
             });
@@ -1808,6 +1814,8 @@ mod tests {
         assert_connected(LOCAL, client);
         assert_connected(REMOTE, accepted);
 
+        let ClientBuffers { send: client_snd_end, receive: client_rcv_end } = client_ends;
+        let ClientBuffers { send: accepted_snd_end, receive: accepted_rcv_end } = accepted_ends;
         for snd_end in [client_snd_end, accepted_snd_end] {
             snd_end.borrow_mut().extend_from_slice(b"Hello");
         }
