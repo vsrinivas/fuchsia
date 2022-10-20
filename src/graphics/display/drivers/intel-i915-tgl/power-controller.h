@@ -10,8 +10,6 @@
 
 #include <cstdint>
 
-#include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
-
 namespace i915_tgl {
 
 // Command sent to the PCU (power controller)'s firmware.
@@ -31,6 +29,60 @@ struct PowerControllerCommand {
   // If this is zero, the GT Driver Mailbox state will not be consulted at all
   // after the command is posted.
   int timeout_us;
+};
+
+// Memory information reported by the PCU.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 212-213
+// DG1: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 169-170
+struct MemorySubsystemInfo {
+  // Documented values for the `ram_type` field.
+  enum class RamType {
+    kDoubleDataRam4 = 0,          // DDRAM 4
+    kDoubleDataRam5 = 1,          // DDRAM 5
+    kLowPowerDoubleDataRam5 = 2,  // LPDDRAM5
+    kLowPowerDoubleDataRam4 = 3,  // LPDDRAM4
+    kDoubleDataRam3 = 4,          // DDRAM 3
+    kLowPowerDoubleDataRam3 = 5,  // LPDDRAM3
+  };
+
+  struct GlobalInfo {
+    RamType ram_type;
+    int memory_channel_count;  // Number of populated DDRAM channels.
+    int agent_point_count;     // Number of enabled QGV points.
+
+    // `mailbox_data` should be the mailbox data contents after a successful
+    // MAILBOX_GTRDIVER_CMD_MEM_SS_INFO_SUBCOMMAND_READ_GLOBAL_INFO command.
+    static GlobalInfo CreateFromMailboxDataTigerLake(uint64_t mailbox_data);
+  };
+
+  struct AgentPoint {
+    // DRAM clock, in kHz.
+    //
+    // All inter-command latencies below are specified in terms of this clock.
+    int32_t dram_clock_khz;
+
+    // tRP: Latency from a precharge to the next row open.
+    int16_t row_precharge_to_open_cycles;
+
+    // tRCD: Latency from a row access to the next column access.
+    int16_t row_access_to_column_access_delay_cycles;
+
+    // tRDPRE / tRTP: Latency from a read to the next precharge.
+    int16_t read_to_precharge_cycles;
+
+    // tRAS: Latency from a row active to the next row precharge.
+    int16_t row_activate_to_precharge_cycles;
+
+    // `mailbox_data` should be the mailbox data contents after a successful
+    // MAILBOX_GTRDIVER_CMD_MEM_SS_INFO_SUBCOMMAND_READ_QGV_POINT_INFO command.
+    static AgentPoint CreateFromMailboxDataTigerLake(uint64_t mailbox_data);
+  };
+
+  GlobalInfo global_info;
+
+  static constexpr int kMaxPointCount = 16;
+  AgentPoint points[kMaxPointCount];
 };
 
 // Communicates with the firmware on the PCU (power controller).
@@ -123,6 +175,66 @@ class PowerController {
   // This method implements the communication protocol for Tiger Lake's PCU
   // firmware. Other processors use different protocols.
   zx::result<> SetDisplayTypeCColdBlockingTigerLake(bool blocked, RetryBehavior retry_behavior);
+
+  // Sets the display engine's SAGV (System Agent Geyserville) enabled flag.
+  //
+  // Returns ZX_ERR_IO_MISSED_DEADLINE if a timeout occurs while communicating
+  // with the the PCU firmware. This indicates a problem in the PCU firmware. We
+  // should assume that the SAGV is stuck enabled and configure the display
+  // engine's pipes and planes accordingly.
+  //
+  // Returns ZX_ERR_IO_REFUSED if the PCU firmware did not bring the system
+  // agent subsystem into the state implied by the enablement request. This is
+  // an acceptable outcome when `enabled` is true.
+  //
+  // This method implements the communication protocol for Kaby Lake and Skylake
+  // PCUs. The protocol is supported by Tiger Lake PCUs, but has been superseded
+  // by a more fine-grained version.
+  zx::result<> SetSystemAgentGeyservilleEnabled(bool enabled, RetryBehavior retry_behavior);
+
+  // Reads the SAGV (System Agent Geyserville) blocking time.
+  //
+  // Returns the SAGV Block Time, in microseconds.
+  //
+  // Returns ZX_ERR_IO_MISSED_DEADLINE if a timeout occurs while communicating
+  // with the the PCU firmware. Returns ZX_ERR_IO_REFUSED if the PCU firmware
+  // reports an error. In either case, the display engine's planes cannot be
+  // used safely.
+  //
+  // This method implements the communication protocol for the Tiger Lake PCU.
+  // The protocol is not supported on Kaby Lake and Skylake PCUs.
+  zx::result<uint32_t> GetSystemAgentBlockTimeUsTigerLake();
+
+  // Reads the SAGV (System Agent Geyserville) blocking time.
+  //
+  // Returns the SAGV Block Time, in microseconds.
+  //
+  // This method has the same signature as GetSystemAgentBlockTimeUsTigerLake()
+  // for programming convenience. On Kaby Lake and Skylake PCUs, the SAGV
+  // blocking time is constant.
+  zx::result<uint32_t> GetSystemAgentBlockTimeUsKabyLake();
+
+  // Reads the PCU's memory latency data.
+  //
+  // Returns the raw memory latency data, as it is returned by the PCU firmware.
+  // Each entry in the returned array represents a memory latency level, in
+  // microseconds. The data may have to be adjusted based on the display engine
+  // hardware and on extra information from the memory controller about the
+  // installed DRAM.
+  //
+  // Returns ZX_ERR_IO_MISSED_DEADLINE if a timeout occurs while communicating
+  // with the the PCU firmware. Returns ZX_ERR_IO_REFUSED if the PCU firmware
+  // reports an error. In either case, the display engine's planes cannot be
+  // used safely.
+  zx::result<std::array<uint8_t, 8>> GetRawMemoryLatencyDataUs();
+
+  // Reads MemSS (Memory Subsystem) information from the PCU.
+  //
+  // Returns ZX_ERR_IO_MISSED_DEADLINE if a timeout occurs while communicating
+  // with the the PCU firmware. Returns ZX_ERR_IO_REFUSED if the PCU firmware
+  // reports an error. In either case, SAGV (System Agent Geyserville) cannot be
+  // enabled safely.
+  zx::result<MemorySubsystemInfo> GetMemorySubsystemInfoTigerLake();
 
  private:
   fdf::MmioBuffer* mmio_buffer_;
