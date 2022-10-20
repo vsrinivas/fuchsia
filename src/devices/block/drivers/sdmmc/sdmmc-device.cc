@@ -178,6 +178,7 @@ zx_status_t SdmmcDevice::SdSendIfCond() {
   req.arg = arg;
   req.cmd_flags = SD_SEND_IF_COND_FLAGS;
   req.use_dma = UseDma();
+  req.suppress_error_messages = true;
   zx_status_t st = Request(&req);
   if (st != ZX_OK) {
     zxlogf(DEBUG, "SD_SEND_IF_COND failed, retcode = %d", st);
