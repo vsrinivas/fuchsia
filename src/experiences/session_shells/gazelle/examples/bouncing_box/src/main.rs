@@ -4,19 +4,17 @@
 
 use {
     anyhow::Error,
-    appkit::{
-        load_image_from_bytes, load_png, Event, EventSender, Image, ImageData, Window, WindowEvent,
-        WindowId,
-    },
+    appkit::{Event, EventSender, Window, WindowEvent, WindowId},
     fidl_fuchsia_input::Key,
     fidl_fuchsia_math as fmath, fidl_fuchsia_ui_composition as ui_comp,
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyEventType},
     futures::StreamExt,
     std::collections::HashMap,
     std::convert::TryInto,
-    std::io::Cursor,
     tracing::*,
 };
+
+const BOX_ID: ui_comp::ContentId = ui_comp::ContentId { value: 2 };
 
 struct Bouncer {
     flatland: ui_comp::FlatlandProxy,
@@ -27,12 +25,16 @@ struct Bouncer {
 }
 
 impl Bouncer {
-    pub fn new(
-        image: Image,
-        flatland: ui_comp::FlatlandProxy,
-        mut transform_id: ui_comp::TransformId,
-    ) -> Self {
-        flatland.set_content(&mut transform_id, &mut image.get_content_id()).expect("fidl_error");
+    pub fn new(flatland: ui_comp::FlatlandProxy, mut transform_id: ui_comp::TransformId) -> Self {
+        flatland.create_filled_rect(&mut BOX_ID.clone()).expect("fidl error");
+        flatland
+            .set_solid_fill(
+                &mut BOX_ID.clone(),
+                &mut ui_comp::ColorRgba { red: 1.0, green: 0.0, blue: 0.0, alpha: 1.0 },
+                &mut fidl_fuchsia_math::SizeU { width: 100, height: 100 },
+            )
+            .expect("fidl error");
+        flatland.set_content(&mut transform_id, &mut BOX_ID.clone()).expect("fidl error");
 
         Bouncer {
             flatland: flatland.clone(),
@@ -69,7 +71,6 @@ enum BouncerEvent {}
 
 struct App<T> {
     bouncer: Option<Bouncer>,
-    image_data: ImageData,
     event_sender: EventSender<T>,
     windows: HashMap<WindowId, Window<T>>,
 }
@@ -86,11 +87,10 @@ impl<T> App<T> {
                     Window::new(self.event_sender.clone()).with_title("Bouncing Box".to_owned());
                 window.create_view()?;
 
-                // Create the bouncer from an image.
-                let image = window.create_image(&mut self.image_data)?;
+                // Create the bouncer.
                 let flatland = window.get_flatland();
                 let root_transform_id = window.get_root_transform_id();
-                self.bouncer = Some(Bouncer::new(image, flatland, root_transform_id));
+                self.bouncer = Some(Bouncer::new(flatland, root_transform_id));
 
                 self.windows.insert(window.id(), window);
             }
@@ -138,16 +138,9 @@ impl<T> App<T> {
 #[fuchsia::main(logging = true)]
 async fn main() -> Result<(), Error> {
     info!("Started...");
-
-    // Load an image as content of the bouncing box.
-    static IMAGE_DATA: &'static [u8] = include_bytes!("../checkerboard_100.png");
-    let (bytes, width, height) = load_png(Cursor::new(IMAGE_DATA))?;
-    let image_data = load_image_from_bytes(&bytes, width, height).await?;
-
     let (event_sender, mut receiver) = EventSender::<BouncerEvent>::new();
     let mut app = App::<BouncerEvent> {
         bouncer: None,
-        image_data,
         event_sender: event_sender.clone(),
         windows: HashMap::new(),
     };

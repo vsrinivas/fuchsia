@@ -4,7 +4,6 @@
 
 pub mod child_view;
 pub mod event;
-pub mod image;
 pub mod utils;
 pub mod window;
 
@@ -20,7 +19,6 @@ pub use {
         NonPrintableKey,
     },
     fidl_fuchsia_ui_shortcut2::Shortcut,
-    image::*,
     pointer_fusion::*,
     utils::*,
     window::*,

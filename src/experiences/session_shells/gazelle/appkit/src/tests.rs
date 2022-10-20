@@ -7,27 +7,23 @@ use {
     fidl::endpoints::{create_proxy, create_proxy_and_stream, create_request_stream},
     fidl_fuchsia_element as felement,
     fidl_fuchsia_input::Key,
-    fidl_fuchsia_ui_app as ui_app, fidl_fuchsia_ui_composition as ui_comp,
+    fidl_fuchsia_ui_app as ui_app,
     fidl_fuchsia_ui_input3::{KeyEvent, KeyEventStatus, KeyMeaning, NonPrintableKey},
     fidl_fuchsia_ui_shortcut2 as ui_shortcut2, fidl_fuchsia_ui_test_input as ui_test_input,
     fidl_fuchsia_ui_test_scene as ui_test_scene, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_scenic::flatland::ViewCreationTokenPair,
-    fuchsia_zircon as zx,
     futures::future::{AbortHandle, Abortable},
     futures::{StreamExt, TryStreamExt},
-    mapped_vmo::Mapping,
     pointer_fusion::*,
-    pretty_assertions,
     std::collections::HashMap,
-    std::io::Cursor,
     tracing::*,
 };
 
 use crate::{
     child_view::{ChildView, ChildViewId},
     event::{ChildViewEvent, Event, SystemEvent, ViewSpecHolder, WindowEvent},
-    utils::{load_image_from_bytes, load_png, EventSender},
+    utils::EventSender,
     window::{Window, WindowId},
 };
 
@@ -91,9 +87,8 @@ async fn test_appkit() -> Result<(), Error> {
                     }
                 }
                 WindowEvent::NeedsRedraw { .. } => {
-                    pretty_assertions::assert_eq!(
+                    assert!(
                         app.width > 0 && app.height > 0,
-                        true,
                         "Redraw event received before window was resized"
                     );
                 }
@@ -283,25 +278,12 @@ async fn create_child_view_spec(
         })
         .await?;
 
-    // Load an image as content for the child view.
-    static IMAGE_DATA: &'static [u8] = include_bytes!("../test_data/checkerboard_100.png");
-    let (bytes, width, height) = load_png(Cursor::new(IMAGE_DATA))?;
-
-    // The checkerboard image should only have two colors (black and white) in equal amount.
-    let histogram = build_histogram(&bytes);
-    let mut iter = histogram.values();
-    pretty_assertions::assert_eq!(iter.len(), 2);
-    pretty_assertions::assert_eq!(iter.next(), iter.next());
-
-    // Now load the image into shared memory buffer.
-    let mut image_data = load_image_from_bytes(&bytes, width, height).await?;
-
     fasync::Task::local(async move {
         let (sender, mut receiver) = futures::channel::mpsc::unbounded::<Event<TestEvent>>();
         let event_sender = EventSender::<TestEvent>(sender);
         event_sender.send(Event::Init).expect("Failed to send Event::Init event");
 
-        let mut window_holder: Option<Window<TestEvent>> = None;
+        let mut _window_holder: Option<Window<TestEvent>> = None;
         let mut view_creation_token = Some(view_creation_token);
         while let Some(event) = receiver.next().await {
             info!("------ChildView  {:?}", event);
@@ -314,33 +296,11 @@ async fn create_child_view_spec(
                         1,
                         vec![KeyMeaning::NonPrintableKey(NonPrintableKey::Tab)],
                     )]);
-                    window_holder = Some(window);
+                    _window_holder = Some(window);
                 }
                 Event::WindowEvent { event: window_event, .. } => match window_event {
-                    WindowEvent::Resized { width, height, .. } => {
-                        if let Some(window) = window_holder.as_mut() {
-                            let image = window
-                                .create_image(&mut image_data)
-                                .expect("Failed to create image content");
-                            image.set_size(width, height).expect("Failed to set image size");
-                            window.set_content(
-                                window.get_root_transform_id(),
-                                image.get_content_id(),
-                            );
-                            window.redraw();
-                        }
-                    }
                     WindowEvent::Focused { focused } => {
                         if focused {
-                            // Take a screenshot to verify child view image content.
-                            let histogram =
-                                take_screenshot().await.expect("Failed to take screenshot");
-                            // The child_view should render the checkerboard fullscreen and should
-                            // only have two colors (black and white) in equal amounts.
-                            let mut iter = histogram.values();
-                            pretty_assertions::assert_eq!(iter.len(), 2);
-                            pretty_assertions::assert_eq!(iter.next(), iter.next());
-
                             tap(mouse.clone());
                         }
                     }
@@ -420,37 +380,4 @@ fn create_shortcut(id: u32, keys: Vec<KeyMeaning>) -> ui_shortcut2::Shortcut {
         key_meanings: keys,
         options: ui_shortcut2::Options { ..ui_shortcut2::Options::EMPTY },
     }
-}
-
-type Histogram = HashMap<u32, u32>;
-
-async fn take_screenshot() -> Result<Histogram, Error> {
-    let screenshot = connect_to_protocol::<ui_comp::ScreenshotMarker>()
-        .expect("failed to connect to Screenshot");
-    let data = screenshot
-        .take(ui_comp::ScreenshotTakeRequest {
-            format: Some(ui_comp::ScreenshotFormat::BgraRaw),
-            ..ui_comp::ScreenshotTakeRequest::EMPTY
-        })
-        .await?;
-    let vmo = data.vmo.unwrap();
-    let size = vmo.get_size().unwrap() as usize;
-    let mapping = Mapping::create_from_vmo(&vmo, size, zx::VmarFlags::PERM_READ)?;
-    let mut image_data = vec![0u8; size];
-    pretty_assertions::assert_eq!(mapping.read(&mut image_data), size);
-
-    Ok(build_histogram(&image_data))
-}
-
-fn build_histogram(data: &[u8]) -> Histogram {
-    use std::convert::TryInto;
-    let mut histogram = HashMap::<u32, u32>::new();
-
-    for chunk in data.chunks_exact(std::mem::size_of::<u32>()) {
-        let pixel = u32::from_be_bytes(chunk.try_into().unwrap());
-        let count = histogram.get(&pixel).unwrap_or(&0);
-        histogram.insert(pixel, count + 1);
-    }
-
-    histogram
 }

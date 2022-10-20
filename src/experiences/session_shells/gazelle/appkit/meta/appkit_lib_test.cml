@@ -20,16 +20,10 @@
     ],
     use: [
         {
-            protocol: "fuchsia.sysmem.Allocator",
-            from: "parent",
-        },
-        {
             protocol: [
                 "fuchsia.element.GraphicalPresenter",
                 "fuchsia.session.scene.Manager",
-                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
-                "fuchsia.ui.composition.Screenshot",
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.shortcut2.Registry",
                 "fuchsia.ui.test.input.Registry",
