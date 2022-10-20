@@ -469,6 +469,71 @@ mod test {
     }
 
     #[test]
+    fn test_encode_debug_symbol_composite_bind_rules_with_optional() {
+        let composite_bind_rules = "composite grey_lourie;
+            primary node \"go-away-bird\" {
+                fuchsia.BIND_PROTOCOL == 1;
+            }
+            optional node \"redpoll\" {
+                fuchsia.BIND_FIDL_PROTOCOL == 2;
+            }";
+
+        let compiled_bind_rules =
+            compile(&composite_bind_rules, &vec![], false, false, true, true).unwrap();
+
+        assert_matches!(compiled_bind_rules, CompiledBindRules::CompositeBind(_));
+
+        let bytecode;
+        match compiled_bind_rules {
+            CompiledBindRules::CompositeBind(rule) => {
+                bytecode = encode_composite_to_bytecode(rule).unwrap();
+            }
+            _ => {
+                panic!("Compiled bind rules are not composite");
+            }
+        }
+
+        let mut checker = BytecodeChecker::new(bytecode);
+
+        checker.verify_bind_rules_header(true);
+        checker.verify_sym_table_header(45);
+        checker.verify_symbol_table(&["grey_lourie", "go-away-bird", "redpoll"]);
+
+        // Composite instruction section.
+        let primary_node_bytes = COND_ABORT_BYTES + DEBG_LINE_NUMBER_BYTES;
+        let optional_node_bytes = COND_ABORT_BYTES + DEBG_LINE_NUMBER_BYTES;
+        checker.verify_composite_header(
+            (NODE_HEADER_BYTES * 2)
+                + COMPOSITE_NAME_ID_BYTES
+                + primary_node_bytes
+                + optional_node_bytes,
+        );
+
+        // Each node section consists of the total node bytes from each
+        // instruction and the debug line number bytes.
+        checker.verify_node_header(RawNodeType::Primary, 2, primary_node_bytes);
+        checker.verify_debug_line_number(3);
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+        );
+
+        // Verify optional node.
+        checker.verify_node_header(RawNodeType::Optional, 3, optional_node_bytes);
+        checker.verify_debug_line_number(6);
+        checker.verify_abort_not_equal(
+            EncodedValue { value_type: RawValueType::NumberValue, value: 4 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2 },
+        );
+
+        // Debug section.
+        checker.verify_debug_header(65);
+        checker.verify_debug_symbol_table_header(57);
+        checker.verify_symbol_table(&["fuchsia.BIND_PROTOCOL", "fuchsia.BIND_FIDL_PROTOCOL"]);
+        checker.verify_end();
+    }
+
+    #[test]
     fn test_debug_line_number() {
         // AST Location for "fuchsia.BIND_PROTOCOL" and "rail".
         let location = AstLocation::AcceptStatementValue {
@@ -559,6 +624,7 @@ mod test {
             device_name: "treehunter".to_string(),
             symbol_table: HashMap::new(),
             additional_nodes: vec![],
+            optional_nodes: vec![],
             primary_node: CompositeNode {
                 name: "bananaquit".to_string(),
                 instructions: primary_node_inst,

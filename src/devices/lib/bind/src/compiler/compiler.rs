@@ -192,6 +192,7 @@ pub struct CompositeBindRules<'a> {
     pub symbol_table: SymbolTable,
     pub primary_node: CompositeNode<'a>,
     pub additional_nodes: Vec<CompositeNode<'a>>,
+    pub optional_nodes: Vec<CompositeNode<'a>>,
     pub enable_debug: bool,
 }
 
@@ -274,11 +275,22 @@ pub fn compile_bind_composite<'a>(
         })
         .collect::<Result<Vec<CompositeNode<'_>>, CompilerError>>()?;
 
+    let optional_nodes = ast
+        .optional_nodes
+        .into_iter()
+        .map(|node| {
+            let name = node.name;
+            compile_statements(node.statements, &symbol_table, use_new_bytecode)
+                .map(|inst| CompositeNode { name: name, instructions: inst })
+        })
+        .collect::<Result<Vec<CompositeNode<'_>>, CompilerError>>()?;
+
     Ok(CompositeBindRules {
         device_name: ast.name.to_string(),
         symbol_table: symbol_table,
         primary_node: primary_node,
         additional_nodes: additional_nodes,
+        optional_nodes: optional_nodes,
         enable_debug: enable_debug,
     })
 }

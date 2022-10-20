@@ -76,11 +76,12 @@ fn get_symbol_table_and_instruction_debug_bytecode(
 // remaining bytecode.
 fn split_off_node(
     mut bytecode: Vec<u8>,
-    node_type: RawNodeType,
+    expect_primary: bool,
     symbol_table: &HashMap<u32, String>,
-) -> Result<(Node, Vec<u8>), BytecodeError> {
+) -> Result<(bool, Node, Vec<u8>), BytecodeError> {
     // Verify the node type and retrieve the node section size.
-    let (node_id, node_inst_sz) = verify_and_read_node_header(&bytecode, node_type)?;
+    let (is_optional, node_id, node_inst_sz) =
+        verify_and_read_node_header(&bytecode, expect_primary)?;
     if bytecode.len() < NODE_TYPE_HEADER_SZ + node_inst_sz as usize {
         return Err(BytecodeError::IncorrectNodeSectionSize);
     }
@@ -96,7 +97,11 @@ fn split_off_node(
     let mut decoder = InstructionDecoder::new(symbol_table, &node_instructions);
     decoder.decode()?;
 
-    Ok((Node { name_id: node_id, instructions: node_instructions }, remaining_bytecode))
+    Ok((
+        is_optional,
+        Node { name_id: node_id, instructions: node_instructions },
+        remaining_bytecode,
+    ))
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -232,6 +237,7 @@ pub struct DecodedCompositeBindRules {
     pub device_name_id: u32,
     pub primary_node: Node,
     pub additional_nodes: Vec<Node>,
+    pub optional_nodes: Vec<Node>,
     pub debug_info: Option<DecodedDebugInfo>,
 }
 
@@ -259,16 +265,21 @@ impl DecodedCompositeBindRules {
         let node_bytecode = composite_inst_bytecode.split_off(4);
 
         // Extract the primary node instructions.
-        let (primary_node, mut node_bytecode) =
-            split_off_node(node_bytecode, RawNodeType::Primary, &symbol_table)?;
+        let (_, primary_node, mut node_bytecode) =
+            split_off_node(node_bytecode, true, &symbol_table)?;
 
-        // Extract additional nodes from the remaining bytecode until there's none left.
+        // Extract additional and optional nodes from the remaining bytecode until there's none left.
         let mut additional_nodes: Vec<Node> = vec![];
+        let mut optional_nodes: Vec<Node> = vec![];
         while !node_bytecode.is_empty() {
-            let (node, remaining) =
-                split_off_node(node_bytecode, RawNodeType::Additional, &symbol_table)?;
+            let (is_optional, node, remaining) =
+                split_off_node(node_bytecode, false, &symbol_table)?;
             node_bytecode = remaining;
-            additional_nodes.push(node);
+            if is_optional {
+                optional_nodes.push(node);
+            } else {
+                additional_nodes.push(node);
+            }
         }
 
         Ok(DecodedCompositeBindRules {
@@ -276,6 +287,7 @@ impl DecodedCompositeBindRules {
             device_name_id: device_name_id,
             primary_node: primary_node,
             additional_nodes: additional_nodes,
+            optional_nodes: optional_nodes,
             debug_info: debug_info,
         })
     }
@@ -329,22 +341,33 @@ fn read_and_remove_debug_flag(mut bytecode: Vec<u8>) -> Result<(u8, Vec<u8>), By
 // Verify the node type and return the node ID and the number of bytes in the node instructions.
 fn verify_and_read_node_header(
     bytecode: &Vec<u8>,
-    expected_node_type: RawNodeType,
-) -> Result<(u32, u32), BytecodeError> {
+    expect_primary: bool,
+) -> Result<(bool, u32, u32), BytecodeError> {
     if bytecode.len() < NODE_TYPE_HEADER_SZ {
         return Err(BytecodeError::UnexpectedEnd);
     }
 
-    match FromPrimitive::from_u8(bytecode[0]) {
+    let is_optional = match FromPrimitive::from_u8(bytecode[0]) {
         Some(RawNodeType::Primary) => {
-            if expected_node_type == RawNodeType::Additional {
+            if !expect_primary {
                 return Err(BytecodeError::MultiplePrimaryNodes);
             }
+
+            false
         }
         Some(RawNodeType::Additional) => {
-            if expected_node_type == RawNodeType::Primary {
+            if expect_primary {
                 return Err(BytecodeError::InvalidPrimaryNode);
             }
+
+            false
+        }
+        Some(RawNodeType::Optional) => {
+            if expect_primary {
+                return Err(BytecodeError::InvalidPrimaryNode);
+            }
+
+            true
         }
         None => {
             return Err(BytecodeError::InvalidNodeType(bytecode[0]));
@@ -353,7 +376,7 @@ fn verify_and_read_node_header(
 
     let node_id = u32::from_le_bytes(get_u32_bytes(bytecode, 1)?);
     let inst_sz = u32::from_le_bytes(get_u32_bytes(bytecode, 5)?);
-    Ok((node_id, inst_sz))
+    Ok((is_optional, node_id, inst_sz))
 }
 
 fn read_string(iter: &mut BytecodeIter) -> Result<String, BytecodeError> {
@@ -1066,6 +1089,95 @@ mod test {
                 Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
                 Node { name_id: 4, instructions: additional_node_inst_2.to_vec() },
             ],
+            optional_nodes: vec![],
+            debug_info: Some(DecodedDebugInfo { symbol_table: debug_symbol_table }),
+        };
+        assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
+    }
+
+    #[test]
+    fn test_enable_debug_composite_with_optional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_ENABLE_DEBUG);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 38);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let node_name_2: [u8; 7] = [0x50, 0x4C, 0x4F, 0x56, 0x45, 0x52, 0]; // "PLOVER"
+        bytecode.extend_from_slice(&[4, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_2);
+
+        let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+        let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x01, 0, 0, 0, 0x10];
+        let optional_node_inst_1 = [0x30, 0x30];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 3)
+                + primary_node_inst.len()
+                + additional_node_inst_1.len()
+                + optional_node_inst_1.len()) as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        // Add the node instructions.
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst_1.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst_1);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Optional,
+            4,
+            optional_node_inst_1.len() as u32,
+        );
+        bytecode.extend_from_slice(&optional_node_inst_1);
+
+        let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
+        expected_symbol_table.insert(1, "IBIS".to_string());
+        expected_symbol_table.insert(2, "RAIL".to_string());
+        expected_symbol_table.insert(3, "COOT".to_string());
+        expected_symbol_table.insert(4, "PLOVER".to_string());
+
+        append_section_header(&mut bytecode, DEBG_MAGIC_NUM, 0x22);
+        append_section_header(&mut bytecode, DBSY_MAGIC_NUM, 0x1A);
+
+        let str_1: [u8; 22] = [
+            // "fuchsia.BIND_PROTOCOL"
+            0x66, 0x75, 0x63, 0x68, 0x73, 0x69, 0x61, 0x2e, 0x42, 0x49, 0x4e, 0x44, 0x5f, 0x50,
+            0x52, 0x4f, 0x54, 0x4f, 0x43, 0x4f, 0x4c, 0,
+        ];
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&str_1);
+
+        let mut debug_symbol_table: HashMap<u32, String> = HashMap::new();
+        debug_symbol_table.insert(1, "fuchsia.BIND_PROTOCOL".to_string());
+
+        let rules = DecodedCompositeBindRules {
+            symbol_table: expected_symbol_table,
+            device_name_id: 1,
+            primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+            additional_nodes: vec![Node {
+                name_id: 3,
+                instructions: additional_node_inst_1.to_vec(),
+            }],
+            optional_nodes: vec![Node { name_id: 4, instructions: optional_node_inst_1.to_vec() }],
             debug_info: Some(DecodedDebugInfo { symbol_table: debug_symbol_table }),
         };
         assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
@@ -1139,6 +1251,81 @@ mod test {
                 Node { name_id: 3, instructions: additional_node_inst_1.to_vec() },
                 Node { name_id: 4, instructions: additional_node_inst_2.to_vec() },
             ],
+            optional_nodes: vec![],
+            debug_info: None,
+        };
+        assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
+    }
+
+    #[test]
+    fn test_valid_composite_bind_with_optional() {
+        let mut bytecode: Vec<u8> = BIND_HEADER.to_vec();
+        bytecode.push(BYTECODE_DISABLE_DEBUG);
+        append_section_header(&mut bytecode, SYMB_MAGIC_NUM, 38);
+
+        let device_name: [u8; 5] = [0x49, 0x42, 0x49, 0x53, 0]; // "IBIS"
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+        bytecode.extend_from_slice(&device_name);
+
+        let primary_node_name: [u8; 5] = [0x52, 0x41, 0x49, 0x4C, 0]; // "RAIL"
+        bytecode.extend_from_slice(&[2, 0, 0, 0]);
+        bytecode.extend_from_slice(&primary_node_name);
+
+        let node_name_1: [u8; 5] = [0x43, 0x4F, 0x4F, 0x54, 0]; // "COOT"
+        bytecode.extend_from_slice(&[3, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_1);
+
+        let node_name_2: [u8; 7] = [0x50, 0x4C, 0x4F, 0x56, 0x45, 0x52, 0]; // "PLOVER"
+        bytecode.extend_from_slice(&[4, 0, 0, 0]);
+        bytecode.extend_from_slice(&node_name_2);
+
+        let primary_node_inst = [0x30, 0x01, 0x01, 0, 0, 0, 0x05, 0x01, 0x10, 0, 0x20, 0];
+        let additional_node_inst_1 = [0x02, 0x01, 0, 0, 0, 0x02, 0x01, 0, 0, 0, 0x10];
+        let optional_node_inst_1 = [0x30, 0x30];
+
+        let composite_insts_sz = COMPOSITE_NAME_ID_BYTES
+            + ((NODE_TYPE_HEADER_SZ * 3)
+                + primary_node_inst.len()
+                + additional_node_inst_1.len()
+                + optional_node_inst_1.len()) as u32;
+        append_section_header(&mut bytecode, COMPOSITE_MAGIC_NUM, composite_insts_sz);
+
+        // Add device name ID.
+        bytecode.extend_from_slice(&[1, 0, 0, 0]);
+
+        // Add the node instructions.
+        append_node_header(&mut bytecode, RawNodeType::Primary, 2, primary_node_inst.len() as u32);
+        bytecode.extend_from_slice(&primary_node_inst);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Additional,
+            3,
+            additional_node_inst_1.len() as u32,
+        );
+        bytecode.extend_from_slice(&additional_node_inst_1);
+        append_node_header(
+            &mut bytecode,
+            RawNodeType::Optional,
+            4,
+            optional_node_inst_1.len() as u32,
+        );
+        bytecode.extend_from_slice(&optional_node_inst_1);
+
+        let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
+        expected_symbol_table.insert(1, "IBIS".to_string());
+        expected_symbol_table.insert(2, "RAIL".to_string());
+        expected_symbol_table.insert(3, "COOT".to_string());
+        expected_symbol_table.insert(4, "PLOVER".to_string());
+
+        let rules = DecodedCompositeBindRules {
+            symbol_table: expected_symbol_table,
+            device_name_id: 1,
+            primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+            additional_nodes: vec![Node {
+                name_id: 3,
+                instructions: additional_node_inst_1.to_vec(),
+            }],
+            optional_nodes: vec![Node { name_id: 4, instructions: optional_node_inst_1.to_vec() }],
             debug_info: None,
         };
         assert_eq!(DecodedRules::Composite(rules), DecodedRules::new(bytecode).unwrap());
@@ -1181,6 +1368,7 @@ mod test {
                 device_name_id: 1,
                 primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
                 additional_nodes: vec![],
+                optional_nodes: vec![],
                 debug_info: None,
             }),
             DecodedRules::new(bytecode).unwrap()
@@ -1390,12 +1578,12 @@ mod test {
         bytecode.extend_from_slice(&[1, 0, 0, 0]);
 
         // Add the node instructions with an invalid node type.
-        bytecode.push(0x52);
+        bytecode.push(0x53);
         bytecode.extend_from_slice(&[2, 0, 0, 0]);
         bytecode.extend_from_slice(&(primary_node_inst.len() as u32).to_le_bytes());
         bytecode.extend_from_slice(&primary_node_inst);
 
-        assert_eq!(Err(BytecodeError::InvalidNodeType(0x52)), DecodedRules::new(bytecode));
+        assert_eq!(Err(BytecodeError::InvalidNodeType(0x53)), DecodedRules::new(bytecode));
     }
 
     #[test]
@@ -2179,6 +2367,7 @@ mod test {
                 name: "cowbird".to_string(),
                 instructions: additional_node_inst,
             }],
+            optional_nodes: vec![],
             enable_debug: false,
         })
         .encode_to_bytecode()
@@ -2205,6 +2394,103 @@ mod test {
                 additional_nodes: vec![Node {
                     name_id: 3,
                     instructions: additional_node_inst.to_vec()
+                }],
+                optional_nodes: vec![],
+                debug_info: None,
+            }),
+            DecodedRules::new(bytecode).unwrap()
+        );
+    }
+
+    #[test]
+    fn test_composite_optional_with_compiler() {
+        use crate::compiler::{
+            CompiledBindRules, CompositeBindRules, CompositeNode, Symbol, SymbolicInstruction,
+            SymbolicInstructionInfo,
+        };
+        use crate::parser::bind_library::ValueType;
+
+        let primary_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::UnconditionalAbort,
+        }];
+
+        let additional_node_inst = vec![
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfEqual {
+                    lhs: Symbol::Key("bobolink".to_string(), ValueType::Bool),
+                    rhs: Symbol::BoolValue(false),
+                },
+            },
+            SymbolicInstructionInfo {
+                location: None,
+                instruction: SymbolicInstruction::AbortIfNotEqual {
+                    lhs: Symbol::Key("grackle".to_string(), ValueType::Number),
+                    rhs: Symbol::NumberValue(1),
+                },
+            },
+        ];
+
+        let optional_node_inst = vec![SymbolicInstructionInfo {
+            location: None,
+            instruction: SymbolicInstruction::AbortIfEqual {
+                lhs: Symbol::Key("mockingbird".to_string(), ValueType::Bool),
+                rhs: Symbol::BoolValue(false),
+            },
+        }];
+
+        let bytecode = CompiledBindRules::CompositeBind(CompositeBindRules {
+            device_name: "blackbird".to_string(),
+            symbol_table: HashMap::new(),
+            primary_node: CompositeNode {
+                name: "meadowlark".to_string(),
+                instructions: primary_node_inst,
+            },
+            additional_nodes: vec![CompositeNode {
+                name: "cowbird".to_string(),
+                instructions: additional_node_inst,
+            }],
+            optional_nodes: vec![CompositeNode {
+                name: "cowbird_optional".to_string(),
+                instructions: optional_node_inst,
+            }],
+            enable_debug: false,
+        })
+        .encode_to_bytecode()
+        .unwrap();
+
+        let mut expected_symbol_table: HashMap<u32, String> = HashMap::new();
+        expected_symbol_table.insert(1, "blackbird".to_string());
+        expected_symbol_table.insert(2, "meadowlark".to_string());
+        expected_symbol_table.insert(3, "cowbird".to_string());
+        expected_symbol_table.insert(4, "bobolink".to_string());
+        expected_symbol_table.insert(5, "grackle".to_string());
+        expected_symbol_table.insert(6, "cowbird_optional".to_string());
+        expected_symbol_table.insert(7, "mockingbird".to_string());
+
+        let primary_node_inst = [0x30];
+        let additional_node_inst = [
+            0x02, 0x0, 0x04, 0x0, 0x0, 0x0, 0x03, 0x0, 0x0, 0x0, 0x0, // bobolink != false
+            0x01, 0x0, 0x05, 0x0, 0x0, 0x0, 0x01, 0x1, 0x0, 0x0, 0x0, // grackle == 1
+        ];
+
+        let optional_node_inst = [
+            0x02, 0x0, 0x07, 0x0, 0x0, 0x0, 0x03, 0x0, 0x0, 0x0, 0x0, // mockingbird != false
+        ];
+
+        assert_eq!(
+            DecodedRules::Composite(DecodedCompositeBindRules {
+                symbol_table: expected_symbol_table,
+                device_name_id: 1,
+                primary_node: Node { name_id: 2, instructions: primary_node_inst.to_vec() },
+                additional_nodes: vec![Node {
+                    name_id: 3,
+                    instructions: additional_node_inst.to_vec()
+                }],
+                optional_nodes: vec![Node {
+                    name_id: 6,
+                    instructions: optional_node_inst.to_vec()
                 }],
                 debug_info: None,
             }),

@@ -2130,6 +2130,7 @@ mod tests {
                 name: "mockingbird".to_string(),
                 instructions: additional_node_inst,
             }],
+            optional_nodes: vec![],
             enable_debug: false,
         };
 
@@ -2538,6 +2539,7 @@ mod tests {
                 name: "mockingbird".to_string(),
                 instructions: additional_node_inst,
             }],
+            optional_nodes: vec![],
             enable_debug: false,
         };
 
@@ -2732,6 +2734,7 @@ mod tests {
                 name: "mockingbird".to_string(),
                 instructions: additional_node_inst,
             }],
+            optional_nodes: vec![],
             enable_debug: false,
         };
 

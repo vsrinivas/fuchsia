@@ -66,4 +66,5 @@ pub enum RawValueType {
 pub enum RawNodeType {
     Primary = 0x50,
     Additional = 0x51,
+    Optional = 0x52,
 }

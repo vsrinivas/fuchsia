@@ -399,6 +399,7 @@ mod tests {
                 instructions: primary_node.1,
             },
             additional_nodes: additional_nodes,
+            optional_nodes: vec![],
             enable_debug: false,
         };
 
