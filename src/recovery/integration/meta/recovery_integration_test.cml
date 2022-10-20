@@ -2,12 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
-    include: [ "syslog/client.shard.cml" ],
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "inspect/client.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
     program: {
-        runner: "elf",
         binary: "bin/recovery_integration_test",
     },
     use: [
-        { protocol: "fuchsia.sys.Launcher" },
+        {
+            protocol: [ "fuchsia.logger.Log" ],
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.Log",
+                "fuchsia.logger.LogSink",
+            ],
+            from: "parent",
+            to: "#realm_builder",
+        },
     ],
 }

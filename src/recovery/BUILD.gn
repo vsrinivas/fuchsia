@@ -27,9 +27,7 @@ group("tests_no_e2e") {
 
   deps = [
     "factory_reset:tests",
-
-    # TODO(b/239237351) Disabled for CFv2 migration
-    # "integration:tests",
+    "integration:tests",
     "lib/recovery-util:tests",
     "system:tests",
   ]
