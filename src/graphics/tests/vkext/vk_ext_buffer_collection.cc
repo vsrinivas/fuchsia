@@ -626,7 +626,7 @@ void VulkanExtensionTest::WriteLinearImage(vk::DeviceMemory memory, bool is_cohe
 
   if (!is_coherent) {
     auto range = vk::MappedMemoryRange().setMemory(memory).setSize(VK_WHOLE_SIZE);
-    ctx_->device()->flushMappedMemoryRanges(1, &range);
+    EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->flushMappedMemoryRanges(1, &range));
   }
 
   ctx_->device()->unmapMemory(memory);
@@ -641,7 +641,7 @@ void VulkanExtensionTest::CheckLinearImage(vk::DeviceMemory memory, bool is_cohe
 
   if (!is_coherent) {
     auto range = vk::MappedMemoryRange().setMemory(memory).setSize(VK_WHOLE_SIZE);
-    ctx_->device()->invalidateMappedMemoryRanges(1, &range);
+    EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->invalidateMappedMemoryRanges(1, &range));
   }
 
   uint32_t error_count = 0;
@@ -1759,7 +1759,7 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
 
   {
     auto info = vk::CommandBufferBeginInfo();
-    command_buffers[0]->begin(&info);
+    EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->begin(&info));
   }
 
   for (vk::Image image : std::vector<vk::Image>{src_image1.get(), src_image2.get()}) {
@@ -1842,15 +1842,15 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
         1 /* imageMemoryBarrierCount */, &barrier);
   }
 
-  command_buffers[0]->end();
+  EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->end());
 
   {
     auto command_buffer_temp = command_buffers[0].get();
     auto info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(&command_buffer_temp);
-    vulkan_context().queue().submit(1, &info, vk::Fence());
+    EXPECT_EQ(vk::Result::eSuccess, vulkan_context().queue().submit(1, &info, vk::Fence()));
   }
 
-  vulkan_context().queue().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, vulkan_context().queue().waitIdle());
 
   CheckLinearImage(dst_memory.get(), dst_is_coherent, kDefaultWidth, kDstHeight, kPattern);
 }
@@ -1966,7 +1966,7 @@ TEST_P(VulkanFormatTest, FastClear) {
 
   {
     auto info = vk::CommandBufferBeginInfo();
-    command_buffers[0]->begin(&info);
+    EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->begin(&info));
   }
 
   vk::UniqueRenderPass render_pass;
@@ -2069,15 +2069,15 @@ TEST_P(VulkanFormatTest, FastClear) {
         nullptr /* pBufferMemoryBarriers */, 1 /* imageMemoryBarrierCount */, &barrier);
   }
 
-  command_buffers[0]->end();
+  EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->end());
 
   {
     auto command_buffer_temp = command_buffers[0].get();
     auto info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(&command_buffer_temp);
-    vulkan_context().queue().submit(1, &info, vk::Fence());
+    EXPECT_EQ(vk::Result::eSuccess, vulkan_context().queue().submit(1, &info, vk::Fence()));
   }
 
-  vulkan_context().queue().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, vulkan_context().queue().waitIdle());
 
   // The image may be linear or y-tiled, but since all pixels are the same and
   // the dimensions are a multiple of the tile size then pretending it's linear

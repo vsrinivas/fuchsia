@@ -103,14 +103,14 @@ int main(int argc, char* argv[]) {
     RTN_MSG(1, "First DrawAllFrames Failed.\n");
   }
 
-  device->waitIdle();
+  RTN_IF_MSG(1, vk::Result::eSuccess != device->waitIdle(), "waitIdle failed");
 
   auto start_time = std::chrono::steady_clock::now();
 
   if (!DrawAllFrames(vkp_device, *vkp_command_buffers)) {
     RTN_MSG(1, "Second DrawAllFrames Failed.\n");
   }
-  device->waitIdle();
+  RTN_IF_MSG(1, vk::Result::eSuccess != device->waitIdle(), "waitIdle failed");
   auto end_time = std::chrono::steady_clock::now();
 
   fprintf(stderr, "End time: %lld\n",

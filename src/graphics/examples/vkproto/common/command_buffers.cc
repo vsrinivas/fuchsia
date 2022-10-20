@@ -71,7 +71,7 @@ bool CommandBuffers::Init() {
                         0 /* firstInstance */);
     command_buffer.endRenderPass();
 
-    command_buffer.end();
+    RTN_IF_VKH_ERR(false, command_buffer.end(), "Failed to end command buffer\n");
   }
 
   initialized_ = true;

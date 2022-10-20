@@ -111,7 +111,7 @@ std::optional<vk::UniqueDeviceMemory> TransitionToHostVisibleImage(
       0 /* bufferMemoryBarrierCount */, nullptr /* pBufferMemoryBarriers */,
       1 /* imageMemoryBarrierCount */, &map_memory_barrier);
 
-  command_buffer->end();
+  RTN_IF_VKH_ERR(empty, command_buffer->end(), "end failed\n");
 
   vk::SubmitInfo submit_info;
   submit_info.commandBufferCount = 1;
@@ -121,12 +121,14 @@ std::optional<vk::UniqueDeviceMemory> TransitionToHostVisibleImage(
   auto [r_fence, unique_fence] = device.createFenceUnique(fence_info);
   RTN_IF_VKH_ERR(empty, r_fence, "Failed to create readback image transition fence.\n");
   vk::Fence& fence = *unique_fence;
-  device.resetFences(1, &fence);
+  RTN_IF_VKH_ERR(empty, device.resetFences(1, &fence), "resetFences failed\n");
 
   RTN_IF_VKH_ERR(empty, queue.submit(1, &submit_info, fence),
                  "Failed to submit command buffer for readback image transition.\n");
 
-  device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
+  RTN_IF_VKH_ERR(empty,
+                 device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max()),
+                 "waitForFences failed\n");
 
   device.getImageSubresourceLayout(*host_image, &subresource, host_image_layout);
   return std::make_optional<vk::UniqueDeviceMemory>(std::move(host_image_memory));
@@ -156,7 +158,8 @@ bool ReadPixels(const vk::PhysicalDevice& physical_device, const vk::Device& dev
   RTN_IF_VKH_ERR(false, r_mapped_memory, "Readback vulkan memory map failed.\n");
 
   vk::MappedMemoryRange range(*host_image_memory, 0 /* offset */, VK_WHOLE_SIZE);
-  device.invalidateMappedMemoryRanges(1 /* memoryRangeCount */, &range);
+  RTN_IF_VKH_ERR(false, device.invalidateMappedMemoryRanges(1 /* memoryRangeCount */, &range),
+                 "invalidateMappedMemoryRanges failed\n");
 
   // Copy to output buffer.
   uint8_t* host_image_buffer = static_cast<uint8_t*>(mapped_memory);

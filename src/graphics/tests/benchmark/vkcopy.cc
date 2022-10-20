@@ -177,7 +177,8 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
     range.memory = *(buffer.memory);
     range.offset = 0;
     range.size = VK_WHOLE_SIZE;
-    device->flushMappedMemoryRanges(1, &range);
+    RTN_IF_VKH_ERR(false, device->flushMappedMemoryRanges(1, &range),
+                   "flushMappedMemoryRanges failed\n");
     device->unmapMemory(*(buffer.memory));
 
     rv = device->bindBufferMemory(*(buffer.buffer), *(buffer.memory), 0 /* offset */);
@@ -247,7 +248,7 @@ bool VkCopyTest::Exec() {
     RTN_MSG(false, "VK Error: 0x%x - vk::Queue submit failed.\n", rv);
   }
 
-  ctx_->queue().waitIdle();
+  RTN_IF_VKH_ERR(false, ctx_->queue().waitIdle(), "waitIdle failed\n");
 
   std::chrono::duration<double> const t = std::chrono::high_resolution_clock::now() - host_start;
 
@@ -263,13 +264,16 @@ bool VkCopyTest::Exec() {
 
     const auto &device = ctx_->device();
 
-    device->getQueryPoolResults(query_pool_.get(),      //
-                                0,                      //
-                                kTimestamps,            //
-                                sizeof(timestamps),     //
-                                timestamps,             //
-                                sizeof(timestamps[0]),  //
-                                vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWait);
+    RTN_IF_VKH_ERR(
+        false,
+        device->getQueryPoolResults(query_pool_.get(),      //
+                                    0,                      //
+                                    kTimestamps,            //
+                                    sizeof(timestamps),     //
+                                    timestamps,             //
+                                    sizeof(timestamps[0]),  //
+                                    vk::QueryResultFlagBits::e64 | vk::QueryResultFlagBits::eWait),
+        "getQueryPoolResults failed\n");
 
     uint64_t const t = timestamps[kTimestampEnd] - timestamps[kTimestampBegin];
 
@@ -292,7 +296,8 @@ bool VkCopyTest::Validate() {
   range.memory = *(buffers_[kDstBuffer].memory);
   range.offset = 0;
   range.size = VK_WHOLE_SIZE;
-  device->invalidateMappedMemoryRanges(1, &range);
+  RTN_IF_VKH_ERR(false, device->invalidateMappedMemoryRanges(1, &range),
+                 "invalidateMappedMemoryRanges failed\n");
   if (vk::Result::eSuccess != rv_map) {
     RTN_MSG(false, "VK Error: 0x%x - Map buffer memory, value test.\n", rv_map);
   }

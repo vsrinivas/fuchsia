@@ -36,8 +36,9 @@ bool DrawOffscreenFrame(const vk::Device& device, const vk::Queue& queue,
   submit_info.pCommandBuffers = &command_buffer;
 
   // Wait for any outstanding command buffers to be processed.
-  device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device.resetFences(1, &fence);
+  EXPECT_EQ(vk::Result::eSuccess,
+            device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max()));
+  EXPECT_EQ(vk::Result::eSuccess, device.resetFences(1, &fence));
 
   EXPECT_EQ(vk::Result::eSuccess, queue.submit(1, &submit_info, fence))
       << "Failed to offscreen submit command buffer.\n";

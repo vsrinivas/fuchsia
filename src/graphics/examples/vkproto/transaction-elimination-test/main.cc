@@ -99,7 +99,7 @@ static void InitCommandBuffers(const vk::Image* image_for_foreign_transition, ui
           1 /* imageMemoryBarrierCount */, &barrier2);
     }
 
-    command_buffer.end();
+    EXPECT_EQ(vk::Result::eSuccess, command_buffer.end());
   }
 }
 
@@ -164,7 +164,7 @@ TEST(TransactionElimination, ForeignQueue) {
   pipe.run();
 
   ASSERT_TRUE(DrawAllFrames(vkp_device, *vkp_command_buffers));
-  vkp_device.get().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, vkp_device.get().waitIdle());
   auto sample = pipe.sample();
   EXPECT_EQ(0u, GetCounterValue(sample.gpu, hwcpipe::GpuCounter::TransactionEliminations));
 
@@ -182,7 +182,7 @@ TEST(TransactionElimination, ForeignQueue) {
                      vkp_command_buffers2);
 
   ASSERT_TRUE(DrawAllFrames(vkp_device, *vkp_command_buffers2));
-  vkp_device.get().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, vkp_device.get().waitIdle());
   auto sample2 = pipe.sample();
   constexpr uint32_t kTransactionMinTileSize = 16;
   constexpr uint32_t kTransactionMaxTileSize = 32;
@@ -338,7 +338,6 @@ TEST(TransactionElimination, ForeignQueueSysmem) {
   pipe.run();
 
   ASSERT_TRUE(DrawAllFrames(vkp_device, *vkp_command_buffers));
-  vkp_device.get().waitIdle();
   auto sample = pipe.sample();
   EXPECT_EQ(0u, GetCounterValue(sample.gpu, hwcpipe::GpuCounter::TransactionEliminations));
 
@@ -356,7 +355,7 @@ TEST(TransactionElimination, ForeignQueueSysmem) {
                      vkp_command_buffers2);
 
   ASSERT_TRUE(DrawAllFrames(vkp_device, *vkp_command_buffers2));
-  vkp_device.get().waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, vkp_device.get().waitIdle());
   auto sample2 = pipe.sample();
   constexpr uint32_t kTransactionMinTileSize = 16;
   constexpr uint32_t kTransactionMaxTileSize = 32;

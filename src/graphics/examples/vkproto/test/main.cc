@@ -32,8 +32,9 @@ bool DrawOffscreenFrame(const vk::Device& device, const vk::Queue& queue,
   submit_info.pCommandBuffers = &command_buffer;
 
   // Wait for any outstanding command buffers to be processed.
-  device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device.resetFences(1, &fence);
+  EXPECT_EQ(vk::Result::eSuccess,
+            device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max()));
+  EXPECT_EQ(vk::Result::eSuccess, device.resetFences(1, &fence));
 
   EXPECT_EQ(vk::Result::eSuccess, queue.submit(1, &submit_info, fence))
       << "Failed to submit command buffer for offscreen draw.\n";
@@ -81,7 +82,7 @@ void TestCommon(const vk::PhysicalDevice& physical_device, std::shared_ptr<vk::D
   vk::CommandBuffer command_buffer = vkp_command_buffers->command_buffers()[0].get();
   vk::Queue queue = device->getQueue(queue_family_index, 0);
   DrawOffscreenFrame(*device, queue, command_buffer, fence.get());
-  device->waitIdle();
+  EXPECT_EQ(vk::Result::eSuccess, device->waitIdle());
 
   // READBACK
   std::vector<uint8_t> clear_color = {0x7f, 0x00, 0x33, 0xff};

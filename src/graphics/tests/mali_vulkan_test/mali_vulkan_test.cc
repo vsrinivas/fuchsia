@@ -117,12 +117,12 @@ TEST_F(ProtectedMode, PerformanceCounters) {
     command_buffers = std::move(result.value);
   }
 
-  command_buffers[0]->begin(vk::CommandBufferBeginInfo());
+  EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->begin(vk::CommandBufferBeginInfo()));
 
   constexpr uint32_t kBufferSize = 1024;
   auto buffer_data = CreateProtectedBuffer(*ctx_->device(), kBufferSize);
   command_buffers[0]->fillBuffer(*buffer_data.buffer, 0, kBufferSize, 1);
-  command_buffers[0]->end();
+  EXPECT_EQ(vk::Result::eSuccess, command_buffers[0]->end());
 
   // A protected submit should switch the GPU into protected mode.
   vk::StructureChain<vk::SubmitInfo, vk::ProtectedSubmitInfo> submit_info;

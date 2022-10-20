@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
   }
   sleep(3);
 #endif
-  device->waitIdle();
+  RTN_IF_VKH_ERR(1, device->waitIdle(), "waitIdle\n");
 
   if (offscreen) {
     // READBACK
@@ -238,8 +238,10 @@ bool DrawFrame(const vkp::Device& vkp_device, const vkp::Swapchain& vkp_swap_cha
   // therefore the command buffer we're about to use so wait on the command
   // buffer's fence.
   const vk::Fence& fence = fences[swapchain_image_index].get();
-  device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device.resetFences(1, &fence);
+  RTN_IF_VKH_ERR(false,
+                 device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max()),
+                 "waitForFences\n");
+  RTN_IF_VKH_ERR(false, device.resetFences(1, &fence), "resetFences failed\n");
 
   RTN_IF_VKH_ERR(false, vkp_device.queue().submit(1, &submit_info, fence),
                  "Failed to onscreen submit command buffer.\n");
@@ -251,7 +253,7 @@ bool DrawFrame(const vkp::Device& vkp_device, const vkp::Swapchain& vkp_swap_cha
   present_info.setPSwapchains(&(vkp_swap_chain.get()));
   present_info.pImageIndices = &swapchain_image_index;
 
-  vkp_device.queue().presentKHR(&present_info);
+  RTN_IF_VKH_ERR(false, vkp_device.queue().presentKHR(&present_info), "presentKHR failed\n");
 
   return true;
 }
@@ -265,8 +267,10 @@ bool DrawOffscreenFrame(const vkp::Device& vkp_device,
 
   // Wait for any outstanding command buffers to be processed.
   const vk::Device& device = vkp_device.get();
-  device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max());
-  device.resetFences(1, &fence);
+  RTN_IF_VKH_ERR(false,
+                 device.waitForFences(1, &fence, VK_TRUE, std::numeric_limits<uint64_t>::max()),
+                 "waitForFences failed\n");
+  RTN_IF_VKH_ERR(false, device.resetFences(1, &fence), "resetFences failed\n");
 
   RTN_IF_VKH_ERR(false, vkp_device.queue().submit(1, &submit_info, fence),
                  "Failed to offscreen submit command buffer.\n");
