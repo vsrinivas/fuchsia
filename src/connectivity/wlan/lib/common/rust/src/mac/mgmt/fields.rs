@@ -299,3 +299,16 @@ pub struct DelbaHdr {
     // Multi-band
     // TCLAS
 }
+
+// IEEE Std 802.11-2016, 9.6.2.1
+#[repr(C)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Copy, Clone, Debug, Default)]
+pub struct SpectrumMgmtAction(pub u8);
+
+impl SpectrumMgmtAction {
+    pub const MEASUREMENT_REQUEST: Self = Self(0);
+    pub const MEASUREMENT_REPORT: Self = Self(1);
+    pub const TPC_REQUEST: Self = Self(2);
+    pub const TPC_REPORT: Self = Self(3);
+    pub const CHANNEL_SWITCH_ANNOUNCEMENT: Self = Self(4);
+}

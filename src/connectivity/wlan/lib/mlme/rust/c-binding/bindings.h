@@ -124,6 +124,10 @@ typedef struct {
                                    const wlan_softmac_active_scan_args_t *active_scan_args,
                                    uint64_t *out_scan_id);
   /**
+   * Cancel ongoing scan in the driver
+   */
+  zx_status_t (*cancel_scan)(void *device, uint64_t scan_id);
+  /**
    * Get information and capabilities of this WLAN interface
    */
   wlan_softmac_info_t (*get_wlan_softmac_info)(void *device);

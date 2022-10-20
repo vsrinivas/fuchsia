@@ -31,7 +31,7 @@ use {
         capabilities::{intersect_with_ap_as_client, ApCapabilities, StaCapabilities},
         energy::DecibelMilliWatt,
         ie,
-        mac::{self, PowerState},
+        mac::{self, BeaconHdr, PowerState},
         stats::SignalStrengthAverage,
         tim,
         timer::{EventId, Timer},
@@ -318,7 +318,7 @@ impl Associating {
             };
 
         let (ap_ht_op, ap_vht_op) = extract_ht_vht_op(&elements[..]);
-        let main_channel = match sta.channel_state.main_channel {
+        let main_channel = match sta.channel_state.get_main_channel() {
             Some(main_channel) => main_channel,
             None => {
                 error!("MLME in associating state but no main channel is set");
@@ -572,8 +572,19 @@ impl Associated {
 
     /// Process and inbound beacon frame.
     /// Resets LostBssCounter, check buffered frame if available.
-    fn on_beacon_frame<B: ByteSlice>(&mut self, sta: &mut BoundClient<'_>, elements: B) {
+    fn on_beacon_frame<B: ByteSlice>(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        header: &BeaconHdr,
+        elements: B,
+    ) {
         self.0.lost_bss_counter.reset();
+        // TODO(b/253637931): Add metrics to track channel switch counts and success rates.
+        if let Err(e) =
+            sta.channel_state.bind(sta.ctx, sta.scanner).handle_beacon(header, &elements[..])
+        {
+            warn!("Failed to handle channel switch announcement: {}", e);
+        }
         for (id, body) in ie::Reader::new(elements) {
             match id {
                 ie::Id::TIM => match ie::parse_tim(body) {
@@ -685,6 +696,26 @@ impl Associated {
         //                        machine is dormant and, importantly, never transmits BlockAck
         //                        frames.
         //self.0.block_ack_state.replace_state(|state| state.on_block_ack_frame(sta, action, body));
+    }
+
+    fn on_spectrum_mgmt_frame<B: ByteSlice>(
+        &mut self,
+        sta: &mut BoundClient<'_>,
+        action: mac::SpectrumMgmtAction,
+        body: B,
+    ) {
+        match action {
+            mac::SpectrumMgmtAction::CHANNEL_SWITCH_ANNOUNCEMENT => {
+                if let Err(e) = sta
+                    .channel_state
+                    .bind(sta.ctx, sta.scanner)
+                    .handle_announcement_frame(&body[..])
+                {
+                    warn!("Failed to handle channel switch announcement: {}", e);
+                }
+            }
+            _ => (),
+        }
     }
 
     fn on_sme_eapol(&self, sta: &mut BoundClient<'_>, req: fidl_mlme::EapolRequest) {
@@ -904,8 +935,9 @@ impl States {
         bytes: B,
         rx_info: banjo_wlan_softmac::WlanRxInfo,
     ) -> States {
-        // For now, silently drop all frames when we are off channel.
-        if !sta.is_on_channel() {
+        // While scanning, it is normal to receive mac frames from other BSSes. Off-channel frames
+        // can be safely ignored since they are handled by the scanner elsewhere.
+        if sta.scanner.is_scanning() {
             return self;
         }
 
@@ -923,12 +955,7 @@ impl States {
         };
 
         if !sta.sta.should_handle_frame(&mac_frame) {
-            // While scanning, it is normal to receive mac frames from other BSS. Off-channel frames
-            // are already dropped at this point. No need to print error messages in this case.
-            if !sta.scanner.is_scanning() {
-                warn!("Mac frame is either from a foreign BSS or not destined for us. Dropped.");
-            }
-            debug!("Dropping MAC frame that should not be handled.");
+            warn!("Mac frame is either from a foreign BSS or not destined for us. Dropped.");
             return self;
         }
 
@@ -1022,8 +1049,8 @@ impl States {
                 state.extract_and_record_signal_dbm(rx_info);
                 state.on_any_mgmt_frame(sta, mgmt_hdr);
                 match mgmt_body {
-                    mac::MgmtBody::Beacon { bcn_hdr: _, elements } => {
-                        state.on_beacon_frame(sta, elements);
+                    mac::MgmtBody::Beacon { bcn_hdr, elements } => {
+                        state.on_beacon_frame(sta, &bcn_hdr, elements);
                         state.into()
                     }
                     mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
@@ -1046,6 +1073,18 @@ impl States {
                             }
                             state.into()
                         }
+                        mac::ActionCategory::SPECTRUM_MGMT => {
+                            let reader = BufferReader::new(elements);
+                            if let Some(action) = reader.peek_unaligned::<mac::SpectrumMgmtAction>()
+                            {
+                                state.on_spectrum_mgmt_frame(
+                                    sta,
+                                    action.get(),
+                                    reader.into_remaining(),
+                                );
+                            }
+                            state.into()
+                        }
                         _ => state.into(),
                     },
                     _ => state.into(),
@@ -1061,12 +1100,14 @@ impl States {
         frame: B,
     ) -> Result<(), Error> {
         match self {
-            States::Associated(state) if sta.is_on_channel() => state.on_eth_frame(sta, frame),
+            States::Associated(state) if !sta.scanner.is_scanning() => {
+                state.on_eth_frame(sta, frame)
+            }
             States::Associated(_state) => Err(Error::Status(
                 format!(
                     "Associated but current channel {:?} != main channel {:?}. Ethernet dropped",
                     sta.ctx.device.channel(),
-                    sta.channel_state.main_channel
+                    sta.channel_state.get_main_channel()
                 ),
                 zx::Status::BAD_STATE,
             )),
@@ -1124,6 +1165,16 @@ impl States {
                 }
                 _ => self,
             },
+            TimedEvent::ChannelSwitch => {
+                if let Err(e) = sta
+                    .channel_state
+                    .bind(sta.ctx, sta.scanner)
+                    .handle_channel_switch_timeout(event_id)
+                {
+                    error!("ChannelSwitch timeout handler failed: {}", e);
+                }
+                self
+            }
         }
     }
 
@@ -1350,14 +1401,13 @@ mod tests {
                 timer: Some(timer),
                 time_stream,
                 scanner: Scanner::new(IFACE_MAC),
-                channel_state: Default::default(),
+                channel_state: ChannelState::new_with_main_channel(fake_wlan_channel()),
             }
         }
 
         fn make_ctx(&mut self) -> Context {
             let device = self.fake_device.as_device();
             device.set_channel(fake_wlan_channel()).expect("fake device is obedient");
-            self.channel_state.main_channel = Some(fake_wlan_channel());
             self.make_ctx_with_device(device)
         }
 
@@ -1371,7 +1421,6 @@ mod tests {
                     remote: true,
                 })
                 .expect("error configuring bss");
-            self.channel_state.main_channel = Some(fake_wlan_channel());
             self.make_ctx_with_device(device)
         }
 

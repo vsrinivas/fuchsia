@@ -546,7 +546,8 @@ impl From<HtOperation> for banjo_wlan_associnfo::WlanHtOp {
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
 pub struct HtOpInfoHead(pub u32);
 
-#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
+#[repr(C, packed)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy, AsBytes, FromBytes, Unaligned)]
 pub struct SecChanOffset(pub u8);
 impl SecChanOffset {
     pub_const!(SECONDARY_NONE, 0); // No secondary channel
@@ -971,7 +972,7 @@ pub struct ExtendedChannelSwitchAnnouncement {
     pub channel_switch_count: u8,
 }
 
-// IEEE Std 802.11-2016 9.4.2.161: Wide Bandwidh Channel Switch element
+// IEEE Std 802.11-2016 9.4.2.161: Wide Bandwidth Channel Switch element
 #[repr(C, packed)]
 #[derive(Clone, Copy, Debug, AsBytes, FromBytes)]
 pub struct WideBandwidthChannelSwitch {

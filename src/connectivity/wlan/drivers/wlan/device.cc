@@ -755,6 +755,19 @@ zx_status_t Device::StartActiveScan(const wlan_softmac_active_scan_args_t* activ
   return ZX_OK;
 }
 
+zx_status_t Device::CancelScan(uint64_t scan_id) {
+  auto arena = fdf::Arena::Create(0, 0);
+  if (arena.is_error()) {
+    errorf("Arena creation failed: %s", arena.status_string());
+    return ZX_ERR_INTERNAL;
+  }
+  auto result = client_.sync().buffer(*std::move(arena))->CancelScan(scan_id);
+  if (!result.ok()) {
+    errorf("CancelScan Failed (FIDL error %s)", result.status_string());
+  }
+  return result.status();
+}
+
 zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
   auto arena = fdf::Arena::Create(0, 0);
   if (arena.is_error()) {

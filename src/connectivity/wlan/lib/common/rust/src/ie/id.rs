@@ -22,6 +22,7 @@ impl Id {
     pub const MOBILITY_DOMAIN: Self = Self(54);
     pub const EXTENDED_CHANNEL_SWITCH_ANNOUNCEMENT: Self = Self(60);
     pub const HT_OPERATION: Self = Self(61);
+    pub const SECONDARY_CHANNEL_OFFSET: Self = Self(62);
     pub const RM_ENABLED_CAPABILITIES: Self = Self(70);
     pub const BSS_MAX_IDLE_PERIOD: Self = Self(90);
     pub const MESH_PEERING_MGMT: Self = Self(117);
@@ -71,6 +72,7 @@ impl IeType {
     ie_type_basic_const!(MOBILITY_DOMAIN);
     ie_type_basic_const!(EXTENDED_CHANNEL_SWITCH_ANNOUNCEMENT);
     ie_type_basic_const!(HT_OPERATION);
+    ie_type_basic_const!(SECONDARY_CHANNEL_OFFSET);
     ie_type_basic_const!(RM_ENABLED_CAPABILITIES);
     ie_type_basic_const!(BSS_MAX_IDLE_PERIOD);
     ie_type_basic_const!(MESH_PEERING_MGMT);

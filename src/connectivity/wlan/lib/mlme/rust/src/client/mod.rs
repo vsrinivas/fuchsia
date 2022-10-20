@@ -65,6 +65,8 @@ pub enum TimedEvent {
     /// Association status update includes checking for auto deauthentication due to beacon loss
     /// and report signal strength
     AssociationStatusCheck,
+    /// The delay for a scheduled channel switch has elapsed.
+    ChannelSwitch,
 }
 
 #[cfg(test)]
@@ -74,6 +76,7 @@ impl TimedEvent {
             Self::Connecting => TimedEventClass::Connecting,
             Self::Reassociating => TimedEventClass::Reassociating,
             Self::AssociationStatusCheck => TimedEventClass::AssociationStatusCheck,
+            Self::ChannelSwitch => TimedEventClass::ChannelSwitch,
         }
     }
 }
@@ -84,6 +87,7 @@ pub enum TimedEventClass {
     Connecting,
     Reassociating,
     AssociationStatusCheck,
+    ChannelSwitch,
 }
 
 /// ClientConfig affects time duration used for different timeouts.
@@ -176,9 +180,7 @@ impl ClientMlme {
         &mut self,
         channel: banjo_common::WlanChannel,
     ) -> Result<(), zx::Status> {
-        self.ctx.device.set_channel(channel)?;
-        self.channel_state.main_channel = Some(channel);
-        Ok(())
+        self.channel_state.bind(&mut self.ctx, &mut self.scanner).set_main_channel(channel)
     }
 
     pub fn on_mac_frame_rx(&mut self, frame: &[u8], rx_info: banjo_wlan_softmac::WlanRxInfo) {
@@ -294,7 +296,10 @@ impl ClientMlme {
 
     fn on_sme_connect(&mut self, req: fidl_mlme::ConnectRequest) -> Result<(), Error> {
         // Cancel any ongoing scan so that it doesn't conflict with the connect request
-        self.scanner.bind(&mut self.ctx).cancel_ongoing_scan();
+        // TODO(b/254290448): Use enable/disable scanning for better guarantees.
+        if let Err(e) = self.scanner.bind(&mut self.ctx).cancel_ongoing_scan() {
+            warn!("Failed to cancel ongoing scan before connect: {}.", e);
+        }
 
         let bssid = req.selected_bss.bssid;
         let result = match req.selected_bss.try_into() {
@@ -807,9 +812,8 @@ impl<'a> BoundClient<'a> {
         let result = self
             .send_mgmt_or_ctrl_frame(out_buf)
             .map_err(|s| Error::Status(format!("error sending deauthenticate frame"), s));
-
         // Clear main_channel since there is no "main channel" after deauthenticating
-        self.channel_state.main_channel = None;
+        self.channel_state.bind(&mut self.ctx, &mut self.scanner).clear_main_channel();
 
         result
     }
@@ -1054,7 +1058,7 @@ impl<'a> BoundClient<'a> {
         locally_initiated: LocallyInitiated,
     ) {
         // Clear main_channel since there is no "main channel" after deauthenticating
-        self.channel_state.main_channel = None;
+        self.channel_state.bind(&mut self.ctx, &mut self.scanner).clear_main_channel();
 
         let result = self.ctx.device.mlme_control_handle().send_deauthenticate_ind(
             &mut fidl_mlme::DeauthenticateIndication {
@@ -1112,11 +1116,6 @@ impl<'a> BoundClient<'a> {
         if let Err(e) = result {
             error!("error sending OnSaeHandshakeInd: {}", e);
         }
-    }
-
-    fn is_on_channel(&self) -> bool {
-        let channel = self.ctx.device.channel();
-        self.channel_state.main_channel.map(|c| c == channel).unwrap_or(false)
     }
 
     fn send_mgmt_or_ctrl_frame(&mut self, out_buf: OutBuf) -> Result<(), zx::Status> {

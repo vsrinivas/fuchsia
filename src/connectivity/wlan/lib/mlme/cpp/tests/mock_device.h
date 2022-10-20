@@ -203,6 +203,8 @@ struct MockDevice : public DeviceInterface {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
+  zx_status_t CancelScan(uint64_t scan_id) final { return ZX_ERR_NOT_SUPPORTED; }
+
   zx_status_t ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) final {
     sta_assoc_ctx_ = *assoc_ctx;
     return ZX_OK;

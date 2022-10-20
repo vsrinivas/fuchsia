@@ -73,11 +73,12 @@ pub struct Scanner {
     ongoing_scan: Option<OngoingScan>,
     /// MAC address of current client interface
     iface_mac: MacAddr,
+    scanning_enabled: bool,
 }
 
 impl Scanner {
     pub fn new(iface_mac: MacAddr) -> Self {
-        Self { ongoing_scan: None, iface_mac }
+        Self { ongoing_scan: None, iface_mac, scanning_enabled: true }
     }
 
     pub fn bind<'a>(&'a mut self, ctx: &'a mut Context) -> BoundScanner<'a> {
@@ -111,7 +112,6 @@ enum OngoingScan {
     },
 }
 
-#[cfg(test)]
 impl OngoingScan {
     fn scan_id(&self) -> u64 {
         match self {
@@ -131,9 +131,35 @@ struct ChannelList {
 }
 
 impl<'a> BoundScanner<'a> {
+    /// Temporarily disable scanning. If scan cancellation is supported, any
+    /// ongoing scan will be cancelled when scanning is disabled. If a scan
+    /// is in progress but cannot be cancelled, this function returns
+    /// zx::Status::NOT_SUPPORTED and makes no changes to the system.
+    pub fn disable_scanning(&mut self) -> Result<(), zx::Status> {
+        if self.scanner.scanning_enabled {
+            self.cancel_ongoing_scan()?;
+            self.scanner.scanning_enabled = false;
+        }
+        Ok(())
+    }
+
+    pub fn enable_scanning(&mut self) {
+        self.scanner.scanning_enabled = true;
+    }
+
     /// Canceling any software scan that's in progress
-    pub fn cancel_ongoing_scan(&'a mut self) {
-        // TODO(fxbug.dev/102984): implement this for offloaded scan.
+    /// TODO(b/254290448): Remove 'pub' when all clients use enable/disable scanning.
+    pub fn cancel_ongoing_scan(&mut self) -> Result<(), zx::Status> {
+        if let Some(scan) = &self.scanner.ongoing_scan {
+            let discovery_support = self.ctx.device.discovery_support();
+            if discovery_support.scan_offload.scan_cancel_supported {
+                self.ctx.device.cancel_scan(scan.scan_id())
+            } else {
+                Err(zx::Status::NOT_SUPPORTED)
+            }
+        } else {
+            Ok(())
+        }
     }
 
     /// Handle scan request. Queue requested scan channels in channel scheduler.
@@ -141,7 +167,7 @@ impl<'a> BoundScanner<'a> {
     /// If a scan request is in progress, or the new request has invalid argument (empty channel
     /// list or larger min channel time than max), then the request is rejected.
     pub fn on_sme_scan(&'a mut self, req: fidl_mlme::ScanRequest) -> Result<(), Error> {
-        if self.scanner.ongoing_scan.is_some() {
+        if self.scanner.ongoing_scan.is_some() || !self.scanner.scanning_enabled {
             return Err(Error::ScanError(ScanError::Busy));
         }
         if req.channel_list.is_empty() {
@@ -603,6 +629,25 @@ mod tests {
         m.fake_device
             .next_mlme_msg::<fidl_mlme::ScanEnd>()
             .expect_err("unexpected MLME ScanEnd from BoundScanner");
+    }
+
+    #[test]
+    fn test_handle_scan_req_reject_if_disabled() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut scanner = Scanner::new(IFACE_MAC);
+
+        scanner.bind(&mut ctx).disable_scanning().expect("Failed to disable scanning");
+        let result = scanner.bind(&mut ctx).on_sme_scan(passive_scan_req());
+        assert_variant!(result, Err(Error::ScanError(ScanError::Busy)));
+        m.fake_device
+            .next_mlme_msg::<fidl_mlme::ScanEnd>()
+            .expect_err("unexpected MLME ScanEnd from BoundScanner");
+
+        // Accept after reenabled.
+        scanner.bind(&mut ctx).enable_scanning();
+        scanner.bind(&mut ctx).on_sme_scan(passive_scan_req()).expect("expect scan req accepted");
     }
 
     #[test]

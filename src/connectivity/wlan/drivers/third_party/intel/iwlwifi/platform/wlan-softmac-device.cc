@@ -217,16 +217,6 @@ void WlanSoftmacDevice::SetChannel(SetChannelRequestView request, fdf::Arena& ar
     return;
   }
 
-  if (ap_mvm_sta_ != nullptr) {
-    if ((status = mac_unconfigure_bss(mvmvif_)) != ZX_OK) {
-      IWL_ERR(this, "%s() failed mac unconfigure bss: %s\n", __func__,
-              zx_status_get_string(status));
-      completer.buffer(arena).ReplyError(status);
-      return;
-    }
-    ap_mvm_sta_.reset();
-  }
-
   // If the AP sta already exists, it probably was left from the previous association attempt.
   // Remove it first.
   wlan_channel_t channel = {

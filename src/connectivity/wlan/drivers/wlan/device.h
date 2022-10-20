@@ -78,6 +78,7 @@ class Device : public DeviceInterface,
                                uint64_t* out_scan_id) final;
   zx_status_t StartActiveScan(const wlan_softmac_active_scan_args_t* active_scan_args,
                               uint64_t* out_scan_id) final;
+  zx_status_t CancelScan(uint64_t scan_id) final;
   fbl::RefPtr<DeviceState> GetState() final;
   const wlan_softmac_info_t& GetWlanSoftmacInfo() const final;
   const discovery_support_t& GetDiscoverySupport() const final;

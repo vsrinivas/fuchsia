@@ -829,33 +829,6 @@ TEST_F(MacInterfaceTest, TestSetChannelWithUnsupportedRole) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, SetChannel(&kChannel));
 }
 
-// Tests calling SetChannel()/ConfigureBss() again without ConfigureAssoc()/ClearAssoc()
-TEST_F(MacInterfaceTest, DuplicateSetChannel) {
-  ASSERT_OK(SetChannel(&kChannel));
-  ASSERT_OK(ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
-  struct iwl_mvm_phy_ctxt* phy_ctxt = mvmvif_->phy_ctxt;
-  ASSERT_NE(nullptr, phy_ctxt);
-  ASSERT_EQ(IWL_STA_NONE, mvm_sta->sta_state);
-  // Call SetChannel() again. This should return the same phy context but ConfigureBss()
-  // should setup a new STA.
-  ASSERT_OK(SetChannel(&kChannel));
-  struct iwl_mvm_phy_ctxt* new_phy_ctxt = mvmvif_->phy_ctxt;
-  ASSERT_NE(nullptr, new_phy_ctxt);
-  ASSERT_EQ(phy_ctxt, new_phy_ctxt);
-  ASSERT_OK(ConfigureBss(&kBssConfig));
-  struct iwl_mvm_sta* new_mvm_sta = mvmvif_->mvm->fw_id_to_mac_id[mvmvif_->ap_sta_id];
-  // Now Associate and disassociate - this should release and reset the phy ctxt.
-  ASSERT_OK(ConfigureAssoc(&kAssocCtx));
-  ASSERT_EQ(IWL_STA_AUTHORIZED, new_mvm_sta->sta_state);
-  ASSERT_TRUE(mvmvif_->bss_conf.assoc);
-  ASSERT_EQ(kListenInterval, mvmvif_->bss_conf.listen_interval);
-
-  ASSERT_OK(ClearAssoc());
-  ASSERT_EQ(nullptr, mvmvif_->phy_ctxt);
-  ASSERT_EQ(IWL_MVM_INVALID_STA, mvmvif_->ap_sta_id);
-}
-
 // Test ConfigureBss()
 //
 TEST_F(MacInterfaceTest, TestConfigureBss) {

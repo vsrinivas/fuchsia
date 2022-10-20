@@ -132,6 +132,10 @@ impl Device {
         self.raw_device.start_active_scan(active_scan_args)
     }
 
+    pub fn cancel_scan(&self, scan_id: u64) -> Result<(), zx::Status> {
+        self.raw_device.cancel_scan(scan_id)
+    }
+
     pub fn channel(&self) -> banjo_common::WlanChannel {
         self.raw_device.channel()
     }
@@ -402,6 +406,8 @@ pub struct DeviceInterface {
         active_scan_args: *const banjo_wlan_softmac::WlanSoftmacActiveScanArgs,
         out_scan_id: *mut u64,
     ) -> zx::sys::zx_status_t,
+    /// Cancel ongoing scan in the driver
+    cancel_scan: extern "C" fn(device: *mut c_void, scan_id: u64) -> zx::sys::zx_status_t,
     /// Get information and capabilities of this WLAN interface
     get_wlan_softmac_info: extern "C" fn(device: *mut c_void) -> WlanSoftmacInfo,
     /// Get discovery features supported by this WLAN interface
@@ -520,6 +526,10 @@ impl DeviceInterface {
             &mut out_scan_id as *mut u64,
         );
         zx::ok(status).map(|_| out_scan_id)
+    }
+
+    fn cancel_scan(&self, scan_id: u64) -> Result<(), zx::Status> {
+        zx::ok((self.cancel_scan)(self.device, scan_id))
     }
 
     fn channel(&self) -> banjo_common::WlanChannel {
@@ -843,6 +853,10 @@ pub(crate) mod test_utils {
             zx::sys::ZX_ERR_NOT_SUPPORTED
         }
 
+        pub extern "C" fn cancel_scan(_device: *mut c_void, _scan_id: u64) -> zx::sys::zx_status_t {
+            zx::sys::ZX_ERR_NOT_SUPPORTED
+        }
+
         pub extern "C" fn get_wlan_softmac_info(device: *mut c_void) -> WlanSoftmacInfo {
             unsafe { (*(device as *const Self)).info }
         }
@@ -963,6 +977,7 @@ pub(crate) mod test_utils {
                 set_key: Self::set_key,
                 start_passive_scan: Self::start_passive_scan,
                 start_active_scan: Self::start_active_scan,
+                cancel_scan: Self::cancel_scan,
                 get_wlan_softmac_info: Self::get_wlan_softmac_info,
                 get_discovery_support: Self::get_discovery_support,
                 get_mac_sublayer_support: Self::get_mac_sublayer_support,

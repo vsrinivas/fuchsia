@@ -50,6 +50,7 @@ simple_parse_func!(wmm_info);
 simple_parse_func!(wmm_param);
 simple_parse_func!(channel_switch_announcement);
 simple_parse_func!(extended_channel_switch_announcement);
+simple_parse_func!(sec_chan_offset);
 simple_parse_func!(wide_bandwidth_channel_switch);
 
 pub fn parse_ssid<B: ByteSlice>(raw_body: B) -> FrameParseResult<B> {
@@ -750,6 +751,13 @@ mod tests {
         let tail = rm_enabled_caps.rm_enabled_caps_tail;
         assert!(tail.antenna_enabled());
         assert!(!tail.ftm_range_report_enabled());
+    }
+
+    #[test]
+    fn sec_chan_offset_ok() {
+        let sec_chan_offset =
+            parse_sec_chan_offset(&[3][..]).expect("valid sec chan offset should result in OK");
+        assert_eq!(sec_chan_offset.0, 3);
     }
 
     #[test]
