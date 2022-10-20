@@ -53,7 +53,8 @@ if (current_toolchain == default_toolchain) {
       # All EFI code is inherently sensitive and in a position for any bug to
       # be unusually dangerous.  So compile with minimal undefined behavior
       # checking in all builds, regardless of variant.
-      "//build/config/zircon/instrumentation:ubsan-trap",
+      # TODO(fxbug.dev/112653): Re enable this config EFI programs work again.
+      # "//build/config/zircon/instrumentation:ubsan-trap",
     ]
 
     # Always enable frame pointers.
