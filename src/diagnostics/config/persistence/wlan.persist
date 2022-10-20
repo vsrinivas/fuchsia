@@ -81,6 +81,7 @@
             'INSPECT:core/wlancfg:root/client_stats/7d_counters:*',
             'INSPECT:core/wlancfg:root/client_stats:get_iface_stats_fail_count',
             'INSPECT:core/wlancfg:root/client_stats:is_driver_unresponsive',
+            'INSPECT:core/wlancfg:root/client_stats:num_consecutive_get_counter_stats_failures',
         ],
     },
     {

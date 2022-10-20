@@ -19,7 +19,7 @@ use {
     fuchsia_inspect_contrib::{
         auto_persist::{self, AutoPersist},
         inspect_insert, inspect_log,
-        inspectable::InspectableBool,
+        inspectable::{InspectableBool, InspectableU64},
         log::InspectBytes,
         make_inspect_loggable,
         nodes::BoundedListNode,
@@ -387,6 +387,7 @@ struct ConnectedState {
     latest_ap_state: BssDescription,
 
     last_signal_report: fasync::Time,
+    num_consecutive_get_counter_stats_failures: InspectableU64,
     is_driver_unresponsive: InspectableBool,
 
     telemetry_proxy: Option<fidl_fuchsia_wlan_sme::TelemetryProxy>,
@@ -796,17 +797,6 @@ impl Telemetry {
         match &mut self.connection_state {
             ConnectionState::Idle(..) => (),
             ConnectionState::Connected(state) => {
-                if now - state.last_signal_report > UNRESPONSIVE_FLAG_MIN_DURATION {
-                    let mut is_driver_unresponsive = state.is_driver_unresponsive.get_mut();
-                    if !*is_driver_unresponsive {
-                        warn!(
-                            "Have not received signal report for at least {} seconds",
-                            UNRESPONSIVE_FLAG_MIN_DURATION.into_seconds()
-                        );
-                        *is_driver_unresponsive = true;
-                    }
-                }
-
                 self.stats_logger.log_stat(StatOp::AddConnectedDuration(duration)).await;
                 if let Some(proxy) = &state.telemetry_proxy {
                     match proxy
@@ -816,6 +806,7 @@ impl Telemetry {
                         .await
                     {
                         Ok(Ok(stats)) => {
+                            *state.num_consecutive_get_counter_stats_failures.get_mut() = 0;
                             if let Some(prev_counters) = state.prev_counters.as_ref() {
                                 diff_and_log_counters(
                                     &mut self.stats_logger,
@@ -829,8 +820,19 @@ impl Telemetry {
                         }
                         _ => {
                             self.get_iface_stats_fail_count.add(1);
+                            *state.num_consecutive_get_counter_stats_failures.get_mut() += 1;
                             let _ = state.prev_counters.take();
                         }
+                    }
+                }
+
+                let unresponsive_signal_ind =
+                    now - state.last_signal_report > UNRESPONSIVE_FLAG_MIN_DURATION;
+                let mut is_driver_unresponsive = state.is_driver_unresponsive.get_mut();
+                if unresponsive_signal_ind != *is_driver_unresponsive {
+                    *is_driver_unresponsive = unresponsive_signal_ind;
+                    if unresponsive_signal_ind {
+                        warn!("driver unresponsive due to missing signal report");
                     }
                 }
             }
@@ -1022,6 +1024,11 @@ impl Telemetry {
                         // indicator for whether driver is still responsive, set it to the
                         // connection start time for now.
                         last_signal_report: now,
+                        num_consecutive_get_counter_stats_failures: InspectableU64::new(
+                            0,
+                            &self.inspect_node,
+                            "num_consecutive_get_counter_stats_failures",
+                        ),
                         is_driver_unresponsive: InspectableBool::new(
                             false,
                             &self.inspect_node,
@@ -1095,7 +1102,6 @@ impl Telemetry {
                     state.latest_ap_state.rssi_dbm = ind.rssi_dbm;
                     state.latest_ap_state.snr_db = ind.snr_db;
                     state.last_signal_report = now;
-                    *state.is_driver_unresponsive.get_mut() = false;
                     self.stats_logger.log_signal_report_metrics(ind.rssi_dbm, rssi_velocity).await;
                 }
             }
@@ -2885,7 +2891,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    fn test_detect_driver_unresponsive() {
+    fn test_detect_driver_unresponsive_signal_ind() {
         let (mut test_helper, mut test_fut) = setup_test();
         test_helper.send_connected_event(random_bss_description!(Wpa2));
 
@@ -2923,6 +2929,26 @@ mod tests {
         assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
             stats: contains {
                 is_driver_unresponsive: true,
+            }
+        });
+    }
+
+    #[fuchsia::test]
+    fn test_logging_num_consecutive_get_counter_stats_failures() {
+        let (mut test_helper, mut test_fut) = setup_test();
+        test_helper.set_counter_stats_resp(Box::new(|| Err(zx::sys::ZX_ERR_TIMED_OUT)));
+        test_helper.send_connected_event(random_bss_description!(Wpa2));
+
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                num_consecutive_get_counter_stats_failures: 0u64,
+            }
+        });
+
+        test_helper.advance_by(TELEMETRY_QUERY_INTERVAL * 20i64, test_fut.as_mut());
+        assert_data_tree_with_respond_blocking_req!(test_helper, test_fut, root: contains {
+            stats: contains {
+                num_consecutive_get_counter_stats_failures: 20u64,
             }
         });
     }
