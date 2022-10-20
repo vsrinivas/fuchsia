@@ -18,19 +18,23 @@
 
 namespace a11y {
 
-// The A11yFocusManagerImpl keeps track of a11y focus, including a cache of the last focused node
-// for each view.
+// The A11yFocusManager keeps track of a11y focus and a cache of the "last
+// focused node" for each view.
 //
 // The a11y focus is defined as the semantic node which is selected in a certain
 // view by the screen reader. There is only (up to) one active a11y focus, meaning that
-// the screen reader cares only about (up to) one node per time.
+// the screen reader cares only about (up to) one node at a time.
 //
-// If the system changes the Focus Chain to a different view, the a11y focus
-// also changes: If a node was previously focused in that view, it
-// regains focus, otherwise the a11y focus will be lost.
+// The view in a11y focus and the view in input focus are almost always kept in sync:
+// - If the system changes the Focus Chain to a different view, the a11y focus
+// also follows. (If a node was previously focused in that view, it regains
+// focus, otherwise the a11y focus is lost.)
+// - If the a11y focus is changed, this will trigger a Focus Chain Update if the
+// active a11y focus is moving to another view (except in rare situations
+// involving the virtual keyboard).
 //
-// The a11y focus can be changed, which may trigger a Focus Chain Update if the active a11y focus is
-// moving to another view.
+// (For clarity, the following terms are equivalent: 'view in input focus', 'view in Scenic focus',
+// and 'view at the end of the focus chain'.)
 class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusChainListener {
  public:
   // Root node id, which will be used to set the default node_id for a view.
@@ -53,15 +57,16 @@ class A11yFocusManagerImpl : public A11yFocusManager, public AccessibilityFocusC
 
   // |A11yFocusManager|
   //
-  // Sets the a11y focus.
+  // Tries to set the a11y focus.
   //
-  // If the new focus is in a different view from the current focus, then
-  // this manager will send a focus chain update request to scenic -- unless the
-  // new view contains a visible virtual keyboard.
+  // If the new focus is in a different view from the current input focus, then
+  // we'll send a focus chain update request to scenic -- unless the new view
+  // contains a visible virtual keyboard.
   //
-  // If the scenic focus chain update either succeeds or was eschewed, we set
-  // the a11y focus to {koid, node_id} and call the callback with 'true'.
-  // Otherwise, we call the callback with 'false'.
+  // If the scenic focus chain update succeeds (or was eschewed), we'll
+  // (1) set the a11y focus to {koid, node_id}, (2) redraw highlights, and (3)
+  // call the callback with 'true'.
+  // Otherwise, we'll call the callback with 'false'.
   void SetA11yFocus(zx_koid_t koid, uint32_t node_id, SetA11yFocusCallback callback) override;
 
   // |A11yFocusManager|
