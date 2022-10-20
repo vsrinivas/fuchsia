@@ -720,7 +720,6 @@
                     "/core/ui/scene_manager",
                     "/core/ui/scenic",
                     "/core/vulkan_loader",
-                    "/core/wlandevicemonitor",
                 ],
             },
         ],

@@ -18,18 +18,18 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-wlanphy",
             to: "#wlandevicemonitor",
-            subdir: "class/wlanphy",
+            subdir: "wlanphy",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-wlanif",
             to: "#wlandevicemonitor",
-            subdir: "class/wlanif",
+            subdir: "wlanif",
         },
         {
             protocol: "fuchsia.logger.LogSink",

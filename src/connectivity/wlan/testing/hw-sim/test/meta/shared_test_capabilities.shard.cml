@@ -89,11 +89,6 @@
             dependency: "weak",
         },
         {
-            protocol: "fuchsia.io.Directory",
-            from: "#driver_test_realm",
-            to: "#wlandevicemonitor",
-        },
-        {
             directory: "dev",
             from: "#driver_test_realm",
             as: "dev-wlanphy",
