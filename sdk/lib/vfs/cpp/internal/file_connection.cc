@@ -94,8 +94,8 @@ void FileConnection::Read(uint64_t count, ReadCallback callback) {
     return;
   }
   set_offset(offset() + data.size());
-  callback(fuchsia::io::File2_Read_Result::WithResponse(
-      fuchsia::io::File2_Read_Response(std::move(data))));
+  callback(fuchsia::io::Readable_Read_Result::WithResponse(
+      fuchsia::io::Readable_Read_Response(std::move(data))));
 }
 
 void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback callback) {
@@ -113,8 +113,8 @@ void FileConnection::ReadAt(uint64_t count, uint64_t offset, ReadAtCallback call
     callback(fpromise::error(status));
     return;
   }
-  callback(fuchsia::io::File2_ReadAt_Result::WithResponse(
-      fuchsia::io::File2_ReadAt_Response(std::move(data))));
+  callback(fuchsia::io::File_ReadAt_Result::WithResponse(
+      fuchsia::io::File_ReadAt_Response(std::move(data))));
 }
 
 void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
@@ -129,8 +129,8 @@ void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
     return;
   }
   set_offset(offset() + actual);
-  callback(
-      fuchsia::io::File2_Write_Result::WithResponse(fuchsia::io::File2_Write_Response(actual)));
+  callback(fuchsia::io::Writable_Write_Result::WithResponse(
+      fuchsia::io::Writable_Write_Response(actual)));
 }
 
 void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAtCallback callback) {
@@ -145,7 +145,7 @@ void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset, WriteAt
     return;
   }
   callback(
-      fuchsia::io::File2_WriteAt_Result::WithResponse(fuchsia::io::File2_WriteAt_Response(actual)));
+      fuchsia::io::File_WriteAt_Result::WithResponse(fuchsia::io::File_WriteAt_Response(actual)));
 }
 
 void FileConnection::Seek(fuchsia::io::SeekOrigin origin, int64_t offset, SeekCallback callback) {
@@ -167,8 +167,8 @@ void FileConnection::Seek(fuchsia::io::SeekOrigin origin, int64_t offset, SeekCa
     return;
   }
   set_offset(offset_from_start);
-  callback(fuchsia::io::File2_Seek_Result::WithResponse(
-      fuchsia::io::File2_Seek_Response(offset_from_start)));
+  callback(fuchsia::io::File_Seek_Result::WithResponse(
+      fuchsia::io::File_Seek_Response(offset_from_start)));
 }
 
 void FileConnection::Resize(uint64_t length, ResizeCallback callback) {

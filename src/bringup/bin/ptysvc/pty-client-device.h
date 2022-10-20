@@ -11,9 +11,6 @@
 #include <fbl/ref_ptr.h>
 
 #include "pty-client.h"
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
 
 class PtyClientDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
  public:
@@ -43,15 +40,8 @@ class PtyClientDevice : public fidl::WireServer<fuchsia_hardware_pty::Device> {
 
   // fuchsia.io.File methods
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
-  void ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) final;
 
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
-  void WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) final;
-
-  void Seek(SeekRequestView request, SeekCompleter::Sync& completer) final;
-  void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
-  void GetBackingMemory(GetBackingMemoryRequestView request,
-                        GetBackingMemoryCompleter::Sync& completer) final;
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
   void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final;

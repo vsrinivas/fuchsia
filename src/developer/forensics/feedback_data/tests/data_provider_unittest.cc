@@ -434,7 +434,7 @@ TEST_F(DataProviderTest, GetSnapshotViaChannel) {
     uint64_t read_count = 0;
     uint64_t increment = 0;
     do {
-      archive->Read(fuchsia::io::MAX_BUF, [&increment](fuchsia::io::File2_Read_Result result) {
+      archive->Read(fuchsia::io::MAX_BUF, [&increment](fuchsia::io::Readable_Read_Result result) {
         EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
         increment = result.response().data.size();
       });

@@ -50,11 +50,8 @@ protocol Device {
     compose fuchsia.unknown.Closeable;
     compose fuchsia.unknown.Queryable;
 
-    // Compose from fuchsia.io/File so we can support Read/Write.
-    //
-    // NB: File2 does not implement inherent Describe, which prevents
-    // conflicting with the inherent Describe below.
-    compose fuchsia.io.File2;
+    compose fuchsia.io.Readable;
+    compose fuchsia.io.Writable;
 
     // TODO(https://fxbug.dev/105607): Remove this. When?
     compose fuchsia.io.Node1;

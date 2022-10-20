@@ -4,8 +4,6 @@
 
 #include "pty-server-device.h"
 
-#include "pty-client.h"
-
 // The pty server half only supports OpenClient and SetWindowSize. Return ZX_ERR_NOT_SUPPORTED for
 // all of the others
 
@@ -85,27 +83,6 @@ void PtyServerDevice::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& comp
 }
 
 void PtyServerDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyServerDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyServerDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyServerDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyServerDevice::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyServerDevice::GetBackingMemory(GetBackingMemoryRequestView request,
-                                       GetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
 
 void PtyServerDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);

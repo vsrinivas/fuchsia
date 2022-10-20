@@ -326,7 +326,7 @@ fit::result<std::string, std::vector<fuchsia::virtualization::BlockSpec>> GetBlo
     }
 
     auto ptr = handle->BindSync();
-    fuchsia::io::File2_Resize_Result resize_result;
+    fuchsia::io::File_Resize_Result resize_result;
     zx_status_t status = ptr->Resize(stateful_image_size_bytes, &resize_result);
     if (status != ZX_OK || resize_result.is_err()) {
       return fit::error("Failed resize stateful file");

@@ -44,6 +44,9 @@ type FileInfo = resource table {
     3: stream zx.handle:STREAM;
 };
 
+// TODO(https://fxbug.dev/105608): Use a generated constant.
+const FILE_PROTOCOL_NAME string = "fuchsia.io/File";
+
 /// A [`Node`] which contains a sequence of bytes of definite length.
 ///
 /// NOTE: cloned connections do not share their seek offset with their source
@@ -51,17 +54,12 @@ type FileInfo = resource table {
 protocol File {
     compose AdvisoryLocking;
     compose Node;
-    compose File2;
+    compose Readable;
+    compose Writable;
 
     @selector("fuchsia.io/File.Describe")
     Describe2() -> (FileInfo);
-};
 
-// TODO(https://fxbug.dev/105608): Use a generated constant.
-const FILE_PROTOCOL_NAME string = "fuchsia.io/File";
-
-/// The non-[`Node`] portion of [`File`], for composition by other protocols.
-protocol File2 {
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
     /// will occur. The seek offset is specific to each file connection.
     ///
@@ -77,61 +75,6 @@ protocol File2 {
         offset int64;
     }) -> (struct {
         offset_from_start uint64;
-    }) error zx.status;
-
-    /// Reads up to 'count' bytes at the seek offset.
-    /// The seek offset is moved forward by the number of bytes read.
-    ///
-    /// ## Invariants
-    ///
-    /// * The returned `data.length` will never be greater than `count`.
-    /// * If `data.length` is less than `count`, it means that the seek offset
-    ///   has reached the end of file as part of this operation.
-    /// * If `data.length` is zero while `count` is not, it means that the
-    ///   seek offset is already at or beyond the end of file, and no data could
-    ///   be read.
-    /// * If `count` is zero, the server should perform all the checks ensuring
-    ///   read access without actually read anything, and return an empty
-    ///   `data` vector.
-    ///
-    /// This method requires the [`Rights.READ_BYTES`] right.
-    ///
-    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
-    @selector("fuchsia.io/File.Read")
-    Read(struct {
-        count uint64;
-    }) -> (struct {
-        data Transfer;
-    }) error zx.status;
-
-    /// Writes data at the seek offset.
-    /// The seek offset is moved forward by the number of bytes written.
-    /// If the file is in append mode, the seek offset is first set to the end
-    /// of the file, followed by the write, in one atomic step.
-    ///
-    /// The file size may grow if the seek offset plus `data.length` is beyond
-    /// the current end of file.
-    ///
-    /// + request `data` the byte buffer to write to the file.
-    /// - response `actual_count` the number of bytes written.
-    ///
-    /// ## Invariants
-    ///
-    /// * The returned `actual_count` will never be greater than `data.length`.
-    /// * If the server is unable to write all the data due to e.g. not enough
-    ///   space, `actual_count` may be less than `data.length`.  If no bytes
-    ///   could be written, an error is returned.
-    /// * If `data.length` is zero, the server should perform all the checks
-    ///   ensuring write access without mutating the file and return a
-    ///   successful write of zero bytes.  The seek offset is still updated if
-    ///   in append mode.
-    ///
-    /// This method requires the [`Rights.WRITE_BYTES`] right.
-    @selector("fuchsia.io/File.Write")
-    Write(struct {
-        data Transfer;
-    }) -> (struct {
-        actual_count uint64;
     }) error zx.status;
 
     /// Reads up to 'count' bytes at the provided offset.
@@ -267,6 +210,65 @@ protocol File2 {
         };
     }) -> (resource struct {
         vmo zx.handle:VMO;
+    }) error zx.status;
+};
+
+protocol Readable {
+    /// Reads up to 'count' bytes at the seek offset.
+    /// The seek offset is moved forward by the number of bytes read.
+    ///
+    /// ## Invariants
+    ///
+    /// * The returned `data.length` will never be greater than `count`.
+    /// * If `data.length` is less than `count`, it means that the seek offset
+    ///   has reached the end of file as part of this operation.
+    /// * If `data.length` is zero while `count` is not, it means that the
+    ///   seek offset is already at or beyond the end of file, and no data could
+    ///   be read.
+    /// * If `count` is zero, the server should perform all the checks ensuring
+    ///   read access without actually read anything, and return an empty
+    ///   `data` vector.
+    ///
+    /// This method requires the [`Rights.READ_BYTES`] right.
+    ///
+    /// Returns `ZX_ERR_OUT_OF_RANGE` if `count` is greater than `MAX_TRANSFER_SIZE`.
+    @selector("fuchsia.io/File.Read")
+    Read(struct {
+        count uint64;
+    }) -> (struct {
+        data Transfer;
+    }) error zx.status;
+};
+
+protocol Writable {
+    /// Writes data at the seek offset.
+    /// The seek offset is moved forward by the number of bytes written.
+    /// If the file is in append mode, the seek offset is first set to the end
+    /// of the file, followed by the write, in one atomic step.
+    ///
+    /// The file size may grow if the seek offset plus `data.length` is beyond
+    /// the current end of file.
+    ///
+    /// + request `data` the byte buffer to write to the file.
+    /// - response `actual_count` the number of bytes written.
+    ///
+    /// ## Invariants
+    ///
+    /// * The returned `actual_count` will never be greater than `data.length`.
+    /// * If the server is unable to write all the data due to e.g. not enough
+    ///   space, `actual_count` may be less than `data.length`.  If no bytes
+    ///   could be written, an error is returned.
+    /// * If `data.length` is zero, the server should perform all the checks
+    ///   ensuring write access without mutating the file and return a
+    ///   successful write of zero bytes.  The seek offset is still updated if
+    ///   in append mode.
+    ///
+    /// This method requires the [`Rights.WRITE_BYTES`] right.
+    @selector("fuchsia.io/File.Write")
+    Write(struct {
+        data Transfer;
+    }) -> (struct {
+        actual_count uint64;
     }) error zx.status;
 };
 

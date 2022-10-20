@@ -122,27 +122,6 @@ void PtyClientDevice::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& comp
 
 void PtyClientDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void PtyClientDevice::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::GetBackingMemory(GetBackingMemoryRequestView request,
-                                       GetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void PtyClientDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

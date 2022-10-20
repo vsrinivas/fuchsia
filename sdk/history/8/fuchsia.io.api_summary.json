@@ -714,7 +714,7 @@
         "kind": "protocol/member",
         "name": "fuchsia.io/File.GetBackingMemory",
         "ordinal": "46911652864194091",
-        "type": "(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)"
+        "type": "(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File_GetBackingMemory_Result result)"
     },
     {
         "kind": "protocol/member",
@@ -750,13 +750,13 @@
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Read",
         "ordinal": "395825947633028830",
-        "type": "(uint64 count) -> (fuchsia.io/File2_Read_Result result)"
+        "type": "(uint64 count) -> (fuchsia.io/Readable_Read_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.io/File.ReadAt",
         "ordinal": "1587416148701180478",
-        "type": "(uint64 count,uint64 offset) -> (fuchsia.io/File2_ReadAt_Result result)"
+        "type": "(uint64 count,uint64 offset) -> (fuchsia.io/File_ReadAt_Result result)"
     },
     {
         "kind": "protocol/member",
@@ -768,13 +768,13 @@
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Resize",
         "ordinal": "3134648685270758458",
-        "type": "(uint64 length) -> (fuchsia.io/File2_Resize_Result result)"
+        "type": "(uint64 length) -> (fuchsia.io/File_Resize_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Seek",
         "ordinal": "8649041485622956551",
-        "type": "(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)"
+        "type": "(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File_Seek_Result result)"
     },
     {
         "kind": "protocol/member",
@@ -804,248 +804,17 @@
         "kind": "protocol/member",
         "name": "fuchsia.io/File.Write",
         "ordinal": "7651971425397809026",
-        "type": "(vector<uint8>:8192 data) -> (fuchsia.io/File2_Write_Result result)"
+        "type": "(vector<uint8>:8192 data) -> (fuchsia.io/Writable_Write_Result result)"
     },
     {
         "kind": "protocol/member",
         "name": "fuchsia.io/File.WriteAt",
         "ordinal": "8736683935131400491",
-        "type": "(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File2_WriteAt_Result result)"
+        "type": "(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File_WriteAt_Result result)"
     },
     {
         "kind": "protocol",
         "name": "fuchsia.io/File"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.GetBackingMemory",
-        "ordinal": "46911652864194091",
-        "type": "(fuchsia.io/VmoFlags flags) -> (fuchsia.io/File2_GetBackingMemory_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Read",
-        "ordinal": "395825947633028830",
-        "type": "(uint64 count) -> (fuchsia.io/File2_Read_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.ReadAt",
-        "ordinal": "1587416148701180478",
-        "type": "(uint64 count,uint64 offset) -> (fuchsia.io/File2_ReadAt_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Resize",
-        "ordinal": "3134648685270758458",
-        "type": "(uint64 length) -> (fuchsia.io/File2_Resize_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Seek",
-        "ordinal": "8649041485622956551",
-        "type": "(fuchsia.io/SeekOrigin origin,int64 offset) -> (fuchsia.io/File2_Seek_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.Write",
-        "ordinal": "7651971425397809026",
-        "type": "(vector<uint8>:8192 data) -> (fuchsia.io/File2_Write_Result result)"
-    },
-    {
-        "kind": "protocol/member",
-        "name": "fuchsia.io/File2.WriteAt",
-        "ordinal": "8736683935131400491",
-        "type": "(vector<uint8>:8192 data,uint64 offset) -> (fuchsia.io/File2_WriteAt_Result result)"
-    },
-    {
-        "kind": "protocol",
-        "name": "fuchsia.io/File2"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/File2_GetBackingMemory_Response.vmo",
-        "ordinal": "1",
-        "type": "zx/handle:VMO"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_GetBackingMemory_Response",
-        "resourceness": "resource"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_GetBackingMemory_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_GetBackingMemory_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_GetBackingMemory_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_GetBackingMemory_Result",
-        "resourceness": "resource",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/File2_ReadAt_Response.data",
-        "ordinal": "1",
-        "type": "vector<uint8>:8192"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_ReadAt_Response"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_ReadAt_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_ReadAt_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_ReadAt_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_ReadAt_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/File2_Read_Response.data",
-        "ordinal": "1",
-        "type": "vector<uint8>:8192"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_Read_Response"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Read_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Read_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_Read_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_Read_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_Resize_Response"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Resize_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Resize_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_Resize_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_Resize_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/File2_Seek_Response.offset_from_start",
-        "ordinal": "1",
-        "type": "uint64"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_Seek_Response"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Seek_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Seek_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_Seek_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_Seek_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/File2_WriteAt_Response.actual_count",
-        "ordinal": "1",
-        "type": "uint64"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_WriteAt_Response"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_WriteAt_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_WriteAt_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_WriteAt_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_WriteAt_Result",
-        "strictness": "strict"
-    },
-    {
-        "kind": "struct/member",
-        "name": "fuchsia.io/File2_Write_Response.actual_count",
-        "ordinal": "1",
-        "type": "uint64"
-    },
-    {
-        "kind": "struct",
-        "name": "fuchsia.io/File2_Write_Response"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Write_Result.err",
-        "ordinal": "2",
-        "type": "int32"
-    },
-    {
-        "kind": "union/member",
-        "name": "fuchsia.io/File2_Write_Result.response",
-        "ordinal": "1",
-        "type": "fuchsia.io/File2_Write_Response"
-    },
-    {
-        "kind": "union",
-        "name": "fuchsia.io/File2_Write_Result",
-        "strictness": "strict"
     },
     {
         "kind": "table/member",
@@ -1118,6 +887,137 @@
         "name": "fuchsia.io/FileSignal",
         "strictness": "strict",
         "type": "uint32"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.io/File_GetBackingMemory_Response.vmo",
+        "ordinal": "1",
+        "type": "zx/handle:VMO"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/File_GetBackingMemory_Response",
+        "resourceness": "resource"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_GetBackingMemory_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_GetBackingMemory_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/File_GetBackingMemory_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/File_GetBackingMemory_Result",
+        "resourceness": "resource",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.io/File_ReadAt_Response.data",
+        "ordinal": "1",
+        "type": "vector<uint8>:8192"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/File_ReadAt_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_ReadAt_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_ReadAt_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/File_ReadAt_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/File_ReadAt_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/File_Resize_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_Resize_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_Resize_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/File_Resize_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/File_Resize_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.io/File_Seek_Response.offset_from_start",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/File_Seek_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_Seek_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_Seek_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/File_Seek_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/File_Seek_Result",
+        "strictness": "strict"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.io/File_WriteAt_Response.actual_count",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/File_WriteAt_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_WriteAt_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/File_WriteAt_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/File_WriteAt_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/File_WriteAt_Result",
+        "strictness": "strict"
     },
     {
         "kind": "struct/member",
@@ -2243,6 +2143,43 @@
         "resourceness": "resource"
     },
     {
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Readable.Read",
+        "ordinal": "395825947633028830",
+        "type": "(uint64 count) -> (fuchsia.io/Readable_Read_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.io/Readable"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.io/Readable_Read_Response.data",
+        "ordinal": "1",
+        "type": "vector<uint8>:8192"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/Readable_Read_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/Readable_Read_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/Readable_Read_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/Readable_Read_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/Readable_Read_Result",
+        "strictness": "strict"
+    },
+    {
         "kind": "union/member",
         "name": "fuchsia.io/Representation.connector",
         "ordinal": "1",
@@ -2481,6 +2418,43 @@
         "name": "fuchsia.io/WatchMask",
         "strictness": "strict",
         "type": "uint32"
+    },
+    {
+        "kind": "protocol/member",
+        "name": "fuchsia.io/Writable.Write",
+        "ordinal": "7651971425397809026",
+        "type": "(vector<uint8>:8192 data) -> (fuchsia.io/Writable_Write_Result result)"
+    },
+    {
+        "kind": "protocol",
+        "name": "fuchsia.io/Writable"
+    },
+    {
+        "kind": "struct/member",
+        "name": "fuchsia.io/Writable_Write_Response.actual_count",
+        "ordinal": "1",
+        "type": "uint64"
+    },
+    {
+        "kind": "struct",
+        "name": "fuchsia.io/Writable_Write_Response"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/Writable_Write_Result.err",
+        "ordinal": "2",
+        "type": "int32"
+    },
+    {
+        "kind": "union/member",
+        "name": "fuchsia.io/Writable_Write_Result.response",
+        "ordinal": "1",
+        "type": "fuchsia.io/Writable_Write_Response"
+    },
+    {
+        "kind": "union",
+        "name": "fuchsia.io/Writable_Write_Result",
+        "strictness": "strict"
     },
     {
         "kind": "const",

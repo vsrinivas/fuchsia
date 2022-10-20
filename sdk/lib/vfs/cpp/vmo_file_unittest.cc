@@ -82,13 +82,13 @@ TEST(VmoFile, Reading) {
 
   // Reading the VMO should match reading the file.
   {
-    fuchsia::io::File2_Read_Result result;
+    fuchsia::io::Readable_Read_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(ReadVmo(test_vmo, 0, 500), result.response().data);
   }
   {
-    fuchsia::io::File2_Read_Result result;
+    fuchsia::io::Readable_Read_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->Read(500, &result));
     ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(ReadVmo(test_vmo, 500, 500), result.response().data);
@@ -163,7 +163,7 @@ TEST(VmoFile, ReadOnlyNoSharing) {
   // Writes should fail, since the VMO is read-only.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
@@ -172,7 +172,7 @@ TEST(VmoFile, ReadOnlyNoSharing) {
   // Reading the VMO should match reading the file.
   {
     std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 500);
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 24, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
@@ -203,7 +203,7 @@ TEST(VmoFile, WritableNoSharing) {
   // Writes should succeed.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(value.size(), result.response().actual_count);
@@ -212,7 +212,7 @@ TEST(VmoFile, WritableNoSharing) {
   // Reading the VMO should match reading the file.
   {
     std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 500);
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
@@ -243,7 +243,7 @@ TEST(VmoFile, ReadOnlyDuplicate) {
   // Writes should fail, since the VMO is read-only.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
@@ -252,17 +252,17 @@ TEST(VmoFile, ReadOnlyDuplicate) {
   // Reading the VMO should match reading the file.
   {
     std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 24, 500);
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 24, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
   }
 
   // GetBackingMemory duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::File2_GetBackingMemory_Result result;
+  fuchsia::io::File_GetBackingMemory_Result result;
   EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory(fuchsia::io::VmoFlags::READ, &result));
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const fuchsia::io::File_GetBackingMemory_Response& response = result.response();
   const zx::vmo& vmo = response.vmo;
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 
@@ -286,7 +286,7 @@ TEST(VmoFile, WritableDuplicate) {
   // Writes should succeed.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(value.size(), result.response().actual_count);
@@ -295,7 +295,7 @@ TEST(VmoFile, WritableDuplicate) {
   // Reading the VMO should match reading the file.
   {
     std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 500);
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(500, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
@@ -303,10 +303,10 @@ TEST(VmoFile, WritableDuplicate) {
   }
 
   // GetBackingMemory duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::File2_GetBackingMemory_Result result;
+  fuchsia::io::File_GetBackingMemory_Result result;
   EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory(fuchsia::io::VmoFlags::READ, &result));
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const fuchsia::io::File_GetBackingMemory_Response& response = result.response();
   const zx::vmo& vmo = response.vmo;
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 }
@@ -328,7 +328,7 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
   // Writes should fail, since the VMO is read-only.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_BAD_HANDLE, result.err());
@@ -337,17 +337,17 @@ TEST(VmoFile, ReadOnlyCopyOnWrite) {
   // Reading the VMO should match reading the file.
   {
     std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 4096);
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(4096, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
   }
 
   // GetBackingMemory duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::File2_GetBackingMemory_Result result;
+  fuchsia::io::File_GetBackingMemory_Result result;
   EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory({}, &result));
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const fuchsia::io::File_GetBackingMemory_Response& response = result.response();
   const zx::vmo& vmo = response.vmo;
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 
@@ -373,7 +373,7 @@ TEST(VmoFile, WritableCopyOnWrite) {
   // Writes should succeed.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(value.size(), result.response().actual_count);
@@ -382,7 +382,7 @@ TEST(VmoFile, WritableCopyOnWrite) {
   // Reading the VMO should match reading the file.
   {
     std::vector<uint8_t> vmo_result = ReadVmo(test_vmo, 0, 4096);
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(4096, 0, &result));
     EXPECT_TRUE(result.is_response()) << zx_status_get_string(result.err());
     EXPECT_EQ(vmo_result, result.response().data);
@@ -390,10 +390,10 @@ TEST(VmoFile, WritableCopyOnWrite) {
   }
 
   // GetBackingMemory duplicates the handle, and we can access the entire VMO.
-  fuchsia::io::File2_GetBackingMemory_Result result;
+  fuchsia::io::File_GetBackingMemory_Result result;
   EXPECT_EQ(ZX_OK, file_ptr->GetBackingMemory({}, &result));
   ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-  const fuchsia::io::File2_GetBackingMemory_Response& response = result.response();
+  const fuchsia::io::File_GetBackingMemory_Response& response = result.response();
   const zx::vmo& vmo = response.vmo;
   EXPECT_EQ(ReadVmo(test_vmo, 0, 4096), ReadVmo(vmo, 0, 4096));
 
@@ -420,7 +420,7 @@ TEST(VmoFile, VmoWithNoRights) {
   // Writes should fail.
   {
     std::vector<uint8_t> value{'a', 'b', 'c', 'd'};
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->WriteAt(value, 0, &result));
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.err());
@@ -428,7 +428,7 @@ TEST(VmoFile, VmoWithNoRights) {
 
   // Reading should fail.
   {
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     EXPECT_EQ(ZX_OK, file_ptr->ReadAt(1000, 0, &result));
     EXPECT_TRUE(result.is_err());
     EXPECT_EQ(ZX_ERR_ACCESS_DENIED, result.err());

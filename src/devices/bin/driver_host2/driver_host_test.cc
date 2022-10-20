@@ -68,10 +68,10 @@ class TestFile : public fio::testing::File_TestBase {
     EXPECT_TRUE(result.ok()) << result.FormatDescription();
     auto* res = result.Unwrap();
     if (res->is_error()) {
-      callback(fio::File2_GetBackingMemory_Result::WithErr(std::move(res->error_value())));
+      callback(fio::File_GetBackingMemory_Result::WithErr(std::move(res->error_value())));
     }
-    callback(fio::File2_GetBackingMemory_Result::WithResponse(
-        fio::File2_GetBackingMemory_Response(std::move(res->value()->vmo))));
+    callback(fio::File_GetBackingMemory_Result::WithResponse(
+        fio::File_GetBackingMemory_Response(std::move(res->value()->vmo))));
   }
 
   void NotImplemented_(const std::string& name) override {

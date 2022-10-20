@@ -58,7 +58,7 @@ void ReadElfJobId(fuchsia::io::DirectoryHandle runtime_dir_handle, const std::st
   job_id_file.set_error_handler(
       [cb = cb.share()](zx_status_t err) mutable { cb(ZX_KOID_INVALID); });
   job_id_file->Read(fuchsia::io::MAX_TRANSFER_SIZE,
-                    [cb = cb.share(), moniker](fuchsia::io::File2_Read_Result res) mutable {
+                    [cb = cb.share(), moniker](fuchsia::io::Readable_Read_Result res) mutable {
                       if (!res.is_response()) {
                         return cb(ZX_KOID_INVALID);
                       }

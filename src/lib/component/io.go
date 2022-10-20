@@ -646,54 +646,54 @@ func (*fileState) UpdateAttributes(fidl.Context, io.MutableNodeAttributes) (io.N
 	return io.Node2UpdateAttributesResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (fState *fileState) Read(_ fidl.Context, count uint64) (io.File2ReadResult, error) {
+func (fState *fileState) Read(_ fidl.Context, count uint64) (io.ReadableReadResult, error) {
 	if l := fState.size; l < count {
 		count = l
 	}
 	b := make([]byte, count)
 	n, err := fState.reader.Read(b)
 	if err != nil && err != stdio.EOF {
-		return io.File2ReadResult{}, err
+		return io.ReadableReadResult{}, err
 	}
 	b = b[:n]
-	return io.File2ReadResultWithResponse(io.File2ReadResponse{
+	return io.ReadableReadResultWithResponse(io.ReadableReadResponse{
 		Data: b,
 	}), nil
 }
 
-func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (io.File2ReadAtResult, error) {
+func (fState *fileState) ReadAt(_ fidl.Context, count uint64, offset uint64) (io.FileReadAtResult, error) {
 	if l := fState.size - offset; l < count {
 		count = l
 	}
 	b := make([]byte, count)
 	n, err := fState.reader.ReadAt(b, int64(offset))
 	if err != nil && err != stdio.EOF {
-		return io.File2ReadAtResult{}, err
+		return io.FileReadAtResult{}, err
 	}
 	b = b[:n]
-	return io.File2ReadAtResultWithResponse(io.File2ReadAtResponse{
+	return io.FileReadAtResultWithResponse(io.FileReadAtResponse{
 		Data: b,
 	}), nil
 }
 
-func (*fileState) Write(fidl.Context, []uint8) (io.File2WriteResult, error) {
-	return io.File2WriteResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*fileState) Write(fidl.Context, []uint8) (io.WritableWriteResult, error) {
+	return io.WritableWriteResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (*fileState) WriteAt(fidl.Context, []uint8, uint64) (io.File2WriteAtResult, error) {
-	return io.File2WriteAtResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*fileState) WriteAt(fidl.Context, []uint8, uint64) (io.FileWriteAtResult, error) {
+	return io.FileWriteAtResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
-func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.File2SeekResult, error) {
+func (fState *fileState) Seek(_ fidl.Context, origin io.SeekOrigin, offset int64) (io.FileSeekResult, error) {
 	n, err := fState.reader.Seek(offset, int(origin))
-	return io.File2SeekResultWithResponse(
-		io.File2SeekResponse{
+	return io.FileSeekResultWithResponse(
+		io.FileSeekResponse{
 			OffsetFromStart: uint64(n),
 		}), err
 }
 
-func (*fileState) Resize(fidl.Context, uint64) (io.File2ResizeResult, error) {
-	return io.File2ResizeResultWithErr(int32(zx.ErrNotSupported)), nil
+func (*fileState) Resize(fidl.Context, uint64) (io.FileResizeResult, error) {
+	return io.FileResizeResultWithErr(int32(zx.ErrNotSupported)), nil
 }
 
 func (*fileState) GetFlags(fidl.Context) (int32, io.OpenFlags, error) {
@@ -716,20 +716,20 @@ func (fState *fileState) AdvisoryLock(fidl.Context, io.AdvisoryLockRequest) (io.
 	return io.AdvisoryLockingAdvisoryLockResult{}, &zx.Error{Status: zx.ErrNotSupported, Text: fmt.Sprintf("%T", fState)}
 }
 
-func (fState *fileState) GetBackingMemory(fidl.Context, io.VmoFlags) (io.File2GetBackingMemoryResult, error) {
+func (fState *fileState) GetBackingMemory(fidl.Context, io.VmoFlags) (io.FileGetBackingMemoryResult, error) {
 	if vmo := fState.reader.GetVMO(); vmo != nil {
 		// TODO(https://fxbug.dev/77623): The rights on this VMO should be capped at the connection's.
 		h, err := vmo.Handle().Duplicate(zx.RightSameRights)
 		switch err := err.(type) {
 		case nil:
-			return io.File2GetBackingMemoryResultWithResponse(io.File2GetBackingMemoryResponse{
+			return io.FileGetBackingMemoryResultWithResponse(io.FileGetBackingMemoryResponse{
 				Vmo: zx.VMO(h),
 			}), nil
 		case *zx.Error:
-			return io.File2GetBackingMemoryResultWithErr(int32(err.Status)), nil
+			return io.FileGetBackingMemoryResultWithErr(int32(err.Status)), nil
 		default:
-			return io.File2GetBackingMemoryResult{}, err
+			return io.FileGetBackingMemoryResult{}, err
 		}
 	}
-	return io.File2GetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
+	return io.FileGetBackingMemoryResultWithErr(int32(zx.ErrNotSupported)), nil
 }

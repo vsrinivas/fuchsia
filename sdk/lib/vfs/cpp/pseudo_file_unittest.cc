@@ -125,7 +125,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     std::vector<uint8_t> buffer;
     buffer.resize(str.length());
     std::copy(str.begin(), str.end(), buffer.begin());
-    fuchsia::io::File2_WriteAt_Result result;
+    fuchsia::io::File_WriteAt_Result result;
     ASSERT_EQ(ZX_OK, file->WriteAt(buffer, offset, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
@@ -142,7 +142,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
     std::vector<uint8_t> buffer;
     buffer.resize(str.length());
     std::copy(str.begin(), str.end(), buffer.begin());
-    fuchsia::io::File2_Write_Result result;
+    fuchsia::io::Writable_Write_Result result;
     ASSERT_EQ(ZX_OK, file->Write(buffer, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
@@ -156,7 +156,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   static void AssertReadAt(fuchsia::io::FileSyncPtr& file, uint64_t offset, uint64_t count,
                            const std::string& expected_str, zx_status_t expected_status = ZX_OK) {
-    fuchsia::io::File2_ReadAt_Result result;
+    fuchsia::io::File_ReadAt_Result result;
     ASSERT_EQ(ZX_OK, file->ReadAt(count, offset, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
@@ -171,7 +171,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   static void AssertRead(fuchsia::io::FileSyncPtr& file, uint64_t count,
                          const std::string& expected_str, zx_status_t expected_status = ZX_OK) {
-    fuchsia::io::File2_Read_Result result;
+    fuchsia::io::Readable_Read_Result result;
     ASSERT_EQ(ZX_OK, file->Read(count, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
@@ -186,7 +186,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
 
   static void AssertResize(fuchsia::io::FileSyncPtr& file, uint64_t count,
                            zx_status_t expected_status = ZX_OK) {
-    fuchsia::io::File2_Resize_Result result;
+    fuchsia::io::File_Resize_Result result;
     ASSERT_EQ(ZX_OK, file->Resize(count, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
@@ -199,7 +199,7 @@ class PseudoFileTest : public gtest::RealLoopFixture {
   static void AssertSeek(fuchsia::io::FileSyncPtr& file, int64_t offset,
                          fuchsia::io::SeekOrigin origin, uint64_t expected_offset,
                          zx_status_t expected_status = ZX_OK) {
-    fuchsia::io::File2_Seek_Result result;
+    fuchsia::io::File_Seek_Result result;
     ASSERT_EQ(ZX_OK, file->Seek(origin, offset, &result));
     if (expected_status == ZX_OK) {
       ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
@@ -590,7 +590,7 @@ TEST_F(PseudoFileTest, CantReadNodeReferenceFile) {
   ASSERT_EQ(ZX_OK, status);
   ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_FILE);
 
-  fuchsia::io::File2_Read_Result result;
+  fuchsia::io::Readable_Read_Result result;
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, file->Read(100, &result));
 }
 
@@ -640,7 +640,7 @@ TEST_F(PseudoFileTest, NodeReferenceIsClonedAsNodeReference) {
   ASSERT_EQ(ZX_OK, status);
   ASSERT_NE(0u, attr.mode | fuchsia::io::MODE_TYPE_FILE);
 
-  fuchsia::io::File2_Read_Result result;
+  fuchsia::io::Readable_Read_Result result;
   ASSERT_EQ(ZX_ERR_PEER_CLOSED, cloned_file->Read(100, &result));
 }
 

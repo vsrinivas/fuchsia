@@ -122,9 +122,9 @@ func TestGetBackingMemory(t *testing.T) {
 		t.Fatalf("f.GetBackingMemory() = %s", err)
 	}
 	switch w := result.Which(); w {
-	case io.File2GetBackingMemoryResultErr:
+	case io.FileGetBackingMemoryResultErr:
 		t.Fatalf("file.GetBackingMemory() = %s", zx.Status(result.Err))
-	case io.File2GetBackingMemoryResultResponse:
+	case io.FileGetBackingMemoryResultResponse:
 		vmo := result.Response.Vmo
 		b := make([]byte, len(content))
 		if err := vmo.Read(b, 0); err != nil {

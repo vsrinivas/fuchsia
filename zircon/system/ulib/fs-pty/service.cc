@@ -91,27 +91,6 @@ void NullPtyDeviceImpl::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& co
 
 void NullPtyDeviceImpl::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void NullPtyDeviceImpl::ReadAt(ReadAtRequestView request, ReadAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::WriteAt(WriteAtRequestView request, WriteAtCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::Seek(SeekRequestView request, SeekCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::GetBackingMemory(GetBackingMemoryRequestView request,
-                                         GetBackingMemoryCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
