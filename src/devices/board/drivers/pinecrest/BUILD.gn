@@ -79,6 +79,7 @@ fuchsia_driver("pinecrest-driver") {
     "//src/devices/lib/mmio",
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
+    "//src/devices/usb/lib/usb:peripheral",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
     "//src/lib/ddktl",

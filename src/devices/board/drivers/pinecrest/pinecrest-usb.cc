@@ -10,13 +10,13 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 #include <unistd.h>
-#include <zircon/device/usb-peripheral.h>
 
 #include <ddk/usb-peripheral-config.h>
 #include <soc/as370/as370-reset.h>
 #include <soc/as370/as370-usb.h>
 #include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
+#include <usb/peripheral.h>
 #include <usb/usb.h>
 
 #include "pinecrest.h"
