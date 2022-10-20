@@ -1,0 +1,13 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library test.bad.fi0103;
+
+type MyEnum = enum : int32 {
+    A = 1;
+};
+
+type MyStruct = struct {
+    @allow_deprecated_struct_defaults
+    field MyEnum = 1;
+};

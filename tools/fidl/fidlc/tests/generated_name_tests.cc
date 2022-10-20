@@ -347,14 +347,8 @@ type Baz = struct {};
 }
 
 TEST(GeneratedNameTests, BadNotString) {
-  TestLibrary library(R"FIDL(
-library fidl.test;
-
-type Foo = struct {
-  bar @generated_name(true) struct {};
-};
-
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0104.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveAttributeArg);
 }

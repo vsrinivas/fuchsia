@@ -108,16 +108,8 @@ type MyStruct = struct {
 }
 
 TEST(StructsTests, BadDefaultValuePrimitiveInEnum) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyEnum = enum : int32 { A = 1; };
-
-type MyStruct = struct {
-    @allow_deprecated_struct_defaults
-    field MyEnum = 1;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0103.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
                                       fidl::ErrCouldNotResolveMemberDefault);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyEnum");

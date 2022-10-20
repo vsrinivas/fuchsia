@@ -138,6 +138,19 @@ type Bad = struct {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrTooManyConstraints);
 }
 
+TEST(AliasTests, BadInvalidSizeConstraintType) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0101-a.test.fidl");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrTypeCannotBeConvertedToType,
+                                      fidl::ErrCouldNotResolveSizeBound);
+}
+
+TEST(AliasTests, BadInvalidSizeConstraintIsNotValue) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0101-b.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCouldNotResolveSizeBound);
+}
+
 TEST(AliasTests, BadNoOptionalOnAliasedPrimitive) {
   TestLibrary library(R"FIDL(
 library test.optionals;

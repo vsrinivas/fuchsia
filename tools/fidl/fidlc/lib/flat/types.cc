@@ -65,7 +65,7 @@ bool VectorBaseType::ResolveSizeAndNullability(TypeResolver* resolver,
   } else if (num_constraints == 2) {
     // first constraint must be size, followed by optional
     if (!resolver->ResolveSizeBound(constraints.items[0].get(), &out_params->size_resolved))
-      return resolver->Fail(ErrCouldNotParseSizeBound, constraints.items[0]->span);
+      return resolver->Fail(ErrCouldNotResolveSizeBound, constraints.items[0]->span);
     out_params->size_raw = constraints.items[0].get();
     if (!resolver->ResolveAsOptional(constraints.items[1].get())) {
       return resolver->Fail(ErrUnexpectedConstraint, constraints.items[1]->span,

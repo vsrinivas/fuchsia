@@ -233,13 +233,11 @@ constexpr UndocumentedErrorDef<99, std::string_view, std::string_view, SourceSpa
         "by the canonical form '{}'");
 constexpr ErrorDef<100, uint64_t> ErrNonDenseOrdinal(
     "missing ordinal {} (ordinals must be dense); consider marking it reserved");
-constexpr UndocumentedErrorDef<101> ErrCouldNotParseSizeBound("unable to parse size bound");
-constexpr UndocumentedErrorDef<102, std::string_view> ErrCouldNotResolveMember(
-    "unable to resolve {} member");
-constexpr UndocumentedErrorDef<103, std::string_view> ErrCouldNotResolveMemberDefault(
+constexpr ErrorDef<101> ErrCouldNotResolveSizeBound("unable to resolve size bound");
+constexpr ErrorDef<102, std::string_view> ErrCouldNotResolveMember("unable to resolve {} member");
+constexpr ErrorDef<103, std::string_view> ErrCouldNotResolveMemberDefault(
     "unable to resolve {} default value");
-constexpr UndocumentedErrorDef<104> ErrCouldNotResolveAttributeArg(
-    "unable to resolve attribute argument");
+constexpr ErrorDef<104> ErrCouldNotResolveAttributeArg("unable to resolve attribute argument");
 constexpr UndocumentedErrorDef<105, std::string_view, std::string_view, SourceSpan>
     ErrDuplicateMemberName("multiple {} members named '{}'; previous was at {}");
 constexpr UndocumentedErrorDef<106, std::string_view, std::string_view, std::string_view,

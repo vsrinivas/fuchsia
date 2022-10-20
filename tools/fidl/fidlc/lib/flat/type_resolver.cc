@@ -40,7 +40,7 @@ bool TypeResolver::ResolveParamAsSize(const Reference& layout,
     case LayoutParameter::Kind::kLiteral: {
       auto literal_param = static_cast<LiteralLayoutParameter*>(param.get());
       if (!ResolveSizeBound(literal_param->literal.get(), out_size))
-        return Fail(ErrCouldNotParseSizeBound, literal_param->span);
+        return Fail(ErrCouldNotResolveSizeBound, literal_param->span);
       break;
     }
     case LayoutParameter::kType: {

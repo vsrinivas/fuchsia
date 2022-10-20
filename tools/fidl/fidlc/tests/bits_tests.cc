@@ -77,17 +77,11 @@ const TWO_SQUARED uint32 = 4;
 }
 
 TEST(BitsTests, BadUnsignedWithNegativeMember) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Fruit = bits : uint64 {
-    ORANGE = 1;
-    APPLE = -2;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0102.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrConstantOverflowsType,
                                       fidl::ErrCouldNotResolveMember);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-2");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "-4");
 }
 
 TEST(BitsTests, BadMemberOverflow) {
