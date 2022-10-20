@@ -23,6 +23,8 @@ go_library("dhcp") {
     "dhcp.go",
     "dhcp_string.go",
     "dhcp_test.go",
+    "logthrottler.go",
+    "logthrottler_test.go",
     "server.go",
   ]
 }

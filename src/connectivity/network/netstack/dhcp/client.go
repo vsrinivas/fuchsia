@@ -83,6 +83,8 @@ type Client struct {
 	// scenario and causing panics.
 	sem chan struct{}
 
+	logThrottler logThrottler
+
 	// Stubbable in test.
 	rand               *rand.Rand
 	retransTimeout     func(time.Duration) <-chan time.Time
@@ -186,6 +188,7 @@ func NewClient(
 		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength),
 		contextWithTimeout: time.ContextWithTimeout,
 	}
+	c.logThrottler.init(s.Clock())
 	c.stats.PacketDiscardStats.InvalidPacketType.Init()
 	c.stats.PacketDiscardStats.InvalidTransProto.Init()
 	c.stats.PacketDiscardStats.InvalidPort.Init()
@@ -227,6 +230,7 @@ func (c *Client) StateRecentHistory() []util.LogEntry {
 //
 // The function periodically searches for a new IP address.
 func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
+	c.logThrottler.reset()
 	info := c.Info()
 
 	nicName := c.stack.FindNICNameFromID(info.NICID)
@@ -424,6 +428,9 @@ func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 				}
 			}
 
+			// We successfully completed a transaction, so reset the log throttling
+			// state.
+			c.logThrottler.reset()
 			c.assign(ctx, &info, info.Acquired, &cfg, txnStart)
 
 			return nil
@@ -431,7 +438,7 @@ func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 			if ctx.Err() != nil {
 				return
 			}
-			_ = syslog.InfoTf(tag, "%s: %s; retrying %s", nicName, err, info.State)
+			_ = c.logThrottler.logTf(syslog.InfoLevel, tag, "%s: %s; retrying %s", nicName, err, info.State)
 		}
 
 		// Synchronize info after attempt to acquire is complete.
@@ -476,7 +483,7 @@ func (c *Client) Run(ctx context.Context) (rtn tcpip.AddressWithPrefix) {
 				return
 			}
 		} else {
-			_ = syslog.InfoTf(tag, "%s: scheduling renewal in %.fs", nicName, waitDuration.Seconds())
+			_ = c.logThrottler.logTf(syslog.InfoLevel, tag, "%s: scheduling renewal in %.fs", nicName, waitDuration.Seconds())
 			select {
 			case <-ctx.Done():
 				return
@@ -698,7 +705,7 @@ func acquire(ctx context.Context, c *Client, nicName string, info *Info) (Config
 				}
 				if retransmit {
 					c.stats.RecvOfferTimeout.Increment()
-					_ = syslog.WarnTf(tag, "%s: recv timeout waiting for %s; retransmitting %s", nicName, dhcpOFFER, dhcpDISCOVER)
+					_ = c.logThrottler.logTf(syslog.WarningLevel, tag, "%s: recv timeout waiting for %s; retransmitting %s", nicName, dhcpOFFER, dhcpDISCOVER)
 					continue retransmitDiscover
 				}
 
@@ -897,8 +904,7 @@ func (c *Client) send(
 		panic(err)
 	}
 
-	_ = syslog.InfoTf(
-		tag,
+	_ = c.logThrottler.logTf(syslog.InfoLevel, tag,
 		// Note: `broadcast_flag` here records the value of a directive to the DHCP
 		// server (see RFC 2131, section 4.1) and does NOT imply that the `to`
 		// address is itself a broadcast address.
@@ -911,8 +917,7 @@ func (c *Client) send(
 		writeTo.Port,
 		writeTo.NIC,
 		broadcast,
-		ciaddr,
-	)
+		ciaddr)
 
 	// TODO(https://gvisor.dev/issues/4957): Use more streamlined serialization
 	// functions when available.
