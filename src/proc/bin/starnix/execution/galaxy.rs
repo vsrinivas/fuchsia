@@ -183,7 +183,7 @@ fn mount_apexes(init_task: &CurrentTask) -> Result<(), Error> {
             let apex_subdir =
                 apex_dir.create_node(init_task, apex, mode!(IFDIR, 0o700), DeviceType::NONE)?;
             let apex_source = init_task.lookup_path_from_root(&[b"system/apex/", apex].concat())?;
-            apex_subdir.mount(WhatToMount::Dir(apex_source.entry), MountFlags::empty())?;
+            apex_subdir.mount(WhatToMount::Bind(apex_source), MountFlags::empty())?;
         }
     }
     Ok(())

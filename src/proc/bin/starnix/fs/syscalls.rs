@@ -1134,7 +1134,7 @@ pub fn sys_mount(
 
     let target = lookup_for_mount(current_task, target_addr, LookupFlags::default())?;
 
-    if flags.contains(MountFlags::BIND) {
+    let what_to_mount = if flags.contains(MountFlags::BIND) {
         strace!(current_task, "mount(MS_BIND)");
 
         if flags.contains(MountFlags::REC) {
@@ -1142,7 +1142,7 @@ pub fn sys_mount(
         }
 
         let source = lookup_for_mount(current_task, source_addr, LookupFlags::default())?;
-        target.mount(WhatToMount::Dir(source.entry), flags)?;
+        WhatToMount::Bind(source)
     } else {
         let mut buf = [0u8; PATH_MAX as usize];
         let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
@@ -1162,11 +1162,9 @@ pub fn sys_mount(
             String::from_utf8_lossy(data)
         );
 
-        let fs = create_filesystem(current_task, source, fs_type, data)?;
-        target.mount(fs, flags)?;
-    }
-
-    Ok(())
+        create_filesystem(current_task, source, fs_type, data)?
+    };
+    target.mount(what_to_mount, flags)
 }
 
 pub fn sys_umount2(

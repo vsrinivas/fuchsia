@@ -326,7 +326,7 @@ pub fn create_filesystem_from_spec<'a>(
     // manifest file, for whatever reason. Anything else is passed to create_filesystem, which is
     // common code that also handles the mount() system call.
     let fs = match fs_type {
-        "bind" => Dir(task.lookup_path_from_root(fs_src.as_bytes())?.entry),
+        "bind" => Bind(task.lookup_path_from_root(fs_src.as_bytes())?),
         "remotefs" => Fs(create_remotefs_filesystem(task.kernel(), pkg, rights, fs_src)?),
         "ext4" => {
             let vmo =

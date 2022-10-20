@@ -32,8 +32,7 @@ pub struct Namespace {
 
 impl Namespace {
     pub fn new(fs: FileSystemHandle) -> Arc<Namespace> {
-        let root = fs.root().clone();
-        Arc::new(Self { root_mount: Mount::new(root, MountFlags::empty()) })
+        Arc::new(Self { root_mount: Mount::new(WhatToMount::Fs(fs), MountFlags::empty()) })
     }
 
     pub fn root(&self) -> NamespaceNode {
@@ -82,8 +81,20 @@ struct MountState {
     submounts: HashMap<ArcKey<DirEntry>, Vec<MountHandle>>,
 }
 
+pub enum WhatToMount {
+    Fs(FileSystemHandle),
+    Bind(NamespaceNode),
+}
+
 impl Mount {
-    fn new(root: DirEntryHandle, flags: MountFlags) -> MountHandle {
+    fn new(what: WhatToMount, flags: MountFlags) -> MountHandle {
+        match what {
+            WhatToMount::Fs(fs) => Self::new_with_root(fs.root().clone(), flags),
+            WhatToMount::Bind(node) => Self::new_with_root(node.entry, flags),
+        }
+    }
+
+    fn new_with_root(root: DirEntryHandle, flags: MountFlags) -> MountHandle {
         let fs = root.node.fs();
         Arc::new(Self {
             mountpoint: OnceCell::new(),
@@ -163,11 +174,6 @@ impl fmt::Debug for Mount {
             .field("submounts", &state.submounts)
             .finish()
     }
-}
-
-pub enum WhatToMount {
-    Fs(FileSystemHandle),
-    Dir(DirEntryHandle),
 }
 
 pub fn create_filesystem(
@@ -479,13 +485,9 @@ impl NamespaceNode {
         components.join(&b'/')
     }
 
-    pub fn mount(&self, root: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
+    pub fn mount(&self, what: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
         let mount = self.mount.as_ref().expect("a mountpoint must be part of a mount");
-        let new_mount = match root {
-            WhatToMount::Fs(fs) => Mount::new(fs.root().clone(), flags),
-            WhatToMount::Dir(entry) => Mount::new(entry, flags),
-        };
-        mount.add_submount(&self.entry, new_mount);
+        mount.add_submount(&self.entry, Mount::new(what, flags));
         Ok(())
     }
 
