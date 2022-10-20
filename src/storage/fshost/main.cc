@@ -162,6 +162,23 @@ int Main() {
   // NB There are tests that look for "fshost started".
   FX_LOGS(INFO) << "fshost started, Config: " << config.ToString();
 
+  // If there is a ramdisk, setup the ramctl filesystems.
+  zx::vmo ramdisk_vmo;
+  zx_status_t status = get_ramdisk(&ramdisk_vmo);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "failed to get ramdisk" << zx_status_get_string(status);
+  } else if (ramdisk_vmo.is_valid()) {
+    thrd_t t;
+
+    int err = thrd_create_with_name(
+        &t, &RamctlWatcher, reinterpret_cast<void*>(static_cast<uintptr_t>(ramdisk_vmo.release())),
+        "ramctl-filesystems");
+    if (err != thrd_success) {
+      FX_LOGS(ERROR) << "failed to start ramctl-filesystems: " << err;
+    }
+    thrd_detach(t);
+  }
+
   // Initialize the local filesystem in isolation.
   fidl::ServerEnd<fio::Directory> dir_request{
       zx::channel{zx_take_startup_handle(PA_DIRECTORY_REQUEST)}};
@@ -176,7 +193,7 @@ int Main() {
 
   BlockWatcher watcher(fs_manager, &config);
 
-  zx_status_t status =
+  status =
       fs_manager.Initialize(std::move(dir_request), std::move(lifecycle_request), config, watcher);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Cannot initialize FsManager: " << zx_status_get_string(status);
@@ -201,23 +218,6 @@ int Main() {
 
   // Used by //src/tests/oom/oom_tests.go as part of an E2E test
   FX_LOGS(INFO) << "fshost: lifecycle handler ready";
-
-  // If there is a ramdisk, setup the ramctl filesystems.
-  zx::vmo ramdisk_vmo;
-  status = get_ramdisk(&ramdisk_vmo);
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "failed to get ramdisk.";
-  } else if (ramdisk_vmo.is_valid()) {
-    thrd_t t;
-
-    int err = thrd_create_with_name(
-        &t, &RamctlWatcher, reinterpret_cast<void*>(static_cast<uintptr_t>(ramdisk_vmo.release())),
-        "ramctl-filesystems");
-    if (err != thrd_success) {
-      FX_LOGS(ERROR) << "failed to start ramctl-filesystems: " << err;
-    }
-    thrd_detach(t);
-  }
 
   if (config.disable_block_watcher()) {
     FX_LOGS(INFO) << "block-watcher disabled";
