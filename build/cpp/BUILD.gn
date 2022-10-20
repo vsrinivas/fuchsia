@@ -31,7 +31,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/bin/lsdev",
     "//src/devices/bin/register-util",
     "//src/devices/bin/register-util:bin",
-    "//src/devices/bin/unbind",
     "//src/devices/block/bin/sdio",
     "//src/devices/block/bin/sdio:sdio-test-bin",
     "//src/devices/block/drivers/block-verity:block-verity-test",

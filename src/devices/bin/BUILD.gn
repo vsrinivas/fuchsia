@@ -13,7 +13,6 @@ group("bin") {
     "lsdev",
     "register-util",
     "tee-test",
-    "unbind",
   ]
 }
 
