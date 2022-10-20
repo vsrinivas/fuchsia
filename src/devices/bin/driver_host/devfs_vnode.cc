@@ -131,20 +131,26 @@ void DevfsVnode::Rebind(RebindRequestView request, RebindCompleter::Sync& comple
 }
 
 void DevfsVnode::UnbindChildren(UnbindChildrenCompleter::Sync& completer) {
-  zx_status_t status = device_schedule_unbind_children(dev_);
-
-  if (status != ZX_OK) {
-    completer.ReplyError(status);
-  } else {
-    // The unbind conn will be set until all the children of this device are unbound.
-    dev_->set_unbind_children_conn([completer = completer.ToAsync()](zx_status_t status) mutable {
-      if (status != ZX_OK) {
-        completer.ReplyError(status);
-      } else {
-        completer.ReplySuccess();
-      }
-    });
+  zx::result<bool> scheduled_unbind = device_schedule_unbind_children(dev_);
+  if (scheduled_unbind.is_error()) {
+    completer.ReplyError(scheduled_unbind.status_value());
   }
+
+  // Handle case where we have no children to unbind (otherwise the callback below will never fire).
+  if (!scheduled_unbind.value()) {
+    completer.ReplySuccess();
+    return;
+  }
+
+  // Asynchronously respond to the unbind request once all children have been unbound.
+  // The unbind children conn will be set until all the children of this device are unbound.
+  dev_->set_unbind_children_conn([completer = completer.ToAsync()](zx_status_t status) mutable {
+    if (status != ZX_OK) {
+      completer.ReplyError(status);
+    } else {
+      completer.ReplySuccess();
+    }
+  });
 }
 
 void DevfsVnode::ScheduleUnbind(ScheduleUnbindCompleter::Sync& completer) {

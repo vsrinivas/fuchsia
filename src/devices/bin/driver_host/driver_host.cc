@@ -1050,13 +1050,20 @@ zx_status_t DriverHostContext::ScheduleRemove(const fbl::RefPtr<zx_device_t>& de
   return resp.status();
 }
 
-zx_status_t DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) {
+zx::result<bool> DriverHostContext::ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) {
   const auto& client = dev->coordinator_client;
   ZX_ASSERT(client);
   VLOGD(1, *dev, "schedule-unbind-children");
-  auto resp = client->ScheduleUnbindChildren();
-  log_rpc_result(dev, "schedule-unbind-children", resp.status());
-  return resp.status();
+  auto resp = client.sync()->ScheduleUnbindChildren();
+  zx_status_t call_status = resp->is_error() ? resp->error_value() : ZX_OK;
+  log_rpc_result(dev, "schedule-unbind-children", resp.status(), call_status);
+  if (resp.status() != ZX_OK) {
+    return zx::error(resp.status());
+  }
+  if (call_status != ZX_OK) {
+    return zx::error(call_status);
+  }
+  return zx::ok(resp->value()->has_children);
 }
 
 zx_status_t DriverHostContext::GetTopoPath(const fbl::RefPtr<zx_device_t>& dev, char* path,

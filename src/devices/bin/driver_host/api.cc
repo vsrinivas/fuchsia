@@ -447,7 +447,7 @@ zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unb
   return internal::ContextForApi()->ScheduleRemove(dev, unbind_self);
 }
 
-zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
+zx::result<bool> device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev) {
   fbl::AutoLock lock(&internal::ContextForApi()->api_lock());
   return internal::ContextForApi()->ScheduleUnbindChildren(dev);
 }

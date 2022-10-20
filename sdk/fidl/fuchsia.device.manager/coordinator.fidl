@@ -301,7 +301,10 @@ protocol Coordinator {
     });
 
     /// Requests the devcoordinator schedule the unbinding of this device's children.
-    ScheduleUnbindChildren();
+    /// If the device has no children, no request will be sent, and `has_children` will be false.
+    ScheduleUnbindChildren() -> (struct {
+        has_children bool;
+    }) error zx.status;
 
     /// Attempt to bind a driver against this device.  If `driver_path` is null,
     /// this will initiate the driver matching algorithm.

@@ -68,7 +68,9 @@ class FakeCoordinator : public fidl::WireServer<fuchsia_device_manager::Coordina
   void AddMetadata(AddMetadataRequestView request, AddMetadataCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) override {}
+  void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) override {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+  }
 
   uint32_t bind_count() { return bind_count_.load(); }
 

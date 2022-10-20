@@ -786,9 +786,15 @@ void Device::ScheduleRemove(ScheduleRemoveRequestView request,
 void Device::ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync& completer) {
   auto dev = fbl::RefPtr(this);
 
-  VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
+  if (dev->children().empty()) {
+    VLOGF(1, "Skipping unbind, no children for device %p '%s'", dev.get(), dev->name().data());
+    completer.ReplySuccess(false);
+    return;
+  }
 
+  VLOGF(1, "Scheduling unbind of children for device %p '%s'", dev.get(), dev->name().data());
   dev->coordinator->device_manager()->ScheduleDriverHostRequestedUnbindChildren(dev);
+  completer.ReplySuccess(true);
 }
 
 void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync& completer) {

@@ -10,6 +10,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/event.h>
 #include <lib/zx/resource.h>
+#include <lib/zx/status.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
@@ -88,7 +89,8 @@ class DriverHostContext {
   // routines driver_host uses to talk to dev coordinator
   zx_status_t ScheduleRemove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self)
       TA_REQ(api_lock_);
-  zx_status_t ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
+
+  zx::result<bool> ScheduleUnbindChildren(const fbl::RefPtr<zx_device_t>& dev) TA_REQ(api_lock_);
 
   zx_status_t LoadFirmware(const zx_driver_t* drv, const fbl::RefPtr<zx_device_t>& dev,
                            const char* path, zx_handle_t* vmo_handle, size_t* size);

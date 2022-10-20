@@ -18,6 +18,7 @@
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/status.h>
 #include <zircon/compiler.h>
 
 #include <array>
@@ -670,7 +671,9 @@ struct zx_device
 // ZX_ERR_ALREADY_BOUND is returned
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);
-zx_status_t device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev);
+// Request to unbind all children from the specified device. Returns true if the device has children
+// and the unbind request was scheduled, otherwise false.
+zx::result<bool> device_schedule_unbind_children(const fbl::RefPtr<zx_device_t>& dev);
 zx_status_t device_schedule_remove(const fbl::RefPtr<zx_device_t>& dev, bool unbind_self);
 zx_status_t device_run_compatibility_tests(const fbl::RefPtr<zx_device_t>& dev,
                                            int64_t hook_wait_time,
