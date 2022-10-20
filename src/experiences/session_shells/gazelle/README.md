@@ -11,6 +11,6 @@ To run it:
         --with //src/experiences/session_shells/{ermine,gazelle} \
         '--args=application_shell="gazelle"'
     fx build
-    ffx session launch fuchsia-pkg://fuchsia.com/workstation_routing#meta/workstation_routing.cm
+    ffx session launch fuchsia-pkg://fuchsia.com/workstation_session#meta/workstation_routing.cm
 
 [wiki-gazelle]: https://en.wikipedia.org/wiki/Gazelle
