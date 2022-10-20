@@ -680,7 +680,6 @@
                     "/core/account/password_authenticator",
                     "/core/appmgr",
                     "/core/audio_recording",
-                    "/core/auto-brightness",
                     "/core/bluetooth-core/bt-gap",
                     "/core/brightness_manager",
                     "/core/bt-snoop",
