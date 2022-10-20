@@ -8,9 +8,7 @@
 //! as well as utilities for reading from it, serializing and deserializing it and testing it.
 
 use {
-    crate::trie::*,
     base64::display::Base64Display,
-    core::marker::PhantomData,
     fidl_fuchsia_diagnostics::{Selector, StringSelector, TreeSelector},
     num_derive::{FromPrimitive, ToPrimitive},
     num_traits::bounds::Bounded,
@@ -20,7 +18,6 @@ use {
     std::{
         borrow::Borrow,
         cmp::Ordering,
-        collections::HashMap,
         convert::{TryFrom, TryInto},
         fmt::{Display, Formatter, Result as FmtResult},
         ops::{Add, AddAssign, MulAssign},
@@ -236,11 +233,8 @@ where
     }
 
     /// Provides an iterator over the diagnostics hierarchy returning properties in pre-order.
-    pub fn property_iter(&self) -> impl Iterator<Item = (Vec<&String>, Option<&Property<Key>>)> {
-        TrieIterableType {
-            iterator: DiagnosticsHierarchyIterator::new(&self),
-            _marker: PhantomData,
-        }
+    pub fn property_iter(&self) -> DiagnosticsHierarchyIterator<'_, Key> {
+        DiagnosticsHierarchyIterator::new(&self)
     }
 
     /// Adds a value that couldn't be read. This can happen when loading a lazy child.
@@ -304,108 +298,84 @@ property_type_getters!(
     [StringList, string_list, Vec<String>]
 );
 
-impl<Key> TrieIterableNode<String, Property<Key>> for DiagnosticsHierarchy<Key> {
-    fn get_children(&self) -> HashMap<&String, &Self> {
-        self.children
-            .iter()
-            .map(|diagnostics_hierarchy| (&diagnostics_hierarchy.name, diagnostics_hierarchy))
-            .collect::<HashMap<&String, &Self>>()
-    }
-
-    fn get_values(&self) -> &[Property<Key>] {
-        return &self.properties;
-    }
+struct WorkStackEntry<'a, Key> {
+    node: &'a DiagnosticsHierarchy<Key>,
+    key: Vec<&'a str>,
 }
 
-struct DiagnosticsHierarchyIterator<'a, Key> {
-    root: &'a DiagnosticsHierarchy<Key>,
-    iterator_initialized: bool,
-    work_stack: Vec<TrieIterableWorkEvent<'a, String, DiagnosticsHierarchy<Key>>>,
-    curr_key: Vec<&'a String>,
-    curr_node: Option<&'a DiagnosticsHierarchy<Key>>,
-    curr_val_index: usize,
+pub struct DiagnosticsHierarchyIterator<'a, Key> {
+    work_stack: Vec<WorkStackEntry<'a, Key>>,
+    current_key: Vec<&'a str>,
+    current_node: Option<&'a DiagnosticsHierarchy<Key>>,
+    current_property_index: usize,
 }
 
 impl<'a, Key> DiagnosticsHierarchyIterator<'a, Key> {
     /// Creates a new iterator for the given `hierarchy`.
-    pub fn new(hierarchy: &'a DiagnosticsHierarchy<Key>) -> Self {
+    fn new(hierarchy: &'a DiagnosticsHierarchy<Key>) -> Self {
         DiagnosticsHierarchyIterator {
-            root: hierarchy,
-            iterator_initialized: false,
-            work_stack: Vec::new(),
-            curr_key: Vec::new(),
-            curr_node: None,
-            curr_val_index: 0,
+            work_stack: vec![WorkStackEntry { node: hierarchy, key: vec![&hierarchy.name] }],
+            current_key: vec![],
+            current_node: None,
+            current_property_index: 0,
         }
     }
 }
 
-impl<'a, Key> TrieIterable<'a, String, Property<Key>> for DiagnosticsHierarchyIterator<'a, Key> {
-    type Node = DiagnosticsHierarchy<Key>;
+impl<'a, Key> Iterator for DiagnosticsHierarchyIterator<'a, Key> {
+    /// Each item is a path to the node holding the resulting property.
+    /// If a node has no properties, a `None` will be returned for it.
+    /// If a node has properties a `Some` will be returned for each property and no `None` will be
+    /// returned.
+    type Item = (Vec<&'a str>, Option<&'a Property<Key>>);
 
-    fn is_initialized(&self) -> bool {
-        self.iterator_initialized
-    }
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            let node = match self.current_node {
+                // If we are going through a node properties, that node will be set here.
+                Some(node) => node,
+                None => {
+                    // If we don't have a node we are currently working with, then go to the next
+                    // node in our stack.
+                    let WorkStackEntry { node, key } = match self.work_stack.pop() {
+                        None => return None,
+                        Some(entry) => entry,
+                    };
 
-    fn initialize(&mut self) {
-        self.iterator_initialized = true;
-        self.add_work_event(TrieIterableWorkEvent {
-            key_state: TrieIterableKeyState::PopKeyFragment,
-            potential_child: None,
-        });
+                    // Push to the stack all children of the new node.
+                    for child in node.children.iter() {
+                        let mut child_key = key.clone();
+                        child_key.push(&child.name);
+                        self.work_stack.push(WorkStackEntry { node: child, key: child_key })
+                    }
 
-        self.curr_node = Some(self.root);
-        self.curr_key.push(&self.root.name);
-        for (key_fragment, child_node) in self.root.get_children().iter() {
-            self.add_work_event(TrieIterableWorkEvent {
-                key_state: TrieIterableKeyState::AddKeyFragment(key_fragment),
-                potential_child: Some(child_node),
-            });
+                    // If this node doesn't have any properties, we still want to return that it
+                    // exists, so we return with a property=None.
+                    if node.properties.is_empty() {
+                        return Some((key.clone(), None));
+                    }
+
+                    self.current_property_index = 0;
+                    self.current_key = key;
+
+                    node
+                }
+            };
+
+            // We were already done with this node. Try the next item in our stack.
+            if self.current_property_index == node.properties.len() {
+                self.current_node = None;
+                continue;
+            }
+
+            // Return the current property and advance our index to the next property we want to
+            // explore.
+            let property = &node.properties[self.current_property_index];
+            self.current_property_index += 1;
+            self.current_node = Some(node);
+
+            return Some((self.current_key.clone(), Some(property)));
         }
-    }
-
-    fn add_work_event(&mut self, work_event: TrieIterableWorkEvent<'a, String, Self::Node>) {
-        self.work_stack.push(work_event);
-    }
-
-    fn expect_work_event(&mut self) -> TrieIterableWorkEvent<'a, String, Self::Node> {
-        self.work_stack
-            .pop()
-            .expect("Should never attempt to retrieve an event from an empty work stack,")
-    }
-    fn expect_curr_node(&self) -> &'a Self::Node {
-        self.curr_node.expect("We should never be trying to retrieve an unset working node.")
-    }
-    fn set_curr_node(&mut self, new_node: &'a Self::Node) {
-        self.curr_val_index = 0;
-        self.curr_node = Some(new_node);
-    }
-    fn is_curr_node_fully_processed(&self) -> bool {
-        let curr_node = self
-            .curr_node
-            .expect("We should always have a working node when checking progress on that node.");
-        curr_node.get_values().is_empty() || curr_node.get_values().len() <= self.curr_val_index
-    }
-    fn is_work_stack_empty(&self) -> bool {
-        self.work_stack.is_empty()
-    }
-    fn pop_curr_key_fragment(&mut self) {
-        self.curr_key.pop();
-    }
-    fn extend_curr_key(&mut self, new_fragment: &'a String) {
-        self.curr_key.push(new_fragment);
-    }
-
-    fn get_curr_key(&mut self) -> Vec<&'a String> {
-        self.curr_key.clone()
-    }
-
-    fn get_next_value(&mut self) -> &'a Property<Key> {
-        self.curr_val_index = self.curr_val_index + 1;
-        &self
-            .curr_node
-            .expect("Should never be retrieving a node value without a working node.")
-            .get_values()[self.curr_val_index - 1]
     }
 }
 
@@ -952,7 +922,7 @@ mod tests {
             num_entries = num_entries + 1;
             let (expected_key, expected_property) = results_vec.pop().unwrap();
             assert_eq!(
-                key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/"),
+                key.iter().map(|s| *s).collect::<Vec<&str>>().join("/"),
                 expected_key.iter().map(|s| s.as_str()).collect::<Vec<&str>>().join("/")
             );
 

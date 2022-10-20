@@ -20,10 +20,7 @@ use {
     },
     async_lock::{Mutex, RwLock},
     diagnostics_data::LogsData,
-    diagnostics_hierarchy::{
-        trie::{self, TrieIterableNode},
-        InspectHierarchyMatcher,
-    },
+    diagnostics_hierarchy::{trie, InspectHierarchyMatcher},
     fidl::prelude::*,
     fidl_fuchsia_diagnostics::{
         self, LogInterestSelector, LogSettingsMarker, LogSettingsRequest, LogSettingsRequestStream,
@@ -237,11 +234,9 @@ impl DataRepo {
     /// corresponds to a running component or we've decided to still retain it.
     pub async fn is_live(&self, identity: &ComponentIdentity) -> bool {
         let this = self.read().await;
-        if let Some(containers) = this.data_directories.get(&identity.unique_key().into()) {
-            let diagnostics_containers = containers.get_values();
-            diagnostics_containers.len() == 1 && diagnostics_containers[0].should_retain().await
-        } else {
-            false
+        match this.data_directories.get(&identity.unique_key()) {
+            Some(container) => container.should_retain().await,
+            None => false,
         }
     }
 
@@ -320,22 +315,18 @@ impl DataRepoState {
                     &mut self.logs_multiplexers,
                 )
                 .await;
-                self.data_directories.insert(trie_key, to_insert);
+                self.data_directories.set(trie_key, to_insert);
                 logs
             }};
         }
 
         match self.data_directories.get_mut(&trie_key) {
-            Some(component) => match &mut component.get_values_mut()[..] {
-                [] => insert_component!(),
-                [existing] => {
-                    existing
-                        .logs(&self.logs_budget, &self.logs_interest, &mut self.logs_multiplexers)
-                        .await
-                }
-                _ => unreachable!("invariant: each trie node has 0-1 entries"),
-            },
             None => insert_component!(),
+            Some(existing) => {
+                existing
+                    .logs(&self.logs_budget, &self.logs_interest, &mut self.logs_multiplexers)
+                    .await
+            }
         }
     }
 
@@ -372,17 +363,12 @@ impl DataRepoState {
 
     async fn maybe_remove(&mut self, identity: Arc<ComponentIdentity>) {
         let key: Vec<_> = identity.unique_key().into();
-        let remove = if let Some(containers) = self.data_directories.get_mut(&key) {
-            match &mut containers.get_values_mut()[..] {
-                [] => true,
-                [container] => {
-                    container.terminate_inspect();
-                    !container.should_retain().await
-                }
-                _ => unreachable!("invariant: each trie node has 0-1 entries"),
+        let remove = match self.data_directories.get_mut(&key) {
+            None => true,
+            Some(container) => {
+                container.terminate_inspect();
+                !container.should_retain().await
             }
-        } else {
-            false
         };
         if remove {
             self.data_directories.remove(&key);
@@ -399,58 +385,14 @@ impl DataRepoState {
         let diag_repo_entry_opt = self.data_directories.get_mut(&unique_key);
 
         match diag_repo_entry_opt {
-            Some(diag_repo_entry) => {
-                let diag_repo_entry_values: &mut [ComponentDiagnostics] =
-                    diag_repo_entry.get_values_mut();
-
-                match &mut *diag_repo_entry_values {
-                    [] => {
-                        // An entry with no values implies that the somehow we observed the
-                        // creation of a component lower in the topology before observing this
-                        // one. If this is the case, just instantiate as though it's our first
-                        // time encountering this moniker segment.
-                        let (inspect_container, on_closed_fut) =
-                            InspectArtifactsContainer::new(diagnostics_proxy);
-                        self.data_directories.insert(
-                            unique_key,
-                            ComponentDiagnostics::new_with_inspect(
-                                identity,
-                                inspect_container,
-                                &self.inspect_node,
-                            ),
-                        );
-                        Ok(Some(on_closed_fut))
-                    }
-                    [existing_diagnostics_artifact_container] => {
-                        // Races may occur between synthesized and real diagnostics_ready
-                        // events, so we must handle de-duplication here.
-                        // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
-                        if existing_diagnostics_artifact_container.inspect.is_none() {
-                            // This is expected to be the most common case. We've encountered the
-                            // diagnostics_ready event for a component that has already been
-                            // observed to be started/existing. We now must update the diagnostics
-                            // artifact container with the inspect artifacts that accompanied the
-                            // diagnostics_ready event.
-                            let (inspect_container, on_closed_fut) =
-                                InspectArtifactsContainer::new(diagnostics_proxy);
-                            existing_diagnostics_artifact_container.inspect =
-                                Some(inspect_container);
-                            Ok(Some(on_closed_fut))
-                        } else {
-                            Ok(None)
-                        }
-                    }
-                    _ => {
-                        return Err(Error::MultipleArtifactContainers(unique_key));
-                    }
-                }
-            }
-            // This case is expected to be uncommon; we've encountered a diagnostics_ready
-            // event before a start or existing event!
             None => {
+                // An entry with no values implies that the somehow we observed the
+                // creation of a component lower in the topology before observing this
+                // one. If this is the case, just instantiate as though it's our first
+                // time encountering this moniker segment.
                 let (inspect_container, on_closed_fut) =
                     InspectArtifactsContainer::new(diagnostics_proxy);
-                self.data_directories.insert(
+                self.data_directories.set(
                     unique_key,
                     ComponentDiagnostics::new_with_inspect(
                         identity,
@@ -459,6 +401,24 @@ impl DataRepoState {
                     ),
                 );
                 Ok(Some(on_closed_fut))
+            }
+            Some(existing_diagnostics_artifact_container) => {
+                // Races may occur between synthesized and real diagnostics_ready
+                // events, so we must handle de-duplication here.
+                // TODO(fxbug.dev/52047): Remove once caching handles ordering issues.
+                if existing_diagnostics_artifact_container.inspect.is_none() {
+                    // This is expected to be the most common case. We've encountered the
+                    // diagnostics_ready event for a component that has already been
+                    // observed to be started/existing. We now must update the diagnostics
+                    // artifact container with the inspect artifacts that accompanied the
+                    // diagnostics_ready event.
+                    let (inspect_container, on_closed_fut) =
+                        InspectArtifactsContainer::new(diagnostics_proxy);
+                    existing_diagnostics_artifact_container.inspect = Some(inspect_container);
+                    Ok(Some(on_closed_fut))
+                } else {
+                    Ok(None)
+                }
             }
         }
     }
@@ -541,14 +501,13 @@ impl DataRepoState {
     }
 
     #[cfg(test)]
-    pub(crate) fn get(&self, identity: &ComponentIdentity) -> &[ComponentDiagnostics] {
-        self.data_directories.get(&*identity.unique_key()).unwrap().get_values()
+    pub(crate) fn get(&self, identity: &ComponentIdentity) -> Option<&ComponentDiagnostics> {
+        self.data_directories.get(&*identity.unique_key())
     }
 
     #[cfg(test)]
     pub(crate) fn terminate_inspect(&mut self, identity: &ComponentIdentity) {
-        self.data_directories.get_mut(&*identity.unique_key()).unwrap().get_values_mut()[0]
-            .terminate_inspect()
+        self.data_directories.get_mut(&*identity.unique_key()).unwrap().terminate_inspect()
     }
 }
 
@@ -617,7 +576,6 @@ mod tests {
     use {
         super::*,
         crate::{events::types::ComponentIdentifier, logs::stored_message::StoredMessage},
-        diagnostics_hierarchy::trie::TrieIterableNode,
         diagnostics_log_encoding::{
             encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
         },
@@ -647,7 +605,7 @@ mod tests {
 
         inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        assert_eq!(inspect_repo.read().await.get(&identity).len(), 1);
+        assert!(inspect_repo.read().await.get(&identity).is_some());
     }
 
     #[fuchsia::test]
@@ -665,44 +623,11 @@ mod tests {
 
         {
             let data_repo = data_repo.read().await;
-            assert_eq!(data_repo.get(&identity).len(), 1);
-            let entry = &data_repo.get(&identity)[0];
+            assert!(data_repo.get(&identity).is_some());
+            let entry = &data_repo.get(&identity).unwrap();
             assert!(entry.inspect.is_some());
             assert_eq!(entry.identity.url, TEST_URL);
         }
-    }
-
-    #[fuchsia::test]
-    async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
-        let data_repo = DataRepo::default().await;
-        let moniker = vec!["a", "b", "foo.cmx"].into();
-        let instance_id = "1234".to_string();
-
-        let component_id = ComponentIdentifier::Legacy { instance_id, moniker };
-        let identity = ComponentIdentity::from_identifier_and_url(component_id, TEST_URL);
-
-        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory proxy");
-        data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
-
-        {
-            let mut data_repo = data_repo.inner.write().await;
-            let mutable_values = data_repo
-                .data_directories
-                .get_mut(&identity.unique_key().into())
-                .unwrap()
-                .get_values_mut();
-
-            mutable_values.push(ComponentDiagnostics::empty_for_test(
-                Arc::new(identity.clone()),
-                &Default::default(),
-            ));
-        }
-
-        let (proxy, _) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
-            .expect("create directory proxy");
-
-        assert!(data_repo.add_inspect_artifacts(identity, proxy).await.is_err());
     }
 
     #[fuchsia::test]
@@ -716,10 +641,10 @@ mod tests {
             .expect("create directory proxy");
         {
             data_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
-            assert_eq!(data_repo.read().await.get(&identity).len(), 1);
+            assert!(data_repo.read().await.get(&identity).is_some());
         }
         drop(server_end);
-        while data_repo.read().await.data_directories.get(&identity.unique_key().into()).is_some() {
+        while data_repo.read().await.data_directories.get(&identity.unique_key()).is_some() {
             fasync::Timer::new(fasync::Time::after(100_i64.millis())).await;
         }
     }
@@ -739,17 +664,7 @@ mod tests {
         };
         drop(server_end);
         for _ in 0..10 {
-            assert_eq!(
-                data_repo
-                    .read()
-                    .await
-                    .data_directories
-                    .get(&identity.unique_key().into())
-                    .unwrap()
-                    .get_values()
-                    .len(),
-                1
-            );
+            assert!(data_repo.read().await.data_directories.get(&identity.unique_key()).is_some());
             fasync::Timer::new(fasync::Time::after(100_i64.millis())).await;
         }
     }

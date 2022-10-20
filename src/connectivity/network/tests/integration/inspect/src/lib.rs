@@ -1009,7 +1009,7 @@ async fn inspect_for_sampler() {
         .expect("get_inspect_data failed");
         let properties: Vec<_> = data
             .property_iter()
-            .filter_map(|(_hierarchy_path, property_opt): (Vec<&String>, _)| property_opt)
+            .filter_map(|(_hierarchy_path, property_opt): (Vec<&str>, _)| property_opt)
             .collect();
         match &properties[..] {
             [Property::Uint(key, _)] => {

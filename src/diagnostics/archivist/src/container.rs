@@ -132,12 +132,4 @@ impl ComponentDiagnostics {
         source_node.record_string("url", &identity.url);
         Self { identity, inspect: None, logs: None, source_node }
     }
-
-    #[cfg(test)]
-    pub(crate) fn empty_for_test(
-        identity: Arc<ComponentIdentity>,
-        parent: &fuchsia_inspect::Node,
-    ) -> Self {
-        Self::empty(identity, parent)
-    }
 }

@@ -619,7 +619,7 @@ mod tests {
 
         inspect_repo.add_inspect_artifacts(identity.clone(), proxy).await.expect("add to repo");
 
-        assert_eq!(inspect_repo.read().await.get(&identity).len(), 1);
+        assert!(inspect_repo.read().await.get(&identity).is_some());
     }
 
     #[fuchsia::test]
