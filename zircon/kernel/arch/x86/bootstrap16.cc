@@ -86,42 +86,27 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
     bootstrap_lock.Release();
   });
 
-  // Compute what needs to go into the mappings
-  paddr_t gdt_phys_page = vaddr_to_paddr((void*)ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE));
-  uintptr_t gdt_region_len =
-      ROUNDUP((uintptr_t)&_temp_gdt_end, PAGE_SIZE) - ROUNDDOWN((uintptr_t)&_temp_gdt, PAGE_SIZE);
-
   if (!bootstrap_aspace) {
     bootstrap_aspace = VmAspace::Create(VmAspace::Type::LowKernel, "bootstrap16");
     if (!bootstrap_aspace) {
       return ZX_ERR_NO_MEMORY;
     }
 
-    // Bootstrap aspace needs 5 regions mapped:
-    struct map_range page_mappings[] = {
-        // 1) The bootstrap code page (identity mapped)
-        // 2) The bootstrap data page (identity mapped)
-        {.start_vaddr = bootstrap_phys_addr,
-         .start_paddr = bootstrap_phys_addr,
-         .size = k_x86_bootstrap16_buffer_size},
-        // 3) The page containing the GDT (identity mapped)
-        {.start_vaddr = (vaddr_t)gdt_phys_page,
-         .start_paddr = gdt_phys_page,
-         .size = gdt_region_len},
-        // These next two come implicitly from the shared kernel aspace:
-        // 4) The kernel's version of the bootstrap code page (matched mapping)
-        // 5) The page containing the aps_still_booting counter (matched mapping)
-    };
-    for (unsigned int i = 0; i < ktl::size(page_mappings); ++i) {
-      void* vaddr = (void*)page_mappings[i].start_vaddr;
-      zx_status_t status = bootstrap_aspace->AllocPhysical(
-          "bootstrap_mapping", page_mappings[i].size, &vaddr, PAGE_SIZE_SHIFT,
-          page_mappings[i].start_paddr, VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
-          ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
-      if (status != ZX_OK) {
-        TRACEF("Failed to create wakeup bootstrap aspace\n");
-        return status;
-      }
+    // Bootstrap aspace needs 3 regions mapped:
+    // 1) The bootstrap region (identity mapped) which contains:
+    // 1.a) A copy of the bootstrap code.
+    // 1.b) A copy of the GDT used temporarily to bounce.
+    // These next two come implicitly from the shared kernel aspace:
+    // 2) The kernel's version of the bootstrap code page (matched mapping)
+    // 3) The page containing the aps_still_booting counter (matched mapping)
+    void* vaddr = reinterpret_cast<void*>(bootstrap_phys_addr);
+    zx_status_t status = bootstrap_aspace->AllocPhysical(
+        "bootstrap_mapping", k_x86_bootstrap16_buffer_size, &vaddr, PAGE_SIZE_SHIFT,
+        bootstrap_phys_addr, VmAspace::VMM_FLAG_VALLOC_SPECIFIC,
+        ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE);
+    if (status != ZX_OK) {
+      TRACEF("Failed to create wakeup bootstrap aspace\n");
+      return status;
     }
   }
 
@@ -139,17 +124,42 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
     return status;
   }
   DEBUG_ASSERT(bootstrap_virt_addr != nullptr);
-  uintptr_t bootstrap_code_len = (uintptr_t)x86_bootstrap16_end - (uintptr_t)x86_bootstrap16_start;
-  DEBUG_ASSERT(bootstrap_code_len <= PAGE_SIZE);
+
+  // Copy the bootstrap code and _temp_gdt to the bootstrap buffer. Compute where the offsets are
+  // going to be up front.
+  const uintptr_t bootstrap_code_len =
+      (uintptr_t)x86_bootstrap16_end - (uintptr_t)x86_bootstrap16_start;
+  void* const temp_gdt_virt_addr =
+      (void*)((uintptr_t)bootstrap_virt_addr + ROUNDUP(bootstrap_code_len, 8));
+
+  const uintptr_t temp_gdt_len = (uintptr_t)&_temp_gdt_end - (uintptr_t)&_temp_gdt;
+  DEBUG_ASSERT(temp_gdt_len < UINT16_MAX);
+
+  // make sure the bootstrap code + gdt (aligned to 8 bytes) fits within the first page
+  DEBUG_ASSERT((uintptr_t)temp_gdt_virt_addr + temp_gdt_len - (uintptr_t)bootstrap_virt_addr <
+               PAGE_SIZE);
+
   // Copy the bootstrap code in
   memcpy(bootstrap_virt_addr, (const void*)x86_bootstrap16_start, bootstrap_code_len);
+  LTRACEF("bootstrap code virt %p phys %#lx len %#lx\n", bootstrap_virt_addr, bootstrap_phys_addr,
+          bootstrap_code_len);
+
+  // Copy _temp_gdt to just after the code, aligned to an 8 byte boundary. This is to avoid
+  // any issues with the kernel being loaded > 4GB.
+  memcpy(temp_gdt_virt_addr, &_temp_gdt, temp_gdt_len);
+  const uintptr_t temp_gdt_phys_addr =
+      bootstrap_phys_addr + ((uintptr_t)temp_gdt_virt_addr - (uintptr_t)bootstrap_virt_addr);
+  LTRACEF("temp_gdt virt %p phys %#lx len %#lx\n", temp_gdt_virt_addr, temp_gdt_phys_addr,
+          temp_gdt_len);
+  DEBUG_ASSERT(temp_gdt_phys_addr < UINT32_MAX);
 
   // Configuration data shared with the APs to get them to 64-bit mode stored in the 2nd page
   // of the bootstrap buffer.
   struct x86_bootstrap16_data* bootstrap_data =
       (struct x86_bootstrap16_data*)((uintptr_t)bootstrap_virt_addr + PAGE_SIZE);
 
-  uintptr_t long_mode_entry = bootstrap_phys_addr + (entry64 - (uintptr_t)x86_bootstrap16_start);
+  const uintptr_t long_mode_entry =
+      bootstrap_phys_addr + (entry64 - (uintptr_t)x86_bootstrap16_start);
   ASSERT(long_mode_entry <= UINT32_MAX);
 
   // Carve out the 3rd page of the bootstrap physical buffer to hold a copy of the top level
@@ -157,10 +167,10 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
   // aspace's top level PML4 to this page to make sure it's located in low (<4GB) memory. This
   // is needed when bootstrapping from 32bit to 64bit since the CR3 register is only 32bits wide
   // at the time you have to load it.
-  uint64_t phys_bootstrap_pml4 = bootstrap_phys_addr + 2UL * PAGE_SIZE;
-  uint64_t bootstrap_aspace_pml4 = bootstrap_aspace->arch_aspace().pt_phys();
-  void* phys_bootstrap_pml4_virt = paddr_to_physmap(phys_bootstrap_pml4);
-  const void* bootstrap_aspace_pml4_virt = paddr_to_physmap(bootstrap_aspace_pml4);
+  const uint64_t phys_bootstrap_pml4 = bootstrap_phys_addr + 2UL * PAGE_SIZE;
+  const uint64_t bootstrap_aspace_pml4 = bootstrap_aspace->arch_aspace().pt_phys();
+  void* const phys_bootstrap_pml4_virt = paddr_to_physmap(phys_bootstrap_pml4);
+  const void* const bootstrap_aspace_pml4_virt = paddr_to_physmap(bootstrap_aspace_pml4);
   LTRACEF("phys_bootstrap_pml4 %p (%#lx), bootstrap_aspace_pml4 %p (%#lx)\n",
           phys_bootstrap_pml4_virt, phys_bootstrap_pml4, bootstrap_aspace_pml4_virt,
           bootstrap_aspace_pml4);
@@ -172,10 +182,8 @@ zx_status_t x86_bootstrap16_acquire(uintptr_t entry64, void** bootstrap_aperture
 
   bootstrap_data->phys_bootstrap_pml4 = static_cast<uint32_t>(phys_bootstrap_pml4);
   bootstrap_data->phys_kernel_pml4 = static_cast<uint32_t>(phys_kernel_pml4);
-  bootstrap_data->phys_gdtr_limit = static_cast<uint16_t>(&_temp_gdt_end - &_temp_gdt - 1);
-  bootstrap_data->phys_gdtr_base = reinterpret_cast<uintptr_t>(&_temp_gdt) -
-                                   reinterpret_cast<uintptr_t>(__code_start) +
-                                   get_kernel_base_phys();
+  bootstrap_data->phys_gdtr_limit = static_cast<uint16_t>(temp_gdt_len - 1);
+  bootstrap_data->phys_gdtr_base = static_cast<uint32_t>(temp_gdt_phys_addr);
   bootstrap_data->phys_long_mode_entry = static_cast<uint32_t>(long_mode_entry);
   bootstrap_data->long_mode_cs = CODE_64_SELECTOR;
 

@@ -11,14 +11,14 @@
 
 #define BCD_PHYS_BOOTSTRAP_PML4_OFFSET 0
 #define BCD_PHYS_KERNEL_PML4_OFFSET 4
-#define BCD_PHYS_GDTR_OFFSET 8
-#define BCD_PHYS_LM_ENTRY_OFFSET 20
-#define BCD_LM_CS_OFFSET 24
-#define BCD_CPU_COUNTER_OFFSET 28
-#define BCD_CPU_WAITING_OFFSET 32
-#define BCD_PER_CPU_BASE_OFFSET 40
+#define BCD_PHYS_GDTR_OFFSET 10
+#define BCD_PHYS_LM_ENTRY_OFFSET 16
+#define BCD_LM_CS_OFFSET 20
+#define BCD_CPU_COUNTER_OFFSET 24
+#define BCD_CPU_WAITING_OFFSET 28
+#define BCD_PER_CPU_BASE_OFFSET 36
 
-#define RED_REGISTERS_OFFSET 28
+#define RED_REGISTERS_OFFSET 24
 
 #ifndef __ASSEMBLER__
 #include <assert.h>
@@ -45,15 +45,15 @@ extern void _x86_suspend_wakeup();
 
 }  // extern "C"
 
-struct __PACKED x86_bootstrap16_data {
+struct x86_bootstrap16_data {
   // Physical address of identity PML4
   uint32_t phys_bootstrap_pml4;
   // Physical address of the kernel PML4
   uint32_t phys_kernel_pml4;
-  // Physical address of GDTR
-  uint16_t phys_gdtr_limit;
-  uint64_t phys_gdtr_base;
+  // Physical address of GDT, aligned such that it can be treated as a LGDT descriptor.
   uint16_t __pad;
+  uint16_t phys_gdtr_limit;
+  uint32_t phys_gdtr_base;
 
   // Ordering of these two matter; they should be usable by retfl
   // Physical address of long mode entry point
