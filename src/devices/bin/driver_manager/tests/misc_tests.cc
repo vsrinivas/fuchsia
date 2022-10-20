@@ -398,13 +398,11 @@ TEST(MiscTestCase, DeviceAlreadyBoundFromDriverIndex) {
       &coordinator, fidl::ClientEnd<fuchsia_device_manager::DriverHostController>(),
       fidl::ClientEnd<fuchsia_io::Directory>(), zx::process{});
   dev->set_host(std::move(host));
-  status =
-      coordinator.bind_driver_manager()->BindDevice(dev, kFakeDriverUrl, true /* new device */);
+  status = coordinator.bind_driver_manager()->BindDevice(dev, kFakeDriverUrl);
   ASSERT_OK(status);
   loop.RunUntilIdle();
 
-  status =
-      coordinator.bind_driver_manager()->BindDevice(dev, kFakeDriverUrl, true /* new device */);
+  status = coordinator.bind_driver_manager()->BindDevice(dev, kFakeDriverUrl);
   ASSERT_STATUS(status, ZX_ERR_ALREADY_BOUND);
   loop.RunUntilIdle();
 

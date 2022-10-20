@@ -28,8 +28,7 @@ class BindDriverManager {
 
   // Try binding a driver to the device. Returns ZX_ERR_ALREADY_BOUND if there
   // is a driver bound to the device and the device is not allowed to be bound multiple times.
-  zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname,
-                         bool new_device);
+  zx_status_t BindDevice(const fbl::RefPtr<Device>& dev, std::string_view drvlibname);
 
   // Binds all the devices to the drivers.
   void BindAllDevices(const DriverLoader::MatchDeviceConfig& config);

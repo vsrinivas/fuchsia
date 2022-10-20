@@ -52,7 +52,7 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
 }
 
 zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
-                                          std::string_view drvlibname, bool new_device) {
+                                          std::string_view drvlibname) {
   // shouldn't be possible to get a bind request for a proxy device
   if (dev->flags & DEV_CTX_PROXY) {
     return ZX_ERR_NOT_SUPPORTED;
@@ -87,12 +87,6 @@ zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
     if (status != ZX_OK) {
       return status;
     }
-  }
-
-  // Notify observers that this device is available again
-  // Needed for non-auto-binding drivers like GPT against block, etc
-  if (!new_device && autobind) {
-    coordinator_->devfs().advertise_modified(*dev);
   }
 
   return ZX_OK;

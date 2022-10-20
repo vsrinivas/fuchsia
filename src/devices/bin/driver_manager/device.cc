@@ -66,8 +66,7 @@ Device::Device(Coordinator* coord, fbl::String name, fbl::String libname, fbl::S
       publish_task_([this] {
         // TODO(tesienbe): We probably should do something with the return value
         // from this...
-        coordinator->bind_driver_manager()->BindDevice(fbl::RefPtr(this), {} /* libdrvname */,
-                                                       true /* new device */);
+        coordinator->bind_driver_manager()->BindDevice(fbl::RefPtr(this), {} /* libdrvname */);
       }),
       outgoing_dir_(std::move(outgoing_dir)),
       inspect_(coord->inspect_manager().devices(), coord->inspect_manager().device_count(),
@@ -808,8 +807,13 @@ void Device::BindDevice(BindDeviceRequestView request, BindDeviceCompleter::Sync
   }
 
   VLOGF(1, "'bind-device' device %p '%s'", dev.get(), dev->name().data());
-  zx_status_t status =
-      dev->coordinator->bind_driver_manager()->BindDevice(dev, driver_path, false /* new device */);
+  zx_status_t status = dev->coordinator->bind_driver_manager()->BindDevice(dev, driver_path);
+
+  // Notify observers that this device is available again
+  // Needed for non-auto-binding drivers like GPT against block, etc
+  if (driver_path.empty()) {
+    coordinator->devfs().advertise_modified(*this);
+  }
   if (status != ZX_OK) {
     completer.ReplyError(status);
   } else {
