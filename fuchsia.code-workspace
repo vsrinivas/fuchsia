@@ -1,0 +1,139 @@
+{
+  // This is a checked-in VSCode workspace configuration file that can be used
+  // instead of directly opening $FUCHSIA_DIR in VSCode.
+  //
+  // It's an opt-in workspace configuration that contains settings for:
+  //  - vscode itself
+  //  - LSP settings for working correctly with the fuchsia.git checkout
+  //  - etc.
+  //
+  // In terms of precedence, VSCode uses the following order in which settings
+  // are applied (merged together).
+  //
+  //  0) default settings
+  //  1) user's settings
+  //  2) remote machine settings
+  //  3) workspace settings  (this file)
+  //  4) workspace folder settings
+  //
+  //
+  // For details, see:
+  // https://code.visualstudio.com/docs/getstarted/settings#_settings-precedence
+
+
+  ////////
+  // VSCode Workspace Contents
+  //
+  // These are the workspace folders, and general VSCode workspace
+  // configuration itself.
+  //
+  // See https://code.visualstudio.com/docs/editor/workspaces for more
+  // information on this section of the file.
+  "folders": [
+    {
+      // The whole project directory.
+      "path": "."
+    }
+  ],
+
+  ////////
+  // Recommended Extensions for VSCode and Fuchsia
+  //
+  "extensions": {
+    "recommendations": [
+      // Fuchsia's own VSCode extension
+      "fuchsia-authors.vscode-fuchsia",
+
+      // Fuchsia's own FIDL LSP extension
+      "fuchsia-authors.language-fidl",
+
+      // The official LSP for Rust, rust-analyzer.
+      "rust-lang.rust-analyzer",
+
+      // The GN language server from Microsoft
+      "msedge-dev.gnls",
+    ],
+  },
+
+
+  "settings": {
+    ////////
+    // Extra file associations (patterns to languages)
+    "files.associations": {
+      "*.cml": "json5",
+      "*.inc": "cpp",
+    },
+
+
+    ////////
+    // Rust
+    //
+
+    // This works around an OOM issue with the vscode extension-host's
+    // implementation of file-watching.
+    // see:  https://github.com/rust-lang/rust-analyzer/issues/12572
+    // see:  https://github.com/microsoft/vscode/issues/153154
+    "rust-analyzer.files.watcher": "server",
+
+    // Use clippy for checkOnSave, if checkOnSave is enabled.
+    "rust-analyzer.checkOnSave.overrideCommand": [
+      "fx",
+      "clippy",
+      "--raw",
+      "--all"
+    ],
+
+    // Remap the diagnostics results from RA to handle the change in working dir
+    // from the workspace root to the root_build_dir in GN/Ninja.
+    "rust-analyzer.diagnostics.remapPrefix": {
+      "../../": "${workspaceFolder}",
+    },
+
+    ////////
+    // Bazel
+    //
+    "bazel.enableCodeLens": true,
+    "bazel.executable": "${workspaceFolder}/tools/devshell/bazel",
+
+    ////////
+    // VSCode file exclusions (marked as hidden in the Workspace Explorer)
+
+    "files.exclude": {
+      "**/.DS_Store": true,
+      "**/.cipd": true,
+      "**/.git": true,
+      "**/__pycache__": true,
+    },
+    // sub repos managed by jiri are listed in .gitignore, so make sure that
+    // they are not hidden.
+    "explorer.excludeGitIgnore": false,
+
+
+    ////////
+    // Files that are excluding from file-watching notifications
+    "files.watcherExclude": {
+      "**/.DS_Store": true,
+      "**/.cipd": true,
+      ".jiri_root/goma_cache/**": true,
+      ".jiri_root/update_history*/**": true,
+      "out/**": true,
+    },
+
+    ////////
+    // File globs to exclude from search results and when opening a file via the
+    // quick-open feature.  This is in addition to the globs in `files.exclude`
+    //
+    "search.exclude": {
+      ".jiri_root/goma_cache/**": true,
+      ".jiri_root/update_history*/**": true,
+    },
+
+    // As sub repos are listed in .gitignore, and searching already excludes
+    // dirs in that are excluded, tell it not NOT use .gitignore to limit search
+    // results.
+    "search.useIgnoreFiles": false,
+
+    // Don't follow symlinks (into other parts of the tree)
+    "search.followSymlinks": false,
+  },
+}
