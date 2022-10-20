@@ -33,7 +33,7 @@ pub struct Namespace {
 impl Namespace {
     pub fn new(fs: FileSystemHandle) -> Arc<Namespace> {
         let root = fs.root().clone();
-        Arc::new(Self { root_mount: Mount::new(root, MountFlags::empty(), fs) })
+        Arc::new(Self { root_mount: Mount::new(root, MountFlags::empty()) })
     }
 
     pub fn root(&self) -> NamespaceNode {
@@ -83,7 +83,8 @@ struct MountState {
 }
 
 impl Mount {
-    fn new(root: DirEntryHandle, flags: MountFlags, fs: FileSystemHandle) -> MountHandle {
+    fn new(root: DirEntryHandle, flags: MountFlags) -> MountHandle {
+        let fs = root.node.fs();
         Arc::new(Self {
             mountpoint: OnceCell::new(),
             root,
@@ -480,14 +481,10 @@ impl NamespaceNode {
 
     pub fn mount(&self, root: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
         let mount = self.mount.as_ref().expect("a mountpoint must be part of a mount");
-        let (fs, root) = match root {
-            WhatToMount::Fs(fs) => {
-                let root = fs.root().clone();
-                (fs, root)
-            }
-            WhatToMount::Dir(entry) => (entry.node.fs(), entry),
+        let new_mount = match root {
+            WhatToMount::Fs(fs) => Mount::new(fs.root().clone(), flags),
+            WhatToMount::Dir(entry) => Mount::new(entry, flags),
         };
-        let new_mount = Mount::new(root, flags, fs);
         mount.add_submount(&self.entry, new_mount);
         Ok(())
     }
