@@ -112,6 +112,10 @@ IgcDriver::IgcDriver(zx_device_t* parent)
            zx_status_get_string(status));
     return;
   }
+
+  // Explicitly initialize rx/tx info buffers with 0s.
+  memset(rx_buffers_, 0, sizeof(rx_buffers_));
+  memset(tx_buffers_, 0, sizeof(tx_buffers_));
 }
 
 IgcDriver::~IgcDriver() {
@@ -509,12 +513,11 @@ void IgcDriver::NetworkDeviceImplStop(network_device_impl_stop_callback callback
     size_t buf_idx = 0;
 
     uint32_t& rxh = adapter_->rxh_ind;
-    const uint32_t& rxt = adapter_->rxh_ind;
+    const uint32_t& rxt = adapter_->rxt_ind;
 
-    // The last buffer on rxt will also be reclaimed under this loop condition.
-    while (rxh != ((rxt + 1) & (kEthRxBufCount - 1))) {
+    while (rxh != rxt) {
       // Populate empty buffers.
-      buffers[buf_idx].data_count = 0;
+      buffers[buf_idx].data_count = 1;
       buffers[buf_idx].meta.port = kPortId;
       buffers[buf_idx].data_list = &buffer_parts[buf_idx];
       buffers[buf_idx].meta.frame_type =
@@ -530,9 +533,6 @@ void IgcDriver::NetworkDeviceImplStop(network_device_impl_stop_callback callback
       buf_idx++;
       ZX_ASSERT_MSG(buf_idx <= kEthRxBufCount, "buf_idx: %zu", buf_idx);
     }
-
-    // Now rxh is one step ahead than rxt, resume rxh to the rxt.
-    rxh = rxt;
     adapter_->netdev_ifc.CompleteRx(buffers, buf_idx);
   }
 
@@ -550,7 +550,7 @@ void IgcDriver::NetworkDeviceImplStop(network_device_impl_stop_callback callback
   }
   adapter_->netdev_ifc.CompleteTx(results, res_idx);
 
-  callback(ZX_OK);
+  callback(cookie);
 }
 
 void IgcDriver::NetworkDeviceImplGetInfo(device_info_t* out_info) {

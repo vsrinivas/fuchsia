@@ -178,7 +178,7 @@ class IgcDriver : public ::ddk::NetworkDeviceImplProtocol<IgcDriver>,
   buffer_info rx_buffers_[kEthRxBufCount];
 
   // An extension for tx decriptor.
-  buffer_info tx_buffers_[kEthTxBufCount];
+  buffer_info tx_buffers_[kEthTxDescRingCount];
 };
 
 }  // namespace igc
