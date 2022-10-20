@@ -144,9 +144,12 @@ impl From<BindParserError> for UserError {
             BindParserError::NodeKeyword(span) => {
                 UserError::new("E030", "Expected 'node' keyword.", Some(span), false)
             }
-            BindParserError::PrimaryKeyword(span) => {
-                UserError::new("E031", "Expected 'primary' keyword.", Some(span), false)
-            }
+            BindParserError::PrimaryOrOptionalKeyword(span) => UserError::new(
+                "E031",
+                "Expected 'primary' or 'optional' keyword.",
+                Some(span),
+                false,
+            ),
             BindParserError::OnePrimaryNode(span) => UserError::new(
                 "E032",
                 "Composite bind rules must contain exactly one primary node.",

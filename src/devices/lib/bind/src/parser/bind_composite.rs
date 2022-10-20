@@ -5,9 +5,10 @@
 use crate::parser::bind_rules::{statement_block, Statement, StatementBlock};
 use crate::parser::common::{
     compound_identifier, many_until_eof, map_err, using_list, ws, BindParserError,
-    CompoundIdentifier, Include, NomSpan,
+    CompoundIdentifier, Include, NodeType, NomSpan,
 };
 use nom::{
+    branch::alt,
     bytes::complete::{escaped, is_not, tag},
     character::complete::{char, one_of},
     combinator::{map, opt},
@@ -28,7 +29,8 @@ pub struct Ast<'a> {
     pub name: CompoundIdentifier,
     pub using: Vec<Include>,
     pub primary_node: Node<'a>,
-    pub nodes: Vec<Node<'a>>,
+    pub additional_nodes: Vec<Node<'a>>,
+    pub optional_nodes: Vec<Node<'a>>,
 }
 
 impl<'a> TryFrom<&'a str> for Ast<'a> {
@@ -55,7 +57,25 @@ fn keyword_node(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
 }
 
 fn keyword_primary(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
-    ws(map_err(tag("primary"), BindParserError::PrimaryKeyword))(input)
+    ws(map_err(tag("primary"), BindParserError::PrimaryOrOptionalKeyword))(input)
+}
+
+fn keyword_optional(input: NomSpan) -> IResult<NomSpan, NomSpan, BindParserError> {
+    ws(map_err(tag("optional"), BindParserError::PrimaryOrOptionalKeyword))(input)
+}
+
+fn node_type(input: NomSpan) -> IResult<NomSpan, NodeType, BindParserError> {
+    let (input, keyword) = opt(alt((keyword_optional, keyword_primary)))(input)?;
+    match keyword {
+        Some(kw) => match kw.fragment() {
+            &"optional" => Ok((input, NodeType::Optional)),
+            &"primary" => Ok((input, NodeType::Primary)),
+            &&_ => Err(nom::Err::Error(BindParserError::PrimaryOrOptionalKeyword(
+                kw.fragment().to_string(),
+            ))),
+        },
+        None => Ok((input, NodeType::Additional)),
+    }
 }
 
 fn composite_name(input: NomSpan) -> IResult<NomSpan, CompoundIdentifier, BindParserError> {
@@ -71,25 +91,27 @@ fn node_name(input: NomSpan) -> IResult<NomSpan, String, BindParserError> {
     )
 }
 
-fn node(input: NomSpan) -> IResult<NomSpan, (bool, String, Vec<Statement>), BindParserError> {
-    let (input, keywords) = tuple((opt(keyword_primary), keyword_node))(input)?;
-    let is_primary = keywords.0.is_some();
+fn node(input: NomSpan) -> IResult<NomSpan, (NodeType, String, Vec<Statement>), BindParserError> {
+    let (input, node_type) = node_type(input)?;
+    let (input, _node) = keyword_node(input)?;
     let (input, node_name) = ws(node_name)(input)?;
+
     let (input, statements) = statement_block(input)?;
-    return Ok((input, (is_primary, node_name, statements)));
+    return Ok((input, (node_type, node_name, statements)));
 }
 
 fn composite<'a>(input: NomSpan<'a>) -> IResult<NomSpan, Ast, BindParserError> {
     let nodes =
-        |input: NomSpan<'a>| -> IResult<NomSpan, (Node<'a>, Vec<Node<'a>>), BindParserError> {
+        |input: NomSpan<'a>| -> IResult<NomSpan, (Node<'a>, Vec<Node<'a>>, Vec<Node<'a>>), BindParserError> {
             let (input, nodes) = many_until_eof(ws(node))(input)?;
             if nodes.is_empty() {
                 return Err(nom::Err::Error(BindParserError::NoNodes(input.to_string())));
             }
             let mut primary_node = None;
-            let mut other_nodes = vec![];
+            let mut additional_nodes = vec![];
+            let mut optional_nodes = vec![];
             let mut node_names = HashSet::new();
-            for (is_primary, name, statements) in nodes {
+            for (node_type, name, statements) in nodes {
                 if node_names.contains(&name) {
                     return Err(nom::Err::Error(BindParserError::DuplicateNodeName(
                         input.to_string(),
@@ -97,25 +119,37 @@ fn composite<'a>(input: NomSpan<'a>) -> IResult<NomSpan, Ast, BindParserError> {
                 }
                 node_names.insert(name.clone());
 
-                if is_primary {
-                    if primary_node.is_some() {
-                        return Err(nom::Err::Error(BindParserError::OnePrimaryNode(
-                            input.to_string(),
-                        )));
+                match node_type {
+                    NodeType::Primary => {
+                        if primary_node.is_some() {
+                            return Err(nom::Err::Error(BindParserError::OnePrimaryNode(
+                                input.to_string(),
+                            )));
+                        }
+                        primary_node = Some(Node { name: name, statements: statements });
                     }
-                    primary_node = Some(Node { name: name, statements: statements });
-                    continue;
+                    NodeType::Additional => {
+                        additional_nodes.push(Node { name: name, statements: statements });
+                    },
+                    NodeType::Optional => {
+                        optional_nodes.push(Node { name: name, statements: statements });
+                    },
                 }
-                other_nodes.push(Node { name: name, statements: statements });
             }
             if let Some(primary_node) = primary_node {
-                return Ok((input, (primary_node, other_nodes)));
+                return Ok((input, (primary_node, additional_nodes, optional_nodes)));
             }
             return Err(nom::Err::Error(BindParserError::OnePrimaryNode(input.to_string())));
         };
     map(
         tuple((ws(composite_name), ws(using_list), nodes)),
-        |(name, using, (primary_node, nodes))| Ast { name, using, primary_node, nodes },
+        |(name, using, (primary_node, additional_nodes, optional_nodes))| Ast {
+            name,
+            using,
+            primary_node,
+            additional_nodes,
+            optional_nodes,
+        },
     )(input)
 }
 
@@ -204,13 +238,14 @@ mod test {
                             span: Span { offset: 41, line: 1, fragment: "true;" },
                         }],
                     },
-                    nodes: vec![],
+                    additional_nodes: vec![],
+                    optional_nodes: vec![],
                 },
             );
         }
 
         #[test]
-        fn one_primary_node_one_other() {
+        fn one_primary_node_one_additional() {
             check_result(
                 composite(NomSpan::new("composite a; primary node \"dipper\" { true; } node \"streamcreeper\" { false; }")),
                 "",
@@ -222,17 +257,84 @@ mod test {
                         statements: vec![Statement::True {
                         span: Span { offset: 37, line: 1, fragment: "true;" },
                     }]},
-                    nodes: vec![Node {
+                    additional_nodes: vec![Node {
                         name: "streamcreeper".to_string(),
                         statements: vec![Statement::False {
                         span: Span { offset: 68, line: 1, fragment: "false;" },
                     }]}],
+                    optional_nodes: vec![],
                 },
             );
         }
 
         #[test]
-        fn one_primary_node_two_others() {
+        fn one_primary_node_one_optional() {
+            check_result(
+                composite(NomSpan::new("composite a; primary node \"dipper\" { true; } optional node \"oilbird\" { x == 1; }")),
+                "",
+                Ast {
+                    name: make_identifier!["a"],
+                    using: vec![],
+                    primary_node: Node {
+                        name: "dipper".to_string(),
+                        statements: vec![Statement::True {
+                        span: Span { offset: 37, line: 1, fragment: "true;" },
+                    }]},
+                    additional_nodes: vec![],
+                    optional_nodes: vec![Node {
+                        name: "oilbird".to_string(),
+                        statements:
+                        vec![Statement::ConditionStatement {
+                            span: Span { offset: 71, line: 1, fragment: "x == 1;" },
+                            condition: Condition {
+                                span: Span { offset: 71, line: 1, fragment: "x == 1" },
+                                lhs: make_identifier!["x"],
+                                op: ConditionOp::Equals,
+                                rhs: Value::NumericLiteral(1),
+                            },
+                        }],
+                    }],
+                },
+            );
+        }
+
+        #[test]
+        fn one_primary_node_one_additional_one_optional() {
+            check_result(
+                composite(NomSpan::new("composite a; primary node \"dipper\" { true; } node \"streamcreeper\" { false; } optional node \"oilbird\" { x == 1; }")),
+                "",
+                Ast {
+                    name: make_identifier!["a"],
+                    using: vec![],
+                    primary_node: Node {
+                        name: "dipper".to_string(),
+                        statements: vec![Statement::True {
+                        span: Span { offset: 37, line: 1, fragment: "true;" },
+                    }]},
+                    additional_nodes: vec![Node {
+                        name: "streamcreeper".to_string(),
+                        statements: vec![Statement::False {
+                        span: Span { offset: 68, line: 1, fragment: "false;" },
+                    }]}],
+                    optional_nodes: vec![Node {
+                        name: "oilbird".to_string(),
+                        statements:
+                        vec![Statement::ConditionStatement {
+                            span: Span { offset: 103, line: 1, fragment: "x == 1;" },
+                            condition: Condition {
+                                span: Span { offset: 103, line: 1, fragment: "x == 1" },
+                                lhs: make_identifier!["x"],
+                                op: ConditionOp::Equals,
+                                rhs: Value::NumericLiteral(1),
+                            },
+                        }],
+                    }],
+                },
+            );
+        }
+
+        #[test]
+        fn one_primary_node_two_additional() {
             check_result(
                 composite(NomSpan::new(
                     "composite a; primary node \"fireback\" { true; } node \"ovenbird\" { false; } node \"oilbird\" { x == 1; }",
@@ -247,7 +349,7 @@ mod test {
                         span: Span { offset: 39, line: 1, fragment: "true;" },
                         }]
                     },
-                    nodes: vec![
+                    additional_nodes: vec![
                         Node {
                             name: "ovenbird".to_string(),
                             statements: vec![Statement::False {
@@ -268,6 +370,7 @@ mod test {
                         }],
                     }
                     ],
+                    optional_nodes: vec![],
                 },
             );
         }
@@ -291,7 +394,8 @@ mod test {
                             span: Span { offset: 54, line: 1, fragment: "true;" },
                         }],
                     },
-                    nodes: vec![],
+                    additional_nodes: vec![],
+                    optional_nodes: vec![],
                 },
             );
         }

@@ -265,7 +265,7 @@ pub fn compile_bind_composite<'a>(
         )?,
     };
     let additional_nodes = ast
-        .nodes
+        .additional_nodes
         .into_iter()
         .map(|node| {
             let name = node.name;

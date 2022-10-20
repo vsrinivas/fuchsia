@@ -89,6 +89,13 @@ pub enum Value {
     Identifier(CompoundIdentifier),
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum NodeType {
+    Primary,
+    Additional,
+    Optional,
+}
+
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum BindParserError {
     Type(String),
@@ -118,7 +125,7 @@ pub enum BindParserError {
     Eof(String),
     CompositeKeyword(String),
     NodeKeyword(String),
-    PrimaryKeyword(String),
+    PrimaryOrOptionalKeyword(String),
     OnePrimaryNode(String),
     InvalidNodeName(String),
     DuplicateNodeName(String),
