@@ -13,12 +13,19 @@ use {
     archivist_lib::{archivist::Archivist, constants, diagnostics, events::router::RouterOptions},
     argh::FromArgs,
     fdio::service_connect,
-    fuchsia_async::{LocalExecutor, SendExecutor},
+    fuchsia_async::SendExecutor,
     fuchsia_component::server::MissingStartupHandle,
     fuchsia_inspect::component,
     fuchsia_zircon as zx,
     std::str::FromStr,
-    tracing::{debug, error, info, warn},
+    tracing::{debug, error, info, warn, Level, Subscriber},
+    tracing_subscriber::{
+        fmt::{
+            format::{self, FormatEvent, FormatFields},
+            FmtContext,
+        },
+        registry::LookupSpan,
+    },
 };
 
 /// The archivist.
@@ -85,26 +92,24 @@ fn main() -> Result<(), Error> {
     } else {
         load_v1_config(args.v1)
     };
-    init_diagnostics(&config).context("initializing diagnostics")?;
-    component::inspector()
-        .root()
-        .record_child("config", |config_node| config.record_inspect(config_node));
-
     let num_threads = config.num_threads;
     debug!("Running executor with {} threads.", num_threads);
-    SendExecutor::new(num_threads as usize)?.run(async_main(config)).context("async main")?;
+    let mut executor = SendExecutor::new(num_threads as usize)?;
+    executor.run(async_main(config)).context("async main")?;
     debug!("Exiting.");
     Ok(())
 }
 
-fn init_diagnostics(config: &Config) -> Result<(), Error> {
+async fn init_diagnostics(config: &Config) -> Result<(), Error> {
     if config.log_to_debuglog {
-        LocalExecutor::new()?.run_singlethreaded(stdout_to_debuglog::init()).unwrap();
-
-        log::set_logger(&STDOUT_LOGGER).unwrap();
-        log::set_max_level(log::LevelFilter::Info);
+        stdout_to_debuglog::init().await.unwrap();
+        tracing_subscriber::fmt()
+            .event_format(DebugLogEventFormatter)
+            .with_writer(std::io::stdout)
+            .with_max_level(Level::INFO)
+            .init();
     } else {
-        fuchsia_syslog::init_with_tags(&["embedded"])?;
+        diagnostics_log::init!(&["embedded"]);
     }
 
     if config.log_to_debuglog {
@@ -112,10 +117,16 @@ fn init_diagnostics(config: &Config) -> Result<(), Error> {
     }
 
     diagnostics::init();
+
     Ok(())
 }
 
 async fn async_main(config: Config) -> Result<(), Error> {
+    init_diagnostics(&config).await.context("initializing diagnostics")?;
+    component::inspector()
+        .root()
+        .record_child("config", |config_node| config.record_inspect(config_node));
+
     let mut archivist = Archivist::new(&config).await?;
     debug!("Archivist initialized from configuration.");
 
@@ -181,17 +192,22 @@ async fn async_main(config: Config) -> Result<(), Error> {
     Ok(())
 }
 
-static STDOUT_LOGGER: StdoutLogger = StdoutLogger;
-struct StdoutLogger;
+struct DebugLogEventFormatter;
 
-impl log::Log for StdoutLogger {
-    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
-        metadata.level() <= log::Level::Info
+impl<S, N> FormatEvent<S, N> for DebugLogEventFormatter
+where
+    S: Subscriber + for<'a> LookupSpan<'a>,
+    N: for<'a> FormatFields<'a> + 'static,
+{
+    fn format_event(
+        &self,
+        ctx: &FmtContext<'_, S, N>,
+        mut writer: format::Writer<'_>,
+        event: &tracing::Event<'_>,
+    ) -> std::fmt::Result {
+        let level = *event.metadata().level();
+        write!(writer, "[archivist] {}: ", level)?;
+        ctx.field_format().format_fields(writer.by_ref(), event)?;
+        writeln!(writer)
     }
-    fn log(&self, record: &log::Record<'_>) {
-        if self.enabled(record.metadata()) {
-            println!("[archivist] {}: {}", record.level(), record.args());
-        }
-    }
-    fn flush(&self) {}
 }

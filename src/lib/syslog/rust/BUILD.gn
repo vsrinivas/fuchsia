@@ -65,7 +65,6 @@ rust_fuchsia_syslog_visibility_allowlist = [
   "//src/connectivity/wlan/wlandevicemonitor:*",
   "//src/connectivity/wlan/wlanstack:*",
   "//src/devices/bin/driver-index:*",
-  "//src/diagnostics/archivist:*",
   "//src/factory/factory_store_providers:*",
   "//src/factory/fake_factory_store_providers:*",
   "//src/fonts:*",

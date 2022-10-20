@@ -69,7 +69,6 @@ third_party_rust_crate_log_visibility = [
   "//src/connectivity/wlan/wlanstack:*",
   "//src/devices/bin/driver_tools:*",
   "//src/devices/bin/driver-index:*",
-  "//src/diagnostics/archivist:*",
   "//src/lib/syslog/rust:*",
   "//src/media/stream_processors/test:*",
   "//src/power/power-manager:*",

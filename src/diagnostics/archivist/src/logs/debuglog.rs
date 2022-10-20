@@ -179,6 +179,7 @@ mod tests {
     use super::*;
     use crate::logs::testing::*;
 
+    use fidl_fuchsia_diagnostics as fdiagnostics;
     use fidl_fuchsia_logger::LogMessage;
     use futures::stream::{StreamExt, TryStreamExt};
 
@@ -208,7 +209,7 @@ mod tests {
                 pid: klog.record.pid,
                 tid: klog.record.tid,
                 time: klog.record.timestamp,
-                severity: i32::from(fuchsia_syslog::levels::INFO),
+                severity: i32::from(fdiagnostics::Severity::Info.into_primitive() as i32),
                 dropped_logs: 0,
                 tags: vec!["klog".to_string()],
                 msg: "test log".to_string(),
