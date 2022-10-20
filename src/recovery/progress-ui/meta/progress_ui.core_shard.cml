@@ -10,11 +10,11 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-display-controller",
             to: "#progress-ui",
-            subdir: "class/display-controller",
+            subdir: "display-controller",
         },
         {
             protocol: [
