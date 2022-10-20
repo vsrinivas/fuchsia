@@ -16,6 +16,8 @@
         {
             protocol: [
                 "fuchsia.element.GraphicalPresenter",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.ui.composition.Allocator",
                 "fuchsia.ui.composition.Flatland",
                 "fuchsia.ui.input3.Keyboard",
             ],

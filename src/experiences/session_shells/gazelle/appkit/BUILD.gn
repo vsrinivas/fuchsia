@@ -13,6 +13,7 @@ rustc_library("appkit") {
   sources = [
     "src/child_view.rs",
     "src/event.rs",
+    "src/image.rs",
     "src/lib.rs",
     "src/tests.rs",
     "src/utils.rs",
@@ -22,6 +23,7 @@ rustc_library("appkit") {
     "//sdk/fidl/fuchsia.element:fuchsia.element_rust",
     "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
     "//sdk/fidl/fuchsia.math:fuchsia.math_rust",
+    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_rust",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
     "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_rust",
     "//sdk/fidl/fuchsia.ui.pointer:fuchsia.ui.pointer_rust",
@@ -32,9 +34,13 @@ rustc_library("appkit") {
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-image-format",
+    "//src/lib/mapped-vmo",
     "//src/lib/ui/fuchsia-scenic",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:png",
     "//third_party/rust_crates:tracing",
   ]
   test_deps = [
@@ -42,7 +48,9 @@ rustc_library("appkit") {
     "//sdk/fidl/fuchsia.ui.test.input:fuchsia.ui.test.input_rust",
     "//sdk/fidl/fuchsia.ui.test.scene:fuchsia.ui.test.scene_rust",
     "//src/lib/fuchsia",
+    "//third_party/rust_crates:pretty_assertions",
   ]
+  inputs = [ "test_data/checkerboard_100.png" ]
 }
 
 fuchsia_unittest_package("appkit-tests") {

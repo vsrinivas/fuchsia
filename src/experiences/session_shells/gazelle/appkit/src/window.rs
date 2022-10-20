@@ -27,7 +27,8 @@ use {
 use crate::{
     child_view::ChildView,
     event::{Event, ViewSpecHolder, WindowEvent},
-    utils::{EventSender, Presenter},
+    image::Image,
+    utils::{EventSender, ImageData, Presenter},
 };
 
 /// Defines a type to hold an id to the window. This implementation uses the value of
@@ -430,6 +431,13 @@ impl<T> Window<T> {
             height,
             event_sender,
         )
+    }
+
+    /// Creates an instance of flatland [Image] given width, height and image data in
+    /// [ui_comp::BufferCollectionImportToken] token at [vmo_index].
+    pub fn create_image(&mut self, image_data: &mut ImageData) -> Result<Image, Error> {
+        let content_id = self.next_content_id();
+        Image::new(image_data, self.flatland.clone(), content_id)
     }
 }
 
