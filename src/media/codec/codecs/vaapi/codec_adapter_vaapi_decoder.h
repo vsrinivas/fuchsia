@@ -18,6 +18,7 @@
 #include <lib/media/codec_impl/codec_input_item.h>
 #include <lib/media/codec_impl/codec_packet.h>
 #include <lib/media/codec_impl/fourcc.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <threads.h>
 
@@ -107,10 +108,24 @@ class SurfaceBufferManager {
     // when calling vaSyncSurface().
     if ((new_picture_size.width() > dpb_surface_size_.width()) ||
         new_picture_size.height() > dpb_surface_size_.height()) {
+      FX_SLOG(INFO,
+              "Current DPB surfaces are NOT large enough to hold new picture size. Incrementing "
+              "surface generation.",
+              KV("new_picture_width", new_picture_size.width()),
+              KV("new_picture_height", new_picture_size.height()),
+              KV("dpb_surface_width", dpb_surface_size_.width()),
+              KV("dpb_surface_height", dpb_surface_size_.height()));
+
       surface_generation_ += 1;
 
       // Signal to subclass that new surface generation has occurred. Called under lock
       OnSurfaceGenerationUpdatedLocked(num_of_surfaces);
+    } else {
+      FX_SLOG(INFO, "Current DPB surfaces are large enough to hold new picture size",
+              KV("new_picture_width", new_picture_size.width()),
+              KV("new_picture_height", new_picture_size.height()),
+              KV("dpb_surface_width", dpb_surface_size_.width()),
+              KV("dpb_surface_height", dpb_surface_size_.height()));
     }
   }
 
@@ -526,16 +541,36 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
       // If the format doesn't have a format modifier, then it is linear
       const auto& pixel_format =
           buffer_collection_info.settings.image_format_constraints.pixel_format;
-      uint64_t pixel_format_modifier = pixel_format.has_format_modifier
-                                           ? pixel_format.format_modifier.value
-                                           : fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+      uint64_t format_modifier = pixel_format.has_format_modifier
+                                     ? pixel_format.format_modifier.value
+                                     : fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
 
       // Should never happen but ensure we do not overwrite a format modifier that has been
       // initialized with another value
       ZX_ASSERT(!output_buffer_format_modifier_ ||
-                (output_buffer_format_modifier_.value() == pixel_format_modifier));
+                (output_buffer_format_modifier_.value() == format_modifier));
 
-      output_buffer_format_modifier_ = pixel_format_modifier;
+      // The first time this value is set, log out if the participants selected a linear or tiled
+      // format.
+      if (!output_buffer_format_modifier_.has_value()) {
+        std::string format_modifier_str;
+        switch (format_modifier) {
+          case fuchsia::sysmem::FORMAT_MODIFIER_LINEAR:
+            format_modifier_str = "linear";
+            break;
+          case fuchsia::sysmem::FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+            format_modifier_str = "intel_i915_y_tiled";
+            break;
+          default:
+            format_modifier_str = "unknown";
+            break;
+        }
+
+        FX_SLOG(INFO, "Format modifier has been chosen", KV("format_modifier", format_modifier),
+                KV("format_modifier_str", format_modifier_str.c_str()));
+      }
+
+      output_buffer_format_modifier_ = format_modifier;
     }
   }
 

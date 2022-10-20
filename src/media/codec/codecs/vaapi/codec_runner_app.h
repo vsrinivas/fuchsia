@@ -12,11 +12,14 @@
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/inspect/service/cpp/service.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_level.h>
 #include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
 
+#include <initializer_list>
 #include <memory>
+#include <string>
 
 #include "local_single_codec_factory.h"
 
@@ -30,7 +33,12 @@ class CodecRunnerApp {
       : codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Init() {
-    syslog::SetTags({"vaapi_codec_runner"});
+    static const std::initializer_list<std::string> kLogTags = {"vaapi_codec_runner"};
+#ifdef NDEBUG
+    syslog::SetTags(kLogTags);
+#else
+    syslog::SetLogSettings({.min_log_level = syslog::LOG_DEBUG}, kLogTags);
+#endif
 
     trace_provider_ =
         std::make_unique<trace::TraceProviderWithFdio>(loop_.dispatcher(), "vaapi_codec_runner");

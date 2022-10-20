@@ -6,6 +6,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/fit/defer.h>
+#include <lib/media/codec_impl/fourcc.h>
 #include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
@@ -113,6 +114,7 @@ class LinearBufferManager : public SurfaceBufferManager {
       scoped_refptr<VASurface> va_surface) override {
     const CodecBuffer* buffer = output_buffer_pool_.AllocateBuffer();
 
+    // Check to make sure the |output_buffer_pool_| was not canceled.
     if (!buffer) {
       return std::nullopt;
     }
@@ -359,6 +361,8 @@ class LinearBufferManager : public SurfaceBufferManager {
     // Since media-driver does not allow the surfaces to become smaller, ensure that the surface
     // dimensions are always at least equal to what they were before this function call.
     dpb_surface_size_ = GetRequiredSurfaceSizeLocked(coded_picture_size_);
+    FX_SLOG(DEBUG, "Increased DPB surface size", KV("dpb_surface_width", dpb_surface_size_.width()),
+            KV("dpb_surface_height", dpb_surface_size_.height()));
 
     // Create the new number for requested DBP surfaces at the picture size.
     //
@@ -367,11 +371,15 @@ class LinearBufferManager : public SurfaceBufferManager {
     // overall memory usage but more information gathering would need to be done to show that we
     // would not need to increase the number of DPB surfaces needed todo the decode operation, or we
     // can do sysmem incremental allocation and use it here.
+    VASurfaceAttrib attrib = {.type = VASurfaceAttribPixelFormat,
+                              .flags = VA_SURFACE_ATTRIB_SETTABLE,
+                              .value = {.type = VAGenericValueTypeInteger,
+                                        .value = {.i = make_fourcc('N', 'V', '1', '2')}}};
     std::vector<VASurfaceID> va_surfaces(num_of_surfaces, VA_INVALID_SURFACE);
     VAStatus va_res =
         vaCreateSurfaces(VADisplayWrapper::GetSingleton()->display(), VA_RT_FORMAT_YUV420,
                          dpb_surface_size_.width(), dpb_surface_size_.height(), va_surfaces.data(),
-                         static_cast<uint32_t>(va_surfaces.size()), nullptr, 0);
+                         static_cast<uint32_t>(va_surfaces.size()), &attrib, 1);
 
     if (va_res != VA_STATUS_SUCCESS) {
       std::ostringstream ss;
@@ -903,6 +911,16 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
     state_ = DecoderState::kIdle;
 
     if (result == media::AcceleratedVideoDecoder::kConfigChange) {
+      gfx::Size pic_size = media_decoder_->GetPicSize();
+      gfx::Rect render_size = media_decoder_->GetVisibleRect();
+      std::string profile = GetProfileName(media_decoder_->GetProfile());
+      FX_SLOG(INFO, "Detected a configuration change in bitstream",
+              KV("pic_width", pic_size.width()), KV("pic_height", pic_size.height()),
+              KV("render_width", render_size.width()), KV("render_height", render_size.height()),
+              KV("profile", profile.c_str()), KV("bit_depth", media_decoder_->GetBitDepth()),
+              KV("required_num_pics", media_decoder_->GetRequiredNumOfPictures()),
+              KV("num_reference_frames", media_decoder_->GetNumReferenceFrames()));
+
       // We only need to request a output buffer reconfiguration if the current buffers are not able
       // to handle the new picture size. If they are able to handle the new picture size then the
       // new output format will be sent to the client and the current buffers will be kept. Since
@@ -918,6 +936,9 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
 
       ZX_ASSERT(output_re_config_required_result.is_ok());
       bool output_re_config_required = output_re_config_required_result.value();
+
+      FX_SLOG(INFO, "Are new buffers required for bitstream change?",
+              KV("output_re_config_required", output_re_config_required ? "yes" : "no"));
 
       // If buffer reconfiguration is needed, reset mid_stream_output_buffer_reconfig_finish_ since
       // we are going to block the input_processing thread until either the stream is stopped or
@@ -936,8 +957,6 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
         // output codec format has changed before the next output packet is sent to the client.
         events_->onCoreCodecOutputFormatChange();
       }
-
-      gfx::Size pic_size = media_decoder_->GetPicSize();
 
       if (!context_id_) {
         // vaCreateContext's |picture_width| and |picture_height| parameters are only used to ensure
