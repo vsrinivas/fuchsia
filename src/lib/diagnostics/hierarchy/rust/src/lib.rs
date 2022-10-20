@@ -29,7 +29,6 @@ use {
 pub mod macros;
 pub mod serialization;
 pub mod testing;
-pub mod trie;
 
 /// Extra slots for a linear histogram: 2 parameter slots (floor, step size) and
 /// 2 overflow slots.

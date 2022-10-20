@@ -16,11 +16,11 @@ use {
             listener::Listener,
             multiplex::{Multiplexer, MultiplexerHandle},
         },
-        ImmutableString,
+        trie, ImmutableString,
     },
     async_lock::{Mutex, RwLock},
     diagnostics_data::LogsData,
-    diagnostics_hierarchy::{trie, InspectHierarchyMatcher},
+    diagnostics_hierarchy::InspectHierarchyMatcher,
     fidl::prelude::*,
     fidl_fuchsia_diagnostics::{
         self, LogInterestSelector, LogSettingsMarker, LogSettingsRequest, LogSettingsRequestStream,

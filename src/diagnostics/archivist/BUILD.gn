@@ -132,6 +132,7 @@ rustc_library("lib") {
     "src/pipeline.rs",
     "src/repository.rs",
     "src/testing.rs",
+    "src/trie.rs",
     "src/utils.rs",
   ]
 }
