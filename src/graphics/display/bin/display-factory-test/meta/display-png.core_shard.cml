@@ -10,18 +10,18 @@
     ],
     offer: [
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-input-report",
             to: [ "#display-png" ],
-            subdir: "class/input-report",
+            subdir: "input-report",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-display-controller",
             to: [ "#display-png" ],
-            subdir: "class/display-controller",
+            subdir: "display-controller",
         },
         {
             protocol: "fuchsia.sysmem.Allocator",
