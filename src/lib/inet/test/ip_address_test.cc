@@ -17,6 +17,7 @@ TEST(IpAddressTest, Invalid) {
   EXPECT_FALSE(under_test.is_v4());
   EXPECT_FALSE(under_test.is_v6());
   EXPECT_FALSE(under_test.is_loopback());
+  EXPECT_FALSE(under_test.is_link_local());
   EXPECT_EQ("<invalid>", under_test.ToString());
   EXPECT_EQ(IpAddress::kInvalid, under_test);
 }
@@ -29,6 +30,7 @@ TEST(IpAddressTest, V4) {
   EXPECT_TRUE(under_test.is_v4());
   EXPECT_FALSE(under_test.is_v6());
   EXPECT_FALSE(under_test.is_loopback());
+  EXPECT_FALSE(under_test.is_link_local());
   EXPECT_EQ(0x04030201u, under_test.as_in_addr().s_addr);
   EXPECT_EQ(0x04030201u, under_test.as_in_addr_t());
   EXPECT_EQ(1u, under_test.as_bytes()[0]);
@@ -50,6 +52,7 @@ TEST(IpAddressTest, V6) {
   EXPECT_FALSE(under_test.is_v4());
   EXPECT_TRUE(under_test.is_v6());
   EXPECT_FALSE(under_test.is_loopback());
+  EXPECT_FALSE(under_test.is_link_local());
 
   for (size_t i = 0; i < 16; ++i) {
     EXPECT_EQ(i, under_test.as_in6_addr().s6_addr[i]);
@@ -101,6 +104,28 @@ TEST(IpAddressTest, IsLoopback) {
   EXPECT_FALSE(IpAddress(0x1234, 0x5678).is_loopback());
   EXPECT_TRUE(IpAddress::kV4Loopback.is_loopback());
   EXPECT_TRUE(IpAddress::kV6Loopback.is_loopback());
+}
+
+// Tests is_link_local method.
+TEST(IpAddressTest, IsLinkLocal) {
+  EXPECT_FALSE(IpAddress::kInvalid.is_link_local());
+  EXPECT_FALSE(IpAddress(1, 2, 3, 4).is_link_local());
+  EXPECT_FALSE(IpAddress(0x1234, 0x5678).is_link_local());
+  EXPECT_FALSE(IpAddress::kV4Loopback.is_link_local());
+  EXPECT_FALSE(IpAddress::kV6Loopback.is_link_local());
+  EXPECT_FALSE(IpAddress(168, 254, 0, 0).is_link_local());
+  EXPECT_FALSE(IpAddress(170, 254, 0, 0).is_link_local());
+  EXPECT_FALSE(IpAddress(169, 253, 0, 0).is_link_local());
+  EXPECT_FALSE(IpAddress(169, 255, 0, 0).is_link_local());
+  EXPECT_TRUE(IpAddress(169, 254, 0, 0).is_link_local());
+  EXPECT_TRUE(IpAddress(169, 254, 255, 255).is_link_local());
+  EXPECT_TRUE(IpAddress(169, 254, 0, 0).is_link_local());
+  EXPECT_TRUE(IpAddress(169, 254, 255, 0).is_link_local());
+  EXPECT_TRUE(IpAddress(169, 254, 0, 255).is_link_local());
+  EXPECT_FALSE(IpAddress(0xfec0, 0x1234).is_link_local());
+  EXPECT_FALSE(IpAddress(0xfe40, 0x1234).is_link_local());
+  EXPECT_TRUE(IpAddress(0xfe80, 0x0).is_link_local());
+  EXPECT_TRUE(IpAddress(0xfe80, 0xffff).is_link_local());
 }
 
 // Tests FromString static method.

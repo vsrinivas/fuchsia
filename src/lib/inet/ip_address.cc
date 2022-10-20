@@ -14,6 +14,8 @@ namespace inet {
 namespace {
 
 constexpr size_t kV6WordCount = 8;
+constexpr uint8_t kV4LinkLocalFirstByte = 169;
+constexpr uint8_t kV4LinkLocalSecondByte = 254;
 
 // Parses a string. Match functions either return true and update the position of the parser or
 // return false and leave the position unchanged. If a Match function has an out-parameter, the
@@ -398,6 +400,23 @@ bool IpAddress::is_loopback() const {
       return *this == kV4Loopback;
     case AF_INET6:
       return *this == kV6Loopback;
+    default:
+      return false;
+  }
+}
+
+bool IpAddress::is_link_local() const {
+  if (!is_valid()) {
+    return false;
+  }
+
+  switch (family_) {
+    case AF_INET: {
+      auto bytes = as_bytes();
+      return bytes[0] == kV4LinkLocalFirstByte && bytes[1] == kV4LinkLocalSecondByte;
+    }
+    case AF_INET6:
+      return IN6_IS_ADDR_LINKLOCAL(&v6_);
     default:
       return false;
   }
