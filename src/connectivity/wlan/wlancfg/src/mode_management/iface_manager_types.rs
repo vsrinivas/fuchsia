@@ -114,6 +114,7 @@ pub enum IfaceManagerRequest {
     SetCountry(SetCountryRequest),
 }
 
+#[derive(Debug)]
 pub(crate) struct SetCountryOperationState {
     pub client_connections_initially_enabled: bool,
     pub initial_ap_configs: Vec<ap_fsm::ApConfig>,
@@ -121,7 +122,9 @@ pub(crate) struct SetCountryOperationState {
     pub responder: oneshot::Sender<Result<(), Error>>,
 }
 
+#[derive(Debug)]
 pub(crate) enum IfaceManagerOperation {
     ConfigureStateMachine,
     SetCountry(SetCountryOperationState),
+    ReportDefect,
 }

@@ -920,14 +920,6 @@ impl IfaceManagerService {
         }
         info!("Roam scan time was not set, matching iface not found.");
     }
-
-    /// Log a defect encountered while using an interface.
-    pub async fn record_defect(&mut self, defect: Defect) {
-        // Centralize all of the defect accounting in the PhyManager so that it can make recovery
-        // decisions.
-        let mut phy_manager = self.phy_manager.lock().await;
-        phy_manager.record_defect(defect).await;
-    }
 }
 
 /// Returns whether the security support indicates WPA3 support.
@@ -1201,6 +1193,20 @@ fn handle_periodic_connection_stats(
     }
 }
 
+// This function allows the defect recording to run in parallel with the regulatory region setting
+// routine.  For full context, see fxb/112640.
+fn initiate_record_defect(
+    phy_manager: Arc<Mutex<dyn PhyManagerApi + Send>>,
+    defect: Defect,
+) -> BoxFuture<'static, IfaceManagerOperation> {
+    let fut = async move {
+        let mut phy_manager = phy_manager.lock().await;
+        phy_manager.record_defect(defect).await;
+        IfaceManagerOperation::ReportDefect
+    };
+    fut.boxed()
+}
+
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -1240,13 +1246,14 @@ pub(crate) async fn serve_iface_manager_requests(
                 ).await;
             },
             op = operation_futures.select_next_some() => match op {
-                IfaceManagerOperation::ConfigureStateMachine => {},
                 IfaceManagerOperation::SetCountry(previous_state) => {
                     restore_state_after_setting_country_code(
                         &mut iface_manager,
                         previous_state
                     ).await;
-                }
+                },
+                IfaceManagerOperation::ConfigureStateMachine
+                | IfaceManagerOperation::ReportDefect => {},
             },
             network_selection_result = iface_manager.network_selection_futures.select_next_some() => {
                 handle_network_selection_results(
@@ -1275,7 +1282,7 @@ pub(crate) async fn serve_iface_manager_requests(
                 );
             },
             defect = defect_receiver.select_next_some() => {
-                iface_manager.record_defect(defect).await
+                operation_futures.push(initiate_record_defect(iface_manager.phy_manager.clone(), defect))
             },
             _connection_candidate = roaming_search_futures.select_next_some() => {
                 // TODO(fxbug.dev/84548): decide whether the best network found is better than the
@@ -5703,7 +5710,6 @@ mod tests {
     #[fuchsia::test]
     fn test_record_defect() {
         let mut exec = fuchsia_async::TestExecutor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
         let phy_manager = Arc::new(Mutex::new(FakePhyManager {
             create_iface_ok: true,
             destroy_iface_ok: true,
@@ -5714,24 +5720,17 @@ mod tests {
             client_ifaces: vec![],
             defects: vec![],
         }));
-        let mut iface_manager = IfaceManagerService::new(
-            phy_manager.clone(),
-            test_values.client_update_sender.clone(),
-            test_values.ap_update_sender.clone(),
-            test_values.monitor_service_proxy.clone(),
-            test_values.saved_networks.clone(),
-            test_values.telemetry_sender.clone(),
-            test_values.stats_sender.clone(),
-            test_values.defect_sender.clone(),
-        );
 
         {
-            let defect_fut = iface_manager
-                .record_defect(Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 }));
-            pin_mut!(defect_fut);
-
+            let mut defect_fut = initiate_record_defect(
+                phy_manager.clone(),
+                Defect::Phy(PhyFailure::IfaceCreationFailure { phy_id: 2 }),
+            );
             // The future should complete immediately.
-            assert_variant!(exec.run_until_stalled(&mut defect_fut), Poll::Ready(()));
+            assert_variant!(
+                exec.run_until_stalled(&mut defect_fut),
+                Poll::Ready(IfaceManagerOperation::ReportDefect)
+            );
         }
 
         // Verify that the defect has been recorded.
