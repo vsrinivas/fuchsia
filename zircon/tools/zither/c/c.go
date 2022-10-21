@@ -87,8 +87,13 @@ func PrimitiveTypeName(typ fidlgen.PrimitiveSubtype) string {
 	switch typ {
 	case fidlgen.Bool:
 		return "bool"
+	case fidlgen.ZxExperimentalUchar:
+		return "char"
+	case fidlgen.ZxExperimentalUsize:
+		return "size_t"
 	case fidlgen.Int8, fidlgen.Int16, fidlgen.Int32, fidlgen.Int64,
-		fidlgen.Uint8, fidlgen.Uint16, fidlgen.Uint32, fidlgen.Uint64:
+		fidlgen.Uint8, fidlgen.Uint16, fidlgen.Uint32, fidlgen.Uint64,
+		fidlgen.ZxExperimentalUintptr:
 		return string(typ) + "_t"
 	default:
 		panic(fmt.Errorf("unrecognized primitive type: %s", typ))

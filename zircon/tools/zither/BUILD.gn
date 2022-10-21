@@ -24,6 +24,14 @@ group("tests") {
     ":multifile",
     ":structs",
   ]
+
+  # TODO(fxbug.dev/110295): These dependencies constitute build-time checks
+  # that the library remains intelligible to zither. Keep these here as an
+  # aide during the deprecation of kazoo and the migration of its duties over
+  # to zither.
+  foreach(backend, supported_zither_backends) {
+    deps += [ "//zircon/vdso:zx_zither.$backend" ]
+  }
 }
 
 if (is_host) {
@@ -131,6 +139,7 @@ template("zither_golden_test") {
   case_data_dir = "testdata/${case_name}"
 
   fidl(library_target) {
+    forward_variables_from(invoker, [ "experimental_flags" ])
     sources = []
     foreach(source, invoker.sources) {
       sources += [ "${case_data_dir}/$source" ]
@@ -281,6 +290,10 @@ template("zither_golden_test") {
 # FIDL: testdata/constants/
 # Goldens: testdata/constants/goldens/${backend}/
 zither_golden_test("constants") {
+  # TODO(fxbug.dev/110021): These tests reference some experimental primitive
+  # types introduced in the context of this bug.
+  experimental_flags = [ "zx_c_types" ]
+
   sources = [ "constants.test.fidl" ]
 
   cases = [

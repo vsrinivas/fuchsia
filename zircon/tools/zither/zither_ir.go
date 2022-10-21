@@ -317,11 +317,27 @@ func Summarize(ir fidlgen.Root, sourceDir string, order DeclOrder) ([]FileSummar
 			decl, err = newStruct(*fidlDecl, processedDecls, typeKinds)
 		case *fidlgen.Alias:
 			decl, err = newAlias(*fidlDecl, processedDecls, typeKinds)
-		default:
-			return nil, fmt.Errorf("unsupported declaration type: %s", fidlgen.GetDeclType(fidlDecl))
 		}
 		if err != nil {
 			return nil, err
+		}
+
+		// A nil `decl` means that it corresponds to an unknown FIDL
+		// declaration. Moreover, if `decl` wraps a nil (which does not imply
+		// that it is nil itself), then that means that it is defined in terms
+		// of unknown elements. In either case, we cannot make sense of the
+		// definition and so we skip it.
+		//
+		// TODO(fxbug.dev/106538): We do not want to silently ignore things
+		// that a user might expect to generate results.
+		if decl == nil || reflect.ValueOf(decl).IsNil() {
+			// Before skipping, we should still record the file that the
+			// unrecognized declaration came from (e.g., for determinism in
+			// the case where we wish the have the generated set of files
+			// match the incoming source file names); calling getFile() has
+			// this side-effect.
+			getFile(fidlDecl.GetLocation())
+			continue
 		}
 
 		file := getFile(fidlDecl.GetLocation())
@@ -636,8 +652,8 @@ func resolveType(typ recursiveType, decls declMap, typeKinds map[TypeKind]struct
 			desc.Kind = TypeKindBits
 		case *Struct:
 			desc.Kind = TypeKindStruct
-		default:
-			return nil, fmt.Errorf("%s: unsupported declaration type: %s", desc.Type, decls[desc.Type])
+		default: // TODO(fxbug.dev/106538): Skip if unknown.
+			return nil, nil
 		}
 
 	case fidlgen.ArrayType:
@@ -647,9 +663,12 @@ func resolveType(typ recursiveType, decls declMap, typeKinds map[TypeKind]struct
 		if err != nil {
 			return nil, err
 		}
+		if nested == nil { // TODO(fxbug.dev/106538): Skip if unknown.
+			return nil, nil
+		}
 		desc.ElementType = nested
-	default:
-		return nil, fmt.Errorf("%s: unsupported type kind: %s", desc.Type, typ.GetKind())
+	default: // TODO(fxbug.dev/106538): Skip if unknown.
+		return nil, nil
 	}
 
 	typeKinds[desc.Kind] = struct{}{}
@@ -697,7 +716,7 @@ type StructMember struct {
 
 func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struct{}) (*Struct, error) {
 	if strct.IsAnonymous() {
-		return nil, fmt.Errorf("anonymous structs are not allowed: %s", strct.Name)
+		return nil, nil
 	}
 
 	s := &Struct{
@@ -708,6 +727,9 @@ func newStruct(strct fidlgen.Struct, decls declMap, typeKinds map[TypeKind]struc
 		typ, err := resolveType(fidlgenType(member.Type), decls, typeKinds)
 		if err != nil {
 			return nil, fmt.Errorf("%s.%s: failed to derive type: %w", s.Name, member.Name, err)
+		}
+		if typ == nil { // TODO(fxbug.dev/106538): Skip if unknown.
+			return nil, nil
 		}
 		s.Members = append(s.Members, StructMember{
 			member: newMember(member),
@@ -733,6 +755,9 @@ func newAlias(alias fidlgen.Alias, decls declMap, typeKinds map[TypeKind]struct{
 	typ, err := resolveType(unresolved, decls, typeKinds)
 	if err != nil {
 		return nil, err
+	}
+	if typ == nil { // TODO(fxbug.dev/106538): Skip if unknown.
+		return nil, nil
 	}
 	return &Alias{
 		decl:  newDecl(alias),

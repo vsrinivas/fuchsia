@@ -227,17 +227,20 @@ func (eci EncodedCompoundIdentifier) Parse() CompoundIdentifier {
 type PrimitiveSubtype string
 
 const (
-	Bool    PrimitiveSubtype = "bool"
-	Int8    PrimitiveSubtype = "int8"
-	Int16   PrimitiveSubtype = "int16"
-	Int32   PrimitiveSubtype = "int32"
-	Int64   PrimitiveSubtype = "int64"
-	Uint8   PrimitiveSubtype = "uint8"
-	Uint16  PrimitiveSubtype = "uint16"
-	Uint32  PrimitiveSubtype = "uint32"
-	Uint64  PrimitiveSubtype = "uint64"
-	Float32 PrimitiveSubtype = "float32"
-	Float64 PrimitiveSubtype = "float64"
+	Bool                  PrimitiveSubtype = "bool"
+	Int8                  PrimitiveSubtype = "int8"
+	Int16                 PrimitiveSubtype = "int16"
+	Int32                 PrimitiveSubtype = "int32"
+	Int64                 PrimitiveSubtype = "int64"
+	Uint8                 PrimitiveSubtype = "uint8"
+	Uint16                PrimitiveSubtype = "uint16"
+	Uint32                PrimitiveSubtype = "uint32"
+	Uint64                PrimitiveSubtype = "uint64"
+	Float32               PrimitiveSubtype = "float32"
+	Float64               PrimitiveSubtype = "float64"
+	ZxExperimentalUchar   PrimitiveSubtype = "uchar"
+	ZxExperimentalUsize   PrimitiveSubtype = "usize"
+	ZxExperimentalUintptr PrimitiveSubtype = "uintptr"
 )
 
 var unsignedSubtypes = map[PrimitiveSubtype]struct{}{

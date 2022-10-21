@@ -100,6 +100,12 @@ const DefinitionFromAnotherConstant string = NonemptyString
 
 const BitwiseOrOfOtherConstants uint8 = 175 // BINARY_VALUE | BITWISE_OR_VALUE | 0b1 | UINT8_ZERO
 
+const ExperimentalUchar byte = 97
+
+const ExperimentalUsize uint64 = 100
+
+const ExperimentalUintptr uintptr = 0x1234abcd5678ffff
+
 // Constant with a one-line comment.
 const ConstantOneLineComment bool = true
 

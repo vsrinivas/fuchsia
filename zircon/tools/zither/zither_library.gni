@@ -448,7 +448,13 @@ template("zither_library") {
         if (get_path_info(name, "extension") == "test") {
           name = get_path_info(name, "name")
         }
-        source_names += [ name ]
+
+        # Ignore overview.fidl files, which do not contribute declarations:
+        #
+        # See https://fuchsia.dev/fuchsia-src/development/languages/fidl/guides/style#library-overview.
+        if (name != "overview") {
+          source_names += [ name ]
+        }
       }
     }
   }

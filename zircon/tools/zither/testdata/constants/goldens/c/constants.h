@@ -109,6 +109,12 @@ extern "C" {
 #define ZITHER_CONSTANTS_BITWISE_OR_OF_OTHER_CONSTANTS \
   ((uint8_t)(175u))  // BINARY_VALUE | BITWISE_OR_VALUE | 0b1 | UINT8_ZERO
 
+#define ZITHER_CONSTANTS_EXPERIMENTAL_UCHAR ((char)(97u))
+
+#define ZITHER_CONSTANTS_EXPERIMENTAL_USIZE ((size_t)(100u))
+
+#define ZITHER_CONSTANTS_EXPERIMENTAL_UINTPTR ((uintptr_t)(0x1234abcd5678ffffu))
+
 // Constant with a one-line comment.
 #define ZITHER_CONSTANTS_CONSTANT_ONE_LINE_COMMENT ((bool)(true))
 

@@ -77,7 +77,15 @@ func ConstMemberName(parent zither.Decl, member zither.Member) string {
 
 func ConstType(c zither.Const) string {
 	switch c.Kind {
-	case zither.TypeKindBool, zither.TypeKindInteger, zither.TypeKindString:
+	case zither.TypeKindBool, zither.TypeKindString:
+		return c.Type
+	case zither.TypeKindInteger:
+		switch fidlgen.PrimitiveSubtype(c.Type) {
+		case fidlgen.ZxExperimentalUchar:
+			return "byte"
+		case fidlgen.ZxExperimentalUsize:
+			return "uint64"
+		}
 		return c.Type
 	case zither.TypeKindEnum, zither.TypeKindBits:
 		return zither.UpperCamelCase(c.Element.Decl)

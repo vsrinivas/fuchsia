@@ -99,66 +99,67 @@ group("tests") {
 # This is the zx library used by internal FIDL backends. For the library
 # imported by `using zx;` in regular FIDL libraries, see
 # //zircon/vdso/zx/BUILD.gn.
-if (current_toolchain == fidl_toolchain) {
-  fidl("zx") {
-    visibility = [ ":*" ]
+fidl("zx") {
+  visibility = [
+    ":*",
+    "//zircon/tools/zither:tests",
+  ]
 
-    sources = [
-      "bti.fidl",
-      "cache.fidl",
-      "channel.fidl",
-      "clock.fidl",
-      "cprng.fidl",
-      "debug.fidl",
-      "debuglog.fidl",
-      "event.fidl",
-      "eventpair.fidl",
-      "exception.fidl",
-      "fifo.fidl",
-      "framebuffer.fidl",
-      "futex.fidl",
-      "guest.fidl",
-      "handle.fidl",
-      "interrupt.fidl",
-      "iommu.fidl",
-      "ioports.fidl",
-      "job.fidl",
-      "ktrace.fidl",
-      "misc.fidl",
-      "msi.fidl",
-      "mtrace.fidl",
-      "object.fidl",
-      "overview.fidl",
-      "pager.fidl",
-      "pc.fidl",
-      "pci.fidl",
-      "pmt.fidl",
-      "port.fidl",
-      "process.fidl",
-      "profile.fidl",
-      "resource.fidl",
-      "restricted.fidl",
-      "rights.fidl",
-      "smc.fidl",
-      "socket.fidl",
-      "stream.fidl",
-      "syscall.fidl",
-      "system.fidl",
-      "task.fidl",
-      "thread.fidl",
-      "timer.fidl",
-      "vcpu.fidl",
-      "vmar.fidl",
-      "vmo.fidl",
-      "zx_common.fidl",
-    ]
+  sources = [
+    "bti.fidl",
+    "cache.fidl",
+    "channel.fidl",
+    "clock.fidl",
+    "cprng.fidl",
+    "debug.fidl",
+    "debuglog.fidl",
+    "event.fidl",
+    "eventpair.fidl",
+    "exception.fidl",
+    "fifo.fidl",
+    "framebuffer.fidl",
+    "futex.fidl",
+    "guest.fidl",
+    "handle.fidl",
+    "interrupt.fidl",
+    "iommu.fidl",
+    "ioports.fidl",
+    "job.fidl",
+    "ktrace.fidl",
+    "misc.fidl",
+    "msi.fidl",
+    "mtrace.fidl",
+    "object.fidl",
+    "overview.fidl",
+    "pager.fidl",
+    "pc.fidl",
+    "pci.fidl",
+    "pmt.fidl",
+    "port.fidl",
+    "process.fidl",
+    "profile.fidl",
+    "resource.fidl",
+    "restricted.fidl",
+    "rights.fidl",
+    "smc.fidl",
+    "socket.fidl",
+    "stream.fidl",
+    "syscall.fidl",
+    "system.fidl",
+    "task.fidl",
+    "thread.fidl",
+    "timer.fidl",
+    "vcpu.fidl",
+    "vmar.fidl",
+    "vmo.fidl",
+    "zx_common.fidl",
+  ]
 
-    # TODO(fxbug.dev/110021): Burn these down.
-    experimental_flags = [ "zx_c_types" ]
+  # TODO(fxbug.dev/110021): Burn these down.
+  experimental_flags = [ "zx_c_types" ]
 
-    # TODO(fxbug.dev/109734): Burn these down.
-    excluded_checks = [ "vector-bounds-not-specified" ]
-  }
+  # TODO(fxbug.dev/109734): Burn these down.
+  excluded_checks = [ "vector-bounds-not-specified" ]
 }
 
 # TODO(joshuaseaton): Do not let our use of a "library zx" here propagate up to

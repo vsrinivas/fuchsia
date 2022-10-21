@@ -70,6 +70,12 @@ const DEFINITION_FROM_ANOTHER_CONSTANT string = NONEMPTY_STRING;
 
 const BITWISE_OR_OF_OTHER_CONSTANTS uint8 = BINARY_VALUE | BITWISE_OR_VALUE | 0b1 | UINT8_ZERO;
 
+// TODO(fxbug.dev/110021): Experimental primitive types introduced in the
+// context of this bug. Give simple exercise here for now.
+const EXPERIMENTAL_UCHAR uchar = 97; // 'a'
+const EXPERIMENTAL_USIZE usize = 100;
+const EXPERIMENTAL_UINTPTR uintptr = 0x1234abcd5678ffff;
+
 /// Constant with a one-line comment.
 const CONSTANT_ONE_LINE_COMMENT bool = true;
 
