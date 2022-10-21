@@ -6,8 +6,8 @@ use {
     crate::{get_missing_blobs, write_blob, TestEnv},
     assert_matches::assert_matches,
     blobfs_ramdisk::{BlobfsRamdisk, Ramdisk},
-    fidl_fuchsia_io as fio, fidl_fuchsia_paver as paver,
-    fidl_fuchsia_pkg::{BlobInfo, NeededBlobsMarker, PackageCacheProxy},
+    fidl_fuchsia_io as fio, fidl_fuchsia_paver as fpaver,
+    fidl_fuchsia_pkg::{self as fpkg, NeededBlobsMarker},
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::ErrorCode,
     fuchsia_async::{self as fasync, OnSignals},
@@ -16,14 +16,16 @@ use {
     futures::TryFutureExt,
     mock_paver::{hooks as mphooks, MockPaverServiceBuilder, PaverEvent},
     rand::prelude::*,
-    std::collections::{BTreeSet, HashMap},
-    std::io::Read,
+    std::{
+        collections::{BTreeSet, HashMap, HashSet},
+        io::Read as _,
+    },
 };
 
 // TODO(fxbug.dev/76724): Deduplicate this function.
-async fn do_fetch(package_cache: &PackageCacheProxy, pkg: &Package) {
+async fn do_fetch(package_cache: &fpkg::PackageCacheProxy, pkg: &Package) {
     let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+        fpkg::BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
@@ -73,7 +75,7 @@ async fn gc_error_pending_commit() {
         .paver_service_builder(
             MockPaverServiceBuilder::new()
                 .insert_hook(throttle_hook)
-                .insert_hook(mphooks::config_status(|_| Ok(paver::ConfigurationStatus::Pending))),
+                .insert_hook(mphooks::config_status(|_| Ok(fpaver::ConfigurationStatus::Pending))),
         )
         .build()
         .await;
@@ -82,14 +84,14 @@ async fn gc_error_pending_commit() {
     // few enough to guarantee the commit is still pending.
     let () = throttler.emit_next_paver_events(&[
         PaverEvent::QueryCurrentConfiguration,
-        PaverEvent::QueryConfigurationStatus { configuration: paver::Configuration::A },
+        PaverEvent::QueryConfigurationStatus { configuration: fpaver::Configuration::A },
     ]);
     assert_matches!(env.proxies.space_manager.gc().await, Ok(Err(ErrorCode::PendingCommit)));
 
     // When the commit completes, GC should unblock as well.
     let () = throttler.emit_next_paver_events(&[
-        PaverEvent::SetConfigurationHealthy { configuration: paver::Configuration::A },
-        PaverEvent::SetConfigurationUnbootable { configuration: paver::Configuration::B },
+        PaverEvent::SetConfigurationHealthy { configuration: fpaver::Configuration::A },
+        PaverEvent::SetConfigurationUnbootable { configuration: fpaver::Configuration::B },
         PaverEvent::BootManagerFlush,
     ]);
     let event_pair =
@@ -175,8 +177,10 @@ async fn gc_dynamic_index_protected() {
     // That's WAI, but complicating the do_fetch interface further isn't worth it.
     //
     // Here, we persist the meta.far
-    let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*pkgprime.meta_far_merkle_root()).into(), length: 0 };
+    let mut meta_blob_info = fpkg::BlobInfo {
+        blob_id: BlobId::from(*pkgprime.meta_far_merkle_root()).into(),
+        length: 0,
+    };
     let package_cache = &env.proxies.package_cache;
 
     let (needed_blobs, needed_blobs_server_end) =
@@ -306,8 +310,10 @@ async fn gc_updated_static_package() {
     // That's WAI, but complicating the do_fetch interface further isn't worth it.
     //
     // Here, we persist the meta.far
-    let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*pkgprime.meta_far_merkle_root()).into(), length: 0 };
+    let mut meta_blob_info = fpkg::BlobInfo {
+        blob_id: BlobId::from(*pkgprime.meta_far_merkle_root()).into(),
+        length: 0,
+    };
     let package_cache = &env.proxies.package_cache;
 
     let (needed_blobs, needed_blobs_server_end) =
@@ -418,7 +424,7 @@ async fn blob_write_fails_when_out_of_space() {
         .await;
 
     let mut meta_blob_info =
-        BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
+        fpkg::BlobInfo { blob_id: BlobId::from(*pkg.meta_far_merkle_root()).into(), length: 0 };
 
     let (needed_blobs, needed_blobs_server_end) =
         fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
@@ -436,4 +442,183 @@ async fn blob_write_fails_when_out_of_space() {
 
     let (meta_far, _contents) = pkg.contents();
     assert_eq!(write_blob(&meta_far.contents, meta_blob).await, Err(Status::NO_SPACE));
+}
+
+enum GcProtection {
+    Dynamic,
+    Retained,
+}
+
+async fn subpackage_blobs_protected_from_gc(gc_protection: GcProtection) {
+    let env = TestEnv::builder().enable_subpackages().build().await;
+
+    let subpackage = PackageBuilder::new("subpackage")
+        .add_resource_at("subpackage-blob-0", "subpackage-blob-contents-0".as_bytes())
+        .add_resource_at("subpackage-blob-1", "subpackage-blob-contents-1".as_bytes())
+        .build()
+        .await
+        .unwrap();
+
+    let superpackage = PackageBuilder::new("superpackage")
+        .add_subpackage("my-subpackage", &subpackage)
+        .build()
+        .await
+        .unwrap();
+
+    match gc_protection {
+        GcProtection::Retained => {
+            crate::replace_retained_packages(
+                &env.proxies.retained_packages,
+                &[(*superpackage.meta_far_merkle_root()).into()],
+            )
+            .await
+        }
+
+        // Ephemeral packages are added to the dynamic index unless they are already in the
+        // retained index.
+        GcProtection::Dynamic => (),
+    }
+
+    // Start the Get.
+    let package_cache = &env.proxies.package_cache;
+    let mut meta_blob_info = fpkg::BlobInfo {
+        blob_id: BlobId::from(*superpackage.meta_far_merkle_root()).into(),
+        length: 0,
+    };
+    let (needed_blobs, needed_blobs_server_end) =
+        fidl::endpoints::create_proxy::<NeededBlobsMarker>().unwrap();
+    let (dir, dir_server_end) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
+    let get_fut = package_cache
+        .get(&mut meta_blob_info, needed_blobs_server_end, Some(dir_server_end))
+        .map_ok(|res| res.map_err(Status::from_raw));
+
+    // Write the meta.far.
+    let meta_far = superpackage.contents().0;
+    let (meta_blob, meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+    assert!(needed_blobs.open_meta_blob(meta_blob_server_end).await.unwrap().unwrap());
+    let () = write_blob(&meta_far.contents, meta_blob).await.unwrap();
+
+    // Get the missing blobs iterator.
+    let (blob_iterator, blob_iterator_server_end) =
+        fidl::endpoints::create_proxy::<fpkg::BlobInfoIteratorMarker>().unwrap();
+    let () = needed_blobs.get_missing_blobs(blob_iterator_server_end).unwrap();
+
+    // Read the subpackage meta.far from missing blobs to guarantee the blob is protected from GC
+    // and pkg-cache is ready to receive it.
+    assert_eq!(
+        blob_iterator.next().await.unwrap(),
+        vec![fpkg::BlobInfo {
+            blob_id: BlobId::from(*subpackage.meta_far_merkle_root()).into(),
+            length: 0
+        }]
+    );
+
+    // Subpackage meta.far should not be in blobfs yet.
+    assert!(!env.blobfs.list_blobs().unwrap().contains(subpackage.meta_far_merkle_root()));
+
+    // Write the subpackage meta.far.
+    let subpackage_meta_far = subpackage.contents().0;
+    let (subpackage_meta_blob, subpackage_meta_blob_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+    assert!(needed_blobs
+        .open_blob(
+            &mut BlobId::from(*subpackage.meta_far_merkle_root()).into(),
+            subpackage_meta_blob_server_end
+        )
+        .await
+        .unwrap()
+        .unwrap());
+    let () = write_blob(&subpackage_meta_far.contents, subpackage_meta_blob).await.unwrap();
+
+    // Subpackage meta.far should now be in blobfs.
+    assert!(env.blobfs.list_blobs().unwrap().contains(&subpackage.meta_far_merkle_root()));
+
+    // GC should not delete the subpackage meta.far
+    let () = env.proxies.space_manager.gc().await.unwrap().unwrap();
+    assert!(env.blobfs.list_blobs().unwrap().contains(subpackage.meta_far_merkle_root()));
+
+    // Read the subpackage content blobs from missing blobs to guarantee the blobs are protected
+    // from GC and pkg-cache is ready to receive them.
+    let subpackage_content_files = subpackage.contents().1.into_iter().collect::<Vec<_>>();
+    assert_eq!(
+        blob_iterator.next().await.unwrap().into_iter().collect::<HashSet<_>>(),
+        HashSet::from_iter([
+            fpkg::BlobInfo {
+                blob_id: BlobId::from(subpackage_content_files[0].0).into(),
+                length: 0
+            },
+            fpkg::BlobInfo {
+                blob_id: BlobId::from(subpackage_content_files[1].0).into(),
+                length: 0
+            },
+        ])
+    );
+
+    // Subpackage content blob should not be in blobfs yet.
+    assert!(!env.blobfs.list_blobs().unwrap().contains(&subpackage_content_files[0].0));
+
+    // Write a subpackage content blob.
+    let (subpackage_content_blob_a, subpackage_content_blob_a_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+    assert!(needed_blobs
+        .open_blob(
+            &mut BlobId::from(subpackage_content_files[0].0).into(),
+            subpackage_content_blob_a_server_end
+        )
+        .await
+        .unwrap()
+        .unwrap());
+    let () = write_blob(&subpackage_content_files[0].1, subpackage_content_blob_a).await.unwrap();
+
+    // Subpackage content blob should now be in blobfs.
+    assert!(env.blobfs.list_blobs().unwrap().contains(&subpackage_content_files[0].0));
+
+    // GC should not delete the subpackage content blob.
+    let () = env.proxies.space_manager.gc().await.unwrap().unwrap();
+    assert!(env.blobfs.list_blobs().unwrap().contains(&subpackage_content_files[0].0));
+
+    // Write the other subpackage content blob.
+    let (subpackage_content_blob_b, subpackage_content_blob_b_server_end) =
+        fidl::endpoints::create_proxy::<fio::FileMarker>().unwrap();
+    assert!(needed_blobs
+        .open_blob(
+            &mut BlobId::from(subpackage_content_files[1].0).into(),
+            subpackage_content_blob_b_server_end
+        )
+        .await
+        .unwrap()
+        .unwrap());
+    let () = write_blob(&subpackage_content_files[1].1, subpackage_content_blob_b).await.unwrap();
+
+    // Other subpackage content blob should now be in blobfs.
+    assert!(env.blobfs.list_blobs().unwrap().contains(&subpackage_content_files[1].0));
+
+    // GC should not delete the other subpackage content blob.
+    let () = env.proxies.space_manager.gc().await.unwrap().unwrap();
+    assert!(env.blobfs.list_blobs().unwrap().contains(&subpackage_content_files[1].0));
+
+    // Complete the Get.
+    assert_eq!(blob_iterator.next().await.unwrap(), vec![]);
+    let () = get_fut.await.unwrap().unwrap();
+    let () = superpackage.verify_contents(&dir).await.unwrap();
+
+    // GC still shouldn't delete any subpackage blobs.
+    let () = env.proxies.space_manager.gc().await.unwrap().unwrap();
+    let blobfs_contents = env.blobfs.list_blobs().unwrap();
+    assert!(blobfs_contents.contains(subpackage.meta_far_merkle_root()));
+    assert!(blobfs_contents.contains(&subpackage_content_files[0].0));
+    assert!(blobfs_contents.contains(&subpackage_content_files[1].0));
+
+    let () = env.stop().await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn subpackage_blobs_protected_from_gc_by_retained_index() {
+    let () = subpackage_blobs_protected_from_gc(GcProtection::Retained).await;
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn subpackage_blobs_protected_from_gc_by_dynamic_index() {
+    let () = subpackage_blobs_protected_from_gc(GcProtection::Dynamic).await;
 }

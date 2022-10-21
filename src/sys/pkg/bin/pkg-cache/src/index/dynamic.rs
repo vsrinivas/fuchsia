@@ -4,7 +4,7 @@
 
 use {
     anyhow::anyhow,
-    fuchsia_inspect as finspect,
+    fuchsia_inspect::{self as finspect, Property as _},
     fuchsia_merkle::Hash,
     fuchsia_pkg::{PackageName, PackagePath},
     fuchsia_zircon as zx,
@@ -37,6 +37,15 @@ pub struct FulfillNotNeededBlobError {
 pub enum CompleteInstallError {
     #[error("the package is in an unexpected state: {0:?}")]
     UnexpectedPackageState(Option<Package>),
+}
+
+#[derive(thiserror::Error, Debug)]
+pub enum AddBlobsError {
+    #[error("the package is not known to the dynamic index")]
+    UnknownPackage,
+
+    #[error("the package should be in state WithMetaFar but was in state {0}")]
+    WrongState(&'static str),
 }
 
 impl DynamicIndex {
@@ -169,6 +178,44 @@ impl DynamicIndex {
 
         self.add_package(package_hash, Package::WithMetaFar { path: package_path, required_blobs });
 
+        Ok(())
+    }
+
+    /// Associates additional blobs with a package that is in state `WithMetaFar`.
+    pub fn add_blobs(
+        &mut self,
+        package_hash: Hash,
+        additional_blobs: &HashSet<Hash>,
+    ) -> Result<(), AddBlobsError> {
+        match self.packages.get_mut(&package_hash) {
+            Some(PackageWithInspect {
+                package: Package::WithMetaFar { required_blobs, .. },
+                package_node,
+            }) => {
+                required_blobs.extend(additional_blobs);
+                if let PackageNode::WithMetaFar {
+                    required_blobs: inspect_required_blobs,
+                    time,
+                    ..
+                } = package_node
+                {
+                    inspect_required_blobs.set(required_blobs.len() as i64);
+                    time.set(zx::Time::get_monotonic().into_nanos());
+                } else {
+                    error!(
+                        "dynamic index state for package {} was WithMetaFar but inspect state \
+                         was {:?}",
+                        package_hash, package_node
+                    );
+                }
+            }
+            Some(PackageWithInspect { package, .. }) => {
+                return Err(AddBlobsError::WrongState(package.state_str()));
+            }
+            None => {
+                return Err(AddBlobsError::UnknownPackage);
+            }
+        }
         Ok(())
     }
 
@@ -361,6 +408,14 @@ impl Package {
             Package::Pending => None,
             Package::WithMetaFar { required_blobs, .. } => Some(required_blobs),
             Package::Active { required_blobs, .. } => Some(required_blobs),
+        }
+    }
+
+    fn state_str(&self) -> &'static str {
+        match self {
+            Package::Pending => "Pending",
+            Package::WithMetaFar { .. } => "WithMetaFar",
+            Package::Active { .. } => "Active",
         }
     }
 }
@@ -845,6 +900,44 @@ mod tests {
         assert_matches!(
             index.fulfill_meta_far(hash, path, required_blobs),
             Err(FulfillNotNeededBlobError{hash, state}) if hash == Hash::from([2; 32]) && state == "Active"
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn add_blobs_adds_blobs() {
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
+        let hash = Hash::from([0; 32]);
+        let path = PackagePath::from_name_and_variant(
+            "fake-package".parse().unwrap(),
+            "0".parse().unwrap(),
+        );
+        dynamic_index.start_install(hash);
+        let () = dynamic_index
+            .fulfill_meta_far(hash, path.clone(), hashset! { Hash::from([1; 32]) })
+            .unwrap();
+
+        let () = dynamic_index.add_blobs(hash, &hashset! { Hash::from([2; 32])}).unwrap();
+
+        assert_eq!(
+            dynamic_index.packages(),
+            hashmap! {
+                hash => Package::WithMetaFar {
+                    path,
+                    required_blobs: hashset! { Hash::from([1; 32]), Hash::from([2; 32]) },
+                }
+            }
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn add_blobs_errors_on_unknown_package() {
+        let inspector = finspect::Inspector::new();
+        let mut dynamic_index = DynamicIndex::new(inspector.root().create_child("index"));
+
+        assert_matches!(
+            dynamic_index.add_blobs(Hash::from([0; 32]), &hashset! { Hash::from([1; 32])}),
+            Err(AddBlobsError::UnknownPackage)
         );
     }
 }

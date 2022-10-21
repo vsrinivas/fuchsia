@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub use crate::index::dynamic::CompleteInstallError;
+pub use crate::index::dynamic::{AddBlobsError, CompleteInstallError};
 use {
     crate::index::{
         dynamic::{DynamicIndex, FulfillNotNeededBlobError},
@@ -88,6 +88,24 @@ impl PackageIndex {
         Ok(())
     }
 
+    /// Associate additional blobs (e.g. subpackage meta.fars and content blobs) with a package
+    /// that is being cached.
+    pub fn add_blobs(
+        &mut self,
+        package_hash: Hash,
+        additional_blobs: HashSet<Hash>,
+    ) -> Result<(), AddBlobsError> {
+        // Notify the retained index if it is interested in this package.
+        let is_retained = self.retained.add_blobs(&package_hash, &additional_blobs);
+
+        let () = match self.dynamic.add_blobs(package_hash, &additional_blobs) {
+            Ok(()) => (),
+            Err(crate::index::dynamic::AddBlobsError::UnknownPackage) if is_retained => (),
+            Err(e) => return Err(e),
+        };
+        Ok(())
+    }
+
     /// Notifies the appropriate indices that the package with the given hash has completed
     /// installation.
     /// Returns the package's name if the package was activated in the dynamic index.
@@ -105,7 +123,7 @@ impl PackageIndex {
     }
 
     /// Notifies the appropriate indices that the installation for the package with the given hash
-    /// has ben cancelled.
+    /// has been cancelled.
     pub fn cancel_install(&mut self, package_hash: &Hash) {
         self.dynamic.cancel_install(package_hash)
     }
@@ -401,6 +419,68 @@ mod tests {
 
         index.set_retained_index(retained_index.clone());
         assert_eq!(index.retained, retained_index);
+    }
+
+    #[test]
+    fn add_blobs_adds_to_dynamic_and_retained() {
+        let mut index = PackageIndex::new_test();
+
+        index.start_install(hash(2));
+        index.fulfill_meta_far(hash(2), path("some-path"), hashset! {hash(10)}).unwrap();
+        index.set_retained_index(RetainedIndex::from_packages(hashmap! {
+            hash(2) => Some(HashSet::from_iter([hash(10)])),
+        }));
+
+        index.add_blobs(hash(2), hashset! {hash(11)}).unwrap();
+
+        assert_eq!(
+            index.retained.packages(),
+            hashmap! {
+                hash(2) => Some(hashset! {hash(10), hash(11)})
+            }
+        );
+        assert_eq!(
+            index.dynamic.packages(),
+            hashmap! {
+                hash(2) => Package::WithMetaFar {
+                    path: path("some-path"),
+                    required_blobs: hashset! { hash(10), hash(11) },
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn add_blobs_ignores_missing_dynamic_if_retained() {
+        let mut index = PackageIndex::new_test();
+
+        index.set_retained_index(RetainedIndex::from_packages(hashmap! {
+            hash(2) => Some(HashSet::from_iter([hash(10)])),
+        }));
+        index.start_install(hash(2));
+        index.fulfill_meta_far(hash(2), path("some-path"), hashset! {hash(10)}).unwrap();
+
+        index.add_blobs(hash(2), hashset! {hash(11)}).unwrap();
+
+        assert_eq!(
+            index.retained.packages(),
+            hashmap! {
+                hash(2) => Some(hashset! {hash(10), hash(11)})
+            }
+        );
+        assert_eq!(index.dynamic.packages(), hashmap! {});
+    }
+
+    #[test]
+    fn add_blobs_errors_if_dynamic_index_in_wrong_state() {
+        let mut index = PackageIndex::new_test();
+
+        index.start_install(hash(2));
+
+        assert_matches!(
+            index.add_blobs(hash(2), hashset! {hash(11)}),
+            Err(AddBlobsError::WrongState("Pending"))
+        );
     }
 
     #[test]

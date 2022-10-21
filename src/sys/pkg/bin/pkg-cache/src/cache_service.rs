@@ -29,9 +29,12 @@ use {
     fuchsia_trace as ftrace, fuchsia_zircon as zx,
     fuchsia_zircon::Status,
     futures::{prelude::*, select_biased, stream::FuturesUnordered},
-    std::sync::{
-        atomic::{AtomicU32, Ordering},
-        Arc,
+    std::{
+        collections::HashSet,
+        sync::{
+            atomic::{AtomicU32, Ordering},
+            Arc,
+        },
     },
     tracing::{error, info, warn},
     vfs::directory::entry::DirectoryEntry as _,
@@ -416,6 +419,12 @@ enum ServeNeededBlobsError {
              outstanding blob write futures. This should be impossible"
     )]
     OutstandingBlobWritesWhenHandleOpenBlobsFinished { count: usize },
+
+    #[error("while recording some of a package's subpackage blobs")]
+    RecordingSubpackageBlobs(#[source] anyhow::Error),
+
+    #[error("while recording some of a package's content blobs")]
+    RecordingContentBlobs(#[source] anyhow::Error),
 }
 
 #[derive(Debug)]
@@ -442,6 +451,28 @@ impl BlobContext {
 impl std::fmt::Display for BlobContext {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{} blob ({})", self.kind_name(), self.hash)
+    }
+}
+
+/// Adds all of a package's content and subpackage blobs (discovered during the caching process by
+/// MissingBlobs) to the PackageIndex, protecting them from GC. MissingBlobs waits for the Future
+/// returned by `record` to complete (so waits until the blobs have been added to the PackageIndex)
+/// before sending the blobs out over the paired receiver, which occurs before the blobs are sent
+/// out over the missing blobs iterator, which occurs before the blobs are written via
+/// NeededBlobs.OpenBlob, so the blobs of a package being cached should always be protected from
+/// GC.
+#[derive(Debug)]
+struct IndexBlobRecorder<'a> {
+    package_index: &'a async_lock::RwLock<PackageIndex>,
+    meta_far: Hash,
+}
+
+impl<'a> missing_blobs::BlobRecorder for IndexBlobRecorder<'a> {
+    fn record(
+        &self,
+        blobs: HashSet<Hash>,
+    ) -> futures::future::BoxFuture<'_, Result<(), anyhow::Error>> {
+        async move { Ok(self.package_index.write().await.add_blobs(self.meta_far, blobs)?) }.boxed()
     }
 }
 
@@ -483,8 +514,15 @@ async fn serve_needed_blobs(
         )
         .await?;
 
-        let (missing_blobs, missing_blobs_recv) =
-            missing_blobs::MissingBlobs::new(blobfs.clone(), subpackages_config, &root_dir).await?;
+        // TODO(fxbug.dev/112579) Move the fulfill_meta_far_blob call out of handle_open_meta_blob
+        // to avoid setting the content blobs twice in the package index.
+        let (missing_blobs, missing_blobs_recv) = missing_blobs::MissingBlobs::new(
+            blobfs.clone(),
+            subpackages_config,
+            &root_dir,
+            Box::new(IndexBlobRecorder { package_index, meta_far: meta_far_info.blob_id.into() }),
+        )
+        .await?;
 
         // Step 2: Determine which data blobs are needed and report them to the client.
         let serve_iterator = handle_get_missing_blobs(&mut stream, missing_blobs_recv).await?;
@@ -603,7 +641,7 @@ async fn handle_get_missing_blobs(
 
 async fn handle_open_blobs(
     stream: &mut NeededBlobsRequestStream,
-    mut missing_blobs: missing_blobs::MissingBlobs,
+    mut missing_blobs: missing_blobs::MissingBlobs<'_>,
     blobfs: &blobfs::Client,
     node: &finspect::Node,
     trace_id: ftrace::Id,
