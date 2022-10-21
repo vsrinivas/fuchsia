@@ -783,7 +783,7 @@ pub(crate) mod testutil {
 
     use derivative::Derivative;
     use net_types::{
-        ip::{AddrSubnet, IpAddress, Ipv4Addr, Subnet},
+        ip::{AddrSubnet, GenericOverIp, IpAddress, Subnet},
         Witness,
     };
 
@@ -1030,66 +1030,40 @@ pub(crate) mod testutil {
         }
     }
 
-    #[derive(Clone)]
+    #[derive(Clone, GenericOverIp)]
     pub(crate) struct FakeDeviceConfig<D, A: IpAddress> {
         pub(crate) device: D,
         pub(crate) local_ips: Vec<SpecifiedAddr<A>>,
         pub(crate) remote_ips: Vec<SpecifiedAddr<A>>,
     }
 
-    impl<D: IpDeviceId> FakeIpSocketCtx<Ipv4, D> {
-        /// Creates a new `FakeIpSocketCtx<Ipv4>` with the given device
-        /// configs.
-        pub(crate) fn new_ipv4(
-            devices: impl IntoIterator<Item = FakeDeviceConfig<D, Ipv4Addr>>,
-        ) -> Self {
-            FakeIpSocketCtx::with_devices_state(devices.into_iter().map(
-                |FakeDeviceConfig { device, local_ips, remote_ips }| {
-                    let mut device_state = IpDeviceState::default();
-                    for ip in local_ips {
-                        // Users of this utility don't care about subnet prefix length,
-                        // so just pick a reasonable one.
-                        device_state
-                            .add_addr(AddrSubnet::new(ip.get(), 32).unwrap())
-                            .expect("add address");
-                    }
-                    (device, device_state, remote_ips)
-                },
-            ))
-        }
-    }
-
-    impl FakeIpSocketCtx<Ipv4, FakeDeviceId> {
-        /// Creates a new `FakeIpSocketCtx<Ipv4>`.
-        pub(crate) fn new_fake_ipv4(
-            local_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
-            remote_ips: Vec<SpecifiedAddr<Ipv4Addr>>,
-        ) -> Self {
-            Self::new_ipv4([FakeDeviceConfig { device: FakeDeviceId, local_ips, remote_ips }])
-        }
-    }
-
-    impl<D: IpDeviceId> FakeIpSocketCtx<Ipv6, D> {
+    impl<I: IpDeviceStateIpExt, D: IpDeviceId> FakeIpSocketCtx<I, D> {
         /// Creates a new `FakeIpSocketCtx<Ipv6>` with the given device
         /// configs.
-        pub(crate) fn new_ipv6(
-            devices: impl IntoIterator<Item = FakeDeviceConfig<D, Ipv6Addr>>,
-        ) -> Self {
+        pub(crate) fn new(devices: impl IntoIterator<Item = FakeDeviceConfig<D, I::Addr>>) -> Self {
             FakeIpSocketCtx::with_devices_state(devices.into_iter().map(
                 |FakeDeviceConfig { device, local_ips, remote_ips }| {
                     let mut device_state = IpDeviceState::default();
                     for ip in local_ips {
                         // Users of this utility don't care about subnet prefix length,
                         // so just pick a reasonable one.
-                        device_state
-                            .add_addr(Ipv6AddressEntry::new(
-                                // Users of this utility don't care about subnet prefix
-                                // length, so just pick a reasonable one.
-                                AddrSubnet::new(ip.get(), 128).unwrap(),
-                                AddressState::Assigned,
-                                AddrConfig::Manual,
-                            ))
-                            .expect("add address");
+                        I::map_ip(
+                            (&mut device_state, ip),
+                            |(device_state, ip)| {
+                                device_state
+                                    .add_addr(AddrSubnet::new(ip.get(), 32).unwrap())
+                                    .expect("add address")
+                            },
+                            |(device_state, ip)| {
+                                device_state
+                                    .add_addr(Ipv6AddressEntry::new(
+                                        AddrSubnet::new(ip.get(), 128).unwrap(),
+                                        AddressState::Assigned,
+                                        AddrConfig::Manual,
+                                    ))
+                                    .expect("add address")
+                            },
+                        )
                     }
                     (device, device_state, remote_ips)
                 },
@@ -1097,13 +1071,13 @@ pub(crate) mod testutil {
         }
     }
 
-    impl FakeIpSocketCtx<Ipv6, FakeDeviceId> {
-        /// Creates a new `FakeIpSocketCtx<Ipv6>`.
-        pub(crate) fn new_fake_ipv6(
-            local_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
-            remote_ips: Vec<SpecifiedAddr<Ipv6Addr>>,
+    impl<I: IpDeviceStateIpExt> FakeIpSocketCtx<I, FakeDeviceId> {
+        /// Creates a new `FakeIpSocketCtx<Ipv4>`.
+        pub(crate) fn new_fake(
+            local_ips: Vec<SpecifiedAddr<I::Addr>>,
+            remote_ips: Vec<SpecifiedAddr<I::Addr>>,
         ) -> Self {
-            Self::new_ipv6([FakeDeviceConfig { device: FakeDeviceId, local_ips, remote_ips }])
+            Self::new([FakeDeviceConfig { device: FakeDeviceId, local_ips, remote_ips }])
         }
     }
 }

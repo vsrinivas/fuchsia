@@ -3866,7 +3866,7 @@ mod tests {
 
     impl Default for FakeIcmpCtx<Ipv4, FakeDeviceId> {
         fn default() -> Self {
-            FakeIcmpCtx::new(FakeIpSocketCtx::new_fake_ipv4(
+            FakeIcmpCtx::new(FakeIpSocketCtx::new_fake(
                 vec![FAKE_CONFIG_V4.local_ip],
                 vec![FAKE_CONFIG_V4.remote_ip],
             ))
@@ -3875,7 +3875,7 @@ mod tests {
 
     impl Default for FakeIcmpCtx<Ipv6, FakeDeviceId> {
         fn default() -> Self {
-            FakeIcmpCtx::new(FakeIpSocketCtx::new_fake_ipv6(
+            FakeIcmpCtx::new(FakeIpSocketCtx::new_fake(
                 vec![FAKE_CONFIG_V6.local_ip],
                 vec![FAKE_CONFIG_V6.remote_ip],
             ))

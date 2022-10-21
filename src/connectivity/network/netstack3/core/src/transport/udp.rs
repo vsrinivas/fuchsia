@@ -2529,46 +2529,7 @@ mod tests {
         ) -> Self;
     }
 
-    trait FakeIpSocketCtxExt<I: Ip + TestIpExt, D> {
-        fn new(devices: impl IntoIterator<Item = FakeDeviceConfig<D, I::Addr>>) -> Self;
-    }
-
-    trait FakeIpSocketCtxFakeExt<I: Ip + TestIpExt>: FakeIpSocketCtxExt<I, FakeDeviceId> {
-        fn new_fake(
-            local_ips: Vec<SpecifiedAddr<I::Addr>>,
-            remote_ips: Vec<SpecifiedAddr<I::Addr>>,
-        ) -> Self;
-    }
-
-    impl<I: Ip + TestIpExt, C: FakeIpSocketCtxExt<I, FakeDeviceId>> FakeIpSocketCtxFakeExt<I> for C {
-        fn new_fake(
-            local_ips: Vec<SpecifiedAddr<<I as Ip>::Addr>>,
-            remote_ips: Vec<SpecifiedAddr<<I as Ip>::Addr>>,
-        ) -> Self {
-            Self::new([FakeDeviceConfig { device: FakeDeviceId, local_ips, remote_ips }])
-        }
-    }
-
-    impl<D: IpDeviceId> FakeIpSocketCtxExt<Ipv4, D> for FakeIpSocketCtx<Ipv4, D> {
-        fn new(
-            devices: impl IntoIterator<Item = FakeDeviceConfig<D, Ipv4Addr>>,
-        ) -> FakeIpSocketCtx<Ipv4, D> {
-            Self::new_ipv4(devices)
-        }
-    }
-
-    impl<D: IpDeviceId> FakeIpSocketCtxExt<Ipv6, D> for FakeIpSocketCtx<Ipv6, D> {
-        fn new(
-            devices: impl IntoIterator<Item = FakeDeviceConfig<D, Ipv6Addr>>,
-        ) -> FakeIpSocketCtx<Ipv6, D> {
-            Self::new_ipv6(devices)
-        }
-    }
-
-    impl<I: Ip + TestIpExt> FakeUdpCtxExt<I> for FakeUdpState<I, FakeDeviceId>
-    where
-        FakeIpSocketCtx<I, FakeDeviceId>: FakeIpSocketCtxExt<I, FakeDeviceId>,
-    {
+    impl<I: Ip + TestIpExt> FakeUdpCtxExt<I> for FakeUdpState<I, FakeDeviceId> {
         fn with_local_remote_ip_addrs(
             local_ips: Vec<SpecifiedAddr<I::Addr>>,
             remote_ips: Vec<SpecifiedAddr<I::Addr>>,
@@ -3909,10 +3870,7 @@ mod tests {
     type UdpMultipleDevicesSyncCtx<I> = FakeUdpSyncCtx<I, MultipleDevicesId>;
     type UdpMultipleDevicesNonSyncCtx<I> = FakeUdpNonSyncCtx<I>;
 
-    impl<I: Ip + TestIpExt> Default for FakeUdpState<I, MultipleDevicesId>
-    where
-        FakeIpSocketCtx<I, MultipleDevicesId>: FakeIpSocketCtxExt<I, MultipleDevicesId>,
-    {
+    impl<I: Ip + TestIpExt> Default for FakeUdpState<I, MultipleDevicesId> {
         fn default() -> Self {
             let remote_ips = vec![I::get_other_remote_ip_address(1)];
             FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new(
@@ -4204,7 +4162,6 @@ mod tests {
     fn test_bind_conn_socket_device_fails<I: Ip + TestIpExt>()
     where
         UdpMultipleDevicesSyncCtx<I>: UdpFakeDeviceSyncCtxBound<I, MultipleDevicesId>,
-        FakeIpSocketCtx<I, MultipleDevicesId>: FakeIpSocketCtxExt<I, MultipleDevicesId>,
     {
         set_logger_for_test();
         let device_configs = HashMap::from(
@@ -5416,7 +5373,7 @@ mod tests {
         let remote_ips = vec![remote_ip::<I>()];
         let UdpMultipleDevicesCtx { mut sync_ctx, mut non_sync_ctx } =
             UdpMultipleDevicesCtx::with_sync_ctx(UdpMultipleDevicesSyncCtx::<I>::with_state(
-                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new_ipv6(
+                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new(
                     [(MultipleDevicesId::A, ll_addr), (MultipleDevicesId::B, local_ip::<I>())].map(
                         |(device, local_ip)| FakeDeviceConfig {
                             device,
@@ -5459,7 +5416,7 @@ mod tests {
         let remote_ips = vec![remote_ip::<I>()];
         let UdpMultipleDevicesCtx { mut sync_ctx, mut non_sync_ctx } =
             UdpMultipleDevicesCtx::with_sync_ctx(UdpMultipleDevicesSyncCtx::<I>::with_state(
-                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new_ipv6(
+                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new(
                     [(MultipleDevicesId::A, ll_addr), (MultipleDevicesId::B, local_ip::<I>())].map(
                         |(device, local_ip)| FakeDeviceConfig {
                             device,
@@ -5497,7 +5454,7 @@ mod tests {
         let remote_ips = vec![remote_ip::<I>()];
         let UdpMultipleDevicesCtx { mut sync_ctx, mut non_sync_ctx } =
             UdpMultipleDevicesCtx::with_sync_ctx(UdpMultipleDevicesSyncCtx::<I>::with_state(
-                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new_ipv6(
+                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new(
                     [(MultipleDevicesId::A, ll_addr), (MultipleDevicesId::B, local_ip::<I>())].map(
                         |(device, local_ip)| FakeDeviceConfig {
                             device,
@@ -5546,7 +5503,6 @@ mod tests {
         bound_addr: Option<ZonedAddr<Ipv6Addr, MultipleDevicesId>>,
     ) where
         UdpMultipleDevicesSyncCtx<Ipv6>: UdpFakeDeviceSyncCtxBound<Ipv6, MultipleDevicesId>,
-        FakeIpSocketCtx<Ipv6, MultipleDevicesId>: FakeIpSocketCtxExt<Ipv6, MultipleDevicesId>,
     {
         let remote_ips = vec![remote_ip::<Ipv6>()];
 
@@ -5600,7 +5556,7 @@ mod tests {
         let remote_ips = vec![remote_ip::<Ipv6>()];
         let UdpMultipleDevicesCtx { mut sync_ctx, mut non_sync_ctx } =
             UdpMultipleDevicesCtx::with_sync_ctx(UdpMultipleDevicesSyncCtx::<Ipv6>::with_state(
-                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new_ipv6(
+                FakeUdpState::with_ip_socket_ctx(FakeIpSocketCtx::new(
                     [(MultipleDevicesId::A, ll_addr), (MultipleDevicesId::B, local_ip::<Ipv6>())]
                         .map(|(device, local_ip)| FakeDeviceConfig {
                             device,
@@ -5708,7 +5664,6 @@ mod tests {
     fn test_listen_udp_loopback_no_zone_is_required<I: Ip + TestIpExt>()
     where
         UdpMultipleDevicesSyncCtx<I>: UdpFakeDeviceSyncCtxBound<I, MultipleDevicesId>,
-        FakeIpSocketCtx<I, MultipleDevicesId>: FakeIpSocketCtxExt<I, MultipleDevicesId>,
     {
         let loopback_addr = I::LOOPBACK_ADDRESS;
         let remote_ips = vec![remote_ip::<I>()];

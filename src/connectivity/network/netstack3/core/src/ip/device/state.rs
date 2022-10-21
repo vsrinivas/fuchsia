@@ -9,7 +9,7 @@ use core::{fmt::Debug, num::NonZeroU8, time::Duration};
 
 use derivative::Derivative;
 use net_types::{
-    ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
+    ip::{AddrSubnet, GenericOverIp, Ip, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr},
     SpecifiedAddr, UnicastAddr, Witness,
 };
 use nonzero_ext::nonzero;
@@ -149,6 +149,12 @@ impl<Instant: crate::Instant, I: IpDeviceStateIpExt> Default for IpDeviceState<I
             routing_enabled: false,
         }
     }
+}
+
+impl<I: IpDeviceStateIpExt, Instant: crate::Instant, NewIp: IpDeviceStateIpExt> GenericOverIp<NewIp>
+    for IpDeviceState<Instant, I>
+{
+    type Type = IpDeviceState<Instant, NewIp>;
 }
 
 // TODO(https://fxbug.dev/84871): Once we figure out what invariants we want to

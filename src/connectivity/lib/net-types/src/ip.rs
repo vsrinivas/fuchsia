@@ -2738,6 +2738,20 @@ macro_rules! ip_generic {
 ip_generic!(Option<T>);
 ip_generic!(Result<R, E>);
 
+impl<'s, NewIp: Ip, T: GenericOverIp<NewIp>> GenericOverIp<NewIp> for &'s T
+where
+    T::Type: 's,
+{
+    type Type = &'s T::Type;
+}
+
+impl<'s, NewIp: Ip, T: GenericOverIp<NewIp>> GenericOverIp<NewIp> for &'s mut T
+where
+    T::Type: 's,
+{
+    type Type = &'s mut T::Type;
+}
+
 #[cfg(test)]
 mod tests {
     use core::convert::TryInto;
