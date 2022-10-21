@@ -12,6 +12,8 @@
 #include "src/media/audio/lib/clock/unreadable_clock.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
+#include "src/media/audio/services/common/testing/test_server_and_client.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 #include "src/media/audio/services/mixer/mix/simple_packet_queue_producer_stage.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"
@@ -94,6 +96,19 @@ FakeGraph::FakeGraph(Args args)
       default_pipeline_direction_(args.default_pipeline_direction),
       global_task_queue_(std::make_shared<GlobalTaskQueue>()),
       detached_thread_(std::make_shared<GraphDetachedThread>(global_task_queue_)) {
+  // Populate `gain_controls_`.
+  auto fidl_thread = FidlThread::CreateFromNewThread("FidlThread");
+  for (const auto& gain_id : args.gain_controls) {
+    auto [client, server] = CreateClientOrDie<fuchsia_audio::GainControl>();
+    gain_controls_.emplace(gain_id,
+                           GainControlServer::Create(fidl_thread, std::move(server),
+                                                     {
+                                                         .id = gain_id,
+                                                         .reference_clock = DefaultClock(),
+                                                         .global_task_queue = global_task_queue_,
+                                                     }));
+  }
+
   // Populate `types`.
   std::unordered_map<NodeId, Node::Type> types;
   for (const auto& [type, nodes] : args.types) {
@@ -183,7 +198,7 @@ FakeGraph::~FakeGraph() {
     node->on_can_accept_source_format_ = nullptr;
     // Remove all circular references so that every FakeNode and FakePipelineStage can be deleted.
     // Do this after clearing closures so the closures don't run.
-    Node::Destroy(*global_task_queue_, detached_thread_, node);
+    Node::Destroy(gain_controls_, *global_task_queue_, detached_thread_, node);
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.
     if (node->type() != Node::Type::kMeta) {

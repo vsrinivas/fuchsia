@@ -17,6 +17,7 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/graph_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
@@ -196,6 +197,9 @@ class FakeGraph {
   };
 
   struct Args {
+    // Set of gain controls.
+    std::unordered_set<GainControlId> gain_controls;
+
     // Meta nodes and their children.
     std::unordered_map<NodeId, MetaNodeArgs> meta_nodes;
 
@@ -267,6 +271,11 @@ class FakeGraph {
     return it->second;
   }
 
+  // Returns the gain controls used by this FakeGraph.
+  std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls() {
+    return gain_controls_;
+  }
+
   // Returns the task queue used by this FakeGraph.
   std::shared_ptr<GlobalTaskQueue> global_task_queue() const { return global_task_queue_; }
 
@@ -281,6 +290,7 @@ class FakeGraph {
   NodeId NextNodeId();
   PipelineDirection PipelineDirectionForNode(NodeId id) const;
 
+  std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>> gain_controls_;
   std::unordered_map<ThreadId, FakeGraphThreadPtr> threads_;
   std::unordered_map<NodeId, FakeNodePtr> nodes_;
   std::unordered_map<NodeId, std::shared_ptr<Format>> formats_;

@@ -225,10 +225,13 @@ ValidateRingBuffer(std::string_view debug_description, std::string_view node_nam
 }
 
 fpromise::result<Node::CreateEdgeOptions, fuchsia_audio_mixer::CreateEdgeError>
-ParseCreateEdgeOptions(const GraphServer::CreateEdgeRequestView& request) {
+ParseCreateEdgeOptions(
+    const GraphServer::CreateEdgeRequestView& request,
+    const std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
+    const Node& source, const Node& dest) {
   Node::CreateEdgeOptions options;
   if (request->has_mixer_sampler()) {
-    if (request->mixer_sampler().is_sinc_sampler()) {
+    if (dest.type() == Node::Type::kMixer && request->mixer_sampler().is_sinc_sampler()) {
       // TODO(fxbug.dev/87651): Make use of `fuchsia_audio_mixer::wire::SincSampler` parameters.
       options.sampler_type = Sampler::Type::kSincSampler;
     } else {
@@ -236,12 +239,17 @@ ParseCreateEdgeOptions(const GraphServer::CreateEdgeRequestView& request) {
     }
   }
   if (request->has_gain_controls()) {
+    if (source.type() != Node::Type::kMixer && dest.type() != Node::Type::kMixer) {
+      return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kUnsupportedOption);
+    }
     options.gain_ids.reserve(request->gain_controls().count());
     for (const auto& gain_id : request->gain_controls()) {
+      if (gain_controls.count(gain_id) == 0) {
+        return fpromise::error(fuchsia_audio_mixer::CreateEdgeError::kInvalidGainControl);
+      }
       options.gain_ids.insert(gain_id);
     }
   }
-  // TODO(fxbug.dev/87651): Populate `newly_added_gain_controls`.
   return fpromise::ok(std::move(options));
 }
 
@@ -608,7 +616,7 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
     return;
   }
 
-  Node::Destroy(*global_task_queue_, detached_thread_, it->second);
+  Node::Destroy(gain_controls_, *global_task_queue_, detached_thread_, it->second);
   nodes_.erase(it);
 
   fidl::Arena arena;
@@ -645,17 +653,17 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
     return;
   }
 
-  auto options = ParseCreateEdgeOptions(request);
+  auto& source = source_it->second;
+  auto& dest = dest_it->second;
+
+  auto options = ParseCreateEdgeOptions(request, gain_controls_, *source, *dest);
   if (!options.is_ok()) {
     completer.ReplyError(options.error());
     return;
   }
 
-  auto& source = source_it->second;
-  auto& dest = dest_it->second;
-
-  auto result =
-      Node::CreateEdge(*global_task_queue_, detached_thread_, source, dest, options.take_value());
+  auto result = Node::CreateEdge(gain_controls_, *global_task_queue_, detached_thread_, source,
+                                 dest, options.take_value());
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;
@@ -699,7 +707,7 @@ void GraphServer::DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter:
   auto& dest = dest_it->second;
   // TODO(fxbug.dev/87651): Populate `options`.
   auto result =
-      Node::DeleteEdge(*global_task_queue_, detached_thread_, source, dest, /*options=*/{});
+      Node::DeleteEdge(gain_controls_, *global_task_queue_, detached_thread_, source, dest);
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;
@@ -897,7 +905,7 @@ void GraphServer::OnShutdown(fidl::UnbindInfo info) {
 
   // Destroy nodes to remove circular references.
   for (auto [id, node] : nodes_) {
-    Node::Destroy(*global_task_queue_, detached_thread_, node);
+    Node::Destroy(gain_controls_, *global_task_queue_, detached_thread_, node);
   }
   nodes_.clear();
 

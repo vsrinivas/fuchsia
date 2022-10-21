@@ -93,7 +93,7 @@ class CustomNodeTest : public ::testing::Test {
 };
 
 TEST_F(CustomNodeTest, CreateDeleteEdge) {
-  const FakeGraph graph({
+  FakeGraph graph({
       .unconnected_ordinary_nodes = {1, 2, 3},
       .formats = {{&kFormat, {1, 2, 3}}},
   });
@@ -137,7 +137,8 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_dest_node->pipeline_stage()->format(), kFormat);
 
   // Connect graph node `1` to `child_source_node`.
-  ASSERT_TRUE(Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), child_source_node,
+  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                               child_source_node,
                                /*options=*/{})
                   .is_ok());
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(graph.node(1).get()),
@@ -152,7 +153,8 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Attempt to connect graph node `2` to `child_source_node`, which should get rejected since
   // `child_source_node` can only have a single source.
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), graph.node(2), child_source_node,
+  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(2),
+                                 child_source_node,
                                  /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
@@ -163,9 +165,9 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_dest_node->dest(), nullptr);
 
   // Connect `child_dest_node` to graph node `3`.
-  ASSERT_TRUE(
-      Node::CreateEdge(*q, graph.detached_thread(), child_dest_node, graph.node(3), /*options=*/{})
-          .is_ok());
+  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), child_dest_node,
+                               graph.node(3), /*options=*/{})
+                  .is_ok());
   EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), graph.node(3));
@@ -177,8 +179,8 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Attempt to connect `child_dest_node` to graph node `2`, which should get rejected since
   // `child_dest_node` can only have a single destination.
-  result =
-      Node::CreateEdge(*q, graph.detached_thread(), child_dest_node, graph.node(2), /*options=*/{});
+  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), child_dest_node,
+                            graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -189,8 +191,8 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Disconnect graph node `1` from `child_source_node`.
-  ASSERT_TRUE(Node::DeleteEdge(*q, graph.detached_thread(), graph.node(1), child_source_node,
-                               /*options=*/{})
+  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                               child_source_node)
                   .is_ok());
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
             zx::nsec(1'500'000'000));
@@ -206,9 +208,9 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_dest_node->dest(), graph.node(3));
 
   // Disconnect `child_dest_node` from graph node `3`.
-  ASSERT_TRUE(
-      Node::DeleteEdge(*q, graph.detached_thread(), child_dest_node, graph.node(3), /*options=*/{})
-          .is_ok());
+  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), child_dest_node,
+                               graph.node(3))
+                  .is_ok());
   EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), nullptr);
@@ -222,14 +224,14 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(*q, graph.detached_thread(), custom_node);
+  Node::Destroy(graph.gain_controls(), *q, graph.detached_thread(), custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }
 
 TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
   const Format mismatching_format = Format::CreateOrDie({SampleType::kFloat32, 1, kFrameRate * 2});
-  const FakeGraph graph({
+  FakeGraph graph({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&mismatching_format, {1}}},
   });
@@ -260,7 +262,8 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
 
   // Attempt to connect graph node `1` to `child_source_node`, which should get rejected due to the
   // mismatching source format of graph node `1`.
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), child_source_node,
+  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                                 child_source_node,
                                  /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
@@ -275,13 +278,13 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(*q, graph.detached_thread(), custom_node);
+  Node::Destroy(graph.gain_controls(), *q, graph.detached_thread(), custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }
 
 TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
-  const FakeGraph graph({
+  FakeGraph graph({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&kFormat, {1}}},
   });
@@ -299,33 +302,33 @@ TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
   ASSERT_EQ(custom_node->child_dests().size(), 1ul);
 
   // Adding a source to `custom_node` is not allowed.
-  auto result =
-      Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), custom_node, /*options=*/{});
+  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                                 custom_node, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 
   // Adding a source to child destination node is not allowed.
-  result = Node::CreateEdge(*q, graph.detached_thread(), graph.node(1),
+  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
                             custom_node->child_dests().front(), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 
   // Adding a destination to `custom_node` is not allowed.
-  result =
-      Node::CreateEdge(*q, graph.detached_thread(), custom_node, graph.node(1), /*options=*/{});
-  ASSERT_FALSE(result.is_ok());
-  EXPECT_EQ(result.error(),
-            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
-
-  // Adding a destination to child source node is not allowed.
-  result = Node::CreateEdge(*q, graph.detached_thread(), custom_node->child_sources().front(),
+  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), custom_node,
                             graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 
+  // Adding a destination to child source node is not allowed.
+  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(),
+                            custom_node->child_sources().front(), graph.node(1), /*options=*/{});
+  ASSERT_FALSE(result.is_ok());
+  EXPECT_EQ(result.error(),
+            fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
+
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(*q, graph.detached_thread(), custom_node);
+  Node::Destroy(graph.gain_controls(), *q, graph.detached_thread(), custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }

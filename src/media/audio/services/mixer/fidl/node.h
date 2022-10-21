@@ -23,6 +23,7 @@
 #include "src/media/audio/lib/processing/sampler.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
+#include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/graph_detached_thread.h"
 #include "src/media/audio/services/mixer/fidl/graph_thread.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
@@ -123,31 +124,30 @@ class Node {
   //
   // Returns an error if the edge is not allowed.
   struct CreateEdgeOptions {
-    std::unordered_map<GainControlId, GainControl> newly_added_gain_controls = {};
     std::unordered_set<GainControlId> gain_ids = {};
     Sampler::Type sampler_type = Sampler::Type::kDefault;
   };
   static fpromise::result<void, fuchsia_audio_mixer::CreateEdgeError> CreateEdge(
+      std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
       GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
       NodePtr dest, CreateEdgeOptions options);
 
   // Deletes the edge from `source` -> `dest`. This is the inverse of `CreateEdge`.
   //
   // Returns an error if the edge does not exist.
-  struct DeleteEdgeOptions {
-    std::unordered_set<GainControlId> newly_removed_gain_controls = {};
-  };
   static fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> DeleteEdge(
+      std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
       GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-      NodePtr dest, DeleteEdgeOptions options);
+      NodePtr dest);
 
   // TODO(fxbug.dev/87651): Consider renaming Destroy. It does destroy some internal resources (e.g.
   // child nodes) but it doesn't fully destroy the `node`, hence the name may be somewhat confusing.
 
   // Calls DeleteEdge for each incoming and outgoing edge, then deletes all child nodes. After this
   // is called, all references to this Node can be dropped.
-  static void Destroy(GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread,
-                      NodePtr node);
+  static void Destroy(
+      std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
+      GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr node);
 
   // Node type. Except for `kMeta`, all types refer to ordinary nodes.
   enum class Type {
@@ -290,6 +290,14 @@ class Node {
  private:
   friend class FakeGraph;
 
+  static std::unordered_map<GainControlId, GainControl> AddGains(
+      std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
+      const std::unordered_set<GainControlId>& gain_ids, const NodePtr& source,
+      const NodePtr& dest);
+  static std::unordered_set<GainControlId> RemoveGains(
+      std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
+      const NodePtr& source, const NodePtr& dest);
+
   // Implementation of `CreateEdge`.
   void AddSource(NodePtr source);
   void SetDest(NodePtr dest);
@@ -318,6 +326,11 @@ class Node {
   std::vector<NodePtr> sources_;
   NodePtr dest_;
   std::shared_ptr<GraphThread> thread_;
+
+  // If `type_ == Type::kMixer`.
+  // Each `NodePtr` in this map is either a source (in `sources_`) or a destination (`dest_`) edge.
+  std::unordered_map<NodePtr, std::unordered_set<GainControlId>> gain_ids_;
+  std::unordered_map<GainControlId, int> gain_usage_counts_;
 
   // If `type_ == Type::kMeta`.
   std::vector<NodePtr> child_sources_;

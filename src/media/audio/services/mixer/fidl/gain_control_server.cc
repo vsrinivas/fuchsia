@@ -35,12 +35,15 @@ std::shared_ptr<GainControlServer> GainControlServer::Create(
   return BaseFidlServer::Create(std::move(thread), std::move(server_end), std::move(args));
 }
 
-void GainControlServer::AddMixer(NodeId mixer_id, NodePtr mixer) {
+void GainControlServer::AddMixer(NodePtr mixer) {
   FX_CHECK(mixer->type() == Node::Type::kMixer);
-  mixers_.emplace(mixer_id, std::move(mixer));
+  FX_CHECK(mixers_.insert(std::move(mixer)).second);
 }
 
-void GainControlServer::RemoveMixer(NodeId mixer_id) { mixers_.erase(mixer_id); }
+void GainControlServer::RemoveMixer(NodePtr mixer) {
+  FX_CHECK(mixer->type() == Node::Type::kMixer);
+  FX_CHECK(mixers_.erase(mixer) > 0);
+}
 
 void GainControlServer::SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) {
   if (!request->has_how() || !request->has_when()) {
@@ -126,7 +129,7 @@ GainControlServer::GainControlServer(Args args)
 void GainControlServer::ScheduleGain(zx::time reference_time, float gain_db,
                                      std::optional<GainRamp> ramp) {
   gain_control_.ScheduleGain(reference_time, gain_db, ramp);
-  for (const auto& [mixer_id, mixer] : mixers_) {
+  for (const auto& mixer : mixers_) {
     global_task_queue_->Push(
         mixer->thread()->id(),
         [gain_id = id_, reference_time, gain_db, ramp,
@@ -139,7 +142,7 @@ void GainControlServer::ScheduleGain(zx::time reference_time, float gain_db,
 
 void GainControlServer::ScheduleMute(zx::time reference_time, bool is_muted) {
   gain_control_.ScheduleMute(reference_time, is_muted);
-  for (const auto& [mixer_id, mixer] : mixers_) {
+  for (const auto& mixer : mixers_) {
     global_task_queue_->Push(
         mixer->thread()->id(),
         [gain_id = id_, reference_time, is_muted,
@@ -152,7 +155,7 @@ void GainControlServer::ScheduleMute(zx::time reference_time, bool is_muted) {
 
 void GainControlServer::SetGain(float gain_db, std::optional<GainRamp> ramp) {
   gain_control_.SetGain(gain_db, ramp);
-  for (const auto& [mixer_id, mixer] : mixers_) {
+  for (const auto& mixer : mixers_) {
     global_task_queue_->Push(
         mixer->thread()->id(),
         [gain_id = id_, gain_db, ramp,
@@ -165,7 +168,7 @@ void GainControlServer::SetGain(float gain_db, std::optional<GainRamp> ramp) {
 
 void GainControlServer::SetMute(bool is_muted) {
   gain_control_.SetMute(is_muted);
-  for (const auto& [mixer_id, mixer] : mixers_) {
+  for (const auto& mixer : mixers_) {
     global_task_queue_->Push(
         mixer->thread()->id(),
         [gain_id = id_, is_muted,

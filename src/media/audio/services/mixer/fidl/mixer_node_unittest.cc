@@ -48,6 +48,12 @@ TEST(MixerNodeTest, CreateDeleteEdge) {
   const Format source_format_2 = Format::CreateOrDie({fuchsia_audio::SampleType::kInt16, 2, 24000});
 
   FakeGraph graph({
+      .gain_controls =
+          {
+              GainControlId{10},
+              GainControlId{20},
+              GainControlId{30},
+          },
       .unconnected_ordinary_nodes = {1, 2, 3, 4},
       .formats =
           {
@@ -75,18 +81,14 @@ TEST(MixerNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(mixer_node->dest(), nullptr);
 
   // Connect graph node `1` to `mixer_node` with gain control `10`.
-  ASSERT_TRUE(
-      Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), mixer_node,
-                       {
-                           .newly_added_gain_controls =
-                               {
-                                   {GainControlId{10}, GainControl(DefaultUnreadableClock())},
-                               },
-                           .gain_ids = {GainControlId{10}},
-                       })
-          .is_ok());
+  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                               mixer_node, {.gain_ids = {GainControlId{10}}})
+                  .is_ok());
   EXPECT_THAT(mixer_node->sources(), ElementsAre(graph.node(1)));
   EXPECT_EQ(mixer_node->dest(), nullptr);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{10})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{20})->num_mixers(), 0ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{30})->num_mixers(), 0ul);
 
   // Gain control `10` should be passed to the underlying mixer, i.e., this should not fail.
   q->RunForThread(graph.detached_thread()->id());
@@ -95,18 +97,14 @@ TEST(MixerNodeTest, CreateDeleteEdge) {
       .Get(GainControlId{10});
 
   // Connect graph node `2` to `mixer_node` with gain controls `10` and `20`.
-  ASSERT_TRUE(
-      Node::CreateEdge(*q, graph.detached_thread(), graph.node(2), mixer_node,
-                       {
-                           .newly_added_gain_controls =
-                               {
-                                   {GainControlId{20}, GainControl(DefaultUnreadableClock())},
-                               },
-                           .gain_ids = {GainControlId{10}, GainControlId{20}},
-                       })
-          .is_ok());
+  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(2),
+                               mixer_node, {.gain_ids = {GainControlId{10}, GainControlId{20}}})
+                  .is_ok());
   EXPECT_THAT(mixer_node->sources(), ElementsAre(graph.node(1), graph.node(2)));
   EXPECT_EQ(mixer_node->dest(), nullptr);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{10})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{20})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{30})->num_mixers(), 0ul);
 
   // Gain control `20` should be passed to the underlying mixer, i.e., this should not fail.
   q->RunForThread(graph.detached_thread()->id());
@@ -115,18 +113,14 @@ TEST(MixerNodeTest, CreateDeleteEdge) {
       .Get(GainControlId{20});
 
   // Connect `mixer_node` to graph node `3` with gain control `30`.
-  ASSERT_TRUE(
-      Node::CreateEdge(*q, graph.detached_thread(), mixer_node, graph.node(3),
-                       {
-                           .newly_added_gain_controls =
-                               {
-                                   {GainControlId{30}, GainControl(DefaultUnreadableClock())},
-                               },
-                           .gain_ids = {GainControlId{30}},
-                       })
-          .is_ok());
+  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), mixer_node,
+                               graph.node(3), {.gain_ids = {GainControlId{30}}})
+                  .is_ok());
   EXPECT_THAT(mixer_node->sources(), ElementsAre(graph.node(1), graph.node(2)));
   EXPECT_EQ(mixer_node->dest(), graph.node(3));
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{10})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{20})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{30})->num_mixers(), 1ul);
 
   // Gain control `30` should be passed to the underlying mixer, i.e., this should not fail.
   q->RunForThread(graph.detached_thread()->id());
@@ -135,42 +129,43 @@ TEST(MixerNodeTest, CreateDeleteEdge) {
       .Get(GainControlId{30});
 
   // Disconnect graph node `1` from `mixer_node`.
-  ASSERT_TRUE(Node::DeleteEdge(*q, graph.detached_thread(), graph.node(1), mixer_node,
-                               /*options=*/{})
+  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                               mixer_node)
                   .is_ok());
   EXPECT_THAT(mixer_node->sources(), ElementsAre(graph.node(2)));
   EXPECT_EQ(mixer_node->dest(), graph.node(3));
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{10})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{20})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{30})->num_mixers(), 1ul);
 
   q->RunForThread(graph.detached_thread()->id());
 
   // Disconnect `mixer_node` from graph node `3`.
-  ASSERT_TRUE(Node::DeleteEdge(*q, graph.detached_thread(), mixer_node, graph.node(3),
-                               {
-                                   .newly_removed_gain_controls = {GainControlId{30}},
-                               })
+  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), mixer_node,
+                               graph.node(3))
                   .is_ok());
   EXPECT_THAT(mixer_node->sources(), ElementsAre(graph.node(2)));
   EXPECT_EQ(mixer_node->dest(), nullptr);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{10})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{20})->num_mixers(), 1ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{30})->num_mixers(), 0ul);
 
   q->RunForThread(graph.detached_thread()->id());
 
   // Finally disconnect graph node `2` from `mixer_node`.
-  ASSERT_TRUE(Node::DeleteEdge(*q, graph.detached_thread(), graph.node(2), mixer_node,
-                               {
-                                   .newly_removed_gain_controls =
-                                       {
-                                           GainControlId{10},
-                                           GainControlId{20},
-                                       },
-                               })
+  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(2),
+                               mixer_node)
                   .is_ok());
   EXPECT_THAT(mixer_node->sources(), ElementsAre());
   EXPECT_EQ(mixer_node->dest(), nullptr);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{10})->num_mixers(), 0ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{20})->num_mixers(), 0ul);
+  EXPECT_EQ(graph.gain_controls().at(GainControlId{30})->num_mixers(), 0ul);
 }
 
 TEST(MixerNodeTest, CreateEdgeCannotAcceptSourceFormat) {
   const Format mismatching_format = Format::CreateOrDie({SampleType::kFloat32, 10, 48000});
-  const FakeGraph graph({
+  FakeGraph graph({
       .unconnected_ordinary_nodes = {1},
       .formats = {{&mismatching_format, {1}}},
   });
@@ -194,7 +189,8 @@ TEST(MixerNodeTest, CreateEdgeCannotAcceptSourceFormat) {
 
   // Attempt to connect graph node `1`, which should fail since the mixer cannot create a sampler
   // that matches the requested channelization.
-  auto result = Node::CreateEdge(*q, graph.detached_thread(), graph.node(1), mixer_node,
+  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
+                                 mixer_node,
                                  /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);

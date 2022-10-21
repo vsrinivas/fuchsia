@@ -7,6 +7,13 @@
 #include <fidl/fuchsia.audio.mixer/cpp/natural_ostream.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <functional>
+#include <limits>
+#include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
 #include "fidl/fuchsia.audio.effects/cpp/markers.h"
@@ -186,10 +193,11 @@ MakeDefaultCreateGainControlRequest(fidl::AnyArena& arena) {
       .reference_clock(MakeReferenceClock(arena));
 }
 
-fidl::VectorView<GainControlId> MakeDefaultGainControls(fidl::AnyArena& arena) {
-  fidl::VectorView<GainControlId> gain_controls(arena, 3);
-  for (int i = 0; i < 3; ++i) {
-    gain_controls.at(i) = GainControlId(i + 1);
+fidl::VectorView<GainControlId> MakeGainControls(fidl::AnyArena& arena,
+                                                 std::vector<GainControlId> gain_ids) {
+  fidl::VectorView<GainControlId> gain_controls(arena, gain_ids.size());
+  for (size_t i = 0; i < gain_ids.size(); ++i) {
+    gain_controls.at(i) = gain_ids[i];
   }
   return gain_controls;
 }
@@ -1105,32 +1113,46 @@ TEST_F(GraphServerTest, CreateEdgeFails) {
     std::string name;
     std::optional<NodeId> source_id;
     std::optional<NodeId> dest_id;
+    std::optional<fidl::VectorView<GainControlId>> gain_controls;
+    bool select_sinc_sampler;
     CreateEdgeError expected_error;
   };
-  std::vector<TestCase> cases = {
-      {
-          .name = "Missing source_id",
-          .dest_id = consumer_id,
-          .expected_error = CreateEdgeError::kInvalidSourceId,
-      },
-      {
-          .name = "Missing dest_id",
-          .source_id = producer_id,
-          .expected_error = CreateEdgeError::kInvalidDestId,
-      },
-      {
-          .name = "Invalid dest_id",
-          .source_id = 99,
-          .dest_id = consumer_id,
-          .expected_error = CreateEdgeError::kInvalidSourceId,
-      },
-      {
-          .name = "Invalid dest_id",
-          .source_id = producer_id,
-          .dest_id = 99,
-          .expected_error = CreateEdgeError::kInvalidDestId,
-      },
-  };
+  std::vector<TestCase> cases = {{
+                                     .name = "Missing source_id",
+                                     .dest_id = consumer_id,
+                                     .expected_error = CreateEdgeError::kInvalidSourceId,
+                                 },
+                                 {
+                                     .name = "Missing dest_id",
+                                     .source_id = producer_id,
+                                     .expected_error = CreateEdgeError::kInvalidDestId,
+                                 },
+                                 {
+                                     .name = "Invalid dest_id",
+                                     .source_id = 99,
+                                     .dest_id = consumer_id,
+                                     .expected_error = CreateEdgeError::kInvalidSourceId,
+                                 },
+                                 {
+                                     .name = "Invalid dest_id",
+                                     .source_id = producer_id,
+                                     .dest_id = 99,
+                                     .expected_error = CreateEdgeError::kInvalidDestId,
+                                 },
+                                 {
+                                     .name = "Unsupported gain_controls",
+                                     .source_id = producer_id,
+                                     .dest_id = consumer_id,
+                                     .gain_controls = MakeGainControls(arena_, {GainControlId{1}}),
+                                     .expected_error = CreateEdgeError::kUnsupportedOption,
+                                 },
+                                 {
+                                     .name = "Unsupported mixer_sampler",
+                                     .source_id = producer_id,
+                                     .dest_id = consumer_id,
+                                     .select_sinc_sampler = true,
+                                     .expected_error = CreateEdgeError::kUnsupportedOption,
+                                 }};
 
   for (auto& tc : cases) {
     SCOPED_TRACE("TestCase: " + tc.name);
@@ -1141,6 +1163,13 @@ TEST_F(GraphServerTest, CreateEdgeFails) {
     }
     if (tc.dest_id) {
       builder.dest_id(*tc.dest_id);
+    }
+    if (tc.gain_controls) {
+      builder.gain_controls(*tc.gain_controls);
+    }
+    if (tc.select_sinc_sampler) {
+      builder.mixer_sampler(fuchsia_audio_mixer::wire::Sampler::WithSincSampler(
+          arena_, fuchsia_audio_mixer::wire::SincSampler::Builder(arena_).Build()));
     }
 
     auto result = client()->CreateEdge(builder.Build());
@@ -1154,6 +1183,47 @@ TEST_F(GraphServerTest, CreateEdgeFails) {
     }
     EXPECT_EQ(result->error_value(), tc.expected_error);
   }
+}
+
+TEST_F(GraphServerTest, CreateEdgeInvalidGainControl) {
+  // Producer.
+  NodeId producer_id;
+  {
+    auto result = client()->CreateProducer(
+        fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
+            .name(fidl::StringView::FromExternal("producer"))
+            .direction(PipelineDirection::kOutput)
+            .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
+                arena_, MakeDefaultRingBuffer(arena_).Build()))
+            .Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    producer_id = result->value()->id();
+  }
+
+  // Mixer.
+  NodeId mixer_id;
+  {
+    auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    mixer_id = result->value()->id();
+  }
+
+  auto result =
+      client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
+                               .source_id(producer_id)
+                               .dest_id(mixer_id)
+                               .gain_controls(MakeGainControls(arena_, {GainControlId{10}}))
+                               .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), fuchsia_audio_mixer::CreateEdgeError::kInvalidGainControl);
 }
 
 TEST_F(GraphServerTest, CreateEdgeSuccess) {
@@ -1200,11 +1270,22 @@ TEST_F(GraphServerTest, CreateEdgeSuccessMixerDest) {
     mixer_id = result->value()->id();
   }
 
+  // Gain control.
+  GainControlId gain_id;
+  {
+    auto result = client()->CreateGainControl(MakeDefaultCreateGainControlRequest(arena_).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    gain_id = result->value()->id();
+  }
+
   auto result =
       client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
                                .source_id(producer_id)
                                .dest_id(mixer_id)
-                               .gain_controls(MakeDefaultGainControls(arena_))
+                               .gain_controls(MakeGainControls(arena_, {gain_id}))
                                .Build());
 
   ASSERT_TRUE(result.ok()) << result;
@@ -1243,11 +1324,22 @@ TEST_F(GraphServerTest, CreateEdgeSuccessMixerSource) {
     custom_source_id = result->value()->node_properties().source_ids().at(0);
   }
 
+  // Gain control.
+  GainControlId gain_id;
+  {
+    auto result = client()->CreateGainControl(MakeDefaultCreateGainControlRequest(arena_).Build());
+
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    gain_id = result->value()->id();
+  }
+
   auto result =
       client()->CreateEdge(fuchsia_audio_mixer::wire::GraphCreateEdgeRequest::Builder(arena_)
                                .source_id(mixer_id)
                                .dest_id(custom_source_id)
-                               .gain_controls(MakeDefaultGainControls(arena_))
+                               .gain_controls(MakeGainControls(arena_, {gain_id}))
                                .Build());
 
   ASSERT_TRUE(result.ok()) << result;

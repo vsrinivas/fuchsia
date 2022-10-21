@@ -582,6 +582,9 @@ type CreateEdgeError = flexible enum {
     /// client built with API version X+1 talks to a server built with API
     /// version X.
     UNSUPPORTED_OPTION = 9;
+
+    /// A gain control in the given `gain_controls` is invalid.
+    INVALID_GAIN_CONTROL = 10;
 };
 
 /// Type of errors return by [`DeleteEdge`].

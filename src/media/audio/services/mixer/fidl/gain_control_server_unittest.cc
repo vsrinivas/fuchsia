@@ -134,21 +134,12 @@ TEST_F(GainControlServerTest, AddRemoveMixer) {
   EXPECT_EQ(server().num_mixers(), 0ul);
 
   // Add a mixer.
-  const auto mixer_id = NodeId{2};
-  server().AddMixer(mixer_id, MakeDefaultMixer());
+  const auto mixer_1 = MakeDefaultMixer();
+  server().AddMixer(mixer_1);
   EXPECT_EQ(server().num_mixers(), 1ul);
 
-  // Attempt to remove a mixer that does not exist.
-  const auto invalid_id = NodeId{3};
-  server().RemoveMixer(invalid_id);
-  EXPECT_EQ(server().num_mixers(), 1ul);
-
-  // Remove the added mixer.
-  server().RemoveMixer(mixer_id);
-  EXPECT_EQ(server().num_mixers(), 0ul);
-
-  // Attempt to remove that mixer again.
-  server().RemoveMixer(mixer_id);
+  // Remove the mixer.
+  server().RemoveMixer(mixer_1);
   EXPECT_EQ(server().num_mixers(), 0ul);
 }
 

@@ -11,7 +11,7 @@
 #include <memory>
 #include <optional>
 #include <string_view>
-#include <unordered_map>
+#include <unordered_set>
 
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "lib/fidl/cpp/wire/wire_messaging_declarations.h"
@@ -47,13 +47,15 @@ class GainControlServer
       std::shared_ptr<const FidlThread> thread,
       fidl::ServerEnd<fuchsia_audio::GainControl> server_end, Args args);
 
-  // Adds a given `mixer` that uses this gain control with the given `mixer_id`.
+  // Adds the given `mixer` to this gain control.
   //
   // REQUIRED: `mixer->type() == Node::Type::kMixer`.
-  void AddMixer(NodeId mixer_id, NodePtr mixer);
+  void AddMixer(NodePtr mixer);
 
-  // Removes a mixer with the given `mixer_id`.
-  void RemoveMixer(NodeId mixer_id);
+  // Removes the given `mixer` from this gain control.
+  //
+  // REQUIRED: `mixer->type() == Node::Type::kMixer`.
+  void RemoveMixer(NodePtr mixer);
 
   // Implements `fidl::WireServer<fuchsia_audio::GainControl>`.
   void SetGain(SetGainRequestView request, SetGainCompleter::Sync& completer) final;
@@ -87,7 +89,7 @@ class GainControlServer
   std::shared_ptr<GlobalTaskQueue> global_task_queue_;
 
   // Mixers that use this gain control.
-  std::unordered_map<NodeId, NodePtr> mixers_;
+  std::unordered_set<NodePtr> mixers_;
 };
 
 }  // namespace media_audio
