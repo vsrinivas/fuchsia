@@ -663,8 +663,15 @@ TEST_F(FlatlandFocusIntegrationTest, ViewRefFocusedDisconnectedWhenSessionDies) 
   EXPECT_TRUE(focused_alive);
 
   // Kill Child session.
+  bool child_dead = false;
+  child_session.set_error_handler([&child_dead](auto) { child_dead = true; });
+
+  // Invalid op since a transform ID of 0 is reserved.
   child_session->CreateTransform({.value = 0});
+
+  // Trigger session death.
   child_session->Present({});
+  RunLoopUntil([&child_dead] { return child_dead; });
 
   // Trigger a new snapshot to be published.
   BlockingPresent(root_session_);
