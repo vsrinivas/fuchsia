@@ -194,6 +194,14 @@
             ],
             from: "#netstack",
         },
+
+        // TODO (https://fxbug.dev/111695) Don't expose the Debug API once
+        // Weavestack no longer needs it.
+        {
+            protocol: [ "fuchsia.net.debug.Interfaces" ],
+            from: "#netstack",
+            as: "fuchsia.net.debug.Interfaces_OnlyForWeavestack",
+        },
         {
             protocol: [ "fuchsia.net.name.Lookup" ],
             from: "#dns-resolver",
