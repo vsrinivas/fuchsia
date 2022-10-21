@@ -5,6 +5,7 @@
 
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Added: 1</span></div>
 
+
 ## **PROTOCOLS**
 
 ## OtherProtocol {#OtherProtocol}
@@ -13,9 +14,11 @@
 ## Protocol {#Protocol}
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=47)*
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
 ### Foo {#Protocol.Foo}
 
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
 #### Request {#Protocol.Foo_Request}
 
 &lt;EMPTY&gt;
@@ -27,6 +30,7 @@
 ### Struct  {#Struct data-text="Struct"}
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=23)*
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
 <table>
     <tr><th>Field</th><th>Type</th><th>Description</th><th>Default</th></tr>
         <tr id="Struct.x">
@@ -34,7 +38,8 @@
             <td>
                 <code>uint32</code>
             </td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
             <td>No default</td>
         </tr>
 </table>
@@ -47,12 +52,14 @@ Type: <code>uint32</code>
 
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=17)*
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
         <tr id="Enum.A">
 <td><h3 id="Enum.A" class="add-link hide-from-toc">A</h3></td>
             <td><code>1</code></td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
 </table>
 
@@ -64,6 +71,7 @@ Type: <code>uint32</code>
 
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=29)*
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
 <table>
     <tr><th>Ordinal</th><th>Field</th><th>Type</th><th>Description</th></tr>
         <tr id="Table.x">
@@ -72,7 +80,8 @@ Type: <code>uint32</code>
             <td>
                 <code>uint32</code>
             </td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
         <tr id="Table.">
 <td><h3 id="Table." class="add-link hide-from-toc">2</h3></td>
@@ -80,7 +89,8 @@ Type: <code>uint32</code>
             <td>
                 <code></code>
             </td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
 </table>
 
@@ -89,7 +99,8 @@ Type: <code>uint32</code>
 
 ### Union [flexible](/fuchsia-src/reference/fidl/language/language.md#strict-vs-flexible){:.fidl-attribute}  {#Union data-text="Union"}
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=37)*
-<div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div><table>
+<div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+<table>
     <tr><th>Ordinal</th><th>Variant</th><th>Type</th><th>Description</th></tr>
         <tr id="Union.x">
 <td><h3 id="Union.x" class="add-link hide-from-toc">1</h3></td>
@@ -97,7 +108,8 @@ Type: <code>uint32</code>
             <td>
                 <code>uint32</code>
             </td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
         <tr id="Union.">
 <td><h3 id="Union." class="add-link hide-from-toc">2</h3></td>
@@ -105,7 +117,8 @@ Type: <code>uint32</code>
             <td>
                 <code></code>
             </td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
 </table>
 
@@ -117,12 +130,14 @@ Type: <code>uint32</code>
 
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=11)*
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
 <table>
     <tr><th>Name</th><th>Value</th><th>Description</th></tr>
         <tr id="Bits.A">
 <td><h3 id="Bits.A" class="add-link hide-from-toc">A</h3></td>
             <td>1</td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
 </table>
 
@@ -137,7 +152,8 @@ Type: <code>uint32</code>
                     <code>true</code>
                 </td>
                 <td><code>bool</code></td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Added: HEAD</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Added: HEAD</span></div>
+</td>
         </tr>
         <tr id="Const">
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=8">Const</a></td>
@@ -145,7 +161,8 @@ Type: <code>uint32</code>
                     <code>0</code>
                 </td>
                 <td><code>uint32</code></td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
 </table>
 
@@ -157,6 +174,7 @@ Type: <code>uint32</code>
             <td><a href="https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=5">Alias</a></td>
             <td>
                 <code>string</code></td>
-            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div></td>
+            <td><div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+</td>
         </tr>
 </table>

@@ -11,7 +11,7 @@
         {{~ /if ~}}
         {{~ #if (eq (lower_snake_case name) "available") ~}}
             <div class="fidl-version-div">{{processVersions arguments}}</div>
-        {{~ /if ~}}
+        {{/if ~}}
         {{~ #if (eq (lower_snake_case name) "doc") ~}}
             {{~ #if (eq (len arguments) "1") ~}}
                 {{~ pulldown (docLink arguments.[0].value.value arguments.[0].name) ~}}
