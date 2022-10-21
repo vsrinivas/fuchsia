@@ -1,0 +1,75 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.hardware.platform.device;
+
+using zx;
+
+type DeviceInfo = table {
+    1: vid uint32;
+    2: pid uint32;
+    3: did uint32;
+    4: mmio_count uint32;
+    5: irq_count uint32;
+    6: bti_count uint32;
+    7: smc_count uint32;
+    8: metadata_count uint32;
+    9: name string:32;
+};
+
+type BoardInfo = table {
+    /// Vendor ID for the board.
+    1: vid uint32;
+    /// Product ID for the board.
+    2: pid uint32;
+    /// Board name from the boot image platform ID record,
+    /// (or from the BIOS on x86 platforms).
+    3: board_name string:32;
+    /// Board specific revision number.
+    4: board_revision uint32;
+};
+
+type Mmio = resource table {
+    /// Offset from beginning of VMO where the mmio region begins.
+    1: offset zx.off;
+    /// Size of mmio region.
+    2: size uint64;
+    3: vmo zx.handle:VMO;
+};
+
+@discoverable
+protocol Device {
+    // TODO(fxb/112765): Combine these methods into a single GetResources
+    // method.
+
+    GetMmio(struct {
+        index uint32;
+    }) -> (Mmio) error zx.status;
+
+    GetInterrupt(struct {
+        index uint32;
+        flags uint32;
+    }) -> (resource struct {
+        irq zx.handle:INTERRUPT;
+    }) error zx.status;
+
+    GetBti(struct {
+        index uint32;
+    }) -> (resource struct {
+        bti zx.handle:BTI;
+    }) error zx.status;
+
+    GetSmc(struct {
+        index uint32;
+    }) -> (resource struct {
+        smc zx.handle:RESOURCE;
+    }) error zx.status;
+
+    GetDeviceInfo() -> (DeviceInfo) error zx.status;
+
+    GetBoardInfo() -> (BoardInfo) error zx.status;
+};
+
+service Service {
+    device client_end:Device;
+};

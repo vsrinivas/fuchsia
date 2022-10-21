@@ -16,17 +16,18 @@
 #ifndef DDK_FIDL_PROTOCOL_DEF
 #error Internal use only. Do not include.
 #else
-DDK_FIDL_PROTOCOL_DEF(RPMB,           1, "fuchsia.hardware.rpmb.Rpmb")
-DDK_FIDL_PROTOCOL_DEF(CHROMEOS_EC,    2, "fuchsia.hardware.google.ec.Device")
-DDK_FIDL_PROTOCOL_DEF(I2C,            3, "fuchsia.hardware.i2c.Device")
-DDK_FIDL_PROTOCOL_DEF(PCI,            4, "fuchsia.hardware.pci.Device")
-DDK_FIDL_PROTOCOL_DEF(GOLDFISH_PIPE,  5, "fuchsia.hardware.goldfish.pipe.GoldfishPipe")
-DDK_FIDL_PROTOCOL_DEF(ADDRESS_SPACE,  6, "fuchsia.hardware.goldfish.AddressSpaceDevice")
-DDK_FIDL_PROTOCOL_DEF(GOLDFISH_SYNC,  7, "fuchsia.hardware.goldfish.SyncDevice")
-DDK_FIDL_PROTOCOL_DEF(SPI,            8, "fuchsia.hardware.spi.Device")
-DDK_FIDL_PROTOCOL_DEF(SYSMEM,         9, "fuchsia.hardware.sysmem.Sysmem")
-DDK_FIDL_PROTOCOL_DEF(AML_MAILBOX,    10, "fuchsia.hardware.mailbox.Device")
-DDK_FIDL_PROTOCOL_DEF(PLATFORM_BUS,          11, "fuchsia.hardware.platform.bus.PlatformBus")
-DDK_FIDL_PROTOCOL_DEF(INTERRUPT,     12, "fuchsia.hardware.interrupt.Provider")
+DDK_FIDL_PROTOCOL_DEF(RPMB,            1, "fuchsia.hardware.rpmb.Rpmb")
+DDK_FIDL_PROTOCOL_DEF(CHROMEOS_EC,     2, "fuchsia.hardware.google.ec.Device")
+DDK_FIDL_PROTOCOL_DEF(I2C,             3, "fuchsia.hardware.i2c.Device")
+DDK_FIDL_PROTOCOL_DEF(PCI,             4, "fuchsia.hardware.pci.Device")
+DDK_FIDL_PROTOCOL_DEF(GOLDFISH_PIPE,   5, "fuchsia.hardware.goldfish.pipe.GoldfishPipe")
+DDK_FIDL_PROTOCOL_DEF(ADDRESS_SPACE,   6, "fuchsia.hardware.goldfish.AddressSpaceDevice")
+DDK_FIDL_PROTOCOL_DEF(GOLDFISH_SYNC,   7, "fuchsia.hardware.goldfish.SyncDevice")
+DDK_FIDL_PROTOCOL_DEF(SPI,             8, "fuchsia.hardware.spi.Device")
+DDK_FIDL_PROTOCOL_DEF(SYSMEM,          9, "fuchsia.hardware.sysmem.Sysmem")
+DDK_FIDL_PROTOCOL_DEF(AML_MAILBOX,     10, "fuchsia.hardware.mailbox.Device")
+DDK_FIDL_PROTOCOL_DEF(PLATFORM_BUS,    11, "fuchsia.hardware.platform.bus.PlatformBus")
+DDK_FIDL_PROTOCOL_DEF(INTERRUPT,       12, "fuchsia.hardware.interrupt.Provider")
+DDK_FIDL_PROTOCOL_DEF(PLATFORM_DEVICE, 13, "fuchsia.hardware.platform.device.Device")
 #undef DDK_FIDL_PROTOCOL_DEF
 #endif
