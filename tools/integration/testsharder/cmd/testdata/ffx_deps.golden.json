@@ -60,7 +60,6 @@
         "deps": [
             "images.json",
             "obj/build/images/flash/virtual_device_specification_recommended_flags.json.template",
-            "physical_device.json",
             "product_bundle.json",
             "sdk/manifest/core",
             "virtual_device_min.json",

@@ -35,7 +35,7 @@ func TestAddFFXDeps(t *testing.T) {
 			name:       "QEMU x64 deps",
 			targetCPU:  "x64",
 			deviceType: "QEMU",
-			want:       append(baseDeps, "physical_device.json"),
+			want:       baseDeps,
 		},
 		{
 			name:       "NUC deps",
@@ -46,7 +46,7 @@ func TestAddFFXDeps(t *testing.T) {
 			name:       "AEMU x64 deps",
 			targetCPU:  "x64",
 			deviceType: "AEMU",
-			want:       append(baseDeps, "physical_device.json"),
+			want:       baseDeps,
 		},
 		{
 			name:       "QEMU arm64 deps",

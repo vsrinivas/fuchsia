@@ -106,7 +106,9 @@ func GetEmuDeps(sdkRoot string, targetCPU string, tools []string) ([]string, err
 		"obj/build/images/flash/virtual_device_specification_recommended_flags.json.template",
 	}
 	if targetCPU == "x64" {
-		deps = append(deps, "physical_device.json")
+		if _, err := os.Stat(filepath.Join(sdkRoot, "physical_device.json")); err == nil {
+			deps = append(deps, "physical_device.json")
+		}
 	}
 
 	manifestPath := filepath.Join(sdkRoot, SDKManifestPath)

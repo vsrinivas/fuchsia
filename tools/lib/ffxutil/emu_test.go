@@ -108,6 +108,9 @@ func TestAddFFXDeps(t *testing.T) {
 				[]string{"x64", "arm64"},
 				filepath.Join(sdkRoot, "sdk", "manifest", "core"),
 			)
+			if err := os.WriteFile(filepath.Join(sdkRoot, "physical_device.json"), []byte{}, os.ModePerm); err != nil {
+				t.Errorf("failed to write physical_device.json: %s", err)
+			}
 			deps, err := GetEmuDeps(sdkRoot, tc.targetCPU, tc.tools)
 			if err != nil {
 				t.Errorf("failed to get ffx emu deps: %s", err)
