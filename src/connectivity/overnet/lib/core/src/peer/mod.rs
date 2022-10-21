@@ -504,7 +504,11 @@ async fn next_link(
 /// Ensure connectivity to a peer.
 /// Update the peer with a new link whenever needed.
 /// Fail if there's no connectivity to a peer.
-async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), RunnerError> {
+async fn check_connectivity(
+    router: Weak<Router>,
+    conn: PeerConn,
+    mut wait_for_route: Option<oneshot::Sender<()>>,
+) -> Result<(), RunnerError> {
     let mut sender_and_current_link: Option<(Task<()>, Arc<LinkRouting>)> = None;
     let mut observer = Weak::upgrade(&router)
         .ok_or_else(|| RunnerError::RouterGone)?
@@ -522,6 +526,9 @@ async fn check_connectivity(router: Weak<Router>, conn: PeerConn) -> Result<(), 
                 new_link.debug_id(),
                 sender_and_current_link.as_ref().map(|s_and_l| s_and_l.1.debug_id())
             );
+            if let Some(sender) = wait_for_route.take() {
+                let _ = sender.send(());
+            }
             sender_and_current_link = Some((
                 Task::spawn(peer_to_link(
                     conn.quic_conn().expect("Should not run link updates for circuit connection!"),
@@ -635,6 +642,7 @@ impl Peer {
         config: &mut quiche::Config,
         service_observer: Observer<Vec<String>>,
         router: &Arc<Router>,
+        wait_for_route: Option<oneshot::Sender<()>>,
     ) -> Result<Arc<Self>, Error> {
         tracing::trace!(node_id = router.node_id().0, peer = node_id.0, ?conn_id, "NEW CLIENT",);
         let (command_sender, command_receiver) = mpsc::channel(1);
@@ -662,6 +670,7 @@ impl Peer {
                     check_connectivity(
                         Arc::downgrade(router),
                         PeerConn::from_quic(conn.clone(), node_id),
+                        wait_for_route,
                     ),
                     client_conn_stream(
                         Arc::downgrade(router),
@@ -710,6 +719,7 @@ impl Peer {
                     check_connectivity(
                         Arc::downgrade(router),
                         PeerConn::from_quic(conn.clone(), node_id),
+                        None,
                     ),
                     server_conn_stream(
                         node_id,

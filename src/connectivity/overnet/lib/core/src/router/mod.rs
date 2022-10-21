@@ -51,6 +51,7 @@ use fidl_fuchsia_overnet_protocol::{
     ZirconHandle,
 };
 use fuchsia_async::Task;
+use futures::channel::oneshot;
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
 use rand::Rng;
 use std::{
@@ -119,9 +120,26 @@ pub(crate) enum OpenedTransfer {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
+enum CircuitState {
+    Waiters(Vec<oneshot::Sender<()>>),
+    Peer(Arc<Peer>),
+}
+
+impl CircuitState {
+    fn peer(&self) -> Option<Arc<Peer>> {
+        if let CircuitState::Peer(peer) = self {
+            Some(Arc::clone(peer))
+        } else {
+            None
+        }
+    }
+}
+
+#[derive(Debug)]
 struct PeerMaps {
     link_clients: BTreeMap<NodeId, Arc<Peer>>,
-    circuit_clients: BTreeMap<NodeId, Arc<Peer>>,
+    circuit_clients: BTreeMap<NodeId, CircuitState>,
     servers: BTreeMap<NodeId, Vec<Arc<Peer>>>,
     connections_for_links: HashMap<ConnectionId, Arc<Peer>>,
 }
@@ -135,7 +153,7 @@ impl PeerMaps {
     ) -> Result<Arc<Peer>, Error> {
         if peer_node_id == router.node_id {
             bail!("Trying to create loopback client peer");
-        } else if let Some(p) = self.circuit_clients.get(&peer_node_id) {
+        } else if let Some(p) = self.circuit_clients.get(&peer_node_id).and_then(|x| x.peer()) {
             Ok(p.clone())
         } else if let Some(p) = self.link_clients.get(&peer_node_id) {
             if p.node_id() != peer_node_id {
@@ -147,7 +165,7 @@ impl PeerMaps {
             }
             Ok(p.clone())
         } else {
-            self.new_link_client(local_node_id, peer_node_id, router).await
+            self.new_link_client(local_node_id, peer_node_id, router, None).await
         }
     }
 
@@ -185,6 +203,7 @@ impl PeerMaps {
         local_node_id: NodeId,
         peer_node_id: NodeId,
         router: &Arc<Router>,
+        wait_for_route: Option<oneshot::Sender<()>>,
     ) -> Result<Arc<Peer>, Error> {
         let mut config =
             router.quiche_config().await.context("creating client configuration for quiche")?;
@@ -196,6 +215,7 @@ impl PeerMaps {
             &mut config,
             router.service_map.new_local_service_observer(),
             router,
+            wait_for_route,
         )?;
         self.link_clients.insert(peer_node_id, peer.clone());
         self.connections_for_links.insert(conn_id, peer.clone());
@@ -712,7 +732,49 @@ impl Router {
     }
 
     async fn client_peer(self: &Arc<Self>, peer_node_id: NodeId) -> Result<Arc<Peer>, Error> {
-        self.peers.lock().await.get_client(self.node_id, peer_node_id, self).await
+        if !cfg!(feature = "circuit") {
+            self.peers.lock().await.get_client(self.node_id, peer_node_id, self).await
+        } else {
+            let this = Arc::clone(self);
+            let circuit_peer = async move {
+                loop {
+                    let mut peers = this.peers.lock().await;
+                    match peers.circuit_clients.get_mut(&peer_node_id) {
+                        Some(CircuitState::Peer(peer)) => break Arc::clone(&peer),
+                        Some(CircuitState::Waiters(waiters)) => {
+                            let (sender, receiver) = oneshot::channel();
+                            waiters.push(sender);
+                            std::mem::drop(peers);
+                            let _ = receiver.await;
+                        }
+                        None => {
+                            peers
+                                .circuit_clients
+                                .insert(peer_node_id, CircuitState::Waiters(Vec::new()));
+                        }
+                    }
+                }
+            };
+            futures::pin_mut!(circuit_peer);
+            let (link_found_sender, link_found) = oneshot::channel();
+            let link_peer = self
+                .peers
+                .lock()
+                .await
+                .new_link_client(self.node_id, peer_node_id, self, Some(link_found_sender))
+                .await?;
+
+            match futures::future::select(circuit_peer, link_found).await {
+                futures::future::Either::Left((peer, _)) => Ok(peer),
+                futures::future::Either::Right((_, circuit_peer)) => {
+                    if let Some(peer) = circuit_peer.now_or_never() {
+                        Ok(peer)
+                    } else {
+                        Ok(link_peer)
+                    }
+                }
+            }
+        }
     }
 
     pub(crate) async fn lookup_peer_for_link(
@@ -1123,7 +1185,8 @@ async fn run_circuits(
                         .map_err(|_| format_err!("Invalid node id: {:?}", peer_node_id))?;
                     let mut peers = router.peers.lock().await;
 
-                    if peers.circuit_clients.get(&peer_node_id_num).is_some() {
+                    if peers.circuit_clients.get(&peer_node_id_num).and_then(|x| x.peer()).is_some()
+                    {
                         tracing::warn!(peer = ?peer_node_id, "Re-establishing connection");
                     }
 
@@ -1141,7 +1204,15 @@ async fn run_circuits(
                         &router,
                     )?;
 
-                    peers.circuit_clients.insert(peer_node_id_num, peer.clone());
+                    if let Some(CircuitState::Waiters(waiters)) = peers
+                        .circuit_clients
+                        .insert(peer_node_id_num, CircuitState::Peer(peer.clone()))
+                    {
+                        for waiter in waiters {
+                            let _ = waiter.send(());
+                        }
+                    }
+
                     Result::<_, Error>::Ok(())
                 }
                 .await;
