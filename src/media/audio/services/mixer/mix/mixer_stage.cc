@@ -39,10 +39,7 @@ MixerStage::MixerStage(std::string_view name, Format format, UnreadableClock ref
 }
 
 void MixerStage::AddSource(PipelineStagePtr source, AddSourceOptions options) {
-  if (!source) {
-    FX_LOGS(ERROR) << "Cannot add null source";
-    return;
-  }
+  FX_CHECK(source);
   FX_CHECK(std::find_if(sources_.begin(), sources_.end(),
                         [&source](const MixerSource& mixer_source) {
                           return mixer_source.original_source() == source;
@@ -54,10 +51,7 @@ void MixerStage::AddSource(PipelineStagePtr source, AddSourceOptions options) {
 }
 
 void MixerStage::RemoveSource(PipelineStagePtr source) {
-  if (!source) {
-    FX_LOGS(ERROR) << "Cannot remove null source";
-    return;
-  }
+  FX_CHECK(source);
   const auto it =
       std::find_if(sources_.begin(), sources_.end(), [&source](const MixerSource& mixer_source) {
         return mixer_source.original_source() == source;
