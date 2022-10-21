@@ -150,11 +150,6 @@
             url: "fuchsia-pkg://fuchsia.com/debug-serial#meta/debug-serial.cm",
         },
         {
-            name: "system-metrics-logger",
-            url: "fuchsia-pkg://fuchsia.com/system-metrics-logger#meta/system-metrics-logger-component.cm",
-            environment: "#core-env",
-        },
-        {
             name: "metrics-logger",
             url: "fuchsia-pkg://fuchsia.com/metrics-logger#meta/metrics-logger.cm",
             environment: "#core-env",
@@ -418,7 +413,6 @@
                 "#stash2",
                 "#stash_secure",
                 "#sysmem_connector",
-                "#system-metrics-logger",
                 "#system-update-committer",
                 "#timekeeper",
                 "#vulkan_loader",
@@ -557,7 +551,6 @@
             to: [
                 "#cobalt_system_metrics",
                 "#remote-control",
-                "#system-metrics-logger",
             ],
         },
         {
@@ -920,7 +913,6 @@
                 "#session-manager",
                 "#starnix_manager",
                 "#sysmem_connector",
-                "#system-metrics-logger",
             ],
 
             // Trace manager may be excluded from builds where tracing is not

@@ -124,10 +124,6 @@
             from: "#debug_serial",
         },
         {
-            protocol: "fuchsia.systemmetrics.test.SystemMetricsLogger",
-            from: "#system-metrics-logger",
-        },
-        {
             protocol: [
                 "fuchsia.pkg.PackageCache",
                 "fuchsia.space.Manager",
