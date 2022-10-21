@@ -17,6 +17,7 @@ if (is_host) {
       "//third_party/rust_crates:anyhow",
       "//third_party/rust_crates:argh",
       "//third_party/rust_crates:byteorder",
+      "//third_party/rust_crates:camino",
       "//third_party/rust_crates:crc",
       "//third_party/rust_crates:fatfs",
       "//third_party/rust_crates:gpt",

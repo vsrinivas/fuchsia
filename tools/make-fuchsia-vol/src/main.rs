@@ -6,6 +6,7 @@ use {
     anyhow::{bail, ensure, Context, Error},
     argh::FromArgs,
     byteorder::{BigEndian, WriteBytesExt},
+    camino::{Utf8Path, Utf8PathBuf},
     crc::crc32,
     fatfs::{FsOptions, NullTimeProvider, OemCpConverter, TimeProvider},
     gpt::{
@@ -21,7 +22,6 @@ use {
         io::{Read, Seek, SeekFrom, Write},
         ops::Range,
         os::unix::fs::FileExt,
-        path::Path,
         process::Command,
         str::FromStr,
     },
@@ -46,7 +46,7 @@ const FVM_GUID: PartType = part_type("41D0E340-57E3-954E-8C1E-17ECAC44CFF5");
 struct TopLevel {
     /// disk-path
     #[argh(positional)]
-    disk_path: String,
+    disk_path: Utf8PathBuf,
 
     /// enable verbose logging
     #[argh(switch)]
@@ -54,7 +54,7 @@ struct TopLevel {
 
     /// fuchsia build dir
     #[argh(option)]
-    fuchsia_build_dir: Option<String>,
+    fuchsia_build_dir: Option<Utf8PathBuf>,
 
     /// the architecture of the target CPU (x64|arm64)
     #[argh(option, default = "Arch::X64")]
@@ -62,19 +62,19 @@ struct TopLevel {
 
     /// path to bootx64.efi
     #[argh(option)]
-    bootloader: Option<String>,
+    bootloader: Option<Utf8PathBuf>,
 
     /// path to zbi (default: zircon-a from image manifests)
     #[argh(option)]
-    zbi: Option<String>,
+    zbi: Option<Utf8PathBuf>,
 
     /// path to command line file (if exists)
     #[argh(option)]
-    cmdline: Option<String>,
+    cmdline: Option<Utf8PathBuf>,
 
     /// path to zedboot.zbi (default: zircon-r from image manifests)
     #[argh(option)]
-    zedboot: Option<String>,
+    zedboot: Option<Utf8PathBuf>,
 
     /// ramdisk-only mode - only write an ESP partition
     #[argh(switch)]
@@ -82,11 +82,11 @@ struct TopLevel {
 
     /// path to blob partition image (not used with ramdisk)
     #[argh(option)]
-    blob: Option<String>,
+    blob: Option<Utf8PathBuf>,
 
     /// path to data partition image (not used with ramdisk)
     #[argh(option)]
-    data: Option<String>,
+    data: Option<Utf8PathBuf>,
 
     /// if true, use sparse fvm instead of full fvm
     #[argh(switch)]
@@ -94,7 +94,7 @@ struct TopLevel {
 
     /// path to sparse FVM image (default: storage-sparse from image manifests)
     #[argh(option)]
-    sparse_fvm: Option<String>,
+    sparse_fvm: Option<Utf8PathBuf>,
 
     /// don't add Zircon-{{A,B,R}} partitions
     #[argh(switch)]
@@ -102,27 +102,27 @@ struct TopLevel {
 
     /// path to partition image for Zircon-A (default: from --zbi)
     #[argh(option)]
-    zircon_a: Option<String>,
+    zircon_a: Option<Utf8PathBuf>,
 
     /// path to partition image for Vbmeta-A
     #[argh(option)]
-    vbmeta_a: Option<String>,
+    vbmeta_a: Option<Utf8PathBuf>,
 
     /// path to partition image for Zircon-B (default: from --zbi)
     #[argh(option)]
-    zircon_b: Option<String>,
+    zircon_b: Option<Utf8PathBuf>,
 
     /// path to partition image for Vbmeta-B
     #[argh(option)]
-    vbmeta_b: Option<String>,
+    vbmeta_b: Option<Utf8PathBuf>,
 
     /// path to partition image for Zircon-R (default: zircon-r from image manifests)
     #[argh(option)]
-    zircon_r: Option<String>,
+    zircon_r: Option<Utf8PathBuf>,
 
     /// path to partition image for Vbmeta-R
     #[argh(option)]
-    vbmeta_r: Option<String>,
+    vbmeta_r: Option<Utf8PathBuf>,
 
     /// kernel partition size for A/B/R
     #[argh(option, default = "256 * 1024 * 1024")]
@@ -337,7 +337,8 @@ fn run(mut args: TopLevel) -> Result<(), Error> {
     mbr.overwrite_lba0(&mut disk)?;
 
     let search_path = if let Some(build_dir) = &args.fuchsia_build_dir {
-        std::env::var("PATH").unwrap_or(String::new()) + ":" + build_dir + "/host_x64"
+        // Use tools from the build directory over $PATH.
+        format!("{}/host_x64:{}", build_dir, std::env::var("PATH").unwrap_or(String::new()))
     } else {
         String::new()
     };
@@ -449,35 +450,38 @@ fn check_args(args: &mut TopLevel) -> Result<(), Error> {
 
     if args.fuchsia_build_dir.is_none() {
         if let Ok(build_dir) = std::env::var("FUCHSIA_BUILD_DIR") {
-            args.fuchsia_build_dir = Some(build_dir)
+            args.fuchsia_build_dir = Some(build_dir.into())
         }
     }
 
     if args.bootloader.is_none() {
         if let Some(build_dir) = &args.fuchsia_build_dir {
-            args.bootloader = Some(build_dir.clone() + "/efi_x64/bootx64.efi");
+            args.bootloader = Some(build_dir.join("efi_x64").join("bootx64.efi"));
         } else {
             bail!("Missing --bootloader");
         }
     }
 
-    let mut dependencies = vec![args.bootloader.as_ref().unwrap().as_str()];
+    let mut dependencies: Vec<&Utf8Path> = vec![args.bootloader.as_ref().unwrap()];
 
     let images = if let Some(build_dir) = &args.fuchsia_build_dir {
-        dependencies.push("images.json");
+        dependencies.push("images.json".into());
 
         #[derive(Deserialize)]
         struct Image {
             name: String,
-            path: String,
+            path: Utf8PathBuf,
             #[serde(rename(deserialize = "type"))]
             image_type: String,
         }
         let images: Vec<Image> =
-            serde_json::from_slice(&read_file(build_dir.clone() + "/images.json")?)?;
+            serde_json::from_slice(&read_file(build_dir.join("images.json"))?)?;
         // Maps "<image-type>_<image-name>" => "<image-path>"
-        let images: HashMap<String, String> =
-            images.into_iter().map(|i| (i.image_type + "_" + &i.name, i.path)).collect();
+        let images: HashMap<String, Utf8PathBuf> = images
+            .into_iter()
+            .map(|i| (i.image_type + "_" + &i.name, build_dir.join(i.path)))
+            .collect();
+
         if args.zbi.is_none() {
             args.zbi = Some(images["zbi_zircon-a"].clone());
         }
@@ -558,17 +562,27 @@ fn check_args(args: &mut TopLevel) -> Result<(), Error> {
 
     if args.depfile {
         // Write a dependency file
-        // The output file needs to be relative to the build dir.
-        let mut disk_path = Path::new(&args.disk_path);
+        // The output file and dependencies needs to be relative to the build dir.
+        let mut disk_path = args.disk_path.as_path();
         if let Some(build_dir) = &args.fuchsia_build_dir {
             if let Ok(dir) = disk_path.strip_prefix(build_dir) {
                 disk_path = dir;
             }
+
+            for dep in dependencies.iter_mut() {
+                if let Ok(d) = dep.strip_prefix(build_dir) {
+                    *dep = d;
+                }
+            }
         }
-        let depfile = args.disk_path.clone() + ".d";
+        let depfile = format!("{}.d", args.disk_path);
         std::fs::write(
             &depfile,
-            format!("{}: {}", disk_path.to_string_lossy(), dependencies.join(" ")),
+            format!(
+                "{}: {}",
+                disk_path,
+                dependencies.iter().map(|dep| dep.as_str()).collect::<Vec<_>>().join(" ")
+            ),
         )
         .context(format!("Failed to write {}", &depfile))?;
     }
@@ -641,7 +655,7 @@ fn write_esp_content<TP: TimeProvider, OCC: OemCpConverter>(
 }
 
 // Copies the file at `source` path to the disk. `range` is the partition byte range.
-fn copy_partition(disk: &mut File, range: Range<u64>, source: &str) -> Result<(), Error> {
+fn copy_partition(disk: &mut File, range: Range<u64>, source: &Utf8Path) -> Result<(), Error> {
     let contents = read_file(source)?;
     let max_len = (range.end - range.start) as usize;
     let contents = if contents.len() > max_len {
