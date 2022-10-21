@@ -19,10 +19,16 @@
 ### with variable or function symbols that users don't want.
 
 # export $FUCHSIA_DIR to ../.. relative to this file location
-set -x FUCHSIA_DIR (realpath -s (dirname (dirname (status -f))))
+set -x FUCHSIA_DIR (readlink -f (dirname (dirname (status -f))))
 
 # export PATH to include .jiri_root/bin
-set -x PATH $FUCHSIA_DIR/.jiri_root/bin $PATH
+set jiri_root_bin "$FUCHSIA_DIR/.jiri_root/bin"
+if not contains $jiri_root_bin $PATH
+  set -x PATH $jiri_root_bin $PATH
+end
 
 # Add completion functions to $fish_complete_path
-set -x fish_complete_path $FUCHSIA_DIR/scripts/fish/completions $fish_complete_path
+set fuchsia_completions "$FUCHSIA_DIR/scripts/fish/completions"
+if not contains $fuchsia_completions $fish_complete_path
+  set -x fish_complete_path $fuchsia_completions $fish_complete_path
+end
