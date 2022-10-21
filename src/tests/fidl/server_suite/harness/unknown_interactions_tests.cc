@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "fidl/fidl.serversuite/cpp/natural_types.h"
+#include "lib/fidl/cpp/unified_messaging.h"
 #include "src/tests/fidl/server_suite/harness/harness.h"
 #include "src/tests/fidl/server_suite/harness/ordinals.h"
 
@@ -115,6 +117,22 @@ OPEN_SERVER_TEST(StrictTwoWayResponseMismatchedStrictness) {
   ASSERT_OK(client_end().read_and_check(bytes_out));
 }
 
+OPEN_SERVER_TEST(StrictTwoWayNonEmptyResponse) {
+  Bytes bytes_in = {
+      header(kTwoWayTxid, kOrdinalStrictTwoWayFields, fidl::MessageDynamicFlags::kStrictMethod),
+      encode(fidl_serversuite::OpenTargetStrictTwoWayFieldsRequest(504230)),
+  };
+  ASSERT_OK(client_end().write(bytes_in));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  Bytes bytes_out = {
+      header(kTwoWayTxid, kOrdinalStrictTwoWayFields, fidl::MessageDynamicFlags::kStrictMethod),
+      encode(fidl_serversuite::OpenTargetStrictTwoWayFieldsResponse(504230)),
+  };
+  ASSERT_OK(client_end().read_and_check(bytes_out));
+}
+
 OPEN_SERVER_TEST(StrictTwoWayErrorSyntaxResponse) {
   Bytes bytes_in = {
       header(kTwoWayTxid, kOrdinalStrictTwoWayErr, fidl::MessageDynamicFlags::kStrictMethod),
@@ -153,6 +171,23 @@ OPEN_SERVER_TEST(StrictTwoWayErrorSyntaxResponseMismatchedStrictness) {
               padding(4),
           },
           false),
+  };
+  ASSERT_OK(client_end().read_and_check(bytes_out));
+}
+
+OPEN_SERVER_TEST(StrictTwoWayErrorSyntaxNonEmptyResponse) {
+  Bytes bytes_in = {
+      header(kTwoWayTxid, kOrdinalStrictTwoWayFieldsErr, fidl::MessageDynamicFlags::kStrictMethod),
+      encode(fidl_serversuite::OpenTargetStrictTwoWayFieldsErrRequest::WithReplySuccess(406601)),
+  };
+  ASSERT_OK(client_end().write(bytes_in));
+
+  ASSERT_OK(client_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  Bytes bytes_out = {
+      header(kTwoWayTxid, kOrdinalStrictTwoWayFieldsErr, fidl::MessageDynamicFlags::kStrictMethod),
+      union_ordinal(kResultUnionSuccess),
+      inline_envelope({i32(406601)}, false),
   };
   ASSERT_OK(client_end().read_and_check(bytes_out));
 }

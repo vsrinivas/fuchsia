@@ -151,9 +151,13 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 			return false
 		case serversuite.TestStrictTwoWayResponseMismatchedStrictness:
 			return false
+		case serversuite.TestStrictTwoWayNonEmptyResponse:
+			return false
 		case serversuite.TestStrictTwoWayErrorSyntaxResponse:
 			return false
 		case serversuite.TestStrictTwoWayErrorSyntaxResponseMismatchedStrictness:
+			return false
+		case serversuite.TestStrictTwoWayErrorSyntaxNonEmptyResponse:
 			return false
 		case serversuite.TestFlexibleTwoWayResponse:
 			return false
