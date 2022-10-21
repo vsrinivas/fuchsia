@@ -93,6 +93,20 @@ class RunnerServer : public fidl::clientsuite::Runner {
     }
   }
 
+  void CallStrictTwoWayFields(::fidl::InterfaceHandle<::fidl::clientsuite::OpenTarget> target,
+                              CallStrictTwoWayFieldsCallback callback) override {
+    auto client = target.BindSync();
+    int32_t result;
+    auto status = client->StrictTwoWayFields(&result);
+    if (status == ZX_OK) {
+      callback(fidl::clientsuite::NonEmptyResultClassification::WithSuccess(
+          fidl::clientsuite::NonEmptyPayload(result)));
+    } else {
+      callback(fidl::clientsuite::NonEmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(status)));
+    }
+  }
+
   void CallStrictTwoWayErr(::fidl::InterfaceHandle<::fidl::clientsuite::OpenTarget> target,
                            CallStrictTwoWayErrCallback callback) override {
     auto client = target.BindSync();
@@ -109,6 +123,27 @@ class RunnerServer : public fidl::clientsuite::Runner {
       }
     } else {
       callback(fidl::clientsuite::EmptyResultWithErrorClassification::WithFidlError(
+          clienttest_util::ClassifyError(status)));
+    }
+  }
+
+  void CallStrictTwoWayFieldsErr(::fidl::InterfaceHandle<::fidl::clientsuite::OpenTarget> target,
+                                 CallStrictTwoWayFieldsErrCallback callback) override {
+    auto client = target.BindSync();
+    fidl::clientsuite::OpenTarget_StrictTwoWayFieldsErr_Result result;
+    auto status = client->StrictTwoWayFieldsErr(&result);
+    if (status == ZX_OK) {
+      if (result.is_response()) {
+        callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithSuccess(
+            std::move(result.response())));
+      } else if (result.is_err()) {
+        callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithApplicationError(
+            std::move(result.err())));
+      } else {
+        ZX_PANIC("invalid tag");
+      }
+    } else {
+      callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithFidlError(
           clienttest_util::ClassifyError(status)));
     }
   }
@@ -141,17 +176,17 @@ class RunnerServer : public fidl::clientsuite::Runner {
     auto status = client->FlexibleTwoWayFields(&result);
     if (status == ZX_OK) {
       if (result.is_response()) {
-        callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsResponse::WithSuccess(
+        callback(fidl::clientsuite::NonEmptyResultClassification::WithSuccess(
             std::move(result.response())));
       } else if (result.is_transport_err()) {
         ZX_ASSERT(result.transport_err() == fidl::TransportErr::kUnknownMethod);
-        callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsResponse::WithFidlError(
+        callback(fidl::clientsuite::NonEmptyResultClassification::WithFidlError(
             fidl::clientsuite::FidlErrorKind::UNKNOWN_METHOD));
       } else {
         ZX_PANIC("invalid tag");
       }
     } else {
-      callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsResponse::WithFidlError(
+      callback(fidl::clientsuite::NonEmptyResultClassification::WithFidlError(
           clienttest_util::ClassifyError(status)));
     }
   }
@@ -187,20 +222,20 @@ class RunnerServer : public fidl::clientsuite::Runner {
     auto status = client->FlexibleTwoWayFieldsErr(&result);
     if (status == ZX_OK) {
       if (result.is_response()) {
-        callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsErrResponse::WithSuccess(
+        callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithSuccess(
             std::move(result.response())));
       } else if (result.is_err()) {
-        callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsErrResponse::WithApplicationError(
+        callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithApplicationError(
             std::move(result.err())));
       } else if (result.is_transport_err()) {
         ZX_ASSERT(result.transport_err() == fidl::TransportErr::kUnknownMethod);
-        callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsErrResponse::WithFidlError(
+        callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithFidlError(
             fidl::clientsuite::FidlErrorKind::UNKNOWN_METHOD));
       } else {
         ZX_PANIC("invalid tag");
       }
     } else {
-      callback(fidl::clientsuite::RunnerCallFlexibleTwoWayFieldsErrResponse::WithFidlError(
+      callback(fidl::clientsuite::NonEmptyResultWithErrorClassification::WithFidlError(
           clienttest_util::ClassifyError(status)));
     }
   }

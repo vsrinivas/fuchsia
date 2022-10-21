@@ -88,6 +88,21 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
     });
   }
 
+  void CallStrictTwoWayFields(CallStrictTwoWayFieldsRequest& request,
+                              CallStrictTwoWayFieldsCompleter::Sync& completer) override {
+    auto client = fidl::SharedClient(std::move(request.target()), dispatcher_);
+    client->StrictTwoWayFields().ThenExactlyOnce(
+        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
+          if (result.is_ok()) {
+            completer.Reply(
+                fidl_clientsuite::NonEmptyResultClassification::WithSuccess(result.value()));
+          } else {
+            completer.Reply(fidl_clientsuite::NonEmptyResultClassification::WithFidlError(
+                clienttest_util::ClassifyError(result.error_value())));
+          }
+        });
+  }
+
   void CallStrictTwoWayErr(CallStrictTwoWayErrRequest& request,
                            CallStrictTwoWayErrCompleter::Sync& completer) override {
     auto client = fidl::SharedClient(std::move(request.target()), dispatcher_);
@@ -104,6 +119,25 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
             clienttest_util::ClassifyError(result.error_value().framework_error())));
       }
     });
+  }
+
+  void CallStrictTwoWayFieldsErr(CallStrictTwoWayFieldsErrRequest& request,
+                                 CallStrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    auto client = fidl::SharedClient(std::move(request.target()), dispatcher_);
+    client->StrictTwoWayFieldsErr().ThenExactlyOnce(
+        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
+          if (result.is_ok()) {
+            completer.Reply(fidl_clientsuite::NonEmptyResultWithErrorClassification::WithSuccess(
+                result.value()));
+          } else if (result.error_value().is_domain_error()) {
+            completer.Reply(
+                fidl_clientsuite::NonEmptyResultWithErrorClassification::WithApplicationError(
+                    result.error_value().domain_error()));
+          } else {
+            completer.Reply(fidl_clientsuite::NonEmptyResultWithErrorClassification::WithFidlError(
+                clienttest_util::ClassifyError(result.error_value().framework_error())));
+          }
+        });
   }
 
   void CallFlexibleTwoWay(CallFlexibleTwoWayRequest& request,
@@ -128,12 +162,10 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
         [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
           if (result.is_ok()) {
             completer.Reply(
-                fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithSuccess(
-                    result.value()));
+                fidl_clientsuite::NonEmptyResultClassification::WithSuccess(result.value()));
           } else {
-            completer.Reply(
-                fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithFidlError(
-                    clienttest_util::ClassifyError(result.error_value())));
+            completer.Reply(fidl_clientsuite::NonEmptyResultClassification::WithFidlError(
+                clienttest_util::ClassifyError(result.error_value())));
           }
         });
   }
@@ -159,22 +191,20 @@ class RunnerServer : public fidl::Server<fidl_clientsuite::Runner> {
   void CallFlexibleTwoWayFieldsErr(CallFlexibleTwoWayFieldsErrRequest& request,
                                    CallFlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     auto client = fidl::SharedClient(std::move(request.target()), dispatcher_);
-    client->FlexibleTwoWayFieldsErr().ThenExactlyOnce([completer = completer.ToAsync(),
-                                                       client =
-                                                           client.Clone()](auto& result) mutable {
-      if (result.is_ok()) {
-        completer.Reply(
-            fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithSuccess(
+    client->FlexibleTwoWayFieldsErr().ThenExactlyOnce(
+        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
+          if (result.is_ok()) {
+            completer.Reply(fidl_clientsuite::NonEmptyResultWithErrorClassification::WithSuccess(
                 result.value()));
-      } else if (result.error_value().is_domain_error()) {
-        completer.Reply(fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
-                            WithApplicationError(result.error_value().domain_error()));
-      } else {
-        completer.Reply(
-            fidl::Response<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithFidlError(
+          } else if (result.error_value().is_domain_error()) {
+            completer.Reply(
+                fidl_clientsuite::NonEmptyResultWithErrorClassification::WithApplicationError(
+                    result.error_value().domain_error()));
+          } else {
+            completer.Reply(fidl_clientsuite::NonEmptyResultWithErrorClassification::WithFidlError(
                 clienttest_util::ClassifyError(result.error_value().framework_error())));
-      }
-    });
+          }
+        });
   }
 
   void ReceiveClosedEvents(ReceiveClosedEventsRequest& request,

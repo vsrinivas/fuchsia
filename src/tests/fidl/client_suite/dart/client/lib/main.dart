@@ -128,6 +128,19 @@ class RunnerImpl extends Runner {
     }
   }
 
+  Future<NonEmptyResultClassification> callStrictTwoWayFields(
+      InterfaceHandle<OpenTarget> targetHandle) async {
+    var target = OpenTargetProxy();
+    target.ctrl.bind(targetHandle);
+    try {
+      int result = await target.strictTwoWayFields();
+      return NonEmptyResultClassification.withSuccess(
+          NonEmptyPayload(someField: result));
+    } catch (e) {
+      return NonEmptyResultClassification.withFidlError(classifyError(e));
+    }
+  }
+
   Future<EmptyResultWithErrorClassification> callStrictTwoWayErr(
       InterfaceHandle<OpenTarget> targetHandle) async {
     var target = OpenTargetProxy();
@@ -139,6 +152,23 @@ class RunnerImpl extends Runner {
       return EmptyResultWithErrorClassification.withApplicationError(e.value);
     } catch (e) {
       return EmptyResultWithErrorClassification.withFidlError(classifyError(e));
+    }
+  }
+
+  Future<NonEmptyResultWithErrorClassification> callStrictTwoWayFieldsErr(
+      InterfaceHandle<OpenTarget> targetHandle) async {
+    var target = OpenTargetProxy();
+    target.ctrl.bind(targetHandle);
+    try {
+      int result = await target.strictTwoWayFieldsErr();
+      return NonEmptyResultWithErrorClassification.withSuccess(
+          NonEmptyPayload(someField: result));
+    } on MethodException<int> catch (e) {
+      return NonEmptyResultWithErrorClassification.withApplicationError(
+          e.value);
+    } catch (e) {
+      return NonEmptyResultWithErrorClassification.withFidlError(
+          classifyError(e));
     }
   }
 
@@ -154,17 +184,16 @@ class RunnerImpl extends Runner {
     }
   }
 
-  Future<RunnerCallFlexibleTwoWayFieldsResponse> callFlexibleTwoWayFields(
+  Future<NonEmptyResultClassification> callFlexibleTwoWayFields(
       InterfaceHandle<OpenTarget> targetHandle) async {
     var target = OpenTargetProxy();
     target.ctrl.bind(targetHandle);
     try {
       int result = await target.flexibleTwoWayFields();
-      return RunnerCallFlexibleTwoWayFieldsResponse.withSuccess(
+      return NonEmptyResultClassification.withSuccess(
           NonEmptyPayload(someField: result));
     } catch (e) {
-      return RunnerCallFlexibleTwoWayFieldsResponse.withFidlError(
-          classifyError(e));
+      return NonEmptyResultClassification.withFidlError(classifyError(e));
     }
   }
 
@@ -182,19 +211,19 @@ class RunnerImpl extends Runner {
     }
   }
 
-  Future<RunnerCallFlexibleTwoWayFieldsErrResponse> callFlexibleTwoWayFieldsErr(
+  Future<NonEmptyResultWithErrorClassification> callFlexibleTwoWayFieldsErr(
       InterfaceHandle<OpenTarget> targetHandle) async {
     var target = OpenTargetProxy();
     target.ctrl.bind(targetHandle);
     try {
       int result = await target.flexibleTwoWayFieldsErr();
-      return RunnerCallFlexibleTwoWayFieldsErrResponse.withSuccess(
+      return NonEmptyResultWithErrorClassification.withSuccess(
           NonEmptyPayload(someField: result));
     } on MethodException<int> catch (e) {
-      return RunnerCallFlexibleTwoWayFieldsErrResponse.withApplicationError(
+      return NonEmptyResultWithErrorClassification.withApplicationError(
           e.value);
     } catch (e) {
-      return RunnerCallFlexibleTwoWayFieldsErrResponse.withFidlError(
+      return NonEmptyResultWithErrorClassification.withFidlError(
           classifyError(e));
     }
   }

@@ -13,6 +13,7 @@
 
 #include <iostream>
 
+#include "fidl/fidl.clientsuite/cpp/wire_types.h"
 #include "src/tests/fidl/client_suite/cpp_util/error_util.h"
 
 class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
@@ -84,6 +85,21 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
         });
   }
 
+  void CallStrictTwoWayFields(CallStrictTwoWayFieldsRequestView request,
+                              CallStrictTwoWayFieldsCompleter::Sync& completer) override {
+    auto client = fidl::WireSharedClient(std::move(request->target), dispatcher_);
+    client->StrictTwoWayFields().ThenExactlyOnce(
+        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
+          if (result.ok()) {
+            completer.Reply(
+                fidl_clientsuite::wire::NonEmptyResultClassification::WithSuccess(result.value()));
+          } else {
+            completer.Reply(fidl_clientsuite::wire::NonEmptyResultClassification::WithFidlError(
+                clienttest_util::ClassifyError(result)));
+          }
+        });
+  }
+
   void CallStrictTwoWayErr(CallStrictTwoWayErrRequestView request,
                            CallStrictTwoWayErrCompleter::Sync& completer) override {
     auto client = fidl::WireSharedClient(std::move(request->target), dispatcher_);
@@ -101,6 +117,30 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
       } else {
         completer.Reply(fidl_clientsuite::wire::EmptyResultWithErrorClassification::WithFidlError(
             clienttest_util::ClassifyError(result)));
+      }
+    });
+  }
+
+  void CallStrictTwoWayFieldsErr(CallStrictTwoWayFieldsErrRequestView request,
+                                 CallStrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    auto client = fidl::WireSharedClient(std::move(request->target), dispatcher_);
+    client->StrictTwoWayFieldsErr().ThenExactlyOnce([completer = completer.ToAsync(),
+                                                     client =
+                                                         client.Clone()](auto& result) mutable {
+      if (result.ok()) {
+        if (result.value().is_ok()) {
+          completer.Reply(
+              fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithSuccess(
+                  *result.value().value()));
+        } else {
+          completer.Reply(
+              fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithApplicationError(
+                  result.value().error_value()));
+        }
+      } else {
+        completer.Reply(
+            fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithFidlError(
+                clienttest_util::ClassifyError(result)));
       }
     });
   }
@@ -123,18 +163,16 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
   void CallFlexibleTwoWayFields(CallFlexibleTwoWayFieldsRequestView request,
                                 CallFlexibleTwoWayFieldsCompleter::Sync& completer) override {
     auto client = fidl::WireSharedClient(std::move(request->target), dispatcher_);
-    client->FlexibleTwoWayFields().ThenExactlyOnce([completer = completer.ToAsync(),
-                                                    client = client.Clone()](auto& result) mutable {
-      if (result.ok()) {
-        completer.Reply(
-            fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithSuccess(
-                result.value()));
-      } else {
-        completer.Reply(
-            fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithFidlError(
+    client->FlexibleTwoWayFields().ThenExactlyOnce(
+        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
+          if (result.ok()) {
+            completer.Reply(
+                fidl_clientsuite::wire::NonEmptyResultClassification::WithSuccess(result.value()));
+          } else {
+            completer.Reply(fidl_clientsuite::wire::NonEmptyResultClassification::WithFidlError(
                 clienttest_util::ClassifyError(result)));
-      }
-    });
+          }
+        });
   }
 
   void CallFlexibleTwoWayErr(CallFlexibleTwoWayErrRequestView request,
@@ -161,24 +199,25 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
   void CallFlexibleTwoWayFieldsErr(CallFlexibleTwoWayFieldsErrRequestView request,
                                    CallFlexibleTwoWayFieldsErrCompleter::Sync& completer) override {
     auto client = fidl::WireSharedClient(std::move(request->target), dispatcher_);
-    client->FlexibleTwoWayFieldsErr().ThenExactlyOnce(
-        [completer = completer.ToAsync(), client = client.Clone()](auto& result) mutable {
-          if (result.ok()) {
-            if (result.value().is_ok()) {
-              completer.Reply(
-                  fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
-                      WithSuccess(*result.value().value()));
-            } else {
-              completer.Reply(
-                  fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
-                      WithApplicationError(result.value().error_value()));
-            }
-          } else {
-            completer.Reply(
-                fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
-                    WithFidlError(clienttest_util::ClassifyError(result)));
-          }
-        });
+    client->FlexibleTwoWayFieldsErr().ThenExactlyOnce([completer = completer.ToAsync(),
+                                                       client =
+                                                           client.Clone()](auto& result) mutable {
+      if (result.ok()) {
+        if (result.value().is_ok()) {
+          completer.Reply(
+              fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithSuccess(
+                  *result.value().value()));
+        } else {
+          completer.Reply(
+              fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithApplicationError(
+                  result.value().error_value()));
+        }
+      } else {
+        completer.Reply(
+            fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithFidlError(
+                clienttest_util::ClassifyError(result)));
+      }
+    });
   }
 
   void ReceiveClosedEvents(ReceiveClosedEventsRequestView request,

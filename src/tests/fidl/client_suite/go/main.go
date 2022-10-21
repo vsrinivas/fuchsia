@@ -50,6 +50,8 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test clientsuite.Test) (bool, e
 			return false
 		case clientsuite.TestTwoWayStrictSendMismatchedStrictness:
 			return false
+		case clientsuite.TestTwoWayStrictSendNonEmptyPayload:
+			return false
 		case clientsuite.TestTwoWayStrictErrorSyntaxSendSuccessResponse:
 			return false
 		case clientsuite.TestTwoWayStrictErrorSyntaxSendErrorResponse:
@@ -57,6 +59,8 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test clientsuite.Test) (bool, e
 		case clientsuite.TestTwoWayStrictErrorSyntaxSendUnknownMethodResponse:
 			return false
 		case clientsuite.TestTwoWayStrictErrorSyntaxSendMismatchedStrictnessUnknownMethodResponse:
+			return false
+		case clientsuite.TestTwoWayStrictErrorSyntaxSendNonEmptyPayload:
 			return false
 		case clientsuite.TestTwoWayFlexibleSendSuccessResponse:
 			return false
@@ -136,20 +140,26 @@ func (*runnerImpl) CallFlexibleOneWay(_ fidl.Context, target clientsuite.OpenTar
 func (*runnerImpl) CallStrictTwoWay(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.EmptyResultClassification, error) {
 	return clientsuite.EmptyResultClassification{}, errors.New("Go Bindings do not support Open protocols")
 }
+func (*runnerImpl) CallStrictTwoWayFields(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.NonEmptyResultClassification, error) {
+	return clientsuite.NonEmptyResultClassification{}, errors.New("Go Bindings do not support Open protocols")
+}
 func (*runnerImpl) CallStrictTwoWayErr(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.EmptyResultWithErrorClassification, error) {
 	return clientsuite.EmptyResultWithErrorClassification{}, errors.New("Go Bindings do not support Open protocols")
+}
+func (*runnerImpl) CallStrictTwoWayFieldsErr(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.NonEmptyResultWithErrorClassification, error) {
+	return clientsuite.NonEmptyResultWithErrorClassification{}, errors.New("Go Bindings do not support Open protocols")
 }
 func (*runnerImpl) CallFlexibleTwoWay(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.EmptyResultClassification, error) {
 	return clientsuite.EmptyResultClassification{}, errors.New("Go Bindings do not support Open protocols")
 }
-func (*runnerImpl) CallFlexibleTwoWayFields(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.RunnerCallFlexibleTwoWayFieldsResponse, error) {
-	return clientsuite.RunnerCallFlexibleTwoWayFieldsResponse{}, errors.New("Go Bindings do not support Open protocols")
+func (*runnerImpl) CallFlexibleTwoWayFields(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.NonEmptyResultClassification, error) {
+	return clientsuite.NonEmptyResultClassification{}, errors.New("Go Bindings do not support Open protocols")
 }
 func (*runnerImpl) CallFlexibleTwoWayErr(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.EmptyResultWithErrorClassification, error) {
 	return clientsuite.EmptyResultWithErrorClassification{}, errors.New("Go Bindings do not support Open protocols")
 }
-func (*runnerImpl) CallFlexibleTwoWayFieldsErr(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.RunnerCallFlexibleTwoWayFieldsErrResponse, error) {
-	return clientsuite.RunnerCallFlexibleTwoWayFieldsErrResponse{}, errors.New("Go Bindings do not support Open protocols")
+func (*runnerImpl) CallFlexibleTwoWayFieldsErr(_ fidl.Context, target clientsuite.OpenTargetWithCtxInterface) (clientsuite.NonEmptyResultWithErrorClassification, error) {
+	return clientsuite.NonEmptyResultWithErrorClassification{}, errors.New("Go Bindings do not support Open protocols")
 }
 func (*runnerImpl) ReceiveClosedEvents(_ fidl.Context, target clientsuite.ClosedTargetWithCtxInterface, reporter clientsuite.ClosedTargetEventReporterWithCtxInterface) error {
 	return errors.New("Go bindings event support is too restricted to support the dynsuite event client")

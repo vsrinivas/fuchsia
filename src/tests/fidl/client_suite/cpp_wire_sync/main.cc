@@ -9,6 +9,7 @@
 
 #include <iostream>
 
+#include "fidl/fidl.clientsuite/cpp/wire_types.h"
 #include "src/tests/fidl/client_suite/cpp_util/error_util.h"
 
 class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
@@ -76,6 +77,19 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
     }
   }
 
+  void CallStrictTwoWayFields(CallStrictTwoWayFieldsRequestView request,
+                              CallStrictTwoWayFieldsCompleter::Sync& completer) override {
+    fidl::WireSyncClient client{std::move(request->target)};
+    auto result = client->StrictTwoWayFields();
+    if (result.ok()) {
+      completer.Reply(
+          fidl_clientsuite::wire::NonEmptyResultClassification::WithSuccess(result.value()));
+    } else {
+      completer.Reply(fidl_clientsuite::wire::NonEmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(result)));
+    }
+  }
+
   void CallStrictTwoWayErr(CallStrictTwoWayErrRequestView request,
                            CallStrictTwoWayErrCompleter::Sync& completer) override {
     fidl::WireSyncClient client{std::move(request->target)};
@@ -91,6 +105,25 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
       }
     } else {
       completer.Reply(fidl_clientsuite::wire::EmptyResultWithErrorClassification::WithFidlError(
+          clienttest_util::ClassifyError(result)));
+    }
+  }
+
+  void CallStrictTwoWayFieldsErr(CallStrictTwoWayFieldsErrRequestView request,
+                                 CallStrictTwoWayFieldsErrCompleter::Sync& completer) override {
+    fidl::WireSyncClient client{std::move(request->target)};
+    auto result = client->StrictTwoWayFieldsErr();
+    if (result.ok()) {
+      if (result.value().is_ok()) {
+        completer.Reply(fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithSuccess(
+            *result.value().value()));
+      } else {
+        completer.Reply(
+            fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithApplicationError(
+                result.value().error_value()));
+      }
+    } else {
+      completer.Reply(fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithFidlError(
           clienttest_util::ClassifyError(result)));
     }
   }
@@ -114,12 +147,10 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
     auto result = client->FlexibleTwoWayFields();
     if (result.ok()) {
       completer.Reply(
-          fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithSuccess(
-              result.value()));
+          fidl_clientsuite::wire::NonEmptyResultClassification::WithSuccess(result.value()));
     } else {
-      completer.Reply(
-          fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFields>::WithFidlError(
-              clienttest_util::ClassifyError(result)));
+      completer.Reply(fidl_clientsuite::wire::NonEmptyResultClassification::WithFidlError(
+          clienttest_util::ClassifyError(result)));
     }
   }
 
@@ -148,17 +179,16 @@ class RunnerServer : public fidl::WireServer<fidl_clientsuite::Runner> {
     auto result = client->FlexibleTwoWayFieldsErr();
     if (result.ok()) {
       if (result.value().is_ok()) {
-        completer.Reply(
-            fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithSuccess(
-                *result.value().value()));
+        completer.Reply(fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithSuccess(
+            *result.value().value()));
       } else {
-        completer.Reply(fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::
-                            WithApplicationError(result.value().error_value()));
+        completer.Reply(
+            fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithApplicationError(
+                result.value().error_value()));
       }
     } else {
-      completer.Reply(
-          fidl::WireResponse<fidl_clientsuite::Runner::CallFlexibleTwoWayFieldsErr>::WithFidlError(
-              clienttest_util::ClassifyError(result)));
+      completer.Reply(fidl_clientsuite::wire::NonEmptyResultWithErrorClassification::WithFidlError(
+          clienttest_util::ClassifyError(result)));
     }
   }
 

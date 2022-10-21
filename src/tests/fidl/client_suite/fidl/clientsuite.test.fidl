@@ -72,6 +72,31 @@ type NonEmptyPayload = struct {
     some_field int32;
 };
 
+// Result classification for methods with non-empty results and no error syntax.
+type NonEmptyResultClassification = union {
+    // This variant will be set if the method succeeded.
+    1: success NonEmptyPayload;
+    // This variant would be used for error syntax if error syntax were
+    // used.
+    2: reserved;
+    // This vairant will be set if there is any error resulting from FIDL
+    // during the call.
+    3: fidl_error FidlErrorKind;
+};
+
+// Result classification for methods with non-empty results and error syntax
+// with an int32 error.
+type NonEmptyResultWithErrorClassification = union {
+    // This variant will be set if the method succeeded.
+    1: success NonEmptyPayload;
+    // This variant will be set to the returned error if an application
+    // error was sent.
+    2: application_error int32;
+    // This vairant will be set if there is any error resulting from FIDL
+    // during the call.
+    3: fidl_error FidlErrorKind;
+};
+
 // Struct used to report when the client receives an unknown event.
 type UnknownEvent = struct {
     ordinal uint64;
@@ -132,10 +157,23 @@ closed protocol Runner {
         target client_end:OpenTarget;
     }) -> (EmptyResultClassification);
 
+    // Request that the client call the [`OpenTarget.StrictTwoWayFields`]
+    // method.
+    strict CallStrictTwoWayFields(resource struct {
+        target client_end:OpenTarget;
+    }) -> (NonEmptyResultClassification);
+
     // Request that the client call the [`OpenTarget.StrictTwoWayErr`] method.
     strict CallStrictTwoWayErr(resource struct {
         target client_end:OpenTarget;
     }) -> (EmptyResultWithErrorClassification);
+
+    // Request that the client call the [`OpenTarget.StrictTwoWayFieldsErr`]
+    // method.
+    strict CallStrictTwoWayFieldsErr(resource struct {
+        target client_end:OpenTarget;
+    }) -> (NonEmptyResultWithErrorClassification);
+
 
     // Request that the client call the [`OpenTarget.FlexibleTwoWay`] method.
     strict CallFlexibleTwoWay(resource struct {
@@ -146,16 +184,7 @@ closed protocol Runner {
     // method.
     strict CallFlexibleTwoWayFields(resource struct {
         target client_end:OpenTarget;
-    }) -> (union {
-        // This variant will be set if the method succeeded.
-        1: success NonEmptyPayload;
-        // This variant would be used for error syntax if error syntax were
-        // used.
-        2: reserved;
-        // This vairant will be set if there is any error resulting from FIDL
-        // during the call.
-        3: fidl_error FidlErrorKind;
-    });
+    }) -> (NonEmptyResultClassification);
 
     // Request that the client call the [`OpenTarget.FlexibleTwoWayErr`] method.
     strict CallFlexibleTwoWayErr(resource struct {
@@ -166,16 +195,7 @@ closed protocol Runner {
     // method.
     strict CallFlexibleTwoWayFieldsErr(resource struct {
         target client_end:OpenTarget;
-    }) -> (union {
-        // This variant will be set if the method succeeded.
-        1: success NonEmptyPayload;
-        // This variant will be set to the returned error if an application
-        // error was sent.
-        2: application_error int32;
-        // This vairant will be set if there is any error resulting from FIDL
-        // during the call.
-        3: fidl_error FidlErrorKind;
-    });
+    }) -> (NonEmptyResultWithErrorClassification);
 
     // Tell the client to receive an event on the given ajar target and report
     // what event was received.
@@ -270,7 +290,9 @@ open protocol OpenTarget {
     flexible FlexibleOneWay();
 
     strict StrictTwoWay() -> ();
+    strict StrictTwoWayFields() -> (NonEmptyPayload);
     strict StrictTwoWayErr() -> (struct {}) error int32;
+    strict StrictTwoWayFieldsErr() -> (NonEmptyPayload) error int32;
     flexible FlexibleTwoWay() -> (struct {});
     flexible FlexibleTwoWayFields() -> (NonEmptyPayload);
     flexible FlexibleTwoWayErr() -> (struct {}) error int32;
@@ -312,10 +334,12 @@ type Test = flexible enum : uint32 {
 
     TWO_WAY_STRICT_SEND = 6;
     TWO_WAY_STRICT_SEND_MISMATCHED_STRICTNESS = 7;
+    TWO_WAY_STRICT_SEND_NON_EMPTY_PAYLOAD = 38;
     TWO_WAY_STRICT_ERROR_SYNTAX_SEND_SUCCESS_RESPONSE = 8;
     TWO_WAY_STRICT_ERROR_SYNTAX_SEND_ERROR_RESPONSE = 9;
     TWO_WAY_STRICT_ERROR_SYNTAX_SEND_UNKNOWN_METHOD_RESPONSE = 10;
     TWO_WAY_STRICT_ERROR_SYNTAX_SEND_MISMATCHED_STRICTNESS_UNKNOWN_METHOD_RESPONSE = 11;
+    TWO_WAY_STRICT_ERROR_SYNTAX_SEND_NON_EMPTY_PAYLOAD = 39;
     TWO_WAY_FLEXIBLE_SEND_SUCCESS_RESPONSE = 12;
     TWO_WAY_FLEXIBLE_SEND_ERROR_RESPONSE = 13;
     TWO_WAY_FLEXIBLE_SEND_UNKNOWN_METHOD_RESPONSE = 14;
@@ -345,5 +369,5 @@ type Test = flexible enum : uint32 {
     UNKNOWN_STRICT_SERVER_INITIATED_TWO_WAY = 36;
     UNKNOWN_FLEXIBLE_SERVER_INITIATED_TWO_WAY = 37;
 
-    // next available: 38
+    // next available: 40
 };

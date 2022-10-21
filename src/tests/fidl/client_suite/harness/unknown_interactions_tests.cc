@@ -110,6 +110,34 @@ CLIENT_TEST(TwoWayStrictSendMismatchedStrictness) {
   WAIT_UNTIL_CALLBACK_RUN();
 }
 
+CLIENT_TEST(TwoWayStrictSendNonEmptyPayload) {
+  runner()
+      ->CallStrictTwoWayFields({{.target = TakeOpenClient()}})
+      .ThenExactlyOnce([&](auto result) {
+        MarkCallbackRun();
+        ASSERT_TRUE(result.is_ok()) << result.error_value();
+        ASSERT_TRUE(result.value().success().has_value());
+        ASSERT_EQ(fidl_clientsuite::NonEmptyPayload(541768), result.value().success().value());
+      });
+
+  ASSERT_OK(server_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  Bytes bytes_out = {
+      header(kTxidNotKnown, kOrdinalStrictTwoWayFields, fidl::MessageDynamicFlags::kStrictMethod),
+  };
+  zx_txid_t txid;
+  ASSERT_OK(server_end().read_and_check_unknown_txid(&txid, bytes_out));
+  ASSERT_NE(0u, txid);
+
+  Bytes bytes_in = {
+      header(txid, kOrdinalStrictTwoWayFields, fidl::MessageDynamicFlags::kStrictMethod),
+      encode(fidl_clientsuite::NonEmptyPayload(541768)),
+  };
+  ASSERT_OK(server_end().write(bytes_in));
+
+  WAIT_UNTIL_CALLBACK_RUN();
+}
+
 CLIENT_TEST(TwoWayStrictErrorSyntaxSendSuccessResponse) {
   runner()->CallStrictTwoWayErr({{.target = TakeOpenClient()}}).ThenExactlyOnce([&](auto result) {
     MarkCallbackRun();
@@ -213,6 +241,36 @@ CLIENT_TEST(TwoWayStrictErrorSyntaxSendMismatchedStrictnessUnknownMethodResponse
       header(txid, kOrdinalStrictTwoWayErr, fidl::MessageDynamicFlags::kFlexibleMethod),
       union_ordinal(kResultUnionTransportError),
       inline_envelope({i32(ZX_ERR_NOT_SUPPORTED)}, false),
+  };
+  ASSERT_OK(server_end().write(bytes_in));
+
+  WAIT_UNTIL_CALLBACK_RUN();
+}
+
+CLIENT_TEST(TwoWayStrictErrorSyntaxSendNonEmptyPayload) {
+  runner()
+      ->CallStrictTwoWayFieldsErr({{.target = TakeOpenClient()}})
+      .ThenExactlyOnce([&](auto result) {
+        MarkCallbackRun();
+        ASSERT_TRUE(result.is_ok()) << result.error_value();
+        ASSERT_TRUE(result.value().success().has_value());
+        ASSERT_EQ(fidl_clientsuite::NonEmptyPayload(394966), result.value().success().value());
+      });
+
+  ASSERT_OK(server_end().wait_for_signal(ZX_CHANNEL_READABLE));
+
+  Bytes bytes_out = {
+      header(kTxidNotKnown, kOrdinalStrictTwoWayFieldsErr,
+             fidl::MessageDynamicFlags::kStrictMethod),
+  };
+  zx_txid_t txid;
+  ASSERT_OK(server_end().read_and_check_unknown_txid(&txid, bytes_out));
+  ASSERT_NE(0u, txid);
+
+  Bytes bytes_in = {
+      header(txid, kOrdinalStrictTwoWayFieldsErr, fidl::MessageDynamicFlags::kStrictMethod),
+      union_ordinal(kResultUnionSuccess),
+      inline_envelope({i32(394966)}, false),
   };
   ASSERT_OK(server_end().write(bytes_in));
 

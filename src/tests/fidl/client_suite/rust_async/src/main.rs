@@ -2,21 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl::endpoints::Proxy;
-use futures::TryStreamExt;
-
 use {
     anyhow::{Context as _, Error},
+    fidl::endpoints::Proxy,
     fidl_fidl_clientsuite::{
         AjarTargetEvent, AjarTargetEventReport, ClosedTargetEventReport, Empty,
         EmptyResultClassification, EmptyResultWithErrorClassification, NonEmptyPayload,
-        OpenTargetEvent, OpenTargetEventReport, RunnerCallFlexibleTwoWayFieldsErrResponse,
-        RunnerCallFlexibleTwoWayFieldsResponse, RunnerRequest, RunnerRequestStream, Test,
-        UnknownEvent,
+        NonEmptyResultClassification, NonEmptyResultWithErrorClassification, OpenTargetEvent,
+        OpenTargetEventReport, RunnerRequest, RunnerRequestStream, Test, UnknownEvent,
     },
     fidl_zx as _, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    futures::prelude::*,
+    futures::{prelude::*, TryStreamExt},
     rust_util::classify_error,
 };
 
@@ -84,6 +81,19 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                             .context("sending response failed"),
                     }
                 }
+                RunnerRequest::CallStrictTwoWayFields { target, responder } => {
+                    let client = target.into_proxy().context("creating proxy failed")?;
+                    match client.strict_two_way_fields().await {
+                        Ok(some_field) => responder
+                            .send(&mut NonEmptyResultClassification::Success(NonEmptyPayload {
+                                some_field,
+                            }))
+                            .context("sending response failed"),
+                        Err(err) => responder
+                            .send(&mut NonEmptyResultClassification::FidlError(classify_error(err)))
+                            .context("sending response failed"),
+                    }
+                }
                 RunnerRequest::CallStrictTwoWayErr { target, responder } => {
                     let client = target.into_proxy().context("creating proxy failed")?;
                     match client.strict_two_way_err().await {
@@ -97,6 +107,26 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                             .context("sending response failed"),
                         Err(fidl_err) => responder
                             .send(&mut EmptyResultWithErrorClassification::FidlError(
+                                classify_error(fidl_err),
+                            ))
+                            .context("sending response failed"),
+                    }
+                }
+                RunnerRequest::CallStrictTwoWayFieldsErr { target, responder } => {
+                    let client = target.into_proxy().context("creating proxy failed")?;
+                    match client.strict_two_way_fields_err().await {
+                        Ok(Ok(some_field)) => responder
+                            .send(&mut NonEmptyResultWithErrorClassification::Success(
+                                NonEmptyPayload { some_field },
+                            ))
+                            .context("sending response failed"),
+                        Ok(Err(application_err)) => responder
+                            .send(&mut NonEmptyResultWithErrorClassification::ApplicationError(
+                                application_err,
+                            ))
+                            .context("sending response failed"),
+                        Err(fidl_err) => responder
+                            .send(&mut NonEmptyResultWithErrorClassification::FidlError(
                                 classify_error(fidl_err),
                             ))
                             .context("sending response failed"),
@@ -117,14 +147,12 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                     let client = target.into_proxy().context("creating proxy failed")?;
                     match client.flexible_two_way_fields().await {
                         Ok(some_field) => responder
-                            .send(&mut RunnerCallFlexibleTwoWayFieldsResponse::Success(
-                                NonEmptyPayload { some_field },
-                            ))
+                            .send(&mut NonEmptyResultClassification::Success(NonEmptyPayload {
+                                some_field,
+                            }))
                             .context("sending response failed"),
                         Err(err) => responder
-                            .send(&mut RunnerCallFlexibleTwoWayFieldsResponse::FidlError(
-                                classify_error(err),
-                            ))
+                            .send(&mut NonEmptyResultClassification::FidlError(classify_error(err)))
                             .context("sending response failed"),
                     }
                 }
@@ -150,17 +178,17 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                     let client = target.into_proxy().context("creating proxy failed")?;
                     match client.flexible_two_way_fields_err().await {
                         Ok(Ok(some_field)) => responder
-                            .send(&mut RunnerCallFlexibleTwoWayFieldsErrResponse::Success(
+                            .send(&mut NonEmptyResultWithErrorClassification::Success(
                                 NonEmptyPayload { some_field },
                             ))
                             .context("sending response failed"),
                         Ok(Err(application_err)) => responder
-                            .send(&mut RunnerCallFlexibleTwoWayFieldsErrResponse::ApplicationError(
+                            .send(&mut NonEmptyResultWithErrorClassification::ApplicationError(
                                 application_err,
                             ))
                             .context("sending response failed"),
                         Err(fidl_err) => responder
-                            .send(&mut RunnerCallFlexibleTwoWayFieldsErrResponse::FidlError(
+                            .send(&mut NonEmptyResultWithErrorClassification::FidlError(
                                 classify_error(fidl_err),
                             ))
                             .context("sending response failed"),
