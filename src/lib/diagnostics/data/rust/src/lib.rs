@@ -369,7 +369,7 @@ impl FromStr for Severity {
             "trace" => Ok(Severity::Trace),
             "debug" => Ok(Severity::Debug),
             "info" => Ok(Severity::Info),
-            "warn" => Ok(Severity::Warn),
+            "warn" | "warning" => Ok(Severity::Warn),
             "error" => Ok(Severity::Error),
             "fatal" => Ok(Severity::Fatal),
             other => Err(format_err!("invalid severity: {}", other)),
@@ -1579,5 +1579,11 @@ mod tests {
         assert_eq!(original_data, expected_data);
         // We skip deserializing dropped
         assert_eq!(original_data.metadata.dropped, None);
+    }
+
+    #[fuchsia::test]
+    fn severity_aliases() {
+        assert_eq!(Severity::from_str("warn").unwrap(), Severity::Warn);
+        assert_eq!(Severity::from_str("warning").unwrap(), Severity::Warn);
     }
 }

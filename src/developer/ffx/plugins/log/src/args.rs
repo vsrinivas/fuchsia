@@ -97,7 +97,8 @@ pub struct LogCommand {
     #[argh(option)]
     pub exclude_tags: Vec<String>,
 
-    /// set the minimum severity
+    /// set the minimum severity. Accepted values (from lower to higher) are: trace, debug, info,
+    /// warn (or warning), error, fatal. This field is case insensitive.
     #[argh(option, default = "Severity::Info")]
     pub severity: Severity,
 
