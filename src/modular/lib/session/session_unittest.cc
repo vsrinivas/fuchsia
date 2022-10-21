@@ -69,32 +69,6 @@ class SessionTest : public gtest::RealLoopFixture {
   std::map<std::string, std::unique_ptr<modular::PseudoDirServer>> protocol_servers_;
 };
 
-// Tests that |ConnectToBasemgrDebug| can connect to |BasemgrDebug| served under the hub path
-// that exists when basemgr is running as a v1 component.
-TEST_F(SessionTest, ConnectToBasemgrDebugV1) {
-  static constexpr auto kTestBasemgrDebugPath = "/hub/c/basemgr.cmx/12345/out/debug/basemgr";
-
-  // Serve the |BasemgrDebug| service in the process namespace at the path |kTestBasemgrDebugPath|.
-  bool got_request{false};
-  fidl::InterfaceRequestHandler<fuchsia::modular::internal::BasemgrDebug> handler =
-      [&](fidl::InterfaceRequest<fuchsia::modular::internal::BasemgrDebug> request) {
-        got_request = true;
-      };
-  ServeProtocolAt<fuchsia::modular::internal::BasemgrDebug>(kTestBasemgrDebugPath,
-                                                            std::move(handler));
-
-  // Connect to the |BasemgrDebug| service.
-  auto result = modular::session::ConnectToBasemgrDebug();
-  EXPECT_TRUE(result.is_ok());
-
-  // Ensure that the proxy returned is connected to the instance served above.
-  fuchsia::modular::internal::BasemgrDebugPtr basemgr_debug = result.take_value();
-  basemgr_debug->StartSessionWithRandomId();
-
-  RunLoopUntil([&]() { return got_request; });
-  EXPECT_TRUE(got_request);
-}
-
 // Tests that |ConnectToBasemgrDebug| can connect to |BasemgrDebug| served under
 // the hub-v2 path that exists when basemgr is running as a v2 session.
 TEST_F(SessionTest, ConnectToBasemgrDebugV2Session) {

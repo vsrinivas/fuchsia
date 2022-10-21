@@ -5,9 +5,6 @@
 #ifndef SRC_MODULAR_LIB_SESSION_SESSION_CONSTANTS_H_
 #define SRC_MODULAR_LIB_SESSION_SESSION_CONSTANTS_H_
 
-// Glob pattern for the path to basemgr's debug service when basemgr is running as a v1 component.
-constexpr char kBasemgrDebugV1Glob[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
-
 // Glob pattern for the path to basemgr's debug service when basemgr is running as a session.
 constexpr char kBasemgrDebugSessionGlob[] =
     "/hub-v2/children/core/children/session-manager/children/session:session/"

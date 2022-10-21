@@ -134,8 +134,6 @@ int main(int argc, char** argv) {
 
   auto lifecycle_request = zx_take_startup_handle(PA_LIFECYCLE);
   std::unordered_set<component::Moniker> lifecycle_allowlist;
-  lifecycle_allowlist.insert(component::Moniker{
-      .url = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx", .realm_path = {"app", "sys"}});
   std::vector<std::string> sysmgr_args;
   if (!auto_update_packages.empty()) {
     sysmgr_args.push_back("--auto_update_packages=" + auto_update_packages);

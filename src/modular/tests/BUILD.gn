@@ -80,7 +80,7 @@ fuchsia_test_package("basemgr_v2_test") {
     ":basemgr-with-eager-children",
     ":basemgr-with-viewprovider-from-parent",
     "//src/cobalt/bin/testing/mock_cobalt:component_v2",
-    "//src/modular/bin/basemgr:component_v2",
+    "//src/modular/bin/basemgr:component",
   ]
 
   test_specs = {

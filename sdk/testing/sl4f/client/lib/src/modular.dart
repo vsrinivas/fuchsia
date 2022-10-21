@@ -56,8 +56,7 @@ class Modular {
   /// Takes a custom [config] as JSON serialized string, or launches basemgr
   /// with system default config if not provided.
   ///
-  /// If [sessionUrl] provided, the given session component will be launched
-  /// instead of the legacy basemgr.cmx component.
+  /// If [sessionUrl] provided, the given session component will be launched.
   Future<String> startBasemgr([String config, String sessionUrl]) async {
     final args = {};
     if (config != null && config.isNotEmpty) {
@@ -83,8 +82,7 @@ class Modular {
   /// If [assumeControl] is true (the default) and basemgr wasn't running, then
   /// this object will stop basemgr when [shutdown] is called with no arguments.
   ///
-  /// If [sessionUrl] provided, the given session component will be launched
-  /// instead of the legacy basemgr.cmx component.
+  /// If [sessionUrl] provided, the given session component will be launched.
   Future<void> boot(
       {String config, bool assumeControl = true, String sessionUrl}) async {
     if (await isRunning) {
@@ -92,8 +90,7 @@ class Modular {
       return;
     }
 
-    _log.info(
-        'Booting ${(sessionUrl != null) ? sessionUrl : 'legacy basemgr.cmx'} '
+    _log.info('Booting ${sessionUrl} '
         'with ${(config != null) ? 'custom' : 'default'} '
         'configuration.');
 

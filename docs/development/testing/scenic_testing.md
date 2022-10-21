@@ -172,7 +172,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   From your host workstation, run:
 
   ```
-  fx shell "killall basemgr.cmx; killall root_presenter.cmx; killall scenic.cmx; killall tiles.cmx; killall present_view"
+  ffx session restart
   ```
 
   Then run the pixel tests:

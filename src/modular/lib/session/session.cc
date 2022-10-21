@@ -37,8 +37,7 @@ fpromise::result<InterfacePtr, zx_status_t> ConnectInPaths(
 }  // namespace
 
 fpromise::result<fuchsia::modular::internal::BasemgrDebugPtr, zx_status_t> ConnectToBasemgrDebug() {
-  return ConnectInPaths<fuchsia::modular::internal::BasemgrDebug>(
-      {kBasemgrDebugSessionGlob, kBasemgrDebugV1Glob});
+  return ConnectInPaths<fuchsia::modular::internal::BasemgrDebug>({kBasemgrDebugSessionGlob});
 }
 
 }  // namespace modular::session

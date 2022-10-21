@@ -72,13 +72,7 @@ source_set("basemgr_impl") {
   ]
 }
 
-fuchsia_component("component_v1") {
-  component_name = "basemgr"
-  manifest = "meta/basemgr.cmx"
-  deps = [ ":basemgr_bin" ]
-}
-
-fuchsia_component("component_v2") {
+fuchsia_component("component") {
   component_name = "basemgr"
   manifest = "meta/basemgr.cml"
   deps = [ ":basemgr_bin" ]
@@ -90,10 +84,7 @@ fuchsia_component("basemgr-for-testing-v1-to-v2") {
 }
 
 fuchsia_package("basemgr") {
-  deps = [
-    ":component_v1",
-    ":component_v2",
-  ]
+  deps = [ ":component" ]
 }
 
 source_set("lib") {
@@ -287,32 +278,6 @@ fuchsia_component("basemgr-v1-to-v2-test-realm") {
   deps = [ ":basemgr_v1_to_v2_test_realm_bin" ]
 }
 
-executable("basemgr_non_hermetic_test") {
-  testonly = true
-
-  sources = [ "basemgr_non_hermetic_test.cc" ]
-
-  deps = [
-    ":basemgr_bin",
-    "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_hlcpp",
-    "//sdk/fidl/fuchsia.modular.session:fuchsia.modular.session_hlcpp",
-    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_hlcpp",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys_hlcpp",
-    "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy_hlcpp",
-    "//sdk/lib/sys/cpp/testing:integration_fixture",
-    "//src/cobalt/bin/testing/mock_cobalt",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/modular/lib/modular_config",
-    "//src/ui/scenic/lib/scenic:scenic",
-    "//third_party/googletest:gtest",
-  ]
-}
-
-fuchsia_unittest_component("basemgr-non-hermetic-test") {
-  manifest = "meta/basemgr_non_hermetic_test.cml"
-  deps = [ ":basemgr_non_hermetic_test" ]
-}
-
 executable("inspector_unittest") {
   testonly = true
 
@@ -348,7 +313,6 @@ fuchsia_test_package("basemgr_unittests") {
     ":basemgr-impl-unittest",
     ":basemgr-v1-to-v2-test-realm",
     ":basemgr-v2-to-v1-unittest",
-    ":basemgr-non-hermetic-test",
     ":session-context-impl-unittest",
     ":basemgr-inspector-unittest",
     ":reboot-rate-limiter-unittest",
