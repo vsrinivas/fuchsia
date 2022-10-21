@@ -2,7 +2,8 @@
 
 [![camino on crates.io](https://img.shields.io/crates/v/camino)](https://crates.io/crates/camino)
 [![crates.io download count](https://img.shields.io/crates/d/camino)](https://crates.io/crates/camino)
-[![Documentation (latest release)](https://docs.rs/camino/badge.svg)](https://docs.rs/camino)
+[![Documentation (latest release)](https://img.shields.io/badge/docs-latest%20version-brightgreen.svg)](https://docs.rs/camino)
+[![Documentation (main)](https://img.shields.io/badge/docs-main-purple.svg)](https://camino-rs.github.io/camino/rustdoc/camino/)
 [![License](https://img.shields.io/badge/license-Apache-green.svg)](LICENSE-APACHE)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE-MIT)
 
@@ -43,7 +44,7 @@ as valid UTF-8 from there on, avoiding repeated lossy and confusing conversions.
 
 The documentation for [`Utf8PathBuf`] and [`Utf8Path`] contains several examples.
 
-For examples of how to use `camino` with other libraries like `serde` and `structopt`, see the [`examples`] directory. 
+For examples of how to use `camino` with other libraries like `serde` and `clap`, see the [`camino-examples`] directory.
 
 ## API design
 
@@ -73,6 +74,8 @@ is ultimately a case-by-case decision. Here are some general guidelines that may
   burdens on downstream consumers.
 * **You're building something brand new and are willing to ask your users to rename their paths if necessary.** Projects
   that don't have to worry about legacy compatibility have more flexibility in choosing what paths they support.
+  
+In general, using camino is the right choice for most projects.
 
 *You should **NOT** use camino, if...*
 
@@ -90,16 +93,19 @@ is ultimately a case-by-case decision. Here are some general guidelines that may
 
 By default, `camino` has **no dependencies** other than `std`. There are some optional features that enable
 dependencies:
-* `serde1` adds serde [`Serialize`] and [`Deserialize`] impls for [`Utf8PathBuf`] and [`Utf8Path`] (zero-copy).
+* `serde1` adds serde [`Serialize`] and [`Deserialize`] impls for [`Utf8PathBuf`] and [`Utf8Path`]
+  (zero-copy).
+* `proptest1` adds [proptest](https://altsysrq.github.io/proptest-book/) [`Arbitrary`]
+  implementations for [`Utf8PathBuf`] and `Box<Utf8Path>`.
 
 ## Rust version support
 
 The minimum supported Rust version (MSRV) for `camino` with default features is **1.34**. This project is tested in CI
 against the latest stable version of Rust and the MSRV.
-* *Stable APIs* added in later Rust versions are supported through conditional compilation in `build.rs`.
+* *Stable APIs* added in later Rust versions are supported either through conditional compilation in `build.rs`, or through backfills that also work on older versions.
 * *Deprecations* are kept in sync with the version of Rust they're added in.
 * *Unstable APIs* are currently not supported. Please
-  [file an issue on GitHub](https://github.com/withoutboats/camino/issues/new) if you need an unstable API.
+  [file an issue on GitHub](https://github.com/camino-rs/camino/issues/new) if you need an unstable API.
 
 `camino` is designed to be a core library and has a conservative MSRV policy. MSRV increases will only happen for
 a compelling enough reason, and will involve at least a minor version bump.
@@ -122,4 +128,5 @@ or the [MIT license](https://github.com/rust-lang/rust/blob/master/LICENSE-MIT).
 [`std::path::Path`]: https://doc.rust-lang.org/std/path/struct.Path.html
 [`Serialize`]: https://docs.rs/serde/1/serde/trait.Serialize.html
 [`Deserialize`]: https://docs.rs/serde/1/serde/trait.Deserialize.html
-[`examples`]: https://github.com/withoutboats/camino/tree/master/examples
+[`camino-examples`]: https://github.com/camino-rs/camino/tree/main/camino-examples
+[`Arbitrary`]: https://docs.rs/proptest/1/proptest/arbitrary/trait.Arbitrary.html

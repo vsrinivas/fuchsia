@@ -47,7 +47,7 @@ blocking = "1.0.2"
 bumpalo = "3.2.1"
 byteorder = { version = "1", features = ["i128"] }
 bytes = "1.0.1"
-camino = "1.0.5"
+camino = { version = "1.1.1", features = ["proptest1", "serde1"] }
 # NB: morally we'd like to default-features = false here, but we have
 # transitive dependencies on this crate that *do* enable default features.
 # Cargo does something called "feature unification"
@@ -409,8 +409,12 @@ rustflags = []
 [gn.package.byteorder."1.3.1"]
 rustflags = ["--cfg=byteorder_i128"]
 
-[gn.package.camino."1.0.5"]
-rustflags = ["--cfg=path_buf_capacity"]
+[gn.package.camino."1.1.1"]
+rustflags = [
+  "--cfg=path_buf_capacity",
+  "--cfg=shrink_to",
+  "--cfg=try_reserve_2",
+]
 
 [gn.package.core-foundation-sys."0.8.3".platform."cfg(target_os = \"macos\")"]
 rustflags = ["-lframework=CoreFoundation"]

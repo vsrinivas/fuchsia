@@ -3,44 +3,56 @@
 # When uploading crates to the registry Cargo will automatically
 # "normalize" Cargo.toml files for maximal compatibility
 # with all versions of Cargo and also rewrite `path` dependencies
-# to registry (e.g., crates.io) dependencies
+# to registry (e.g., crates.io) dependencies.
 #
-# If you believe there's an error in this file please file an
-# issue against the rust-lang/cargo repository. If you're
-# editing this file be aware that the upstream Cargo.toml
-# will likely look very different (and much more reasonable)
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
 
 [package]
 edition = "2018"
 name = "camino"
-version = "1.0.5"
-authors = ["Without Boats <saoirse@without.boats>", "Ashley Williams <ashley666ashley@gmail.com>", "Steve Klabnik <steve@steveklabnik.com>", "Rain <rain@sunshowers.io>"]
-exclude = [".cargo/**/*", ".github/**/*"]
+version = "1.1.1"
+authors = [
+    "Without Boats <saoirse@without.boats>",
+    "Ashley Williams <ashley666ashley@gmail.com>",
+    "Steve Klabnik <steve@steveklabnik.com>",
+    "Rain <rain@sunshowers.io>",
+]
+exclude = [
+    ".cargo/**/*",
+    ".github/**/*",
+]
 description = "UTF-8 paths"
 documentation = "https://docs.rs/camino"
 readme = "README.md"
-keywords = ["paths", "utf8", "unicode", "filesystem"]
-categories = ["development-tools", "filesystem", "os"]
+keywords = [
+    "paths",
+    "utf8",
+    "unicode",
+    "filesystem",
+]
+categories = [
+    "development-tools",
+    "filesystem",
+    "os",
+]
 license = "MIT OR Apache-2.0"
-repository = "https://github.com/withoutboats/camino"
+repository = "https://github.com/camino-rs/camino"
+
 [package.metadata.docs.rs]
 all-features = true
+rustdoc-args = ["--cfg=doc_cfg"]
 
-[[example]]
-name = "serde"
-required-features = ["serde1"]
+[dependencies.proptest]
+version = "1.0.0"
+optional = true
+
 [dependencies.serde]
 version = "1"
 features = ["derive"]
 optional = true
-[dev-dependencies.anyhow]
-version = "1.0.38"
-
-[dev-dependencies.serde_json]
-version = "1.0.62"
-
-[dev-dependencies.structopt]
-version = "0.3.21"
 
 [features]
+proptest1 = ["proptest"]
 serde1 = ["serde"]

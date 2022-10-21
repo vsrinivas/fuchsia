@@ -131,7 +131,7 @@ group("bytes") {
 }
 
 group("camino") {
-  public_deps = [ ":camino-v1_0_5" ]
+  public_deps = [ ":camino-v1_1_1" ]
 }
 
 if (!(current_os == "fuchsia")) {
@@ -2146,13 +2146,14 @@ rust_library("cache-padded-v1_1_1") {
   visibility = [ ":*" ]
 }
 
-rust_library("camino-v1_0_5") {
+rust_library("camino-v1_1_1") {
   crate_name = "camino"
   crate_root = "//third_party/rust_crates/vendor/camino/src/lib.rs"
-  output_name = "camino-675a72b3a822c4c7"
+  output_name = "camino-d00e09f300cff915"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
+  deps += [ ":proptest-v1_0_0" ]
   deps += [ ":serde-v1_0_116" ]
 
   rustenv = []
@@ -2160,8 +2161,10 @@ rust_library("camino-v1_0_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=675a72b3a822c4c7",
-    "-Cextra-filename=-675a72b3a822c4c7",
+    "-Cmetadata=d00e09f300cff915",
+    "-Cextra-filename=-d00e09f300cff915",
+    "--cfg=feature=\"proptest\"",
+    "--cfg=feature=\"proptest1\"",
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"serde1\"",
     "--cfg=path_buf_capacity",
@@ -2198,7 +2201,7 @@ rust_library("cargo_metadata-v0_14_1") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":camino-v1_0_5" ]
+  deps += [ ":camino-v1_1_1" ]
   deps += [ ":cargo-platform-v0_1_2" ]
   deps += [ ":semver-v1_0_4" ]
   deps += [ ":serde-v1_0_116" ]
@@ -6805,7 +6808,7 @@ rust_library("pathdiff-v0_2_1") {
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
-  deps += [ ":camino-v1_0_5" ]
+  deps += [ ":camino-v1_1_1" ]
 
   rustenv = []
 
