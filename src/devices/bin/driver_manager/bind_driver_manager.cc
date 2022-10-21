@@ -51,28 +51,33 @@ zx_status_t BindDriverManager::BindDriverToDevice(const MatchedDriver& driver,
   return status;
 }
 
-zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev,
-                                          std::string_view drvlibname) {
+zx_status_t BindDriverManager::BindDevice(const fbl::RefPtr<Device>& dev) {
   // shouldn't be possible to get a bind request for a proxy device
   if (dev->flags & DEV_CTX_PROXY) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // A libname of "" means a general rebind request instead of a specific request.
-  bool autobind = drvlibname.size() == 0;
-  if (autobind && (dev->flags & DEV_CTX_SKIP_AUTOBIND)) {
+  // This is a general request, so skip devices that don't allow autobind.
+  if (dev->flags & DEV_CTX_SKIP_AUTOBIND) {
     return ZX_OK;
   }
 
-  // Attempt composite device matching first. This is unnecessary if a
-  // specific driver has been requested.
-  if (autobind) {
-    for (auto& composite : coordinator_->device_manager()->composite_devices()) {
-      auto status = composite.TryMatchBindFragments(dev);
-      if (status != ZX_OK) {
-        return status;
-      }
+  // Attempt composite device matching first.
+  for (auto& composite : coordinator_->device_manager()->composite_devices()) {
+    auto status = composite.TryMatchBindFragments(dev);
+    if (status != ZX_OK) {
+      return status;
     }
+  }
+
+  return BindDriverToDevice(dev, "");
+}
+
+zx_status_t BindDriverManager::BindDriverToDevice(const fbl::RefPtr<Device>& dev,
+                                                  std::string_view drvlibname) {
+  // It shouldn't be possible to get a bind request for a proxy device.
+  if (dev->flags & DEV_CTX_PROXY) {
+    return ZX_ERR_NOT_SUPPORTED;
   }
 
   // TODO: disallow if we're in the middle of enumeration, etc
