@@ -17,6 +17,7 @@ void AddNonPassingTests(TestMap& tests) {
     SkipTest(tests, "All/SocketInetLoopbackIsolatedTest.TCPPassiveCloseNoTimeWaitTest/*");
     // https://fxbug.dev/112590
     SkipTest(tests, "AllFamilies/SocketMultiProtocolInetLoopbackIsolatedTest.V4EphemeralPortReservedReuseAddr/*");
+    SkipTest(tests, "AllFamilies/SocketMultiProtocolInetLoopbackIsolatedTest.V4MappedEphemeralPortReservedReuseAddr/*");
 }
 
 }  // namespace netstack_syscall_test
