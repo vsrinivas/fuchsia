@@ -6,9 +6,10 @@ use fuchsia_async as fasync;
 use fuchsia_criterion::{criterion, FuchsiaCriterion};
 use fuchsia_inspect::{
     reader::snapshot::{Snapshot, SnapshotTree},
-    Inspector, NumericProperty,
+    Inspector, NumericProperty, StringReference,
 };
 use futures::FutureExt;
+use lazy_static::lazy_static;
 use std::{
     sync::{Arc, Mutex},
     time::Duration,
@@ -140,7 +141,7 @@ fn uncontended_snapshot_tree_bench(b: &mut criterion::Bencher, size: usize) {
     executor.run_singlethreaded(task).unwrap();
 }
 
-/// This benchmark measures the performanc of snapshotting an Inspect VMO backed by a tree server
+/// This benchmark measures the performance of snapshotting an Inspect VMO backed by a tree server
 /// when the vmo is partially filled to the given bytes.
 fn reader_snapshot_tree_vmo_bench(b: &mut criterion::Bencher, size: usize, filled_size: i64) {
     let mut executor = fuchsia_async::LocalExecutor::new().unwrap();
@@ -149,11 +150,14 @@ fn reader_snapshot_tree_vmo_bench(b: &mut criterion::Bencher, size: usize, fille
     let (proxy, tree_server_fut) = utils::spawn_server(inspector.clone()).unwrap();
     let task = fasync::Task::local(tree_server_fut);
 
+    lazy_static! {
+        static ref NAME: StringReference<'static> = "i".into();
+    }
     let mut nodes = vec![];
     if filled_size > 0 {
-        let ints_for_filling: i64 = filled_size / 64;
+        let ints_for_filling: i64 = filled_size / 16 - 1;
         for i in 0..ints_for_filling {
-            nodes.push(inspector.root().create_int("i", i));
+            nodes.push(inspector.root().create_int(&*NAME, i));
         }
     }
 
