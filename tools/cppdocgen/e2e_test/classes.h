@@ -30,8 +30,17 @@ class SimpleTestClass {
 
   int public_value2 = 20;  // End-of-line comment. Scary!
 
+  // Undocumented public data member $nodoc
+  int secret_public_value = 42;
+
   // This is a documented pure virtual function.
   virtual int TheFunction() = 0;
+
+  // This member function shouldn't be documented because of the $nodoc annotation.
+  void UndocumentedFunction();
+
+  // This member shouldn't have a declaration because of the $nodecl annotation.
+  void FunctionWithNoGeneratedDeclaration();
 
  private:
   /// This is a well-documented private member. It should not be emitted in the markdown.
@@ -56,6 +65,18 @@ class DerivedClass : public BaseClass1, private BaseClass2 {
  public:
   // An override with documentation. Note that the BaseClass1Function() is not overridden.
   void BaseClass2Function() override;
+};
+
+// This class should be omitted because of the $nodoc annotation.
+class UndocumentedClass {
+ public:
+  int SomeFunction();
+};
+
+// This class should not have a generated declaration becaose of the $nodecl annotation.
+class NoDeclarationClass {
+ public:
+  int SomeFunction();
 };
 
 #endif  // TOOLS_CPPDOCGEN_E2E_TEST_CLASSES_H_

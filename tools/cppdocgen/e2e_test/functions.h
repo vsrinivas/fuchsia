@@ -23,4 +23,10 @@ std::string GetStringFromVectors(const std::vector<int>& vector1 = std::vector<i
                                  std::vector<double, std::allocator<double>>* v2 = {},
                                  int max_count = -1);
 
+// This function should be omitted from the documentation because of: $nodoc
+void ThisShouldBeSkipped();
+
+// This function should have no emitted declaration because of: $nodecl
+void ThisShouldHaveNoDeclaration();
+
 #endif  // TOOLS_CPPDOCGEN_E2E_TEST_FUNCTIONS_H_

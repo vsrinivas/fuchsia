@@ -27,9 +27,15 @@ Documentation for the API flag.
 </pre>
 
 
+## DOCUMENTED_BUT_NO_DECL macro {:#DOCUMENTED_BUT_NO_DECL}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#24)
+
+Macro with no declaration emitted 
+
 ## MySimpleEnum Enum {:#MySimpleEnum}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#38)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#44)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">enum</span> <span class="typ">MySimpleEnum</span> {
@@ -43,7 +49,7 @@ Here is a regular enum with everything implicit.
 
 ## A very complex enum. {:#MyFancyEnum}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#47)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#53)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">enum class</span> <span class="typ">MyFancyEnum</span> : <span class="typ">char</span> {
@@ -58,9 +64,16 @@ This is a C++ enum class with an explicit type and explicit values. It also has 
 title for the docstring.
 
 
+## NoDeclEnum Enum {:#NoDeclEnum}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#62)
+
+This enum should have the declaration omitted because of the  annotation.
+
+
 ## SimpleTestStructure struct {:#SimpleTestStructure}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#23)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#29)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">struct</span> <span class="typ">SimpleTestStructure</span> {
@@ -84,7 +97,7 @@ Some documentation for the `b` member of the `SimpleTestStructure`.
 
 ## StandaloneUnion union {:#StandaloneUnion}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#32)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#38)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">union</span> <span class="typ">StandaloneUnion</span> {
@@ -95,7 +108,7 @@ Some documentation for the `b` member of the `SimpleTestStructure`.
 
 ## UnnamedStructTypedef struct {:#UnnamedStructTypedef}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#59)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/basics.h#71)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">struct</span> <span class="typ">UnnamedStructTypedef</span> {

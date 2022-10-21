@@ -22,6 +22,7 @@ The contents of this README file will comprise the top of the generated index.md
   - [myns::ClassInsideNamespace](namespace.h.md#myns::ClassInsideNamespace) class
   - [DerivedClass](classes.h.md#DerivedClass) class
   - [MyClass](grouping.h.md#MyClass) class
+  - [NoDeclarationClass](classes.h.md#NoDeclarationClass) class
   - [SimpleTestClass](classes.h.md#SimpleTestClass) class
   - [SimpleTestStructure](basics.h.md#SimpleTestStructure) struct
   - [StandaloneUnion](basics.h.md#StandaloneUnion) union
@@ -36,6 +37,7 @@ The contents of this README file will comprise the top of the generated index.md
   - [GroupedExplicitlyTwo(…)](grouping.h.md#GroupedExplicitlyOne)
   - [GroupedImplicitly(…)](grouping.h.md#GroupedImplicitly)
   - [myns::FunctionInsideNamespace()](namespace.h.md#myns::FunctionInsideNamespace)
+  - [ThisShouldHaveNoDeclaration()](functions.h.md#ThisShouldHaveNoDeclaration)
   - [UndocumentedFunction()](functions.h.md#UndocumentedFunction)
   - [UngroupedOne()](grouping.h.md#UngroupedOne)
   - [UngroupedTwo()](grouping.h.md#UngroupedTwo)
@@ -45,11 +47,13 @@ The contents of this README file will comprise the top of the generated index.md
   - [MyFancyEnum](basics.h.md#MyFancyEnum)
   - [myns::EnumInsideNamespace](namespace.h.md#myns::EnumInsideNamespace)
   - [MySimpleEnum](basics.h.md#MySimpleEnum)
+  - [NoDeclEnum](basics.h.md#NoDeclEnum)
 
 ## Macros
 
   - [API_FLAG_1](basics.h.md#API_FLAG_1)
   - [API_FLAG_2](basics.h.md#API_FLAG_2)
+  - [DOCUMENTED_BUT_NO_DECL](basics.h.md#DOCUMENTED_BUT_NO_DECL)
   - [GROUPED_ONE](grouping.h.md#GROUPED_ONE)
   - [GROUPED_TWO](grouping.h.md#GROUPED_ONE)
   - [UNGROUPED_ONE](grouping.h.md#UNGROUPED_ONE)

@@ -183,6 +183,9 @@ func TestParseHeaderDefines(t *testing.T) {
  #  define    	TAZ( a, b )   \
            blah
 
+
+// This define should be skipped because of: $nodoc
+#define THE_ONE_THAT_SHOULD_NOT_BE_DOCUMENTED true
 `
 	vals := ParseHeader(contents, "filename.h")
 	expectedDefines := []*Define{

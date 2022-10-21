@@ -166,7 +166,8 @@ func (f defineGroupByTitle) Less(i, j int) bool {
 func indexFunction(settings IndexSettings, index *Index, f *clangdoc.FunctionInfo) {
 	if len(f.Location) == 0 {
 		fmt.Printf("WARNING: Function %s does not have a declaration location.\n", f.Name)
-	} else if settings.ShouldIndexInHeader(f.Location[0].Filename) {
+	} else if settings.ShouldIndexInHeader(f.Location[0].Filename) &&
+		!commentContains(f.Description, NoDocTag) {
 		// TODO(brettw) there can be multiple locations! I think this might be for every
 		// forward declaration. In this case we will want to pick the "best" one.
 		index.FunctionUsrs[f.USR] = f
@@ -181,7 +182,8 @@ func indexFunction(settings IndexSettings, index *Index, f *clangdoc.FunctionInf
 }
 
 func indexRecord(settings IndexSettings, index *Index, r *clangdoc.RecordInfo) {
-	if settings.ShouldIndexInHeader(r.DefLocation.Filename) {
+	if settings.ShouldIndexInHeader(r.DefLocation.Filename) &&
+		!commentContains(r.Description, NoDocTag) {
 		index.RecordUsrs[r.USR] = r
 		index.RecordNames[r.Name] = r
 
@@ -191,7 +193,8 @@ func indexRecord(settings IndexSettings, index *Index, r *clangdoc.RecordInfo) {
 }
 
 func indexEnum(settings IndexSettings, index *Index, e *clangdoc.EnumInfo) {
-	if settings.ShouldIndexInHeader(e.DefLocation.Filename) {
+	if settings.ShouldIndexInHeader(e.DefLocation.Filename) &&
+		!commentContains(e.Description, NoDocTag) {
 		index.Enums[e.Name] = e
 
 		header := index.HeaderForFileName(e.DefLocation.Filename)

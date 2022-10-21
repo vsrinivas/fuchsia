@@ -38,7 +38,9 @@ func writeDefineGroupSection(settings WriteSettings, index *Index, g *DefineGrou
 	fmt.Fprintf(f, "[Declaration source code](%s)\n\n",
 		settings.locationSourceLink(g.Defines[0].Location))
 
-	writeDefineDeclarationBlock(g.Defines, f)
+	if !commentContains(g.Defines[0].Description, NoDeclTag) {
+		writeDefineDeclarationBlock(g.Defines, f)
+	}
 
 	// If the comment has a heading, it will have been extracted and used as the title so we
 	// need to strip that to avoid duplicating.

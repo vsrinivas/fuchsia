@@ -17,6 +17,12 @@
 #define API_FLAG_1 1
 #define API_FLAG_2 2
 
+// Undocumented macro $nodoc
+#define UNDOCUMENTED_MACRO 123
+
+// Macro with no declaration emitted $nodecl
+#define DOCUMENTED_BUT_NO_DECL 789
+
 // This is a structure that defines some values. The values appear inside the structure.
 //
 // The first value has no docstring, the second one does.
@@ -48,6 +54,12 @@ enum class MyFancyEnum : char {
   kValue1 = 1,
   kValue2 = 1 + 1,
 };
+
+// This enum should be undocumented because of the $nodoc annotation.
+enum UndocumentedEnum { kSomeValue = 34324 };
+
+// This enum should have the declaration omitted because of the $nodecl annotation.
+enum NoDeclEnum { kSomeOtherValue = 34324 };
 
 // This is an extern global value.
 extern int kGlobalValue;

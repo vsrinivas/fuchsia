@@ -35,7 +35,10 @@ func writeBaseClassFunctions(index *Index, r *clangdoc.RecordInfo, headingLevel 
 			key := fn.IdentityKey()
 			if !seenFuncs[key] {
 				seenFuncs[key] = true
-				funcs = append(funcs, fn)
+
+				if !commentContains(fn.Description, NoDocTag) {
+					funcs = append(funcs, fn)
+				}
 			}
 		}
 	}
@@ -107,7 +110,7 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 			// there's almost never any documentation for these. The main relevant part
 			// is whether the destructor might be private in some cases like internally
 			// reference counted classes.
-		} else {
+		} else if !commentContains(fn.Description, NoDocTag) {
 			funcs = append(funcs, fn)
 		}
 	}
@@ -123,7 +126,9 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 		}
 	}
 
-	writeRecordDeclarationBlock(index, r, dataMembers, f)
+	if !commentContains(r.Description, NoDeclTag) {
+		writeRecordDeclarationBlock(index, r, dataMembers, f)
+	}
 	writeComment(index, r.Description, markdownHeading2, f)
 
 	// Data member documentation first.
@@ -131,7 +136,7 @@ func writeRecordReference(settings WriteSettings, index *Index, h *Header, r *cl
 		// Only add separate documentation when there is some. Unlike functions, the
 		// class/struct code declaration includes all data members and our code often
 		// doesn't have documentation for obvious ones.
-		if len(d.Description) > 0 {
+		if len(d.Description) > 0 && !commentContains(d.Description, NoDocTag) {
 			// TODO needs anchor ref.
 			fmt.Fprintf(f, "### %s\n\n", d.Name)
 			writeComment(index, d.Description, markdownHeading3, f)
@@ -303,8 +308,10 @@ func writeRecordDeclarationBlock(index *Index, r *clangdoc.RecordInfo, data []cl
 		}
 
 		for _, d := range data {
-			tn, _ := getEscapedTypeName(d.Type)
-			fmt.Fprintf(f, "    <span class=\"typ\">%s</span> %s;\n", tn, d.Name)
+			if !commentContains(d.Description, NoDocTag) && !commentContains(d.Description, NoDeclTag) {
+				tn, _ := getEscapedTypeName(d.Type)
+				fmt.Fprintf(f, "    <span class=\"typ\">%s</span> %s;\n", tn, d.Name)
+			}
 		}
 	}
 

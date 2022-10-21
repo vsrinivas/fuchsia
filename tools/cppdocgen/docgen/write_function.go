@@ -80,11 +80,14 @@ func writeFunctionDeclaration(fn *clangdoc.FunctionInfo, namePrefix string, incl
 // This could be extracted from the function but this lets the caller decide which information to
 // include.
 func writeFunctionGroupBody(index *Index, g *FunctionGroup, namePrefix string, includeReturnType bool, f io.Writer) {
-	writePreHeader(f)
-	for _, fn := range g.Funcs {
-		writeFunctionDeclaration(fn, namePrefix, includeReturnType, "", f)
+	if !commentContains(g.Funcs[0].Description, NoDeclTag) {
+		// Write the declaration.
+		writePreHeader(f)
+		for _, fn := range g.Funcs {
+			writeFunctionDeclaration(fn, namePrefix, includeReturnType, "", f)
+		}
+		writePreFooter(f)
 	}
-	writePreFooter(f)
 
 	// Any comment is on the first function in the group. If it has a heading, it will have
 	// been extracted and used as the title so we need to strip that to avoid duplicating.

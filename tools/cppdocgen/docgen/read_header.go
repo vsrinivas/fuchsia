@@ -152,6 +152,11 @@ func parsePreprocContents(contents string, comments []string, loc clangdoc.Locat
 		return // Ignore #defines with no value, assume they don't need docs.
 	}
 
+	desc := commentsToDescription(comments)
+	if commentContains(desc, NoDocTag) {
+		return // Ignore #defines with the "$nodoc" annotation in the comment.
+	}
+
 	vals.Defines = append(vals.Defines, &Define{
 		Location:    loc,
 		Name:        name,

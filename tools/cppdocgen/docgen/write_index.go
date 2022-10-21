@@ -99,7 +99,7 @@ func WriteIndex(settings WriteSettings, index *Index, f io.Writer) {
 	if len(settings.OverviewContents) > 0 {
 		// The overview will comprise the top of the index and we will also take the
 		// page title from that.
-		f.Write(fixupLinks(index, settings.OverviewContents))
+		f.Write(fixupComment(index, settings.OverviewContents))
 		fmt.Fprintf(f, "\n")
 	} else {
 		fmt.Fprintf(f, "# %s\n\n", settings.LibName)

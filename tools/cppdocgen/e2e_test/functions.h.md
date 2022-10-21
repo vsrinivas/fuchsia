@@ -27,6 +27,11 @@ This also has a link to the <code><a href="functions.h.md#CustomTitleFunction">C
 the [FIDL wire format](/docs/reference/fidl/language/wire-format) which should not.
 
 
+## ThisShouldHaveNoDeclaration() {:#ThisShouldHaveNoDeclaration}
+
+This function should have no emitted declaration because of: 
+
+
 ## UndocumentedFunction() {:#UndocumentedFunction}
 
 <pre class="devsite-disable-click-to-copy">

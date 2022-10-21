@@ -4,7 +4,7 @@
 
 ## BaseClass1 class {:#BaseClass1}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#43)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#52)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">BaseClass1</span> { <span class="com">...</span> };
@@ -21,7 +21,7 @@ Complicated documentation for BaseClass1Function.
 
 ## BaseClass2 class {:#BaseClass2}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#49)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#58)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">BaseClass2</span> { <span class="com">...</span> };
@@ -38,7 +38,7 @@ Insightful documentation for BaseClass2Function.
 
 ## DerivedClass class {:#DerivedClass}
 
-[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#55)
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#64)
 
 <pre class="devsite-disable-click-to-copy">
 <span class="kwd">class</span> <span class="typ">DerivedClass</span> : <span class="kwd">public</span> <span class="typ"><a href="classes.h.md#BaseClass1">GlobalNamespace::BaseClass1</a></span>,
@@ -58,6 +58,19 @@ Insightful documentation for BaseClass2Function.
 </pre>
 
 An override with documentation. Note that the BaseClass1Function() is not overridden.
+
+
+## NoDeclarationClass class {:#NoDeclarationClass}
+
+[Declaration source code](https://fuchsia.googlesource.com/fuchsia/+/refs/heads/main/tools/cppdocgen/e2e_test/classes.h#77)
+
+This class should not have a generated declaration becaose of the  annotation.
+
+### NoDeclarationClass::SomeFunction() {:#NoDeclarationClass::SomeFunction}
+
+<pre class="devsite-disable-click-to-copy">
+<span class="typ">int</span> NoDeclarationClass::<b>SomeFunction</b>();
+</pre>
 
 
 ## SimpleTestClass class {:#SimpleTestClass}
@@ -91,6 +104,11 @@ SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a);
 SimpleTestClass::<b>SimpleTestClass</b>(<span class="typ">int</span> a = 1,
                                  <span class="typ">int</span> b = 2);
 </pre>
+
+
+### SimpleTestClass::FunctionWithNoGeneratedDeclaration() {:#SimpleTestClass::FunctionWithNoGeneratedDeclaration}
+
+This member shouldn't have a declaration because of the  annotation.
 
 
 ### SimpleTestClass::TheFunction() {:#SimpleTestClass::TheFunction}
