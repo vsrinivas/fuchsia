@@ -135,16 +135,15 @@ constexpr ErrorDef<57, std::vector<const flat::Decl *>> ErrIncludeCycle(
     "There is an includes-cycle in declarations: {}");
 constexpr ErrorDef<58, flat::Name> ErrAnonymousNameReference("cannot refer to anonymous name {}");
 constexpr ErrorDef<59, const flat::Type *> ErrInvalidConstantType("invalid constant type {}");
-constexpr UndocumentedErrorDef<60> ErrCannotResolveConstantValue(
-    "unable to resolve constant value");
-constexpr UndocumentedErrorDef<61> ErrOrOperatorOnNonPrimitiveValue(
+constexpr ErrorDef<60> ErrCannotResolveConstantValue("unable to resolve constant value");
+constexpr ErrorDef<61> ErrOrOperatorOnNonPrimitiveValue(
     "Or operator can only be applied to primitive-kinded values");
 constexpr UndocumentedErrorDef<62, flat::Name, std::string_view> ErrNewTypesNotAllowed(
     "newtypes not allowed: type declaration {} defines a new type of the existing {} type, which "
     "is not yet supported");
-constexpr UndocumentedErrorDef<63, flat::Name> ErrExpectedValueButGotType(
+constexpr ErrorDef<63, flat::Name> ErrExpectedValueButGotType(
     "{} is a type, but a value was expected");
-constexpr UndocumentedErrorDef<64, flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
+constexpr ErrorDef<64, flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
     "mismatched named type assignment: cannot define a constant or default value of type {} "
     "using a value of type {}");
 constexpr ErrorDef<65, const flat::Constant *, const flat::Type *, const flat::Type *>

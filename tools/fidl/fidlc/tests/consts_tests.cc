@@ -376,13 +376,8 @@ const c MyBits = MyBits.A;
 }
 
 TEST(ConstsTests, BadConstDifferentEnumMemberReference) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type MyEnum = enum : int32 { VALUE = 1; };
-type OtherEnum = enum : int32 { VALUE = 5; };
-const c MyEnum = OtherEnum.VALUE;
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0064.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrMismatchedNameTypeAssignment,
                                       fidl::ErrCannotResolveConstantValue);
 }
@@ -491,6 +486,13 @@ const u uint8<string> = 0;
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrWrongNumberOfLayoutParameters);
 }
 
+TEST(ConstsTests, BadConstTestAssignTypeSimple) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0063.test.fidl");
+  ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrExpectedValueButGotType,
+                                      fidl::ErrCannotResolveConstantValue);
+}
+
 TEST(ConstsTests, BadConstTestAssignTypeName) {
   for (auto type_declaration : {
            "type Example = struct {};",
@@ -511,6 +513,12 @@ TEST(ConstsTests, BadConstTestAssignTypeName) {
     ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrExpectedValueButGotType,
                                         fidl::ErrCannotResolveConstantValue);
   }
+}
+
+TEST(ConstsTests, BadConstTestAssignBuiltinSimple) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0060.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrCannotResolveConstantValue);
 }
 
 TEST(ConstsTests, BadConstTestAssignBuiltinType) {
@@ -644,13 +652,8 @@ const two_fifty_seven uint16 = one | two_fifty_six;
 }
 
 TEST(ConstsTests, BadOrOperatorNonPrimitiveTypesTest) {
-  TestLibrary library(R"FIDL(
-library example;
-
-const HI string = "hi";
-const THERE string = "there";
-const result string = HI | THERE;
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0061.test.fidl");
   ASSERT_ERRORED_TWICE_DURING_COMPILE(library, fidl::ErrOrOperatorOnNonPrimitiveValue,
                                       fidl::ErrCannotResolveConstantValue);
 }
