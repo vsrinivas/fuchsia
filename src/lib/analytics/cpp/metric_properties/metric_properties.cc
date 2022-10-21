@@ -10,6 +10,7 @@
 #include <filesystem>
 #include <iostream>
 
+#include "src/lib/analytics/cpp/metric_properties/optional_path.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/trim.h"
@@ -18,15 +19,30 @@ namespace analytics::metric_properties {
 
 namespace {
 
-std::filesystem::path GetFuchsiaDataDirectory() {
-  std::filesystem::path fuchsia_data_dir(std::getenv("HOME"));
-  FX_DCHECK(!fuchsia_data_dir.empty());
-  fuchsia_data_dir /= ".fuchsia";
-  return fuchsia_data_dir;
+std::filesystem::path GetMetricBaseDirectory() {
+#if defined(__APPLE__)
+  auto home = internal::GetOptionalPathFromEnv("HOME");
+  FX_DCHECK(home.has_value());
+  return *home / "Library" / "Application Support";
+#else
+  auto dir = internal::GetOptionalPathFromEnv("XDG_DATA_HOME");
+  if (dir.has_value()) {
+    return *dir;
+  }
+  dir = internal::GetOptionalPathFromEnv("HOME");
+  FX_DCHECK(dir.has_value());
+  return *dir / ".local" / "share";
+#endif
 }
 
 std::filesystem::path GetMetricPropertiesDirectory() {
-  return GetFuchsiaDataDirectory() / "metrics";
+  return GetMetricBaseDirectory() / "Fuchsia" / "metrics";
+}
+
+std::filesystem::path GetOldMetricPropertiesDirectory() {
+  auto path = internal::GetOptionalPathFromEnv("HOME");
+  FX_DCHECK(path.has_value());
+  return *path / ".fuchsia" / "metrics";
 }
 
 std::filesystem::path GetMetricPropertyPath(std::string_view name) {
@@ -79,6 +95,29 @@ bool Exists(std::string_view name) {
   auto path = GetMetricPropertyPath(name);
   std::error_code _ignore;
   return std::filesystem::exists(path, _ignore);
+}
+
+void MigrateMetricDirectory() {
+  auto path = GetMetricPropertiesDirectory();
+  std::error_code _ignore;
+  if (std::filesystem::exists(path, _ignore)) {
+    // no need to migrate as the new folder already exists
+    return;
+  }
+
+  auto old_path = GetOldMetricPropertiesDirectory();
+  if (!std::filesystem::is_directory(old_path, _ignore)) {
+    // no need to migrate as the old folder does not exist
+    return;
+  }
+
+  std::error_code ec;
+  if (files::CreateDirectory(path.parent_path())) {
+    std::filesystem::rename(old_path, path, ec);
+    if (!ec) {
+      std::filesystem::create_directory_symlink(path, old_path, ec);
+    }
+  }
 }
 
 }  // namespace analytics::metric_properties

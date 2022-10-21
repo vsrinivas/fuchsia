@@ -22,6 +22,7 @@
 #include "src/lib/analytics/cpp/core_dev_tools/system_info.h"
 #include "src/lib/analytics/cpp/google_analytics/client.h"
 #include "src/lib/analytics/cpp/google_analytics/event.h"
+#include "src/lib/analytics/cpp/metric_properties/metric_properties.h"
 
 namespace analytics::core_dev_tools {
 
@@ -72,6 +73,7 @@ class Analytics {
  public:
   // Same as Init() but will behave differently when run by bot
   static void InitBotAware(AnalyticsOption analytics_option, bool enable_on_bots = false) {
+    metric_properties::MigrateMetricDirectory();
     if (IsDisabledByEnvironment()) {
       T::SetRuntimeAnalyticsStatus(AnalyticsStatus::kDisabled);
       return;

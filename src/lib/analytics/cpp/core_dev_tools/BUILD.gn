@@ -58,6 +58,7 @@ static_library("core_dev_tools") {
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",
     "//src/lib/analytics/cpp/google_analytics",
+    "//src/lib/analytics/cpp/metric_properties",
     "//src/lib/fxl",
   ]
 

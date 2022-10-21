@@ -8,6 +8,8 @@ static_library("metric_properties") {
   sources = [
     "metric_properties.cc",
     "metric_properties.h",
+    "optional_path.cc",
+    "optional_path.h",
   ]
 
   deps = [
@@ -19,7 +21,10 @@ static_library("metric_properties") {
 
 test("unittests") {
   output_name = "analytics_cpp_metric_properties_unittests"
-  sources = [ "metric_properties_unittest.cc" ]
+  sources = [
+    "metric_properties_unittest.cc",
+    "optional_path_unittest.cc",
+  ]
   deps = [
     ":metric_properties",
     "//src/lib/files",

@@ -30,6 +30,9 @@ void Delete(std::string_view name);
 // Check the existence of the property with the given name.
 bool Exists(std::string_view name);
 
+// Migrate persistent storage location from $HOME to $XDG_DATA_HOME
+void MigrateMetricDirectory();
+
 }  // namespace analytics::metric_properties
 
 #endif  // SRC_LIB_ANALYTICS_CPP_METRIC_PROPERTIES_METRIC_PROPERTIES_H_
