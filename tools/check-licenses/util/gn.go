@@ -58,38 +58,16 @@ func NewGn(gnPath, buildDir string) (*Gn, error) {
 // Return the dependencies of the given GN target. Calls out to the external GN
 // executable. Saves the results to a file specified by gnFilterFile.
 func (gn *Gn) Dependencies(ctx context.Context, gnFilterFile string, target string) ([]string, error) {
-	args := []string{
-		"desc",
-		gn.outDir,
-		target,
-		"deps",
-		"--all",
-		"--format=json",
-	}
-
-	cmd := exec.CommandContext(ctx, gn.gnPath, args...)
-	var output bytes.Buffer
-	cmd.Stdout = &output
-	cmd.Stderr = os.Stderr
-	err := cmd.Run()
-	if err != nil {
-		return nil, err
-	}
-
-	result := output.String()
-	result = strings.TrimSpace(result)
-
-	var content interface{}
-	if err = json.Unmarshal([]byte(result), &content); err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal `gn desc` output file [%v]: %v\n", content, err)
-	}
-
-	return gn.unpack(content)
+	return gn.getDeps(ctx, gnFilterFile, target)
 }
 
 // Return the dependencies of the given GN workspace. Calls out to external GN
 // executable. Saves the results to a file specified by gnFilterFile.
 func (gn *Gn) Gen(ctx context.Context, gnFilterFile string) ([]string, error) {
+	return gn.getDeps(ctx, gnFilterFile, DefaultTarget)
+}
+
+func (gn *Gn) getDeps(ctx context.Context, gnFilterFile string, target string) ([]string, error) {
 	projectFile := filepath.Join(gn.outDir, "project.json")
 
 	if _, err := os.Stat(projectFile); err != nil {
@@ -111,6 +89,7 @@ func (gn *Gn) Gen(ctx context.Context, gnFilterFile string) ([]string, error) {
 	} else {
 		log.Println(" -> project.json already exists.")
 	}
+	log.Println(" -> " + target)
 
 	// Read in the projects.json file.
 	//
@@ -121,103 +100,77 @@ func (gn *Gn) Gen(ctx context.Context, gnFilterFile string) ([]string, error) {
 		return nil, fmt.Errorf("Failed to read project.json file [%v]: %v\n", projectFile, err)
 	}
 
-	var content interface{}
-	if err = json.Unmarshal(b, &content); err != nil {
-		return nil, fmt.Errorf("Failed to unmarshal project.json file [%v]: %v\n", projectFile, err)
+	gen := &Gen{
+		BuildSettings: make(map[string]interface{}),
+		Targets:       make(map[string]*Target),
 	}
 
-	return gn.unpack(content)
+	d := json.NewDecoder(strings.NewReader(string(b)))
+	if err := d.Decode(gen); err != nil {
+		return nil, fmt.Errorf("Failed to decode project.json into struct object: %v", err)
+	}
+	for k, v := range gen.Targets {
+		v.Name = k
+		AllTargets[v.Name] = v
+	}
+	paths, err := gen.Process(target)
+	if err != nil {
+		return nil, fmt.Errorf("Failed to process gen output: %v", err)
+	}
+
+	return gn.cleanPaths(paths)
 }
 
 // Converts a GN label string (such as those returned by Dependencies) and
 // strips any target names and toolchains, thereby returning the directory
 // of the label.
-func (gn *Gn) labelToDirectory(label string) []string {
-	results := make([]string, 0)
-	results = append(results, label)
-
-	// Rust crate dependencies are all linked into the build system
-	// using targets that are defined in the "rust_crates/BUILD.gn" file.
-	// We want to add the actual rust_crate subdirectory as a dependency,
-	// but there is no easy way to determine that from the build target name.
-	//
-	// This adds all possible directories to the list. There is no harm if
-	// a given directory doesn't actually exist -- check-licenses will ignore
-	// those entries.
-	if strings.Contains(label, "rust_crates") {
-		results = append(results, strings.ReplaceAll(label, ":", "/vendor/"))
-		results = append(results, strings.ReplaceAll(label, ":", "/ask2patch/"))
-		results = append(results, strings.ReplaceAll(label, ":", "/compat/"))
-		results = append(results, strings.ReplaceAll(label, ":", "/empty/"))
-		results = append(results, strings.ReplaceAll(label, ":", "/forks/"))
-		results = append(results, strings.ReplaceAll(label, ":", "/mirrors/"))
-		results = append(results, strings.ReplaceAll(label, ":", "/src/"))
-	}
-
-	// If this target isn't a rust crate target, we still want to retrieve
-	// the relevant directory, not the target name in that directory.
-	// If a colon exists in this string, delete it and everything after it.
-	for i := range results {
-		results[i] = strings.Split(results[i], ":")[0]
-	}
-
-	// Same goes for toolchain definitions.
-	// If a parenthesis exists in this string, delete it and everything after it.
-	for i := range results {
-		results[i] = strings.Split(results[i], "(")[0]
-	}
-
-	// Many rust crate libraries have a version string in their target name,
-	// but no version string in their folder path. If we see this specific
-	// version string pattern, remove it from the string.
-	for i := range results {
-		results[i] = gn.re.ReplaceAllString(results[i], "")
-	}
-
-	return results
-}
-
-// The output of a "gn" command is a large json file.
-// We want to retrieve any and all paths from that file, so we recursively
-// look at each key / value / list item etc and add it to a string slice.
-// We then return the resulting json blob (byte slice).
-func (gn *Gn) unpack(content interface{}) ([]string, error) {
-	var recurse func(interface{}) []string
-
-	recurse = func(content interface{}) []string {
-		results := make([]string, 0)
-		mapContent, ok := content.(map[string]interface{})
-		if ok {
-			for k, v := range mapContent {
-				results = append(results, k)
-				results = append(results, recurse(v)...)
-			}
-		}
-
-		listContent, ok := content.([]interface{})
-		if ok {
-			for _, v := range listContent {
-				results = append(results, recurse(v)...)
-			}
-		}
-
-		stringContent, ok := content.(string)
-		if ok {
-			results = append(results, gn.labelToDirectory(stringContent)...)
-		}
-		return results
-	}
-
-	results := recurse(content)
-
-	// Dedup the entries in the string slice.
+func (gn *Gn) cleanPaths(paths []string) ([]string, error) {
 	set := make(map[string]bool, 0)
-	for _, s := range results {
-		set[s] = true
+
+	for _, path := range paths {
+		set[path] = true
+
+		// Rust crate dependencies are all linked into the build system
+		// using targets that are defined in the "rust_crates/BUILD.gn" file.
+		// We want to add the actual rust_crate subdirectory as a dependency,
+		// but there is no easy way to determine that from the build target name.
+		//
+		// This adds all possible directories to the list. There is no harm if
+		// a given directory doesn't actually exist -- check-licenses will ignore
+		// those entries.
+		if strings.Contains(path, "rust_crates") {
+			set[strings.ReplaceAll(path, ":", "/vendor/")] = true
+			set[strings.ReplaceAll(path, ":", "/ask2patch/")] = true
+			set[strings.ReplaceAll(path, ":", "/compat/")] = true
+			set[strings.ReplaceAll(path, ":", "/empty/")] = true
+			set[strings.ReplaceAll(path, ":", "/forks/")] = true
+			set[strings.ReplaceAll(path, ":", "/mirrors/")] = true
+			set[strings.ReplaceAll(path, ":", "/src/")] = true
+		}
+
+		// If this target isn't a rust crate target, we still want to retrieve
+		// the relevant directory, not the target name in that directory.
+		// If a colon exists in this string, delete it and everything after it.
+		if strings.Contains(path, ":") {
+			set[strings.Split(path, ":")[0]] = true
+		}
+
+		// Same goes for toolchain definitions.
+		// If a parenthesis exists in this string, delete it and everything after it.
+		if strings.Contains(path, "{") {
+			set[strings.Split(path, "(")[0]] = true
+		}
+
+		// Many rust crate libraries have a version string in their target name,
+		// but no version string in their folder path. If we see this specific
+		// version string pattern, remove it from the string.
+		if strings.Contains(path, "{") {
+			set[gn.re.ReplaceAllString(path, "")] = true
+		}
 	}
 
 	// Sort the results, so the outputs are deterministic.
-	results = make([]string, 0)
+	results := make([]string, 0)
 	for k := range set {
 		results = append(results, k)
 	}

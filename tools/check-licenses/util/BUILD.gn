@@ -7,9 +7,12 @@ import("//build/go/go_test.gni")
 
 go_library("util") {
   sources = [
+    "gen.go",
     "git.go",
     "gn.go",
     "gn_test.go",
+    "init.go",
+    "target.go",
   ]
   deps = [ "//tools/lib/logger" ]
 }
