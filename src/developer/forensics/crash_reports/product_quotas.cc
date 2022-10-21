@@ -60,7 +60,6 @@ ProductQuotas::ProductQuotas(async_dispatcher_t* dispatcher, timekeeper::Clock* 
       utc_clock_ready_watcher_(utc_clock_ready_watcher),
       reset_time_offset_(reset_time_offset) {
   if (!quota_.has_value()) {
-    FX_LOGS(INFO) << "No quota specified. Deleting " << quota_filepath_;
     files::DeletePath(quota_filepath_, /*recursive=*/true);
     return;
   }
