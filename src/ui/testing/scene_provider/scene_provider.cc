@@ -16,6 +16,8 @@
 
 namespace ui_testing {
 
+void FakeViewController::Dismiss() { dismiss_(); }
+
 void SceneProvider::AttachClientView(
     fuchsia::ui::test::scene::ControllerAttachClientViewRequest request,
     AttachClientViewCallback callback) {
@@ -68,6 +70,8 @@ void SceneProvider::RegisterViewTreeWatcher(
   callback();
 }
 
+// TODO(fxbug.dev/112819): Refactor to accommodate Flatland + Geometry
+// Observation.
 void SceneProvider::PresentView(
     fuchsia::element::ViewSpec view_spec,
     fidl::InterfaceHandle<fuchsia::element::AnnotationController> annotation_controller,
@@ -78,7 +82,7 @@ void SceneProvider::PresentView(
   }
 
   if (view_controller) {
-    fake_view_controller_.emplace(std::move(view_controller));
+    fake_view_controller_.emplace(std::move(view_controller), [this] { this->DismissView(); });
   }
 
   auto scene_provider_config = scene_provider_config_lib::Config::TakeFromStartupHandle();
@@ -132,6 +136,22 @@ SceneProvider::GetSceneControllerHandler() {
 fidl::InterfaceRequestHandler<fuchsia::element::GraphicalPresenter>
 SceneProvider::GetGraphicalPresenterHandler() {
   return graphical_presenter_bindings_.GetHandler(this);
+}
+
+void SceneProvider::DismissView() {
+  // Give the scene provider a new ViewHolderToken to drop the existing view.
+  auto client_view_tokens = scenic::ViewTokenPair::New();
+  auto [client_control_ref, client_view_ref] = scenic::ViewRefPair::New();
+  fuchsia::session::scene::ManagerSyncPtr scene_manager;
+  context_->svc()->Connect(scene_manager.NewRequest());
+
+  fuchsia::session::scene::Manager_PresentRootViewLegacy_Result set_root_view_result;
+
+  scene_manager->PresentRootViewLegacy(std::move(client_view_tokens.view_holder_token),
+                                       fidl::Clone(client_view_ref), &set_root_view_result);
+  if (set_root_view_result.is_err()) {
+    FX_LOGS(ERROR) << "Got a PresentRootViewLegacyError when trying to attach an empty view";
+  }
 }
 
 }  // namespace ui_testing

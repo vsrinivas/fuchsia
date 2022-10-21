@@ -18,17 +18,19 @@ namespace ui_testing {
 class FakeViewController : public fuchsia::element::ViewController {
  public:
   explicit FakeViewController(
-      fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller) {
+      fidl::InterfaceRequest<fuchsia::element::ViewController> view_controller,
+      fit::function<void()> dismiss) {
     view_controller_bindings_.AddBinding(this, std::move(view_controller));
+    dismiss_ = std::move(dismiss);
   }
   ~FakeViewController() override = default;
 
-  // TODO(fxbug.dev/106187): Detach client view in Dismiss().
-  // |ViewController|
-  void Dismiss() override {}
+  // |fuchsia.element.ViewController|
+  void Dismiss() override;
 
  private:
   fidl::BindingSet<fuchsia::element::ViewController> view_controller_bindings_;
+  fit::function<void()> dismiss_;
 };
 
 class SceneProvider : public fuchsia::ui::test::scene::Controller,
@@ -60,6 +62,9 @@ class SceneProvider : public fuchsia::ui::test::scene::Controller,
   // object.
   fidl::InterfaceRequestHandler<fuchsia::element::GraphicalPresenter>
   GetGraphicalPresenterHandler();
+
+  // Drops the existing view.
+  void DismissView();
 
  private:
   fidl::BindingSet<fuchsia::ui::test::scene::Controller> scene_controller_bindings_;
