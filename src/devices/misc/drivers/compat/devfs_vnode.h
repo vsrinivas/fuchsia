@@ -37,7 +37,7 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
 
   // fidl::WireServer<fuchsia_device::Controller> methods
   void ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
-                           ConnectToDeviceFidlCompleter::Sync& completer) override {}
+                           ConnectToDeviceFidlCompleter::Sync& completer) override;
   void Bind(BindRequestView request, BindCompleter::Sync& _completer) override;
   void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override;
   void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;
@@ -49,6 +49,8 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                                SetMinDriverLogSeverityCompleter::Sync& _completer) override;
   void SetPerformanceState(SetPerformanceStateRequestView request,
                            SetPerformanceStateCompleter::Sync& _completer) override;
+
+  zx_device* dev() { return dev_; }
 
  private:
   // A pointer to the device that this vnode represents. This will be

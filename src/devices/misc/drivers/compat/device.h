@@ -120,6 +120,7 @@ class Device : public std::enable_shared_from_this<Device>,
   void set_fragments(std::vector<std::string> names) { fragments_ = std::move(names); }
   Driver* driver() { return driver_; }
 
+  async_dispatcher_t* dispatcher() { return dispatcher_; }
   fpromise::scope& scope() { return scope_; }
   driver::Logger& logger() { return *logger_; }
   async::Executor& executor() { return executor_; }

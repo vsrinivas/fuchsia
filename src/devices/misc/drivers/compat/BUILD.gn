@@ -52,6 +52,7 @@ source_set("lib") {
     "//sdk/lib/driver2:runtime-deprecated",
     "//sdk/lib/stdcompat",
     "//sdk/lib/sys/component/cpp",
+    "//src/devices/bin/driver_host:simple_binding",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
