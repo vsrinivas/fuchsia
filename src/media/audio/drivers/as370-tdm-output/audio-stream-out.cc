@@ -63,7 +63,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   if (status != ZX_OK) {
     return status;
   }
-  status = pdev_.MapMmio(0, &mmio_i2s);
+  status = pdev_.MapMmio(1, &mmio_i2s);
   if (status != ZX_OK) {
     return status;
   }
@@ -251,7 +251,7 @@ zx_status_t As370AudioStreamOut::AddFormats() {
 
   format.range.min_channels = kNumberOfChannels;
   format.range.max_channels = kNumberOfChannels;
-  format.range.sample_formats = AUDIO_SAMPLE_FORMAT_16BIT;
+  format.range.sample_formats = AUDIO_SAMPLE_FORMAT_32BIT;
   assert(kWantedFrameRate == 48000);
   format.range.min_frames_per_second = kWantedFrameRate;
   format.range.max_frames_per_second = kWantedFrameRate;
