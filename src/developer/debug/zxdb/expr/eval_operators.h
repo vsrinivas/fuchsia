@@ -21,9 +21,11 @@ class ExprValue;
 class ExprValueSource;
 class Type;
 
+// This version takes evaluated values and so can not support short-circuiting for || and &&.
 void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const ExprValue& left_value,
                         const ExprToken& op, const ExprValue& right_value, EvalCallback cb);
 
+// Conditionally evaluates the right expression to allow short-circuiting || and &&.
 void EvalBinaryOperator(const fxl::RefPtr<EvalContext>& context, const fxl::RefPtr<ExprNode>& left,
                         const ExprToken& op, const fxl::RefPtr<ExprNode>& right, EvalCallback cb);
 

@@ -79,6 +79,16 @@ class ErrOr {
     return T();
   }
 
+  // Comparators for unit tests.
+  bool operator==(const ErrOr<T>& other) const {
+    if (ok() != other.ok())
+      return false;
+    if (ok())
+      return value() == other.value();
+    return err() == other.err();
+  }
+  bool operator!=(const ErrOr<T>& other) const { return !operator==(other); }
+
   // Adapts an old-style callback that takes two parameters and returns a newer one that takes an
   // ErrOr.
   static fit::callback<void(ErrOr<T>)> FromPairCallback(fit::callback<void(const Err&, T)> cb) {

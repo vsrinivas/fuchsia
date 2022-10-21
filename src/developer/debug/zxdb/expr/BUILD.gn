@@ -103,6 +103,12 @@ static_library("expr") {
     "template_type_extractor.h",
     "vector_register_format.cc",
     "vector_register_format.h",
+    "vm_exec.cc",
+    "vm_exec.h",
+    "vm_op.cc",
+    "vm_op.h",
+    "vm_op_type.cc",
+    "vm_op_type.h",
   ]
 
   public_deps = [
@@ -185,6 +191,7 @@ source_set("tests") {
     "virtual_base_test_setup.h",
     "virtual_inheritance_test_setup.cc",
     "virtual_inheritance_test_setup.h",
+    "vm_exec_unittest.cc",
   ]
 
   # Note: this should not depend on client/ or console/ libraries, including their test_support.
