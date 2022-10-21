@@ -150,6 +150,19 @@ TEST_F(SystemLogTest, GetTerminatesDueToTimeout) {
 )");
 }
 
+TEST_F(SystemLogTest, GetTerminatesDueToTimeoutWithEmptyLog) {
+  SetUpLogServer({});
+
+  // Prime the clock so log collection won't be completed due to message timestamps.
+  RunLoopFor(kLogTimestamp + zx::sec(1));
+
+  const auto log = CollectSystemLog(zx::min(1));
+  ASSERT_TRUE(log.HasError());
+  EXPECT_EQ(log.Error(), Error::kTimeout);
+
+  EXPECT_FALSE(log.HasValue());
+}
+
 TEST_F(SystemLogTest, GetTerminatesDueToForceCompletion) {
   const uint64_t kTicket = 1234;
   SetUpLogServer(Messages());
@@ -196,12 +209,12 @@ TEST_F(SystemLogTest, ForceCompletionCalledAfterTermination) {
 )");
 }
 
-TEST_F(SystemLogTest, GetEmptyLog) {
+TEST_F(SystemLogTest, GetTerminatesDueToLogTimestampWithEmptyLog) {
   SetUpLogServer({});
 
   const auto log = CollectSystemLog();
   ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kMissingValue);
+  EXPECT_EQ(log.Error(), Error::kTimeout);
 
   EXPECT_FALSE(log.HasValue());
 }
@@ -226,7 +239,7 @@ TEST_F(SystemLogTest, ActivePeriodExpires) {
 
   // Get empty logs because the original data was cleared and the server doesn't respond.
   ASSERT_TRUE(log.HasError());
-  EXPECT_EQ(log.Error(), Error::kMissingValue);
+  EXPECT_EQ(log.Error(), Error::kTimeout);
 
   // Ensure reconnection happened.
   EXPECT_TRUE(LogServer().IsBound());

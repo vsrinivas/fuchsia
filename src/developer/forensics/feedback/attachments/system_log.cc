@@ -293,7 +293,8 @@ auto CompletesAndConsume() {
 
     auto system_log = self->buffer_.ToString();
     if (system_log.empty()) {
-      return ::fpromise::ok(AttachmentValue(Error::kMissingValue));
+      const Error error = (result.is_ok()) ? Error::kMissingValue : result.error();
+      return ::fpromise::ok(AttachmentValue(error));
     }
 
     return ::fpromise::ok(result.is_ok() ? AttachmentValue(std::move(system_log))
