@@ -1,0 +1,32 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/connectivity/network/lib/net_interfaces/client.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/virtio_net_bin",
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.virtualization.hardware.VirtioNet" ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.net.virtualization.Control",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.virtualization.hardware.VirtioNet" ],
+            from: "self",
+        },
+    ],
+}
