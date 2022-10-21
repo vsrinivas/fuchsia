@@ -12,7 +12,7 @@ ffx_plugin("ffx_flutter_tunnel") {
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
-    "//src/developer/ffx:ffx_lib_args",
+    "//src/developer/ffx/command:lib",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/netext:lib",

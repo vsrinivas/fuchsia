@@ -12,23 +12,28 @@ rustc_library("lib") {
 
   deps = [
     "//src/connectivity/overnet/lib/hoist",
-    "//src/developer/ffx:ffx_lib_args",
-    "//src/developer/ffx:ffx_lib_suite",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/daemon/proxy:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/metrics:lib",
+    "//src/developer/ffx/lib/writer:lib",
     "//src/lib/analytics/rust:lib",
     "//src/lib/fuchsia-async",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:itertools",
     "//third_party/rust_crates:simplelog",
-    "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:tracing",
   ]
 
   test_deps = [ "//third_party/rust_crates:tempfile" ]
 
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/ffx.rs",
+    "src/lib.rs",
+    "src/tools.rs",
+  ]
 }
 
 group("tests") {

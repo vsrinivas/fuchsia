@@ -275,9 +275,6 @@ template("ffx_plugin") {
       ":" + args,
       ":" + plugins_name,
     ]
-    if (defined(invoker.deps)) {
-      #suite_deps += invoker.deps
-    }
     if (defined(invoker.plugin_deps)) {
       suite_deps += [ ":" + sub_cmd ]
     }

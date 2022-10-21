@@ -21,7 +21,7 @@ pub async fn wait_for_device(
     target_collection: TargetCollectionProxy,
     cmd: WaitCommand,
 ) -> Result<()> {
-    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let ffx: ffx_command::Ffx = argh::from_env();
     let knock_fut = async {
         loop {
             break match knock_target(&ffx, &target_collection).await {
@@ -59,7 +59,7 @@ enum KnockError {
 }
 
 async fn knock_target(
-    ffx: &ffx_lib_args::Ffx,
+    ffx: &ffx_command::Ffx,
     target_collection_proxy: &TargetCollectionProxy,
 ) -> Result<(), KnockError> {
     let default_target = ffx.target().await?;
@@ -210,7 +210,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn peer_closed_to_target_collection_causes_knock_error() {
         let _env = ffx_config::test_init().await.unwrap();
-        let ffx: ffx_lib_args::Ffx = argh::from_env();
+        let ffx: ffx_command::Ffx = argh::from_env();
         let tc_proxy = setup_fake_target_collection_server_auto_close();
         match knock_target(&ffx, &tc_proxy).await.unwrap_err() {
             KnockError::CriticalError(_) => {}

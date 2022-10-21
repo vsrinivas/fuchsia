@@ -37,7 +37,7 @@ async fn get_ssh_address_impl<W: Write>(
     let timeout_dur = Duration::from_secs_f64(cmd.timeout().await?);
     let (proxy, handle) = fidl::endpoints::create_proxy::<TargetMarker>()?;
     let target: Option<String> = ffx_config::get("target.default").await?;
-    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let ffx: ffx_command::Ffx = argh::from_env();
     let is_default_target = ffx.target.is_none();
     let t_clone = target.clone();
     let t_clone_2 = target.clone();

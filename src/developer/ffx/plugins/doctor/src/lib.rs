@@ -227,7 +227,7 @@ pub async fn doctor_cmd_impl<W: Write + Send + Sync + 'static>(
     let daemon_manager = DefaultDaemonManager::new(hoist.clone(), ascendd_path);
     let delay = Duration::from_millis(cmd.retry_delay);
 
-    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let ffx: ffx_command::Ffx = argh::from_env();
     let target_str = ffx.target.unwrap_or(String::default());
 
     let mut log_root = None;

@@ -2,10 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Result, ffx_core::ffx_plugin, ffx_lib_args::Ffx, std::env, std::process::Command};
+use anyhow::Result;
+use ffx_core::ffx_plugin;
+use ffx_lib_args::FfxBuiltIn;
+use std::env;
+use std::process::Command;
 
 #[ffx_plugin()]
-pub async fn help(_cmd: Ffx) -> Result<()> {
+pub async fn help(_cmd: FfxBuiltIn) -> Result<()> {
     let ffx_path = env::current_exe()?;
     Command::new(ffx_path).arg("help").status()?;
     Ok(())

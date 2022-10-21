@@ -10,7 +10,7 @@ ffx_plugin("ffx_get_ssh_address") {
   with_unit_tests = true
   deps = [
     "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
-    "//src/developer/ffx:ffx_lib_args",
+    "//src/developer/ffx/command:lib",
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/lib/addr:lib",
     "//src/developer/ffx/lib/errors:lib",

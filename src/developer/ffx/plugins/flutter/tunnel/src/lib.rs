@@ -59,7 +59,7 @@ pub async fn tunnel_impl<W: std::io::Write>(
     _cmd: TunnelCommand,
     writer: &mut W,
 ) -> Result<()> {
-    let ffx: ffx_lib_args::Ffx = argh::from_env();
+    let ffx: ffx_command::Ffx = argh::from_env();
 
     let provider = DiagnosticsBridgeProvider::new(diagnostics_proxy, rcs_proxy);
     let result = provider
