@@ -5,7 +5,10 @@
 use {
     crate::{
         above_root_capabilities::AboveRootCapabilitiesForTest,
-        constants::{HERMETIC_ENVIRONMENT_NAME, HERMETIC_TESTS_COLLECTION, TEST_ROOT_REALM_NAME},
+        constants::{
+            CHROMIUM_TESTS_COLLECTION, HERMETIC_ENVIRONMENT_NAME, HERMETIC_TESTS_COLLECTION,
+            TEST_ROOT_REALM_NAME,
+        },
         diagnostics, enclosing_env,
         error::LaunchTestError,
         facet, resolver,
@@ -39,7 +42,7 @@ use {
         FutureExt,
     },
     lazy_static::lazy_static,
-    maplit::hashmap,
+    maplit::{hashmap, hashset},
     moniker::RelativeMonikerBase,
     resolver::AllowedPackages,
     std::{
@@ -492,7 +495,14 @@ lazy_static! {
     // hermetic resolver is default. The map will contain ctf and OOT test urls.
     static ref TEST_URL_ALLOWED_PACKAGE_MAP: HashMap<&'static str, AllowedPackages> = hashmap! {
         "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_10.20221012.0.1#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
-        "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_9.20221010.3.8#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
+        "fuchsia-pkg://fuchsia.com/driver_test_realm_cts_test_9.20221010.3.16#meta/driver_test_realm_cts_test.cm" => AllowedPackages::from_iter(["driver_test_realm".to_string()]),
+    };
+
+
+    // Allows tests running in following collection to resolve any package. This will contain
+    // collections used to for executing out of tree tests.
+    static ref TEST_COLLECTION_ALLOW_ALL_PACKAGES: HashSet<&'static str> = hashset! {
+        CHROMIUM_TESTS_COLLECTION
     };
 }
 
@@ -510,6 +520,9 @@ fn get_allowed_package_value(test_url: &str, suite_facet: &facet::SuiteFacets) -
     } else {
         match suite_facet.collection {
             HERMETIC_TESTS_COLLECTION => AllowedPackages::zero_allowed_pkgs(),
+            coll if TEST_COLLECTION_ALLOW_ALL_PACKAGES.contains(coll) => {
+                AllowedPackages::all(test_url.to_string())
+            }
             // based on the flag this can be ALL or zero list.
             _ => AllowedPackages::default(test_url),
         }
@@ -1285,5 +1298,28 @@ mod tests {
             false => AllowedPackages::all(url.to_string()),
         };
         assert_eq!(expected, get_allowed_package_value(&url, &suite_facet));
+
+        for col in TEST_COLLECTION_ALLOW_ALL_PACKAGES.iter() {
+            let mut suite_facet = facet::SuiteFacets {
+                collection: col,
+                deprecated_allowed_packages: None,
+                deprecated_allowed_all_packages: None,
+            };
+
+            let url = "test_url";
+
+            // default is all packages.
+            assert_eq!(
+                AllowedPackages::all(url.to_string()),
+                get_allowed_package_value(&url, &suite_facet)
+            );
+
+            // deprecated_allowed_packages overrides the list
+            suite_facet.deprecated_allowed_packages = Some(vec!["pkg-one".to_owned()]);
+            assert_eq!(
+                AllowedPackages::from_iter(["pkg-one".to_owned()]),
+                get_allowed_package_value(&url, &suite_facet)
+            );
+        }
     }
 }
