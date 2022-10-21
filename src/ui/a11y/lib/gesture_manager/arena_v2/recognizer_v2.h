@@ -12,7 +12,7 @@
 
 namespace a11y {
 
-class ContestMemberV2;
+class ParticipationTokenInterface;
 
 // A Gesture Recognizer interface for accessibility services.
 //
@@ -21,16 +21,15 @@ class ContestMemberV2;
 // the winner for that contest. The lifecycle of a recognizer could be simplified as follows:
 //     - The recognizer adds itself to the arena via GestureArenaV2::Add().
 //     - As an interaction with the touch screen happens, it will first receive a
-//     |ContestMemberV2| object from |OnContestStarted|, which allows the recognizer to subscribe
+//     |ParticipationToken| object from |OnContestStarted|, which allows the recognizer to subscribe
 //     to events and mark acceptance or rejection.
-//     - Recognizers can then have four main states: not started, possible gesture, not possible,
-//     detected.
-//     - The recognizer can claim a win or declare defeat via the |ContestMemberV2| depending on
-//     which state it's in. Declarations of defeat are handled immediately, while win claimers may
-//     be awarded win or defeat by the arena.
+//     - Recognizers can then have three main states: undecided, accepted, or rejected.
+//     - The recognizer declares its intention via the |ParticipationToken|. Rejects are handled
+//     immediately, while accepts may be awarded win or defeat by the arena.
 //     - This recognizer will continue receiving pointer events until it releases the
-//     |ContestMemberV2| or is defeated. A new contest starts on the first interaction after the
-//     winner releases its |ContestMemberV2|.
+//     |ParticipationToken| or is defeated. A new contest starts on the first interaction after the
+//     winner releases its |ParticipationToken|. (Or the first interaction after all recognizers are
+//     defeated.)
 class GestureRecognizerV2 {
  public:
   virtual ~GestureRecognizerV2();
@@ -43,13 +42,16 @@ class GestureRecognizerV2 {
   // nothing.
   virtual void OnDefeat();
 
-  // This method gets called when the arena starts a new contest. The implementation should set a
-  // callback on the provided |ContestMemberV2| and indicate when it accepts or rejects the
-  // gesture, releasing the |ContestMemberV2| when it no longer cares about it.
-  virtual void OnContestStarted(std::unique_ptr<ContestMemberV2> contest_member) = 0;
+  // This method gets called when the arena starts a new contest.
+  virtual void OnContestStarted(
+      std::unique_ptr<ParticipationTokenInterface> participation_token) = 0;
 
-  // Non-defeated recognizers holding a |ContestMemberV2| will receive a call to |HandleEvent|
+  // Non-defeated recognizers holding a |ParticipationToken| will receive a call to |HandleEvent|
   // whenever a new pointer event arrives in the arena.
+  //
+  // The implementation should eventually call a method on the provided |ParticipationToken| to
+  // indicate when it accepts or rejects the gesture. Additionally, it should release the
+  // |ParticipationToken| when it no longer wants to receive events.
   virtual void HandleEvent(
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) = 0;
 

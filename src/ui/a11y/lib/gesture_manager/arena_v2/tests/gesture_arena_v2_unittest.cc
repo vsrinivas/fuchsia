@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include "src/ui/a11y/lib/gesture_manager/arena_v2/contest_member_v2.h"
+#include "src/ui/a11y/lib/gesture_manager/arena_v2/participation_token_interface.h"
 #include "src/ui/a11y/lib/gesture_manager/arena_v2/recognizer_v2.h"
 #include "src/ui/a11y/lib/testing/input.h"
 
@@ -59,12 +59,17 @@ class MockGestureRecognizer : public a11y::GestureRecognizerV2 {
 
   uint32_t num_events() { return num_events_; }
 
-  void OnContestStarted(std::unique_ptr<a11y::ContestMemberV2> contest_member) override {
-    contest_member_ = std::move(contest_member);
+  void OnContestStarted(
+      std::unique_ptr<a11y::ParticipationTokenInterface> participation_token) override {
+    participation_token_ = std::move(participation_token);
   }
 
-  const a11y::ContestMemberV2* contest_member() const { return contest_member_.get(); }
-  std::unique_ptr<a11y::ContestMemberV2>& contest_member() { return contest_member_; }
+  const a11y::ParticipationTokenInterface* participation_token() const {
+    return participation_token_.get();
+  }
+  std::unique_ptr<a11y::ParticipationTokenInterface>& participation_token() {
+    return participation_token_;
+  }
 
   std::string DebugName() const override { return "mock_gesture_recognizer"; }
 
@@ -72,7 +77,7 @@ class MockGestureRecognizer : public a11y::GestureRecognizerV2 {
     won_ = false;
     lost_ = false;
     num_events_ = 0;
-    contest_member_.reset();
+    participation_token_.reset();
   }
 
  private:
@@ -83,7 +88,7 @@ class MockGestureRecognizer : public a11y::GestureRecognizerV2 {
   fit::closure on_win_, on_defeat_;
   fit::function<void(const AccessibilityPointerEvent&)> handle_event_;
 
-  std::unique_ptr<a11y::ContestMemberV2> contest_member_;
+  std::unique_ptr<a11y::ParticipationTokenInterface> participation_token_;
 };
 
 constexpr uint32_t kDefaultDeviceID = 42;
@@ -105,7 +110,7 @@ TEST(GestureArenaTest, NoContestAtStart) {
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
 
-  EXPECT_FALSE(recognizer.contest_member());
+  EXPECT_FALSE(recognizer.participation_token());
 }
 
 TEST(GestureArenaTest, ContendingOnAddEvent) {
@@ -115,7 +120,7 @@ TEST(GestureArenaTest, ContendingOnAddEvent) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  EXPECT_TRUE(recognizer.contest_member());
+  EXPECT_TRUE(recognizer.participation_token());
   EXPECT_FALSE(recognizer.OnWinWasCalled());
   EXPECT_FALSE(recognizer.OnDefeatWasCalled());
 }
@@ -127,7 +132,7 @@ TEST(GestureArenaTest, AcceptWins) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.contest_member()->Accept();
+  recognizer.participation_token()->Accept();
   EXPECT_TRUE(recognizer.OnWinWasCalled());
   EXPECT_FALSE(recognizer.OnDefeatWasCalled());
 }
@@ -139,7 +144,7 @@ TEST(GestureArenaTest, RejectLoses) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.contest_member()->Reject();
+  recognizer.participation_token()->Reject();
   EXPECT_FALSE(recognizer.OnWinWasCalled());
   EXPECT_TRUE(recognizer.OnDefeatWasCalled());
 }
@@ -152,9 +157,9 @@ TEST(GestureArenaTest, ResolveAfterAllDecided) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizers[0].contest_member()->Accept();
+  recognizers[0].participation_token()->Accept();
   EXPECT_FALSE(recognizers[0].OnWinWasCalled());
-  recognizers[1].contest_member()->Reject();
+  recognizers[1].participation_token()->Reject();
   EXPECT_TRUE(recognizers[0].OnWinWasCalled());
 }
 
@@ -168,9 +173,9 @@ TEST(GestureArenaTest, HighestPriorityAccept) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizers[1].contest_member()->Accept();
-  recognizers[0].contest_member()->Accept();
-  recognizers[2].contest_member()->Accept();
+  recognizers[1].participation_token()->Accept();
+  recognizers[0].participation_token()->Accept();
+  recognizers[2].participation_token()->Accept();
 
   EXPECT_TRUE(recognizers[0].OnWinWasCalled());
   EXPECT_FALSE(recognizers[0].OnDefeatWasCalled());
@@ -187,12 +192,12 @@ TEST(GestureArenaTest, ReleaseRejectsByDefault) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.contest_member().reset();
+  recognizer.participation_token().reset();
   EXPECT_FALSE(recognizer.OnWinWasCalled());
   EXPECT_TRUE(recognizer.OnDefeatWasCalled());
 }
 
-// Ensures that if a member is released after calling |Accept|, it can still receive a win.
+// Ensures that if a token is released after calling |Accept|, it can still receive a win.
 TEST(GestureArenaTest, ReleasedCanWin) {
   a11y::GestureArenaV2 arena;
   std::array<MockGestureRecognizer, 2> recognizers;
@@ -201,16 +206,16 @@ TEST(GestureArenaTest, ReleasedCanWin) {
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizers[0].contest_member()->Accept();
-  recognizers[0].contest_member().reset();
-  recognizers[1].contest_member()->Reject();
+  recognizers[0].participation_token()->Accept();
+  recognizers[0].participation_token().reset();
+  recognizers[1].participation_token()->Reject();
 
   EXPECT_TRUE(recognizers[0].OnWinWasCalled());
   EXPECT_FALSE(recognizers[0].OnDefeatWasCalled());
 }
 
-// This test makes sure that pointer events are sent to all active arena members, either because
-// they are still contending or they haven't released yet.
+// This test makes sure that pointer events are sent to all participating recognizers,
+// either because they are still undecided or they haven't released their token yet.
 TEST(GestureArenaTest, RoutePointerEvents) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
@@ -234,7 +239,7 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   EXPECT_EQ(recognizers[1].num_events(), 1u);
 
   EXPECT_FALSE(actual_handled) << "Arena should not prematurely notify that events were consumed.";
-  recognizers[0].contest_member()->Accept();
+  recognizers[0].participation_token()->Accept();
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_pointer_id, 1);
@@ -245,13 +250,13 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   EXPECT_EQ(recognizers[0].num_events(), 2u);
   EXPECT_EQ(recognizers[1].num_events(), 2u);
 
-  recognizers[1].contest_member()->Reject();
+  recognizers[1].participation_token()->Reject();
   SendPointerEvent(&arena, {1, Phase::UP, {}});
 
   EXPECT_EQ(recognizers[0].num_events(), 3u);
   // Recognizer 1 has been defeated, so it should no longer receive events.
 
-  recognizers[0].contest_member().reset();
+  recognizers[0].participation_token().reset();
   SendPointerEvent(&arena, {1, Phase::REMOVE, {}});
 
   // Recognizer 0 has been released, so it should no longer receive events.
@@ -259,7 +264,8 @@ TEST(GestureArenaTest, RoutePointerEvents) {
   EXPECT_EQ(recognizers[1].num_events(), 2u);
 }
 
-// This test makes sure that when all members reject, the input system is notified of the rejection.
+// This test makes sure that when all recognizers reject, the input system is notified
+// of the rejection.
 TEST(GestureArenaTest, EmptyArenaRejectsPointerEvents) {
   std::optional<uint32_t> actual_device_id;
   std::optional<uint32_t> actual_pointer_id;
@@ -275,9 +281,9 @@ TEST(GestureArenaTest, EmptyArenaRejectsPointerEvents) {
   arena.Add(&recognizer);
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
-  recognizer.contest_member()->Reject();
+  recognizer.participation_token()->Reject();
 
-  // The input system should see the callback now, as all members have rejected.
+  // The input system should see the callback now, as all recognizers have rejected.
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::REJECTED);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
   EXPECT_EQ(actual_pointer_id, 1);
@@ -291,13 +297,14 @@ TEST(GestureArenaTest, HoldUnresolvedArena) {
 
   // Hold the arena to wait for another interaction. Move it into a local so we can verify that a
   // new one wasn't vended.
-  std::unique_ptr<a11y::ContestMemberV2> first_member = std::move(recognizer.contest_member());
+  std::unique_ptr<a11y::ParticipationTokenInterface> first_token =
+      std::move(recognizer.participation_token());
 
   SendPointerEvent(&arena, {1, Phase::REMOVE, {}});
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
   // Arena is held, so the contest is not finished yet.
-  EXPECT_FALSE(recognizer.contest_member());
+  EXPECT_FALSE(recognizer.participation_token());
 }
 
 TEST(GestureArenaTest, HoldResolvedArena) {
@@ -306,17 +313,18 @@ TEST(GestureArenaTest, HoldResolvedArena) {
   arena.Add(&recognizer);
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.contest_member()->Accept();
+  recognizer.participation_token()->Accept();
 
   // Hold the arena to wait for another interaction. Move it into a local so we can verify that a
   // new one wasn't vended.
-  std::unique_ptr<a11y::ContestMemberV2> first_member = std::move(recognizer.contest_member());
+  std::unique_ptr<a11y::ParticipationTokenInterface> first_token =
+      std::move(recognizer.participation_token());
 
   SendPointerEvent(&arena, {1, Phase::REMOVE, {}});
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
   // Arena is held, so the contest is not finished yet.
-  EXPECT_FALSE(recognizer.contest_member());
+  EXPECT_FALSE(recognizer.participation_token());
 }
 
 // Ensures that a recognizer need not resolve while an interaction is still in progress to route
@@ -336,7 +344,7 @@ TEST(GestureArenaTest, ConsumeAfterInteraction) {
   arena.Add(&recognizer);
 
   SendPointerEvents(&arena, TapEvents(1, {}));
-  recognizer.contest_member()->Accept();
+  recognizer.participation_token()->Accept();
 
   EXPECT_EQ(actual_handled, fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
   EXPECT_EQ(actual_device_id, kDefaultDeviceID);
@@ -359,7 +367,7 @@ TEST(GestureArenaTest, ConsumeSubsequentInteractions) {
   arena.Add(&recognizer);
 
   SendPointerEvents(&arena, TapEvents(1, {}));
-  recognizer.contest_member()->Accept();
+  recognizer.participation_token()->Accept();
 
   actual_device_id.reset();
   actual_pointer_id.reset();
@@ -378,26 +386,26 @@ TEST(GestureArenaTest, NewContest) {
   arena.Add(&recognizer);
 
   SendPointerEvents(&arena, TapEvents(1, {}));
-  recognizer.contest_member().reset();
+  recognizer.participation_token().reset();
 
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
-  EXPECT_TRUE(recognizer.contest_member());
+  EXPECT_TRUE(recognizer.participation_token());
 }
 
-// Exercises |ContestMemberV2| release during |OnWin| as a result of |Accept()|.
+// Exercises |ParticipationToken| release during |OnWin| as a result of |Accept()|.
 TEST(GestureArenaTest, PoisonAcceptWin) {
   a11y::GestureArenaV2 arena;
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.SetOnWin([&] { recognizer.contest_member().reset(); });
-  recognizer.contest_member()->Accept();
+  recognizer.SetOnWin([&] { recognizer.participation_token().reset(); });
+  recognizer.participation_token()->Accept();
 
-  FX_CHECK(!recognizer.contest_member());
+  FX_CHECK(!recognizer.participation_token());
 }
 
-// Exercises |ContestMemberV2| release during |OnDefeat| as a result of |Accept()|.
+// Exercises |ParticipationToken| release during |OnDefeat| as a result of |Accept()|.
 TEST(GestureArenaTest, PoisonAcceptDefeat) {
   a11y::GestureArenaV2 arena;
   std::array<MockGestureRecognizer, 2> recognizers;
@@ -405,51 +413,51 @@ TEST(GestureArenaTest, PoisonAcceptDefeat) {
   arena.Add(&recognizers[1]);
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizers[1].SetOnDefeat([&] { recognizers[1].contest_member().reset(); });
-  recognizers[0].contest_member()->Accept();
-  recognizers[1].contest_member()->Accept();
+  recognizers[1].SetOnDefeat([&] { recognizers[1].participation_token().reset(); });
+  recognizers[0].participation_token()->Accept();
+  recognizers[1].participation_token()->Accept();
 
-  FX_CHECK(!recognizers[1].contest_member());
+  FX_CHECK(!recognizers[1].participation_token());
 }
 
-// Exercises |ContestMemberV2| release during |OnDefeat| as a result of |Reject()|.
+// Exercises |ParticipationToken| release during |OnDefeat| as a result of |Reject()|.
 TEST(GestureArenaTest, PoisonReject) {
   a11y::GestureArenaV2 arena;
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.SetOnDefeat([&] { recognizer.contest_member().reset(); });
-  recognizer.contest_member()->Reject();
+  recognizer.SetOnDefeat([&] { recognizer.participation_token().reset(); });
+  recognizer.participation_token()->Reject();
 
-  FX_CHECK(!recognizer.contest_member());
+  FX_CHECK(!recognizer.participation_token());
 }
 
-// Exercises |ContestMemberV2| release during |HandleEvent| while still contending.
+// Exercises |ParticipationToken| release during |HandleEvent| while still contending.
 TEST(GestureArenaTest, PoisonContendingEvent) {
   a11y::GestureArenaV2 arena;
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
 
-  recognizer.SetHandleEvent([&](const auto&) { recognizer.contest_member().reset(); });
+  recognizer.SetHandleEvent([&](const auto&) { recognizer.participation_token().reset(); });
   SendPointerEvent(&arena, {1, Phase::DOWN, {}});
 
-  FX_CHECK(!recognizer.contest_member());
+  FX_CHECK(!recognizer.participation_token());
 }
 
-// Exercises |ContestMemberV2| release during |HandleEvent| after winning.
+// Exercises |ParticipationToken| release during |HandleEvent| after winning.
 TEST(GestureArenaTest, PoisonWinnerEvent) {
   a11y::GestureArenaV2 arena;
   MockGestureRecognizer recognizer;
   arena.Add(&recognizer);
   SendPointerEvent(&arena, {1, Phase::ADD, {}});
-  recognizer.contest_member()->Accept();
+  recognizer.participation_token()->Accept();
 
-  recognizer.SetHandleEvent([&](const auto&) { recognizer.contest_member().reset(); });
+  recognizer.SetHandleEvent([&](const auto&) { recognizer.participation_token().reset(); });
   SendPointerEvent(&arena, {1, Phase::DOWN, {}});
 
-  FX_CHECK(!recognizer.contest_member());
+  FX_CHECK(!recognizer.participation_token());
 }
 
 }  // namespace
