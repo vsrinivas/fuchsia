@@ -47,9 +47,6 @@ class Node {
   // Default implementation returns |ZX_OK|.
   virtual zx_status_t PreClose(Connection* connection);
 
-  // Implementation of |fuchsia.io.unknown/Queryable.Query|.
-  virtual std::vector<uint8_t> Query() const = 0;
-
   // Implementation of |fuchsia.io.Node/Describe|.
   //
   // Subclass must override this method to describe themselves accurately.

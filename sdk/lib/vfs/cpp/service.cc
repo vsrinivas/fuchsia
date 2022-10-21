@@ -17,11 +17,6 @@ void Service::Describe(fuchsia::io::NodeInfoDeprecated* out_info) {
   out_info->set_service(fuchsia::io::Service());
 }
 
-std::vector<uint8_t> Service::Query() const {
-  const std::string_view kProtocol = fuchsia::io::NODE_PROTOCOL_NAME;
-  return {kProtocol.begin(), kProtocol.end()};
-}
-
 void Service::GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) { *out_info = {}; }
 
 zx_status_t Service::CreateConnection(fuchsia::io::OpenFlags flags,

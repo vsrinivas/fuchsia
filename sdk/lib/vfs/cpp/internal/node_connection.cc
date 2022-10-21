@@ -35,7 +35,10 @@ void NodeConnection::Clone(fuchsia::io::OpenFlags flags,
 
 void NodeConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
-void NodeConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
+void NodeConnection::Query(QueryCallback callback) {
+  const std::string_view kProtocol = fuchsia::io::NODE_PROTOCOL_NAME;
+  callback({kProtocol.begin(), kProtocol.end()});
+}
 
 void NodeConnection::DescribeDeprecated(DescribeDeprecatedCallback callback) {
   Connection::Describe(vn_, std::move(callback));

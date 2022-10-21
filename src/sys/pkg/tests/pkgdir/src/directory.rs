@@ -635,24 +635,34 @@ fn generate_valid_file_paths(base: &str) -> Vec<String> {
 
 async fn verify_directory_opened(node: fio::NodeProxy, flag: fio::OpenFlags) -> Result<(), Error> {
     let protocol = node.query().await.context("failed to call describe")?;
-    if protocol != fio::DIRECTORY_PROTOCOL_NAME.as_bytes() {
+    let expected = if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
+        fio::NODE_PROTOCOL_NAME
+    } else {
+        fio::DIRECTORY_PROTOCOL_NAME
+    };
+    if protocol != expected.as_bytes() {
         return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
     }
 
     if flag.intersects(fio::OpenFlags::DESCRIBE) {
-        match node.take_event_stream().next().await {
-            Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
-                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                assert_eq!(*boxed, fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {}));
-                return Ok(());
+        let event = node.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+        let event = event.context("event error")?;
+        match event {
+            fio::NodeEvent::OnOpen_ { s, info } => {
+                let () = zx::Status::ok(s).context("OnOpen failed")?;
+                let info = info.ok_or(anyhow!("missing info"))?;
+                let expected = if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
+                    fio::NodeInfoDeprecated::Service(fio::Service)
+                } else {
+                    fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)
+                };
+                if *info != expected {
+                    return Err(anyhow!("wrong protocol returned: {:?}", info));
+                }
             }
-            Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => {
-                assert_eq!(payload, fio::Representation::Directory(fio::DirectoryInfo::EMPTY));
-                return Ok(());
+            event @ fio::NodeEvent::OnRepresentation { .. } => {
+                return Err(anyhow!("unexpected event returned: {:?}", event));
             }
-            Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Some(Err(e)) => return Err(e).context("failed to call onopen"),
-            None => return Err(anyhow!("no events!")),
         }
     };
     Ok(())
@@ -729,26 +739,30 @@ async fn verify_meta_as_file_opened(
     flag: fio::OpenFlags,
 ) -> Result<(), Error> {
     let protocol = node.query().await.context("failed to call describe")?;
-    if protocol != fio::FILE_PROTOCOL_NAME.as_bytes() {
+    let expected = if flag.intersects(fio::OpenFlags::NODE_REFERENCE) {
+        fio::NODE_PROTOCOL_NAME
+    } else {
+        fio::FILE_PROTOCOL_NAME
+    };
+    if protocol != expected.as_bytes() {
         return Err(anyhow!("wrong protocol returned: {:?}", std::str::from_utf8(&protocol)));
     }
 
     if flag.intersects(fio::OpenFlags::DESCRIBE) {
-        match node.take_event_stream().next().await {
-            Some(Ok(fio::NodeEvent::OnOpen_ { s, info: Some(boxed) })) => {
-                assert_eq!(zx::Status::from_raw(s), zx::Status::OK);
-                match *boxed {
-                    fio::NodeInfoDeprecated::File(_) => return Ok(()),
-                    _ => return Err(anyhow!("wrong fio::NodeInfoDeprecated returned")),
+        let event = node.take_event_stream().next().await.ok_or(anyhow!("no events!"))?;
+        let event = event.context("event error")?;
+        match event {
+            fio::NodeEvent::OnOpen_ { s, info } => {
+                let () = zx::Status::ok(s).context("OnOpen failed")?;
+                let info = info.ok_or(anyhow!("missing info"))?;
+                match *info {
+                    fio::NodeInfoDeprecated::File(fio::FileObject { .. }) => {}
+                    info => return Err(anyhow!("wrong protocol returned: {:?}", info)),
                 }
             }
-            Some(Ok(fio::NodeEvent::OnRepresentation { payload })) => match payload {
-                fio::Representation::File(_) => return Ok(()),
-                _ => return Err(anyhow!("wrong fio::NodeInfoDeprecated returned")),
-            },
-            Some(Ok(other)) => return Err(anyhow!("wrong node type returned: {:?}", other)),
-            Some(Err(e)) => return Err(e).context("failed to call onopen"),
-            None => return Err(anyhow!("no events!")),
+            event @ fio::NodeEvent::OnRepresentation { .. } => {
+                return Err(anyhow!("unexpected event returned: {:?}", event));
+            }
         }
     }
     Ok(())

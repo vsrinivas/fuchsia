@@ -90,15 +90,16 @@ impl DerivedConnection for ImmutableConnection {
                 }
             };
 
+        let connection = Self::new(scope.clone(), directory, flags);
+
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
-            let mut info = fio::NodeInfoDeprecated::Directory(fio::DirectoryObject);
-            match control_handle.send_on_open_(Status::OK.into_raw(), Some(&mut info)) {
+            match control_handle
+                .send_on_open_(Status::OK.into_raw(), Some(&mut connection.base.node_info()))
+            {
                 Ok(()) => (),
                 Err(_) => return,
             }
         }
-
-        let connection = Self::new(scope.clone(), directory, flags);
 
         // If we fail to send the task to the executor, it is probably shut down or is in the
         // process of shutting down (this is the only error state currently).  So there is nothing

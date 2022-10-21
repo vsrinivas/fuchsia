@@ -571,14 +571,8 @@ macro_rules! clone_get_vmo_file_proxy_assert_err {
                 assert_eq!(Status::from_raw(s), Status::OK);
                 let info = *info.expect("Empty fio::NodeInfoDeprecated");
                 assert!(
-                    matches!(
-                        info,
-                        fio::NodeInfoDeprecated::File(fio::FileObject {
-                            event: None,
-                            stream: None
-                        })
-                    ),
-                    "Expected error but got {:?}",
+                    matches!(info, fio::NodeInfoDeprecated::Service(fio::Service)),
+                    "Expected fio::Service but got {:?}",
                     info
                 );
             }

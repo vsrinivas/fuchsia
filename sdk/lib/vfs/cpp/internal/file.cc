@@ -15,11 +15,6 @@ void File::Describe(fuchsia::io::NodeInfoDeprecated* out_info) {
   out_info->set_file(fuchsia::io::FileObject());
 }
 
-std::vector<uint8_t> File::Query() const {
-  const std::string_view kProtocol = fuchsia::io::FILE_PROTOCOL_NAME;
-  return {kProtocol.begin(), kProtocol.end()};
-}
-
 void File::GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) { *out_info = {}; }
 
 zx_status_t File::ReadAt(uint64_t count, uint64_t offset, std::vector<uint8_t>* out_data) {

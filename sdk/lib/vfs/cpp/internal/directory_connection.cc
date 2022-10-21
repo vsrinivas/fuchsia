@@ -42,7 +42,10 @@ void DirectoryConnection::Close(CloseCallback callback) {
   Connection::Close(vn_, std::move(callback));
 }
 
-void DirectoryConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
+void DirectoryConnection::Query(QueryCallback callback) {
+  const std::string_view kProtocol = fuchsia::io::DIRECTORY_PROTOCOL_NAME;
+  callback({kProtocol.begin(), kProtocol.end()});
+}
 
 void DirectoryConnection::DescribeDeprecated(DescribeDeprecatedCallback callback) {
   Connection::Describe(vn_, std::move(callback));

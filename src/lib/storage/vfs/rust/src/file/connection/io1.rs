@@ -15,7 +15,7 @@ use {
     },
     anyhow::Error,
     async_trait::async_trait,
-    fidl::endpoints::ServerEnd,
+    fidl::endpoints::{ControlHandle as _, ServerEnd},
     fidl_fuchsia_io as fio,
     fuchsia_zircon::{
         self as zx,
@@ -143,25 +143,6 @@ async fn create_connection_async_impl<U: 'static + File + IoOpHandler + CloneFil
         }
     }
 
-    let stream = match file.duplicate_stream() {
-        Ok(stream) => stream,
-        Err(status) => {
-            send_on_open_with_error(flags, server_end, status);
-            return;
-        }
-    };
-    let info = if flags.intersects(fio::OpenFlags::DESCRIBE) {
-        match file.describe(flags, stream) {
-            Ok(info) => Some(info),
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
-            }
-        }
-    } else {
-        None
-    };
-
     let (requests, control_handle) =
         match ServerEnd::<fio::FileMarker>::new(server_end.into_channel())
             .into_stream_and_control_handle()
@@ -174,16 +155,30 @@ async fn create_connection_async_impl<U: 'static + File + IoOpHandler + CloneFil
             }
         };
 
-    if let Some(fio::FileInfo { observer, stream, .. }) = info {
-        let mut info = fio::NodeInfoDeprecated::File(fio::FileObject { event: observer, stream });
+    let connection = FileConnection { scope: scope.clone(), file, requests, flags };
 
-        match control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info)) {
-            Ok(()) => (),
-            Err(_) => return,
+    if flags.intersects(fio::OpenFlags::DESCRIBE) {
+        let result = match connection.node_info() {
+            Ok(mut info) => {
+                control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info))
+            }
+            Err(status) => {
+                let result = control_handle.send_on_open_(status.into_raw(), None);
+                let () = control_handle.shutdown_with_epitaph(status);
+                result
+            }
+        };
+        match result {
+            Ok(()) => {}
+            Err(_) => {
+                // As we report all errors on `server_end`, if we failed to send an error over this
+                // connection, there is nowhere to send the error to.
+                return;
+            }
         }
     }
 
-    FileConnection { scope: scope.clone(), file, requests, flags }.handle_requests(shutdown).await;
+    connection.handle_requests(shutdown).await
 }
 
 /// Trait for dispatching read, write, and seek FIDL requests.
@@ -264,14 +259,6 @@ where
 
     fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         self.as_file().query_filesystem()
-    }
-
-    fn describe(
-        &self,
-        connection_flags: fio::OpenFlags,
-        stream: Option<zx::Stream>,
-    ) -> Result<fio::FileInfo, Status> {
-        self.as_file().describe(connection_flags, stream)
     }
 }
 
@@ -574,6 +561,15 @@ impl<T: 'static + File + IoOpHandler + CloneFile> FileConnection<T> {
         // dropped.
     }
 
+    fn node_info(&self) -> Result<fio::NodeInfoDeprecated, Status> {
+        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+            Ok(fio::NodeInfoDeprecated::Service(fio::Service))
+        } else {
+            let stream = self.file.duplicate_stream()?;
+            Ok(fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream }))
+        }
+    }
+
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
     /// that operate on the connection-specific buffer.
     async fn handle_request(&mut self, req: fio::FileRequest) -> Result<ConnectionState, Error> {
@@ -594,18 +590,13 @@ impl<T: 'static + File + IoOpHandler + CloneFile> FileConnection<T> {
             }
             fio::FileRequest::DescribeDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe");
-                let stream = self.file.duplicate_stream()?;
-                let fio::FileInfo { observer, stream, .. } =
-                    self.file.describe(self.flags, stream)?;
-                let mut info =
-                    fio::NodeInfoDeprecated::File(fio::FileObject { event: observer, stream });
+                let mut info = self.node_info()?;
                 responder.send(&mut info)?;
             }
             fio::FileRequest::Describe2 { responder } => {
                 fuchsia_trace::duration!("storage", "File::Describe2");
                 let stream = self.file.duplicate_stream()?;
-                let info = self.file.describe(self.flags, stream)?;
-                responder.send(info)?;
+                responder.send(fio::FileInfo { stream, ..fio::FileInfo::EMPTY })?;
             }
             fio::FileRequest::GetConnectionInfo { responder } => {
                 fuchsia_trace::duration!("storage", "File::GetConnectionInfo");
@@ -696,7 +687,14 @@ impl<T: 'static + File + IoOpHandler + CloneFile> FileConnection<T> {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             fio::FileRequest::Query { responder } => {
-                responder.send(fio::FILE_PROTOCOL_NAME.as_bytes())?;
+                responder.send(
+                    if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+                        fio::NODE_PROTOCOL_NAME
+                    } else {
+                        fio::FILE_PROTOCOL_NAME
+                    }
+                    .as_bytes(),
+                )?;
             }
             fio::FileRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");

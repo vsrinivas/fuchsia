@@ -153,6 +153,14 @@ where
         BaseConnection { scope, directory, flags, seek: Default::default() }
     }
 
+    pub(in crate::directory) fn node_info(&self) -> fio::NodeInfoDeprecated {
+        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+            fio::NodeInfoDeprecated::Service(fio::Service)
+        } else {
+            fio::NodeInfoDeprecated::Directory(fio::DirectoryObject)
+        }
+    }
+
     /// Handle a [`DirectoryRequest`].  This function is responsible for handing all the basic
     /// directory operations.
     pub(in crate::directory) async fn handle_request(
@@ -176,8 +184,7 @@ where
             }
             fio::DirectoryRequest::DescribeDeprecated { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::Describe");
-                let mut info = fio::NodeInfoDeprecated::Directory(fio::DirectoryObject);
-                responder.send(&mut info)?;
+                responder.send(&mut self.node_info())?;
             }
             fio::DirectoryRequest::GetConnectionInfo { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::GetConnectionInfo");
@@ -279,7 +286,14 @@ where
                 responder.send(status.into_raw())?;
             }
             fio::DirectoryRequest::Query { responder } => {
-                responder.send(fio::DIRECTORY_PROTOCOL_NAME.as_bytes())?;
+                let () = responder.send(
+                    if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+                        fio::NODE_PROTOCOL_NAME
+                    } else {
+                        fio::DIRECTORY_PROTOCOL_NAME
+                    }
+                    .as_bytes(),
+                )?;
             }
             fio::DirectoryRequest::QueryFilesystem { responder } => {
                 fuchsia_trace::duration!("storage", "Directory::QueryFilesystem");

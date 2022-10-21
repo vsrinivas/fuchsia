@@ -67,11 +67,6 @@ zx_status_t Directory::Lookup(const std::string& name, Node** out_node) const {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-std::vector<uint8_t> Directory::Query() const {
-  const std::string_view kProtocol = fuchsia::io::DIRECTORY_PROTOCOL_NAME;
-  return {kProtocol.begin(), kProtocol.end()};
-}
-
 zx_status_t Directory::CreateConnection(fuchsia::io::OpenFlags flags,
                                         std::unique_ptr<Connection>* connection) {
   *connection = std::make_unique<internal::DirectoryConnection>(flags, this);

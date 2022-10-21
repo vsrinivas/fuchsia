@@ -68,15 +68,6 @@ pub trait File: Send + Sync {
     fn query_filesystem(&self) -> Result<fio::FilesystemInfo, Status> {
         Err(Status::NOT_SUPPORTED)
     }
-
-    /// Describes the underlying object.  Defaults to a simple file.
-    fn describe(
-        &self,
-        _connection_flags: fio::OpenFlags,
-        stream: Option<zx::Stream>,
-    ) -> Result<fio::FileInfo, Status> {
-        Ok(fio::FileInfo { stream, ..fio::FileInfo::EMPTY })
-    }
 }
 
 // Trait for handling reads and writes to a file. Files that support Streams should handle reads and

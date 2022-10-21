@@ -41,7 +41,10 @@ void FileConnection::Clone(fuchsia::io::OpenFlags flags,
 
 void FileConnection::Close(CloseCallback callback) { Connection::Close(vn_, std::move(callback)); }
 
-void FileConnection::Query(QueryCallback callback) { callback(vn_->Query()); }
+void FileConnection::Query(QueryCallback callback) {
+  const std::string_view kProtocol = fuchsia::io::FILE_PROTOCOL_NAME;
+  callback({kProtocol.begin(), kProtocol.end()});
+}
 
 void FileConnection::DescribeDeprecated(DescribeDeprecatedCallback callback) {
   Connection::Describe(vn_, std::move(callback));

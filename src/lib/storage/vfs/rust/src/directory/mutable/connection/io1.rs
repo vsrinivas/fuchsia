@@ -265,12 +265,14 @@ impl MutableConnection {
             ServerEnd::<fio::DirectoryMarker>::new(server_end.into_channel())
                 .into_stream_and_control_handle()?;
 
+        let connection = Self::new(scope, directory, flags);
+
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
-            let mut info = fio::NodeInfoDeprecated::Directory(fio::DirectoryObject);
-            control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info))?;
+            control_handle
+                .send_on_open_(zx::Status::OK.into_raw(), Some(&mut connection.base.node_info()))?;
         }
 
-        Ok((Self::new(scope, directory, flags), requests))
+        Ok((connection, requests))
     }
 
     async fn handle_requests(

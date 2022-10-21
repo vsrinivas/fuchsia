@@ -73,7 +73,6 @@ class DummyTestNode : public vfs::internal::Node {
     return ZX_ERR_UNAVAILABLE;
   }
 
-  std::vector<uint8_t> Query() const override { return {}; }
   void Describe(fuchsia::io::NodeInfoDeprecated* out_info) override {}
   void GetConnectionInfo(fuchsia::io::ConnectionInfo* out_info) override {}
 

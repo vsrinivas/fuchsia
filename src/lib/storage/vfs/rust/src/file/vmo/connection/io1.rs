@@ -154,27 +154,23 @@ impl VmoFileConnection {
             }
         };
 
-        let mut connection =
-            VmoFileConnection { scope: scope.clone(), file, requests, flags, seek: 0 };
+        let connection = VmoFileConnection { scope, file, requests, flags, seek: 0 };
 
         if flags.intersects(fio::OpenFlags::DESCRIBE) {
-            match connection.get_node_info().await {
-                Ok(mut info) => {
-                    let send_result =
-                        control_handle.send_on_open_(zx::Status::OK.into_raw(), Some(&mut info));
-                    if send_result.is_err() {
-                        return;
-                    }
-                }
-                Err(status) => {
-                    debug_assert!(status != zx::Status::OK);
-                    control_handle.shutdown_with_epitaph(status);
+            match control_handle
+                .send_on_open_(zx::Status::OK.into_raw(), Some(&mut connection.node_info()))
+            {
+                Ok(()) => {}
+                Err(_) => {
+                    // As we report all errors on `server_end`, if we failed to
+                    // send an error over this connection, there is nowhere to
+                    // send the error to.
                     return;
                 }
             }
         }
 
-        connection.handle_requests().await;
+        connection.handle_requests().await
     }
 
     async fn ensure_vmo<'state_guard>(
@@ -264,9 +260,12 @@ impl VmoFileConnection {
         let _: Result<(), zx::Status> = self.handle_close().await;
     }
 
-    /// Returns `NodeInfoDeprecated` for the VMO file.
-    async fn get_node_info(&mut self) -> Result<fio::NodeInfoDeprecated, zx::Status> {
-        Ok(fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None }))
+    fn node_info(&self) -> fio::NodeInfoDeprecated {
+        if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+            fio::NodeInfoDeprecated::Service(fio::Service)
+        } else {
+            fio::NodeInfoDeprecated::File(fio::FileObject { event: None, stream: None })
+        }
     }
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
@@ -291,13 +290,7 @@ impl VmoFileConnection {
                 return Ok(ConnectionState::Closed);
             }
             fio::FileRequest::DescribeDeprecated { responder } => {
-                match self.get_node_info().await {
-                    Ok(mut info) => responder.send(&mut info)?,
-                    Err(status) => {
-                        debug_assert!(status != zx::Status::OK);
-                        responder.control_handle().shutdown_with_epitaph(status);
-                    }
-                }
+                let () = responder.send(&mut self.node_info())?;
             }
             fio::FileRequest::Describe2 { responder } => {
                 let () = responder.send(fio::FileInfo::EMPTY)?;
@@ -372,7 +365,14 @@ impl VmoFileConnection {
                 responder.send(&mut Err(ZX_ERR_NOT_SUPPORTED))?;
             }
             fio::FileRequest::Query { responder } => {
-                responder.send(fio::FILE_PROTOCOL_NAME.as_bytes())?;
+                responder.send(
+                    if self.flags.intersects(fio::OpenFlags::NODE_REFERENCE) {
+                        fio::NODE_PROTOCOL_NAME
+                    } else {
+                        fio::FILE_PROTOCOL_NAME
+                    }
+                    .as_bytes(),
+                )?;
             }
             fio::FileRequest::QueryFilesystem { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
