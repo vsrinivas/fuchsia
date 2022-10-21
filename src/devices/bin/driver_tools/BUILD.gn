@@ -11,6 +11,15 @@ group("tests") {
   deps = [ ":driver_tools_tests" ]
 }
 
+_host_or_test = [
+  "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_rust",
+  "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
+  "//sdk/lib/device-watcher/rust",
+  "//src/lib/fuchsia-async",
+  "//src/lib/fuchsia-fs",
+  "//third_party/rust_crates:log",
+]
+
 rustc_library("lib") {
   edition = "2021"
   name = "driver_tools"
@@ -23,45 +32,42 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.device.manager:fuchsia.device.manager_rust",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_rust",
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_rust",
-    "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_rust",
     "//sdk/fidl/fuchsia.driver.registrar:fuchsia.driver.registrar_rust",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//sdk/fidl/fuchsia.hardware.i2c:fuchsia.hardware.i2c_rust",
-    "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_rust",
-    "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_rust",
-    "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//sdk/lib/device-watcher/rust",
-    "//src/developer/ffx/lib/errors:lib",
     "//src/devices/lib/bind",
-    "//src/devices/pci/bin/lspci:lib",
-    "//src/devices/usb/bin/lsusb:lib",
     "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
-    "//src/lib/storage/fuchsia-vfs-watcher",
     "//src/lib/zircon/rust:fuchsia-zircon-status",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:blocking",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:uuid",
-    "//third_party/rust_crates:zstd",
-    "//third_party/zstd",
   ]
   if (is_host) {
-    deps += [ "//src/devices/lib/driver-conformance:lib" ]
+    deps += [
+              "//sdk/fidl/fuchsia.driver.playground:fuchsia.driver.playground_rust",
+              "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
+              "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+              "//sdk/fidl/fuchsia.hardware.pci:fuchsia.hardware.pci_rust",
+              "//sdk/fidl/fuchsia.hardware.skipblock:fuchsia.hardware.skipblock_rust",
+              "//src/developer/ffx/lib/errors:lib",
+              "//src/devices/lib/driver-conformance:lib",
+              "//src/devices/pci/bin/lspci:lib",
+              "//src/devices/usb/bin/lsusb:lib",
+              "//src/lib/storage/fuchsia-vfs-watcher",
+              "//third_party/rust_crates:async-trait",
+              "//third_party/rust_crates:blocking",
+              "//third_party/rust_crates:lazy_static",
+              "//third_party/rust_crates:uuid",
+              "//third_party/rust_crates:zstd",
+              "//third_party/zstd",
+            ] + _host_or_test
   }
   test_deps = [
-    "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust",
-    "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
-    "//src/lib/fuchsia-component",
-  ]
+                "//sdk/fidl/fuchsia.driver.index:fuchsia.driver.index_rust",
+                "//sdk/fidl/fuchsia.input:fuchsia.input_rust",
+                "//src/lib/fuchsia-async",
+                "//src/lib/fuchsia-component",
+              ] + _host_or_test
   sources = [
     "src/args.rs",
     "src/lib.rs",
@@ -88,13 +94,6 @@ rustc_library("lib") {
     "src/subcommands/list_devices/mod.rs",
     "src/subcommands/list_hosts/args.rs",
     "src/subcommands/list_hosts/mod.rs",
-    "src/subcommands/lsblk/args.rs",
-    "src/subcommands/lsblk/guids.rs",
-    "src/subcommands/lsblk/mod.rs",
-    "src/subcommands/lspci/args.rs",
-    "src/subcommands/lspci/mod.rs",
-    "src/subcommands/lsusb/args.rs",
-    "src/subcommands/lsusb/mod.rs",
     "src/subcommands/mod.rs",
     "src/subcommands/print_input_report/args.rs",
     "src/subcommands/print_input_report/mod.rs",
@@ -111,8 +110,6 @@ rustc_library("lib") {
     "src/subcommands/register/mod.rs",
     "src/subcommands/restart/args.rs",
     "src/subcommands/restart/mod.rs",
-    "src/subcommands/runtool/args.rs",
-    "src/subcommands/runtool/mod.rs",
     "src/subcommands/test_node/args.rs",
     "src/subcommands/test_node/mod.rs",
     "src/subcommands/test_node/subcommands/add/args.rs",
@@ -121,6 +118,19 @@ rustc_library("lib") {
     "src/subcommands/test_node/subcommands/remove/args.rs",
     "src/subcommands/test_node/subcommands/remove/mod.rs",
   ]
+  if (is_host) {
+    sources += [
+      "src/subcommands/lsblk/args.rs",
+      "src/subcommands/lsblk/guids.rs",
+      "src/subcommands/lsblk/mod.rs",
+      "src/subcommands/lspci/args.rs",
+      "src/subcommands/lspci/mod.rs",
+      "src/subcommands/lsusb/args.rs",
+      "src/subcommands/lsusb/mod.rs",
+      "src/subcommands/runtool/args.rs",
+      "src/subcommands/runtool/mod.rs",
+    ]
+  }
   inputs = [ "//third_party/pciids/pci.ids.zst" ]
 }
 

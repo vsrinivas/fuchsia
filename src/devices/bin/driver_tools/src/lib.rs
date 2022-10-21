@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#[cfg(not(target_os = "fuchsia"))]
 #[macro_use]
 extern crate lazy_static;
 
@@ -12,14 +13,16 @@ use {
     anyhow::{Context, Result},
     args::{DriverCommand, DriverSubCommand},
     driver_connector::DriverConnector,
-    futures::lock::Mutex,
-    std::{io, sync::Arc},
+    std::io,
 };
+
+#[cfg(not(target_os = "fuchsia"))]
+use {futures::lock::Mutex, std::sync::Arc};
 
 pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) -> Result<()> {
     match cmd.subcommand {
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::Conformance(_subcmd) => {
-            #[cfg(not(target_os = "fuchsia"))]
             conformance_lib::conformance(_subcmd, &driver_connector)
                 .await
                 .context("Conformance subcommand failed")?;
@@ -53,6 +56,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Dump subcommand failed")?;
         }
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::I2c(ref subcmd) => {
             let dev =
                 driver_connector.get_dev_proxy(false).await.context("Failed to get dev proxy")?;
@@ -88,6 +92,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("List-hosts subcommand failed")?;
         }
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::Lsblk(subcmd) => {
             let dev = driver_connector
                 .get_dev_proxy(subcmd.select)
@@ -95,6 +100,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .context("Failed to get dev proxy")?;
             subcommands::lsblk::lsblk(subcmd, dev).await.context("Lsblk subcommand failed")?;
         }
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::Lspci(subcmd) => {
             let dev = driver_connector
                 .get_dev_proxy(subcmd.select)
@@ -102,6 +108,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .context("Failed to get dev proxy")?;
             subcommands::lspci::lspci(subcmd, dev).await.context("Lspci subcommand failed")?;
         }
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::Lsusb(subcmd) => {
             let device_watcher_proxy = driver_connector
                 .get_device_watcher_proxy()
@@ -111,6 +118,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Lsusb subcommand failed")?;
         }
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::PrintInputReport(ref subcmd) => {
             let writer = Arc::new(Mutex::new(io::stdout()));
             let dev =
@@ -146,6 +154,7 @@ pub async fn driver(cmd: DriverCommand, driver_connector: impl DriverConnector) 
                 .await
                 .context("Restart subcommand failed")?;
         }
+        #[cfg(not(target_os = "fuchsia"))]
         DriverSubCommand::RunTool(subcmd) => {
             let tool_runner_proxy = driver_connector
                 .get_tool_runner_proxy(false)
