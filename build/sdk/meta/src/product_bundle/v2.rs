@@ -21,8 +21,11 @@ use anyhow::{anyhow, Context, Result};
 use assembly_manifest::AssemblyManifest;
 use assembly_partitions_config::PartitionsConfig;
 use camino::Utf8PathBuf;
+use fidl_fuchsia_developer_ffx::ListFields;
+use fuchsia_repo::{repo_client::RepoClient, repository::FileSystemRepository};
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 use std::path::Path;
 
 /// Description of the data needed to set up (flash) a device.
@@ -61,6 +64,30 @@ pub struct Repository {
 }
 
 impl ProductBundleV2 {
+    /// Return the paths-on-host of the blobs contained in the product bundle.
+    pub async fn blobs(&self) -> Result<HashSet<Utf8PathBuf>> {
+        let mut all_blobs = HashSet::<Utf8PathBuf>::new();
+        if let Some(Repository { metadata_path, blobs_path }) = &self.repository {
+            let repo = FileSystemRepository::new(metadata_path.clone(), blobs_path.clone());
+            let mut client =
+                RepoClient::from_trusted_remote(&repo).await.context("creating the repo client")?;
+            client.update().await.context("updating the repo metadata")?;
+            let packages =
+                client.list_packages(ListFields::empty()).await.context("listing packages")?;
+            for package in &packages {
+                if let Some(name) = &package.name {
+                    if let Some(blobs) =
+                        client.show_package(name.clone()).await.context("showing package")?
+                    {
+                        all_blobs
+                            .extend(blobs.iter().filter_map(|e| e.hash.clone()).map(|p| p.into()));
+                    }
+                }
+            }
+        }
+        Ok(all_blobs)
+    }
+
     /// Convert all the paths from relative to absolute, assuming `product_bundle_dir` is the
     /// current base all the paths are relative to.
     ///
@@ -171,6 +198,8 @@ mod tests {
     use super::*;
     use assembly_manifest::Image;
     use assembly_partitions_config::{BootloaderPartition, BootstrapPartition, Partition, Slot};
+    use camino::Utf8Path;
+    use fuchsia_repo::test_utils;
     use std::fs::File;
     use std::io::Write;
     use std::path::PathBuf;
@@ -316,5 +345,35 @@ mod tests {
         };
         let result = pb.relativize_paths(tempdir.path());
         assert!(result.is_ok());
+    }
+
+    #[fuchsia::test]
+    async fn test_blobs() {
+        let tempdir = TempDir::new().unwrap();
+        let dir = Utf8Path::from_path(&tempdir.path()).unwrap();
+        let _repo = test_utils::make_pm_repo_dir(&tempdir.path()).await;
+
+        let pb = ProductBundleV2 {
+            partitions: PartitionsConfig::default(),
+            system_a: None,
+            system_b: None,
+            system_r: None,
+            repository: Some(Repository {
+                metadata_path: dir.join("repository"),
+                blobs_path: dir.join("repository").join("blobs"),
+            }),
+        };
+
+        let expected = HashSet::from([
+            "050907f009ff634f9aa57bff541fb9e9c2c62b587c23578e77637cda3bd69458".into(),
+            "2881455493b5870aaea36537d70a2adc635f516ac2092598f4b6056dabc6b25d".into(),
+            "548981eb310ddc4098fb5c63692e19ac4ae287b13d0e911fbd9f7819ac22491c".into(),
+            "72e1e7a504f32edf4f23e7e8a3542c1d77d12541142261cfe272decfa75f542d".into(),
+            "8a8a5f07f935a4e8e1fd1a1eda39da09bb2438ec0adfb149679ddd6e7e1fbb4f".into(),
+            "ecc11f7f4b763c5a21be2b4159c9818bbe22ca7e6d8100a72f6a41d3d7b827a9".into(),
+        ]);
+
+        let blobs = pb.blobs().await.unwrap();
+        assert_eq!(expected, blobs);
     }
 }
