@@ -13,6 +13,7 @@
 
 #include "driver_host.h"
 #include "log.h"
+#include "src/devices/bin/driver_host/simple_binding.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
@@ -37,9 +38,9 @@ void FidlDispatcher::CreateAndBind(fbl::RefPtr<zx_device> dev, async_dispatcher_
 
   // Create the binding. We pass the FidlDispatcher's pointer into the unbound
   // function so it stays alive as long as the binding.
-  auto binding = std::make_unique<fidl::internal::SimpleBinding>(
-      dispatcher, std::move(channel), fidl_ptr, [fidl = std::move(fidl)](void*) {});
-  zx_status_t status = fidl::internal::BeginWait(&binding);
+  auto binding = std::make_unique<devfs::SimpleBinding>(dispatcher, std::move(channel), fidl_ptr,
+                                                        [fidl = std::move(fidl)](void*) {});
+  zx_status_t status = devfs::BeginWait(&binding);
   if (status != ZX_OK) {
     LOGF(ERROR, "FidlDispatcher: Failed to BeginWait: %s", zx_status_get_string(status));
   }

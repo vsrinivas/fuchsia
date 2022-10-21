@@ -24,6 +24,24 @@ executable("driver_host") {
   ]
 }
 
+source_set("simple_binding") {
+  sources = [
+    "simple_binding.cc",
+    "simple_binding.h",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl",
+    "//sdk/lib/fidl/cpp/wire",
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/async",
+  ]
+  public_deps = [
+    "//sdk/lib/fit",
+    "//zircon/system/ulib/zx",
+  ]
+}
+
 source_set("common") {
   sources = [
     "api.cc",
@@ -46,6 +64,7 @@ source_set("common") {
   ]
 
   deps = [
+    ":simple_binding",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//src/devices/lib/driver:driver_runtime",
