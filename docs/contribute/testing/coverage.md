@@ -62,12 +62,14 @@ ask authors to close any testing gaps that they identify as important.
 
 ![Gerrit screenshot showing line coverage](incremental.png)
 
-## Local coverage edit loop
+## Coverage-driven development workflow {#local_coverage_edit_loop}
 
 Note: Only component tests are supported at this time.
 
-You can view coverage from local edits in your browser or in VS Code. To
-demonstrate, we'll use our rust example tests //examples/rust:rust-examples.
+You can view coverage from local edits in your browser or in VS Code.
+You can use this to establish a coverage-driven development workflow.
+To demonstrate, we'll use our Rust example tests at
+`//examples/rust:rust-examples`.
 
 ### Prepare your test environment
 
