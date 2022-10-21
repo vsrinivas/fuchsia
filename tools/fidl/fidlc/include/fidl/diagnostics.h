@@ -213,19 +213,19 @@ constexpr ErrorDef<92> ErrTooManyTableOrdinals(
     "table contains too many ordinals; tables are limited to 64 ordinals");
 constexpr ErrorDef<93> ErrMaxOrdinalNotTable(
     "the 64th ordinal of a table may only contain a table type");
-constexpr UndocumentedErrorDef<94, SourceSpan> ErrDuplicateTableFieldOrdinal(
+constexpr ErrorDef<94, SourceSpan> ErrDuplicateTableFieldOrdinal(
     "multiple table fields with the same ordinal; previous was at {}");
-constexpr UndocumentedErrorDef<95, std::string_view, SourceSpan> ErrDuplicateTableFieldName(
+constexpr ErrorDef<95, std::string_view, SourceSpan> ErrDuplicateTableFieldName(
     "multiple table fields named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<96, std::string_view, std::string_view, SourceSpan, std::string_view>
+constexpr ErrorDef<96, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateTableFieldNameCanonical(
         "table field '{}' conflicts with field '{}' from {}; both are represented "
         "by the canonical form '{}'");
-constexpr UndocumentedErrorDef<97, SourceSpan> ErrDuplicateUnionMemberOrdinal(
+constexpr ErrorDef<97, SourceSpan> ErrDuplicateUnionMemberOrdinal(
     "multiple union fields with the same ordinal; previous was at {}");
-constexpr UndocumentedErrorDef<98, std::string_view, SourceSpan> ErrDuplicateUnionMemberName(
+constexpr ErrorDef<98, std::string_view, SourceSpan> ErrDuplicateUnionMemberName(
     "multiple union members named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<99, std::string_view, std::string_view, SourceSpan, std::string_view>
+constexpr ErrorDef<99, std::string_view, std::string_view, SourceSpan, std::string_view>
     ErrDuplicateUnionMemberNameCanonical(
         "union member '{}' conflicts with member '{}' from {}; both are represented "
         "by the canonical form '{}'");

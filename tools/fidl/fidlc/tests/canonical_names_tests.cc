@@ -326,33 +326,21 @@ type Example = struct {
 }
 
 TEST(CanonicalNamesTests, BadTableMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Example = table {
-  1: fooBar bool;
-  2: FooBar bool;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0096.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "myField");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyField");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "my_field");
 }
 
 TEST(CanonicalNamesTests, BadUnionMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Example = union {
-  1: fooBar bool;
-  2: FooBar bool;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0099.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberNameCanonical);
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
-  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "foo_bar");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "myVariant");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "MyVariant");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "my_variant");
 }
 
 TEST(CanonicalNamesTests, BadEnumMembers) {

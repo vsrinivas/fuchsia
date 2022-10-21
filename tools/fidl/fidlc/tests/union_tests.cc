@@ -191,26 +191,14 @@ type Foo = union {
 }
 
 TEST(UnionTests, BadOrdinalsMustBeUnique) {
-  TestLibrary library(R"FIDL(
-library test;
-
-type Foo = strict union {
-  1: reserved;
-  1: x uint64;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0097.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
 TEST(UnionTests, BadMemberNamesMustBeUnique) {
-  TestLibrary library(R"FIDL(
-library test;
-
-type Duplicates = strict union {
-    1: s string;
-    2: s int32;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0098.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateUnionMemberName);
 }
 

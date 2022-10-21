@@ -100,26 +100,14 @@ type Foo = union {
 }
 
 TEST(TableTests, BadDuplicateFieldNames) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-type Foo = table {
-    1: field string;
-    2: field uint32;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0095.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldName);
 }
 
 TEST(TableTests, BadDuplicateOrdinals) {
-  TestLibrary library(R"FIDL(
-library fidl.test.tables;
-
-type Foo = table {
-    1: foo string;
-    1: bar uint32;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0094.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
