@@ -468,5 +468,4 @@ TEST(ComparePathTest, AliasedPathMatches) {
     EXPECT_EQ(ComparePath(node_path, target_path), devicetree::CompareResult::kIsMatch);
   }
 }
-
 }  // namespace

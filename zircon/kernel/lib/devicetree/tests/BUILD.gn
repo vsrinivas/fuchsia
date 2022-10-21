@@ -28,6 +28,7 @@ source_set("test_helper") {
 test("devicetree-tests") {
   sources = [
     "devicetree_tests.cc",
+    "matcher_tests.cc",
     "path_tests.cc",
   ]
   deps = [
