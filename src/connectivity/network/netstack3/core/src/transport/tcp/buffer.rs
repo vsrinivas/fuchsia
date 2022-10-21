@@ -20,13 +20,13 @@ use crate::transport::tcp::{
 pub trait Buffer: Takeable + Debug + Sized {
     /// Returns the number of bytes in the buffer that can be read.
     fn len(&self) -> usize;
-
-    /// Returns the maximum number of bytes that can reside in the buffer.
-    fn cap(&self) -> usize;
 }
 
 /// A buffer supporting TCP receiving operations.
 pub trait ReceiveBuffer: Buffer {
+    /// Returns the maximum number of bytes that can reside in the buffer.
+    fn cap(&self) -> usize;
+
     /// Writes `data` into the buffer at `offset`.
     ///
     /// Returns the number of bytes written.
@@ -229,13 +229,13 @@ impl Buffer for RingBuffer {
     fn len(&self) -> usize {
         self.len
     }
-
-    fn cap(&self) -> usize {
-        self.storage.len()
-    }
 }
 
 impl ReceiveBuffer for RingBuffer {
+    fn cap(&self) -> usize {
+        self.storage.len()
+    }
+
     fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
         let Self { storage, head, len } = self;
         if storage.len() == 0 {

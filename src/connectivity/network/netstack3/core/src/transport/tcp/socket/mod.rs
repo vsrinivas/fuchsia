@@ -1441,13 +1441,13 @@ mod tests {
         fn len(&self) -> usize {
             self.borrow().len()
         }
-
-        fn cap(&self) -> usize {
-            self.borrow().cap()
-        }
     }
 
     impl ReceiveBuffer for Rc<RefCell<RingBuffer>> {
+        fn cap(&self) -> usize {
+            self.borrow().cap()
+        }
+
         fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
             self.borrow_mut().write_at(offset, data)
         }
@@ -1463,10 +1463,6 @@ mod tests {
     impl Buffer for TestSendBuffer {
         fn len(&self) -> usize {
             self.1.len() + self.0.borrow().len()
-        }
-
-        fn cap(&self) -> usize {
-            self.1.cap() + self.0.borrow().capacity()
         }
     }
 

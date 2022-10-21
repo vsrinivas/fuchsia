@@ -1634,13 +1634,13 @@ mod test {
         fn len(&self) -> usize {
             0
         }
-
-        fn cap(&self) -> usize {
-            0
-        }
     }
 
     impl ReceiveBuffer for NullBuffer {
+        fn cap(&self) -> usize {
+            0
+        }
+
         fn write_at<P: Payload>(&mut self, _offset: usize, _data: &P) -> usize {
             0
         }

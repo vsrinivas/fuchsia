@@ -184,13 +184,13 @@ impl Buffer for ReceiveBufferWithZirconSocket {
         let info = self.socket.info().expect("failed to get socket info");
         info.tx_buf_size
     }
-
-    fn cap(&self) -> usize {
-        self.capacity
-    }
 }
 
 impl ReceiveBuffer for ReceiveBufferWithZirconSocket {
+    fn cap(&self) -> usize {
+        self.capacity
+    }
+
     fn write_at<P: Payload>(&mut self, offset: usize, data: &P) -> usize {
         self.out_of_order.write_at(offset, data)
     }
@@ -224,10 +224,6 @@ impl Buffer for SendBufferWithZirconSocket {
     fn len(&self) -> usize {
         let info = self.socket.info().expect("failed to get socket info");
         info.rx_buf_size + self.ready_to_send.len()
-    }
-
-    fn cap(&self) -> usize {
-        self.capacity
     }
 }
 
