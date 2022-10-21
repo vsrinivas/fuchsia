@@ -5,6 +5,7 @@
 //! Core DHCPv6 client state transitions.
 
 use assert_matches::assert_matches;
+use net_types::ip::Ipv6Addr;
 use num::{rational::Ratio, CheckedMul};
 use packet::serialize::InnerPacketBuilder;
 use packet_formats_dhcp::v6;
@@ -14,7 +15,6 @@ use std::{
     collections::{hash_map::Entry, BinaryHeap, HashMap},
     convert::TryFrom,
     default::Default,
-    net::Ipv6Addr,
     time::{Duration, Instant},
 };
 use tracing::{debug, info, warn};
@@ -1652,7 +1652,6 @@ fn get_nonzero_min(
 
 mod private {
     use super::*;
-    use std::net::Ipv6Addr;
 
     /// Holds an address different from what was configured.
     #[derive(Debug, PartialEq, Clone, Copy)]
@@ -3936,13 +3935,13 @@ impl<R: Rng> ClientStateMachine<R> {
 
 #[cfg(test)]
 pub(crate) mod testconsts {
-    use net_declare::std_ip_v6;
+    use net_declare::net_ip_v6;
+    use net_types::ip::Ipv6Addr;
     use packet_formats_dhcp::v6;
-    use std::net::Ipv6Addr;
 
     pub(crate) const INFINITY: u32 = u32::MAX;
     pub(crate) const DNS_SERVERS: [Ipv6Addr; 2] =
-        [std_ip_v6!("ff01::0102"), std_ip_v6!("ff01::0304")];
+        [net_ip_v6!("ff01::0102"), net_ip_v6!("ff01::0304")];
     pub(crate) const CLIENT_ID: [u8; 18] =
         [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17];
     pub(crate) const MISMATCHED_CLIENT_ID: [u8; 18] =
@@ -3952,19 +3951,19 @@ pub(crate) mod testconsts {
         [[100, 101, 102], [110, 111, 112], [120, 121, 122]];
 
     pub(crate) const RENEW_NON_TEMPORARY_ADDRESSES: [Ipv6Addr; 3] = [
-        std_ip_v6!("::ffff:4e45:123"),
-        std_ip_v6!("::ffff:4e45:456"),
-        std_ip_v6!("::ffff:4e45:789"),
+        net_ip_v6!("::ffff:4e45:123"),
+        net_ip_v6!("::ffff:4e45:456"),
+        net_ip_v6!("::ffff:4e45:789"),
     ];
     pub(crate) const REPLY_NON_TEMPORARY_ADDRESSES: [Ipv6Addr; 3] = [
-        std_ip_v6!("::ffff:5447:123"),
-        std_ip_v6!("::ffff:5447:456"),
-        std_ip_v6!("::ffff:5447:789"),
+        net_ip_v6!("::ffff:5447:123"),
+        net_ip_v6!("::ffff:5447:456"),
+        net_ip_v6!("::ffff:5447:789"),
     ];
     pub(crate) const CONFIGURED_NON_TEMPORARY_ADDRESSES: [Ipv6Addr; 3] = [
-        std_ip_v6!("::ffff:c00a:123"),
-        std_ip_v6!("::ffff:c00a:456"),
-        std_ip_v6!("::ffff:c00a:789"),
+        net_ip_v6!("::ffff:c00a:123"),
+        net_ip_v6!("::ffff:c00a:456"),
+        net_ip_v6!("::ffff:c00a:789"),
     ];
 
     pub(crate) const T1: v6::NonZeroOrMaxU32 =

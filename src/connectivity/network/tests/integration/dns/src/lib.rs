@@ -463,7 +463,7 @@ async fn discovered_dhcpv6_dns<E: netemul::Endpoint, M: Manager>(name: &str) {
     );
 
     // Send the DHCPv6 reply.
-    let dns_servers = [std::net::Ipv6Addr::from(DHCPV6_DNS_SERVER.addr)];
+    let dns_servers = [net_types_ip::Ipv6Addr::from(DHCPV6_DNS_SERVER.addr)];
     let options = [v6::DhcpOption::ServerId(&[]), v6::DhcpOption::DnsServers(&dns_servers)];
     let builder = v6::MessageBuilder::new(v6::MessageType::Reply, tx_id, &options);
     let ser = builder

@@ -10,6 +10,7 @@ rustc_library("core") {
   edition = "2021"
   with_unit_tests = true
   deps = [
+    "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats-dhcp",
     "//src/lib/network/packet",
     "//third_party/rust_crates:assert_matches",

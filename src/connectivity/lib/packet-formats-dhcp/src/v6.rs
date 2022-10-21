@@ -7,7 +7,7 @@
 use {
     byteorder::NetworkEndian,
     mdns::protocol::{Domain, ParseError as MdnsParseError},
-    net_types::ip::{PrefixTooLongError, Subnet},
+    net_types::ip::{IpAddress as _, Ipv6Addr, PrefixTooLongError, Subnet},
     num_derive::FromPrimitive,
     packet::{
         records::{
@@ -19,7 +19,6 @@ use {
     std::{
         convert::{TryFrom, TryInto},
         mem,
-        net::Ipv6Addr,
         slice::Iter,
         str,
     },
@@ -413,7 +412,7 @@ impl<'a, B: ByteSlice> IaAddrData<B> {
 
     /// Returns the address.
     pub fn addr(&self) -> Ipv6Addr {
-        Ipv6Addr::from(self.header.addr.ipv6_bytes())
+        self.header.addr
     }
 
     /// Returns the preferred lifetime as `TimeValue` to relay the fact that
@@ -446,7 +445,7 @@ impl<'a, B: ByteSlice> IaAddrData<B> {
 #[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
 struct IaAddrHeader {
-    addr: net_types::ip::Ipv6Addr,
+    addr: Ipv6Addr,
     preferred_lifetime: U32,
     valid_lifetime: U32,
 }
@@ -517,7 +516,7 @@ struct IaPrefixHeader {
     preferred_lifetime_secs: U32,
     valid_lifetime_secs: U32,
     prefix_length: u8,
-    prefix: net_types::ip::Ipv6Addr,
+    prefix: Ipv6Addr,
 }
 
 /// An overlay representation of an IA Address option, as per RFC 8415 section 21.22.
@@ -540,7 +539,7 @@ impl<'a, B: ByteSlice> IaPrefixData<B> {
     }
 
     /// Returns the prefix.
-    pub fn prefix(&self) -> Result<Subnet<net_types::ip::Ipv6Addr>, PrefixTooLongError> {
+    pub fn prefix(&self) -> Result<Subnet<Ipv6Addr>, PrefixTooLongError> {
         Subnet::from_host(self.header.prefix, self.header.prefix_length)
     }
 
@@ -920,7 +919,7 @@ impl<'a> IaAddrSerializer<'a> {
     ) -> IaAddrSerializer<'a> {
         IaAddrSerializer {
             header: IaAddrHeader {
-                addr: net_types::ip::Ipv6Addr::from_bytes(addr.octets()),
+                addr,
                 preferred_lifetime: U32::new(preferred_lifetime),
                 valid_lifetime: U32::new(valid_lifetime),
             },
@@ -958,7 +957,7 @@ impl<'a> IaPrefixSerializer<'a> {
     pub fn new(
         preferred_lifetime_secs: u32,
         valid_lifetime_secs: u32,
-        prefix: Subnet<net_types::ip::Ipv6Addr>,
+        prefix: Subnet<Ipv6Addr>,
         options: &'a [DhcpOption<'a>],
     ) -> IaPrefixSerializer<'a> {
         IaPrefixSerializer {
@@ -1175,8 +1174,7 @@ impl<'a> RecordBuilder for DhcpOption<'a> {
                     );
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
                 recursive_name_servers.iter().for_each(|server_addr| {
-                    let () =
-                        buf.write_obj_front(&server_addr.octets()).expect("buffer is too small");
+                    let () = buf.write_obj_front(server_addr.bytes()).expect("buffer is too small");
                 })
             }
             DhcpOption::DomainList(domains) => {
@@ -1310,7 +1308,10 @@ impl InnerPacketBuilder for MessageBuilder<'_> {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, assert_matches::assert_matches, net_declare::net_subnet_v6, std::str::FromStr,
+        super::*,
+        assert_matches::assert_matches,
+        net_declare::{net_ip_v6, net_subnet_v6},
+        std::str::FromStr,
         test_case::test_case,
     };
 
@@ -1440,7 +1441,7 @@ mod tests {
             net_subnet_v6!("1234:5678:1231::/48"),
             &iaprefix_options,
         ))];
-        let dns_servers = [Ipv6Addr::from(0)];
+        let dns_servers = [net_ip_v6!("::")];
         let domains = [
             checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
             checked::Domain::from_str("www.google.com").expect("failed to construct test domain"),

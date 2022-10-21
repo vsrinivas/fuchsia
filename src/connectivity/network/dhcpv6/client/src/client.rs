@@ -25,6 +25,7 @@ use {
         stream::futures_unordered::FuturesUnordered,
         Future, FutureExt as _, StreamExt as _, TryStreamExt as _,
     },
+    net_types::{ip::Ipv6Addr, MulticastAddress as _},
     packet::ParsablePacket,
     packet_formats_dhcp::v6,
     rand::{rngs::StdRng, SeedableRng},
@@ -35,7 +36,7 @@ use {
         },
         convert::TryFrom,
         hash::{Hash, Hasher},
-        net::{IpAddr, Ipv6Addr, SocketAddr},
+        net::{IpAddr, SocketAddr},
         num::{NonZeroU8, TryFromIntError},
         str::FromStr as _,
         time::{Duration, Instant},
@@ -170,11 +171,12 @@ fn create_state_machine(
     let ClientConfig { non_temporary_address_config, information_config, .. } = config;
     match non_temporary_address_config {
         Some(non_temporary_address_config) => {
-            let configured_addresses = to_configured_addresses(non_temporary_address_config)?;
+            let configured_non_temporary_addresses =
+                to_configured_addresses(non_temporary_address_config)?;
             Ok(dhcpv6_core::client::ClientStateMachine::start_stateful(
                 transaction_id,
                 v6::duid_uuid(),
-                configured_addresses,
+                configured_non_temporary_addresses,
                 information_config.map_or_else(Vec::new, to_dhcpv6_option_codes),
                 StdRng::from_entropy(),
                 Instant::now(),
@@ -289,7 +291,7 @@ impl<S: for<'a> AsyncSocket<'a>> Client<S> {
     ) -> Result<(), ClientError> {
         let () = responder
             .send(&mut servers.iter().map(|addr| {
-                let address = fnet::Ipv6Address { addr: addr.octets() };
+                let address = fnet::Ipv6Address { addr: addr.ipv6_bytes() };
                 let zone_index =
                     if is_unicast_link_local_strict(&address) { self.interface_id } else { 0 };
 
@@ -550,7 +552,7 @@ mod tests {
         fuchsia_async as fasync,
         futures::{channel::mpsc, join},
         net_declare::{
-            fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, std_ip_v6, std_socket_addr,
+            fidl_ip_v6, fidl_socket_addr, fidl_socket_addr_v6, net_ip_v6, std_socket_addr,
         },
         packet::serialize::InnerPacketBuilder,
         std::{collections::HashSet, task::Poll},
@@ -986,7 +988,7 @@ mod tests {
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
-            let dns_servers = [std_ip_v6!("fe80::1:2")];
+            let dns_servers = [net_ip_v6!("fe80::1:2")];
             let () = exec
                 .run_singlethreaded(send_reply_with_options(
                     &server_socket,
@@ -1018,7 +1020,7 @@ mod tests {
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
-            let dns_servers = [std_ip_v6!("fe80::1:2")];
+            let dns_servers = [net_ip_v6!("fe80::1:2")];
             let () = exec
                 .run_singlethreaded(send_reply_with_options(
                     &server_socket,
@@ -1036,7 +1038,7 @@ mod tests {
             let () = signal_client_to_refresh
                 .try_send(())
                 .expect("failed to signal test client to refresh");
-            let dns_servers = [std_ip_v6!("fe80::1:2"), std_ip_v6!("1234::5:6")];
+            let dns_servers = [net_ip_v6!("fe80::1:2"), net_ip_v6!("1234::5:6")];
             let () = exec
                 .run_singlethreaded(send_reply_with_options(
                     &server_socket,
@@ -1114,7 +1116,7 @@ mod tests {
         .await
         .expect("failed to create test client");
 
-        let dns_servers = [std_ip_v6!("fe80::1:2"), std_ip_v6!("1234::5:6")];
+        let dns_servers = [net_ip_v6!("fe80::1:2"), net_ip_v6!("1234::5:6")];
         let () = send_reply_with_options(
             &server_socket,
             client_addr,

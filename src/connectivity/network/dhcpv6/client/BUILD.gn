@@ -12,6 +12,7 @@ rustc_binary("dhcpv6_client") {
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.net.dhcpv6:fuchsia.net.dhcpv6_rust",
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
+    "//src/connectivity/lib/net-types",
     "//src/connectivity/lib/packet-formats-dhcp",
     "//src/connectivity/network/dhcpv6/core",
     "//src/connectivity/network/lib/dns_server_watcher",
