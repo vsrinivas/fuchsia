@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"testing"
+	"time"
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/check"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/tests/system-tests/flash"
@@ -120,6 +121,10 @@ func testReboot(
 	build artifacts.Build,
 	rpcClient **sl4f.Client,
 ) error {
+	if err := sleepAfterReboot(ctx, device); err != nil {
+		return err
+	}
+
 	for i := 1; i <= c.cycleCount; i++ {
 		logger.Infof(ctx, "Reboot Attempt %d", i)
 
@@ -199,6 +204,25 @@ func doTestReboot(
 
 	if err := script.RunScript(ctx, device, repo, rpcClient, c.afterTestScript); err != nil {
 		return fmt.Errorf("failed to run after-test-script: %w", err)
+	}
+
+	if err := sleepAfterReboot(ctx, device); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func sleepAfterReboot(ctx context.Context, device *device.Client) error {
+	if c.sleepAfterReboot != 0 {
+		logger.Infof(ctx, "Sleeping %s seconds after reboot", c.sleepAfterReboot)
+
+		disconnectionCh := device.DisconnectionListener()
+		select {
+		case <-time.After(c.sleepAfterReboot * time.Second):
+		case <-disconnectionCh:
+			return fmt.Errorf("Device unexpectedly disconnected")
+		}
 	}
 
 	return nil

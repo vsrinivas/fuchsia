@@ -295,6 +295,10 @@ template("system_test_upgrade_suite") {
 #   device_connect_timeout
 #   - Optional: How long to wait between connection attempts.
 #   - Type: duration string
+#
+#   sleep_after_reboot
+#   - Optional: How long to sleep after we trigger a reboot and connect to the device.
+#   - Type: duration string
 template("system_test_reboot_suite") {
   assert(is_linux || is_mac, "system_test_reboot_suite is for linux/mac only")
 
@@ -373,6 +377,15 @@ template("system_test_reboot_suite") {
       _args += [
         "-device-connect-timeout",
         invoker.device_connect_timeout,
+      ]
+    }
+
+    if (defined(invoker.sleep_after_reboot)) {
+      assert(invoker.sleep_after_reboot != "",
+             "'${_host_test_target_name}' cannot have empty sleep after reboot")
+      _args += [
+        "-sleep-after-reboot",
+        invoker.sleep_after_reboot,
       ]
     }
 

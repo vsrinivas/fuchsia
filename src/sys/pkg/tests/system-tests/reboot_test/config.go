@@ -26,6 +26,7 @@ type config struct {
 	afterInitScript  string
 	afterTestScript  string
 	useFlash         bool
+	sleepAfterReboot time.Duration
 }
 
 func newConfig(fs *flag.FlagSet) (*config, error) {
@@ -53,6 +54,7 @@ func newConfig(fs *flag.FlagSet) (*config, error) {
 	fs.StringVar(&c.afterInitScript, "after-init-script", "", "Run this script after initializing device for testing")
 	fs.StringVar(&c.afterTestScript, "after-test-script", "", "Run this script after a test step")
 	fs.BoolVar(&c.useFlash, "use-flash", false, "Provision device using flashing instead of paving")
+	fs.DurationVar(&c.sleepAfterReboot, "sleep-after-reboot", 0, "How long to sleep after rebooting the device and then connecting to the device (default 0 seconds)")
 
 	return c, nil
 }
