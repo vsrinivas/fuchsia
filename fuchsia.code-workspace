@@ -69,6 +69,9 @@
 
       // Linkifies Fuchsia URLs (components, bugs, etc.)
       "RichKadel.fuchsiaware",
+
+      // Adds coverage gutters for `fx coverage`.
+      "ryanluker.vscode-coverage-gutters",
     ],
 
     "unwantedRecommendations": [
@@ -173,5 +176,11 @@
 
     // Don't follow symlinks (into other parts of the tree)
     "search.followSymlinks": false,
+
+    ////////
+    // Code coverage
+    "coverage-gutters.coverageBaseDir": ".",
+    "coverage-gutters.showLineCoverage": true,
+    "coverage-gutters.coverageFileNames": [ "lcov.info" ]
   },
 }
