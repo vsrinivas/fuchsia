@@ -12,6 +12,7 @@
 
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/services/mixer/mix/mix_job_context.h"
+#include "src/media/audio/services/mixer/mix/timeline_function_math.h"
 
 namespace media_audio {
 
@@ -138,38 +139,9 @@ void ProducerStage::RecomputeInternalFrameOffset() {
     return;
   }
 
-  // Translations from presentation time to frame are defined by linear functions of the form:
-  //
-  // ```
-  // f(t) = (t-t0) * fps + f0
-  // ```
-  //
-  // This function is defined for both downstream and internal frames. Since both frame timelines
-  // use the same frame rate, their time-to-frame translation functions have the same slope, meaning
-  // they are offset by a constant amount. Hence, to translate from a downstream frame to an
-  // internal frame, we need an `offset` such that:
-  //
-  // ```
-  // f_internal(t) = f_downstream(t) + offset
-  // ```
-  //
-  // Solving for `offset`, we have:
-  //
-  // ```
-  // offset = f_internal(t) - f_downstream(t)
-  //        = (t-t0_internal) * fps + f0_internal - (t-t0_downstream)*fps - f0_downstream
-  //        = (t0_downstream - t0_internal) * fps + f0_internal - f0_downstream
-  // ```
-  //
-  // This is computed below.
-  int64_t t0_internal = presentation_time_to_internal_frac_frame_->reference_time();
-  int64_t t0_downstream = presentation_time_to_frac_frame()->reference_time();
-  auto f0_internal = Fixed::FromRaw(presentation_time_to_internal_frac_frame_->subject_time());
-  auto f0_downstream = Fixed::FromRaw(presentation_time_to_frac_frame()->subject_time());
-
-  internal_frame_offset_ =
-      Fixed::FromRaw(format().frac_frames_per_ns().Scale(t0_downstream - t0_internal)) +
-      f0_internal - f0_downstream;
+  // Solve for `internal` - `downstream`.
+  internal_frame_offset_ = TimelineFunctionOffsetInFracFrames(
+      *presentation_time_to_frac_frame(), *presentation_time_to_internal_frac_frame_);
 }
 
 std::optional<Fixed> ProducerStage::PresentationTimeToDownstreamFrame(zx::time t) {

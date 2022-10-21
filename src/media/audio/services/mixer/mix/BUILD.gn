@@ -58,6 +58,8 @@ source_set("mix") {
     "start_stop_control.h",
     "stream_sink_consumer_writer.cc",
     "stream_sink_consumer_writer.h",
+    "timeline_function_math.cc",
+    "timeline_function_math.h",
   ]
 
   public_deps = [
@@ -103,6 +105,7 @@ executable("mix_unittests") {
     "simple_ring_buffer_producer_stage_unittest.cc",
     "start_stop_control_unittest.cc",
     "stream_sink_consumer_writer_unittest.cc",
+    "timeline_function_math_unittest.cc",
   ]
 
   deps = [
