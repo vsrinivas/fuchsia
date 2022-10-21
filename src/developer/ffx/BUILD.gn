@@ -20,6 +20,7 @@ group("ffx") {
     ":ffx_tool",
     ":tests",
     "lib",
+    "tools($host_toolchain)",
   ]
 }
 
@@ -181,6 +182,9 @@ group("tests") {
     # Most ffx plugin test suites are included downstream of the group defined
     # by the ffx template above.
     ":ffx_tests($host_toolchain)",
+
+    # Subtool tests
+    "tools:tests($host_toolchain)",
 
     # Individual library tests, for libraries that are not plugins.
     "lib:tests($host_toolchain)",

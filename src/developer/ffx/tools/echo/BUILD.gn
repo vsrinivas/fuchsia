@@ -1,0 +1,67 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//src/developer/ffx/lib/version/build/ffx_apply_version.gni")
+
+rustc_library("lib") {
+  # This is named as such to avoid a conflict with an existing ffx echo command.
+  name = "ffx_tool_echo"
+  edition = "2021"
+  with_unit_tests = true
+
+  deps = [
+    "//sdk/fidl/fuchsia.developer.ffx:fuchsia.developer.ffx_rust",
+    "//src/developer/ffx/lib/fho:lib",
+    "//src/developer/ffx/lib/writer:lib",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+  ]
+
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures-lite",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+rustc_binary("ffx_echo_tool_unversioned") {
+  edition = "2021"
+  output_name = "ffx-echo_unversioned"
+  deps = [
+    ":lib",
+    "//src/developer/ffx/lib/fho:lib",
+    "//src/lib/fuchsia-async",
+  ]
+  sources = [ "src/main.rs" ]
+}
+
+# Replace the special linker sections containing the version information with the real values
+ffx_apply_version("ffx_echo_tool") {
+  output_name = "ffx-echo"
+
+  deps = [ ":ffx_echo_tool_unversioned" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":ffx_echo_tool" ]
+  outputs = [ "ffx-echo" ]
+}
+
+group("echo") {
+  deps = [
+    ":ffx_echo_tool",
+    ":host",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":lib_test($host_toolchain)" ]
+}
