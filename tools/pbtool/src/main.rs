@@ -32,10 +32,11 @@ enum Subcommand {
     GenerateTransferManifest(GenerateTransferManifest),
 }
 
-fn main() -> Result<()> {
+#[fuchsia::main]
+async fn main() -> Result<()> {
     let command = argh::from_env::<Command>();
     match command.sub {
         Subcommand::GenerateBuildArchive(cmd) => cmd.generate(),
-        Subcommand::GenerateTransferManifest(cmd) => cmd.generate(),
+        Subcommand::GenerateTransferManifest(cmd) => cmd.generate().await,
     }
 }

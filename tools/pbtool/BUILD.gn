@@ -14,6 +14,7 @@ rustc_binary("pbtool") {
   deps = [
     "//build/sdk/meta:rust",
     "//src/lib/assembly/assembly_manifest",
+    "//src/lib/fuchsia",
     "//src/lib/transfer_manifest",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",

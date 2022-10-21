@@ -78,17 +78,21 @@ func uploadProductBundle(mods productBundlesModules, transferManifestPath string
 		remote := ""
 		if entry.Type == "product_bundle" {
 			remote = productBundleRemote
+			for _, artifact := range entry.Entries {
+				uploads = append(uploads, Upload{
+					Source:      path.Join(mods.BuildDir(), transferManifestParentPath, entry.Local, artifact.Name),
+					Destination: path.Join(remote, entry.Remote, artifact.Name),
+				})
+			}
 		} else if entry.Type == "blobs" {
 			remote = blobsRemote
+			uploads = append(uploads, Upload{
+				Source:      path.Join(mods.BuildDir(), transferManifestParentPath, entry.Local),
+				Destination: path.Join(remote, entry.Remote),
+				Deduplicate: true,
+			})
 		} else {
 			return nil, fmt.Errorf("unrecognized transfer entry type: %s", entry.Type)
-		}
-
-		for _, artifact := range entry.Entries {
-			uploads = append(uploads, Upload{
-				Source:      path.Join(mods.BuildDir(), transferManifestParentPath, entry.Local, artifact.Name),
-				Destination: path.Join(remote, entry.Remote, artifact.Name),
-			})
 		}
 
 		// Modify the remote inside the entry, so that we can upload this transfer

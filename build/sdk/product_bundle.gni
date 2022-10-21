@@ -204,6 +204,15 @@ template("product_bundle") {
 
     tool = "//tools/pbtool"
 
+    # Constructing the transfer manifest requires walking the TUF metadata and
+    # reading meta.fars from the blobs directory. Determining exactly which
+    # files are read is quite difficult, therefore we ignore some entire
+    # directories.
+    hermetic_action_ignored_prefixes = [
+      "${files.outdir}/blobs",
+      "${files.outdir}/repository",
+    ]
+
     deps = [ ":${labels.product_bundle}" ]
     inputs = [ files.product_bundle_manifest ]
     outputs = [ files.transfer_manifest ]

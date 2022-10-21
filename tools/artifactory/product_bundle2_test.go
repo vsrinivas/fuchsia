@@ -132,16 +132,9 @@ func TestProductBundle2Uploads(t *testing.T) {
 			Destination: filepath.Join("namespace_pb", "product_bundle", "sub", "sub", "789"),
 		},
 		{
-			Source:      filepath.Join(dir, "blobs", "abc"),
-			Destination: filepath.Join("namespace_b", "abc"),
-		},
-		{
-			Source:      filepath.Join(dir, "blobs", "def"),
-			Destination: filepath.Join("namespace_b", "def"),
-		},
-		{
-			Source:      filepath.Join(dir, "blobs", "ghi"),
-			Destination: filepath.Join("namespace_b", "ghi"),
+			Source:      filepath.Join(dir, "blobs"),
+			Destination: filepath.Join("namespace_b"),
+			Deduplicate: true,
 		},
 		{
 			Compress:    true,
