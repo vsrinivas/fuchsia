@@ -83,12 +83,7 @@ void LocalComponentImpl::Exit(zx_status_t return_code) {
 LocalComponentHandles::LocalComponentHandles(fdio_ns_t* ns, sys::OutgoingDirectory outgoing_dir)
     : namespace_(ns), outgoing_dir_(std::move(outgoing_dir)) {}
 
-LocalComponentHandles::~LocalComponentHandles() {
-  if (on_destruct_) {
-    on_destruct_();
-  }
-  ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK);
-}
+LocalComponentHandles::~LocalComponentHandles() { ZX_ASSERT(fdio_ns_destroy(namespace_) == ZX_OK); }
 
 LocalComponentHandles::LocalComponentHandles(LocalComponentHandles&& other) noexcept
     : namespace_(other.namespace_), outgoing_dir_(std::move(other.outgoing_dir_)) {
@@ -125,8 +120,6 @@ sys::ServiceDirectory LocalComponentHandles::svc() {
 }
 
 void LocalComponentHandles::Exit(zx_status_t return_code) {
-  // Disable checks for premature LocalComponentHandles destruction:
-  on_destruct_ = nullptr;
   if (on_exit_) {
     on_exit_(return_code);
   }

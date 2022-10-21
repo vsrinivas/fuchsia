@@ -787,18 +787,23 @@ TEST_F(RealmBuilderTest, BuildsRealmFromRelativeUrl) {
 class SimpleComponent : public component_testing::LocalComponentImpl {
  public:
   SimpleComponent() = default;
-  explicit SimpleComponent(fit::closure on_destruct)
-      : on_destruct_(std::make_unique<fit::closure>(std::move(on_destruct))) {}
+  explicit SimpleComponent(fit::closure on_stop, fit::closure on_destruct)
+      : on_stop_(std::move(on_stop)), on_destruct_(std::move(on_destruct)) {}
 
   ~SimpleComponent() override {
     if (on_destruct_) {
-      (*on_destruct_)();
+      on_destruct_();
     }
   }
 
   void OnStart() override { started_ = true; }
 
-  void OnStop() override { stopping_ = true; }
+  void OnStop() override {
+    stopping_ = true;
+    if (on_stop_) {
+      on_stop_();
+    }
+  }
 
   bool IsStarted() const { return started_; }
 
@@ -807,7 +812,8 @@ class SimpleComponent : public component_testing::LocalComponentImpl {
  private:
   bool started_ = false;
   bool stopping_ = false;
-  std::unique_ptr<fit::closure> on_destruct_;
+  fit::closure on_stop_;
+  fit::closure on_destruct_;
 };
 
 class SimpleComponentByPtr : public component_testing::LocalComponent {
@@ -846,7 +852,7 @@ TEST_F(RealmBuilderTest, LocalComponentGetsDestructedOnExit) {
   std::vector<SimpleComponent*> components;
   for (size_t i = 0; i < 3; ++i) {
     std::string name = "numbered" + std::to_string(i);
-    auto component = std::make_unique<SimpleComponent>([&]() { destructors_called++; });
+    auto component = std::make_unique<SimpleComponent>(nullptr, [&]() { destructors_called++; });
     components.push_back(component.get());
     realm_builder.AddLocalChild(
         name, [component = std::move(component)]() mutable { return std::move(component); },
@@ -879,7 +885,7 @@ TEST_F(RealmBuilderTest, LocalComponentGetsDestructedOnExit) {
 // This test asserts that the LocalComponentImpl::OnStop() method is called when
 // the component is stopped (which confirms that the ComponentController
 // would have also been dropped).
-TEST_F(RealmBuilderTest, LocalComponentGetsStop) {
+TEST_F(RealmBuilderTest, LocalComponentGetsLifecycleControllerStop) {
   auto realm_builder = RealmBuilder::Create();
   realm_builder.AddRoute(
       Route{.capabilities = {Protocol{fuchsia::sys2::LifecycleController::Name_}},
@@ -891,7 +897,7 @@ TEST_F(RealmBuilderTest, LocalComponentGetsStop) {
   std::vector<SimpleComponent*> components;
   for (size_t i = 0; i < 3; ++i) {
     std::string name = "numbered" + std::to_string(i);
-    auto component = std::make_unique<SimpleComponent>([&]() { destructors_called++; });
+    auto component = std::make_unique<SimpleComponent>(nullptr, [&]() { destructors_called++; });
     components.push_back(component.get());
     realm_builder.AddLocalChild(
         name, [component = std::move(component)]() mutable { return std::move(component); },
@@ -922,6 +928,218 @@ TEST_F(RealmBuilderTest, LocalComponentGetsStop) {
                                [](auto result) { ASSERT_TRUE(result.is_response()); });
     RunLoopUntil([&]() { return destructors_called == orig + 1; });
   }
+}
+
+// This test asserts that the `LocalComponentImpl::OnStop()` method is called
+// when the RealmRoot is torn down (returned from `Realm::DestroyChild()`), and
+// the `RealmRoot::Teardown` callback is called when the realm is destroyed.
+TEST_F(RealmBuilderTest, LocalComponentGetsRealmRootTeardownStop) {
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::sys2::LifecycleController::Name_}},
+            .source = FrameworkRef(),
+            .targets = {ParentRef{}}});
+
+  size_t components_stopped = 0;
+  size_t destructors_called = 0;
+
+  std::vector<SimpleComponent*> components;
+  for (size_t i = 0; i < 3; ++i) {
+    std::string name = "numbered" + std::to_string(i);
+    auto component = std::make_unique<SimpleComponent>([&]() { components_stopped++; },
+                                                       [&]() { destructors_called++; });
+    components.push_back(component.get());
+    realm_builder.AddLocalChild(
+        name, [component = std::move(component)]() mutable { return std::move(component); },
+        ChildOptions{.startup_mode = StartupMode::EAGER});
+  }
+
+  auto realm = std::make_optional<RealmRoot>(realm_builder.Build(dispatcher()));
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStarted());
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  // Verify all components have started.
+  for (auto& component : components) {
+    RunLoopUntil([&]() { return component->IsStarted(); });
+  }
+
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  ASSERT_EQ(components_stopped, 0u);
+  ASSERT_EQ(destructors_called, 0u);
+
+  bool realm_is_destroyed = false;
+  realm->Teardown([&](cpp17::optional<fuchsia::component::Error> err) {
+    // Since the Realm owns the `unique_ptr`s to the SimpleComponents, the
+    // realm should have stopped and destructed them before this callback is
+    // invoked, so  do not try to use the `components` vector of
+    // SimpleComponent* raw pointers!
+    realm_is_destroyed = true;
+  });
+
+  RunLoopUntil([&]() { return realm_is_destroyed; });
+
+  // Verify all components were stopped _and_ destructed.
+  ASSERT_EQ(components_stopped, components.size());
+  ASSERT_EQ(destructors_called, components.size());
+}
+
+// This test validates that RealmRoot::TeardownCallback returns a callback that
+// can be used in a RunLoopUntil, and that the loop runs until the realm is
+// destroyed.
+TEST_F(RealmBuilderTest, RunLoopUntilTeardownCallback) {
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::sys2::LifecycleController::Name_}},
+            .source = FrameworkRef(),
+            .targets = {ParentRef{}}});
+
+  size_t components_stopped = 0;
+  size_t destructors_called = 0;
+
+  std::vector<SimpleComponent*> components;
+  for (size_t i = 0; i < 3; ++i) {
+    std::string name = "numbered" + std::to_string(i);
+    auto component = std::make_unique<SimpleComponent>([&]() { components_stopped++; },
+                                                       [&]() { destructors_called++; });
+    components.push_back(component.get());
+    realm_builder.AddLocalChild(
+        name, [component = std::move(component)]() mutable { return std::move(component); },
+        ChildOptions{.startup_mode = StartupMode::EAGER});
+  }
+
+  auto realm = std::make_optional<RealmRoot>(realm_builder.Build(dispatcher()));
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStarted());
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  // Verify all components have started.
+  for (auto& component : components) {
+    RunLoopUntil([&]() { return component->IsStarted(); });
+  }
+
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  ASSERT_EQ(components_stopped, 0u);
+  ASSERT_EQ(destructors_called, 0u);
+
+  realm->Teardown();
+  RunLoopUntil(realm->TeardownCallback());
+
+  ASSERT_EQ(components_stopped, components.size());
+  ASSERT_EQ(destructors_called, components.size());
+}
+
+// This test validates that RealmRoot::TeardownCallback returns a callback that
+// can be used in a RunLoopUntil, and that the loop runs until the realm is
+// destroyed.
+TEST_F(RealmBuilderTest, RunLoopUntilTeardownAfterGettingCallback) {
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::sys2::LifecycleController::Name_}},
+            .source = FrameworkRef(),
+            .targets = {ParentRef{}}});
+
+  size_t components_stopped = 0;
+  size_t destructors_called = 0;
+
+  std::vector<SimpleComponent*> components;
+  for (size_t i = 0; i < 3; ++i) {
+    std::string name = "numbered" + std::to_string(i);
+    auto component = std::make_unique<SimpleComponent>([&]() { components_stopped++; },
+                                                       [&]() { destructors_called++; });
+    components.push_back(component.get());
+    realm_builder.AddLocalChild(
+        name, [component = std::move(component)]() mutable { return std::move(component); },
+        ChildOptions{.startup_mode = StartupMode::EAGER});
+  }
+
+  auto realm = std::make_optional<RealmRoot>(realm_builder.Build(dispatcher()));
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStarted());
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  // Verify all components have started.
+  for (auto& component : components) {
+    RunLoopUntil([&]() { return component->IsStarted(); });
+  }
+
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  ASSERT_EQ(components_stopped, 0u);
+  ASSERT_EQ(destructors_called, 0u);
+
+  auto is_torn_down_cb = realm->TeardownCallback();
+  realm->Teardown();
+  RunLoopUntil(std::move(is_torn_down_cb));
+
+  ASSERT_EQ(components_stopped, components.size());
+  ASSERT_EQ(destructors_called, components.size());
+}
+
+// This test validates that RealmRoot::TeardownCallback returns a callback that
+// can be used in a RunLoopUntil, and that the callback will be invoked even
+// if the user simply drops the realm without first calling
+// RealmRoot::Teardown(). This is the original behavior of the
+// TeardownCallback(), and it needs to work this way so existing tests that
+// use it this way (without calling the new Teardown() function) will not hang.
+TEST_F(RealmBuilderTest, RunLoopUntilRealmRootDestructorCausesUncleanRealmDestroy) {
+  auto realm_builder = RealmBuilder::Create();
+  realm_builder.AddRoute(
+      Route{.capabilities = {Protocol{fuchsia::sys2::LifecycleController::Name_}},
+            .source = FrameworkRef(),
+            .targets = {ParentRef{}}});
+
+  size_t components_stopped = 0;
+  size_t destructors_called = 0;
+
+  std::vector<SimpleComponent*> components;
+  for (size_t i = 0; i < 3; ++i) {
+    std::string name = "numbered" + std::to_string(i);
+    auto component = std::make_unique<SimpleComponent>([&]() { components_stopped++; },
+                                                       [&]() { destructors_called++; });
+    components.push_back(component.get());
+    realm_builder.AddLocalChild(
+        name, [component = std::move(component)]() mutable { return std::move(component); },
+        ChildOptions{.startup_mode = StartupMode::EAGER});
+  }
+
+  auto realm = std::make_optional<RealmRoot>(realm_builder.Build(dispatcher()));
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStarted());
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  // Verify all components have started.
+  for (auto& component : components) {
+    RunLoopUntil([&]() { return component->IsStarted(); });
+  }
+
+  for (auto& component : components) {
+    ASSERT_FALSE(component->IsStopping());
+  }
+
+  ASSERT_EQ(components_stopped, 0u);
+  ASSERT_EQ(destructors_called, 0u);
+
+  auto is_torn_down_cb = realm->TeardownCallback();
+  realm.reset();
+  RunLoopUntil(std::move(is_torn_down_cb));
+
+  ASSERT_EQ(destructors_called, components.size());
+  // Sadly, the components did not get stopped because the user did not
+  // call realm->Teardown() before dropping the realm.
+  ASSERT_EQ(components_stopped, 0u);
 }
 
 // This test is nearly identically to the

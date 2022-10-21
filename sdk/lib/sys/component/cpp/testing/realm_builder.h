@@ -42,6 +42,8 @@ class RealmRoot final {
   RealmRoot(const RealmRoot& other) = delete;
   RealmRoot& operator=(const RealmRoot& other) = delete;
 
+  virtual ~RealmRoot();
+
   // Connect to an interface in the exposed directory of the root component.
   //
   // The discovery name of the interface is inferred from the C++ type of the
@@ -60,7 +62,7 @@ class RealmRoot final {
   template <typename Interface>
   fidl::InterfacePtr<Interface> Connect(
       const std::string& interface_name = Interface::Name_) const {
-    return root_.Connect<Interface>(interface_name);
+    return root_->Connect<Interface>(interface_name);
   }
 
   // SynchronousInterfacePtr method overload of |Connect|. See
@@ -68,13 +70,13 @@ class RealmRoot final {
   template <typename Interface>
   fidl::SynchronousInterfacePtr<Interface> ConnectSync(
       const std::string& interface_name = Interface::Name_) const {
-    return root_.ConnectSync<Interface>(interface_name);
+    return root_->ConnectSync<Interface>(interface_name);
   }
 
   // Connect to exposed directory of the root component.
   template <typename Interface>
   zx_status_t Connect(fidl::InterfaceRequest<Interface> request) const {
-    return root_.Connect<Interface>(std::move(request));
+    return root_->Connect<Interface>(std::move(request));
   }
 
   // Connect to an interface in the exposed directory using the supplied
@@ -83,16 +85,29 @@ class RealmRoot final {
 
   // Return a handle to the exposed directory of the root component.
   fidl::InterfaceHandle<fuchsia::io::Directory> CloneRoot() const {
-    return root_.CloneExposedDir();
+    return root_->CloneExposedDir();
   }
 
   // Get the child name of the root component.
   std::string GetChildName() const;
 
 #if __Fuchsia_API_level__ >= 9
-  // Returns a callback that returns |true| when realm teardown has completed successfully. If
-  // realm teardown fails, it will trigger a panic.
+  // Returns a callback that returns |true| when realm teardown has completed
+  // successfully. If realm teardown fails, it will trigger a panic.
   fit::function<bool()> TeardownCallback();
+#endif
+
+#if __Fuchsia_API_level__ >= 10
+  // Destructs the root component and sends Component Manager a request to
+  // destroy its realm, which will stop all child components. Each
+  // |LocalComponentImpl| should receive an |OnStop()| callback, and after
+  // returning, the |LocalComponentImpl| will be destructed. If an
+  // |on_teardown_complete| callback is provided, the callback will be invoked
+  // when Component Manager has completed the realm teardown. If
+  // |TeardownCallback()| was used to get a |bool| callback function, the
+  // function will return |false| until the realm is torn down, and then it
+  // will return |true|.
+  void Teardown(ScopedChild::TeardownCallback on_teardown_complete = nullptr);
 #endif
 
  private:
@@ -102,13 +117,27 @@ class RealmRoot final {
 
   // True if complete, or Error if teardown failed.
   using TeardownStatus = cpp17::variant<bool, fuchsia::component::Error>;
-  RealmRoot(std::shared_ptr<TeardownStatus> teardown_status,
-            std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
-            ScopedChild root);
+  RealmRoot(std::unique_ptr<internal::LocalComponentRunner> local_component_runner,
+            ScopedChild root, async_dispatcher_t* dispatcher);
 
-  fit::function<bool()> teardown_callback_;
   std::unique_ptr<internal::LocalComponentRunner> local_component_runner_;
-  ScopedChild root_;
+
+  // root_ is allocated on the heap so it can be destructed independently of
+  // the RealmRoot (via RealmRoot::Teardown()). The RealmRoot should not be
+  // destructed until the TeardownCallback (passed to Teardown()) is called,
+  // indicating Realm::DestroyChild successfully destroyed the realm (the
+  // component managed by the ScopedChild).
+  std::unique_ptr<ScopedChild> root_;
+  async_dispatcher_t* dispatcher_;
+
+  // Holds the shared |TeardownStatus| value if |Teardown()| is called before
+  // calling |TeardownStatus()|. When |TeardownStatus()| is called, the
+  // shared_ptr is moved to the callback.
+  std::shared_ptr<RealmRoot::TeardownStatus> teardown_status_;
+
+  // If not empty, this member is a weak_ptr to the shared_ptr that was or
+  // may later be moved to the |TeardownStatus()| callback.
+  std::weak_ptr<RealmRoot::TeardownStatus> weak_teardown_status_;
 };
 
 // A `Realm` describes a component instance together with its children.

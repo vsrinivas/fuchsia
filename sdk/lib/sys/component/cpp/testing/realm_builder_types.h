@@ -115,7 +115,6 @@ class LocalComponentHandles final {
   void Exit(zx_status_t return_code = ZX_OK);
 
   fit::function<void(zx_status_t)> on_exit_;
-  fit::closure on_destruct_;
   fdio_ns_t* namespace_;
   sys::OutgoingDirectory outgoing_dir_;
   // [END_EXCLUDE]
