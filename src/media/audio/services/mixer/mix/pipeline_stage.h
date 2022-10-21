@@ -209,12 +209,6 @@ class PipelineStage {
   // If `f` is not `std::nullopt`, it must be an invertible function.
   virtual void UpdatePresentationTimeToFracFrame(std::optional<TimelineFunction> f) = 0;
 
-  // Sets the maximum number of consumers downstream from this stage (where "downstream" means "on
-  // any path through outgoing destination edges). This property is meaningful for ConsumerStages
-  // only. We put this property here (rather than ConsumerStage) so that external code can update
-  // this generically without needing a way to downcast to ConsumerStage.
-  virtual void set_max_downstream_consumers(int64_t n) TA_REQ(thread()->checker()) {}
-
  protected:
   PipelineStage(std::string_view name, Format format, UnreadableClock reference_clock)
       : name_(name),

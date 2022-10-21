@@ -41,7 +41,6 @@ class FakePipelineStage : public PipelineStage {
   }
 
   const std::unordered_set<PipelineStagePtr>& sources() const { return sources_; }
-  int64_t max_downstream_consumers() const { return max_downstream_consumers_; }
 
   // Implementation of PipelineStage.
   void AddSource(PipelineStagePtr source, AddSourceOptions options) { sources_.insert(source); }
@@ -55,7 +54,6 @@ class FakePipelineStage : public PipelineStage {
       s->UpdatePresentationTimeToFracFrame(f);
     }
   }
-  void set_max_downstream_consumers(int64_t n) final { max_downstream_consumers_ = n; }
 
   // Sets the canned packet to return from Read.
   void SetPacketForRead(std::optional<PacketView> packet) { packet_ = packet; }
@@ -80,7 +78,6 @@ class FakePipelineStage : public PipelineStage {
 
   std::unordered_set<PipelineStagePtr> sources_;
   std::optional<PacketView> packet_;
-  int64_t max_downstream_consumers_ = 0;
 };
 
 }  // namespace media_audio
