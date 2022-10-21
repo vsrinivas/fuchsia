@@ -673,6 +673,8 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
             | v6::ParsedDhcpOption::Preference(_)
             | v6::ParsedDhcpOption::Iana(_)
             | v6::ParsedDhcpOption::InformationRefreshTime(_)
+            | v6::ParsedDhcpOption::IaPd(_)
+            | v6::ParsedDhcpOption::IaPrefix(_)
             | v6::ParsedDhcpOption::Oro(_)
             | v6::ParsedDhcpOption::ElapsedTime(_)
             | v6::ParsedDhcpOption::DnsServers(_)
@@ -999,6 +1001,9 @@ fn process_options<B: ByteSlice>(
                 }
                 status_code_option = Some((status_code, message.to_string()));
             }
+            v6::ParsedDhcpOption::IaPd(_) => {
+                // TODO(https://fxbug.dev/80595): Implement Prefix delegation.
+            }
             v6::ParsedDhcpOption::InformationRefreshTime(information_refresh_time) => {
                 if !information_refresh_time_allowed {
                     return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
@@ -1013,6 +1018,7 @@ fn process_options<B: ByteSlice>(
                 refresh_time_option = Some(information_refresh_time);
             }
             v6::ParsedDhcpOption::IaAddr(_)
+            | v6::ParsedDhcpOption::IaPrefix(_)
             | v6::ParsedDhcpOption::Oro(_)
             | v6::ParsedDhcpOption::ElapsedTime(_) => {
                 return Err(OptionsError::InvalidOption(format!("{:?}", opt)));

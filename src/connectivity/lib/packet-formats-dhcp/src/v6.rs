@@ -7,6 +7,7 @@
 use {
     byteorder::NetworkEndian,
     mdns::protocol::{Domain, ParseError as MdnsParseError},
+    net_types::ip::{PrefixTooLongError, Subnet},
     num_derive::FromPrimitive,
     packet::{
         records::{
@@ -194,6 +195,8 @@ pub enum OptionCode {
     StatusCode = 13,
     DnsServers = 23,
     DomainList = 24,
+    IaPd = 25,
+    IaPrefix = 26,
     InformationRefreshTime = 32,
     SolMaxRt = 82,
 }
@@ -245,6 +248,14 @@ pub enum ParsedDhcpOption<'a> {
     ElapsedTime(u16),
     // https://tools.ietf.org/html/rfc8415#section-21.13
     StatusCode(U16, &'a str),
+    // https://tools.ietf.org/html/rfc8415#section-21.21
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an IA_PD option.
+    IaPd(IaPdData<&'a [u8]>),
+    // ttps://tools.ietf.org/html/rfc8415#section-21.22
+    // TODO(https://fxbug.dev/74340): add validation; not all option codes can
+    // be present in an IA Prefix option.
+    IaPrefix(IaPrefixData<&'a [u8]>),
     // https://tools.ietf.org/html/rfc8415#section-21.23
     InformationRefreshTime(u32),
     // https://tools.ietf.org/html/rfc8415#section-21.24
@@ -444,6 +455,125 @@ pub struct IaAddrHeader {
 
 const IAADDR_HEADER_LEN: usize = 24;
 
+/// An overlay for the fixed fields of an IA_PD option.
+#[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
+#[repr(C)]
+struct IaPdHeader {
+    iaid: U32,
+    t1: U32,
+    t2: U32,
+}
+
+/// An overlay representation of an IA_PD option as per [RFC 8415 section 21.21].
+///
+/// [RFC 8415 section 21.21]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.21
+#[derive(Debug, PartialEq)]
+pub struct IaPdData<B: ByteSlice> {
+    header: LayoutVerified<B, IaPdHeader>,
+    options: Records<B, ParsedDhcpOptionImpl>,
+}
+
+impl<'a, B: ByteSlice> IaPdData<B> {
+    /// Constructs a new `IaPdData` from a `ByteSlice`.
+    fn new(buf: B) -> Result<Self, ParseError> {
+        let buf_len = buf.len();
+        let (header, options) = LayoutVerified::new_unaligned_from_prefix(buf)
+            .ok_or(ParseError::InvalidOpLen(OptionCode::IaPd, buf_len))?;
+        let options = Records::<B, ParsedDhcpOptionImpl>::parse_with_context(options, ())?;
+        Ok(IaPdData { header, options })
+    }
+
+    /// Returns the IAID.
+    pub fn iaid(&self) -> u32 {
+        self.header.iaid.get()
+    }
+
+    /// Returns the T1 as `TimeValue` to relay the fact that certain values have
+    /// special significance as described in RFC 8415, [section 14.2] and
+    /// [section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn t1(&self) -> TimeValue {
+        TimeValue::new(self.header.t1.get())
+    }
+
+    /// Returns the T2 as `TimeValue` to relay the fact that certain values have
+    /// special significance as described in RFC 8415, [section 14.2] and
+    /// [section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn t2(&self) -> TimeValue {
+        TimeValue::new(self.header.t2.get())
+    }
+
+    /// Returns an iterator over the options.
+    pub fn iter_options(&'a self) -> impl 'a + Iterator<Item = ParsedDhcpOption<'a>> {
+        self.options.iter()
+    }
+}
+
+/// An overlay for the fixed fields of an IA Prefix option.
+#[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
+#[repr(C)]
+struct IaPrefixHeader {
+    preferred_lifetime_secs: U32,
+    valid_lifetime_secs: U32,
+    prefix_length: u8,
+    prefix: net_types::ip::Ipv6Addr,
+}
+
+/// An overlay representation of an IA Address option, as per RFC 8415 section 21.22.
+///
+/// [RFC 8415 section 21.22]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.22
+#[derive(Debug, PartialEq)]
+pub struct IaPrefixData<B: ByteSlice> {
+    header: LayoutVerified<B, IaPrefixHeader>,
+    options: Records<B, ParsedDhcpOptionImpl>,
+}
+
+impl<'a, B: ByteSlice> IaPrefixData<B> {
+    /// Constructs a new `IaPrefixData` from a `ByteSlice`.
+    pub fn new(buf: B) -> Result<Self, ParseError> {
+        let buf_len = buf.len();
+        let (header, options) = LayoutVerified::new_unaligned_from_prefix(buf)
+            .ok_or(ParseError::InvalidOpLen(OptionCode::IaPrefix, buf_len))?;
+        let options = Records::<B, ParsedDhcpOptionImpl>::parse_with_context(options, ())?;
+        Ok(IaPrefixData { header, options })
+    }
+
+    /// Returns the prefix.
+    pub fn prefix(&self) -> Result<Subnet<net_types::ip::Ipv6Addr>, PrefixTooLongError> {
+        Subnet::from_host(self.header.prefix, self.header.prefix_length)
+    }
+
+    /// Returns the preferred lifetime as `TimeValue` to relay the fact that
+    /// certain values have special significance as described in
+    /// [RFC 8415, section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn preferred_lifetime(&self) -> TimeValue {
+        TimeValue::new(self.header.preferred_lifetime_secs.get())
+    }
+
+    /// Returns the valid lifetime as `TimeValue` to relay the fact that certain
+    /// values have special significance as described in
+    /// [RFC 8415, section 7.7].
+    ///
+    /// [section 14.2]: https://datatracker.ietf.org/doc/html/rfc8415#section-14.2
+    /// [section 7.7]: https://datatracker.ietf.org/doc/html/rfc8415#section-7.7
+    pub fn valid_lifetime(&self) -> TimeValue {
+        TimeValue::new(self.header.valid_lifetime_secs.get())
+    }
+
+    /// Returns an iterator over the options.
+    pub fn iter_options(&'a self) -> impl 'a + Iterator<Item = ParsedDhcpOption<'a>> {
+        self.options.iter()
+    }
+}
+
 mod checked {
     use std::convert::TryFrom;
     use std::str::FromStr;
@@ -520,6 +650,8 @@ impl ParsedDhcpOption<'_> {
             ParsedDhcpOption::Preference(_),
             ParsedDhcpOption::ElapsedTime(_),
             ParsedDhcpOption::StatusCode(_, _),
+            ParsedDhcpOption::IaPd(_),
+            ParsedDhcpOption::IaPrefix(_),
             ParsedDhcpOption::InformationRefreshTime(_),
             ParsedDhcpOption::SolMaxRt(_),
             ParsedDhcpOption::DnsServers(_),
@@ -618,6 +750,8 @@ impl<'a> RecordsImpl<'a> for ParsedDhcpOptionImpl {
                 let message = str::from_utf8(opt_val)?;
                 Ok(ParsedDhcpOption::StatusCode(*code, message))
             }
+            OptionCode::IaPd => IaPdData::new(opt_val).map(ParsedDhcpOption::IaPd),
+            OptionCode::IaPrefix => IaPrefixData::new(opt_val).map(ParsedDhcpOption::IaPrefix),
             OptionCode::InformationRefreshTime => match opt_val {
                 &[b0, b1, b2, b3] => {
                     Ok(ParsedDhcpOption::InformationRefreshTime(u32::from_be_bytes([
@@ -723,6 +857,10 @@ pub enum DhcpOption<'a> {
     ElapsedTime(u16),
     // https://tools.ietf.org/html/rfc8415#section-21.13
     StatusCode(u16, &'a str),
+    // https://tools.ietf.org/html/rfc8415#section-21.21
+    IaPd(IaPdSerializer<'a>),
+    // https://tools.ietf.org/html/rfc8415#section-21.22
+    IaPrefix(IaPrefixSerializer<'a>),
     // https://tools.ietf.org/html/rfc8415#section-21.23
     InformationRefreshTime(u32),
     // https://tools.ietf.org/html/rfc8415#section-21.24
@@ -794,6 +932,50 @@ impl<'a> IaAddrSerializer<'a> {
     }
 }
 
+/// A serializer for the IA_PD DHCPv6 option.
+#[derive(Debug)]
+pub struct IaPdSerializer<'a> {
+    header: IaPdHeader,
+    options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+}
+
+impl<'a> IaPdSerializer<'a> {
+    /// Constructs a new `IaPdSerializer`.
+    pub fn new(iaid: IAID, t1: u32, t2: u32, options: &'a [DhcpOption<'a>]) -> IaPdSerializer<'a> {
+        IaPdSerializer {
+            header: IaPdHeader { iaid: U32::new(iaid.get()), t1: U32::new(t1), t2: U32::new(t2) },
+            options: RecordSequenceBuilder::new(options.iter()),
+        }
+    }
+}
+
+/// A serializer for the IA Prefix DHCPv6 option.
+#[derive(Debug)]
+pub struct IaPrefixSerializer<'a> {
+    header: IaPrefixHeader,
+    options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
+}
+
+impl<'a> IaPrefixSerializer<'a> {
+    /// Constructs a new `IaPrefixSerializer`.
+    pub fn new(
+        preferred_lifetime_secs: u32,
+        valid_lifetime_secs: u32,
+        prefix: Subnet<net_types::ip::Ipv6Addr>,
+        options: &'a [DhcpOption<'a>],
+    ) -> IaPrefixSerializer<'a> {
+        IaPrefixSerializer {
+            header: IaPrefixHeader {
+                preferred_lifetime_secs: U32::new(preferred_lifetime_secs),
+                valid_lifetime_secs: U32::new(valid_lifetime_secs),
+                prefix_length: prefix.prefix(),
+                prefix: prefix.network(),
+            },
+            options: RecordSequenceBuilder::new(options.iter()),
+        }
+    }
+}
+
 impl DhcpOption<'_> {
     /// Returns the corresponding option code for the calling option.
     pub fn code(&self) -> OptionCode {
@@ -807,6 +989,8 @@ impl DhcpOption<'_> {
             DhcpOption::Preference(_),
             DhcpOption::ElapsedTime(_),
             DhcpOption::StatusCode(_, _),
+            DhcpOption::IaPd(_),
+            DhcpOption::IaPrefix(_),
             DhcpOption::InformationRefreshTime(_),
             DhcpOption::SolMaxRt(_),
             DhcpOption::DnsServers(_),
@@ -842,6 +1026,16 @@ impl<'a> RecordBuilder for DhcpOption<'a> {
             DhcpOption::Preference(v) => std::mem::size_of_val(v),
             DhcpOption::ElapsedTime(v) => std::mem::size_of_val(v),
             DhcpOption::StatusCode(v, message) => std::mem::size_of_val(v) + message.len(),
+            DhcpOption::IaPd(IaPdSerializer { header, options }) => {
+                u16::try_from(header.as_bytes().len() + options.serialized_len())
+                    .expect("overflows")
+                    .into()
+            }
+            DhcpOption::IaPrefix(IaPrefixSerializer { header, options }) => {
+                u16::try_from(header.as_bytes().len() + options.serialized_len())
+                    .expect("overflows")
+                    .into()
+            }
             DhcpOption::InformationRefreshTime(v) => std::mem::size_of_val(v),
             DhcpOption::SolMaxRt(v) => std::mem::size_of_val(v),
             DhcpOption::DnsServers(recursive_name_servers) => {
@@ -951,6 +1145,20 @@ impl<'a> RecordBuilder for DhcpOption<'a> {
                 let () = buf.write_obj_front(&U16::new(opt_len)).expect("buffer is too small");
                 let () = buf.write_obj_front(&U16::new(*code)).expect("buffer is too small");
                 let () = buf.write_obj_front(message.as_bytes()).expect("buffer is too small");
+            }
+            DhcpOption::IaPd(IaPdSerializer { header, options }) => {
+                let len = u16::try_from(header.as_bytes().len() + options.serialized_len())
+                    .expect("overflows");
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                buf.write_obj_front(header).expect("buffer is too small");
+                let () = options.serialize_into(buf);
+            }
+            DhcpOption::IaPrefix(IaPrefixSerializer { header, options }) => {
+                let len = u16::try_from(header.as_bytes().len() + options.serialized_len())
+                    .expect("overflows");
+                let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
+                buf.write_obj_front(header).expect("buffer is too small");
+                let () = options.serialize_into(buf);
             }
             DhcpOption::InformationRefreshTime(information_refresh_time) => {
                 let () = buf
@@ -1116,7 +1324,10 @@ impl InnerPacketBuilder for MessageBuilder<'_> {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, assert_matches::assert_matches, std::str::FromStr, test_case::test_case};
+    use {
+        super::*, assert_matches::assert_matches, net_declare::net_subnet_v6, std::str::FromStr,
+        test_case::test_case,
+    };
 
     fn test_buf_with_no_options() -> Vec<u8> {
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &[]);
@@ -1137,6 +1348,13 @@ mod tests {
                 &iaaddr_options,
             )),
         ];
+        let iaprefix_options = [DhcpOption::StatusCode(0, "Success.")];
+        let iapd_options = [DhcpOption::IaPrefix(IaPrefixSerializer::new(
+            9999,
+            6666,
+            net_subnet_v6!("abcd:1234::/56"),
+            &iaprefix_options,
+        ))];
         let dns_servers = [
             Ipv6Addr::from([0, 1, 2, 3, 4, 5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215]),
             Ipv6Addr::from([10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25]),
@@ -1153,17 +1371,17 @@ mod tests {
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
             DhcpOption::StatusCode(0, "Success."),
+            DhcpOption::IaPd(IaPdSerializer::new(IAID::new(44), 5000, 7000, &iapd_options)),
             DhcpOption::InformationRefreshTime(86400),
             DhcpOption::SolMaxRt(86400),
             DhcpOption::DnsServers(&dns_servers),
             DhcpOption::DomainList(&domains),
         ];
         let builder = MessageBuilder::new(MessageType::Solicit, [1, 2, 3], &options);
+        assert_eq!(builder.bytes_len(), 256);
         let mut buf = vec![0; builder.bytes_len()];
-
         let () = builder.serialize(&mut buf);
 
-        assert_eq!(buf.len(), 197);
         #[rustfmt::skip]
         assert_eq!(
             buf[..],
@@ -1179,6 +1397,31 @@ mod tests {
                 0, 8, 0, 2, 14, 16, // option - elapsed time
                 // option - status code
                 0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
+
+                // option - IA_PD
+                0, 25, 0, 55,
+                // IA_PD - IAID
+                0, 0, 0, 44,
+                // IA_PD - T1
+                0, 0, 19, 136,
+                // IA_PD - T2
+                0, 0, 27, 88,
+                // IA_PD - Options
+                //   IA Prefix
+                0, 26, 0, 39,
+                //   IA Prefix - Preferred lifetime
+                0, 0, 39, 15,
+                //   IA Prefix - Valid lifetime
+                0, 0, 26, 10,
+                //   IA Prefix - Prefix Length
+                56,
+                //   IA Prefix - IPv6 Prefix
+                0xab, 0xcd, 0x12, 0x34, 0x00, 0x00, 0x00, 0x00,
+                0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+                //   IA Prefix - Options
+                //     Status Code
+                0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
+
                 0, 32, 0, 4, 0, 1, 81, 128, // option - information refresh time
                 0, 82, 0, 4, 0, 1, 81, 128, // option - SOL_MAX_RT
                 // option - Dns servers
@@ -1205,6 +1448,13 @@ mod tests {
                 &iaaddr_suboptions,
             )),
         ];
+        let iaprefix_options = [DhcpOption::StatusCode(0, "Success.")];
+        let iapd_options = [DhcpOption::IaPrefix(IaPrefixSerializer::new(
+            89658902,
+            82346231,
+            net_subnet_v6!("1234:5678:1231::/48"),
+            &iaprefix_options,
+        ))];
         let dns_servers = [Ipv6Addr::from(0)];
         let domains = [
             checked::Domain::from_str("fuchsia.dev").expect("failed to construct test domain"),
@@ -1218,6 +1468,7 @@ mod tests {
             DhcpOption::Preference(42),
             DhcpOption::ElapsedTime(3600),
             DhcpOption::StatusCode(0, "Success."),
+            DhcpOption::IaPd(IaPdSerializer::new(IAID::new(1412), 6513, 9876, &iapd_options)),
             DhcpOption::InformationRefreshTime(86400),
             DhcpOption::SolMaxRt(86400),
             DhcpOption::DnsServers(&dns_servers),
@@ -1238,6 +1489,20 @@ mod tests {
             5, 6, 107, 108, 109, 110, 111, 212, 213, 214, 215, 0, 0, 28, 32, 0, 0, 35, 40, 0, 13,
             0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
         ];
+        let iapd_buf = [
+            // IA_PD - IAID
+            0, 0, 5, 132, // IA_PD - T1
+            0, 0, 25, 113, // IA_PD - T2
+            0, 0, 38, 148, // IA_PD - Options
+            //   IA Prefix
+            0, 26, 0, 39, //   IA Prefix - Preferred lifetime
+            5, 88, 22, 22, //   IA Prefix - Valid lifetime
+            4, 232, 128, 247, //   IA Prefix - Prefix Length
+            48,  //   IA Prefix - IPv6 Prefix
+            0x12, 0x34, 0x56, 0x78, 0x12, 0x31, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, //   IA Prefix - Options
+            0, 13, 0, 10, 0, 0, 83, 117, 99, 99, 101, 115, 115, 46,
+        ];
         let options = [
             ParsedDhcpOption::ClientId(&[4, 5, 6]),
             ParsedDhcpOption::ServerId(&[8]),
@@ -1246,6 +1511,9 @@ mod tests {
             ParsedDhcpOption::Preference(42),
             ParsedDhcpOption::ElapsedTime(3600),
             ParsedDhcpOption::StatusCode(U16::new(0), "Success."),
+            ParsedDhcpOption::IaPd(
+                IaPdData::new(&iapd_buf[..]).expect("IA_PD construction failed"),
+            ),
             ParsedDhcpOption::InformationRefreshTime(86400),
             ParsedDhcpOption::SolMaxRt(U32::new(86400)),
             ParsedDhcpOption::DnsServers(vec![Ipv6Addr::from([0; 16])]),

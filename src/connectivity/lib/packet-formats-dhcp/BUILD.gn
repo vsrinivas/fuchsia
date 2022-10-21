@@ -22,6 +22,7 @@ rustc_library("packet-formats-dhcp") {
     "//third_party/rust_crates:zerocopy",
   ]
   test_deps = [
+    "//src/connectivity/lib/net-declare",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:test-case",
   ]
