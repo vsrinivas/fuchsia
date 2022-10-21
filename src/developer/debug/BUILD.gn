@@ -18,7 +18,7 @@ group("tests") {
 
   deps = [
     "debug_agent:tests",
-    "e2e_tests:zxdb_e2e_tests($host_toolchain)",
+    "e2e_tests:tests",
     "zxdb:tests",
   ]
 }

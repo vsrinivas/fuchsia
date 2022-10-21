@@ -73,11 +73,10 @@ std::vector<char*> GetFfxArgV() {
 
 // The environment variable |kFuchsiaSshKey| needs to be a full path for FFX to properly resolve
 // the file, but in infra, it's set to a relative path. This function expands the environment
-// variable to the full path to the ssh key file, if it exists. If the environment variable doesn't
-// exist, this function returns the parent env without any allocations.
+// variable to the full path to the ssh key file, if it exists. Other environment variables are
+// copied. The returned strings must be freed properly.
 std::vector<char*> GetFfxEnv(char** unix_env) {
   std::vector<char*> new_env = {};
-  char* ssh_key_path_str = std::getenv(kFuchsiaSshKey.data());
 
   // Duplicate the strings in the parent environment for us to manage in the child process. The
   // ownership of these strings is kept by the class and they are deallocated when this object goes
@@ -90,18 +89,14 @@ std::vector<char*> GetFfxEnv(char** unix_env) {
     }
   }
 
-  // There's nothing to do if |kFuchsiaSshKey| isn't set in the environment, this means that
-  // |new_env| is already equivalent to |environ|.
-  if (ssh_key_path_str == nullptr) {
-    new_env.push_back(nullptr);
-    return new_env;
+  if (char* ssh_key_path_str = std::getenv(kFuchsiaSshKey.data())) {
+    std::string ssh_key_env_var{kFuchsiaSshKey};
+    ssh_key_env_var.append("=");
+    ssh_key_env_var.append(std::filesystem::absolute(ssh_key_path_str).string());
+
+    new_env.push_back(strdup(ssh_key_env_var.data()));
   }
 
-  std::string ssh_key_env_var{kFuchsiaSshKey};
-  ssh_key_env_var.append("=");
-  ssh_key_env_var.append(std::filesystem::absolute(ssh_key_path_str).string());
-
-  new_env.push_back(strdup(ssh_key_env_var.data()));
   new_env.push_back(nullptr);
   return new_env;
 }
@@ -134,13 +129,6 @@ FfxDebugAgentBridge::~FfxDebugAgentBridge() {
     if (e.has_error()) {
       FX_LOGS(ERROR) << "Error encountered while cleaning up child: " << e.msg();
     }
-  }
-
-  // Even in the case where the child process fails to fork, we still need to clean up the duplicate
-  // environment that was created.
-  for (auto str : child_env_) {
-    // These strings were allocated by strdup.
-    std::free(str);
   }
 }
 
@@ -189,8 +177,8 @@ Err FfxDebugAgentBridge::SetupPipeAndFork(char** unix_env) {
       exit(EXIT_FAILURE);
     }
 
-    child_env_ = GetFfxEnv(unix_env);
-    execve(ffx_path.c_str(), GetFfxArgV().data(), child_env_.data());
+    std::vector<char*> env = GetFfxEnv(unix_env);
+    execve(ffx_path.c_str(), GetFfxArgV().data(), env.data());
 
     FX_NOTREACHED();
   } else {

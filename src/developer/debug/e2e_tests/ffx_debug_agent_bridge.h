@@ -69,7 +69,6 @@ class FfxDebugAgentBridge {
   std::string socket_path_;
 
   char** unix_env_;
-  std::vector<char*> child_env_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FfxDebugAgentBridge);
 };

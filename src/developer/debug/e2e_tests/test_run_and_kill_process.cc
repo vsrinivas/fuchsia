@@ -10,7 +10,6 @@
 #include "src/developer/debug/ipc/records.h"
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/client/breakpoint.h"
-#include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -20,29 +19,23 @@
 namespace zxdb {
 
 namespace {
-constexpr std::string_view kCrasherSymbolPathSuffix = "exe.unstripped/crasher";
 
 // This is a very simple test to ensure basic functionality of commonly used commands. This
-// simulates a user passing a filter to "attach", setting a breakpoint at a well-known symbol (a
-// function name in this case), and then running the program with the "run" command. The test
-// ensures that the breakpoint is eventually matched when symbols are loaded, and then that the
-// breakpoint was hit before killing the program.
+// simulates a user setting a breakpoint at a well-known symbol (a function name in this case),
+// then running the program with the "run-component" command. The test ensures that the breakpoint
+// is eventually matched when symbols are loaded, and then that the breakpoint was hit before
+// killing the program.
 class RunAndKillProcess : public E2eTest {
  public:
   RunAndKillProcess() {
     // Add symbols for crasher.
-    ConfigureSymbolsWithFile(kCrasherSymbolPathSuffix);
+    ConfigureSymbolsWithFile("exe.unstripped/crasher");
   }
 
   void Run() {
-    auto command_sequence_ctx =
+    console().ProcessInputLine(
+        "break blind_write",
         fxl::MakeRefCounted<ConsoleCommandContext>(&console(), [this](const Err& e) {
-          // Make sure the filter has been set up.
-          EXPECT_TRUE(e.ok()) << e.msg();
-          auto filters = this->session().system().GetFilters();
-          EXPECT_EQ(filters.size(), 1u);
-          EXPECT_STREQ(filters[0]->pattern().c_str(), "crasher");
-
           // Make sure the breakpoint was added, but hasn't been resolved to a location yet.
           EXPECT_TRUE(e.ok()) << e.msg();
           auto bps = this->session().system().GetBreakpoints();
@@ -54,25 +47,26 @@ class RunAndKillProcess : public E2eTest {
 
           // Shouldn't have any resolved locations yet, because symbols haven't been loaded yet.
           EXPECT_EQ(bps[0]->GetLocations().size(), 0u);
-        });
+        }));
 
-    RunCommandSequence(&console(), {"attach crasher", "break blind_write"},
-                       std::move(command_sequence_ctx));
-
-    auto run_ctx = fxl::MakeRefCounted<ConsoleCommandContext>(&console(), [this](const Err& e) {
-      auto target = this->console().context().GetActiveTarget();
-      ASSERT_NE(target, nullptr);
-      EXPECT_STREQ(target->GetProcess()->GetName().c_str(), "/boot/bin/crasher");
-    });
-    console().ProcessInputLine("run /boot/bin/crasher", std::move(run_ctx));
+    console().ProcessInputLine(
+        "run-component fuchsia-pkg://fuchsia.com/crasher#meta/cpp_crasher.cm");
 
     // Kick off the MessageLoop, we should catch the process starting in the above observer
     // implementations.
     loop().Run();
   }
 
+  void DidCreateProcess(Process* process, uint64_t timestamp) override {
+    FX_LOGS(INFO) << "DidCreateProcess";
+
+    EXPECT_EQ(process->GetName(), "cpp_crasher.cm");
+  }
+
   // BreakpointObserver implementation. This observer method should be called first.
   void OnBreakpointMatched(Breakpoint* breakpoint, bool user_requested) override {
+    FX_LOGS(INFO) << "OnBreakpointMatched";
+
     ASSERT_NE(breakpoint, nullptr);
 
     auto threads = console().context().GetActiveTarget()->GetProcess()->GetThreads();
@@ -102,6 +96,8 @@ class RunAndKillProcess : public E2eTest {
 
   // ThreadObserver implementation.
   void OnThreadStopped(Thread* thread, const StopInfo& info) override {
+    FX_LOGS(INFO) << "OnThreadStopped";
+
     ASSERT_NE(thread, nullptr);
 
     // We should have hit our breakpoint.
@@ -114,14 +110,16 @@ class RunAndKillProcess : public E2eTest {
     EXPECT_TRUE(thread->IsBlockedOnException());
     EXPECT_EQ(thread->GetBlockedReason(), debug_ipc::ThreadRecord::BlockedReason::kException);
 
-    console().ProcessInputLine("frame", nullptr);
+    console().ProcessInputLine("frame");
 
-    console().ProcessInputLine("kill", nullptr);
+    console().ProcessInputLine("kill");
   }
 
   // ProcessObserver implementation.
   void WillDestroyProcess(Process* process, DestroyReason reason, int exit_code,
                           uint64_t timestamp) override {
+    FX_LOGS(INFO) << "OnThreadStopped";
+
     ASSERT_NE(process, nullptr);
     EXPECT_EQ(process, console().context().GetActiveTarget()->GetProcess());
     EXPECT_EQ(reason, ProcessObserver::DestroyReason::kKill);
