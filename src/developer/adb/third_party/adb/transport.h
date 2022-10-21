@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_TRANSPORT_H_
-#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_TRANSPORT_H_
+#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_TRANSPORT_H_
+#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_TRANSPORT_H_
 
 #include <sys/types.h>
 
@@ -206,7 +206,7 @@ struct FdConnection : public BlockingConnection {
 
  private:
   bool DispatchRead(void* buf, size_t len);
-  bool DispatchWrite(void* buf, size_t len, apacket* p, bool release);
+  bool DispatchWrite(void* buf, size_t len);
 
   void* adb_;
   // unique_fd fd_;
@@ -431,4 +431,4 @@ void send_packet(apacket* p, atransport* t);
                           std::string_view addr);
 */
 
-#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_TRANSPORT_H_
+#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_TRANSPORT_H_

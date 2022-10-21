@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_ADB_PROTOCOL_H_
-#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_ADB_PROTOCOL_H_
+#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_ADB_PROTOCOL_H_
+#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_ADB_PROTOCOL_H_
 
 #include <limits.h>
 #include <stdint.h>
@@ -218,4 +218,4 @@ void parse_banner(const std::string&, atransport* t);
 
 std::vector<std::string> Split(const std::string& s, const std::string& delimiters);
 
-#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_ADB_PROTOCOL_H_
+#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_ADB_PROTOCOL_H_

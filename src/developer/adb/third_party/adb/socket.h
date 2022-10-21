@@ -14,8 +14,8 @@
  * limitations under the License.
  */
 
-#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_SOCKET_H_
-#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_SOCKET_H_
+#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_SOCKET_H_
+#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_SOCKET_H_
 
 #include <stddef.h>
 
@@ -135,4 +135,4 @@ asocket* create_remote_socket(unsigned id, atransport* t);
 void connect_to_remote(asocket* s, std::string_view destination);
 void release_service_socket(asocket* s);
 
-#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_SOCKET_H_
+#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_SOCKET_H_

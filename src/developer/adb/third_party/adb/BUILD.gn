@@ -2,13 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-config("adb-daemon-headers") {
+config("adb-headers") {
   include_dirs = [ "." ]
 }
 
-source_set("adb-daemon") {
+source_set("adb") {
   sources = [
-    "adb-daemon-base.h",
+    "adb-base.h",
     "adb-protocol.cc",
     "adb-protocol.h",
     "socket.cc",
@@ -18,10 +18,10 @@ source_set("adb-daemon") {
     "types.h",
   ]
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.adb",
+    "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_cpp",
     "//sdk/lib/syslog/cpp",
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxc",
   ]
-  public_configs = [ ":adb-daemon-headers" ]
+  public_configs = [ ":adb-headers" ]
 }

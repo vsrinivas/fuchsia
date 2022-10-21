@@ -1,0 +1,45 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "adb",
+            url: "fuchsia-boot:///#meta/adb.cm",
+
+            // Start up Adb eagerly. The usb-adb driver expects to have this component up to
+            // start receiving and servicing packets. Minimizes device discovery latency.
+            startup: "eager",
+        },
+    ],
+
+    // Collection to hold dynamically created child components for services
+    collections: [
+        {
+            name: "adb-services",
+            durability: "transient",
+        },
+    ],
+    offer: [
+        {
+            directory: "dev-class",
+            from: "parent",
+            as: "dev-adb",
+            to: [ "#adb" ],
+            subdir: "adb",
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+            to: "#adb",
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#adb",
+                "#adb-services",
+            ],
+        },
+    ],
+}

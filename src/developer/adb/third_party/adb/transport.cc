@@ -14,9 +14,8 @@
  * limitations under the License.
  */
 
+#include "adb-protocol.h"
 #define TRACE_TAG TRANSPORT
-
-#include "transport.h"
 
 #include <ctype.h>
 #include <errno.h>
@@ -35,7 +34,8 @@
 #include <string>
 #include <thread>
 
-#include "adb-daemon-base.h"
+#include "adb-base.h"
+#include "transport.h"
 
 #if 0
 #include "adb.h"
@@ -236,7 +236,7 @@ void BlockingConnectionAdapter::Stop() {
   }
 
   FX_LOGS(DEBUG) << "BlockingConnectionAdapter(" << Serial().c_str() << "): stopped";
-  std::call_once(this->error_flag_, [this]() { transport_->HandleError("requested stop"); });
+  // std::call_once(this->error_flag_, [this]() { transport_->HandleError("requested stop"); });
 }
 
 bool BlockingConnectionAdapter::Write(std::unique_ptr<apacket> packet) {
@@ -270,7 +270,7 @@ bool FdConnection::DispatchRead(void* buf, size_t len) {
   return false; /*ReadFdExactly(fd_.get(), buf, len);*/
 }
 
-bool FdConnection::DispatchWrite(void* buf, size_t len, apacket* p, bool release) {
+bool FdConnection::DispatchWrite(void* buf, size_t len) {
 #if 0
   if (tls_ != nullptr) {
     // The TlsConnection doesn't allow 0 byte writes
@@ -284,10 +284,8 @@ bool FdConnection::DispatchWrite(void* buf, size_t len, apacket* p, bool release
   if (!adb_) {
     return false;
   }
-  auto* adb = static_cast<adb_daemon::AdbDaemonBase*>(adb_);
-  adb->SendUsbPacket(reinterpret_cast<uint8_t*>(buf), len, p, release);
-
-  return true; /*WriteFdExactly(fd_.get(), buf, len);*/
+  auto* adb = static_cast<adb::AdbBase*>(adb_);
+  return adb->SendUsbPacket(reinterpret_cast<uint8_t*>(buf), len);
 }
 
 bool FdConnection::Read(apacket* packet) {
@@ -313,24 +311,21 @@ bool FdConnection::Read(apacket* packet) {
 }
 
 bool FdConnection::Write(apacket* packet) {
-  bool release = true;
-
-  if (packet->msg.data_length) {
-    release = false;
-  }
-
-  if (!DispatchWrite(&packet->msg, sizeof(packet->msg), packet, release)) {
+  if (!DispatchWrite(&packet->msg, sizeof(packet->msg))) {
     FX_LOGS(DEBUG) << "remote local: write terminated";
+    put_apacket(packet);
     return false;
   }
 
   if (packet->msg.data_length) {
-    if (!DispatchWrite(&packet->payload[0], packet->msg.data_length, packet, true)) {
+    if (!DispatchWrite(&packet->payload[0], packet->msg.data_length)) {
       FX_LOGS(DEBUG) << "remote local: write terminated";
+      put_apacket(packet);
       return false;
     }
   }
 
+  put_apacket(packet);
   return true;
 }
 

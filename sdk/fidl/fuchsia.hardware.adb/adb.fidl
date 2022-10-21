@@ -11,6 +11,9 @@ type StatusFlags = flexible bits : uint32 {
     ONLINE = 0x1;
 };
 
+/// Max length of arguments passed in adb OPEN message.
+const MAX_ARGS_LENGTH uint64 = 1024;
+
 /// USB ADB implementation protocol. The USB ADB driver would start serving this interface on the
 /// server endpoint passed to a driver during Device::Start.
 protocol UsbAdbImpl {
@@ -50,5 +53,27 @@ protocol Device {
     /// Start USB ADB protocol with |interface|.
     Start(resource struct {
         interface server_end:UsbAdbImpl;
+    }) -> (struct {}) error zx.status;
+};
+
+/// A Provider is a provider for one service which interacts with the adb component to implement
+/// a particular service such as shell, file-sync, or ffx.
+/// The interaction between the adb component and a service Provider (e.g. shell) is as follows:
+///    - adb component is started eagerly by core.cml. Note that the adb component does not
+///      implement any adb FIDL protocols.
+///    - When a request for a service (e.g. shell) comes in, adb daemon starts up a lazy
+///      component for the corresponding requested service (adb-shell-component) exposing the
+///      Provider protocol and calls ConnectToService, creating a connection between the adb
+///      component and the service provider component (adb-shell-component) through the socket.
+///    - If the service (adb-shell-component) has already been started, it opens that service
+///      and hands it the socket.
+///    - adb component and service Provider component (adb-shell) communicate over the socket.
+@discoverable
+protocol Provider {
+    /// Connect `socket` to the service (called in response to adb OPEN message).
+    /// `args` provides additional arguments passed by the client if any.
+    ConnectToService(resource struct {
+        socket zx.handle:SOCKET;
+        args string:<MAX_ARGS_LENGTH, optional>;
     }) -> (struct {}) error zx.status;
 };

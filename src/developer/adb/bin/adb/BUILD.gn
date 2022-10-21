@@ -1,0 +1,81 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+import("//src/sys/core/build/core_shard.gni")
+
+core_shard("adb-shard") {
+  shard_file = "meta/adb.core_shard.cml"
+}
+
+group("common") {
+  public_deps = [
+    "//sdk/fidl/fuchsia.component:fuchsia.component_cpp",
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_cpp",
+    "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_cpp",
+    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/developer/adb/third_party/adb",
+    "//src/lib/fsl",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/sync:sync-cpp",
+  ]
+}
+
+executable("adb") {
+  sources = [
+    "adb.cc",
+    "main.cc",
+    "service-manager.cc",
+  ]
+  deps = [ ":common" ]
+}
+
+fuchsia_component("adb-component") {
+  component_name = "adb"
+  manifest = "meta/adb.cml"
+  deps = [ ":adb" ]
+}
+
+test("adb-test-bin") {
+  sources = [
+    "adb-test.cc",
+    "adb.cc",
+    "service-manager.cc",
+  ]
+  deps = [
+    ":common",
+    "//sdk/fidl/fuchsia.hardware.adb:fuchsia.hardware.adb_hlcpp",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/component/cpp/testing:cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_component("adb-test-component") {
+  testonly = true
+  component_name = "adb_test"
+  manifest = "meta/adb-test.cml"
+  deps = [ ":adb-test-bin" ]
+}
+
+fuchsia_test_package("adb-test") {
+  test_components = [ ":adb-test-component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":adb-test" ]
+}

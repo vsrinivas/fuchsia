@@ -14,14 +14,15 @@
  * limitations under the License.
  */
 
-#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_TYPES_H_
-#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_TYPES_H_
+#ifndef SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_TYPES_H_
+#define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_TYPES_H_
 
 #include <string.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
 #include <memory>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -132,4 +133,9 @@ struct apacket {
   payload_type payload;
 };
 
-#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_DAEMON_TYPES_H_
+// Service Names
+constexpr std::string_view kShellService = "SHELL";
+constexpr std::string_view kFfxService = "FFX";
+constexpr std::string_view kFileSyncService = "FILE_SYNC";
+
+#endif  // SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_TYPES_H_

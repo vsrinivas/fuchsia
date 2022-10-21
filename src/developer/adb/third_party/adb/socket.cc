@@ -18,7 +18,7 @@
 
 #include <ctype.h>
 #include <errno.h>
-#include <fuchsia/hardware/adb/cpp/fidl.h>
+#include <fidl/fuchsia.hardware.adb/cpp/fidl.h>
 #include <inttypes.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdio.h>
@@ -33,9 +33,10 @@
 #include <string>
 #include <vector>
 
-#include "adb-daemon-base.h"
+#include "adb-base.h"
 #include "adb-protocol.h"
 #include "transport.h"
+#include "types.h"
 
 using namespace std::chrono_literals;
 
@@ -549,23 +550,23 @@ bool newline_replace(std::string_view name) {
 }
 
 zx_status_t daemon_service_connect(std::string_view name, void* adb_ctxt, asocket* s) {
-  std::string service_name = "UNKNOWN";
+  std::string_view service_name = "UNKNOWN";
   std::string args = "";
   if (name.rfind("shell:", 0) == 0) {
-    service_name = fuchsia::hardware::adb::SHELL_SERVICE;
+    service_name = kShellService;
     args = name.substr(strlen("shell:"));
     if (!args.empty()) {
       FX_LOGS(DEBUG) << "Requesting shell cmd " << std::string(args).c_str() << "[" << args.size()
                      << "]";
     }
   } else if (name == "local:ffx") {
-    service_name = fuchsia::hardware::adb::FFX_SERVICE;
+    service_name = kFfxService;
   } else {
     FX_LOGS(ERROR) << "Service " << name << " not supported";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto adb = static_cast<adb_daemon::AdbDaemonBase*>(adb_ctxt);
+  auto adb = static_cast<adb::AdbBase*>(adb_ctxt);
   auto socket = adb->GetServiceSocket(service_name, args);
   if (socket.is_error()) {
     FX_LOGS(ERROR) << "Could not get socket " << socket.error_value();
@@ -584,7 +585,7 @@ asocket* create_local_service_socket(std::string_view name, atransport* transpor
   // int fd_value = 0; // fd.get();
   asocket* s = create_local_socket();  // std::move(fd));
   s->transport = transport;
-  s->adb = static_cast<adb_daemon::AdbDaemonBase*>(transport->connection()->adb());
+  s->adb = static_cast<adb::AdbBase*>(transport->connection()->adb());
   s->name = name;
 
   zx_status_t status = daemon_service_connect(name, transport->connection()->adb(), s);

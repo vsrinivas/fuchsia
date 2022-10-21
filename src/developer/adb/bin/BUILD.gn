@@ -4,6 +4,15 @@
 
 import("//build/components.gni")
 
-group("third_party") {
-  deps = [ "adb" ]
+group("bin") {
+  deps = [ "adb:adb-component" ]
+}
+
+group("core_shards") {
+  deps = [ "adb:adb-shard" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "adb:tests" ]
 }
