@@ -29,8 +29,6 @@ namespace fio = fuchsia_io;
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";
 
-constexpr char kBuildInfoAllowList[] = "allowlist/build_info.txt";
-
 NamespaceBuilder::~NamespaceBuilder() = default;
 
 void NamespaceBuilder::AddFlatNamespace(fuchsia::sys::FlatNamespacePtr ns) {
@@ -162,16 +160,6 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPathAs(isolated_temp_path_factory().value(), "/tmp");
     } else if (feature == "hub") {
       AddHub(hub_directory_factory);
-    } else if (feature == "build-info") {
-      // fxbug.dev/50308
-      AllowList build_info_allowlist(appmgr_config_dir_, kBuildInfoAllowList);
-      FuchsiaPkgUrl pkg_url;
-      if (pkg_url.Parse(ns_id) && build_info_allowlist.IsAllowed(pkg_url)) {
-        PushDirectoryFromPathAs("/pkgfs/packages/build-info/0/data", "/config/build-info");
-      } else {
-        FX_LOGS(WARNING) << "Component " << ns_id
-                         << " is not allowlisted to use build-info. See fxbug.dev/50308.";
-      }
     }
   }
 

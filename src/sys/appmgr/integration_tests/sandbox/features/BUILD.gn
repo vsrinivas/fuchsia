@@ -6,7 +6,6 @@ group("features") {
   testonly = true
   deps = [
     "ambient-executable-policy",
-    "build-info",
     "hub",
     "isolated-temp",
     "shell-commands",
