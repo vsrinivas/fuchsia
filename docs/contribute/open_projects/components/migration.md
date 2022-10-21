@@ -61,7 +61,7 @@ A high-level diagram of the system's component topology is shown below:
 *   Modern components are shown in blue boxes.
 *   Legacy components are shown in red boxes.
 *   The dashed arrow between the [session][glossary.session] and
-    [Modular][doc-modular] represents bidirectional communication between both
+    Modular represents bidirectional communication between both
     systems.
 
 In addition, all [unit tests with generated manifests][unit-tests-generated] are
@@ -189,7 +189,6 @@ Reach out for questions or for status updates:
 [cml]: /docs/concepts/components/v2/component_manifests.md
 [component_manager]: /docs/concepts/components/v2/component_manager.md
 [doc-realm-builder]: /docs/development/testing/components/realm_builder.md
-[doc-modular]: /docs/development/modular/overview.md
 [fuchsia-component]: https://fuchsia.dev/reference/fidl/fuchsia.component
 [fuchsia-sys2]: https://fuchsia.dev/reference/fidl/fuchsia.sys2
 [fuchsia-sys]: https://fuchsia.dev/reference/fidl/fuchsia.sys

@@ -61,9 +61,6 @@ toc:
 - title: "Media"
   section:
   - include: /docs/development/media/_toc.yaml
-- title: "Modular framework"
-  section:
-  - include: /docs/development/modular/_toc.yaml
 - title: "Networking"
   section:
   - include: /docs/development/networking/_toc.yaml

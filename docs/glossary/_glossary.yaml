@@ -29,18 +29,6 @@
   related_guides: [""]
   area: ["System", "Zircon"]
 
-- term: "Agent"
-  short_description: "An agent is a role a component can play to execute in the background in the
-  context of a session."
-  full_description: "<p>A <a href=\"/docs/development/modular/overview.md#extension_points\">Modular</a> concept
-  that is being deprecated.</p>
-  <p>An agent is a role a <a href=\"/docs/glossary#component\">component</a> can play to execute
-  in the background in the context of a <a href=\"/docs/glossary#session\">session</a>.
-  Agents are always a singleton within a session, and provide services to other components.</p>"
-  see_also: ["<a href=\"/docs/development/modular/overview.md#extension_points\">Agents</a>"]
-  related_guides: [""]
-  area: ["Session", "Component Framework"]
-
 - term: "Banjo"
   short_description: "Language for definition protocols that communicate between drivers."
   full_description: "Banjo is a language for defining protocols that are used to communicate between
