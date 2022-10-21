@@ -28,18 +28,18 @@
             to: "#session-manager",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-gpu",
             to: [ "#opencl_loader" ],
-            subdir: "class/gpu",
+            subdir: "gpu",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-gpu-dependency-injection",
             to: "#opencl_loader",
-            subdir: "class/gpu-dependency-injection",
+            subdir: "gpu-dependency-injection",
         },
         {
             protocol: "fuchsia.memorypressure.Provider",
