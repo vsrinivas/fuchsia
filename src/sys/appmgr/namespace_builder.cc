@@ -163,9 +163,6 @@ zx_status_t NamespaceBuilder::AddSandbox(
     }
   }
 
-  for (const auto& path : sandbox.boot())
-    PushDirectoryFromPath("/boot/" + path);
-
   return ZX_OK;
 }
 
