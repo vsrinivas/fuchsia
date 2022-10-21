@@ -212,9 +212,6 @@ class RunnerImpl extends Runner {
       // so the createNHandleVector method cannot be implemented.
       case Test.responseMatchesHandleLimit:
       case Test.responseExceedsHandleLimit:
-      // These tests are currently out of spec and disabled across all bindings.
-      case Test.badAtRestFlagsCausesClose:
-      case Test.badDynamicFlagsCausesClose:
       // fxbug.dev/111266: Dart bindings don't validate TXIDs.
       case Test.oneWayWithNonZeroTxid:
       case Test.twoWayNoPayloadWithZeroTxid:

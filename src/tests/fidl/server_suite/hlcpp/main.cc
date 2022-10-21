@@ -244,8 +244,6 @@ class RunnerServer : public fidl::serversuite::Runner {
 
   void IsTestEnabled(fidl::serversuite::Test test, IsTestEnabledCallback callback) override {
     switch (test) {
-      case fidl::serversuite::Test::BAD_AT_REST_FLAGS_CAUSES_CLOSE:
-      case fidl::serversuite::Test::BAD_DYNAMIC_FLAGS_CAUSES_CLOSE:
       case fidl::serversuite::Test::SERVER_SENDS_TOO_FEW_RIGHTS:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_BYTE_LIMIT:
       case fidl::serversuite::Test::RESPONSE_EXCEEDS_HANDLE_LIMIT:

@@ -239,8 +239,6 @@ async fn run_runner_server(stream: RunnerRequestStream) -> Result<(), Error> {
                     let enabled = match test {
                         Test::OneWayWithNonZeroTxid
                         | Test::TwoWayNoPayloadWithZeroTxid
-                        | Test::BadAtRestFlagsCausesClose
-                        | Test::BadDynamicFlagsCausesClose
                         | Test::ServerSendsTooFewRights
                         | Test::ResponseExceedsByteLimit
                         | Test::ResponseExceedsHandleLimit => false,

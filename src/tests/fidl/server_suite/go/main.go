@@ -129,10 +129,6 @@ func (*runnerImpl) IsTestEnabled(_ fidl.Context, test serversuite.Test) (bool, e
 			return false
 		case serversuite.TestTwoWayNoPayloadWithZeroTxid:
 			return false
-		case serversuite.TestBadAtRestFlagsCausesClose:
-			return false
-		case serversuite.TestBadDynamicFlagsCausesClose:
-			return false
 		case serversuite.TestSendStrictEvent:
 			return false
 		case serversuite.TestSendFlexibleEvent:

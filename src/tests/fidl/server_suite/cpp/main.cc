@@ -260,8 +260,6 @@ class RunnerServer : public fidl::Server<fidl_serversuite::Runner> {
       switch (request.test()) {
         case fidl_serversuite::Test::kOneWayWithNonZeroTxid:
         case fidl_serversuite::Test::kTwoWayNoPayloadWithZeroTxid:
-        case fidl_serversuite::Test::kBadAtRestFlagsCausesClose:
-        case fidl_serversuite::Test::kBadDynamicFlagsCausesClose:
           return false;
         default:
           return true;
