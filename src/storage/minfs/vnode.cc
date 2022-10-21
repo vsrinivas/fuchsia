@@ -288,12 +288,14 @@ zx::result<> VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
 }
 
 void VnodeMinfs::RecycleNode() {
+  size_t count;
   {
     // Need to hold the lock to check open_count(), but be careful not to hold it across this class
     // getting deleted at the bottom of this function.
     std::lock_guard lock(mutex_);
-    ZX_DEBUG_ASSERT(open_count() == 0);
+    count = open_count();
   }
+  ZX_DEBUG_ASSERT_MSG(count == 0, "open_count=%zu", count);
   if (!IsUnlinked()) {
     // If this node has not been purged already, remove it from the
     // hash map. If it has been purged; it will already be absent
