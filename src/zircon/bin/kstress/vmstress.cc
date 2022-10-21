@@ -1178,6 +1178,46 @@ class MultiVmoTestInstance : public TestInstance {
       }
       if (packet.key == 1) {
         ZX_ASSERT(solo_owner);
+
+        // Writeback any dirty pages before exiting.
+        zx_vmo_dirty_range_t ranges[10];
+        size_t actual = 0, avail = 0;
+        size_t vmo_size;
+        zx_status_t status = vmo.get_size(&vmo_size);
+        ZX_ASSERT_MSG(status == ZX_OK, "Failed to get VMO size %s\n", zx_status_get_string(status));
+        uint64_t start = 0, len = vmo_size;
+
+        do {
+          status = zx_pager_query_dirty_ranges(pager.get(), vmo.get(), start, len, &ranges[0],
+                                               sizeof(ranges), &actual, &avail);
+          ZX_ASSERT_MSG(status == ZX_OK, "Failed to query dirty ranges %s\n",
+                        zx_status_get_string(status));
+
+          if (actual == 0) {
+            break;
+          }
+
+          for (size_t i = 0; i < actual; i++) {
+            status = zx_pager_op_range(pager.get(), ZX_PAGER_OP_WRITEBACK_BEGIN, vmo.get(),
+                                       ranges[i].offset, ranges[i].length, ranges[i].options);
+            ZX_ASSERT_MSG(status == ZX_OK, "Failed to begin writeback %s\n",
+                          zx_status_get_string(status));
+            status = zx_pager_op_range(pager.get(), ZX_PAGER_OP_WRITEBACK_END, vmo.get(),
+                                       ranges[i].offset, ranges[i].length, 0);
+            ZX_ASSERT_MSG(status == ZX_OK, "Failed to end writeback %s\n",
+                          zx_status_get_string(status));
+          }
+
+          uint64_t new_start = ranges[actual - 1].offset + ranges[actual - 1].length;
+          len -= (new_start - start);
+          start = new_start;
+        } while (avail > actual);
+        ZX_ASSERT(avail == actual);
+
+        status = zx_pager_query_dirty_ranges(pager.get(), vmo.get(), 0, vmo_size, nullptr, 0,
+                                             nullptr, &avail);
+        ZX_ASSERT_MSG(avail == 0, "Found %zu dirty ranges after writeback\n", avail);
+
         // No children, and we have the only handle. Done.
         break;
       }
