@@ -59,10 +59,6 @@ pub fn collect_node_names_from_composite_rules(
         node_names.push(composite_rules.symbol_table[&node.name_id].clone());
     }
 
-    for node in &composite_rules.optional_nodes {
-        node_names.push(composite_rules.symbol_table[&node.name_id].clone());
-    }
-
     return node_names;
 }
 

@@ -141,10 +141,7 @@ impl ResolvedDriver {
                 let node_names = collect_node_names_from_composite_rules(composite);
                 Ok(Some(fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                     node_index: Some(node_index),
-                    num_nodes: Some(
-                        (composite.optional_nodes.len() + composite.additional_nodes.len() + 1)
-                            as u32,
-                    ),
+                    num_nodes: Some((composite.additional_nodes.len() + 1) as u32),
                     composite_name: Some(composite.symbol_table[&composite.device_name_id].clone()),
                     node_names: Some(node_names),
                     driver_info: Some(self.create_matched_driver_info()),
@@ -220,16 +217,6 @@ fn matches_composite_device(
         )?;
         if matches {
             return Ok(Some((i + 1) as u32));
-        }
-    }
-
-    for (i, node) in rules.optional_nodes.iter().enumerate() {
-        let matches = match_bind(
-            MatchBindData { symbol_table: &rules.symbol_table, instructions: &node.instructions },
-            properties,
-        )?;
-        if matches {
-            return Ok(Some((i + rules.additional_nodes.len() + 1) as u32));
         }
     }
     Ok(None)

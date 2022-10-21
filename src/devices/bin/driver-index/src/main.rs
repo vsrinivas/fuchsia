@@ -2334,13 +2334,9 @@ mod tests {
             };
             let expected_result = fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                 node_index: Some(0),
-                num_nodes: Some(3),
+                num_nodes: Some(2),
                 composite_name: Some("mimid".to_string()),
-                node_names: Some(vec![
-                    "catbird".to_string(),
-                    "mockingbird".to_string(),
-                    "lapwing".to_string(),
-                ]),
+                node_names: Some(vec!["catbird".to_string(), "mockingbird".to_string()]),
                 driver_info: Some(expected_driver_info),
                 ..fdi::MatchedCompositeInfo::EMPTY
             });
@@ -2375,19 +2371,15 @@ mod tests {
             };
             let expected_result = fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
                 node_index: Some(1),
-                num_nodes: Some(3),
+                num_nodes: Some(2),
                 composite_name: Some("mimid".to_string()),
-                node_names: Some(vec![
-                    "catbird".to_string(),
-                    "mockingbird".to_string(),
-                    "lapwing".to_string(),
-                ]),
+                node_names: Some(vec!["catbird".to_string(), "mockingbird".to_string()]),
                 driver_info: Some(expected_driver_info),
                 ..fdi::MatchedCompositeInfo::EMPTY
             });
             assert_eq!(expected_result, result);
 
-            // Match optional node.
+            // The optional node should not match.
             let property = fdf::NodeProperty {
                 key: Some(fdf::NodePropertyKey::StringValue("thrasher".to_string())),
                 value: Some(fdf::NodePropertyValue::StringValue("trembler".to_string())),
@@ -2396,29 +2388,8 @@ mod tests {
             let args =
                 fdf::NodeAddArgs { properties: Some(vec![property]), ..fdf::NodeAddArgs::EMPTY };
 
-            let result = proxy.match_driver(args).await.unwrap().unwrap();
-
-            let expected_driver_info = fdi::MatchedDriverInfo {
-                url: Some("fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()),
-                colocate: Some(false),
-                device_categories: Some(vec![]),
-                package_type: Some(fdi::DriverPackageType::Base),
-                is_fallback: Some(false),
-                ..fdi::MatchedDriverInfo::EMPTY
-            };
-            let expected_result = fdi::MatchedDriver::CompositeDriver(fdi::MatchedCompositeInfo {
-                node_index: Some(2),
-                num_nodes: Some(3),
-                composite_name: Some("mimid".to_string()),
-                node_names: Some(vec![
-                    "catbird".to_string(),
-                    "mockingbird".to_string(),
-                    "lapwing".to_string(),
-                ]),
-                driver_info: Some(expected_driver_info),
-                ..fdi::MatchedCompositeInfo::EMPTY
-            });
-            assert_eq!(expected_result, result);
+            let result = proxy.match_driver(args).await.unwrap();
+            assert_eq!(result, Err(Status::NOT_FOUND.into_raw()));
         }
         .fuse();
 
