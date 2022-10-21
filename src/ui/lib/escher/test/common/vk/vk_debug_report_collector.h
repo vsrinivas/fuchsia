@@ -5,6 +5,7 @@
 #ifndef SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_COLLECTOR_H_
 #define SRC_UI_LIB_ESCHER_TEST_COMMON_VK_VK_DEBUG_REPORT_COLLECTOR_H_
 
+#include <functional>
 #include <string>
 #include <vector>
 
