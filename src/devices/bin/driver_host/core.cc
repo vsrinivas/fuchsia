@@ -625,7 +625,7 @@ zx_status_t DriverHostContext::DeviceRebind(const fbl::RefPtr<zx_device_t>& dev)
     // note that we want to be rebound when our children are all gone
     dev->set_flag(DEV_FLAG_WANTS_REBIND);
     // request that any existing children go away
-    ScheduleUnbindChildren(dev);
+    std::ignore = ScheduleUnbindChildren(dev);
   } else {
     std::string drv = dev->get_rebind_drv_name().value_or("");
     return DeviceBind(dev, drv.c_str());
