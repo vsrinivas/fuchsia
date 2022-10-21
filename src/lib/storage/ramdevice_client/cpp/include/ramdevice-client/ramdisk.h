@@ -52,11 +52,13 @@ zx_status_t ramdisk_create_from_vmo(zx_handle_t vmo, ramdisk_client_t** out);
 // Same as above except that it opens the ramdisk relative to the passed in 'dev_root_fd'.
 // Ownership of 'dev_root_fd' is not transferred.
 zx_status_t ramdisk_create_at_from_vmo(int dev_root_fd, zx_handle_t vmo, ramdisk_client_t** out);
-// Same as previous two, but with block size. If block_size is zero, a default block size is chosen.
-zx_status_t ramdisk_create_from_vmo_with_block_size(zx_handle_t vmo, uint64_t block_size,
-                                                    ramdisk_client_t** out);
-zx_status_t ramdisk_create_at_from_vmo_with_block_size(int dev_root_fd, zx_handle_t vmo,
-                                                       uint64_t block_size, ramdisk_client_t** out);
+// Same as previous two, but with optional parameters.
+zx_status_t ramdisk_create_from_vmo_with_params(zx_handle_t vmo, uint64_t block_size,
+                                                const uint8_t* type_guid, size_t guid_len,
+                                                ramdisk_client_t** out);
+zx_status_t ramdisk_create_at_from_vmo_with_params(int dev_root_fd, zx_handle_t vmo,
+                                                   uint64_t block_size, const uint8_t* type_guid,
+                                                   size_t guid_len, ramdisk_client_t** out);
 
 // Returns the file descriptor to the block device interface of the client.
 //

@@ -54,17 +54,20 @@ enum DevRoot {
     Provided(fs::File),
 }
 
+const GUID_LEN: usize = 16;
+
 /// A type to help construct a [`RamdeviceClient`] from an existing VMO.
 pub struct VmoRamdiskClientBuilder {
     vmo: zx::Vmo,
     block_size: Option<u64>,
     dev_root: Option<DevRoot>,
+    guid: Option<[u8; GUID_LEN]>,
 }
 
 impl VmoRamdiskClientBuilder {
     /// Create a new ramdisk builder with the given VMO handle.
     pub fn new(vmo: zx::Vmo) -> Self {
-        Self { vmo, block_size: None, dev_root: None }
+        Self { vmo, block_size: None, dev_root: None, guid: None }
     }
 
     /// Set the size of a single block (in bytes)
@@ -79,60 +82,50 @@ impl VmoRamdiskClientBuilder {
         self
     }
 
+    /// Initialize the ramdisk with the given GUID, which can be queried from the ramdisk instance.
+    pub fn guid(mut self, guid: [u8; GUID_LEN]) -> Self {
+        self.guid = Some(guid);
+        self
+    }
+
     /// Create the ramdisk.
     pub fn build(self) -> Result<RamdiskClient, zx::Status> {
         let vmo_handle = self.vmo.into_raw();
-
         let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
-        let status = match (&self.dev_root, &self.block_size) {
-            (Some(dev_root), Some(block_size)) => {
-                // If this statement needs to open the dev_root itself, hold onto the File to
-                // ensure dev_root_fd is valid for this block.
-                let dev_root_fd = match &dev_root {
-                    DevRoot::Provided(f) => f.as_raw_fd(),
-                };
+        let block_size = self.block_size.unwrap_or(0);
+        let type_guid: *const u8 =
+            if let Some(guid) = self.guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
 
-                // Safe because ramdisk_create_at_from_vmo_with_block_size creates a duplicate fd
-                // of the provided dev_root_fd. The returned ramdisk is valid iff the FFI method
-                // returns ZX_OK.
-                unsafe {
-                    ramdevice_sys::ramdisk_create_at_from_vmo_with_block_size(
-                        dev_root_fd,
-                        vmo_handle,
-                        *block_size,
-                        &mut ramdisk,
-                    )
-                }
+        let status = if let Some(dev_root) = &self.dev_root {
+            let dev_root_fd = match &dev_root {
+                DevRoot::Provided(f) => f.as_raw_fd(),
+            };
+            // Safe because ramdisk_create_at_from_vmo_with_params creates a duplicate fd
+            // of the provided dev_root_fd.
+            unsafe {
+                ramdevice_sys::ramdisk_create_at_from_vmo_with_params(
+                    dev_root_fd,
+                    vmo_handle,
+                    block_size,
+                    type_guid,
+                    GUID_LEN,
+                    &mut ramdisk,
+                )
             }
-            (Some(dev_root), None) => {
-                // If this statement needs to open the dev_root itself, hold onto the File to
-                // ensure dev_root_fd is valid for this block.
-                let dev_root_fd = match &dev_root {
-                    DevRoot::Provided(f) => f.as_raw_fd(),
-                };
-                // Safe because ramdisk_create_at_from_vmo creates a duplicate fd of the provided
-                // dev_root_fd. The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe {
-                    ramdevice_sys::ramdisk_create_at_from_vmo(dev_root_fd, vmo_handle, &mut ramdisk)
-                }
-            }
-            (None, Some(block_size)) => {
-                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe {
-                    ramdevice_sys::ramdisk_create_from_vmo_with_block_size(
-                        vmo_handle,
-                        *block_size,
-                        &mut ramdisk,
-                    )
-                }
-            }
-            (None, None) => {
-                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe { ramdevice_sys::ramdisk_create_from_vmo(vmo_handle, &mut ramdisk) }
+        } else {
+            unsafe {
+                ramdevice_sys::ramdisk_create_from_vmo_with_params(
+                    vmo_handle,
+                    block_size,
+                    type_guid,
+                    GUID_LEN,
+                    &mut ramdisk,
+                )
             }
         };
-        zx::Status::ok(status)?;
 
+        // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+        zx::Status::ok(status)?;
         Ok(RamdiskClient { ramdisk })
     }
 }
@@ -142,7 +135,7 @@ pub struct RamdiskClientBuilder {
     block_size: u64,
     block_count: u64,
     dev_root: Option<DevRoot>,
-    guid: Option<[u8; 16]>,
+    guid: Option<[u8; GUID_LEN]>,
 }
 
 impl RamdiskClientBuilder {
@@ -158,7 +151,7 @@ impl RamdiskClientBuilder {
     }
 
     /// Initialize the ramdisk with the given GUID, which can be queried from the ramdisk instance.
-    pub fn guid(&mut self, guid: [u8; 16]) -> &mut Self {
+    pub fn guid(&mut self, guid: [u8; GUID_LEN]) -> &mut Self {
         self.guid = Some(guid);
         self
     }
@@ -167,65 +160,39 @@ impl RamdiskClientBuilder {
     pub fn build(&mut self) -> Result<RamdiskClient, zx::Status> {
         let block_size = self.block_size;
         let block_count = self.block_count;
-
+        let type_guid: *const u8 =
+            if let Some(guid) = self.guid.as_ref() { guid.as_ptr() } else { std::ptr::null() };
         let mut ramdisk: *mut ramdevice_sys::ramdisk_client_t = ptr::null_mut();
-        let status = match (&self.dev_root, &self.guid) {
-            (Some(dev_root), Some(guid)) => {
-                // If this statement needs to open the dev_root itself, hold onto the File to
-                // ensure dev_root_fd is valid for this block.
-                let dev_root_fd = match &dev_root {
-                    DevRoot::Provided(f) => f.as_raw_fd(),
-                };
 
-                // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
-                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe {
-                    ramdevice_sys::ramdisk_create_at_with_guid(
-                        dev_root_fd,
-                        block_size,
-                        block_count,
-                        guid.as_ptr(),
-                        16,
-                        &mut ramdisk,
-                    )
-                }
+        let status = if let Some(dev_root) = &self.dev_root {
+            let dev_root_fd = match &dev_root {
+                DevRoot::Provided(f) => f.as_raw_fd(),
+            };
+            // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
+            unsafe {
+                ramdevice_sys::ramdisk_create_at_with_guid(
+                    dev_root_fd,
+                    block_size,
+                    block_count,
+                    type_guid,
+                    GUID_LEN,
+                    &mut ramdisk,
+                )
             }
-            (Some(dev_root), None) => {
-                // If this statement needs to open the dev_root itself, hold onto the File to
-                // ensure dev_root_fd is valid for this block.
-                let dev_root_fd = match &dev_root {
-                    DevRoot::Provided(f) => f.as_raw_fd(),
-                };
-                // Safe because ramdisk_create_at creates a duplicate fd of the provided dev_root_fd.
-                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe {
-                    ramdevice_sys::ramdisk_create_at(
-                        dev_root_fd,
-                        block_size,
-                        block_count,
-                        &mut ramdisk,
-                    )
-                }
-            }
-            (None, Some(guid)) => {
-                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe {
-                    ramdevice_sys::ramdisk_create_with_guid(
-                        block_size,
-                        block_count,
-                        guid.as_ptr(),
-                        16,
-                        &mut ramdisk,
-                    )
-                }
-            }
-            (None, None) => {
-                // The returned ramdisk is valid iff the FFI method returns ZX_OK.
-                unsafe { ramdevice_sys::ramdisk_create(block_size, block_count, &mut ramdisk) }
+        } else {
+            unsafe {
+                ramdevice_sys::ramdisk_create_with_guid(
+                    block_size,
+                    block_count,
+                    type_guid,
+                    GUID_LEN,
+                    &mut ramdisk,
+                )
             }
         };
-        zx::Status::ok(status)?;
 
+        // The returned ramdisk is valid iff the FFI method returns ZX_OK.
+        zx::Status::ok(status)?;
         Ok(RamdiskClient { ramdisk })
     }
 }
@@ -335,7 +302,7 @@ mod tests {
 
     // Note that if these tests flake, all downstream tests that depend on this crate may too.
 
-    const TEST_GUID: [u8; 16] = [
+    const TEST_GUID: [u8; GUID_LEN] = [
         0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09,
         0x10,
     ];

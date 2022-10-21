@@ -13,17 +13,6 @@ pub type ramdisk_client_t = ramdisk_client;
 
 #[link(name = "ramdevice-client")]
 extern "C" {
-    pub fn ramdisk_create(
-        blk_size: u64,
-        blk_count: u64,
-        out: *mut *mut ramdisk_client_t,
-    ) -> zx_status_t;
-    pub fn ramdisk_create_at(
-        dev_root_fd: raw::c_int,
-        blk_size: u64,
-        blk_count: u64,
-        out: *mut *mut ramdisk_client_t,
-    ) -> zx_status_t;
     pub fn ramdisk_create_with_guid(
         blk_size: u64,
         blk_count: u64,
@@ -39,24 +28,19 @@ extern "C" {
         guid_len: usize,
         out: *mut *mut ramdisk_client_t,
     ) -> zx_status_t;
-    pub fn ramdisk_create_from_vmo(
-        raw_vmo: zx_handle_t,
-        out: *mut *mut ramdisk_client_t,
-    ) -> zx_status_t;
-    pub fn ramdisk_create_at_from_vmo(
-        dev_root_fd: raw::c_int,
-        raw_vmo: zx_handle_t,
-        out: *mut *mut ramdisk_client_t,
-    ) -> zx_status_t;
-    pub fn ramdisk_create_from_vmo_with_block_size(
+    pub fn ramdisk_create_from_vmo_with_params(
         raw_vmo: zx_handle_t,
         blk_size: u64,
+        type_guid: *const u8,
+        guid_len: usize,
         out: *mut *mut ramdisk_client_t,
     ) -> zx_status_t;
-    pub fn ramdisk_create_at_from_vmo_with_block_size(
+    pub fn ramdisk_create_at_from_vmo_with_params(
         dev_root_fd: raw::c_int,
         raw_vmo: zx_handle_t,
         blk_size: u64,
+        type_guid: *const u8,
+        guid_len: usize,
         out: *mut *mut ramdisk_client_t,
     ) -> zx_status_t;
     pub fn ramdisk_get_path(client: *const ramdisk_client_t) -> *const raw::c_char;

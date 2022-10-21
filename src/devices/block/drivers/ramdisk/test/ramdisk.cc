@@ -56,6 +56,11 @@ namespace {
 auto BRead = block_client::SingleReadBytes;
 auto BWrite = block_client::SingleWriteBytes;
 
+constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
+                                                   0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
+
+static_assert(sizeof(fuchsia_hardware_block_partition_GUID) == sizeof kGuid,
+              "Mismatched GUID size");
 // Make sure isolated_devmgr is ready to go before all tests.
 class Environment : public testing::Environment {
  public:
@@ -340,9 +345,6 @@ TEST(RamdiskTests, RamdiskGrowTestWriteToAddedBlocks) {
 }
 
 TEST(RamdiskTests, RamdiskTestGuid) {
-  constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-                                                     0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
-
   std::unique_ptr<RamdiskTest> ramdisk;
   ASSERT_NO_FATAL_FAILURE(RamdiskTest::CreateWithGuid(zx_system_get_page_size() / 2, 512, kGuid,
                                                       sizeof(kGuid), &ramdisk));
@@ -355,7 +357,6 @@ TEST(RamdiskTests, RamdiskTestGuid) {
             ZX_OK);
   ASSERT_EQ(status, ZX_OK);
 
-  static_assert(sizeof(guid) == sizeof(kGuid), "Mismatched GUID size");
   ASSERT_TRUE(memcmp(guid.value, kGuid, sizeof(guid)) == 0);
 }
 
@@ -382,14 +383,16 @@ TEST(RamdiskTests, RamdiskTestVmo) {
   EXPECT_GE(ramdisk_destroy(ramdisk), 0) << "Could not unlink ramdisk device";
 }
 
-TEST(RamdiskTests, RamdiskTestVmoWithBlockSize) {
-  constexpr int kBlockSize = 512;
-  constexpr int kBlockCount = 256;
+TEST(RamdiskTests, RamdiskTestVmoWithParams) {
+  constexpr uint64_t kBlockSize = 512;
+  constexpr uint64_t kBlockCount = 256;
   zx::vmo vmo;
   ASSERT_EQ(zx::vmo::create(kBlockCount * kBlockSize, 0, &vmo), ZX_OK);
 
   ramdisk_client_t* ramdisk = nullptr;
-  ASSERT_EQ(ramdisk_create_from_vmo_with_block_size(vmo.release(), kBlockSize, &ramdisk), ZX_OK);
+  ASSERT_EQ(
+      ramdisk_create_from_vmo_with_params(vmo.release(), kBlockSize, kGuid, sizeof kGuid, &ramdisk),
+      ZX_OK);
   int block_fd = ramdisk_get_block_fd(ramdisk);
 
   fuchsia_hardware_block_BlockInfo info;
@@ -399,8 +402,15 @@ TEST(RamdiskTests, RamdiskTestVmoWithBlockSize) {
       fuchsia_hardware_block_BlockGetInfo(ramdisk_connection.borrow_channel(), &status, &info),
       ZX_OK);
   ASSERT_EQ(status, ZX_OK);
-  ASSERT_EQ(info.block_count, uint64_t{kBlockCount});
-  ASSERT_EQ(info.block_size, uint32_t{kBlockSize});
+  ASSERT_EQ(info.block_count, kBlockCount);
+  ASSERT_EQ(info.block_size, kBlockSize);
+
+  fuchsia_hardware_block_partition_GUID guid;
+  ASSERT_EQ(fuchsia_hardware_block_partition_PartitionGetTypeGuid(
+                ramdisk_connection.borrow_channel(), &status, &guid),
+            ZX_OK);
+  ASSERT_EQ(status, ZX_OK);
+  ASSERT_TRUE(memcmp(guid.value, kGuid, sizeof(guid)) == 0);
 
   uint8_t buf[kBlockSize * 2];
   uint8_t out[kBlockSize * 2];
@@ -1641,8 +1651,6 @@ TEST(RamdiskTests, RamdiskCreateAt) {
 }
 
 TEST(RamdiskTests, RamdiskCreateAtGuid) {
-  constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7,
-                                                     0x8, 0x9, 0xA, 0xB, 0xC, 0xD, 0xE, 0xF};
   fbl::unique_fd devfs_fd(open("/dev", O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(devfs_fd);
 

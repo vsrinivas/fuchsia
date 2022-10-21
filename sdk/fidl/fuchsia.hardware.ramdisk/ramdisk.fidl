@@ -109,10 +109,23 @@ protocol RamdiskController {
         name string:<MAX_NAME_LENGTH, optional>;
     });
 
-    // Same as previous, but with the given block size.
+    /// Same as `CreateFromVmo`, but with the given `block_size`. If `block_size` is zero,
+    /// `PAGE_SIZE` will be used as `block_size`.
+    @deprecated("replaced by fuchsia.hardware.ramdisk/RamdiskController.CreateFromVmoWithParams")
     CreateFromVmoWithBlockSize(resource struct {
         vmo zx.handle:VMO;
         block_size uint64;
+    }) -> (struct {
+        s zx.status;
+        name string:<MAX_NAME_LENGTH, optional>;
+    });
+
+    /// Same as CreateFromVmo, but with the given `block_size` and optional `type_guid`. If
+    /// `block_size` is zero, `PAGE_SIZE` will be used as `block_size`.
+    CreateFromVmoWithParams(resource struct {
+        vmo zx.handle:VMO;
+        block_size uint64;
+        type_guid box<GUID>;
     }) -> (struct {
         s zx.status;
         name string:<MAX_NAME_LENGTH, optional>;

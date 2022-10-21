@@ -36,6 +36,8 @@ class RamdiskController : public RamdiskControllerDeviceType {
   // FIDL Interface RamdiskController.
   void Create(CreateRequestView request, CreateCompleter::Sync& completer);
   void CreateFromVmo(CreateFromVmoRequestView request, CreateFromVmoCompleter::Sync& completer);
+  void CreateFromVmoWithParams(CreateFromVmoWithParamsRequestView request,
+                               CreateFromVmoWithParamsCompleter::Sync& completer);
   void CreateFromVmoWithBlockSize(CreateFromVmoWithBlockSizeRequestView request,
                                   CreateFromVmoWithBlockSizeCompleter::Sync& completer);
 
@@ -44,7 +46,8 @@ class RamdiskController : public RamdiskControllerDeviceType {
   zx::result<std::string> ConfigureDevice(zx::vmo vmo, uint64_t block_size, uint64_t block_count,
                                           const uint8_t* type_guid);
 
-  zx::result<std::string> CreateFromVmoWithBlockSizeInternal(zx::vmo vmo, uint64_t block_size);
+  zx::status<std::string> CreateFromVmoWithParamsInternal(zx::vmo vmo, uint64_t block_size,
+                                                          const uint8_t* type_guid);
 };
 
 void RamdiskController::Create(CreateRequestView request, CreateCompleter::Sync& completer) {
@@ -64,8 +67,8 @@ void RamdiskController::Create(CreateRequestView request, CreateCompleter::Sync&
   completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
 }
 
-zx::result<std::string> RamdiskController::CreateFromVmoWithBlockSizeInternal(zx::vmo vmo,
-                                                                              uint64_t block_size) {
+zx::status<std::string> RamdiskController::CreateFromVmoWithParamsInternal(
+    zx::vmo vmo, uint64_t block_size, const uint8_t* type_guid) {
   zx_info_handle_count_t handle_count_info;
   zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &handle_count_info,
                                     sizeof(handle_count_info), nullptr, nullptr);
@@ -91,14 +94,18 @@ zx::result<std::string> RamdiskController::CreateFromVmoWithBlockSizeInternal(zx
     return zx::error(status);
   }
 
+  if (block_size == 0) {
+    block_size = zx_system_get_page_size();
+  }
+
   return ConfigureDevice(std::move(vmo), block_size, (vmo_size + block_size - 1) / block_size,
-                         nullptr);
+                         type_guid);
 }
 
 void RamdiskController::CreateFromVmo(CreateFromVmoRequestView request,
                                       CreateFromVmoCompleter::Sync& completer) {
-  auto name_or =
-      CreateFromVmoWithBlockSizeInternal(std::move(request->vmo), zx_system_get_page_size());
+  auto name_or = CreateFromVmoWithParamsInternal(std::move(request->vmo), /*block_size*/ 0,
+                                                 /*type_guid*/ nullptr);
   if (name_or.is_error()) {
     completer.Reply(name_or.status_value(), fidl::StringView());
     return;
@@ -110,7 +117,21 @@ void RamdiskController::CreateFromVmo(CreateFromVmoRequestView request,
 void RamdiskController::CreateFromVmoWithBlockSize(
     CreateFromVmoWithBlockSizeRequestView request,
     CreateFromVmoWithBlockSizeCompleter::Sync& completer) {
-  auto name_or = CreateFromVmoWithBlockSizeInternal(std::move(request->vmo), request->block_size);
+  auto name_or = CreateFromVmoWithParamsInternal(std::move(request->vmo), request->block_size,
+                                                 /*type_guid*/ nullptr);
+  if (name_or.is_error()) {
+    completer.Reply(name_or.status_value(), fidl::StringView());
+    return;
+  }
+
+  completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
+}
+
+void RamdiskController::CreateFromVmoWithParams(CreateFromVmoWithParamsRequestView request,
+                                                CreateFromVmoWithParamsCompleter::Sync& completer) {
+  auto name_or = CreateFromVmoWithParamsInternal(
+      std::move(request->vmo), request->block_size,
+      request->type_guid ? request->type_guid->value.data() : nullptr);
   if (name_or.is_error()) {
     completer.Reply(name_or.status_value(), fidl::StringView());
     return;
