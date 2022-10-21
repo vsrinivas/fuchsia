@@ -93,11 +93,25 @@ impl HyperConnector {
 
 #[cfg(test)]
 mod test {
-    use crate::*;
-    use anyhow::Result;
-    use hyper::body::HttpBody;
-    use hyper::StatusCode;
-    use std::io::Write;
+    use {
+        crate::*,
+        anyhow::{Error, Result},
+        async_net::{Ipv6Addr, SocketAddr, TcpListener},
+        futures::{
+            future::BoxFuture, stream::FuturesUnordered, FutureExt, StreamExt, TryFutureExt,
+            TryStreamExt,
+        },
+        hyper::{
+            body::HttpBody,
+            server::{accept::from_stream, Server},
+            service::{make_service_fn, service_fn},
+            Body, Response, StatusCode,
+        },
+        std::{convert::Infallible, io::Write},
+    };
+
+    trait AsyncReadWrite: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send {}
+    impl<T> AsyncReadWrite for T where T: tokio::io::AsyncRead + tokio::io::AsyncWrite + Send {}
 
     async fn fetch_url<W: Write>(url: hyper::Uri, mut buffer: W) -> Result<StatusCode> {
         let client = new_https_client();
@@ -118,19 +132,67 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_download_succeeds() -> Result<()> {
-        let output: Vec<u8> = Vec::new();
-        let status = fetch_url("https://www.google.com".parse::<hyper::Uri>()?, output).await?;
-        match status {
-            StatusCode::OK | StatusCode::FOUND => {}
-            _ => assert!(false, "Unexpected status code: {}", status),
-        }
+        let (listener, addr) = {
+            let addr = SocketAddr::new(Ipv6Addr::LOCALHOST.into(), 0);
+            let listener = TcpListener::bind(&addr).await.unwrap();
+            let local_addr = listener.local_addr().unwrap();
+            (listener, local_addr)
+        };
+
+        let listener =
+            listener.incoming().map_err(Error::from).map_ok(|conn| TcpStream { stream: conn });
+
+        let connections = listener
+            .map_ok(|conn| Pin::new(Box::new(conn)) as Pin<Box<dyn AsyncReadWrite>>)
+            .boxed();
+
+        let make_svc = make_service_fn(move |_socket| async move {
+            Ok::<_, Infallible>(service_fn(move |_req| async move {
+                Ok::<_, Infallible>(Response::new(Body::from("Hello")))
+            }))
+        });
+
+        let (stop, rx_stop) = futures::channel::oneshot::channel();
+
+        let server = async {
+            Server::builder(from_stream(connections))
+                .executor(Executor)
+                .serve(make_svc)
+                .with_graceful_shutdown(
+                    rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
+                )
+                .unwrap_or_else(|e| panic!("error serving repo over http: {}", e))
+                .await;
+            Ok(())
+        };
+
+        let client = async {
+            let output: Vec<u8> = Vec::new();
+            let status = fetch_url(
+                format!("http://localhost:{}", addr.port()).parse::<hyper::Uri>().unwrap(),
+                output,
+            )
+            .await
+            .unwrap();
+            match status {
+                StatusCode::OK | StatusCode::FOUND => {}
+                _ => assert!(false, "Unexpected status code: {}", status),
+            }
+            stop.send(()).expect("server to still be running");
+            Ok(())
+        };
+
+        let mut tasks: FuturesUnordered<BoxFuture<'_, Result<(), Error>>> = FuturesUnordered::new();
+        tasks.push(Box::pin(server));
+        tasks.push(Box::pin(client));
+        while let Some(Ok(())) = tasks.next().await {}
         Ok(())
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_download_handles_bad_domain() -> Result<()> {
         let output: Vec<u8> = Vec::new();
-        let res = fetch_url("https://not-exist.example.test".parse::<hyper::Uri>()?, output).await;
+        let res = fetch_url("https://domain.invalid".parse::<hyper::Uri>()?, output).await;
         assert!(res.is_err());
         Ok(())
     }
