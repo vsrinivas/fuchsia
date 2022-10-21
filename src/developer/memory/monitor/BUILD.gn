@@ -83,20 +83,9 @@ fuchsia_component("component") {
   deps = [ ":bin" ]
 }
 
-# Allow launching legacy v1 component to support existing use cases in tests.
-# TODO(fxbug.dev/77702): delete this.
-fuchsia_component("legacy_component") {
-  component_name = "memory_monitor"
-  manifest = "meta/memory_monitor.cmx"
-  deps = [ ":bin" ]
-}
-
 fuchsia_package("monitor") {
   package_name = "memory_monitor"
-  deps = [
-    ":component",
-    ":legacy_component",
-  ]
+  deps = [ ":component" ]
 }
 
 core_shard("memory_monitor_core_shard") {
