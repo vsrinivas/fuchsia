@@ -16,21 +16,25 @@ struct TransferParams {
   const char* label;
   zx::socket socket;
   Input input;
-  zx_signals_t signals;
+  zx_signals_t ready;
+  zx_signals_t done;
 };
 
 template <typename Transfer>
 ZxPromise<Input> AsyncSocketTransfer(TransferParams&& params, Transfer transfer) {
   FX_DCHECK(params.executor);
+  if (params.input.size() == 0) {
+    return fpromise::make_promise([input = std::move(params.input)]() mutable -> ZxResult<Input> {
+      return fpromise::ok(std::move(input));
+    });
+  }
   return fpromise::make_promise([executor = params.executor, label = params.label,
                                  socket = std::move(params.socket), input = std::move(params.input),
-                                 signals = params.signals, transfer = std::move(transfer),
-                                 offset = size_t(0), awaiting = ZxFuture<zx_signals_t>()](
-                                    Context& context) mutable -> ZxResult<Input> {
+                                 ready = params.ready, done = params.done,
+                                 transfer = std::move(transfer), offset = size_t(0),
+                                 awaiting =
+                                     ZxFuture<>()](Context& context) mutable -> ZxResult<Input> {
     while (true) {
-      if (offset == input.size()) {
-        return fpromise::ok(std::move(input));
-      }
       size_t actual = 0;
       auto status = transfer(socket, input.data() + offset, input.size() - offset, &actual);
       if (status == ZX_OK) {
@@ -44,16 +48,13 @@ ZxPromise<Input> AsyncSocketTransfer(TransferParams&& params, Transfer transfer)
         return fpromise::ok(std::move(input));
       }
       if (!awaiting) {
-        awaiting =
-            executor
-                ->MakePromiseWaitHandle(zx::unowned_handle(socket.get()),
-                                        signals | ZX_SOCKET_PEER_CLOSED)
-                .and_then([signals](const zx_packet_signal_t& packet) -> ZxResult<zx_signals_t> {
-                  if (packet.observed & ZX_SOCKET_PEER_CLOSED) {
-                    return fpromise::error(ZX_ERR_PEER_CLOSED);
-                  }
-                  return fpromise::ok(packet.observed & signals);
-                });
+        awaiting = executor->MakePromiseWaitHandle(zx::unowned_handle(socket.get()), ready | done)
+                       .and_then([ready](const zx_packet_signal_t& packet) -> ZxResult<> {
+                         if (packet.observed & ready) {
+                           return fpromise::ok();
+                         }
+                         return fpromise::error(ZX_ERR_PEER_CLOSED);
+                       });
       }
       if (!awaiting(context)) {
         return fpromise::pending();
@@ -76,7 +77,8 @@ ZxPromise<Input> AsyncSocketRead(const ExecutorPtr& executor, FidlInput&& fidl_i
       .label = "read from",
       .socket = std::move(fidl_input.socket),
       .input = Input(fidl_input.size),
-      .signals = ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
+      .ready = ZX_SOCKET_READABLE,
+      .done = ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED,
   };
   return AsyncSocketTransfer(
       std::move(params), [](const zx::socket& socket, uint8_t* buf, size_t len, size_t* actual) {
@@ -106,7 +108,8 @@ FidlInput AsyncSocketWrite(const ExecutorPtr& executor, Input&& input) {
       .label = "write to",
       .socket = std::move(socket),
       .input = std::move(input),
-      .signals = ZX_SOCKET_WRITABLE,
+      .ready = ZX_SOCKET_WRITABLE,
+      .done = ZX_SOCKET_PEER_CLOSED,
   };
   auto task = AsyncSocketTransfer(std::move(params), [](const zx::socket& socket, uint8_t* buf,
                                                         size_t len, size_t* actual) {
