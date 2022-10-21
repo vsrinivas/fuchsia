@@ -644,6 +644,8 @@ pub trait IpAddress:
     + LinkLocalAddress
     + ScopeableAddress
     + GenericOverIp<Type<Self::Version> = Self>
+    + GenericOverIp<Type<Ipv4> = Ipv4Addr>
+    + GenericOverIp<Type<Ipv6> = Ipv6Addr>
     + sealed::Sealed
     + 'static
 {
@@ -2730,6 +2732,61 @@ mod tests {
     use core::convert::TryInto;
 
     use super::*;
+
+    #[test]
+    fn test_map_ip_associated_constant() {
+        fn get_loopback_address<I: Ip>() -> SpecifiedAddr<I::Addr> {
+            I::map_ip((), |()| Ipv4::LOOPBACK_ADDRESS, |()| Ipv6::LOOPBACK_ADDRESS)
+        }
+
+        assert_eq!(get_loopback_address::<Ipv4>(), Ipv4::LOOPBACK_ADDRESS);
+        assert_eq!(get_loopback_address::<Ipv6>(), Ipv6::LOOPBACK_ADDRESS);
+    }
+
+    #[test]
+    fn test_map_ip_different_behavior() {
+        fn filter_v4<I: Ip>(addr: I::Addr) -> Option<I::Addr> {
+            I::map_ip(addr, |addr| Some(addr), |_addr| None)
+        }
+
+        assert_eq!(filter_v4::<Ipv4>(*Ipv4::LOOPBACK_ADDRESS), Some(*Ipv4::LOOPBACK_ADDRESS));
+        assert_eq!(filter_v4::<Ipv6>(*Ipv6::LOOPBACK_ADDRESS), None);
+    }
+
+    #[test]
+    fn test_map_ip_extension_trait_fn() {
+        trait FakeIpExt: Ip {
+            fn reverse_addr_bytes(a: Self::Addr) -> Self::Addr;
+        }
+
+        impl FakeIpExt for Ipv4 {
+            fn reverse_addr_bytes(a: Self::Addr) -> Self::Addr {
+                let Ipv4Addr(mut bytes) = a;
+                bytes.reverse();
+                Ipv4Addr(bytes)
+            }
+        }
+        impl FakeIpExt for Ipv6 {
+            fn reverse_addr_bytes(a: Self::Addr) -> Self::Addr {
+                let Ipv6Addr(mut bytes) = a;
+                bytes.reverse();
+                Ipv6Addr(bytes)
+            }
+        }
+
+        fn reverse_bytes<A: IpAddress>(addr: A) -> A
+        where
+            A::Version: FakeIpExt,
+        {
+            A::Version::map_ip(addr, Ipv4::reverse_addr_bytes, Ipv6::reverse_addr_bytes)
+        }
+
+        assert_eq!(reverse_bytes(Ipv4Addr([1, 2, 3, 4])), Ipv4Addr([4, 3, 2, 1]));
+        assert_eq!(
+            reverse_bytes(Ipv6Addr([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16])),
+            Ipv6Addr([16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1])
+        );
+    }
 
     #[test]
     fn test_loopback_unicast() {
