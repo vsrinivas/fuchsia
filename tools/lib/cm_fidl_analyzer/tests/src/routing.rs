@@ -16,12 +16,13 @@ use {
     cm_rust::{
         Availability, CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, ChildRef,
         ComponentDecl, DependencyType, ExposeDecl, ExposeDeclCommon, ExposeDirectoryDecl,
-        ExposeProtocolDecl, ExposeResolverDecl, ExposeServiceDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl, OfferServiceDecl,
-        OfferSource, OfferStorageDecl, OfferTarget, ProtocolDecl, RegistrationSource, ResolverDecl,
-        ResolverRegistration, RunnerDecl, RunnerRegistration, ServiceDecl, StorageDecl,
-        StorageDirectorySource, UseDecl, UseDirectoryDecl, UseEventDecl, UseEventStreamDecl,
-        UseProtocolDecl, UseServiceDecl, UseSource, UseStorageDecl,
+        ExposeEventStreamDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeServiceDecl,
+        ExposeSource, ExposeTarget, OfferDecl, OfferDirectoryDecl, OfferEventDecl,
+        OfferEventStreamDecl, OfferProtocolDecl, OfferServiceDecl, OfferSource, OfferStorageDecl,
+        OfferTarget, ProtocolDecl, RegistrationSource, ResolverDecl, ResolverRegistration,
+        RunnerDecl, RunnerRegistration, ServiceDecl, StorageDecl, StorageDirectorySource, UseDecl,
+        UseDirectoryDecl, UseEventDecl, UseEventStreamDecl, UseProtocolDecl, UseServiceDecl,
+        UseSource, UseStorageDecl,
     },
     cm_rust_testing::{
         ChildDeclBuilder, ComponentDeclBuilder, DirectoryDeclBuilder, EnvironmentDeclBuilder,
@@ -30,7 +31,6 @@ use {
     fidl::prelude::*,
     fidl_fuchsia_component_decl as fdecl, fidl_fuchsia_component_internal as component_internal,
     fidl_fuchsia_sys2 as fsys, fuchsia_zircon_status as zx_status,
-    futures::FutureExt,
     moniker::{AbsoluteMoniker, AbsoluteMonikerBase, ChildMonikerBase},
     routing::{
         component_id_index::ComponentIdIndex,
@@ -42,7 +42,7 @@ use {
         environment::RunnerRegistry,
         error::RoutingError,
         rights::{READ_RIGHTS, WRITE_RIGHTS},
-        RegistrationDecl,
+        RegistrationDecl, RouteInfo,
     },
     routing_test_helpers::{
         CheckUse, ComponentEventRoute, ExpectedResult, RoutingTestModel, RoutingTestModelBuilder,
@@ -254,10 +254,8 @@ impl RoutingTestForAnalyzer {
             })
             .unwrap_or_default();
         map.reverse();
-        let search_name = use_decl.source_name.clone();
-
         // Generate a unified route from the component topology
-        generate_unified_route(map, search_name, &mut route);
+        generate_unified_route(map, &mut route);
         assert_eq!(scope, &route);
     }
 
@@ -378,93 +376,45 @@ impl RoutingTestForAnalyzer {
 /// Converts a component framework route to a strongly-typed stringified route
 /// which can be compared against a string of paths for testing purposes.
 fn generate_unified_route(
-    map: Vec<Arc<ComponentInstanceForAnalyzer>>,
-    mut search_name: CapabilityName,
+    map: Vec<RouteInfo<ComponentInstanceForAnalyzer, OfferEventStreamDecl, ExposeEventStreamDecl>>,
     route: &mut Vec<ComponentEventRoute>,
 ) {
     for component in &map {
-        add_component_to_route(component, &mut search_name, route);
+        add_component_to_route(&component, route);
     }
 }
 
 /// Adds a specified component to the route
 fn add_component_to_route(
-    component: &Arc<ComponentInstanceForAnalyzer>,
-    search_name: &mut CapabilityName,
+    component: &RouteInfo<
+        ComponentInstanceForAnalyzer,
+        OfferEventStreamDecl,
+        ExposeEventStreamDecl,
+    >,
     route: &mut Vec<ComponentEventRoute>,
 ) {
-    let locked_state = component.lock_resolved_state().now_or_never().unwrap().unwrap();
-    let offers = locked_state.offers();
-    let exposes = locked_state.exposes();
     let mut component_route = ComponentEventRoute {
-        component: if let Some(moniker) = component.child_moniker() {
+        component: if let Some(moniker) = component.component.child_moniker() {
             moniker.name().to_string()
         } else {
             "/".to_string()
         },
         scope: None,
     };
-    scan_event_stream_offers(offers, search_name, &mut component_route);
-    scan_event_stream_exposes(exposes, search_name, &mut component_route);
+    if let Some(ref stream) = component.offer {
+        if let Some(scopes) = &stream.scope {
+            component_route.scope = Some(
+                scopes
+                    .iter()
+                    .map(|s| match s {
+                        cm_rust::EventScope::Child(child) => child.name.to_string(),
+                        cm_rust::EventScope::Collection(collection) => collection.to_string(),
+                    })
+                    .collect(),
+            );
+        }
+    }
     route.push(component_route);
-}
-
-/// Scans exposes for event streams and serializes any scopes that are found to the component_route
-fn scan_event_stream_exposes(
-    exposes: Vec<ExposeDecl>,
-    search_name: &mut CapabilityName,
-    component_route: &mut ComponentEventRoute,
-) {
-    for expose in exposes {
-        // Found match, continue up tree.
-        if let cm_rust::ExposeDecl::EventStream(stream) = expose {
-            if stream.source_name == *search_name {
-                if let Some(scopes) = stream.scope {
-                    component_route.scope = Some(
-                        scopes
-                            .iter()
-                            .map(|s| match s {
-                                cm_rust::EventScope::Child(child) => child.name.to_string(),
-                                cm_rust::EventScope::Collection(collection) => {
-                                    collection.to_string()
-                                }
-                            })
-                            .collect(),
-                    );
-                }
-                *search_name = stream.target_name;
-            }
-        }
-    }
-}
-
-/// Scans offers for event streams and serializes any scopes that are found to the component route
-fn scan_event_stream_offers(
-    offers: Vec<OfferDecl>,
-    search_name: &mut CapabilityName,
-    component_route: &mut ComponentEventRoute,
-) {
-    for offer in offers {
-        if let cm_rust::OfferDecl::EventStream(stream) = offer {
-            // Found match, continue up tree.
-            if stream.source_name == *search_name {
-                if let Some(scopes) = stream.scope {
-                    component_route.scope = Some(
-                        scopes
-                            .iter()
-                            .map(|s| match s {
-                                cm_rust::EventScope::Child(child) => child.name.to_string(),
-                                cm_rust::EventScope::Collection(collection) => {
-                                    collection.to_string()
-                                }
-                            })
-                            .collect(),
-                    );
-                }
-                *search_name = stream.target_name;
-            }
-        }
-    }
 }
 
 #[async_trait]

@@ -14,8 +14,8 @@ use {
     cm_moniker::InstancedRelativeMoniker,
     cm_rust::{
         CapabilityDecl, CapabilityPath, CapabilityTypeName, ComponentDecl, ExposeDecl,
-        ExposeDeclCommon, ProgramDecl, ResolverRegistration, UseDecl, UseEventStreamDecl,
-        UseStorageDecl,
+        ExposeDeclCommon, ExposeEventStreamDecl, OfferEventStreamDecl, ProgramDecl,
+        ResolverRegistration, UseDecl, UseEventStreamDecl, UseStorageDecl,
     },
     config_encoder::ConfigFields,
     fidl::prelude::*,
@@ -39,7 +39,7 @@ use {
         error::{AvailabilityRoutingError, ComponentInstanceError, RoutingError},
         policy::GlobalPolicyChecker,
         route_capability, route_event_stream_capability, route_storage_and_backing_directory,
-        DebugRouteMapper, RouteRequest, RouteSource,
+        DebugRouteMapper, RouteInfo, RouteRequest, RouteSource,
     },
     serde::{Deserialize, Serialize},
     std::{
@@ -1062,7 +1062,7 @@ impl ComponentModelForAnalyzer {
     pub fn route_event_stream_sync(
         request: UseEventStreamDecl,
         target: &Arc<ComponentInstanceForAnalyzer>,
-        map: &mut Vec<Arc<ComponentInstanceForAnalyzer>>,
+        map: &mut Vec<RouteInfo<ComponentInstanceForAnalyzer, OfferEventStreamDecl, ExposeEventStreamDecl>>,
     ) -> Result<
         (
             RouteSource<ComponentInstanceForAnalyzer>,

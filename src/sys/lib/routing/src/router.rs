@@ -14,7 +14,7 @@ use {
             TopInstanceInterface,
         },
         error::RoutingError,
-        DebugRouteMapper, RegistrationDecl,
+        DebugRouteMapper, RegistrationDecl, RouteInfo,
     },
     cm_rust::{
         name_mappings_to_map, Availability, CapabilityDecl, CapabilityDeclCommon, CapabilityName,
@@ -169,7 +169,7 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, ()>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -216,7 +216,7 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, ()>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -305,7 +305,7 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, E>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -428,7 +428,7 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, E>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -533,7 +533,7 @@ where
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, E>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -702,7 +702,7 @@ where
         V: Clone + Send + Sync + 'static,
         M: DebugRouteMapper + 'static,
     {
-        let mut route = vec![];
+        let mut route: Vec<RouteInfo<C, (), E>> = vec![];
         self.route_from_expose_extended(
             expose_decl,
             expose_target,
@@ -720,14 +720,14 @@ where
     /// See [`AllowedSourcesBuilder`].
     /// `visitor` is invoked for each `Expose` declaration in the routing path, as well
     /// as the final `Capability` declaration if `sources` permits.
-    pub async fn route_from_expose_extended<C, S, V, M>(
+    pub async fn route_from_expose_extended<C, S, V, M, Offer>(
         self,
         expose_decl: E,
         expose_target: Arc<C>,
         sources: S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, Offer, E>>,
     ) -> Result<CapabilitySourceInterface<C>, RoutingError>
     where
         C: ComponentInstanceInterface + 'static,
@@ -1351,13 +1351,13 @@ where
 {
     /// Routes the capability starting from the `offer` declaration at `target` to either a valid
     /// source (as defined by `sources`) or the declaration that ends this phase of routing.
-    async fn route<C, S, V, M>(
+    async fn route<C, S, V, M, E>(
         mut offer: O,
         mut target: Arc<C>,
         sources: &S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, E>>,
     ) -> Result<OfferResult<C, O>, RoutingError>
     where
         C: ComponentInstanceInterface,
@@ -1369,7 +1369,11 @@ where
         loop {
             mapper.add_offer(target.abs_moniker().clone(), offer.clone().into());
             OfferVisitor::visit(visitor, &offer)?;
-            route.push(target.clone());
+            route.push(RouteInfo {
+                component: target.clone(),
+                offer: Some(offer.clone()),
+                expose: None,
+            });
             match offer.source() {
                 OfferSource::Void => {
                     panic!("an error should have been emitted by the availability walker before we reach this point");
@@ -1574,13 +1578,13 @@ where
 {
     /// Routes the capability starting from the `expose` declaration at `target` to a valid source
     /// (as defined by `sources`).
-    async fn route<C, S, V, M>(
+    async fn route<C, S, V, M, O>(
         mut expose: E,
         mut target: Arc<C>,
         sources: &S,
         visitor: &mut V,
         mapper: &mut M,
-        route: &mut Vec<Arc<C>>,
+        route: &mut Vec<RouteInfo<C, O, E>>,
     ) -> Result<ExposeResult<C, E>, RoutingError>
     where
         C: ComponentInstanceInterface,
@@ -1592,7 +1596,11 @@ where
         loop {
             mapper.add_expose(target.abs_moniker().clone(), expose.clone().into());
             ExposeVisitor::visit(visitor, &expose)?;
-            route.push(target.clone());
+            route.push(RouteInfo {
+                component: target.clone(),
+                expose: Some(expose.clone()),
+                offer: None,
+            });
             match expose.source() {
                 ExposeSource::Self_ => {
                     let target_capabilities = target.lock_resolved_state().await?.capabilities();

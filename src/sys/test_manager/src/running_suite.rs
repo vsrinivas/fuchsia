@@ -800,10 +800,26 @@ async fn get_realm(
     wrapper_realm
         .add_route(
             Route::new()
-                .capability(Capability::event_stream("stopped_v2"))
-                .capability(Capability::event_stream("destroyed_v2"))
-                .capability(Capability::event_stream("capability_requested_v2"))
-                .capability(Capability::event_stream("directory_ready_v2"))
+                .capability(
+                    Capability::event_stream("stopped_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("destroyed_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("capability_requested_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
+                .capability(
+                    Capability::event_stream("directory_ready_v2")
+                        .with_scope(&test_root)
+                        .with_scope(&enclosing_env),
+                )
                 .from(Ref::parent())
                 .to(&archivist),
         )

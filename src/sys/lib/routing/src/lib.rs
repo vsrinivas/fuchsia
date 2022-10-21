@@ -231,6 +231,19 @@ where
     Ok((source, mapper.get_route()))
 }
 
+/// Route information regarding an offer/expose or collection hop
+/// in the component topology.
+pub struct RouteInfo<C, O, E> {
+    /// The component this route info refers to.
+    pub component: Arc<C>,
+
+    /// The offer decl in the route.
+    pub offer: Option<O>,
+
+    /// The expose decl in the route.
+    pub expose: Option<E>,
+}
+
 /// Routes a capability to its source.
 ///
 /// If the capability is not allowed to be routed to the `target`, per the
@@ -238,7 +251,7 @@ where
 pub async fn route_event_stream_capability<C>(
     request: UseEventStreamDecl,
     target: &Arc<C>,
-    route: &mut Vec<Arc<C>>,
+    route: &mut Vec<RouteInfo<C, OfferEventStreamDecl, ExposeEventStreamDecl>>,
 ) -> Result<(RouteSource<C>, <C::DebugRouteMapper as DebugRouteMapper>::RouteMap), RoutingError>
 where
     C: ComponentInstanceInterface + 'static,
@@ -951,7 +964,7 @@ async fn route_event_stream_with_route<C>(
     use_decl: UseEventStreamDecl,
     target: &Arc<C>,
     mapper: &mut C::DebugRouteMapper,
-    route: &mut Vec<Arc<C>>,
+    route: &mut Vec<RouteInfo<C, OfferEventStreamDecl, ExposeEventStreamDecl>>,
 ) -> Result<RouteSource<C>, RoutingError>
 where
     C: ComponentInstanceInterface + 'static,

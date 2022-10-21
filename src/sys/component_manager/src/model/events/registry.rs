@@ -20,10 +20,8 @@ use {
         },
     },
     ::routing::{
-        capability_source::InternalCapability,
-        component_instance::{ComponentInstanceInterface, ResolvedInstanceInterface},
-        event::EventFilter,
-        route_capability, route_event_stream_capability,
+        capability_source::InternalCapability, component_instance::ComponentInstanceInterface,
+        event::EventFilter, route_capability, route_event_stream_capability,
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, EventMode, UseDecl, UseEventDecl, UseEventStreamDecl},
@@ -485,8 +483,9 @@ impl EventRegistry {
         let mut route = vec![];
         let (route_source, _route) =
             route_event_stream_capability(event_decl.clone(), component, &mut components).await?;
-        let mut search_name: CapabilityName = event_decl.source_name;
         // Handle scope in "use" clause
+
+        let mut search_name: CapabilityName = event_decl.source_name;
         if let Some(moniker) = component.child_moniker() {
             route.push(ComponentEventRoute {
                 component: moniker.to_string(),
@@ -506,54 +505,30 @@ impl EventRegistry {
             });
         }
         for component in components {
-            let locked_state = component.lock_resolved_state().await?;
-            let offers = locked_state.offers();
-            let exposes = locked_state.exposes();
             let mut component_route = ComponentEventRoute {
-                component: if let Some(moniker) = component.child_moniker() {
+                component: if let Some(moniker) = component.component.child_moniker() {
                     moniker.name().to_string()
                 } else {
                     "<root>".to_string()
                 },
                 scope: None,
             };
-
-            for offer in offers {
-                match offer {
-                    cm_rust::OfferDecl::EventStream(stream) => {
-                        // Found match, continue up tree.
-                        if stream.target_name == search_name {
-                            search_name = stream.source_name;
-                            if let Some(scopes) = stream.scope {
-                                component_route.scope = Some(
-                                    scopes
-                                        .iter()
-                                        .map(|s| match s {
-                                            cm_rust::EventScope::Child(child) => {
-                                                child.name.to_string()
-                                            }
-                                            cm_rust::EventScope::Collection(collection) => {
-                                                collection.to_string()
-                                            }
-                                        })
-                                        .collect(),
-                                );
-                            }
-                        }
+            if let Some(stream) = component.offer {
+                if stream.target_name == search_name {
+                    search_name = stream.source_name;
+                    if let Some(scopes) = stream.scope {
+                        component_route.scope = Some(
+                            scopes
+                                .iter()
+                                .map(|s| match s {
+                                    cm_rust::EventScope::Child(child) => child.name.to_string(),
+                                    cm_rust::EventScope::Collection(collection) => {
+                                        collection.to_string()
+                                    }
+                                })
+                                .collect(),
+                        );
                     }
-                    _ => {}
-                }
-            }
-
-            for expose in exposes {
-                // Found match, continue up tree.
-                match expose {
-                    cm_rust::ExposeDecl::EventStream(stream) => {
-                        if stream.target_name == search_name {
-                            search_name = stream.source_name;
-                        }
-                    }
-                    _ => {}
                 }
             }
             route.push(component_route);
