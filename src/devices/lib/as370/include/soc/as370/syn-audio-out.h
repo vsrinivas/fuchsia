@@ -14,6 +14,9 @@
 #include <memory>
 #include <utility>
 
+// Output device set fixed at:
+// Input: 2 x 32 bits samples from DMA.
+// Output: I2S 48kHz, 32 bits slots/samples.
 class SynAudioOutDevice {
  public:
   // Move operators are implicitly disabled.
@@ -42,17 +45,16 @@ class SynAudioOutDevice {
  private:
   static constexpr uint32_t kFifoDepth = 1024;  // in bytes.
 
+  SynAudioOutDevice(ddk::MmioBuffer mmio_avio_global, ddk::MmioBuffer mmio_i2s,
+                    ddk::SharedDmaProtocolClient dma);
+  zx_status_t Init();
+
   ddk::MmioBuffer avio_global_;
   ddk::MmioBuffer i2s_;
   bool enabled_ = false;
   zx::vmo ring_buffer_;
   ddk::SharedDmaProtocolClient dma_;
   zx::vmo dma_buffer_;
-
-  SynAudioOutDevice(ddk::MmioBuffer mmio_avio_global, ddk::MmioBuffer mmio_i2s,
-                    ddk::SharedDmaProtocolClient dma);
-
-  zx_status_t Init();
 };
 
 #endif  // SRC_DEVICES_LIB_AS370_INCLUDE_SOC_AS370_SYN_AUDIO_OUT_H_

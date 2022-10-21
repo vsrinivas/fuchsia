@@ -12,6 +12,17 @@
 // AIO I2S Registers.
 
 struct AIO_PRI_PRIAUD_CLKDIV : public hwreg::RegisterBase<AIO_PRI_PRIAUD_CLKDIV, uint32_t> {
+  static constexpr uint32_t kDivideBy1 = 0;
+  static constexpr uint32_t kDivideBy2 = 1;
+  static constexpr uint32_t kDivideBy4 = 2;
+  static constexpr uint32_t kDivideBy8 = 3;
+  static constexpr uint32_t kDivideBy16 = 4;
+  static constexpr uint32_t kDivideBy32 = 5;
+  static constexpr uint32_t kDivideBy64 = 6;
+  static constexpr uint32_t kDivideBy128 = 7;
+  static constexpr uint32_t kDivideBy256 = 8;
+  static constexpr uint32_t kDivideBy512 = 9;
+  static constexpr uint32_t kDivideBy1024 = 10;
   DEF_FIELD(3, 0, SETTING);
   static auto Get() { return hwreg::RegisterAddr<AIO_PRI_PRIAUD_CLKDIV>(0x0000); }
 };
@@ -21,12 +32,28 @@ struct AIO_PRI_PRIAUD_CTRL : public hwreg::RegisterBase<AIO_PRI_PRIAUD_CTRL, uin
   DEF_FIELD(23, 16, TDMWSHIGH);
   DEF_FIELD(15, 13, TDMCHCNT);
   DEF_BIT(12, TDMMODE);
+  static constexpr uint32_t kJustified = 1;
+  static constexpr uint32_t kI2s = 2;
   DEF_FIELD(11, 10, TFM);
+  static constexpr uint32_t kFsyncHalfPeriodEqualsTo16BitClocks = 0;
+  static constexpr uint32_t kFsyncHalfPeriodEqualsTo24BitClocks = 1;
+  static constexpr uint32_t kFsyncHalfPeriodEqualsTo32BitClocks = 2;
+  static constexpr uint32_t kFsyncHalfPeriodEqualsTo8BitClocks = 3;
+  static constexpr uint32_t kManualFsyncHalfPeriod = 7;
   DEF_FIELD(9, 7, TCF);
+  static constexpr uint32_t k16BitsPerChannel = 0;
+  static constexpr uint32_t k18BitsPerChannel = 1;
+  static constexpr uint32_t k20BitsPerChannel = 2;
+  static constexpr uint32_t k24BitsPerChannel = 3;
+  static constexpr uint32_t k32BitsPerChannel = 4;
+  static constexpr uint32_t k8BitsPerChannel = 5;
+  static constexpr uint32_t kManualBitsPerChannel = 7;
   DEF_FIELD(6, 4, TDM);
   DEF_BIT(3, TLSB);
   DEF_BIT(2, INVFS);
   DEF_BIT(1, INVCLK);
+  static constexpr uint32_t kLeftJustify = 0;
+  static constexpr uint32_t kRightJustify = 1;
   DEF_BIT(0, LEFTJFY);
   static auto Get() { return hwreg::RegisterAddr<AIO_PRI_PRIAUD_CTRL>(0x0004); }
 };
@@ -105,6 +132,11 @@ struct AIO_IRQSTS : public hwreg::RegisterBase<AIO_IRQSTS, uint32_t> {
 
 struct AIO_MCLKPRI_ACLK_CTRL : public hwreg::RegisterBase<AIO_MCLKPRI_ACLK_CTRL, uint32_t> {
   DEF_BIT(8, sw_sync_rst);
+  // Dividers not in datasheet, guessed from TDM probing.
+  static constexpr uint32_t kDivideBy4 = 2;
+  static constexpr uint32_t kDivideBy6 = 3;
+  static constexpr uint32_t kDivideBy8 = 4;
+  static constexpr uint32_t kDivideBy12 = 5;
   DEF_FIELD(7, 5, clkSel);
   DEF_BIT(4, clkD3Switch);
   DEF_BIT(3, clkSwitch);

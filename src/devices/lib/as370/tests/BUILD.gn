@@ -43,6 +43,27 @@ test("syn-audio-in-test-bin") {
   ]
 }
 
+test("syn-audio-out-test-bin") {
+  output_name = "syn-audio-out-test"
+  sources = [ "syn-audio-out-test.cc" ]
+  deps = [
+    "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.shareddma:fuchsia.hardware.shareddma_banjo_cpp_mock",
+    "//src/devices/lib/as370",
+    "//src/devices/lib/mmio",
+    "//src/devices/testing/mock-mmio-reg",
+    "//src/devices/testing/no_ddk",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+    "//zircon/system/ulib/fbl",
+    "//zircon/system/ulib/fzl",
+    "//zircon/system/ulib/hwreg",
+    "//zircon/system/ulib/mock-function",
+    "//zircon/system/ulib/zx",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
 test("audio-dsp-test-bin") {
   if (is_fuchsia) {
     fdio_config = [ "//build/config/fuchsia:fdio_config" ]
@@ -72,6 +93,10 @@ fuchsia_unittest_component("audio-dsp-test") {
   deps = [ ":audio-dsp-test-bin" ]
 }
 
+fuchsia_unittest_component("syn-audio-out-test") {
+  deps = [ ":syn-audio-out-test-bin" ]
+}
+
 fuchsia_unittest_component("syn-audio-in-test") {
   deps = [ ":syn-audio-in-test-bin" ]
 }
@@ -80,5 +105,6 @@ fuchsia_test_package("as370-audio-lib-tests") {
   test_components = [
     ":audio-dsp-test",
     ":syn-audio-in-test",
+    ":syn-audio-out-test",
   ]
 }
