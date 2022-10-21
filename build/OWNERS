@@ -5,6 +5,7 @@ fangism@google.com
 rudymathu@google.com
 
 per-file security.gni = file://src/security/OWNERS
+per-file fuzz.gni = file://src/sys/fuzzing/OWNERS
 
 # Ensure that owners of out-of-tree config-data have control over the allowlist
 # that governs its usage.
