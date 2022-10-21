@@ -161,9 +161,15 @@ void Dwc2::HandleInEpInterrupt() {
       // Timeout on receiving appropriate 2.0 token from host.
       if (diepint.timeout() && ep_num == DWC_EP0_IN) {
         switch (ep0_state_) {
-          case Ep0State::DATA_IN:
+          case Ep0State::DATA_IN: {
+
             // TODO(105382) remove logging once timeout recovery has stabilized.
-            zxlogf(ERROR, "Got diepint.timeout for DATA_IN phase, attempting to recover...");
+            //   - what does the core think it's doing at wrt NAK status?
+            //   - Is the core globally NAK-ing all non-periodic IN endpoints at the moment?
+            auto dctl = DCTL::Get().ReadFrom(mmio);
+            auto depctl0 = DEPCTL0::Get(0).ReadFrom(mmio);
+            zxlogf(ERROR, "Got diepint.timeout for DATA_IN phase, attempting to recover. "
+                   "DCTL=0x%08x DEPCTL0=0x%08x", dctl.reg_value(), depctl0.reg_value());
 
             // The timeout is due to one of two cases:
             //   1. The core never received an ACK to sent IN-data.
@@ -181,6 +187,7 @@ void Dwc2::HandleInEpInterrupt() {
             timeout_recovering_ = true;
             DIEPINT::Get(ep_num).ReadFrom(mmio).set_timeout(1).WriteTo(mmio);
             break;
+          }
           case Ep0State::DISCONNECTED:
           case Ep0State::IDLE:
           case Ep0State::DATA_OUT:
@@ -1015,6 +1022,11 @@ int Dwc2::IrqThread() {
       break;
     } else if (wait_res != ZX_OK) {
       zxlogf(ERROR, "dwc_usb: irq wait failed, retcode = %d", wait_res);
+    }
+
+    if (timeout_recovering_) {
+      // TODO(105382) remove logging once timeout recovery has stabilized.
+      zxlogf(ERROR, "(diepint.timeout) Got interrupt with timeout_recovering_ = true");
     }
 
     // It doesn't seem that this inner loop should be necessary,
