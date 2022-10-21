@@ -303,13 +303,14 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
           fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfoDeprecated::Tag::kDirectory: {
-      return zxio_dir_init(storage, std::move(node));
+      return zxio_dir_init(storage, fidl::ClientEnd<fio::Directory>(node.TakeChannel()));
     }
     case fio::wire::NodeInfoDeprecated::Tag::kFile: {
       fio::wire::FileObject& file = info.file();
       zx::event event = std::move(file.event);
       zx::stream stream = std::move(file.stream);
-      return zxio_file_init(storage, std::move(event), std::move(stream), std::move(node));
+      return zxio_file_init(storage, std::move(event), std::move(stream),
+                            fidl::ClientEnd<fio::File>(node.TakeChannel()));
     }
     case fio::wire::NodeInfoDeprecated::Tag::kPacketSocket: {
       return zxio_packet_socket_init(
@@ -322,7 +323,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
           fidl::ClientEnd<fuchsia_posix_socket_raw::Socket>(node.TakeChannel()));
     }
     case fio::wire::NodeInfoDeprecated::Tag::kService: {
-      return zxio_remote_init(storage, zx::event{}, std::move(node), /*is_tty=*/false);
+      return zxio_node_init(storage, std::move(node));
     }
     case fio::wire::NodeInfoDeprecated::Tag::kStreamSocket: {
       zx::socket& socket = info.stream_socket().socket;
@@ -359,7 +360,8 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fio::Node> node,
     case fio::wire::NodeInfoDeprecated::Tag::kTty: {
       fio::wire::Tty& tty = info.tty();
       zx::eventpair event = std::move(tty.event);
-      return zxio_remote_init(storage, std::move(event), std::move(node), /*is_tty=*/true);
+      return zxio_pty_init(storage, std::move(event),
+                           fidl::ClientEnd<fuchsia_hardware_pty::Device>(node.TakeChannel()));
     }
   }
 }
@@ -397,15 +399,14 @@ zx_status_t zxio_create_with_type(zxio_storage_t* storage, zxio_object_type_t ty
       if (storage == nullptr || !control.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return zxio_dir_init(storage, fidl::ClientEnd<fio::Node>{std::move(control)});
+      return zxio_dir_init(storage, fidl::ClientEnd<fio::Directory>{std::move(control)});
     }
     case ZXIO_OBJECT_TYPE_NODE: {
       zx::channel control(va_arg(args, zx_handle_t));
       if (storage == nullptr || !control.is_valid()) {
         return ZX_ERR_INVALID_ARGS;
       }
-      return zxio_remote_init(storage, zx::event{}, fidl::ClientEnd<fio::Node>{std::move(control)},
-                              /*is_tty=*/false);
+      return zxio_node_init(storage, fidl::ClientEnd<fio::Node>{std::move(control)});
     }
     case ZXIO_OBJECT_TYPE_STREAM_SOCKET: {
       zx::socket socket(va_arg(args, zx_handle_t));

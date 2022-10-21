@@ -21,7 +21,7 @@ namespace {
 
 namespace fio = fuchsia_io;
 
-class TestServerBase : public fidl::testing::WireTestBase<fio::File> {
+class TestServerBase : public fidl::testing::WireTestBase<fio::Node> {
  public:
   TestServerBase() = default;
   ~TestServerBase() override = default;
@@ -40,12 +40,10 @@ class TestServerBase : public fidl::testing::WireTestBase<fio::File> {
   }
 
   void Query(QueryCompleter::Sync& completer) final {
-    const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;
+    const std::string_view kProtocol = fuchsia_io::wire::kNodeProtocolName;
     uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
-
-  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -58,10 +56,7 @@ class Remote : public zxtest::Test {
   void SetUp() final {
     zx::result control_client_end = fidl::CreateEndpoints(&control_server_);
     ASSERT_OK(control_client_end.status_value());
-    ASSERT_OK(zx::eventpair::create(0, &eventpair_to_client_, &eventpair_on_server_));
-    ASSERT_OK(zxio_remote_init(&remote_, std::move(eventpair_to_client_),
-                               fidl::ClientEnd<fio::Node>{control_client_end.value().TakeChannel()},
-                               /*is_tty=*/false));
+    ASSERT_OK(zxio_node_init(&remote_, std::move(control_client_end.value())));
   }
 
   template <typename ServerImpl>
@@ -90,10 +85,8 @@ class Remote : public zxtest::Test {
 
  protected:
   zxio_storage_t remote_;
-  fidl::ServerEnd<fio::File> control_server_;
+  fidl::ServerEnd<fio::Node> control_server_;
 
-  zx::eventpair eventpair_on_server_;
-  zx::eventpair eventpair_to_client_;
   std::unique_ptr<TestServerBase> server_;
   std::unique_ptr<async::Loop> loop_;
 };
@@ -154,15 +147,14 @@ class CloneTest : public zxtest::Test {
 
   void TearDown() final { server_loop_.Shutdown(); }
 
-  fidl::ClientEnd<fio::File> TakeClientEnd() { return std::move(client_end_); }
+  fidl::ClientEnd<fio::Node> TakeClientEnd() { return std::move(client_end_); }
 
  private:
   void Clone(TestCloneServer::CloneRequestView request,
              TestCloneServer::CloneCompleter::Sync& completer) {
     auto server = std::make_unique<TestServerBase>();
     auto binding_ref =
-        fidl::BindServer(server_loop_.dispatcher(),
-                         fidl::ServerEnd<fio::File>{request->object.TakeChannel()}, server.get());
+        fidl::BindServer(server_loop_.dispatcher(), std::move(request->object), server.get());
     cloned_servers_.push_back(std::move(server));
 
     if (request->flags & fio::wire::OpenFlags::kDescribe) {
@@ -177,7 +169,7 @@ class CloneTest : public zxtest::Test {
   }
 
   TestCloneServer node_server_;
-  fidl::ClientEnd<fio::File> client_end_;
+  fidl::ClientEnd<fio::Node> client_end_;
   async::Loop server_loop_;
   std::vector<std::unique_ptr<TestServerBase>> cloned_servers_;
 };

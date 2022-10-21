@@ -89,7 +89,7 @@ class File : public zxtest::Test {
     fio::wire::FileInfo& file = result.value();
     return zxio_file_init(&file_, file.has_observer() ? std::move(file.observer()) : zx::event{},
                           file.has_stream() ? std::move(file.stream()) : zx::stream{},
-                          fidl::ClientEnd<fio::Node>{client_end.value().TakeChannel()});
+                          std::move(client_end.value()));
   }
 
   void TearDown() override {
@@ -316,25 +316,6 @@ class TestServerStream final : public CloseCountingFileServer {
 TEST_F(File, ReadWriteStream) {
   ASSERT_NO_FAILURES(StartServer<TestServerStream>());
   ASSERT_OK(OpenFile());
-  ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
-}
-
-class Remote : public File {
- public:
-  zx_status_t OpenRemote() {
-    zx::result client_end = OpenConnection();
-    if (client_end.is_error()) {
-      return client_end.status_value();
-    }
-    return zxio_remote_init(&file_, zx::event{},
-                            fidl::ClientEnd<fio::Node>(client_end.value().TakeChannel()),
-                            /*is_tty=*/false);
-  }
-};
-
-TEST_F(Remote, ReadWriteChannel) {
-  ASSERT_NO_FAILURES(StartServer<TestServerChannel>());
-  ASSERT_OK(OpenRemote());
   ASSERT_NO_FAILURES(FileTestSuite::ReadWrite(&file_.io));
 }
 

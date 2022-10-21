@@ -376,11 +376,11 @@ TEST_P(AccessTest, TestAccessOpath) {
 
   char buf[128];
   ASSERT_LT(read(fd.get(), buf, sizeof(buf)), 0);
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_EQ(errno, EOPNOTSUPP);
   ASSERT_LT(write(fd.get(), data, datalen), 0);
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_EQ(errno, EOPNOTSUPP);
   ASSERT_LT(lseek(fd.get(), 1, SEEK_SET), 0);
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_EQ(errno, ESPIPE);
 
   // We can fstat the file, however
   struct stat st;
@@ -408,7 +408,7 @@ TEST_P(AccessTest, TestAccessOpath) {
   ASSERT_EQ(flags & ~O_ACCMODE, O_APPEND);
   // We still can't write though
   ASSERT_LT(write(fd.get(), data, datalen), 0);
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_EQ(errno, EOPNOTSUPP);
 
   // We cannot update attributes of the file
   struct timespec ts[2];
@@ -428,14 +428,14 @@ TEST_P(AccessTest, TestAccessOpath) {
 
   // The *at functions are not allowed on Fuchsia, for an O_PATH-opened directory.
   ASSERT_LT(renameat(fd.get(), "bar", fd.get(), "baz"), 0);
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_EQ(errno, EOPNOTSUPP);
 
   // Readdir is not allowed
   DIR* dir = fdopendir(fd.get());
   ASSERT_NE(dir, nullptr);
   struct dirent* de = readdir(dir);
   ASSERT_EQ(de, nullptr);
-  ASSERT_EQ(errno, EBADF);
+  ASSERT_EQ(errno, EOPNOTSUPP);
   ASSERT_EQ(closedir(dir), 0);
 
   ASSERT_EQ(unlink(filename.c_str()), 0);

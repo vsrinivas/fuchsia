@@ -5,6 +5,7 @@
 #ifndef LIB_ZXIO_PRIVATE_H_
 #define LIB_ZXIO_PRIVATE_H_
 
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.packet/cpp/wire.h>
 #include <fidl/fuchsia.posix.socket.raw/cpp/wire.h>
@@ -79,16 +80,9 @@ class HasIo {
     // signature compatible to the C-style definition, treating |io| as a pointer
     // to the |HasIo|, invoking the corresponding member function automatically.
     template <auto fn, typename... Args>
-    static zx_status_t From(Args... args) {
-      auto memfn = std::mem_fn(fn);
-      return FromImpl(memfn, args...);
-    }
-
-   private:
-    template <typename MemFn, typename... Args>
-    static zx_status_t FromImpl(MemFn memfn, zxio_t* io, Args... args) {
-      T* instance = reinterpret_cast<T*>(io);
-      return memfn(instance, args...);
+    static auto From(zxio_t* io, Args... args) {
+      T& instance = *reinterpret_cast<T*>(io);
+      return (instance.*fn)(args...);
     }
   };
 
@@ -107,10 +101,15 @@ uint32_t zxio_node_protocols_to_posix_type(zxio_node_protocols_t protocols);
 
 bool zxio_is_valid(const zxio_t* io);
 
-zx_status_t zxio_dir_init(zxio_storage_t* storage, fidl::ClientEnd<fuchsia_io::Node> client);
+zx_status_t zxio_dir_init(zxio_storage_t* storage, fidl::ClientEnd<fuchsia_io::Directory> client);
 
 zx_status_t zxio_file_init(zxio_storage_t* storage, zx::event event, zx::stream stream,
-                           fidl::ClientEnd<fuchsia_io::Node> client);
+                           fidl::ClientEnd<fuchsia_io::File> client);
+
+zx_status_t zxio_node_init(zxio_storage_t* storage, fidl::ClientEnd<fuchsia_io::Node> client);
+
+zx_status_t zxio_pty_init(zxio_storage_t* storage, zx::eventpair event,
+                          fidl::ClientEnd<fuchsia_hardware_pty::Device> client);
 
 zx_status_t zxio_pipe_init(zxio_storage_t* pipe, zx::socket socket, zx_info_socket_t info);
 
@@ -233,13 +232,6 @@ static_assert(sizeof(zxio_packet_socket_t) <= sizeof(zxio_storage_t),
 
 zx_status_t zxio_packet_socket_init(zxio_storage_t* storage, zx::eventpair event,
                                     fidl::ClientEnd<fuchsia_posix_socket_packet::Socket> client);
-
-// remote ----------------------------------------------------------------------
-
-zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::event event,
-                             fidl::ClientEnd<fuchsia_io::Node> client, bool is_tty);
-zx_status_t zxio_remote_init(zxio_storage_t* storage, zx::eventpair event,
-                             fidl::ClientEnd<fuchsia_io::Node> client, bool is_tty);
 
 // vmo -------------------------------------------------------------------------
 

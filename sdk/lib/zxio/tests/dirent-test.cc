@@ -91,14 +91,15 @@ class TestServer final : public zxio_tests::TestDirectoryServerBase {
 class DirentTest : public zxtest::Test {
  public:
   void SetUp() final {
-    zx::result control_ends = fidl::CreateEndpoints<fio::Directory>();
-    ASSERT_OK(control_ends.status_value());
-    ASSERT_OK(zxio_dir_init(&dir_, fidl::ClientEnd<fio::Node>{control_ends->client.TakeChannel()}));
+    zx::result endpoints = fidl::CreateEndpoints<fio::Directory>();
+    ASSERT_OK(endpoints.status_value());
+    auto& [client_end, server_end] = endpoints.value();
+    ASSERT_OK(zxio_dir_init(&dir_, std::move(client_end)));
     server_ = std::make_unique<TestServer>();
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     ASSERT_OK(loop_->StartThread("fake-filesystem"));
-    ASSERT_OK(fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(control_ends->server),
-                                           server_.get()));
+    ASSERT_OK(
+        fidl::BindSingleInFlightOnly(loop_->dispatcher(), std::move(server_end), server_.get()));
   }
 
   void TearDown() final {
