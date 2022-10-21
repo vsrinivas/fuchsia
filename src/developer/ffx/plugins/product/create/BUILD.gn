@@ -16,8 +16,16 @@ ffx_plugin("ffx_product_create") {
     "//build/sdk/meta:rust",
     "//src/lib/assembly/assembly_manifest",
     "//src/lib/assembly/partitions_config",
+    "//src/sys/pkg/lib/fuchsia-pkg",
+    "//src/sys/pkg/lib/fuchsia-repo",
+    "//third_party/rust_crates:camino",
     "//third_party/rust_crates:serde_json",
   ]
 
-  test_deps = [ "//third_party/rust_crates:tempfile" ]
+  test_deps = [
+    "//src/developer/ffx/lib/pkg:empty-repo-keys",
+    "//src/developer/ffx/lib/pkg:empty-repo-metadata",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:tempfile",
+  ]
 }

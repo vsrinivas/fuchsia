@@ -6,29 +6,51 @@
 //! images and packages, and can be used to emulate, flash, or update a product.
 
 use anyhow::{Context, Result};
-use assembly_manifest::{AssemblyManifest, BlobfsContents, Image};
+use assembly_manifest::{AssemblyManifest, BlobfsContents, Image, PackagesMetadata};
 use assembly_partitions_config::PartitionsConfig;
+use camino::Utf8Path;
 use ffx_core::ffx_plugin;
 use ffx_product_create_args::CreateCommand;
+use fuchsia_pkg::PackageManifest;
+use fuchsia_repo::{
+    repo_builder::RepoBuilder, repo_keys::RepoKeys, repository::FileSystemRepository,
+};
 use sdk_metadata::{ProductBundle, ProductBundleV2};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
 /// Create a product bundle.
 #[ffx_plugin("product.experimental")]
-fn pb_create(cmd: CreateCommand) -> Result<()> {
+pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
     // Make sure `out_dir` is created and empty.
     if cmd.out_dir.exists() {
         std::fs::remove_dir_all(&cmd.out_dir).context("Deleting the out_dir")?;
     }
     std::fs::create_dir_all(&cmd.out_dir).context("Creating the out_dir")?;
 
-    let product_bundle = ProductBundleV2 {
-        partitions: load_partitions_config(&cmd.partitions, &cmd.out_dir.join("partitions"))?,
-        system_a: load_assembly_manifest(&cmd.system_a, &cmd.out_dir.join("system_a"))?,
-        system_b: load_assembly_manifest(&cmd.system_b, &cmd.out_dir.join("system_b"))?,
-        system_r: load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?,
-    };
+    let partitions = load_partitions_config(&cmd.partitions, &cmd.out_dir.join("partitions"))?;
+    let (system_a, packages_a) =
+        load_assembly_manifest(&cmd.system_a, &cmd.out_dir.join("system_a"))?;
+    let (system_b, packages_b) =
+        load_assembly_manifest(&cmd.system_b, &cmd.out_dir.join("system_b"))?;
+    let (system_r, packages_r) =
+        load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?;
+    let product_bundle = ProductBundleV2 { partitions, system_a, system_b, system_r };
+
+    if let Some(tuf_keys) = cmd.tuf_keys {
+        let repo_path = Utf8Path::from_path(&cmd.out_dir).context("Creating repository path")?;
+        let metadata_path = repo_path.join("repository");
+        let blobs_path = repo_path.join("blobs");
+        let repo = FileSystemRepository::new(metadata_path.to_path_buf(), blobs_path.to_path_buf());
+        let repo_keys = RepoKeys::from_dir(&tuf_keys).context("Gathering repo keys")?;
+        RepoBuilder::create(&repo, &repo_keys)
+            .add_packages(packages_a.into_iter())
+            .add_packages(packages_b.into_iter())
+            .add_packages(packages_r.into_iter())
+            .commit()
+            .await
+            .context("Building the repo")?;
+    }
 
     let product_bundle = ProductBundle::V2(product_bundle);
     product_bundle.write(&cmd.out_dir).context("writing product bundle")?;
@@ -65,7 +87,7 @@ fn load_partitions_config(
 fn load_assembly_manifest(
     path: &Option<PathBuf>,
     out_dir: impl AsRef<Path>,
-) -> Result<Option<AssemblyManifest>> {
+) -> Result<(Option<AssemblyManifest>, Vec<PackageManifest>)> {
     if let Some(path) = path {
         // Make sure `out_dir` is created.
         std::fs::create_dir_all(&out_dir).context("Creating the out_dir")?;
@@ -76,17 +98,28 @@ fn load_assembly_manifest(
             .with_context(|| format!("Parsing assembly manifest: {}", path.display()))?;
 
         // Filter out the base package, and the blobfs contents.
-        let images: Vec<Image> = manifest
-            .images
-            .into_iter()
-            .filter_map(|i| match i {
-                Image::BasePackage(..) => None,
-                Image::BlobFS { path, contents: _ } => {
-                    Some(Image::BlobFS { path, contents: BlobfsContents::default() })
+        let mut images = Vec::<Image>::new();
+        let mut packages = Vec::<PackageManifest>::new();
+        for image in manifest.images.into_iter() {
+            match image {
+                Image::BasePackage(..) => {}
+                Image::BlobFS { path, contents } => {
+                    let PackagesMetadata { base, cache } = contents.packages;
+                    let all_packages = [base.0, cache.0].concat();
+                    for package in all_packages {
+                        let manifest = PackageManifest::try_load_from(&package.manifest)
+                            .with_context(|| {
+                                format!("reading package manifest: {}", package.manifest.display())
+                            })?;
+                        packages.push(manifest);
+                    }
+                    images.push(Image::BlobFS { path, contents: BlobfsContents::default() });
                 }
-                _ => Some(i),
-            })
-            .collect();
+                _ => {
+                    images.push(image);
+                }
+            }
+        }
 
         // Copy the images to the `out_dir`.
         let mut new_images = Vec::<Image>::new();
@@ -96,9 +129,9 @@ fn load_assembly_manifest(
             new_images.push(image);
         }
 
-        Ok(Some(AssemblyManifest { images: new_images }))
+        Ok((Some(AssemblyManifest { images: new_images }), packages))
     } else {
-        Ok(None)
+        Ok((None, vec![]))
     }
 }
 
@@ -116,6 +149,7 @@ mod test {
     use super::*;
     use assembly_manifest::AssemblyManifest;
     use assembly_partitions_config::PartitionsConfig;
+    use fuchsia_repo::test_utils;
     use std::io::Write;
     use tempfile::TempDir;
 
@@ -163,18 +197,19 @@ mod test {
         let mut error_file = File::create(&error_path).unwrap();
         error_file.write_all("error".as_bytes()).unwrap();
 
-        let parsed = load_assembly_manifest(&Some(manifest_path), &pb_dir).unwrap();
+        let (parsed, packages) = load_assembly_manifest(&Some(manifest_path), &pb_dir).unwrap();
         assert!(parsed.is_some());
+        assert_eq!(packages, vec![]);
 
         let error = load_assembly_manifest(&Some(error_path), &pb_dir);
         assert!(error.is_err());
 
-        let none = load_assembly_manifest(&None, &pb_dir).unwrap();
+        let (none, _) = load_assembly_manifest(&None, &pb_dir).unwrap();
         assert!(none.is_none());
     }
 
-    #[test]
-    fn test_pb_create_minimal() {
+    #[fuchsia::test]
+    async fn test_pb_create_minimal() {
         let tempdir = TempDir::new().unwrap();
         let pb_dir = tempdir.path().join("pb");
 
@@ -187,8 +222,10 @@ mod test {
             system_a: None,
             system_b: None,
             system_r: None,
+            tuf_keys: None,
             out_dir: pb_dir.clone(),
         })
+        .await
         .unwrap();
 
         let pb = ProductBundle::try_load_from(pb_dir).unwrap();
@@ -203,8 +240,8 @@ mod test {
         );
     }
 
-    #[test]
-    fn test_pb_create_a_and_r() {
+    #[fuchsia::test]
+    async fn test_pb_create_a_and_r() {
         let tempdir = TempDir::new().unwrap();
         let pb_dir = tempdir.path().join("pb");
 
@@ -221,8 +258,50 @@ mod test {
             system_a: Some(system_path.clone()),
             system_b: None,
             system_r: Some(system_path.clone()),
+            tuf_keys: None,
             out_dir: pb_dir.clone(),
         })
+        .await
+        .unwrap();
+
+        let pb = ProductBundle::try_load_from(pb_dir).unwrap();
+        assert_eq!(
+            pb,
+            ProductBundle::V2(ProductBundleV2 {
+                partitions: PartitionsConfig::default(),
+                system_a: Some(AssemblyManifest::default()),
+                system_b: None,
+                system_r: Some(AssemblyManifest::default()),
+            })
+        );
+    }
+
+    #[fuchsia::test]
+    async fn test_pb_create_a_and_r_and_tuf() {
+        let tempdir = TempDir::new().unwrap();
+        let pb_dir = tempdir.path().join("pb");
+
+        let partitions_path = tempdir.path().join("partitions.json");
+        let partitions_file = File::create(&partitions_path).unwrap();
+        serde_json::to_writer(&partitions_file, &PartitionsConfig::default()).unwrap();
+
+        let system_path = tempdir.path().join("system.json");
+        let system_file = File::create(&system_path).unwrap();
+        serde_json::to_writer(&system_file, &AssemblyManifest::default()).unwrap();
+
+        let tuf_keys = tempdir.path().join("keys");
+        let tuf_keys_path = Utf8Path::from_path(&tuf_keys).unwrap();
+        test_utils::make_repo_keys_dir(&tuf_keys_path);
+
+        pb_create(CreateCommand {
+            partitions: partitions_path,
+            system_a: Some(system_path.clone()),
+            system_b: None,
+            system_r: Some(system_path.clone()),
+            tuf_keys: Some(tuf_keys),
+            out_dir: pb_dir.clone(),
+        })
+        .await
         .unwrap();
 
         let pb = ProductBundle::try_load_from(pb_dir).unwrap();

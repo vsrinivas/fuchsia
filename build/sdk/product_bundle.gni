@@ -57,6 +57,7 @@ template("product_bundle") {
     outdir = "$target_out_dir/$target_name"
     product_bundle_manifest = "${outdir}/product_bundle.json"
     transfer_manifest = "${outdir}/transfer.json"
+    tuf_keys = "//src/sys/pkg/repositories/devhost/keys"
   }
 
   python_action(labels.hermetic_inputs) {
@@ -77,6 +78,7 @@ template("product_bundle") {
     args = [
       "--partitions",
       rebase_path(invoker.partitions, root_build_dir),
+      "--include-blobs",
       "--output",
       rebase_path(files.hermetic_inputs, root_build_dir),
       "--depfile",
@@ -141,6 +143,10 @@ template("product_bundle") {
 
     hermetic_inputs_target = ":${labels.hermetic_inputs}"
     hermetic_inputs_file = files.hermetic_inputs
+    hermetic_action_ignored_prefixes = [
+      "${files.outdir}/blobs",
+      "${files.outdir}/repository",
+    ]
 
     args = [
       "--config",
@@ -151,11 +157,18 @@ template("product_bundle") {
       rebase_path(invoker.partitions, root_build_dir),
       "--out-dir",
       rebase_path(files.outdir, root_build_dir),
+      "--tuf-keys",
+      rebase_path(files.tuf_keys, root_build_dir),
     ]
 
     outputs += [ files.product_bundle_manifest ]
-
-    inputs = [ invoker.partitions ]
+    inputs = [
+      invoker.partitions,
+      "${files.tuf_keys}/root.json",
+      "${files.tuf_keys}/snapshot.json",
+      "${files.tuf_keys}/targets.json",
+      "${files.tuf_keys}/timestamp.json",
+    ]
 
     if (defined(invoker.system_a)) {
       args += [
