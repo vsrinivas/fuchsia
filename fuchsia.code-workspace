@@ -149,7 +149,6 @@
     // they are not hidden.
     "explorer.excludeGitIgnore": false,
 
-
     ////////
     // Files that are excluding from file-watching notifications
     "files.watcherExclude": {
@@ -158,21 +157,12 @@
       ".jiri_root/goma_cache/**": true,
       ".jiri_root/update_history*/**": true,
       "out/**": true,
+      ".cache/**": true,
     },
 
-    ////////
-    // File globs to exclude from search results and when opening a file via the
-    // quick-open feature.  This is in addition to the globs in `files.exclude`
-    //
-    "search.exclude": {
-      ".jiri_root/goma_cache/**": true,
-      ".jiri_root/update_history*/**": true,
-    },
-
-    // As sub repos are listed in .gitignore, and searching already excludes
-    // dirs in that are excluded, tell it not NOT use .gitignore to limit search
-    // results.
-    "search.useIgnoreFiles": false,
+    // This significantly speeds up search and avoids polluting results with
+    // build output, third party code, and prebuilt binaries.
+    "search.useIgnoreFiles": true,
 
     // Don't follow symlinks (into other parts of the tree)
     "search.followSymlinks": false,
@@ -181,6 +171,197 @@
     // Code coverage
     "coverage-gutters.coverageBaseDir": ".",
     "coverage-gutters.showLineCoverage": true,
-    "coverage-gutters.coverageFileNames": [ "lcov.info" ]
+    "coverage-gutters.coverageFileNames": [ "lcov.info" ],
+
+    // Disable task auto-detection for supported project configuration files
+    // (e.g. NPM's project.json). This significantly speeds up task running.
+    "task.autoDetect": "off",
   },
+
+  // Tasks run with the "Tasks: Run Task" command (bind a shortcut!).
+  "tasks": {
+    "version": "2.0.0",
+    "tasks": [
+      {
+        "label": "Fuchsia: fx build",
+        "type": "shell",
+        "command": "fx build",
+        "problemMatcher": [],
+      },
+      {
+        "label": "Fuchsia: fx build (Rust problem matcher)",
+        "type": "shell",
+        "command": "fx build",
+        "problemMatcher": [
+          {
+            "base": "$rustc-watch",
+            // Error file paths are relative to a build directory. The names
+            // are arbitrary.
+            "fileLocation": [
+              "relative",
+              "${workspaceFolder}/a/b"
+            ],
+          }
+        ],
+      },
+      {
+        // This task requires the ms-vscode.cpptools extension.
+        "label": "Fuchsia: fx build (C++ problem matcher)",
+        "type": "shell",
+        "command": "fx build",
+        "problemMatcher": [
+          {
+            "base": "$gcc",
+            // Error file paths are relative to a build directory. The names
+            // are arbitrary.
+            "fileLocation": [
+              "relative",
+              "${workspaceFolder}/a/b"
+            ],
+          }
+        ],
+      },
+      {
+        "label": "Fuchsia: fx serve",
+        "type": "shell",
+         "command": "fx serve",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: fx ota",
+        "type": "shell",
+         "command": "fx ota",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx doctor",
+        "type": "shell",
+         "command": "ffx doctor",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: fx flash",
+        "type": "shell",
+         "command": "fx flash",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx emu start",
+        "type": "shell",
+         "command": "ffx emu start",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx emu start --headless",
+        "type": "shell",
+         "command": "ffx emu start --headless",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx emu stop",
+        "type": "shell",
+         "command": "ffx emu stop",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component list",
+        "type": "shell",
+         "command": "ffx component list",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component list --only",
+        "type": "shell",
+         "command": "ffx component list --only ${input:COMPONENT_LIST_ONLY}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component show",
+        "type": "shell",
+         "command": "ffx component show ${input:COMPONENT_FILTER}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component doctor",
+        "type": "shell",
+         "command": "ffx component doctor ${input:TARGET_MONIKER}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component run",
+        "type": "shell",
+         "command": "ffx component run ${input:TARGET_MONIKER} ${input:COMPONENT_URL}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component stop",
+        "type": "shell",
+         "command": "ffx component stop ${input:TARGET_MONIKER}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component reload",
+        "type": "shell",
+         "command": "ffx component reload ${input:TARGET_MONIKER}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: ffx component destroy",
+        "type": "shell",
+         "command": "ffx component destroy ${input:TARGET_MONIKER}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: fx test",
+        "type": "shell",
+         "command": "fx test ${input:TEST_NAME}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: fx coverage",
+        "type": "shell",
+         "command": "fx coverage --lcov-output-path ${workspaceFolder}/lcov.info ${input:TEST_NAME}",
+         "problemMatcher": []
+      },
+      {
+        "label": "Fuchsia: jiri upload",
+        "type": "shell",
+        "command": "jiri upload",
+        "problemMatcher": [],
+      },
+      {
+        "label": "Fuchsia: jiri update",
+        "type": "shell",
+        "command": "jiri update",
+        "problemMatcher": [],
+      },
+    ],
+    "inputs": [
+      {
+        "id": "TEST_NAME",
+        "type": "promptString",
+        "description": "Test name"
+      },
+      {
+        "id": "TARGET_MONIKER",
+        "type": "promptString",
+        "description": "TARGET_MONIKER: The destination moniker of a new component instance. The moniker must include a component collection on the path. E.g. '/core/ffx-laboratory:hello-world'"
+      },
+      {
+        "id": "COMPONENT_URL",
+        "type": "promptString",
+        "description": "COMPONENT_URL: The resource location of a component. E.g. 'fuchsia-pkg://fuchsia.com/hello-world#meta/hello-world-cpp.cm'"
+      },
+      {
+        "id": "COMPONENT_FILTER",
+        "type": "promptString",
+        "description": "COMPONENT_FILTER: URL or moniker of component instance. Partial matches allowed."
+      },
+      {
+        "id": "COMPONENT_LIST_ONLY",
+        "type": "promptString",
+        "description": "--only: cmx, cml, running, stopped, ancestor:foo, descendant:foo, relatives:foo"
+      },
+    ]
+  }
 }
