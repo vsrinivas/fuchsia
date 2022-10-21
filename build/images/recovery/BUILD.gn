@@ -8,6 +8,7 @@ import("//build/images/paths.gni")
 import("//build/images/vboot/vboot.gni")
 import("//build/images/zedboot/zedboot_args.gni")
 import("//build/testing/host_test_data.gni")
+import("//src/sys/appmgr/core_shards.gni")
 import("//src/sys/core/build/core.gni")
 import("//src/sys/root/build/root.gni")
 
@@ -112,7 +113,9 @@ if (is_fuchsia) {
   core_realm("core-eng") {
     package_name = core_name
     restrict_persistent_storage = false
-    deps = _core_realm_deps + [
+
+    # TODO(fxbug.dev/102390): deprecate appmgr from this product config
+    deps = _core_realm_deps + appmgr_core_shards + [
              "//src/developer/sshd-host:core_shard",
              "//src/recovery/system:system_recovery_core_shard",
              "//src/sys/process-resolver:core_shard",

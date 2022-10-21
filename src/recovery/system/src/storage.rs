@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::fdr::execute_reset;
 use anyhow::{ensure, Context, Error};
 use async_trait::async_trait;
+use fdr_lib::execute_reset;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_io as fio;
 use fs_management::{self as fs, filesystem::ServingSingleVolumeFilesystem};

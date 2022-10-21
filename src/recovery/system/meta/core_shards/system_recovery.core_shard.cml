@@ -26,6 +26,14 @@
         },
         {
             protocol: [
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "self",
+            to: "#system_recovery",
+        },
+        {
+            protocol: [
                 "fuchsia.paver.Paver",
                 "fuchsia.process.Launcher",
             ],
@@ -70,11 +78,11 @@
             to: "#system_recovery",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-class-block",
             to: "#system_recovery",
-            subdir: "class/block",
+            subdir: "block",
         },
         {
             directory: "dev",

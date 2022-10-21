@@ -8,19 +8,12 @@ mod button;
 mod cobalt;
 #[cfg(feature = "debug_console")]
 mod console;
-mod fdr;
 mod font;
 #[cfg(feature = "http_setup_server")]
 mod keyboard;
 #[cfg(feature = "http_setup_server")]
 mod keys;
-#[cfg(feature = "http_setup_server")]
-mod ota;
 mod proxy_view_assistant;
-#[cfg(feature = "http_setup_server")]
-mod setup;
-#[cfg(feature = "http_setup_server")]
-mod storage;
 
 use anyhow::{format_err, Error};
 use carnelian::{
@@ -44,9 +37,15 @@ use carnelian::{
     MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
 use euclid::size2;
-use fdr::{FactoryResetState, ResetEvent};
+use fdr_lib::{self as fdr, FactoryResetState, ResetEvent};
+#[cfg(feature = "http_setup_server")]
+use fidl::endpoints::{DiscoverableProtocolMarker, RequestStream};
 use fidl_fuchsia_input_report::ConsumerControlButton;
 use fidl_fuchsia_recovery_policy::FactoryResetMarker as FactoryResetPolicyMarker;
+#[cfg(feature = "http_setup_server")]
+use fidl_fuchsia_recovery_ui::{
+    ProgressRendererMarker, ProgressRendererRequest, ProgressRendererRequestStream, Status,
+};
 #[cfg(feature = "http_setup_server")]
 use fuchsia_async::DurationExt;
 use fuchsia_async::{self as fasync, Task};
@@ -54,11 +53,17 @@ use fuchsia_component::client::connect_to_protocol;
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
 #[cfg(feature = "http_setup_server")]
+use ota_lib::{ota, setup, OtaComponent, OtaManager, OtaStatus};
+#[cfg(feature = "http_setup_server")]
 use recovery_metrics_registry::cobalt_registry as metrics;
 use recovery_ui_config::Config as UiConfig;
 use rive_rs::{self as rive};
-use std::borrow::{Borrow, Cow};
-use std::path::Path;
+#[cfg(feature = "http_setup_server")]
+use std::sync::Arc;
+use std::{
+    borrow::{Borrow, Cow},
+    path::Path,
+};
 
 // 11 seconds so it can count from 10 down to 0 while displaying each tick for 1 second
 const FACTORY_RESET_TIMER_IN_SECONDS: u8 = 11;
@@ -161,6 +166,8 @@ struct RecoveryAppAssistant {
     app_sender: AppSender,
     display_rotation: DisplayRotation,
     fdr_restriction: FdrRestriction,
+    #[cfg(feature = "http_setup_server")]
+    ota_manager: Arc<dyn OtaManager>,
 }
 
 impl RecoveryAppAssistant {
@@ -168,8 +175,26 @@ impl RecoveryAppAssistant {
         app_sender: &AppSender,
         display_rotation: DisplayRotation,
         fdr_restriction: FdrRestriction,
+        #[cfg(feature = "http_setup_server")] ota_manager: Arc<dyn OtaManager>,
     ) -> Self {
-        Self { app_sender: app_sender.clone(), display_rotation, fdr_restriction }
+        Self {
+            app_sender: app_sender.clone(),
+            display_rotation,
+            fdr_restriction,
+            #[cfg(feature = "http_setup_server")]
+            ota_manager,
+        }
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    async fn update_ota_manager(ota_manager: &dyn OtaManager, status: Status) {
+        match status {
+            Status::Active => {
+                println!("OTA update is now in progress...")
+            }
+            Status::Complete => ota_manager.complete_ota(OtaStatus::Succeeded).await,
+            _ => ota_manager.complete_ota(OtaStatus::Failed).await,
+        }
     }
 }
 
@@ -195,6 +220,8 @@ impl AppAssistant for RecoveryAppAssistant {
             body.map(Into::into),
             self.fdr_restriction,
             font_face,
+            #[cfg(feature = "http_setup_server")]
+            self.ota_manager.clone(),
         )?);
 
         // ProxyView is a root view that conditionally displays the top View
@@ -207,10 +234,54 @@ impl AppAssistant for RecoveryAppAssistant {
         Ok(proxy_ptr)
     }
 
+    #[cfg(feature = "http_setup_server")]
+    fn outgoing_services_names(&self) -> Vec<&'static str> {
+        vec![ProgressRendererMarker::PROTOCOL_NAME]
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    fn handle_service_connection_request(
+        &mut self,
+        service_name: &str,
+        channel: fasync::Channel,
+    ) -> Result<(), Error> {
+        match service_name {
+            ProgressRendererMarker::PROTOCOL_NAME => {
+                let ota_manager = self.ota_manager.clone();
+
+                fasync::Task::local(async move {
+                    let mut stream = ProgressRendererRequestStream::from_channel(channel);
+                    while let Some(Ok(request)) = stream.next().await {
+                        match request {
+                            ProgressRendererRequest::Render {
+                                status,
+                                percent_complete: _,
+                                responder,
+                            } => {
+                                Self::update_ota_manager(&*ota_manager, status).await;
+                                responder.send().expect("Error replying to progress update");
+                            }
+                            ProgressRendererRequest::Render2 { payload, responder } => {
+                                if let Some(status) = payload.status {
+                                    Self::update_ota_manager(&*ota_manager, status).await;
+                                }
+                                responder.send().expect("Error replying to progress update");
+                            }
+                        }
+                    }
+                })
+                .detach();
+            }
+            _ => panic!("Error: Unexpected service: {}", service_name),
+        }
+        Ok(())
+    }
+
     fn filter_config(&mut self, config: &mut Config) {
         config.display_rotation = self.display_rotation;
     }
 }
+
 #[cfg(feature = "http_setup_server")]
 struct RenderResources {
     scene: Scene,
@@ -525,6 +596,8 @@ struct RecoveryViewAssistant {
     wifi_password: Option<String>,
     #[cfg(feature = "http_setup_server")]
     connected: WiFiMessages,
+    #[cfg(feature = "http_setup_server")]
+    ota_manager: Arc<dyn OtaManager>,
 }
 
 impl RecoveryViewAssistant {
@@ -536,6 +609,7 @@ impl RecoveryViewAssistant {
         body: Option<Cow<'static, str>>,
         fdr_restriction: FdrRestriction,
         font_face: FontFace,
+        #[cfg(feature = "http_setup_server")] ota_manager: Arc<dyn OtaManager>,
     ) -> Result<RecoveryViewAssistant, Error> {
         RecoveryViewAssistant::setup(app_sender, view_key)?;
 
@@ -557,6 +631,8 @@ impl RecoveryViewAssistant {
             wifi_password: None,
             #[cfg(feature = "http_setup_server")]
             connected: WiFiMessages::Connected(false),
+            #[cfg(feature = "http_setup_server")]
+            ota_manager,
         })
     }
 
@@ -859,11 +935,23 @@ impl RecoveryViewAssistant {
                             MessageTarget::View(view_key),
                             make_message(RecoveryMessages::StartingOta),
                         );
+
+                        let ota_manager = self.ota_manager.clone();
                         let f = async move {
                             let start_time = fasync::Time::now();
-                            let res = ota::run_wellknown_ota(ota::StorageType::Real).await;
+
+                            // Even if stop fails, try to update anyway.
+                            println!("Stopping running OTAs...");
+                            if let Err(e) = ota_manager.stop().await {
+                                eprintln!("failed to stop OTA: {:?}", e);
+                            }
+
+                            println!("Starting OTA process and waiting...");
+                            let res = ota_manager.start_and_wait_for_result().await;
+
                             let end_time = fasync::Time::now();
                             let elapsed_time = (end_time - start_time).into_seconds();
+
                             match res {
                                 Ok(_) => {
                                     println!("OTA Success!");
@@ -1177,15 +1265,20 @@ fn make_app_assistant_fut(
             }
         };
 
-        let assistant =
-            Box::new(RecoveryAppAssistant::new(app_sender, display_rotation, fdr_restriction));
+        let assistant = Box::new(RecoveryAppAssistant::new(
+            app_sender,
+            display_rotation,
+            fdr_restriction,
+            #[cfg(feature = "http_setup_server")]
+            Arc::new(OtaComponent::new()?),
+        ));
 
         Ok::<AppAssistantPtr, Error>(assistant)
     };
     Box::pin(f)
 }
 
-pub fn make_app_assistant() -> AssistantCreatorFunc {
+fn make_app_assistant() -> AssistantCreatorFunc {
     Box::new(make_app_assistant_fut)
 }
 
@@ -1196,13 +1289,152 @@ fn main() -> Result<(), Error> {
 
 #[cfg(test)]
 mod tests {
-    use super::make_app_assistant;
-    use carnelian::App;
+    use super::{make_app_assistant, FdrRestriction, RecoveryAppAssistant};
+    use carnelian::{drawing::DisplayRotation, App, AppAssistant, AppSender};
+    use std::sync::Arc;
 
     #[ignore] //TODO(fxbug.dev/102239) Move to integration test
     #[test]
     fn test_ui() -> std::result::Result<(), anyhow::Error> {
         let assistant = make_app_assistant();
         App::test(assistant)
+    }
+
+    #[fuchsia::test]
+    fn test_recovery_app_assistant_sets_up_successfully() {
+        let test_app_sender = AppSender::new_for_testing_purposes_only();
+        let mut recovery_app_assistant = RecoveryAppAssistant::new(
+            &test_app_sender,
+            DisplayRotation::Deg0,
+            FdrRestriction::NotRestricted,
+            #[cfg(feature = "http_setup_server")]
+            Arc::new(ota::FakeOtaManager::new()),
+        );
+        recovery_app_assistant.setup().unwrap();
+    }
+
+    #[cfg(feature = "http_setup_server")]
+    mod ota {
+        use super::*;
+        use anyhow::Error;
+        use async_trait::async_trait;
+        use fidl::endpoints::DiscoverableProtocolMarker;
+        use fidl_fuchsia_recovery_ui::{
+            ProgressRendererMarker, ProgressRendererRender2Request, Status,
+        };
+        use fuchsia_async as fasync;
+        use futures::lock::Mutex;
+        use ota_lib::{OtaManager, OtaStatus};
+
+        pub struct FakeOtaManager {
+            pub status: Arc<Mutex<Option<ota_lib::OtaStatus>>>,
+        }
+        impl FakeOtaManager {
+            pub fn new() -> Self {
+                Self { status: Arc::new(Mutex::new(None)) }
+            }
+        }
+
+        #[async_trait]
+        impl OtaManager for FakeOtaManager {
+            async fn start_and_wait_for_result(&self) -> Result<(), Error> {
+                Ok(())
+            }
+
+            async fn stop(&self) -> Result<(), Error> {
+                Ok(())
+            }
+
+            async fn complete_ota(&self, status: OtaStatus) {
+                *self.status.lock().await = Some(status);
+            }
+        }
+
+        #[fuchsia::test]
+        async fn test_progress_updates_reports_success_to_ota_manager() {
+            let test_app_sender = AppSender::new_for_testing_purposes_only();
+            let (progress_proxy, progress_server) =
+                fidl::endpoints::create_proxy::<ProgressRendererMarker>().unwrap();
+            let ota_manager = Arc::new(FakeOtaManager::new());
+
+            let mut recovery_app_assistant = RecoveryAppAssistant::new(
+                &test_app_sender,
+                DisplayRotation::Deg0,
+                FdrRestriction::NotRestricted,
+                ota_manager.clone(),
+            );
+            assert_eq!(
+                vec![ProgressRendererMarker::PROTOCOL_NAME],
+                recovery_app_assistant.outgoing_services_names()
+            );
+            recovery_app_assistant
+                .handle_service_connection_request(
+                    ProgressRendererMarker::PROTOCOL_NAME,
+                    fasync::Channel::from_channel(progress_server.into_channel()).unwrap(),
+                )
+                .unwrap();
+
+            progress_proxy
+                .render2(ProgressRendererRender2Request {
+                    status: Some(Status::Active),
+                    percent_complete: Some(0.0),
+                    ..ProgressRendererRender2Request::EMPTY
+                })
+                .await
+                .unwrap();
+            progress_proxy
+                .render2(ProgressRendererRender2Request {
+                    status: Some(Status::Complete),
+                    percent_complete: Some(100.0),
+                    ..ProgressRendererRender2Request::EMPTY
+                })
+                .await
+                .unwrap();
+
+            assert_eq!(Some(OtaStatus::Succeeded), *ota_manager.status.lock().await);
+        }
+
+        #[fuchsia::test]
+        async fn test_progress_updates_reports_error_to_ota_manager() {
+            let test_app_sender = AppSender::new_for_testing_purposes_only();
+            let (progress_proxy, progress_server) =
+                fidl::endpoints::create_proxy::<ProgressRendererMarker>().unwrap();
+            let ota_manager = Arc::new(FakeOtaManager::new());
+
+            let mut recovery_app_assistant = RecoveryAppAssistant::new(
+                &test_app_sender,
+                DisplayRotation::Deg0,
+                FdrRestriction::NotRestricted,
+                ota_manager.clone(),
+            );
+            assert_eq!(
+                vec![ProgressRendererMarker::PROTOCOL_NAME],
+                recovery_app_assistant.outgoing_services_names()
+            );
+            recovery_app_assistant
+                .handle_service_connection_request(
+                    ProgressRendererMarker::PROTOCOL_NAME,
+                    fasync::Channel::from_channel(progress_server.into_channel()).unwrap(),
+                )
+                .unwrap();
+
+            progress_proxy
+                .render2(ProgressRendererRender2Request {
+                    status: Some(Status::Active),
+                    percent_complete: Some(0.0),
+                    ..ProgressRendererRender2Request::EMPTY
+                })
+                .await
+                .unwrap();
+            progress_proxy
+                .render2(ProgressRendererRender2Request {
+                    status: Some(Status::Error),
+                    ..ProgressRendererRender2Request::EMPTY
+                })
+                .await
+                .unwrap();
+
+            assert_eq!(Some(OtaStatus::Failed), *ota_manager.status.lock().await);
+        }
     }
 }

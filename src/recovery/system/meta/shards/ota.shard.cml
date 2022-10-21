@@ -5,13 +5,18 @@
 // This shard provides WIFI network functionality and handling OTA related features.
 {
     include: [ "//src/lib/fuchsia-hyper/hyper.shard.cml" ],
-    use: [
+    collections: [
         {
-            directory: "root-ssl-certificates",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/config/ssl",
+            name: "ota",
+            durability: "transient",
         },
+    ],
+    capabilities: [
+        {
+            protocol: [ "fuchsia.recovery.ui.ProgressRenderer" ],
+        },
+    ],
+    use: [
         {
             protocol: [
                 "fuchsia.metrics.MetricEventLoggerFactory",
@@ -19,6 +24,54 @@
                 "fuchsia.wlan.policy.ClientListener",
                 "fuchsia.wlan.policy.ClientProvider",
             ],
+        },
+        {
+            protocol: "fuchsia.component.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#ota",
+        },
+        {
+            directory: "dev-class-block",
+            from: "parent",
+            to: "#ota",
+        },
+        {
+            directory: "config-data",
+            from: "parent",
+            to: "#ota",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            to: "#ota",
+        },
+        {
+            protocol: [ "fuchsia.recovery.ui.ProgressRenderer" ],
+            from: "self",
+            to: "#ota",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.buildinfo.Provider",
+                "fuchsia.logger.LogSink",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.paver.Paver",
+                "fuchsia.posix.socket.Provider",
+                "fuchsia.process.Launcher",
+                "fuchsia.recovery.FactoryReset",
+                "fuchsia.sys.Environment",
+                "fuchsia.sys.Loader",
+            ],
+            from: "parent",
+            to: "#ota",
         },
     ],
 }

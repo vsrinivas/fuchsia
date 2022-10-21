@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::{
-        setup::DevhostConfig,
-        storage::{Storage, StorageFactory, TopoPathInitializer},
-    },
+    crate::{setup::DevhostConfig, storage::Storage},
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_buildinfo::ProviderMarker as BuildInfoMarker,
@@ -49,10 +46,7 @@ enum BoardName {
 
 pub enum StorageType {
     /// Use storage that has already had its blobfs partition wiped.
-    #[allow(dead_code)]
     Ready(Box<dyn Storage>),
-    /// Use real storage (i.e. wipe disk and use the real FVM)
-    Real,
     /// Use the given DirectoryMarker for blobfs, and the given path for minfs.
     #[allow(dead_code)]
     Fake { blobfs_root: ClientEnd<fio::DirectoryMarker>, minfs_path: Option<String> },
@@ -208,21 +202,6 @@ impl OtaEnvBuilder {
         ))
     }
 
-    /// Wipe the system's disk and mount the clean blobfs partition.
-    pub async fn init_real_storage(
-    ) -> Result<(Option<Box<dyn Storage>>, ClientEnd<fio::DirectoryMarker>, Option<String>), Error>
-    {
-        let storage_initializer = TopoPathInitializer {};
-        let storage = storage_initializer.create().await.context("initialising storage")?;
-        storage.wipe_storage().await.context("Wiping storage")?;
-
-        let blobfs_root = storage.get_blobfs().context("Opening blobfs")?;
-        let minfs_mount_point =
-            storage.get_minfs_mount_point().context("Getting minfs mount point")?;
-
-        Ok((Some(Box::new(storage)), blobfs_root, minfs_mount_point))
-    }
-
     /// Construct an |OtaEnv| from this |OtaEnvBuilder|.
     pub async fn build(self) -> Result<OtaEnv, Error> {
         let (authorized_keys, repo_dir) = match &self.ota_type {
@@ -245,7 +224,6 @@ impl OtaEnvBuilder {
                 let blobfs_root = storage.wipe_or_get_storage().await.context("Opening blobfs")?;
                 (Some(storage), blobfs_root, None)
             }
-            StorageType::Real => Self::init_real_storage().await?,
             StorageType::Fake { blobfs_root, minfs_path } => (None, blobfs_root, minfs_path),
         };
 
