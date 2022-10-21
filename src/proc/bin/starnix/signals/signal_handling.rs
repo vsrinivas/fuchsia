@@ -212,7 +212,8 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
     let mut task_state = task.write();
 
     let action_is_masked = siginfo.signal.is_in_set(task_state.signals.mask);
-    let action = action_for_signal(&siginfo, task.thread_group.signal_actions.get(siginfo.signal));
+    let sigaction = task.thread_group.signal_actions.get(siginfo.signal);
+    let action = action_for_signal(&siginfo, sigaction);
 
     // Enqueue a masked signal, since it can be unmasked later, but don't enqueue an ignored
     // signal, since it cannot. See SigtimedwaitTest.IgnoredUnmaskedSignal gvisor test.
@@ -222,7 +223,7 @@ pub fn send_signal(task: &Task, siginfo: SignalInfo) {
 
     drop(task_state);
 
-    if !action_is_masked && action.must_interrupt() {
+    if !action_is_masked && action.must_interrupt(sigaction) {
         // Wake the task. Note that any potential signal handler will be executed before
         // the task returns from the suspend (from the perspective of user space).
         task.interrupt();
@@ -256,8 +257,15 @@ enum DeliveryAction {
 
 impl DeliveryAction {
     /// Returns whether the target task must be interrupted to execute the action.
-    fn must_interrupt(&self) -> bool {
-        !matches!(*self, Self::Ignore | Self::Continue)
+    ///
+    /// The task will not be interrupted if the signal is the action is the Continue action, or if
+    /// the action is Ignore and the user specifically requested to ignore the signal.
+    pub fn must_interrupt(&self, sigaction: sigaction_t) -> bool {
+        match *self {
+            Self::Continue => false,
+            Self::Ignore => sigaction.sa_handler == SIG_IGN,
+            _ => true,
+        }
     }
 }
 
