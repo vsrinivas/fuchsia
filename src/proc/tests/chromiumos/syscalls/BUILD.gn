@@ -23,6 +23,7 @@ test("syscalls_test_bin") {
     "fcntl_lock_test.cc",
     "fs_test.cc",
     "mmap_test.cc",
+    "mount_test.cc",
     "pipe_test.cc",
     "poll_test.cc",
     "prctl_test.cc",
@@ -36,6 +37,7 @@ test("syscalls_test_bin") {
   ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
   include_dirs = [

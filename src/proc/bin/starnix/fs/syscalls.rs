@@ -1136,16 +1136,18 @@ pub fn sys_mount(
 
     let what_to_mount = if flags.contains(MountFlags::BIND) {
         strace!(current_task, "mount(MS_BIND)");
-
-        if flags.contains(MountFlags::REC) {
-            not_implemented!(current_task, "MS_REC unimplemented");
-        }
-
-        let source = lookup_for_mount(current_task, source_addr, LookupFlags::default())?;
+        // Don't use lookup_for_mount here. If there is a mount on /foo, bind mounting /foo to /bar
+        // should bind from the mount on /foo, not /foo itself.
+        let source =
+            lookup_at(current_task, FdNumber::AT_FDCWD, source_addr, LookupFlags::default())?;
         WhatToMount::Bind(source)
     } else {
         let mut buf = [0u8; PATH_MAX as usize];
-        let source = current_task.mm.read_c_string(source_addr, &mut buf)?;
+        let source = if source_addr.is_null() {
+            b""
+        } else {
+            current_task.mm.read_c_string(source_addr, &mut buf)?
+        };
         let mut buf = [0u8; PATH_MAX as usize];
         let fs_type = current_task.mm.read_c_string(filesystemtype_addr, &mut buf)?;
         let mut buf = [0u8; PATH_MAX as usize];

@@ -40,7 +40,7 @@ impl Namespace {
     }
 
     pub fn clone_namespace(&self) -> Arc<Namespace> {
-        Arc::new(Self { root_mount: self.root_mount.clone_mount_tree() })
+        Arc::new(Self { root_mount: self.root_mount.clone_mount_recursive() })
     }
 }
 
@@ -58,16 +58,16 @@ impl fmt::Debug for Namespace {
 struct Mount {
     mountpoint: OnceCell<(Weak<Mount>, DirEntryHandle)>,
     root: DirEntryHandle,
-    _flags: MountFlags,
+    flags: MountFlags,
     _fs: FileSystemHandle,
 
     state: RwLock<MountState>,
     // Mount used to contain a Weak<Namespace>. It no longer does because since the mount point
     // hash was moved from Namespace to Mount, nothing actually uses it. Now that
-    // Namespace::clone_namespace() is implemented in terms of Mount::clone_mount_tree, it won't be
-    // trivial to add it back. I recommend turning the mountpoint field into an enum of Mountpoint
-    // or Namespace, maybe called "parent", and then traverse up to the top of the tree if you need
-    // to find a Mount's Namespace.
+    // Namespace::clone_namespace() is implemented in terms of Mount::clone_mount_recursive, it
+    // won't be trivial to add it back. I recommend turning the mountpoint field into an enum of
+    // Mountpoint or Namespace, maybe called "parent", and then traverse up to the top of the tree
+    // if you need to find a Mount's Namespace.
 }
 type MountHandle = Arc<Mount>;
 
@@ -90,42 +90,57 @@ impl Mount {
     fn new(what: WhatToMount, flags: MountFlags) -> MountHandle {
         match what {
             WhatToMount::Fs(fs) => Self::new_with_root(fs.root().clone(), flags),
-            WhatToMount::Bind(node) => Self::new_with_root(node.entry, flags),
+            WhatToMount::Bind(node) => {
+                let mount = node.mount.expect("can't bind mount from an anonymous node");
+                mount.clone_mount(&node.entry, flags)
+            }
         }
     }
 
     fn new_with_root(root: DirEntryHandle, flags: MountFlags) -> MountHandle {
+        assert!(
+            !flags.intersects(!MountFlags::STORED_FLAGS),
+            "mount created with extra flags {:?}",
+            flags - MountFlags::STORED_FLAGS
+        );
         let fs = root.node.fs();
         Arc::new(Self {
             mountpoint: OnceCell::new(),
             root,
-            _flags: flags,
+            flags,
             _fs: fs,
             state: Default::default(),
         })
     }
 
-    fn clone_mount(&self) -> MountHandle {
-        Arc::new(Self {
-            mountpoint: OnceCell::new(),
-            root: Arc::clone(&self.root),
-            _flags: self._flags,
-            _fs: Arc::clone(&self._fs),
-            state: Default::default(),
-        })
-    }
+    fn clone_mount(&self, new_root: &DirEntryHandle, flags: MountFlags) -> MountHandle {
+        assert!(new_root.is_descendant_of(&self.root));
+        // According to mount(2) on bind mounts, all flags other than MS_REC are ignored when doing
+        // a bind mount.
+        let clone = Self::new_with_root(Arc::clone(new_root), self.flags);
 
-    fn clone_mount_tree(&self) -> MountHandle {
-        let clone = self.clone_mount();
-        {
-            let mut clone_state = clone.state.write();
+        if flags.contains(MountFlags::REC) {
+            // This is two steps because the alternative (locking clone.state while iterating over
+            // self.state.submounts) trips tracing_mutex. The lock ordering is parent -> child, and
+            // if the clone is eventually made a child of the parent, this looks like an ordering
+            // violation. I'm not convinced it's a real issue, but I can't convince myself it's not
+            // either.
+            let mut submounts = vec![];
             for (dir, mount_stack) in &self.state.read().submounts {
                 for mount in mount_stack {
-                    clone.add_submount_locked(&mut clone_state, dir, mount.clone_mount_tree());
+                    submounts.push((dir.clone(), mount.clone_mount_recursive()));
                 }
+            }
+            let mut clone_state = clone.state.write();
+            for (dir, submount) in submounts {
+                clone.add_submount_locked(&mut clone_state, &dir, submount);
             }
         }
         clone
+    }
+
+    fn clone_mount_recursive(&self) -> MountHandle {
+        self.clone_mount(&self.root, MountFlags::REC)
     }
 
     fn add_submount(self: &MountHandle, dir: &DirEntryHandle, mount: MountHandle) {
@@ -138,6 +153,10 @@ impl Mount {
         dir: &DirEntryHandle,
         mount: MountHandle,
     ) {
+        if !dir.is_descendant_of(&self.root) {
+            return;
+        }
+
         dir.register_mount();
         mount
             .mountpoint

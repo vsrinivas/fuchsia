@@ -7,6 +7,8 @@
 
 #include <functional>
 
+#include "syscall_matchers.h"
+
 #define SAFE_SYSCALL(X)                                                             \
   ({                                                                                \
     auto retval = (X);                                                              \
