@@ -249,6 +249,9 @@ class IgdOpRegion {
   bool SupportsDp(tgl_registers::Ddi ddi) const {
     return HasDdi(ddi) && ddi_features_.at(ddi).supports_dp;
   }
+  bool IsTypeC(tgl_registers::Ddi ddi) const {
+    return HasDdi(ddi) && ddi_features_.at(ddi).is_type_c;
+  }
   bool IsEdp(tgl_registers::Ddi ddi) const { return HasDdi(ddi) && ddi_features_.at(ddi).is_edp; }
 
   bool IsLowVoltageEdp(tgl_registers::Ddi ddi) const {
@@ -269,11 +272,17 @@ class IgdOpRegion {
 
   double GetMinBacklightBrightness() const { return min_backlight_brightness_; }
 
+  // TODO(fxbug.dev/112092): Instead of adding the helper functions, these DDI
+  // features should be exported as a data-only struct that can be easily
+  // injected by tests.
   void SetIsEdpForTesting(tgl_registers::Ddi ddi, bool is_edp) {
     ddi_features_[ddi].is_edp = is_edp;
   }
   void SetSupportsDpForTesting(tgl_registers::Ddi ddi, bool value) {
     ddi_features_[ddi].supports_dp = value;
+  }
+  void SetIsTypeCForTesting(tgl_registers::Ddi ddi, bool value) {
+    ddi_features_[ddi].is_type_c = value;
   }
 
  private:

@@ -15,13 +15,10 @@
 #include <ddktl/device.h>
 #include <region-alloc/region-alloc.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/gtt.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
-#include "src/graphics/display/drivers/intel-i915-tgl/registers-transcoder.h"
 
 namespace i915_tgl {
 
@@ -46,7 +43,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
     kDvi,
   };
 
-  DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, Type type);
+  DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
+                DdiReference ddi_reference, Type type);
 
   DisplayDevice(const DisplayDevice&) = delete;
   DisplayDevice(DisplayDevice&&) = delete;
@@ -92,6 +90,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   uint64_t id() const { return id_; }
   tgl_registers::Ddi ddi() const { return ddi_; }
   Controller* controller() { return controller_; }
+  const std::optional<DdiReference>& ddi_reference() const { return ddi_reference_; }
 
   virtual uint32_t i2c_bus_id() const = 0;
 
@@ -157,6 +156,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   tgl_registers::Ddi ddi_;
 
   Pipe* pipe_ = nullptr;
+
+  std::optional<DdiReference> ddi_reference_;
 
   PowerWellRef ddi_power_;
   PowerWellRef ddi_io_power_;

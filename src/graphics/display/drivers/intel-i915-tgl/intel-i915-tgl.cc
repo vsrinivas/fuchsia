@@ -39,6 +39,7 @@
 
 #include "fuchsia/hardware/display/controller/c/banjo.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/clock/cdclk.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dp-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
@@ -524,17 +525,29 @@ std::unique_ptr<DisplayDevice> Controller::QueryDisplay(tgl_registers::Ddi ddi,
 
   if (igd_opregion_.SupportsDp(ddi)) {
     zxlogf(DEBUG, "Checking for DisplayPort monitor at DDI %d", ddi);
-    auto dp_disp = fbl::make_unique_checked<DpDisplay>(&ac, this, display_id, ddi, &dp_auxs_[ddi],
-                                                       &pch_engine_.value(), &root_node_);
-    if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
-      return dp_disp;
+    DdiReference ddi_reference_maybe = ddi_manager_->GetDdiReference(ddi);
+    if (!ddi_reference_maybe) {
+      zxlogf(DEBUG, "DDI %d PHY not available. Skip querying.", ddi);
+    } else {
+      auto dp_disp = fbl::make_unique_checked<DpDisplay>(
+          &ac, this, display_id, ddi, &dp_auxs_[ddi], &pch_engine_.value(),
+          std::move(ddi_reference_maybe), &root_node_);
+      if (ac.check() && reinterpret_cast<DisplayDevice*>(dp_disp.get())->Query()) {
+        return dp_disp;
+      }
     }
   }
   if (igd_opregion_.SupportsHdmi(ddi) || igd_opregion_.SupportsDvi(ddi)) {
     zxlogf(DEBUG, "Checking for HDMI monitor at DDI %d", ddi);
-    auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, display_id, ddi);
-    if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
-      return hdmi_disp;
+    DdiReference ddi_reference_maybe = ddi_manager_->GetDdiReference(ddi);
+    if (!ddi_reference_maybe) {
+      zxlogf(DEBUG, "DDI %d PHY not available. Skip querying.", ddi);
+    } else {
+      auto hdmi_disp = fbl::make_unique_checked<HdmiDisplay>(&ac, this, display_id, ddi,
+                                                             std::move(ddi_reference_maybe));
+      if (ac.check() && reinterpret_cast<DisplayDevice*>(hdmi_disp.get())->Query()) {
+        return hdmi_disp;
+      }
     }
   }
   zxlogf(TRACE, "Nothing found for ddi %d!", ddi);
@@ -2312,6 +2325,12 @@ zx_status_t Controller::Init() {
     } else {
       pipe_manager_ = std::make_unique<PipeManagerSkylake>(this);
     }
+  }
+
+  if (is_tgl(device_id())) {
+    ddi_manager_ = std::make_unique<DdiManagerTigerLake>(this);
+  } else {
+    ddi_manager_ = std::make_unique<DdiManagerSkylake>();
   }
 
   if (is_tgl(device_id())) {

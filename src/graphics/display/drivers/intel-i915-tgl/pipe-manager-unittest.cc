@@ -13,6 +13,7 @@
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
@@ -55,7 +56,7 @@ class PipeManagerTest : public ::testing::Test {
 class FakeDisplay : public DisplayDevice {
  public:
   FakeDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, Type type)
-      : DisplayDevice(controller, id, ddi, type) {}
+      : DisplayDevice(controller, id, ddi, DdiReference(), type) {}
   ~FakeDisplay() override = default;
 
   // DisplayDevice overrides:

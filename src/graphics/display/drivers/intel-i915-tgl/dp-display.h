@@ -15,6 +15,7 @@
 #include <cstdint>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/ddi-aux-channel.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/display-device.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpcd.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pch-engine.h"
@@ -181,7 +182,7 @@ class DpCapabilities final {
 class DpDisplay : public DisplayDevice {
  public:
   DpDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, DpcdChannel* dp_aux,
-            PchEngine* pch_engine, inspect::Node* parent_node);
+            PchEngine* pch_engine, DdiReference ddi_reference, inspect::Node* parent_node);
 
   DpDisplay(const DpDisplay&) = delete;
   DpDisplay(DpDisplay&&) = delete;
@@ -236,8 +237,6 @@ class DpDisplay : public DisplayDevice {
   bool DpcdReadPairedRegs(hwreg::RegisterBase<T, typename T::ValueType>* status);
   bool DpcdHandleAdjustRequest(dpcd::TrainingLaneSet* training, dpcd::AdjustRequestLane* adjust);
 
-  bool TypeCConnectTigerLake();
-  bool TypeCDisconnectTigerLake();
   bool ProgramDpModeTigerLake();
 
   bool DoLinkTraining();
@@ -296,13 +295,6 @@ class DpDisplay : public DisplayDevice {
 
   // The backlight brightness coefficient, in the range [min brightness, 1].
   double backlight_brightness_ = 1.0f;
-
-  enum class DisplayType {
-    Unknown = 0,
-    Legacy,
-    DpAlternate,
-    Thunderbolt,
-  } display_type_ = DisplayType::Unknown;
 
   // Debug
   inspect::Node inspect_node_;

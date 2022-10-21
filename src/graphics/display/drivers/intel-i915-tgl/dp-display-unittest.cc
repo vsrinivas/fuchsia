@@ -8,8 +8,11 @@
 
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-manager.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/fake-dpcd-channel.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pch-engine.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/pci-ids.h"
@@ -98,6 +101,32 @@ class TestPipeManager : public PipeManager {
   }
 };
 
+class TestDdiPhysicalLayer final : public i915_tgl::DdiPhysicalLayer {
+ public:
+  explicit TestDdiPhysicalLayer(tgl_registers::Ddi ddi) : DdiPhysicalLayer(ddi) {}
+  bool IsEnabled() const override { return enabled_; }
+  bool IsHealthy() const override { return true; }
+  bool Enable() override {
+    enabled_ = true;
+    return true;
+  }
+  bool Disable() override {
+    enabled_ = false;
+    return true;
+  }
+
+  PhysicalLayerInfo GetPhysicalLayerInfo() const override {
+    return {
+        .ddi_type = DdiPhysicalLayer::DdiType::kCombo,
+        .connection_type = DdiPhysicalLayer::ConnectionType::kBuiltIn,
+        .max_allowed_dp_lane_count = 4u,
+    };
+  }
+
+ private:
+  bool enabled_ = false;
+};
+
 class DpDisplayTest : public ::testing::Test {
  protected:
   DpDisplayTest()
@@ -141,8 +170,8 @@ class DpDisplayTest : public ::testing::Test {
     // DisplayDevice::LoadACtiveMode() (for a pre-initialized display, e.g. bootloader-configured
     // eDP). For testing we only initialize until the Query() stage. The states of a DpDisplay
     // should become easier to reason about if remove the partially-initialized states.
-    auto display = std::make_unique<DpDisplay>(&controller_, id, ddi, &fake_dpcd_,
-                                               &pch_engine_.value(), &node_);
+    auto display = std::make_unique<DpDisplay>(
+        &controller_, id, ddi, &fake_dpcd_, &pch_engine_.value(), i915_tgl::DdiReference(), &node_);
     if (!display->Query()) {
       return nullptr;
     }
@@ -163,6 +192,7 @@ class DpDisplayTest : public ::testing::Test {
 
   inspect::Node node_;
   testing::FakeDpcdChannel fake_dpcd_;
+
   std::optional<PchEngine> pch_engine_;
 };
 

@@ -22,6 +22,7 @@
 #include <fbl/vector.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/clock/cdclk.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/display-device.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dp-display.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
@@ -281,6 +282,7 @@ class Controller : public DeviceType,
   uint64_t next_id_ __TA_GUARDED(display_lock_) = 1;  // id can't be INVALID_DISPLAY_ID == 0
   mtx_t display_lock_;
 
+  std::unique_ptr<DdiManager> ddi_manager_;
   std::unique_ptr<PipeManager> pipe_manager_;
 
   PowerWellRef cd_clk_power_well_;

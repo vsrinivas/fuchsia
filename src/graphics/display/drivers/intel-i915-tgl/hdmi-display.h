@@ -14,6 +14,7 @@
 #include <cstddef>
 #include <cstdint>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/display-device.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
@@ -41,7 +42,8 @@ class GMBusI2c {
 
 class HdmiDisplay : public DisplayDevice {
  public:
-  HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi);
+  HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
+              DdiReference ddi_reference);
 
   HdmiDisplay(const HdmiDisplay&) = delete;
   HdmiDisplay(HdmiDisplay&&) = delete;

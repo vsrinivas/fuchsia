@@ -21,6 +21,7 @@
 
 #include <fbl/auto_lock.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/ddi-physical-layer-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/intel-i915-tgl.h"
@@ -665,8 +666,9 @@ std::optional<HdmiDpllState> ComputeDpllConfigurationForHdmi(uint32_t symbol_clo
 // On DisplayDevice creation we cannot determine whether it is an HDMI
 // display; this will be updated when intel-i915 Controller gets EDID
 // information for this device (before Init()).
-HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi)
-    : DisplayDevice(controller, id, ddi, /* type */ Type::kHdmi) {}
+HdmiDisplay::HdmiDisplay(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
+                         DdiReference ddi_reference)
+    : DisplayDevice(controller, id, ddi, std::move(ddi_reference), Type::kHdmi) {}
 
 HdmiDisplay::~HdmiDisplay() = default;
 

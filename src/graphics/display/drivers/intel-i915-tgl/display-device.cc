@@ -47,8 +47,13 @@ constexpr zx_protocol_device_t kBacklightDeviceOps = {
 
 namespace i915_tgl {
 
-DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi, Type type)
-    : controller_(controller), id_(id), ddi_(ddi), type_(type) {}
+DisplayDevice::DisplayDevice(Controller* controller, uint64_t id, tgl_registers::Ddi ddi,
+                             DdiReference ddi_reference, Type type)
+    : controller_(controller),
+      id_(id),
+      ddi_(ddi),
+      ddi_reference_(std::move(ddi_reference)),
+      type_(type) {}
 
 DisplayDevice::~DisplayDevice() {
   if (pipe_) {
@@ -57,6 +62,9 @@ DisplayDevice::~DisplayDevice() {
   }
   if (inited_) {
     controller_->ResetDdi(ddi(), pipe()->connected_transcoder_id());
+  }
+  if (ddi_reference_) {
+    ddi_reference_.reset();
   }
   if (display_ref_) {
     fbl::AutoLock lock(&display_ref_->mtx);
