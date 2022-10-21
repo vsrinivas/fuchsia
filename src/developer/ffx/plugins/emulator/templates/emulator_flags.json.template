@@ -43,7 +43,7 @@
         {{/if}}
         {{#if (eq runtime.console "console")}}
             "-serial",
-            "stdio",
+            "mon:stdio",
         {{else}}
             "-serial",
             "unix:{{runtime.instance_directory}}/serial,server,nowait",

@@ -41,9 +41,13 @@ pub struct StartCommand {
     pub config: Option<PathBuf>,
 
     /// launch the emulator in serial console mode. This redirects the virtual serial port to the
-    /// host's input/output streams, then maintains a connection to those streams rather than
-    /// returning control to the host terminal. This is especially useful when the guest is running
-    /// without networking enabled.
+    /// host's input/output streams, multi-plexed with the QEMU monitor console, then maintains a
+    /// connection to those streams rather than returning control to the host terminal. This is
+    /// especially useful when the guest is running without networking enabled.
+    ///
+    /// Note: Control sequences are passed through to the guest system in this mode, so Crtl-c will
+    /// terminate the guest system's shell, rather than the emulator process itself. If you need to
+    /// hard-kill the emulator, use the QEMU sequence 'Ctrl-a x' instead.
     #[argh(switch)]
     pub console: bool,
 
