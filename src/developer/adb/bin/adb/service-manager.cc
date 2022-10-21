@@ -32,7 +32,7 @@ zx_status_t ServiceManager::Init() {
   return ZX_OK;
 }
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ServiceManager::CreateDynamicChild(
+zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ServiceManager::CreateDynamicChild(
     std::string_view name) {
   if (services.find(name) == services.end()) {
     FX_LOGS(ERROR) << "Service " << name << " not supported";
@@ -59,7 +59,7 @@ zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ServiceManager::Crea
   return ConnectDynamicChild(name);
 }
 
-zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ServiceManager::ConnectDynamicChild(
+zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ServiceManager::ConnectDynamicChild(
     std::string_view name) {
   // Connect to SVC
   auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();

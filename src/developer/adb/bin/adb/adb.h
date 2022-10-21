@@ -23,7 +23,7 @@ class DeviceConnector {
 
   // Calls ConnectToDevice() on all available devices, and returns the first one that is able
   // to connect successfully.
-  virtual zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Device>> ConnectToFirstDevice() = 0;
+  virtual zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Device>> ConnectToFirstDevice() = 0;
 };
 
 // Adb connects to devices implementing fuchsia_hardware_adb::Device and calls the Start function to
@@ -34,11 +34,11 @@ class Adb : public AdbBase {
  public:
   explicit Adb(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
-  static zx::status<std::unique_ptr<Adb>> Create(async_dispatcher_t* dispatcher);
+  static zx::result<std::unique_ptr<Adb>> Create(async_dispatcher_t* dispatcher);
 
   // AdbDaemonBase functions
   bool SendUsbPacket(uint8_t* buf, size_t len) override;
-  zx::status<zx::socket> GetServiceSocket(std::string_view service_name,
+  zx::result<zx::socket> GetServiceSocket(std::string_view service_name,
                                           std::string_view args) override;
 
  private:

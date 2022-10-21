@@ -47,7 +47,7 @@ zx::result<RamDisk> RamDisk::CreateWithVmo(zx::vmo vmo, uint64_t block_size) {
     return status.take_error();
   }
   ramdisk_client_t* client;
-  status = zx::make_status(ramdisk_create_from_vmo_with_params(vmo.release(), block_size,
+  status = zx::make_result(ramdisk_create_from_vmo_with_params(vmo.release(), block_size,
                                                                /*type_guid*/ nullptr,
                                                                /*guid_len*/ 0, &client));
   if (status.is_error()) {

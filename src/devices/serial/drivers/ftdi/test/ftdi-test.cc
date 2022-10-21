@@ -88,7 +88,7 @@ class FtdiTest : public zxtest::Test {
 };
 
 TEST_F(FtdiTest, ReadAndWriteTest) {
-  zx::status result = component::ConnectAt<fuchsia_hardware_serial::Device>(
+  zx::result result = component::ConnectAt<fuchsia_hardware_serial::Device>(
       fdio_cpp::UnownedFdioCaller(bus_->GetRootFd()).directory(), devpath_.c_str());
   ASSERT_OK(result.status_value());
   fidl::ClientEnd<fuchsia_hardware_serial::Device>& client_end = result.value();

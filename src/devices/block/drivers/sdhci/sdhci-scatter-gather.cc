@@ -279,7 +279,7 @@ zx_status_t Sdhci::DmaDescriptorBuilder::ProcessBuffer(const sdmmc_buffer_region
   total_size_ += buffer.size;
 
   fzl::PinnedVmo::Region region_buffer[SDMMC_PAGES_COUNT];
-  zx::status<size_t> region_count;
+  zx::result<size_t> region_count;
   if (buffer.type == SDMMC_BUFFER_TYPE_VMO_HANDLE) {
     region_count = GetPinnedRegions(zx::unowned_vmo(buffer.buffer.vmo), buffer,
                                     {region_buffer, std::size(region_buffer)});
@@ -297,7 +297,7 @@ zx_status_t Sdhci::DmaDescriptorBuilder::ProcessBuffer(const sdmmc_buffer_region
   return AppendRegions({region_buffer, region_count.value()});
 }
 
-zx::status<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
+zx::result<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
     uint32_t vmo_id, const sdmmc_buffer_region_t& buffer,
     cpp20::span<fzl::PinnedVmo::Region> out_regions) {
   vmo_store::StoredVmo<OwnedVmoInfo>* const stored_vmo =
@@ -334,7 +334,7 @@ zx::status<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
   return zx::ok(region_count);
 }
 
-zx::status<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
+zx::result<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
     zx::unowned_vmo vmo, const sdmmc_buffer_region_t& buffer,
     cpp20::span<fzl::PinnedVmo::Region> out_regions) {
   const uint64_t kPageSize = zx_system_get_page_size();

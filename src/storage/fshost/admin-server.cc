@@ -434,7 +434,7 @@ void AdminServer::WipeStorage(WipeStorageRequestView request,
 
   // Find the first non-ramdisk FVM partition to wipe.
   ZX_DEBUG_ASSERT(!config_.ramdisk_prefix().empty());
-  zx::status<fbl::unique_fd> fvm_device =
+  zx::result<fbl::unique_fd> fvm_device =
       storage_wiper::GetFvmBlockDevice(config_.ramdisk_prefix());
   if (fvm_device.is_error()) {
     FX_LOGS(ERROR) << "Failed get FVM block device: " << fvm_device.status_string();
@@ -443,7 +443,7 @@ void AdminServer::WipeStorage(WipeStorageRequestView request,
   }
 
   // Wipe and reprovision the FVM partition with the product/board configured values.
-  zx::status<fs_management::StartedSingleVolumeFilesystem> blobfs =
+  zx::result<fs_management::StartedSingleVolumeFilesystem> blobfs =
       storage_wiper::WipeStorage(*std::move(fvm_device), config_);
   if (blobfs.is_error()) {
     FX_LOGS(ERROR) << "WipeStorage failed: " << blobfs.status_string();
@@ -451,7 +451,7 @@ void AdminServer::WipeStorage(WipeStorageRequestView request,
     return;
   }
 
-  zx::status blob_data_root = blobfs->DataRoot();
+  zx::result blob_data_root = blobfs->DataRoot();
   if (blob_data_root.is_error()) {
     FX_LOGS(ERROR) << "Failed to obtain Blobfs data root: " << blob_data_root.status_string();
     completer.ReplyError(blob_data_root.error_value());

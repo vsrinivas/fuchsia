@@ -216,9 +216,9 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     // Pins the buffer if needed, and fills out_regions with the physical addresses corresponding to
     // the (owned or unowned) input buffer. Contiguous runs of pages are condensed into single
     // regions so that the minimum number of DMA descriptors are required.
-    zx::status<size_t> GetPinnedRegions(uint32_t vmo_id, const sdmmc_buffer_region_t& buffer,
+    zx::result<size_t> GetPinnedRegions(uint32_t vmo_id, const sdmmc_buffer_region_t& buffer,
                                         cpp20::span<fzl::PinnedVmo::Region> out_regions);
-    zx::status<size_t> GetPinnedRegions(zx::unowned_vmo vmo, const sdmmc_buffer_region_t& buffer,
+    zx::result<size_t> GetPinnedRegions(zx::unowned_vmo vmo, const sdmmc_buffer_region_t& buffer,
                                         cpp20::span<fzl::PinnedVmo::Region> out_regions);
 
     // Appends the regions to the current list of regions being tracked by this object. Regions are

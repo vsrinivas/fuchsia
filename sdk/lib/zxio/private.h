@@ -246,7 +246,7 @@ zx_status_t zxio_create_with_nodeinfo(fidl::ClientEnd<fuchsia_io::Node> node,
                                       fuchsia_io::wire::NodeInfoDeprecated& node_info,
                                       zxio_storage_t* storage);
 
-zx::status<fuchsia_io::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
+zx::result<fuchsia_io::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
     fidl::AnyArena& alloc, const fidl::ClientEnd<fuchsia_io::Node>& node);
 
 #endif  // LIB_ZXIO_PRIVATE_H_

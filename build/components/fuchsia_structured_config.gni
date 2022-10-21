@@ -596,7 +596,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
 # ```
 # #import <my_component_config_lib/config.h>
 #
-# static zx::status<std::unique_ptr<MyDriver>> Start(fdf::wire::DriverStartArgs& start_args,
+# static zx::result<std::unique_ptr<MyDriver>> Start(fdf::wire::DriverStartArgs& start_args,
 #                                                        async_dispatcher_t* dispatcher,
 #                                                        fidl::WireSharedClient<fdf::Node> node,
 #                                                        driver::Namespace ns,

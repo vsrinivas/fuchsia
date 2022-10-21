@@ -192,7 +192,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   ```c++
   // The channel creation and service connection is done in one function.
   // By default it opens the protocol name.
-  // Returns |zx::status<fidl::ClientEnd<Foo>>|.
+  // Returns |zx::result<fidl::ClientEnd<Foo>>|.
   auto client_end = service::Connect<Foo>();
   if (!client_end.is_ok())
     return client_end.status_value();
@@ -220,7 +220,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   ```c++
   // The channel creation and service connection is done in one function.
   // Opens "/svc" and returns the client endpoint, as a
-  // |zx::status<fidl::ClientEnd<::fuchsia_io::Directory>>|.
+  // |zx::result<fidl::ClientEnd<::fuchsia_io::Directory>>|.
   auto client_end = component::OpenServiceRoot<Foo>();
   if (!client_end.is_ok())
     return client_end.status_value();

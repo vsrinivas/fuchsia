@@ -135,7 +135,7 @@ bool Adb::SendUsbPacket(uint8_t* buf, size_t len) {
   return success;
 }
 
-zx::status<zx::socket> Adb::GetServiceSocket(std::string_view service_name, std::string_view args) {
+zx::result<zx::socket> Adb::GetServiceSocket(std::string_view service_name, std::string_view args) {
   auto client_end = service_manager_.CreateDynamicChild(service_name);
   if (client_end.is_error()) {
     FX_LOGS(ERROR) << "Couldn't create/open child for service " << service_name;
@@ -198,7 +198,7 @@ zx_status_t Adb::Init(DeviceConnector* connector) {
   return ZX_OK;
 }
 
-zx::status<std::unique_ptr<Adb>> Adb::Create(async_dispatcher_t* dispatcher) {
+zx::result<std::unique_ptr<Adb>> Adb::Create(async_dispatcher_t* dispatcher) {
   auto adb = std::make_unique<Adb>(dispatcher);
   if (!adb) {
     return zx::error(ZX_ERR_NO_RESOURCES);
@@ -210,7 +210,7 @@ zx::status<std::unique_ptr<Adb>> Adb::Create(async_dispatcher_t* dispatcher) {
    public:
     explicit DefaultConnector() = default;
 
-    zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Device>> ConnectToFirstDevice() override {
+    zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Device>> ConnectToFirstDevice() override {
       async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
       fidl::ClientEnd<fuchsia_hardware_adb::Device> client;
       auto watcher = fsl::DeviceWatcher::Create(

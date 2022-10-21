@@ -43,7 +43,7 @@ constexpr blobfs::FilesystemOptions GetProductBlobfsOptions(const fshost_config:
 }
 
 // Unbind all children of |device_fd|. Assumes |device_fd| speaks fuchsia.device/Controller.
-zx::status<> UnbindChildren(const fbl::unique_fd& device_fd) {
+zx::result<> UnbindChildren(const fbl::unique_fd& device_fd) {
   const fdio_cpp::UnownedFdioCaller device_caller(device_fd);
   auto resp =
       fidl::WireCall(device_caller.borrow_as<fuchsia_device::Controller>())->UnbindChildren();
@@ -61,7 +61,7 @@ zx::status<> UnbindChildren(const fbl::unique_fd& device_fd) {
 }
 
 // Bind the FVM driver to |device_fd|. Assumes |device_fd| speaks fuchsia.device/Controller.
-zx::status<> BindFvmDriver(const fbl::unique_fd& device_fd) {
+zx::result<> BindFvmDriver(const fbl::unique_fd& device_fd) {
   const fdio_cpp::UnownedFdioCaller device_caller(device_fd);
   auto resp = fidl::WireCall(device_caller.borrow_as<fuchsia_device::Controller>())
                   ->Bind(fshost::kFVMDriverPath);
@@ -79,7 +79,7 @@ zx::status<> BindFvmDriver(const fbl::unique_fd& device_fd) {
 // Allocate a new blob and data partition, each with a single slice. On success, returns handle to
 // the newly created blob partition. Assumes |fvm_device| speaks
 // hardware.block.volume/VolumeManager.
-zx::status<fbl::unique_fd> AllocateFvmPartitions(const fbl::unique_fd& fvm_device) {
+zx::result<fbl::unique_fd> AllocateFvmPartitions(const fbl::unique_fd& fvm_device) {
   // Volumes will be dynamically resized.
   constexpr size_t kInitialSliceCount = 1;
 
@@ -101,12 +101,12 @@ zx::status<fbl::unique_fd> AllocateFvmPartitions(const fbl::unique_fd& fvm_devic
   std::copy(data_guid.bytes(), data_guid.bytes() + uuid::kUuidSize, data_partition.guid);
 
   // Allocate new empty blob and data partitions.
-  zx::status blob_fd = fs_management::FvmAllocatePartition(fvm_device.get(), &blob_partition);
+  zx::result blob_fd = fs_management::FvmAllocatePartition(fvm_device.get(), &blob_partition);
   if (blob_fd.is_error()) {
     FX_LOGS(ERROR) << "Failed to allocate blob partition: " << blob_fd.status_string();
     return blob_fd;
   }
-  if (zx::status status = fs_management::FvmAllocatePartition(fvm_device.get(), &data_partition);
+  if (zx::result status = fs_management::FvmAllocatePartition(fvm_device.get(), &data_partition);
       status.is_error()) {
     FX_LOGS(ERROR) << "Failed to allocate data partition: " << status.status_string();
     return status;
@@ -116,7 +116,7 @@ zx::status<fbl::unique_fd> AllocateFvmPartitions(const fbl::unique_fd& fvm_devic
   return blob_fd;
 }
 
-zx::status<fbl::unique_fd> WaitForFvm(const std::filesystem::path& device_topo_path) {
+zx::result<fbl::unique_fd> WaitForFvm(const std::filesystem::path& device_topo_path) {
   auto watch_func = [](int, int event, const char* filename, void*) -> zx_status_t {
     if (event != WATCH_EVENT_ADD_FILE) {
       return ZX_OK;
@@ -147,7 +147,7 @@ zx::status<fbl::unique_fd> WaitForFvm(const std::filesystem::path& device_topo_p
 
 namespace fshost::storage_wiper {
 
-zx::status<fbl::unique_fd> GetFvmBlockDevice(std::string_view ignore_prefix) {
+zx::result<fbl::unique_fd> GetFvmBlockDevice(std::string_view ignore_prefix) {
   FX_LOGS(INFO) << "Searching for FVM block device.";
   if (!ignore_prefix.empty()) {
     FX_LOGS(INFO) << "Ignoring devices with prefix: " << ignore_prefix;
@@ -188,13 +188,13 @@ zx::status<fbl::unique_fd> GetFvmBlockDevice(std::string_view ignore_prefix) {
   return zx::ok(*std::move(fvm_device));
 }
 
-zx::status<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
+zx::result<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
     fbl::unique_fd fvm_block_device, const fshost_config::Config& config) {
   const std::filesystem::path device_topo_path = GetTopologicalPath(fvm_block_device.get());
   FX_LOGS(INFO) << "Wiping storage on device: " << device_topo_path;
 
   FX_LOGS(INFO) << "Unbinding child drivers (FVM/zxcrypt).";
-  if (zx::status status = UnbindChildren(fvm_block_device); status.is_error()) {
+  if (zx::result status = UnbindChildren(fvm_block_device); status.is_error()) {
     FX_LOGS(ERROR) << "Failed to unbind children: " << status.status_string();
     return status.take_error();
   }
@@ -208,11 +208,11 @@ zx::status<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
   }
 
   FX_LOGS(INFO) << "Binding and waiting for FVM driver.";
-  if (zx::status status = BindFvmDriver(fvm_block_device); status.is_error()) {
+  if (zx::result status = BindFvmDriver(fvm_block_device); status.is_error()) {
     FX_LOGS(INFO) << "Failed to bind FVM driver: " << status.status_string();
     return status.take_error();
   }
-  zx::status<fbl::unique_fd> fvm_device = WaitForFvm(device_topo_path);
+  zx::result<fbl::unique_fd> fvm_device = WaitForFvm(device_topo_path);
   if (fvm_device.is_error()) {
     FX_LOGS(ERROR) << "Failed to wait for FVM to bind: " << fvm_device.status_string();
     return fvm_device.take_error();
@@ -220,7 +220,7 @@ zx::status<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
 
   FX_LOGS(INFO) << "Allocating new partitions.";
 
-  zx::status<fbl::unique_fd> blob_partition = AllocateFvmPartitions(*std::move(fvm_device));
+  zx::result<fbl::unique_fd> blob_partition = AllocateFvmPartitions(*std::move(fvm_device));
   if (blob_partition.is_error()) {
     FX_LOGS(ERROR) << "Failed to allocate new partitions: " << blob_partition.status_string();
     return blob_partition.take_error();
@@ -234,7 +234,7 @@ zx::status<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
                   << ", num_inodes = " << blobfs_options.num_inodes
                   << ", oldest_min_version = " << blobfs_options.oldest_minor_version;
 
-    zx::status blobfs_device = block_client::RemoteBlockDevice::Create(blob_partition->get());
+    zx::result blobfs_device = block_client::RemoteBlockDevice::Create(blob_partition->get());
     if (blobfs_device.is_error()) {
       FX_LOGS(ERROR) << "Failed to create RemoteBlockDevice: " << blobfs_device.status_string();
       return blobfs_device.take_error();
@@ -248,7 +248,7 @@ zx::status<fs_management::StartedSingleVolumeFilesystem> WipeStorage(
   }
 
   FX_LOGS(INFO) << "Mounting Blobfs.";
-  zx::status blobfs = fs_management::Mount(
+  zx::result blobfs = fs_management::Mount(
       *std::move(blob_partition), fs_management::kDiskFormatBlobfs,
       fshost::GetBlobfsMountOptionsForRecovery(config), fs_management::LaunchLogsAsync);
   if (blobfs.is_error()) {

@@ -26,7 +26,7 @@ namespace usb_virtual {
 
 using driver_integration_test::IsolatedDevmgr;
 
-zx::status<BusLauncher> BusLauncher::Create(IsolatedDevmgr::Args args) {
+zx::result<BusLauncher> BusLauncher::Create(IsolatedDevmgr::Args args) {
   args.disable_block_watcher = true;
 
   board_test::DeviceEntry dev = {};

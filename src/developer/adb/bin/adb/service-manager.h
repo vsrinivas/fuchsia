@@ -20,12 +20,12 @@ class ServiceManager {
 
   // Use the fuchsia.component.Realm protocol to create a dynamic
   // child instance in the collection.
-  zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> CreateDynamicChild(
+  zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> CreateDynamicChild(
       std::string_view name);
 
   // Use the fuchsia.component.Realm protocol to open the exposed directory of
   // the dynamic child instance.
-  zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ConnectDynamicChild(
+  zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Provider>> ConnectDynamicChild(
       std::string_view name);
 
  private:

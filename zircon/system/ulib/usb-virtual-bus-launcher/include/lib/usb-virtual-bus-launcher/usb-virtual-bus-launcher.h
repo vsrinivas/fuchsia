@@ -44,7 +44,7 @@ class BusLauncher {
   //       }
   //   };
   //   usb_virtual::Bus::Create(std::move(args));
-  static zx::status<BusLauncher> Create(IsolatedDevmgr::Args args = {});
+  static zx::result<BusLauncher> Create(IsolatedDevmgr::Args args = {});
 
   // Set up a USB peripheral device with the given descriptors. See fuchsia.hardware.usb.peripheral
   // for more information. Waits for the functions to be registered and triggers a connect event on

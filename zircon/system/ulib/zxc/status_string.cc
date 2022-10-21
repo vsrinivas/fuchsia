@@ -5,4 +5,4 @@
 #include <lib/zx/status.h>
 #include <zircon/status.h>
 
-const char* zx::status<>::status_string() const { return zx_status_get_string(status_value()); }
+const char* zx::result<>::status_string() const { return zx_status_get_string(status_value()); }

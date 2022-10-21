@@ -208,7 +208,7 @@ class FakeAdb : public Adb, public component_testing::LocalComponentImpl {
   // component_testing::LocalComponentImpl methods
   void OnStart() override {}
 
-  zx::status<zx::socket> GetServiceSocket(std::string_view service_name,
+  zx::result<zx::socket> GetServiceSocket(std::string_view service_name,
                                           std::string_view args) override {
     zx::socket server, client;
     EXPECT_EQ(zx::socket::create(ZX_SOCKET_STREAM, &server, &client), ZX_OK);
@@ -247,7 +247,7 @@ class AdbTest : public testing::Test {
       explicit TestConnector(async_dispatcher_t* dispatcher, FakeAdbDriver* fake_driver)
           : dispatcher_(dispatcher), fake_driver_(fake_driver) {}
 
-      zx::status<fidl::ClientEnd<fuchsia_hardware_adb::Device>> ConnectToFirstDevice() override {
+      zx::result<fidl::ClientEnd<fuchsia_hardware_adb::Device>> ConnectToFirstDevice() override {
         zx::channel server, client;
         EXPECT_EQ(zx::channel::create(0, &server, &client), ZX_OK);
         driver_binding_.emplace(fidl::BindServer(

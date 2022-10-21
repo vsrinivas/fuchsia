@@ -241,9 +241,9 @@ TEST_F(SerialDeviceTest, DdkClose) {
 }
 
 template <typename ServerImpl>
-zx::status<fidl::WireClient<typename ServerImpl::_EnclosingProtocol>> Connect(
+zx::result<fidl::WireClient<typename ServerImpl::_EnclosingProtocol>> Connect(
     async_dispatcher_t* dispatcher, ServerImpl* impl) {
-  zx::status endpoints = fidl::CreateEndpoints<typename ServerImpl::_EnclosingProtocol>();
+  zx::result endpoints = fidl::CreateEndpoints<typename ServerImpl::_EnclosingProtocol>();
   if (endpoints.is_error()) {
     return endpoints.take_error();
   }
@@ -254,7 +254,7 @@ zx::status<fidl::WireClient<typename ServerImpl::_EnclosingProtocol>> Connect(
 
 TEST_F(SerialDeviceTest, Read) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  zx::status client = Connect(loop.dispatcher(), device());
+  zx::result client = Connect(loop.dispatcher(), device());
   ASSERT_OK(client.status_value());
   fidl::WireClient<fuchsia_hardware_serial::Device>& fidl = client.value();
 
@@ -290,7 +290,7 @@ TEST_F(SerialDeviceTest, Read) {
 
 TEST_F(SerialDeviceTest, Write) {
   async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
-  zx::status client = Connect(loop.dispatcher(), device());
+  zx::result client = Connect(loop.dispatcher(), device());
   ASSERT_OK(client.status_value());
   fidl::WireClient<fuchsia_hardware_serial::Device>& fidl = client.value();
 

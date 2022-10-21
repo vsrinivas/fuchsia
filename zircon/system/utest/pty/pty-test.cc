@@ -113,7 +113,7 @@ TEST(PtyTests, pty_test) {
   // This manifests as a loss of fd signals.
   fbl::unique_fd ps;
   {
-    zx::status client_end = component::Connect<fpty::Device>();
+    zx::result client_end = component::Connect<fpty::Device>();
     ASSERT_OK(client_end.status_value());
 
     ASSERT_OK(fdio_fd_create(client_end->channel().release(), ps.reset_and_get_address()));

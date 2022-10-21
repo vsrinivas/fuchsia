@@ -89,7 +89,7 @@ class ZxioCreateOnOpenEventHandler final : public fidl::WireSyncEventHandler<fio
 
 }  // namespace
 
-zx::status<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
+zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
     fidl::AnyArena& alloc, const fidl::ClientEnd<fio::Node>& node) {
   const fidl::WireResult result = fidl::WireCall(node)->Query();
   if (!result.ok()) {
@@ -202,7 +202,7 @@ zx_status_t zxio_create_with_info(zx_handle_t raw_handle, const zx_info_handle_b
     case ZX_OBJ_TYPE_CHANNEL: {
       fidl::Arena alloc;
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      zx::status node_info = zxio_get_nodeinfo(alloc, node);
+      zx::result node_info = zxio_get_nodeinfo(alloc, node);
       if (node_info.is_error()) {
         return node_info.status_value();
       }

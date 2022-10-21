@@ -46,7 +46,7 @@ class RamdiskController : public RamdiskControllerDeviceType {
   zx::result<std::string> ConfigureDevice(zx::vmo vmo, uint64_t block_size, uint64_t block_count,
                                           const uint8_t* type_guid);
 
-  zx::status<std::string> CreateFromVmoWithParamsInternal(zx::vmo vmo, uint64_t block_size,
+  zx::result<std::string> CreateFromVmoWithParamsInternal(zx::vmo vmo, uint64_t block_size,
                                                           const uint8_t* type_guid);
 };
 
@@ -67,7 +67,7 @@ void RamdiskController::Create(CreateRequestView request, CreateCompleter::Sync&
   completer.Reply(ZX_OK, fidl::StringView::FromExternal(name_or.value()));
 }
 
-zx::status<std::string> RamdiskController::CreateFromVmoWithParamsInternal(
+zx::result<std::string> RamdiskController::CreateFromVmoWithParamsInternal(
     zx::vmo vmo, uint64_t block_size, const uint8_t* type_guid) {
   zx_info_handle_count_t handle_count_info;
   zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &handle_count_info,

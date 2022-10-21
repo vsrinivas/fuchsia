@@ -27,7 +27,7 @@ zx_status_t zxio_create_with_allocator(zx::handle handle, zxio_storage_alloc all
     case ZX_OBJ_TYPE_CHANNEL: {
       fidl::Arena alloc;
       fidl::ClientEnd<fio::Node> node(zx::channel(std::move(handle)));
-      zx::status node_info = zxio_get_nodeinfo(alloc, node);
+      zx::result node_info = zxio_get_nodeinfo(alloc, node);
       if (node_info.is_error()) {
         return node_info.status_value();
       }

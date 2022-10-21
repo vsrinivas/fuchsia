@@ -683,7 +683,7 @@ void IgcDriver::NetworkDeviceImplPrepareVmo(uint8_t id, zx::vmo vmo,
 
 void IgcDriver::NetworkDeviceImplReleaseVmo(uint8_t vmo_id) {
   fbl::AutoLock vmo_lock(&vmo_lock_);
-  zx::status<zx::vmo> status = vmo_store_->Unregister(vmo_id);
+  zx::result<zx::vmo> status = vmo_store_->Unregister(vmo_id);
   if (status.status_value() != ZX_OK) {
     zxlogf(ERROR, "Failed to release VMO: %s", status.status_string());
   }

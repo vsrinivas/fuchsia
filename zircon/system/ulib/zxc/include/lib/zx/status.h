@@ -15,10 +15,10 @@ namespace zx {
 // Simplified result type for returning either a zx_status_t error or zero/one values. See
 // lib/fit/result.h for an explanation of the general result type.
 //
-// To make a zx::status:
+// To make a zx::result:
 //
-//   zx::ok()                    // For success on zx::status<>.
-//   zx::ok(foo)                 // For success on zx::status<Foo>.
+//   zx::ok()                    // For success on zx::result<>.
+//   zx::ok(foo)                 // For success on zx::result<Foo>.
 //
 //   zx::error(ZX_ERR_NO_MEMORY) // For failure.
 //
@@ -44,11 +44,11 @@ namespace zx {
 //
 //   zx_status_t error_value()   // Error code. See also status_value() which is always usable.
 //   error<E> take_error()       // Generates a zx::error() which can be implicitly converted to a
-//                               // zx::status with another "success" type (or zx::status<>).
+//                               // zx::result with another "success" type (or zx::result<>).
 //
 // Examples:
 //
-//   zx::status<fbl::RefPtr<Node>> MakeNode(Args...) {
+//   zx::result<fbl::RefPtr<Node>> MakeNode(Args...) {
 //     fbl::AllocChecker alloc_checker;
 //     auto* node_ptr = new (&alloc_checker) Node(Args...);
 //     if (!alloc_checker.check()) {
@@ -57,7 +57,7 @@ namespace zx {
 //     return zx::ok(fbl::RefPtr{node_ptr});
 //   }
 //
-//   zx::status<> AddNewNode(Tree* tree, Args...) {
+//   zx::result<> AddNewNode(Tree* tree, Args...) {
 //     auto status = MakeNode(Args...));
 //     if (status.is_ok() {
 //       tree->AddNode(std::move(status.value()));
@@ -76,20 +76,20 @@ using fit::success;
 
 // Base type.
 template <typename... Ts>
-class status;
+class result;
 
 // Specialization of status for returning a single value.
 template <typename T>
-class LIB_FIT_NODISCARD status<T> : public ::fit::result<zx_status_t, T> {
+class LIB_FIT_NODISCARD result<T> : public ::fit::result<zx_status_t, T> {
   using base = ::fit::result<zx_status_t, T>;
 
  public:
   using base::base;
 
   // Implicit conversion from error<zx_status_t>.
-  constexpr status(error<zx_status_t> error) : base{error} {
+  constexpr result(error<zx_status_t> error) : base{error} {
     // It is invalid to pass ZX_OK as an error state. Use zx::ok() or
-    // zx::success to indicate success. See zx::make_status for forwarding
+    // zx::success to indicate success. See zx::make_result for forwarding
     // errors from code that uses zx_status_t.
     if (base::error_value() == ZX_OK) {
       __builtin_abort();
@@ -110,16 +110,16 @@ class LIB_FIT_NODISCARD status<T> : public ::fit::result<zx_status_t, T> {
 
 // Specialization of status for empty value type.
 template <>
-class LIB_FIT_NODISCARD status<> : public ::fit::result<zx_status_t> {
+class LIB_FIT_NODISCARD result<> : public ::fit::result<zx_status_t> {
   using base = ::fit::result<zx_status_t>;
 
  public:
   using base::base;
 
   // Implicit conversion from error<zx_status_t>.
-  constexpr status(error<zx_status_t> error) : base{error} {
+  constexpr result(error<zx_status_t> error) : base{error} {
     // It is invalid to pass ZX_OK as an error state. Use zx::ok() or
-    // zx::success to indicate success. See zx::make_status for forwarding
+    // zx::success to indicate success. See zx::make_result for forwarding
     // errors from code that uses zx_status_t.
     if (base::error_value() == ZX_OK) {
       __builtin_abort();
@@ -139,11 +139,11 @@ class LIB_FIT_NODISCARD status<> : public ::fit::result<zx_status_t> {
 };
 
 // Simplified alias of zx::error<zx_status_t>.
-using error_status = error<zx_status_t>;
+using error_result = error<zx_status_t>;
 
-// Utility to make a status-only zx::status<> from a zx_status_t error.
+// Utility to make a status-only zx::result<> from a zx_status_t error.
 //
-// A status-only zx::status<> is one with an empty value set. It may contain
+// A status-only zx::result<> is one with an empty value set. It may contain
 // either a status value that represents the error (i.e. not ZX_OK) or a
 // valueless success state. This utility automatically handles the distinction
 // to make interop with older code easier.
@@ -154,23 +154,23 @@ using error_status = error<zx_status_t>;
 //   zx_status_t ConsumeValues(Value* values, size_t length);
 //
 //   // Newer method that interops with the legacy method.
-//   zx::status<> ConsumeValues(std::array<Value, kSize>* values) {
+//   zx::result<> ConsumeValues(std::array<Value, kSize>* values) {
 //     if (values == nullptr) {
 //       return zx::error_result(ZX_ERR_INVALID_ARGS);
 //     }
-//     return zx::make_status(ConsumeValues(values->data(), values->length()));
+//     return zx::make_result(ConsumeValues(values->data(), values->length()));
 //   }
 //
-constexpr status<> make_status(zx_status_t status) {
+constexpr result<> make_result(zx_status_t status) {
   if (status == ZX_OK) {
     return ok();
   }
-  return error_status{status};
+  return error_result{status};
 }
 
-// Utility to make a zx::status<T> from a zx_status_t and T.
+// Utility to make a zx::result<T> from a zx_status_t and T.
 //
-// Depending on |status|, the resulting zx::status<T> will be either
+// Depending on |status|, the resulting zx::result<T> will be either
 // zx::ok(value) or zx::error(status).
 //
 // Example:
@@ -179,13 +179,13 @@ constexpr status<> make_status(zx_status_t status) {
 //   zx_status_t ComputeValue(Value* value);
 //
 //   // Newer method that interops with the legacy method.
-//   zx::status<Value> ComputeValue() {
+//   zx::result<Value> ComputeValue() {
 //     Value value;
-//     return zx::make_status(ComputeValue(&value), value);
+//     return zx::make_result(ComputeValue(&value), value);
 //   }
 //
 // Note, because the order of evaluation of function arguments is unspecified,
-// it's critical that the second parameter to zx::make_status (`value`) is
+// it's critical that the second parameter to zx::make_result (`value`) is
 // passed by reference and *not* passed by value. If it were passed by value,
 // then its value may be bound before the first argument has been evaluated
 // (i.e. before ComputeValue was even called!).
@@ -197,54 +197,28 @@ constexpr status<> make_status(zx_status_t status) {
 //   zx_status_t ComputeValue(std::unique_ptr<Value>* value);
 //
 //   // BUGGY CODE
-//   zx::status<Value> ComputeValue() {
+//   zx::result<Value> ComputeValue() {
 //     std::unique_ptr<Value> value;
-//     return zx::make_status(ComputeValue(&value), *value);  // <--- BUGGY CODE
+//     return zx::make_result(ComputeValue(&value), *value);  // <--- BUGGY CODE
 //   }
 //
 // Depending on the compiler, the code above might work or my dereference a null
 // std::unique_ptr. When in doubt, use a local variable.
 //
 template <typename T>
-constexpr status<std::remove_reference_t<T>> make_status(zx_status_t status, T&& value) {
+constexpr result<std::remove_reference_t<T>> make_result(zx_status_t status, T&& value) {
   if (status == ZX_OK) {
     return ok(std::forward<T>(value));
   }
-  return error_status{status};
+  return error_result{status};
 }
 
 #if defined(__Fuchsia__)
 template <typename T>
-const char* status<T>::status_string() const {
-  return make_status(status_value()).status_string();
+const char* result<T>::status_string() const {
+  return make_result(status_value()).status_string();
 }
 #endif  // defined(__Fuchsia__)
-
-// zx::result usage is deprecated in favor of zx::result (rename).
-// Usually we would just alias status, but unfortunately template argument deduction does not work
-// through aliases, so a lot of `zx::result a = .....` would fail to compile. This is being done
-// until migration is complete.
-//
-// TODO(fxbug.dev/1120969) in progress.
-template <typename... Ts>
-class result : public status<Ts...> {
-  using base = ::zx::status<Ts...>;
-
- public:
-  using base::base;
-  // Implicit construction from status -> result to aid with migration.
-  constexpr result(status<Ts...>&& s) : status<Ts...>(std::forward<zx::status<Ts...>>(s)) {}
-
-  // Implicit conversion from result -> status to aid with migration. Will the alias is moved.
-  constexpr operator status<Ts...>&() { return *this; }
-};
-
-using error_result = zx::error<zx_status_t>;
-
-template <typename... Args>
-constexpr auto make_result(Args&&... args) {
-  return make_status(std::forward<Args>(args)...);
-}
 
 }  // namespace zx
 

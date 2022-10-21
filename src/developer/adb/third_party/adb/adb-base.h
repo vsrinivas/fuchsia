@@ -18,7 +18,7 @@ class AdbBase {
   virtual ~AdbBase() = default;
 
   virtual bool SendUsbPacket(uint8_t* buf, size_t len) = 0;
-  virtual zx::status<zx::socket> GetServiceSocket(std::string_view service,
+  virtual zx::result<zx::socket> GetServiceSocket(std::string_view service,
                                                   std::string_view args) = 0;
 };
 
