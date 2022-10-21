@@ -49,6 +49,7 @@ static constexpr audio_sample_format_t AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT =
 
 enum class Command {
   INVALID,
+  HELP,
   INFO,
   MUTE,
   UNMUTE,
@@ -76,7 +77,7 @@ static std::optional<uint32_t> GetUint32(const char* arg) {
 
 // If you update this help text you should probably also update the reference
 // documentation at //docs/reference/hardware/tools/audio-driver-ctl.md
-void usage(const char* prog_name) {
+void usage(const char* prog_name, bool full_usage) {
   // clang-format off
   printf(
       "Usage:\n"
@@ -98,7 +99,11 @@ void usage(const char* prog_name) {
       "  audio-driver-ctl [-a <mask>] [-b (8|16|20|24|32)] [-c <channels>] \\\n"
       "      [-d <id>] [-r <hertz>] tone [<frequency>] [<seconds>] [<amplitude>]\n\n"
       "  audio-driver-ctl [-d <id>] [-t (input|output)] unmute\n\n"
-      "Play, record, and configure audio streams.\n\n"
+      "Play, record, and configure audio streams.\n\n");
+  if (!full_usage) {
+    printf("For full usage help use: audio-driver-ctl help\n");
+  } else {
+    printf(
       "Options:\n"
       "  -a <mask>              Active channel mask. For example `0xf` or `15` for\n"
       "                         channels 0, 1, 2, and 3. Defaults to all channels.\n"
@@ -213,7 +218,8 @@ void usage(const char* prog_name) {
       "  $ audio-driver-ctl play /tmp/two_channel.wav\n"
       "  Failed to set source format [11025 Hz, 1 Chan, 00000000ffffffff Mask, 00000004 fmt] (res -20)\n\n"
       "  Source code for `audio-driver-ctl`: https://cs.opensource.google/fuchsia/fuchsia/+/main:src/media/audio/tools/audio-driver-ctl/audio.cc\n\n");
-  // clang-format on
+    // clang-format on
+  }
 }
 
 void dump_formats(const audio::utils::AudioDeviceStream& stream) {
@@ -493,7 +499,7 @@ int main(int argc, const char** argv) {
   std::optional<uint32_t> channels;
   std::optional<uint32_t> active = DEFAULT_ACTIVE_CHANNELS;
   Command cmd = Command::INVALID;
-  auto print_usage = fit::defer([prog_name = argv[0]]() { usage(prog_name); });
+  auto print_usage = fit::defer([prog_name = argv[0]]() { usage(prog_name, false); });
   int arg = 1;
 
   if (arg >= argc)
@@ -520,6 +526,7 @@ int main(int argc, const char** argv) {
     bool force_in;
   } COMMANDS[] = {
       // clang-format off
+    { "help",   Command::HELP,          false, false },
     { "info",   Command::INFO,          false, false },
     { "mute",   Command::MUTE,          false, false },
     { "unmute", Command::UNMUTE,        false, false },
@@ -834,6 +841,10 @@ int main(int argc, const char** argv) {
 
   // Execute the chosen command.
   switch (cmd) {
+    case Command::HELP: {
+      usage(argv[0], true);
+      return ZX_OK;
+    }
     case Command::INFO:
       return dump_stream_info(*stream);
     case Command::MUTE:
