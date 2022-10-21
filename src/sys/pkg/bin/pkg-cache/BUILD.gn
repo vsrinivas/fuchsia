@@ -104,7 +104,7 @@ fuchsia_structured_config_rust_lib("config_lib") {
 fuchsia_structured_config_values("config_values_from_gn") {
   cm_label = ":manifest"
   values = {
-    enable_subpackages = false
+    enable_subpackages = true
   }
 }
 
@@ -130,7 +130,7 @@ fuchsia_component("component-ignore-system-image") {
 fuchsia_structured_config_values("config_values_from_gn-ignore-system-image") {
   cm_label = ":manifest-ignore-system-image"
   values = {
-    enable_subpackages = false
+    enable_subpackages = true
   }
 }
 
