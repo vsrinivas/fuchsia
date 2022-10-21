@@ -57,6 +57,27 @@ namespace devicetree {
 //   return {MatcherResult::kDone};
 // };
 //
+// A matcher may provide an additional overload of the form:
+//  * MatcherResult matcher()
+//
+// That is callable without arguments. This is used to notify a matcher when a scan finishes, this
+// is useful for matchers that cannot determine whether they have finished or not until at least
+// they are notified that all nodes have been visited (scan finished).
+//
+// A matcher is notified of every scan finish, as long as it has not reached completion.
+//
+// Example:
+//
+// struct Matcher() {
+//    // Counts all the childs of cpus whose name is 'cpu'.
+//    MatcherScanResult<2> operator()(const NodePath&, Properties, Resolver) {}
+//
+//    // The matcher can do any calculations now that the scan has finished, which means
+//    // all cpu nodes have been visited. Or all interestings nodes in the devicetree have been
+//    // visited at least once.
+//    MatcherResult operator()() {}
+// }
+//
 template <typename... Matchers>
 size_t Match(Devicetree& tree, Matchers&&... matchers) {
   static_assert(sizeof...(Matchers) > 0);

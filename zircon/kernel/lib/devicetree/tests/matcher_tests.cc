@@ -8,8 +8,11 @@
 #include <lib/devicetree/path.h>
 #include <lib/stdcompat/array.h>
 
+#include <cstdint>
+
 #include <zxtest/zxtest.h>
 
+#include "lib/devicetree/devicetree.h"
 #include "lib/devicetree/internal/matcher.h"
 #include "lib/devicetree/matcher-result.h"
 #include "test_helper.h"
@@ -374,6 +377,48 @@ TEST_F(MatchTest, LambdaAsMatchersMixedAliasAndNoAlias) {
 
   EXPECT_EQ(called, 1);
   EXPECT_EQ(called_2, 2);
+}
+
+template <size_t MaxScans, size_t ScansForDone>
+struct UnboundedMatcher {
+  devicetree::MatcherScanResult<MaxScans> operator()(const devicetree::NodePath&,
+                                                     devicetree::Properties) {
+    visit_count++;
+    return {devicetree::MatcherResult::kVisitSubtree};
+  }
+
+  devicetree::MatcherResult operator()() {
+    scan_count++;
+    return scan_count >= ScansForDone ? devicetree::MatcherResult::kDone
+                                      : devicetree::MatcherResult::kVisitSubtree;
+  }
+
+  size_t visit_count = 0;
+  size_t scan_count = 0;
+};
+
+TEST_F(MatchTest, MatcherNotifiedOnScanEndMatcherDidNotFinish) {
+  constexpr size_t kScans = 3;
+
+  auto tree = no_prop_tree();
+  UnboundedMatcher<kScans, kScans + 1> matcher;
+
+  ASSERT_EQ(devicetree::Match(tree, matcher), -1);
+
+  EXPECT_EQ(matcher.visit_count, 10 * kScans);
+  EXPECT_EQ(matcher.scan_count, kScans);
+}
+
+TEST_F(MatchTest, MatcherNotifiedOnScanEndMatcherFinished) {
+  constexpr size_t kScans = 3;
+
+  auto tree = no_prop_tree();
+  UnboundedMatcher<kScans, kScans> matcher;
+
+  ASSERT_EQ(devicetree::Match(tree, matcher), kScans);
+
+  EXPECT_EQ(matcher.visit_count, 10 * kScans);
+  EXPECT_EQ(matcher.scan_count, kScans);
 }
 
 }  // namespace

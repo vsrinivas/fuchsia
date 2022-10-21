@@ -30,7 +30,7 @@ class VisitState {
   explicit constexpr VisitState(MatcherResult state) : state_(state) {}
 
   constexpr MatcherResult state() const { return state_; }
-  void set_state(MatcherResult state) { state_ = state; }
+  constexpr void set_state(MatcherResult state) { state_ = state; }
 
   constexpr void Prune(const NodePath& path) { mark_ = &path.back(); }
 
@@ -181,20 +181,17 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
   auto visit_and_prune = [&visit_state, &matchers...](const NodePath& path, Properties props) {
     // Use of optional for delayed instantiation, |*resolver| is always valid.
     auto resolver = GetPathResolver(matchers...);
-
-    ForEachMatcher(
-        [&resolver, &visit_state, &path, props](auto& matcher, size_t index) -> void {
-          if (visit_state[index].state() == MatcherResult::kVisitSubtree ||
-              (visit_state[index].state() == MatcherResult::kNeedsAliases &&
-               resolver.has_aliases())) {
-            visit_state[index].set_state(
-                to_matcher_result(Dispatch(matcher, path, props, resolver)));
-            if (visit_state[index].state() == MatcherResult::kAvoidSubtree) {
-              visit_state[index].Prune(path);
-            }
-          }
-        },
-        matchers...);
+    auto on_each_matcher = [&resolver, &visit_state, &path, props](auto& matcher,
+                                                                   size_t index) -> void {
+      if (visit_state[index].state() == MatcherResult::kVisitSubtree ||
+          (visit_state[index].state() == MatcherResult::kNeedsAliases && resolver.has_aliases())) {
+        visit_state[index].set_state(to_matcher_result(Dispatch(matcher, path, props, resolver)));
+        if (visit_state[index].state() == MatcherResult::kAvoidSubtree) {
+          visit_state[index].Prune(path);
+        }
+      }
+    };
+    ForEachMatcher(on_each_matcher, matchers...);
 
     return std::any_of(visit_state.begin(), visit_state.end(), [](auto& visit_state) {
       return visit_state.state() == MatcherResult::kVisitSubtree;
@@ -208,9 +205,22 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
     return true;
   };
 
+  constexpr auto on_scan_finish = [](auto& visit_state, auto&... matchers) constexpr {
+    ForEachMatcher(
+        [&visit_state](auto& matcher, size_t matcher_index) {
+          using Matcher = decltype(matcher);
+          if constexpr (std::is_invocable_v<Matcher>) {
+            static_assert(std::is_same_v<std::invoke_result_t<Matcher>, MatcherResult>,
+                          "Return type of 'Matcher()' must be MatcherResult.");
+            visit_state[matcher_index].set_state(to_matcher_result(matcher()));
+          }
+        },
+        matchers...);
+  };
+
   for (size_t i = 0; i < kMaxRequestedScans<Matchers...>; ++i) {
     tree.Walk(visit_and_prune, unprune);
-
+    on_scan_finish(visit_state, matchers...);
     if (all_matchers_done()) {
       return i + 1;
     }
