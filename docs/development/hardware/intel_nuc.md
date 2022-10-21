@@ -294,12 +294,6 @@ To flash a Fuchsia image to your NUC, do the following:
 
    When finished, the NUC reboots and starts running the new Fuchsia image.
 
-   Important: When using this NUC device for Fuchsia development, currently
-   for other [`ffx` workflows][ffx-workflows], you can only use USB ports to
-   connect the NUC to your host machine. In other words, undo the cable setup in
-   Step 1 above, and use **2 Ethernet-to-USB adapters** and an Ethernet cable to
-   establish a connection between the NUC and your host machine using only USB ports.
-
 <!-- Reference links -->
 
 [nuc-wiki]: https://en.wikipedia.org/wiki/Next_Unit_of_Computing
