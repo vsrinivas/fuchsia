@@ -1747,3 +1747,16 @@ TEST(UnownedChannelTest, Comparison) {
   EXPECT_TRUE(unowned_valid >= unowned_default);
   EXPECT_FALSE(unowned_valid <= unowned_default);
 }
+
+TEST_F(ChannelTest, Borrow) {
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_EQ(ZX_OK, channels.status_value());
+  fdf::Channel ch = std::move(channels->end0);
+  fdf::UnownedChannel unowned = ch.borrow();
+  ASSERT_EQ(unowned->get(), ch.get());
+  unowned = {};
+
+  // Handle is not closed. Writing succeeds.
+  void* data = arena_.Allocate(64);
+  ASSERT_EQ(ZX_OK, fdf_channel_write(channels->end1.get(), 0, arena_.get(), data, 64, NULL, 0));
+}

@@ -240,6 +240,8 @@ class Channel {
     return ret;
   }
 
+  Unowned<Channel> borrow() const { return Unowned<Channel>(get()); }
+
  private:
   fdf_handle_t channel_;
 };

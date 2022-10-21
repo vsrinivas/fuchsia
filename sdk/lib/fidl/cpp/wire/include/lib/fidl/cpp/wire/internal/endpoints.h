@@ -202,8 +202,8 @@ class ClientEndBase : public TransportEnd<Protocol, Transport> {
 
   // Returns a type-safe copy of the underlying handle in this |ClientEndBase|
   // that does not claim ownership.
-  UnownedClientEnd<Protocol> borrow() const {
-    return UnownedClientEnd<Protocol>(TransportEnd::handle_.borrow());
+  typename Transport::template UnownedClientEnd<Protocol> borrow() const {
+    return typename Transport::template UnownedClientEnd<Protocol>(TransportEnd::handle_.borrow());
   }
 };
 

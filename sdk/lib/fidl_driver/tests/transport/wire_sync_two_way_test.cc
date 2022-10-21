@@ -96,6 +96,67 @@ TEST(DriverTransport, WireTwoWaySync) {
   ASSERT_OK(server_dispatcher_shutdown.Wait());
 }
 
+TEST(DriverTransport, WireTwoWaySyncFreeFunction) {
+  fidl_driver_testing::ScopedFakeDriver driver;
+
+  libsync::Completion client_dispatcher_shutdown;
+  auto client_dispatcher = fdf::Dispatcher::Create(
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "",
+      [&](fdf_dispatcher_t* dispatcher) { client_dispatcher_shutdown.Signal(); });
+  ASSERT_OK(client_dispatcher.status_value());
+
+  libsync::Completion server_dispatcher_shutdown;
+  auto server_dispatcher = fdf::Dispatcher::Create(
+      FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS, "",
+      [&](fdf_dispatcher_t* dispatcher) { server_dispatcher_shutdown.Signal(); });
+  ASSERT_OK(server_dispatcher.status_value());
+
+  auto channels = fdf::ChannelPair::Create(0);
+  ASSERT_OK(channels.status_value());
+
+  fdf::ServerEnd<test_transport::TwoWayTest> server_end(std::move(channels->end0));
+  fdf::ClientEnd<test_transport::TwoWayTest> client_end(std::move(channels->end1));
+
+  libsync::Completion server_destruction;
+  auto server = std::make_shared<TestServer>(&server_destruction);
+  fdf::ServerBindingRef binding_ref =
+      fdf::BindServer(server_dispatcher->get(), std::move(server_end), server,
+                      fidl_driver_testing::FailTestOnServerError<test_transport::TwoWayTest>());
+  fdf::Arena arena('ORIG');
+  server->fdf_request_arena = arena.get();
+
+  auto run_on_dispatcher_thread = [&] {
+    {
+      fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
+          fdf::WireCall(client_end).buffer(arena)->TwoWay(kRequestPayload);
+      ASSERT_TRUE(result.ok());
+      ASSERT_EQ(kResponsePayload, result->payload);
+      ASSERT_EQ(server->fdf_response_arena, result.arena().get());
+    }
+    {
+      fdf::WireUnownedResult<test_transport::TwoWayTest::TwoWay> result =
+          fdf::WireCall(fdf::UnownedClientEnd<test_transport::TwoWayTest>(client_end))
+              .buffer(arena)
+              ->TwoWay(kRequestPayload);
+      ASSERT_TRUE(result.ok());
+      ASSERT_EQ(kResponsePayload, result->payload);
+      ASSERT_EQ(server->fdf_response_arena, result.arena().get());
+    }
+
+    // TODO(fxbug.dev/92489): If this call and wait is removed, the test will
+    // flake by leaking |AsyncServerBinding| objects.
+    binding_ref.Unbind();
+    server.reset();
+  };
+  async::PostTask(client_dispatcher->async_dispatcher(), run_on_dispatcher_thread);
+  ASSERT_OK(server_destruction.Wait());
+
+  client_dispatcher->ShutdownAsync();
+  server_dispatcher->ShutdownAsync();
+  ASSERT_OK(client_dispatcher_shutdown.Wait());
+  ASSERT_OK(server_dispatcher_shutdown.Wait());
+}
+
 TEST(DriverTransport, WireTwoWaySyncViaAsyncClient) {
   fidl_driver_testing::ScopedFakeDriver driver;
 

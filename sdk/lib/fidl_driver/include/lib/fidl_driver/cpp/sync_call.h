@@ -52,12 +52,8 @@ struct SyncEndpointBufferVeneer {
 // |FidlProtocol| should be the protocol marker.
 //
 // It must not outlive the borrowed endpoint.
-template <template <typename FidlProtocol> class SyncImpl, typename FidlProtocol>
+template <typename FidlProtocol>
 class SyncEndpointVeneer final {
- private:
-  using CallerAllocatingImpl =
-      typename ::fidl::internal::CallerAllocatingImpl<SyncImpl, FidlProtocol>::Type;
-
  public:
   explicit SyncEndpointVeneer(fidl::internal::AnyUnownedTransport transport)
       : transport_(std::move(transport)) {}
@@ -66,7 +62,8 @@ class SyncEndpointVeneer final {
   // the provided |arena| to allocate buffers necessary for each call.
   // The requests and responses (if applicable) will live on the arena.
   auto buffer(const fdf::Arena& arena) {
-    return SyncEndpointBufferVeneer<CallerAllocatingImpl>(transport_, arena);
+    return SyncEndpointBufferVeneer<fidl::internal::WireSyncBufferClientImpl<FidlProtocol>>(
+        transport_, arena);
   }
 
  private:
@@ -193,9 +190,9 @@ WireSyncClient(ClientEnd<FidlProtocol>) -> WireSyncClient<FidlProtocol>;
 //     fdf::WireCall(client_end).buffer(arena)->Method(args...);
 //
 template <typename FidlProtocol>
-fidl::internal::SyncEndpointVeneer<fidl::internal::WireSyncClientImpl, FidlProtocol> WireCall(
+fdf::internal::SyncEndpointVeneer<FidlProtocol> WireCall(
     const ClientEnd<FidlProtocol>& client_end) {
-  return fdf::internal::SyncEndpointVeneer<fidl::internal::WireSyncClientImpl, FidlProtocol>(
+  return fdf::internal::SyncEndpointVeneer<FidlProtocol>(
       fidl::internal::MakeAnyUnownedTransport(client_end.borrow().handle()));
 }
 
@@ -206,9 +203,9 @@ fidl::internal::SyncEndpointVeneer<fidl::internal::WireSyncClientImpl, FidlProto
 //     fdf::WireCall(client_end).buffer(arena)->Method(args...);
 //
 template <typename FidlProtocol>
-fidl::internal::SyncEndpointVeneer<fidl::internal::WireSyncClientImpl, FidlProtocol> WireCall(
-    const fidl::UnownedClientEnd<FidlProtocol>& client_end) {
-  return fdf::internal::SyncEndpointVeneer<fidl::internal::WireSyncClientImpl, FidlProtocol>(
+fdf::internal::SyncEndpointVeneer<FidlProtocol> WireCall(
+    const UnownedClientEnd<FidlProtocol>& client_end) {
+  return fdf::internal::SyncEndpointVeneer<FidlProtocol>(
       fidl::internal::MakeAnyUnownedTransport(client_end.handle()));
 }
 }  // namespace fdf
