@@ -470,7 +470,7 @@ class ArmArchVmAspace::ConsistencyManager {
       return;
     }
     // Need a DSB to synchronize any page table updates prior to flushing the TLBs.
-    __dsb(ARM_MB_ISH);
+    __dsb(ARM_MB_ISHST);
 
     // Check if we should just be performing a full ASID invalidation.
     if (num_pending_tlbs_ > kMaxPendingTlbs || aspace_.type_ == ArmAspaceType::kHypervisor) {
@@ -677,8 +677,8 @@ zx_status_t ArmArchVmAspace::SplitLargePage(vaddr_t vaddr, const uint index_shif
     new_page_table[i] = mapped_paddr | attrs;
   }
 
-  // Ensure all zeroing becomes visible prior to page table installation.
-  __dmb(ARM_MB_ISHST);
+  // Ensure all new entries of the table becomes visible prior to page table installation.
+  __dsb(ARM_MB_ISHST);
 
   update_pte(&page_table[pt_index], paddr | MMU_PTE_L012_DESCRIPTOR_TABLE);
   LTRACEF("pte %p[%#" PRIxPTR "] = %#" PRIx64 "\n", page_table, pt_index, page_table[pt_index]);
@@ -890,7 +890,7 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
 
           // ensure that the zeroing is observable from hardware page table walkers, as we need to
           // do this prior to writing the pte we cannot defer it using the consistency manager.
-          __dmb(ARM_MB_ISHST);
+          __dsb(ARM_MB_ISHST);
 
           // When new pages are mapped they they have their AF set, under the assumption they are
           // being mapped due to being accessed, and this lets us avoid an accessed fault. Since new
@@ -1719,7 +1719,7 @@ zx_status_t ArmArchVmAspace::Init() {
 
     // zero the top level translation table.
     arch_zero_page(const_cast<pte_t*>(tt_virt_));
-    __dmb(ARM_MB_ISHST);
+    __dsb(ARM_MB_ISHST);
   }
   pt_pages_ = 1;
   kcounter_add(vm_mmu_page_table_alloc, 1);
