@@ -78,4 +78,11 @@
             to: "#session-manager",
         },
     ],
+    expose: [
+        {
+            protocol: [ "fuchsia.memorypressure.Provider" ],
+            from: "#memory_monitor",
+            to: "parent",
+        },
+    ],
 }

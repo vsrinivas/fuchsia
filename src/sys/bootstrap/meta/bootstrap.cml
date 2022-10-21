@@ -371,6 +371,12 @@
             to: "#fshost",
         },
         {
+            protocol: [ "fuchsia.memorypressure.Provider" ],
+            from: "parent",
+            to: "#fshost",
+            availability: "optional",
+        },
+        {
             protocol: [
                 "fuchsia.boot.Arguments",
                 "fuchsia.pkg.rewrite.Engine",

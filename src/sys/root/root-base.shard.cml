@@ -201,6 +201,7 @@
         },
         {
             protocol: [
+                "fuchsia.memorypressure.Provider",
                 "fuchsia.sys.internal.ComponentEventProvider",
                 "fuchsia.sys.internal.LogConnector",
             ],
