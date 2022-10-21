@@ -28,13 +28,9 @@ class VisitState {
 
   // Initialize and assign from
   explicit constexpr VisitState(MatcherResult state) : state_(state) {}
-  constexpr VisitState& operator=(MatcherResult state) {
-    state_ = state;
-    mark_ = nullptr;
-    return *this;
-  }
 
   constexpr MatcherResult state() const { return state_; }
+  void set_state(MatcherResult state) { state_ = state; }
 
   constexpr void Prune(const NodePath& path) { mark_ = &path.back(); }
 
@@ -83,6 +79,27 @@ constexpr void ForEachMatcher(Visitor&& visitor, Matchers&&... matchers) {
                  std::forward<Matchers>(matchers)...);
 }
 
+template <typename Matcher>
+using MatcherResultType = decltype(std::declval<Matcher>()(NodePath{}, std::declval<Properties>()));
+
+// Helper to obtain the requested scans from the return type.
+template <size_t N>
+constexpr size_t GetRequestedScans(MatcherScanResult<N>* r) {
+  return N;
+}
+
+constexpr size_t GetRequestedScans(MatcherResult* r) { return 1; }
+
+// Actual number of scans requested by a given implementation of a Matcher.
+template <typename Matcher>
+constexpr size_t kRequestedScans =
+    GetRequestedScans(static_cast<MatcherResultType<Matcher>*>(nullptr));
+
+// For a set of matchers, the maximum number of scans needed to complete them,
+// in an ideal case.
+template <typename... Matchers>
+constexpr size_t kMaxRequestedScans = std::max({kRequestedScans<Matchers>...});
+
 template <typename... Matchers>
 size_t Match(Devicetree& tree, Matchers&... matchers) {
   // Walk state for each matcher.
@@ -95,13 +112,18 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
     });
   };
 
-  size_t i = 0;
-
   auto visit_and_prune = [&visit_state, &matchers...](const NodePath& path, Properties props) {
     ForEachMatcher(
         [&visit_state, &path, props](auto& matcher, size_t index) -> void {
           if (visit_state[index].state() == MatcherResult::kVisitSubtree) {
-            visit_state[index] = matcher(path, props);
+            auto to_matcher_result = [](auto typed_result) constexpr {
+              if constexpr (std::is_same_v<decltype(typed_result), MatcherResult>) {
+                return typed_result;
+              } else {
+                return typed_result.result;
+              }
+            };
+            visit_state[index].set_state(to_matcher_result(matcher(path, props)));
             if (visit_state[index].state() == MatcherResult::kAvoidSubtree) {
               visit_state[index].Prune(path);
             }
@@ -121,12 +143,15 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
     return true;
   };
 
-  while (!all_matchers_done()) {
+  for (size_t i = 0; i < kMaxRequestedScans<Matchers...>; ++i) {
     tree.Walk(visit_and_prune, unprune);
-    ++i;
+
+    if (all_matchers_done()) {
+      return i + 1;
+    }
   }
 
-  return i;
+  return -1;
 }
 
 }  // namespace devicetree::internal

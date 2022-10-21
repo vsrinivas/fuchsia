@@ -23,6 +23,13 @@ enum class MatcherResult {
   kDone,
 };
 
-}  // namespace devicetree
+// Matcher return type uses this type to communicate at compile time the maximum number of
+// rescans it will require to reach completion.
+// It is considered an error for a matcher not to terminate after |MaxRescans|.
+template <size_t Rescans>
+struct MatcherScanResult {
+  MatcherResult result;
+};
 
+}  // namespace devicetree
 #endif  // ZIRCON_KERNEL_LIB_DEVICETREE_INCLUDE_LIB_DEVICETREE_MATCHER_RESULT_H_

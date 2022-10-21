@@ -21,23 +21,42 @@ namespace devicetree {
 // Scans |tree|, visiting each node at most |kMaxRescan| times. |kMaxRescan| is calculated
 // from the MatcherResult<size_t N> and whether the matcher needs to resolve alias or not.
 //
-// A matcher that will not need to resolve aliases must declare the following interface:
+// A |matcher| is a callable with the following arguments (const NodePath& path, Properties
+// properties):
 //
-// struct Matcher {
-//   // Match will call |matcher(node, props)| on each node that the matcher manifests interest in.
-//   //
-//   // A matcher declares interest on a node |m|, when |matcher(path, props)| returns true on every
-//   // node |n| that is an ancestor of |m|.
-//   //
-//   // |path| represent the path to the current node of the in progress walk of the tree.
-//   // |props| are the list of properties contained in the current node.
-//   MatcherResult<size_t> operator()(const NodePath& path, Properties properties);
+// |path| represent the path to the current node of the in progress walk of the tree.
+// |props| are the list of properties contained in the current node.
+//
+// The return type is used to communicate the |matcher|'s interest on a given node |m| or its
+// subtree. See |MatchResult| for possible return values.
+//
+// When a |matcher| needs multiple(> 1) rescans it may choose to use |MatcherScanResult<N>| as its
+// return type. This allows statically determining the maximum number of scan a given matcher may
+// need until completion.
+//
+// It is equivalent returning |MatcherResult| and |MatcherResult<1>| when a matcher requires at
+// most a single scan for completion.
+//
+// The maximum number of scans is determined from the the return type of the provided matchers. It
+// is considered an error when not all matchers reach completion after all scans are performed. In
+// this case |-1| is returned.
+//
+// Matcher examples:
+//
+// MatcherResult MatchFoo(const NodePath& path, Properties props) {
+//   return {MatcherResult::kDone};
 // }
 //
-// A matcher must define one and only one of those interfaces.
+// struct Matcher {
+//   MatcherScanResult<45> operator()(const NodePath& path, Properties props) {
+//     return {MatcherResult::kDone};
+//   }
+// };
 //
-// Match will return the number of scans performed if all matchers complete successfully.
-// If not every matcher is done, then will return -1.
+// auto matcher = [&...] (const NodePath& path, Properties) -> MatcherScanResult<2>{
+//   return {MatcherResult::kDone};
+// };
+//
 template <typename... Matchers>
 size_t Match(Devicetree& tree, Matchers&&... matchers) {
   static_assert(sizeof...(Matchers) > 0);
