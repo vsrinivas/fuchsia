@@ -30,6 +30,8 @@ group("tests") {
   deps = [
     # DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
     "cpp_wire:tests",
+    "rust:tests",
+
     # /DO_NOT_REMOVE_COMMENT (Why? See: /tools/fidl/scripts/canonical_example/README.md)
   ]
 }
