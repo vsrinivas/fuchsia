@@ -56,6 +56,8 @@ const METADATA_KEY: Aes256Key = Aes256Key::create([
     0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
 ]);
 
+pub const FVM_SLICE_SIZE: u64 = 32 * 1024;
+
 pub async fn create_hermetic_crypt_service(
     data_key: Aes256Key,
     metadata_key: Aes256Key,
@@ -123,6 +125,8 @@ pub struct TestFixtureBuilder {
     // Direct config overrides.
     fvm_ramdisk: bool,
     ramdisk_prefix: Option<&'static str>,
+    blobfs_max_bytes: Option<u64>,
+    data_max_bytes: Option<u64>,
 }
 
 impl TestFixtureBuilder {
@@ -136,6 +140,8 @@ impl TestFixtureBuilder {
             zxcrypt: true,
             fvm_ramdisk: false,
             ramdisk_prefix: None,
+            blobfs_max_bytes: None,
+            data_max_bytes: None,
         }
     }
 
@@ -169,6 +175,16 @@ impl TestFixtureBuilder {
         self
     }
 
+    pub fn blobfs_max_bytes(mut self, max_size: u64) -> Self {
+        self.blobfs_max_bytes = Some(max_size);
+        self
+    }
+
+    pub fn data_max_bytes(mut self, max_size: u64) -> Self {
+        self.data_max_bytes = Some(max_size);
+        self
+    }
+
     pub async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks().await;
         let builder = RealmBuilder::new().await.unwrap();
@@ -189,6 +205,20 @@ impl TestFixtureBuilder {
         }
         if let Some(prefix) = self.ramdisk_prefix {
             builder.set_config_value_string(&fshost, "ramdisk_prefix", prefix).await.unwrap();
+        }
+
+        if let Some(blobfs_max_bytes) = self.blobfs_max_bytes {
+            builder
+                .set_config_value_uint64(&fshost, "blobfs_max_bytes", blobfs_max_bytes)
+                .await
+                .unwrap();
+        }
+
+        if let Some(data_max_bytes) = self.data_max_bytes {
+            builder
+                .set_config_value_uint64(&fshost, "data_max_bytes", data_max_bytes)
+                .await
+                .unwrap();
         }
 
         let mocks = builder

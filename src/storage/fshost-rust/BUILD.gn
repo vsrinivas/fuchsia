@@ -14,6 +14,7 @@ rustc_binary("fshost-rust") {
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
     "//sdk/fidl/fuchsia.hardware.block.encrypted:fuchsia.hardware.block.encrypted_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",

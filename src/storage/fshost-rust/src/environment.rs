@@ -7,15 +7,18 @@ use {
         crypt::{fxfs, zxcrypt},
         device::Device,
     },
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_device::ControllerProxy,
+    fidl_fuchsia_hardware_block_partition::Guid,
+    fidl_fuchsia_hardware_block_volume::VolumeManagerMarker,
     fidl_fuchsia_io as fio,
     fs_management::{
         filesystem::{ServingMultiVolumeFilesystem, ServingSingleVolumeFilesystem},
         Blobfs, Fxfs, Minfs,
     },
+    fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon as zx,
 };
 
@@ -116,6 +119,11 @@ impl<'a> Environment for FshostEnvironment<'a> {
     async fn mount_blobfs(&mut self, device: &mut dyn Device) -> Result<(), Error> {
         let queue = self.blobfs.queue().ok_or(anyhow!("blobfs already mounted"))?;
 
+        // Setting max partition size for blobfs
+        if let Err(e) = set_partition_max_size(device, self.config.blobfs_max_bytes).await {
+            tracing::warn!("Failed to set max partition size for blobfs: {:?}", e);
+        };
+
         let fs =
             Blobfs::from_channel(device.proxy()?.into_channel().unwrap().into())?.serve().await?;
         let root_dir = fs.root();
@@ -128,6 +136,11 @@ impl<'a> Environment for FshostEnvironment<'a> {
 
     async fn mount_data(&mut self, device: &mut dyn Device) -> Result<(), Error> {
         let _ = self.data.queue().ok_or_else(|| anyhow!("data partition already mounted"))?;
+
+        // Setting max partition size for data
+        if let Err(e) = set_partition_max_size(device, self.config.data_max_bytes).await {
+            tracing::warn!("Failed to set max partition size for data: {:?}", e);
+        };
 
         let mut filesystem = match self.config.data_filesystem_format.as_ref() {
             "fxfs" => {
@@ -190,4 +203,27 @@ impl<'a> Environment for FshostEnvironment<'a> {
         self.data = filesystem;
         Ok(())
     }
+}
+
+async fn set_partition_max_size(device: &mut dyn Device, max_byte_size: u64) -> Result<(), Error> {
+    let index =
+        device.topological_path().find("/fvm").ok_or(anyhow!("fvm is not in the device path"))?;
+    // The 4 is from the 4 characters in "/fvm"
+    let fvm_path = &device.topological_path()[..index + 4];
+
+    let fvm_proxy = connect_to_protocol_at_path::<VolumeManagerMarker>(&fvm_path)
+        .context("Failed to connect to fvm volume manager")?;
+    let (status, info) = fvm_proxy.get_info().await.context("Transport error in get_info call")?;
+    zx::Status::ok(status).context("get_info call failed")?;
+    let info = info.ok_or(anyhow!("Expected info"))?;
+    let slice_size = info.slice_size;
+    let max_slice_count = max_byte_size / slice_size;
+    let mut instance_guid =
+        Guid { value: *device.partition_instance().await.context("Expected partition instance")? };
+    let status = fvm_proxy
+        .set_partition_limit(&mut instance_guid, max_slice_count)
+        .await
+        .context("Transport error on set_partition_limit")?;
+    zx::Status::ok(status).context("set_partition_limit failed")?;
+    Ok(())
 }

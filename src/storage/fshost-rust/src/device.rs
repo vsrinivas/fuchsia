@@ -5,10 +5,10 @@
 pub mod constants;
 
 use {
-    anyhow::{anyhow, Error},
+    anyhow::{anyhow, Context, Error},
     async_trait::async_trait,
     fidl::endpoints::{create_endpoints, Proxy},
-    fidl_fuchsia_device::{ControllerMarker, ControllerProxy},
+    fidl_fuchsia_device::ControllerMarker,
     fidl_fuchsia_hardware_block::BlockProxy,
     fidl_fuchsia_hardware_block_volume::VolumeAndNodeProxy,
     fidl_fuchsia_io::OpenFlags,
@@ -39,8 +39,12 @@ pub trait Device: Send + Sync {
     /// If this device is a partition, this returns the type GUID. Otherwise, an error is returned.
     async fn partition_type(&mut self) -> Result<&[u8; 16], Error>;
 
+    /// If this device is a partition, this returns the instance GUID.
+    /// Otherwise, an error is returned.
+    async fn partition_instance(&mut self) -> Result<&[u8; 16], Error>;
+
     /// Returns a proxy for the device.
-    fn proxy(&self) -> Result<ControllerProxy, Error>;
+    fn proxy(&self) -> Result<BlockProxy, Error>;
 
     /// Returns a new Device, which is a child of this device with the specified suffix. This
     /// function will return when the device is available. This function assumes the child device
@@ -108,7 +112,11 @@ impl Device for NandDevice {
         self.block_device.partition_type().await
     }
 
-    fn proxy(&self) -> Result<ControllerProxy, Error> {
+    async fn partition_instance(&mut self) -> Result<&[u8; 16], Error> {
+        self.block_device.partition_instance().await
+    }
+
+    fn proxy(&self) -> Result<BlockProxy, Error> {
         self.block_device.proxy()
     }
 }
@@ -130,6 +138,7 @@ pub struct BlockDevice {
     content_format: Option<DiskFormat>,
     partition_label: Option<String>,
     partition_type: Option<[u8; 16]>,
+    partition_instance: Option<[u8; 16]>,
 }
 
 impl BlockDevice {
@@ -157,6 +166,7 @@ impl BlockDevice {
             content_format: None,
             partition_label: None,
             partition_type: None,
+            partition_instance: None,
         }
     }
 
@@ -214,10 +224,24 @@ impl Device for BlockDevice {
         Ok(self.partition_type.as_ref().unwrap())
     }
 
-    fn proxy(&self) -> Result<ControllerProxy, Error> {
+    async fn partition_instance(&mut self) -> Result<&[u8; 16], Error> {
+        if self.partition_instance.is_none() {
+            let (status, instance_guid) = self
+                .volume_proxy
+                .get_instance_guid()
+                .await
+                .context("Transport error get_instance_guid")?;
+            zx::Status::ok(status).context("get_instance_guid failed")?;
+            self.partition_instance =
+                Some(instance_guid.ok_or(anyhow!("Expected instance guid"))?.value);
+        }
+        Ok(self.partition_instance.as_ref().unwrap())
+    }
+
+    fn proxy(&self) -> Result<BlockProxy, Error> {
         let (client, server) = create_endpoints()?;
         self.volume_proxy.clone(OpenFlags::CLONE_SAME_RIGHTS, server)?;
-        Ok(ControllerProxy::new(fidl::AsyncChannel::from_channel(client.into_channel())?))
+        Ok(BlockProxy::new(fidl::AsyncChannel::from_channel(client.into_channel())?))
     }
 
     async fn get_child(&self, suffix: &str) -> Result<Box<dyn Device>, Error> {
@@ -236,6 +260,7 @@ impl Device for BlockDevice {
             },
         )
         .await?;
+
         let block_device = BlockDevice::new(child_path).await?;
         Ok(Box::new(block_device))
     }

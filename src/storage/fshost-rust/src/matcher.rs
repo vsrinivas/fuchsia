@@ -410,8 +410,7 @@ mod tests {
         anyhow::Error,
         async_trait::async_trait,
         fidl::encoding::Decodable,
-        fidl_fuchsia_device::ControllerProxy,
-        fidl_fuchsia_hardware_block::BlockInfo,
+        fidl_fuchsia_hardware_block::{BlockInfo, BlockProxy},
         std::sync::Mutex,
     };
 
@@ -490,7 +489,10 @@ mod tests {
                 .as_ref()
                 .unwrap_or_else(|| panic!("Unexpected call to partition_type")))
         }
-        fn proxy(&self) -> Result<ControllerProxy, Error> {
+        async fn partition_instance(&mut self) -> Result<&[u8; 16], Error> {
+            unreachable!()
+        }
+        fn proxy(&self) -> Result<BlockProxy, Error> {
             unreachable!()
         }
         async fn get_child(&self, _suffix: &str) -> Result<Box<dyn Device>, Error> {

@@ -78,10 +78,13 @@ template("fshost_integration_test") {
     deps = [
       ":fshost_test_fixture",
       "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
+      "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
       "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
       "//sdk/lib/device-watcher/rust",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia",
+      "//src/lib/fuchsia-component",
       "//src/lib/zircon/rust:fuchsia-zircon",
     ]
     if (defined(invoker.deps)) {
@@ -160,22 +163,17 @@ fshost_integration_test("fshost-cpp-integration-test-minfs") {
   ]
 }
 
-# TODO(fxbug.dev/87511): Port this test to fshost-rust.
 fshost_integration_test("fshost-cpp-integration-test-fxfs-recovery") {
   fshost_target = "//src/storage/fshost/testing:test-fshost-fxfs-recovery"
   source_root = "tests/fshost_recovery_integration_test.rs"
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/key-bag",
     "//src/lib/storage/ramdevice_client/rust",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/fxfs:fuchsia.fxfs_rust",
     "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:either",
@@ -190,15 +188,11 @@ fshost_integration_test("fshost-cpp-integration-test-minfs-recovery") {
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_rust",
-    "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-fs",
     "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/key-bag",
     "//src/lib/storage/ramdevice_client/rust",
-    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/storage/fxfs:fuchsia.fxfs_rust",
     "//src/storage/testing/rust:storage-isolated-driver-manager",
     "//third_party/rust_crates:either",

@@ -3,8 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    fidl::endpoints::create_proxy, fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
-    fshost_test_fixture::TestFixtureBuilder, fuchsia_async as fasync, fuchsia_zircon as zx,
+    fidl::endpoints::create_proxy,
+    fidl_fuchsia_fshost as fshost,
+    fidl_fuchsia_hardware_block_partition::Guid,
+    fidl_fuchsia_hardware_block_volume::{VolumeAndNodeMarker, VolumeManagerMarker},
+    fidl_fuchsia_io as fio,
+    fshost_test_fixture::TestFixtureBuilder,
+    fshost_test_fixture::FVM_SLICE_SIZE,
+    fuchsia_async as fasync,
+    fuchsia_component::client::connect_to_named_protocol_at_dir_root,
+    fuchsia_zircon as zx,
     futures::FutureExt,
 };
 
@@ -18,6 +26,8 @@ const VFS_TYPE_MINFS: u32 = 0x6e694d21;
 // const VFS_TYPE_FACTORYFS: u32 = 0x1e694d21;
 const VFS_TYPE_FXFS: u32 = 0x73667866;
 const VFS_TYPE_F2FS: u32 = 0xfe694d21;
+const BLOBFS_MAX_BYTES: u64 = 8765432;
+const DATA_MAX_BYTES: u64 = 7654321;
 
 fn data_fs_type() -> u32 {
     match DATA_FILESYSTEM_FORMAT {
@@ -159,4 +169,58 @@ async fn ramdisk_data_ignores_non_ramdisk() {
     }
 
     fixture.tear_down().await;
+}
+
+async fn get_instance_guid_from_path(dir_proxy: &fio::DirectoryProxy, path: &str) -> Box<Guid> {
+    let volume_proxy_data =
+        connect_to_named_protocol_at_dir_root::<VolumeAndNodeMarker>(dir_proxy, path).unwrap();
+
+    let (status, data_instance_guid) = volume_proxy_data.get_instance_guid().await.unwrap();
+    assert!(zx::Status::ok(status).is_ok());
+    data_instance_guid.unwrap()
+}
+
+#[fuchsia::test]
+async fn partition_max_size_set() {
+    let fixture = new_fixture()
+        .with_ramdisk()
+        .data_max_bytes(DATA_MAX_BYTES)
+        .blobfs_max_bytes(BLOBFS_MAX_BYTES)
+        .build()
+        .await;
+
+    fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
+    fixture.check_fs_type("data", data_fs_type()).await;
+
+    // get blobfs instance guid
+    let mut blobfs_instance_guid = get_instance_guid_from_path(
+        &fixture.dir("dev-topological"),
+        "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/blobfs-p-1/block",
+    )
+    .await;
+
+    // get data instance guid
+    let mut data_instance_guid = get_instance_guid_from_path(
+        &fixture.dir("dev-topological"),
+        "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm/data-p-2/block",
+    )
+    .await;
+
+    let fvm_proxy = connect_to_named_protocol_at_dir_root::<VolumeManagerMarker>(
+        &fixture.dir("dev-topological"),
+        "sys/platform/00:00:2d/ramctl/ramdisk-0/block/fvm",
+    )
+    .unwrap();
+
+    // blobfs max size check
+    let (status, blobfs_slice_count) =
+        fvm_proxy.get_partition_limit(blobfs_instance_guid.as_mut()).await.unwrap();
+    assert!(zx::Status::ok(status).is_ok());
+    assert_eq!(blobfs_slice_count, BLOBFS_MAX_BYTES / FVM_SLICE_SIZE);
+
+    // data max size check
+    let (status, data_slice_count) =
+        fvm_proxy.get_partition_limit(data_instance_guid.as_mut()).await.unwrap();
+    assert!(zx::Status::ok(status).is_ok());
+    assert_eq!(data_slice_count, DATA_MAX_BYTES / FVM_SLICE_SIZE);
 }
