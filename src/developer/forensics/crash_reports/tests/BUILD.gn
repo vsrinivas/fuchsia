@@ -401,14 +401,11 @@ fuchsia_unittest_component("inspect_manager_unittest") {
   deps = [ ":inspect_manager_unittest_exe" ]
 }
 
-fuchsia_component("product_quotas_unittest") {
-  testonly = true
-
-  manifest = "meta/product_quotas_unittest.cml"
-
+fuchsia_unittest_component("product_quotas_unittest") {
   deps = [
     ":product_quotas_unittest_exe",
     "//src/sys/test_runners:tmp_storage",
+    "//src/sys/test_runners/gtest:death_test",
   ]
 }
 
@@ -427,12 +424,11 @@ fuchsia_unittest_component("report_util_unittest") {
   deps = [ ":report_util_unittest_exe" ]
 }
 
-fuchsia_component("reporting_policy_watcher_unittest") {
-  testonly = true
-
-  manifest = "meta/reporting_policy_watcher_unittest.cml"
-
-  deps = [ ":reporting_policy_watcher_unittest_exe" ]
+fuchsia_unittest_component("reporting_policy_watcher_unittest") {
+  deps = [
+    ":reporting_policy_watcher_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 fuchsia_unittest_component("sized_data_reader_unittest") {
@@ -446,14 +442,11 @@ fuchsia_unittest_component("snapshot_collector_unittest") {
   ]
 }
 
-fuchsia_component("snapshot_store_unittest") {
-  testonly = true
-
-  manifest = "meta/snapshot_store_unittest.cml"
-
+fuchsia_unittest_component("snapshot_store_unittest") {
   deps = [
     ":snapshot_store_unittest_exe",
     "//src/sys/test_runners:tmp_storage",
+    "//src/sys/test_runners/gtest:death_test",
   ]
 }
 

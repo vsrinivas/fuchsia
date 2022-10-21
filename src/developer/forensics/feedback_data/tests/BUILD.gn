@@ -231,12 +231,11 @@ fuchsia_component("metadata_unittest") {
   deps = [ ":metadata_unittest_exe" ]
 }
 
-fuchsia_component("screenshot_unittest") {
-  testonly = true
-
-  manifest = "meta/screenshot_unittest.cml"
-
-  deps = [ ":screenshot_unittest_exe" ]
+fuchsia_unittest_component("screenshot_unittest") {
+  deps = [
+    ":screenshot_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 ###############################################################################

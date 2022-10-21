@@ -219,12 +219,11 @@ fuchsia_unittest_component("fidl_oneshot_unittest") {
   deps = [ ":fidl_oneshot_unittest_exe" ]
 }
 
-fuchsia_component("inspect_node_manager_unittest") {
-  testonly = true
-
-  manifest = "meta/inspect_node_manager_unittest.cml"
-
-  deps = [ ":inspect_node_manager_unittest_exe" ]
+fuchsia_unittest_component("inspect_node_manager_unittest") {
+  deps = [
+    ":inspect_node_manager_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 fuchsia_unittest_component("inspect_protocol_stats_unittest") {
@@ -244,9 +243,10 @@ fuchsia_component("previous_boot_file_unittest") {
 }
 
 fuchsia_unittest_component("time_unittest") {
-  manifest = "meta/time_unittest.cml"
-
-  deps = [ ":time_unittest_exe" ]
+  deps = [
+    ":time_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 fuchsia_unittest_component("utc_clock_ready_watcher_unittest") {

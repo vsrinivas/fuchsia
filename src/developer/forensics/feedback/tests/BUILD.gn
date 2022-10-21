@@ -489,12 +489,11 @@ executable("ui_state_provider_unittest_exe") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
-fuchsia_component("annotation_manager_unittest") {
-  testonly = true
-
-  manifest = "meta/annotation_manager_unittest.cml"
-
-  deps = [ ":annotation_manager_unittest_exe" ]
+fuchsia_unittest_component("annotation_manager_unittest") {
+  deps = [
+    ":annotation_manager_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 fuchsia_component("attachment_manager_unittest") {
@@ -557,12 +556,11 @@ fuchsia_unittest_component("fidl_provider_unittest") {
   deps = [ ":fidl_provider_unittest_exe" ]
 }
 
-fuchsia_component("inspect_unittest") {
-  testonly = true
-
-  manifest = "meta/inspect_unittest.cml"
-
-  deps = [ ":inspect_unittest_exe" ]
+fuchsia_unittest_component("inspect_unittest") {
+  deps = [
+    ":inspect_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 fuchsia_component("kernel_log_integration_test") {
@@ -615,9 +613,10 @@ fuchsia_unittest_component("static_attachments_unittest") {
 }
 
 fuchsia_unittest_component("system_log_unittest") {
-  manifest = "meta/system_log_unittest.cml"
-
-  deps = [ ":system_log_unittest_exe" ]
+  deps = [
+    ":system_log_unittest_exe",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
 }
 
 fuchsia_unittest_component("target_channel_provider_unittest") {
