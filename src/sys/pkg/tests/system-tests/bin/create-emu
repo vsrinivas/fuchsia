@@ -99,6 +99,10 @@ if [[ -e "${IMGDIR_OVMF_VARS}" || -e "${IMGDIR_FUCHSIA}" ]]; then
   exit 1
 fi
 
+if [[ ! -d "${IMGDIR}" ]]; then
+  mkdir -p "${IMGDIR}"
+fi
+
 fx-info "Creating ${IMGDIR_FUCHSIA}..."
 
 # Ensure that the output is sent to the serial, and that we boot into zedboot.
@@ -124,6 +128,7 @@ fx-zbi -o "${KERNEL_ZBI}" \
 
 # Construct a Fuchsia image.
 MAKE_FUCHSIA_VOL_ARGS=(
+  --fuchsia-build-dir "${FUCHSIA_BUILD_DIR}"
   --cmdline "${CMDLINE}"
   --resize "${IMAGE_SIZE_BYTES}"
   --zbi "${KERNEL_ZBI}"
@@ -137,13 +142,9 @@ if [[ -n "${ABR_SIZE_BYTES}" ]]; then
   MAKE_FUCHSIA_VOL_ARGS+=( --abr-size "${ABR_SIZE_BYTES}" )
 fi
 
-(
-  cd "${FUCHSIA_BUILD_DIR}"
-
-  "${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" \
-    "${MAKE_FUCHSIA_VOL_ARGS[@]}" \
-    "${IMGDIR_FUCHSIA}"
-)
+"${FUCHSIA_BUILD_DIR}/host-tools/make-fuchsia-vol" \
+  "${MAKE_FUCHSIA_VOL_ARGS[@]}" \
+  "${IMGDIR_FUCHSIA}"
 
 fx-info "Created ${IMGDIR_FUCHSIA}"
 
