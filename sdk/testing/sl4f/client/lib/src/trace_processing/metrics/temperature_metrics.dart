@@ -29,6 +29,16 @@ List<TestCaseResults> temperatureMetricsProcessor(
           'soc_pll')
       .map((t) => t.toDouble())
       .toList();
+  // TODO(didis): Remove processing `temperature_logger` data after we don't need to track builds
+  // which still uses `temperature_logger` category.
+  if (temperatureReadings.isEmpty) {
+    temperatureReadings = getArgValuesFromEvents<num>(
+            filterEventsTyped<CounterEvent>(getAllEvents(model),
+                category: 'temperature_logger', name: 'temperature'),
+            'soc_pll')
+        .map((t) => t.toDouble())
+        .toList();
+  }
   if (temperatureReadings.isEmpty) {
     final duration = getTotalTraceDuration(model);
     _log.info('No temperature readings are present. Perhaps the trace duration '
