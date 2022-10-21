@@ -54,6 +54,7 @@ rustc_macro("net-types-macros") {
   version = "0.1.0"
   edition = "2021"
   deps = [
+    "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",
     "//third_party/rust_crates:syn",
   ]

@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use proc_macro::TokenStream;
-use quote::quote;
+use proc_macro2::TokenStream as TokenStream2;
+use quote::{quote, ToTokens as _};
 use syn::{
     parse_quote, punctuated::Punctuated, spanned::Spanned, AngleBracketedGenericArguments,
     GenericArgument, GenericParam, Generics, Ident, Path, PathSegment, Type, TypeParam,
@@ -15,10 +16,10 @@ use syn::{
 pub fn derive_generic_over_ip(input: TokenStream) -> TokenStream {
     let ast = syn::parse(input).unwrap();
 
-    impl_derive_generic_over_ip(&ast)
+    impl_derive_generic_over_ip(&ast).into()
 }
 
-fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream {
+fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream2 {
     let (impl_generics, type_generics, where_clause) = ast.generics.split_for_impl();
     if where_clause.is_some() {
         return quote! {
@@ -39,6 +40,14 @@ fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream {
             .into()
         }
     };
+
+    // Drop the first and last tokens, which should be '<' and '>'
+    let mut impl_generics = impl_generics.into_token_stream().into_iter().skip(1).peekable();
+    let impl_generics = core::iter::from_fn(|| {
+        impl_generics.next().and_then(|x| impl_generics.peek().is_some().then_some(x))
+    })
+    .collect::<TokenStream2>();
+
     match param {
         Some(to_replace) => {
             // Emit an impl that substitutes the identified type parameter
@@ -48,21 +57,20 @@ fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream {
                 with_type_param_replaced(&ast.generics, to_replace, generic_ip_name.clone());
 
             quote! {
-                impl #impl_generics GenericOverIp for #name #type_generics {
-                    type Type<#generic_ip_name: Ip> = #name #generic_bounds;
+                impl <#generic_ip_name: Ip, #impl_generics> GenericOverIp<IpType> for #name #type_generics {
+                    type Type = #name #generic_bounds;
                 }
             }
         }
         None => {
             // The type is IP-invariant so `GenericOverIp::Type` is always Self.`
             quote! {
-                impl #impl_generics GenericOverIp for #name #type_generics {
-                    type Type<IpType: Ip> = Self;
+                impl <IpType: Ip, #impl_generics> GenericOverIp<IpType> for #name #type_generics {
+                    type Type = Self;
                 }
             }
         }
     }
-    .into()
 }
 
 #[derive(Debug)]

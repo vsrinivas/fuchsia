@@ -931,16 +931,16 @@ impl<A, Z> From<AddrAndZone<A, Z>> for ZonedAddr<A, Z> {
     }
 }
 
-impl<A: IpAddress> GenericOverIp for SpecifiedAddr<A> {
-    type Type<I: Ip> = SpecifiedAddr<I::Addr>;
+impl<A, I: Ip> GenericOverIp<I> for SpecifiedAddr<A> {
+    type Type = SpecifiedAddr<I::Addr>;
 }
 
-impl<A: IpAddress> GenericOverIp for MulticastAddr<A> {
-    type Type<I: Ip> = MulticastAddr<I::Addr>;
+impl<A: IpAddress, I: Ip> GenericOverIp<I> for MulticastAddr<A> {
+    type Type = MulticastAddr<I::Addr>;
 }
 
-impl<A: IpAddress, D> GenericOverIp for ZonedAddr<A, D> {
-    type Type<I: Ip> = ZonedAddr<I::Addr, D>;
+impl<A: IpAddress, I: Ip, D> GenericOverIp<I> for ZonedAddr<A, D> {
+    type Type = ZonedAddr<I::Addr, D>;
 }
 
 #[cfg(test)]

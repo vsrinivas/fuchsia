@@ -1115,8 +1115,8 @@ pub enum MulticastInterfaceSelector<A, D> {
     Interface(D),
 }
 
-impl<A, D> GenericOverIp for MulticastInterfaceSelector<A, D> {
-    type Type<I: Ip> = MulticastInterfaceSelector<I::Addr, D>;
+impl<A, D, I: Ip> GenericOverIp<I> for MulticastInterfaceSelector<A, D> {
+    type Type = MulticastInterfaceSelector<I::Addr, D>;
 }
 
 /// Selector for the device to use when changing multicast membership settings.

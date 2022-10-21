@@ -501,8 +501,8 @@ pub(crate) enum MulticastMembershipConversionError {
     WrongIpVersion,
 }
 
-impl GenericOverIp for MulticastMembershipConversionError {
-    type Type<I: Ip> = Self;
+impl<I: Ip> GenericOverIp<I> for MulticastMembershipConversionError {
+    type Type = Self;
 }
 
 impl IntoErrno for MulticastMembershipConversionError {
