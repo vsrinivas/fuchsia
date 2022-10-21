@@ -237,15 +237,14 @@ constexpr ErrorDef<102, std::string_view> ErrCouldNotResolveMember("unable to re
 constexpr ErrorDef<103, std::string_view> ErrCouldNotResolveMemberDefault(
     "unable to resolve {} default value");
 constexpr ErrorDef<104> ErrCouldNotResolveAttributeArg("unable to resolve attribute argument");
-constexpr UndocumentedErrorDef<105, std::string_view, std::string_view, SourceSpan>
-    ErrDuplicateMemberName("multiple {} members named '{}'; previous was at {}");
-constexpr UndocumentedErrorDef<106, std::string_view, std::string_view, std::string_view,
-                               SourceSpan, std::string_view>
+constexpr ErrorDef<105, std::string_view, std::string_view, SourceSpan> ErrDuplicateMemberName(
+    "multiple {} members named '{}'; previous was at {}");
+constexpr ErrorDef<106, std::string_view, std::string_view, std::string_view, SourceSpan,
+                   std::string_view>
     ErrDuplicateMemberNameCanonical(
         "{} member '{}' conflicts with member '{}' from {}; both are "
         "represented by the canonical form '{}'");
-constexpr UndocumentedErrorDef<107, std::string_view, std::string_view, std::string_view,
-                               SourceSpan>
+constexpr ErrorDef<107, std::string_view, std::string_view, std::string_view, SourceSpan>
     ErrDuplicateMemberValue(
         "value of {} member '{}' conflicts with previously declared member '{}' at {}");
 constexpr UndocumentedErrorDef<108, std::string_view, SourceSpan> ErrDuplicateResourcePropertyName(

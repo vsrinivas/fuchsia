@@ -46,14 +46,8 @@ type Fruit = enum {
 }
 
 TEST(EnumsTests, BadEnumTestWithNonUniqueValues) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Fruit = enum : uint64 {
-    ORANGE = 1;
-    APPLE = 1;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0107.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberValue);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "APPLE");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
@@ -125,15 +119,8 @@ TEST(EnumsTests, BadEnumTestFloatType) {
 }
 
 TEST(EnumsTests, BadEnumTestDuplicateMember) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Fruit = enum : uint64 {
-    ORANGE = 1;
-    APPLE = 2;
-    ORANGE = 3;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0105.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberName);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "ORANGE");
 }

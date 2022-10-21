@@ -371,14 +371,8 @@ type Example = enum {
 }
 
 TEST(CanonicalNamesTests, BadBitsMembers) {
-  TestLibrary library(R"FIDL(
-library example;
-
-type Example = bits {
-  fooBar = 1;
-  FooBar = 2;
-};
-)FIDL");
+  TestLibrary library;
+  library.AddFile("bad/fi-0106.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrDuplicateMemberNameCanonical);
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "fooBar");
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "FooBar");
