@@ -213,6 +213,12 @@
             dependency: "weak_for_migration",
         },
         {
+            event_stream: "stopped_v2",
+            from: "parent",
+            to: "#sl4f",
+            scope: "#sl4f",
+        },
+        {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
             to: [

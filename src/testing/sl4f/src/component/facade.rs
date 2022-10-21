@@ -7,7 +7,6 @@ use crate::component::types::{
     ComponentLaunchRequest, ComponentLaunchResponse, ComponentSearchRequest, ComponentSearchResult,
 };
 use anyhow::{format_err, Context as _, Error};
-use component_events::events::Event;
 use component_events::{events::*, matcher::*};
 use component_hub::{
     list::{get_all_instances, ListFilter},
@@ -88,6 +87,10 @@ impl ComponentFacade {
                     format_err!("Component URL must end with a manifest file name: {url}")
                 )
             };
+
+        // Subscribe to stopped events for child components and then
+        // wait for the component's `Stopped` event, and exit this command.
+        let mut event_stream = EventStream::open().await.unwrap();
         let realm = client::connect_to_protocol::<fcomponent::RealmMarker>()?;
         let mut collection_ref = fcdecl::CollectionRef { name: collection_name.to_string() };
         let child_decl = fcdecl::Child {
@@ -104,14 +107,6 @@ impl ComponentFacade {
         if let Err(err) = realm.create_child(&mut collection_ref, child_decl, child_args).await? {
             fx_err_and_bail!(&with_line!(tag), format_err!("Failed to create CFv2 child: {err:?}"));
         }
-
-        // Subscribe to stopped events for child components and then
-        // wait for the component's `Stopped` event, and exit this command.
-        let event_source = EventSource::new().unwrap();
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
-            .await
-            .context("failed to subscribe to EventSource")?;
 
         let mut child_ref = fcdecl::ChildRef {
             name: child_name.to_string(),
