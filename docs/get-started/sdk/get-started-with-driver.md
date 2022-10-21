@@ -27,7 +27,12 @@ Found an issue? Please [let us know][sdk-bug]{:.external}.
 
 This guide requires that your host machine meets the following criteria:
 
-*  An x64-based development machine running Linux or macOS.
+*  An x64-based machine running Linux or macOS.
+
+   Note: While you can use an x64-based (Intel) macOS machine for this get-started
+   flow, you might run into issues. To help us improve, please
+   [file a bug][sdk-bug]{:.external} if you discover issues on macOS.
+
 *  Has at least 15 GB of storage space.
 *  Supports [KVM][kvm]{:.external} (Kernel Virtual Machine) for running a
    [QEMU][qemu]{:.external}-based emulator.
@@ -901,13 +906,29 @@ tools/ffx repository server stop
 
 Remove all existing configurations and data of `ffx`:
 
-```posix-terminal
-tools/ffx daemon stop
-```
+* {Linux}
 
-```posix-terminal
-rm -rf $HOME/.local/share/Fuchsia/ffx
-```
+  ```posix-terminal
+  tools/ffx daemon stop
+  ```
+
+  ```posix-terminal
+  rm -rf $HOME/.local/share/Fuchsia/ffx
+  ```
+
+* {macOS}
+
+  ```posix-terminal
+  tools/ffx daemon stop
+  ```
+
+  ```posix-terminal
+  rm -rf $HOME/Library/Caches/Fuchsia/ffx
+  ```
+
+  ```posix-terminal
+  rm -fr $HOME/Library/Fuchsia/ffx
+  ```
 
 When Bazel fails to build, try the commands below:
 
@@ -916,13 +937,25 @@ deletes all the artifacts downloaded by Bazel, which can be around 4 GB.
 This means Bazel will need to download those dependencies again
 the next time you run `bazel build`.
 
-```posix-terminal
-tools/bazel clean --expunge
-```
+* {Linux}
 
-```posix-terminal
-tools/bazel shutdown && rm -rf $HOME/.cache/bazel
-```
+  ```posix-terminal
+  tools/bazel clean --expunge
+  ```
+
+  ```posix-terminal
+  tools/bazel shutdown && rm -rf $HOME/.cache/bazel
+  ```
+
+* {macOS}
+
+  ```posix-terminal
+  tools/bazel clean --expunge
+  ```
+
+  ```posix-terminal
+  tools/bazel shutdown && rm -rf /private/var/tmp/bazel$USER
+  ```
 
 Remove the `fuchsia-drivers` directory and its artifacts:
 

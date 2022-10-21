@@ -32,7 +32,12 @@ Note: For more details on the driver framework, see the
 
 ## What you'll need
 
-*   An x64-based development machine running Linux or macOS
+*   An x64-based machine running Linux or macOS
+
+    Note: While you can use an x64-based (Intel) macOS machine for this get-started
+    flow, you might run into issues. To help us improve, please
+    [file a bug][sdk-bug]{:.external} if you discover issues on macOS.
+
 *   A configured [Fuchsia SDK environment][driver-get-started]
 *   [Emulator product bundle][driver-product-bundle]
     for `workstation_eng.qemu-x64`
@@ -76,3 +81,4 @@ alias bazel=tools/bazel
 [guide-fuchsia-emulator]: /docs/development/sdk/ffx/start-the-fuchsia-emulator.md
 [guide-fundamentals]: /docs/get-started/sdk/learn/README.md
 [qemu]: https://www.qemu.org/
+[sdk-bug]: https://bugs.fuchsia.dev/p/fuchsia/issues/entry?template=Bazel
