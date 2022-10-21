@@ -888,16 +888,40 @@ TEST(ProtocolTests, BadMethodEnumLayout) {
   ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "enum");
 }
 
-TEST(ProtocolTests, BadMethodAbsentResponseWithError) {
-  TestLibrary library;
-  library.AddFile("bad/fi-0076.test.fidl");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+TEST(ProtocolTests, GoodMethodAbsentResponseWithError) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> () error uint32;
+};
+)FIDL");
+  ASSERT_COMPILED(library);
 }
 
+// TODO(fxbug.dev/112767): This is temporarily still allowed. Remove once the
+// soft transition of `--experimental simple_empty_response_syntax` is done.
 TEST(ProtocolTests, GoodMethodEmptyStructResponseWithError) {
-  TestLibrary library;
-  library.AddFile("good/fi-0076.test.fidl");
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> (struct {}) error uint32;
+};
+)FIDL");
   ASSERT_COMPILED(library);
+}
+
+TEST(ProtocolTests, BadMethodEmptyStructResponseWithError) {
+  TestLibrary library(R"FIDL(
+library example;
+
+protocol MyProtocol {
+    MyMethod() -> (struct {}) error uint32;
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kSimpleEmptyResponseSyntax);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(ProtocolTests, GoodMethodNamedTypeRequest) {

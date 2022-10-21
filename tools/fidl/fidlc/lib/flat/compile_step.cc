@@ -1125,7 +1125,14 @@ void CompileStep::CompileProtocol(Protocol* protocol_declaration) {
                 const auto* success_decl =
                     static_cast<const IdentifierType*>(success_variant_type)->type_decl;
                 CheckNoDefaultMembers(success_decl);
-                CheckPayloadDeclKind(method.name, success_decl, true);
+                bool empty_payload_allowed = true;
+                if (experimental_flags().IsFlagEnabled(
+                        ExperimentalFlags::Flag::kSimpleEmptyResponseSyntax)) {
+                  auto* anonymous = success_decl->name.as_anonymous();
+                  empty_payload_allowed =
+                      anonymous && anonymous->provenance == Name::Provenance::kCompilerGenerated;
+                }
+                CheckPayloadDeclKind(method.name, success_decl, empty_payload_allowed);
               }
             }
           } else {

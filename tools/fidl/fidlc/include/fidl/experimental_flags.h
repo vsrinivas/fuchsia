@@ -17,15 +17,18 @@ class ExperimentalFlags {
   using FlagSet = uint32_t;
   enum class Flag : FlagSet {
     // TODO(fxbug.dev/106641): Allows backends to implement overflowing experiments.
-    kAllowOverflowing = 0b10,
-    kAllowNewTypes = 0b100,
-    kUnknownInteractions = 0b10000,
-    kNoOptionalStructs = 0b100000,
-    kOutputIndexJson = 0b1000000,
+    kAllowOverflowing = 1 << 0,
+    kAllowNewTypes = 1 << 1,
+    kUnknownInteractions = 1 << 2,
+    kNoOptionalStructs = 1 << 3,
+    kOutputIndexJson = 1 << 4,
 
     // TODO(fxbug.dev/110021): A temporary measure describe in
     // fxbug.dev/110294.
-    kZxCTypes = 0b10000000,
+    kZxCTypes = 1 << 5,
+
+    // TODO(fxbug.dev/112767): Remove once soft transition is done.
+    kSimpleEmptyResponseSyntax = 1 << 6,
   };
 
   ExperimentalFlags() = default;

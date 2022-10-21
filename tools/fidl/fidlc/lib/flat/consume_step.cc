@@ -328,7 +328,8 @@ bool ConsumeStep::CreateMethodResult(
 
   // TODO(fxbug.dev/8027): Join spans of response and error constructor for `result_name`.
   auto result_context = err_variant_context->parent();
-  auto result_name = Name::CreateAnonymous(library(), response_span, result_context);
+  auto result_name = Name::CreateAnonymous(library(), response_span, result_context,
+                                           Name::Provenance::kCompilerGenerated);
   auto union_decl = std::make_unique<Union>(
       std::make_unique<AttributeList>(std::move(result_attributes)), std::move(result_name),
       std::move(result_members), types::Strictness::kStrict, std::nullopt /* resourceness */);
@@ -343,7 +344,8 @@ bool ConsumeStep::CreateMethodResult(
                                 std::make_unique<AttributeList>());
 
   const auto& response_context = result_context->parent();
-  const Name response_name = Name::CreateAnonymous(library(), response_span, response_context);
+  const Name response_name = Name::CreateAnonymous(library(), response_span, response_context,
+                                                   Name::Provenance::kCompilerGenerated);
   auto struct_decl = std::make_unique<Struct>(
       /* attributes = */ std::make_unique<AttributeList>(), response_name,
       std::move(response_members),
@@ -385,7 +387,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
     std::unique_ptr<TypeConstructor> maybe_request;
     if (has_request) {
       bool result = ConsumeParameterList(method_name, protocol_context->EnterRequest(method_name),
-                                         std::move(method->maybe_request), true, &maybe_request);
+                                         std::move(method->maybe_request),
+                                         /*is_request_or_response=*/true, &maybe_request);
       if (!result)
         return;
     }
@@ -451,7 +454,8 @@ void ConsumeStep::ConsumeProtocolDeclaration(
         std::unique_ptr<TypeConstructor> result_payload;
 
         if (!ConsumeParameterList(method_name, success_variant_context,
-                                  std::move(method->maybe_response), false, &result_payload)) {
+                                  std::move(method->maybe_response),
+                                  /*is_request_or_response=*/false, &result_payload)) {
           return;
         }
 
@@ -467,7 +471,7 @@ void ConsumeStep::ConsumeProtocolDeclaration(
                                                   : protocol_context->EnterEvent(method_name);
         std::unique_ptr<TypeConstructor> response_payload;
         if (!ConsumeParameterList(method_name, response_context, std::move(method->maybe_response),
-                                  true, &response_payload)) {
+                                  /*is_request_or_response=*/true, &response_payload)) {
           return;
         }
 
@@ -498,16 +502,22 @@ bool ConsumeStep::ConsumeParameterList(const SourceSpan method_name,
                                        std::unique_ptr<raw::ParameterList> parameter_layout,
                                        bool is_request_or_response,
                                        std::unique_ptr<TypeConstructor>* out_payload) {
-  // If the payload is empty, like the request in `Foo()` or the response in
-  // `Foo(...) -> ()` or the success variant in `Foo(...) -> () error uint32`:
   if (!parameter_layout->type_ctor) {
-    // If this is not a request or response, but a success variant:
-    if (!is_request_or_response) {
-      // Fail because we want `Foo(...) -> (struct {}) error uint32` instead.
-      return Fail(ErrResponsesWithErrorsMustNotBeEmpty, parameter_layout->span(),
-                  method_name.data());
+    // Empty request or response, like `Foo()` or `Foo(...) -> ()`:
+    if (is_request_or_response) {
+      // Nothing to do.
+      return true;
     }
-    // Otherwise, there is nothing to do for an empty payload.
+    // We have an empty success variant, like `Foo(...) -> () error uint32`.
+    // Synthesize an empty struct for the result union.
+    auto empty_struct =
+        std::make_unique<Struct>(std::make_unique<AttributeList>(),
+                                 Name::CreateAnonymous(library(), parameter_layout->span(), context,
+                                                       Name::Provenance::kCompilerGenerated),
+                                 std::vector<Struct::Member>(), types::Resourceness::kValue);
+    auto empty_struct_decl = empty_struct.get();
+    ZX_ASSERT(RegisterDecl(std::move(empty_struct)));
+    *out_payload = IdentifierTypeForDecl(empty_struct_decl);
     return true;
   }
 

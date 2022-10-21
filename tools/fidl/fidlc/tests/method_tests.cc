@@ -22,7 +22,7 @@ open protocol HasComposeMethod1 {
 };
 
 open protocol HasComposeMethod2 {
-    compose() -> (struct {});
+    compose() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -76,7 +76,7 @@ open protocol HasComposeMethod1 {
 };
 
 open protocol HasComposeMethod2 {
-    flexible compose() -> (struct {});
+    flexible compose() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -103,7 +103,7 @@ open protocol HasStrictMethod1 {
 };
 
 open protocol HasStrictMethod2 {
-    strict() -> (struct {});
+    strict() -> ();
 };
 
 open protocol HasStrictMethod3 {
@@ -119,7 +119,7 @@ open protocol HasStrictMethod5 {
 };
 
 open protocol HasStrictMethod6 {
-    flexible strict() -> (struct {});
+    flexible strict() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -170,7 +170,7 @@ open protocol HasFlexibleTwoWayMethod1 {
 };
 
 open protocol HasFlexibleTwoWayMethod2 {
-    flexible() -> (struct {});
+    flexible() -> ();
 };
 
 open protocol HasFlexibleTwoWayMethod3 {
@@ -186,7 +186,7 @@ open protocol HasFlexibleTwoWayMethod5 {
 };
 
 open protocol HasFlexibleTwoWayMethod6 {
-    flexible flexible() -> (struct {});
+    flexible flexible() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -237,7 +237,7 @@ open protocol HasNormalMethod1 {
 };
 
 open protocol HasNormalMethod2 {
-    MyMethod() -> (struct {});
+    MyMethod() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -291,7 +291,7 @@ open protocol HasNormalMethod1 {
 };
 
 open protocol HasNormalMethod2 {
-    flexible MyMethod() -> (struct {});
+    flexible MyMethod() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -386,7 +386,7 @@ open protocol Open {
   flexible FlexibleOneWay();
 
   strict StrictTwoWay() -> ();
-  flexible FlexibleTwoWay() -> (struct {});
+  flexible FlexibleTwoWay() -> ();
 
   strict -> StrictEvent();
   flexible -> FlexibleEvent();
@@ -430,7 +430,7 @@ TEST(MethodTests, BadInvalidStrictnessFlexibleTwoWayMethodInClosed) {
   TestLibrary library(R"FIDL(library example;
 
 closed protocol Closed {
-  flexible Method() -> (struct {});
+  flexible Method() -> ();
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
@@ -654,7 +654,7 @@ TEST(MethodTests, GoodValidEmptyStructPayloadWhenErrorOrFlexible) {
 
 open protocol Test {
   strict MethodA() -> ();
-  flexible MethodB() -> (struct {});
+  flexible MethodB() -> ();
   strict MethodC() -> (struct {}) error int32;
   flexible MethodD() -> (struct {}) error int32;
 };
@@ -678,7 +678,46 @@ open protocol Test {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
-TEST(MethodTests, BadMissingStructPayloadFlexibleNoError) {
+// TODO(fxbug.dev/112767): This is temporarily still allowed. Remove once the
+// soft transition of `--experimental simple_empty_response_syntax` is done.
+TEST(MethodTests, GoodEmptyStructPayloadFlexibleNoError) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  flexible Method() -> (struct {});
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+// TODO(fxbug.dev/112767): This is temporarily still allowed. Remove once the
+// soft transition of `--experimental simple_empty_response_syntax` is done.
+TEST(MethodTests, GoodEmptyStructPayloadStrictError) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  strict Method() -> (struct {}) error int32;
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+// TODO(fxbug.dev/112767): This is temporarily still allowed. Remove once the
+// soft transition of `--experimental simple_empty_response_syntax` is done.
+TEST(MethodTests, GoodEmptyStructPayloadFlexibleError) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  flexible Method() -> (struct {}) error int32;
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  ASSERT_COMPILED(library);
+}
+
+TEST(MethodTests, GoodAbsentPayloadFlexibleNoError) {
   TestLibrary library(R"FIDL(library example;
 
 open protocol Test {
@@ -686,10 +725,10 @@ open protocol Test {
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+  ASSERT_COMPILED(library);
 }
 
-TEST(MethodTests, BadMissingStructPayloadStrictError) {
+TEST(MethodTests, GoodAbsentPayloadStrictError) {
   TestLibrary library(R"FIDL(library example;
 
 open protocol Test {
@@ -697,10 +736,10 @@ open protocol Test {
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+  ASSERT_COMPILED(library);
 }
 
-TEST(MethodTests, BadMissingStructPayloadFlexibleError) {
+TEST(MethodTests, GoodAbsentPayloadFlexibleError) {
   TestLibrary library(R"FIDL(library example;
 
 open protocol Test {
@@ -708,7 +747,43 @@ open protocol Test {
 };
 )FIDL");
   library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrResponsesWithErrorsMustNotBeEmpty);
+  ASSERT_COMPILED(library);
+}
+
+TEST(MethodTests, BadEmptyStructPayloadFlexibleNoError) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  flexible Method() -> (struct {});
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kSimpleEmptyResponseSyntax);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
+}
+
+TEST(MethodTests, BadEmptyStructPayloadStrictError) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  strict Method() -> (struct {}) error int32;
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kSimpleEmptyResponseSyntax);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
+}
+
+TEST(MethodTests, BadEmptyStructPayloadFlexibleError) {
+  TestLibrary library(R"FIDL(library example;
+
+open protocol Test {
+  flexible Method() -> (struct {}) error int32;
+};
+)FIDL");
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  library.EnableFlag(fidl::ExperimentalFlags::Flag::kSimpleEmptyResponseSyntax);
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrEmptyPayloadStructs);
 }
 
 TEST(MethodTests, GoodFlexibleNoErrorResponseUnion) {

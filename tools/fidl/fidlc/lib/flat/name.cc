@@ -82,7 +82,8 @@ std::vector<std::string> NamingContext::Context() const {
 Name NamingContext::ToName(Library* library, SourceSpan declaration_span) {
   if (parent_ == nullptr)
     return Name::CreateSourced(library, name_);
-  return Name::CreateAnonymous(library, declaration_span, shared_from_this());
+  return Name::CreateAnonymous(library, declaration_span, shared_from_this(),
+                               Name::Provenance::kAnonymousLayout);
 }
 
 std::optional<SourceSpan> Name::span() const {

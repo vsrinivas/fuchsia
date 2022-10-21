@@ -171,7 +171,7 @@ constexpr ErrorDef<74, flat::Decl::Kind> ErrInvalidMethodPayloadLayoutClass(
     "cannot use {} as a request/response; must use a struct, table, or union");
 constexpr ErrorDef<75, const flat::Type *> ErrInvalidMethodPayloadType(
     "invalid request/response type '{}'; must use a struct, table, or union");
-constexpr ErrorDef<76, std::string_view> ErrResponsesWithErrorsMustNotBeEmpty(
+constexpr RetiredDef<76, std::string_view> ErrResponsesWithErrorsMustNotBeEmpty(
     "must define success type of method '{}'");
 constexpr ErrorDef<77, std::string_view> ErrEmptyPayloadStructs(
     "method '{}' cannot have an empty struct as a payload, prefer omitting the payload altogether");
