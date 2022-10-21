@@ -53,6 +53,8 @@ test("devicetree-tests") {
 # The binary, flattened devicetrees files created by data/update.sh.
 dtb_sources = [
   "data/complex_no_properties.dtb",
+  "data/complex_with_alias.dtb",
+  "data/complex_with_alias_first.dtb",
   "data/empty.dtb",
   "data/memory_reservations.dtb",
   "data/simple_with_properties.dtb",

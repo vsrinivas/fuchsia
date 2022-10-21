@@ -71,8 +71,7 @@ struct AliasContext {
 
 TEST(PathResolverTest, ResolveAboslutePath) {
   std::string_view path = "/absolute_path/with_leaf";
-  std::optional<devicetree::Properties> empty_aliases;
-  devicetree::PathResolver resolver(empty_aliases);
+  devicetree::PathResolver resolver(std::nullopt);
 
   auto resolved_path = resolver.Resolve(path);
   ASSERT_TRUE(resolved_path.is_ok());
@@ -84,8 +83,7 @@ TEST(PathResolverTest, ResolveAboslutePath) {
 
 TEST(PathResolverTest, ResolveRelativePathNoAliasNode) {
   std::string_view path = "alias/with_leaf";
-  std::optional<devicetree::Properties> empty_aliases;
-  devicetree::PathResolver resolver(empty_aliases);
+  devicetree::PathResolver resolver(std::nullopt);
 
   auto resolved_path = resolver.Resolve(path);
   ASSERT_TRUE(resolved_path.is_error());
@@ -101,8 +99,7 @@ TEST(PathResolverTest, ResolveRelativePathWithAliasNoLeaf) {
   aliases.Add("2", "/2");
   aliases.Add("3", "/3");
   aliases.Add(alias_path, absolute_path);
-  std::optional<devicetree::Properties> alias_prop = aliases.properties();
-  devicetree::PathResolver resolver(alias_prop);
+  devicetree::PathResolver resolver(aliases.properties());
 
   auto resolved_path = resolver.Resolve(alias_path);
   ASSERT_TRUE(resolved_path.is_ok());
@@ -124,13 +121,12 @@ TEST(PathResolverTest, ResolveRelativePathWithAliasWithLeaf) {
   std::optional<devicetree::Properties> alias_prop = aliases.properties();
   devicetree::PathResolver resolver(alias_prop);
 
-  std::string_view alias_with_leaf = "alias/this/is/a/leaf";
-  auto resolved_path = resolver.Resolve(alias_with_leaf);
+  auto resolved_path = resolver.Resolve("alias/this/is/a/leaf");
   ASSERT_TRUE(resolved_path.is_ok());
 
   auto [stem, leaf] = *resolved_path;
   EXPECT_EQ(stem, absolute_path);
-  EXPECT_EQ(leaf, alias_with_leaf.substr(alias_path.size() + 1));
+  EXPECT_EQ(leaf, "this/is/a/leaf");
 }
 
 TEST(PathResolverTest, ResolveRelativePathWithNoMatchingAlias) {
@@ -145,8 +141,7 @@ TEST(PathResolverTest, ResolveRelativePathWithNoMatchingAlias) {
   std::optional<devicetree::Properties> alias_prop = aliases.properties();
   devicetree::PathResolver resolver(alias_prop);
 
-  std::string_view unknown_alias = "unknown_alias/this/is/a/leaf";
-  auto resolved_path = resolver.Resolve(unknown_alias);
+  auto resolved_path = resolver.Resolve("unknown_alias/this/is/a/leaf");
 
   ASSERT_TRUE(resolved_path.is_error());
   EXPECT_EQ(resolved_path.error_value(), devicetree::PathResolver::ResolveError::kBadAlias);
@@ -164,41 +159,10 @@ TEST(PathResolverTest, ResolveRelativePathWithEmptyAlias) {
   std::optional<devicetree::Properties> alias_prop = aliases.properties();
   devicetree::PathResolver resolver(alias_prop);
 
-  std::string_view empty_alias = "alias/this/is/a/leaf";
-  auto resolved_path = resolver.Resolve(empty_alias);
+  auto resolved_path = resolver.Resolve("alias/this/is/a/leaf");
 
   ASSERT_TRUE(resolved_path.is_error());
   EXPECT_EQ(resolved_path.error_value(), devicetree::PathResolver::ResolveError::kBadAlias);
-}
-
-// This test introduces the expected usage on the matcher infrastructure.
-TEST(PathResolverTest, AliasPopulatedAfterCreation) {
-  std::string_view alias_path = "alias";
-  std::string_view absolute_path = "/A/B/C/D";
-
-  std::string_view not_yet_available_alias = "alias/this/is/a/leaf";
-
-  // When scanning a devicetree the alias are empty initially, since they
-  // have not been populated yet.
-  std::optional<devicetree::Properties> alias_initially_empty;
-  devicetree::PathResolver resolver(alias_initially_empty);
-
-  // Attempting to resolve an aliased path(before we actually find the aliases node)
-  // gives a signal to the user that it cant make progress yet.
-  auto resolved_path = resolver.Resolve(not_yet_available_alias);
-  ASSERT_TRUE(resolved_path.is_error());
-  EXPECT_EQ(resolved_path.error_value(), devicetree::PathResolver::ResolveError::kNoAliases);
-
-  // Eventually if there is an alias node in a devicetree, it will get populated.
-  AliasContext aliases;
-  aliases.Add(alias_path, absolute_path);
-  alias_initially_empty.emplace(aliases.properties());
-  // Now resolving this should return something else.
-  resolved_path = resolver.Resolve(not_yet_available_alias);
-  ASSERT_TRUE(resolved_path.is_ok());
-
-  EXPECT_EQ(resolved_path->prefix, absolute_path);
-  EXPECT_EQ(resolved_path->suffix, "this/is/a/leaf");
 }
 
 std::vector<std::string_view> ConvertPath(std::string_view path) {

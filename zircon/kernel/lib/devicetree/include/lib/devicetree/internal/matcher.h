@@ -80,7 +80,24 @@ constexpr void ForEachMatcher(Visitor&& visitor, Matchers&&... matchers) {
 }
 
 template <typename Matcher>
-using MatcherResultType = decltype(std::declval<Matcher>()(NodePath{}, std::declval<Properties>()));
+constexpr bool kIsValidMatcher =
+    std::is_invocable_v<Matcher, const NodePath&, Properties> ^
+    std::is_invocable_v<Matcher, const NodePath&, Properties, const PathResolver&>;
+
+// Compile time dispatch depending on the implemented matcher interface.
+template <typename Matcher>
+constexpr auto Dispatch(Matcher&& matcher, const NodePath& path, const Properties& props,
+                        const PathResolver& resolver) {
+  if constexpr (std::is_invocable_v<Matcher, const NodePath&, Properties>) {
+    return matcher(path, props);
+  } else {
+    return matcher(path, props, resolver);
+  }
+}
+
+template <typename Matcher>
+using MatcherResultType = decltype(Dispatch(
+    std::declval<Matcher>(), NodePath{}, std::declval<Properties>(), std::declval<PathResolver>()));
 
 // Helper to obtain the requested scans from the return type.
 template <size_t N>
@@ -90,15 +107,46 @@ constexpr size_t GetRequestedScans(MatcherScanResult<N>* r) {
 
 constexpr size_t GetRequestedScans(MatcherResult* r) { return 1; }
 
+template <typename Matcher>
+constexpr bool kNeedsAliases =
+    std::is_invocable_v<Matcher, const NodePath&, Properties, const PathResolver&>;
+
 // Actual number of scans requested by a given implementation of a Matcher.
+// When a matcher needs aliases, an extra scan may be needed to resolve the `aliases` node.
 template <typename Matcher>
 constexpr size_t kRequestedScans =
-    GetRequestedScans(static_cast<MatcherResultType<Matcher>*>(nullptr));
+    GetRequestedScans(static_cast<MatcherResultType<Matcher>*>(nullptr)) +
+    (kNeedsAliases<Matcher> ? 1 : 0);
 
 // For a set of matchers, the maximum number of scans needed to complete them,
 // in an ideal case.
 template <typename... Matchers>
 constexpr size_t kMaxRequestedScans = std::max({kRequestedScans<Matchers>...});
+
+// Used for looking for the aliases node.
+struct AliasMatcher {
+  MatcherResult operator()(const NodePath& path, Properties props);
+
+  std::optional<Properties> aliases;
+};
+
+template <size_t Index, typename... Matchers>
+using MatcherTypeAt = std::tuple_element_t<Index, std::tuple<Matchers...>>;
+
+template <typename... Matchers>
+constexpr bool kHasAliasMatcher =
+    std::is_same_v<devicetree::internal::AliasMatcher,
+                   MatcherTypeAt<sizeof...(Matchers) - 1, Matchers...>>;
+
+template <typename... Matchers>
+inline PathResolver GetPathResolver(Matchers&&... matchers) {
+  auto& maybe_alias_matcher = std::get<sizeof...(Matchers) - 1>(std::forward_as_tuple(matchers...));
+  if constexpr (std::is_same_v<std::decay_t<decltype(maybe_alias_matcher)>, AliasMatcher>) {
+    return PathResolver(maybe_alias_matcher.aliases);
+  } else {
+    return PathResolver(std::nullopt);
+  }
+}
 
 template <typename... Matchers>
 size_t Match(Devicetree& tree, Matchers&... matchers) {
@@ -107,23 +155,40 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
 
   // Helper for checking if we can terminate early if all matchers are done.
   auto all_matchers_done = [&visit_state]() {
-    return std::all_of(visit_state.begin(), visit_state.end(), [](const VisitState& matcher_state) {
-      return matcher_state.state() == MatcherResult::kDone;
-    });
+    // Alias node do not need to be resolved for the match operation to be completed, if
+    // all other matchers are completed already.
+    if constexpr (kHasAliasMatcher<Matchers...>) {
+      return std::all_of(visit_state.begin(), std::prev(visit_state.end()),
+                         [](const VisitState& matcher_state) {
+                           return matcher_state.state() == MatcherResult::kDone;
+                         });
+    } else {
+      return std::all_of(visit_state.begin(), visit_state.end(),
+                         [](const VisitState& matcher_state) {
+                           return matcher_state.state() == MatcherResult::kDone;
+                         });
+    }
+  };
+
+  static constexpr auto to_matcher_result = [](auto typed_result) constexpr {
+    if constexpr (std::is_same_v<decltype(typed_result), MatcherResult>) {
+      return typed_result;
+    } else {
+      return typed_result.result;
+    }
   };
 
   auto visit_and_prune = [&visit_state, &matchers...](const NodePath& path, Properties props) {
+    // Use of optional for delayed instantiation, |*resolver| is always valid.
+    auto resolver = GetPathResolver(matchers...);
+
     ForEachMatcher(
-        [&visit_state, &path, props](auto& matcher, size_t index) -> void {
-          if (visit_state[index].state() == MatcherResult::kVisitSubtree) {
-            auto to_matcher_result = [](auto typed_result) constexpr {
-              if constexpr (std::is_same_v<decltype(typed_result), MatcherResult>) {
-                return typed_result;
-              } else {
-                return typed_result.result;
-              }
-            };
-            visit_state[index].set_state(to_matcher_result(matcher(path, props)));
+        [&resolver, &visit_state, &path, props](auto& matcher, size_t index) -> void {
+          if (visit_state[index].state() == MatcherResult::kVisitSubtree ||
+              (visit_state[index].state() == MatcherResult::kNeedsAliases &&
+               resolver.has_aliases())) {
+            visit_state[index].set_state(
+                to_matcher_result(Dispatch(matcher, path, props, resolver)));
             if (visit_state[index].state() == MatcherResult::kAvoidSubtree) {
               visit_state[index].Prune(path);
             }
@@ -155,5 +220,4 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
 }
 
 }  // namespace devicetree::internal
-
 #endif  // ZIRCON_KERNEL_LIB_DEVICETREE_INCLUDE_LIB_DEVICETREE_INTERNAL_MATCHER_H_

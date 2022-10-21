@@ -94,8 +94,10 @@ class PathResolver {
   // Returns a resolved path containing the de-aliased prefix and the suffix of the path.
   fit::result<ResolveError, ResolvedPath> Resolve(std::string_view maybe_aliased_path) const;
 
+  constexpr bool has_aliases() const { return !!aliases_; }
+
  private:
-  const std::optional<Properties>& aliases_;
+  std::optional<Properties> aliases_;
 };
 
 // Represents the result of comparing |path_a| to |path_b|.

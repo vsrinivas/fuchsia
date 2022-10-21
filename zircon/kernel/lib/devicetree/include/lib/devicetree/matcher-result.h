@@ -21,6 +21,9 @@ enum class MatcherResult {
 
   // Matcher has finished collecting information, no more scans are needed.
   kDone,
+
+  // Matcher cannot make further progress until the aliases node is resolved.
+  kNeedsAliases,
 };
 
 // Matcher return type uses this type to communicate at compile time the maximum number of

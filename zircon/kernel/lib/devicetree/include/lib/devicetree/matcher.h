@@ -60,9 +60,16 @@ namespace devicetree {
 template <typename... Matchers>
 size_t Match(Devicetree& tree, Matchers&&... matchers) {
   static_assert(sizeof...(Matchers) > 0);
-  static_assert((std::is_invocable_v<Matchers, const NodePath&, Properties> && ...),
+  static_assert((internal::kIsValidMatcher<Matchers> && ...),
                 "Matchers must implement the Matcher API.");
-  return internal::Match(tree, matchers...);
+  // If no matchers need aliases, dont bother.
+  if constexpr ((... && std::is_invocable_v<Matchers, const NodePath&, Properties>)) {
+    return internal::Match(tree, matchers...);
+  } else {
+    // When providing aliases, the alias matcher MUST be last.
+    internal::AliasMatcher alias_matcher;
+    return internal::Match(tree, matchers..., alias_matcher);
+  }
 }
 
 }  // namespace devicetree
