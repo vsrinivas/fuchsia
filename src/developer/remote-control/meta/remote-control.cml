@@ -13,12 +13,6 @@
     ],
     use: [
         {
-            directory: "hub",
-            from: "parent",
-            rights: [ "rw*" ],
-            path: "/discovery_root",
-        },
-        {
             directory: "config-data",
             rights: [ "r*" ],
             path: "/config/data",

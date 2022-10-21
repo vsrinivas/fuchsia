@@ -145,7 +145,7 @@ async fn knock_rcs_impl(rcs_proxy: &RemoteControlProxy) -> Result<(), KnockRcsEr
     rcs_proxy
         .connect(
             selectors::parse_selector::<VerboseError>(
-                "core/remote-control:out:fuchsia.developer.remotecontrol.RemoteControl",
+                "core/remote-control:expose:fuchsia.developer.remotecontrol.RemoteControl",
             )
             .unwrap(),
             knock_remote,

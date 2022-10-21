@@ -84,6 +84,8 @@ protocol RemoteControl {
         match ServiceMatch;
     }) error ConnectError;
 
+    // This method serves no purpose and is not used anywhere.
+    @deprecated("Consider connecting to a protocol with the `Connect` method instead")
     Select(struct {
         selector diagnostics.Selector;
     }) -> (struct {
