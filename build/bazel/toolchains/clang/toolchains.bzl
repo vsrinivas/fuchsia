@@ -17,7 +17,7 @@ def _prebuilt_clang_cc_toolchain_config_impl(ctx):
     tool_paths = [
         tool_path(name = "ar", path = clang_binprefix + "llvm-ar"),
         tool_path(name = "cpp", path = clang_binprefix + "cpp"),
-        tool_path(name = "gcc", path = clang_binprefix + "clang++"),
+        tool_path(name = "gcc", path = clang_binprefix + "clang"),
         tool_path(name = "gcov", path = "/usr/bin/false"),
         tool_path(name = "gcov-tool", path = "/usr/bin/false"),
         tool_path(name = "ld", path = clang_binprefix + "llvm-ld"),
