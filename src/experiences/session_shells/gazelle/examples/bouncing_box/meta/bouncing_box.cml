@@ -7,11 +7,6 @@
         runner: "elf",
         binary: "bin/bouncing_box",
     },
-    capabilities: [
-        {
-            protocol: [ "fuchsia.ui.app.ViewProvider" ],
-        },
-    ],
     use: [
         {
             protocol: [
@@ -25,9 +20,8 @@
     ],
     expose: [
         {
-            protocol: "fuchsia.ui.app.ViewProvider",
-            from: "self",
-            to: "parent",
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
         },
     ],
 }
