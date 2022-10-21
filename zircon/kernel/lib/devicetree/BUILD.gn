@@ -15,6 +15,7 @@ zx_library("devicetree") {
   deps = [ "//zircon/system/ulib/fbl" ]
 
   public_deps = [
+    "//sdk/lib/stdcompat",
     "//zircon/system/ulib/zircon-internal:headers",
     "//zircon/system/ulib/zxc:headers",
   ]

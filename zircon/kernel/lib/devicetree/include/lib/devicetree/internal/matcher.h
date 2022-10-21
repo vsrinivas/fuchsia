@@ -10,9 +10,12 @@
 #include <lib/devicetree/devicetree.h>
 #include <lib/devicetree/matcher-result.h>
 #include <lib/devicetree/path.h>
+#include <lib/fit/result.h>
+#include <lib/stdcompat/array.h>
 
 #include <algorithm>
 #include <cstdint>
+#include <iterator>
 #include <tuple>
 #include <type_traits>
 
@@ -149,25 +152,35 @@ inline PathResolver GetPathResolver(Matchers&&... matchers) {
 }
 
 template <typename... Matchers>
-size_t Match(Devicetree& tree, Matchers&... matchers) {
+fit::result<size_t, size_t> Match(Devicetree& tree, Matchers&... matchers) {
   // Walk state for each matcher.
   std::array<VisitState, sizeof...(Matchers)> visit_state = {};
 
-  // Helper for checking if we can terminate early if all matchers are done.
-  auto all_matchers_done = [&visit_state]() {
-    // Alias node do not need to be resolved for the match operation to be completed, if
-    // all other matchers are completed already.
-    if constexpr (kHasAliasMatcher<Matchers...>) {
-      return std::all_of(visit_state.begin(), std::prev(visit_state.end()),
-                         [](const VisitState& matcher_state) {
-                           return matcher_state.state() == MatcherResult::kDone;
-                         });
-    } else {
-      return std::all_of(visit_state.begin(), visit_state.end(),
-                         [](const VisitState& matcher_state) {
-                           return matcher_state.state() == MatcherResult::kDone;
-                         });
+  // If all matcher are done returns -1.
+  // If at least one matcher is not done -2.
+  // A positive value represents the index of the offending matcher, that didnt compelte within the
+  // number of scans it requested.
+  auto all_matchers_done = [](auto& visit_state, size_t scan_index) -> int {
+    constexpr std::array kScansForMatchers{kRequestedScans<Matchers>...};
+    auto end = [](auto& visit_state) constexpr {
+      if constexpr (kHasAliasMatcher<Matchers...>) {
+        return std::prev(visit_state.end());
+      } else {
+        return visit_state.end();
+      }
+    }(visit_state);
+    bool all_done = true;
+    for (auto it = visit_state.begin(); it != end; ++it) {
+      if (it->state() == MatcherResult::kDone) {
+        continue;
+      }
+      size_t matcher_index = std::distance(visit_state.begin(), it);
+      if (scan_index + 1 >= kScansForMatchers[matcher_index]) {
+        return static_cast<int>(matcher_index);
+      }
+      all_done = false;
     }
+    return all_done ? -1 : -2;
   };
 
   static constexpr auto to_matcher_result = [](auto typed_result) constexpr {
@@ -218,15 +231,25 @@ size_t Match(Devicetree& tree, Matchers&... matchers) {
         matchers...);
   };
 
+  size_t unfinished_matcher_index = 0;
   for (size_t i = 0; i < kMaxRequestedScans<Matchers...>; ++i) {
     tree.Walk(visit_and_prune, unprune);
     on_scan_finish(visit_state, matchers...);
-    if (all_matchers_done()) {
-      return i + 1;
+    int completion_result = all_matchers_done(visit_state, i);
+
+    // All matchers done.
+    if (completion_result == -1) {
+      return fit::success(i + 1);
+    }
+
+    // A matcher claims it should have finished earlier than it should.
+    if (completion_result >= 0) {
+      unfinished_matcher_index = completion_result;
+      break;
     }
   }
 
-  return -1;
+  return fit::error(unfinished_matcher_index);
 }
 
 }  // namespace devicetree::internal

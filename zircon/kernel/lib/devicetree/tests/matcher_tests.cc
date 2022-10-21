@@ -4,6 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/devicetree/devicetree.h>
+#include <lib/devicetree/internal/matcher.h>
 #include <lib/devicetree/matcher.h>
 #include <lib/devicetree/path.h>
 #include <lib/stdcompat/array.h>
@@ -12,9 +14,6 @@
 
 #include <zxtest/zxtest.h>
 
-#include "lib/devicetree/devicetree.h"
-#include "lib/devicetree/internal/matcher.h"
-#include "lib/devicetree/matcher-result.h"
 #include "test_helper.h"
 
 namespace {
@@ -155,8 +154,9 @@ TEST_F(MatchTest, SingleMatcherNoAlias) {
                                }};
 
   auto tree = no_prop_tree();
-
-  ASSERT_EQ(devicetree::Match(tree, matcher), 1);
+  auto match_result = devicetree::Match(tree, matcher);
+  ASSERT_TRUE(match_result.is_ok());
+  ASSERT_EQ(*match_result, 1);
 
   EXPECT_TRUE(matcher.found);
   EXPECT_EQ(matcher.visit_count, 5);
@@ -180,7 +180,9 @@ TEST_F(MatchTest, MultipleMatchersNoAlias) {
 
   auto tree = no_prop_tree();
 
-  ASSERT_EQ(devicetree::Match(tree, matcher, matcher_2), 1);
+  auto match_result = devicetree::Match(tree, matcher, matcher_2);
+  ASSERT_TRUE(match_result.is_ok());
+  ASSERT_EQ(*match_result, 1);
 
   EXPECT_TRUE(matcher.found);
   EXPECT_EQ(matcher.visit_count, 5);
@@ -226,7 +228,8 @@ TEST_F(MatchTest, LambdaAsMatchers) {
       });
 
   // If not all matchers are done, returns -1.
-  ASSERT_EQ(scan_result, 2);
+  ASSERT_TRUE(scan_result.is_ok());
+  ASSERT_EQ(*scan_result, 2);
 
   EXPECT_EQ(called, 1);
   EXPECT_EQ(called_2, 2);
@@ -237,10 +240,13 @@ TEST_F(MatchTest, SingleMatcherNeveDoneCompletes) {
     SingleNodeMatcher<1> matcher{.path_to_match = "/A/C/D/G", .cb = [](auto name, auto props) {
                                    FAIL("This matcher should not match anything.");
                                  }};
+
     auto tree = no_prop_tree();
 
-    // If not all matchers are done, returns -1.
-    ASSERT_EQ(devicetree::Match(tree, matcher), -1);
+    // If not all matchers are done, returns error with index of the failing matcher (0).
+    auto match_res = devicetree::Match(tree, matcher);
+    ASSERT_TRUE(match_res.is_error());
+    ASSERT_EQ(match_res.error_value(), 0);
     EXPECT_FALSE(matcher.found);
     // The matcher gets called for every node in the path, plus every offspring that
     // branches out of the path, per scan. The default number of scan is 1.
@@ -290,8 +296,10 @@ TEST_F(MatchTest, MatcherWithAliasBailsEarlyWithoutAlias) {
 
   auto tree = no_prop_tree();
 
-  // If not all matchers are done, returns -1.
-  ASSERT_EQ(devicetree::Match(tree, matcher), -1);
+  // If not all matchers are done, returns index of failing matcher.
+  auto match_res = devicetree::Match(tree, matcher);
+  ASSERT_TRUE(match_res.is_error());
+  ASSERT_EQ(match_res.error_value(), 0);
 
   // It will never be found, and it will be pruned at the root of each tree.
   EXPECT_FALSE(matcher.found);
@@ -306,7 +314,9 @@ TEST_F(MatchTest, MultipleMatchersWithAlias) {
 
   auto tree = with_alias_tree();
 
-  ASSERT_EQ(devicetree::Match(tree, matcher, matcher_2), 2);
+  auto match_res = devicetree::Match(tree, matcher, matcher_2);
+  ASSERT_TRUE(match_res.is_ok());
+  ASSERT_EQ(*match_res, 2);
 
   EXPECT_TRUE(matcher.found);
   EXPECT_EQ(matcher.visit_count, 6);
@@ -323,7 +333,9 @@ TEST_F(MatchTest, MultipleMatchersAliasResolvedFirstIsSingleScan) {
 
   auto tree = with_alias_first_tree();
 
-  ASSERT_EQ(devicetree::Match(tree, matcher, matcher_2), 1);
+  auto match_res = devicetree::Match(tree, matcher, matcher_2);
+  ASSERT_TRUE(match_res.is_ok());
+  ASSERT_EQ(*match_res, 1);
 
   EXPECT_TRUE(matcher.found);
   EXPECT_EQ(matcher.visit_count, 5);
@@ -372,8 +384,8 @@ TEST_F(MatchTest, LambdaAsMatchersMixedAliasAndNoAlias) {
         }
       });
 
-  // If not all matchers are done, returns -1.
-  ASSERT_EQ(scan_result, 2);
+  ASSERT_TRUE(scan_result.is_ok());
+  ASSERT_EQ(*scan_result, 2);
 
   EXPECT_EQ(called, 1);
   EXPECT_EQ(called_2, 2);
@@ -403,7 +415,9 @@ TEST_F(MatchTest, MatcherNotifiedOnScanEndMatcherDidNotFinish) {
   auto tree = no_prop_tree();
   UnboundedMatcher<kScans, kScans + 1> matcher;
 
-  ASSERT_EQ(devicetree::Match(tree, matcher), -1);
+  auto match_res = devicetree::Match(tree, matcher);
+  ASSERT_TRUE(match_res.is_error());
+  ASSERT_EQ(match_res.error_value(), 0);
 
   EXPECT_EQ(matcher.visit_count, 10 * kScans);
   EXPECT_EQ(matcher.scan_count, kScans);
@@ -415,10 +429,31 @@ TEST_F(MatchTest, MatcherNotifiedOnScanEndMatcherFinished) {
   auto tree = no_prop_tree();
   UnboundedMatcher<kScans, kScans> matcher;
 
-  ASSERT_EQ(devicetree::Match(tree, matcher), kScans);
+  auto match_res = devicetree::Match(tree, matcher);
+  ASSERT_TRUE(match_res.is_ok());
+  ASSERT_EQ(*match_res, kScans);
 
   EXPECT_EQ(matcher.visit_count, 10 * kScans);
   EXPECT_EQ(matcher.scan_count, kScans);
+}
+
+TEST_F(MatchTest, MatcherDoesntFinishWithinRequestedScanIsAbortsEarly) {
+  auto tree = no_prop_tree();
+
+  UnboundedMatcher<2, 2> done_after_second_scan;
+
+  auto match_result = devicetree::Match(
+      tree,
+      // We will bail early, and this matcher wont complete either, since only
+      // a single scan will be completed.
+      done_after_second_scan,
+      // This matcher will neve complete, but claims it should complete after 1 scan.
+      [](const auto&, auto) { return devicetree::MatcherResult::kVisitSubtree; });
+
+  ASSERT_TRUE(match_result.is_error());
+  EXPECT_EQ(match_result.error_value(), 1);
+  EXPECT_EQ(done_after_second_scan.visit_count, 10);
+  EXPECT_EQ(done_after_second_scan.scan_count, 1);
 }
 
 }  // namespace

@@ -11,6 +11,7 @@
 #include <lib/devicetree/internal/matcher.h>
 #include <lib/devicetree/matcher-result.h>
 #include <lib/devicetree/path.h>
+#include <lib/fit/result.h>
 
 #include <algorithm>
 #include <string_view>
@@ -79,7 +80,7 @@ namespace devicetree {
 // }
 //
 template <typename... Matchers>
-size_t Match(Devicetree& tree, Matchers&&... matchers) {
+fit::result<size_t, size_t> Match(Devicetree& tree, Matchers&&... matchers) {
   static_assert(sizeof...(Matchers) > 0);
   static_assert((internal::kIsValidMatcher<Matchers> && ...),
                 "Matchers must implement the Matcher API.");
