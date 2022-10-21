@@ -104,8 +104,9 @@ impl<I: Instant> AssignedAddress<Ipv6Addr> for Ipv6AddressEntry<I> {
 }
 
 /// The state common to all IP devices.
+#[derive(GenericOverIp)]
 #[cfg_attr(test, derive(Debug))]
-pub(crate) struct IpDeviceState<Instant: crate::Instant, I: IpDeviceStateIpExt> {
+pub(crate) struct IpDeviceState<Instant: crate::Instant, I: Ip + IpDeviceStateIpExt> {
     /// IP addresses assigned to this device.
     ///
     /// IPv6 addresses may be tentative (performing NDP's Duplicate Address
@@ -149,12 +150,6 @@ impl<Instant: crate::Instant, I: IpDeviceStateIpExt> Default for IpDeviceState<I
             routing_enabled: false,
         }
     }
-}
-
-impl<I: IpDeviceStateIpExt, Instant: crate::Instant, NewIp: IpDeviceStateIpExt> GenericOverIp<NewIp>
-    for IpDeviceState<Instant, I>
-{
-    type Type = IpDeviceState<Instant, NewIp>;
 }
 
 // TODO(https://fxbug.dev/84871): Once we figure out what invariants we want to

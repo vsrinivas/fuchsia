@@ -53,11 +53,18 @@ fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream2 {
             // Emit an impl that substitutes the identified type parameter
             // to produce the new GenericOverIp::Type.
             let generic_ip_name: Ident = parse_quote!(IpType);
+            let IpGenericParam { ident, param_type, extra_bounds } = to_replace;
+            let extra_bounds_target: Path = match param_type {
+                IpGenericParamType::IpVersion => parse_quote!(#generic_ip_name),
+                IpGenericParamType::IpAddress => parse_quote!(#generic_ip_name::Addr),
+            };
             let generic_bounds =
-                with_type_param_replaced(&ast.generics, to_replace, generic_ip_name.clone());
+                with_type_param_replaced(&ast.generics, ident, param_type, generic_ip_name.clone());
 
             quote! {
-                impl <#generic_ip_name: Ip, #impl_generics> GenericOverIp<IpType> for #name #type_generics {
+                impl <#generic_ip_name: Ip, #impl_generics>
+                GenericOverIp<IpType> for #name #type_generics
+                where #extra_bounds_target: #(#extra_bounds)+*, {
                     type Type = #name #generic_bounds;
                 }
             }
@@ -77,6 +84,7 @@ fn impl_derive_generic_over_ip(ast: &syn::DeriveInput) -> TokenStream2 {
 struct IpGenericParam<'i> {
     ident: &'i Ident,
     param_type: IpGenericParamType,
+    extra_bounds: Vec<&'i TypeParamBound>,
 }
 
 #[derive(Debug)]
@@ -99,16 +107,19 @@ fn find_ip_generic_param<'t>(
                 TypeParamBound::Trait(t) => t,
                 TypeParamBound::Lifetime(_) => continue,
             };
+            let extra_bounds = t.bounds.iter().filter(|b| b != &bound);
             if trait_bound.path.is_ident("Ip") {
                 return Some(IpGenericParam {
                     ident: &t.ident,
                     param_type: IpGenericParamType::IpVersion,
+                    extra_bounds: extra_bounds.collect(),
                 });
             }
             if trait_bound.path.is_ident("IpAddress") {
                 return Some(IpGenericParam {
                     ident: &t.ident,
                     param_type: IpGenericParamType::IpAddress,
+                    extra_bounds: extra_bounds.collect(),
                 });
             }
         }
@@ -128,10 +139,10 @@ fn find_ip_generic_param<'t>(
 
 fn with_type_param_replaced(
     generics: &Generics,
-    to_replace: IpGenericParam<'_>,
+    to_find: &Ident,
+    param_type: IpGenericParamType,
     ip_type_ident: Ident,
 ) -> Option<AngleBracketedGenericArguments> {
-    let IpGenericParam { ident: to_find, param_type } = to_replace;
     let args: Punctuated<_, _> = generics
         .params
         .iter()

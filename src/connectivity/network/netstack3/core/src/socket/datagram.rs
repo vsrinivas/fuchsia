@@ -1107,16 +1107,12 @@ pub(crate) enum DatagramSocketId<S: DatagramSocketStateSpec> {
 }
 
 /// Selector for the device to affect when changing multicast settings.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
-pub enum MulticastInterfaceSelector<A, D> {
+#[derive(Copy, Clone, Debug, Eq, GenericOverIp, PartialEq)]
+pub enum MulticastInterfaceSelector<A: IpAddress, D> {
     /// Use the device with the assigned address.
     LocalAddress(SpecifiedAddr<A>),
     /// Use the device with the specified identifier.
     Interface(D),
-}
-
-impl<A, D, I: Ip> GenericOverIp<I> for MulticastInterfaceSelector<A, D> {
-    type Type = MulticastInterfaceSelector<I::Addr, D>;
 }
 
 /// Selector for the device to use when changing multicast membership settings.

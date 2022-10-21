@@ -4796,7 +4796,9 @@ mod tests {
         .into()
     }
 
-    fn iface_id<A>(id: MultipleDevicesId) -> MulticastInterfaceSelector<A, MultipleDevicesId> {
+    fn iface_id<A: IpAddress>(
+        id: MultipleDevicesId,
+    ) -> MulticastInterfaceSelector<A, MultipleDevicesId> {
         MulticastInterfaceSelector::Interface(id)
     }
     fn iface_addr<A: IpAddress>(

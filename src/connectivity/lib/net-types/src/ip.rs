@@ -3542,4 +3542,46 @@ mod macro_test {
 
         assert_ip_generic!(Invariant, usize, bool, char);
     }
+
+    #[test]
+    fn struct_with_ip_version_extension_parameter() {
+        trait FakeIpExt: Ip {
+            type Associated;
+        }
+        impl FakeIpExt for Ipv4 {
+            type Associated = u8;
+        }
+        impl FakeIpExt for Ipv6 {
+            type Associated = u16;
+        }
+
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Generic<I: Ip + FakeIpExt> {
+            field: I::Associated,
+        }
+
+        assert_ip_generic!(Generic, Ip);
+    }
+
+    #[test]
+    fn struct_with_ip_address_extension_parameter() {
+        trait FakeIpAddressExt: IpAddress {
+            type Associated;
+        }
+        impl FakeIpAddressExt for Ipv4Addr {
+            type Associated = u8;
+        }
+        impl FakeIpAddressExt for Ipv6Addr {
+            type Associated = u16;
+        }
+
+        #[allow(dead_code)]
+        #[derive(GenericOverIp)]
+        struct Generic<A: IpAddress + FakeIpAddressExt> {
+            field: A::Associated,
+        }
+
+        assert_ip_generic!(Generic, IpAddress);
+    }
 }
