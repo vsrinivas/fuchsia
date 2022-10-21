@@ -17,6 +17,7 @@ import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/zircon/tools.gni")
 import("//src/developer/ffx/build/ffx_action.gni")
+import("//src/storage/fshost/fshost.gni")
 import("//src/storage/fshost/generated_fshost_config.gni")
 
 # Assembles a Fuchsia system.
@@ -309,7 +310,7 @@ template("assembled_system") {
     config_data = "${image_name}.config-data"
     shell_commands = "${image_name}.shell_commands"
     assembly_generated_packages = "${image_name}.assembly_generated_packages"
-    fshost_config = "${image_name}.fshost_config"
+    fshost = "${image_name}.fs_host"
     compare_command_logs = "${image_name}.compare_command_logs"
     compare_images_manifests = "${image_name}.compare_images_manifests"
 
@@ -351,6 +352,9 @@ template("assembled_system") {
 
     outdir = "$target_out_dir/$image_name"
     gendir = "$outdir/gen"
+
+    # The cmc_merge() template this is used with prepends $target_out_dir.
+    fshost_merged_cml = "${image_name}/fshost.merged.cml"
 
     legacy_assembly_input_bundle_dir = "${outdir}/legacy"
     legacy_assembly_input_bundle_manifest =
@@ -521,10 +525,34 @@ template("assembled_system") {
     _meta_packages += [ ":${labels.config_data}" ]
   }
 
-  generated_fshost_config(labels.fshost_config) {
-    options = fshost_config
-    if (embed_fvm_in_zbi) {
-      options.fvm_ramdisk = true
+  # Compile the fshost component and configuration needed for this assembly
+  fshost_component_and_config(labels.fshost) {
+    # THIS CANNOT BE MARKED TESTONLY, EVEN IF THE ASSEMBLY IS.  This template
+    # changes behavior to create a non-bootable fshost if testly is set to true.
+    testonly = false
+
+    # Correct the component name since the target_name is per-image.
+    component_name = "fshost"
+
+    # This is picked up by the `cmc_merge()` within `fshost_cml()`, through its
+    # use of foward_variables_from(invoker, ["output_name" ...]).
+    output_name = files.fshost_merged_cml
+
+    options = {
+      # Use the defaults from the build args set in generated_fshost_config.gni
+      data_filesystem_format = data_filesystem_format
+      use_disk_based_minfs_migration = use_disk_based_minfs_migration
+
+      # Override with anything passed from `fshost_config`
+      forward_variables_from(fshost_config, "*")
+
+      # Always set fvm_ramdisk if this is an fvm-in-ramdisk assembly.
+      if (embed_fvm_in_zbi) {
+        fvm_ramdisk = true
+      }
+
+      # Use the rust implementation of fshost based on the global GN arg.
+      use_rust_port = rust_fshost
     }
   }
 
@@ -581,7 +609,7 @@ template("assembled_system") {
     bootfs_labels = invoker.bootfs_labels
     bootfs_labels += component_id_index_dep
     bootfs_labels += [ kernel_image ]
-    bootfs_labels += [ ":${labels.fshost_config}" ]
+    bootfs_labels += [ ":${labels.fshost}" ]
 
     # Only builds with an FVM need base-resolver/pkg-cache-resolver.
     if (generate_fvm) {

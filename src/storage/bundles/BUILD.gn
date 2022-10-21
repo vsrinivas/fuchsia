@@ -8,7 +8,6 @@ group("bootstrap") {
     "//src/storage/bin/fsck",
     "//src/storage/bin/minfs",
     "//src/storage/bin/mkfs",
-    "//src/storage/fshost:bootfs",
   ]
 }
 

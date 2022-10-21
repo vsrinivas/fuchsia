@@ -100,7 +100,6 @@ assembled_system("guest") {
     "//src/storage/bin/df",
     "//src/storage/bin/mount",
     "//src/storage/bin/umount",
-    "//src/storage/fshost:bootfs",
     "//src/storage/fvm/driver",
     "//src/sys/bin/psutils",
     "//src/sys/bundles:bootstrap",

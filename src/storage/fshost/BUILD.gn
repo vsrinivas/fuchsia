@@ -9,11 +9,6 @@ import("//build/test.gni")
 import("//src/storage/fshost/fshost.gni")
 import("//tools/cmc/build/cmc.gni")
 
-declare_args() {
-  # If true, use the Rust version of fshost.
-  rust_fshost = false
-}
-
 group("tests") {
   testonly = true
   deps = [ ":fshost-tests" ]
@@ -198,9 +193,12 @@ executable("fshost") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
-    "//src/storage/memfs:memfs_component",
     "//third_party/zstd",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
+
+    # TODO(fxbug.dev/112753):  Remove this dep when adding fshost to the common
+    # platform AIB, and add this component to the AIB at the same time.
+    "//src/storage/memfs:memfs_component",
   ]
 }
 
@@ -492,28 +490,28 @@ fuchsia_test_package("fshost-tests") {
   ]
 }
 
-fshost_cml("fshost.cml") {
+# This is only used for generating the structured configuration library, as the
+# main cml is produced by assembly.
+fshost_cml("fshost_for_config_lib.cml") {
   options = {
-    bootfs_only = bootfs_only
-    data_filesystem_format = data_filesystem_format
-    use_disk_based_minfs_migration = use_disk_based_minfs_migration
+    bootfs_only = true
   }
 }
 
-fuchsia_component_manifest("fshost_manifest") {
+fuchsia_component_manifest("fshost_manifest_for_config_lib") {
   component_name = "fshost"
-  manifest = get_target_outputs(":fshost.cml")
+  manifest = get_target_outputs(":fshost_for_config_lib.cml")
   manifest = manifest[0]
-  deps = [ ":fshost.cml" ]
+  deps = [ ":fshost_for_config_lib.cml" ]
 }
 
 fuchsia_structured_config_cpp_elf_lib("fshost_config") {
-  cm_label = ":fshost_manifest"
+  cm_label = ":fshost_manifest_for_config_lib"
 }
 
 fuchsia_structured_config_rust_lib("fshost_config_rust") {
   name = "fshost_config"
-  cm_label = ":fshost_manifest"
+  cm_label = ":fshost_manifest_for_config_lib"
 }
 
 # Note: Instead of using a shard to switch the binary we are calling, like the tests do, the main
@@ -523,29 +521,10 @@ renamed_binary("fshost_rust") {
   source = "$root_out_dir/fshost_rust"
   source_deps = [ "//src/storage/fshost-rust" ]
   dest = "bin/fshost"
-}
 
-fuchsia_component("fshost_rust_component") {
-  cm_label = ":fshost_manifest"
   deps = [
-    ":fshost_rust",
+    # TODO(fxbug.dev/112753):  Remove this dep when adding fshost to the common
+    # platform AIB, and add this component to the AIB at the same time.
     "//src/storage/memfs:memfs_component",
   ]
-  if (data_filesystem_format == "fxfs") {
-    deps += [
-      "//src/storage/fxfs:fxfs_component",
-      "//src/storage/fxfs-crypt",
-    ]
-  }
-}
-
-group("bootfs") {
-  if (rust_fshost) {
-    deps = [ ":fshost_rust_component" ]
-  } else {
-    deps = [
-      ":fshost",
-      ":fshost_manifest",
-    ]
-  }
 }

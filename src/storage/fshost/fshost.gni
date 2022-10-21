@@ -6,6 +6,11 @@ import("//build/components.gni")
 import("//src/storage/fshost/generated_fshost_config.gni")
 import("//tools/cmc/build/cmc.gni")
 
+declare_args() {
+  # If true, use the Rust version of fshost.
+  rust_fshost = false
+}
+
 # Generates an fshost cml file.
 #
 # Parameters
@@ -19,7 +24,12 @@ import("//tools/cmc/build/cmc.gni")
 #   testonly - the component will only be used for testing
 template("fshost_cml") {
   cmc_merge(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker,
+                           [
+                             "output_name",
+                             "visibility",
+                             "testonly",
+                           ])
     sources = [
       "//src/storage/fshost/meta/base_fshost.cml",
       "//src/storage/fshost/meta/config.cml",
@@ -68,8 +78,20 @@ template("fshost_cml") {
   }
 }
 
-# Generates an fshost component and matching config.  The parameters are the same as for
-# fshost_cml above.  This will produces the following targets:
+# Generates an fshost component and matching config.
+#
+# Parameters:
+#
+#   options - same as for `fshost_cml` above, see that template's documentation
+#             for details.
+#
+#   component_name (optional; default: target_name)
+#     [string] The name to use for the fshost component (changes the name of the
+#     component manifest that's created).
+#
+#   output_name (optional; used to enable transition to other template changes)
+#
+#  This will produces the following targets:
 #
 #     <target-name>.cml      : the cml file
 #     <target-name>.manifest : the manifest (compiled cml file)
@@ -77,25 +99,37 @@ template("fshost_cml") {
 #     <target-name>.comp     : the component
 #     <target-name>          : a group encompassing the component and the config
 #
-# The component name will be <target-name>.
 template("fshost_component_and_config") {
   _cml_target = "$target_name.cml"
   _manifest_target = "$target_name.manifest"
   _config_target = "$target_name.config"
   _component_target = "$target_name.comp"
+
+  # This is used by any of the templates below that use `invoker.component_name`
+  # or `forward_variables_from(invoker, [ "component_name" ...`.
   component_name = target_name
+  if (defined(invoker.component_name)) {
+    component_name = invoker.component_name
+  }
 
   # The CML file
   fshost_cml(_cml_target) {
-    forward_variables_from(invoker, "*")
+    forward_variables_from(invoker,
+                           [
+                             "options",
+                             "output_name",
+                             "testonly",
+                           ])
+    visibility = [ ":*" ]
   }
 
   # The manifest (compiled CML)
   fuchsia_component_manifest(_manifest_target) {
     forward_variables_from(invoker, [ "testonly" ])
-    target_outputs = get_target_outputs(":$_cml_target")
-    manifest = target_outputs[0]
+    _target_outputs = get_target_outputs(":$_cml_target")
+    manifest = _target_outputs[0]
     deps = [ ":$_cml_target" ]
+    visibility = [ ":*" ]
   }
 
   # The config
