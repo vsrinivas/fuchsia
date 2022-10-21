@@ -22,7 +22,7 @@ template("banjo_rust_library") {
   underscore_name = "banjo_" + string_replace(library_name, ".", "_")
 
   banjo_target_gen_dir =
-      get_label_info(":bogus($banjo_toolchain)", "target_gen_dir")
+      get_label_info(":anything($banjo_toolchain)", "target_gen_dir")
   file_stem = "$banjo_target_gen_dir/${underscore_name}"
 
   rustc_library(rustc_target_name) {

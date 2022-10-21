@@ -169,7 +169,7 @@ foreach(file, bootstrap_files) {
 # into a separate BUILD.gn file.
 flash_script_outputs = [ "$root_out_dir/flash.sh" ]
 
-host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
+host_out_dir = get_label_info(":anything($host_toolchain)", "root_out_dir")
 flash_script_args = [
   "--image=" + rebase_path(files.final_zbi, root_build_dir),
   "--recovery-image=" + rebase_path(files.final_recovery_zbi, root_build_dir),

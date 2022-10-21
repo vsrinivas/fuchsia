@@ -383,7 +383,7 @@ if (current_toolchain == dart_toolchain) {
       outputs = [ _invocation_file ]
 
       _dart_target_gen_dir =
-          get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+          get_label_info(":anything($dart_toolchain)", "target_gen_dir")
       _delegate_file = "$_dart_target_gen_dir/$_main_target_name"
 
       args = [

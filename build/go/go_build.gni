@@ -278,9 +278,9 @@ template("go_build") {
     if (defined(invoker.lib_dirs)) {
       lib_dirs = rebase_path(invoker.lib_dirs, root_build_dir)
     }
-    lib_dirs +=
-        [ rebase_path(get_label_info(":any($shlib_toolchain)", "root_out_dir"),
-                      root_build_dir) ]
+    lib_dirs += [ rebase_path(
+            get_label_info(":anything($shlib_toolchain)", "root_out_dir"),
+            root_build_dir) ]
 
     if (!(defined(invoker.cgo) && !invoker.cgo)) {
       args += [ "--cgo" ]

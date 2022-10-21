@@ -320,7 +320,7 @@ template("fuchsia_structured_config_rust_lib") {
   # Cannot call get_target_outputs on `client_lib_source`, so we must get the path to the
   # generated source files manually.
   source_gen_dir =
-      get_label_info(":bogus($default_toolchain)", "target_out_dir")
+      get_label_info(":anything($default_toolchain)", "target_out_dir")
   fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
   rust_source_file = "${source_gen_dir}/${rust_source_target}.rs"
 
@@ -494,7 +494,7 @@ template("fuchsia_structured_config_cpp_elf_lib") {
   # Cannot call get_target_outputs on `client_lib_source`, so we must get the path to the
   # generated source files manually.
   source_gen_dir =
-      get_label_info(":bogus($default_toolchain)", "target_out_dir")
+      get_label_info(":anything($default_toolchain)", "target_out_dir")
   fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
   cpp_elf_cc_source_file = "${source_gen_dir}/${namespace}.cc"
 
@@ -683,7 +683,7 @@ template("fuchsia_structured_config_cpp_driver_lib") {
   # Cannot call get_target_outputs on `client_lib_source`, so we must get the path to the
   # generated source files manually.
   source_gen_dir =
-      get_label_info(":bogus($default_toolchain)", "target_out_dir")
+      get_label_info(":anything($default_toolchain)", "target_out_dir")
   fidl_source_file = "${source_gen_dir}/${fidl_source_target}.fidl"
   cpp_driver_cc_source_file = "${source_gen_dir}/${namespace}.cc"
 

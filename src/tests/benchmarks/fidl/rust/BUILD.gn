@@ -64,7 +64,7 @@ foreach(suite, benchmark_suites) {
   }
 }
 
-rust_target_gen_dir = get_label_info(":bogus", "target_gen_dir")
+rust_target_gen_dir = get_label_info(":anything", "target_gen_dir")
 benchmark_suite_file =
     "$rust_target_gen_dir/benchmark_suite-${toolchain_variant.name}.rs"
 

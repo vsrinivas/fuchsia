@@ -115,7 +115,7 @@ template("flutter_dart_test_component") {
   }
 
   # Generate a main which will call all of the test targets
-  _dart_gen_dir = get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+  _dart_gen_dir = get_label_info(":anything($dart_toolchain)", "target_gen_dir")
 
   _generate_test_main_target_name = target_name + "_test_main"
   _generated_test_package = "${_test_package_name}_generated"

@@ -179,7 +179,7 @@ template("fidl_library") {
       }
     }
 
-    full_label = get_label_info(":bogus", "label_no_toolchain")
+    full_label = get_label_info(":anything", "label_no_toolchain")
     in_vendor = string_replace(full_label, "//vendor", "") != full_label
     if (in_vendor && !vendor_linting) {
       # Disable lints for libraries under //vendor.

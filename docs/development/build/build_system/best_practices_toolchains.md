@@ -302,6 +302,24 @@ executable("program") {
 }
 ```
 
+### Use the `:anything` label to get output directories {#use-the-anything-label-to-get-output-directories}
+
+When you call `get_label_info` with "target_gen_dir" or "target_out_dir", only
+the label's directory matters, not its target name. If there is no specific
+target that makes sense, use a fake target called "anything".
+
+<span class="compare-better">Recommended</span>: Naming the fake target "anything".
+
+```gn
+codegen_dir = get_label_info(":anything($default_toolchain)", "target_gen_dir")
+```
+
+<span class="compare-worse">Not recommended</span>: Naming the fake target something other than "anything".
+
+```gn
+codegen_dir = get_label_info(":bogus($default_toolchain)", "target_gen_dir")
+```
+
 ### Avoid language-specific toolchains {#avoid-language-specific-toolchains}
 
 Do not create a toolchain for a particular programming language. We did this

@@ -36,7 +36,7 @@ group("board_tools") {
 group("bootserver") {
   deps = [ "//tools/bootserver_old:bootserver($host_toolchain)" ]
 
-  host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
+  host_out_dir = get_label_info(":anything($host_toolchain)", "root_out_dir")
 
   metadata = {
     images = [
@@ -53,7 +53,7 @@ group("bootserver") {
 
 copy("fastboot") {
   sources = [ "${prebuilt_fastboot}" ]
-  host_out_dir = get_label_info(":bogus($host_toolchain)", "root_out_dir")
+  host_out_dir = get_label_info(":anything($host_toolchain)", "root_out_dir")
   outputs = [ "$host_out_dir/fastboot" ]
 
   metadata = {
