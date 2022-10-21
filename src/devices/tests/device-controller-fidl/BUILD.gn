@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/test.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":package" ]
+}
+
+test("device_controller_fidl") {
+  sources = [ "test.cc" ]
+  deps = [
+    "//examples/drivers/driver_test_realm/sample-driver:fuchsia.hardware.sample_cpp_wire",
+    "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_hlcpp",
+    "//sdk/lib/device-watcher/cpp",
+    "//sdk/lib/driver_test_realm/realm_builder/cpp",
+    "//sdk/lib/sys/component/cpp",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/testing/loop_fixture",
+    "//zircon/system/ulib/async-loop",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_unittest_package("package") {
+  package_name = "device_controller_fidl"
+  deps = [
+    ":device_controller_fidl",
+    "//examples/drivers/driver_test_realm/sample-driver",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}

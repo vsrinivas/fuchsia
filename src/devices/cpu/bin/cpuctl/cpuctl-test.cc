@@ -59,6 +59,8 @@ class FakeCpuDevice : TestDeviceType,
   void GetCurrentPerformanceState(GetCurrentPerformanceStateCompleter::Sync& completer) override;
 
   // The following methods are left unimplemented and it's an error to call them.
+  void ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
+                           ConnectToDeviceFidlCompleter::Sync& completer) override {}
   void Bind(BindRequestView request, BindCompleter::Sync& _completer) override {}
   void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override {}
   void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override {}

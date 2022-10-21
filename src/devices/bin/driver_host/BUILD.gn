@@ -65,6 +65,7 @@ source_set("common") {
     "//src/devices/bin/driver_host2:driver",
     "//src/devices/lib/log",
     "//src/lib/ddk",
+    "//zircon/system/ulib/async-default",
 
     # TODO(fxb/38132): Migrate to the new bind rules and delete the below
     "//sdk/lib/fidl",

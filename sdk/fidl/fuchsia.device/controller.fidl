@@ -124,6 +124,13 @@ type SystemPowerStateInfo = struct {
 
 /// Interface for manipulating a device in a devhost
 protocol Controller {
+    /// Connect to the underlying device's FIDL protocol.
+    /// This connection will not be multiplexed with fuchsia.device.Controller
+    /// or fuchsia.io.Node.
+    ConnectToDeviceFidl(resource struct {
+        server zx.handle:CHANNEL;
+    });
+
     /// Attempt to bind the requested driver to this device. This should just be the name of the
     /// shared object for the driver e.g. "fvm.so". A full path can be specified but this is
     /// deprecated.

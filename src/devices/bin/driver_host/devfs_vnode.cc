@@ -4,6 +4,7 @@
 
 #include "devfs_vnode.h"
 
+#include <lib/async/default.h>
 #include <lib/ddk/device.h>
 
 #include <string_view>
@@ -11,7 +12,58 @@
 #include <fbl/string_buffer.h>
 
 #include "driver_host.h"
+#include "log.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
+
+namespace {
+// Utility class for dispatching messages to a device.
+class FidlDispatcher : public fidl::internal::IncomingMessageDispatcher {
+ public:
+  explicit FidlDispatcher(fbl::RefPtr<zx_device> dev) : dev_(std::move(dev)) {}
+
+  static void CreateAndBind(fbl::RefPtr<zx_device> dev, async_dispatcher_t* dispatcher,
+                            zx::channel channel);
+
+ private:
+  void dispatch_message(fidl::IncomingHeaderAndMessage&& msg, ::fidl::Transaction* txn,
+                        fidl::internal::MessageStorageViewBase* storage_view) final;
+  fbl::RefPtr<zx_device> dev_;
+};
+
+void FidlDispatcher::CreateAndBind(fbl::RefPtr<zx_device> dev, async_dispatcher_t* dispatcher,
+                                   zx::channel channel) {
+  auto fidl = std::make_unique<FidlDispatcher>(std::move(dev));
+  auto fidl_ptr = fidl.get();
+
+  // Create the binding. We pass the FidlDispatcher's pointer into the unbound
+  // function so it stays alive as long as the binding.
+  auto binding = std::make_unique<fidl::internal::SimpleBinding>(
+      dispatcher, std::move(channel), fidl_ptr, [fidl = std::move(fidl)](void*) {});
+  zx_status_t status = fidl::internal::BeginWait(&binding);
+  if (status != ZX_OK) {
+    LOGF(ERROR, "FidlDispatcher: Failed to BeginWait: %s", zx_status_get_string(status));
+  }
+}
+
+void FidlDispatcher::dispatch_message(fidl::IncomingHeaderAndMessage&& msg,
+                                      ::fidl::Transaction* txn,
+                                      fidl::internal::MessageStorageViewBase* storage_view) {
+  // If the device is unbound it shouldn't receive messages so close the channel.
+  if (dev_->Unbound()) {
+    txn->Close(ZX_ERR_IO_NOT_PRESENT);
+    return;
+  }
+
+  fidl_incoming_msg_t c_msg = std::move(msg).ReleaseToEncodedCMessage();
+  auto ddk_txn = MakeDdkInternalTransaction(txn);
+  zx_status_t status = dev_->MessageOp(&c_msg, ddk_txn.Txn());
+  if (status != ZX_OK && status != ZX_ERR_ASYNC) {
+    // Close the connection on any error
+    txn->Close(status);
+  }
+}
+
+}  // namespace
 
 zx_status_t DevfsVnode::OpenNode(fs::Vnode::ValidatedOptions options,
                                  fbl::RefPtr<Vnode>* out_redirect) {
@@ -56,6 +108,11 @@ zx_status_t DevfsVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::R
     return ZX_OK;
   }
   return ZX_ERR_NOT_SUPPORTED;
+}
+
+void DevfsVnode::ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
+                                     ConnectToDeviceFidlCompleter::Sync& completer) {
+  FidlDispatcher::CreateAndBind(dev_, async_get_default_dispatcher(), std::move(request->server));
 }
 
 void DevfsVnode::HandleFsSpecificMessage(fidl::IncomingHeaderAndMessage& msg,

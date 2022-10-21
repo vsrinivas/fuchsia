@@ -36,6 +36,8 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                                fidl::Transaction* txn) override;
 
   // fidl::WireServer<fuchsia_device::Controller> methods
+  void ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
+                           ConnectToDeviceFidlCompleter::Sync& completer) override {}
   void Bind(BindRequestView request, BindCompleter::Sync& _completer) override;
   void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override;
   void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;

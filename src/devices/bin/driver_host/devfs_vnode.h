@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_HOST_DEVFS_VNODE_H_
 
 #include <fidl/fuchsia.device/cpp/wire.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/cpp/wire/transaction.h>
 
 #include <variant>
@@ -31,6 +32,8 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
                                fidl::Transaction* txn) override;
 
   // fidl::WireServer<fuchsia_device::Controller> methods
+  void ConnectToDeviceFidl(ConnectToDeviceFidlRequestView request,
+                           ConnectToDeviceFidlCompleter::Sync& completer) override;
   void Bind(BindRequestView request, BindCompleter::Sync& _completer) override;
   void Rebind(RebindRequestView request, RebindCompleter::Sync& _completer) override;
   void UnbindChildren(UnbindChildrenCompleter::Sync& completer) override;
@@ -52,7 +55,7 @@ class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Con
   fbl::RefPtr<zx_device> dev_;
 };
 
-// Utilties for converting our fidl::Transactions to something usable by the driver C ABI
+// Utilities for converting our fidl::Transactions to something usable by the driver C ABI
 ddk::internal::Transaction MakeDdkInternalTransaction(fidl::Transaction* txn);
 ddk::internal::Transaction MakeDdkInternalTransaction(std::unique_ptr<fidl::Transaction> txn);
 // This returns a variant because, as an optimization, we skip performing allocations when

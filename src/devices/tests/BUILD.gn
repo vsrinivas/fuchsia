@@ -21,6 +21,7 @@ group("tests") {
     "ddk-power:tests",
     "ddk-topology-test:tests",
     "devfs:tests",
+    "device-controller-fidl:tests",
     "device-group-test:tests",
     "device-watcher:tests",
     "driver-development:tests",
