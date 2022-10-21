@@ -20,6 +20,7 @@
 use anyhow::{anyhow, Context, Result};
 use assembly_manifest::AssemblyManifest;
 use assembly_partitions_config::PartitionsConfig;
+use camino::Utf8PathBuf;
 use pathdiff::diff_paths;
 use serde::{Deserialize, Serialize};
 use std::path::Path;
@@ -32,13 +33,31 @@ pub struct ProductBundleV2 {
     pub partitions: PartitionsConfig,
 
     /// An assembled system that should be placed in slot A on the target.
+    #[serde(default)]
     pub system_a: Option<AssemblyManifest>,
 
     /// An assembled system that should be placed in slot B on the target.
+    #[serde(default)]
     pub system_b: Option<AssemblyManifest>,
 
     /// An assembled system that should be placed in slot R on the target.
+    #[serde(default)]
     pub system_r: Option<AssemblyManifest>,
+
+    /// The repository that holds the TUF metadata, packages, and blobs.
+    #[serde(default)]
+    pub repository: Option<Repository>,
+}
+
+/// A repository that holds all the packages, blobs, and keys.
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
+#[serde(deny_unknown_fields)]
+pub struct Repository {
+    /// The path to the TUF repository, relative to the product bundle directory.
+    pub metadata_path: Utf8PathBuf,
+
+    /// The path to the blobs directory, relative to the product bundle directory.
+    pub blobs_path: Utf8PathBuf,
 }
 
 impl ProductBundleV2 {
@@ -77,6 +96,20 @@ impl ProductBundleV2 {
         canonicalize_system(&mut self.system_a)?;
         canonicalize_system(&mut self.system_b)?;
         canonicalize_system(&mut self.system_r)?;
+
+        if let Some(repository) = &mut self.repository {
+            let canonicalize_dir = |path: &Utf8PathBuf| -> Result<Utf8PathBuf> {
+                let dir = product_bundle_dir.join(path);
+                // Create the directory to ensure that canonicalize will work.
+                std::fs::create_dir_all(&dir)
+                    .with_context(|| format!("Creating the directory: {}", dir.display()))?;
+                let path = Utf8PathBuf::from_path_buf(dir.canonicalize()?)
+                    .map_err(|_| anyhow::anyhow!("converting to utf8 path: {}", &path))?;
+                Ok(path)
+            };
+            repository.metadata_path = canonicalize_dir(&repository.metadata_path)?;
+            repository.blobs_path = canonicalize_dir(&repository.blobs_path)?;
+        }
 
         Ok(())
     }
@@ -118,6 +151,17 @@ impl ProductBundleV2 {
         relativize_system(&mut self.system_b)?;
         relativize_system(&mut self.system_r)?;
 
+        if let Some(repository) = &mut self.repository {
+            let relativize_dir = |path: &Utf8PathBuf| -> Result<Utf8PathBuf> {
+                let dir = diff_paths(&path, &product_bundle_dir).context("rebasing repository")?;
+                let path = Utf8PathBuf::from_path_buf(dir)
+                    .map_err(|_| anyhow::anyhow!("converting to utf8 path: {}", &path))?;
+                Ok(path)
+            };
+            repository.metadata_path = relativize_dir(&repository.metadata_path)?;
+            repository.blobs_path = relativize_dir(&repository.blobs_path)?;
+        }
+
         Ok(())
     }
 }
@@ -145,6 +189,7 @@ mod tests {
             system_a: None,
             system_b: None,
             system_r: None,
+            repository: None,
         };
         let result = pb.canonicalize_paths(&PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
@@ -196,6 +241,7 @@ mod tests {
             }),
             system_b: None,
             system_r: None,
+            repository: None,
         };
         let result = pb.canonicalize_paths(tempdir.path());
         assert!(result.is_ok());
@@ -214,6 +260,7 @@ mod tests {
             system_a: None,
             system_b: None,
             system_r: None,
+            repository: None,
         };
         let result = pb.relativize_paths(&PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
@@ -265,6 +312,7 @@ mod tests {
             }),
             system_b: None,
             system_r: None,
+            repository: None,
         };
         let result = pb.relativize_paths(tempdir.path());
         assert!(result.is_ok());

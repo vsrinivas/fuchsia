@@ -12,7 +12,7 @@ use serde::{Deserialize, Serialize};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 pub use v1::*;
-pub use v2::ProductBundleV2;
+pub use v2::{ProductBundleV2, Repository};
 
 /// Versioned product bundle.
 #[derive(Clone, Debug, PartialEq)]

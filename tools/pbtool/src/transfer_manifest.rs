@@ -129,6 +129,7 @@ mod tests {
             }),
             system_b: None,
             system_r: None,
+            repository: None,
         });
         pb.write(&pb_path).unwrap();
 

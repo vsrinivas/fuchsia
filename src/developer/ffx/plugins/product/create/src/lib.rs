@@ -15,7 +15,7 @@ use fuchsia_pkg::PackageManifest;
 use fuchsia_repo::{
     repo_builder::RepoBuilder, repo_keys::RepoKeys, repository::FileSystemRepository,
 };
-use sdk_metadata::{ProductBundle, ProductBundleV2};
+use sdk_metadata::{ProductBundle, ProductBundleV2, Repository};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 
@@ -35,14 +35,14 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
         load_assembly_manifest(&cmd.system_b, &cmd.out_dir.join("system_b"))?;
     let (system_r, packages_r) =
         load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?;
-    let product_bundle = ProductBundleV2 { partitions, system_a, system_b, system_r };
 
-    if let Some(tuf_keys) = cmd.tuf_keys {
+    let repository = if let Some(tuf_keys) = &cmd.tuf_keys {
         let repo_path = Utf8Path::from_path(&cmd.out_dir).context("Creating repository path")?;
         let metadata_path = repo_path.join("repository");
         let blobs_path = repo_path.join("blobs");
         let repo = FileSystemRepository::new(metadata_path.to_path_buf(), blobs_path.to_path_buf());
         let repo_keys = RepoKeys::from_dir(&tuf_keys).context("Gathering repo keys")?;
+
         RepoBuilder::create(&repo, &repo_keys)
             .add_packages(packages_a.into_iter())
             .add_packages(packages_b.into_iter())
@@ -50,8 +50,12 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
             .commit()
             .await
             .context("Building the repo")?;
-    }
+        Some(Repository { metadata_path, blobs_path })
+    } else {
+        None
+    };
 
+    let product_bundle = ProductBundleV2 { partitions, system_a, system_b, system_r, repository };
     let product_bundle = ProductBundle::V2(product_bundle);
     product_bundle.write(&cmd.out_dir).context("writing product bundle")?;
     Ok(())
@@ -149,6 +153,7 @@ mod test {
     use super::*;
     use assembly_manifest::AssemblyManifest;
     use assembly_partitions_config::PartitionsConfig;
+    use camino::Utf8PathBuf;
     use fuchsia_repo::test_utils;
     use std::io::Write;
     use tempfile::TempDir;
@@ -236,6 +241,7 @@ mod test {
                 system_a: None,
                 system_b: None,
                 system_r: None,
+                repository: None,
             })
         );
     }
@@ -272,12 +278,13 @@ mod test {
                 system_a: Some(AssemblyManifest::default()),
                 system_b: None,
                 system_r: Some(AssemblyManifest::default()),
+                repository: None,
             })
         );
     }
 
     #[fuchsia::test]
-    async fn test_pb_create_a_and_r_and_tuf() {
+    async fn test_pb_create_a_and_r_and_repository() {
         let tempdir = TempDir::new().unwrap();
         let pb_dir = tempdir.path().join("pb");
 
@@ -304,7 +311,7 @@ mod test {
         .await
         .unwrap();
 
-        let pb = ProductBundle::try_load_from(pb_dir).unwrap();
+        let pb = ProductBundle::try_load_from(&pb_dir).unwrap();
         assert_eq!(
             pb,
             ProductBundle::V2(ProductBundleV2 {
@@ -312,6 +319,10 @@ mod test {
                 system_a: Some(AssemblyManifest::default()),
                 system_b: None,
                 system_r: Some(AssemblyManifest::default()),
+                repository: Some(Repository {
+                    metadata_path: Utf8PathBuf::from_path_buf(pb_dir.join("repository")).unwrap(),
+                    blobs_path: Utf8PathBuf::from_path_buf(pb_dir.join("blobs")).unwrap(),
+                }),
             })
         );
     }

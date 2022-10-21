@@ -120,6 +120,7 @@ if (is_host) {
       "//src/lib/assembly/assembly_manifest",
       "//src/lib/assembly/partitions_config",
       "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:camino",
       "//third_party/rust_crates:lazy_static",
       "//third_party/rust_crates:pathdiff",
       "//third_party/rust_crates:serde",
