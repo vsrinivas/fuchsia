@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/connectivity/overnet/enable_circuit.gni")
+
 group("tests") {
   testonly = true
   deps = [
@@ -17,9 +19,13 @@ group("tests_no_e2e") {
   deps = [
     "fidl:tests",
     "host_examples:tests",
-    "integration:tests",
+    "integration_legacy:tests",
     "stress:tests",
   ]
+
+  if (enable_circuit) {
+    deps += [ "integration:tests" ]
+  }
 }
 
 group("e2e_tests") {

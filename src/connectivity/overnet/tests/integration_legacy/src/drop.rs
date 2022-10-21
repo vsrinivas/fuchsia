@@ -35,7 +35,7 @@ async fn drop_connection_3node(run: usize) -> Result<(), Error> {
     // Create a channel from A->C, then drop A.
     // See that the channel drops on C.
     let a = Overnet::new(&mut node_id_gen)?;
-    let b = Overnet::new_circuit_router(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
     let c = Overnet::new(&mut node_id_gen)?;
     connect(&a, &b)?;
     connect(&b, &c)?;

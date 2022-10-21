@@ -5,61 +5,63 @@
 import("//build/components.gni")
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_library.gni")
+import("//src/connectivity/overnet/enable_circuit.gni")
 
-rustc_test("integration") {
-  edition = "2021"
-  output_name = "overnet_integration_tests"
-  deps = [
-    ":triangle_rust",
-    "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
-    "//src/connectivity/overnet/lib/core",
-    "//src/connectivity/overnet/lib/stream_link",
-    "//src/connectivity/overnet/lib/udp_link",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia",
-    "//src/lib/fuchsia-async",
-    "//src/lib/zircon/rust:fuchsia-zircon-status",
-    "//src/testing/fidl:placeholders_rust",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:tracing",
-  ]
-  if (is_host) {
-    deps += [ "//src/connectivity/overnet/lib/core:test_certs" ]
+if (enable_circuit) {
+  rustc_test("integration") {
+    edition = "2021"
+    output_name = "overnet_integration_tests"
+    deps = [
+      ":triangle_rust",
+      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet_rust",
+      "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol_rust",
+      "//src/connectivity/overnet/lib/circuit",
+      "//src/connectivity/overnet/lib/core",
+      "//src/lib/fidl/rust/fidl",
+      "//src/lib/fuchsia",
+      "//src/lib/fuchsia-async",
+      "//src/lib/zircon/rust:fuchsia-zircon-status",
+      "//src/testing/fidl:placeholders_rust",
+      "//third_party/rust_crates:anyhow",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:parking_lot",
+      "//third_party/rust_crates:tracing",
+    ]
+    if (is_host) {
+      deps += [ "//src/connectivity/overnet/lib/core:test_certs" ]
+    }
+
+    sources = [
+      "src/drop.rs",
+      "src/echo.rs",
+      "src/lib.rs",
+      "src/triangle.rs",
+    ]
+    inputs = [
+      "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt",
+      "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.key",
+      "//third_party/rust_crates/mirrors/quiche/quiche/examples/rootca.crt",
+    ]
   }
 
-  sources = [
-    "src/drop.rs",
-    "src/echo.rs",
-    "src/lib.rs",
-    "src/triangle.rs",
-  ]
-  inputs = [
-    "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.crt",
-    "//third_party/rust_crates/mirrors/quiche/quiche/examples/cert.key",
-    "//third_party/rust_crates/mirrors/quiche/quiche/examples/rootca.crt",
-  ]
-}
+  fidl("triangle") {
+    name = "fuchsia.overnet.triangletests"
+    sources = [ "src/triangle.test.fidl" ]
+    public_deps = [ "//src/testing/fidl:placeholders" ]
+  }
 
-fidl("triangle") {
-  name = "fuchsia.overnet.triangletests"
-  sources = [ "src/triangle.test.fidl" ]
-  public_deps = [ "//src/testing/fidl:placeholders" ]
-}
+  fuchsia_unittest_package("overnet-integration-tests") {
+    deps = [
+      ":integration",
+      "//src/connectivity/overnet/overnetstack:certificates",
+    ]
+  }
 
-fuchsia_unittest_package("overnet-integration-tests") {
-  deps = [
-    ":integration",
-    "//src/connectivity/overnet/overnetstack:certificates",
-  ]
-}
-
-group("tests") {
-  testonly = true
-  deps = [
-    ":integration($host_toolchain)",
-    ":overnet-integration-tests",
-  ]
+  group("tests") {
+    testonly = true
+    deps = [
+      ":integration($host_toolchain)",
+      ":overnet-integration-tests",
+    ]
+  }
 }

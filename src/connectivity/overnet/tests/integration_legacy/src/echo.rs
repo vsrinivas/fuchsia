@@ -54,6 +54,15 @@ async fn quite_large(run: usize) -> Result<(), Error> {
         .await
 }
 
+#[fuchsia::test]
+async fn quic(run: usize) -> Result<(), Error> {
+    let mut node_id_gen = NodeIdGenerator::new("quic", run);
+    let client = Overnet::new(&mut node_id_gen)?;
+    let server = Overnet::new(&mut node_id_gen)?;
+    super::connect_with_quic(&client, &server)?;
+    run_echo_test(client, server, Some("HELLO INTEGRATION TEST WORLD")).await
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 // Client implementation
 

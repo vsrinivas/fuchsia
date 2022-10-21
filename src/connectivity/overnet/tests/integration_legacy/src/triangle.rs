@@ -54,7 +54,7 @@ async fn simple_flat(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("simple_flat", run);
     // Three nodes, connected linearly: C - A - B
     // A creates a channel, passes either end to B, C to do an echo request
-    let a = Overnet::new_circuit_router(&mut node_id_gen)?;
+    let a = Overnet::new(&mut node_id_gen)?;
     let b = Overnet::new(&mut node_id_gen)?;
     let c = Overnet::new(&mut node_id_gen)?;
     super::connect(&a, &b)?;
@@ -90,15 +90,16 @@ async fn full_transfer(run: usize) -> Result<(), Error> {
 }
 
 #[fuchsia::test]
+#[ignore = "TODO(https://fxbug.dev/110501): Re-enable after CSO lands"]
 async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_to_separate_nodes", run);
     // Five nodes connected in a line: A - B - C - D - E
     // A creates a channel, passes either end to B & C
     // B & C forward to D & E (respectively) and then do an echo request
     let a = Overnet::new(&mut node_id_gen)?;
-    let b = Overnet::new_circuit_router(&mut node_id_gen)?;
-    let c = Overnet::new_circuit_router(&mut node_id_gen)?;
-    let d = Overnet::new_circuit_router(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    let c = Overnet::new(&mut node_id_gen)?;
+    let d = Overnet::new(&mut node_id_gen)?;
     let e = Overnet::new(&mut node_id_gen)?;
     tracing::info!(
         a = a.node_id().0,
@@ -124,14 +125,15 @@ async fn forwarded_twice_to_separate_nodes(run: usize) -> Result<(), Error> {
 }
 
 #[fuchsia::test]
+#[ignore = "TODO(https://fxbug.dev/110501): Re-enable after CSO lands"]
 async fn forwarded_twice_full_transfer(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("forwarded_twice_full_transfer", run);
     // Four nodes connected in a line: A - B - C - D
     // A creates a channel, passes either end to B & C
     // B & C forward to D which then does an echo request
     let a = Overnet::new(&mut node_id_gen)?;
-    let b = Overnet::new_circuit_router(&mut node_id_gen)?;
-    let c = Overnet::new_circuit_router(&mut node_id_gen)?;
+    let b = Overnet::new(&mut node_id_gen)?;
+    let c = Overnet::new(&mut node_id_gen)?;
     let d = Overnet::new(&mut node_id_gen)?;
     super::connect(&a, &b)?;
     super::connect(&b, &c)?;

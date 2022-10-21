@@ -7,6 +7,8 @@ use crate::router::security_context::SecurityContext;
 use anyhow::Error;
 use std::sync::Arc;
 
+pub static TEST_ROUTER_INTERVAL: std::time::Duration = std::time::Duration::from_millis(500);
+
 /// Generates node id's for tests in a repeatable fashion.
 pub struct NodeIdGenerator {
     test_id: u64,
@@ -43,6 +45,16 @@ impl NodeIdGenerator {
         crate::router::Router::new(
             crate::router::RouterOptions::new()
                 .set_node_id(self.next().ok_or(anyhow::format_err!("No more node ids available"))?),
+            Box::new(test_security_context()),
+        )
+    }
+
+    /// Like [`new_router`] but enables circuit route forwarding.
+    pub fn new_router_circuit_router(&mut self) -> Result<Arc<crate::router::Router>, Error> {
+        crate::router::Router::new(
+            crate::router::RouterOptions::new()
+                .set_node_id(self.next().ok_or(anyhow::format_err!("No more node ids available"))?)
+                .set_router_interval(TEST_ROUTER_INTERVAL),
             Box::new(test_security_context()),
         )
     }

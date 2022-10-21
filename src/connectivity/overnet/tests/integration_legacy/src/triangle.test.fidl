@@ -1,0 +1,19 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+library fuchsia.overnet.triangletests;
+
+using test.placeholders;
+
+@discoverable
+protocol Conscript {
+    Serve(resource struct {
+        iface server_end:test.placeholders.Echo;
+    });
+    Issue(resource struct {
+        iface client_end:test.placeholders.Echo;
+        request string:optional;
+    }) -> (struct {
+        response string:optional;
+    });
+};
