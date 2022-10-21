@@ -614,6 +614,7 @@ function connectToService(serviceName) {
 
 global['fidl'] = {
   connectToService,
+  connectToServiceAt,
   loadLibrary,
   loadLibraryIr,
   ProtocolClient,

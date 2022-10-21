@@ -4,6 +4,7 @@
 
 #include "console.h"
 
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <vector>
@@ -60,7 +61,7 @@ int ConsoleMain(int argc, const char **argv) {
   // command line, which might be nice at some point.
   js_std_add_helpers(ctx_ptr, 0, nullptr);
 
-  if (!options.command_string) {
+  if (!options.command_string && !options.run_script_path) {
     if (!options.line_editor) {
       // Use the qjs repl for the time being.
       js_std_eval_binary(ctx_ptr, qjsc_repl, qjsc_repl_size, 0);
@@ -72,8 +73,19 @@ int ConsoleMain(int argc, const char **argv) {
       js_std_eval_binary(ctx_ptr, qjsc_repl_init, qjsc_repl_init_size, 0);
     }
   } else {
-    const char *command = options.command_string->c_str();
-    JSValue result = JS_Eval(ctx_ptr, command, options.command_string->length(), "batch", 0);
+    std::string command_string;
+    if (options.run_script_path) {
+      std::filesystem::path script_path(*options.run_script_path);
+      if (!std::filesystem::exists(script_path)) {
+        fprintf(stderr, "FATAL: the script %s does not exist!\n", script_path.string().c_str());
+        return 1;
+      }
+      command_string.append("std.loadScript(\"" + script_path.string() + "\");");
+    } else {
+      command_string = *options.command_string;
+    }
+
+    JSValue result = JS_Eval(ctx_ptr, command_string.c_str(), command_string.length(), "batch", 0);
     if (JS_IsException(result)) {
       ctx.DumpError();
       return 1;

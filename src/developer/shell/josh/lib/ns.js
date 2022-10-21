@@ -87,7 +87,7 @@ class Directory {
 
   // Given an absolute path string, returns a Directory object representing that path.
   // If the path string represents a non-directory node, returns null.
-  static async getDirectoryFor(pathString) {
+  static async getDirectoryFor(pathString, noThrow=false) {
     let rns = fdio.nsExportRoot();
     let splitDirString = pathString.split('/');
     const rootElements = rns.getElements();
@@ -116,7 +116,10 @@ class Directory {
     }
 
     if (typeof element == 'undefined') {
-      throw 'Node ' + pathString + ' not found';
+      if (noThrow)
+        return null;
+      else
+        throw 'Node ' + pathString + ' not found';
     }
     // Each Node (i.e., the thing we want listed) is contained within a root namespace
     // For example, if you want to list /bin/ls, it is going to be the ls node inside
@@ -161,7 +164,10 @@ class Directory {
       if ('directory' in args.info) {
         return new Directory(nodeClient);
       } else {
-        throw pathString + " is not a directory"
+        if (noThrow)
+          return null;
+        else
+          throw pathString + " is not a directory";
       }
     } else {
       return new Directory(nodeClient);
@@ -186,13 +192,24 @@ async function ls(pathString) {
   return dirents;
 }
 
+// Returns the correct svc path to use. If "/ns/svc" exists, use it. Otherwise
+// use "/svc"
+async function getSvcPath() {
+  let directory = await Directory.getDirectoryFor('/ns/svc', true);
+  if (directory == null) {
+    return ['/svc', await ls('/svc')];
+  } else {
+    return ['/ns/svc/', await ls('/ns/svc')];
+  }
+}
+
 (async function(global) {
-  ls('/svc')
-      .then((svcDir) => {
+  getSvcPath()
+      .then(([svcDir, svcEntries]) => {
         // Make services available on an object called `svc`
         const svc = {};
         const svcNames = [];
-        for (const service of svcDir) {
+        for (const service of svcEntries) {
           // serviceName looks like "fuchsia.kernel.RootJob"
           const serviceName = service.name;
           // Mangle service names to be valid JS identifiers
@@ -210,7 +227,7 @@ async function ls(pathString) {
             enumerable: true,
             get: () => {
               return new fidl.ProtocolClient(
-                  new zx.Channel(fdio.serviceConnect(`/svc/${serviceName}`)),
+                  new zx.Channel(fdio.serviceConnect(svcDir + `/${serviceName}`)),
                   `${libraryName}/${name}`);
             },
           });
