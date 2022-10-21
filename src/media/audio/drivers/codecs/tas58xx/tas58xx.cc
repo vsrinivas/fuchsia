@@ -203,6 +203,9 @@ void Tas58xx::ScheduleFaultPolling() {
 void Tas58xx::PeriodicPollFaults() {
   zx::time time_now = zx::clock::get_monotonic();
   uint8_t fault_state;
+  if (!fault_gpio_.is_valid()) {
+    return;  // Only check for periodic faults when the FAULT GPIO is setup.
+  }
   auto status = fault_gpio_.Read(&fault_state);
   if (status != ZX_OK) {
     zxlogf(WARNING, "GPIO error while polling fault data");
@@ -260,8 +263,8 @@ zx_status_t Tas58xx::Create(zx_device_t* parent) {
 
   ddk::GpioProtocolClient fault_gpio(parent, "gpio-fault");
   if (!fault_gpio.is_valid()) {
-    zxlogf(ERROR, "Could not get gpio-fault");
-    return ZX_ERR_INTERNAL;
+    // It is ok to not have a valid GPIO for fault.
+    zxlogf(INFO, "No gpio-fault available");
   }
 
   return SimpleCodecServer::CreateAndAddToDdk<Tas58xx>(parent, std::move(i2c),

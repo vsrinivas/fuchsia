@@ -1423,6 +1423,37 @@ TEST(Tas58xxTest, Reset) {
   mock_i2c.VerifyAndClear();
 }
 
+TEST(Tas58xxTest, BadFaultGpio) {
+  auto fake_parent = MockDevice::FakeRootParent();
+  mock_i2c::MockI2c mock_i2c;
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_hardware_i2c::Device>();
+  ASSERT_TRUE(endpoints.is_ok());
+
+  fidl::BindServer<mock_i2c::MockI2c>(loop.dispatcher(), std::move(endpoints->server), &mock_i2c);
+  loop.StartThread();
+
+  gpio_protocol bad_protocol = {};
+
+  ASSERT_OK(SimpleCodecServer::CreateAndAddToDdk<Tas58xxCodec>(
+      fake_parent.get(), std::move(endpoints->client), &bad_protocol));
+  auto* child_dev = fake_parent->GetLatestChild();
+  ASSERT_NOT_NULL(child_dev);
+  auto codec = child_dev->GetDeviceContext<Tas58xxCodec>();
+  // Trigger a poll faults which uses the FAULT GPIO, must not crash.
+  codec->PeriodicPollFaults();
+
+  // Make a 2-way call to make sure we run the loop in the driver.
+  SimpleCodecClient client;
+  auto codec_proto = codec->GetProto();
+  client.SetProtocol(&codec_proto);
+  mock_i2c.ExpectWrite({0x67}).ExpectReadStop({0x95});  // Check DIE ID.
+  [[maybe_unused]] auto info = client.GetInfo();
+}
+
 TEST(Tas58xxTest, Bridged) {
   auto fake_parent = MockDevice::FakeRootParent();
   mock_i2c::MockI2c mock_i2c;
