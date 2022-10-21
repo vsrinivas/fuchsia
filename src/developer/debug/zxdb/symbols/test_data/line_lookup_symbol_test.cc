@@ -28,3 +28,18 @@ EXPORT int DoLineLookupTest(int i) {
   result += LineLookupTest<1>(i);     // Line 28.
   return result;
 }
+
+namespace {
+
+__attribute__((always_inline)) int InlineCall(int i) {  // Line 34.
+  return LineLookupTest<0>(i + 2);                      // Line 35.
+}
+
+}  // namespace
+
+// See ModuleSymbols.ResolveLineInputLocation_Inlines test.
+EXPORT int DoInlineLineLookupTest(int i) {
+  int result = InlineCall(i + 1);  // Line 42.
+  result *= 2;
+  return result;
+}

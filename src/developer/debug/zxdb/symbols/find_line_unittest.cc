@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/mock_line_table.h"
 
@@ -68,6 +69,61 @@ TEST(FindLine, GetAllLineTableMatchesInUnit_Reverse) {
   auto out = GetAllLineTableMatchesInUnit(table, "file1.cc", 100);
   ASSERT_EQ(1u, out.size());
   EXPECT_EQ(LineMatch(0x1001, 101, 0), out[0]);
+}
+
+TEST(FindLine, AppendLineMatchesForInlineCalls) {
+  // The location we're searching for.
+  const char kFilename[] = "file.cc";
+  const int kLine = 100;
+
+  constexpr uint64_t kFnBegin = 0x1000;
+  constexpr uint64_t kFnEnd = 0x2000;
+  auto outer_fn = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  outer_fn->set_code_ranges(AddressRanges(AddressRange(kFnBegin, kFnEnd)));
+
+  // This block covers the whole function (just to check recursive logic).
+  auto outer_block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
+  outer_block->set_code_ranges(AddressRanges(AddressRange(kFnBegin, kFnEnd)));
+
+  // This inlined function is called before the line in question.
+  constexpr uint64_t kInlineCall1Begin = kFnBegin + 0x100;
+  constexpr uint64_t kInlineCall1End = kFnBegin + 0x200;
+  auto inline_call1 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline_call1->set_code_ranges(AddressRanges(AddressRange(kInlineCall1Begin, kInlineCall1End)));
+  inline_call1->set_call_line(FileLine(kFilename, kLine - 1));
+
+  // This inlined function is called at the line in question.
+  constexpr uint64_t kInlineCall2Begin = kFnBegin + 0x200;
+  constexpr uint64_t kInlineCall2End = kFnBegin + 0x300;
+  auto inline_call2 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline_call2->set_code_ranges(AddressRanges(AddressRange(kInlineCall2Begin, kInlineCall2End)));
+  inline_call2->set_call_line(FileLine(kFilename, kLine));
+
+  // This inlined function is called at the line in question.
+  constexpr uint64_t kInlineCall3Begin = kFnBegin + 0x300;
+  constexpr uint64_t kInlineCall3End = kFnBegin + 0x400;
+  auto inline_call3 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline_call3->set_code_ranges(AddressRanges(AddressRange(kInlineCall3Begin, kInlineCall3End)));
+  inline_call3->set_call_line(FileLine(kFilename, kLine + 1));
+
+  // Hook up the hierarchy.
+  outer_block->set_inner_blocks(
+      {LazySymbol(inline_call1), LazySymbol(inline_call2), LazySymbol(inline_call3)});
+  outer_fn->set_inner_blocks({LazySymbol(outer_block)});
+
+  std::vector<LineMatch> result;
+  constexpr uint64_t kFunctionDieOffset = 0x12398645;
+  AppendLineMatchesForInlineCalls(outer_fn.get(), kFilename, kLine, kFunctionDieOffset, &result);
+
+  // We should get the two later inlined calls (exact match and one following it).
+  ASSERT_EQ(2u, result.size());
+  EXPECT_EQ(result[0], LineMatch(kInlineCall2Begin, kLine, kFunctionDieOffset));
+  EXPECT_EQ(result[1], LineMatch(kInlineCall3Begin, kLine + 1, kFunctionDieOffset));
+
+  // These should be collapsed down to only the exact match by GetBestLineMatches().
+  std::vector<LineMatch> best = GetBestLineMatches(result);
+  ASSERT_EQ(1u, best.size());
+  EXPECT_EQ(best[0], LineMatch(kInlineCall2Begin, kLine, kFunctionDieOffset));
 }
 
 TEST(FindLine, GetBestLineMatches) {

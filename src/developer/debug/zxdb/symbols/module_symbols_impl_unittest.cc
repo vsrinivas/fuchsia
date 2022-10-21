@@ -276,6 +276,48 @@ TEST(ModuleSymbols, ResolveLineInputLocation) {
   }
 }
 
+// Tests that we can match inline function call lines. As part of
+// https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=112572, Clang doesn't always emit line
+// information for the call line of an inlined function.
+//
+// This uses the current (rather than checked-in) symbol file to verify that we can match the
+// inlined call location in whatever compiler config is running right now. Generally this will
+// happen more in optimized builds.
+TEST(ModuleSymbols, ResolveLineInputLocation_Inlines) {
+  TestSymbolModule setup(TestSymbolModule::GetTestFileName(), "");
+  ASSERT_TRUE(setup.Init("/build_dir").ok());
+
+  // Make a symbol context with some load address to ensure that the addresses round-trip properly.
+  SymbolContext symbol_context(0x18000);
+
+  // Get the canonical file name to test.
+  auto file_matches = setup.symbols()->FindFileMatches("line_lookup_symbol_test.cc");
+  ASSERT_EQ(1u, file_matches.size());
+  const std::string file_name = file_matches[0];
+
+  constexpr int kInlineFnFirstLine = 34;   // Declaration line of the InlineCall().
+  constexpr int kInlineFnSecondLine = 35;  // Body of the inline function.
+  constexpr int kInlineCallLine = 42;      // Where the inlined function is called from.
+
+  ResolveOptions options;
+  options.symbolize = true;
+
+  // This line calls an inline function.
+  std::vector<Location> addrs = setup.symbols()->ResolveInputLocation(
+      symbol_context, InputLocation(FileLine(file_name, kInlineCallLine)), options);
+  ASSERT_EQ(1u, addrs.size());
+
+  // Here we tolerate the match as matching the call line (what we put in) OR the actual inlined
+  // function (accepting either the declaration or body line of it). If the function is actually
+  // inlined, the round-trip query of that address could legitimately match the first instruction of
+  // the inlined function. We want to be flexible about how the compiler represents this.
+  int matched_line = addrs[0].file_line().line();
+  EXPECT_TRUE(matched_line == kInlineFnFirstLine || matched_line == kInlineFnSecondLine ||
+              matched_line == kInlineCallLine)
+      << "Expecting the matched line of " << matched_line << " to be one of {" << kInlineFnFirstLine
+      << ", " << kInlineFnSecondLine << ", " << kInlineCallLine << "}";
+}
+
 TEST(ModuleSymbols, ResolveGlobalVariable) {
   TestSymbolModule setup(TestSymbolModule::GetCheckedInTestFileName(), "");
   ASSERT_TRUE(setup.Init().ok());

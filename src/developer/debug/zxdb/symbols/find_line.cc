@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
+#include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/line_table.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
@@ -89,6 +90,37 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
   return result;
 }
 
+void AppendLineMatchesForInlineCalls(const CodeBlock* block, const std::string& full_path, int line,
+                                     uint64_t function_die_offset,
+                                     std::vector<LineMatch>* accumulator) {
+  std::vector<LineMatch> result;
+
+  for (const LazySymbol& child : block->inner_blocks()) {
+    const CodeBlock* child_block = child.Get()->As<CodeBlock>();
+    if (!child_block)
+      continue;  // Shouldn't happen, maybe corrupt?
+
+    if (const Function* child_fn = child_block->As<Function>()) {
+      if (child_fn->is_inline() && child_fn->call_line().file() == full_path &&
+          child_fn->call_line().line() >= line) {
+        // Found a potential match.
+        const AddressRange& addr_range = child_fn->code_ranges().GetExtent();
+        if (addr_range.size() > 0) {
+          // Some inlined functions may be optimized away, only add those with code.
+          accumulator->emplace_back(addr_range.begin(), child_fn->call_line().line(),
+                                    function_die_offset);
+        }
+      }
+    } else {
+      // Recurse into all child code blocks. We don't need to recurse into inline functions (handled
+      // above) because the toplevel call to AppendLineMatchesForInlineCalls() will be per-function
+      // (counting inlines as functions for the purposes of uniquifying matches).
+      AppendLineMatchesForInlineCalls(child_block, full_path, line, function_die_offset,
+                                      accumulator);
+    }
+  }
+}
+
 std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches) {
   // The lowest line is tbe "best" match because GetAllLineTableMatchesInUnit()
   // returns the next row for all pairs that cross the line in question. The
@@ -97,18 +129,16 @@ std::vector<LineMatch> GetBestLineMatches(const std::vector<LineMatch>& matches)
       std::min_element(matches.begin(), matches.end(),
                        [](const LineMatch& a, const LineMatch& b) { return a.line < b.line; });
 
-  // This will be populated with all matches for the line equal to the best
-  // one (one line can match many addresses depending on inlining and code
-  // reodering).
+  // This will be populated with all matches for the line equal to the best one (one line can match
+  // many addresses depending on inlining and code reodering).
   //
-  // We only want one per inlined function instance. One function can have a
-  // line split into multiple line entries (possibly disjoint or not) and we
-  // want only the first one (by address). But if the same helper is inlined
-  // into many places (or even twice into the same function), we want to catch
-  // all of those places.
+  // We only want one per inlined function instance. One function can have a line split into
+  // multiple line entries (possibly disjoint or not) and we want only the first one (by address).
+  // But if the same helper is inlined into many places (or even twice into the same function), we
+  // want to catch all of those places.
   //
-  // By indexing by the [inlined] subroutine DIE offset, we can ensure there
-  // is only one match per subroutine, and resolve collisions by address.
+  // By indexing by the [inlined] subroutine DIE offset, we can ensure there is only one match per
+  // subroutine, and resolve collisions by address.
   std::map<uint64_t, size_t> die_to_match_index;
   for (size_t i = 0; i < matches.size(); i++) {
     const LineMatch& match = matches[i];

@@ -662,7 +662,16 @@ std::vector<Location> ModuleSymbolsImpl::ResolveElfName(const SymbolContext& sym
 // 1. The line might not be an exact match (the user can specify a blank line or something optimized
 //    out). In this case, find the next valid line.
 //
-// 2. The above step can find many different locations. Maybe some code from the file in question is
+// 2. Clang doesn't emit line table entries for the source of an inlined function call.
+//    See https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=112203 and
+//    https://github.com/llvm/llvm-project/issues/58483.
+//
+//    To work around this, for every function with a line table match from complication 1,
+//    we search for inlined function calls whose call location could match the input location.
+//    (Note: neither GDB nor LLDB do this as of this writing, this is more of a workaround for a
+//    Clang bug.)
+//
+// 3. The above step can find many different locations. Maybe some code from the file in question is
 //    inlined into the compilation unit, but not the function with the line in it. Or different
 //    template instantiations can mean that a line of code is in some instantiations but don't apply
 //    to others.
@@ -671,7 +680,7 @@ std::vector<Location> ModuleSymbolsImpl::ResolveElfName(const SymbolContext& sym
 //    and find the best one. Keep only those locations matching the best one (there can still be
 //    multiple).
 //
-// 3. Inlining and templates can mean there can be multiple matches of the exact same line. Only
+// 4. Inlining and templates can mean there can be multiple matches of the exact same line. Only
 //    keep the first match per function or inlined function to catch the case where a line is spread
 //    across multiple line table entries.
 void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& symbol_context,
@@ -698,7 +707,52 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   if (matches.empty())
     return;
 
-  // Complications 2 & 3 above: Get all instances of the best match only with a max of one per
+  // Complication 2 above: Get all unique functions we found from complication 1, and add in
+  // inline call site locations. This can be removed if the above-mentioned Clang bug is fixed.
+  //
+  // The LineMatch contains the function DIE offset which we use for uniquifying functions, but
+  // we currently don't have a convenient way to map this back to a Symbol object. Instead, look up
+  // the corresponding function based on address of the previously found match.
+  //
+  // TODO: This will work for most cases but isn't quite sufficient. If you have an inlined function
+  // that consists only of a call to another inlined function (maybe in another file), the calling
+  // inlined function will never get identified in the previous loop and we'll never search its
+  // inlined call locations in this loop. Having an inline only call another inline isn't actually
+  // that uncommon in places like the STL.
+  //
+  // The correct approach would be brute-force search all functions in all units identified at the
+  // top of this function for inlined calls and check their call locations. However, our current
+  // implementation doesn't make it easy to go through all functions in a unit, and neither GDB nor
+  // LLDB handle the inlined call location searching at all. Therefore, this implementation seems
+  // good enough for now.
+  std::set<uint64_t> checked_functions;          // LineMatch.function_die_offsets we've checked.
+  size_t original_match_count = matches.size();  // Don't check anything the loop appends.
+  for (size_t i = 0; i < original_match_count; i++) {
+    const LineMatch& match = matches[i];
+
+    if (checked_functions.find(match.function_die_offset) != checked_functions.end()) {
+      continue;  // Already checked this function.
+    }
+    checked_functions.insert(match.function_die_offset);
+
+    auto unit = binary_->UnitForRelativeAddress(match.address);
+    if (!unit)
+      continue;  // Some kind of corruption.
+
+    if (llvm::DWARFDie subroutine_die = unit->FunctionForRelativeAddress(match.address)) {
+      if (auto fn = RefPtrTo(symbol_factory_->MakeLazy(subroutine_die).Get()->As<Function>())) {
+        // Make sure we have the outermost function and not some random code block inside it.
+        // We want to do this *per* inline function.
+        fn = fn->GetContainingFunction(Function::kInlineOrPhysical);
+
+        // Append any new matches.
+        AppendLineMatchesForInlineCalls(fn.get(), canonical_file, line_number,
+                                        match.function_die_offset, &matches);
+      }
+    }
+  }
+
+  // Complications 3 & 4 above: Get all instances of the best match only with a max of one per
   // function. The best match is the one with the lowest line number (found matches should all be
   // bigger than the input line, so this will be the closest).
   for (const LineMatch& match : GetBestLineMatches(matches)) {
