@@ -3,12 +3,20 @@
 // found in the LICENSE file.
 
 // ignore_for_file: implementation_imports
+import 'dart:ui' show Locale;
 import 'package:fidl/fidl.dart' as fidl;
 import 'package:fidl_fuchsia_intl/fidl_async.dart' as fidl_intl;
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:mockito/mockito.dart';
 import 'package:test/test.dart';
+
+class _LocaleTest {
+  final String locale;
+  final String languageCode;
+  final String countryCode;
+  const _LocaleTest(this.locale, this.languageCode, this.countryCode);
+}
 
 void main() {
   setupLogger();
@@ -76,6 +84,37 @@ void main() {
         .thenAnswer((_) => Stream.fromIterable(['1', '2']));
 
     expect(await source.stream().join(','), equals('sr_RS,ru_RU,nl_NL'));
+  });
+
+  const List<_LocaleTest> bcp47Locales = [
+    // This is the default locale on Fuchsia.
+    const _LocaleTest(
+        'en-US-u-ca-gregory-fw-sun-hc-h12-ms-ussystem-nu-latn-tz-utc-x-fxdef',
+        'en',
+        'US'),
+    // This is not correct, but falls out of (incorrect) canonicalization in
+    // Dart.
+    const _LocaleTest('sr-Cyrl-RS', 'sr', 'Cyrl-RS'),
+  ];
+
+  test('Test locales with extensions', () async {
+    await Future.forEach(bcp47Locales, (_LocaleTest a) async {
+      final _bcp47Profile = fidl_intl.Profile(
+        locales: [
+          fidl_intl.LocaleId(id: a.locale),
+        ],
+      );
+      when(mockPropertyProvider.getProfile())
+          .thenAnswer((_) => Future.value(_bcp47Profile));
+      when(mockPropertyProvider.onChange)
+          .thenAnswer((_) => Stream.fromIterable([]));
+
+      final Locale? actual = await source.stream().first;
+      expect(actual?.languageCode, equals(a.languageCode),
+          reason: 'actual: $actual');
+      expect(actual?.countryCode, equals(a.countryCode),
+          reason: 'actual: $actual');
+    });
   });
 }
 

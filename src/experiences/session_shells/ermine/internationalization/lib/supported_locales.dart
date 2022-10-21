@@ -7,4 +7,5 @@ import 'dart:ui' show Locale;
 List<Locale> locales = [
   const Locale.fromSubtags(languageCode: 'sr'),
   const Locale.fromSubtags(languageCode: 'nl'),
+  const Locale.fromSubtags(languageCode: 'en'),
 ];

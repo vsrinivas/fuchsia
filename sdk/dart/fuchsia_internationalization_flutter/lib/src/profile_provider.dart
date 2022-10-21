@@ -16,7 +16,23 @@ const _defaultLocale =
 Locale _fromProfile(Profile profile) {
   final String localeName =
       profile.locales?.first.id ?? _defaultLocale.toString();
-  return Locale(Intl.canonicalizedLocale(localeName));
+  // This is not quite correct, but will likely be enough for
+  // our purposes for the time being.
+  final String canonicalized =
+      Intl.canonicalizedLocale(localeName).split('-u-').first;
+  Iterator<String?> split = canonicalized.split('_').iterator;
+  String languageCode = 'en';
+  if (split.moveNext()) {
+    languageCode = split.current ?? 'en';
+  }
+  String? countryCode = null;
+  if (split.moveNext()) {
+    countryCode = split.current;
+  }
+  // Note, Locale('en_US') is not a correctly initialized Dart locale.
+  // You must separate tags manually.
+  return Locale.fromSubtags(
+      languageCode: languageCode, countryCode: countryCode);
 }
 
 /// Encapsulates the logic to obtain the locales from the service
