@@ -484,7 +484,7 @@ async fn connecting_state<'a>(
                     status: Some(types::DisconnectStatus::CredentialsFailed),
                 }),
             );
-            return Err(ExitReason(Err(format_err!("bad credentials"))));
+            return Err(ExitReason(Ok(())));
         }
         (code, _) => {
             info!("Failed to connect: {:?}", code);
