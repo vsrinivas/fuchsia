@@ -388,13 +388,11 @@ impl<'a, B: ByteSlice> IanaData<B> {
 /// An overlay for the fixed fields of an IA_NA option.
 #[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct IanaHeader {
+struct IanaHeader {
     iaid: U32,
     t1: U32,
     t2: U32,
 }
-
-const IANA_HEADER_LEN: usize = 12;
 
 /// An overlay representation of an IA Address option.
 #[derive(Debug, PartialEq)]
@@ -447,13 +445,11 @@ impl<'a, B: ByteSlice> IaAddrData<B> {
 /// An overlay for the fixed fields of an IA Address option.
 #[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
 #[repr(C)]
-pub struct IaAddrHeader {
+struct IaAddrHeader {
     addr: net_types::ip::Ipv6Addr,
     preferred_lifetime: U32,
     valid_lifetime: U32,
 }
-
-const IAADDR_HEADER_LEN: usize = 24;
 
 /// An overlay for the fixed fields of an IA_PD option.
 #[derive(FromBytes, AsBytes, Unaligned, Debug, PartialEq, Copy, Clone)]
@@ -893,25 +889,24 @@ impl IAID {
 /// A serializer for the IA_NA DHCPv6 option.
 #[derive(Debug)]
 pub struct IanaSerializer<'a> {
-    iaid: IAID,
-    t1: u32,
-    t2: u32,
+    header: IanaHeader,
     options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
 impl<'a> IanaSerializer<'a> {
     /// Constructs a new `IanaSerializer`.
     pub fn new(iaid: IAID, t1: u32, t2: u32, options: &'a [DhcpOption<'a>]) -> IanaSerializer<'a> {
-        IanaSerializer { iaid, t1, t2, options: RecordSequenceBuilder::new(options.iter()) }
+        IanaSerializer {
+            header: IanaHeader { iaid: U32::new(iaid.get()), t1: U32::new(t1), t2: U32::new(t2) },
+            options: RecordSequenceBuilder::new(options.iter()),
+        }
     }
 }
 
 /// A serializer for the IA Address DHCPv6 option.
 #[derive(Debug)]
 pub struct IaAddrSerializer<'a> {
-    addr: Ipv6Addr,
-    preferred_lifetime: u32,
-    valid_lifetime: u32,
+    header: IaAddrHeader,
     options: RecordSequenceBuilder<DhcpOption<'a>, Iter<'a, DhcpOption<'a>>>,
 }
 
@@ -924,9 +919,11 @@ impl<'a> IaAddrSerializer<'a> {
         options: &'a [DhcpOption<'a>],
     ) -> IaAddrSerializer<'a> {
         IaAddrSerializer {
-            addr,
-            preferred_lifetime,
-            valid_lifetime,
+            header: IaAddrHeader {
+                addr: net_types::ip::Ipv6Addr::from_bytes(addr.octets()),
+                preferred_lifetime: U32::new(preferred_lifetime),
+                valid_lifetime: U32::new(valid_lifetime),
+            },
             options: RecordSequenceBuilder::new(options.iter()),
         }
     }
@@ -1012,13 +1009,13 @@ impl<'a> RecordBuilder for DhcpOption<'a> {
             DhcpOption::ClientId(duid) | DhcpOption::ServerId(duid) => {
                 u16::try_from(duid.len()).unwrap_or(18).into()
             }
-            DhcpOption::Iana(iana_data) => {
-                u16::try_from(IANA_HEADER_LEN + iana_data.options.serialized_len())
+            DhcpOption::Iana(IanaSerializer { header, options }) => {
+                u16::try_from(header.as_bytes().len() + options.serialized_len())
                     .expect("overflows")
                     .into()
             }
-            DhcpOption::IaAddr(iaaddr_data) => {
-                u16::try_from(IAADDR_HEADER_LEN + iaaddr_data.options.serialized_len())
+            DhcpOption::IaAddr(IaAddrSerializer { header, options }) => {
+                u16::try_from(header.as_bytes().len() + options.serialized_len())
                     .expect("overflows")
                     .into()
             }
@@ -1085,30 +1082,18 @@ impl<'a> RecordBuilder for DhcpOption<'a> {
                     }
                 }
             }
-            DhcpOption::Iana(IanaSerializer { iaid, t1, t2, options }) => {
-                let len =
-                    u16::try_from(IANA_HEADER_LEN + options.serialized_len()).expect("overflows");
+            DhcpOption::Iana(IanaSerializer { header, options }) => {
+                let len = u16::try_from(header.as_bytes().len() + options.serialized_len())
+                    .expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
-                let () = buf.write_obj_front(&U32::new(iaid.get())).expect("buffer is too small");
-                let () = buf.write_obj_front(&U32::new(*t1)).expect("buffer is too small");
-                let () = buf.write_obj_front(&U32::new(*t2)).expect("buffer is too small");
+                let () = buf.write_obj_front(header).expect("buffer is too small");
                 let () = options.serialize_into(buf);
             }
-            DhcpOption::IaAddr(IaAddrSerializer {
-                addr,
-                preferred_lifetime,
-                valid_lifetime,
-                options,
-            }) => {
-                let len =
-                    u16::try_from(IAADDR_HEADER_LEN + options.serialized_len()).expect("overflows");
+            DhcpOption::IaAddr(IaAddrSerializer { header, options }) => {
+                let len = u16::try_from(header.as_bytes().len() + options.serialized_len())
+                    .expect("overflows");
                 let () = buf.write_obj_front(&U16::new(len)).expect("buffer is too small");
-                let () = buf.write_obj_front(&addr.octets()).expect("buffer is too small");
-                let () = buf
-                    .write_obj_front(&U32::new(*preferred_lifetime))
-                    .expect("buffer is too small");
-                let () =
-                    buf.write_obj_front(&U32::new(*valid_lifetime)).expect("buffer is too small");
+                let () = buf.write_obj_front(header).expect("buffer is too small");
                 let () = options.serialize_into(buf);
             }
             DhcpOption::Oro(requested_opts) => {
