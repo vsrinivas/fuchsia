@@ -75,7 +75,7 @@ impl PackageIndex {
         content_blobs: HashSet<Hash>,
     ) -> Result<(), FulfillMetaFarError> {
         // Notify the retained index if it is interested in this package.
-        let is_retained = self.retained.set_content_blobs(&package_hash, &content_blobs);
+        let is_retained = self.retained.add_blobs(&package_hash, &content_blobs);
 
         // Transition the dynamic index state if it is interested in this package.  Report an error if
         // the package is not tracked by any index.
@@ -111,11 +111,13 @@ impl PackageIndex {
     }
 
     fn set_retained_index(&mut self, mut index: RetainedIndex) {
-        // Populate the index with content blobs from the dynamic index.
-        let missing = index.iter_packages_with_unknown_content_blobs().collect::<Vec<_>>();
-        for hash in missing {
+        // Populate the index with the blobs from the dynamic index.
+        let retained_packages = index.retained_packages().copied().collect::<Vec<_>>();
+        for hash in retained_packages {
             if let Some(blobs) = self.dynamic.lookup_content_blobs(&hash) {
-                assert!(index.set_content_blobs(&hash, blobs));
+                // TODO(fxbug.dev/112769) Consider replacing this panic with an error, or e.g.
+                // adding a method to the retained index that makes both unnecessary.
+                assert!(index.add_blobs(&hash, blobs));
             }
         }
 
@@ -227,7 +229,7 @@ mod tests {
         assert_eq!(
             index.retained.packages(),
             hashmap! {
-                hash(0) => Some(vec![hash(1)]),
+                hash(0) => Some(HashSet::from_iter([hash(1)])),
             }
         );
         assert_eq!(
@@ -260,7 +262,7 @@ mod tests {
         // Constructing a new RetainedIndex may race with a package install to the dynamic index.
         // Ensure index.set_retained_index handles both cases.
         index.set_retained_index(RetainedIndex::from_packages(hashmap! {
-            hash(0) => Some(vec![hash(10)]),
+            hash(0) => Some(HashSet::from_iter([hash(10)])),
             hash(1) => None,
         }));
 
@@ -270,8 +272,8 @@ mod tests {
         assert_eq!(
             index.retained.packages(),
             hashmap! {
-                hash(0) => Some(vec![hash(10)]),
-                hash(1) => Some(vec![hash(11)]),
+                hash(0) => Some(HashSet::from_iter([hash(10)])),
+                hash(1) => Some(HashSet::from_iter([hash(11)])),
             }
         );
         assert_eq!(
@@ -297,6 +299,24 @@ mod tests {
     }
 
     #[test]
+    fn set_retained_index_hashes_are_extended_with_dynamic_index_hashes() {
+        let mut index = PackageIndex::new_test();
+        index.start_install(hash(0));
+        index.fulfill_meta_far(hash(0), path("withmetafar1"), hashset! {hash(1), hash(2)}).unwrap();
+
+        index.set_retained_index(RetainedIndex::from_packages(hashmap! {
+            hash(0) => Some(HashSet::from_iter([hash(1)])),
+        }));
+
+        assert_eq!(
+            index.retained.packages(),
+            hashmap! {
+                hash(0) => Some(HashSet::from_iter([hash(1), hash(2)])),
+            }
+        );
+    }
+
+    #[test]
     fn set_retained_index_with_no_dynamic_package_entry_puts_package_in_retained_only() {
         let mut index = PackageIndex::new_test();
 
@@ -311,7 +331,7 @@ mod tests {
         assert_eq!(
             index.retained.packages(),
             hashmap! {
-                hash(0) => Some(vec![hash(123)]),
+                hash(0) => Some(HashSet::from_iter([hash(123)])),
             }
         );
         assert_eq!(index.dynamic.active_packages(), hashmap! {});
@@ -323,7 +343,7 @@ mod tests {
         let mut index = PackageIndex::new_test();
 
         index.set_retained_index(RetainedIndex::from_packages(hashmap! {
-            hash(0) => Some(vec![hash(10)]),
+            hash(0) => Some(HashSet::from_iter([hash(10)])),
             hash(1) => None,
         }));
 
@@ -335,7 +355,7 @@ mod tests {
         assert_eq!(
             index.retained.packages(),
             hashmap! {
-                hash(0) => Some(vec![hash(10)]),
+                hash(0) => Some(HashSet::from_iter([hash(10)])),
                 hash(1) => None,
             }
         );
@@ -365,7 +385,7 @@ mod tests {
         index.fulfill_meta_far(hash(3), path("before"), hashset! {hash(10)}).unwrap();
 
         index.set_retained_index(RetainedIndex::from_packages(hashmap! {
-            hash(0) => Some(vec![hash(11)]),
+            hash(0) => Some(HashSet::from_iter([hash(11)])),
             hash(1) => None,
             hash(2) => None,
             hash(3) => None,
@@ -403,7 +423,7 @@ mod tests {
         assert_eq!(
             index.retained.packages(),
             hashmap! {
-                hash(0) => Some(vec![hash(10)]),
+                hash(0) => Some(HashSet::from_iter([hash(10)])),
             }
         );
         assert_eq!(index.dynamic.active_packages(), hashmap! {});
@@ -419,7 +439,7 @@ mod tests {
         index.set_retained_index(RetainedIndex::from_packages(hashmap! {
             hash(0) => None,
             hash(5) => None,
-            hash(6) => Some(vec![hash(60), hash(61)]),
+            hash(6) => Some(HashSet::from_iter([hash(60), hash(61)])),
         }));
 
         index.start_install(hash(1));
@@ -450,7 +470,7 @@ mod tests {
 
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
 
-        add_meta_far_to_blobfs(&blobfs_fake, hash(2), "fake-package", vec![hash(3)]);
+        add_meta_far_to_blobfs(&blobfs_fake, hash(2), "fake-package", [hash(3)], []);
 
         fulfill_meta_far_blob(&index, &blobfs, hash(2)).await.unwrap();
 
@@ -475,7 +495,7 @@ mod tests {
         let (blobfs_fake, blobfs) = fuchsia_pkg_testing::blobfs::Fake::new();
 
         let hash = Hash::from([2; 32]);
-        add_meta_far_to_blobfs(&blobfs_fake, hash, "fake-package", vec![]);
+        add_meta_far_to_blobfs(&blobfs_fake, hash, "fake-package", [], []);
 
         assert_matches!(
             fulfill_meta_far_blob(&index, &blobfs, hash).await,

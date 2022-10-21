@@ -1470,7 +1470,7 @@ mod serve_needed_blobs_tests {
 
     /// The returned task completes when the connection to the meta blob closes.
     pub(super) async fn serve_minimal_far(blobfs: &mut blobfs::Mock, meta_hash: Hash) -> Task<()> {
-        let far_data = crate::test_utils::get_meta_far("fake-package", vec![]);
+        let far_data = crate::test_utils::get_meta_far("fake-package", [], []);
 
         let blob = blobfs.expect_open_blob(meta_hash.into()).await;
         Task::spawn(async move { blob.serve_contents(&far_data[..]).await })
@@ -1484,7 +1484,7 @@ mod serve_needed_blobs_tests {
         meta_blob_info: BlobInfo,
         needed_blobs: impl IntoIterator<Item = Hash>,
     ) -> Task<()> {
-        let far_data = crate::test_utils::get_meta_far("fake-package", needed_blobs);
+        let far_data = crate::test_utils::get_meta_far("fake-package", needed_blobs, []);
 
         let (serve_contents, ()) = future::join(
             // serve_contents does not complete until later.

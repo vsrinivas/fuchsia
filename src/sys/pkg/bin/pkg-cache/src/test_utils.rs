@@ -4,7 +4,7 @@
 
 use {
     fuchsia_hash::Hash,
-    fuchsia_pkg::{MetaContents, MetaPackage},
+    fuchsia_pkg::{MetaContents, MetaPackage, MetaSubpackages},
     std::{collections::BTreeMap, convert::TryInto as _, io},
 };
 
@@ -13,14 +13,16 @@ pub fn add_meta_far_to_blobfs(
     hash: impl Into<Hash>,
     package_name: impl Into<String>,
     needed_blobs: impl IntoIterator<Item = Hash>,
+    subpackages: impl IntoIterator<Item = Hash>,
 ) {
-    let meta_far = get_meta_far(package_name, needed_blobs);
+    let meta_far = get_meta_far(package_name, needed_blobs, subpackages);
     blobfs.add_blob(hash.into(), meta_far);
 }
 
 pub fn get_meta_far(
     package_name: impl Into<String>,
     needed_blobs: impl IntoIterator<Item = Hash>,
+    subpackages: impl IntoIterator<Item = Hash>,
 ) -> Vec<u8> {
     let meta_contents = MetaContents::from_map(
         needed_blobs
@@ -37,10 +39,19 @@ pub fn get_meta_far(
     let mut meta_package_bytes = Vec::new();
     meta_package.serialize(&mut meta_package_bytes).unwrap();
 
+    let meta_subpackages =
+        MetaSubpackages::from_iter(subpackages.into_iter().enumerate().map(|(i, hash)| {
+            (fuchsia_url::RelativePackageUrl::parse(&format!("subpackage-{i}")).unwrap(), hash)
+        }));
+    let mut meta_subpackages_bytes = Vec::new();
+    meta_subpackages.serialize(&mut meta_subpackages_bytes).unwrap();
+
     let mut path_content_map: BTreeMap<&str, (u64, Box<dyn io::Read>)> = BTreeMap::new();
-    for (path, content) in
-        vec![("meta/contents", &meta_contents_bytes), ("meta/package", &meta_package_bytes)]
-    {
+    for (path, content) in vec![
+        ("meta/contents", &meta_contents_bytes),
+        ("meta/package", &meta_package_bytes),
+        (MetaSubpackages::PATH, &meta_subpackages_bytes),
+    ] {
         path_content_map.insert(path, (content.len() as u64, Box::new(content.as_slice())));
     }
     let mut meta_far = Vec::new();
