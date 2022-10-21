@@ -32,29 +32,25 @@ DebugAdapterContext::DebugAdapterContext(Session* session, debug::StreamBuffer* 
   reader_ = std::make_shared<DebugAdapterReader>(stream);
   writer_ = std::make_shared<DebugAdapterWriter>(stream);
 
-  dap_->registerHandler(
-      [this](const dap::InitializeRequest& req) -> dap::ResponseOrError<dap::InitializeResponse> {
-        DEBUG_LOG(DebugAdapter) << "InitializeRequest received";
+  session_->AddObserver(this);
 
-        // If not connected to a device, attempt to connect, if unsuccessful, return error to
-        // the initialization request.
-        if (!this->session()->IsConnected()) {
-          Err err = this->session()->last_connection_error();
-          dap::Error error_message(err.has_error() ? err.msg()
-                                                   : "Debugger not connected to device");
-          return error_message;
-        } else {
-          dap::InitializeResponse response;
-          response.supportsFunctionBreakpoints = false;
-          response.supportsConfigurationDoneRequest = true;
-          response.supportsEvaluateForHovers = false;
-          if (req.supportsInvalidatedEvent) {
-            this->supports_invalidate_event_ = req.supportsInvalidatedEvent.value();
-          }
-          if (req.supportsRunInTerminalRequest) {
-            this->supports_run_in_terminal_ = req.supportsRunInTerminalRequest.value();
-          }
-          return response;
+  dap_->registerHandler(
+      [this](const dap::InitializeRequest& req,
+             std::function<void(dap::ResponseOrError<dap::InitializeResponse>)> send_resp) {
+        DEBUG_LOG(DebugAdapter) << "InitializeRequest received";
+        if (req.supportsInvalidatedEvent) {
+          supports_invalidate_event_ = req.supportsInvalidatedEvent.value();
+        }
+        if (req.supportsRunInTerminalRequest) {
+          supports_run_in_terminal_ = req.supportsRunInTerminalRequest.value();
+        }
+        send_initialize_response_ = send_resp;
+        // If the session is connected or there's no pending connection, send the response
+        // immediately. Otherwise, defer the response until the connection resolves.
+        if (session_->IsConnected()) {
+          DidConnect(Err());
+        } else if (!session_->HasPendingConnection()) {
+          DidConnect(Err("Debugger not connected to device"));
         }
       });
 
@@ -78,6 +74,22 @@ DebugAdapterContext::~DebugAdapterContext() {
     session()->process_observers().RemoveObserver(this);
   }
   DeleteAllBreakpoints();
+  session_->RemoveObserver(this);
+}
+
+void DebugAdapterContext::DidConnect(const Err& err) {
+  if (!send_initialize_response_) {
+    return;
+  }
+  if (err.has_error()) {
+    send_initialize_response_(dap::Error(err.msg()));
+    return;
+  }
+  dap::InitializeResponse response;
+  response.supportsFunctionBreakpoints = false;
+  response.supportsConfigurationDoneRequest = true;
+  response.supportsEvaluateForHovers = false;
+  send_initialize_response_(response);
 }
 
 void DebugAdapterContext::Init() {

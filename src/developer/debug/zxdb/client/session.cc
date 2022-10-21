@@ -14,6 +14,7 @@
 #include <unistd.h>
 
 #include <thread>
+#include <utility>
 #include <variant>
 
 #include "lib/syslog/cpp/macros.h"
@@ -109,13 +110,15 @@ bool FilterApplicableBreakpoints(StopInfo* info) {
 //  - The connection could be canceled by the user (the session callback checks for this).
 class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConnection> {
  public:
-  void Initiate(fxl::WeakPtr<Session> session, fit::callback<void(const Err&)> callback);
+  using Callback = fit::callback<void(const Err&, const debug_ipc::HelloReply&,
+                                      std::unique_ptr<debug::BufferedFD>)>;
+  void Initiate(Callback callback);
 
   // Use only when non-multithreaded.
   const SessionConnectionInfo& connection_info() { return connection_info_; }
 
   // There are no other functions since this will be running on a background thread and the class
-  // state can't be safely retrieved. It reports all of the output state via ConnectionResolved.
+  // state can't be safely retrieved. It reports all of the output state via the callback.
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(PendingConnection);
@@ -142,9 +145,6 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
 
   debug::MessageLoop* main_loop_ = nullptr;
 
-  // Access only on the main thread.
-  fxl::WeakPtr<Session> session_;
-
   // The constructed socket and buffer.
   //
   // The socket is created by ConnectBackgroundThread and read by HelloCompleteMainThread to create
@@ -154,15 +154,13 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   std::unique_ptr<debug::BufferedFD> buffer_;
 
   // Callback when the connection is complete (or fails). Access only on the main thread.
-  fit::callback<void(const Err&)> callback_;
+  Callback callback_;
 };
 
-void Session::PendingConnection::Initiate(fxl::WeakPtr<Session> session,
-                                          fit::callback<void(const Err&)> callback) {
+void Session::PendingConnection::Initiate(Callback callback) {
   FX_DCHECK(!thread_.get());  // Duplicate Initiate() call.
 
   main_loop_ = debug::MessageLoop::Current();
-  session_ = std::move(session);
   callback_ = std::move(callback);
 
   // Create the background thread, and run the background function. The context will keep a ref to
@@ -187,13 +185,16 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
   thread_->join();
   thread_.reset();
 
-  if (!session_ || err.has_error()) {
-    // Error or session destroyed, skip sending hello and forward the error.
+  if (err.has_error()) {
+    // Skip sending hello and forward the error.
     HelloCompleteMainThread(owner, err, debug_ipc::HelloReply());
     return;
   }
 
   FX_DCHECK(socket_.is_valid());
+
+  // The buffer must be created here on the main thread since it will register with the message
+  // loop to watch the FD.
   buffer_ = std::make_unique<debug::BufferedFD>(std::move(socket_));
   buffer_->Start();
 
@@ -237,7 +238,7 @@ void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConn
     reply = debug_ipc::HelloReply();
   }
 
-  HelloCompleteMainThread(owner, err, reply);
+  HelloCompleteMainThread(std::move(owner), err, reply);
 }
 
 void Session::PendingConnection::HelloCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
@@ -249,22 +250,7 @@ void Session::PendingConnection::HelloCompleteMainThread(fxl::RefPtr<PendingConn
     buffer_->set_error_callback({});
   }
 
-  if (session_) {
-    // The buffer must be created here on the main thread since it will register with the message
-    // loop to watch the FD.
-
-    // If the session exists, always tell it about the completion, whether the connection was
-    // successful or not. It will issue the callback.
-    session_->ConnectionResolved(std::move(owner), err, reply, std::move(buffer_),
-                                 std::move(callback_));
-  } else if (callback_) {
-    // Session was destroyed. Issue the callback with an error (not clobbering an existing one if
-    // there was one).
-    if (err.has_error())
-      callback_(err);
-    else
-      callback_(Err("Session was destroyed."));
-  }
+  callback_(err, reply, std::move(buffer_));
 }
 
 Err Session::PendingConnection::DoConnectBackgroundThread() {
@@ -274,8 +260,6 @@ Err Session::PendingConnection::DoConnectBackgroundThread() {
     case SessionConnectionType::kUnix:
       return ConnectToUnixSocket(connection_info_.host, &socket_);
   }
-  FX_NOTREACHED();
-  return Err("Unsupported Connection type");
 }
 
 // Session -----------------------------------------------------------------------------------------
@@ -397,8 +381,6 @@ bool Session::ConnectCanProceed(fit::callback<void(const Err&)>& callback, bool 
   return true;
 }
 
-bool Session::IsConnected() const { return stream_ != nullptr; }
-
 void Session::Connect(const SessionConnectionInfo& info, fit::callback<void(const Err&)> cb) {
   if (!ConnectCanProceed(cb, false))
     return;
@@ -416,7 +398,22 @@ void Session::Connect(const SessionConnectionInfo& info, fit::callback<void(cons
   }
 
   pending_connection_ = fxl::MakeRefCounted<PendingConnection>(last_connection_);
-  pending_connection_->Initiate(weak_factory_.GetWeakPtr(), std::move(cb));
+  pending_connection_->Initiate(
+      [weak_this = GetWeakPtr(), pending = pending_connection_, cb = std::move(cb)](
+          Err err, const debug_ipc::HelloReply& reply,
+          std::unique_ptr<debug::BufferedFD> buffer) mutable {
+        if (!weak_this) {
+          cb(Err("Session was destroyed."));
+        } else {
+          if (!err.has_error()) {
+            err = weak_this->ResolvePendingConnection(pending, reply, std::move(buffer));
+          }
+          for (auto& observer : weak_this->observers_) {
+            observer.DidConnect(err);
+          }
+          cb(err);
+        }
+      });
 }
 
 Err Session::SetArch(debug::Arch arch, uint64_t page_size) {
@@ -506,7 +503,6 @@ bool Session::ClearConnectionData() {
   stream_ = nullptr;
   connected_info_.host.clear();
   connected_info_.port = 0;
-  last_connection_error_ = Err();
   arch_info_ = std::make_unique<ArchInfo>();  // Reset to default one (always keep non-null).
   connection_storage_.reset();
   arch_ = debug::Arch::kUnknown;
@@ -717,50 +713,32 @@ ThreadImpl* Session::ThreadImplFromKoid(const debug_ipc::ProcessThreadId& id) {
   return process->GetThreadImplFromKoid(id.thread);
 }
 
-void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
-                                 const debug_ipc::HelloReply& reply,
-                                 std::unique_ptr<debug::BufferedFD> buffer,
-                                 fit::callback<void(const Err&)> callback) {
+Err Session::ResolvePendingConnection(fxl::RefPtr<PendingConnection> pending,
+                                      const debug_ipc::HelloReply& reply,
+                                      std::unique_ptr<debug::BufferedFD> buffer) {
   if (pending.get() != pending_connection_.get()) {
     // When the connection doesn't match the pending one, that means the pending connection was
     // cancelled and we should drop the one we just got.
-    if (callback)
-      callback(Err(ErrType::kCanceled, "Connect operation cancelled."));
-    return;
+    return Err(ErrType::kCanceled, "Connect operation cancelled.");
   }
   pending_connection_ = nullptr;
-
-  if (err.has_error()) {
-    last_connection_error_ = err;
-    // Other error connecting.
-    if (callback)
-      callback(err);
-    return;
-  }
 
   // Version check.
   if (reply.version > debug_ipc::kCurrentProtocolVersion ||
       reply.version < debug_ipc::kMinimumProtocolVersion) {
-    last_connection_error_ =
-        Err("The IPC version of the debug_agent on the system (v%u) is not in the supported\n"
-            "range of the zxdb frontend (v%u to v%u).",
-            reply.version, debug_ipc::kMinimumProtocolVersion, debug_ipc::kCurrentProtocolVersion);
-    if (callback) {
-      callback(last_connection_error_);
-    }
-    return;
+    return Err(
+        "The IPC version of the debug_agent on the system (v%u) is not in the supported\n"
+        "range of the zxdb frontend (v%u to v%u).",
+        reply.version, debug_ipc::kMinimumProtocolVersion, debug_ipc::kCurrentProtocolVersion);
   }
 
   ipc_version_ = reply.version;
   remote_api_->SetVersion(reply.version);
 
   // Initialize arch-specific stuff.
-  Err arch_err = SetArch(reply.arch, reply.page_size);
-  if (arch_err.has_error()) {
-    last_connection_error_ = arch_err;
-    if (callback)
-      callback(arch_err);
-    return;
+  Err err = SetArch(reply.arch, reply.page_size);
+  if (err.has_error()) {
+    return err;
   }
 
   // Success, connect up the stream buffers.
@@ -774,11 +752,8 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
   // TODO As we extend local debugging support, this will need to get more complex and robust.
   bool is_local_connection = pending->connection_info().host == "localhost";
 
-  // Issue success callbacks.
+  // Connection succeeds.
   system_.DidConnect(is_local_connection);
-  last_connection_error_ = Err();
-  if (callback)
-    callback(Err());
 
   // Query which processes the debug agent is already connected to.
   remote_api()->Status(
@@ -814,6 +789,8 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
           }
         }
       });
+
+  return Err();
 }
 
 void Session::OnSettingChanged(const SettingStore& store, const std::string& setting_name) {

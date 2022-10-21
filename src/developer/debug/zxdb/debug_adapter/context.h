@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process_observer.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/session_observer.h"
 #include "src/developer/debug/zxdb/client/thread_observer.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/expr/format_node.h"
@@ -51,7 +52,7 @@ struct VariablesRecord {
 // Handles processing requests from debug adapter client with help from zxdb client session and dap
 // library.
 // Note: All methods in this class need to be executed on main thread to avoid concurrency bugs.
-class DebugAdapterContext : public ThreadObserver, ProcessObserver {
+class DebugAdapterContext : public ThreadObserver, ProcessObserver, SessionObserver {
  public:
   using DestroyConnectionCallback = std::function<void()>;
 
@@ -70,6 +71,9 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   void set_destroy_connection_callback(DestroyConnectionCallback cb) {
     destroy_connection_cb_ = std::move(cb);
   }
+
+  // SessionObserver implementation:
+  void DidConnect(const Err& err) override;
 
   // ThreadObserver implementation:
   void DidCreateThread(Thread* thread) override;
@@ -130,6 +134,11 @@ class DebugAdapterContext : public ThreadObserver, ProcessObserver {
   int64_t next_variables_id_ = 1;
 
   DestroyConnectionCallback destroy_connection_cb_;
+
+  // This is used when the DAP initialize request comes when the debugger has a pending connection
+  // to the device. In this case, we want to defer the DAP initialze response until the connection
+  // is resolved.
+  fit::callback<void(dap::ResponseOrError<dap::InitializeResponse>)> send_initialize_response_;
 
   // This mapping is temporarily added to store all breakpoints added by debug adapter client. Once
   // http://fxbug.dev/69392 is fixed, this can removed in favor of using System::GetBreakpoints API

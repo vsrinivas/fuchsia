@@ -106,7 +106,10 @@ class Session : public SettingStoreObserver {
   void OnStreamError();
 
   // Returns true if there is currently a connection.
-  bool IsConnected() const;
+  bool IsConnected() const { return stream_ != nullptr; }
+
+  // Returns whether a connection is pending.
+  bool HasPendingConnection() const { return pending_connection_.get(); }
 
   // Information about the current connection.
   const std::string minidump_path() const { return minidump_path_; }
@@ -116,9 +119,6 @@ class Session : public SettingStoreObserver {
   // Call with an empty host and 0 port to reconnect to the last attempted connection destination.
   // If there is no previous destination, this will be issue an error.
   void Connect(const SessionConnectionInfo& info, fit::callback<void(const Err&)> cb);
-
-  // Returns the result of the last call to Connect().
-  const Err& last_connection_error() { return last_connection_error_; }
 
   // Synchronously disconnects from the remote system. Calling when there is no connection will
   // return an error.
@@ -205,11 +205,11 @@ class Session : public SettingStoreObserver {
   // Returns the thread object from the given koids, or null.
   ThreadImpl* ThreadImplFromKoid(const debug_ipc::ProcessThreadId& id);
 
-  // Callback when a connection has been successful or failed.
-  void ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const Err& err,
-                          const debug_ipc::HelloReply& reply,
-                          std::unique_ptr<debug::BufferedFD> buffer,
-                          fit::callback<void(const Err&)> callback);
+  // Resolve a pending connection that has been established. An error could be returned if e.g. the
+  // protocol is not supported.
+  Err ResolvePendingConnection(fxl::RefPtr<PendingConnection> pending,
+                               const debug_ipc::HelloReply& reply,
+                               std::unique_ptr<debug::BufferedFD> buffer);
 
   void ListenForSystemSettings();
 
@@ -279,9 +279,6 @@ class Session : public SettingStoreObserver {
   // The last connection that was made by the session. Will have an empty host and a 0 port
   // if there has never been a connection.
   SessionConnectionInfo last_connection_;
-
-  // The error result from the last connection attempt.
-  Err last_connection_error_;
 
   fxl::WeakPtrFactory<Session> weak_factory_;
 };

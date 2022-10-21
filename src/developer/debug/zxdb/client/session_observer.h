@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "src/developer/debug/ipc/records.h"
+#include "src/developer/debug/zxdb/common/err.h"
 
 namespace zxdb {
 
@@ -35,6 +36,9 @@ class SessionObserver {
   virtual void HandlePreviousConnectedProcesses(const std::vector<debug_ipc::ProcessRecord>&) {}
 
   virtual void HandleProcessesInLimbo(const std::vector<debug_ipc::ProcessRecord>&) {}
+
+  // Called when a connection is resolved, either successful or failed.
+  virtual void DidConnect(const Err& err) {}
 };
 
 }  // namespace zxdb

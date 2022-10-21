@@ -50,7 +50,7 @@ namespace zxdb {
 
 class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObserver {
  public:
-  DebugAdapterServerTest() : server_(nullptr, kServerPort) { server_.AddObserver(this); }
+  DebugAdapterServerTest() : server_(&session_, kServerPort) { server_.AddObserver(this); }
 
   DebugAdapterServer& server() { return server_; }
 
@@ -59,6 +59,7 @@ class DebugAdapterServerTest : public TestWithLoop, public DebugAdapterServerObs
   void ClientDisconnected() override { debug::MessageLoop::Current()->QuitNow(); }
 
  private:
+  Session session_;
   DebugAdapterServer server_;
 };
 

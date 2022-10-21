@@ -62,14 +62,14 @@ void DebugAdapterServer::ListenConnection() {
 
 void DebugAdapterServer::ListenBackgroundThread() {
   // Wait for one connection.
-  LOGS(Info) << "Waiting on port " << port_ << " for debug adapter connection.\r\n";
+  LOGS(Info) << "Waiting on port " << port_ << " for debug adapter connection.";
   fbl::unique_fd client;
   while (!Accept(client)) {
     if (background_thread_exit_) {
       return;
     }
   }
-  LOGS(Info) << "Debug Adapter connection established.\r\n";
+  LOGS(Info) << "Debug Adapter connection established.";
 
   main_loop_->PostTask(FROM_HERE, [this, client = std::move(client)]() mutable {
     ConnectionResolvedMainThread(std::move(client));
