@@ -189,7 +189,7 @@ bool Page::ClearColdData() {
 zx_status_t Page::VmoOpUnlock(bool evict) {
   ZX_DEBUG_ASSERT(InTreeContainer());
   // |evict| can be true only when the Page is clean or subject to invalidation.
-  if ((!IsDirty() || evict) && IsVmoLocked()) {
+  if (((!IsDirty() && !file_cache_->IsOrphan()) || evict) && IsVmoLocked()) {
     ClearFlag(PageFlag::kPageVmoLocked);
     return file_cache_->GetVmoManager().UnlockVmo(index_, evict);
   }

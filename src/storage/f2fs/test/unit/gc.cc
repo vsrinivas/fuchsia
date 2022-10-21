@@ -133,6 +133,49 @@ TEST_F(GcManagerTest, PageColdData) {
   file->Close();
 }
 
+TEST_F(GcManagerTest, OrphanFileGc) {
+  DirtySeglistInfo *dirty_info = &fs_->GetSegmentManager().GetDirtySegmentInfo();
+  FreeSegmapInfo *free_info = &fs_->GetSegmentManager().GetFreeSegmentInfo();
+
+  fbl::RefPtr<fs::Vnode> vn;
+  ASSERT_EQ(root_dir_->Create("test", S_IFREG, &vn), ZX_OK);
+  auto file = fbl::RefPtr<File>::Downcast(std::move(vn));
+
+  uint8_t buffer[kPageSize] = {
+      0,
+  };
+  FileTester::AppendToFile(file.get(), buffer, kPageSize);
+  WritebackOperation op = {.bSync = true};
+  fs_->SyncDirtyDataPages(op);
+
+  fs_->GetSegmentManager().AllocateNewSegments();
+  fs_->WriteCheckpoint(false, false);
+
+  auto block_or = file->FindDataBlkAddr(0);
+  ASSERT_TRUE(block_or.is_ok());
+
+  // gc target segno
+  auto target_segno = fs_->GetSegmentManager().GetSegmentNumber(block_or.value());
+
+  // Check victim seg is dirty
+  ASSERT_TRUE(
+      TestBit(target_segno, dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirty)].get()));
+  ASSERT_TRUE(TestBit(target_segno, free_info->free_segmap.get()));
+
+  // Make file orphan
+  FileTester::DeleteChild(root_dir_.get(), "test", false);
+
+  // Do gc
+  ASSERT_EQ(GcTester::DoGarbageCollect(fs_->GetGcManager(), target_segno, GcType::kFgGc), ZX_OK);
+
+  // Check victim seg is clean
+  ASSERT_FALSE(
+      TestBit(target_segno, dirty_info->dirty_segmap[static_cast<int>(DirtyType::kDirty)].get()));
+
+  ASSERT_EQ(file->Close(), ZX_OK);
+  file = nullptr;
+}
+
 class GcManagerTestWithLargeSec
     : public GcManagerTest,
       public testing::WithParamInterface<std::pair<uint64_t, uint32_t>> {

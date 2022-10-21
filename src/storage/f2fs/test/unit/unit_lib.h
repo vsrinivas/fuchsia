@@ -133,6 +133,11 @@ class MkfsTester {
   static zx::result<std::unique_ptr<Bcache>> FormatDevice(MkfsWorker &mkfs);
 };
 
+class GcTester {
+ public:
+  static zx_status_t DoGarbageCollect(GcManager &manager, uint32_t segno, GcType gc_type)
+      __TA_EXCLUDES(manager.gc_mutex_);
+};
 }  // namespace f2fs
 
 #endif  // SRC_STORAGE_F2FS_TEST_UNIT_UNIT_LIB_H_

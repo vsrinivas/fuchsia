@@ -334,6 +334,7 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
     // valid caused by race condition along with SSR block allocation.
     const uint32_t kBlocksPerSection =
         fs_->GetSuperblockInfo().GetBlocksPerSeg() * fs_->GetSuperblockInfo().GetSegsPerSec();
+    const block_t target_address = safemath::CheckAdd<block_t>(start_addr, off).ValueOrDie();
     if ((gc_type == GcType::kBgGc && fs_->GetSegmentManager().HasNotEnoughFreeSecs()) ||
         fs_->GetSegmentManager().GetValidBlocks(segno, fs_->GetSuperblockInfo().GetSegsPerSec()) ==
             kBlocksPerSection) {
@@ -344,8 +345,7 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
       continue;
     }
 
-    auto dnode_result =
-        CheckDnode(*entry, safemath::CheckAdd<block_t>(start_addr, off).ValueOrDie());
+    auto dnode_result = CheckDnode(*entry, target_address);
     if (dnode_result.is_error()) {
       continue;
     }
@@ -360,6 +360,22 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
 
     LockedPage data_page;
     if (auto err = vnode->GetLockedDataPage(start_bidx + ofs_in_node, &data_page); err != ZX_OK) {
+      continue;
+    }
+
+    if (gc_type == GcType::kFgGc &&
+        fs_->GetSuperblockInfo().FindVnodeFromVnodeSet(InoType::kOrphanIno, ino)) {
+      // Here, GC already uploaded victim data block to the filecache.
+      // Once a page of an orphan file is uploaded to the filecache, the page is not reclaimed until
+      // the vnode is recycled. Therefore, even if we truncate it here, orphan files that are
+      // already opened can access data. If SPO occurs during the truncation, f2fs rolls back to the
+      // previous checkpoint, so that the orphan file can be purged normally.
+      ZX_DEBUG_ASSERT(data_page->IsUptodate());
+      LockedPage node_page;
+      if (auto err = fs_->GetNodeManager().GetNodePage(entry->nid, &node_page); err != ZX_OK) {
+        return err;
+      }
+      vnode->TruncateDataBlocksRange(node_page.GetPage<NodePage>(), ofs_in_node, 1);
       continue;
     }
 

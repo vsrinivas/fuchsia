@@ -26,6 +26,7 @@ class GcManager {
   uint32_t GetCurVictimSec() const { return cur_victim_sec_; }
 
  private:
+  friend class GcTester;
   zx::result<uint32_t> GetGcVictim(GcType gc_type, CursegType type) __TA_REQUIRES(gc_mutex_);
   zx_status_t DoGarbageCollect(uint32_t segno, GcType gc_type) __TA_REQUIRES(gc_mutex_);
 

@@ -498,4 +498,9 @@ zx::result<std::unique_ptr<Bcache>> MkfsTester::FormatDevice(MkfsWorker &mkfs) {
   return zx::ok(std::move(mkfs.bc_));
 }
 
+zx_status_t GcTester::DoGarbageCollect(GcManager &manager, uint32_t segno, GcType gc_type) {
+  std::lock_guard gc_lock(manager.gc_mutex_);
+  return manager.DoGarbageCollect(segno, gc_type);
+}
+
 }  // namespace f2fs
