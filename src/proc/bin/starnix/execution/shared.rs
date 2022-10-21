@@ -9,16 +9,20 @@ use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET};
+#[cfg(not(feature = "restricted_mode"))]
 use process_builder::elf_parse;
 use std::convert::TryFrom;
 use std::sync::Arc;
+#[cfg(not(feature = "restricted_mode"))]
 use zerocopy::AsBytes;
 
 use crate::fs::ext4::ExtFilesystem;
 use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
 use crate::logging::strace;
-use crate::mm::{DesiredAddress, MappingOptions, MemoryManager, PAGE_SIZE};
+use crate::mm::MemoryManager;
+#[cfg(not(feature = "restricted_mode"))]
+use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
 use crate::signals::dequeue_signal;
 use crate::syscalls::{
     decls::{Syscall, SyscallDecl},
@@ -26,6 +30,7 @@ use crate::syscalls::{
 };
 use crate::task::*;
 use crate::types::*;
+#[cfg(not(feature = "restricted_mode"))]
 use crate::vmex_resource::VMEX_RESOURCE;
 
 /// Contains context to track the most recently failing system call.
@@ -128,6 +133,7 @@ pub fn process_completed_syscall(
     // Handle the debug address after the thread is set up to continue, because
     // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
     // importantly the instruction pointer needs to be "correct").
+    #[cfg(not(feature = "restricted_mode"))]
     set_process_debug_addr(current_task)?;
 
     Ok(None)
@@ -147,6 +153,7 @@ pub fn process_completed_syscall(
 /// - `current_task`: The task to set the property for. The register's of this task, the instruction
 ///                   pointer specifically, needs to be set to the value with which the task is
 ///                   expected to resume.
+#[cfg(not(feature = "restricted_mode"))]
 pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errno> {
     let dt_debug_address = match current_task.dt_debug_address {
         Some(dt_debug_address) => dt_debug_address,
