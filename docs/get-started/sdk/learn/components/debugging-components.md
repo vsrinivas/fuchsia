@@ -128,11 +128,11 @@ int main(int argc, const char* argv[], char* envp[]) {
 }
 ```
 
-Run `bazel build` and verify that the build completes successfully:
+Build and publish the updated package to the `fuchsiasamples.com` repository:
 
 ```posix-terminal
-bazel build --config=fuchsia_x64 //fuchsia-codelab/echo:pkg \
-    --publish_to=$HOME/.package_repos/sdk-samples
+bazel run --config=fuchsia_x64 //fuchsia-codelab/echo:pkg.publish -- \
+    --repo_name fuchsiasamples.com
 ```
 
 Start a new debug session with `zxdb`:

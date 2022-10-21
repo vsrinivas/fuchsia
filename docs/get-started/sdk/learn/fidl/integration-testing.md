@@ -197,11 +197,12 @@ Add the following code to implement an integration test:
 
 ### Update the build configuration
 
-Run `bazel build` and verify that the build completes successfully:
+Build and publish the integration test package to the `fuchsiasamples.com`
+repository:
 
 ```posix-terminal
-bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-integration:test_pkg \
-     --publish_to=$HOME/.package_repos/sdk-samples
+bazel run --config=fuchsia_x64 //fuchsia-codelab/echo-integration:test_pkg.publish -- \
+    --repo_name fuchsiasamples.com
 ```
 
 ### Run the integration test

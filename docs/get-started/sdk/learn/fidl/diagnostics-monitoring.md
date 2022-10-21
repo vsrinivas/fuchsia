@@ -186,11 +186,11 @@ Finally, update the imports to include the new Inspect libraries:
 #include <lib/sys/inspect/cpp/component.h>
 ```
 
-Run `bazel build` and verify that the build completes successfully:
+Build and publish the updated package to the `fuchsiasamples.com` repository:
 
 ```posix-terminal
-bazel build --config=fuchsia_x64 //fuchsia-codelab/echo-realm:pkg \
-     --publish_to=$HOME/.package_repos/sdk-samples
+bazel run --config=fuchsia_x64 //fuchsia-codelab/echo-realm:pkg.publish -- \
+    --repo_name fuchsiasamples.com
 ```
 
 ### Verify the Inspect data

@@ -190,8 +190,7 @@ the new component in the build configuration:
 Run `bazel build` and verify that the build completes successfully:
 
 ```posix-terminal
-bazel build --config=fuchsia_x64 //fuchsia-codelab/echo:pkg \
-    --publish_to=$HOME/.package_repos/sdk-samples
+bazel build --config=fuchsia_x64 //fuchsia-codelab/echo:pkg
 ```
 
 In the next section, you'll integrate this component into the build and test the

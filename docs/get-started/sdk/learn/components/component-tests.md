@@ -151,11 +151,11 @@ This rule packages your unit tests into a component with the following URL:
 fuchsia-pkg://fuchsiasamples.com/echo_unittests#meta/echo_unittests.cm
 ```
 
-Run `bazel build` and verify that the build completes successfully:
+Build and publish the test package to the `fuchsiasamples.com` repository:
 
 ```posix-terminal
-bazel build --config=fuchsia_x64 //fuchsia-codelab/echo:test_pkg \
-    --publish_to=$HOME/.package_repos/sdk-samples
+bazel run --config=fuchsia_x64 //fuchsia-codelab/echo:test_pkg.publish -- \
+    --repo_name fuchsiasamples.com
 ```
 
 Use the `ffx test` command to execute the unit tests inside this package.
