@@ -6,6 +6,10 @@
 
 #include <assert.h>
 #include <fidl/fuchsia.hardware.pci/cpp/wire.h>
+#include <fidl/fuchsia.hardware.pci/cpp/wire_types.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
+#include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/fdf/cpp/dispatcher.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/svc/outgoing.h>
 #include <lib/zx/channel.h>
@@ -27,8 +31,6 @@
 #include <fbl/ref_ptr.h>
 #include <region-alloc/region-alloc.h>
 
-#include "fidl/fuchsia.hardware.pci/cpp/wire_types.h"
-#include "lib/fdf/cpp/dispatcher.h"
 #include "src/devices/bus/drivers/pci/allocation.h"
 #include "src/devices/bus/drivers/pci/bar_info.h"
 #include "src/devices/bus/drivers/pci/bus_device_interface.h"
@@ -61,55 +63,18 @@ class Device;
 class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
                public fbl::ContainableBaseClasses<
                    fbl::TaggedDoublyLinkedListable<Device*, DownstreamListTag>,
-                   fbl::TaggedDoublyLinkedListable<Device*, SharedIrqListTag>>
-
-{
+                   fbl::TaggedDoublyLinkedListable<Device*, SharedIrqListTag>> {
  public:
-  // All the strings used for inspect PropertyValue and Node names.
-  static constexpr char kInspectIrqMode[] = "Irq Mode";
-  static constexpr char kInspectLegacyInterrupt[] = "Legacy Interrupt";
-  static constexpr char kInspectMsi[] = "Message Signaled Interrupts";
-  static constexpr char kInspectLegacyDisabled[] = "Disabled";
-  static const constexpr char* kInspectIrqModes[PCI_INTERRUPT_MODE_COUNT] = {
-      "Disabled", "Legacy Interrupt", "Legacy Interrupt (No Acknowledge)",
-      "Message Signaled Interrupts (MSI)", "MSI-X"};
-  static constexpr char kInspectLegacyInterruptLine[] = "InterruptLine";
-  static constexpr char kInspectLegacyInterruptPin[] = "InterruptPin";
-  static constexpr char kInspectLegacySignalCount[] = "Signal Count";
-  static constexpr char kInspectLegacyAckCount[] = "Ack Count";
-  static constexpr char kInspectMsiBaseVector[] = "Base Vector";
-  static constexpr char kInspectMsiAllocated[] = "Allocated";
-
-  struct LegacyInterruptInspect {
-    inspect::Node node;
-    inspect::UintProperty line;
-    inspect::StringProperty pin;
-    inspect::UintProperty signal_count;
-    inspect::UintProperty ack_count;
-    inspect::BoolProperty disabled;
-  };
-
-  struct MsiInspect {
-    inspect::Node node;
-    inspect::UintProperty base_vector;
-    inspect::UintProperty allocated;
-  };
-
-  struct Inspect {
-    inspect::Node node;
-    inspect::StringProperty irq_mode;  // Corresponds to |kInspectIrqModes|
-    LegacyInterruptInspect legacy;
-    MsiInspect msi;
-  };
-
   // This structure contains all bookkeeping and state for a device's
   // configured IRQ mode. It is initialized to PCI_INTERRUPT_MODE_DISABLED.
   struct Irqs {
-    pci_interrupt_mode_t mode;  // The mode currently configured.
-    zx::interrupt legacy;       // Virtual interrupt for legacy signaling.
-    uint32_t legacy_vector;  // Vector for the legacy interrupt, mirrors kInterruptLine in Config.
-    zx_time_t legacy_irq_period_start;  // Timestamp of the current second we're monitoring for IRQ
-                                        // floods.
+    pci_interrupt_mode_t mode;          // The mode currently configured.
+    zx::interrupt legacy;               // Virtual interrupt for legacy signaling.
+    uint32_t legacy_vector;             // Vector for the legacy interrupt, mirrors kInterruptLine
+                                        // in Config.
+    uint8_t legacy_pin;                 // Pin for the legacy interrupt, mirrors kInterruptPin.
+    zx_time_t legacy_irq_period_start;  // Timestamp of the current second we're monitoring for
+                                        // IRQ floods.
     bool legacy_disabled;               // Whether  the legacy vector has been disabled
     zx::msi msi_allocation;             // The MSI allocation object for MSI & MSI-X
     uint64_t
@@ -141,6 +106,41 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
       return (bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
              (bdf1.function_id == bdf2.function_id);
     }
+  };
+
+  struct Inspect {
+    explicit Inspect(inspect::Node node) : device(std::move(node)) {}
+
+    // All the strings used for inspect PropertyValue and Node names.
+    static constexpr char kInspectHeaderBars[] = "BARs";
+    static constexpr char kInspectHeaderBarsInitial[] = "0. Initial";
+    static constexpr char kInspectHeaderBarsProbed[] = "1. Probed";
+    static constexpr char kInspectHeaderBarsConfigured[] = "2. Configured";
+    static constexpr char kInspectHeaderBarsFailed[] = "Failed Range";
+    static constexpr char kInspectHeaderBarsReallocated[] = "Reallocated Range";
+    static constexpr char kInspectHeaderInterrupts[] = "Interrupts";
+    static constexpr char kInspectIrqMode[] = "Mode";
+    static constexpr char kInspectLegacyInterrupt[] = "Legacy Interrupt";
+    static constexpr char kInspectMsi[] = "Message Signaled Interrupts";
+    static constexpr char kInspectLegacyDisabled[] = "Disabled";
+    static const constexpr char* kInspectIrqModes[] = {"Disabled", "Legacy", "Legacy (No Ack)",
+                                                       "MSI", "MSI-X"};
+    static constexpr char kInspectLegacyInterruptLine[] = "InterruptLine";
+    static constexpr char kInspectLegacyInterruptPin[] = "InterruptPin";
+    static constexpr char kInspectLegacySignalCount[] = "Signal Count";
+    static constexpr char kInspectLegacyAckCount[] = "Ack Count";
+    static constexpr char kInspectMsiBaseVector[] = "Base Vector";
+    static constexpr char kInspectMsiAllocated[] = "Allocated";
+    static constexpr char kInspectMsiMapped[] = "Mapped";
+
+    inspect::Node device;
+    // These hang off of |device|
+    inspect::Node interrupts;
+    inspect::UintProperty legacy_signal_cnt;
+    inspect::UintProperty legacy_ack_cnt;
+    // Individual BARs
+    inspect::Node bar;  // The top level 'BARs' header
+    std::array<std::optional<inspect::Node>, fuchsia_hardware_pci::wire::kMaxBarCount> bars;
   };
 
   // Templated helpers to assist with differently sized protocol reads and writes.
@@ -245,7 +245,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   const Capabilities& capabilities() const { return caps_; }
 
   uint32_t legacy_vector() const __TA_EXCLUDES(dev_lock_) {
-    fbl::AutoLock dev_lock(&dev_lock_);
+    const fbl::AutoLock dev_lock(&dev_lock_);
     return irqs_.legacy_vector;
   }
   const zx::msi& msi_allocation() const __TA_REQUIRES(dev_lock_) { return irqs_.msi_allocation; }
@@ -273,7 +273,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   zx_status_t DisableMsix() __TA_REQUIRES(dev_lock_);
   // Signals the device's zx::interrupt, effectively triggering an interrupt for the device
   // driver.
-  zx_status_t SignalLegacyIrq(zx_time_t timestamp) const __TA_REQUIRES(dev_lock_);
+  zx_status_t SignalLegacyIrq(zx_time_t timestamp) __TA_REQUIRES(dev_lock_);
   zx_status_t AckLegacyIrq() __TA_REQUIRES(dev_lock_);
   void EnableLegacyIrq() __TA_REQUIRES(dev_lock_);
   void DisableLegacyIrq() __TA_REQUIRES(dev_lock_);
@@ -343,7 +343,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // Bridge implements it so it can allocate its bridge windows and own BARs before
   // configuring downstream BARs..
   virtual zx::result<> AllocateBars() __TA_EXCLUDES(dev_lock_);
-  zx_status_t ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
+  zx::result<> ConfigureCapabilities() __TA_EXCLUDES(dev_lock_);
   zx::result<std::pair<zx::msi, zx_info_msi_t>> AllocateMsi(uint32_t irq_cnt)
       __TA_REQUIRES(dev_lock_);
   zx_status_t VerifyAllMsisFreed() __TA_REQUIRES(dev_lock_);
@@ -354,6 +354,19 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   // will all be disabled.
   virtual void Disable() __TA_EXCLUDES(dev_lock_);
   void DisableLocked() __TA_REQUIRES(dev_lock_);
+
+  // Inspect methods
+  void InspectUpdateInterrupts() __TA_REQUIRES(dev_lock_);
+  void InspectIncrementLegacySignalCount();
+  void InspectIncrementLegacyAckCount();
+  inspect::Node& InspectGetOrCreateBarNode(uint8_t bar_id);
+  void InspectRecordBarState(const char* name, uint8_t bar_id, uint64_t bar_val);
+  void InspectRecordBarInitialState(uint8_t bar_id, uint64_t bar_val);
+  void InspectRecordBarConfiguredState(uint8_t bar_id, uint64_t bar_val);
+  void InspectRecordBarRange(const char* name, uint8_t bar_id, ralloc_region_t region);
+  void InspectRecordBarFailure(uint8_t bar_id, ralloc_region_t region);
+  void InspectRecordBarReallocation(uint8_t bar_id, ralloc_region_t region);
+  void InspectRecordBarProbedState(uint8_t bar_id, const Bar& bar);
 
   mutable fbl::Mutex dev_lock_;
   mutable fbl::Mutex cmd_reg_lock_;    // Protection for access to the command register.
@@ -382,9 +395,7 @@ class Device : public fbl::WAVLTreeContainable<fbl::RefPtr<pci::Device>>,
   Irqs irqs_ __TA_GUARDED(dev_lock_){.mode = PCI_INTERRUPT_MODE_DISABLED};
 
   zx_device_t* parent_;
-
-  // Diagnostics
-  mutable Inspect metrics_;
+  Inspect inspect_;
 };
 
 class BanjoDevice;

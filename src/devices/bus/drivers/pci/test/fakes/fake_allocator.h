@@ -32,7 +32,7 @@ class FakeAllocation : public PciAllocation {
   size_t size() const final { return size_; }
   zx::result<zx::vmo> CreateVmo() const final {
     zx::vmo vmo;
-    zx_status_t status = zx::vmo::create(size_, 0, &vmo);
+    const zx_status_t status = zx::vmo::create(size_, 0, &vmo);
     if (status != ZX_OK) {
       return zx::error(status);
     }
@@ -53,8 +53,17 @@ class FakeAllocation : public PciAllocation {
 
 class FakeAllocator : public PciAllocator {
  public:
-  zx::result<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> base,
+  void FailNextAllocation(bool enable) { fail_next_allocation_ = enable; }
+  zx::result<std::unique_ptr<PciAllocation>> Allocate(std::optional<zx_paddr_t> in_base,
                                                       size_t size) final {
+    if (in_base.has_value() && fail_next_allocation_) {
+      fail_next_allocation_ = false;
+      return zx::error(ZX_ERR_NOT_FOUND);
+    }
+
+    // In a normal reallocation use the requested base, but in a forced it
+    // should align to the size so that's a convenient placeholder.
+    const zx_paddr_t base = (in_base.has_value()) ? *in_base : size;
     auto allocation = std::unique_ptr<PciAllocation>(new FakeAllocation(base, size));
     return zx::ok(std::move(allocation));
   }
@@ -63,6 +72,9 @@ class FakeAllocator : public PciAllocator {
     (void)alloc.release();
     return ZX_OK;
   }
+
+ private:
+  bool fail_next_allocation_ = false;
 };
 
 }  // namespace pci

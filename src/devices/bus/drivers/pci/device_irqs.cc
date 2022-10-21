@@ -20,7 +20,7 @@
 namespace pci {
 
 zx::result<uint32_t> Device::QueryIrqMode(pci_interrupt_mode_t mode) {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   switch (mode) {
     case PCI_INTERRUPT_MODE_LEGACY:
     case PCI_INTERRUPT_MODE_LEGACY_NOACK:
@@ -48,7 +48,7 @@ zx::result<uint32_t> Device::QueryIrqMode(pci_interrupt_mode_t mode) {
 }
 
 pci_interrupt_modes_t Device::GetInterruptModes() {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   pci_interrupt_modes_t modes{};
 
   if (cfg_->Read(Config::kInterruptLine) != 0) {
@@ -75,40 +75,45 @@ zx_status_t Device::SetIrqMode(pci_interrupt_mode_t mode, uint32_t irq_cnt) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   // Before enabling any given interrupt mode we need to ensure no existing
   // interrupts are configured. Disabling them can fail in cases downstream
   // drivers have not freed outstanding interrupt objects allocated off of
   // an MSI object.
-  if (zx_status_t st = DisableInterrupts(); st != ZX_OK) {
-    return st;
+  zx_status_t status = DisableInterrupts();
+  if (status != ZX_OK) {
+    return status;
   }
 
-  // At this point interrupts have been disabled, so we're already successful
-  // if that was the intent.
-  if (mode == PCI_INTERRUPT_MODE_DISABLED) {
-    return ZX_OK;
-  }
-
+  status = ZX_ERR_NOT_SUPPORTED;
   switch (mode) {
+    case PCI_INTERRUPT_MODE_DISABLED:
+      status = ZX_OK;
+      break;
     case PCI_INTERRUPT_MODE_LEGACY:
-      return EnableLegacy(/*needs_ack=*/true);
+      status = EnableLegacy(/*needs_ack=*/true);
+      break;
     case PCI_INTERRUPT_MODE_LEGACY_NOACK:
-      return EnableLegacy(/*needs_ack=*/false);
+      status = EnableLegacy(/*needs_ack=*/false);
+      break;
     case PCI_INTERRUPT_MODE_MSI:
       if (caps_.msi) {
-        return EnableMsi(irq_cnt);
+        status = EnableMsi(irq_cnt);
       }
       break;
 #ifdef ENABLE_MSIX
     case PCI_INTERRUPT_MODE_MSI_X:
       if (caps_.msix) {
-        return EnableMsix(irq_cnt);
+        status = EnableMsix(irq_cnt);
       }
       break;
 #endif
   }
-  return ZX_ERR_NOT_SUPPORTED;
+
+  if (status == ZX_OK) {
+    InspectUpdateInterrupts();
+  }
+  return status;
 }
 
 zx_status_t Device::DisableInterrupts() {
@@ -133,13 +138,12 @@ zx_status_t Device::DisableInterrupts() {
   if (st == ZX_OK) {
     zxlogf(DEBUG, "[%s] disabled IRQ mode %u", cfg_->addr(), irqs_.mode);
     irqs_.mode = PCI_INTERRUPT_MODE_DISABLED;
-    metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   }
   return st;
 }
 
 zx::result<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   // MSI support is controlled through the capability held within the device's configuration space,
   // so the dispatcher needs access to the given device's config vmo. MSI-X needs access to the
   // table structure which is held in one of the device BARs, but a view is built ahead of time for
@@ -194,8 +198,8 @@ zx::result<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
   return zx::ok(std::move(interrupt));
 }
 
-zx_status_t Device::SignalLegacyIrq(zx_time_t timestamp) const {
-  metrics_.legacy.signal_count.Add(1);
+zx_status_t Device::SignalLegacyIrq(zx_time_t timestamp) {
+  InspectIncrementLegacySignalCount();
   return irqs_.legacy.trigger(/*options=*/0, zx::time(timestamp));
 }
 
@@ -204,21 +208,19 @@ zx_status_t Device::AckLegacyIrq() {
     return ZX_ERR_BAD_STATE;
   }
 
+  InspectIncrementLegacyAckCount();
   EnableLegacyIrq();
-  metrics_.legacy.ack_count.Add(1);
   return ZX_OK;
 }
 
 void Device::EnableLegacyIrq() {
   ModifyCmdLocked(/*clr_bits=*/PCI_CONFIG_COMMAND_INT_DISABLE, /*set_bits=*/0);
   irqs_.legacy_disabled = false;
-  metrics_.legacy.disabled.Set(irqs_.legacy_disabled);
 }
 
 void Device::DisableLegacyIrq() {
   ModifyCmdLocked(/*clr_bits=*/0, /*set_bits=*/PCI_CONFIG_COMMAND_INT_DISABLE);
   irqs_.legacy_disabled = true;
-  metrics_.legacy.disabled.Set(irqs_.legacy_disabled);
 }
 
 zx::result<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_cnt) {
@@ -236,8 +238,6 @@ zx::result<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_c
   ZX_DEBUG_ASSERT(msi_info.num_irq == irq_cnt);
   ZX_DEBUG_ASSERT(msi_info.interrupt_count == 0);
 
-  metrics_.msi.allocated.Set(msi_info.num_irq);
-  metrics_.msi.base_vector.Set(msi_info.base_irq_id);
   return zx::ok(std::make_pair(std::move(msi), msi_info));
 }
 
@@ -247,7 +247,7 @@ zx_status_t Device::EnableLegacy(bool needs_ack) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  zx_status_t status = bdi_->AddToSharedIrqList(this, irqs_.legacy_vector);
+  const zx_status_t status = bdi_->AddToSharedIrqList(this, irqs_.legacy_vector);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] failed to add legacy irq to shared handler list %#x: %s", cfg_->addr(),
            irqs_.legacy_vector, zx_status_get_string(status));
@@ -256,7 +256,7 @@ zx_status_t Device::EnableLegacy(bool needs_ack) {
 
   ModifyCmdLocked(/*clr_bits=*/PCIE_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
   irqs_.mode = (needs_ack) ? PCI_INTERRUPT_MODE_LEGACY : PCI_INTERRUPT_MODE_LEGACY_NOACK;
-  metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
+  irqs_.legacy_pin = cfg_->Read(Config::kInterruptPin);
   return ZX_OK;
 }
 
@@ -272,7 +272,7 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
   }
 
   // Bus mastering must be enabled to generate MSI messages.
-  zx_status_t status = SetBusMastering(true);
+  const zx_status_t status = SetBusMastering(true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to enable bus mastering for MSI mode (%d)", cfg_->addr(), status);
     return status;
@@ -292,7 +292,6 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
 
     irqs_.msi_allocation = std::move(alloc);
     irqs_.mode = PCI_INTERRUPT_MODE_MSI;
-    metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   }
   return result.status_value();
 }
@@ -303,7 +302,7 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
   ZX_DEBUG_ASSERT(caps_.msix);
 
   // Bus mastering must be enabled to generate MSI-X messages.
-  zx_status_t status = SetBusMastering(true);
+  const zx_status_t status = SetBusMastering(true);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to enable bus mastering for MSI-X mode (%d)", cfg_->addr(), status);
     return status;
@@ -311,7 +310,7 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 
   // MSI-X supports non-pow2 counts, but the MSI allocator still allocates in
   // pow2 based blocks.
-  uint32_t irq_cnt_pow2 = cpp20::bit_ceil(irq_cnt);
+  const uint32_t irq_cnt_pow2 = cpp20::bit_ceil(irq_cnt);
   auto result = AllocateMsi(irq_cnt_pow2);
   if (result.is_ok()) {
     auto [alloc, info] = std::move(result.value());
@@ -323,13 +322,12 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 
     irqs_.msi_allocation = std::move(alloc);
     irqs_.mode = PCI_INTERRUPT_MODE_MSI_X;
-    metrics_.irq_mode.Set(kInspectIrqModes[PCI_INTERRUPT_MODE_MSI_X]);
   }
   return result.status_value();
 }
 
 zx_status_t Device::DisableLegacy() {
-  zx_status_t status = bdi_->RemoveFromSharedIrqList(this, irqs_.legacy_vector);
+  const zx_status_t status = bdi_->RemoveFromSharedIrqList(this, irqs_.legacy_vector);
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] failed to remove legacy irq to shared handler list %#x: %s", cfg_->addr(),
            irqs_.legacy_vector, zx_status_get_string(status));
@@ -353,7 +351,7 @@ zx_status_t Device::VerifyAllMsisFreed() {
   }
 
   zx_info_msi_t info = {};
-  zx_status_t st =
+  const zx_status_t st =
       irqs_.msi_allocation.get_info(ZX_INFO_MSI, &info, sizeof(info), nullptr, nullptr);
   if (st != ZX_OK) {
     return st;
@@ -366,15 +364,11 @@ zx_status_t Device::VerifyAllMsisFreed() {
   return ZX_OK;
 }
 
-void Device::DisableMsiCommon() {
-  irqs_.msi_allocation.reset();
-  metrics_.msi.allocated.Set(0);
-  metrics_.msi.base_vector.Set(0);
-}
+void Device::DisableMsiCommon() { irqs_.msi_allocation.reset(); }
 
 zx_status_t Device::DisableMsi() {
   ZX_DEBUG_ASSERT(caps_.msi);
-  if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
+  if (const zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
     return st;
   }
 
@@ -388,7 +382,7 @@ zx_status_t Device::DisableMsi() {
 
 zx_status_t Device::DisableMsix() {
   ZX_DEBUG_ASSERT(caps_.msix);
-  if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
+  if (const zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
     return st;
   }
 

@@ -121,22 +121,22 @@ zx_status_t AllocateCapability(
 
 }  // namespace
 
-zx_status_t Device::ConfigureCapabilities() {
-  fbl::AutoLock dev_lock(&dev_lock_);
-  zx_status_t st;
-  if (caps_.msix) {
+zx::result<> Device::ConfigureCapabilities() {
+  const fbl::AutoLock dev_lock(&dev_lock_);
+  if (caps_.msix && bars()[caps_.msix->table_bar()].has_value() &&
+      bars()[caps_.msix->pba_bar()].has_value()) {
     auto& msix = *caps_.msix;
     ZX_DEBUG_ASSERT(bars()[msix.table_bar()]);
     ZX_DEBUG_ASSERT(bars()[msix.pba_bar()]);
 
-    st = msix.Init(*bars()[msix.table_bar()], *bars()[msix.pba_bar()]);
-    if (st != ZX_OK) {
-      zxlogf(ERROR, "Failed to initialize MSI-X: %d", st);
-      return st;
+    const zx_status_t status = msix.Init(*bars()[msix.table_bar()], *bars()[msix.pba_bar()]);
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "Failed to initialize MSI-X: %d", status);
+      return zx::error(status);
     }
   }
 
-  return ZX_OK;
+  return zx::ok();
 }
 
 zx_status_t Device::ParseCapabilities() {

@@ -26,7 +26,6 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/string_buffer.h>
-#include <pretty/sizes.h>
 
 #include "src/devices/bus/drivers/pci/bus_device_interface.h"
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
@@ -72,7 +71,7 @@ zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cf
   }
 
   auto dev = fbl::AdoptRef(static_cast<Device*>(raw_dev));
-  zx_status_t status = raw_dev->Init();
+  const zx_status_t status = raw_dev->Init();
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to initialize PCIe device: %s", dev->config()->addr(),
            zx_status_get_string(status));
@@ -93,36 +92,10 @@ Device::Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNo
       bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
       is_bridge_(is_bridge),
       has_acpi_(has_acpi),
-      parent_(parent) {
-  metrics_.node = std::move(node);
-  metrics_.legacy.node = metrics_.node.CreateChild(kInspectLegacyInterrupt);
-  metrics_.msi.node = metrics_.node.CreateChild(kInspectMsi);
+      parent_(parent),
+      inspect_(std::move(node))
 
-  metrics_.irq_mode =
-      metrics_.node.CreateString(kInspectIrqMode, kInspectIrqModes[PCI_INTERRUPT_MODE_DISABLED]);
-  uint8_t pin = cfg_->Read(Config::kInterruptPin);
-  switch (pin) {
-    case 1:
-    case 2:
-    case 3:
-    case 4: {
-      // register values 1-4 map to pins A-D
-      char s[2] = {static_cast<char>('A' + (pin - 1)), '\0'};
-      metrics_.legacy.pin = metrics_.legacy.node.CreateString(kInspectLegacyInterruptPin, s);
-      break;
-    }
-  }
-  // Line should always exist if a pin exists, unless there was no mapping in the _PRT.
-  uint8_t line = cfg_->Read(Config::kInterruptLine);
-  if (line != 0 && line != 0xFF) {
-    metrics_.legacy.line = metrics_.legacy.node.CreateUint(kInspectLegacyInterruptLine, line);
-  }
-  metrics_.legacy.ack_count = metrics_.legacy.node.CreateUint(kInspectLegacyAckCount, 0);
-  metrics_.legacy.signal_count = metrics_.legacy.node.CreateUint(kInspectLegacySignalCount, 0);
-  metrics_.legacy.disabled = metrics_.legacy.node.CreateBool(kInspectLegacyDisabled, false);
-  metrics_.msi.base_vector = metrics_.msi.node.CreateUint(kInspectMsiBaseVector, 0);
-  metrics_.msi.allocated = metrics_.msi.node.CreateUint(kInspectMsiAllocated, 0);
-}
+{}
 
 Device::~Device() {
   // We should already be unlinked from the bus's device tree.
@@ -145,9 +118,9 @@ zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config
 }
 
 zx_status_t Device::Init() {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
 
-  zx_status_t status = InitLocked();
+  const zx_status_t status = InitLocked();
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to initialize device %s: %d", cfg_->addr(), status);
     return status;
@@ -177,14 +150,20 @@ zx_status_t Device::InitInterrupts() {
   ModifyCmdLocked(/*clr_bits=*/0, /*set_bits=*/PCIE_CFG_COMMAND_INT_DISABLE);
   irqs_.legacy_vector = 0;
 
-  if (caps_.msi && (status = DisableMsi()) != ZX_OK) {
-    zxlogf(ERROR, "failed to disable MSI: %s", zx_status_get_string(status));
-    return status;
+  if (caps_.msi) {
+    status = DisableMsi();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to disable MSI: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
-  if (caps_.msix && (status = DisableMsix()) != ZX_OK) {
-    zxlogf(ERROR, "failed to disable MSI-X: %s", zx_status_get_string(status));
-    return status;
+  if (caps_.msix) {
+    status = DisableMsix();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "failed to disable MSI-X: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   irqs_.mode = PCI_INTERRUPT_MODE_DISABLED;
@@ -247,7 +226,7 @@ zx_status_t Device::InitLocked() {
 }
 
 zx_status_t Device::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   // In order to keep internal bookkeeping coherent, and interactions between
   // MSI/MSI-X and Legacy IRQ mode safe, API users may not directly manipulate
   // the legacy IRQ enable/disable bit.  Just ignore them if they try to
@@ -271,7 +250,7 @@ void Device::ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits) {
 }
 
 void Device::Disable() {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   DisableLocked();
 }
 
@@ -315,7 +294,7 @@ zx_status_t Device::WriteBarInformation(const Bar& bar) {
 
   cfg_->Write(Config::kBar(bar.bar_id), static_cast<uint32_t>(bar.address));
   if (bar.is_64bit) {
-    uint32_t addr_hi = static_cast<uint32_t>(bar.address >> 32);
+    const uint32_t addr_hi = static_cast<uint32_t>(bar.address >> 32);
     cfg_->Write(Config::kBar(bar.bar_id + 1), addr_hi);
   }
   // Flip the IO bit back on for this type of bar
@@ -330,11 +309,12 @@ zx::result<> Device::ProbeBar(uint8_t bar_id) {
 
   Bar bar{};
   uint32_t bar_val = cfg_->Read(Config::kBar(bar_id));
+
   bar.bar_id = bar_id;
   bar.is_mmio = (bar_val & PCI_BAR_IO_TYPE_MASK) == PCI_BAR_IO_TYPE_MMIO;
   bar.is_64bit = bar.is_mmio && ((bar_val & PCI_BAR_MMIO_TYPE_MASK) == PCI_BAR_MMIO_TYPE_64BIT);
   bar.is_prefetchable = bar.is_mmio && (bar_val & PCI_BAR_MMIO_PREFETCH_MASK);
-  uint32_t addr_mask = (bar.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
+  const uint32_t addr_mask = (bar.is_mmio) ? PCI_BAR_MMIO_ADDR_MASK : PCI_BAR_PIO_ADDR_MASK;
 
   // Check the read-only configuration of the BAR. If it's invalid then don't add it to our BAR
   // list.
@@ -394,6 +374,7 @@ zx::result<> Device::ProbeBar(uint8_t bar_id) {
     // then they should be removed from the size mask before incrementing it.
     size_mask &= UINT16_MAX;
   }
+  InspectRecordBarInitialState(bar_id, bar.address);
 
   // No matter what configuration we've found, |size_mask| should contain a
   // mask representing all the valid bits that can be set in the address.
@@ -403,11 +384,7 @@ zx::result<> Device::ProbeBar(uint8_t bar_id) {
   // access mode now that probing is complete.
   WriteBarInformation(bar);
 
-  std::array<char, 8> pretty_size = {};
-  zxlogf(DEBUG, "[%s] Region %u: probed %s (%s%sprefetchable) [size=%s]", cfg_->addr(), bar_id,
-         (bar.is_mmio) ? "Memory" : "I/O ports", (bar.is_64bit) ? "64-bit, " : "",
-         (bar.is_prefetchable) ? "" : "non-",
-         format_size(pretty_size.data(), pretty_size.max_size(), bar.size));
+  InspectRecordBarProbedState(bar_id, bar);
   bars_[bar_id] = std::move(bar);
   return zx::ok();
 }
@@ -433,7 +410,6 @@ void Device::ProbeBars() {
 zx::result<std::unique_ptr<PciAllocation>> Device::AllocateFromUpstream(
     const Bar& bar, std::optional<zx_paddr_t> base) {
   ZX_DEBUG_ASSERT(bar.size > 0);
-  std::unique_ptr<PciAllocation> allocation;
 
   // On all platforms if a BAR is not marked in its register as MMIO then it
   // goes through the Root Host IO/PIO allocator, regardless of whether the
@@ -474,25 +450,25 @@ zx::result<> Device::AllocateBar(uint8_t bar_id) {
   // The goal is to try to allocate the same window configured by the
   // bootloader/bios, but if unavailable then allocate an appropriately sized
   // window from anywhere in the upstream allocator.
-  std::unique_ptr<PciAllocation> allocation = {};
   if (auto result = AllocateFromUpstream(bar, bar.address); result.is_ok()) {
     bar.allocation = std::move(result.value());
   } else if (auto result = AllocateFromUpstream(bar, std::nullopt); result.is_ok()) {
+    InspectRecordBarReallocation(bar_id, {result.value()->base(), result.value()->size()});
     bar.allocation = std::move(result.value());
   } else {
+    InspectRecordBarFailure(bar_id, {bar.address, bar.size});
     return zx::error(ZX_ERR_NOT_FOUND);
   }
 
   bar.address = bar.allocation->base();
   WriteBarInformation(bar);
-  zxlogf(TRACE, "[%s] allocated [%#lx, %#lx) to BAR%u", cfg_->addr(), bar.allocation->base(),
-         bar.allocation->base() + bar.allocation->size(), bar.bar_id);
+  InspectRecordBarConfiguredState(bar_id, bar.address);
 
   return zx::ok();
 }
 
 zx::result<> Device::AllocateBars() {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   ZX_DEBUG_ASSERT(plugged_in_);
   ZX_DEBUG_ASSERT(bar_count_ <= bars_.max_size());
 
@@ -511,7 +487,7 @@ zx::result<> Device::AllocateBars() {
 }
 
 zx::result<PowerManagementCapability::PowerState> Device::GetPowerState() {
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   if (!caps_.power) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
   }
@@ -521,7 +497,7 @@ zx::result<PowerManagementCapability::PowerState> Device::GetPowerState() {
 
 void Device::Unplug() {
   zxlogf(TRACE, "[%s] %s %s", cfg_->addr(), (is_bridge()) ? " (b)" : "", __func__);
-  fbl::AutoLock dev_lock(&dev_lock_);
+  const fbl::AutoLock dev_lock(&dev_lock_);
   // Disable should have been called before Unplug and would have disabled
   // everything in the command register
   ZX_DEBUG_ASSERT(disabled_);

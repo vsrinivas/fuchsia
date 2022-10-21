@@ -20,7 +20,10 @@ void UpstreamNode::ConfigureDownstreamDevices() {
     // Some capabilities can only be configured after device BARs have been
     // configured, and device BARs cannot be configured when a Device is object
     // is created since bridge windows still need to be allocated.
-    if (device.AllocateBars().is_error() || device.ConfigureCapabilities() != ZX_OK) {
+    if (auto result = device.AllocateBars(); result.is_error()) {
+      device.Disable();
+    }
+    if (auto result = device.ConfigureCapabilities(); result.is_error()) {
       device.Disable();
     }
   }

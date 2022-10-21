@@ -23,6 +23,7 @@
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_bus.h"
+#include "src/devices/bus/drivers/pci/test/fakes/fake_config.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_pciroot.h"
 #include "src/devices/bus/drivers/pci/test/fakes/fake_upstream_node.h"
 #include "src/devices/bus/drivers/pci/test/fakes/test_device.h"
@@ -45,6 +46,7 @@ class PciDeviceTests : protected inspect::InspectTestHelper, public zxtest::Test
 
   zx::vmo& inspect_vmo() { return inspect_vmo_; }
   inspect::Inspector& inspector() { return inspector_; }
+  void ConfigureDownstreamDevices() { return upstream_.ConfigureDownstreamDevices(); }
 
  protected:
   PciDeviceTests()
@@ -78,10 +80,13 @@ Device& PciDeviceTests::CreateTestDevice(zx_device_t* parent, const uint8_t* cfg
   // Copy the config dump into a device entry in the ecam.
   memcpy(pciroot_proto().ecam().get(default_bdf()).config, cfg_buf, cfg_size);
   // Create the config object for the device.
-  std::unique_ptr<Config> cfg;
-  EXPECT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
+  std::unique_ptr<Config> mmio_cfg;
+  EXPECT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &mmio_cfg));
+  auto view = mmio_cfg->get_view();
+  EXPECT_TRUE(view.is_ok());
+  auto fake_cfg = std::make_unique<FakeMmioConfig>(default_bdf(), std::move(view.value()));
   // Create and initialize the fake device.
-  EXPECT_OK(Device::Create(parent, std::move(cfg), &upstream(), &bus(), GetInspectNode(),
+  EXPECT_OK(Device::Create(parent, std::move(fake_cfg), &upstream(), &bus(), GetInspectNode(),
                            /*has_acpi=*/false));
   return bus().get_device(default_bdf());
 }
@@ -100,22 +105,65 @@ zx_status_t device_add_composite(zx_device_t* dev, const char* name,
 
 TEST_F(PciDeviceTests, CreationTest) {
   device_add_composite(nullptr, nullptr, nullptr);
-  std::unique_ptr<Config> cfg;
 
   // This test creates a device, goes through its init sequence, links it into
   // the toplogy, and then has it linger. It will be cleaned up by TearDown()
   // releasing all objects of upstream(). If creation succeeds here and no
   // asserts happen following the test it means the fakes are built properly
   // enough and the basic interface is fulfilled.
-  ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &cfg));
-  ASSERT_OK(Device::Create(parent(), std::move(cfg), &upstream(), &bus(), GetInspectNode(),
+  std::unique_ptr<Config> mmio_cfg;
+  memcpy(pciroot_proto().ecam().get(default_bdf()).config, kFakeQuadroDeviceConfig.data(),
+         kFakeQuadroDeviceConfig.max_size());
+  ASSERT_OK(MmioConfig::Create(default_bdf(), &pciroot_proto().ecam().mmio(), 0, 1, &mmio_cfg));
+  auto view = mmio_cfg->get_view();
+  EXPECT_TRUE(view.is_ok());
+  // We need a FakeConfig here because we need BAR probing to be handled properly for inspect to be
+  // populated.
+  auto fake_cfg = std::make_unique<FakeMmioConfig>(default_bdf(), std::move(view.value()));
+  ASSERT_OK(Device::Create(parent(), std::move(fake_cfg), &upstream(), &bus(), GetInspectNode(),
                            /*has_acpi=*/false));
+
+  auto* allocator = reinterpret_cast<FakeAllocator*>(&upstream().mmio_regions());
+  allocator->FailNextAllocation(true);
+  ConfigureDownstreamDevices();
 
   // Verify the created device's BDF.
   auto& dev = bus().get_device(default_bdf());
   ASSERT_EQ(default_bdf().bus_id, dev.bus_id());
   ASSERT_EQ(default_bdf().device_id, dev.dev_id());
   ASSERT_EQ(default_bdf().function_id, dev.func_id());
+
+  // Did the device BARs get allocated (and re-allocated) as expected?
+  ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
+  // First BAR is re-allocated so we should have 4 entries.
+  EXPECT_EQ(4, hierarchy()
+                   .GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderBars, "0"})
+                   ->node()
+                   .properties()
+                   .size());
+  EXPECT_EQ(3, hierarchy()
+                   .GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderBars, "1"})
+                   ->node()
+                   .properties()
+                   .size());
+  EXPECT_EQ(3, hierarchy()
+                   .GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderBars, "2"})
+                   ->node()
+                   .properties()
+                   .size());
+  EXPECT_EQ(3, hierarchy()
+                   .GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderBars, "3"})
+                   ->node()
+                   .properties()
+                   .size());
+  // There should be no BAR 4, so no node at this path.
+  EXPECT_EQ(nullptr,
+            hierarchy().GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderBars, "4"}));
+  EXPECT_EQ(3, hierarchy()
+                   .GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderBars, "5"})
+                   ->node()
+                   .properties()
+                   .size());
 }
 
 // Test a normal capability chain
@@ -295,7 +343,7 @@ TEST_F(PciDeviceTests, MsiCapabilityTest) {
   EXPECT_EQ(false, msi.supports_pvm());
 
   // MSI should be disabled by Device initialization.
-  MsiControlReg ctrl = {.value = dev.config()->Read(msi.ctrl())};
+  const MsiControlReg ctrl = {.value = dev.config()->Read(msi.ctrl())};
   EXPECT_EQ(0, ctrl.enable());
 }
 
@@ -316,7 +364,7 @@ TEST_F(PciDeviceTests, MsixCapabilityTest) {
   EXPECT_EQ(0x800, msix.pba_offset());
 
   // MSI-X should be disabled by Device initialization.
-  MsixControlReg ctrl = {.value = dev.config()->Read(msix.ctrl())};
+  const MsixControlReg ctrl = {.value = dev.config()->Read(msix.ctrl())};
   EXPECT_EQ(0, ctrl.enable());
 }
 
@@ -325,61 +373,53 @@ TEST_F(PciDeviceTests, InspectIrqMode) {
       parent(), &CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
                                   kFakeQuadroDeviceConfig.max_size()));
   {
-    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_DISABLED;
-    ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(hierarchy().GetByPath({kTestNodeName})->node(), Device::kInspectIrqMode,
-                      inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
-  }
-  {
-    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
+    const pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY;
     ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    auto* node = hierarchy().GetByPath({kTestNodeName});
+    auto* node =
+        hierarchy().GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderInterrupts});
     ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node->node(), Device::kInspectIrqMode,
-                      inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
+        CheckProperty(node->node(), Device::Inspect::kInspectIrqMode,
+                      inspect::StringPropertyValue(Device::Inspect::kInspectIrqModes[mode])));
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node->node(), Device::Inspect::kInspectLegacyInterruptPin,
+                                          inspect::StringPropertyValue("A")));
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node->node(),
+                                          Device::Inspect::kInspectLegacyInterruptLine,
+                                          inspect::UintPropertyValue(16)));
   }
   {
-    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY_NOACK;
+    const pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_LEGACY_NOACK;
     ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    auto* node = hierarchy().GetByPath({kTestNodeName});
+    auto* node =
+        hierarchy().GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderInterrupts});
     ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node->node(), Device::kInspectIrqMode,
-                      inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
+        CheckProperty(node->node(), Device::Inspect::kInspectIrqMode,
+                      inspect::StringPropertyValue(Device::Inspect::kInspectIrqModes[mode])));
   }
   {
-    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI;
+    const pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI;
     ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    auto* node = hierarchy().GetByPath({kTestNodeName});
+    auto* node =
+        hierarchy().GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderInterrupts});
     ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node->node(), Device::kInspectIrqMode,
-                      inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
+        CheckProperty(node->node(), Device::Inspect::kInspectIrqMode,
+                      inspect::StringPropertyValue(Device::Inspect::kInspectIrqModes[mode])));
   }
 
 #ifdef ENABLE_MSIX
   {
-    pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI_X;
+    const pci_interrupt_mode_t mode = PCI_INTERRUPT_MODE_MSI_X;
     ASSERT_OK(dev->PciSetInterruptMode(mode, 1));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    auto* node = hierarchy().GetByPath({kTestNodeName});
+    auto* node =
+        hierarchy().GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderInterrupts});
     ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node->node(), Device::kInspectIrqMode,
-                      inspect::StringPropertyValue(Device::kInspectIrqModes[mode])));
+        CheckProperty(node->node(), Device::Inspect::kInspectIrqMode,
+                      inspect::StringPropertyValue(Device::Inspect::kInspectIrqModes[mode])));
   }
 #endif
-}
-
-TEST_F(PciDeviceTests, InspectLegacyNoPin) {
-  auto quadro_copy = kFakeQuadroDeviceConfig;
-  quadro_copy[PCI_CONFIG_INTERRUPT_PIN] = 0;
-  CreateTestDevice(parent(), quadro_copy.data(), quadro_copy.max_size());
-  ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-  auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
-  ASSERT_NULL(node.get_property<inspect::StringPropertyValue>(Device::kInspectLegacyInterruptLine));
-  ASSERT_NULL(node.get_property<inspect::StringPropertyValue>(Device::kInspectLegacyInterruptPin));
 }
 
 TEST_F(PciDeviceTests, InspectLegacy) {
@@ -389,7 +429,7 @@ TEST_F(PciDeviceTests, InspectLegacy) {
                                   kFakeQuadroDeviceConfig.max_size()));
   ASSERT_OK(dev->PciSetInterruptMode(PCI_INTERRUPT_MODE_LEGACY, 1));
   {
-    fbl::AutoLock _(dev->device()->dev_lock());
+    const fbl::AutoLock _(dev->device()->dev_lock());
     ASSERT_OK(dev->device()->SignalLegacyIrq(0x10000));
     ASSERT_OK(dev->device()->AckLegacyIrq());
   }
@@ -397,36 +437,34 @@ TEST_F(PciDeviceTests, InspectLegacy) {
   // Verify properties in the general case.
   {
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
+    auto& node =
+        hierarchy().GetByPath({kTestNodeName, Device::Inspect::kInspectHeaderInterrupts})->node();
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::Inspect::kInspectLegacyInterruptPin,
+                                          inspect::StringPropertyValue("A")));
     ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node, Device::kInspectLegacyInterruptPin, inspect::StringPropertyValue("A")));
-    ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node, Device::kInspectLegacyInterruptLine,
+        CheckProperty(node, Device::Inspect::kInspectLegacyInterruptLine,
                       inspect::UintPropertyValue(dev->device()->legacy_vector())));
-    ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node, Device::kInspectLegacyAckCount, inspect::UintPropertyValue(1)));
-    ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node, Device::kInspectLegacySignalCount, inspect::UintPropertyValue(1)));
-    ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node, Device::kInspectLegacyDisabled, inspect::BoolPropertyValue(false)));
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::Inspect::kInspectLegacyAckCount,
+                                          inspect::UintPropertyValue(1)));
+    ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::Inspect::kInspectLegacySignalCount,
+                                          inspect::UintPropertyValue(1)));
   }
 
   {
-    fbl::AutoLock _(dev->device()->dev_lock());
-    dev->device()->DisableLegacyIrq();
-  }
-
-  {
+    ASSERT_OK(dev->device()->SetIrqMode(PCI_INTERRUPT_MODE_DISABLED, 0));
     ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-    auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectLegacyInterrupt})->node();
+    auto* node =
+        hierarchy().GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderInterrupts});
     ASSERT_NO_FATAL_FAILURE(
-        CheckProperty(node, Device::kInspectLegacyDisabled, inspect::BoolPropertyValue(true)));
+        CheckProperty(node->node(), Device::Inspect::kInspectIrqMode,
+                      inspect::StringPropertyValue(
+                          Device::Inspect::kInspectIrqModes[PCI_INTERRUPT_MODE_DISABLED])));
   }
 }
 
 #ifdef ENABLE_MSIX
-TEST_F(PciDeviceTests, InspectMSI) {
-  uint32_t irq_cnt = 4;
+TEST_F(PciDeviceTests, InspectMsi) {
+  const uint32_t irq_cnt = 4;
   auto dev = std::make_unique<BanjoDevice>(
       parent(), &CreateTestDevice(parent(), kFakeQuadroDeviceConfig.data(),
                                   kFakeQuadroDeviceConfig.max_size()));
@@ -434,16 +472,18 @@ TEST_F(PciDeviceTests, InspectMSI) {
 
   zx_info_msi_t info{};
   {
-    fbl::AutoLock _(dev->device()->dev_lock());
+    const fbl::AutoLock _(dev->device()->dev_lock());
     dev->device()->msi_allocation().get_info(ZX_INFO_MSI, &info, sizeof(info), nullptr, nullptr);
   }
 
   ASSERT_NO_FATAL_FAILURE(ReadInspect(inspect_vmo()));
-  auto& node = hierarchy().GetByPath({kTestNodeName, Device::kInspectMsi})->node();
-  ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::kInspectMsiBaseVector,
+  auto& node = hierarchy()
+                   .GetByPath({kTestNodeName, pci::Device::Inspect::kInspectHeaderInterrupts})
+                   ->node();
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::Inspect::kInspectMsiBaseVector,
                                         inspect::UintPropertyValue(info.base_irq_id)));
-  ASSERT_NO_FATAL_FAILURE(
-      CheckProperty(node, Device::kInspectMsiAllocated, inspect::UintPropertyValue(irq_cnt)));
+  ASSERT_NO_FATAL_FAILURE(CheckProperty(node, Device::Inspect::kInspectMsiAllocated,
+                                        inspect::UintPropertyValue(irq_cnt)));
 }
 #endif
 
@@ -463,10 +503,11 @@ TEST_F(PciDeviceTests, PowerStateTransitions) {
     pmcsr.set_power_state(start_state);
     cfg.Write(power.pmcsr(), pmcsr.value);
     // Time the transition
-    zx::time start_time = zx::clock::get_monotonic();
+    const zx::time start_time = zx::clock::get_monotonic();
     power.SetPowerState(cfg, end_state);
-    zx::time end_time = zx::clock::get_monotonic();
-    zx::duration min_delay = PowerManagementCapability::kStateRecoveryTime[start_state][end_state];
+    const zx::time end_time = zx::clock::get_monotonic();
+    const zx::duration min_delay =
+        PowerManagementCapability::kStateRecoveryTime[start_state][end_state];
     return (end_time - start_time > min_delay);
   };
 
