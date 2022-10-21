@@ -99,7 +99,9 @@ void Writer::ScheduleSubmitPages(sync_completion_t *completion, PageType type) {
 }
 
 Reader::Reader(Bcache *bc, size_t capacity) : transaction_handler_(bc) {
-  buffer_ = std::make_unique<StorageBuffer>(bc, capacity, kBlockSize, "ReadBuffer");
+  constexpr uint32_t kDefaultAllocationUnit = 128;
+  buffer_ = std::make_unique<StorageBuffer>(bc, capacity, kBlockSize, "ReadBuffer",
+                                            kDefaultAllocationUnit);
 }
 
 zx::result<std::vector<LockedPage>> Reader::SubmitPages(std::vector<LockedPage> pages,

@@ -260,6 +260,40 @@ TEST_F(FileTest, MixedSizeWrite) {
   test_file_vn = nullptr;
 }
 
+TEST_F(FileTest, LargeChunkReadWrite) {
+  srand(testing::UnitTest::GetInstance()->random_seed());
+
+  fbl::RefPtr<fs::Vnode> test_file;
+  ASSERT_EQ(root_dir_->Create("test", S_IFREG, &test_file), ZX_OK);
+
+  fbl::RefPtr<File> test_file_vn = fbl::RefPtr<File>::Downcast(std::move(test_file));
+
+  constexpr size_t kNumPage = 256;
+  constexpr size_t kDataSize = kPageSize * kNumPage;
+  std::vector<char> w_buf(kDataSize, 0);
+
+  for (size_t i = 0; i < kDataSize; ++i) {
+    w_buf[i] = static_cast<char>(rand() % 128);
+  }
+
+  FileTester::AppendToFile(test_file_vn.get(), w_buf.data(), kDataSize);
+  ASSERT_EQ(test_file_vn->GetSize(), kDataSize);
+
+  // Read verify again after clearing file cache
+  {
+    WritebackOperation op = {.bSync = true};
+    test_file_vn->Writeback(op);
+    [[maybe_unused]] auto unused = test_file_vn->InvalidatePages();
+  }
+
+  std::vector<char> r_buf(kDataSize, 0);
+  FileTester::ReadFromFile(test_file_vn.get(), r_buf.data(), kDataSize, 0);
+  ASSERT_EQ(memcmp(w_buf.data(), r_buf.data(), kDataSize), 0);
+
+  ASSERT_EQ(test_file_vn->Close(), ZX_OK);
+  test_file_vn = nullptr;
+}
+
 TEST_F(FileTest, MixedSizeWriteUnaligned) {
   srand(testing::UnitTest::GetInstance()->random_seed());
 

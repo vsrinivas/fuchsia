@@ -7,21 +7,24 @@
 namespace f2fs {
 
 #ifdef __Fuchsia__
-StorageBuffer::StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std::string_view label)
-    : max_blocks_(bc->Maxblk()) {
+StorageBuffer::StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std::string_view label,
+                             uint32_t allocation_unit)
+    : max_blocks_(bc->Maxblk()), allocation_unit_(allocation_unit) {
+  ZX_DEBUG_ASSERT(allocation_unit >= 1 && allocation_unit <= blocks);
   ZX_ASSERT(buffer_.Initialize(bc, blocks, block_size, label.data()) == ZX_OK);
   Init();
 }
 #else   // __Fuchsia__
-StorageBuffer::StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std::string_view label)
-    : max_blocks_(bc->Maxblk()), buffer_(blocks, block_size) {
+StorageBuffer::StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std::string_view label,
+                             uint32_t allocation_unit)
+    : max_blocks_(bc->Maxblk()), allocation_unit_(1), buffer_(blocks, block_size) {
   Init();
 }
 #endif  // __Fuchsia__
 
 void StorageBuffer::Init() {
   std::lock_guard lock(mutex_);
-  for (size_t i = 0; i < buffer_.capacity(); ++i) {
+  for (size_t i = 0; i < buffer_.capacity(); i += allocation_unit_) {
     auto key = std::make_unique<VmoBufferKey>(i, buffer_.vmoid());
     free_list_.push_back(std::move(key));
   }
@@ -67,7 +70,7 @@ zx::result<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<Lock
   VmoKeyList keys;
   std::vector<fbl::RefPtr<Page>> io_pages;
 
-  auto i = 0;
+  uint32_t i = 0, allocate_index = 0;
   for (auto addr : addrs) {
     if (addr != kNullAddr && !pages[i]->IsUptodate()) {
       if (addr != kNewAddr) {
@@ -78,24 +81,29 @@ zx::result<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<Lock
           free_list_.splice(free_list_.end(), keys);
           return zx::error(ZX_ERR_OUT_OF_RANGE);
         }
-        // Wait until there is a room in |buffer_|.
-        while (free_list_.is_empty()) {
-          if (auto wait_result = cvar_.wait_for(mutex_, kWriteTimeOut);
-              wait_result == std::cv_status::timeout) {
-            FX_LOGS(ERROR) << "[f2fs] Allocating read buffers timeout. ";
-            return zx::error(ZX_ERR_TIMED_OUT);
+
+        if (allocate_index % allocation_unit_ == 0) {
+          allocate_index = 0;
+          // Wait until there is a room in |buffer_|.
+          while (free_list_.is_empty()) {
+            if (auto wait_result = cvar_.wait_for(mutex_, kWriteTimeOut);
+                wait_result == std::cv_status::timeout) {
+              FX_LOGS(ERROR) << "[f2fs] Allocating read buffers timeout. ";
+              return zx::error(ZX_ERR_TIMED_OUT);
+            }
           }
+          keys.push_back(free_list_.pop_front());
         }
-        auto key = free_list_.pop_front();
+
         storage::Operation op = {
             .type = storage::OperationType::kRead,
-            .vmo_offset = key->GetKey(),
+            .vmo_offset = keys.back().GetKey() + allocate_index,
             .dev_offset = addr,
             .length = 1,
         };
         builder.Add(op, &buffer_);
-        keys.push_back(std::move(key));
         io_pages.push_back(pages[i].CopyRefPtr());
+        ++allocate_index;
       } else {
         // If it is a newly allocated block, just zero it.
         // Refer to VnodeF2fs::GetLockedDataPages().
@@ -106,6 +114,7 @@ zx::result<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<Lock
     ++i;
   }
   if (io_pages.empty()) {
+    ZX_DEBUG_ASSERT(keys.is_empty());
     return zx::error(ZX_ERR_CANCELED);
   }
   return zx::ok(PageOperations(builder.TakeOperations(), std::move(io_pages), std::move(keys),
@@ -120,11 +129,15 @@ void StorageBuffer::ReleaseReadBuffers(const PageOperations &operation,
     auto keys = operation.TakeVmoKeys();
     ZX_DEBUG_ASSERT(!keys.is_empty());
     if (io_status == ZX_OK) {
-      size_t i = 0;
-      for (auto &key : keys) {
-        ZX_ASSERT(operation.PopulatePage(buffer_.Data(key.GetKey()), i++).is_ok());
+      auto key = keys.begin();
+      uint32_t allocate_index = 0;
+      for (size_t i = 0; i < operation.GetSize(); ++i) {
+        ZX_ASSERT(operation.PopulatePage(buffer_.Data(key->GetKey() + allocate_index), i).is_ok());
+        if ((++allocate_index) == allocation_unit_) {
+          allocate_index = 0;
+          ++key;
+        }
       }
-      ZX_DEBUG_ASSERT(operation.GetSize() == i);
     }
     std::lock_guard lock(mutex_);
     // Add vmo buffers of |operation| to |free_list_| to allow waiters to reserve buffer_.
@@ -168,7 +181,7 @@ StorageBuffer::~StorageBuffer() {
       ++num_keys;
       free_list_.pop_front();
     }
-    ZX_DEBUG_ASSERT(num_keys == buffer_.capacity());
+    ZX_DEBUG_ASSERT(num_keys == buffer_.capacity() / allocation_unit_);
   }
 }
 

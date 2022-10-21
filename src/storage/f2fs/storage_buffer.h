@@ -35,7 +35,12 @@ using VmoKeyList = fbl::DoublyLinkedList<std::unique_ptr<VmoBufferKey>>;
 // free list is empty, a caller waits for buffers. Free operations are O(1) as well.
 class StorageBuffer {
  public:
-  StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std::string_view label);
+  // StorageBuffer reserves vmo buffers in |allocation_unit|. Therefore, |allocation_unit| should be
+  // bigger than the number of pages requested in |ReserveWriteOperation| or |ReserveReadOperations|
+  // to get the maximum performance. It should be also smaller than |blocks|, because |blocks| is
+  // the total size of vmo buffers.
+  StorageBuffer(Bcache *bc, size_t blocks, uint32_t block_size, std::string_view label,
+                uint32_t allocation_unit = 1);
   StorageBuffer() = delete;
   StorageBuffer(const StorageBuffer &) = delete;
   StorageBuffer &operator=(const StorageBuffer &) = delete;
@@ -69,6 +74,7 @@ class StorageBuffer {
  private:
   void Init() __TA_EXCLUDES(mutex_);
   const uint64_t max_blocks_;
+  const uint32_t allocation_unit_;
 #ifdef __Fuchsia__
   storage::VmoBuffer buffer_;
 #else
