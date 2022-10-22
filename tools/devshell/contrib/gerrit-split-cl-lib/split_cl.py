@@ -188,7 +188,7 @@ def get_cl_tags(files: List[Path]) -> List[str]:
      - pick the third path component, e.g. src/developer/shell -> shell
   3) If the path begins with "zircon", then pick the path component after
      either "ulib" or "utest", e.g.
-     zircon/system/ulib/fs-pty/test/service-test.cc -> fs-pty
+     zircon/system/ulib/fdio-caller/test/fdio.cc -> fdio-caller
   4) If the path begins with "examples" or "tools", then pick the next path
      component, e.g. examples/fidl/llcpp/async_completer/client/main.cc -> fidl
 
