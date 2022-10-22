@@ -8,7 +8,6 @@ import("//src/sys/appmgr/integration_tests/sandbox/sandbox_test_package.gni")
 group("storage") {
   testonly = true
   deps = [
-    ":has_isolated_cache_storage",
     ":has_isolated_persistent_storage",
     ":isolated_persistent_storage",
     ":no_persistent_storage",
@@ -30,17 +29,6 @@ sandbox_test_package("has_isolated_persistent_storage") {
   deps = [
     "//src/lib/fxl/test:gtest_main",
     "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-  ]
-}
-
-sandbox_test_package("has_isolated_cache_storage") {
-  sources = [ "has_isolated_cache_storage.cc" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.sys.test:fuchsia.sys.test_hlcpp",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/sys/appmgr/integration_tests/sandbox:namespace_test",
-    "//third_party/googletest:gmock",
   ]
 }
 

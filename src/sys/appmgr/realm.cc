@@ -938,7 +938,6 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
         /*hub_directory_factory=*/[this] { return OpenInfoDir(); },
         /*isolated_data_path_factory=*/
         [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::DATA); },
-        [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::CACHE); },
         [&] { return InitIsolatedPathForComponentInstance(fp, internal::StorageType::TEMP); });
     if (status != ZX_OK) {
       component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::ACCESS_DENIED);

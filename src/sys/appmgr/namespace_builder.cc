@@ -79,17 +79,12 @@ zx_status_t NamespaceBuilder::AddSandbox(const SandboxMetadata& sandbox,
         FX_NOTREACHED() << "IsolatedDataPathFactory unexpectedly used";
         return fpromise::ok("");
       },
-      [] {
-        FX_NOTREACHED() << "IsolatedCachePathFactory unexpectedly used";
-        return fpromise::ok("");
-      },
       [] { return fpromise::ok("/tmp"); });
 }
 
 zx_status_t NamespaceBuilder::AddSandbox(
     const SandboxMetadata& sandbox, const HubDirectoryFactory& hub_directory_factory,
     const IsolatedDataPathFactory& isolated_data_path_factory,
-    const IsolatedCachePathFactory& isolated_cache_path_factory,
     const IsolatedTempPathFactory& isolated_temp_path_factory) {
   for (const auto& path : sandbox.dev()) {
     if (path == "class") {
@@ -154,8 +149,6 @@ zx_status_t NamespaceBuilder::AddSandbox(
       PushDirectoryFromPath("/dev/class/gpu");
       PushDirectoryFromPathAs("/pkgfs/packages/config-data/0/meta/data/vulkan-icd/icd.d",
                               "/config/vulkan/icd.d");
-    } else if (feature == "isolated-cache-storage") {
-      PushDirectoryFromPathAs(isolated_cache_path_factory().value(), "/cache");
     } else if (feature == "isolated-temp") {
       PushDirectoryFromPathAs(isolated_temp_path_factory().value(), "/tmp");
     } else if (feature == "hub") {

@@ -39,9 +39,6 @@ class NamespaceBuilder {
   // A factory function that returns a new path for /data to point to when it
   // should be isolated from other components and realms
   using IsolatedDataPathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
-  // A factory function that returns a new path for /cache to point to when it
-  // should be isolated from other components and realms
-  using IsolatedCachePathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
   // A factory function that returns a new path for /tmp to point to when it
   // should be isolated from other components and realms
   using IsolatedTempPathFactory = fit::function<fpromise::result<std::string, zx_status_t>()>;
@@ -52,7 +49,6 @@ class NamespaceBuilder {
   [[nodiscard]] zx_status_t AddSandbox(const SandboxMetadata& sandbox,
                                        const HubDirectoryFactory& hub_directory_factory,
                                        const IsolatedDataPathFactory& isolated_data_path_factory,
-                                       const IsolatedCachePathFactory& isolated_cache_path_factory,
                                        const IsolatedTempPathFactory& isolated_temp_path_factory);
 
   // Returns an fdio_flat_namespace_t representing the built namespace.
