@@ -82,6 +82,9 @@ zx_status_t WAVSource::Initialize(const char* filename, uint64_t channels_to_use
     case 16:
       audio_format_.sample_format = AUDIO_SAMPLE_FORMAT_16BIT;
       break;
+    case 32:
+      audio_format_.sample_format = AUDIO_SAMPLE_FORMAT_32BIT;
+      break;
     default:
       printf("Unsupported bits per sample (%hu)\n", wav_info.bits_per_sample);
       return ZX_ERR_INVALID_ARGS;
