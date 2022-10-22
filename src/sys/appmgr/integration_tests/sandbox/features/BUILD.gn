@@ -8,7 +8,6 @@ group("features") {
     "ambient-executable-policy",
     "hub",
     "isolated-temp",
-    "shell-commands",
     "storage",
   ]
 }

@@ -1,8 +1,0 @@
-{
-    "include": [
-        "syslog/client.shard.cmx"
-    ],
-    "program": {
-        "binary": "bin/no_shell_commands"
-    }
-}

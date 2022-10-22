@@ -139,8 +139,6 @@ zx_status_t NamespaceBuilder::AddSandbox(
       FX_LOGS(WARNING) << "Component " << ns_id
                        << " is not allowlisted to use deprecated-global-hub."
                        << " See: https://fxbug.dev/36227#c43";
-    } else if (feature == "shell-commands") {
-      PushDirectoryFromPathAs("/pkgfs/packages/shell-commands/0/bin", "/bin");
     } else if (feature == "vulkan") {
       PushDirectoryFromPath("/dev/class/goldfish-address-space");
       PushDirectoryFromPath("/dev/class/goldfish-control");
