@@ -15,12 +15,15 @@ impl BindingGenerator for CppGenerator {
     }
 
     fn generate_identifier_declaration(self: &Self, path: &str, identifier_name: &str) -> String {
-        format!(
-            "static const std::string {} = \"{}.{}\";\n",
-            identifier_name.to_uppercase(),
-            path,
-            identifier_name
-        )
+        let mut var_name = identifier_name.to_uppercase();
+
+        // Remove the BIND_ prefix for the variable name if the identifier is from the fuchsia
+        // base library. This is to prevent conflicts with the macros defined in binding_priv.h.
+        if path == "fuchsia" {
+            var_name = var_name.strip_prefix("BIND_").unwrap_or(&var_name).to_string();
+        }
+
+        format!("static const std::string {} = \"{}.{}\";\n", var_name, path, identifier_name)
     }
 
     fn generate_numerical_value_declaration(self: &Self, name: &str, val: &u64) -> String {

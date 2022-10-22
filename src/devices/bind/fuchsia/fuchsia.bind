@@ -1,0 +1,105 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia;
+
+// Value of the flags register.
+uint BIND_FLAGS;
+
+// Primary protocol of the device.
+uint BIND_PROTOCOL;
+
+// Property that indicates if it's an automated bind/load.
+uint BIND_AUTOBIND;
+
+// Indicates whether this is a composite.
+uint BIND_COMPOSITE;
+
+// Primary FIDL protocol of the device.
+uint BIND_FIDL_PROTOCOL;
+
+// PCI bind properties.
+uint BIND_PCI_VID;
+uint BIND_PCI_DID;
+uint BIND_PCI_CLASS;
+uint BIND_PCI_SUBCLASS;
+uint BIND_PCI_INTERFACE;
+uint BIND_PCI_REVISION;
+uint BIND_PCI_TOPO;
+
+// USB bind properties.
+uint BIND_USB_VID;
+uint BIND_USB_PID;
+uint BIND_USB_CLASS;
+uint BIND_USB_SUBCLASS;
+uint BIND_USB_PROTOCOL;
+uint BIND_USB_INTERFACE_NUMBER;
+
+// Platform bus bind properties.
+uint BIND_PLATFORM_DEV_VID;
+uint BIND_PLATFORM_DEV_PID;
+uint BIND_PLATFORM_DEV_DID;
+uint BIND_PLATFORM_DEV_INSTANCE_ID;
+uint BIND_PLATFORM_DEV_INTERRUPT_ID;
+
+// ACPI bind properties.
+uint BIND_ACPI_BUS_TYPE;
+uint BIND_ACPI_ID;
+
+// Intel HDA Codec bind properties.
+uint BIND_IHDA_CODEC_VID;
+uint BIND_IHDA_CODEC_DID;
+uint BIND_IHDA_CODEC_MAJOR_REV;
+uint BIND_IHDA_CODEC_MINOR_REV;
+uint BIND_IHDA_CODEC_VENDOR_REV;
+uint BIND_IHDA_CODEC_VENDOR_STEP;
+
+// Serial bind properties.
+uint BIND_SERIAL_CLASS;
+uint BIND_SERIAL_VID;
+uint BIND_SERIAL_PID;
+
+// NAND bind properties.
+uint BIND_NAND_CLASS;
+
+// SDIO bind properties.
+uint BIND_SDIO_VID;
+uint BIND_SDIO_PID;
+uint BIND_SDIO_FUNCTION;
+
+// I2C bind properties.
+uint BIND_I2C_CLASS;
+uint BIND_I2C_BUS_ID;
+uint BIND_I2C_ADDRESS;
+uint BIND_I2C_VID;
+uint BIND_I2C_DID;
+
+// GPIO bind properties.
+uint BIND_GPIO_PIN;
+
+// POWER bind properties.
+uint BIND_POWER_DOMAIN;
+uint BIND_POWER_DOMAIN_COMPOSITE;
+
+// POWER bind properties.
+uint BIND_CLOCK_ID;
+
+// SPI bind properties.
+uint BIND_SPI_BUS_ID;
+uint BIND_SPI_CHIP_SELECT;
+
+// PWM bind properties.
+uint BIND_PWM_ID;
+
+// Init Step bind properties.
+uint BIND_INIT_STEP;
+
+// Codec bind properties.
+uint BIND_CODEC_INSTANCE;
+
+// Registers bind properties.
+uint BIND_REGISTER_ID;
+
+// Power sensor bind properties.
+uint BIND_POWER_SENSOR_DOMAIN;

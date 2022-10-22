@@ -11,6 +11,7 @@
 
 #include <bind/bindlib/codegen/testlib/cpp/bind.h>
 #include <bind/bindlibparent/codegen/testlib/cpp/bind.h>
+#include <bind/fuchsia/cpp/bind.h>
 #include <gtest/gtest.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 
@@ -47,55 +48,52 @@ TEST_F(BindLibToFidlCodeGenTest, DeviceProperties) {
   std::vector<fuchsia::driver::development::DeviceInfo> devices;
   ASSERT_EQ(iterator->GetNext(&devices), ZX_OK);
 
-  constexpr zx_device_prop_t kExpectedProps[] = {
-      {BIND_PROTOCOL, 0, 3},
-      {BIND_PCI_VID, 0, lib::BIND_PCI_VID_PIE},
-      {BIND_PCI_DID, 0, 1234},
-  };
-
-  ASSERT_EQ(devices.size(), 1u);
-  auto props = devices[0].property_list().props;
-  ASSERT_EQ(props.size(), std::size(kExpectedProps));
-  for (size_t i = 0; i < props.size(); i++) {
-    ASSERT_EQ(props[i].id, kExpectedProps[i].id);
-    ASSERT_EQ(props[i].reserved, kExpectedProps[i].reserved);
-    ASSERT_EQ(props[i].value, kExpectedProps[i].value);
-  }
-
   auto& str_props = devices[0].property_list().str_props;
-  ASSERT_EQ(static_cast<size_t>(6), str_props.size());
+  ASSERT_EQ(static_cast<size_t>(9), str_props.size());
 
-  ASSERT_EQ("bindlib.codegen.testlib.kinglet", str_props[0].key);
-  ASSERT_EQ(lib::KINGLET, str_props[0].key);
-  ASSERT_TRUE(str_props[0].value.is_str_value());
-  ASSERT_EQ("firecrest", str_props[0].value.str_value());
+  ASSERT_EQ(bind_fuchsia::PROTOCOL, str_props[0].key);
+  ASSERT_TRUE(str_props[0].value.is_int_value());
+  ASSERT_EQ(3u, str_props[0].value.int_value());
 
-  ASSERT_EQ("bindlib.codegen.testlib.Moon", str_props[1].key);
-  ASSERT_EQ(lib::MOON, str_props[1].key);
-  ASSERT_TRUE(str_props[1].value.is_enum_value());
-  ASSERT_EQ("bindlib.codegen.testlib.Moon.Half", str_props[1].value.enum_value());
-  ASSERT_EQ(lib::MOON_HALF, str_props[1].value.enum_value());
+  ASSERT_EQ(bind_fuchsia::PCI_VID, str_props[1].key);
+  ASSERT_TRUE(str_props[1].value.is_int_value());
+  ASSERT_EQ(lib::BIND_PCI_VID_PIE, str_props[1].value.int_value());
 
-  ASSERT_EQ("bindlib.codegen.testlib.bobolink", str_props[2].key);
-  ASSERT_EQ(lib::BOBOLINK, str_props[2].key);
+  ASSERT_EQ(bind_fuchsia::PCI_DID, str_props[2].key);
   ASSERT_TRUE(str_props[2].value.is_int_value());
-  ASSERT_EQ(static_cast<uint32_t>(10), str_props[2].value.int_value());
+  ASSERT_EQ(1234u, str_props[2].value.int_value());
 
-  ASSERT_EQ("bindlib.codegen.testlib.flag", str_props[3].key);
-  ASSERT_EQ(lib::FLAG, str_props[3].key);
-  ASSERT_TRUE(str_props[3].value.is_bool_value());
-  ASSERT_TRUE(str_props[3].value.bool_value());
-  ASSERT_EQ(lib::FLAG_ENABLE, str_props[3].value.bool_value());
+  ASSERT_EQ("bindlib.codegen.testlib.kinglet", str_props[3].key);
+  ASSERT_EQ(lib::KINGLET, str_props[3].key);
+  ASSERT_TRUE(str_props[3].value.is_str_value());
+  ASSERT_EQ("firecrest", str_props[3].value.str_value());
 
-  ASSERT_EQ("bindlibparent.codegen.testlib.Pizza", str_props[4].key);
-  ASSERT_EQ(parent::PIZZA, str_props[4].key);
-  ASSERT_TRUE(str_props[4].value.is_str_value());
-  ASSERT_EQ("pepperoni pizza", str_props[4].value.str_value());
-  ASSERT_EQ(parent::PIZZA_PEPPERONI, str_props[4].value.str_value());
+  ASSERT_EQ("bindlib.codegen.testlib.Moon", str_props[4].key);
+  ASSERT_EQ(lib::MOON, str_props[4].key);
+  ASSERT_TRUE(str_props[4].value.is_enum_value());
+  ASSERT_EQ("bindlib.codegen.testlib.Moon.Half", str_props[4].value.enum_value());
+  ASSERT_EQ(lib::MOON_HALF, str_props[4].value.enum_value());
 
-  ASSERT_EQ("bindlibparent.codegen.testlib.Grit", str_props[5].key);
-  ASSERT_EQ(parent::GRIT, str_props[5].key);
+  ASSERT_EQ("bindlib.codegen.testlib.bobolink", str_props[5].key);
+  ASSERT_EQ(lib::BOBOLINK, str_props[5].key);
   ASSERT_TRUE(str_props[5].value.is_int_value());
-  ASSERT_EQ(static_cast<uint32_t>(100), str_props[5].value.int_value());
-  ASSERT_EQ(parent::GRIT_COARSE, str_props[5].value.int_value());
+  ASSERT_EQ(static_cast<uint32_t>(10), str_props[5].value.int_value());
+
+  ASSERT_EQ("bindlib.codegen.testlib.flag", str_props[6].key);
+  ASSERT_EQ(lib::FLAG, str_props[6].key);
+  ASSERT_TRUE(str_props[6].value.is_bool_value());
+  ASSERT_TRUE(str_props[6].value.bool_value());
+  ASSERT_EQ(lib::FLAG_ENABLE, str_props[6].value.bool_value());
+
+  ASSERT_EQ("bindlibparent.codegen.testlib.Pizza", str_props[7].key);
+  ASSERT_EQ(parent::PIZZA, str_props[7].key);
+  ASSERT_TRUE(str_props[7].value.is_str_value());
+  ASSERT_EQ("pepperoni pizza", str_props[7].value.str_value());
+  ASSERT_EQ(parent::PIZZA_PEPPERONI, str_props[7].value.str_value());
+
+  ASSERT_EQ("bindlibparent.codegen.testlib.Grit", str_props[8].key);
+  ASSERT_EQ(parent::GRIT, str_props[8].key);
+  ASSERT_TRUE(str_props[8].value.is_int_value());
+  ASSERT_EQ(static_cast<uint32_t>(100), str_props[8].value.int_value());
+  ASSERT_EQ(parent::GRIT_COARSE, str_props[8].value.int_value());
 }

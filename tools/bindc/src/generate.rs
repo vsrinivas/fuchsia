@@ -438,4 +438,17 @@ mod tests {
                 .unwrap()
         );
     }
+
+    #[test]
+    fn test_deprecated_lib_cpp_generation() {
+        assert_eq!(
+            include_str!("tests/expected_deprecated_bind_cpp_header"),
+            generate(
+                GeneratedBindingType::Cpp,
+                include_str!("../../../src/devices/bind/fuchsia/fuchsia.bind"),
+                false
+            )
+            .unwrap()
+        );
+    }
 }

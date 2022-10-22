@@ -71,6 +71,7 @@ if (is_host) {
     ]
 
     inputs = [
+      "//src/devices/bind/fuchsia/fuchsia.bind",
       "src/templates/bind_lib.template",
       "src/templates/bind_lib_enum.template",
       "src/templates/bind_v1.h.template",
@@ -84,6 +85,7 @@ if (is_host) {
       "src/tests/expected_composite_code_w_dashes",
       "src/tests/expected_composite_code_w_disabled_fragments",
       "src/tests/expected_cpp_header_gen",
+      "src/tests/expected_deprecated_bind_cpp_header",
       "src/tests/expected_rust_file_gen",
       "src/tests/test_library.bind",
     ]

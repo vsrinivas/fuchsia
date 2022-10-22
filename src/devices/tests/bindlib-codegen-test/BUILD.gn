@@ -32,6 +32,7 @@ test("test") {
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp",
+    "//src/devices/bind/fuchsia:fuchsia_cpp",
     "//src/lib/ddk",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
@@ -80,6 +81,7 @@ fuchsia_driver("parent-driver-driver") {
     ":bindlib.codegen.testlib_cpp",
     ":bindlibparent.codegen.testlib_cpp",
     ":parent-driver-bind",
+    "//src/devices/bind/fuchsia:fuchsia_cpp",
     "//src/devices/lib/driver",
     "//src/lib/ddk",
   ]

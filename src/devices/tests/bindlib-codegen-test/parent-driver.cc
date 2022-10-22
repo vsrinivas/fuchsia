@@ -9,6 +9,7 @@
 
 #include <bind/bindlib/codegen/testlib/cpp/bind.h>
 #include <bind/bindlibparent/codegen/testlib/cpp/bind.h>
+#include <bind/fuchsia/cpp/bind.h>
 
 #include "src/devices/tests/bindlib-codegen-test/parent-driver-bind.h"
 
@@ -31,15 +32,14 @@ static zx_status_t bind_func(void* ctx, zx_device_t* parent) {
   args.version = DEVICE_ADD_ARGS_VERSION;
   args.name = "parent";
   args.ops = &dev_ops;
-  zx_device_prop_t props[] = {
-      {BIND_PROTOCOL, 0, 3},
-      {BIND_PCI_VID, 0, lib::BIND_PCI_VID_PIE},
-      {BIND_PCI_DID, 0, 1234},
-  };
-  args.props = props;
-  args.prop_count = std::size(props);
 
   zx_device_str_prop_t str_props[] = {
+      zx_device_str_prop_t{.key = bind_fuchsia::PROTOCOL.c_str(),
+                           .property_value = str_prop_int_val(3)},
+      zx_device_str_prop_t{.key = bind_fuchsia::PCI_VID.c_str(),
+                           .property_value = str_prop_int_val(lib::BIND_PCI_VID_PIE)},
+      zx_device_str_prop_t{.key = bind_fuchsia::PCI_DID.c_str(),
+                           .property_value = str_prop_int_val(1234)},
       zx_device_str_prop_t{.key = lib::KINGLET.c_str(),
                            .property_value = str_prop_str_val("firecrest")},
       zx_device_str_prop_t{.key = lib::MOON.c_str(),

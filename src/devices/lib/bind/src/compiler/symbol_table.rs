@@ -322,6 +322,103 @@ pub fn get_deprecated_key_identifiers() -> HashMap<u32, String> {
     key_identifiers
 }
 
+pub fn get_deprecated_key_identifier(key: u32) -> Option<String> {
+    match key {
+        0x0000 => Some("fuchsia.BIND_FLAGS".to_string()),
+        0x0001 => Some("fuchsia.BIND_PROTOCOL".to_string()),
+        0x0002 => Some("fuchsia.BIND_AUTOBIND".to_string()),
+        0x0003 => Some("fuchsia.BIND_COMPOSITE".to_string()),
+        0x0004 => Some("fuchsia.BIND_FIDL_PROTOCOL".to_string()),
+
+        // PCI binding variables at 0x01XX.
+        0x0100 => Some("fuchsia.BIND_PCI_VID".to_string()),
+        0x0101 => Some("fuchsia.BIND_PCI_DID".to_string()),
+        0x0102 => Some("fuchsia.BIND_PCI_CLASS".to_string()),
+        0x0103 => Some("fuchsia.BIND_PCI_SUBCLASS".to_string()),
+        0x0104 => Some("fuchsia.BIND_PCI_INTERFACE".to_string()),
+        0x0105 => Some("fuchsia.BIND_PCI_REVISION".to_string()),
+        0x0107 => Some("fuchsia.BIND_PCI_TOPO".to_string()),
+
+        // USB binding variables at 0x02XX.
+        0x0200 => Some("fuchsia.BIND_USB_VID".to_string()),
+        0x0201 => Some("fuchsia.BIND_USB_PID".to_string()),
+        0x0202 => Some("fuchsia.BIND_USB_CLASS".to_string()),
+        0x0203 => Some("fuchsia.BIND_USB_SUBCLASS".to_string()),
+        0x0204 => Some("fuchsia.BIND_USB_PROTOCOL".to_string()),
+        0x0205 => Some("fuchsia.BIND_USB_INTERFACE_NUMBER".to_string()),
+
+        // Platform bus binding variables at 0x03XX.
+        0x0300 => Some("fuchsia.BIND_PLATFORM_DEV_VID".to_string()),
+        0x0301 => Some("fuchsia.BIND_PLATFORM_DEV_PID".to_string()),
+        0x0302 => Some("fuchsia.BIND_PLATFORM_DEV_DID".to_string()),
+        0x0304 => Some("fuchsia.BIND_PLATFORM_DEV_INSTANCE_ID".to_string()),
+        0x0305 => Some("fuchsia.BIND_PLATFORM_DEV_INTERRUPT_ID".to_string()),
+
+        // ACPI binding variables at 0x04XX.
+        0x0400 => Some("fuchsia.BIND_ACPI_BUS_TYPE".to_string()),
+        0x0401 => Some("fuchsia.BIND_ACPI_ID".to_string()),
+
+        // Intel HDA Codec binding variables at 0x05XX.
+        0x0500 => Some("fuchsia.BIND_IHDA_CODEC_VID".to_string()),
+        0x0501 => Some("fuchsia.BIND_IHDA_CODEC_DID".to_string()),
+        0x0502 => Some("fuchsia.BIND_IHDA_CODEC_MAJOR_REV".to_string()),
+        0x0503 => Some("fuchsia.BIND_IHDA_CODEC_MINOR_REV".to_string()),
+        0x0504 => Some("fuchsia.BIND_IHDA_CODEC_VENDOR_REV".to_string()),
+        0x0505 => Some("fuchsia.BIND_IHDA_CODEC_VENDOR_STEP".to_string()),
+
+        // Serial binding variables at 0x06XX.
+        0x0600 => Some("fuchsia.BIND_SERIAL_CLASS".to_string()),
+        0x0601 => Some("fuchsia.BIND_SERIAL_VID".to_string()),
+        0x0602 => Some("fuchsia.BIND_SERIAL_PID".to_string()),
+
+        // NAND binding variables at 0x07XX.
+        0x0700 => Some("fuchsia.BIND_NAND_CLASS".to_string()),
+
+        // SDIO binding variables at 0x09XX.
+        0x0900 => Some("fuchsia.BIND_SDIO_VID".to_string()),
+        0x0901 => Some("fuchsia.BIND_SDIO_PID".to_string()),
+        0x0902 => Some("fuchsia.BIND_SDIO_FUNCTION".to_string()),
+
+        // I2C binding variables at 0x0A0X.
+        0x0A00 => Some("fuchsia.BIND_I2C_CLASS".to_string()),
+        0x0A01 => Some("fuchsia.BIND_I2C_BUS_ID".to_string()),
+        0x0A02 => Some("fuchsia.BIND_I2C_ADDRESS".to_string()),
+        0x0A03 => Some("fuchsia.BIND_I2C_VID".to_string()),
+        0x0A04 => Some("fuchsia.BIND_I2C_DID".to_string()),
+
+        // GPIO binding variables at 0x0A1X.
+        0x0A10 => Some("fuchsia.BIND_GPIO_PIN".to_string()),
+
+        // POWER binding variables at 0x0A2X.
+        0x0A20 => Some("fuchsia.BIND_POWER_DOMAIN".to_string()),
+        0x0A21 => Some("fuchsia.BIND_POWER_DOMAIN_COMPOSITE".to_string()),
+
+        // POWER (clock) binding variables at 0x0A3X.
+        0x0A30 => Some("fuchsia.BIND_CLOCK_ID".to_string()),
+
+        // SPI binding variables at 0x0A4X.
+        0x0A41 => Some("fuchsia.BIND_SPI_BUS_ID".to_string()),
+        0x0A42 => Some("fuchsia.BIND_SPI_CHIP_SELECT".to_string()),
+
+        // PWM binding variables at 0x0A5X.
+        0x0A50 => Some("fuchsia.BIND_PWM_ID".to_string()),
+
+        // Init step binding variables at 0x0A6X.
+        0x0A60 => Some("fuchsia.BIND_INIT_STEP".to_string()),
+
+        // Code binding variables at 0x0A7X.
+        0x0A70 => Some("fuchsia.BIND_CODEC_INSTANCE".to_string()),
+
+        // Registers binding variables at 0x0A8X.
+        0x0A80 => Some("fuchsia.BIND_REGISTER_ID".to_string()),
+
+        // Power sensor binding variables at 0x0A9X.
+        0x0A90 => Some("fuchsia.BIND_POWER_SENSOR_DOMAIN".to_string()),
+
+        _ => None,
+    }
+}
+
 #[cfg(test)]
 mod test {
     use super::*;

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::bytecode_constants::*;
+use crate::compiler::symbol_table::get_deprecated_key_identifier;
 use crate::compiler::Symbol;
 use crate::interpreter::common::*;
 use crate::interpreter::decode_bind_rules::DecodedBindRules;
@@ -108,10 +109,23 @@ impl<'a> DeviceMatcher<'a> {
             }
         };
 
-        let bind_value = self.read_next_value()?;
-        match self.properties.get(&property_key) {
+        let expected_value = self.read_next_value()?;
+        let mut node_property_value = self.properties.get(&property_key);
+
+        // If the node properties doesn't contain an integer key, try to convert the
+        // integer key to a deprecated string key, and check if the node properties
+        // contain that.
+        if node_property_value.is_none() {
+            if let PropertyKey::NumberKey(int_key) = property_key {
+                if let Some(str_key) = get_deprecated_key_identifier(int_key as u32) {
+                    node_property_value = self.properties.get(&PropertyKey::StringKey(str_key));
+                }
+            }
+        }
+
+        match node_property_value {
             None => Ok(condition == Condition::Inequal),
-            Some(device_value) => compare_symbols(condition, device_value, &bind_value),
+            Some(value) => compare_symbols(condition, &expected_value, value),
         }
     }
 
@@ -663,6 +677,47 @@ mod test {
         );
         verify_match_result(
             Ok(false),
+            DecodedBindRules {
+                symbol_table: HashMap::new(),
+                instructions: instructions,
+                decoded_instructions: vec![],
+                debug_info: None,
+            },
+            &device_properties,
+        );
+    }
+
+    #[test]
+    fn match_with_str_deprecated_keys() {
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(
+            PropertyKey::StringKey("fuchsia.BIND_PROTOCOL".to_string()),
+            Symbol::NumberValue(10),
+        );
+        device_properties.insert(
+            PropertyKey::StringKey("fuchsia.BIND_PWM_ID".to_string()),
+            Symbol::NumberValue(5),
+        );
+
+        let mut instructions: Vec<u8> = vec![];
+        append_equal_cond(
+            &mut instructions,
+            EncodedValue {
+                value_type: RawValueType::NumberValue,
+                value: 0x01, /* BIND_PROTOCOL */
+            },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+        );
+        append_equal_cond(
+            &mut instructions,
+            EncodedValue {
+                value_type: RawValueType::NumberValue,
+                value: 0x0A50, /* BIND_PWN_ID */
+            },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+        );
+        verify_match_result(
+            Ok(true),
             DecodedBindRules {
                 symbol_table: HashMap::new(),
                 instructions: instructions,

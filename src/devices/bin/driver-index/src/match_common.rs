@@ -4,12 +4,15 @@
 
 use {
     crate::resolved_driver::ResolvedDriver,
+    bind::compiler::Symbol,
     bind::ddk_bind_constants::BIND_PROTOCOL,
     bind::interpreter::decode_bind_rules::DecodedCompositeBindRules,
     bind::interpreter::match_bind::{DeviceProperties, PropertyKey},
     fidl_fuchsia_driver_framework as fdf,
     fuchsia_zircon::{zx_status_t, Status},
 };
+
+const BIND_PROTOCOL_KEY: PropertyKey = PropertyKey::NumberKey(BIND_PROTOCOL as u64);
 
 pub fn node_to_device_property(
     node_properties: &Vec<fdf::NodeProperty>,
@@ -27,19 +30,15 @@ pub fn node_to_device_property(
         };
 
         let value = match property.value.as_ref().unwrap() {
-            fdf::NodePropertyValue::IntValue(i) => {
-                bind::compiler::Symbol::NumberValue(i.clone().into())
-            }
-            fdf::NodePropertyValue::StringValue(s) => {
-                bind::compiler::Symbol::StringValue(s.clone())
-            }
-            fdf::NodePropertyValue::EnumValue(s) => bind::compiler::Symbol::EnumValue(s.clone()),
-            fdf::NodePropertyValue::BoolValue(b) => bind::compiler::Symbol::BoolValue(b.clone()),
+            fdf::NodePropertyValue::IntValue(i) => Symbol::NumberValue(i.clone().into()),
+            fdf::NodePropertyValue::StringValue(s) => Symbol::StringValue(s.clone()),
+            fdf::NodePropertyValue::EnumValue(s) => Symbol::EnumValue(s.clone()),
+            fdf::NodePropertyValue::BoolValue(b) => Symbol::BoolValue(b.clone()),
         };
 
         // TODO(fxb/93937): Platform bus devices may contain two different BIND_PROTOCOL values.
         // The duplicate key needs to be fixed since this is incorrect and is working by luck.
-        if key != PropertyKey::NumberKey(BIND_PROTOCOL.into()) {
+        if key != BIND_PROTOCOL_KEY {
             if device_properties.contains_key(&key) && device_properties.get(&key) != Some(&value) {
                 return Err(Status::INVALID_ARGS.into_raw());
             }
@@ -47,6 +46,16 @@ pub fn node_to_device_property(
 
         device_properties.insert(key, value);
     }
+
+    // Due to a bug, if device properties already contain a "fuchsia.BIND_PROTOCOL" string key
+    // and BIND_PROTOCOL = 28, we should remove the latter.
+    // TODO(fxb/93937): Fix the duplicate BIND_PROTOCOL values and remove this hack.
+    if device_properties.contains_key(&PropertyKey::StringKey("fuchsia.BIND_PROTOCOL".to_string()))
+        && device_properties.get(&BIND_PROTOCOL_KEY) == Some(&Symbol::NumberValue(28))
+    {
+        device_properties.remove(&BIND_PROTOCOL_KEY);
+    }
+
     Ok(device_properties)
 }
 
@@ -95,8 +104,7 @@ mod tests {
         ];
 
         let mut expected_properties = DeviceProperties::new();
-        expected_properties
-            .insert(PropertyKey::NumberKey(10), bind::compiler::Symbol::NumberValue(200));
+        expected_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(200));
 
         let result = node_to_device_property(&node_properties).unwrap();
         assert_eq!(expected_properties, result);
@@ -138,11 +146,32 @@ mod tests {
         ];
 
         let mut expected_properties = DeviceProperties::new();
-        expected_properties.insert(
-            PropertyKey::NumberKey(BIND_PROTOCOL.into()),
-            bind::compiler::Symbol::NumberValue(10),
-        );
+        expected_properties.insert(BIND_PROTOCOL_KEY, Symbol::NumberValue(10));
+        assert_eq!(Ok(expected_properties), node_to_device_property(&node_properties));
+    }
 
+    // TODO(fxb/93937): Remove this case once the issue with multiple BIND_PROTOCOL properties
+    // is resolved.
+    #[fasync::run_singlethreaded(test)]
+    async fn test_multiple_bind_protocol_w_deprecated_str_key() {
+        let node_properties = vec![
+            fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::IntValue(BIND_PROTOCOL.into())),
+                value: Some(fdf::NodePropertyValue::IntValue(28)),
+                ..fdf::NodeProperty::EMPTY
+            },
+            fdf::NodeProperty {
+                key: Some(fdf::NodePropertyKey::StringValue("fuchsia.BIND_PROTOCOL".to_string())),
+                value: Some(fdf::NodePropertyValue::IntValue(10)),
+                ..fdf::NodeProperty::EMPTY
+            },
+        ];
+
+        let mut expected_properties = DeviceProperties::new();
+        expected_properties.insert(
+            PropertyKey::StringKey("fuchsia.BIND_PROTOCOL".to_string()),
+            Symbol::NumberValue(10),
+        );
         assert_eq!(Ok(expected_properties), node_to_device_property(&node_properties));
     }
 }

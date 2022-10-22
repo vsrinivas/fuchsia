@@ -12,4 +12,6 @@ pub use self::compiler::{
     CompilerError, CompositeBindRules, CompositeNode, SymbolicInstruction, SymbolicInstructionInfo,
 };
 
-pub use self::symbol_table::{get_deprecated_key_identifiers, Symbol, SymbolTable};
+pub use self::symbol_table::{
+    get_deprecated_key_identifier, get_deprecated_key_identifiers, Symbol, SymbolTable,
+};
