@@ -81,6 +81,52 @@
 #define X86_MSR_IA32_MTRR_FIX4K_F8000 0x0000026f   /* MTRR FIX4K_F8000 */
 #define X86_MSR_IA32_PAT 0x00000277                /* PAT */
 #define X86_MSR_IA32_TSC_DEADLINE 0x000006e0       /* TSC deadline */
+
+#define X86_MSR_IA32_X2APIC_APICID      0x00000802 /* x2APIC ID Register (R/O) */
+#define X86_MSR_IA32_X2APIC_VERSION     0x00000803 /* x2APIC Version Register (R/O) */
+#define X86_MSR_IA32_X2APIC_TPR         0x00000808 /* x2APIC Task Priority Register (R/W) */
+#define X86_MSR_IA32_X2APIC_PPR         0x0000080A /* x2APIC Processor Priority Register (R/O) */
+#define X86_MSR_IA32_X2APIC_EOI         0x0000080B /* x2APIC EOI Register (W/O) */
+#define X86_MSR_IA32_X2APIC_LDR         0x0000080D /* x2APIC Logical Destination Register (R/O) */
+#define X86_MSR_IA32_X2APIC_SIVR        0x0000080F /* x2APIC Spurious Interrupt Vector Register (R/W) */
+#define X86_MSR_IA32_X2APIC_ISR0        0x00000810 /* x2APIC In-Service Register Bits 31:0 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR1        0x00000811 /* x2APIC In-Service Register Bits 63:32 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR2        0x00000812 /* x2APIC In-Service Register Bits 95:64 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR3        0x00000813 /* x2APIC In-Service Register Bits 127:96 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR4        0x00000814 /* x2APIC In-Service Register Bits 159:128 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR5        0x00000815 /* x2APIC In-Service Register Bits 191:160 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR6        0x00000816 /* x2APIC In-Service Register Bits 223:192 (R/O) */
+#define X86_MSR_IA32_X2APIC_ISR7        0x00000817 /* x2APIC In-Service Register Bits 255:224 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR0        0x00000818 /* x2APIC Trigger Mode Register Bits 31:0 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR1        0x00000819 /* x2APIC Trigger Mode Register Bits 63:32 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR2        0x0000081A /* x2APIC Trigger Mode Register Bits 95:64 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR3        0x0000081B /* x2APIC Trigger Mode Register Bits 127:96 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR4        0x0000081C /* x2APIC Trigger Mode Register Bits 159:128 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR5        0x0000081D /* x2APIC Trigger Mode Register Bits 191:160 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR6        0x0000081E /* x2APIC Trigger Mode Register Bits 223:192 (R/O) */
+#define X86_MSR_IA32_X2APIC_TMR7        0x0000081F /* x2APIC Trigger Mode Register Bits 255:224 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR0        0x00000820 /* x2APIC Interrupt Request Register Bits 31:0 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR1        0x00000821 /* x2APIC Interrupt Request Register Bits 63:32 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR2        0x00000822 /* x2APIC Interrupt Request Register Bits 95:64 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR3        0x00000823 /* x2APIC Interrupt Request Register Bits 127:96 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR4        0x00000824 /* x2APIC Interrupt Request Register Bits 159:128 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR5        0x00000825 /* x2APIC Interrupt Request Register Bits 191:160 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR6        0x00000826 /* x2APIC Interrupt Request Register Bits 223:192 (R/O) */
+#define X86_MSR_IA32_X2APIC_IRR7        0x00000827 /* x2APIC Interrupt Request Register Bits 255:224 (R/O) */
+#define X86_MSR_IA32_X2APIC_ESR         0x00000828 /* x2APIC Error Status Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_CMCI    0x0000082F /* x2APIC LVT Corrected Machine Check Interrupt Register (R/W) */
+#define X86_MSR_IA32_X2APIC_ICR         0x00000830 /* x2APIC Interrupt Command Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_TIMER   0x00000832 /* x2APIC LVT Timer Interrupt Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_THERMAL 0x00000833 /* x2APIC LVT Thermal Sensor Interrupt Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_PMI     0x00000834 /* x2APIC LVT Performance Monitor Interrupt Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_LINT0   0x00000835 /* x2APIC LVT LINT0 Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_LINT1   0x00000836 /* x2APIC LVT LINT1 Register (R/W) */
+#define X86_MSR_IA32_X2APIC_LVT_ERROR   0x00000837 /* x2APIC LVT Error Register (R/W) */
+#define X86_MSR_IA32_X2APIC_INIT_COUNT  0x00000838 /* x2APIC Initial Count Register (R/W) */
+#define X86_MSR_IA32_X2APIC_CUR_COUNT   0x00000839 /* x2APIC Current Count Register (R/O) */
+#define X86_MSR_IA32_X2APIC_DIV_CONF    0x0000083E /* x2APIC Divide Configuration Register (R/W) */
+#define X86_MSR_IA32_X2APIC_SELF_IPI    0x0000083F /* x2APIC Self IPI Register (W/O) */
+
 #define X86_MSR_IA32_EFER 0xc0000080               /* EFER */
 #define X86_MSR_IA32_STAR 0xc0000081               /* system call address */
 #define X86_MSR_IA32_LSTAR 0xc0000082              /* long mode call address */

@@ -122,6 +122,8 @@ static void lapic_reg_and(size_t offset, uint32_t bits) {
   lapic_reg_write(offset, lapic_reg_read(offset) & bits);
 }
 
+bool is_x2apic_enabled() { return x2apic_enabled; }
+
 // This function must be called once on the kernel address space
 void apic_vm_init(void) {
   // only memory map the aperture if we're using the legacy mmio interface

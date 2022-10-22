@@ -147,4 +147,7 @@ void apic_io_restore();
 void apic_local_debug();
 void apic_io_debug();
 
+// Accessor for the internal flag indicating whether or not we have enabled the X2APIC.
+bool is_x2apic_enabled();
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_APIC_H_

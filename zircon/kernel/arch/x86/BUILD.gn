@@ -138,6 +138,7 @@ zx_library("x86") {
     "mmu_mem_types.cc",
     "mp.cc",
     "msr.cc",
+    "msr_bench.cc",
     "ops.S",
     "perf_mon.cc",
     "pv.cc",
