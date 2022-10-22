@@ -263,6 +263,7 @@ void Session::EventAndErrorReporter::PostFlushTask() {
   // task to ensure that FlushEvents() is called.
   if (buffered_events_.empty()) {
     async::PostTask(async_get_default_dispatcher(), [weak = weak_factory_.GetWeakPtr()] {
+      TRACE_DURATION("gfx", "scenic_impl::Session::EventAndErrorReporter::PostFlushTask[task]");
       if (!weak)
         return;
       weak->FilterRedundantGfxEvents();

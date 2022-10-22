@@ -7,6 +7,7 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 namespace flatland {
 
@@ -56,6 +57,7 @@ void FlatlandPresenterImpl::ScheduleUpdateForSession(zx::time requested_presenta
   async::PostTask(
       main_dispatcher_, [thiz = shared_from_this(), requested_presentation_time, id_pair,
                          unsquashable, release_fences = std::move(release_fences)]() mutable {
+        TRACE_DURATION("gfx", "FlatlandPresenterImpl::ScheduleUpdateForSession[task]");
         FX_DCHECK(thiz->release_fences_.find(id_pair) == thiz->release_fences_.end());
         thiz->release_fences_.emplace(id_pair, std::move(release_fences));
         thiz->frame_scheduler_.RegisterPresent(id_pair.session_id, {}, id_pair.present_id);

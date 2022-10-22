@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/link_system.h"
 
 #include <lib/syslog/cpp/macros.h>
+#include <lib/trace/event.h>
 
 #include "src/ui/scenic/lib/utils/dispatcher_holder.h"
 #include "src/ui/scenic/lib/utils/task_utils.h"
@@ -73,13 +74,14 @@ LinkSystem::LinkToChild LinkSystem::CreateLinkToChild(
           ref->child_to_parent_map_.erase(*child_transform_handle);
         }
 
-        // Avoid race conditions by destroying ParentViewportWatcher on its "own" thread.  For
-        // example, if not destroyed on its "own" thread, it might concurrently be handling a FIDL
-        // message.
+        // Avoid race conditions by destroying ChildViewWatcher on its "own" thread.  For example,
+        // if not destroyed on its "own" thread, it might concurrently be handling a FIDL message.
         if (auto dispatcher_holder = weak_dispatcher_holder.lock()) {
           utils::ExecuteOrPostTaskOnDispatcher(
-              dispatcher_holder->dispatcher(),
-              [impl = std::move(impl)]() mutable { impl.reset(); });
+              dispatcher_holder->dispatcher(), [impl = std::move(impl)]() mutable {
+                TRACE_DURATION("gfx", "LinkSystem::CreateLinkToChild[destroy impl]");
+                impl.reset();
+              });
 
           // The point of moving |impl| into the task above is to destroy it on the correct thread.
           // Verify that we did actually move it (previously, there was a subtle bug where this
@@ -167,8 +169,10 @@ LinkSystem::LinkToParent LinkSystem::CreateLinkToParent(
         // message.
         if (auto dispatcher_holder = weak_dispatcher_holder.lock()) {
           utils::ExecuteOrPostTaskOnDispatcher(
-              dispatcher_holder->dispatcher(),
-              [impl = std::move(impl)]() mutable { impl.reset(); });
+              dispatcher_holder->dispatcher(), [impl = std::move(impl)]() mutable {
+                TRACE_DURATION("gfx", "LinkSystem::CreateLinkToParent[destroy impl]");
+                impl.reset();
+              });
 
           // The point of moving |impl| into the task above is to destroy it on the correct thread.
           // Verify that we did actually move it (previously, there was a subtle bug where this

@@ -121,6 +121,7 @@ std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
       [this](fidl::InterfaceRequest<fuchsia::ui::views::Focuser> focuser, zx_koid_t view_ref_koid) {
         async::PostTask(executor_.dispatcher(),
                         [this, focuser = std::move(focuser), view_ref_koid]() mutable {
+                          TRACE_DURATION("gfx", "FlatlandManager::NewFlatland[Focuser]");
                           CheckIsOnMainThread();
                           register_view_focuser_(std::move(focuser), view_ref_koid);
                         });
@@ -131,6 +132,7 @@ std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
         async::PostTask(
             executor_.dispatcher(),
             [this, view_ref_focused = std::move(view_ref_focused), view_ref_koid]() mutable {
+              TRACE_DURATION("gfx", "FlatlandManager::NewFlatland[ViewRefFocused]");
               CheckIsOnMainThread();
               register_view_ref_focused_(std::move(view_ref_focused), view_ref_koid);
             });
@@ -140,6 +142,7 @@ std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
              zx_koid_t view_ref_koid) {
         async::PostTask(executor_.dispatcher(),
                         [this, touch_source = std::move(touch_source), view_ref_koid]() mutable {
+                          TRACE_DURATION("gfx", "FlatlandManager::NewFlatland[TouchSource]");
                           CheckIsOnMainThread();
                           register_touch_source_(std::move(touch_source), view_ref_koid);
                         });
@@ -149,6 +152,7 @@ std::shared_ptr<Flatland> FlatlandManager::NewFlatland(
              zx_koid_t view_ref_koid) {
         async::PostTask(executor_.dispatcher(),
                         [this, mouse_source = std::move(mouse_source), view_ref_koid]() mutable {
+                          TRACE_DURATION("gfx", "FlatlandManager::NewFlatland[MouseSource]");
                           CheckIsOnMainThread();
                           register_mouse_source_(std::move(mouse_source), view_ref_koid);
                         });
@@ -375,6 +379,8 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
       // display instance.
       async::PostTask(instance_kv->second->loop->dispatcher(),
                       [instance = std::move(instance_kv->second), this]() mutable {
+                        TRACE_DURATION("gfx", "FlatlandManager::RemoveFlatlandInstance[task]");
+
                         // A flatland display instance must release all its resources before
                         // |alive_sessions_| is decremented. This ensures that flatland manager is
                         // not destroyed before the flatland display instance.
