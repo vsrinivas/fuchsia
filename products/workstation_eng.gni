@@ -51,7 +51,7 @@ legacy_universe_package_labels += [
   "//src/lib/ui/carnelian:examples",
 
   # TODO(fxb/102262): This is an anti-pattern, do not imitate. Remove when we are ready.
-  "//bundles/drivers:conformance-tests",
+  "//src/devices/tests/fhcp:device-tests",
 ]
 
 # Set the SWD policy for workstation_eng, details can be found in //build/security/policies_swd.gni.
