@@ -167,7 +167,8 @@ zx_status_t VmObject::ReadUserVector(VmAspace* current_aspace, user_out_iovec_t 
   if (len > UINT64_MAX - offset) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return vec.ForEach([&](user_out_ptr<char> ptr, size_t capacity) {
+
+  zx_status_t status = vec.ForEach([&](user_out_ptr<char> ptr, size_t capacity) {
     if (capacity > len) {
       capacity = len;
     }
@@ -189,6 +190,9 @@ zx_status_t VmObject::ReadUserVector(VmAspace* current_aspace, user_out_iovec_t 
     len -= chunk_actual;
     return len > 0 ? ZX_ERR_NEXT : ZX_ERR_STOP;
   });
+
+  // Return |ZX_ERR_BUFFER_TOO_SMALL| if all of |len| was not transferred.
+  return (status == ZX_OK && len > 0) ? ZX_ERR_BUFFER_TOO_SMALL : status;
 }
 
 zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t vec,
@@ -200,7 +204,8 @@ zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t 
   if (len > UINT64_MAX - offset) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-  return vec.ForEach([&](user_in_ptr<const char> ptr, size_t capacity) {
+
+  zx_status_t status = vec.ForEach([&](user_in_ptr<const char> ptr, size_t capacity) {
     if (capacity > len) {
       capacity = len;
     }
@@ -223,6 +228,9 @@ zx_status_t VmObject::WriteUserVector(VmAspace* current_aspace, user_in_iovec_t 
     len -= chunk_actual;
     return len > 0 ? ZX_ERR_NEXT : ZX_ERR_STOP;
   });
+
+  // Return |ZX_ERR_BUFFER_TOO_SMALL| if all of |len| was not transferred.
+  return (status == ZX_OK && len > 0) ? ZX_ERR_BUFFER_TOO_SMALL : status;
 }
 
 void VmObject::SetChildObserver(VmObjectChildObserver* child_observer) {

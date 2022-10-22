@@ -15,6 +15,7 @@
 #include <zircon/types.h>
 
 #include <numeric>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -1146,6 +1147,178 @@ TEST(StreamTestCase, ContentSizeUpdatedOnPartialWrite) {
   }
 
   write_thread.join();
+}
+
+// Tests that resizing a `zx_iovec_t` capacity smaller while a read is using it does not fail.
+TEST(StreamTestCase, RaceReadResizeVecSmaller) {
+  constexpr size_t kNumIterations = 50;
+  constexpr size_t kInitialVecSize = 26;
+  constexpr size_t kResizeVecSize = 10;
+  constexpr char kInitialBufferChar = '!';
+
+  for (size_t i = 0; i < kNumIterations; ++i) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+    ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
+
+    std::string buffer(kInitialVecSize, kInitialBufferChar);
+    zx_iovec_t vec = {
+        .buffer = buffer.data(),
+        .capacity = buffer.size(),
+    };
+
+    zx::stream stream;
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ, vmo, 0, &stream));
+
+    std::thread read_thread([&] {
+      size_t actual = 42u;
+      ASSERT_OK(stream.readv(0, &vec, 1, &actual));
+
+      ASSERT_TRUE(actual == buffer.size() || actual == kResizeVecSize);
+
+      if (actual == kResizeVecSize) {
+        std::string spliced = std::string(kAlphabet).substr(0, kResizeVecSize) +
+                              std::string(kInitialVecSize - kResizeVecSize, kInitialBufferChar);
+
+        EXPECT_STREQ(spliced.c_str(), buffer.c_str());
+      } else {
+        EXPECT_STREQ(kAlphabet, GetData(vmo).c_str());
+      }
+    });
+
+    std::thread resize_thread([&] { vec.capacity = kResizeVecSize; });
+
+    read_thread.join();
+    resize_thread.join();
+  }
+}
+
+// Tests that resizing a `zx_iovec_t` capacity smaller while a write is using it does not fail.
+TEST(StreamTestCase, RaceWriteResizeVecSmaller) {
+  constexpr size_t kNumIterations = 50;
+  constexpr size_t kResizeVecSize = 10;
+
+  for (size_t i = 0; i < kNumIterations; ++i) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+    ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
+
+    std::string buffer = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    zx_iovec_t vec = {
+        .buffer = buffer.data(),
+        .capacity = buffer.size(),
+    };
+
+    zx::stream stream;
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
+
+    std::thread write_thread([&] {
+      size_t actual = 42u;
+      ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+
+      ASSERT_TRUE(actual == buffer.size() || actual == kResizeVecSize);
+
+      if (actual == kResizeVecSize) {
+        std::string spliced =
+            buffer.substr(0, kResizeVecSize) + std::string(kAlphabet).substr(kResizeVecSize);
+
+        EXPECT_STREQ(spliced.c_str(), GetData(vmo).c_str());
+      } else {
+        EXPECT_STREQ(buffer.c_str(), GetData(vmo).c_str());
+      }
+    });
+
+    std::thread resize_thread([&] { vec.capacity = kResizeVecSize; });
+
+    write_thread.join();
+    resize_thread.join();
+  }
+}
+
+// Tests that resizing a `zx_iovec_t` capacity larger while a read is using it does not fail.
+TEST(StreamTestCase, RaceReadResizeVecLarger) {
+  constexpr size_t kNumIterations = 50;
+  constexpr size_t kInitialVecSize = 10;
+  constexpr size_t kResizeVecSize = 26;
+  constexpr char kInitialBufferChar = '!';
+
+  for (size_t i = 0; i < kNumIterations; ++i) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+    ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
+
+    std::string buffer(kResizeVecSize, kInitialBufferChar);
+    zx_iovec_t vec = {
+        .buffer = buffer.data(),
+        .capacity = kInitialVecSize,
+    };
+
+    zx::stream stream;
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ, vmo, 0, &stream));
+
+    std::thread read_thread([&] {
+      size_t actual = 42u;
+      ASSERT_OK(stream.readv(0, &vec, 1, &actual));
+
+      ASSERT_TRUE(actual == kInitialVecSize || actual == buffer.size());
+
+      if (actual == kResizeVecSize) {
+        EXPECT_STREQ(kAlphabet, buffer.c_str());
+      } else {
+        std::string spliced = std::string(kAlphabet).substr(0, kInitialVecSize) +
+                              std::string(kResizeVecSize - kInitialVecSize, kInitialBufferChar);
+
+        EXPECT_STREQ(spliced.c_str(), buffer.c_str());
+      }
+    });
+
+    std::thread resize_thread([&] { vec.capacity = kResizeVecSize; });
+
+    read_thread.join();
+    resize_thread.join();
+  }
+}
+
+// Tests that resizing a `zx_iovec_t` capacity larger while a write is using it does not fail.
+TEST(StreamTestCase, RaceWriteResizeVecLarger) {
+  constexpr size_t kNumIterations = 50;
+  constexpr size_t kInitialVecSize = 10;
+
+  for (size_t i = 0; i < kNumIterations; ++i) {
+    zx::vmo vmo;
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+    ASSERT_OK(vmo.write(kAlphabet, 0u, strlen(kAlphabet)));
+
+    std::string buffer = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+    zx_iovec_t vec = {
+        .buffer = buffer.data(),
+        .capacity = kInitialVecSize,
+    };
+
+    zx::stream stream;
+    ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_WRITE, vmo, 0, &stream));
+
+    std::thread write_thread([&] {
+      size_t actual = 42u;
+      ASSERT_OK(stream.writev(0, &vec, 1, &actual));
+
+      ASSERT_TRUE(actual == kInitialVecSize || actual == buffer.size());
+
+      if (actual == kInitialVecSize) {
+        std::string spliced =
+            buffer.substr(0, kInitialVecSize) + std::string(kAlphabet).substr(kInitialVecSize);
+
+        EXPECT_STREQ(spliced.c_str(), GetData(vmo).c_str());
+      } else {
+        EXPECT_STREQ(buffer.c_str(), GetData(vmo).c_str());
+      }
+    });
+
+    std::thread resize_thread([&] { vec.capacity = buffer.size(); });
+
+    write_thread.join();
+    resize_thread.join();
+  }
 }
 
 }  // namespace
