@@ -338,6 +338,18 @@ zx_status_t Av400::AudioInit() {
     metadata.sClockDivFactor = 4;   // sclk = 12'288'000 / 4 = 3'072'000 hz
     metadata.bus = metadata::AmlBus::TDM_A;
 
+#ifdef TEST_LOOPBACK
+    metadata.is_loopback = true;
+    // |TDMOUT_B| & |LOOPBACK| needs use the same MCLK.
+    metadata.is_custom_tdm_clk_sel = true;
+    metadata.tdm_clk_sel = metadata::AmlTdmclk::CLK_A;
+    // Now |TDMOUT_B| is active, so select it as loopback source.
+    metadata.loopback.datalb_src = metadata::AmlAudioBlock::TDMOUT_B;
+    // `datalb_chnum` use same value as `ring_buffer.number_of_channels`
+    metadata.loopback.datalb_chnum = 2;
+    // `datalb_chnum` use same value as `lanes_enable_mask`
+    metadata.loopback.datalb_chmask = 0x3;
+#else
     metadata.is_custom_tdm_clk_sel = true;
     metadata.tdm_clk_sel = metadata::AmlTdmclk::CLK_B;  // you can select A ~ D
     metadata.is_custom_tdm_mpad_sel = true;
@@ -347,6 +359,7 @@ zx_status_t Av400::AudioInit() {
         metadata::AmlTdmSclkPad::SCLK_PAD_2;  // sclk/lrclk_pad2  <-> SCLK2/LRCLK2 (A5_GPIOT_1/0)
     metadata.dpad_mask = 1 << 0;
     metadata.dpad_sel[0] = metadata::AmlTdmDatPad::TDM_D8;  // lane0 <-> TDM_D8(A5_GPIOT_2)
+#endif
 
     metadata.version = metadata::AmlVersion::kA5;
     metadata.dai.type = metadata::DaiType::I2s;

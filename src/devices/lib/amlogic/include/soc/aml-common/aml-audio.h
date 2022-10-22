@@ -20,6 +20,17 @@ enum class AmlVersion : uint32_t {
   kA5 = 3,
 };
 
+enum class AmlAudioBlock : uint32_t {
+  TDMIN_A,
+  TDMIN_B,
+  TDMIN_C,
+  TDMOUT_A,
+  TDMOUT_B,
+  TDMOUT_C,
+  PDMIN,
+  PDMIN_VAD,
+};
+
 enum class AmlBus : uint32_t {
   TDM_A = 1,
   TDM_B = 2,
@@ -56,10 +67,48 @@ enum class AmlTdmDatPad : uint32_t {
   TDM_D11 = 11,
 };
 
+struct AmlLoopbackConfig {
+  // If Enable Loopback, select source for TDMIN_LB.
+  // e.g.
+  //  tdminlb_src = TDMOUT_B.
+  //
+  // [Data Flow as follow]:
+  // `==>` : Play data flow.
+  // `-->` : Loopback data flow.
+  //
+  //                                                        |  (To Codec or BT)
+  //                                                        |
+  // +--------+     +-------+     +--------+                |   +----------+
+  // | player | ==> |FRDDR_*| ==> |TDMOUT_B| ========0======+=> |PAD to Pin|
+  // +--------+     +-------+     +--------+         |      |   +----------+
+  //                                        (reflow) |      |
+  //                                                 |      |
+  //                                                 |      |
+  //                                        datalb   v      |
+  // +--------+     +-------+     +--------+     +--------+ |
+  // | record | <-- |TODDR_*| <-- |LOOPBACK| <-- |TDMIN_LB| |
+  // +--------+     +-------+     +--------+     +--------+ |
+  //                                  ^                     |
+  //                                  |       +---------+   |
+  //                                   -------|PDM/TDMIN|
+  //                                datain    +---------+
+  //
+  AmlAudioBlock datain_src;
+  uint8_t datain_chnum;
+  uint32_t datain_chmask;
+
+  AmlAudioBlock datalb_src;
+  uint8_t datalb_chnum;
+  uint32_t datalb_chmask;
+};
+
 struct AmlConfig {
   char manufacturer[kMaxAmlConfigString];
   char product_name[kMaxAmlConfigString];
   bool is_input;
+
+  bool is_loopback;
+  AmlLoopbackConfig loopback;
 
   // If false, it will use HIFI_PLL by default.
   // If true, it will use MP0_PLL

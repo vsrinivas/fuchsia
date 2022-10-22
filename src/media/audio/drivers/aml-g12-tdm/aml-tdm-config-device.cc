@@ -44,7 +44,12 @@ AmlTdmConfigDevice::AmlTdmConfigDevice(const metadata::AmlConfig& metadata, fdf:
     if (metadata.is_custom_tdm_clk_sel)
       mclk = ToMclkId(metadata.tdm_clk_sel);
 
-    device_ = AmlTdmInDevice::Create(std::move(mmio), mclk_src, tdm, ddr, mclk, metadata.version);
+    if (metadata.is_loopback) {
+      device_ = AmlTdmLbDevice::Create(std::move(mmio), mclk_src, ddr, mclk, metadata.loopback,
+                                       metadata.version);
+    } else {
+      device_ = AmlTdmInDevice::Create(std::move(mmio), mclk_src, tdm, ddr, mclk, metadata.version);
+    }
   } else {
     aml_tdm_out_t tdm = {};
     aml_frddr_t ddr = {};

@@ -162,6 +162,9 @@ zx_status_t AmlTdmInDevice::SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_cust
     case TDM_IN_C:
       spad = SCLK_PAD_2;
       break;
+    case TDM_IN_LB:
+      ZX_ASSERT(0);
+      break;
   }
 
   if (is_custom_select)
@@ -269,6 +272,9 @@ void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_
         case TDM_IN_C:
           src = 2;
           break;
+        case TDM_IN_LB:
+          ZX_ASSERT(0);
+          break;
       }
 #ifdef ENABLE_BT_LOOPBACK
       src += 3;
@@ -290,6 +296,9 @@ void AmlTdmInDevice::ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_
           break;
         case TDM_IN_C:
           src = 2;
+          break;
+        case TDM_IN_LB:
+          ZX_ASSERT(0);
           break;
       }
       uint32_t reg0 = (i2s_mode << 30) |    // TDM/I2S mode.

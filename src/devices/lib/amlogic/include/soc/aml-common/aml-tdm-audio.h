@@ -255,6 +255,8 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
         return EE_AUDIO_TDMIN_B_CTRL0;
       case TDM_IN_C:
         return EE_AUDIO_TDMIN_C_CTRL0;
+      case TDM_IN_LB:
+        return EE_AUDIO_TDMIN_LB_CTRL0;
     }
     // We should never get here, but if we do, make it obvious
     assert(0);
@@ -277,6 +279,134 @@ class AmlTdmInDevice : public AmlTdmDevice {  // Not final for unit testing.
   const aml_tdm_mclk_t mclk_ch_;  // mclk channel used by this instance
   const zx_off_t toddr_base_;     // base offset of toddr ch used by this instance
   const zx_off_t tdm_base_;       // base offset of our tdmin block
+  const fdf::MmioBuffer mmio_;
+  const metadata::AmlVersion version_;
+};
+
+class AmlTdmLbDevice : public AmlTdmDevice {
+ public:
+  static std::unique_ptr<AmlTdmDevice> Create(
+      fdf::MmioBuffer mmio, ee_audio_mclk_src_t src, aml_toddr_t toddr, aml_tdm_mclk_t mclk,
+      metadata::AmlLoopbackConfig loopback_config,
+      metadata::AmlVersion version = metadata::AmlVersion::kS905D2G);
+
+  void ConfigTdmSlot(uint8_t bit_offset, uint8_t num_slots, uint8_t bits_per_slot,
+                     uint8_t bits_per_sample, uint8_t mix_mask, bool i2s_mode) override;
+  zx_status_t ConfigTdmLane(size_t lane, uint32_t enable_mask, uint32_t mute_mask) override;
+  void ConfigTdmSwaps(uint32_t swaps) override;
+  zx_status_t SetBuffer(zx_paddr_t buf, size_t len) override;
+  zx_status_t SetSclkPad(aml_tdm_sclk_pad_t sclk_pad, bool is_custom_select) override {
+    return ZX_OK;
+  }
+  zx_status_t SetDatPad(aml_tdm_dat_pad_t tdm_pin, aml_tdm_dat_lane_t dat_lane) override {
+    return ZX_OK;
+  }
+  uint32_t GetRingPosition() override;
+  uint32_t GetDmaStatus() override;
+  uint32_t GetTdmStatus() override;
+  uint64_t Start() override;
+  void Stop() override;
+  void Sync() override;
+  void Initialize() override;
+  void Shutdown() override;
+  uint32_t fifo_depth() const override { return fifo_depth_; }
+
+ protected:
+  AmlTdmLbDevice(fdf::MmioBuffer mmio, ee_audio_mclk_src_t clk_src, aml_toddr_t toddr,
+                 aml_tdm_mclk_t mclk, uint32_t fifo_depth, metadata::AmlVersion version,
+                 uint32_t lb_src)
+      : AmlTdmDevice(mclk, clk_src, version),
+        fifo_depth_(fifo_depth),
+        lb_src_(lb_src),
+        toddr_ch_(toddr),
+        mclk_ch_(mclk),
+        toddr_base_(GetToddrBase(toddr)),
+        mmio_(std::move(mmio)),
+        version_(version) {}
+
+ private:
+  const fdf::MmioBuffer& GetMmio() const override { return mmio_; }
+
+  /* Get the register block offset for our ddr block */
+  static zx_off_t GetToddrBase(aml_toddr_t ch) {
+    switch (ch) {
+      case TODDR_A:
+        return EE_AUDIO_TODDR_A_CTRL0;
+      case TODDR_B:
+        return EE_AUDIO_TODDR_B_CTRL0;
+      case TODDR_C:
+        return EE_AUDIO_TODDR_C_CTRL0;
+    }
+    // We should never get here, but if we do, make it obvious
+    assert(0);
+    return 0;
+  }
+
+  // For S905D2/S905D3.
+  static uint32_t ToTdminLbSrcV1(metadata::AmlAudioBlock src) {
+    switch (src) {
+      case metadata::AmlAudioBlock::TDMOUT_A:
+        return 0;
+      case metadata::AmlAudioBlock::TDMOUT_B:
+        return 1;
+      case metadata::AmlAudioBlock::TDMOUT_C:
+        return 2;
+      case metadata::AmlAudioBlock::TDMIN_A:
+        return 3;
+      case metadata::AmlAudioBlock::TDMIN_B:
+        return 4;
+      case metadata::AmlAudioBlock::TDMIN_C:
+        return 5;
+      default:
+        break;
+    }
+
+    // We should never get here, but if we do, make it obvious
+    assert(0);
+    return 0;
+  }
+
+  // For A5.
+  static uint32_t ToTdminLbSrcV2(metadata::AmlAudioBlock src) {
+    switch (src) {
+      case metadata::AmlAudioBlock::TDMIN_A:
+        return 0;
+      case metadata::AmlAudioBlock::TDMIN_B:
+        return 1;
+      case metadata::AmlAudioBlock::TDMIN_C:
+        return 2;
+      case metadata::AmlAudioBlock::TDMOUT_A:
+        return 12;
+      case metadata::AmlAudioBlock::TDMOUT_B:
+        return 13;
+      case metadata::AmlAudioBlock::TDMOUT_C:
+        return 14;
+      default:
+        break;
+    }
+
+    // We should never get here, but if we do, make it obvious
+    assert(0);
+    return 0;
+  }
+
+  void TODDREnable();
+  void TODDRDisable();
+  void TdmInDisable();
+  void TdmInEnable();
+
+  /* Get the register block offset for our ddr block */
+  zx_off_t GetToddrOffset(zx_off_t off) { return toddr_base_ + off; }
+  /* Get the register block offset for our tdm block */
+  zx_off_t GetTdmOffset(zx_off_t off) { return tdm_base_ + off; }
+
+  const uint32_t fifo_depth_;              // in bytes.
+  const uint32_t lb_src_;                  // select for |tdmin_lb| source.
+  const aml_tdm_in_t tdm_ch_ = TDM_IN_LB;  // tdm input block used by this instance
+  const aml_toddr_t toddr_ch_;             // fromddr channel used by this instance
+  const aml_tdm_mclk_t mclk_ch_;           // mclk channel used by this instance
+  const zx_off_t toddr_base_;              // base offset of toddr ch used by this instance
+  const zx_off_t tdm_base_ = EE_AUDIO_TDMIN_LB_CTRL0;  // base offset of our tdmin block
   const fdf::MmioBuffer mmio_;
   const metadata::AmlVersion version_;
 };

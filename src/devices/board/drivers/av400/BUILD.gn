@@ -7,6 +7,7 @@ import("//build/drivers.gni")
 
 declare_args() {
   av400_has_codec = true
+  av400_has_loopback = false
 }
 
 driver_bind_rules("av400-emmc-bind") {
@@ -302,10 +303,14 @@ fuchsia_driver("av400-driver") {
   # Consider switching to the C++ bindings. See linked bug for details.
   configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 
+  defines = []
   if (av400_has_codec) {
-    defines = [ "TEST_CODEC" ]
+    defines += [ "TEST_CODEC" ]
     deps += [ ":tdm-i2s-test-codec-bind_header" ]
     deps -= [ ":tdm-i2s-bind_header" ]
+  }
+  if (av400_has_loopback) {
+    defines += [ "TEST_LOOPBACK" ]
   }
 }
 
