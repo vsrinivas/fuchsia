@@ -113,7 +113,9 @@ void EvalExpressionAsNode(const std::string& input, const fxl::RefPtr<EvalContex
 
 void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
                     bool follow_references, EvalCallback cb) {
-  return EvalExpressionAsNode(input, context, follow_references, std::move(cb));
+  // Use the bytecode path as the default.
+  // TODO(remove the node path).
+  return EvalExpressionAsBytecode(input, context, follow_references, std::move(cb));
 }
 
 void EvalExpressions(const std::vector<std::string>& inputs,
