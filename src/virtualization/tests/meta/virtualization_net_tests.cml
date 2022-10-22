@@ -6,4 +6,22 @@
     program: {
         binary: "bin/virtualization_net_tests",
     },
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "debian_guest",
+                "debian_guest_manager",
+                "virtio_balloon",
+                "virtio_block",
+                "virtio_console",
+                "virtio_net",
+                "virtio_rng",
+                "virtio_sound",
+                "virtio_vsock",
+                "vmm",
+                "zircon_guest",
+                "zircon_guest_manager",
+            ],
+        },
+    },
 }

@@ -9,4 +9,22 @@
     program: {
         binary: "bin/virtualization_sound_tests",
     },
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "termina_guest",
+                "virtio_balloon",
+                "virtio_block",
+                "virtio_console",
+                "virtio_magma",
+                "virtio_net",
+                "virtio_rng",
+                "virtio_sound",
+                "virtio_vsock",
+                "virtio_wl",
+                "vmm",
+                "wayland_bridge",
+            ],
+        },
+    },
 }

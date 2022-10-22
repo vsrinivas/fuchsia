@@ -6,4 +6,25 @@
     program: {
         binary: "bin/virtualization_gpu_tests",
     },
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "cursor",
+                "debian_guest",
+                "debian_guest_manager",
+                "virtio_balloon",
+                "virtio_block",
+                "virtio_console",
+                "virtio_gpu",
+                "virtio_input",
+                "virtio_net",
+                "virtio_rng",
+                "virtio_sound",
+                "virtio_vsock",
+                "vmm",
+                "zircon_guest",
+                "zircon_guest_manager",
+            ],
+        },
+    },
 }
