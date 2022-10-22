@@ -134,7 +134,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/serial/drivers/uart16550:uart16550_lib",
     "//src/devices/serial/drivers/uart16550:uart16550_lib_for_testing",
     "//src/devices/serial/drivers/usb-cdc-acm:usb-cdc-acm-driver",
-    "//src/devices/serial/drivers/virtio-console:virtio_console-driver",
     "//src/devices/sysmem/drivers/sysmem:sysmem-driver",
     "//src/devices/sysmem/drivers/sysmem:sysmem-unittest-bin",
     "//src/devices/sysmem/drivers/sysmem:sysmem_common_srcs",

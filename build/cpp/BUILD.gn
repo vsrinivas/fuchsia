@@ -67,7 +67,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/devices/registers/testing/mock-registers:mock-registers-test",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-driver",
     "//src/devices/securemem/drivers/aml-securemem:aml-securemem-test-bin",
-    "//src/devices/serial/drivers/virtio-console:virtio_console-driver",
     "//src/devices/spi/drivers/spi:spi-driver",
     "//src/devices/spi/drivers/spi:spi-test-bin",
     "//src/devices/sysmem/drivers/sysmem:sysmem-unittest-bin",

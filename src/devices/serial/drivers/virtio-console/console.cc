@@ -4,7 +4,7 @@
 
 #include "console.h"
 
-#include <fuchsia/hardware/pty/c/fidl.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/fs-pty/service.h>
