@@ -149,6 +149,8 @@ fbl::String GetTestFilter() {
 #endif
   } else if (board_name == "arm64" || board_name == "x64") {
     return "*GenericShouldFail*";
+  } else if (board_name == "clover") {
+    return "*Clover*";
   }
 
   return "Unknown";
@@ -239,6 +241,14 @@ class DeviceEnumerationTest : public zxtest::Test {
     }
   }
 };
+
+TEST_F(DeviceEnumerationTest, CloverTest) {
+  static const char* kDevicePaths[] = {
+      "sys/platform/platform-passthrough/clover",
+  };
+
+  ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
+}
 
 TEST_F(DeviceEnumerationTest, Av400Test) {
   static const char* kDevicePaths[] = {

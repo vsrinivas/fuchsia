@@ -1,0 +1,38 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.google.platform.BIND_PLATFORM_DEV_PID.CLOVER",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS"
+        },
+        "expected": "match",
+        "name": "Match"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.i2c.BIND_FIDL_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "WrongProtocol"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM3",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.platform.BIND_PLATFORM_DEV_VID.GENERIC",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS"
+        },
+        "expected": "abort",
+        "name": "WrongVendor"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_PID.VIM2",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.khadas.platform.BIND_PLATFORM_DEV_VID.KHADAS",
+            "fuchsia.BIND_FIDL_PROTOCOL": "fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS"
+        },
+        "expected": "abort",
+        "name": "WrongPlatform"
+    }
+]

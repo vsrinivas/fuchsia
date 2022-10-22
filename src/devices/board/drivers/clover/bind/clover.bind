@@ -1,0 +1,10 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.google.platform;
+using fuchsia.hardware.platform.bus;
+
+fuchsia.BIND_FIDL_PROTOCOL == fuchsia.hardware.platform.bus.BIND_FIDL_PROTOCOL.PLATFORM_BUS;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE;
+fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.CLOVER;

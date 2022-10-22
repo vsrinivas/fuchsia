@@ -111,6 +111,7 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/devices/board/drivers/as370:*",
     "//src/devices/board/drivers/astro:*",
     "//src/devices/board/drivers/c18:*",
+    "//src/devices/board/drivers/clover:*",
     "//src/devices/board/drivers/integration-test:*",
     "//src/devices/board/drivers/machina:*",
     "//src/devices/board/drivers/nelson:*",

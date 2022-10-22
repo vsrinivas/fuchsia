@@ -91,6 +91,7 @@
 //src/devices/board/drivers/astro:astro-driver
 //src/devices/board/drivers/av400:av400-driver
 //src/devices/board/drivers/buckeye:buckeye-driver
+//src/devices/board/drivers/clover:clover-driver
 //src/devices/board/drivers/integration-test:integration-test-driver
 //src/devices/board/drivers/machina:machina-driver
 //src/devices/board/drivers/nelson:nelson-module-driver

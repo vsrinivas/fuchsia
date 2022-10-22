@@ -183,3 +183,12 @@ kernel_cmdline("av400") {
     "netsvc.interface=/dwmac/dwmac/Designware-MAC/ethernet",
   ]
 }
+
+# Copy from av400
+kernel_cmdline("clover") {
+  deps = [ ":pmm-checker-from-board" ]
+  args = [
+    # Prefer using the built-in NIC to the CDC-ether interface.
+    "netsvc.interface=/dev/dwmac/dwmac/Designware-MAC/ethernet",
+  ]
+}

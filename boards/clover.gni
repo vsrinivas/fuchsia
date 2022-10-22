@@ -1,0 +1,51 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//boards/arm64.gni")
+
+board_name = "clover"
+board_description = "clover"
+
+_common_bootfs_deps = [
+  "//boards/kernel_cmdline:clover",
+  "//src/devices/board/drivers/clover",
+]
+
+board_bootfs_labels += _common_bootfs_deps
+
+board_zedboot_bootfs_labels += _common_bootfs_deps
+
+board_recovery_bootfs_labels += _common_bootfs_deps
+
+board_package_labels += [ "//src/devices/sysmem/bin/sysmem_connector" ]
+
+use_gigaboot = false
+use_vbmeta = true
+
+# workaround: use vim3 key
+avb_key = "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_devkey_atx_psk.pem"
+avb_algorithm = "SHA512_RSA4096"
+avb_atx_metadata =
+    "//src/firmware/avb_keys/vim3/vim3-dev-key/vim3_dev_atx_metadata.bin"
+
+# partitions for fx flash to flash
+zircon_a_partition = "zircon_a"
+zircon_b_partition = "zircon_b"
+zircon_r_partition = "zircon_r"
+vbmeta_a_partition = "vbmeta_a"
+vbmeta_b_partition = "vbmeta_b"
+vbmeta_r_partition = "vbmeta_r"
+active_partition = "a"
+fastboot_product = "clover"
+fvm_partition = "fvm"
+
+# total 512M
+fvm_ftl_nand_page_size = 4096
+fvm_ftl_nand_oob_size = 128
+fvm_ftl_nand_pages_per_block = 64
+fvm_ftl_nand_block_count = 2048
+
+# Supports only physical devices.
+board_is_emu = false
+board_is_phys = true

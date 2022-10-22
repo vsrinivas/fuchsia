@@ -9,6 +9,7 @@ group("drivers") {
     "drivers/astro",
     "drivers/av400",
     "drivers/buckeye",
+    "drivers/clover",
     "drivers/integration-test",
     "drivers/machina",
     "drivers/nelson",
