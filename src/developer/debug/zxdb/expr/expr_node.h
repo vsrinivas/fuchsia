@@ -14,6 +14,7 @@
 #include "src/developer/debug/zxdb/expr/expr_token.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/parsed_identifier.h"
+#include "src/developer/debug/zxdb/expr/vm_op.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -90,6 +91,24 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   // actual type the expression evaluated to.
   void EvalFollowReferences(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const;
 
+  // Appends the bytecode necessary to execute this node.  The bytecode machine is a stack-based
+  // machine.
+  //
+  // Each ExprNode pushes temporary values it needs to the stack (usually by evaluating
+  // sub-expressions that will leave these values on the stack). It must consume these values and
+  // push exactly one result value on the stack when it is done. This value will be the "result" of
+  // the expression. Even expressions with no results (like a loop) must push a value to the stack
+  // (typically an empty ExprValue()) since the node calling it always expects one value. If the
+  // calling node doesn't want a value, it should "drop" it after running the expression.
+  //
+  // After the entire program is executed, the result should be a stack containing exactly one
+  // ExprValue which is the result of evaluation.
+  virtual void EmitBytecode(VmStream& stream) const = 0;
+
+  // Wrapper around EmitBytecode() that automatically expands C++ references to their values.
+  // Used when callers know they want the effective value.
+  void EmitBytecodeExpandRef(VmStream& stream) const;
+
   // Dumps the tree to a stream with the given indent. Used for unit testing and debugging.
   virtual void Print(std::ostream& out, int indent) const = 0;
 
@@ -105,6 +124,7 @@ class AddressOfExprNode : public ExprNode {
  public:
   const AddressOfExprNode* AsAddressOf() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -123,6 +143,7 @@ class ArrayAccessExprNode : public ExprNode {
  public:
   const ArrayAccessExprNode* AsArrayAccess() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -148,6 +169,7 @@ class BinaryOpExprNode : public ExprNode {
  public:
   const BinaryOpExprNode* AsBinaryOp() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -168,6 +190,7 @@ class BlockExprNode : public ExprNode {
  public:
   const BlockExprNode* AsBlock() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
   const std::vector<fxl::RefPtr<ExprNode>>& statements() const { return statements_; }
@@ -194,6 +217,7 @@ class CastExprNode : public ExprNode {
  public:
   const CastExprNode* AsCast() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -223,6 +247,7 @@ class ConditionExprNode : public ExprNode {
 
   const ConditionExprNode* AsCondition() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -248,6 +273,7 @@ class DereferenceExprNode : public ExprNode {
  public:
   const DereferenceExprNode* AsDereference() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -266,6 +292,7 @@ class FunctionCallExprNode : public ExprNode {
  public:
   const FunctionCallExprNode* AsFunctionCall() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
   const fxl::RefPtr<ExprNode>& call() const { return call_; }
@@ -308,6 +335,7 @@ class IdentifierExprNode : public ExprNode {
  public:
   const IdentifierExprNode* AsIdentifier() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
   ParsedIdentifier& ident() { return ident_; }
@@ -338,6 +366,7 @@ class LiteralExprNode : public ExprNode {
  public:
   const LiteralExprNode* AsLiteral() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
   // The token's value won't have been checked that it's valid, only that it starts like the type of
@@ -349,9 +378,10 @@ class LiteralExprNode : public ExprNode {
   FRIEND_MAKE_REF_COUNTED(LiteralExprNode);
 
   LiteralExprNode() = default;
-  explicit LiteralExprNode(const ExprToken& token) : token_(token) {}
+  LiteralExprNode(ExprLanguage lang, const ExprToken& token) : language_(lang), token_(token) {}
   ~LiteralExprNode() override = default;
 
+  ExprLanguage language_;
   ExprToken token_;
 };
 
@@ -360,6 +390,7 @@ class MemberAccessExprNode : public ExprNode {
  public:
   const MemberAccessExprNode* AsMemberAccess() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
   // Expression on the left side of the "." or "->".
@@ -390,6 +421,7 @@ class SizeofExprNode : public ExprNode {
  public:
   const SizeofExprNode* AsSizeof() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:
@@ -410,6 +442,7 @@ class TypeExprNode : public ExprNode {
  public:
   const TypeExprNode* AsType() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
   fxl::RefPtr<Type>& type() { return type_; }
@@ -431,6 +464,7 @@ class UnaryOpExprNode : public ExprNode {
  public:
   const UnaryOpExprNode* AsUnaryOp() const override { return this; }
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:

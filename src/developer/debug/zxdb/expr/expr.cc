@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/expr/expr_node.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
+#include "src/developer/debug/zxdb/expr/vm_exec.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 
 namespace zxdb {
@@ -48,8 +49,40 @@ class MultiEvalTracking {
 
 }  // namespace
 
-void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
-                    bool follow_references, EvalCallback cb) {
+void EvalExpressionAsBytecode(const std::string& input, const fxl::RefPtr<EvalContext>& context,
+                              bool follow_references, EvalCallback cb) {
+  ExprTokenizer tokenizer(input, context->GetLanguage());
+  if (!tokenizer.Tokenize())
+    return cb(tokenizer.err());
+
+  ExprParser parser(tokenizer.TakeTokens(), tokenizer.language(),
+                    context->GetSymbolNameLookupCallback());
+  auto node = parser.ParseExpression();
+  if (parser.err().has_error()) {
+    // Add context information since we have the original input string (the
+    // parser doesn't have this).
+    ExprToken error_token = parser.error_token();
+    if (error_token.type() != ExprTokenType::kInvalid) {
+      Err context_err(parser.err().type(),
+                      parser.err().msg() + "\n" +
+                          ExprTokenizer::GetErrorContext(input, error_token.byte_offset()));
+      cb(context_err);
+    } else {
+      cb(parser.err());
+    }
+    return;
+  }
+
+  VmStream stream;
+  node->EmitBytecode(stream);
+  if (follow_references)
+    stream.push_back(VmOp::MakeExpandRef());
+
+  VmExec(context, std::move(stream), std::move(cb));
+}
+
+void EvalExpressionAsNode(const std::string& input, const fxl::RefPtr<EvalContext>& context,
+                          bool follow_references, EvalCallback cb) {
   ExprTokenizer tokenizer(input, context->GetLanguage());
   if (!tokenizer.Tokenize())
     return cb(tokenizer.err());
@@ -76,6 +109,11 @@ void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& co
     node->Eval(context, std::move(cb));
   else
     node->EvalFollowReferences(context, std::move(cb));
+}
+
+void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
+                    bool follow_references, EvalCallback cb) {
+  return EvalExpressionAsNode(input, context, follow_references, std::move(cb));
 }
 
 void EvalExpressions(const std::vector<std::string>& inputs,

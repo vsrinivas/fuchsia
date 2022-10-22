@@ -1150,7 +1150,7 @@ fxl::RefPtr<ExprNode> ExprParser::QuestionInfix(fxl::RefPtr<ExprNode> left,
 }
 
 fxl::RefPtr<ExprNode> ExprParser::LiteralPrefix(const ExprToken& token) {
-  return fxl::MakeRefCounted<LiteralExprNode>(token);
+  return fxl::MakeRefCounted<LiteralExprNode>(language_, token);
 }
 
 fxl::RefPtr<ExprNode> ExprParser::UnaryPrefix(const ExprToken& token) {

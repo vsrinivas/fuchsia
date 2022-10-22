@@ -16,6 +16,7 @@ class MockExprNode : public ExprNode {
   // Construct with fxl::MakeRefCounted().
 
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
+  void EmitBytecode(VmStream& stream) const override;
   void Print(std::ostream& out, int indent) const override;
 
  private:

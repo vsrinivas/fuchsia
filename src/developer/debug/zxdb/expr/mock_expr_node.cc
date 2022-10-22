@@ -23,6 +23,19 @@ void MockExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb
   }
 }
 
+void MockExprNode::EmitBytecode(VmStream& stream) const {
+  if (is_synchronous_) {
+    stream.push_back(
+        VmOp::MakeCallback0([value = value_](const fxl::RefPtr<EvalContext>&) { return value; }));
+  } else {
+    stream.push_back(VmOp::MakeAsyncCallback0(
+        [value = value_](const fxl::RefPtr<EvalContext>&, EvalCallback cb) {
+          debug::MessageLoop::Current()->PostTask(
+              FROM_HERE, [value, cb = std::move(cb)]() mutable { cb(value); });
+        }));
+  }
+}
+
 void MockExprNode::Print(std::ostream& out, int indent) const {}
 
 }  // namespace zxdb

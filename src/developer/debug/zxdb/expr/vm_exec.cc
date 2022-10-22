@@ -211,12 +211,14 @@ Completion VmExecState::ExecUnary(const VmOp& op) {
 }
 
 Completion VmExecState::ExecBinary(const VmOp& op) {
-  ExprValue left_param;
-  if (Pop(&left_param) == Completion::kError)
-    return Completion::kError;
-
+  // The "left" side expression on the binary operator will be pushed on the stack first, leaving
+  // the "right" side at the top of the stack to pop first when we execute the operator.
   ExprValue right_param;
   if (Pop(&right_param) == Completion::kError)
+    return Completion::kError;
+
+  ExprValue left_param;
+  if (Pop(&left_param) == Completion::kError)
     return Completion::kError;
 
   auto cb_info = std::make_shared<CallbackInfo>();

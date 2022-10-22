@@ -28,6 +28,11 @@ class EvalContext;
 void EvalExpression(const std::string& input, const fxl::RefPtr<EvalContext>& context,
                     bool follow_references, EvalCallback cb);
 
+// Same as EvalExpression but uses the bycode execution path.
+// TODO remove the other version when the conversion is complete.
+void EvalExpressionAsBytecode(const std::string& input, const fxl::RefPtr<EvalContext>& context,
+                              bool follow_references, EvalCallback cb);
+
 // Like EvalExpressions but evaluates a sequence of expressions, issuing the callback when they're
 // all complete. The size order of the results in the callback vector will correspond to the inputs.
 void EvalExpressions(const std::vector<std::string>& inputs,
