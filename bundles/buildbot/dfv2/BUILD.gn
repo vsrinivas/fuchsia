@@ -430,8 +430,6 @@ group("core") {
   # //src/tests/shutdown:tests pass with DFv2 enabled.
   # TODO(fxbug.dev/108573): Add //src/tests/dfv2:tests when all tests in
   # //src/tests/dfv2:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/109854): Add //src/tests/femu:tests when all tests in
-  # //src/tests/femu:tests pass with DFv2 enabled.
   deps += [
     "//src/tests/assembly:tests",
     "//src/tests/coverage:tests",
@@ -441,6 +439,7 @@ group("core") {
     "//src/tests/end_to_end/fidlcat:tests",
     "//src/tests/end_to_end/package_manager:tests",
     "//src/tests/end_to_end/snapshot:tests",
+    "//src/tests/femu:tests",
     "//src/tests/intl:tests",
     "//src/tests/kernel_cprng:tests",
     "//src/tests/kernel_crashlog:tests",
