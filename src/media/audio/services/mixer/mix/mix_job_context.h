@@ -25,10 +25,16 @@ class MixJobContext {
   static constexpr size_t kMaxSubtasks = 16;
 
  public:
-  explicit MixJobContext(const ClockSnapshots& clocks) : clocks_(clocks) {}
+  MixJobContext(const ClockSnapshots& clocks, zx::time mono_start_time, zx::time mono_deadline);
 
   // Returns the set of clocks available during this mix job.
   const ClockSnapshots& clocks() const { return clocks_; }
+
+  // Reports the start time of this mix job relative to the given clock.
+  zx::time start_time(const UnreadableClock& clock) const;
+
+  // Reports the deadline of this mix job relative to the given clock.
+  zx::time deadline(const UnreadableClock& clock) const;
 
   // Adds metrics for the given subtask. Internally we maintain one Metrics object per subtask. If
   // this method is called multiple times with the same subtask name, the metrics are accumulated.
@@ -51,6 +57,9 @@ class MixJobContext {
 
  private:
   const ClockSnapshots& clocks_;
+  zx::time mono_start_time_;
+  zx::time mono_deadline_;
+  zx::duration mix_period_;
   SubtaskMetricsVector per_subtask_metrics_;
 };
 

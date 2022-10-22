@@ -73,7 +73,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
   ClockSnapshots clock_snapshots;
   clock_snapshots.AddClock(clock);
   clock_snapshots.Update(zx::clock::get_monotonic());
-  MixJobContext ctx(clock_snapshots);
+  MixJobContext ctx(clock_snapshots, zx::time(0), zx::time(10));
 
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({
@@ -166,7 +166,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
   ClockSnapshots clock_snapshots;
   clock_snapshots.AddClock(clock);
   clock_snapshots.Update(zx::clock::get_monotonic());
-  MixJobContext ctx(clock_snapshots);
+  MixJobContext ctx(clock_snapshots, zx::time(0), zx::time(10));
 
   constexpr int64_t kRingBufferFrames = 10;
   auto buffer =
@@ -285,7 +285,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
   ClockSnapshots clock_snapshots;
   clock_snapshots.AddClock(clock);
   clock_snapshots.Update(zx::clock::get_monotonic());
-  MixJobContext ctx(clock_snapshots);
+  MixJobContext ctx(clock_snapshots, zx::time(0), zx::time(10));
 
   auto stream_sink = MakeStreamSink();
   auto producer = ProducerNode::Create({

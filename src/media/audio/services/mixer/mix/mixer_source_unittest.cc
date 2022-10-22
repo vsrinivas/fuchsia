@@ -139,7 +139,7 @@ void TestMix(int64_t step_size = 1) {
   source->push(
       PacketView({kDefaultFormat, Fixed(0), static_cast<int64_t>(payload.size()), payload.data()}));
 
-  MixJobContext ctx(clock_snapshots);
+  MixJobContext ctx(clock_snapshots, zx::time(0), zx::time(10));
   MixerSource mixer_source(source,
                            {.clock_sync = ClockSynchronizer::Create(
                                 dest_clock, source_clock, ClockSynchronizer::Mode::WithMicroSRC),

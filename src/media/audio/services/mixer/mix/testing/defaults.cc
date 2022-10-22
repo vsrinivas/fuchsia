@@ -26,9 +26,10 @@ struct Defaults {
   Defaults() {
     clock_realm = SyntheticClockRealm::Create();
     clock = clock_realm->CreateClock("default_clock_for_tests", Clock::kMonotonicDomain, false);
+    auto now = clock_realm->now();
     clock_snapshots.AddClock(clock);
-    clock_snapshots.Update(clock_realm->now());
-    mix_job_ctx = std::make_shared<MixJobContext>(clock_snapshots);
+    clock_snapshots.Update(now);
+    mix_job_ctx = std::make_shared<MixJobContext>(clock_snapshots, now, now + zx::msec(10));
   }
 };
 

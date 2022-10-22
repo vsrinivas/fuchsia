@@ -195,12 +195,14 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
   // Run a mix job, which should write the source data to the destination buffer.
   {
+    const auto now = h.clock_realm->now();
+
     ClockSnapshots clock_snapshots;
     clock_snapshots.AddClock(h.clock);
-    clock_snapshots.Update(h.clock_realm->now());
+    clock_snapshots.Update(now);
 
-    MixJobContext ctx(clock_snapshots);
-    auto status = consumer_stage->RunMixJob(ctx, h.clock_realm->now(), kMixJobPeriod);
+    MixJobContext ctx(clock_snapshots, now, now + kMixJobPeriod);
+    auto status = consumer_stage->RunMixJob(ctx, now, kMixJobPeriod);
     ASSERT_TRUE(std::holds_alternative<ConsumerStage::StartedStatus>(status));
 
     ASSERT_EQ(h.consumer_writer->packets().size(), 1u);
@@ -224,13 +226,14 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   // Run a mix job, which should write silence now that the source is disconnected.
   {
     h.clock_realm->AdvanceBy(kMixJobPeriod);
+    const auto now = h.clock_realm->now();
 
     ClockSnapshots clock_snapshots;
     clock_snapshots.AddClock(h.clock);
-    clock_snapshots.Update(h.clock_realm->now());
+    clock_snapshots.Update(now);
 
-    MixJobContext ctx(clock_snapshots);
-    auto status = consumer_stage->RunMixJob(ctx, h.clock_realm->now(), kMixJobPeriod);
+    MixJobContext ctx(clock_snapshots, now, now + kMixJobPeriod);
+    auto status = consumer_stage->RunMixJob(ctx, now, kMixJobPeriod);
     ASSERT_TRUE(std::holds_alternative<ConsumerStage::StartedStatus>(status));
 
     ASSERT_EQ(h.consumer_writer->packets().size(), 1u);

@@ -1139,7 +1139,7 @@ TEST_F(CustomStageTest, Metrics) {
   producer_stage->push(PacketView({input_format, Fixed(0), kPacketFrames, packet_payload.data()}));
 
   // Call Read and validate the metrics.
-  MixJobContext ctx(DefaultClockSnapshots());
+  MixJobContext ctx(DefaultClockSnapshots(), zx::time(0), zx::time(10));
   auto packet = custom_stage->Read(ctx, Fixed(0), kPacketFrames);
   ASSERT_TRUE(packet);
 

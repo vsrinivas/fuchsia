@@ -16,12 +16,15 @@ source_set("mix") {
   ]
 
   sources = [
+    "base_consumer_stage.cc",
+    "base_consumer_stage.h",
     "consumer_stage.cc",
     "consumer_stage.h",
     "custom_stage.cc",
     "custom_stage.h",
     "gain_control.cc",
     "gain_control.h",
+    "mix_job_context.cc",
     "mix_job_context.h",
     "mix_job_subtask.cc",
     "mix_job_subtask.h",
@@ -86,6 +89,7 @@ executable("mix_unittests") {
   testonly = true
 
   sources = [
+    "base_consumer_stage_unittest.cc",
     "consumer_stage_unittest.cc",
     "custom_stage_unittest.cc",
     "gain_control_unittest.cc",

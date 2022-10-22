@@ -197,13 +197,14 @@ void PipelineMixThread::RunLoop() {
 }
 
 zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx::time mono_now) {
-  MixJobContext ctx(clocks_);
+  const auto mono_deadline = mono_start_time + mix_period_;
+
+  MixJobContext ctx(clocks_, mono_start_time, mono_deadline);
   MixJobSubtask subtask("PipelineMixThread::RunMixJobs");
 
   clocks_.Update(mono_start_time);
 
   // If we woke up after this job's deadline, skip ahead to the next job.
-  const auto mono_deadline = mono_start_time + mix_period_;
   if (mono_now >= mono_deadline) {
     // Round the underflow length up to the next period. Cast to uint64_t to use `fbl::round_up`.
     // These casts are safe because the values must be positive.
@@ -229,13 +230,10 @@ zx::time PipelineMixThread::RunMixJobs(const zx::time mono_start_time, const zx:
 
   // Run each consumer that might be started.
   for (auto& [consumer, c] : consumers_) {
-    auto clock = clocks_.SnapshotFor(consumer->reference_clock());
-    const auto& mono_to_ref = clock.to_clock_mono().Inverse();
-
     // Mix periods are defined relative to the system monotonic clock. Translate this mix period to
     // the consumer's reference clock.
-    auto ref_start_time = zx::time(mono_to_ref.Apply(mono_start_time.get()));
-    auto ref_deadline = zx::time(mono_to_ref.Apply((mono_start_time + mix_period_).get()));
+    auto ref_start_time = ctx.start_time(consumer->reference_clock());
+    auto ref_deadline = ctx.deadline(consumer->reference_clock());
     auto ref_period = ref_deadline - ref_start_time;
 
     if (c.maybe_started ||
