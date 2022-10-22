@@ -18,21 +18,32 @@ use {
     tracing::{error, info, warn},
 };
 
+type LogSubscriber = dyn tracing::Subscriber + std::marker::Send + std::marker::Sync + 'static;
+
 // List of non hermetic packages accessed by a test which are logged to make it easy to transition.
 #[derive(Debug)]
 pub struct NonHermeticPkgList {
     test_url: String,
     list: Mutex<HashSet<String>>,
+    logger: Mutex<Option<Arc<LogSubscriber>>>,
 }
 
 impl NonHermeticPkgList {
     fn new(test_url: String) -> Arc<Self> {
-        Arc::new(Self { test_url, list: HashSet::new().into() })
+        Arc::new(Self { test_url, list: HashSet::new().into(), logger: None.into() })
     }
 
     async fn add_pkg(&self, pkg_name: &str) {
         let mut list = self.list.lock().await;
         list.insert(format!("\"{}\"", pkg_name));
+    }
+
+    async fn set_logger(&self, subscriber: Arc<LogSubscriber>) {
+        let mut logger = self.logger.lock().await;
+        // only set logger once.
+        if logger.is_none() {
+            let _ = logger.insert(subscriber);
+        }
     }
 }
 
@@ -40,16 +51,21 @@ impl Drop for NonHermeticPkgList {
     fn drop(&mut self) {
         let list = self.list.get_mut();
         if list.len() > 0 {
-            info!(
-                "Test '{}' uses non-hermetic packages. \
+            let s = format!("Test '{}' uses non-hermetic packages. \
             Please add below line to facets of your test manifest:
             \"{}\": [ {} ]\
             \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
             for more information.",
                 self.test_url,
                 facet::TEST_DEPRECATED_ALLOWED_PACKAGES_FACET_KEY,
-                list.drain().join(", ")
-            );
+                list.drain().join(", "));
+            // log in both test managers log sink and test's log sink so that it is easy to retrieve.
+            info!("{}", s);
+            if let Some(subscriber) = self.logger.get_mut().take() {
+                tracing::subscriber::with_default(subscriber, || {
+                    info!("{}", s);
+                });
+            }
         }
     }
 }
@@ -108,7 +124,7 @@ impl PartialEq for AllowedPackages {
 
 async fn validate_hermetic_package(
     component_url_str: &str,
-    subscriber: Arc<dyn tracing::Subscriber + Send + Sync + 'static>,
+    subscriber: Arc<LogSubscriber>,
     hermetic_test_package_name: &String,
     other_allowed_packages: &AllowedPackages,
 ) -> Result<(), fresolution::ResolverError> {
@@ -136,14 +152,15 @@ async fn validate_hermetic_package(
             if hermetic_test_package_name != package_name.as_ref()
                 && !allowed_packages.contains(package_name.as_ref())
             {
+                let s = format!("failed to resolve component {}: package {} is not in the test package allowlist: '{}, {}'
+                \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
+                for more information.",
+                &component_url_str, package_name, hermetic_test_package_name, allowed_packages.iter().join(", "));
+                // log in both test managers log sink and test's log sink so that it is easy to retrieve.
                 tracing::subscriber::with_default(subscriber, || {
-                    warn!(
-                    "failed to resolve component {}: package {} is not in the test package allowlist: '{}, {}'
-                    \nSee https://fuchsia.dev/fuchsia-src/development/testing/components/test_runner_framework?hl=en#hermetic-resolver
-                    for more information.",
-                    &component_url_str, package_name, hermetic_test_package_name, allowed_packages.iter().join(", ")
-                );
+                    warn!("{}", s);
                 });
+                warn!("{}", s);
                 return Err(fresolution::ResolverError::PackageNotFound);
             }
         }
@@ -156,7 +173,7 @@ async fn validate_hermetic_package(
 
 async fn serve_resolver(
     mut stream: fresolution::ResolverRequestStream,
-    subscriber: Arc<dyn tracing::Subscriber + Send + Sync + 'static>,
+    subscriber: Arc<LogSubscriber>,
     hermetic_test_package_name: Arc<String>,
     other_allowed_packages: AllowedPackages,
     full_resolver: Arc<fresolution::ResolverProxy>,
@@ -242,6 +259,9 @@ pub async fn serve_hermetic_resolver(
     )
     .unwrap();
     let log_publisher = Arc::new(log_publisher);
+    if let AllowedPackages::All(l) = &other_allowed_packages {
+        l.set_logger(log_publisher.clone()).await;
+    }
     fs.dir("svc").add_fidl_service(move |stream: fresolution::ResolverRequestStream| {
         let full_resolver = full_resolver.clone();
         let hermetic_test_package_name = hermetic_test_package_name.clone();
