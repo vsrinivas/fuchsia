@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use argh::FromArgs;
-use ffx_core::ffx_command;
-use std::path::PathBuf;
+use {argh::FromArgs, ffx_core::ffx_command, pbms::AuthFlowChoice, std::path::PathBuf};
 
 /// Retrieve image data.
 #[ffx_command()]
@@ -15,7 +13,11 @@ pub struct GetCommand {
     #[argh(switch)]
     pub force: bool,
 
-    /// use an insecure oauth2 token flow.
+    /// use specific auth flow for oauth2.
+    #[argh(option, default = "AuthFlowChoice::Default")]
+    pub auth: AuthFlowChoice,
+
+    /// use an insecure oauth2 token flow (deprecated).
     #[argh(switch)]
     pub oob_auth: bool,
 

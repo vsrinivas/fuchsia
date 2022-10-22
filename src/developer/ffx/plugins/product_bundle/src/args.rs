@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {argh::FromArgs, ffx_core::ffx_command, std::path::PathBuf, std::str::FromStr};
+use {
+    argh::FromArgs, ffx_core::ffx_command, pbms::AuthFlowChoice, std::path::PathBuf,
+    std::str::FromStr,
+};
 
 /// Discover and access product bundle metadata and image data.
 #[ffx_command()]
@@ -30,7 +33,11 @@ pub struct ListCommand {
     #[argh(switch)]
     pub cached: bool,
 
-    /// use an insecure oauth2 token flow.
+    /// use specific auth flow for oauth2.
+    #[argh(option, default = "AuthFlowChoice::Default")]
+    pub auth: AuthFlowChoice,
+
+    /// use an insecure oauth2 token flow (deprecated).
     #[argh(switch)]
     pub oob_auth: bool,
 }
@@ -47,7 +54,11 @@ pub struct GetCommand {
     #[argh(switch)]
     pub force: bool,
 
-    /// use an insecure oauth2 token flow.
+    /// use specific auth flow for oauth2.
+    #[argh(option, default = "AuthFlowChoice::Default")]
+    pub auth: AuthFlowChoice,
+
+    /// use an insecure oauth2 token flow (deprecated).
     #[argh(switch)]
     pub oob_auth: bool,
 

@@ -323,8 +323,8 @@ fn browser_open(url: &str) -> Result<()> {
         "A browser window will open to request access to GCS. \
         Please grant access.\n\nIf you're running without a gui (such as \
         through ssh) this may appear to hang,\nin that case rerun with the \
-        --oob-auth flag.\n\n(If you decide not to grant access, press ctrl+c \
-        to exit.)\n"
+        `--auth oob` option.\n\n(If you decide not to grant access, press \
+        ctrl+c to exit.)\n"
     );
 
     #[cfg(target_os = "linux")]

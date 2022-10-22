@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_developer_ffx::RepositoryRegistryProxy,
     fidl_fuchsia_developer_ffx_ext::{RepositoryError, RepositorySpec},
     fuchsia_url::RepositoryUrl,
-    pbms::{fetch_data_for_product_bundle_v1, update_metadata_from},
+    pbms::{fetch_data_for_product_bundle_v1, select_auth, update_metadata_from},
     sdk_metadata,
     std::{
         convert::TryInto,
@@ -53,26 +53,28 @@ async fn pb_get_impl<I: structured_ui::Interface + Sync>(
     make_way_for_output(&local_dir, cmd.force).await.context("make_way_for_output")?;
     let pbm_path = local_dir.join("product_bundle.json");
     tracing::debug!("first read_product_bundle_metadata {:?}", pbm_path);
-    let product_bundle_metadata =
-        match read_product_bundle_metadata(&pbm_path).await.context("reading product metadata") {
-            Ok(name) => name,
-            _ => {
-                // Try updating the metadata and then reading again.
-                tracing::debug!("update_metadata_from {:?} {:?}", product_url, local_dir);
-                update_metadata_from(&product_url, local_dir, !cmd.oob_auth, ui)
-                    .await
-                    .context("updating metadata")?;
-                read_product_bundle_metadata(&pbm_path)
-                    .await
-                    .with_context(|| format!("loading product metadata from {:?}", pbm_path))?
-            }
-        };
+    let product_bundle_metadata = match read_product_bundle_metadata(&pbm_path)
+        .await
+        .context("reading product metadata")
+    {
+        Ok(name) => name,
+        _ => {
+            // Try updating the metadata and then reading again.
+            tracing::debug!("update_metadata_from {:?} {:?}", product_url, local_dir);
+            update_metadata_from(&product_url, local_dir, select_auth(cmd.oob_auth, cmd.auth), ui)
+                .await
+                .context("updating metadata")?;
+            read_product_bundle_metadata(&pbm_path)
+                .await
+                .with_context(|| format!("loading product metadata from {:?}", pbm_path))?
+        }
+    };
     tracing::debug!("fetch_data_for_product_bundle_v1, product_url {:?}", product_url);
     fetch_data_for_product_bundle_v1(
         &product_bundle_metadata,
         &product_url,
         local_dir,
-        !cmd.oob_auth,
+        select_auth(cmd.oob_auth, cmd.auth),
         ui,
     )
     .await

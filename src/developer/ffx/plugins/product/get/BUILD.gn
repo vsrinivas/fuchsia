@@ -9,6 +9,7 @@ ffx_plugin("ffx_product_get") {
   edition = "2021"
   with_unit_tests = true
 
+  args_deps = [ "//src/developer/ffx/lib/pbms:lib" ]
   args_sources = [ "src/args.rs" ]
   sources = [ "src/lib.rs" ]
 

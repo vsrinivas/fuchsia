@@ -20,7 +20,7 @@ use {
     fuchsia_url::RepositoryUrl,
     pbms::{
         get_images_dir, get_product_data, is_locally_built, is_pb_ready, product_bundle_urls,
-        select_product_bundle, update_metadata_all, ListingMode,
+        select_auth, select_product_bundle, update_metadata_all, ListingMode,
     },
     std::{
         convert::TryInto,
@@ -263,7 +263,7 @@ where
     tracing::debug!("pb_list");
     if !cmd.cached {
         let storage_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&storage_dir, !cmd.oob_auth, ui).await?;
+        update_metadata_all(&storage_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?;
     }
     let mut entries = product_bundle_urls().await.context("list pbms")?;
     if entries.is_empty() {
@@ -347,7 +347,15 @@ where
     }
 
     // Go ahead and download the product images.
-    if !get_product_data(&product_url, &output_dir, !cmd.oob_auth, ui, cmd.force).await? {
+    if !get_product_data(
+        &product_url,
+        &output_dir,
+        select_auth(cmd.oob_auth, cmd.auth),
+        ui,
+        cmd.force,
+    )
+    .await?
+    {
         return Ok(());
     }
 
@@ -383,7 +391,7 @@ where
 {
     if !cmd.cached {
         let base_dir = pbms::get_storage_dir().await?;
-        update_metadata_all(&base_dir, !cmd.oob_auth, ui).await?;
+        update_metadata_all(&base_dir, select_auth(cmd.oob_auth, cmd.auth), ui).await?;
     }
     let should_print = true;
     select_product_bundle(&cmd.product_bundle_name, ListingMode::AllBundles, should_print).await

@@ -9,6 +9,7 @@ use {
     crate::{
         gcs::{get_boto_path, get_gcs_client_with_auth, get_gcs_client_without_auth},
         pbms::{fetch_bundle_uri, make_remote_url, GS_SCHEME},
+        AuthFlowChoice,
     },
     ::gcs::client::{DirectoryProgress, FileProgress, ProgressResponse, ProgressResult, Throttle},
     anyhow::{anyhow, bail, Context, Result},
@@ -39,7 +40,7 @@ pub(crate) async fn fetch_package_repository_from_mirrors<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     packages: &[PackageBundle],
-    use_secure_auth_flow: bool,
+    auth_flow: AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -50,15 +51,9 @@ where
     // The packages list is a set of mirrors. Try downloading the packages from each one. Only error
     // out if we can't download the packages from any mirror.
     for (i, package) in packages.iter().enumerate() {
-        let res = fetch_package_repository(
-            product_url,
-            local_dir,
-            package,
-            use_secure_auth_flow,
-            progress,
-            ui,
-        )
-        .await;
+        let res =
+            fetch_package_repository(product_url, local_dir, package, auth_flow, progress, ui)
+                .await;
 
         match res {
             Ok(()) => {
@@ -83,7 +78,7 @@ async fn fetch_package_repository<F, I>(
     product_url: &url::Url,
     local_dir: &Path,
     package: &PackageBundle,
-    use_secure_auth_flow: bool,
+    auth_flow: AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -132,7 +127,7 @@ where
                 repo_keys_uri,
                 repo_metadata_uri,
                 repo_blobs_uri,
-                use_secure_auth_flow,
+                auth_flow,
                 progress,
                 ui,
             )
@@ -145,14 +140,8 @@ where
                 unimplemented!();
             }
 
-            fetch_package_repository_from_tgz(
-                local_dir,
-                repo_metadata_uri,
-                use_secure_auth_flow,
-                progress,
-                ui,
-            )
-            .await
+            fetch_package_repository_from_tgz(local_dir, repo_metadata_uri, auth_flow, progress, ui)
+                .await
         }
         _ =>
         // The schema currently defines only "files" or "tgz" (see RFC-100).
@@ -181,7 +170,7 @@ async fn fetch_package_repository_from_files<F, I>(
     repo_keys_uri: Url,
     repo_metadata_uri: Url,
     repo_blobs_uri: Url,
-    use_secure_auth_flow: bool,
+    auth_flow: AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -214,7 +203,7 @@ where
                 repo_blobs_uri.clone(),
                 backend,
                 metadata_current_time,
-                use_secure_auth_flow,
+                auth_flow,
                 progress,
                 ui,
             )
@@ -223,7 +212,7 @@ where
                 return Ok(());
             }
 
-            let boto_path = get_boto_path(use_secure_auth_flow, ui).await?;
+            let boto_path = get_boto_path(auth_flow, ui).await?;
             let client =
                 get_gcs_client_with_auth(&boto_path).context("get_gcs_client_with_auth")?;
 
@@ -240,7 +229,7 @@ where
                 repo_blobs_uri.clone(),
                 backend,
                 metadata_current_time,
-                use_secure_auth_flow,
+                auth_flow,
                 progress,
                 ui,
             )
@@ -262,7 +251,7 @@ where
                 repo_blobs_uri,
                 backend,
                 Utc::now(),
-                use_secure_auth_flow,
+                auth_flow,
                 progress,
                 ui,
             )
@@ -286,7 +275,7 @@ async fn fetch_package_repository_from_backend<'a, F, I>(
     repo_blobs_uri: Url,
     backend: Box<dyn RepoProvider>,
     metadata_current_time: DateTime<Utc>,
-    use_secure_auth_flow: bool,
+    auth_flow: AuthFlowChoice,
     progress: &'a F,
     ui: &'a I,
 ) -> Result<()>
@@ -326,7 +315,7 @@ where
     fetch_bundle_uri(
         &repo_keys_uri.join("targets.json")?,
         keys_dir.as_std_path(),
-        use_secure_auth_flow,
+        auth_flow,
         progress,
         ui,
     )
@@ -336,7 +325,7 @@ where
     fetch_bundle_uri(
         &repo_keys_uri.join("snapshot.json")?,
         keys_dir.as_std_path(),
-        use_secure_auth_flow,
+        auth_flow,
         progress,
         ui,
     )
@@ -346,7 +335,7 @@ where
     fetch_bundle_uri(
         &repo_keys_uri.join("timestamp.json")?,
         keys_dir.as_std_path(),
-        use_secure_auth_flow,
+        auth_flow,
         progress,
         ui,
     )
@@ -436,7 +425,7 @@ where
 async fn fetch_package_repository_from_tgz<F, I>(
     local_dir: &Path,
     repo_uri: Url,
-    use_secure_auth_flow: bool,
+    auth_flow: AuthFlowChoice,
     progress: &F,
     ui: &I,
 ) -> Result<()>
@@ -444,7 +433,7 @@ where
     F: Fn(DirectoryProgress<'_>, FileProgress<'_>) -> ProgressResult,
     I: structured_ui::Interface + Sync,
 {
-    fetch_bundle_uri(&repo_uri, &local_dir, use_secure_auth_flow, progress, ui)
+    fetch_bundle_uri(&repo_uri, &local_dir, auth_flow, progress, ui)
         .await
         .with_context(|| format!("downloading repo URI {}", repo_uri))
 }
@@ -587,7 +576,7 @@ mod tests {
             blobs_url,
             Box::new(remote_repo),
             metadata_current_time,
-            /*use_secure_auth_flow=*/ true,
+            AuthFlowChoice::Default,
             &|_, _| Ok(ProgressResponse::Continue),
             &ui,
         )
