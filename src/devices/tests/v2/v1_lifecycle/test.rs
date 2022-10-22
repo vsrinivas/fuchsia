@@ -30,5 +30,7 @@ async fn test_devfs_exporter() -> Result<()> {
     let response = device.get_string().await.unwrap();
     assert_eq!(response, "hello world!");
 
+    device.stop().await?;
+
     Ok(())
 }

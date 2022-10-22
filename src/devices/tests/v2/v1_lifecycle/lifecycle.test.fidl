@@ -11,6 +11,9 @@ protocol Device {
     GetString() -> (struct {
         response string:MAX;
     });
+
+    /// Replies in prepare stop.
+    Stop() -> ();
 };
 
 service Service {

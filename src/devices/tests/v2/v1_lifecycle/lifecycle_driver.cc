@@ -100,13 +100,32 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
     completer.Reply(fidl::StringView::FromExternal(std::string(str)));
   }
 
+  // fidl::WireServer<ft::Device>
+  void Stop(StopCompleter::Sync& completer) override {
+    stop_completer_ = completer.ToAsync();
+    // Resetting the node handle will result in the driver being stopped.
+    node().reset();
+  }
+
+  void PrepareStop(PrepareStopContext* context) override {
+    ZX_ASSERT(stop_completer_);
+    ZX_ASSERT(stop_called_ == false);
+    stop_completer_->Reply();
+    context->complete(context, ZX_OK);
+  }
+
+  void Stop() override { stop_called_ = true; }
+
  private:
   std::optional<compat::DeviceServer> child_;
   std::shared_ptr<compat::Context> compat_context_;
+
+  std::optional<StopCompleter::Async> stop_completer_;
+  bool stop_called_ = false;
 
   ddk::ParentProtocolClient parent_client_;
 };
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<LifecycleDriver>);
+FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<LifecycleDriver>);

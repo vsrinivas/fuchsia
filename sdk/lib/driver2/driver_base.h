@@ -23,7 +23,7 @@ using DriverStartArgs = fuchsia_driver_framework::DriverStartArgs;
 // for accessing the start args, as well as helper methods for common initialization tasks.
 //
 // There are two virtual methods, |Start| which must be overridden,
-// and |Stop| which is optional to override.
+// and |PrepareStop| and |Stop| which are optional to override.
 //
 // In order to work with the default |BasicFactory| factory implementation,
 // classes which inherit from |DriverBase| must implement a constructor with the following
@@ -90,6 +90,8 @@ class DriverBase {
   // Child nodes can be created here synchronously or asynchronously as long as all of the
   // protocols being offered to the child has been added to the outgoing directory first.
   virtual zx::result<> Start() = 0;
+
+  virtual void PrepareStop(PrepareStopContext* context) { context->complete(context, ZX_OK); }
 
   virtual void Stop() {}
 
@@ -256,6 +258,11 @@ class Record {
     return ZX_OK;
   }
 
+  static void PrepareStop(PrepareStopContext* context) {
+    DriverBase* casted_driver = static_cast<DriverBase*>(context->driver);
+    casted_driver->PrepareStop(context);
+  }
+
   static zx_status_t Stop(void* driver) {
     DriverBase* casted_driver = static_cast<DriverBase*>(driver);
     casted_driver->Stop();
@@ -266,6 +273,10 @@ class Record {
 
 #define FUCHSIA_DRIVER_RECORD_CPP_V2(record) \
   FUCHSIA_DRIVER_RECORD_V1(.start = record::Start, .stop = record::Stop)
+
+#define FUCHSIA_DRIVER_RECORD_CPP_V3(record)                                            \
+  FUCHSIA_DRIVER_RECORD_V2(.start = record::Start, .prepare_stop = record::PrepareStop, \
+                           .stop = record::Stop)
 
 }  // namespace driver
 

@@ -34,6 +34,7 @@ source_set("driver") {
     "//sdk/fidl/fuchsia.driver.host:fuchsia.driver.host_cpp",
     "//sdk/lib/driver2:cpp",
     "//sdk/lib/driver_runtime:driver_runtime_cpp",
+    "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/fbl",
   ]
 }

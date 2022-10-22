@@ -10,6 +10,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 
 #include <fbl/intrusive_double_list.h>
+#include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
@@ -21,7 +22,7 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
  public:
   static zx::result<fbl::RefPtr<Driver>> Load(std::string url, zx::vmo vmo);
 
-  Driver(std::string url, void* library, const DriverRecordV1* record);
+  Driver(std::string url, void* library, const DriverRecord* record);
   ~Driver() override;
 
   const std::string& url() const { return url_; }
@@ -36,13 +37,16 @@ class Driver : public fidl::Server<fuchsia_driver_host::Driver>,
  private:
   std::string url_;
   void* library_;
-  const DriverRecordV1* record_;
-  std::optional<void*> opaque_;
-  std::optional<fidl::ServerBindingRef<fuchsia_driver_host::Driver>> binding_;
+  const DriverRecord* record_;
+
+  fbl::Mutex lock_;
+  std::optional<void*> opaque_ __TA_GUARDED(lock_);
+
+  std::optional<fidl::ServerBindingRef<fuchsia_driver_host::Driver>> binding_ __TA_GUARDED(lock_);
 
   // The initial dispatcher passed to the driver.
   // This must be shutdown by before this driver object is destructed.
-  fdf::Dispatcher initial_dispatcher_;
+  fdf::Dispatcher initial_dispatcher_ __TA_GUARDED(lock_);
 };
 
 // Extracts the default_dispatcher_opts from |program| and converts it to

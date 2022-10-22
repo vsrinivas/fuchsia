@@ -4,6 +4,7 @@
 
 #include "src/devices/bin/driver_host2/driver.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/driver2/start_args.h>
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/fdf/cpp/env.h>
@@ -11,6 +12,7 @@
 #include <lib/fit/defer.h>
 #include <zircon/dlfcn.h>
 
+#include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 
 #include "src/devices/lib/log/log.h"
@@ -110,12 +112,12 @@ zx::result<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
     LOGF(ERROR, "Failed to start driver '%s', could not load library: %s", url.data(), dlerror());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  auto record = static_cast<const DriverRecordV1*>(dlsym(library, "__fuchsia_driver_record__"));
+  auto record = static_cast<const DriverRecord*>(dlsym(library, "__fuchsia_driver_record__"));
   if (record == nullptr) {
     LOGF(ERROR, "Failed to start driver '%s', driver record not found", url.data());
     return zx::error(ZX_ERR_NOT_FOUND);
   }
-  if (record->version != 1) {
+  if (record->version < 1 || record->version > 2) {
     LOGF(ERROR, "Failed to start driver '%s', unknown driver record version: %lu", url.data(),
          record->version);
     return zx::error(ZX_ERR_WRONG_TYPE);
@@ -123,28 +125,78 @@ zx::result<fbl::RefPtr<Driver>> Driver::Load(std::string url, zx::vmo vmo) {
   return zx::ok(fbl::MakeRefCounted<Driver>(std::move(url), library, record));
 }
 
-Driver::Driver(std::string url, void* library, const DriverRecordV1* record)
+Driver::Driver(std::string url, void* library, const DriverRecord* record)
     : url_(std::move(url)), library_(library), record_(record) {}
 
 Driver::~Driver() {
+  fbl::AutoLock al(&lock_);
   if (opaque_.has_value()) {
-    zx_status_t status = record_->stop(*opaque_);
+    void* opaque = *opaque_;
+    al.release();
+    zx_status_t status = record_->v1.stop(opaque);
     if (status != ZX_OK) {
       LOGF(ERROR, "Failed to stop driver '%s': %s", url_.data(), zx_status_get_string(status));
     }
+  } else {
+    al.release();
   }
   dlclose(library_);
 }
 
 void Driver::set_binding(fidl::ServerBindingRef<fdh::Driver> binding) {
+  fbl::AutoLock al(&lock_);
   binding_.emplace(std::move(binding));
 }
 
-void Driver::Stop(StopCompleter::Sync& completer) { binding_->Unbind(); }
+void Driver::Stop(StopCompleter::Sync& completer) {
+  // Prepare stop was added in version 2.
+  if (record_->version >= 2) {
+    // We synchronize this task with start by posting it against the dispatcher used in Start.
+    async_dispatcher_t* dispatcher;
+    {
+      fbl::AutoLock al(&lock_);
+      dispatcher = initial_dispatcher_.async_dispatcher();
+    }
+    zx_status_t status = async::PostTask(dispatcher, [this]() {
+      struct Context : public PrepareStopContext {
+        Context(Driver* driver) : PrepareStopContext(), driver_actual(driver) {}
+        Driver* const driver_actual;
+      };
+      auto context = std::make_unique<Context>(this);
+      {
+        fbl::AutoLock al(&lock_);
+        ZX_ASSERT(opaque_.has_value());
+        context->driver = *opaque_;
+      }
+      context->complete = [](PrepareStopContext* ctx, zx_status_t status) {
+        auto* context = static_cast<Context*>(ctx);
+        if (status != ZX_OK) {
+          LOGF(ERROR, "prepare_stop failed with status: %s", zx_status_get_string(status));
+        }
+        {
+          fbl::AutoLock al(&context->driver_actual->lock_);
+          context->driver_actual->binding_->Unbind();
+        }
+        delete context;
+      };
+      record_->v2.prepare_stop(context.release());
+    });
+    // It shouldn't be possible for this to fail as the dispatcher shouldn't be shutdown by anyone
+    // other than the driver host.
+    ZX_ASSERT(status == ZX_OK);
+  } else {
+    fbl::AutoLock al(&lock_);
+    binding_->Unbind();
+  }
+}
 
 zx::result<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
                            ::fdf::Dispatcher dispatcher) {
-  initial_dispatcher_ = std::move(dispatcher);
+  fdf_dispatcher_t* initial_dispatcher = dispatcher.get();
+  {
+    fbl::AutoLock al(&lock_);
+    initial_dispatcher_ = std::move(dispatcher);
+  }
 
   fidl::OwnedEncodeResult encoded = fidl::Encode(std::move(start_args));
   if (!encoded.message().ok()) {
@@ -170,11 +222,14 @@ zx::result<> Driver::Start(fuchsia_driver_framework::DriverStartArgs start_args,
       std::move(converted_message.incoming_message()).ReleaseToEncodedCMessage();
   void* opaque = nullptr;
   zx_status_t status =
-      record_->start({&c_msg, wire_format_metadata}, initial_dispatcher_.get(), &opaque);
+      record_->v1.start({&c_msg, wire_format_metadata}, initial_dispatcher, &opaque);
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  opaque_.emplace(opaque);
+  {
+    fbl::AutoLock al(&lock_);
+    opaque_.emplace(opaque);
+  }
   return zx::ok();
 }
 
