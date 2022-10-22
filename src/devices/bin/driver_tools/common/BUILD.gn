@@ -13,6 +13,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_rust",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
   ]
   sources = [ "src/lib.rs" ]
 }

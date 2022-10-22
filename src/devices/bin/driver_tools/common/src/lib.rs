@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{Context, Result},
-    fidl_fuchsia_driver_development as fdd,
+    anyhow::{anyhow, Context, Result},
+    fidl_fuchsia_driver_development as fdd, futures,
 };
 
 #[derive(Debug)]
@@ -102,4 +102,123 @@ pub async fn get_driver_info(
         info_result.append(&mut driver_info)
     }
     Ok(info_result)
+}
+
+/// Gets the desired DriverInfo instance.
+///
+/// # Arguments
+/// * `driver_libname` - The driver's libname. e.g. fuchsia-pkg://domain/driver#driver/foo.so
+pub async fn get_driver_by_libname(
+    driver_libname: &String,
+    driver_development_proxy: &fdd::DriverDevelopmentProxy,
+) -> Result<fdd::DriverInfo> {
+    let driver_filter: [String; 1] = [driver_libname.to_string()];
+    let driver_list = get_driver_info(&driver_development_proxy, &driver_filter).await?;
+    if driver_list.len() != 1 {
+        return Err(anyhow!(
+            "There should be exactly one match for '{}'. Found {}.",
+            driver_libname,
+            driver_list.len()
+        ));
+    }
+
+    let mut driver_info: Option<fdd::DriverInfo> = None;
+
+    // Confirm this is the correct match.
+    let driver = &driver_list[0];
+    if let Some(ref libname) = driver.libname {
+        if libname == driver_libname {
+            driver_info = Some(driver.clone());
+        }
+    }
+
+    match driver_info {
+        Some(driver) => Ok(driver),
+        _ => Err(anyhow!("Did not find matching driver for: {}", driver_libname)),
+    }
+}
+
+/// Gets the driver that is bound to the given device.
+///
+/// # Arguments
+/// * `device_topo_path` - The device's topological path. e.g. sys/platform/.../device
+pub async fn get_driver_by_device(
+    device_topo_path: &String,
+    driver_development_proxy: &fdd::DriverDevelopmentProxy,
+) -> Result<fdd::DriverInfo> {
+    let device_filter: [String; 1] = [device_topo_path.to_string()];
+    let mut device_list = get_device_info(&driver_development_proxy, &device_filter).await?;
+
+    if device_list.len() != 1 {
+        return Err(anyhow!(
+            concat!(
+                "Expected 1 result for the given query but got {}. Please ",
+                "adjust your query for an exact match."
+            ),
+            device_list.len()
+        ));
+    }
+
+    let mut found_device: Option<String> = None;
+
+    let device: Device = device_list.remove(0).into();
+    match device {
+        Device::V1(ref info) => match &info.0.bound_driver_libname {
+            Some(bound_driver_libname) => {
+                found_device = Some(bound_driver_libname.to_string());
+            }
+            _ => {}
+        },
+        Device::V2(ref _info) => {
+            // TODO(fxb/112785): Querying V2 is not supported for now.
+        }
+    };
+    match found_device {
+        Some(ref driver_libname) => {
+            get_driver_by_libname(&driver_libname, &driver_development_proxy).await
+        }
+        _ => Err(anyhow!("Did not find driver for device {}", &device_topo_path)),
+    }
+}
+
+/// Gets the devices that are bound to the given driver.
+///
+/// # Arguments
+/// * `driver_libname` - The driver's libname. e.g. fuchsia-pkg://domain/driver#driver/foo.so
+pub async fn get_devices_by_driver(
+    driver_libname: &String,
+    driver_development_proxy: &fdd::DriverDevelopmentProxy,
+) -> Result<Vec<Device>> {
+    let driver_info = get_driver_by_libname(driver_libname, &driver_development_proxy);
+    let empty: [String; 0] = [];
+    let device_list = get_device_info(&driver_development_proxy, &empty);
+
+    let (driver_info, device_list) = futures::join!(driver_info, device_list);
+    let (driver_info, device_list) = (driver_info?, device_list?);
+
+    let mut matches: Vec<Device> = Vec::new();
+    for device_item in device_list.into_iter() {
+        let device: Device = device_item.into();
+        match device {
+            Device::V1(ref info) => {
+                if let (Some(bound_driver_libname), Some(libname)) =
+                    (&info.0.bound_driver_libname, &driver_info.libname)
+                {
+                    if &libname == &bound_driver_libname {
+                        matches.push(device);
+                    }
+                }
+            }
+            Device::V2(ref info) => {
+                if let (Some(bound_driver_url), Some(url)) =
+                    (&info.0.bound_driver_url, &driver_info.url)
+                {
+                    if &url == &bound_driver_url {
+                        matches.push(device);
+                    }
+                }
+            }
+        };
+    }
+    Ok(matches)
 }
