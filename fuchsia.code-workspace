@@ -94,6 +94,20 @@
     "files.associations": {
       "*.cml": "json5",
       "*.inc": "cpp",
+
+      // Golden files
+      "*.c.golden": "c",
+      "*.cc.golden": "cpp",
+      "*.cml.golden": "json5",
+      "*.dart.golden": "dart",
+      "*.fidl.golden": "fidl",
+      "*.gn.golden": "gn",
+      "*.go.golden": "go",
+      "*.h.golden": "cpp",
+      "*.json.golden": "json",
+      "*.md.golden": "markdown",
+      "*.rs.golden": "rust",
+      "*.yaml.golden": "yaml",
     },
 
 
