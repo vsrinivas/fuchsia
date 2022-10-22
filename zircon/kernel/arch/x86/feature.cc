@@ -67,6 +67,7 @@ bool g_ras_fill_on_ctxt_switch;
 bool g_cpu_vulnerable_to_rsb_underflow;
 bool g_has_enhanced_ibrs;
 bool g_has_retbleed;
+bool g_stibp_enabled;
 
 enum x86_hypervisor_list x86_hypervisor;
 bool g_hypervisor_has_pv_clock;
@@ -261,19 +262,37 @@ void x86_cpu_feature_late_init_percpu(void) {
 
   // Spectre v2 hardware-related mitigations; retpolines may further be used,
   // which is taken care of by the code-patching engine.
+  bool stibp_enabled = false;
   if (!gBootOptions->x86_disable_spec_mitigations) {
     switch (arch::GetPreferredSpectreV2Mitigation(cpuid, msr)) {
-      case arch::SpectreV2Mitigation::kIbrs:
+      case arch::SpectreV2Mitigation::kIbrs:  // Enhanced IBRS
         arch::EnableIbrs(cpuid, msr);
         break;
       case arch::SpectreV2Mitigation::kIbpbRetpoline:
         break;
       case arch::SpectreV2Mitigation::kIbpbRetpolineStibp:
         // Enable STIPB for added cross-hyperthread security.
+        stibp_enabled = true;
         arch::EnableStibp(cpuid, msr);
         break;
     }
   }
+  // RETbleed mitigations
+  // Some RETbleed mitigations may overlap with Spectre V2 mitigations.
+  if (!gBootOptions->x86_disable_spec_mitigations && g_has_retbleed) {
+    if (x86_vendor == X86_VENDOR_AMD) {
+      if (arch::HasStibp(cpuid, false) && !stibp_enabled) {
+        stibp_enabled = true;
+        arch::EnableStibp(cpuid, msr);
+      }
+      x86_amd_zen2_retbleed_mitigation(model_info);
+    }
+    if (x86_vendor == X86_VENDOR_INTEL) {
+      // TODO: Mitigate RETbleed on Intel processors.
+    }
+  }
+
+  g_stibp_enabled |= stibp_enabled;
 
   // Mitigate Spectre v4 (Speculative Store Bypass) if requested.
   if (x86_cpu_should_mitigate_ssb()) {
@@ -448,6 +467,7 @@ void x86_feature_debug(void) {
   print_property("harden_sls");
 #endif
   print_property("retbleed", g_has_retbleed);
+  print_property("stibp_enabled", g_stibp_enabled);
   if (arch::BootCpuidSupports<arch::CpuidPerformanceMonitoringA>()) {
     const arch::CpuidPerformanceMonitoringA eax = io.Read<arch::CpuidPerformanceMonitoringA>();
     const arch::CpuidPerformanceMonitoringD edx = io.Read<arch::CpuidPerformanceMonitoringD>();

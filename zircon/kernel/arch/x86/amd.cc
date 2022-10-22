@@ -20,6 +20,25 @@ uint32_t x86_amd_get_patch_level(void) {
   return patch_level;
 }
 
+void x86_amd_zen2_retbleed_mitigation(const x86_model_info& model) {
+  constexpr uint32_t kDeCfg2 = 0xC00110E3;
+  constexpr uint64_t kSuppressBPOnNonBr = (1 << 1);
+  MsrAccess msr;
+
+  // Zen 2 processors have a configuration bit that mitigates the BTC-NOBR case
+  // of the Branch Type Confusion / retbleed vulnerability.
+  if (x86_feature_test(X86_FEATURE_HYPERVISOR))
+    return;
+  if ((model.display_family == 0x17) &&
+      ((model.display_model >= 0x30 && model.display_model <= 0x4F) ||
+      (model.display_model >= 0x60 && model.display_model <= 0x7F))) {
+    uint64_t de_cfg2 = msr.read_msr(kDeCfg2);
+    if (!(de_cfg2 & kSuppressBPOnNonBr)) {
+      msr.write_msr(kDeCfg2, de_cfg2 | kSuppressBPOnNonBr);
+    }
+  }
+}
+
 void x86_amd_set_lfence_serializing(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   // "Software Techniques for Managing Speculation on AMD Processors"
   // Mitigation G-2: Set MSR so that LFENCE is a dispatch-serializing instruction.
