@@ -51,27 +51,8 @@ fuchsia_component("hwinfo_component") {
   deps = [ ":hwinfo_bin" ]
 }
 
-# TODO(fxbug.dev/82330): delete this
-fuchsia_component("legacy_hwinfo_component") {
-  component_name = "hwinfo"
-  manifest = "meta/hwinfo.cmx"
-  deps = [ ":hwinfo_bin" ]
-}
-
-fuchsia_package("fake_legacy_hwinfo") {
-  deps = [
-    ":legacy_hwinfo_component",
-    ":legacy_hwinfo_config",
-    ":legacy_hwinfo_factory_config",
-    "//src/factory/fake_factory_store_providers",
-  ]
-}
-
 fuchsia_package("hwinfo") {
-  deps = [
-    ":hwinfo_component",
-    ":legacy_hwinfo_component",
-  ]
+  deps = [ ":hwinfo_component" ]
 }
 
 fuchsia_package("fake_hwinfo") {
@@ -225,21 +206,6 @@ config_data("hwinfo_retail_tests_factory_config") {
 
 config_data("hwinfo_retail_tests_config") {
   for_pkg = "hwinfo_retail_tests"
-
-  sources = [
-    "testdata/board_config.json",
-    "testdata/product_config.json",
-  ]
-}
-
-config_data("legacy_hwinfo_factory_config") {
-  for_pkg = "fake_legacy_hwinfo"
-
-  sources = [ "testdata/test_misc.config" ]
-}
-
-config_data("legacy_hwinfo_config") {
-  for_pkg = "fake_legacy_hwinfo"
 
   sources = [
     "testdata/board_config.json",

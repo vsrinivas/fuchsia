@@ -17,13 +17,6 @@ group("tests") {
   public_deps = [ "fake/tests" ]
 }
 
-fuchsia_component("fake-hardware-display-controller-provider-cmv1-component") {
-  testonly = true
-  manifest = "meta/fake_hdcp.cmx"
-  component_name = "hdcp"
-  deps = [ "fake:bin" ]
-}
-
 fuchsia_component("fake-hardware-display-controller-provider-cmv2-component") {
   testonly = true
   manifest = "meta/fake_hdcp.cml"
@@ -33,10 +26,7 @@ fuchsia_component("fake-hardware-display-controller-provider-cmv2-component") {
 
 fuchsia_package("fake-hardware-display-controller-provider") {
   testonly = true
-  deps = [
-    ":fake-hardware-display-controller-provider-cmv1-component",
-    ":fake-hardware-display-controller-provider-cmv2-component",
-  ]
+  deps = [ ":fake-hardware-display-controller-provider-cmv2-component" ]
 }
 
 fuchsia_component("hardware-display-controller-provider-cmv2-component") {

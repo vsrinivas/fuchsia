@@ -49,12 +49,6 @@ fuchsia_component("intl_property_manager_component") {
   deps = [ ":intl_property_manager_bin" ]
 }
 
-fuchsia_component("intl_property_manager_component_v1") {
-  component_name = "intl_property_manager_v1"
-  manifest = "meta/intl_property_manager.cmx"
-  deps = [ ":intl_property_manager_bin" ]
-}
-
 fuchsia_component("intl_property_manager_without_flags_component") {
   component_name = "intl_property_manager_without_flags"
   manifest = "meta/intl_property_manager_without_flags.cml"
@@ -64,7 +58,6 @@ fuchsia_component("intl_property_manager_without_flags_component") {
 fuchsia_package("intl_property_manager") {
   deps = [
     ":intl_property_manager_component",
-    ":intl_property_manager_component_v1",
     ":intl_property_manager_without_flags_component",
   ]
 }
