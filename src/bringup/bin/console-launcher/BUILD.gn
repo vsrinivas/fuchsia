@@ -38,6 +38,9 @@ source_set("lib") {
     # console_launcher.h has #include <fidl/fuchsia.boot/cpp/wire.h>
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
 
+    # console_launcher.h has #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
+    "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
+
     # console_launcher.h has #include <fidl/fuchsia.io/cpp/wire.h>
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
 

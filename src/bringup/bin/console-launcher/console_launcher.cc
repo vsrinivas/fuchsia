@@ -169,9 +169,10 @@ zx::result<Arguments> GetArguments(const fidl::ClientEnd<fuchsia_boot::Arguments
   return zx::ok(ret);
 }
 
-zx::result<zx::process> ConsoleLauncher::LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
-                                                     zx::channel stdio, const std::string& term,
-                                                     const std::optional<std::string>& cmd) const {
+zx::result<zx::process> ConsoleLauncher::LaunchShell(
+    fidl::ClientEnd<fuchsia_io::Directory> root,
+    fidl::ClientEnd<fuchsia_hardware_pty::Device> stdio, const std::string& term,
+    const std::optional<std::string>& cmd) const {
   const char* argv[] = {ZX_SHELL_DEFAULT, nullptr, nullptr, nullptr};
   if (cmd.has_value()) {
     argv[1] = "-c";
@@ -205,7 +206,7 @@ zx::result<zx::process> ConsoleLauncher::LaunchShell(fidl::ClientEnd<fuchsia_io:
           .h =
               {
                   .id = PA_HND(PA_FD, FDIO_FLAG_USE_FOR_STDIO),
-                  .handle = stdio.get(),
+                  .handle = stdio.TakeChannel().release(),
               },
       }};
 

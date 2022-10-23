@@ -71,18 +71,19 @@ std::ostream& operator<<(std::ostream& os, const std::vector<std::string>& args)
 }
 
 zx::result<fidl::ClientEnd<fuchsia_hardware_pty::Device>> CreateVirtualConsole(
-    const fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& client) {
-  zx::result device_endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
-  if (device_endpoints.is_error()) {
-    return device_endpoints.take_error();
+    const fidl::WireSyncClient<fuchsia_virtualconsole::SessionManager>& session_manager) {
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
   }
+  auto& [client, server] = endpoints.value();
 
-  const fidl::WireResult result = client->CreateSession(std::move(device_endpoints->server));
+  const fidl::WireResult result = session_manager->CreateSession(std::move(server));
   if (!result.ok()) {
     FX_PLOGS(ERROR, result.status()) << "failed to create virtcon session";
     return zx::error(result.status());
   }
-  return zx::ok(std::move(device_endpoints->client));
+  return zx::ok(std::move(client));
 }
 
 std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& launcher,
@@ -100,7 +101,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     if (args.empty()) {
       continue;
     }
-    if (!cpp20::starts_with(std::string_view(args), "/")) {
+    if (!cpp20::starts_with(std::string_view{args}, "/")) {
       FX_LOGS(ERROR) << name << " failed to run '" << args << "' command must be absolute path";
       continue;
     }
@@ -180,19 +181,18 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
 
 [[noreturn]] void RunSerialConsole(const console_launcher::ConsoleLauncher& launcher,
                                    fs::FuchsiaVfs& vfs, const fbl::RefPtr<fs::Vnode>& root,
-                                   zx::channel channel, const std::string& term,
-                                   const std::optional<std::string>& cmd) {
-  fidl::WireSyncClient client =
-      fidl::WireSyncClient(fidl::ClientEnd<fuchsia_io::Node>(std::move(channel)));
-
+                                   fidl::ClientEnd<fuchsia_hardware_pty::Device> stdio,
+                                   const std::string& term, const std::optional<std::string>& cmd) {
   while (true) {
-    zx::result node = fidl::CreateEndpoints<fuchsia_io::Node>();
-    if (node.is_error()) {
-      FX_PLOGS(FATAL, node.status_value()) << "failed to create node endpoints";
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+    if (endpoints.is_error()) {
+      FX_PLOGS(FATAL, endpoints.status_value()) << "failed to create endpoints";
     }
+    auto& [client, server] = endpoints.value();
 
     const fidl::WireResult result =
-        client->Clone(fuchsia_io::OpenFlags::kCloneSameRights, std::move(node->server));
+        fidl::WireCall(stdio)->Clone(fuchsia_io::OpenFlags::kCloneSameRights,
+                                     fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()));
     if (!result.ok()) {
       FX_PLOGS(FATAL, result.status()) << "failed to clone stdio handle";
     }
@@ -208,7 +208,7 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     }
 
     zx::result process =
-        launcher.LaunchShell(std::move(directory->client), node->client.TakeChannel(), term, cmd);
+        launcher.LaunchShell(std::move(directory->client), std::move(client), term, cmd);
     if (process.is_error()) {
       FX_PLOGS(FATAL, process.status_value()) << "failed to launch shell";
     }
@@ -385,7 +385,7 @@ int main(int argv, char** argc) {
           return session.status_value();
         }
 
-        workers.emplace_back([&, stdio = session.value().TakeChannel()]() mutable {
+        workers.emplace_back([&, stdio = std::move(session.value())]() mutable {
           RunSerialConsole(launcher, vfs, root, std::move(stdio), args.term, "dlog -f -t");
         });
       }
@@ -394,7 +394,7 @@ int main(int argv, char** argc) {
       if (session.is_error()) {
         return session.status_value();
       }
-      workers.emplace_back([&, stdio = session.value().TakeChannel()]() mutable {
+      workers.emplace_back([&, stdio = std::move(session.value())]() mutable {
         RunSerialConsole(launcher, vfs, root, std::move(stdio), "TERM=xterm-256color", {});
       });
       return ZX_OK;
@@ -423,7 +423,7 @@ int main(int argv, char** argc) {
 
     fdio_cpp::FdioCaller caller(std::move(fd).value());
 
-    zx::channel stdio;
+    fidl::ClientEnd<fuchsia_hardware_pty::Device> stdio;
     // If the console is a virtio connection, then speak the
     // fuchsia.hardware.virtioconsole.Device interface to get the real
     // fuchsia.io.File connection
@@ -433,19 +433,18 @@ int main(int argv, char** argc) {
     // virtio-console driver should just speak that instead of this shim
     // interface.
     if (args.device.is_virtio) {
-      zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
-      if (endpoints.is_error()) {
-        FX_PLOGS(FATAL, endpoints.status_value()) << "failed to create pty endpoints";
+      zx::result server = fidl::CreateEndpoints(&stdio);
+      if (server.is_error()) {
+        FX_PLOGS(FATAL, server.status_value()) << "failed to create pty endpoints";
       }
       const fidl::WireResult result =
           fidl::WireCall(caller.borrow_as<fuchsia_hardware_virtioconsole::Device>())
-              ->GetChannel(std::move(endpoints->server));
+              ->GetChannel(std::move(server.value()));
       if (!result.ok()) {
         FX_PLOGS(FATAL, result.status()) << "failed to get virtio console channel";
       }
-      stdio = std::move(endpoints->client).TakeChannel();
     } else {
-      zx::result channel = caller.take_channel();
+      zx::result channel = caller.take_as<fuchsia_hardware_pty::Device>();
       if (channel.is_error()) {
         FX_PLOGS(FATAL, channel.status_value()) << "failed to get console channel";
       }

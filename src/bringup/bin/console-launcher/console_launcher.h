@@ -6,6 +6,7 @@
 #define SRC_BRINGUP_BIN_CONSOLE_LAUNCHER_CONSOLE_LAUNCHER_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -42,7 +43,8 @@ class ConsoleLauncher {
  public:
   static zx::result<ConsoleLauncher> Create();
   zx::result<zx::process> LaunchShell(fidl::ClientEnd<fuchsia_io::Directory> root,
-                                      zx::channel stdio, const std::string& term,
+                                      fidl::ClientEnd<fuchsia_hardware_pty::Device> stdio,
+                                      const std::string& term,
                                       const std::optional<std::string>& cmd) const;
 
   const zx::job& shell_job() const { return shell_job_; }
