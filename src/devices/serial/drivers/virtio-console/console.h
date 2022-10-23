@@ -19,8 +19,6 @@
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
-
 namespace virtio {
 
 // Describes a chunk of memory used for data transfers between the device and the driver,
@@ -72,6 +70,7 @@ using DeviceType =
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
                       public DeviceType,
+                      public fidl::WireServer<fuchsia_hardware_pty::Device>,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
@@ -85,13 +84,28 @@ class ConsoleDevice : public Device,
   void IrqConfigChange() override {}  // No need to handle configuration changes
   const char* tag() const override { return "virtio-console"; }
 
-  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
-  zx_status_t GetEvent(zx::eventpair* event) {
-    return event_remote_.duplicate(ZX_RIGHTS_BASIC, event);
-  }
+  void AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device> server_end);
 
-  zx_status_t Read(void* buf, size_t len, size_t* actual);
-  zx_status_t Write(const void* buf, size_t len, size_t* actual);
+  // fuchsia.hardware.virtioconsole.Device.
+  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
+
+  // fuchsia.hardware.pty.Device.
+  void Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) override;
+  void Close(CloseCompleter::Sync& completer) override;
+  void Query(QueryCompleter::Sync& completer) override;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
+  void Describe2(Describe2Completer::Sync& completer) override;
+
+  void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) override;
+  void ClrSetFeature(ClrSetFeatureRequestView request,
+                     ClrSetFeatureCompleter::Sync& completer) override;
+  void GetWindowSize(GetWindowSizeCompleter::Sync& completer) override;
+  void MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) override;
+  void ReadEvents(ReadEventsCompleter::Sync& completer) override;
+  void SetWindowSize(SetWindowSizeRequestView request,
+                     SetWindowSizeCompleter::Sync& completer) override;
 
  private:
   // For two queues it sums up to 32KiB, we probably don't need that much
@@ -114,10 +128,9 @@ class ConsoleDevice : public Device,
   Ring port0_transmit_queue_ TA_GUARDED(request_lock_) = {this};
 
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
-  fs::ManagedVfs vfs_{loop_.dispatcher()};
-  fbl::RefPtr<fs::Vnode> console_vnode_;
   zx::eventpair event_, event_remote_;
 
+  std::unordered_map<zx_handle_t, fidl::ServerBindingRef<fuchsia_hardware_pty::Device>> bindings_;
   std::optional<ddk::UnbindTxn> unbind_txn_;
 };
 

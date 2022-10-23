@@ -136,7 +136,6 @@ TEST(VnodeProtocolSet, Union) {
   EXPECT_TRUE((combined & file).any());
   EXPECT_TRUE((combined & directory).any());
   EXPECT_FALSE((combined & fs::VnodeProtocol::kConnector).any());
-  EXPECT_FALSE((combined & fs::VnodeProtocol::kTty).any());
 }
 
 TEST(VnodeProtocolSet, Intersection) {
@@ -151,7 +150,6 @@ TEST(VnodeProtocolSet, Intersection) {
   EXPECT_TRUE((intersection & fs::VnodeProtocol::kDirectory).any());
   EXPECT_FALSE((intersection & fs::VnodeProtocol::kConnector).any());
   EXPECT_FALSE((intersection & fs::VnodeProtocol::kFile).any());
-  EXPECT_FALSE((intersection & fs::VnodeProtocol::kTty).any());
 }
 
 TEST(VnodeProtocolSet, Difference) {
@@ -184,7 +182,6 @@ TEST(VnodeProtocolSet, All) {
   EXPECT_TRUE((all & fs::VnodeProtocol::kConnector) == fs::VnodeProtocol::kConnector);
   EXPECT_TRUE((all & fs::VnodeProtocol::kDirectory) == fs::VnodeProtocol::kDirectory);
   EXPECT_TRUE((all & fs::VnodeProtocol::kFile) == fs::VnodeProtocol::kFile);
-  EXPECT_TRUE((all & fs::VnodeProtocol::kTty) == fs::VnodeProtocol::kTty);
 }
 
 TEST(VnodeProtocolSet, Empty) {

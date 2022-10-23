@@ -79,9 +79,6 @@ zx_status_t Vnode::GetNodeInfo(Rights rights, VnodeRepresentation* info) {
     case VnodeProtocol::kDirectory:
       ZX_DEBUG_ASSERT(info->is_directory());
       break;
-    case VnodeProtocol::kTty:
-      ZX_DEBUG_ASSERT(info->is_tty());
-      break;
   }
   return ZX_OK;
 }

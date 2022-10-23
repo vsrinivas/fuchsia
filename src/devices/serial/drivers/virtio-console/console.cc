@@ -7,7 +7,6 @@
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
-#include <lib/fs-pty/service.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
 
@@ -19,9 +18,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <virtio/virtio.h>
-
-#include "src/lib/storage/vfs/cpp/vfs.h"
-#include "src/lib/storage/vfs/cpp/vnode.h"
 
 namespace virtio {
 
@@ -120,7 +116,7 @@ bool TransferQueue::IsEmpty() const { return queue_.is_empty(); }
 ConsoleDevice::ConsoleDevice(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> backend)
     : virtio::Device(bus_device, std::move(bti), std::move(backend)), DeviceType(bus_device) {}
 
-ConsoleDevice::~ConsoleDevice() {}
+ConsoleDevice::~ConsoleDevice() = default;
 
 // We don't need to hold request_lock_ during initialization
 zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
@@ -137,9 +133,6 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     zxlogf(ERROR, "%s: Failed to launch connection processing thread (%d)", tag(), status);
     return status;
   }
-
-  using Vnode = fs_pty::TtyService<fs_pty::SimpleConsoleOps<ConsoleDevice*>, ConsoleDevice*>;
-  console_vnode_ = fbl::AdoptRef(new Vnode(this));
 
   // It's a common part for all virtio devices: reset the device, notify
   // about the driver and negotiate supported features
@@ -173,7 +166,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   // put all descriptors in the virtio ring available list
   for (size_t i = 0; i < kDescriptors; ++i) {
     TransferDescriptor* desc = port0_receive_buffer_.GetDescriptor(i);
-    QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/ 0);
+    QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/ false);
   }
   // Notify the device
   port0_receive_queue_.Kick();
@@ -215,16 +208,11 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 void ConsoleDevice::Unbind(ddk::UnbindTxn txn) {
   unbind_txn_ = std::move(txn);
 
-  // Request all console connections be terminated.  Once that completes, finish
-  // the unbind.
-  fs::FuchsiaVfs::ShutdownCallback shutdown_cb = [this](zx_status_t status) {
-    if (unbind_txn_.has_value()) {
-      unbind_txn_->Reply();
-    } else {
-      zxlogf(ERROR, "No saved unbind txn to reply to");
+  async::PostTask(loop_.dispatcher(), [this]() {
+    for (auto& [handle, binding] : bindings_) {
+      binding.Unbind();
     }
-  };
-  vfs_.Shutdown(std::move(shutdown_cb));
+  });
 }
 
 void ConsoleDevice::IrqRingUpdate() {
@@ -283,41 +271,89 @@ void ConsoleDevice::IrqRingUpdate() {
   zxlogf(TRACE, "%s: exit", __func__);
 }
 
-zx_status_t ConsoleDevice::Read(void* buf, size_t count, size_t* actual) {
-  zxlogf(TRACE, "%s: entry", __func__);
-  *actual = 0;
+void ConsoleDevice::AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device> server_end) {
+  // TODO(https://fxbug.dev/112983): guarantee that `this` is alive when this
+  // task executes (or remove loop_ if it's possible to do this work on the
+  // driver host's loop). At the time of writing it appears that this loop
+  // may still be running while `this` is being destroyed on another thread.
+  async::PostTask(loop_.dispatcher(), [this, server_end = std::move(server_end)]() mutable {
+    const zx_handle_t key = server_end.channel().get();
+    auto [it, inserted] = bindings_.insert(
+        {key,
+         fidl::BindServer(loop_.dispatcher(), std::move(server_end),
+                          static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(this),
+                          [](fidl::WireServer<fuchsia_hardware_pty::Device>* impl, fidl::UnbindInfo,
+                             fidl::ServerEnd<fuchsia_hardware_pty::Device> key) {
+                            ConsoleDevice& self = *static_cast<ConsoleDevice*>(impl);
+                            size_t erased = self.bindings_.erase(key.channel().get());
+                            ZX_ASSERT_MSG(erased == 1, "erased=%zu", erased);
+                            if (self.bindings_.empty()) {
+                              if (std::optional txn = std::exchange(self.unbind_txn_, {});
+                                  txn.has_value()) {
+                                txn.value().Reply();
+                              }
+                            }
+                          })});
+    ZX_ASSERT_MSG(inserted, "handle=%d", key);
+  });
+}
 
-  if (count > UINT32_MAX)
-    count = UINT32_MAX;
+void ConsoleDevice::GetChannel(GetChannelRequestView request,
+                               GetChannelCompleter::Sync& completer) {
+  AddConnection(std::move(request->req));
+}
+
+void ConsoleDevice::Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) {
+  AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->request.TakeChannel()));
+}
+
+void ConsoleDevice::Close(CloseCompleter::Sync& completer) {
+  completer.ReplySuccess();
+  completer.Close(ZX_OK);
+}
+
+void ConsoleDevice::Query(QueryCompleter::Sync& completer) {
+  const std::string_view kProtocol = fuchsia_hardware_pty::wire::kDeviceProtocolName;
+  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+  completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+}
+
+void ConsoleDevice::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
+  zxlogf(TRACE, "%s: entry", __func__);
 
   fbl::AutoLock a(&request_lock_);
 
   TransferDescriptor* desc = port0_receive_descriptors_.Peek();
   if (!desc) {
     event_.signal_peer(DEV_STATE_READABLE, 0);
-    return ZX_ERR_SHOULD_WAIT;
+    return completer.ReplyError(ZX_ERR_SHOULD_WAIT);
   }
 
-  uint32_t len = std::min(static_cast<uint32_t>(count), desc->used_len - desc->processed_len);
+  uint8_t buf[fuchsia_io::wire::kMaxBuf];
+  uint32_t len = static_cast<uint32_t>(std::min(std::initializer_list<uint64_t>{
+      std::numeric_limits<uint32_t>::max(),
+      sizeof(buf),
+      request->count,
+      desc->used_len - desc->processed_len,
+  }));
   memcpy(buf, desc->virt + desc->processed_len, len);
   desc->processed_len += len;
-  *actual += len;
 
   // Did we read the whole buffer? If so return it back to the device
   if (desc->processed_len == desc->used_len) {
     port0_receive_descriptors_.Dequeue();
-    QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/ 0);
+    QueueTransfer(&port0_receive_queue_, desc->phys, desc->total_len, /*write*/ false);
     port0_receive_queue_.Kick();
   }
 
   zxlogf(TRACE, "%s: exit", __func__);
-  return ZX_OK;
+  completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buf, len));
 }
 
-zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) {
+void ConsoleDevice::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   zxlogf(TRACE, "%s: entry", __func__);
-  *actual = 0;
 
+  uint64_t count = request->data.count();
   if (count > UINT32_MAX)
     count = UINT32_MAX;
 
@@ -326,27 +362,61 @@ zx_status_t ConsoleDevice::Write(const void* buf, size_t count, size_t* actual) 
   TransferDescriptor* desc = port0_transmit_descriptors_.Dequeue();
   if (!desc) {
     event_.signal_peer(DEV_STATE_WRITABLE, 0);
-    return ZX_ERR_SHOULD_WAIT;
+    return completer.ReplyError(ZX_ERR_SHOULD_WAIT);
   }
 
   uint32_t len = std::min(static_cast<uint32_t>(count), desc->total_len);
-  memcpy(desc->virt, buf, len);
+  memcpy(desc->virt, request->data.data(), len);
   desc->used_len = len;
-  *actual += len;
 
-  QueueTransfer(&port0_transmit_queue_, desc->phys, desc->used_len, /*write*/ 1);
+  QueueTransfer(&port0_transmit_queue_, desc->phys, desc->used_len, /*write*/ true);
   port0_transmit_queue_.Kick();
 
   zxlogf(TRACE, "%s: exit", __func__);
-  return ZX_OK;
+  completer.ReplySuccess(len);
 }
 
-void ConsoleDevice::GetChannel(GetChannelRequestView request,
-                               GetChannelCompleter::Sync& completer) {
-  // Must post a task, since ManagedVfs is not thread-safe.
-  async::PostTask(loop_.dispatcher(), [this, req = request->req.TakeChannel()]() mutable {
-    vfs_.Serve(console_vnode_, std::move(req), fs::VnodeConnectionOptions::ReadWrite());
-  });
+void ConsoleDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+  if (request->flags != fuchsia_io::wire::OpenFlags::kCloneSameRights) {
+    request->object.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->object.TakeChannel()));
+}
+
+void ConsoleDevice::Describe2(Describe2Completer::Sync& completer) {
+  zx::eventpair event;
+  if (zx_status_t status = event_remote_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event); status != ZX_OK) {
+    completer.Close(status);
+  } else {
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                        .event(std::move(event))
+                        .Build());
+  }
+}
+
+void ConsoleDevice::OpenClient(OpenClientRequestView request,
+                               OpenClientCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+void ConsoleDevice::ClrSetFeature(ClrSetFeatureRequestView request,
+                                  ClrSetFeatureCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+}
+void ConsoleDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+}
+void ConsoleDevice::MakeActive(MakeActiveRequestView request,
+                               MakeActiveCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+void ConsoleDevice::ReadEvents(ReadEventsCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+}
+void ConsoleDevice::SetWindowSize(SetWindowSizeRequestView request,
+                                  SetWindowSizeCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace virtio

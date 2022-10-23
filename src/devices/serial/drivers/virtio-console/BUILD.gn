@@ -34,10 +34,8 @@ fuchsia_driver("virtio_console-driver") {
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",
-    "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fs-pty",
   ]
 }
 

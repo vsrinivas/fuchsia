@@ -34,7 +34,6 @@ group("tests") {
     "fdio-caller:tests",
     "ffl:tests",
     "fidl-async:tests",
-    "fs-pty:tests",
     "fzl:tests",
     "gfx:tests",
     "hid-parser:tests",

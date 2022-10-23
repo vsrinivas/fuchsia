@@ -358,8 +358,7 @@ zx_status_t FuchsiaVfs::Serve(fbl::RefPtr<Vnode> vnode, zx::channel server_end,
   std::unique_ptr<internal::Connection> connection;
   zx_status_t status = ([&] {
     switch (protocol) {
-      case VnodeProtocol::kFile:
-      case VnodeProtocol::kTty: {
+      case VnodeProtocol::kFile: {
         zx::stream stream;
         zx_status_t status = vnode->CreateStream(ToStreamOptions(*options), &stream);
         if (status == ZX_OK) {

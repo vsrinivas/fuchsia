@@ -327,9 +327,6 @@ fidl::VectorView<uint8_t> Connection::NodeQuery() {
       case VnodeProtocol::kDirectory: {
         return fio::wire::kDirectoryProtocolName;
       }
-      case VnodeProtocol::kTty: {
-        return fuchsia_hardware_pty::wire::kDeviceProtocolName;
-      }
     }
   }();
   uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));

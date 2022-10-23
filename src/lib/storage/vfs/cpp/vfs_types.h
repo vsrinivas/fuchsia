@@ -124,13 +124,10 @@ enum class VnodeProtocol : uint32_t {
   kConnector,
   kFile,
   kDirectory,
-  // TODO(https://fxbug.dev/77623): Remove these variants when Node1.Describe is gone and the tight
-  // coupling between io1 and io2 interfaces can be incinerated.
-  kTty,
   // Note: when appending more members, adjust |kVnodeProtocolCount| accordingly.
 };
 
-constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kTty) + 1;
+constexpr size_t kVnodeProtocolCount = static_cast<uint32_t>(VnodeProtocol::kDirectory) + 1;
 
 // A collection of |VnodeProtocol|s, stored internally as a bit-field.
 // The N-th bit corresponds to the N-th element in the |VnodeProtocol| enum, under zero-based index.
@@ -395,16 +392,12 @@ class VnodeRepresentation {
 
   struct Directory {};
 
-  struct Tty {
-    zx::eventpair event = {};
-  };
-
   VnodeRepresentation() = default;
 
   // Forwards the constructor arguments into the underlying |std::variant|. This allows
   // |VnodeRepresentation| to be constructed directly from one of the variants, e.g.
   //
-  //     VnodeRepresentation repr = VnodeRepresentation::Tty{.event = zx::event(...)};
+  //     VnodeRepresentation repr = VnodeRepresentation::File{.observer = zx::event(...)};
   //
   template <typename T>
   VnodeRepresentation(T&& v) : variants_(std::forward<T>(v)) {}
@@ -429,12 +422,8 @@ class VnodeRepresentation {
 
   bool is_directory() const { return std::holds_alternative<Directory>(variants_); }
 
-  Tty& tty() { return std::get<Tty>(variants_); }
-
-  bool is_tty() const { return std::holds_alternative<Tty>(variants_); }
-
  private:
-  using Variants = std::variant<std::monostate, Connector, File, Directory, Tty>;
+  using Variants = std::variant<std::monostate, Connector, File, Directory>;
 
   Variants variants_ = {};
 };

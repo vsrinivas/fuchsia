@@ -149,8 +149,6 @@ void ConvertToIoV1NodeInfo(VnodeRepresentation representation,
           fidl::ObjectView<fio::wire::FileObject>::FromExternal(&file)));
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       callback(fio::wire::NodeInfoDeprecated::WithDirectory({}));
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      callback(fio::wire::NodeInfoDeprecated::WithTty({.event = std::move(repr.event)}));
     } else {
       ZX_PANIC("Representation variant is not initialized");
     }
@@ -173,8 +171,6 @@ ConnectionInfoConverter::ConnectionInfoConverter(VnodeRepresentation vnode_repre
       representation = fio::wire::Representation::WithFile(arena, file);
     } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Directory>) {
       representation = fio::wire::Representation::WithDirectory(arena);
-    } else if constexpr (std::is_same_v<T, fs::VnodeRepresentation::Tty>) {
-      representation = fio::wire::Representation::WithConnector(arena);
     } else {
       ZX_PANIC("Representation variant is not initialized");
     }

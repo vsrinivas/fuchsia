@@ -138,7 +138,6 @@ zx_status_t Devnode::VnodeImpl::GetNodeInfoForProtocol(fs::VnodeProtocol protoco
       *info = fs::VnodeRepresentation::Connector{};
       return ZX_OK;
     case fs::VnodeProtocol::kFile:
-    case fs::VnodeProtocol::kTty:
       return ZX_ERR_NOT_SUPPORTED;
     case fs::VnodeProtocol::kDirectory:
       *info = fs::VnodeRepresentation::Directory{};

@@ -42,7 +42,6 @@ zx_status_t BuiltinDevVnode::GetNodeInfoForProtocol(fs::VnodeProtocol protocol, 
   switch (protocol) {
     case fs::VnodeProtocol::kConnector:
     case fs::VnodeProtocol::kDirectory:
-    case fs::VnodeProtocol::kTty:
       return ZX_ERR_NOT_SUPPORTED;
     case fs::VnodeProtocol::kFile:
       *info = fs::VnodeRepresentation::File{};

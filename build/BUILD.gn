@@ -222,7 +222,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/system/ulib/fidl-async-2:*",
     "//zircon/system/ulib/fidl-utils:*",
     "//zircon/system/ulib/fs-host:*",
-    "//zircon/system/ulib/fs-pty:*",
     "//zircon/system/ulib/fzl:*",
     "//zircon/system/ulib/gfx:*",
     "//zircon/system/ulib/hid:*",
