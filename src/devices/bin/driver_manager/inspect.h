@@ -8,7 +8,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>

@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.hardware.pci/cpp/wire.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

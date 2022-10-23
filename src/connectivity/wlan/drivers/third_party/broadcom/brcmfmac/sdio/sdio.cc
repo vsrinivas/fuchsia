@@ -22,7 +22,7 @@
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 

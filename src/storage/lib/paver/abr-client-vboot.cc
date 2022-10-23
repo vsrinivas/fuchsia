@@ -4,7 +4,7 @@
 
 #include "src/storage/lib/paver/abr-client-vboot.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <memory>

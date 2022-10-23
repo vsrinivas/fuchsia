@@ -7,7 +7,7 @@
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace guest_config {
 

@@ -14,7 +14,7 @@
 #include <lib/fdf/env.h>
 #include <lib/fdf/token.h>
 #include <lib/sync/cpp/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

@@ -9,7 +9,7 @@
 #define SRC_STORAGE_MINFS_ALLOCATOR_ALLOCATOR_RESERVATION_H_
 
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/macros.h>
 

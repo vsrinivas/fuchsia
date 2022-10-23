@@ -5,7 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_ALLOCATOR_H_
 
 #include <lib/fake-resource/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

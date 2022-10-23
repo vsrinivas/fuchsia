@@ -6,7 +6,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>

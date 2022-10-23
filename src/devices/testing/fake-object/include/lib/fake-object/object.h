@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_TESTING_FAKE_OBJECT_INCLUDE_LIB_FAKE_OBJECT_OBJECT_H_
 #define SRC_DEVICES_TESTING_FAKE_OBJECT_INCLUDE_LIB_FAKE_OBJECT_OBJECT_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <limits.h>
 #include <stdio.h>
 #include <zircon/compiler.h>

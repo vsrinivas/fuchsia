@@ -13,7 +13,7 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <stdbool.h>
 #include <stdio.h>

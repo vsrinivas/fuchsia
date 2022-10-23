@@ -11,7 +11,7 @@
 #ifndef SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
 #define SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_SERIALIZER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 
 #include <cstdint>

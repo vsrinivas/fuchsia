@@ -14,7 +14,7 @@
 #include <storage/operation/operation.h>
 
 #include "entry_view.h"
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 #include "replay_tree.h"
 #include "src/lib/storage/vfs/cpp/journal/format.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"

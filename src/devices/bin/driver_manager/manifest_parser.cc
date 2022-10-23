@@ -4,7 +4,7 @@
 
 #include "src/devices/bin/driver_manager/manifest_parser.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/pkg_url/fuchsia_pkg_url.h"

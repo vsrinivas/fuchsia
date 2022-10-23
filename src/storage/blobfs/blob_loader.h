@@ -8,7 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 

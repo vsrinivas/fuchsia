@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_REALM_SETUP_H_
 #define SRC_CONNECTIVITY_NETWORK_TESTING_NETEMUL_NETWORK_CONTEXT_LIB_REALM_SETUP_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/unique_fd.h>
 

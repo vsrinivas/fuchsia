@@ -8,7 +8,7 @@
 #include <align.h>
 #include <inttypes.h>
 #include <lib/counters.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>

@@ -9,7 +9,7 @@
 #define ZIRCON_KERNEL_LIB_CBUF_INCLUDE_LIB_CBUF_H_
 
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <pow2.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>

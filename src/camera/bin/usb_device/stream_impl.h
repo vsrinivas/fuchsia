@@ -11,7 +11,7 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fpromise/result.h>
 #include <lib/fpromise/scope.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/status.h>
 
 #include <memory>

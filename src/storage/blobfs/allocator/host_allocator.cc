@@ -5,7 +5,7 @@
 #include "src/storage/blobfs/allocator/host_allocator.h"
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

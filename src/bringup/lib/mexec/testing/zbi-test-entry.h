@@ -6,7 +6,7 @@
 #define SRC_BRINGUP_LIB_MEXEC_TESTING_ZBI_TEST_ENTRY_H_
 
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 class ZbiTestEntry {

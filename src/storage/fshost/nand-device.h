@@ -6,7 +6,7 @@
 #define SRC_STORAGE_FSHOST_NAND_DEVICE_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <memory>

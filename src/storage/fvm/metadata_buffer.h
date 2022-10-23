@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FVM_METADATA_BUFFER_H_
 #define SRC_STORAGE_FVM_METADATA_BUFFER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <limits>

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_NODE_FINDER_H_
 #define SRC_STORAGE_BLOBFS_NODE_FINDER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/storage/blobfs/format.h"
 

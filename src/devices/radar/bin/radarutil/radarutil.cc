@@ -9,7 +9,7 @@
 #include <lib/async/time.h>
 #include <lib/fidl/cpp/wire/arena.h>
 #include <lib/zx/clock.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>

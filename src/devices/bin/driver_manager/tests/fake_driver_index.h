@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/fidl.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 class FakeDriverIndex final : public fidl::WireServer<fuchsia_driver_index::DriverIndex> {

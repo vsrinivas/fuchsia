@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <grpc++/grpc++.h>
 

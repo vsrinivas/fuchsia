@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <memory>

@@ -9,7 +9,7 @@
 #include <lib/async-loop/loop.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

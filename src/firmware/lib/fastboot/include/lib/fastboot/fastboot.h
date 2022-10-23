@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.paver/cpp/wire.h>
 #include <lib/fzl/owned-vmo-mapper.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stddef.h>
 #include <zircon/status.h>
 

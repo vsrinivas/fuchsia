@@ -21,7 +21,7 @@
 
 #include <fbl/algorithm.h>
 
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "zircon/assert.h"

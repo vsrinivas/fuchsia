@@ -9,7 +9,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
 #include <lib/zx/clock.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <deque>
 

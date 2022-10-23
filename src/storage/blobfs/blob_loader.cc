@@ -7,7 +7,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

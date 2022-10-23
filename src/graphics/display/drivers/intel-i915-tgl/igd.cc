@@ -6,7 +6,7 @@
 
 #include <lib/device-protocol/pci.h>
 #include <lib/zircon-internal/align.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <limits.h>
 #include <zircon/status.h>
 

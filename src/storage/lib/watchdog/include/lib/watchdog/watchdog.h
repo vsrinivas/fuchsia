@@ -11,7 +11,7 @@
 using fx_log_severity_t = int;
 #define FX_LOG_INFO 4
 #endif
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <chrono>

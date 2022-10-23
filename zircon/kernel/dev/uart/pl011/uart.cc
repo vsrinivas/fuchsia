@@ -9,7 +9,7 @@
 #include <lib/cbuf.h>
 #include <lib/debuglog.h>
 #include <lib/zircon-internal/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <reg.h>
 #include <stdio.h>
 #include <trace.h>

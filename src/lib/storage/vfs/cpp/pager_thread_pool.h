@@ -6,7 +6,7 @@
 #define SRC_LIB_STORAGE_VFS_CPP_PAGER_THREAD_POOL_H_
 
 #include <lib/zx/port.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 
 #include <map>

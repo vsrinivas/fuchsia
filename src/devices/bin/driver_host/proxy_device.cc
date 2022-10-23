@@ -8,7 +8,7 @@
 #include <fbl/mutex.h>
 
 #include "lib/fdio/directory.h"
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 #include "src/devices/bin/driver_host/driver_host.h"
 
 namespace {

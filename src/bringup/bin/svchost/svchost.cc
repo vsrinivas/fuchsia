@@ -16,7 +16,7 @@
 #include <lib/svc/outgoing.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/job.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>

@@ -7,7 +7,7 @@
 
 #include <lib/zx/channel.h>
 #include <lib/zx/exception.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/task.h>
 #include <lib/zx/thread.h>
 #include <zircon/assert.h>

@@ -10,7 +10,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <utility>
 

@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.hardware.usb.virtual.bus/cpp/wire.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/usb-virtual-bus-launcher-helper/usb-virtual-bus-launcher-helper.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <vector>
 

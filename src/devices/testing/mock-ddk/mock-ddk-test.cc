@@ -9,7 +9,7 @@
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <algorithm>

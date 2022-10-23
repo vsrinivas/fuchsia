@@ -6,7 +6,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fpromise/result.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>

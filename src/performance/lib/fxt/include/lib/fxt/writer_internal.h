@@ -10,7 +10,7 @@
 #ifndef SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
 #define SRC_PERFORMANCE_LIB_FXT_INCLUDE_LIB_FXT_WRITER_INTERNAL_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <cstddef>
 #include <cstdint>

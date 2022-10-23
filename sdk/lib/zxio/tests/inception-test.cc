@@ -11,7 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/zx/eventpair.h>
 #include <lib/zx/socket.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <lib/zxio/cpp/inception.h>

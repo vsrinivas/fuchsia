@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fasync/future.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <deque>
 #include <initializer_list>

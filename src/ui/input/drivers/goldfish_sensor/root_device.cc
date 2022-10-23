@@ -9,7 +9,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 

@@ -14,7 +14,7 @@
 
 #include <iostream>
 
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 
 namespace extractor {
 namespace {

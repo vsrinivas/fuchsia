@@ -20,7 +20,7 @@
 #endif
 
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <functional>
 #include <memory>

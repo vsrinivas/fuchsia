@@ -6,7 +6,7 @@
 #define SRC_ZIRCON_BIN_HWSTRESS_DEVICE_H_
 
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string>
 #include <string_view>

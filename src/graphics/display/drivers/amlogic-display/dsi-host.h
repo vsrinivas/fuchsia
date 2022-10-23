@@ -9,7 +9,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 

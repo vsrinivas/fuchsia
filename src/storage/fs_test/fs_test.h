@@ -6,7 +6,7 @@
 #define SRC_STORAGE_FS_TEST_FS_TEST_H_
 
 #include <fcntl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <zircon/compiler.h>

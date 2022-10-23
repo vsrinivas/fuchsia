@@ -8,7 +8,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>

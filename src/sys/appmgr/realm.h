@@ -11,7 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/syscalls/policy.h>
 #include <zircon/types.h>
 

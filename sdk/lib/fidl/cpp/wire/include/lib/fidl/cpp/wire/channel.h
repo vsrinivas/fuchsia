@@ -14,7 +14,7 @@
 #include <lib/fidl/cpp/wire/server.h>
 #include <lib/fidl/cpp/wire/sync_call.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace fidl {
 

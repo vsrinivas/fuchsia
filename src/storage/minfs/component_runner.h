@@ -6,7 +6,7 @@
 #define SRC_STORAGE_MINFS_COMPONENT_RUNNER_H_
 
 #include <fidl/fuchsia.process.lifecycle/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"

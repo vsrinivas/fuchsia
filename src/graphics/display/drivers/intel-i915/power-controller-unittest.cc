@@ -5,7 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915/power-controller.h"
 
 #include <lib/mmio/mmio-buffer.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <atomic>

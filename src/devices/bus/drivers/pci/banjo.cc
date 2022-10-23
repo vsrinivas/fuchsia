@@ -8,7 +8,7 @@
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/interrupt.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
 #include <zircon/assert.h>

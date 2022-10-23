@@ -6,7 +6,7 @@
 #define LIB_FDIO_DIRECTORY_INTERNAL_H_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace fdio_internal {
 

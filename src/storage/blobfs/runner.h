@@ -9,7 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/paged_vfs.h"

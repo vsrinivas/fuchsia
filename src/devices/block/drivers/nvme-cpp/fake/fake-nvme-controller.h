@@ -8,7 +8,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <unordered_map>
 #include <vector>

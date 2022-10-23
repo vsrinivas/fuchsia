@@ -8,7 +8,7 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <condition_variable>
 #include <thread>

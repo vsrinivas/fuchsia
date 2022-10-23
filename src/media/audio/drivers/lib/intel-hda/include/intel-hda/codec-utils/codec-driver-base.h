@@ -10,7 +10,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/handle.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/mutex.h>

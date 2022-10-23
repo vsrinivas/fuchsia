@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.hardware.tpmimpl/cpp/wire.h>
 #include <lib/ddk/debug.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <hwreg/bitfields.h>
 

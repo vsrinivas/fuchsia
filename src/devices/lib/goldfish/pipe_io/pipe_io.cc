@@ -10,7 +10,7 @@
 #include <lib/fpromise/result.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 

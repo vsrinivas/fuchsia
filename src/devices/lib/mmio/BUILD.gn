@@ -29,7 +29,7 @@ zx_library("mmio") {
     # <lib/mmio/mmio.h> has #include <lib/zx/bti.h>.
     "//zircon/system/ulib/zx",
 
-    # <lib/mmio/mmio-buffer.h> has #include <lib/zx/status.h>.
+    # <lib/mmio/mmio-buffer.h> has #include <lib/zx/result.h>.
     "//zircon/system/ulib/zxc",
   ]
 }

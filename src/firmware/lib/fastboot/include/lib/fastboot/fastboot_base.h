@@ -5,7 +5,7 @@
 #ifndef SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_BASE_H_
 #define SRC_FIRMWARE_LIB_FASTBOOT_INCLUDE_LIB_FASTBOOT_FASTBOOT_BASE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stddef.h>
 
 #include <string_view>

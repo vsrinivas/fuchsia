@@ -17,7 +17,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <list>
 #include <unordered_map>

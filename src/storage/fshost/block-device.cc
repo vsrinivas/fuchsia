@@ -23,7 +23,7 @@
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>

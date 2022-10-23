@@ -8,7 +8,7 @@
 #include <lib/fidl/cpp/wire/service_handler_interface.h>
 #include <lib/svc/dir.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <map>

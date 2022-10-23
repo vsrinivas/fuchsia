@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_TOOLS_MINFS_H_
 #define SRC_STORAGE_MINFS_TOOLS_MINFS_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 #include <utility>

@@ -10,7 +10,7 @@
 #include <lib/fit/defer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <math.h>
 #include <string.h>

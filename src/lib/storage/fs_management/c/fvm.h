@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_STORAGE_FS_MANAGEMENT_C_FVM_H_
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_C_FVM_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 extern "C" {
 

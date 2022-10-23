@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_SOCKET_DISPATCHER_H_
 
 #include <lib/user_copy/user_ptr.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>

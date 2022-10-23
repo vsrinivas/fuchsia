@@ -5,7 +5,7 @@
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_MSIX_H_
 
 #include <lib/mmio/mmio.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <algorithm>

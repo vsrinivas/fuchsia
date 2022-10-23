@@ -11,7 +11,7 @@
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #endif
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/storage/minfs/minfs_private.h"
 #include "src/storage/minfs/mount.h"

@@ -6,7 +6,7 @@
 #define SRC_STORAGE_BLOBFS_ALLOCATOR_HOST_ALLOCATOR_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

@@ -13,7 +13,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/compiler.h>

@@ -8,7 +8,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 #include <zircon/status.h>
 

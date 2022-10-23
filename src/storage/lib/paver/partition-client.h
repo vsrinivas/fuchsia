@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

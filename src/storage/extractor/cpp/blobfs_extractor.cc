@@ -4,7 +4,7 @@
 
 #include <lib/fdio/fd.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

@@ -8,7 +8,7 @@
 #include <lib/fdf/channel.h>
 #include <lib/fdf/channel_read.h>
 #include <lib/sync/cpp/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <optional>
 

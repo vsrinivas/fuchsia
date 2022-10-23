@@ -7,7 +7,7 @@
 #include <fuchsia/hardware/thermal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/directory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 #include <unistd.h>
 #include <zircon/assert.h>

@@ -6,7 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_POWER_CONTROLLER_H_
 
 #include <lib/mmio/mmio-buffer.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <cstdint>
 

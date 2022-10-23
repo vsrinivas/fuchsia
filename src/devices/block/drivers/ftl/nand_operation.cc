@@ -10,7 +10,7 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 
 namespace ftl {
 

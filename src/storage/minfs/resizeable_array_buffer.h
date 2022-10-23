@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_RESIZEABLE_ARRAY_BUFFER_H_
 #define SRC_STORAGE_MINFS_RESIZEABLE_ARRAY_BUFFER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 
 #include <storage/buffer/array_buffer.h>

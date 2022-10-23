@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_CPU_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <kernel/cpu.h>
 

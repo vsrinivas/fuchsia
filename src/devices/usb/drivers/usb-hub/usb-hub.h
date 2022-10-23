@@ -18,7 +18,7 @@
 #include <lib/fpromise/result.h>
 #include <lib/inspect/cpp/inspector.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_MODULAR_BIN_BASEMGR_REBOOT_RATE_LIMITER_H_
 #define SRC_MODULAR_BIN_BASEMGR_REBOOT_RATE_LIMITER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <chrono>
 #include <string>

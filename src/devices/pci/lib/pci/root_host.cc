@@ -8,7 +8,7 @@
 #include <lib/zx/object.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>

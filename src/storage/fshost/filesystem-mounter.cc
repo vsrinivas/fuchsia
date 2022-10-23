@@ -33,7 +33,7 @@
 #include "lib/fdio/namespace.h"
 #include "lib/fidl/cpp/wire/channel.h"
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"

@@ -10,7 +10,7 @@
 #include <storage/buffer/vmo_buffer.h>
 #include <storage/operation/operation.h>
 
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 #include "src/lib/storage/vfs/cpp/journal/superblock.h"
 #include "src/lib/storage/vfs/cpp/transaction/transaction_handler.h"
 

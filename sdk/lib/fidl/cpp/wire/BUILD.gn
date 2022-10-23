@@ -155,7 +155,7 @@ sdk_source_set("wire") {
     # Syscall headers.
     "//src/zircon/lib/zircon",
 
-    # Various result-returning API uses #include <lib/zx/status.h>.
+    # Various result-returning API uses #include <lib/zx/result.h>.
     "//zircon/system/ulib/zxc",
 
     # <lib/fidl/cpp/wire/message.h> has #include <lib/fidl/cpp/transaction_header.h>

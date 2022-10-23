@@ -9,7 +9,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <array>
 

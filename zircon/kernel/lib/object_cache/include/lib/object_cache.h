@@ -9,7 +9,7 @@
 
 #include <inttypes.h>
 #include <lib/ktrace.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <trace.h>
 #include <zircon/errors.h>

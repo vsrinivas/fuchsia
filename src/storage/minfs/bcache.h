@@ -10,7 +10,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <atomic>
 #include <shared_mutex>

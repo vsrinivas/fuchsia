@@ -15,7 +15,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_IOCTL_ADAPTER_H_
 
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <functional>

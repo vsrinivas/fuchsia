@@ -21,7 +21,7 @@
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 

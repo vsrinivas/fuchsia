@@ -20,7 +20,7 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <threads.h>

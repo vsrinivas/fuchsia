@@ -9,7 +9,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
 

@@ -91,7 +91,7 @@ if (current_toolchain == default_toolchain) {
         "//zircon/kernel/lib/fbl:headers.config",
 
         # Everywhere has #include <lib/fit/result.h>
-        # Everywhere has #include <zx/status.h>
+        # Everywhere has #include <zx/result.h>
         "//zircon/system/ulib/zxc:headers.config",
 
         "//zircon/kernel/lib/backtrace:headers.config",

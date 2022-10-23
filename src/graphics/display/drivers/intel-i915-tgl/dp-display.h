@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

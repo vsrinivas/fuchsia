@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_EXTRACTOR_BIN_PARSE_H_
 #define SRC_STORAGE_EXTRACTOR_BIN_PARSE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <optional>
 #include <string>

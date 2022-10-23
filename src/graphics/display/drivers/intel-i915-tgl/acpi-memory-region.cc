@@ -8,7 +8,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>

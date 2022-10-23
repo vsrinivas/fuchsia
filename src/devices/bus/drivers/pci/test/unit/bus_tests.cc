@@ -7,7 +7,7 @@
 #include <lib/mmio/mmio.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/clock.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/limits.h>

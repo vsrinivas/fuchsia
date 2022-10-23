@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_CLOCK_REGISTRY_H_
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_CLOCK_REGISTRY_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <unordered_map>
 

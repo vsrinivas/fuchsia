@@ -9,7 +9,7 @@
 #include <lib/fit/function.h>
 #include <lib/stdcompat/span.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdbool.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>

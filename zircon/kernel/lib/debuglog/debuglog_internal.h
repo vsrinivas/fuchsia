@@ -9,7 +9,7 @@
 
 #include <lib/debuglog.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <kernel/event.h>
 #include <kernel/mutex.h>

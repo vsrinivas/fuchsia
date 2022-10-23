@@ -6,7 +6,7 @@
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_MKFS_WITH_DEFAULT_H_
 
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/launch.h"

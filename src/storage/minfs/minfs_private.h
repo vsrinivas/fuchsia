@@ -18,7 +18,7 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>

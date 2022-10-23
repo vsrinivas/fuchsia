@@ -16,7 +16,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 

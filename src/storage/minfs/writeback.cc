@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

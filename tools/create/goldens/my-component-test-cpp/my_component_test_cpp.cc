@@ -9,7 +9,7 @@
 #include <lib/fdio/directory.h>
 #include <lib/inspect/contrib/cpp/archive_reader.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 namespace my_component_test_cpp {

@@ -6,7 +6,7 @@
 #define SRC_BRINGUP_BIN_NETSVC_BOARD_INFO_H_
 
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <unistd.h>
 
 zx::result<bool> CheckBoardName(fidl::UnownedClientEnd<fuchsia_sysinfo::SysInfo> sysinfo,

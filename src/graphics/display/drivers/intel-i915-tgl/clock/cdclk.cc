@@ -5,7 +5,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/clock/cdclk.h"
 
 #include <lib/ddk/debug.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 

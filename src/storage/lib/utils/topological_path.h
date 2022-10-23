@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string>
 #include <string_view>

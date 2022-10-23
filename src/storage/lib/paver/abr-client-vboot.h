@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_ABR_CLIENT_VBOOT_H_
 #define SRC_STORAGE_LIB_PAVER_ABR_CLIENT_VBOOT_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <memory>

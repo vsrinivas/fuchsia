@@ -4,7 +4,7 @@
 
 #include "src/storage/blobfs/allocator/base_allocator.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <memory>

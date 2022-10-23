@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_COMPRESSION_SEEKABLE_DECOMPRESSOR_H_
 #define SRC_STORAGE_BLOBFS_COMPRESSION_SEEKABLE_DECOMPRESSOR_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stddef.h>
 #include <zircon/types.h>
 

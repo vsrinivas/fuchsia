@@ -4,7 +4,7 @@
 
 #include "memory_range.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <stdio.h>

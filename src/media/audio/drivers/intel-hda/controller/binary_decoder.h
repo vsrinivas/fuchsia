@@ -6,7 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_BINARY_DECODER_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 

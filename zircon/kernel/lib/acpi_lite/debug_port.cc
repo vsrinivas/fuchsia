@@ -7,7 +7,7 @@
 #include <lib/acpi_lite.h>
 #include <lib/acpi_lite/debug_port.h>
 #include <lib/acpi_lite/structures.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include "binary_reader.h"

@@ -8,7 +8,7 @@
 #include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 

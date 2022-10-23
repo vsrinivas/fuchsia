@@ -8,7 +8,7 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/profile.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>

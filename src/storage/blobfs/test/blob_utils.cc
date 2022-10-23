@@ -6,7 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/fdio/io.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 #include <sys/stat.h>
 #include <unistd.h>

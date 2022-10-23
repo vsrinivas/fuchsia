@@ -7,7 +7,7 @@
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/debug.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

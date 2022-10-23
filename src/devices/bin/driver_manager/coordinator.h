@@ -24,7 +24,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

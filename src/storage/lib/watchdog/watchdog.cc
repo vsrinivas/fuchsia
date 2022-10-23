@@ -7,7 +7,7 @@
 #include <lib/watchdog/operations.h>
 #include <lib/watchdog/watchdog.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <unistd.h>

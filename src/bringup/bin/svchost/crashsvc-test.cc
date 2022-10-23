@@ -12,7 +12,7 @@
 #include <lib/zx/exception.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>

@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/block/volume/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/hw/gpt.h>
 
 #include <vector>

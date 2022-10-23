@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_MAPPED_VMO_FILE_H_
 #define SRC_LIB_ELFLDLTL_INCLUDE_LIB_ELFLDLTL_MAPPED_VMO_FILE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 

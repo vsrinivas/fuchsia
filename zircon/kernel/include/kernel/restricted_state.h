@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_RESTRICTED_STATE_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_RESTRICTED_STATE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/syscalls-next.h>
 
 #include <arch/regs.h>

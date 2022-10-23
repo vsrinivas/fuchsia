@@ -6,7 +6,7 @@
 
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/status.h>
 
 #include <safemath/checked_math.h>

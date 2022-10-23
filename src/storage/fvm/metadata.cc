@@ -5,7 +5,7 @@
 #include "src/storage/fvm/metadata.h"
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 

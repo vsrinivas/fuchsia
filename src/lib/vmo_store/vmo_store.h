@@ -6,7 +6,7 @@
 #define SRC_LIB_VMO_STORE_VMO_STORE_H_
 
 #include <lib/stdcompat/optional.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/status.h>
 
 #include <memory>

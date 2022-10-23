@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/block/cpp/fidl.h>
 #include <fuchsia/hardware/block/cpp/fidl_test_base.h>
 #include <lib/zx/fifo.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 

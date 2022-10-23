@@ -8,7 +8,7 @@
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>

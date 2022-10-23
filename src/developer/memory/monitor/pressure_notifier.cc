@@ -6,7 +6,7 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/clock.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace monitor {
 

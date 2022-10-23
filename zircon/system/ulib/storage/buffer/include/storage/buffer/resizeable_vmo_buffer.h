@@ -6,7 +6,7 @@
 #define STORAGE_BUFFER_RESIZEABLE_VMO_BUFFER_H_
 
 #include <lib/fzl/resizeable-vmo-mapper.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 
 #include <storage/buffer/block_buffer.h>

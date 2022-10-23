@@ -9,7 +9,7 @@
 #error Fuchsia-only Header
 #endif
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>

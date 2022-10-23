@@ -18,7 +18,7 @@
 #include <lib/vfs/cpp/service.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <unistd.h>
 #include <zircon/assert.h>

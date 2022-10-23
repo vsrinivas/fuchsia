@@ -7,7 +7,7 @@
 #include "binary_reader.h"
 
 #include <lib/acpi_lite.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <string.h>
 
 #include <initializer_list>

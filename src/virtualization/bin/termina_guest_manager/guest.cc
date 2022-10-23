@@ -10,7 +10,7 @@
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/default.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <netinet/in.h>
 #include <sys/mount.h>
 #include <unistd.h>

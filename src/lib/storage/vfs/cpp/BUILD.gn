@@ -32,7 +32,7 @@ static_library("cpp") {
     "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
 
-    # <fs/vnode.h> has #include <lib/zx/status.h>
+    # <fs/vnode.h> has #include <lib/zx/result.h>
     "//zircon/system/ulib/zxc",
   ]
 

@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_MANIFEST_PARSER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_MANIFEST_PARSER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/devices/lib/log/log.h"
 #include "src/lib/json_parser/json_parser.h"

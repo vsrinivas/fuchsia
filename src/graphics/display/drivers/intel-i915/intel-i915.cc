@@ -15,7 +15,7 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl/cpp/wire/channel.h>
 #include <lib/image-format/image_format.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <math.h>

@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_LIB_ACPI_LITE_INCLUDE_LIB_ACPI_LITE_H_
 
 #include <lib/acpi_lite/structures.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <zircon/types.h>
 

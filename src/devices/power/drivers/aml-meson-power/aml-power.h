@@ -10,7 +10,7 @@
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
 #include <lib/device-protocol/pdev.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <threads.h>
 
 #include <array>

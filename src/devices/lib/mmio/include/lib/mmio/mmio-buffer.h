@@ -36,7 +36,7 @@ __END_CDECLS
 
 #include <lib/zx/bti.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <optional>

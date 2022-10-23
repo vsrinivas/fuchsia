@@ -75,7 +75,7 @@ zx_library("vm") {
     # <vm/vm_cow_pages.h> has #include <lib/page_cache.h>
     "//zircon/kernel/lib/page_cache:headers",
 
-    # "pmm_arena.h" has #include <lib/zx/status.h>.
+    # "pmm_arena.h" has #include <lib/zx/result.h>.
     "//zircon/system/ulib/zxc:headers",
   ]
 

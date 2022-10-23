@@ -11,7 +11,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include "rapidjson/document.h"

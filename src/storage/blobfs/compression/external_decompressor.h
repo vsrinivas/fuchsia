@@ -9,7 +9,7 @@
 #include <fuchsia/blobfs/internal/cpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/fifo.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <optional>

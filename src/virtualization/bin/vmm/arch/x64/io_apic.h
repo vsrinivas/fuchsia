@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_IO_APIC_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_IO_APIC_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <mutex>
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file
 
 #include <lib/fake-object/object.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/rights.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

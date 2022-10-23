@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_BLOBFS_INSPECTOR_H_
 #define SRC_STORAGE_BLOBFS_BLOBFS_INSPECTOR_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string>
 #include <vector>

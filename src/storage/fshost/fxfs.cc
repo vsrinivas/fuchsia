@@ -11,7 +11,7 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <explicit-memory/bytes.h>
 

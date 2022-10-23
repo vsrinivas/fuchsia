@@ -11,7 +11,7 @@
 #include <lib/fdf/cpp/dispatcher.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 
 #include <fbl/intrusive_double_list.h>

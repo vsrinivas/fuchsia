@@ -8,7 +8,7 @@
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
 #include <zircon/errors.h>

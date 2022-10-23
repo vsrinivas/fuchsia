@@ -6,7 +6,7 @@
 
 #include <fuchsia/boot/cpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 

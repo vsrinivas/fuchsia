@@ -7,7 +7,7 @@
 
 #include <lib/async/dispatcher.h>
 #include <lib/zx/pager.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>

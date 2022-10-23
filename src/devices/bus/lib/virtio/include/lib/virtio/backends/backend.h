@@ -7,7 +7,7 @@
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/port.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <vector>
 

@@ -5,7 +5,7 @@
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/stdcompat/bit.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>

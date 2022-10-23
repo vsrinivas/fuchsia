@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_ACPI_H_
 
 #include <lib/acpi_lite.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 
 // Returns a new AcpiParser instance, that uses a physical memory reader, that the transformation

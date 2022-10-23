@@ -6,7 +6,7 @@
 #include <getopt.h>
 #include <inttypes.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>

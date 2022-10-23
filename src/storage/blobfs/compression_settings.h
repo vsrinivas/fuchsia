@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_COMPRESSION_SETTINGS_H_
 #define SRC_STORAGE_BLOBFS_COMPRESSION_SETTINGS_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 
 #include <optional>

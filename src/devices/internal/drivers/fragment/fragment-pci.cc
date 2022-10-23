@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <lib/ddk/debug.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/devices/bus/drivers/pci/proxy_rpc.h"
 #include "src/devices/internal/drivers/fragment/fragment.h"

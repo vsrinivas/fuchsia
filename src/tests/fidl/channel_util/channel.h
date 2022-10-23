@@ -6,7 +6,7 @@
 #define SRC_TESTS_FIDL_CHANNEL_UTIL_CHANNEL_H_
 
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 

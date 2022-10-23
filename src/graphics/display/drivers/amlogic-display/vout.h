@@ -9,7 +9,7 @@
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <lib/device-protocol/display-panel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/pixelformat.h>
 
 #include "clock.h"

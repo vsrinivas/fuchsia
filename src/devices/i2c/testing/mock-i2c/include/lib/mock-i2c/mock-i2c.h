@@ -6,7 +6,7 @@
 #define SRC_DEVICES_I2C_TESTING_MOCK_I2C_INCLUDE_LIB_MOCK_I2C_MOCK_I2C_H_
 
 #include <fidl/fuchsia.hardware.i2c/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>

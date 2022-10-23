@@ -12,7 +12,7 @@ static_assert(false, "Fuchsia only header");
 #include <lib/fit/function.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/lib/chunked-compression/chunked-archive.h"
 #include "src/storage/blobfs/compression/external_decompressor.h"

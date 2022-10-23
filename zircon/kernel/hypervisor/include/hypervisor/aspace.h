@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ASPACE_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ASPACE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <ktl/move.h>
 #include <ktl/unique_ptr.h>

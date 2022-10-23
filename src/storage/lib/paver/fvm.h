@@ -4,7 +4,7 @@
 #ifndef SRC_STORAGE_LIB_PAVER_FVM_H_
 #define SRC_STORAGE_LIB_PAVER_FVM_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "partition-client.h"
 #include "src/lib/storage/block_client/cpp/client.h"

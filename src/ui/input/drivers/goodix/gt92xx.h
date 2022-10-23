@@ -13,7 +13,7 @@
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/stdcompat/span.h>
 #include <lib/zx/interrupt.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <threads.h>
 #include <zircon/types.h>
 

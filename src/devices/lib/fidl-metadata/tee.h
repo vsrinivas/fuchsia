@@ -6,7 +6,7 @@
 #define SRC_DEVICES_LIB_FIDL_METADATA_TEE_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <zircon/status.h>
 #include <zircon/types.h>

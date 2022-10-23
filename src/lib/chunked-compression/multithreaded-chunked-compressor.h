@@ -6,7 +6,7 @@
 #define SRC_LIB_CHUNKED_COMPRESSION_MULTITHREADED_CHUNKED_COMPRESSOR_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <cstdint>
 #include <memory>

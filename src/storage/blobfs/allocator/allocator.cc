@@ -7,7 +7,7 @@
 #include <inttypes.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

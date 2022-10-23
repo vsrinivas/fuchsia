@@ -7,7 +7,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 

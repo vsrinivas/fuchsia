@@ -6,7 +6,7 @@
 
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/zx/handle.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/syscalls.h>
 
 #include <future>

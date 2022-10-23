@@ -13,7 +13,7 @@
 #include <lib/input_report_reader/reader.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <time.h>
 
 #include <ddktl/device.h>

@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.driver.framework/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <unordered_map>
 

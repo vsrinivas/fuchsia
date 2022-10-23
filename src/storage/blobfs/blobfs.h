@@ -19,7 +19,7 @@
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/trace/event.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>

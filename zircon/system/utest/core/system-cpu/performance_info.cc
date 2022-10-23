@@ -7,7 +7,7 @@
 #include <lib/zx/job.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>

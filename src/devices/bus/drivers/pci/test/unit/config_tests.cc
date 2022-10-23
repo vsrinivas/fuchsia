@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/limits.h>
 
 #include <zxtest/zxtest.h>

@@ -6,7 +6,7 @@
 #define SRC_STORAGE_BIN_STORAGE_BENCHMARK_RUNNING_FILESYSTEM_
 
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace storage_benchmark {
 

@@ -8,7 +8,7 @@
 #include <fuchsia/ui/input3/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <virtio/input.h>
 

@@ -9,7 +9,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/inspector.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 
 #include <string>

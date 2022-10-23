@@ -5,7 +5,7 @@
 #include "src/lib/chunked-compression/multithreaded-chunked-compressor.h"
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <string.h>
 #include <zircon/errors.h>
 

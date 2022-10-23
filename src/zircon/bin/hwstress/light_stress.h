@@ -6,7 +6,7 @@
 #define SRC_ZIRCON_BIN_HWSTRESS_LIGHT_STRESS_H_
 
 #include <fuchsia/hardware/light/cpp/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 
 #include <string>

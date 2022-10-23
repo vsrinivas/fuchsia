@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_TRANSACTION_LIMITS_H_
 #define SRC_STORAGE_MINFS_TRANSACTION_LIMITS_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/storage/minfs/format.h"
 

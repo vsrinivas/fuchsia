@@ -5,7 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_TEST_AUDIO_TEST_TOOLS_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>

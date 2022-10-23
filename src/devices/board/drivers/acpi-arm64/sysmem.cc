@@ -8,7 +8,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "acpi-arm64.h"
 

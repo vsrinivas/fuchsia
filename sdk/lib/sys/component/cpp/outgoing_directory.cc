@@ -6,7 +6,7 @@
 #include <lib/sys/component/cpp/constants.h>
 #include <lib/sys/component/cpp/handlers.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>

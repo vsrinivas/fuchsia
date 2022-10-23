@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace fs_test {
 

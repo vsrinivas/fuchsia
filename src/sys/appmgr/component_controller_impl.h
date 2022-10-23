@@ -10,7 +10,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fpromise/promise.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>
 

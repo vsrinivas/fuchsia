@@ -17,7 +17,7 @@
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 

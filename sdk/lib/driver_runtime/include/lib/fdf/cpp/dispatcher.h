@@ -10,7 +10,7 @@
 #include <lib/fdf/dispatcher.h>
 #include <lib/fit/function.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string>
 

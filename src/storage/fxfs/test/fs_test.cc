@@ -4,7 +4,7 @@
 #include <fcntl.h>
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <utility>
 

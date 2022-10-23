@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.backlight/cpp/wire.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

@@ -7,7 +7,7 @@
 
 #include <lib/fdf/arena.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 
 namespace fdf {

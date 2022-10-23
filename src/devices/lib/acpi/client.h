@@ -6,7 +6,7 @@
 
 #include <fidl/fuchsia.hardware.acpi/cpp/wire.h>
 #include <lib/ddk/driver.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/devices/lib/acpi/object.h"
 #include "src/devices/lib/acpi/util.h"

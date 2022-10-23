@@ -9,7 +9,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/ktrace.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>

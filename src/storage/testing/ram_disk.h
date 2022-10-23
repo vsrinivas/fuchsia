@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_TESTING_RAM_DISK_H_
 #define SRC_STORAGE_TESTING_RAM_DISK_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/gpt.h>
 

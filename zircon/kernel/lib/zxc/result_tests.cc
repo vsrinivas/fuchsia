@@ -8,7 +8,7 @@
 // headers used by libzxc.
 
 #include <lib/unittest/unittest.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stddef.h>
 #include <string.h>
 

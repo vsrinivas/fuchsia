@@ -25,7 +25,7 @@
 #include <fbl/string_printf.h>
 
 #include "lib/ddk/device.h"
-#include "lib/zx/status.h"
+#include "lib/zx/result.h"
 #include "src/devices/board/lib/acpi/event.h"
 #include "src/devices/board/lib/acpi/fidl.h"
 #include "src/devices/board/lib/acpi/global-lock.h"

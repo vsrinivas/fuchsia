@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_TESTING_ZXCRYPT_H_
 #define SRC_STORAGE_TESTING_ZXCRYPT_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string>
 

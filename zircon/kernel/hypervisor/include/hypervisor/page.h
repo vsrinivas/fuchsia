@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_PAGE_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_PAGE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <vm/physmap.h>
 #include <vm/pmm.h>

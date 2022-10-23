@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_PAGE_TABLES_H_
 #define ZIRCON_KERNEL_ARCH_X86_PAGE_TABLES_INCLUDE_ARCH_X86_PAGE_TABLES_PAGE_TABLES_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/canary.h>
 #include <hwreg/bitfields.h>

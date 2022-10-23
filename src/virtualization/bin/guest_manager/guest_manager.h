@@ -8,7 +8,7 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include "src/virtualization/lib/guest_config/guest_config.h"

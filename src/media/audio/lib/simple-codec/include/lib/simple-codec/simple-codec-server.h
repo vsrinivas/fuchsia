@@ -10,7 +10,7 @@
 #include <lib/ddk/debug.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/simple-codec/simple-codec-server-internal.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <string.h>
 

@@ -7,7 +7,7 @@
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 

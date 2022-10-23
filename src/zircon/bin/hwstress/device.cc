@@ -6,7 +6,7 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <cstdio>
 #include <string>

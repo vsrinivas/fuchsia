@@ -11,7 +11,7 @@
 #include <lib/fit/defer.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdlib.h>
 #include <string.h>
 #include <strings.h>

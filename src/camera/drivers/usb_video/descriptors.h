@@ -7,7 +7,7 @@
 
 #include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <vector>
 

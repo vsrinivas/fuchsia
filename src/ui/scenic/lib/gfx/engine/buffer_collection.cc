@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/buffer_collection.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include "src/ui/lib/escher/impl/vulkan_utils.h"

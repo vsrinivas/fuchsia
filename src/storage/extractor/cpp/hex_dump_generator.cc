@@ -5,7 +5,7 @@
 #include "hex_dump_generator.h"
 
 #include <lib/cksum.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <sys/stat.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>

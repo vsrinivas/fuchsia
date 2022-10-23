@@ -6,7 +6,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/mmio/mmio-buffer.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 
 #include <fbl/string_printf.h>

@@ -6,7 +6,7 @@
 #define SRC_ZIRCON_BIN_HWSTRESS_MEMORY_STATS_H_
 
 #include <fuchsia/kernel/cpp/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace hwstress {
 

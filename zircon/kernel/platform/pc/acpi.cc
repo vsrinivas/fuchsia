@@ -13,7 +13,7 @@
 #include <lib/console.h>
 #include <lib/fit/defer.h>
 #include <lib/lazy_init/lazy_init.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <trace.h>
 #include <zircon/types.h>
 

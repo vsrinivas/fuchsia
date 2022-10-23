@@ -11,7 +11,7 @@
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <lib/sys/component/cpp/testing/realm_builder_types.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <virtio/gpu.h>
 

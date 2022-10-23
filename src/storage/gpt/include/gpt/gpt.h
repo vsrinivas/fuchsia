@@ -6,7 +6,7 @@
 #define SRC_STORAGE_GPT_INCLUDE_GPT_GPT_H_
 
 #include <lib/fpromise/result.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

@@ -7,7 +7,7 @@
 
 #include <lib/ddk/io-buffer.h>
 #include <lib/zx/bti.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

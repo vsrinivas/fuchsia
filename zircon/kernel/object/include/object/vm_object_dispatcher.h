@@ -9,7 +9,7 @@
 
 #include <lib/user_copy/user_iovec.h>
 #include <lib/user_copy/user_ptr.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <sys/types.h>
 #include <zircon/rights.h>
 #include <zircon/types.h>

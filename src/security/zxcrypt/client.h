@@ -10,7 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

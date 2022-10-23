@@ -15,7 +15,7 @@
 
 #ifndef __ASSEMBLER__
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/compiler.h>

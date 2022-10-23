@@ -7,7 +7,7 @@
 #include <fuchsia/scheduler/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
 #include <lib/zx/profile.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 
 #include <atomic>

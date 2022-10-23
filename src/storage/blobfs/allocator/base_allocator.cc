@@ -5,7 +5,7 @@
 #include "src/storage/blobfs/allocator/base_allocator.h"
 
 #include <lib/syslog/cpp/macros.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

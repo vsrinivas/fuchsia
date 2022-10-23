@@ -9,7 +9,7 @@
 #include <lib/zbitl/error-stdio.h>
 #include <lib/zbitl/image.h>
 #include <lib/zbitl/memory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <mexec.h>
 #include <stdio.h>
 #include <zircon/assert.h>

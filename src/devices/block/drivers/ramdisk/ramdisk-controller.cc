@@ -5,7 +5,7 @@
 #include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <lib/ddk/driver.h>
 #include <lib/fidl-utils/bind.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.fs.startup/cpp/wire.h>
 #include <fidl/fuchsia.fxfs/cpp/wire.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <memory>

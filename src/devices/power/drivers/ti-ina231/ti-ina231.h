@@ -10,7 +10,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <ddktl/device.h>
 #include <fbl/mutex.h>

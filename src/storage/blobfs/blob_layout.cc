@@ -3,7 +3,7 @@
 
 #include "src/storage/blobfs/blob_layout.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <limits>

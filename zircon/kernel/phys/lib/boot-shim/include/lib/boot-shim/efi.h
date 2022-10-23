@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_EFI_H_
 #define ZIRCON_KERNEL_PHYS_LIB_BOOT_SHIM_INCLUDE_LIB_BOOT_SHIM_EFI_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <efi/system-table.h>
 #include <efi/types.h>

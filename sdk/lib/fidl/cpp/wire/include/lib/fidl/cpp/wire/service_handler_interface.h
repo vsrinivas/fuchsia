@@ -14,7 +14,7 @@
 #ifdef __Fuchsia__
 #include <lib/fidl/cpp/wire/internal/endpoints.h>
 #include <lib/fidl/cpp/wire/internal/transport.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #endif  // __Fuchsia__
 
 namespace fidl {

@@ -36,7 +36,7 @@ source_set("ddktl") {
     # <ddktl/device.h> has #include <lib/zx/channel.h>.
     "//zircon/system/ulib/zx",
 
-    # <ddktl/device.h> has #include <lib/zx/status.h>.
+    # <ddktl/device.h> has #include <lib/zx/result.h>.
     "//zircon/system/ulib/zxc",
 
     # <ddktl/fidl.h> has #include <ddk/device.h>

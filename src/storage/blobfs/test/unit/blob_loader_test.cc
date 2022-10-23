@@ -6,7 +6,7 @@
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>

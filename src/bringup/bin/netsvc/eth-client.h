@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.hardware.ethernet/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/fifo.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 

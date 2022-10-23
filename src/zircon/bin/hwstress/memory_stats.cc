@@ -4,7 +4,7 @@
 
 #include <fuchsia/kernel/cpp/fidl.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <cstdint>
 #include <memory>

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zxio/types.h>
 #include <limits.h>
 #include <zircon/types.h>

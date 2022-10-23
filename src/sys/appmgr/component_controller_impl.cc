@@ -15,7 +15,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/job.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 

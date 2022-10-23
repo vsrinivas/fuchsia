@@ -6,7 +6,7 @@
 #ifndef ZIRCON_KERNEL_VM_PMM_ARENA_H_
 #define ZIRCON_KERNEL_VM_PMM_ARENA_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <trace.h>
 #include <zircon/types.h>
 

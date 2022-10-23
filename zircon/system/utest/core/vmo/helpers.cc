@@ -6,7 +6,7 @@
 
 #include <lib/boot-options/boot-options.h>
 #include <lib/maybe-standalone-test/maybe-standalone.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
 

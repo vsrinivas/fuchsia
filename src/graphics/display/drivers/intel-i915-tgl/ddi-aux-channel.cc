@@ -6,7 +6,7 @@
 
 #include <lib/ddk/debug.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/types.h>

@@ -6,7 +6,7 @@
 #define SRC_DEVICES_GPIO_BIN_GPIOUTIL_GPIOUTIL_H_
 
 #include <fidl/fuchsia.hardware.gpio/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 
 enum GpioFunc {

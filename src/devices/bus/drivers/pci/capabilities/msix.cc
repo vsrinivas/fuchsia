@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 #include "src/devices/bus/drivers/pci/capabilities/msix.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 

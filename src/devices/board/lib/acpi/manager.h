@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BOARD_LIB_ACPI_MANAGER_H_
 #define SRC_DEVICES_BOARD_LIB_ACPI_MANAGER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <mutex>

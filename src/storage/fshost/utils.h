@@ -9,7 +9,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire_types.h>
 #include <fidl/fuchsia.io/cpp/wire_types.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace fshost {
 

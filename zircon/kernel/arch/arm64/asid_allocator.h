@@ -6,7 +6,7 @@
 #ifndef ZIRCON_KERNEL_ARCH_ARM64_ASID_ALLOCATOR_H_
 #define ZIRCON_KERNEL_ARCH_ARM64_ASID_ALLOCATOR_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/types.h>
 
 #include <arch/arm64/feature.h>

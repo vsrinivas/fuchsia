@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_MINFS_DIRECTORY_H_
 #define SRC_STORAGE_MINFS_DIRECTORY_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string_view>
 

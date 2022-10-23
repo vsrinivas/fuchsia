@@ -4,7 +4,7 @@
 
 #include <err.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/rights.h>
 #include <zircon/status.h>

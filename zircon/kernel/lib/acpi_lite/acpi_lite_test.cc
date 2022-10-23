@@ -8,7 +8,7 @@
 #include <lib/acpi_lite/testing/test_data.h>
 #include <lib/acpi_lite/testing/test_util.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <string.h>
 
 #include <initializer_list>

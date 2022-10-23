@@ -17,8 +17,8 @@ library_headers("headers") {
     "lib/fxt/writer_internal.h",
   ]
   public_deps = [
-    # <fxt/writer.h> has #include <lib/zx/status.h>
-    # <fxt/serializer.h> has #include <lib/zx/status.h>
+    # <fxt/writer.h> has #include <lib/zx/result.h>
+    # <fxt/serializer.h> has #include <lib/zx/result.h>
     "//zircon/system/ulib/zxc",
   ]
 }

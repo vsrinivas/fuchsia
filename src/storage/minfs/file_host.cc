@@ -4,7 +4,7 @@
 
 // This file contains host specific minfs::File code.
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

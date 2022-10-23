@@ -6,7 +6,7 @@
 #define SRC_DEVELOPER_ADB_THIRD_PARTY_ADB_ADB_BASE_H_
 
 #include <lib/zx/socket.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <string_view>
 

@@ -8,7 +8,7 @@
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 // A wrapper around the C API that sets up and tears down memfs.
 //

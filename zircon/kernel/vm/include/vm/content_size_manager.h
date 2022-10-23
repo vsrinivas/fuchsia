@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_VM_INCLUDE_VM_CONTENT_SIZE_MANAGER_H_
 #define ZIRCON_KERNEL_VM_INCLUDE_VM_CONTENT_SIZE_MANAGER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/intrusive_container_utils.h>
 #include <fbl/intrusive_double_list.h>

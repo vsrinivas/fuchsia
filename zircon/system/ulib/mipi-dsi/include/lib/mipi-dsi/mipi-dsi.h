@@ -6,7 +6,7 @@
 #define LIB_MIPI_DSI_MIPI_DSI_H_
 #include <fidl/fuchsia.hardware.dsi/cpp/wire.h>
 #include <fuchsia/hardware/dsiimpl/c/banjo.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <stdio.h>

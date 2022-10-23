@@ -9,7 +9,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <atomic>
 

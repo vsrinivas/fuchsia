@@ -8,7 +8,7 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>

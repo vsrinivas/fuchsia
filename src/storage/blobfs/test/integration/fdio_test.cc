@@ -14,7 +14,7 @@
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
 #include <lib/sys/component/cpp/service_client.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"

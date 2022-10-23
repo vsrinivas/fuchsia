@@ -6,7 +6,7 @@
 #define SRC_STORAGE_BLOBFS_BLOB_DATA_PRODUCER_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

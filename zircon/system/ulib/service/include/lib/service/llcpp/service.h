@@ -12,7 +12,7 @@
 #include <lib/service/llcpp/constants.h>
 #include <lib/stdcompat/string_view.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <utility>
 

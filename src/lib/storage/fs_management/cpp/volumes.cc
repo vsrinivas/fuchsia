@@ -18,7 +18,7 @@
 #include <lib/fidl/cpp/wire/string_view.h>
 #include <lib/fit/defer.h>
 #include <lib/sys/component/cpp/service_client.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <zircon/errors.h>

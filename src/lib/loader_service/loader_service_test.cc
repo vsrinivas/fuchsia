@@ -7,7 +7,7 @@
 #include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 #include <zircon/fidl.h>
 

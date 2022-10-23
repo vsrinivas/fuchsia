@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/zircon_boot/zbi_utils.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <limits.h>
 #include <zircon/boot/bootfs.h>
 #include <zircon/boot/image.h>

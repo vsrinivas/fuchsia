@@ -73,7 +73,7 @@ static inline zx_status_t acpi_to_zx_status(ACPI_STATUS acpi_status) {
 namespace acpi {
 
 // This is almost a direct copy of zx::result, but wrapping ACPI_STATUS instead of zx_status_t.
-// See //zircon/system/ulib/zxc/include/lib/zx/status.h for more information.
+// See //zircon/system/ulib/zxc/include/lib/zx/result.h for more information.
 using fit::as_error;
 using fit::error;
 using fit::failed;

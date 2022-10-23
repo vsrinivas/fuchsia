@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_RESTRICTED_H_
 
 #include <lib/user_copy/user_ptr.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 // Routines and data structures to support restricted mode.
 

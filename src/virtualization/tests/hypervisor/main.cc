@@ -13,7 +13,7 @@
 #include <lib/zx/guest.h>
 #include <lib/zx/port.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vcpu.h>
 #include <lib/zx/vmar.h>
 #include <threads.h>

@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <zircon/device/block.h>

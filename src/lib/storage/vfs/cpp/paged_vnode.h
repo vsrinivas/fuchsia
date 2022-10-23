@@ -8,7 +8,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
 #include <lib/zx/port.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
 

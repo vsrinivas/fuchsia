@@ -21,7 +21,7 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/compiler.h>

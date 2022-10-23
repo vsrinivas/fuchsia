@@ -5,7 +5,7 @@
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmar.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>

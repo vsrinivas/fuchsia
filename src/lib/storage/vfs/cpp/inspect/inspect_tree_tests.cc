@@ -7,7 +7,7 @@
 #include <lib/fpromise/single_threaded_executor.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/inspect/testing/cpp/inspect.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <optional>
 #include <vector>

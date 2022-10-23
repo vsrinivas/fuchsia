@@ -12,7 +12,7 @@
 #include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <threads.h>
 
 #include <memory>

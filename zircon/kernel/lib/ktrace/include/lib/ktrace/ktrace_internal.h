@@ -11,7 +11,7 @@
 #include <lib/fit/function.h>
 #include <lib/user_copy/user_ptr.h>
 #include <lib/zircon-internal/ktrace.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdint.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>

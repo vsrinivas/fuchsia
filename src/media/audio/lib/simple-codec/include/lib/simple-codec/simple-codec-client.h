@@ -13,7 +13,7 @@
 #include <lib/simple-codec/simple-codec-types.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 #include <threads.h>
 

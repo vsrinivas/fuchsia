@@ -10,7 +10,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_NHLT_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 
 #include <cstdint>

@@ -14,7 +14,7 @@
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/vfs.h>
 #include <lib/stdcompat/string_view.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zxio/ops.h>
 #include <lib/zxio/posix_mode.h>
 #include <lib/zxio/types.h>

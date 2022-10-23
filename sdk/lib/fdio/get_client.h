@@ -7,7 +7,7 @@
 
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/wire/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 template <class T>
 zx::result<typename fidl::WireSyncClient<T>>& get_client() {

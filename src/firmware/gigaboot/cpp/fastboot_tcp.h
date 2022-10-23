@@ -5,7 +5,7 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_CPP_FASTBOOT_TCP_H_
 #define SRC_FIRMWARE_GIGABOOT_CPP_FASTBOOT_TCP_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace gigaboot {
 

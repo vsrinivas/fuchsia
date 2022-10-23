@@ -5,7 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_PAGE_TABLE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_PAGE_TABLE_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/syscalls/port.h>
 
 #include "src/virtualization/bin/vmm/device/phys_mem.h"

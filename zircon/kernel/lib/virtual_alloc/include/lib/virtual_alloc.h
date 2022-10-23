@@ -8,7 +8,7 @@
 #define ZIRCON_KERNEL_LIB_VIRTUAL_ALLOC_INCLUDE_LIB_VIRTUAL_ALLOC_H_
 
 #include <inttypes.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <bitmap/raw-bitmap.h>

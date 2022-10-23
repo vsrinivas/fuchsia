@@ -9,7 +9,7 @@
 #include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <unistd.h>
 #include <zircon/compiler.h>
 

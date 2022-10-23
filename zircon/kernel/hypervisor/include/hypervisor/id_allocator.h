@@ -7,7 +7,7 @@
 #ifndef ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ID_ALLOCATOR_H_
 #define ZIRCON_KERNEL_HYPERVISOR_INCLUDE_HYPERVISOR_ID_ALLOCATOR_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>

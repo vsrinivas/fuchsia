@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/hiddevice/cpp/banjo.h>
 #include <lib/inspect/cpp/inspect.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/time.h>
 
 #include <list>

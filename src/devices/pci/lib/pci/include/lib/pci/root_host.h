@@ -17,7 +17,7 @@
 #include <lib/zx/eventpair.h>
 #include <lib/zx/msi.h>
 #include <lib/zx/port.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
 #include <stdint.h>
 #include <string.h>

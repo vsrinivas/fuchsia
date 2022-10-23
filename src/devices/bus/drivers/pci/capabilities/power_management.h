@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_POWER_MANAGEMENT_H_
 #define SRC_DEVICES_BUS_DRIVERS_PCI_CAPABILITIES_POWER_MANAGEMENT_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <hwreg/bitfields.h>
 

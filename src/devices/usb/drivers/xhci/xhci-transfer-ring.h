@@ -7,7 +7,7 @@
 
 #include <fuchsia/hardware/usb/request/c/banjo.h>
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <map>
 

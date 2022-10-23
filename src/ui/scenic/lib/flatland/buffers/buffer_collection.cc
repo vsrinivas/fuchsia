@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 namespace flatland {

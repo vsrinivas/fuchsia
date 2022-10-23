@@ -6,7 +6,7 @@
 #define SRC_SYS_EARLY_BOOT_INSTRUMENTATION_COVERAGE_SOURCE_H_
 
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 
 #include <string_view>

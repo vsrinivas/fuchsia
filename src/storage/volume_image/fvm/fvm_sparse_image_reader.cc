@@ -5,7 +5,7 @@
 #include "src/storage/volume_image/fvm/fvm_sparse_image_reader.h"
 
 #include <lib/fpromise/result.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 

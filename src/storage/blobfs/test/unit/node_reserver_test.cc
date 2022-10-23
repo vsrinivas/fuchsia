@@ -4,7 +4,7 @@
 
 #include "src/storage/blobfs/allocator/node_reserver.h"
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

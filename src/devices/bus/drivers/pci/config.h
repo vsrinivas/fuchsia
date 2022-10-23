@@ -7,7 +7,7 @@
 #include <endian.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdio.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>

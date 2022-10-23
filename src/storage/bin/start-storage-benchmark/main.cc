@@ -8,7 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <iostream>
 

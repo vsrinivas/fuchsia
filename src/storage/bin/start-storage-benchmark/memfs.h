@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <memory>
 

@@ -8,7 +8,7 @@
 #include <fidl/fuchsia.component.runner/cpp/fidl.h>
 #include <fidl/fuchsia.data/cpp/fidl.h>
 #include <fidl/fuchsia.driver.framework/cpp/fidl.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <vector>
 

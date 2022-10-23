@@ -6,7 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_TGL_ACPI_MEMORY_REGION_H_
 
 #include <lib/stdcompat/span.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

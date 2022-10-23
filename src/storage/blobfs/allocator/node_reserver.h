@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_BLOBFS_ALLOCATOR_NODE_RESERVER_H_
 #define SRC_STORAGE_BLOBFS_ALLOCATOR_NODE_RESERVER_H_
 
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <stdbool.h>
 #include <stdint.h>
 #include <zircon/types.h>

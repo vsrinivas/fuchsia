@@ -6,7 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/fit/defer.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <string.h>
 #include <sys/stat.h>
 #include <zircon/errors.h>

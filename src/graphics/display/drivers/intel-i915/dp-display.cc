@@ -7,7 +7,7 @@
 #include <endian.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <math.h>
 #include <string.h>
 #include <zircon/assert.h>

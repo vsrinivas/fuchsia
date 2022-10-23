@@ -6,7 +6,7 @@
 #define SRC_STORAGE_FSHOST_FXFS_H_
 
 #include <fidl/fuchsia.hardware.block/cpp/wire_types.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/storage/fshost/fshost_config.h"

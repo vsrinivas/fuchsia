@@ -7,7 +7,7 @@
 
 #include <lib/syslog/logger.h>
 #include <lib/watchdog/watchdog.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 
 #include <chrono>

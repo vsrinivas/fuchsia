@@ -4,7 +4,7 @@
 
 #include <lib/ddk/device.h>
 #include <lib/zx/interrupt.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 namespace fragment_irq {
 

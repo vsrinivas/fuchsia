@@ -7,7 +7,7 @@
 
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/ref_ptr.h>
 

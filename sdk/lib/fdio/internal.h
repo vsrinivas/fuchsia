@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <lib/fdio/fdio.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zxio/zxio.h>
 #include <sys/socket.h>
 #include <zircon/types.h>

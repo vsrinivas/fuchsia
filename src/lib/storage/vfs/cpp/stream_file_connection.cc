@@ -9,7 +9,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/handle.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdlib.h>

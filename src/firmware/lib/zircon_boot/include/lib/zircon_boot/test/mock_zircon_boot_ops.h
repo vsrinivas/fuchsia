@@ -9,7 +9,7 @@
 #include <lib/stdcompat/span.h>
 #include <lib/zbi/zbi.h>
 #include <lib/zircon_boot/zircon_boot.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <functional>
 #include <optional>

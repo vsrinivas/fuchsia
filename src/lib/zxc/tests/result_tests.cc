@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/fit/result.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/errors.h>
 
 #include <cstddef>

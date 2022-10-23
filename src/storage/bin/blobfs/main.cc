@@ -9,7 +9,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/resource.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <optional>
 #include <utility>

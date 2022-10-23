@@ -7,7 +7,7 @@
 
 #include <lib/ddk/driver.h>
 #include <lib/fdf/cpp/dispatcher.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

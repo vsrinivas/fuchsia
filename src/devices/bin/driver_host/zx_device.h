@@ -18,7 +18,7 @@
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/compiler.h>
 
 #include <array>

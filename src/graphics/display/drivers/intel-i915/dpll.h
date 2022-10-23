@@ -6,7 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_DPLL_H_
 
 #include <lib/mmio/mmio-buffer.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <zircon/assert.h>
 
 #include <string>

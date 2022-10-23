@@ -7,7 +7,7 @@
 
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.pkg/cpp/wire.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <zircon/types.h>
 

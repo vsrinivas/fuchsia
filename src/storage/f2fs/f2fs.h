@@ -32,7 +32,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/zx/status.h>
+#include <lib/zx/result.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>
