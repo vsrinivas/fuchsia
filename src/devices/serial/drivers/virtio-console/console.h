@@ -4,7 +4,7 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
 
-#include <fidl/fuchsia.hardware.virtioconsole/cpp/wire.h>
+#include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/ddk/device.h>
@@ -65,12 +65,11 @@ class TransferQueue {
 
 class ConsoleDevice;
 using DeviceType =
-    ddk::Device<ConsoleDevice, ddk::Messageable<fuchsia_hardware_virtioconsole::Device>::Mixin>;
+    ddk::Device<ConsoleDevice, ddk::Messageable<fuchsia_hardware_pty::Device>::Mixin>;
 
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
                       public DeviceType,
-                      public fidl::WireServer<fuchsia_hardware_pty::Device>,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_CONSOLE> {
  public:
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
@@ -85,9 +84,6 @@ class ConsoleDevice : public Device,
   const char* tag() const override { return "virtio-console"; }
 
   void AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device> server_end);
-
-  // fuchsia.hardware.virtioconsole.Device.
-  void GetChannel(GetChannelRequestView request, GetChannelCompleter::Sync& completer) override;
 
   // fuchsia.hardware.pty.Device.
   void Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) override;

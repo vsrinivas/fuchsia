@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
-#include <fidl/fuchsia.hardware.virtioconsole/cpp/wire.h>
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
 #include <fidl/fuchsia.virtualconsole/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -424,11 +424,7 @@ int main(int argv, char** argc) {
     fdio_cpp::FdioCaller caller(std::move(fd).value());
 
     fidl::ClientEnd<fuchsia_hardware_pty::Device> stdio;
-    // If the console is a virtio connection, then speak the
-    // fuchsia.hardware.virtioconsole.Device interface to get the real
-    // fuchsia.io.File connection
-    //
-    // TODO(https://fxbug.dev/33183): Clean this up once devhost stops speaking
+    // TODO(https://fxbug.dev/112484): Clean this up once devhost stops speaking
     // fuchsia.io.File on behalf of drivers. Once that happens, the
     // virtio-console driver should just speak that instead of this shim
     // interface.
@@ -437,9 +433,8 @@ int main(int argv, char** argc) {
       if (server.is_error()) {
         FX_PLOGS(FATAL, server.status_value()) << "failed to create pty endpoints";
       }
-      const fidl::WireResult result =
-          fidl::WireCall(caller.borrow_as<fuchsia_hardware_virtioconsole::Device>())
-              ->GetChannel(std::move(server.value()));
+      const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                                          ->ConnectToDeviceFidl(server.value().TakeChannel());
       if (!result.ok()) {
         FX_PLOGS(FATAL, result.status()) << "failed to get virtio console channel";
       }

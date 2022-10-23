@@ -30,7 +30,6 @@ fuchsia_driver("virtio_console-driver") {
   deps = [
     ":virtio_console_bind",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_cpp_wire",
     "//src/devices/bus/lib/virtio",
     "//src/devices/lib/driver",
     "//src/lib/ddktl",

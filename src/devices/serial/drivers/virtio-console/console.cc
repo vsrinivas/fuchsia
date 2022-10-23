@@ -298,11 +298,6 @@ void ConsoleDevice::AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device> 
   });
 }
 
-void ConsoleDevice::GetChannel(GetChannelRequestView request,
-                               GetChannelCompleter::Sync& completer) {
-  AddConnection(std::move(request->req));
-}
-
 void ConsoleDevice::Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) {
   AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->request.TakeChannel()));
 }

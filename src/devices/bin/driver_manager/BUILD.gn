@@ -128,7 +128,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.driver.test.logger:fuchsia.driver.test.logger_cpp_wire",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.virtioconsole:fuchsia.hardware.virtioconsole_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/fidl/fuchsia.ldsvc:fuchsia.ldsvc_cpp_wire",
