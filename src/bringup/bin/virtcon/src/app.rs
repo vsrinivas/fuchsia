@@ -18,7 +18,8 @@ use {
     fidl_fuchsia_hardware_display::VirtconMode,
     fidl_fuchsia_virtualconsole::SessionManagerMarker,
     fuchsia_async as fasync, fuchsia_zircon as zx,
-    std::{collections::BTreeMap, fs::File},
+    pty::ServerPty,
+    std::collections::BTreeMap,
     term_model::event::{Event, EventListener},
 };
 
@@ -68,11 +69,11 @@ impl VirtualConsoleClient {
         id: u32,
         title: String,
         make_active: bool,
-        pty_fd: Option<File>,
+        pty: Option<ServerPty>,
     ) -> Result<Terminal<EventProxy>, Error> {
         let event_proxy = EventProxy::new(&self.app_sender, id);
         let terminal =
-            Terminal::new(event_proxy, title, self.color_scheme, self.scrollback_rows, pty_fd);
+            Terminal::new(event_proxy, title, self.color_scheme, self.scrollback_rows, pty);
         let terminal_clone = terminal.try_clone()?;
         self.app_sender.queue_message(
             MessageTarget::Application,
@@ -109,9 +110,9 @@ impl SessionManagerClient for VirtualConsoleClient {
         id: u32,
         title: String,
         make_active: bool,
-        pty_fd: File,
+        pty: ServerPty,
     ) -> Result<Terminal<Self::Listener>, Error> {
-        VirtualConsoleClient::create_terminal(self, id, title, make_active, Some(pty_fd))
+        VirtualConsoleClient::create_terminal(self, id, title, make_active, Some(pty))
     }
 
     fn request_update(&self, id: u32) {

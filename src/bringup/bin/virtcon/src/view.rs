@@ -25,11 +25,12 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::client::connect_channel_to_protocol,
     fuchsia_zircon::{self as zx, prelude::*},
-    pty::{key_util::CodePoint, key_util::HidUsage, Pty},
+    futures::future::{join_all, FutureExt as _},
+    pty::{key_util::CodePoint, key_util::HidUsage},
     rive_rs as rive,
     std::{
         collections::{BTreeMap, BTreeSet},
-        io::Write,
+        io::Write as _,
         mem,
         path::PathBuf,
     },
@@ -272,24 +273,20 @@ impl VirtualConsoleViewAssistant {
             terminal.resize(&size_info);
         }
 
-        let pty_fds: Vec<_> = self
-            .terminals
-            .values()
-            .map(|(t, _)| t.try_clone_pty_fd().expect("failed to clone PTY fd"))
-            .collect();
-
         // PTY window size (in character cells).
         let window_size = WindowSize {
             width: clamped_grid_size.width as u32,
             height: clamped_grid_size.height as u32 - 1,
         };
 
+        let ptys: Vec<_> =
+            self.terminals.values().filter_map(|(term, _)| term.pty()).cloned().collect();
         fasync::Task::local(async move {
-            for pty_fd in &pty_fds {
-                if let Some(fd) = pty_fd {
-                    Pty::set_window_size(fd, window_size).await.expect("failed to set window size");
-                }
-            }
+            join_all(ptys.iter().map(|pty| {
+                pty.resize(window_size).map(|result| result.expect("failed to set window size"))
+            }))
+            .map(|vec| vec.into_iter().collect())
+            .await
         })
         .detach();
     }

@@ -10,8 +10,8 @@ use {
     fidl_fuchsia_virtualconsole::{SessionManagerRequest, SessionManagerRequestStream},
     fuchsia_async as fasync,
     futures::{io::AsyncReadExt, prelude::*},
-    pty::Pty,
-    std::{cell::RefCell, fs::File, rc::Rc},
+    pty::ServerPty,
+    std::{cell::RefCell, rc::Rc},
     term_model::{ansi::Processor, event::EventListener},
 };
 
@@ -25,7 +25,7 @@ pub trait SessionManagerClient: 'static + Clone {
         id: u32,
         title: String,
         make_active: bool,
-        pty_fd: File,
+        pty: ServerPty,
     ) -> Result<Terminal<Self::Listener>, Error>;
     fn request_update(&self, id: u32);
 }
@@ -97,13 +97,14 @@ impl SessionManager {
         <T as SessionManagerClient>::Listener: EventListener,
     {
         let client = client.clone();
-        let pty = Pty::with_server_end(session).await.expect("failed to create PTY");
-        let fd = pty.try_clone_fd().expect("unable to clone PTY fd");
+        let pty = ServerPty::new().expect("failed to create PTY");
+        let () = pty.open_client(session).await.expect("failed to connect session");
+        let read_fd = pty.try_clone_fd().expect("unable to clone PTY fd");
+        let mut write_fd = pty.try_clone_fd().expect("unable to clone PTY fd");
         let terminal = client
-            .create_terminal(id, String::new(), make_active, fd)
+            .create_terminal(id, String::new(), make_active, pty)
             .expect("failed to create terminal");
         let term = terminal.clone_term();
-        let read_fd = pty.try_clone_fd().expect("unable to clone PTY write fd");
 
         fasync::Task::local(async move {
             let mut evented_fd = unsafe {
@@ -114,7 +115,6 @@ impl SessionManager {
                 fasync::net::EventedFd::new(read_fd).expect("failed to create evented_fd")
             };
 
-            let mut write_fd = pty.try_clone_fd().expect("unable to clone PTY write fd");
             let mut parser = Processor::new();
 
             let mut read_buf = [0u8; BYTE_BUFFER_MAX_SIZE];
@@ -164,14 +164,14 @@ mod tests {
             _id: u32,
             title: String,
             _make_active: bool,
-            pty_fd: File,
+            pty: ServerPty,
         ) -> Result<Terminal<Self::Listener>, Error> {
             Ok(Terminal::new(
                 TestListener::default(),
                 title,
                 ColorScheme::default(),
                 1024,
-                Some(pty_fd),
+                Some(pty),
             ))
         }
         fn request_update(&self, _id: u32) {}

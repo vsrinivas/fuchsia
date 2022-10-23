@@ -24,7 +24,7 @@ use {
     fidl_fuchsia_hardware_pty::WindowSize,
     fuchsia_async as fasync, fuchsia_trace as ftrace,
     futures::{channel::mpsc, io::AsyncReadExt, select, FutureExt, StreamExt},
-    pty::Pty,
+    pty::ServerPty,
     std::{
         any::Any, cell::RefCell, convert::TryFrom, ffi::CStr, ffi::CString, fs::File,
         io::prelude::*, path::PathBuf, rc::Rc,
@@ -110,7 +110,7 @@ struct PtyContext {
 }
 
 impl PtyContext {
-    fn from_pty(pty: &Pty) -> Result<PtyContext, Error> {
+    fn from_pty(pty: &ServerPty) -> Result<PtyContext, Error> {
         let (resize_sender, resize_receiver) = mpsc::unbounded();
         let file = pty.try_clone_fd()?;
         Ok(PtyContext {
@@ -374,7 +374,7 @@ impl TerminalViewAssistant {
             return Ok(());
         }
 
-        let mut pty = Pty::new()?;
+        let pty = ServerPty::new()?;
         let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut resize_receiver = pty_context.take_resize_receiver();
 
@@ -390,16 +390,16 @@ impl TerminalViewAssistant {
         // logic to account for thread safaty.
         fasync::Task::local(async move {
             let environ: Vec<&CStr> = spawn_environ.iter().map(|s| s.as_ref()).collect();
-            if spawn_command.is_empty() {
-                pty.spawn(None, Some(environ.as_slice())).await.expect("unable to spawn pty");
+            let process = if spawn_command.is_empty() {
+                pty.spawn(None, Some(environ.as_slice())).await.expect("unable to spawn pty")
             } else {
                 let argv: Vec<&CStr> = spawn_command.iter().map(|s| s.as_ref()).collect();
                 pty.spawn_with_argv(&argv[0], argv.as_slice(), Some(environ.as_slice()))
                     .await
-                    .expect("unable to spawn pty");
-            }
+                    .expect("unable to spawn pty")
+            };
 
-            let fd = pty.try_clone_fd().expect("unable to clone pty read fd");
+            let fd = process.pty.try_clone_fd().expect("unable to clone pty read fd");
             let mut evented_fd = unsafe {
                 // EventedFd::new() is unsafe because it can't guarantee the lifetime of
                 // the file descriptor passed to it exceeds the lifetime of the EventedFd.
@@ -408,7 +408,7 @@ impl TerminalViewAssistant {
                 fasync::net::EventedFd::new(fd).expect("failed to create evented_fd for io_loop")
             };
 
-            let mut write_fd = pty.try_clone_fd().expect("unable to clone pty write fd");
+            let mut write_fd = process.pty.try_clone_fd().expect("unable to clone pty write fd");
             let mut parser = Processor::new();
 
             let mut read_buf = [0u8; BYTE_BUFFER_MAX_SIZE];
@@ -434,23 +434,26 @@ impl TerminalViewAssistant {
                     },
                     result = resize_receiver.next().fuse() => {
                         if let Some(event) = result {
-                            pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
+                            process.pty.resize(event.window_size).await.unwrap_or_else(|e: anyhow::Error| {
                                 error!("failed to send resize message to pty: {:?}", e)
                             });
                             app_sender.request_render(view_key);
                         }
                     }
                 );
-                if !pty.is_shell_process_running() {
+                if !process.is_running() {
                     break;
                 }
             }
             // TODO(fxb/60181): Exit by using Carnelian, when implemented.
             std::process::exit(
-                match pty.shell_process_info().map(|info| i32::try_from(info.return_code)) {
-                    Some(Ok(return_code)) => return_code,
-                    _ => {
-                        error!("failed to obtain the shell process return code");
+                match process
+                    .process_info()
+                    .and_then(|info| i32::try_from(info.return_code).context("overflow"))
+                {
+                    Ok(return_code) => return_code,
+                    error => {
+                        error!("failed to obtain the shell process return code: {:?}", error);
                         1
                     }
                 },
@@ -868,7 +871,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn resize_message_queued_with_logical_size_when_resize_needed() -> Result<(), Error> {
-        let pty = Pty::new()?;
+        let pty = ServerPty::new()?;
         let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut view = TerminalViewAssistant::new_for_test();
         let mut receiver = pty_context.take_resize_receiver();
@@ -892,7 +895,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn handle_keyboard_event_writes_characters() -> Result<(), Error> {
-        let pty = Pty::new()?;
+        let pty = ServerPty::new()?;
         let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut view = TerminalViewAssistant::new_for_test();
         pty_context.allow_dual_write_for_test();
@@ -911,7 +914,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn handle_control_keyboard_event() -> Result<(), Error> {
-        let pty = Pty::new()?;
+        let pty = ServerPty::new()?;
         let mut pty_context = PtyContext::from_pty(&pty)?;
         let mut view = TerminalViewAssistant::new_for_test();
         pty_context.allow_dual_write_for_test();
@@ -942,7 +945,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn pty_message_reads_trigger_call_to_redraw() -> Result<(), Error> {
+    async fn pty_message_reads_triggers_call_to_redraw() -> Result<(), Error> {
         let (view, mut receiver) = make_test_view_with_spawned_pty_loop().await?;
 
         let mut fd = view
@@ -952,14 +955,14 @@ mod tests {
             .unwrap();
 
         fasync::Task::local(async move {
-            let _ = fd.write_all(b"ls");
+            let () = fd.write_all(b"ls").unwrap();
         })
         .detach();
 
         // No redraw will trigger a timeout and failure
         wait_until_update_received_or_timeout(&mut receiver)
             .await
-            .context(":pty_message_reads_trigger_call_to_redraw after write")?;
+            .context(":pty_message_reads_triggers_call_to_redraw after write")?;
 
         Ok(())
     }
@@ -1009,7 +1012,7 @@ mod tests {
             .unwrap();
 
         fasync::Task::local(async move {
-            let _ = fd.write_all(b"A");
+            let () = fd.write_all(b"A").unwrap();
         })
         .detach();
 
@@ -1032,7 +1035,7 @@ mod tests {
         let mut view = TerminalViewAssistant::new_for_test();
         view.app_sender.use_test_sender(sender);
 
-        let _ = view.spawn_pty_loop();
+        let () = view.spawn_pty_loop().unwrap();
 
         // Spawning the loop triggers a read and a redraw, we want to skip this
         // so that we can check that our test event triggers the redraw.
@@ -1056,7 +1059,7 @@ mod tests {
                     return Err(anyhow!("wait_until_update_received timed out"));
                 }
                 Either::Right((result, _)) => {
-                    let _ = result.expect("result should not be None");
+                    let _: Message = result.expect("result should not be None");
                     break;
                 }
             }

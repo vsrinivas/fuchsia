@@ -6,7 +6,8 @@ use {
     crate::colors::ColorScheme,
     anyhow::Error,
     carnelian::{color::Color, Size},
-    std::{cell::RefCell, convert::From, fs::File, io::prelude::*, rc::Rc},
+    pty::ServerPty,
+    std::{cell::RefCell, convert::From, fs::File, io::Write, rc::Rc},
     term_model::{
         clipboard::Clipboard,
         config::Config,
@@ -39,6 +40,8 @@ impl From<ColorScheme> for TerminalConfig {
 pub struct Terminal<T> {
     term: Rc<RefCell<Term<T>>>,
     title: String,
+    pty: Option<ServerPty>,
+    /// Lazily initialized if `pty` is set.
     pty_fd: Option<File>,
 }
 
@@ -48,7 +51,7 @@ impl<T> Terminal<T> {
         title: String,
         color_scheme: ColorScheme,
         scrollback_rows: u32,
-        pty_fd: Option<File>,
+        pty: Option<ServerPty>,
     ) -> Self {
         // Initial size info used before we know what the real size is.
         let cell_size = Size::new(8.0, 16.0);
@@ -66,28 +69,24 @@ impl<T> Terminal<T> {
         let term =
             Rc::new(RefCell::new(Term::new(&config, &size_info, Clipboard::new(), event_listener)));
 
-        Self { term: Rc::clone(&term), title, pty_fd }
+        Self { term: Rc::clone(&term), title, pty, pty_fd: None }
     }
 
     #[cfg(test)]
-    fn new_for_test(event_listener: T, pty_fd: File) -> Self {
-        Self::new(event_listener, String::new(), ColorScheme::default(), 1024, Some(pty_fd))
+    fn new_for_test(event_listener: T, pty: ServerPty) -> Self {
+        Self::new(event_listener, String::new(), ColorScheme::default(), 1024, Some(pty))
     }
 
     pub fn clone_term(&self) -> Rc<RefCell<Term<T>>> {
         Rc::clone(&self.term)
     }
 
-    pub fn try_clone_pty_fd(&self) -> Result<Option<File>, Error> {
-        let fd = if let Some(fd) = &self.pty_fd { Some(fd.try_clone()?) } else { None };
-        Ok(fd)
-    }
-
     pub fn try_clone(&self) -> Result<Self, Error> {
-        let pty_fd = self.try_clone_pty_fd()?;
         let term = self.clone_term();
         let title = self.title.clone();
-        Ok(Self { term, title, pty_fd })
+        let pty = self.pty.clone();
+        let pty_fd = None;
+        Ok(Self { term, title, pty, pty_fd })
     }
 
     pub fn resize(&mut self, size_info: &SizeInfo) {
@@ -97,6 +96,10 @@ impl<T> Terminal<T> {
 
     pub fn title(&self) -> &str {
         self.title.as_str()
+    }
+
+    pub fn pty(&self) -> Option<&ServerPty> {
+        self.pty.as_ref()
     }
 
     pub fn scroll(&mut self, scroll: Scroll)
@@ -121,11 +124,24 @@ impl<T> Terminal<T> {
         let term = self.term.borrow();
         *term.mode()
     }
+
+    fn file(&mut self) -> Result<Option<&mut File>, std::io::Error> {
+        if self.pty_fd.is_none() {
+            if let Some(pty) = &self.pty {
+                let pty_fd = pty.try_clone_fd().map_err(|e| {
+                    std::io::Error::new(std::io::ErrorKind::BrokenPipe, format!("{:?}", e))
+                })?;
+                self.pty_fd = Some(pty_fd);
+            }
+        }
+        Ok(self.pty_fd.as_mut())
+    }
 }
 
 impl<T> Write for Terminal<T> {
     fn write(&mut self, buf: &[u8]) -> Result<usize, std::io::Error> {
-        if let Some(fd) = &mut self.pty_fd {
+        let fd = self.file()?;
+        if let Some(fd) = fd {
             fd.write(buf)
         } else {
             Ok(buf.len())
@@ -133,7 +149,8 @@ impl<T> Write for Terminal<T> {
     }
 
     fn flush(&mut self) -> Result<(), std::io::Error> {
-        if let Some(fd) = &mut self.pty_fd {
+        let fd = self.file()?;
+        if let Some(fd) = fd {
             fd.flush()
         } else {
             Ok(())
@@ -146,7 +163,7 @@ mod tests {
     use {
         super::*,
         fuchsia_async as fasync,
-        pty::Pty,
+        pty::ServerPty,
         term_model::event::{Event, EventListener},
     };
 
@@ -159,9 +176,8 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_create_terminal() -> Result<(), Error> {
-        let pty = Pty::new()?;
-        let fd = pty.try_clone_fd()?;
-        let _ = Terminal::new_for_test(TestListener::default(), fd);
+        let pty = ServerPty::new()?;
+        let _ = Terminal::new_for_test(TestListener::default(), pty);
         Ok(())
     }
 }

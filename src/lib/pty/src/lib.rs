@@ -5,4 +5,4 @@
 pub mod key_util;
 pub mod pty;
 pub use crate::key_util::{CodePoint, HidUsage};
-pub use crate::pty::Pty;
+pub use crate::pty::ServerPty;
