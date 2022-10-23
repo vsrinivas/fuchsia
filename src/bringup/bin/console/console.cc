@@ -78,16 +78,6 @@ void Console::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   return completer.ReplySuccess(request->data.count());
 }
 
-void Console::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  if (request->flags != fuchsia_io::wire::OpenFlags::kCloneSameRights) {
-    request->object.Close(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  fidl::BindServer(dispatcher_,
-                   fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->object.TakeChannel()),
-                   static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(this));
-}
-
 void Console::Describe2(Describe2Completer::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = rx_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event); status != ZX_OK) {

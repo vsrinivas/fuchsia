@@ -91,7 +91,6 @@ class ConsoleDevice : public Device,
   void Query(QueryCompleter::Sync& completer) override;
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) override;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) override;
-  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) override;
   void Describe2(Describe2Completer::Sync& completer) override;
 
   void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) override;

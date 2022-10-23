@@ -187,8 +187,8 @@ fn split_pty_into_handles(
     let to_pty_stderr = to_pty_stderr.into_channel().into();
 
     // Clone the PTY to also be used for stdout and stderr.
-    pty.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, to_pty_stdout).map_err(|_| LauncherError::Pty)?;
-    pty.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, to_pty_stderr).map_err(|_| LauncherError::Pty)?;
+    pty.clone2(to_pty_stdout).map_err(|_| LauncherError::Pty)?;
+    pty.clone2(to_pty_stderr).map_err(|_| LauncherError::Pty)?;
 
     let stdin = pty.into_channel().unwrap().into_zx_channel().into_handle();
     let stdout = stdout.into_handle();

@@ -64,14 +64,6 @@ void PtyClient::Write(WriteRequestView request, WriteCompleter::Sync& completer)
   return completer.ReplySuccess(out_actual);
 }
 
-void PtyClient::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  if (request->flags != fuchsia_io::wire::OpenFlags::kCloneSameRights) {
-    request->object.Close(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->object.TakeChannel()));
-}
-
 void PtyClient::Describe2(Describe2Completer::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = remote_.duplicate(ZX_RIGHTS_BASIC, &event); status != ZX_OK) {

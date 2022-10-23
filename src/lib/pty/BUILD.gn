@@ -16,7 +16,6 @@ rustc_library("pty") {
 
   deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",

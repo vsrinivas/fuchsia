@@ -190,9 +190,8 @@ std::vector<std::thread> LaunchAutorun(const console_launcher::ConsoleLauncher& 
     }
     auto& [client, server] = endpoints.value();
 
-    const fidl::WireResult result =
-        fidl::WireCall(stdio)->Clone(fuchsia_io::OpenFlags::kCloneSameRights,
-                                     fidl::ServerEnd<fuchsia_io::Node>(server.TakeChannel()));
+    const fidl::WireResult result = fidl::WireCall(stdio)->Clone2(
+        fidl::ServerEnd<fuchsia_unknown::Cloneable>(server.TakeChannel()));
     if (!result.ok()) {
       FX_PLOGS(FATAL, result.status()) << "failed to clone stdio handle";
     }

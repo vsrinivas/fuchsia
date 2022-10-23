@@ -53,17 +53,6 @@ protocol Device {
     compose fuchsia.io.Readable;
     compose fuchsia.io.Writable;
 
-    // TODO(https://fxbug.dev/105607): Remove this.
-    //
-    // This is a temporary hack to allow the various VFS-based implementations
-    // of this protocol to continue working by using the same ordinal as
-    // fuchsia.io/Node.
-    @selector("fuchsia.io1/Node.Clone")
-    Clone(resource struct {
-        flags fuchsia.io.OpenFlags;
-        object server_end:fuchsia.io.Node;
-    });
-
     @selector("Describe")
     Describe2() -> (resource table {
         /// An optional event which transmits information about a device's state.

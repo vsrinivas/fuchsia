@@ -371,14 +371,6 @@ void ConsoleDevice::Write(WriteRequestView request, WriteCompleter::Sync& comple
   completer.ReplySuccess(len);
 }
 
-void ConsoleDevice::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
-  if (request->flags != fuchsia_io::wire::OpenFlags::kCloneSameRights) {
-    request->object.Close(ZX_ERR_NOT_SUPPORTED);
-    return;
-  }
-  AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->object.TakeChannel()));
-}
-
 void ConsoleDevice::Describe2(Describe2Completer::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = event_remote_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event); status != ZX_OK) {

@@ -449,6 +449,20 @@ class Pty : public Remote<fuchsia_hardware_pty::Device> {
     return status;
   }
 
+  zx_status_t Clone(zx_handle_t* out_handle) {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_unknown::Cloneable>();
+    if (endpoints.is_error()) {
+      return endpoints.status_value();
+    }
+    auto [client_end, server_end] = std::move(endpoints.value());
+    const fidl::WireResult result = client()->Clone2(std::move(server_end));
+    if (!result.ok()) {
+      return result.status();
+    }
+    *out_handle = client_end.TakeChannel().release();
+    return ZX_OK;
+  }
+
   void WaitBegin(zxio_signals_t zxio_signals, zx_handle_t* out_handle,
                  zx_signals_t* out_zx_signals) {
     *out_handle = event_.get();

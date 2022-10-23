@@ -86,7 +86,7 @@ impl ServerPty {
 
         let Self { proxy } = self;
         let (client_end, server_end) = fidl::endpoints::create_endpoints()?;
-        let () = proxy.clone(fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS, server_end)?;
+        let () = proxy.clone2(server_end)?;
         let file = fdio::create_fd::<File>(client_end.into())
             .context("failed to create FD from server PTY")?;
         let fd = file.as_raw_fd();
