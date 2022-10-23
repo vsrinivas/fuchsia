@@ -4,7 +4,7 @@
 
 #include "console.h"
 
-#include <lib/sync/completion.h>
+#include <lib/fidl/cpp/wire/client.h>
 
 #include <fbl/string_buffer.h>
 #include <zxtest/zxtest.h>
@@ -31,17 +31,32 @@ TEST(ConsoleTestCase, Read) {
   };
   Console::TxSink tx_sink = [](const uint8_t* buffer, size_t length) { return ZX_OK; };
 
-  fbl::RefPtr<Console> console;
-  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
-  ASSERT_OK(sync_completion_wait_deadline(&rx_source_done, ZX_TIME_INFINITE));
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [client_end, server_end] = endpoints.value();
 
-  uint8_t data[kReadSize] = {};
-  size_t actual;
-  ASSERT_OK(console->Read(reinterpret_cast<void*>(data), kReadSize, &actual));
-  ASSERT_EQ(actual, kWriteCount);
-  for (size_t i = 0; i < actual; ++i) {
-    ASSERT_EQ(data[i], kWrittenByte);
-  }
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx::eventpair event1, event2;
+  ASSERT_OK(zx::eventpair::create(0, &event1, &event2));
+  Console console(loop.dispatcher(), std::move(event1), std::move(event2), std::move(rx_source),
+                  std::move(tx_sink), {});
+  ASSERT_OK(sync_completion_wait_deadline(&rx_source_done, ZX_TIME_INFINITE));
+  fidl::BindServer(loop.dispatcher(), std::move(server_end),
+                   static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(&console));
+  fidl::WireClient client(std::move(client_end), loop.dispatcher());
+
+  client->Read(kReadSize).ThenExactlyOnce(
+      [kWriteCount,
+       kWrittenByte](fidl::WireUnownedResult<fuchsia_hardware_pty::Device::Read>& result) {
+        ASSERT_OK(result.status());
+        fit::result response = result.value();
+        ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+        ASSERT_EQ(response.value()->data.count(), kWriteCount);
+        for (uint8_t byte : response.value()->data) {
+          ASSERT_EQ(byte, kWrittenByte);
+        }
+      });
+  ASSERT_OK(loop.RunUntilIdle());
 }
 
 // Verify that calling Write() writes data to the TxSink
@@ -58,13 +73,28 @@ TEST(ConsoleTestCase, Write) {
     return ZX_OK;
   };
 
-  fbl::RefPtr<Console> console;
-  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_hardware_pty::Device>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [client_end, server_end] = endpoints.value();
 
-  size_t actual;
-  ASSERT_OK(
-      console->Write(reinterpret_cast<const void*>(kExpectedBuffer), kExpectedLength, &actual));
-  ASSERT_EQ(actual, kExpectedLength);
+  async::Loop loop(&kAsyncLoopConfigNeverAttachToThread);
+  zx::eventpair event1, event2;
+  ASSERT_OK(zx::eventpair::create(0, &event1, &event2));
+  Console console(loop.dispatcher(), std::move(event1), std::move(event2), std::move(rx_source),
+                  std::move(tx_sink), {});
+  fidl::BindServer(loop.dispatcher(), std::move(server_end),
+                   static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(&console));
+  fidl::WireClient client(std::move(client_end), loop.dispatcher());
+
+  client->Write(fidl::VectorView<uint8_t>::FromExternal(kExpectedBuffer, kExpectedLength))
+      .ThenExactlyOnce(
+          [kExpectedLength](fidl::WireUnownedResult<fuchsia_hardware_pty::Device::Write>& result) {
+            ASSERT_OK(result.status());
+            fit::result response = result.value();
+            ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
+            ASSERT_EQ(response.value()->actual_count, kExpectedLength);
+          });
+  ASSERT_OK(loop.RunUntilIdle());
 }
 
 // Verify that calling Log() writes data to the TxSink
@@ -80,8 +110,10 @@ TEST(ConsoleTestCase, Log) {
     return ZX_OK;
   };
 
-  fbl::RefPtr<Console> console;
-  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {}, &console));
+  zx::eventpair event1, event2;
+  ASSERT_OK(zx::eventpair::create(0, &event1, &event2));
+  Console console(nullptr, std::move(event1), std::move(event2), std::move(rx_source),
+                  std::move(tx_sink), {});
 
   fidl::StringView tag = "tag";
   fuchsia_logger::wire::LogMessage log{
@@ -92,7 +124,7 @@ TEST(ConsoleTestCase, Log) {
       .tags = fidl::VectorView<fidl::StringView>::FromExternal(&tag, 1),
       .msg = {"Hello World"},
   };
-  ASSERT_OK(console->Log(std::move(log)));
+  ASSERT_OK(console.Log(log));
 
   EXPECT_EQ(actual.size(), kExpectedLength);
   EXPECT_STREQ(actual.c_str(), kExpectedBuffer);
@@ -109,8 +141,10 @@ TEST(ConsoleTestCase, LogDenyTag) {
     return ZX_OK;
   };
 
-  fbl::RefPtr<Console> console;
-  ASSERT_OK(Console::Create(std::move(rx_source), std::move(tx_sink), {"deny-tag"}, &console));
+  zx::eventpair event1, event2;
+  ASSERT_OK(zx::eventpair::create(0, &event1, &event2));
+  Console console(nullptr, std::move(event1), std::move(event2), std::move(rx_source),
+                  std::move(tx_sink), {"deny-tag"});
 
   fidl::StringView tag = "deny-tag";
   fuchsia_logger::wire::LogMessage log{
@@ -121,7 +155,7 @@ TEST(ConsoleTestCase, LogDenyTag) {
       .tags = fidl::VectorView<fidl::StringView>::FromExternal(&tag, 1),
       .msg = {"Goodbye World"},
   };
-  ASSERT_OK(console->Log(std::move(log)));
+  ASSERT_OK(console.Log(log));
 }
 
 }  // namespace

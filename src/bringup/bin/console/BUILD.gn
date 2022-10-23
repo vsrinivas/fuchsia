@@ -31,10 +31,8 @@ source_set("common") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_cpp_wire",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_cpp_wire",
     "//sdk/lib/fit",
-    "//src/lib/storage/vfs/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
@@ -45,6 +43,7 @@ source_set("common") {
     "//sdk/lib/sys/component/cpp",
     "//src/lib/fxl",
     "//zircon/system/ulib/cmdline",
+    "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
 }
@@ -57,8 +56,6 @@ executable("console") {
     "//sdk/lib/sys/component/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-    "//zircon/system/ulib/fs-pty",
-    "//zircon/system/ulib/svc",
   ]
 }
 

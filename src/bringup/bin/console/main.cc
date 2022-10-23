@@ -4,13 +4,10 @@
 
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/fs-pty/service.h>
-#include <lib/svc/outgoing.h>
+#include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
-
-#include <fbl/string_printf.h>
 
 #include "src/bringup/bin/console/args.h"
 #include "src/bringup/bin/console/console.h"
@@ -36,7 +33,7 @@ zx::resource GetDebugResource() {
 }
 
 zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> listener,
-                            std::vector<std::string> allowed_log_tags) {
+                            const std::vector<std::string>& allowed_log_tags) {
   auto client_end = component::Connect<fuchsia_logger::Log>();
   if (client_end.is_error()) {
     printf("console: fdio_service_connect() = %s\n", client_end.status_string());
@@ -45,6 +42,7 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
 
   fidl::WireSyncClient log{std::move(client_end.value())};
   std::vector<fidl::StringView> tags;
+  tags.reserve(allowed_log_tags.size());
   for (auto& tag : allowed_log_tags) {
     tags.emplace_back(fidl::StringView::FromExternal(tag));
   }
@@ -67,21 +65,26 @@ zx_status_t ConnectListener(fidl::ClientEnd<fuchsia_logger::LogListenerSafe> lis
 }  // namespace
 
 int main(int argc, const char** argv) {
-  zx_status_t status = StdoutToDebuglog::Init();
-  if (status != ZX_OK) {
+  if (zx_status_t status = StdoutToDebuglog::Init(); status != ZX_OK) {
+    printf("console: StdoutToDebuglog::Init() = %s\n", zx_status_get_string(status));
     return status;
   }
-
-  zx::result boot_args = component::Connect<fuchsia_boot::Arguments>();
-  if (boot_args.is_error()) {
-    return boot_args.status_value();
-  }
-  const fidl::WireSyncClient boot_args_client{*std::move(boot_args)};
 
   Options opts;
-  status = ParseArgs(console_config::Config::TakeFromStartupHandle(), boot_args_client, &opts);
-  if (status != ZX_OK) {
-    return status;
+  {
+    zx::result client = component::Connect<fuchsia_boot::Arguments>();
+    if (client.is_error()) {
+      printf("console: component::Connect<fuchsia_boot::Arguments>() = %s\n",
+             client.status_string());
+      return client.status_value();
+    }
+
+    if (zx_status_t status = ParseArgs(console_config::Config::TakeFromStartupHandle(),
+                                       fidl::WireSyncClient{std::move(client.value())}, &opts);
+        status != ZX_OK) {
+      printf("console: ParseArgs() = %s\n", zx_status_get_string(status));
+      return status;
+    }
   }
 
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -94,7 +97,8 @@ int main(int argc, const char** argv) {
     if (status == ZX_ERR_NOT_SUPPORTED) {
       // Suppress the error print in this case.  No console on this machine.
       return status;
-    } else if (status != ZX_OK) {
+    }
+    if (status != ZX_OK) {
       printf("console: error %s, length %zu from zx_debug_read syscall, exiting.\n",
              zx_status_get_string(status), length);
       return status;
@@ -107,39 +111,43 @@ int main(int argc, const char** argv) {
   Console::TxSink tx_sink = [](const uint8_t* buffer, size_t length) {
     return zx_debug_write(reinterpret_cast<const char*>(buffer), length);
   };
-  fbl::RefPtr<Console> console;
-  status = Console::Create(std::move(rx_source), std::move(tx_sink),
-                           std::move(opts.denied_log_tags), &console);
-  if (status != ZX_OK) {
-    printf("console: Console::Create() = %s\n", zx_status_get_string(status));
+  zx::eventpair event1, event2;
+  if (zx_status_t status = zx::eventpair::create(0, &event1, &event2); status != ZX_OK) {
+    printf("console: zx::eventpair::create() = %s\n", zx_status_get_string(status));
     return status;
   }
+  Console console(loop.dispatcher(), std::move(event1), std::move(event2), std::move(rx_source),
+                  std::move(tx_sink), std::move(opts.denied_log_tags));
 
-  auto endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_logger::LogListenerSafe>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
+  auto& [client, server] = endpoints.value();
 
-  status = ConnectListener(std::move(endpoints->client), std::move(opts.allowed_log_tags));
-  if (status != ZX_OK) {
+  if (zx_status_t status = ConnectListener(std::move(client), opts.allowed_log_tags);
+      status != ZX_OK) {
     return status;
   }
 
-  fidl::BindServer(loop.dispatcher(), std::move(endpoints->server), console.get());
+  fidl::BindServer(loop.dispatcher(), std::move(server),
+                   static_cast<fidl::WireServer<fuchsia_logger::LogListenerSafe>*>(&console));
 
-  svc::Outgoing outgoing(loop.dispatcher());
-  status = outgoing.ServeFromStartupInfo();
-  if (status != ZX_OK) {
-    printf("console: outgoing.ServeFromStartupInfo() = %s\n", zx_status_get_string(status));
-    return status;
+  component::OutgoingDirectory outgoing = component::OutgoingDirectory::Create(loop.dispatcher());
+  if (zx::result status = outgoing.AddProtocol<fuchsia_hardware_pty::Device>(&console);
+      status.is_error()) {
+    printf("console: outgoing.AddProtocol() = %s\n", status.status_string());
+    return status.status_value();
   }
 
-  using Vnode =
-      fs_pty::TtyService<fs_pty::SimpleConsoleOps<fbl::RefPtr<Console>>, fbl::RefPtr<Console>>;
-  outgoing.svc_dir()->AddEntry(fidl::DiscoverableProtocolName<fuchsia_hardware_pty::Device>,
-                               fbl::AdoptRef(new Vnode(std::move(console))));
+  if (zx::result status = outgoing.ServeFromStartupInfo(); status.is_error()) {
+    printf("console: outgoing.ServeFromStartupInfo() = %s\n", status.status_string());
+    return status.status_value();
+  }
 
-  status = loop.Run();
-  ZX_ASSERT(status == ZX_OK);
-  return status;
+  if (zx_status_t status = loop.Run(); status != ZX_OK) {
+    printf("console: lop.Run() = %s\n", zx_status_get_string(status));
+    return status;
+  }
+  return 0;
 }

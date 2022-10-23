@@ -16,29 +16,15 @@
 #include <zircon/types.h>
 
 #include <algorithm>
+#include <iterator>
 #include <thread>
 
-#include <fbl/algorithm.h>
 #include <fbl/string_buffer.h>
 
-zx_status_t Console::Create(RxSource rx_source, TxSink tx_sink,
-                            std::vector<std::string> denied_log_tags,
-                            fbl::RefPtr<Console>* console) {
-  zx::eventpair event1, event2;
-  zx_status_t status = zx::eventpair::create(0, &event1, &event2);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  *console =
-      fbl::MakeRefCounted<Console>(std::move(event1), std::move(event2), std::move(rx_source),
-                                   std::move(tx_sink), std::move(denied_log_tags));
-  return ZX_OK;
-}
-
-Console::Console(zx::eventpair event1, zx::eventpair event2, RxSource rx_source, TxSink tx_sink,
-                 std::vector<std::string> denied_log_tags)
-    : rx_fifo_(std::move(event1)),
+Console::Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::eventpair event2,
+                 RxSource rx_source, TxSink tx_sink, std::vector<std::string> denied_log_tags)
+    : dispatcher_(dispatcher),
+      rx_fifo_(std::move(event1)),
       rx_event_(std::move(event2)),
       rx_source_(std::move(rx_source)),
       tx_sink_(std::move(tx_sink)),
@@ -47,36 +33,92 @@ Console::Console(zx::eventpair event1, zx::eventpair event2, RxSource rx_source,
 
 Console::~Console() { rx_thread_.join(); }
 
-zx_status_t Console::Read(void* data, size_t len, size_t* out_actual) {
+void Console::Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) {
+  fidl::BindServer(dispatcher_,
+                   fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->request.TakeChannel()),
+                   static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(this));
+}
+
+void Console::Close(CloseCompleter::Sync& completer) {
+  completer.ReplySuccess();
+  completer.Close(ZX_OK);
+}
+
+void Console::Query(QueryCompleter::Sync& completer) {
+  const std::string_view kProtocol = fuchsia_hardware_pty::wire::kDeviceProtocolName;
+  uint8_t* data = reinterpret_cast<uint8_t*>(const_cast<char*>(kProtocol.data()));
+  completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
+}
+
+void Console::Read(ReadRequestView request, ReadCompleter::Sync& completer) {
   // Don't try to read more than the FIFO can hold.
-  uint64_t to_read = std::min<uint64_t>(len, Fifo::kFifoSize);
-  return rx_fifo_.Read(reinterpret_cast<uint8_t*>(data), to_read, out_actual);
+  uint64_t to_read = std::min<uint64_t>(request->count, Fifo::kFifoSize);
+  uint8_t buf[to_read];
+  size_t out_actual;
+  if (zx_status_t status = rx_fifo_.Read(buf, to_read, &out_actual); status != ZX_OK) {
+    completer.ReplyError(status);
+  } else {
+    completer.ReplySuccess(fidl::VectorView<uint8_t>::FromExternal(buf, out_actual));
+  }
 }
 
-zx_status_t Console::Write(const void* data, size_t len, size_t* out_actual) {
-  zx_status_t status = ZX_OK;
-  size_t total_written = 0;
-
-  const uint8_t* ptr = reinterpret_cast<const uint8_t*>(data);
-  size_t count = len;
-  while (count > 0) {
-    size_t xfer = std::min(count, kMaxWriteSize);
-    if ((status = tx_sink_(ptr, xfer)) != ZX_OK) {
-      break;
+void Console::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
+  cpp20::span span = request->data.get();
+  while (!span.empty()) {
+    size_t count = std::min(span.size(), kMaxWriteSize);
+    if (zx_status_t status = tx_sink_(span.data(), count); status != ZX_OK) {
+      uint64_t written = std::distance(request->data.begin(), span.begin());
+      if (written != 0) {
+        return completer.ReplySuccess(written);
+      }
+      return completer.ReplyError(status);
     }
-    ptr += xfer;
-    count -= xfer;
-    total_written += xfer;
+    span = span.subspan(count);
   }
-  if (total_written > 0) {
-    status = ZX_OK;
-  }
-  *out_actual = total_written;
-  return status;
+  return completer.ReplySuccess(request->data.count());
 }
 
-zx_status_t Console::GetEvent(zx::eventpair* event) const {
-  return rx_event_.duplicate(ZX_RIGHTS_BASIC, event);
+void Console::Clone(CloneRequestView request, CloneCompleter::Sync& completer) {
+  if (request->flags != fuchsia_io::wire::OpenFlags::kCloneSameRights) {
+    request->object.Close(ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  fidl::BindServer(dispatcher_,
+                   fidl::ServerEnd<fuchsia_hardware_pty::Device>(request->object.TakeChannel()),
+                   static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(this));
+}
+
+void Console::Describe2(Describe2Completer::Sync& completer) {
+  zx::eventpair event;
+  if (zx_status_t status = rx_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event); status != ZX_OK) {
+    completer.Close(status);
+  } else {
+    fidl::Arena alloc;
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+                        .event(std::move(event))
+                        .Build());
+  }
+}
+
+void Console::OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+void Console::ClrSetFeature(ClrSetFeatureRequestView request,
+                            ClrSetFeatureCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+}
+void Console::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+}
+void Console::MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
+}
+void Console::ReadEvents(ReadEventsCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, {});
+}
+void Console::SetWindowSize(SetWindowSizeRequestView request,
+                            SetWindowSizeCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 void Console::DebugReaderThread() {
@@ -137,7 +179,7 @@ zx_status_t Console::Log(fuchsia_logger::wire::LogMessage log) {
 }
 
 void Console::Log(LogRequestView request, LogCompleter::Sync& completer) {
-  zx_status_t status = Log(std::move(request->log));
+  zx_status_t status = Log(request->log);
   if (status != ZX_OK) {
     completer.Close(status);
     return;
@@ -147,7 +189,7 @@ void Console::Log(LogRequestView request, LogCompleter::Sync& completer) {
 
 void Console::LogMany(LogManyRequestView request, LogManyCompleter::Sync& completer) {
   for (auto& log : request->log) {
-    zx_status_t status = Log(std::move(log));
+    zx_status_t status = Log(log);
     if (status != ZX_OK) {
       completer.Close(status);
       return;

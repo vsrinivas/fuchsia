@@ -6,10 +6,8 @@
 
 #include <fidl/fuchsia.device/cpp/wire.h>
 
-#include <fbl/auto_lock.h>
-
 zx_status_t Fifo::Read(uint8_t* buffer, size_t length, size_t* actual) {
-  fbl::AutoLock guard(&lock_);
+  std::lock_guard guard(lock_);
 
   size_t count;
   for (count = 0; count < length; ++count) {
@@ -30,7 +28,7 @@ zx_status_t Fifo::Read(uint8_t* buffer, size_t length, size_t* actual) {
 }
 
 zx_status_t Fifo::Write(const uint8_t* buffer, size_t length, size_t* actual) {
-  fbl::AutoLock guard(&lock_);
+  std::lock_guard guard(lock_);
 
   size_t count;
   for (count = 0; count < length; ++count) {

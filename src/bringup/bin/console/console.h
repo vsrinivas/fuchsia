@@ -15,13 +15,10 @@
 #include <thread>
 #include <vector>
 
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-
 #include "fifo.h"
 
 class Console : public fidl::WireServer<fuchsia_logger::LogListenerSafe>,
-                public fbl::RefCounted<Console> {
+                public fidl::WireServer<fuchsia_hardware_pty::Device> {
  public:
   // Maximum amount of data that will be written to tx_sink_() per call.
   static constexpr size_t kMaxWriteSize = 256;
@@ -35,24 +32,12 @@ class Console : public fidl::WireServer<fuchsia_logger::LogListenerSafe>,
   // it is assumed that no data from this request was transmitted.
   using TxSink = fit::function<zx_status_t(const uint8_t* buffer, size_t length)>;
 
-  // Do not use, instead use Create()
-  Console(zx::eventpair event1, zx::eventpair event2, RxSource rx_source, TxSink tx_sink,
-          std::vector<std::string> denied_log_tags);
-  ~Console();
+  Console(async_dispatcher_t* dispatcher, zx::eventpair event1, zx::eventpair event2,
+          RxSource rx_source, TxSink tx_sink, std::vector<std::string> denied_log_tags);
+  ~Console() override;
 
-  static zx_status_t Create(RxSource rx_source, TxSink tx_sink,
-                            std::vector<std::string> denied_log_tags,
-                            fbl::RefPtr<Console>* console);
-
-  // Used to implement fuchsia.io.File/{Read,Write}
-  zx_status_t Read(void* data, size_t len, size_t* out_actual);
-  zx_status_t Write(const void* data, size_t len, size_t* out_actual);
-
-  // Used to implement fuchsia.log.LogListenerSafe/{Log,LogMany}
+  // Used to implement fuchsia.log.LogListenerSafe/{Log,LogMany}. Exposed for testing.
   zx_status_t Log(fuchsia_logger::wire::LogMessage log);
-
-  // Return the event for a connection to this console
-  zx_status_t GetEvent(zx::eventpair* event) const;
 
  private:
   // Thread for getting tty input via zx_debug_read
@@ -63,6 +48,25 @@ class Console : public fidl::WireServer<fuchsia_logger::LogListenerSafe>,
   void LogMany(LogManyRequestView request, LogManyCompleter::Sync& completer) override;
   void Done(DoneCompleter::Sync& completer) override;
 
+  // Functions to handle fuchsia.hardware.pty.Device
+  void Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) final;
+  void Close(CloseCompleter::Sync& completer) final;
+  void Query(QueryCompleter::Sync& completer) final;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
+  void Describe2(Describe2Completer::Sync& completer) final;
+
+  void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
+  void ClrSetFeature(ClrSetFeatureRequestView request,
+                     ClrSetFeatureCompleter::Sync& completer) final;
+  void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
+  void MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) final;
+  void ReadEvents(ReadEventsCompleter::Sync& completer) final;
+  void SetWindowSize(SetWindowSizeRequestView request,
+                     SetWindowSizeCompleter::Sync& completer) final;
+
+  async_dispatcher_t* dispatcher_;
   Fifo rx_fifo_;
   zx::eventpair rx_event_;
   RxSource rx_source_;

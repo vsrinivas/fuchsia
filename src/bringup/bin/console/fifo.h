@@ -9,10 +9,10 @@
 #include <lib/zx/eventpair.h>
 #include <stdint.h>
 #include <stdlib.h>
-#include <utility>
 #include <zircon/types.h>
 
-#include <fbl/mutex.h>
+#include <mutex>
+#include <utility>
 
 class Fifo {
  public:
@@ -41,7 +41,7 @@ class Fifo {
 
   static inline constexpr uint32_t kFifoMask = kFifoSize;
 
-  fbl::Mutex lock_;
+  std::mutex lock_;
 
   uint8_t data_[kFifoSize + 1] TA_GUARDED(lock_) = {};
   uint32_t head_ TA_GUARDED(lock_) = 0;
