@@ -40,12 +40,6 @@ class NullPtyDeviceImpl : public fidl::WireServer<fuchsia_hardware_pty::Device> 
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
 
   void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
-  void DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) final;
-  void GetAttr(GetAttrCompleter::Sync& completer) final;
-  void SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) final;
-  void GetFlags(GetFlagsCompleter::Sync& completer) final;
-  void SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) final;
-  void QueryFilesystem(QueryFilesystemCompleter::Sync& completer) final;
 };
 
 template <typename ConsoleOps, typename ConsoleState>

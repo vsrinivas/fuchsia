@@ -115,23 +115,3 @@ void PtyClientDevice::Clone2(Clone2RequestView request, Clone2Completer::Sync& c
 void PtyClientDevice::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false); }
 
 void PtyClientDevice::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyClientDevice::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyClientDevice::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::GetFlags(GetFlagsCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void PtyClientDevice::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void PtyClientDevice::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}

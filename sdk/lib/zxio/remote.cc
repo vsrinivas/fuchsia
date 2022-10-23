@@ -520,11 +520,6 @@ constexpr zxio_ops_t Pty::kOps = ([]() {
   ops.borrow = Adaptor::From<&Pty::Borrow>;
   ops.clone = Adaptor::From<&Pty::Clone>;
 
-  ops.attr_get = Adaptor::From<&Pty::AttrGet>;
-  ops.attr_set = Adaptor::From<&Pty::AttrSet>;
-  ops.flags_get = Adaptor::From<&Pty::FlagsGet>;
-  ops.flags_set = Adaptor::From<&Pty::FlagsSet>;
-
   ops.wait_begin = Adaptor::From<&Pty::WaitBegin>;
   ops.wait_end = Adaptor::From<&Pty::WaitEnd>;
   ops.readv = Adaptor::From<&Pty::Readv>;

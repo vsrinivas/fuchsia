@@ -108,41 +108,21 @@ TEST_F(PtyTestCase, Describe) {
   fidl::WireSyncClient<fuchsia_hardware_pty::Device> client;
   ASSERT_NO_FATAL_FAILURE(Connect(&client));
 
-  {
-    auto result = client->DescribeDeprecated();
-    ASSERT_OK(result.status());
-    ASSERT_TRUE(result.value().info.is_tty());
+  auto result = client->Describe2();
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result.value().has_event());
 
-    // Check that we got back the handle we expected.
-    zx_info_handle_basic_t local_info = {};
-    zx_info_handle_basic_t remote_info = {};
-    ASSERT_OK(
-        local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
-    ASSERT_OK(result.value().info.tty().event.get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
-                                                       sizeof(remote_info), nullptr, nullptr));
-    ASSERT_EQ(local_info.related_koid, remote_info.koid);
+  // Check that we got back the handle we expected.
+  zx_info_handle_basic_t local_info = {};
+  zx_info_handle_basic_t remote_info = {};
+  ASSERT_OK(
+      local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
+  ASSERT_OK(result.value().event().get_info(ZX_INFO_HANDLE_BASIC, &remote_info, sizeof(remote_info),
+                                            nullptr, nullptr));
+  ASSERT_EQ(local_info.related_koid, remote_info.koid);
 
-    // We should not have seen an ordinal dispatch
-    ASSERT_EQ(state()->last_seen_ordinal.load(), 0);
-  }
-
-  {
-    auto result = client->Describe2();
-    ASSERT_OK(result.status());
-    ASSERT_TRUE(result.value().has_event());
-
-    // Check that we got back the handle we expected.
-    zx_info_handle_basic_t local_info = {};
-    zx_info_handle_basic_t remote_info = {};
-    ASSERT_OK(
-        local.get_info(ZX_INFO_HANDLE_BASIC, &local_info, sizeof(local_info), nullptr, nullptr));
-    ASSERT_OK(result.value().event().get_info(ZX_INFO_HANDLE_BASIC, &remote_info,
-                                              sizeof(remote_info), nullptr, nullptr));
-    ASSERT_EQ(local_info.related_koid, remote_info.koid);
-
-    // We should have seen an ordinal dispatch
-    ASSERT_NE(state()->last_seen_ordinal.load(), 0);
-  }
+  // We should have seen an ordinal dispatch
+  ASSERT_NE(state()->last_seen_ordinal.load(), 0);
 }
 
 // Verify that the Read plumbing works fine

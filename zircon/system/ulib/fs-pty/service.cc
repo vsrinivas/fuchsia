@@ -85,24 +85,4 @@ void NullPtyDeviceImpl::Close(CloseCompleter::Sync& completer) { ZX_ASSERT(false
 
 void NullPtyDeviceImpl::Query(QueryCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void NullPtyDeviceImpl::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::GetAttr(GetAttrCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::SetAttr(SetAttrRequestView request, SetAttrCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::GetFlags(GetFlagsCompleter::Sync& completer) { ZX_ASSERT(false); }
-
-void NullPtyDeviceImpl::SetFlags(SetFlagsRequestView request, SetFlagsCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
-void NullPtyDeviceImpl::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  ZX_ASSERT(false);
-}
-
 }  // namespace fs_pty::internal
