@@ -18,17 +18,12 @@ class Fifo {
   Fifo() = default;
   ~Fifo() = default;
 
-  Fifo(const Fifo&) = delete;
-  Fifo(Fifo&&) = delete;
-  Fifo& operator=(const Fifo&) = delete;
-  Fifo& operator=(Fifo&&) = delete;
-
   // Returns the number of bytes read.
-  [[nodiscard]] size_t Read(void* data, size_t len);
+  [[nodiscard]] size_t Read(void* buf, size_t len);
 
   // Returns the number of bytes written.  If |atomic| is true, no partial
   // writes will occur.
-  [[nodiscard]] size_t Write(const void* data, size_t len, bool atomic);
+  [[nodiscard]] size_t Write(const void* buf, size_t len, bool atomic);
 
   [[nodiscard]] bool is_empty() const { return head_ == tail_; }
   [[nodiscard]] bool is_full() const { return head_ - tail_ == kSize; }

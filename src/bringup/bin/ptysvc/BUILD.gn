@@ -7,16 +7,10 @@ import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
 
 executable("ptysvc") {
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
   sources = [ "main.cc" ]
   deps = [
     ":common",
-    "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/sys/lib/stdout-to-debuglog/cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
@@ -28,50 +22,29 @@ source_set("common") {
   sources = [
     "fifo.cc",
     "fifo.h",
-    "pty-client-device.cc",
-    "pty-client-device.h",
-    "pty-client-vnode.h",
     "pty-client.cc",
     "pty-client.h",
-    "pty-server-device.cc",
-    "pty-server-device.h",
-    "pty-server-vnode.h",
     "pty-server.cc",
     "pty-server.h",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_cpp_wire",
-    "//sdk/lib/fit",
-    "//src/lib/storage/vfs/cpp",
-    "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fs-pty",
-    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
-    "//sdk/lib/fdio",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 test("ptysvc-test") {
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
-
   sources = [ "pty-tests.cc" ]
   deps = [
     ":common",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/sync",

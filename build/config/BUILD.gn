@@ -636,7 +636,6 @@ config("Wno-conversion") {
     "//sdk/lib/syslog/streams/cpp:*",
     "//sdk/lib/vfs/cpp:*",
     "//sdk/lib/vfs/cpp/testing:*",
-    "//src/bringup/bin/ptysvc:*",
     "//src/cobalt/bin/system-metrics:*",
     "//src/cobalt/bin/testapp:*",
     "//src/connectivity/bluetooth/core/bt-host/gap:*",

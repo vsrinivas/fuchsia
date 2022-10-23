@@ -9,29 +9,35 @@
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <lib/zx/eventpair.h>
 
-#include <fbl/intrusive_double_list.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
-
 #include "fifo.h"
 #include "pty-server.h"
 
-class PtyClient : public fbl::RefCounted<PtyClient>,
-                  public fbl::DoublyLinkedListable<fbl::RefPtr<PtyClient>> {
+class PtyClient : public fidl::WireServer<fuchsia_hardware_pty::Device> {
  public:
-  // This ctor is only public for the use of fbl::MakeRefCounted.  Use Create()
-  // instead.
-  PtyClient(fbl::RefPtr<PtyServer> server, uint32_t id, zx::eventpair local, zx::eventpair remote);
+  PtyClient(std::shared_ptr<PtyServer>, uint32_t id, zx::eventpair local, zx::eventpair remote);
 
-  ~PtyClient();
+  zx_status_t Read(void* data, size_t count, size_t* out_actual);
+  zx_status_t Write(const void* data, size_t count, size_t* out_actual);
 
-  // Create a new PtyClient.  This method is preferred to the ctor.
-  static zx_status_t Create(fbl::RefPtr<PtyServer> server, uint32_t id,
-                            fbl::RefPtr<PtyClient>* out);
+  void AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device> request);
 
-  zx_status_t Read(void* data, size_t len, size_t* out_actual);
-  zx_status_t Write(const void* data, size_t len, size_t* out_actual);
-  zx_status_t GetEvent(zx::eventpair* event) { return remote_.duplicate(ZX_RIGHTS_BASIC, event); }
+  // fuchsia.hardware.pty.Device.
+  void Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) final;
+  void Close(CloseCompleter::Sync& completer) final;
+  void Query(QueryCompleter::Sync& completer) final;
+  void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
+  void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
+  void Clone(CloneRequestView request, CloneCompleter::Sync& completer) final;
+  void Describe2(Describe2Completer::Sync& completer) final;
+
+  void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
+  void ClrSetFeature(ClrSetFeatureRequestView request,
+                     ClrSetFeatureCompleter::Sync& completer) final;
+  void GetWindowSize(GetWindowSizeCompleter::Sync& completer) final;
+  void MakeActive(MakeActiveRequestView request, MakeActiveCompleter::Sync& completer) final;
+  void ReadEvents(ReadEventsCompleter::Sync& completer) final;
+  void SetWindowSize(SetWindowSizeRequestView request,
+                     SetWindowSizeCompleter::Sync& completer) final;
 
   Fifo* rx_fifo() { return &rx_fifo_; }
 
@@ -71,24 +77,19 @@ class PtyClient : public fbl::RefCounted<PtyClient>,
   [[nodiscard]] bool in_raw_mode() const { return flags_ & kFlagRawMode; }
   [[nodiscard]] bool is_peer_closed() const { return flags_ & kFlagPeerClosed; }
 
-  uint32_t id() const { return id_; }
-
   // Ensure READABLE/WRITABLE signals are properly asserted based on active
   // status and rx_fifo status.
   void AdjustSignals();
 
-  [[nodiscard]] bool is_active() { return server_->is_active(this); }
-  [[nodiscard]] bool is_control() { return server_->is_control(this); }
+  [[nodiscard]] bool is_active() { return server().is_active(*this); }
+  [[nodiscard]] bool is_control() { return server().is_control(*this); }
 
-  const fbl::RefPtr<PtyServer>& server() const { return server_; }
-
-  // Teardown this client
-  void Shutdown();
+  PtyServer& server() { return *server_; }
 
  private:
   zx_status_t WriteChunk(const void* buf, size_t count, size_t* actual);
 
-  const fbl::RefPtr<PtyServer> server_;
+  std::shared_ptr<PtyServer> server_;
   const uint32_t id_;
 
   // remote_ is signaled to indicate to client connections various status
@@ -101,6 +102,8 @@ class PtyClient : public fbl::RefCounted<PtyClient>,
 
   uint32_t flags_ = 0;
   Fifo rx_fifo_;
+
+  std::unordered_map<zx_handle_t, fidl::ServerBindingRef<fuchsia_hardware_pty::Device>> bindings_;
 };
 
 #endif  // SRC_BRINGUP_BIN_PTYSVC_PTY_CLIENT_H_

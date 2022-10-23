@@ -14,10 +14,7 @@
 
 #include <zxtest/zxtest.h>
 
-#include "pty-server-vnode.h"
 #include "pty-server.h"
-#include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {
 
@@ -26,16 +23,20 @@ using Connection = fidl::WireSyncClient<Device>;
 
 class PtyTestCase : public zxtest::Test {
  public:
-  PtyTestCase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), vfs_(loop_.dispatcher()) {}
+  PtyTestCase() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   void SetUp() override {
+    zx::result args = PtyServer::Args::Create();
+    ASSERT_OK(args.status_value());
+    std::shared_ptr server =
+        std::make_shared<PtyServer>(std::move(args.value()), loop_.dispatcher());
+    zx::result endpoints = fidl::CreateEndpoints<Device>();
+    ASSERT_OK(endpoints.status_value());
+    server->AddConnection(std::move(endpoints->server));
+
     ASSERT_OK(loop_.StartThread("pty-test"));
-    ASSERT_NO_FATAL_FAILURE(CreateNewServer(server_));
-  }
-  void TearDown() override {
-    sync_completion_t completion;
-    vfs_.Shutdown([&completion](zx_status_t) { sync_completion_signal(&completion); });
-    ASSERT_OK(sync_completion_wait_deadline(&completion, zx::time::infinite().get()));
+
+    server_ = Connection(std::move(endpoints->client));
   }
 
  protected:
@@ -55,24 +56,10 @@ class PtyTestCase : public zxtest::Test {
   }
 
   async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
-  fs::ManagedVfs* vfs() { return &vfs_; }
   Connection take_server() { return std::move(server_); }
 
  private:
-  void CreateNewServer(Connection& conn) {
-    fbl::RefPtr<PtyServer> server;
-    ASSERT_OK(PtyServer::Create(&server, &vfs_));
-    auto vnode = fbl::MakeRefCounted<PtyServerVnode>(std::move(server));
-
-    auto endpoints = fidl::CreateEndpoints<Device>();
-    ASSERT_OK(endpoints.status_value());
-    ASSERT_OK(vfs()->Serve(std::move(vnode), endpoints->server.TakeChannel(),
-                           fs::VnodeConnectionOptions::ReadWrite()));
-    conn = Connection(std::move(endpoints->client));
-  }
-
   async::Loop loop_;
-  fs::ManagedVfs vfs_;
   Connection server_;
 };
 
