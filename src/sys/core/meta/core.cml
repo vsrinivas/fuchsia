@@ -491,7 +491,6 @@
         },
         {
             protocol: [
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
             ],
             from: "parent",

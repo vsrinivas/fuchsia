@@ -477,7 +477,6 @@
         },
         {
             protocol: [
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.driver.development.DriverDevelopment",
                 "fuchsia.hardware.usb.DeviceWatcher",
             ],
@@ -742,12 +741,6 @@
             protocol: [ "fuchsia.device.manager.Administrator" ],
             from: "#driver_manager",
             to: "#fshost",
-        },
-        {
-            protocol: [ "fuchsia.device.manager.Administrator" ],
-            from: "#driver_manager",
-            to: "#power_manager",
-            dependency: "weak_for_migration",
         },
         {
             protocol: [
@@ -1080,7 +1073,6 @@
         },
         {
             protocol: [
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.device.manager.SystemStateTransition",
                 "fuchsia.driver.development.DriverDevelopment",
                 "fuchsia.hardware.usb.DeviceWatcher",

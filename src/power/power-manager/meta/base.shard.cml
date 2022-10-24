@@ -24,7 +24,6 @@
     use: [
         {
             protocol: [
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.feedback.CrashReporter",
                 "fuchsia.kernel.CpuResource",
                 "fuchsia.kernel.Stats",

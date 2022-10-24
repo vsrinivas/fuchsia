@@ -42,7 +42,6 @@
                 "fuchsia.boot.Items",
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
                 "fuchsia.fshost.Admin",
                 "fuchsia.hardware.power.statecontrol.Admin",

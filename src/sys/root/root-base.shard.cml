@@ -133,7 +133,6 @@
         // Non-zircon services for svchost
         {
             protocol: [
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",

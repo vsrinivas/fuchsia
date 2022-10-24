@@ -20,7 +20,6 @@
                 "fuchsia.boot.ReadOnlyLog",
                 "fuchsia.boot.RootResource",
                 "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.device.manager.Administrator",
                 "fuchsia.device.NameProvider",
                 "fuchsia.diagnostics.ArchiveAccessor",
                 "fuchsia.diagnostics.FeedbackArchiveAccessor",
