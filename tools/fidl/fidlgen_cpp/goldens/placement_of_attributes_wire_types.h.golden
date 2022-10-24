@@ -76,6 +76,7 @@ struct ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable> 
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint32_t> member_;
 
   friend class ::test_placementofattributes::wire::ExampleTable;
@@ -110,15 +111,11 @@ class ExampleTable {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_placementofattributes::wire::ExampleTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>> frame);
 
-  const uint32_t& member() const {
+  [[nodiscard]] uint32_t& member() const {
     ZX_ASSERT(has_member());
     return frame_ptr_->member_.get_data();
   }
-  uint32_t& member() {
-    ZX_ASSERT(has_member());
-    return frame_ptr_->member_.get_data();
-  }
-  bool has_member() const {
+  [[nodiscard]] bool has_member() const {
     return max_ordinal_ >= 1 && frame_ptr_->member_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -137,6 +134,7 @@ class ExampleTable {
   ExampleTable& clear_member() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->member_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -169,6 +167,17 @@ class ExampleTable {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_placementofattributes::wire::ExampleTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_placementofattributes::wire::ExampleTable Build() {
@@ -178,6 +187,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_placementofattributes::wire:
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_member() const {
+    return table_.has_member();
+  }
+
+  // Clears the member field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_member() {
+    table_.clear_member();
+  }
+
+  // Getter for member.
+  //
+
+  [[nodiscard]] uint32_t& member() const {
+    return table_.member();
+  }
+
+  // Setter for member.
+  //
 
   BuilderImpl& member(uint32_t elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);

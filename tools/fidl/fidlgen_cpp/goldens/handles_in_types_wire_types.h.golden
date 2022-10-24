@@ -59,6 +59,7 @@ struct ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle> fina
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<::zx::vmo> h_;
 
   friend class ::test_handlesintypes::wire::TableWithHandle;
@@ -94,15 +95,11 @@ class TableWithHandle {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_handlesintypes::wire::TableWithHandle> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>> frame);
 
-  const ::zx::vmo& h() const {
+  [[nodiscard]] ::zx::vmo& h() const {
     ZX_ASSERT(has_h());
     return frame_ptr_->h_.get_data();
   }
-  ::zx::vmo& h() {
-    ZX_ASSERT(has_h());
-    return frame_ptr_->h_.get_data();
-  }
-  bool has_h() const {
+  [[nodiscard]] bool has_h() const {
     return max_ordinal_ >= 1 && frame_ptr_->h_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -121,6 +118,7 @@ class TableWithHandle {
   TableWithHandle& clear_h() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->h_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -153,6 +151,17 @@ class TableWithHandle {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_handlesintypes::wire::TableWithHandle, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_handlesintypes::wire::TableWithHandle Build() {
@@ -162,6 +171,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_handlesintypes::wire::TableW
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_h() const {
+    return table_.has_h();
+  }
+
+  // Clears the h field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_h() {
+    table_.clear_h();
+  }
+
+  // Getter for h.
+  //
+
+  [[nodiscard]] ::zx::vmo& h() const {
+    return table_.h();
+  }
+
+  // Setter for h.
+  //
 
   BuilderImpl& h(::zx::vmo elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);

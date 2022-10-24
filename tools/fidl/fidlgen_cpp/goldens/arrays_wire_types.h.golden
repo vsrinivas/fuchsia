@@ -61,6 +61,7 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<::fidl::Array<uint32_t, 2>> a_;
 
   friend class ::test_arrays::wire::TableSmallArray;
@@ -95,15 +96,11 @@ class TableSmallArray {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableSmallArray> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>> frame);
 
-  const ::fidl::Array<uint32_t, 2>& a() const {
+  [[nodiscard]] ::fidl::Array<uint32_t, 2>& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  ::fidl::Array<uint32_t, 2>& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[nodiscard]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -135,6 +132,7 @@ class TableSmallArray {
   TableSmallArray& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -167,6 +165,17 @@ class TableSmallArray {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArray, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_arrays::wire::TableSmallArray Build() {
@@ -176,10 +185,32 @@ class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableSmallArra
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_a() const {
+    return table_.has_a();
+  }
 
-  BuilderImpl& a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>> elem) {
+  // Clears the a field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_a() {
+    table_.clear_a();
+  }
+
+  // Getter for a.
+  //
+
+  [[nodiscard]] ::fidl::Array<uint32_t, 2>& a() const {
+    return table_.a();
+  }
+
+  // Setter for a.
+  //
+
+  BuilderImpl& a(Wrapper_Ignore_Me_<::fidl::ObjectView<::fidl::Array<uint32_t, 2>>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->a_.set_data(elem);
+    ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+    table_.frame_ptr_->a_.set_data(elem.value);
     table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
     return *static_cast<BuilderImpl*>(this);
   }
@@ -199,9 +230,13 @@ class ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray> final : pub
  public:
   using Base::a;
 
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>& a(Args&&... args_) {
-    a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(arena_.get(), std::forward<Args>(args_)...));
+  template <
+      typename First = ::fidl::Array<uint32_t, 2>,
+      typename... Args,
+      std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<::fidl::Array<uint32_t, 2>>>, int> = 0>
+  ::fidl::WireTableBuilder<::test_arrays::wire::TableSmallArray>& a(First&& first, Args&&... args_) {
+    fidl::ObjectView<::fidl::Array<uint32_t, 2>> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+    a(Base::Wrapper_Ignore_Me_<fidl::ObjectView<::fidl::Array<uint32_t, 2>>>(view_));
     return *this;
   }
 
@@ -258,6 +293,7 @@ struct ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<::fidl::Array<uint32_t, 100>> a_;
 
   friend class ::test_arrays::wire::TableLargeArray;
@@ -292,15 +328,11 @@ class TableLargeArray {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_arrays::wire::TableLargeArray> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>> frame);
 
-  const ::fidl::Array<uint32_t, 100>& a() const {
+  [[nodiscard]] ::fidl::Array<uint32_t, 100>& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  ::fidl::Array<uint32_t, 100>& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[nodiscard]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -332,6 +364,7 @@ class TableLargeArray {
   TableLargeArray& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -364,6 +397,17 @@ class TableLargeArray {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArray, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_arrays::wire::TableLargeArray Build() {
@@ -373,10 +417,32 @@ class ::fidl::internal::WireTableBaseBuilder<::test_arrays::wire::TableLargeArra
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_a() const {
+    return table_.has_a();
+  }
 
-  BuilderImpl& a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>> elem) {
+  // Clears the a field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_a() {
+    table_.clear_a();
+  }
+
+  // Getter for a.
+  //
+
+  [[nodiscard]] ::fidl::Array<uint32_t, 100>& a() const {
+    return table_.a();
+  }
+
+  // Setter for a.
+  //
+
+  BuilderImpl& a(Wrapper_Ignore_Me_<::fidl::ObjectView<::fidl::Array<uint32_t, 100>>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->a_.set_data(elem);
+    ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+    table_.frame_ptr_->a_.set_data(elem.value);
     table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
     return *static_cast<BuilderImpl*>(this);
   }
@@ -396,9 +462,13 @@ class ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray> final : pub
  public:
   using Base::a;
 
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>& a(Args&&... args_) {
-    a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(arena_.get(), std::forward<Args>(args_)...));
+  template <
+      typename First = ::fidl::Array<uint32_t, 100>,
+      typename... Args,
+      std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<::fidl::Array<uint32_t, 100>>>, int> = 0>
+  ::fidl::WireTableBuilder<::test_arrays::wire::TableLargeArray>& a(First&& first, Args&&... args_) {
+    fidl::ObjectView<::fidl::Array<uint32_t, 100>> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+    a(Base::Wrapper_Ignore_Me_<fidl::ObjectView<::fidl::Array<uint32_t, 100>>>(view_));
     return *this;
   }
 

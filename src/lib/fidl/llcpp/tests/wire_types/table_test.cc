@@ -6,7 +6,9 @@
 #include <lib/fidl/cpp/wire/wire_messaging_declarations.h>
 
 #include <gtest/gtest.h>
-#include <src/lib/fidl/llcpp/tests/types_test_utils.h>
+
+#include "src/lib/fidl/llcpp/tests/arena_checker.h"
+#include "src/lib/fidl/llcpp/tests/types_test_utils.h"
 
 TEST(Table, TablePrimitive) {
   namespace test = test_types;
@@ -31,6 +33,16 @@ TEST(Table, InlineSet) {
   EXPECT_FALSE(table.HasUnknownData());
 }
 
+TEST(Table, InlineSetEmptyBrace) {
+  namespace test = test_types;
+  fidl::Arena arena;
+  auto table = test::wire::SampleTable::Builder(arena).x({}).Build();
+
+  ASSERT_TRUE(table.has_x());
+  ASSERT_EQ(table.x(), 0u);
+  EXPECT_FALSE(table.HasUnknownData());
+}
+
 TEST(Table, OutOfLineSet) {
   namespace test = test_types;
   fidl::Arena arena;
@@ -39,6 +51,32 @@ TEST(Table, OutOfLineSet) {
   ASSERT_TRUE(table.has_x());
   ASSERT_EQ(table.x(), 3u);
   EXPECT_FALSE(table.HasUnknownData());
+}
+
+TEST(Table, OutOfLineSetWithEmptyBrace) {
+  namespace test = test_types;
+  fidl::Arena arena;
+  auto table = test::wire::Uint64Table::Builder(arena).x({}).Build();
+
+  ASSERT_TRUE(table.has_x());
+  ASSERT_EQ(table.x(), 0u);
+  EXPECT_FALSE(table.HasUnknownData());
+}
+
+TEST(Table, OutOfLineSetUsingSeparatelyAllocatedObjectView) {
+  namespace test = test_types;
+  fidl::Arena arena;
+  fidl::Arena arena2;
+
+  fidl::ObjectView<uint64_t> x{arena, 100u};
+  auto table = test::wire::Uint64Table::Builder(arena2).x(x).Build();
+
+  ASSERT_TRUE(table.has_x());
+  ASSERT_EQ(table.x(), 100u);
+  EXPECT_FALSE(table.HasUnknownData());
+
+  EXPECT_TRUE(fidl_testing::ArenaChecker::IsPointerInArena(&table.x(), arena));
+  EXPECT_FALSE(fidl_testing::ArenaChecker::IsPointerInArena(&table.x(), arena2));
 }
 
 TEST(Table, Builder) {
@@ -138,6 +176,26 @@ TEST(Table, Getters) {
   EXPECT_EQ(3, table.x());
 }
 
+TEST(Table, BuilderGetClear) {
+  namespace test = test_types;
+  fidl::Arena arena;
+  auto builder = test::wire::SampleTable::Builder(arena).x(3);
+  static_assert(std::is_same<uint8_t&, decltype(builder.x())>::value);
+  EXPECT_TRUE(builder.has_x());
+  EXPECT_EQ(3, builder.x());
+  builder.x(4);
+  EXPECT_TRUE(builder.has_x());
+  EXPECT_EQ(4, builder.x());
+
+  builder.clear_x();
+  EXPECT_FALSE(builder.has_x());
+  EXPECT_DEATH({ (void)builder.x(); }, "");
+
+  auto table = builder.Build();
+  EXPECT_FALSE(table.has_x());
+  EXPECT_DEATH({ (void)table.x(); }, "");
+}
+
 TEST(Table, SubTables) {
   namespace test = test_types;
   fidl::Arena arena;
@@ -152,7 +210,7 @@ TEST(Table, SubTables) {
 
   // Test setting a field which is a vector of tables.
   EXPECT_FALSE(table.has_vt());
-  table = test::wire::TableWithSubTables::Builder(arena).vt().Build();
+  table = test::wire::TableWithSubTables::Builder(arena).vt({}).Build();
   table.vt().Allocate(arena, 1);
   table.vt()[0] = test::wire::SampleTable::Builder(arena).x(13).Build();
   EXPECT_TRUE(table.has_vt());
@@ -160,7 +218,7 @@ TEST(Table, SubTables) {
   EXPECT_EQ(13, table.vt()[0].x());
 
   // Test setting a field which is an array of tables
-  table = test::wire::TableWithSubTables::Builder(arena).at().Build();
+  table = test::wire::TableWithSubTables::Builder(arena).at({}).Build();
   table.at()[0] = test::wire::SampleTable::Builder(arena).x(15).Build();
   EXPECT_TRUE(table.has_at());
   EXPECT_EQ(15, table.at()[0].x());

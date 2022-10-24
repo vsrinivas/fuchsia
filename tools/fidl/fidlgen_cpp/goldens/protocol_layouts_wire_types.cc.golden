@@ -106,6 +106,14 @@ bool ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>::Ha
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_protocollayouts::wire::LocalTablePayload::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -118,6 +126,14 @@ bool ::test_protocollayouts::wire::LocalTablePayload::HasUnknownData() const {
 
 bool ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest::HasUnknownData() const {
@@ -134,6 +150,14 @@ bool ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAnon
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -148,6 +172,14 @@ bool ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAnon
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -160,6 +192,14 @@ bool ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest::HasUn
 
 bool ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse::HasUnknownData() const {

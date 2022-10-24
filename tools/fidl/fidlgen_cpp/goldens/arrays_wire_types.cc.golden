@@ -18,6 +18,14 @@ bool ::fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>::HasUnknownDat
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_arrays::wire::TableSmallArray>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_arrays::wire::TableSmallArray::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -30,6 +38,14 @@ bool ::test_arrays::wire::TableSmallArray::HasUnknownData() const {
 
 bool ::fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_arrays::wire::TableLargeArray>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!a_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_arrays::wire::TableLargeArray::HasUnknownData() const {

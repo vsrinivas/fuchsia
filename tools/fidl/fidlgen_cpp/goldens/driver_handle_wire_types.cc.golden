@@ -29,6 +29,17 @@ bool ::fidl::WireTableFrame<::test_driverhandle::wire::T>::HasUnknownData() cons
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_driverhandle::wire::T>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!zircon_handle_.has_data()) {
+    max_ordinal = 1;
+  }
+  if (!fdf_handle_.has_data()) {
+    max_ordinal = 2;
+  }
+  return max_ordinal;
+}
+
 bool ::test_driverhandle::wire::T::HasUnknownData() const {
   if (max_ordinal_ > 2) {
     return true;

@@ -295,19 +295,12 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
   std::vector<TestCase> cases = {
       {
           .name = "MissingFormat",
-          .edit =
-              [](auto data_source) {
-                data_source.format(fidl::ObjectView<fuchsia_audio::wire::Format>());
-              },
+          .edit = [](auto data_source) { data_source.clear_format(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
           .name = "MissingReferenceClock",
-          .edit =
-              [](auto data_source) {
-                data_source.reference_clock(
-                    fidl::ObjectView<fuchsia_audio_mixer::wire::ReferenceClock>());
-              },
+          .edit = [](auto data_source) { data_source.clear_reference_clock(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -321,18 +314,12 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
       },
       {
           .name = "MissingTicksPerSecondNumerator",
-          .edit =
-              [](auto data_source) {
-                data_source.media_ticks_per_second_numerator(fidl::ObjectView<uint64_t>());
-              },
+          .edit = [](auto data_source) { data_source.clear_media_ticks_per_second_numerator(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
           .name = "MissingTicksPerSecondDenominator",
-          .edit =
-              [](auto data_source) {
-                data_source.media_ticks_per_second_denominator(fidl::ObjectView<uint64_t>());
-              },
+          .edit = [](auto data_source) { data_source.clear_media_ticks_per_second_denominator(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -451,22 +438,17 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
   std::vector<TestCase> cases = {
       {
           .name = "MissingFormat",
-          .edit =
-              [](auto ring_buffer) {
-                ring_buffer.format(fidl::ObjectView<fuchsia_audio::wire::Format>());
-              },
+          .edit = [](auto ring_buffer) { ring_buffer.clear_format(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
           .name = "MissingProducerBytes",
-          .edit =
-              [](auto ring_buffer) { ring_buffer.producer_bytes(fidl::ObjectView<uint64_t>()); },
+          .edit = [](auto ring_buffer) { ring_buffer.clear_producer_bytes(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
           .name = "MissingConsumerBytes",
-          .edit =
-              [](auto ring_buffer) { ring_buffer.consumer_bytes(fidl::ObjectView<uint64_t>()); },
+          .edit = [](auto ring_buffer) { ring_buffer.clear_consumer_bytes(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -811,17 +793,17 @@ TEST_F(GraphServerTest, CreateMixerFails) {
   const std::vector<TestCase> cases = {
       {
           .name = "MissingDestFormat",
-          .edit = [](auto request) { request.dest_format({}); },
+          .edit = [](auto request) { request.clear_dest_format(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
           .name = "MissingDestReferenceClock",
-          .edit = [](auto request) { request.dest_reference_clock({}); },
+          .edit = [](auto request) { request.clear_dest_reference_clock(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
           .name = "MissingDestBufferFrameCount",
-          .edit = [](auto request) { request.dest_buffer_frame_count({}); },
+          .edit = [](auto request) { request.clear_dest_buffer_frame_count(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -1473,12 +1455,12 @@ TEST_F(GraphServerTest, CreateThreadFailsBadFields) {
   std::vector<TestCase> cases = {
       {
           .name = "MissingPeriod",
-          .edit = [](auto request) { request.period(fidl::ObjectView<int64_t>()); },
+          .edit = [](auto request) { request.clear_period(); },
           .expected_error = CreateThreadError::kMissingRequiredField,
       },
       {
           .name = "MissingCpuPerPeriod",
-          .edit = [](auto request) { request.cpu_per_period(fidl::ObjectView<int64_t>()); },
+          .edit = [](auto request) { request.clear_cpu_per_period(); },
           .expected_error = CreateThreadError::kMissingRequiredField,
       },
       {
@@ -1672,11 +1654,12 @@ TEST_F(GraphServerTest, CreateGainControlFails) {
   const std::vector<TestCase> cases = {
       {
           .name = "MissingReferenceClock",
-          .edit =
-              [](auto request) {
-                request.reference_clock(
-                    fidl::ObjectView<fuchsia_audio_mixer::wire::ReferenceClock>());
-              },
+          .edit = [](auto request) { request.clear_reference_clock(); },
+          .expected_error = CreateGainControlError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingServerEnd",
+          .edit = [](auto request) { request.clear_control(); },
           .expected_error = CreateGainControlError::kMissingRequiredField,
       },
   };
@@ -1697,20 +1680,6 @@ TEST_F(GraphServerTest, CreateGainControlFails) {
     }
     EXPECT_EQ(result->error_value(), tc.expected_error);
   }
-}
-
-// TODO(fxbug.dev/109458): can be merged into `CreateGainControlFails` after fix.
-TEST_F(GraphServerTest, CreateGainControlFailsMissingServerEnd) {
-  const auto result = client()->CreateGainControl(
-      fuchsia_audio_mixer::wire::GraphCreateGainControlRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("gaincontrol"))
-          // no control()
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateGainControlError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateGainControlSuccess) {

@@ -130,6 +130,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload> f
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::LocalTablePayload;
@@ -164,15 +165,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::LocalTablePayload> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_protocollayouts::wire::LocalTablePayload>> frame);
 
-  const uint16_t& a() const {
+  [[ nodiscard ]] uint16_t& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  uint16_t& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[ nodiscard ]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -191,6 +188,7 @@ private:
   LocalTablePayload& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -222,6 +220,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::LocalTablePayload, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_protocollayouts::wire::LocalTablePayload Build() {
@@ -231,6 +240,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::Local
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_a() const {
+      return table_.has_a();
+    }
+
+    // Clears the a field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_a() {
+      table_.clear_a();
+    }
+
+    // Getter for a.
+    //
+    
+    [[ nodiscard ]] uint16_t& a() const {
+      return table_.a();
+    }
+
+    // Setter for a.
+    //
     
       BuilderImpl& a(uint16_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -305,6 +335,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOneWayAn
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest;
@@ -339,15 +370,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest>> frame);
 
-  const uint16_t& a() const {
+  [[ nodiscard ]] uint16_t& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  uint16_t& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[ nodiscard ]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -366,6 +393,7 @@ private:
   MainProtocolOneWayAnonRequest& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -397,6 +425,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolOneWayAnonRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_protocollayouts::wire::MainProtocolOneWayAnonRequest Build() {
@@ -406,6 +445,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainP
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_a() const {
+      return table_.has_a();
+    }
+
+    // Clears the a field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_a() {
+      table_.clear_a();
+    }
+
+    // Getter for a.
+    //
+    
+    [[ nodiscard ]] uint16_t& a() const {
+      return table_.a();
+    }
+
+    // Setter for a.
+    //
     
       BuilderImpl& a(uint16_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -480,6 +540,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAn
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse;
@@ -514,15 +575,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse>> frame);
 
-  const uint16_t& a() const {
+  [[ nodiscard ]] uint16_t& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  uint16_t& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[ nodiscard ]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -541,6 +598,7 @@ private:
   MainProtocolTwoWayAnonResponse& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -572,6 +630,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_protocollayouts::wire::MainProtocolTwoWayAnonResponse Build() {
@@ -581,6 +650,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainP
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_a() const {
+      return table_.has_a();
+    }
+
+    // Clears the a field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_a() {
+      table_.clear_a();
+    }
+
+    // Getter for a.
+    //
+    
+    [[ nodiscard ]] uint16_t& a() const {
+      return table_.a();
+    }
+
+    // Setter for a.
+    //
     
       BuilderImpl& a(uint16_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -655,6 +745,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAn
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest;
@@ -689,15 +780,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest>> frame);
 
-  const uint16_t& a() const {
+  [[ nodiscard ]] uint16_t& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  uint16_t& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[ nodiscard ]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -716,6 +803,7 @@ private:
   MainProtocolTwoWayAnonWithErrorRequest& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -747,6 +835,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_protocollayouts::wire::MainProtocolTwoWayAnonWithErrorRequest Build() {
@@ -756,6 +855,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainP
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_a() const {
+      return table_.has_a();
+    }
+
+    // Clears the a field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_a() {
+      table_.clear_a();
+    }
+
+    // Getter for a.
+    //
+    
+    [[ nodiscard ]] uint16_t& a() const {
+      return table_.a();
+    }
+
+    // Setter for a.
+    //
     
       BuilderImpl& a(uint16_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -830,6 +950,7 @@ struct ::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOnAnonWi
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint16_t> a_;
 
   friend class ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse;
@@ -864,15 +985,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse>> frame);
 
-  const uint16_t& a() const {
+  [[ nodiscard ]] uint16_t& a() const {
     ZX_ASSERT(has_a());
     return frame_ptr_->a_.get_data();
   }
-  uint16_t& a() {
-    ZX_ASSERT(has_a());
-    return frame_ptr_->a_.get_data();
-  }
-  bool has_a() const {
+  [[ nodiscard ]] bool has_a() const {
     return max_ordinal_ >= 1 && frame_ptr_->a_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -891,6 +1008,7 @@ private:
   MainProtocolOnAnonWithErrorResponse& clear_a() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->a_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -922,6 +1040,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_protocollayouts::wire::MainProtocolOnAnonWithErrorResponse Build() {
@@ -931,6 +1060,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_protocollayouts::wire::MainP
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_a() const {
+      return table_.has_a();
+    }
+
+    // Clears the a field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_a() {
+      table_.clear_a();
+    }
+
+    // Getter for a.
+    //
+    
+    [[ nodiscard ]] uint16_t& a() const {
+      return table_.a();
+    }
+
+    // Setter for a.
+    //
     
       BuilderImpl& a(uint16_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);

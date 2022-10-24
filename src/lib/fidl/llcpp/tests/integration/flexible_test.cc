@@ -232,7 +232,7 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
   void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync& completer) override {
     fidl::Arena allocator;
     auto flexible_table = test::wire::FlexibleTable::Builder(allocator)
-                              .want_more_than_30_bytes_at_ordinal_3()
+                              .want_more_than_30_bytes_at_ordinal_3({})
                               .Build();
     completer.Reply(std::move(flexible_table));
   }
@@ -240,7 +240,7 @@ class Server : fidl::WireServer<test::ReceiveFlexibleEnvelope>, private async_wa
   void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
     fidl::Arena allocator;
     auto flexible_table = test::wire::FlexibleTable::Builder(allocator)
-                              .want_more_than_4_handles_at_ordinal_4()
+                              .want_more_than_4_handles_at_ordinal_4({})
                               .Build();
     completer.Reply(std::move(flexible_table));
   }

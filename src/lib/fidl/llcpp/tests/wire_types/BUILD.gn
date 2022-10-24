@@ -23,6 +23,7 @@ test("fidl_llcpp_wire_type_api_tests_bin") {
   ]
   deps = [
     "//sdk/testing/fidl/types_tests:test.types_cpp_wire",
+    "//src/lib/fidl/llcpp/tests:arena_checker",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]

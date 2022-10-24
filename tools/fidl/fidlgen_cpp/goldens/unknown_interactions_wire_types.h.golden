@@ -1169,6 +1169,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse;
@@ -1203,15 +1204,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1230,6 +1227,7 @@ private:
   UnknownInteractionsProtocolStrictTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1261,6 +1259,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse Build() {
@@ -1270,6 +1279,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -1344,6 +1374,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse;
@@ -1378,15 +1409,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1405,6 +1432,7 @@ private:
   UnknownInteractionsProtocolStrictTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1436,6 +1464,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse Build() {
@@ -1445,6 +1484,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -1519,6 +1579,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse;
@@ -1553,15 +1614,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1580,6 +1637,7 @@ private:
   UnknownInteractionsProtocolFlexibleTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1611,6 +1669,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse Build() {
@@ -1620,6 +1689,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -1694,6 +1784,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse;
@@ -1728,15 +1819,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1755,6 +1842,7 @@ private:
   UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1786,6 +1874,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse Build() {
@@ -1795,6 +1894,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -1869,6 +1989,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest;
@@ -1903,15 +2024,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1930,6 +2047,7 @@ private:
   UnknownInteractionsProtocolStrictEventTableRequest& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1961,6 +2079,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest Build() {
@@ -1970,6 +2099,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -2044,6 +2194,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse;
@@ -2078,15 +2229,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2105,6 +2252,7 @@ private:
   UnknownInteractionsProtocolStrictEventTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -2136,6 +2284,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse Build() {
@@ -2145,6 +2304,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -2219,6 +2399,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest;
@@ -2253,15 +2434,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2280,6 +2457,7 @@ private:
   UnknownInteractionsProtocolFlexibleEventTableRequest& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -2311,6 +2489,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest Build() {
@@ -2320,6 +2509,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -2394,6 +2604,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse;
@@ -2428,15 +2639,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2455,6 +2662,7 @@ private:
   UnknownInteractionsProtocolFlexibleEventTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -2486,6 +2694,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse Build() {
@@ -2495,6 +2714,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -2569,6 +2809,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse;
@@ -2603,15 +2844,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2630,6 +2867,7 @@ private:
   UnknownInteractionsAjarProtocolStrictTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -2661,6 +2899,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse Build() {
@@ -2670,6 +2919,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -2744,6 +3014,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse;
@@ -2778,15 +3049,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2805,6 +3072,7 @@ private:
   UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -2836,6 +3104,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse Build() {
@@ -2845,6 +3124,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -2919,6 +3219,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest;
@@ -2953,15 +3254,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2980,6 +3277,7 @@ private:
   UnknownInteractionsAjarProtocolStrictEventTableRequest& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -3011,6 +3309,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest Build() {
@@ -3020,6 +3329,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -3094,6 +3424,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse;
@@ -3128,15 +3459,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -3155,6 +3482,7 @@ private:
   UnknownInteractionsAjarProtocolStrictEventTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -3186,6 +3514,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse Build() {
@@ -3195,6 +3534,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -3269,6 +3629,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest;
@@ -3303,15 +3664,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -3330,6 +3687,7 @@ private:
   UnknownInteractionsAjarProtocolFlexibleEventTableRequest& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -3361,6 +3719,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest Build() {
@@ -3370,6 +3739,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -3444,6 +3834,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse;
@@ -3478,15 +3869,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -3505,6 +3892,7 @@ private:
   UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -3536,6 +3924,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse Build() {
@@ -3545,6 +3944,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -3619,6 +4039,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse;
@@ -3653,15 +4074,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -3680,6 +4097,7 @@ private:
   UnknownInteractionsClosedProtocolStrictTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -3711,6 +4129,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse Build() {
@@ -3720,6 +4149,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -3794,6 +4244,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse;
@@ -3828,15 +4279,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -3855,6 +4302,7 @@ private:
   UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -3886,6 +4334,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse Build() {
@@ -3895,6 +4354,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -3969,6 +4449,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest;
@@ -4003,15 +4484,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -4030,6 +4507,7 @@ private:
   UnknownInteractionsClosedProtocolStrictEventTableRequest& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4061,6 +4539,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest Build() {
@@ -4070,6 +4559,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -4144,6 +4654,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse;
@@ -4178,15 +4689,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -4205,6 +4712,7 @@ private:
   UnknownInteractionsClosedProtocolStrictEventTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4236,6 +4744,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse Build() {
@@ -4245,6 +4764,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -4319,6 +4859,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse;
@@ -4353,15 +4894,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -4380,6 +4917,7 @@ private:
   UnknownInteractionsDriverProtocolStrictTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4411,6 +4949,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse Build() {
@@ -4420,6 +4969,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -4494,6 +5064,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse;
@@ -4528,15 +5099,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -4555,6 +5122,7 @@ private:
   UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4586,6 +5154,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse Build() {
@@ -4595,6 +5174,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -4669,6 +5269,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse;
@@ -4703,15 +5304,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -4730,6 +5327,7 @@ private:
   UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4761,6 +5359,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse Build() {
@@ -4770,6 +5379,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -4844,6 +5474,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse;
@@ -4878,15 +5509,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -4905,6 +5532,7 @@ private:
   UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4936,6 +5564,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse Build() {
@@ -4945,6 +5584,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -5019,6 +5679,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse;
@@ -5053,15 +5714,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -5080,6 +5737,7 @@ private:
   UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -5111,6 +5769,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse Build() {
@@ -5120,6 +5789,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -5194,6 +5884,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse;
@@ -5228,15 +5919,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -5255,6 +5942,7 @@ private:
   UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -5286,6 +5974,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse Build() {
@@ -5295,6 +5994,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -5369,6 +6089,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse;
@@ -5403,15 +6124,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -5430,6 +6147,7 @@ private:
   UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -5461,6 +6179,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse Build() {
@@ -5470,6 +6199,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -5544,6 +6294,7 @@ struct ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteracti
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> some_field_;
 
   friend class ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse;
@@ -5578,15 +6329,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>> frame);
 
-  const int32_t& some_field() const {
+  [[ nodiscard ]] int32_t& some_field() const {
     ZX_ASSERT(has_some_field());
     return frame_ptr_->some_field_.get_data();
   }
-  int32_t& some_field() {
-    ZX_ASSERT(has_some_field());
-    return frame_ptr_->some_field_.get_data();
-  }
-  bool has_some_field() const {
+  [[ nodiscard ]] bool has_some_field() const {
     return max_ordinal_ >= 1 && frame_ptr_->some_field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -5605,6 +6352,7 @@ private:
   UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse& clear_some_field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->some_field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -5636,6 +6384,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse Build() {
@@ -5645,6 +6404,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_unknowninteractions::wire::U
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_some_field() const {
+      return table_.has_some_field();
+    }
+
+    // Clears the some_field field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_some_field() {
+      table_.clear_some_field();
+    }
+
+    // Getter for some_field.
+    //
+    
+    [[ nodiscard ]] int32_t& some_field() const {
+      return table_.some_field();
+    }
+
+    // Setter for some_field.
+    //
     
       BuilderImpl& some_field(int32_t elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);

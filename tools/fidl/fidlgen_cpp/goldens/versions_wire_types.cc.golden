@@ -22,6 +22,14 @@ bool ::fidl::WireTableFrame<::test_versions::wire::Table>::HasUnknownData() cons
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_versions::wire::Table>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!x_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_versions::wire::Table::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;

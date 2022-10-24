@@ -6,6 +6,11 @@ bool ::fidl::WireTableFrame<::test_table::wire::EmptyTable>::HasUnknownData() co
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_table::wire::EmptyTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  return max_ordinal;
+}
+
 bool ::test_table::wire::EmptyTable::HasUnknownData() const {
   if (max_ordinal_ > 0) {
     return true;
@@ -29,6 +34,26 @@ bool ::fidl::WireTableFrame<::test_table::wire::SimpleTable>::HasUnknownData() c
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_table::wire::SimpleTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!x_.has_data()) {
+    max_ordinal = 1;
+  }
+  if (!reserved_1_.IsZeroEnvelope()) {
+    max_ordinal = 1;
+  }
+  if (!reserved_2_.IsZeroEnvelope()) {
+    max_ordinal = 2;
+  }
+  if (!reserved_3_.IsZeroEnvelope()) {
+    max_ordinal = 3;
+  }
+  if (!y_.has_data()) {
+    max_ordinal = 5;
+  }
+  return max_ordinal;
+}
+
 bool ::test_table::wire::SimpleTable::HasUnknownData() const {
   if (max_ordinal_ > 5) {
     return true;
@@ -41,6 +66,14 @@ bool ::test_table::wire::SimpleTable::HasUnknownData() const {
 
 bool ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!x_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_table::wire::OlderSimpleTable::HasUnknownData() const {
@@ -66,6 +99,29 @@ bool ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>::HasUnknownDat
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!x_.has_data()) {
+    max_ordinal = 1;
+  }
+  if (!reserved_1_.IsZeroEnvelope()) {
+    max_ordinal = 1;
+  }
+  if (!reserved_2_.IsZeroEnvelope()) {
+    max_ordinal = 2;
+  }
+  if (!reserved_3_.IsZeroEnvelope()) {
+    max_ordinal = 3;
+  }
+  if (!y_.has_data()) {
+    max_ordinal = 5;
+  }
+  if (!z_.has_data()) {
+    max_ordinal = 6;
+  }
+  return max_ordinal;
+}
+
 bool ::test_table::wire::NewerSimpleTable::HasUnknownData() const {
   if (max_ordinal_ > 6) {
     return true;
@@ -78,6 +134,20 @@ bool ::test_table::wire::NewerSimpleTable::HasUnknownData() const {
 
 bool ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!z_.has_data()) {
+    max_ordinal = 1;
+  }
+  if (!y_.has_data()) {
+    max_ordinal = 2;
+  }
+  if (!x_.has_data()) {
+    max_ordinal = 3;
+  }
+  return max_ordinal;
 }
 
 bool ::test_table::wire::ReverseOrdinalTable::HasUnknownData() const {
@@ -94,6 +164,14 @@ bool ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>::HasUnknown
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_table::wire::TableWithAttributes>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!x_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_table::wire::TableWithAttributes::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -108,6 +186,11 @@ bool ::fidl::WireTableFrame<::test_table::wire::ExtensionTable>::HasUnknownData(
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_table::wire::ExtensionTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  return max_ordinal;
+}
+
 bool ::test_table::wire::ExtensionTable::HasUnknownData() const {
   if (max_ordinal_ > 0) {
     return true;
@@ -120,6 +203,203 @@ bool ::test_table::wire::ExtensionTable::HasUnknownData() const {
 
 bool ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!v1_.has_data()) {
+    max_ordinal = 1;
+  }
+  if (!v2_.has_data()) {
+    max_ordinal = 2;
+  }
+  if (!v3_.has_data()) {
+    max_ordinal = 3;
+  }
+  if (!v4_.has_data()) {
+    max_ordinal = 4;
+  }
+  if (!v5_.has_data()) {
+    max_ordinal = 5;
+  }
+  if (!v6_.has_data()) {
+    max_ordinal = 6;
+  }
+  if (!v7_.has_data()) {
+    max_ordinal = 7;
+  }
+  if (!v8_.has_data()) {
+    max_ordinal = 8;
+  }
+  if (!v9_.has_data()) {
+    max_ordinal = 9;
+  }
+  if (!v10_.has_data()) {
+    max_ordinal = 10;
+  }
+  if (!v11_.has_data()) {
+    max_ordinal = 11;
+  }
+  if (!v12_.has_data()) {
+    max_ordinal = 12;
+  }
+  if (!v13_.has_data()) {
+    max_ordinal = 13;
+  }
+  if (!v14_.has_data()) {
+    max_ordinal = 14;
+  }
+  if (!v15_.has_data()) {
+    max_ordinal = 15;
+  }
+  if (!v16_.has_data()) {
+    max_ordinal = 16;
+  }
+  if (!v17_.has_data()) {
+    max_ordinal = 17;
+  }
+  if (!v18_.has_data()) {
+    max_ordinal = 18;
+  }
+  if (!v19_.has_data()) {
+    max_ordinal = 19;
+  }
+  if (!v20_.has_data()) {
+    max_ordinal = 20;
+  }
+  if (!v21_.has_data()) {
+    max_ordinal = 21;
+  }
+  if (!v22_.has_data()) {
+    max_ordinal = 22;
+  }
+  if (!v23_.has_data()) {
+    max_ordinal = 23;
+  }
+  if (!v24_.has_data()) {
+    max_ordinal = 24;
+  }
+  if (!v25_.has_data()) {
+    max_ordinal = 25;
+  }
+  if (!v26_.has_data()) {
+    max_ordinal = 26;
+  }
+  if (!v27_.has_data()) {
+    max_ordinal = 27;
+  }
+  if (!v28_.has_data()) {
+    max_ordinal = 28;
+  }
+  if (!v29_.has_data()) {
+    max_ordinal = 29;
+  }
+  if (!v30_.has_data()) {
+    max_ordinal = 30;
+  }
+  if (!v31_.has_data()) {
+    max_ordinal = 31;
+  }
+  if (!v32_.has_data()) {
+    max_ordinal = 32;
+  }
+  if (!v33_.has_data()) {
+    max_ordinal = 33;
+  }
+  if (!v34_.has_data()) {
+    max_ordinal = 34;
+  }
+  if (!v35_.has_data()) {
+    max_ordinal = 35;
+  }
+  if (!v36_.has_data()) {
+    max_ordinal = 36;
+  }
+  if (!v37_.has_data()) {
+    max_ordinal = 37;
+  }
+  if (!v38_.has_data()) {
+    max_ordinal = 38;
+  }
+  if (!v39_.has_data()) {
+    max_ordinal = 39;
+  }
+  if (!v40_.has_data()) {
+    max_ordinal = 40;
+  }
+  if (!v41_.has_data()) {
+    max_ordinal = 41;
+  }
+  if (!v42_.has_data()) {
+    max_ordinal = 42;
+  }
+  if (!v43_.has_data()) {
+    max_ordinal = 43;
+  }
+  if (!v44_.has_data()) {
+    max_ordinal = 44;
+  }
+  if (!v45_.has_data()) {
+    max_ordinal = 45;
+  }
+  if (!v46_.has_data()) {
+    max_ordinal = 46;
+  }
+  if (!v47_.has_data()) {
+    max_ordinal = 47;
+  }
+  if (!v48_.has_data()) {
+    max_ordinal = 48;
+  }
+  if (!v49_.has_data()) {
+    max_ordinal = 49;
+  }
+  if (!v50_.has_data()) {
+    max_ordinal = 50;
+  }
+  if (!v51_.has_data()) {
+    max_ordinal = 51;
+  }
+  if (!v52_.has_data()) {
+    max_ordinal = 52;
+  }
+  if (!v53_.has_data()) {
+    max_ordinal = 53;
+  }
+  if (!v54_.has_data()) {
+    max_ordinal = 54;
+  }
+  if (!v55_.has_data()) {
+    max_ordinal = 55;
+  }
+  if (!v56_.has_data()) {
+    max_ordinal = 56;
+  }
+  if (!v57_.has_data()) {
+    max_ordinal = 57;
+  }
+  if (!v58_.has_data()) {
+    max_ordinal = 58;
+  }
+  if (!v59_.has_data()) {
+    max_ordinal = 59;
+  }
+  if (!v60_.has_data()) {
+    max_ordinal = 60;
+  }
+  if (!v61_.has_data()) {
+    max_ordinal = 61;
+  }
+  if (!v62_.has_data()) {
+    max_ordinal = 62;
+  }
+  if (!v63_.has_data()) {
+    max_ordinal = 63;
+  }
+  if (!v64_.has_data()) {
+    max_ordinal = 64;
+  }
+  return max_ordinal;
 }
 
 bool ::test_table::wire::SixtyFourOrdinalTable::HasUnknownData() const {

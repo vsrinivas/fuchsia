@@ -65,6 +65,7 @@ struct ::fidl::WireTableFrame<::test_versions::wire::Table> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<uint32_t> x_;
 
   friend class ::test_versions::wire::Table;
@@ -99,15 +100,11 @@ class Table {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_versions::wire::Table> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_versions::wire::Table>> frame);
 
-  const uint32_t& x() const {
+  [[nodiscard]] uint32_t& x() const {
     ZX_ASSERT(has_x());
     return frame_ptr_->x_.get_data();
   }
-  uint32_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
+  [[nodiscard]] bool has_x() const {
     return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -126,6 +123,7 @@ class Table {
   Table& clear_x() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -158,6 +156,17 @@ class Table {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_versions::wire::Table, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_versions::wire::Table Build() {
@@ -167,6 +176,27 @@ class ::fidl::internal::WireTableBaseBuilder<::test_versions::wire::Table, Build
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_x() const {
+    return table_.has_x();
+  }
+
+  // Clears the x field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_x() {
+    table_.clear_x();
+  }
+
+  // Getter for x.
+  //
+
+  [[nodiscard]] uint32_t& x() const {
+    return table_.x();
+  }
+
+  // Setter for x.
+  //
 
   BuilderImpl& x(uint32_t elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);

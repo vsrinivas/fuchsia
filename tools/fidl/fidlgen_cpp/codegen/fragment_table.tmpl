@@ -38,6 +38,7 @@ struct {{ .WireTableFrame }} final {
   {{ .WireTableFrame.Self }}& operator=({{ .WireTableFrame.Self }}&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
 
   {{- range $index, $item := .FrameItems }}
     {{- if $item }}
@@ -87,15 +88,11 @@ public:
 {{- range .Members }}
 {{ "" }}
   {{- .Docs }}
-  const {{ .Type }}& {{ .Name }}() const {
+  [[ nodiscard ]] {{ .Type }}& {{ .Name }}() const {
     ZX_ASSERT({{ .MethodHasName }}());
     return frame_ptr_->{{ .Name }}_.get_data();
   }
-  {{ .Type }}& {{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return frame_ptr_->{{ .Name }}_.get_data();
-  }
-  bool {{ .MethodHasName }}() const {
+  [[ nodiscard ]] bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.has_data();
   }
 {{- end }}
@@ -138,9 +135,10 @@ private:
   }
   {{- end }}
 
-  {{ $.Name }}& clear_{{ .Name }}() {
+  {{ $.Name }}& {{ .MethodClearName }}() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->{{ .Name }}_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 {{- end }}
@@ -173,6 +171,17 @@ private:
 {{- EnsureNamespace "" }}
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<{{ . }}, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   {{ . }} Build() {
@@ -184,6 +193,27 @@ class ::fidl::internal::WireTableBaseBuilder<{{ . }}, BuilderImpl> {
   }
 
   {{- range .Members }}
+    [[ nodiscard ]] bool {{ .MethodHasName }}() const {
+      return table_.{{ .MethodHasName }}();
+    }
+
+    // Clears the {{ .Name }} field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void {{ .MethodClearName }}() {
+      table_.{{ .MethodClearName }}();
+    }
+
+    // Getter for {{ .Name }}.
+    //
+    {{ .Docs }}
+    [[ nodiscard ]] {{ .Type }}& {{ .Name }}() const {
+      return table_.{{ .Name }}();
+    }
+
+    // Setter for {{ .Name }}.
+    //
     {{ .Docs }}
     {{- if .Type.InlineInEnvelope }}
       BuilderImpl& {{ .Name }}({{ .Type }} elem) {
@@ -194,9 +224,10 @@ class ::fidl::internal::WireTableBaseBuilder<{{ . }}, BuilderImpl> {
       }
     {{- else }}
       {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-      BuilderImpl& {{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
+      BuilderImpl& {{ .Name }}(Wrapper_Ignore_Me_<::fidl::ObjectView<{{ .Type }}>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->{{ .Name }}_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->{{ .Name }}_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -219,9 +250,14 @@ class {{ .WireTableBuilder }} final : public ::fidl::internal::WireTableBaseBuil
     {{- if not .Type.InlineInEnvelope }}
     using Base::{{ .Name }};
     {{ .Docs }}
-      template <typename... Args>
-      {{ $.WireTableBuilder }}& {{ .Name }}(Args&&... args_) {
-        {{ .Name }}(::fidl::ObjectView<{{ .Type }}>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = {{ .Type }},
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<{{ .Type }}>>, int> = 0
+      >
+      {{ $.WireTableBuilder }}& {{ .Name }}(First&& first, Args&&... args_) {
+        fidl::ObjectView<{{ .Type }}> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        {{ .Name }}(Base::Wrapper_Ignore_Me_<fidl::ObjectView<{{ .Type }}>>(view_));
         return *this;
       }
     {{- end }}
@@ -277,6 +313,22 @@ bool {{ .WireTableFrame }}::HasUnknownData() const {
     {{- end }}
   {{- end }}
   return false;
+}
+
+uint64_t {{ .WireTableFrame.NoLeading }}::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  {{- range $index, $item := .FrameItems }}
+    {{- if not $item }}
+      if (!reserved_{{ $index }}_.IsZeroEnvelope()) {
+        max_ordinal = {{ $index }};
+      }
+    {{- else }}
+      if (!{{ $item }}_.has_data()) {
+        max_ordinal = {{ $item.Ordinal }};
+      }
+    {{- end }}
+  {{- end }}
+  return max_ordinal;
 }
 
 bool {{ . }}::HasUnknownData() const {

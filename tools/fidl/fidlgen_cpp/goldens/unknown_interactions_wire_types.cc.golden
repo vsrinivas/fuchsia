@@ -782,6 +782,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -794,6 +802,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTa
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictTwoWayTableErrResponse::HasUnknownData() const {
@@ -810,6 +826,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -822,6 +846,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWay
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleTwoWayTableErrResponse::HasUnknownData() const {
@@ -838,6 +870,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableRequest::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -850,6 +890,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTab
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolStrictEventTableErrResponse::HasUnknownData() const {
@@ -866,6 +914,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableRequest::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -878,6 +934,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventT
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsProtocolFlexibleEventTableErrResponse::HasUnknownData() const {
@@ -894,6 +958,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -906,6 +978,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoW
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictTwoWayTableErrResponse::HasUnknownData() const {
@@ -922,6 +1002,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableRequest::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -934,6 +1022,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEven
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolStrictEventTableErrResponse::HasUnknownData() const {
@@ -950,6 +1046,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableRequest::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -962,6 +1066,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEv
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarProtocolFlexibleEventTableErrResponse::HasUnknownData() const {
@@ -978,6 +1090,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -990,6 +1110,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTw
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictTwoWayTableErrResponse::HasUnknownData() const {
@@ -1006,6 +1134,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableRequest::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -1018,6 +1154,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEv
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsClosedProtocolStrictEventTableErrResponse::HasUnknownData() const {
@@ -1034,6 +1178,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -1046,6 +1198,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTw
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolStrictTwoWayTableErrResponse::HasUnknownData() const {
@@ -1062,6 +1222,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -1074,6 +1242,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexible
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsDriverProtocolFlexibleTwoWayTableErrResponse::HasUnknownData() const {
@@ -1090,6 +1266,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -1102,6 +1286,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStri
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsAjarDriverProtocolStrictTwoWayTableErrResponse::HasUnknownData() const {
@@ -1118,6 +1310,14 @@ bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteraction
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableResponse::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
@@ -1130,6 +1330,14 @@ bool ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolSt
 
 bool ::fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::HasUnknownData() const {
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!some_field_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
 }
 
 bool ::test_unknowninteractions::wire::UnknownInteractionsClosedDriverProtocolStrictTwoWayTableErrResponse::HasUnknownData() const {

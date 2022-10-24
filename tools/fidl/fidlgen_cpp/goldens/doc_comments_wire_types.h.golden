@@ -77,6 +77,7 @@ struct ::fidl::WireTableFrame<::test_doccomments::wire::Table> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int32_t> field_;
 
   friend class ::test_doccomments::wire::Table;
@@ -117,15 +118,11 @@ class Table {
   /// table field comment #1
   ///
   /// table field comment #3
-  const int32_t& field() const {
+  [[nodiscard]] int32_t& field() const {
     ZX_ASSERT(has_Field());
     return frame_ptr_->field_.get_data();
   }
-  int32_t& field() {
-    ZX_ASSERT(has_Field());
-    return frame_ptr_->field_.get_data();
-  }
-  bool has_Field() const {
+  [[nodiscard]] bool has_Field() const {
     return max_ordinal_ >= 1 && frame_ptr_->field_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -141,9 +138,10 @@ class Table {
     return *this;
   }
 
-  Table& clear_field() {
+  Table& clear_Field() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->field_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -176,6 +174,17 @@ class Table {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_doccomments::wire::Table, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_doccomments::wire::Table Build() {
@@ -185,6 +194,30 @@ class ::fidl::internal::WireTableBaseBuilder<::test_doccomments::wire::Table, Bu
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_Field() const {
+    return table_.has_Field();
+  }
+
+  // Clears the field field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_Field() {
+    table_.clear_Field();
+  }
+
+  // Getter for field.
+  //
+
+  /// table field comment #1
+  ///
+  /// table field comment #3
+  [[nodiscard]] int32_t& field() const {
+    return table_.field();
+  }
+
+  // Setter for field.
+  //
 
   /// table field comment #1
   ///

@@ -91,6 +91,7 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication> final
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<::fidl::StringView> func_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
   ::fidl::Envelope<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> args_;
@@ -129,39 +130,27 @@ class FunctionApplication {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_anonymous::wire::FunctionApplication> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>> frame);
 
-  const ::fidl::StringView& func() const {
+  [[nodiscard]] ::fidl::StringView& func() const {
     ZX_ASSERT(has_func());
     return frame_ptr_->func_.get_data();
   }
-  ::fidl::StringView& func() {
-    ZX_ASSERT(has_func());
-    return frame_ptr_->func_.get_data();
-  }
-  bool has_func() const {
+  [[nodiscard]] bool has_func() const {
     return max_ordinal_ >= 1 && frame_ptr_->func_.has_data();
   }
 
-  const ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>& args() const {
+  [[nodiscard]] ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>& args() const {
     ZX_ASSERT(has_args());
     return frame_ptr_->args_.get_data();
   }
-  ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>& args() {
-    ZX_ASSERT(has_args());
-    return frame_ptr_->args_.get_data();
-  }
-  bool has_args() const {
+  [[nodiscard]] bool has_args() const {
     return max_ordinal_ >= 3 && frame_ptr_->args_.has_data();
   }
 
-  const ::test_anonymous::wire::Flags& flags() const {
+  [[nodiscard]] ::test_anonymous::wire::Flags& flags() const {
     ZX_ASSERT(has_flags());
     return frame_ptr_->flags_.get_data();
   }
-  ::test_anonymous::wire::Flags& flags() {
-    ZX_ASSERT(has_flags());
-    return frame_ptr_->flags_.get_data();
-  }
-  bool has_flags() const {
+  [[nodiscard]] bool has_flags() const {
     return max_ordinal_ >= 4 && frame_ptr_->flags_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -193,6 +182,7 @@ class FunctionApplication {
   FunctionApplication& clear_func() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->func_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   FunctionApplication& set_args(::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> elem) {
@@ -218,6 +208,7 @@ class FunctionApplication {
   FunctionApplication& clear_args() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->args_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   FunctionApplication& set_flags(::test_anonymous::wire::Flags elem) {
@@ -230,6 +221,7 @@ class FunctionApplication {
   FunctionApplication& clear_flags() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->flags_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -262,6 +254,17 @@ class FunctionApplication {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::FunctionApplication, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_anonymous::wire::FunctionApplication Build() {
@@ -271,20 +274,85 @@ class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::FunctionApp
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_func() const {
+    return table_.has_func();
+  }
 
-  BuilderImpl& func(::fidl::ObjectView<::fidl::StringView> elem) {
+  // Clears the func field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_func() {
+    table_.clear_func();
+  }
+
+  // Getter for func.
+  //
+
+  [[nodiscard]] ::fidl::StringView& func() const {
+    return table_.func();
+  }
+
+  // Setter for func.
+  //
+
+  BuilderImpl& func(Wrapper_Ignore_Me_<::fidl::ObjectView<::fidl::StringView>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->func_.set_data(elem);
+    ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+    table_.frame_ptr_->func_.set_data(elem.value);
     table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
     return *static_cast<BuilderImpl*>(this);
   }
+  [[nodiscard]] bool has_args() const {
+    return table_.has_args();
+  }
 
-  BuilderImpl& args(::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> elem) {
+  // Clears the args field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_args() {
+    table_.clear_args();
+  }
+
+  // Getter for args.
+  //
+
+  [[nodiscard]] ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>& args() const {
+    return table_.args();
+  }
+
+  // Setter for args.
+  //
+
+  BuilderImpl& args(Wrapper_Ignore_Me_<::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->args_.set_data(elem);
+    ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+    table_.frame_ptr_->args_.set_data(elem.value);
     table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
     return *static_cast<BuilderImpl*>(this);
   }
+  [[nodiscard]] bool has_flags() const {
+    return table_.has_flags();
+  }
+
+  // Clears the flags field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_flags() {
+    table_.clear_flags();
+  }
+
+  // Getter for flags.
+  //
+
+  [[nodiscard]] ::test_anonymous::wire::Flags& flags() const {
+    return table_.flags();
+  }
+
+  // Setter for flags.
+  //
 
   BuilderImpl& flags(::test_anonymous::wire::Flags elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
@@ -308,16 +376,24 @@ class ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication> fina
  public:
   using Base::func;
 
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& func(Args&&... args_) {
-    func(::fidl::ObjectView<::fidl::StringView>(arena_.get(), std::forward<Args>(args_)...));
+  template <
+      typename First = ::fidl::StringView,
+      typename... Args,
+      std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<::fidl::StringView>>, int> = 0>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& func(First&& first, Args&&... args_) {
+    fidl::ObjectView<::fidl::StringView> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+    func(Base::Wrapper_Ignore_Me_<fidl::ObjectView<::fidl::StringView>>(view_));
     return *this;
   }
   using Base::args;
 
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& args(Args&&... args_) {
-    args(::fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>>(arena_.get(), std::forward<Args>(args_)...));
+  template <
+      typename First = ::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>,
+      typename... Args,
+      std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>>>, int> = 0>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::FunctionApplication>& args(First&& first, Args&&... args_) {
+    fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+    args(Base::Wrapper_Ignore_Me_<fidl::ObjectView<::fidl::VectorView<::fidl::WireOptional<::test_anonymous::wire::Expression>>>>(view_));
     return *this;
   }
 
@@ -374,6 +450,7 @@ struct ::fidl::WireTableFrame<::test_anonymous::wire::TableMember> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_0_;
   ::fidl::Envelope<::fidl::VectorView<::test_anonymous::wire::TableData>> table_data_;
 
@@ -410,15 +487,11 @@ class TableMember {
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_anonymous::wire::TableMember> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_anonymous::wire::TableMember>> frame);
 
-  const ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() const {
+  [[nodiscard]] ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() const {
     ZX_ASSERT(has_table_data());
     return frame_ptr_->table_data_.get_data();
   }
-  ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() {
-    ZX_ASSERT(has_table_data());
-    return frame_ptr_->table_data_.get_data();
-  }
-  bool has_table_data() const {
+  [[nodiscard]] bool has_table_data() const {
     return max_ordinal_ >= 2 && frame_ptr_->table_data_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -450,6 +523,7 @@ class TableMember {
   TableMember& clear_table_data() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->table_data_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -482,6 +556,17 @@ class TableMember {
 
 template <typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_anonymous::wire::TableMember Build() {
@@ -491,10 +576,32 @@ class ::fidl::internal::WireTableBaseBuilder<::test_anonymous::wire::TableMember
     table_.frame_ptr_ = nullptr;
     return t;
   }
+  [[nodiscard]] bool has_table_data() const {
+    return table_.has_table_data();
+  }
 
-  BuilderImpl& table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>> elem) {
+  // Clears the table_data field.
+  //
+  // This method should be used sparingly, such as only during tests, as it has
+  // O(number_of_fields) complexity.
+  void clear_table_data() {
+    table_.clear_table_data();
+  }
+
+  // Getter for table_data.
+  //
+
+  [[nodiscard]] ::fidl::VectorView<::test_anonymous::wire::TableData>& table_data() const {
+    return table_.table_data();
+  }
+
+  // Setter for table_data.
+  //
+
+  BuilderImpl& table_data(Wrapper_Ignore_Me_<::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>> elem) {
     ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-    table_.frame_ptr_->table_data_.set_data(elem);
+    ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+    table_.frame_ptr_->table_data_.set_data(elem.value);
     table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
     return *static_cast<BuilderImpl*>(this);
   }
@@ -514,9 +621,13 @@ class ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember> final : publ
  public:
   using Base::table_data;
 
-  template <typename... Args>
-  ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>& table_data(Args&&... args_) {
-    table_data(::fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>(arena_.get(), std::forward<Args>(args_)...));
+  template <
+      typename First = ::fidl::VectorView<::test_anonymous::wire::TableData>,
+      typename... Args,
+      std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>>, int> = 0>
+  ::fidl::WireTableBuilder<::test_anonymous::wire::TableMember>& table_data(First&& first, Args&&... args_) {
+    fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+    table_data(Base::Wrapper_Ignore_Me_<fidl::ObjectView<::fidl::VectorView<::test_anonymous::wire::TableData>>>(view_));
     return *this;
   }
 

@@ -49,6 +49,23 @@ bool ::fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>::HasUnk
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_anonymous::wire::FunctionApplication>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!func_.has_data()) {
+    max_ordinal = 1;
+  }
+  if (!reserved_1_.IsZeroEnvelope()) {
+    max_ordinal = 1;
+  }
+  if (!args_.has_data()) {
+    max_ordinal = 3;
+  }
+  if (!flags_.has_data()) {
+    max_ordinal = 4;
+  }
+  return max_ordinal;
+}
+
 bool ::test_anonymous::wire::FunctionApplication::HasUnknownData() const {
   if (max_ordinal_ > 4) {
     return true;
@@ -64,6 +81,17 @@ bool ::fidl::WireTableFrame<::test_anonymous::wire::TableMember>::HasUnknownData
     return true;
   }
   return false;
+}
+
+uint64_t fidl::WireTableFrame<::test_anonymous::wire::TableMember>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!reserved_0_.IsZeroEnvelope()) {
+    max_ordinal = 0;
+  }
+  if (!table_data_.has_data()) {
+    max_ordinal = 2;
+  }
+  return max_ordinal;
 }
 
 bool ::test_anonymous::wire::TableMember::HasUnknownData() const {

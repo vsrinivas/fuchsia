@@ -83,6 +83,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::EmptyTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
 
   friend class ::test_table::wire::EmptyTable;
   friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, ::fidl::WireTableBuilder<::test_table::wire::EmptyTable>>;
@@ -150,6 +151,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::EmptyTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::EmptyTable Build() {
@@ -226,6 +238,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::SimpleTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int64_t> x_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
@@ -264,27 +277,19 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_table::wire::SimpleTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::SimpleTable>> frame);
 
-  const int64_t& x() const {
+  [[ nodiscard ]] int64_t& x() const {
     ZX_ASSERT(has_x());
     return frame_ptr_->x_.get_data();
   }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
+  [[ nodiscard ]] bool has_x() const {
     return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
   }
 
-  const int64_t& y() const {
+  [[ nodiscard ]] int64_t& y() const {
     ZX_ASSERT(has_y());
     return frame_ptr_->y_.get_data();
   }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const {
+  [[ nodiscard ]] bool has_y() const {
     return max_ordinal_ >= 5 && frame_ptr_->y_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -316,6 +321,7 @@ private:
   SimpleTable& clear_x() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SimpleTable& set_y(::fidl::ObjectView<int64_t> elem) {
@@ -341,6 +347,7 @@ private:
   SimpleTable& clear_y() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -372,6 +379,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SimpleTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::SimpleTable Build() {
@@ -381,17 +399,61 @@ class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SimpleTable, Bu
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_x() const {
+      return table_.has_x();
+    }
+
+    // Clears the x field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_x() {
+      table_.clear_x();
+    }
+
+    // Getter for x.
+    //
     
-      BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& x() const {
+      return table_.x();
+    }
+
+    // Setter for x.
+    //
+    
+      BuilderImpl& x(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->x_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->x_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_y() const {
+      return table_.has_y();
+    }
+
+    // Clears the y field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_y() {
+      table_.clear_y();
+    }
+
+    // Getter for y.
+    //
     
-      BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& y() const {
+      return table_.y();
+    }
+
+    // Setter for y.
+    //
+    
+      BuilderImpl& y(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->y_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->y_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(5));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -410,16 +472,26 @@ class ::fidl::WireTableBuilder<::test_table::wire::SimpleTable> final : public :
  public:
     using Base::x;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>& x(Args&&... args_) {
-        x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>& x(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        x(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::y;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>& y(Args&&... args_) {
-        y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SimpleTable>& y(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        y(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
  private:
@@ -476,6 +548,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::OlderSimpleTable;
@@ -510,15 +583,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_table::wire::OlderSimpleTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::OlderSimpleTable>> frame);
 
-  const int64_t& x() const {
+  [[ nodiscard ]] int64_t& x() const {
     ZX_ASSERT(has_x());
     return frame_ptr_->x_.get_data();
   }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
+  [[ nodiscard ]] bool has_x() const {
     return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -550,6 +619,7 @@ private:
   OlderSimpleTable& clear_x() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -581,6 +651,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::OlderSimpleTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::OlderSimpleTable Build() {
@@ -590,10 +671,32 @@ class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::OlderSimpleTabl
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_x() const {
+      return table_.has_x();
+    }
+
+    // Clears the x field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_x() {
+      table_.clear_x();
+    }
+
+    // Getter for x.
+    //
     
-      BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& x() const {
+      return table_.x();
+    }
+
+    // Setter for x.
+    //
+    
+      BuilderImpl& x(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->x_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->x_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -612,9 +715,14 @@ class ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable> final : pub
  public:
     using Base::x;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>& x(Args&&... args_) {
-        x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::OlderSimpleTable>& x(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        x(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
  private:
@@ -671,6 +779,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int64_t> x_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_1_;
   [[maybe_unused]] ::fidl::UntypedEnvelope reserved_2_;
@@ -710,39 +819,27 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_table::wire::NewerSimpleTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::NewerSimpleTable>> frame);
 
-  const int64_t& x() const {
+  [[ nodiscard ]] int64_t& x() const {
     ZX_ASSERT(has_x());
     return frame_ptr_->x_.get_data();
   }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
+  [[ nodiscard ]] bool has_x() const {
     return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
   }
 
-  const int64_t& y() const {
+  [[ nodiscard ]] int64_t& y() const {
     ZX_ASSERT(has_y());
     return frame_ptr_->y_.get_data();
   }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const {
+  [[ nodiscard ]] bool has_y() const {
     return max_ordinal_ >= 5 && frame_ptr_->y_.has_data();
   }
 
-  const int64_t& z() const {
+  [[ nodiscard ]] int64_t& z() const {
     ZX_ASSERT(has_z());
     return frame_ptr_->z_.get_data();
   }
-  int64_t& z() {
-    ZX_ASSERT(has_z());
-    return frame_ptr_->z_.get_data();
-  }
-  bool has_z() const {
+  [[ nodiscard ]] bool has_z() const {
     return max_ordinal_ >= 6 && frame_ptr_->z_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -774,6 +871,7 @@ private:
   NewerSimpleTable& clear_x() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   NewerSimpleTable& set_y(::fidl::ObjectView<int64_t> elem) {
@@ -799,6 +897,7 @@ private:
   NewerSimpleTable& clear_y() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   NewerSimpleTable& set_z(::fidl::ObjectView<int64_t> elem) {
@@ -824,6 +923,7 @@ private:
   NewerSimpleTable& clear_z() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -855,6 +955,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::NewerSimpleTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::NewerSimpleTable Build() {
@@ -864,24 +975,90 @@ class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::NewerSimpleTabl
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_x() const {
+      return table_.has_x();
+    }
+
+    // Clears the x field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_x() {
+      table_.clear_x();
+    }
+
+    // Getter for x.
+    //
     
-      BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& x() const {
+      return table_.x();
+    }
+
+    // Setter for x.
+    //
+    
+      BuilderImpl& x(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->x_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->x_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_y() const {
+      return table_.has_y();
+    }
+
+    // Clears the y field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_y() {
+      table_.clear_y();
+    }
+
+    // Getter for y.
+    //
     
-      BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& y() const {
+      return table_.y();
+    }
+
+    // Setter for y.
+    //
+    
+      BuilderImpl& y(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->y_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->y_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(5));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_z() const {
+      return table_.has_z();
+    }
+
+    // Clears the z field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_z() {
+      table_.clear_z();
+    }
+
+    // Getter for z.
+    //
     
-      BuilderImpl& z(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& z() const {
+      return table_.z();
+    }
+
+    // Setter for z.
+    //
+    
+      BuilderImpl& z(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->z_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->z_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(6));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -900,23 +1077,38 @@ class ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable> final : pub
  public:
     using Base::x;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& x(Args&&... args_) {
-        x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& x(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        x(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::y;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& y(Args&&... args_) {
-        y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& y(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        y(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::z;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& z(Args&&... args_) {
-        z(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::NewerSimpleTable>& z(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        z(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
  private:
@@ -973,6 +1165,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int64_t> z_;
   ::fidl::Envelope<int64_t> y_;
   ::fidl::Envelope<int64_t> x_;
@@ -1009,39 +1202,27 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_table::wire::ReverseOrdinalTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::ReverseOrdinalTable>> frame);
 
-  const int64_t& z() const {
+  [[ nodiscard ]] int64_t& z() const {
     ZX_ASSERT(has_z());
     return frame_ptr_->z_.get_data();
   }
-  int64_t& z() {
-    ZX_ASSERT(has_z());
-    return frame_ptr_->z_.get_data();
-  }
-  bool has_z() const {
+  [[ nodiscard ]] bool has_z() const {
     return max_ordinal_ >= 1 && frame_ptr_->z_.has_data();
   }
 
-  const int64_t& y() const {
+  [[ nodiscard ]] int64_t& y() const {
     ZX_ASSERT(has_y());
     return frame_ptr_->y_.get_data();
   }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return frame_ptr_->y_.get_data();
-  }
-  bool has_y() const {
+  [[ nodiscard ]] bool has_y() const {
     return max_ordinal_ >= 2 && frame_ptr_->y_.has_data();
   }
 
-  const int64_t& x() const {
+  [[ nodiscard ]] int64_t& x() const {
     ZX_ASSERT(has_x());
     return frame_ptr_->x_.get_data();
   }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
+  [[ nodiscard ]] bool has_x() const {
     return max_ordinal_ >= 3 && frame_ptr_->x_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1073,6 +1254,7 @@ private:
   ReverseOrdinalTable& clear_z() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->z_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   ReverseOrdinalTable& set_y(::fidl::ObjectView<int64_t> elem) {
@@ -1098,6 +1280,7 @@ private:
   ReverseOrdinalTable& clear_y() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->y_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   ReverseOrdinalTable& set_x(::fidl::ObjectView<int64_t> elem) {
@@ -1123,6 +1306,7 @@ private:
   ReverseOrdinalTable& clear_x() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1154,6 +1338,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::ReverseOrdinalTable Build() {
@@ -1163,24 +1358,90 @@ class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ReverseOrdinalT
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_z() const {
+      return table_.has_z();
+    }
+
+    // Clears the z field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_z() {
+      table_.clear_z();
+    }
+
+    // Getter for z.
+    //
     
-      BuilderImpl& z(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& z() const {
+      return table_.z();
+    }
+
+    // Setter for z.
+    //
+    
+      BuilderImpl& z(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->z_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->z_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_y() const {
+      return table_.has_y();
+    }
+
+    // Clears the y field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_y() {
+      table_.clear_y();
+    }
+
+    // Getter for y.
+    //
     
-      BuilderImpl& y(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& y() const {
+      return table_.y();
+    }
+
+    // Setter for y.
+    //
+    
+      BuilderImpl& y(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->y_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->y_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_x() const {
+      return table_.has_x();
+    }
+
+    // Clears the x field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_x() {
+      table_.clear_x();
+    }
+
+    // Getter for x.
+    //
     
-      BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& x() const {
+      return table_.x();
+    }
+
+    // Setter for x.
+    //
+    
+      BuilderImpl& x(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->x_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->x_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -1199,23 +1460,38 @@ class ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable> final : 
  public:
     using Base::z;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& z(Args&&... args_) {
-        z(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& z(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        z(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::y;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& y(Args&&... args_) {
-        y(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& y(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        y(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::x;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& x(Args&&... args_) {
-        x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::ReverseOrdinalTable>& x(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        x(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
  private:
@@ -1272,6 +1548,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::TableWithAttributes> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int64_t> x_;
 
   friend class ::test_table::wire::TableWithAttributes;
@@ -1306,15 +1583,11 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_table::wire::TableWithAttributes> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::TableWithAttributes>> frame);
 
-  const int64_t& x() const {
+  [[ nodiscard ]] int64_t& x() const {
     ZX_ASSERT(has_x());
     return frame_ptr_->x_.get_data();
   }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return frame_ptr_->x_.get_data();
-  }
-  bool has_x() const {
+  [[ nodiscard ]] bool has_x() const {
     return max_ordinal_ >= 1 && frame_ptr_->x_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -1346,6 +1619,7 @@ private:
   TableWithAttributes& clear_x() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->x_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -1377,6 +1651,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttributes, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::TableWithAttributes Build() {
@@ -1386,10 +1671,32 @@ class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::TableWithAttrib
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_x() const {
+      return table_.has_x();
+    }
+
+    // Clears the x field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_x() {
+      table_.clear_x();
+    }
+
+    // Getter for x.
+    //
     
-      BuilderImpl& x(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& x() const {
+      return table_.x();
+    }
+
+    // Setter for x.
+    //
+    
+      BuilderImpl& x(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->x_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->x_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -1408,9 +1715,14 @@ class ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes> final : 
  public:
     using Base::x;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>& x(Args&&... args_) {
-        x(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::TableWithAttributes>& x(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        x(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
  private:
@@ -1467,6 +1779,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::ExtensionTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
 
   friend class ::test_table::wire::ExtensionTable;
   friend ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ExtensionTable, ::fidl::WireTableBuilder<::test_table::wire::ExtensionTable>>;
@@ -1534,6 +1847,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::ExtensionTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::ExtensionTable Build() {
@@ -1610,6 +1934,7 @@ struct ::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable> final {
   WireTableFrame& operator=(WireTableFrame&&) noexcept = default;
 
   bool HasUnknownData() const;
+  uint64_t ComputeMaxOrdinal() const;
   ::fidl::Envelope<int64_t> v1_;
   ::fidl::Envelope<int64_t> v2_;
   ::fidl::Envelope<int64_t> v3_;
@@ -1707,771 +2032,515 @@ public:
   // Return a builder that relies on explicitly allocating |fidl::ObjectView|s.
   static ::fidl::WireTableExternalBuilder<::test_table::wire::SixtyFourOrdinalTable> ExternalBuilder(::fidl::ObjectView<::fidl::WireTableFrame<::test_table::wire::SixtyFourOrdinalTable>> frame);
 
-  const int64_t& v1() const {
+  [[ nodiscard ]] int64_t& v1() const {
     ZX_ASSERT(has_v1());
     return frame_ptr_->v1_.get_data();
   }
-  int64_t& v1() {
-    ZX_ASSERT(has_v1());
-    return frame_ptr_->v1_.get_data();
-  }
-  bool has_v1() const {
+  [[ nodiscard ]] bool has_v1() const {
     return max_ordinal_ >= 1 && frame_ptr_->v1_.has_data();
   }
 
-  const int64_t& v2() const {
+  [[ nodiscard ]] int64_t& v2() const {
     ZX_ASSERT(has_v2());
     return frame_ptr_->v2_.get_data();
   }
-  int64_t& v2() {
-    ZX_ASSERT(has_v2());
-    return frame_ptr_->v2_.get_data();
-  }
-  bool has_v2() const {
+  [[ nodiscard ]] bool has_v2() const {
     return max_ordinal_ >= 2 && frame_ptr_->v2_.has_data();
   }
 
-  const int64_t& v3() const {
+  [[ nodiscard ]] int64_t& v3() const {
     ZX_ASSERT(has_v3());
     return frame_ptr_->v3_.get_data();
   }
-  int64_t& v3() {
-    ZX_ASSERT(has_v3());
-    return frame_ptr_->v3_.get_data();
-  }
-  bool has_v3() const {
+  [[ nodiscard ]] bool has_v3() const {
     return max_ordinal_ >= 3 && frame_ptr_->v3_.has_data();
   }
 
-  const int64_t& v4() const {
+  [[ nodiscard ]] int64_t& v4() const {
     ZX_ASSERT(has_v4());
     return frame_ptr_->v4_.get_data();
   }
-  int64_t& v4() {
-    ZX_ASSERT(has_v4());
-    return frame_ptr_->v4_.get_data();
-  }
-  bool has_v4() const {
+  [[ nodiscard ]] bool has_v4() const {
     return max_ordinal_ >= 4 && frame_ptr_->v4_.has_data();
   }
 
-  const int64_t& v5() const {
+  [[ nodiscard ]] int64_t& v5() const {
     ZX_ASSERT(has_v5());
     return frame_ptr_->v5_.get_data();
   }
-  int64_t& v5() {
-    ZX_ASSERT(has_v5());
-    return frame_ptr_->v5_.get_data();
-  }
-  bool has_v5() const {
+  [[ nodiscard ]] bool has_v5() const {
     return max_ordinal_ >= 5 && frame_ptr_->v5_.has_data();
   }
 
-  const int64_t& v6() const {
+  [[ nodiscard ]] int64_t& v6() const {
     ZX_ASSERT(has_v6());
     return frame_ptr_->v6_.get_data();
   }
-  int64_t& v6() {
-    ZX_ASSERT(has_v6());
-    return frame_ptr_->v6_.get_data();
-  }
-  bool has_v6() const {
+  [[ nodiscard ]] bool has_v6() const {
     return max_ordinal_ >= 6 && frame_ptr_->v6_.has_data();
   }
 
-  const int64_t& v7() const {
+  [[ nodiscard ]] int64_t& v7() const {
     ZX_ASSERT(has_v7());
     return frame_ptr_->v7_.get_data();
   }
-  int64_t& v7() {
-    ZX_ASSERT(has_v7());
-    return frame_ptr_->v7_.get_data();
-  }
-  bool has_v7() const {
+  [[ nodiscard ]] bool has_v7() const {
     return max_ordinal_ >= 7 && frame_ptr_->v7_.has_data();
   }
 
-  const int64_t& v8() const {
+  [[ nodiscard ]] int64_t& v8() const {
     ZX_ASSERT(has_v8());
     return frame_ptr_->v8_.get_data();
   }
-  int64_t& v8() {
-    ZX_ASSERT(has_v8());
-    return frame_ptr_->v8_.get_data();
-  }
-  bool has_v8() const {
+  [[ nodiscard ]] bool has_v8() const {
     return max_ordinal_ >= 8 && frame_ptr_->v8_.has_data();
   }
 
-  const int64_t& v9() const {
+  [[ nodiscard ]] int64_t& v9() const {
     ZX_ASSERT(has_v9());
     return frame_ptr_->v9_.get_data();
   }
-  int64_t& v9() {
-    ZX_ASSERT(has_v9());
-    return frame_ptr_->v9_.get_data();
-  }
-  bool has_v9() const {
+  [[ nodiscard ]] bool has_v9() const {
     return max_ordinal_ >= 9 && frame_ptr_->v9_.has_data();
   }
 
-  const int64_t& v10() const {
+  [[ nodiscard ]] int64_t& v10() const {
     ZX_ASSERT(has_v10());
     return frame_ptr_->v10_.get_data();
   }
-  int64_t& v10() {
-    ZX_ASSERT(has_v10());
-    return frame_ptr_->v10_.get_data();
-  }
-  bool has_v10() const {
+  [[ nodiscard ]] bool has_v10() const {
     return max_ordinal_ >= 10 && frame_ptr_->v10_.has_data();
   }
 
-  const int64_t& v11() const {
+  [[ nodiscard ]] int64_t& v11() const {
     ZX_ASSERT(has_v11());
     return frame_ptr_->v11_.get_data();
   }
-  int64_t& v11() {
-    ZX_ASSERT(has_v11());
-    return frame_ptr_->v11_.get_data();
-  }
-  bool has_v11() const {
+  [[ nodiscard ]] bool has_v11() const {
     return max_ordinal_ >= 11 && frame_ptr_->v11_.has_data();
   }
 
-  const int64_t& v12() const {
+  [[ nodiscard ]] int64_t& v12() const {
     ZX_ASSERT(has_v12());
     return frame_ptr_->v12_.get_data();
   }
-  int64_t& v12() {
-    ZX_ASSERT(has_v12());
-    return frame_ptr_->v12_.get_data();
-  }
-  bool has_v12() const {
+  [[ nodiscard ]] bool has_v12() const {
     return max_ordinal_ >= 12 && frame_ptr_->v12_.has_data();
   }
 
-  const int64_t& v13() const {
+  [[ nodiscard ]] int64_t& v13() const {
     ZX_ASSERT(has_v13());
     return frame_ptr_->v13_.get_data();
   }
-  int64_t& v13() {
-    ZX_ASSERT(has_v13());
-    return frame_ptr_->v13_.get_data();
-  }
-  bool has_v13() const {
+  [[ nodiscard ]] bool has_v13() const {
     return max_ordinal_ >= 13 && frame_ptr_->v13_.has_data();
   }
 
-  const int64_t& v14() const {
+  [[ nodiscard ]] int64_t& v14() const {
     ZX_ASSERT(has_v14());
     return frame_ptr_->v14_.get_data();
   }
-  int64_t& v14() {
-    ZX_ASSERT(has_v14());
-    return frame_ptr_->v14_.get_data();
-  }
-  bool has_v14() const {
+  [[ nodiscard ]] bool has_v14() const {
     return max_ordinal_ >= 14 && frame_ptr_->v14_.has_data();
   }
 
-  const int64_t& v15() const {
+  [[ nodiscard ]] int64_t& v15() const {
     ZX_ASSERT(has_v15());
     return frame_ptr_->v15_.get_data();
   }
-  int64_t& v15() {
-    ZX_ASSERT(has_v15());
-    return frame_ptr_->v15_.get_data();
-  }
-  bool has_v15() const {
+  [[ nodiscard ]] bool has_v15() const {
     return max_ordinal_ >= 15 && frame_ptr_->v15_.has_data();
   }
 
-  const int64_t& v16() const {
+  [[ nodiscard ]] int64_t& v16() const {
     ZX_ASSERT(has_v16());
     return frame_ptr_->v16_.get_data();
   }
-  int64_t& v16() {
-    ZX_ASSERT(has_v16());
-    return frame_ptr_->v16_.get_data();
-  }
-  bool has_v16() const {
+  [[ nodiscard ]] bool has_v16() const {
     return max_ordinal_ >= 16 && frame_ptr_->v16_.has_data();
   }
 
-  const int64_t& v17() const {
+  [[ nodiscard ]] int64_t& v17() const {
     ZX_ASSERT(has_v17());
     return frame_ptr_->v17_.get_data();
   }
-  int64_t& v17() {
-    ZX_ASSERT(has_v17());
-    return frame_ptr_->v17_.get_data();
-  }
-  bool has_v17() const {
+  [[ nodiscard ]] bool has_v17() const {
     return max_ordinal_ >= 17 && frame_ptr_->v17_.has_data();
   }
 
-  const int64_t& v18() const {
+  [[ nodiscard ]] int64_t& v18() const {
     ZX_ASSERT(has_v18());
     return frame_ptr_->v18_.get_data();
   }
-  int64_t& v18() {
-    ZX_ASSERT(has_v18());
-    return frame_ptr_->v18_.get_data();
-  }
-  bool has_v18() const {
+  [[ nodiscard ]] bool has_v18() const {
     return max_ordinal_ >= 18 && frame_ptr_->v18_.has_data();
   }
 
-  const int64_t& v19() const {
+  [[ nodiscard ]] int64_t& v19() const {
     ZX_ASSERT(has_v19());
     return frame_ptr_->v19_.get_data();
   }
-  int64_t& v19() {
-    ZX_ASSERT(has_v19());
-    return frame_ptr_->v19_.get_data();
-  }
-  bool has_v19() const {
+  [[ nodiscard ]] bool has_v19() const {
     return max_ordinal_ >= 19 && frame_ptr_->v19_.has_data();
   }
 
-  const int64_t& v20() const {
+  [[ nodiscard ]] int64_t& v20() const {
     ZX_ASSERT(has_v20());
     return frame_ptr_->v20_.get_data();
   }
-  int64_t& v20() {
-    ZX_ASSERT(has_v20());
-    return frame_ptr_->v20_.get_data();
-  }
-  bool has_v20() const {
+  [[ nodiscard ]] bool has_v20() const {
     return max_ordinal_ >= 20 && frame_ptr_->v20_.has_data();
   }
 
-  const int64_t& v21() const {
+  [[ nodiscard ]] int64_t& v21() const {
     ZX_ASSERT(has_v21());
     return frame_ptr_->v21_.get_data();
   }
-  int64_t& v21() {
-    ZX_ASSERT(has_v21());
-    return frame_ptr_->v21_.get_data();
-  }
-  bool has_v21() const {
+  [[ nodiscard ]] bool has_v21() const {
     return max_ordinal_ >= 21 && frame_ptr_->v21_.has_data();
   }
 
-  const int64_t& v22() const {
+  [[ nodiscard ]] int64_t& v22() const {
     ZX_ASSERT(has_v22());
     return frame_ptr_->v22_.get_data();
   }
-  int64_t& v22() {
-    ZX_ASSERT(has_v22());
-    return frame_ptr_->v22_.get_data();
-  }
-  bool has_v22() const {
+  [[ nodiscard ]] bool has_v22() const {
     return max_ordinal_ >= 22 && frame_ptr_->v22_.has_data();
   }
 
-  const int64_t& v23() const {
+  [[ nodiscard ]] int64_t& v23() const {
     ZX_ASSERT(has_v23());
     return frame_ptr_->v23_.get_data();
   }
-  int64_t& v23() {
-    ZX_ASSERT(has_v23());
-    return frame_ptr_->v23_.get_data();
-  }
-  bool has_v23() const {
+  [[ nodiscard ]] bool has_v23() const {
     return max_ordinal_ >= 23 && frame_ptr_->v23_.has_data();
   }
 
-  const int64_t& v24() const {
+  [[ nodiscard ]] int64_t& v24() const {
     ZX_ASSERT(has_v24());
     return frame_ptr_->v24_.get_data();
   }
-  int64_t& v24() {
-    ZX_ASSERT(has_v24());
-    return frame_ptr_->v24_.get_data();
-  }
-  bool has_v24() const {
+  [[ nodiscard ]] bool has_v24() const {
     return max_ordinal_ >= 24 && frame_ptr_->v24_.has_data();
   }
 
-  const int64_t& v25() const {
+  [[ nodiscard ]] int64_t& v25() const {
     ZX_ASSERT(has_v25());
     return frame_ptr_->v25_.get_data();
   }
-  int64_t& v25() {
-    ZX_ASSERT(has_v25());
-    return frame_ptr_->v25_.get_data();
-  }
-  bool has_v25() const {
+  [[ nodiscard ]] bool has_v25() const {
     return max_ordinal_ >= 25 && frame_ptr_->v25_.has_data();
   }
 
-  const int64_t& v26() const {
+  [[ nodiscard ]] int64_t& v26() const {
     ZX_ASSERT(has_v26());
     return frame_ptr_->v26_.get_data();
   }
-  int64_t& v26() {
-    ZX_ASSERT(has_v26());
-    return frame_ptr_->v26_.get_data();
-  }
-  bool has_v26() const {
+  [[ nodiscard ]] bool has_v26() const {
     return max_ordinal_ >= 26 && frame_ptr_->v26_.has_data();
   }
 
-  const int64_t& v27() const {
+  [[ nodiscard ]] int64_t& v27() const {
     ZX_ASSERT(has_v27());
     return frame_ptr_->v27_.get_data();
   }
-  int64_t& v27() {
-    ZX_ASSERT(has_v27());
-    return frame_ptr_->v27_.get_data();
-  }
-  bool has_v27() const {
+  [[ nodiscard ]] bool has_v27() const {
     return max_ordinal_ >= 27 && frame_ptr_->v27_.has_data();
   }
 
-  const int64_t& v28() const {
+  [[ nodiscard ]] int64_t& v28() const {
     ZX_ASSERT(has_v28());
     return frame_ptr_->v28_.get_data();
   }
-  int64_t& v28() {
-    ZX_ASSERT(has_v28());
-    return frame_ptr_->v28_.get_data();
-  }
-  bool has_v28() const {
+  [[ nodiscard ]] bool has_v28() const {
     return max_ordinal_ >= 28 && frame_ptr_->v28_.has_data();
   }
 
-  const int64_t& v29() const {
+  [[ nodiscard ]] int64_t& v29() const {
     ZX_ASSERT(has_v29());
     return frame_ptr_->v29_.get_data();
   }
-  int64_t& v29() {
-    ZX_ASSERT(has_v29());
-    return frame_ptr_->v29_.get_data();
-  }
-  bool has_v29() const {
+  [[ nodiscard ]] bool has_v29() const {
     return max_ordinal_ >= 29 && frame_ptr_->v29_.has_data();
   }
 
-  const int64_t& v30() const {
+  [[ nodiscard ]] int64_t& v30() const {
     ZX_ASSERT(has_v30());
     return frame_ptr_->v30_.get_data();
   }
-  int64_t& v30() {
-    ZX_ASSERT(has_v30());
-    return frame_ptr_->v30_.get_data();
-  }
-  bool has_v30() const {
+  [[ nodiscard ]] bool has_v30() const {
     return max_ordinal_ >= 30 && frame_ptr_->v30_.has_data();
   }
 
-  const int64_t& v31() const {
+  [[ nodiscard ]] int64_t& v31() const {
     ZX_ASSERT(has_v31());
     return frame_ptr_->v31_.get_data();
   }
-  int64_t& v31() {
-    ZX_ASSERT(has_v31());
-    return frame_ptr_->v31_.get_data();
-  }
-  bool has_v31() const {
+  [[ nodiscard ]] bool has_v31() const {
     return max_ordinal_ >= 31 && frame_ptr_->v31_.has_data();
   }
 
-  const int64_t& v32() const {
+  [[ nodiscard ]] int64_t& v32() const {
     ZX_ASSERT(has_v32());
     return frame_ptr_->v32_.get_data();
   }
-  int64_t& v32() {
-    ZX_ASSERT(has_v32());
-    return frame_ptr_->v32_.get_data();
-  }
-  bool has_v32() const {
+  [[ nodiscard ]] bool has_v32() const {
     return max_ordinal_ >= 32 && frame_ptr_->v32_.has_data();
   }
 
-  const int64_t& v33() const {
+  [[ nodiscard ]] int64_t& v33() const {
     ZX_ASSERT(has_v33());
     return frame_ptr_->v33_.get_data();
   }
-  int64_t& v33() {
-    ZX_ASSERT(has_v33());
-    return frame_ptr_->v33_.get_data();
-  }
-  bool has_v33() const {
+  [[ nodiscard ]] bool has_v33() const {
     return max_ordinal_ >= 33 && frame_ptr_->v33_.has_data();
   }
 
-  const int64_t& v34() const {
+  [[ nodiscard ]] int64_t& v34() const {
     ZX_ASSERT(has_v34());
     return frame_ptr_->v34_.get_data();
   }
-  int64_t& v34() {
-    ZX_ASSERT(has_v34());
-    return frame_ptr_->v34_.get_data();
-  }
-  bool has_v34() const {
+  [[ nodiscard ]] bool has_v34() const {
     return max_ordinal_ >= 34 && frame_ptr_->v34_.has_data();
   }
 
-  const int64_t& v35() const {
+  [[ nodiscard ]] int64_t& v35() const {
     ZX_ASSERT(has_v35());
     return frame_ptr_->v35_.get_data();
   }
-  int64_t& v35() {
-    ZX_ASSERT(has_v35());
-    return frame_ptr_->v35_.get_data();
-  }
-  bool has_v35() const {
+  [[ nodiscard ]] bool has_v35() const {
     return max_ordinal_ >= 35 && frame_ptr_->v35_.has_data();
   }
 
-  const int64_t& v36() const {
+  [[ nodiscard ]] int64_t& v36() const {
     ZX_ASSERT(has_v36());
     return frame_ptr_->v36_.get_data();
   }
-  int64_t& v36() {
-    ZX_ASSERT(has_v36());
-    return frame_ptr_->v36_.get_data();
-  }
-  bool has_v36() const {
+  [[ nodiscard ]] bool has_v36() const {
     return max_ordinal_ >= 36 && frame_ptr_->v36_.has_data();
   }
 
-  const int64_t& v37() const {
+  [[ nodiscard ]] int64_t& v37() const {
     ZX_ASSERT(has_v37());
     return frame_ptr_->v37_.get_data();
   }
-  int64_t& v37() {
-    ZX_ASSERT(has_v37());
-    return frame_ptr_->v37_.get_data();
-  }
-  bool has_v37() const {
+  [[ nodiscard ]] bool has_v37() const {
     return max_ordinal_ >= 37 && frame_ptr_->v37_.has_data();
   }
 
-  const int64_t& v38() const {
+  [[ nodiscard ]] int64_t& v38() const {
     ZX_ASSERT(has_v38());
     return frame_ptr_->v38_.get_data();
   }
-  int64_t& v38() {
-    ZX_ASSERT(has_v38());
-    return frame_ptr_->v38_.get_data();
-  }
-  bool has_v38() const {
+  [[ nodiscard ]] bool has_v38() const {
     return max_ordinal_ >= 38 && frame_ptr_->v38_.has_data();
   }
 
-  const int64_t& v39() const {
+  [[ nodiscard ]] int64_t& v39() const {
     ZX_ASSERT(has_v39());
     return frame_ptr_->v39_.get_data();
   }
-  int64_t& v39() {
-    ZX_ASSERT(has_v39());
-    return frame_ptr_->v39_.get_data();
-  }
-  bool has_v39() const {
+  [[ nodiscard ]] bool has_v39() const {
     return max_ordinal_ >= 39 && frame_ptr_->v39_.has_data();
   }
 
-  const int64_t& v40() const {
+  [[ nodiscard ]] int64_t& v40() const {
     ZX_ASSERT(has_v40());
     return frame_ptr_->v40_.get_data();
   }
-  int64_t& v40() {
-    ZX_ASSERT(has_v40());
-    return frame_ptr_->v40_.get_data();
-  }
-  bool has_v40() const {
+  [[ nodiscard ]] bool has_v40() const {
     return max_ordinal_ >= 40 && frame_ptr_->v40_.has_data();
   }
 
-  const int64_t& v41() const {
+  [[ nodiscard ]] int64_t& v41() const {
     ZX_ASSERT(has_v41());
     return frame_ptr_->v41_.get_data();
   }
-  int64_t& v41() {
-    ZX_ASSERT(has_v41());
-    return frame_ptr_->v41_.get_data();
-  }
-  bool has_v41() const {
+  [[ nodiscard ]] bool has_v41() const {
     return max_ordinal_ >= 41 && frame_ptr_->v41_.has_data();
   }
 
-  const int64_t& v42() const {
+  [[ nodiscard ]] int64_t& v42() const {
     ZX_ASSERT(has_v42());
     return frame_ptr_->v42_.get_data();
   }
-  int64_t& v42() {
-    ZX_ASSERT(has_v42());
-    return frame_ptr_->v42_.get_data();
-  }
-  bool has_v42() const {
+  [[ nodiscard ]] bool has_v42() const {
     return max_ordinal_ >= 42 && frame_ptr_->v42_.has_data();
   }
 
-  const int64_t& v43() const {
+  [[ nodiscard ]] int64_t& v43() const {
     ZX_ASSERT(has_v43());
     return frame_ptr_->v43_.get_data();
   }
-  int64_t& v43() {
-    ZX_ASSERT(has_v43());
-    return frame_ptr_->v43_.get_data();
-  }
-  bool has_v43() const {
+  [[ nodiscard ]] bool has_v43() const {
     return max_ordinal_ >= 43 && frame_ptr_->v43_.has_data();
   }
 
-  const int64_t& v44() const {
+  [[ nodiscard ]] int64_t& v44() const {
     ZX_ASSERT(has_v44());
     return frame_ptr_->v44_.get_data();
   }
-  int64_t& v44() {
-    ZX_ASSERT(has_v44());
-    return frame_ptr_->v44_.get_data();
-  }
-  bool has_v44() const {
+  [[ nodiscard ]] bool has_v44() const {
     return max_ordinal_ >= 44 && frame_ptr_->v44_.has_data();
   }
 
-  const int64_t& v45() const {
+  [[ nodiscard ]] int64_t& v45() const {
     ZX_ASSERT(has_v45());
     return frame_ptr_->v45_.get_data();
   }
-  int64_t& v45() {
-    ZX_ASSERT(has_v45());
-    return frame_ptr_->v45_.get_data();
-  }
-  bool has_v45() const {
+  [[ nodiscard ]] bool has_v45() const {
     return max_ordinal_ >= 45 && frame_ptr_->v45_.has_data();
   }
 
-  const int64_t& v46() const {
+  [[ nodiscard ]] int64_t& v46() const {
     ZX_ASSERT(has_v46());
     return frame_ptr_->v46_.get_data();
   }
-  int64_t& v46() {
-    ZX_ASSERT(has_v46());
-    return frame_ptr_->v46_.get_data();
-  }
-  bool has_v46() const {
+  [[ nodiscard ]] bool has_v46() const {
     return max_ordinal_ >= 46 && frame_ptr_->v46_.has_data();
   }
 
-  const int64_t& v47() const {
+  [[ nodiscard ]] int64_t& v47() const {
     ZX_ASSERT(has_v47());
     return frame_ptr_->v47_.get_data();
   }
-  int64_t& v47() {
-    ZX_ASSERT(has_v47());
-    return frame_ptr_->v47_.get_data();
-  }
-  bool has_v47() const {
+  [[ nodiscard ]] bool has_v47() const {
     return max_ordinal_ >= 47 && frame_ptr_->v47_.has_data();
   }
 
-  const int64_t& v48() const {
+  [[ nodiscard ]] int64_t& v48() const {
     ZX_ASSERT(has_v48());
     return frame_ptr_->v48_.get_data();
   }
-  int64_t& v48() {
-    ZX_ASSERT(has_v48());
-    return frame_ptr_->v48_.get_data();
-  }
-  bool has_v48() const {
+  [[ nodiscard ]] bool has_v48() const {
     return max_ordinal_ >= 48 && frame_ptr_->v48_.has_data();
   }
 
-  const int64_t& v49() const {
+  [[ nodiscard ]] int64_t& v49() const {
     ZX_ASSERT(has_v49());
     return frame_ptr_->v49_.get_data();
   }
-  int64_t& v49() {
-    ZX_ASSERT(has_v49());
-    return frame_ptr_->v49_.get_data();
-  }
-  bool has_v49() const {
+  [[ nodiscard ]] bool has_v49() const {
     return max_ordinal_ >= 49 && frame_ptr_->v49_.has_data();
   }
 
-  const int64_t& v50() const {
+  [[ nodiscard ]] int64_t& v50() const {
     ZX_ASSERT(has_v50());
     return frame_ptr_->v50_.get_data();
   }
-  int64_t& v50() {
-    ZX_ASSERT(has_v50());
-    return frame_ptr_->v50_.get_data();
-  }
-  bool has_v50() const {
+  [[ nodiscard ]] bool has_v50() const {
     return max_ordinal_ >= 50 && frame_ptr_->v50_.has_data();
   }
 
-  const int64_t& v51() const {
+  [[ nodiscard ]] int64_t& v51() const {
     ZX_ASSERT(has_v51());
     return frame_ptr_->v51_.get_data();
   }
-  int64_t& v51() {
-    ZX_ASSERT(has_v51());
-    return frame_ptr_->v51_.get_data();
-  }
-  bool has_v51() const {
+  [[ nodiscard ]] bool has_v51() const {
     return max_ordinal_ >= 51 && frame_ptr_->v51_.has_data();
   }
 
-  const int64_t& v52() const {
+  [[ nodiscard ]] int64_t& v52() const {
     ZX_ASSERT(has_v52());
     return frame_ptr_->v52_.get_data();
   }
-  int64_t& v52() {
-    ZX_ASSERT(has_v52());
-    return frame_ptr_->v52_.get_data();
-  }
-  bool has_v52() const {
+  [[ nodiscard ]] bool has_v52() const {
     return max_ordinal_ >= 52 && frame_ptr_->v52_.has_data();
   }
 
-  const int64_t& v53() const {
+  [[ nodiscard ]] int64_t& v53() const {
     ZX_ASSERT(has_v53());
     return frame_ptr_->v53_.get_data();
   }
-  int64_t& v53() {
-    ZX_ASSERT(has_v53());
-    return frame_ptr_->v53_.get_data();
-  }
-  bool has_v53() const {
+  [[ nodiscard ]] bool has_v53() const {
     return max_ordinal_ >= 53 && frame_ptr_->v53_.has_data();
   }
 
-  const int64_t& v54() const {
+  [[ nodiscard ]] int64_t& v54() const {
     ZX_ASSERT(has_v54());
     return frame_ptr_->v54_.get_data();
   }
-  int64_t& v54() {
-    ZX_ASSERT(has_v54());
-    return frame_ptr_->v54_.get_data();
-  }
-  bool has_v54() const {
+  [[ nodiscard ]] bool has_v54() const {
     return max_ordinal_ >= 54 && frame_ptr_->v54_.has_data();
   }
 
-  const int64_t& v55() const {
+  [[ nodiscard ]] int64_t& v55() const {
     ZX_ASSERT(has_v55());
     return frame_ptr_->v55_.get_data();
   }
-  int64_t& v55() {
-    ZX_ASSERT(has_v55());
-    return frame_ptr_->v55_.get_data();
-  }
-  bool has_v55() const {
+  [[ nodiscard ]] bool has_v55() const {
     return max_ordinal_ >= 55 && frame_ptr_->v55_.has_data();
   }
 
-  const int64_t& v56() const {
+  [[ nodiscard ]] int64_t& v56() const {
     ZX_ASSERT(has_v56());
     return frame_ptr_->v56_.get_data();
   }
-  int64_t& v56() {
-    ZX_ASSERT(has_v56());
-    return frame_ptr_->v56_.get_data();
-  }
-  bool has_v56() const {
+  [[ nodiscard ]] bool has_v56() const {
     return max_ordinal_ >= 56 && frame_ptr_->v56_.has_data();
   }
 
-  const int64_t& v57() const {
+  [[ nodiscard ]] int64_t& v57() const {
     ZX_ASSERT(has_v57());
     return frame_ptr_->v57_.get_data();
   }
-  int64_t& v57() {
-    ZX_ASSERT(has_v57());
-    return frame_ptr_->v57_.get_data();
-  }
-  bool has_v57() const {
+  [[ nodiscard ]] bool has_v57() const {
     return max_ordinal_ >= 57 && frame_ptr_->v57_.has_data();
   }
 
-  const int64_t& v58() const {
+  [[ nodiscard ]] int64_t& v58() const {
     ZX_ASSERT(has_v58());
     return frame_ptr_->v58_.get_data();
   }
-  int64_t& v58() {
-    ZX_ASSERT(has_v58());
-    return frame_ptr_->v58_.get_data();
-  }
-  bool has_v58() const {
+  [[ nodiscard ]] bool has_v58() const {
     return max_ordinal_ >= 58 && frame_ptr_->v58_.has_data();
   }
 
-  const int64_t& v59() const {
+  [[ nodiscard ]] int64_t& v59() const {
     ZX_ASSERT(has_v59());
     return frame_ptr_->v59_.get_data();
   }
-  int64_t& v59() {
-    ZX_ASSERT(has_v59());
-    return frame_ptr_->v59_.get_data();
-  }
-  bool has_v59() const {
+  [[ nodiscard ]] bool has_v59() const {
     return max_ordinal_ >= 59 && frame_ptr_->v59_.has_data();
   }
 
-  const int64_t& v60() const {
+  [[ nodiscard ]] int64_t& v60() const {
     ZX_ASSERT(has_v60());
     return frame_ptr_->v60_.get_data();
   }
-  int64_t& v60() {
-    ZX_ASSERT(has_v60());
-    return frame_ptr_->v60_.get_data();
-  }
-  bool has_v60() const {
+  [[ nodiscard ]] bool has_v60() const {
     return max_ordinal_ >= 60 && frame_ptr_->v60_.has_data();
   }
 
-  const int64_t& v61() const {
+  [[ nodiscard ]] int64_t& v61() const {
     ZX_ASSERT(has_v61());
     return frame_ptr_->v61_.get_data();
   }
-  int64_t& v61() {
-    ZX_ASSERT(has_v61());
-    return frame_ptr_->v61_.get_data();
-  }
-  bool has_v61() const {
+  [[ nodiscard ]] bool has_v61() const {
     return max_ordinal_ >= 61 && frame_ptr_->v61_.has_data();
   }
 
-  const int64_t& v62() const {
+  [[ nodiscard ]] int64_t& v62() const {
     ZX_ASSERT(has_v62());
     return frame_ptr_->v62_.get_data();
   }
-  int64_t& v62() {
-    ZX_ASSERT(has_v62());
-    return frame_ptr_->v62_.get_data();
-  }
-  bool has_v62() const {
+  [[ nodiscard ]] bool has_v62() const {
     return max_ordinal_ >= 62 && frame_ptr_->v62_.has_data();
   }
 
-  const int64_t& v63() const {
+  [[ nodiscard ]] int64_t& v63() const {
     ZX_ASSERT(has_v63());
     return frame_ptr_->v63_.get_data();
   }
-  int64_t& v63() {
-    ZX_ASSERT(has_v63());
-    return frame_ptr_->v63_.get_data();
-  }
-  bool has_v63() const {
+  [[ nodiscard ]] bool has_v63() const {
     return max_ordinal_ >= 63 && frame_ptr_->v63_.has_data();
   }
 
-  const ::test_table::wire::ExtensionTable& v64() const {
+  [[ nodiscard ]] ::test_table::wire::ExtensionTable& v64() const {
     ZX_ASSERT(has_v64());
     return frame_ptr_->v64_.get_data();
   }
-  ::test_table::wire::ExtensionTable& v64() {
-    ZX_ASSERT(has_v64());
-    return frame_ptr_->v64_.get_data();
-  }
-  bool has_v64() const {
+  [[ nodiscard ]] bool has_v64() const {
     return max_ordinal_ >= 64 && frame_ptr_->v64_.has_data();
   }
 #if defined(FIDL_WIRE_ALLOW_DEPRECATED_MUTABLE_TABLES) || false
@@ -2503,6 +2572,7 @@ private:
   SixtyFourOrdinalTable& clear_v1() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v1_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v2(::fidl::ObjectView<int64_t> elem) {
@@ -2528,6 +2598,7 @@ private:
   SixtyFourOrdinalTable& clear_v2() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v2_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v3(::fidl::ObjectView<int64_t> elem) {
@@ -2553,6 +2624,7 @@ private:
   SixtyFourOrdinalTable& clear_v3() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v3_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v4(::fidl::ObjectView<int64_t> elem) {
@@ -2578,6 +2650,7 @@ private:
   SixtyFourOrdinalTable& clear_v4() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v4_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v5(::fidl::ObjectView<int64_t> elem) {
@@ -2603,6 +2676,7 @@ private:
   SixtyFourOrdinalTable& clear_v5() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v5_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v6(::fidl::ObjectView<int64_t> elem) {
@@ -2628,6 +2702,7 @@ private:
   SixtyFourOrdinalTable& clear_v6() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v6_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v7(::fidl::ObjectView<int64_t> elem) {
@@ -2653,6 +2728,7 @@ private:
   SixtyFourOrdinalTable& clear_v7() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v7_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v8(::fidl::ObjectView<int64_t> elem) {
@@ -2678,6 +2754,7 @@ private:
   SixtyFourOrdinalTable& clear_v8() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v8_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v9(::fidl::ObjectView<int64_t> elem) {
@@ -2703,6 +2780,7 @@ private:
   SixtyFourOrdinalTable& clear_v9() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v9_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v10(::fidl::ObjectView<int64_t> elem) {
@@ -2728,6 +2806,7 @@ private:
   SixtyFourOrdinalTable& clear_v10() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v10_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v11(::fidl::ObjectView<int64_t> elem) {
@@ -2753,6 +2832,7 @@ private:
   SixtyFourOrdinalTable& clear_v11() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v11_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v12(::fidl::ObjectView<int64_t> elem) {
@@ -2778,6 +2858,7 @@ private:
   SixtyFourOrdinalTable& clear_v12() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v12_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v13(::fidl::ObjectView<int64_t> elem) {
@@ -2803,6 +2884,7 @@ private:
   SixtyFourOrdinalTable& clear_v13() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v13_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v14(::fidl::ObjectView<int64_t> elem) {
@@ -2828,6 +2910,7 @@ private:
   SixtyFourOrdinalTable& clear_v14() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v14_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v15(::fidl::ObjectView<int64_t> elem) {
@@ -2853,6 +2936,7 @@ private:
   SixtyFourOrdinalTable& clear_v15() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v15_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v16(::fidl::ObjectView<int64_t> elem) {
@@ -2878,6 +2962,7 @@ private:
   SixtyFourOrdinalTable& clear_v16() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v16_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v17(::fidl::ObjectView<int64_t> elem) {
@@ -2903,6 +2988,7 @@ private:
   SixtyFourOrdinalTable& clear_v17() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v17_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v18(::fidl::ObjectView<int64_t> elem) {
@@ -2928,6 +3014,7 @@ private:
   SixtyFourOrdinalTable& clear_v18() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v18_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v19(::fidl::ObjectView<int64_t> elem) {
@@ -2953,6 +3040,7 @@ private:
   SixtyFourOrdinalTable& clear_v19() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v19_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v20(::fidl::ObjectView<int64_t> elem) {
@@ -2978,6 +3066,7 @@ private:
   SixtyFourOrdinalTable& clear_v20() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v20_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v21(::fidl::ObjectView<int64_t> elem) {
@@ -3003,6 +3092,7 @@ private:
   SixtyFourOrdinalTable& clear_v21() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v21_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v22(::fidl::ObjectView<int64_t> elem) {
@@ -3028,6 +3118,7 @@ private:
   SixtyFourOrdinalTable& clear_v22() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v22_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v23(::fidl::ObjectView<int64_t> elem) {
@@ -3053,6 +3144,7 @@ private:
   SixtyFourOrdinalTable& clear_v23() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v23_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v24(::fidl::ObjectView<int64_t> elem) {
@@ -3078,6 +3170,7 @@ private:
   SixtyFourOrdinalTable& clear_v24() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v24_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v25(::fidl::ObjectView<int64_t> elem) {
@@ -3103,6 +3196,7 @@ private:
   SixtyFourOrdinalTable& clear_v25() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v25_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v26(::fidl::ObjectView<int64_t> elem) {
@@ -3128,6 +3222,7 @@ private:
   SixtyFourOrdinalTable& clear_v26() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v26_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v27(::fidl::ObjectView<int64_t> elem) {
@@ -3153,6 +3248,7 @@ private:
   SixtyFourOrdinalTable& clear_v27() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v27_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v28(::fidl::ObjectView<int64_t> elem) {
@@ -3178,6 +3274,7 @@ private:
   SixtyFourOrdinalTable& clear_v28() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v28_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v29(::fidl::ObjectView<int64_t> elem) {
@@ -3203,6 +3300,7 @@ private:
   SixtyFourOrdinalTable& clear_v29() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v29_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v30(::fidl::ObjectView<int64_t> elem) {
@@ -3228,6 +3326,7 @@ private:
   SixtyFourOrdinalTable& clear_v30() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v30_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v31(::fidl::ObjectView<int64_t> elem) {
@@ -3253,6 +3352,7 @@ private:
   SixtyFourOrdinalTable& clear_v31() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v31_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v32(::fidl::ObjectView<int64_t> elem) {
@@ -3278,6 +3378,7 @@ private:
   SixtyFourOrdinalTable& clear_v32() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v32_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v33(::fidl::ObjectView<int64_t> elem) {
@@ -3303,6 +3404,7 @@ private:
   SixtyFourOrdinalTable& clear_v33() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v33_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v34(::fidl::ObjectView<int64_t> elem) {
@@ -3328,6 +3430,7 @@ private:
   SixtyFourOrdinalTable& clear_v34() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v34_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v35(::fidl::ObjectView<int64_t> elem) {
@@ -3353,6 +3456,7 @@ private:
   SixtyFourOrdinalTable& clear_v35() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v35_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v36(::fidl::ObjectView<int64_t> elem) {
@@ -3378,6 +3482,7 @@ private:
   SixtyFourOrdinalTable& clear_v36() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v36_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v37(::fidl::ObjectView<int64_t> elem) {
@@ -3403,6 +3508,7 @@ private:
   SixtyFourOrdinalTable& clear_v37() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v37_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v38(::fidl::ObjectView<int64_t> elem) {
@@ -3428,6 +3534,7 @@ private:
   SixtyFourOrdinalTable& clear_v38() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v38_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v39(::fidl::ObjectView<int64_t> elem) {
@@ -3453,6 +3560,7 @@ private:
   SixtyFourOrdinalTable& clear_v39() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v39_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v40(::fidl::ObjectView<int64_t> elem) {
@@ -3478,6 +3586,7 @@ private:
   SixtyFourOrdinalTable& clear_v40() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v40_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v41(::fidl::ObjectView<int64_t> elem) {
@@ -3503,6 +3612,7 @@ private:
   SixtyFourOrdinalTable& clear_v41() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v41_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v42(::fidl::ObjectView<int64_t> elem) {
@@ -3528,6 +3638,7 @@ private:
   SixtyFourOrdinalTable& clear_v42() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v42_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v43(::fidl::ObjectView<int64_t> elem) {
@@ -3553,6 +3664,7 @@ private:
   SixtyFourOrdinalTable& clear_v43() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v43_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v44(::fidl::ObjectView<int64_t> elem) {
@@ -3578,6 +3690,7 @@ private:
   SixtyFourOrdinalTable& clear_v44() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v44_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v45(::fidl::ObjectView<int64_t> elem) {
@@ -3603,6 +3716,7 @@ private:
   SixtyFourOrdinalTable& clear_v45() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v45_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v46(::fidl::ObjectView<int64_t> elem) {
@@ -3628,6 +3742,7 @@ private:
   SixtyFourOrdinalTable& clear_v46() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v46_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v47(::fidl::ObjectView<int64_t> elem) {
@@ -3653,6 +3768,7 @@ private:
   SixtyFourOrdinalTable& clear_v47() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v47_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v48(::fidl::ObjectView<int64_t> elem) {
@@ -3678,6 +3794,7 @@ private:
   SixtyFourOrdinalTable& clear_v48() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v48_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v49(::fidl::ObjectView<int64_t> elem) {
@@ -3703,6 +3820,7 @@ private:
   SixtyFourOrdinalTable& clear_v49() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v49_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v50(::fidl::ObjectView<int64_t> elem) {
@@ -3728,6 +3846,7 @@ private:
   SixtyFourOrdinalTable& clear_v50() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v50_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v51(::fidl::ObjectView<int64_t> elem) {
@@ -3753,6 +3872,7 @@ private:
   SixtyFourOrdinalTable& clear_v51() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v51_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v52(::fidl::ObjectView<int64_t> elem) {
@@ -3778,6 +3898,7 @@ private:
   SixtyFourOrdinalTable& clear_v52() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v52_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v53(::fidl::ObjectView<int64_t> elem) {
@@ -3803,6 +3924,7 @@ private:
   SixtyFourOrdinalTable& clear_v53() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v53_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v54(::fidl::ObjectView<int64_t> elem) {
@@ -3828,6 +3950,7 @@ private:
   SixtyFourOrdinalTable& clear_v54() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v54_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v55(::fidl::ObjectView<int64_t> elem) {
@@ -3853,6 +3976,7 @@ private:
   SixtyFourOrdinalTable& clear_v55() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v55_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v56(::fidl::ObjectView<int64_t> elem) {
@@ -3878,6 +4002,7 @@ private:
   SixtyFourOrdinalTable& clear_v56() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v56_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v57(::fidl::ObjectView<int64_t> elem) {
@@ -3903,6 +4028,7 @@ private:
   SixtyFourOrdinalTable& clear_v57() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v57_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v58(::fidl::ObjectView<int64_t> elem) {
@@ -3928,6 +4054,7 @@ private:
   SixtyFourOrdinalTable& clear_v58() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v58_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v59(::fidl::ObjectView<int64_t> elem) {
@@ -3953,6 +4080,7 @@ private:
   SixtyFourOrdinalTable& clear_v59() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v59_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v60(::fidl::ObjectView<int64_t> elem) {
@@ -3978,6 +4106,7 @@ private:
   SixtyFourOrdinalTable& clear_v60() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v60_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v61(::fidl::ObjectView<int64_t> elem) {
@@ -4003,6 +4132,7 @@ private:
   SixtyFourOrdinalTable& clear_v61() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v61_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v62(::fidl::ObjectView<int64_t> elem) {
@@ -4028,6 +4158,7 @@ private:
   SixtyFourOrdinalTable& clear_v62() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v62_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v63(::fidl::ObjectView<int64_t> elem) {
@@ -4053,6 +4184,7 @@ private:
   SixtyFourOrdinalTable& clear_v63() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v63_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
   SixtyFourOrdinalTable& set_v64(::fidl::ObjectView<::test_table::wire::ExtensionTable> elem) {
@@ -4078,6 +4210,7 @@ private:
   SixtyFourOrdinalTable& clear_v64() {
     ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->v64_.clear_data();
+    max_ordinal_ = frame_ptr_->ComputeMaxOrdinal();
     return *this;
   }
 
@@ -4109,6 +4242,17 @@ private:
 
 template<typename BuilderImpl>
 class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SixtyFourOrdinalTable, BuilderImpl> {
+ protected:
+  // |Wrapper_Ignore_Me_| wraps a |fidl::ObjectView<T>| and reduces its
+  // priority in overload resolution. When the user writes `{}` as the
+  // setter argument, that would default construct the field instead of
+  // constructing a NULL object view.
+  template <typename U>
+  struct Wrapper_Ignore_Me_ {
+    Wrapper_Ignore_Me_(U v) : value(v) {}
+    U value;
+  };
+
  public:
   // Build and return the table. The builder should not be used after this.
   ::test_table::wire::SixtyFourOrdinalTable Build() {
@@ -4118,451 +4262,1859 @@ class ::fidl::internal::WireTableBaseBuilder<::test_table::wire::SixtyFourOrdina
     table_.frame_ptr_ = nullptr;
     return t;
   }
+    [[ nodiscard ]] bool has_v1() const {
+      return table_.has_v1();
+    }
+
+    // Clears the v1 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v1() {
+      table_.clear_v1();
+    }
+
+    // Getter for v1.
+    //
     
-      BuilderImpl& v1(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v1() const {
+      return table_.v1();
+    }
+
+    // Setter for v1.
+    //
+    
+      BuilderImpl& v1(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v1_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v1_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(1));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v2() const {
+      return table_.has_v2();
+    }
+
+    // Clears the v2 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v2() {
+      table_.clear_v2();
+    }
+
+    // Getter for v2.
+    //
     
-      BuilderImpl& v2(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v2() const {
+      return table_.v2();
+    }
+
+    // Setter for v2.
+    //
+    
+      BuilderImpl& v2(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v2_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v2_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(2));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v3() const {
+      return table_.has_v3();
+    }
+
+    // Clears the v3 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v3() {
+      table_.clear_v3();
+    }
+
+    // Getter for v3.
+    //
     
-      BuilderImpl& v3(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v3() const {
+      return table_.v3();
+    }
+
+    // Setter for v3.
+    //
+    
+      BuilderImpl& v3(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v3_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v3_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(3));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v4() const {
+      return table_.has_v4();
+    }
+
+    // Clears the v4 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v4() {
+      table_.clear_v4();
+    }
+
+    // Getter for v4.
+    //
     
-      BuilderImpl& v4(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v4() const {
+      return table_.v4();
+    }
+
+    // Setter for v4.
+    //
+    
+      BuilderImpl& v4(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v4_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v4_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(4));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v5() const {
+      return table_.has_v5();
+    }
+
+    // Clears the v5 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v5() {
+      table_.clear_v5();
+    }
+
+    // Getter for v5.
+    //
     
-      BuilderImpl& v5(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v5() const {
+      return table_.v5();
+    }
+
+    // Setter for v5.
+    //
+    
+      BuilderImpl& v5(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v5_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v5_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(5));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v6() const {
+      return table_.has_v6();
+    }
+
+    // Clears the v6 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v6() {
+      table_.clear_v6();
+    }
+
+    // Getter for v6.
+    //
     
-      BuilderImpl& v6(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v6() const {
+      return table_.v6();
+    }
+
+    // Setter for v6.
+    //
+    
+      BuilderImpl& v6(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v6_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v6_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(6));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v7() const {
+      return table_.has_v7();
+    }
+
+    // Clears the v7 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v7() {
+      table_.clear_v7();
+    }
+
+    // Getter for v7.
+    //
     
-      BuilderImpl& v7(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v7() const {
+      return table_.v7();
+    }
+
+    // Setter for v7.
+    //
+    
+      BuilderImpl& v7(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v7_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v7_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(7));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v8() const {
+      return table_.has_v8();
+    }
+
+    // Clears the v8 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v8() {
+      table_.clear_v8();
+    }
+
+    // Getter for v8.
+    //
     
-      BuilderImpl& v8(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v8() const {
+      return table_.v8();
+    }
+
+    // Setter for v8.
+    //
+    
+      BuilderImpl& v8(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v8_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v8_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(8));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v9() const {
+      return table_.has_v9();
+    }
+
+    // Clears the v9 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v9() {
+      table_.clear_v9();
+    }
+
+    // Getter for v9.
+    //
     
-      BuilderImpl& v9(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v9() const {
+      return table_.v9();
+    }
+
+    // Setter for v9.
+    //
+    
+      BuilderImpl& v9(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v9_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v9_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(9));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v10() const {
+      return table_.has_v10();
+    }
+
+    // Clears the v10 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v10() {
+      table_.clear_v10();
+    }
+
+    // Getter for v10.
+    //
     
-      BuilderImpl& v10(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v10() const {
+      return table_.v10();
+    }
+
+    // Setter for v10.
+    //
+    
+      BuilderImpl& v10(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v10_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v10_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(10));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v11() const {
+      return table_.has_v11();
+    }
+
+    // Clears the v11 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v11() {
+      table_.clear_v11();
+    }
+
+    // Getter for v11.
+    //
     
-      BuilderImpl& v11(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v11() const {
+      return table_.v11();
+    }
+
+    // Setter for v11.
+    //
+    
+      BuilderImpl& v11(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v11_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v11_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(11));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v12() const {
+      return table_.has_v12();
+    }
+
+    // Clears the v12 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v12() {
+      table_.clear_v12();
+    }
+
+    // Getter for v12.
+    //
     
-      BuilderImpl& v12(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v12() const {
+      return table_.v12();
+    }
+
+    // Setter for v12.
+    //
+    
+      BuilderImpl& v12(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v12_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v12_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(12));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v13() const {
+      return table_.has_v13();
+    }
+
+    // Clears the v13 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v13() {
+      table_.clear_v13();
+    }
+
+    // Getter for v13.
+    //
     
-      BuilderImpl& v13(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v13() const {
+      return table_.v13();
+    }
+
+    // Setter for v13.
+    //
+    
+      BuilderImpl& v13(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v13_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v13_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(13));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v14() const {
+      return table_.has_v14();
+    }
+
+    // Clears the v14 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v14() {
+      table_.clear_v14();
+    }
+
+    // Getter for v14.
+    //
     
-      BuilderImpl& v14(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v14() const {
+      return table_.v14();
+    }
+
+    // Setter for v14.
+    //
+    
+      BuilderImpl& v14(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v14_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v14_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(14));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v15() const {
+      return table_.has_v15();
+    }
+
+    // Clears the v15 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v15() {
+      table_.clear_v15();
+    }
+
+    // Getter for v15.
+    //
     
-      BuilderImpl& v15(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v15() const {
+      return table_.v15();
+    }
+
+    // Setter for v15.
+    //
+    
+      BuilderImpl& v15(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v15_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v15_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(15));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v16() const {
+      return table_.has_v16();
+    }
+
+    // Clears the v16 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v16() {
+      table_.clear_v16();
+    }
+
+    // Getter for v16.
+    //
     
-      BuilderImpl& v16(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v16() const {
+      return table_.v16();
+    }
+
+    // Setter for v16.
+    //
+    
+      BuilderImpl& v16(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v16_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v16_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(16));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v17() const {
+      return table_.has_v17();
+    }
+
+    // Clears the v17 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v17() {
+      table_.clear_v17();
+    }
+
+    // Getter for v17.
+    //
     
-      BuilderImpl& v17(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v17() const {
+      return table_.v17();
+    }
+
+    // Setter for v17.
+    //
+    
+      BuilderImpl& v17(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v17_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v17_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(17));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v18() const {
+      return table_.has_v18();
+    }
+
+    // Clears the v18 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v18() {
+      table_.clear_v18();
+    }
+
+    // Getter for v18.
+    //
     
-      BuilderImpl& v18(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v18() const {
+      return table_.v18();
+    }
+
+    // Setter for v18.
+    //
+    
+      BuilderImpl& v18(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v18_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v18_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(18));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v19() const {
+      return table_.has_v19();
+    }
+
+    // Clears the v19 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v19() {
+      table_.clear_v19();
+    }
+
+    // Getter for v19.
+    //
     
-      BuilderImpl& v19(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v19() const {
+      return table_.v19();
+    }
+
+    // Setter for v19.
+    //
+    
+      BuilderImpl& v19(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v19_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v19_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(19));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v20() const {
+      return table_.has_v20();
+    }
+
+    // Clears the v20 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v20() {
+      table_.clear_v20();
+    }
+
+    // Getter for v20.
+    //
     
-      BuilderImpl& v20(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v20() const {
+      return table_.v20();
+    }
+
+    // Setter for v20.
+    //
+    
+      BuilderImpl& v20(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v20_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v20_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(20));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v21() const {
+      return table_.has_v21();
+    }
+
+    // Clears the v21 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v21() {
+      table_.clear_v21();
+    }
+
+    // Getter for v21.
+    //
     
-      BuilderImpl& v21(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v21() const {
+      return table_.v21();
+    }
+
+    // Setter for v21.
+    //
+    
+      BuilderImpl& v21(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v21_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v21_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(21));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v22() const {
+      return table_.has_v22();
+    }
+
+    // Clears the v22 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v22() {
+      table_.clear_v22();
+    }
+
+    // Getter for v22.
+    //
     
-      BuilderImpl& v22(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v22() const {
+      return table_.v22();
+    }
+
+    // Setter for v22.
+    //
+    
+      BuilderImpl& v22(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v22_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v22_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(22));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v23() const {
+      return table_.has_v23();
+    }
+
+    // Clears the v23 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v23() {
+      table_.clear_v23();
+    }
+
+    // Getter for v23.
+    //
     
-      BuilderImpl& v23(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v23() const {
+      return table_.v23();
+    }
+
+    // Setter for v23.
+    //
+    
+      BuilderImpl& v23(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v23_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v23_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(23));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v24() const {
+      return table_.has_v24();
+    }
+
+    // Clears the v24 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v24() {
+      table_.clear_v24();
+    }
+
+    // Getter for v24.
+    //
     
-      BuilderImpl& v24(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v24() const {
+      return table_.v24();
+    }
+
+    // Setter for v24.
+    //
+    
+      BuilderImpl& v24(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v24_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v24_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(24));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v25() const {
+      return table_.has_v25();
+    }
+
+    // Clears the v25 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v25() {
+      table_.clear_v25();
+    }
+
+    // Getter for v25.
+    //
     
-      BuilderImpl& v25(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v25() const {
+      return table_.v25();
+    }
+
+    // Setter for v25.
+    //
+    
+      BuilderImpl& v25(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v25_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v25_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(25));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v26() const {
+      return table_.has_v26();
+    }
+
+    // Clears the v26 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v26() {
+      table_.clear_v26();
+    }
+
+    // Getter for v26.
+    //
     
-      BuilderImpl& v26(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v26() const {
+      return table_.v26();
+    }
+
+    // Setter for v26.
+    //
+    
+      BuilderImpl& v26(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v26_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v26_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(26));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v27() const {
+      return table_.has_v27();
+    }
+
+    // Clears the v27 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v27() {
+      table_.clear_v27();
+    }
+
+    // Getter for v27.
+    //
     
-      BuilderImpl& v27(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v27() const {
+      return table_.v27();
+    }
+
+    // Setter for v27.
+    //
+    
+      BuilderImpl& v27(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v27_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v27_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(27));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v28() const {
+      return table_.has_v28();
+    }
+
+    // Clears the v28 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v28() {
+      table_.clear_v28();
+    }
+
+    // Getter for v28.
+    //
     
-      BuilderImpl& v28(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v28() const {
+      return table_.v28();
+    }
+
+    // Setter for v28.
+    //
+    
+      BuilderImpl& v28(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v28_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v28_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(28));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v29() const {
+      return table_.has_v29();
+    }
+
+    // Clears the v29 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v29() {
+      table_.clear_v29();
+    }
+
+    // Getter for v29.
+    //
     
-      BuilderImpl& v29(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v29() const {
+      return table_.v29();
+    }
+
+    // Setter for v29.
+    //
+    
+      BuilderImpl& v29(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v29_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v29_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(29));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v30() const {
+      return table_.has_v30();
+    }
+
+    // Clears the v30 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v30() {
+      table_.clear_v30();
+    }
+
+    // Getter for v30.
+    //
     
-      BuilderImpl& v30(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v30() const {
+      return table_.v30();
+    }
+
+    // Setter for v30.
+    //
+    
+      BuilderImpl& v30(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v30_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v30_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(30));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v31() const {
+      return table_.has_v31();
+    }
+
+    // Clears the v31 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v31() {
+      table_.clear_v31();
+    }
+
+    // Getter for v31.
+    //
     
-      BuilderImpl& v31(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v31() const {
+      return table_.v31();
+    }
+
+    // Setter for v31.
+    //
+    
+      BuilderImpl& v31(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v31_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v31_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(31));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v32() const {
+      return table_.has_v32();
+    }
+
+    // Clears the v32 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v32() {
+      table_.clear_v32();
+    }
+
+    // Getter for v32.
+    //
     
-      BuilderImpl& v32(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v32() const {
+      return table_.v32();
+    }
+
+    // Setter for v32.
+    //
+    
+      BuilderImpl& v32(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v32_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v32_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(32));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v33() const {
+      return table_.has_v33();
+    }
+
+    // Clears the v33 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v33() {
+      table_.clear_v33();
+    }
+
+    // Getter for v33.
+    //
     
-      BuilderImpl& v33(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v33() const {
+      return table_.v33();
+    }
+
+    // Setter for v33.
+    //
+    
+      BuilderImpl& v33(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v33_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v33_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(33));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v34() const {
+      return table_.has_v34();
+    }
+
+    // Clears the v34 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v34() {
+      table_.clear_v34();
+    }
+
+    // Getter for v34.
+    //
     
-      BuilderImpl& v34(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v34() const {
+      return table_.v34();
+    }
+
+    // Setter for v34.
+    //
+    
+      BuilderImpl& v34(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v34_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v34_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(34));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v35() const {
+      return table_.has_v35();
+    }
+
+    // Clears the v35 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v35() {
+      table_.clear_v35();
+    }
+
+    // Getter for v35.
+    //
     
-      BuilderImpl& v35(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v35() const {
+      return table_.v35();
+    }
+
+    // Setter for v35.
+    //
+    
+      BuilderImpl& v35(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v35_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v35_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(35));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v36() const {
+      return table_.has_v36();
+    }
+
+    // Clears the v36 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v36() {
+      table_.clear_v36();
+    }
+
+    // Getter for v36.
+    //
     
-      BuilderImpl& v36(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v36() const {
+      return table_.v36();
+    }
+
+    // Setter for v36.
+    //
+    
+      BuilderImpl& v36(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v36_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v36_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(36));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v37() const {
+      return table_.has_v37();
+    }
+
+    // Clears the v37 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v37() {
+      table_.clear_v37();
+    }
+
+    // Getter for v37.
+    //
     
-      BuilderImpl& v37(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v37() const {
+      return table_.v37();
+    }
+
+    // Setter for v37.
+    //
+    
+      BuilderImpl& v37(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v37_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v37_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(37));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v38() const {
+      return table_.has_v38();
+    }
+
+    // Clears the v38 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v38() {
+      table_.clear_v38();
+    }
+
+    // Getter for v38.
+    //
     
-      BuilderImpl& v38(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v38() const {
+      return table_.v38();
+    }
+
+    // Setter for v38.
+    //
+    
+      BuilderImpl& v38(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v38_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v38_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(38));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v39() const {
+      return table_.has_v39();
+    }
+
+    // Clears the v39 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v39() {
+      table_.clear_v39();
+    }
+
+    // Getter for v39.
+    //
     
-      BuilderImpl& v39(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v39() const {
+      return table_.v39();
+    }
+
+    // Setter for v39.
+    //
+    
+      BuilderImpl& v39(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v39_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v39_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(39));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v40() const {
+      return table_.has_v40();
+    }
+
+    // Clears the v40 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v40() {
+      table_.clear_v40();
+    }
+
+    // Getter for v40.
+    //
     
-      BuilderImpl& v40(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v40() const {
+      return table_.v40();
+    }
+
+    // Setter for v40.
+    //
+    
+      BuilderImpl& v40(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v40_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v40_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(40));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v41() const {
+      return table_.has_v41();
+    }
+
+    // Clears the v41 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v41() {
+      table_.clear_v41();
+    }
+
+    // Getter for v41.
+    //
     
-      BuilderImpl& v41(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v41() const {
+      return table_.v41();
+    }
+
+    // Setter for v41.
+    //
+    
+      BuilderImpl& v41(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v41_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v41_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(41));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v42() const {
+      return table_.has_v42();
+    }
+
+    // Clears the v42 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v42() {
+      table_.clear_v42();
+    }
+
+    // Getter for v42.
+    //
     
-      BuilderImpl& v42(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v42() const {
+      return table_.v42();
+    }
+
+    // Setter for v42.
+    //
+    
+      BuilderImpl& v42(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v42_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v42_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(42));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v43() const {
+      return table_.has_v43();
+    }
+
+    // Clears the v43 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v43() {
+      table_.clear_v43();
+    }
+
+    // Getter for v43.
+    //
     
-      BuilderImpl& v43(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v43() const {
+      return table_.v43();
+    }
+
+    // Setter for v43.
+    //
+    
+      BuilderImpl& v43(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v43_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v43_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(43));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v44() const {
+      return table_.has_v44();
+    }
+
+    // Clears the v44 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v44() {
+      table_.clear_v44();
+    }
+
+    // Getter for v44.
+    //
     
-      BuilderImpl& v44(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v44() const {
+      return table_.v44();
+    }
+
+    // Setter for v44.
+    //
+    
+      BuilderImpl& v44(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v44_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v44_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(44));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v45() const {
+      return table_.has_v45();
+    }
+
+    // Clears the v45 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v45() {
+      table_.clear_v45();
+    }
+
+    // Getter for v45.
+    //
     
-      BuilderImpl& v45(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v45() const {
+      return table_.v45();
+    }
+
+    // Setter for v45.
+    //
+    
+      BuilderImpl& v45(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v45_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v45_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(45));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v46() const {
+      return table_.has_v46();
+    }
+
+    // Clears the v46 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v46() {
+      table_.clear_v46();
+    }
+
+    // Getter for v46.
+    //
     
-      BuilderImpl& v46(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v46() const {
+      return table_.v46();
+    }
+
+    // Setter for v46.
+    //
+    
+      BuilderImpl& v46(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v46_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v46_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(46));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v47() const {
+      return table_.has_v47();
+    }
+
+    // Clears the v47 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v47() {
+      table_.clear_v47();
+    }
+
+    // Getter for v47.
+    //
     
-      BuilderImpl& v47(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v47() const {
+      return table_.v47();
+    }
+
+    // Setter for v47.
+    //
+    
+      BuilderImpl& v47(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v47_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v47_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(47));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v48() const {
+      return table_.has_v48();
+    }
+
+    // Clears the v48 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v48() {
+      table_.clear_v48();
+    }
+
+    // Getter for v48.
+    //
     
-      BuilderImpl& v48(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v48() const {
+      return table_.v48();
+    }
+
+    // Setter for v48.
+    //
+    
+      BuilderImpl& v48(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v48_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v48_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(48));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v49() const {
+      return table_.has_v49();
+    }
+
+    // Clears the v49 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v49() {
+      table_.clear_v49();
+    }
+
+    // Getter for v49.
+    //
     
-      BuilderImpl& v49(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v49() const {
+      return table_.v49();
+    }
+
+    // Setter for v49.
+    //
+    
+      BuilderImpl& v49(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v49_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v49_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(49));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v50() const {
+      return table_.has_v50();
+    }
+
+    // Clears the v50 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v50() {
+      table_.clear_v50();
+    }
+
+    // Getter for v50.
+    //
     
-      BuilderImpl& v50(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v50() const {
+      return table_.v50();
+    }
+
+    // Setter for v50.
+    //
+    
+      BuilderImpl& v50(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v50_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v50_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(50));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v51() const {
+      return table_.has_v51();
+    }
+
+    // Clears the v51 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v51() {
+      table_.clear_v51();
+    }
+
+    // Getter for v51.
+    //
     
-      BuilderImpl& v51(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v51() const {
+      return table_.v51();
+    }
+
+    // Setter for v51.
+    //
+    
+      BuilderImpl& v51(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v51_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v51_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(51));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v52() const {
+      return table_.has_v52();
+    }
+
+    // Clears the v52 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v52() {
+      table_.clear_v52();
+    }
+
+    // Getter for v52.
+    //
     
-      BuilderImpl& v52(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v52() const {
+      return table_.v52();
+    }
+
+    // Setter for v52.
+    //
+    
+      BuilderImpl& v52(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v52_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v52_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(52));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v53() const {
+      return table_.has_v53();
+    }
+
+    // Clears the v53 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v53() {
+      table_.clear_v53();
+    }
+
+    // Getter for v53.
+    //
     
-      BuilderImpl& v53(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v53() const {
+      return table_.v53();
+    }
+
+    // Setter for v53.
+    //
+    
+      BuilderImpl& v53(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v53_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v53_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(53));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v54() const {
+      return table_.has_v54();
+    }
+
+    // Clears the v54 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v54() {
+      table_.clear_v54();
+    }
+
+    // Getter for v54.
+    //
     
-      BuilderImpl& v54(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v54() const {
+      return table_.v54();
+    }
+
+    // Setter for v54.
+    //
+    
+      BuilderImpl& v54(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v54_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v54_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(54));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v55() const {
+      return table_.has_v55();
+    }
+
+    // Clears the v55 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v55() {
+      table_.clear_v55();
+    }
+
+    // Getter for v55.
+    //
     
-      BuilderImpl& v55(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v55() const {
+      return table_.v55();
+    }
+
+    // Setter for v55.
+    //
+    
+      BuilderImpl& v55(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v55_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v55_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(55));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v56() const {
+      return table_.has_v56();
+    }
+
+    // Clears the v56 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v56() {
+      table_.clear_v56();
+    }
+
+    // Getter for v56.
+    //
     
-      BuilderImpl& v56(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v56() const {
+      return table_.v56();
+    }
+
+    // Setter for v56.
+    //
+    
+      BuilderImpl& v56(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v56_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v56_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(56));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v57() const {
+      return table_.has_v57();
+    }
+
+    // Clears the v57 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v57() {
+      table_.clear_v57();
+    }
+
+    // Getter for v57.
+    //
     
-      BuilderImpl& v57(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v57() const {
+      return table_.v57();
+    }
+
+    // Setter for v57.
+    //
+    
+      BuilderImpl& v57(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v57_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v57_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(57));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v58() const {
+      return table_.has_v58();
+    }
+
+    // Clears the v58 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v58() {
+      table_.clear_v58();
+    }
+
+    // Getter for v58.
+    //
     
-      BuilderImpl& v58(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v58() const {
+      return table_.v58();
+    }
+
+    // Setter for v58.
+    //
+    
+      BuilderImpl& v58(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v58_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v58_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(58));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v59() const {
+      return table_.has_v59();
+    }
+
+    // Clears the v59 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v59() {
+      table_.clear_v59();
+    }
+
+    // Getter for v59.
+    //
     
-      BuilderImpl& v59(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v59() const {
+      return table_.v59();
+    }
+
+    // Setter for v59.
+    //
+    
+      BuilderImpl& v59(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v59_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v59_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(59));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v60() const {
+      return table_.has_v60();
+    }
+
+    // Clears the v60 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v60() {
+      table_.clear_v60();
+    }
+
+    // Getter for v60.
+    //
     
-      BuilderImpl& v60(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v60() const {
+      return table_.v60();
+    }
+
+    // Setter for v60.
+    //
+    
+      BuilderImpl& v60(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v60_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v60_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(60));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v61() const {
+      return table_.has_v61();
+    }
+
+    // Clears the v61 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v61() {
+      table_.clear_v61();
+    }
+
+    // Getter for v61.
+    //
     
-      BuilderImpl& v61(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v61() const {
+      return table_.v61();
+    }
+
+    // Setter for v61.
+    //
+    
+      BuilderImpl& v61(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v61_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v61_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(61));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v62() const {
+      return table_.has_v62();
+    }
+
+    // Clears the v62 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v62() {
+      table_.clear_v62();
+    }
+
+    // Getter for v62.
+    //
     
-      BuilderImpl& v62(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v62() const {
+      return table_.v62();
+    }
+
+    // Setter for v62.
+    //
+    
+      BuilderImpl& v62(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v62_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v62_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(62));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v63() const {
+      return table_.has_v63();
+    }
+
+    // Clears the v63 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v63() {
+      table_.clear_v63();
+    }
+
+    // Getter for v63.
+    //
     
-      BuilderImpl& v63(::fidl::ObjectView<int64_t> elem) {
+    [[ nodiscard ]] int64_t& v63() const {
+      return table_.v63();
+    }
+
+    // Setter for v63.
+    //
+    
+      BuilderImpl& v63(Wrapper_Ignore_Me_<::fidl::ObjectView<int64_t>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v63_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v63_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(63));
         return *static_cast<BuilderImpl*>(this);
       }
+    [[ nodiscard ]] bool has_v64() const {
+      return table_.has_v64();
+    }
+
+    // Clears the v64 field.
+    //
+    // This method should be used sparingly, such as only during tests, as it has
+    // O(number_of_fields) complexity.
+    void clear_v64() {
+      table_.clear_v64();
+    }
+
+    // Getter for v64.
+    //
     
-      BuilderImpl& v64(::fidl::ObjectView<::test_table::wire::ExtensionTable> elem) {
+    [[ nodiscard ]] ::test_table::wire::ExtensionTable& v64() const {
+      return table_.v64();
+    }
+
+    // Setter for v64.
+    //
+    
+      BuilderImpl& v64(Wrapper_Ignore_Me_<::fidl::ObjectView<::test_table::wire::ExtensionTable>> elem) {
         ZX_DEBUG_ASSERT(table_.frame_ptr_ != nullptr);
-        table_.frame_ptr_->v64_.set_data(elem);
+        ZX_DEBUG_ASSERT(elem.value.get() != nullptr);
+        table_.frame_ptr_->v64_.set_data(elem.value);
         table_.max_ordinal_ = std::max(table_.max_ordinal_, static_cast<uint64_t>(64));
         return *static_cast<BuilderImpl*>(this);
       }
@@ -4581,450 +6133,770 @@ class ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable> final 
  public:
     using Base::v1;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v1(Args&&... args_) {
-        v1(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v1(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v1(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v2;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v2(Args&&... args_) {
-        v2(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v2(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v2(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v3;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v3(Args&&... args_) {
-        v3(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v3(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v3(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v4;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v4(Args&&... args_) {
-        v4(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v4(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v4(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v5;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v5(Args&&... args_) {
-        v5(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v5(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v5(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v6;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v6(Args&&... args_) {
-        v6(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v6(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v6(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v7;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v7(Args&&... args_) {
-        v7(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v7(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v7(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v8;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v8(Args&&... args_) {
-        v8(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v8(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v8(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v9;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v9(Args&&... args_) {
-        v9(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v9(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v9(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v10;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v10(Args&&... args_) {
-        v10(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v10(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v10(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v11;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v11(Args&&... args_) {
-        v11(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v11(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v11(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v12;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v12(Args&&... args_) {
-        v12(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v12(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v12(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v13;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v13(Args&&... args_) {
-        v13(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v13(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v13(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v14;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v14(Args&&... args_) {
-        v14(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v14(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v14(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v15;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v15(Args&&... args_) {
-        v15(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v15(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v15(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v16;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v16(Args&&... args_) {
-        v16(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v16(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v16(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v17;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v17(Args&&... args_) {
-        v17(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v17(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v17(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v18;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v18(Args&&... args_) {
-        v18(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v18(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v18(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v19;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v19(Args&&... args_) {
-        v19(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v19(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v19(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v20;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v20(Args&&... args_) {
-        v20(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v20(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v20(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v21;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v21(Args&&... args_) {
-        v21(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v21(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v21(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v22;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v22(Args&&... args_) {
-        v22(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v22(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v22(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v23;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v23(Args&&... args_) {
-        v23(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v23(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v23(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v24;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v24(Args&&... args_) {
-        v24(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v24(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v24(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v25;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v25(Args&&... args_) {
-        v25(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v25(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v25(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v26;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v26(Args&&... args_) {
-        v26(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v26(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v26(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v27;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v27(Args&&... args_) {
-        v27(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v27(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v27(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v28;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v28(Args&&... args_) {
-        v28(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v28(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v28(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v29;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v29(Args&&... args_) {
-        v29(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v29(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v29(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v30;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v30(Args&&... args_) {
-        v30(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v30(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v30(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v31;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v31(Args&&... args_) {
-        v31(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v31(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v31(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v32;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v32(Args&&... args_) {
-        v32(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v32(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v32(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v33;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v33(Args&&... args_) {
-        v33(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v33(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v33(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v34;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v34(Args&&... args_) {
-        v34(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v34(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v34(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v35;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v35(Args&&... args_) {
-        v35(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v35(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v35(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v36;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v36(Args&&... args_) {
-        v36(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v36(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v36(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v37;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v37(Args&&... args_) {
-        v37(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v37(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v37(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v38;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v38(Args&&... args_) {
-        v38(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v38(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v38(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v39;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v39(Args&&... args_) {
-        v39(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v39(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v39(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v40;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v40(Args&&... args_) {
-        v40(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v40(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v40(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v41;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v41(Args&&... args_) {
-        v41(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v41(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v41(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v42;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v42(Args&&... args_) {
-        v42(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v42(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v42(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v43;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v43(Args&&... args_) {
-        v43(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v43(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v43(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v44;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v44(Args&&... args_) {
-        v44(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v44(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v44(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v45;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v45(Args&&... args_) {
-        v45(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v45(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v45(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v46;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v46(Args&&... args_) {
-        v46(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v46(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v46(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v47;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v47(Args&&... args_) {
-        v47(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v47(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v47(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v48;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v48(Args&&... args_) {
-        v48(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v48(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v48(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v49;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v49(Args&&... args_) {
-        v49(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v49(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v49(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v50;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v50(Args&&... args_) {
-        v50(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v50(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v50(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v51;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v51(Args&&... args_) {
-        v51(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v51(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v51(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v52;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v52(Args&&... args_) {
-        v52(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v52(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v52(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v53;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v53(Args&&... args_) {
-        v53(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v53(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v53(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v54;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v54(Args&&... args_) {
-        v54(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v54(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v54(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v55;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v55(Args&&... args_) {
-        v55(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v55(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v55(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v56;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v56(Args&&... args_) {
-        v56(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v56(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v56(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v57;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v57(Args&&... args_) {
-        v57(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v57(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v57(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v58;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v58(Args&&... args_) {
-        v58(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v58(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v58(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v59;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v59(Args&&... args_) {
-        v59(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v59(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v59(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v60;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v60(Args&&... args_) {
-        v60(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v60(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v60(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v61;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v61(Args&&... args_) {
-        v61(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v61(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v61(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v62;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v62(Args&&... args_) {
-        v62(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v62(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v62(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v63;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v63(Args&&... args_) {
-        v63(::fidl::ObjectView<int64_t>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = int64_t,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<int64_t>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v63(First&& first, Args&&... args_) {
+        fidl::ObjectView<int64_t> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v63(Base::Wrapper_Ignore_Me_<fidl::ObjectView<int64_t>>(view_));
         return *this;
       }
     using Base::v64;
     
-      template <typename... Args>
-      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v64(Args&&... args_) {
-        v64(::fidl::ObjectView<::test_table::wire::ExtensionTable>(arena_.get(), std::forward<Args>(args_)...));
+      template <
+          typename First = ::test_table::wire::ExtensionTable,
+          typename... Args,
+          std::enable_if_t<!std::is_same_v<cpp20::remove_cvref_t<First>, fidl::ObjectView<::test_table::wire::ExtensionTable>>, int> = 0
+      >
+      ::fidl::WireTableBuilder<::test_table::wire::SixtyFourOrdinalTable>& v64(First&& first, Args&&... args_) {
+        fidl::ObjectView<::test_table::wire::ExtensionTable> view_(arena_.get(), std::forward<First>(first), std::forward<Args>(args_)...);
+        v64(Base::Wrapper_Ignore_Me_<fidl::ObjectView<::test_table::wire::ExtensionTable>>(view_));
         return *this;
       }
  private:

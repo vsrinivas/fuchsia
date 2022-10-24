@@ -99,12 +99,12 @@ TEST_F(GainControlServerTest, SetGainFails) {
   std::vector<TestCase> cases = {
       {
           .name = "MissingWhen",
-          .edit = [](auto& request) { request.when({}); },
+          .edit = [](auto& request) { request.clear_when(); },
           .expected_error = GainError::kMissingRequiredField,
       },
       {
           .name = "MissingHow",
-          .edit = [](auto& request) { request.how({}); },
+          .edit = [](auto& request) { request.clear_how(); },
           .expected_error = GainError::kMissingRequiredField,
       },
   };
@@ -161,7 +161,12 @@ TEST_F(GainControlServerTest, SetMuteFails) {
   std::vector<TestCase> cases = {
       {
           .name = "MissingWhen",
-          .edit = [](auto& request) { request.when({}); },
+          .edit = [](auto& request) { request.clear_when(); },
+          .expected_error = GainError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingMuted",
+          .edit = [](auto& request) { request.clear_muted(); },
           .expected_error = GainError::kMissingRequiredField,
       },
   };
@@ -185,18 +190,6 @@ TEST_F(GainControlServerTest, SetMuteFails) {
 
     EXPECT_EQ(server().gain_control().state().is_muted, false);
   }
-}
-
-// TODO(fxbug.dev/109458): can be merged into `SetMuteFails` after fix.
-TEST_F(GainControlServerTest, SetMuteFailsMissingMuted) {
-  auto result = client()->SetMute(fuchsia_audio::wire::GainControlSetMuteRequest::Builder(arena_)
-                                      .when(fuchsia_audio::wire::GainTimestamp::WithImmediately({}))
-                                      .Build());
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  EXPECT_EQ(result->error_value(), GainError::kMissingRequiredField);
-
-  EXPECT_EQ(server().gain_control().state().is_muted, false);
 }
 
 TEST_F(GainControlServerTest, SetMuteSuccess) {

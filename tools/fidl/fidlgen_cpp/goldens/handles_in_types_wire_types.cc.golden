@@ -79,6 +79,14 @@ bool ::fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>::HasUn
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_handlesintypes::wire::TableWithHandle>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!h_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_handlesintypes::wire::TableWithHandle::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;

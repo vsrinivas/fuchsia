@@ -28,6 +28,14 @@ bool ::fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>::H
   return false;
 }
 
+uint64_t fidl::WireTableFrame<::test_placementofattributes::wire::ExampleTable>::ComputeMaxOrdinal() const {
+  uint64_t max_ordinal = 0;
+  if (!member_.has_data()) {
+    max_ordinal = 1;
+  }
+  return max_ordinal;
+}
+
 bool ::test_placementofattributes::wire::ExampleTable::HasUnknownData() const {
   if (max_ordinal_ > 1) {
     return true;
