@@ -74,6 +74,7 @@ fuchsia_driver_component("intel-i2c") {
     ":intel_i2c_bind",
   ]
   info = "intel-i2c-info.json"
+  colocate = false
   default_dispatcher_opts = [ "allow_sync_calls" ]
 }
 
@@ -83,6 +84,7 @@ fuchsia_driver_component("intel-i2c-dfv2") {
     ":intel_i2c_bind_dfv2",
   ]
   info = "intel-i2c-info.json"
+  colocate = false
   default_dispatcher_opts = [ "allow_sync_calls" ]
 }
 

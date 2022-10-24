@@ -104,6 +104,7 @@ template("simple_fuchsia_driver") {
     info = "simple.${driver_name}-info.json"
     root_resource = true
     fallback = is_fallback
+    colocate = false
 
     if (driver_name == "intel") {
       # TODO(fxbug.dev/93333): remove this once DFv2 is stabilised.

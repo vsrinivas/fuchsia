@@ -48,6 +48,7 @@ fuchsia_driver_component("as370-power") {
   component_name = "as370-power"
   deps = [ ":as370-power-driver" ]
   info = "as370-power-info.json"
+  colocate = false
 }
 
 test("as370-power-test-bin") {

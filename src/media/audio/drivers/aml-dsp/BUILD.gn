@@ -49,4 +49,5 @@ fuchsia_driver_component("aml-dsp") {
   component_name = "aml-dsp"
   deps = [ ":aml-dsp-driver" ]
   info = "aml-dsp-info.json"
+  colocate = false
 }

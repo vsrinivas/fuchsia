@@ -43,6 +43,7 @@ fuchsia_driver_component("component") {
   component_name = "init-child-first"
   deps = [ ":driver" ]
   info = "init-test-info.json"
+  colocate = false
 }
 
 rustc_test("init-child-first") {

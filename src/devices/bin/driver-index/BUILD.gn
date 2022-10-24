@@ -110,6 +110,7 @@ fuchsia_driver_component("test-bind2-component") {
     ":fake-driver2",
     ":test-bind2",
   ]
+  colocate = false
   info = "test-bind2-component-info.json"
 }
 
@@ -128,6 +129,7 @@ fuchsia_driver_component("test-fallback-component") {
   info = "test-fallback-component-info.json"
   is_v1_driver = false
   fallback = true
+  colocate = false
 }
 
 driver_manifest("driver-manifest") {

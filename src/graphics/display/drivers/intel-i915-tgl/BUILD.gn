@@ -98,6 +98,7 @@ fuchsia_driver_component("intel-i915-tgl") {
   root_resource = true
   uses_profiles = true
   uses_sysmem = true
+  colocate = false
 }
 
 test("intel-i915-tgl-test") {

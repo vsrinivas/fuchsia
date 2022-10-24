@@ -52,6 +52,7 @@ fuchsia_driver_component("address_space_driver") {
   component_name = "goldfish_address_space"
   deps = [ ":address_space_driver-driver" ]
   info = "address_space_driver-info.json"
+  colocate = false
 }
 
 fuchsia_driver_package("goldfish_address_space") {

@@ -65,6 +65,7 @@ fuchsia_driver_component("e1000") {
   deps = [ ":e1000-driver" ]
   info = "e1000-info.json"
   root_resource = true
+  colocate = false
 }
 
 group("tests") {

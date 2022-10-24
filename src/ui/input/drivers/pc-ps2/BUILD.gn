@@ -65,6 +65,7 @@ fuchsia_driver_component("pc-ps2") {
   ]
   info = "pc-ps2-info.json"
   root_resource = true
+  colocate = false
 }
 
 test("pc-ps2-tests-bin") {

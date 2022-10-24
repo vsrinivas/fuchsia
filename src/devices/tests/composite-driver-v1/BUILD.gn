@@ -60,6 +60,7 @@ fuchsia_driver_component("component") {
     ":driver",
   ]
   info = "component-info.json"
+  colocate = false
 }
 
 fuchsia_driver_component("composite-device-component") {
@@ -69,6 +70,7 @@ fuchsia_driver_component("composite-device-component") {
     ":driver",
   ]
   info = "component-info.json"
+  colocate = false
 }
 
 test("composite-driver-v1-test") {

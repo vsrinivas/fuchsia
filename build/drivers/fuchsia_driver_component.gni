@@ -40,11 +40,11 @@ import("//tools/cmc/build/cmc.gni")
 #     If this is true then the driver is a fallback driver.
 #     Type: bool
 #     Default: false
-#   colocate (optional)
-#     If this is true, the driver will be put in the same DriverHost as its parent.
-#     This currently only affects composite drivers.
+#   colocate
+#     If this is true, the driver will be put in the same DriverHost as its parent if possible. If the
+#     parent device was added with DEVICE_ADD_MUST_ISOLATE, then the child device will be put in a
+#     separate DriverHost even with `colocate = true`. This flag is currently only respected in DFv2.
 #     Type: boolean
-#     Default: false
 #   root_resource (optional)
 #     If this is true, the driver will be given access to the root resource.
 #     This only affects drivers with automatically generated manifests.
@@ -126,7 +126,7 @@ template("fuchsia_driver_component") {
         if (fallback) {
           args += [ "--fallback" ]
         }
-        if (defined(invoker.colocate) && invoker.colocate) {
+        if (invoker.colocate) {
           args += [ "--colocate" ]
         }
         if (defined(invoker.root_resource) && invoker.root_resource) {

@@ -80,4 +80,5 @@ fuchsia_driver_component("parent_device_component") {
   component_name = "parent_device"
   deps = [ ":parent_device" ]
   info = "parent_device-info.json"
+  colocate = false
 }

@@ -41,6 +41,7 @@ fuchsia_driver_component("dw-i2c") {
   component_name = "dw-i2c"
   deps = [ ":dw-i2c-driver" ]
   info = "dw-i2c-info.json"
+  colocate = false
 }
 
 test("dw-i2c-test-bin") {

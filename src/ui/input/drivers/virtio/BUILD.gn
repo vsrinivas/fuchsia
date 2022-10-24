@@ -41,6 +41,7 @@ fuchsia_driver_component("virtio_input") {
   component_name = "virtio_input"
   deps = [ ":virtio_input-driver" ]
   info = "virtio_input-info.json"
+  colocate = false
 }
 
 test("virtio-input-test") {
