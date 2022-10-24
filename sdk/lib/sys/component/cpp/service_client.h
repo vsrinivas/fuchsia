@@ -81,16 +81,25 @@ void CheckProtocolForClone(fidl::UnownedClientEnd<Protocol> node,
                 "|Protocol| already appears to compose the |fuchsia.io/Node| protocol. "
                 "There is no need to specify |AssumeProtocolComposesNode|.");
 }
+}  // namespace internal
 
+// Gets the relative path to a service member.
+//
+// This is in the format of:
+// `ServiceName/instance/Name`
+//
+// This relative path can be appended to `/svc/` to construct a full path.
 template <typename ServiceMember>
 std::string MakeServiceMemberPath(std::string_view instance) {
+  static_assert(
+      fidl::IsServiceMemberV<ServiceMember>,
+      "ServiceMember type must be the Protocol inside of a Service, eg: fuchsia_hardware_pci::Service::Device.");
   return std::string(ServiceMember::ServiceName)
       .append("/")
       .append(instance)
       .append("/")
       .append(ServiceMember::Name);
 }
-}  // namespace internal
 
 // Typed channel wrapper around |fdio_service_connect|.
 //
@@ -175,7 +184,7 @@ template <typename ServiceMember,
 zx::result<fidl::ClientEnd<typename ServiceMember::ProtocolType>> ConnectAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
     std::string_view instance = kDefaultInstance) {
-  auto path = internal::MakeServiceMemberPath<ServiceMember>(instance);
+  auto path = MakeServiceMemberPath<ServiceMember>(instance);
   auto channel = internal::ConnectAtRaw(svc_dir, path.c_str());
   if (channel.is_error()) {
     return channel.take_error();
@@ -195,7 +204,7 @@ template <typename ServiceMember,
 zx::result<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
                        fidl::ServerEnd<typename ServiceMember::ProtocolType> server_end,
                        std::string_view instance = kDefaultInstance) {
-  auto path = internal::MakeServiceMemberPath<ServiceMember>(instance);
+  auto path = MakeServiceMemberPath<ServiceMember>(instance);
   if (zx::result<> status = internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), path.c_str());
       status.is_error()) {
     return status.take_error();

@@ -18,15 +18,6 @@ template <typename T>
 static constexpr std::false_type always_false{};
 
 template <typename ServiceMember>
-std::string MakeServiceMemberPath(std::string_view instance) {
-  return std::string(ServiceMember::ServiceName)
-      .append("/")
-      .append(instance)
-      .append("/")
-      .append(ServiceMember::Name);
-}
-
-template <typename ServiceMember>
 zx::result<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DriverTransportConnect(
     const driver::Namespace& ns, std::string_view instance = kDefaultInstance) {
   ZX_ASSERT((std::is_same_v<typename ServiceMember::ProtocolType::Transport,
@@ -37,7 +28,7 @@ zx::result<fdf::ClientEnd<typename ServiceMember::ProtocolType>> DriverTransport
   if (status != ZX_OK) {
     return zx::error(status);
   }
-  auto path = "/svc/" + MakeServiceMemberPath<ServiceMember>(instance);
+  auto path = "/svc/" + component::MakeServiceMemberPath<ServiceMember>(instance);
   auto result =
       ns.Open(path.c_str(), fuchsia_io::wire::OpenFlags::kRightReadable, std::move(server_token));
   if (result.is_error()) {

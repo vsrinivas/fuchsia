@@ -7,6 +7,7 @@
 
 #include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <lib/driver2/namespace.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 namespace driver {
 
@@ -39,6 +40,15 @@ class DevfsExporter {
               uint32_t protocol_id, fit::callback<void(zx_status_t)> callback) const {
     return Export(fidl::DiscoverableProtocolName<T>, devfs_path, options, protocol_id,
                   std::move(callback));
+  }
+
+  // Exports `ServiceMember` to `devfs_path`, with an associated `options` and `protocol_id`.
+  template <typename ServiceMember>
+  void ExportService(std::string_view devfs_path, fuchsia_device_fs::ExportOptions options,
+                     uint32_t protocol_id, fit::callback<void(zx_status_t)> callback,
+                     std::string_view instance = component::kDefaultInstance) const {
+    auto service_path = component::MakeServiceMemberPath<ServiceMember>(instance);
+    return Export(service_path, devfs_path, options, protocol_id, std::move(callback));
   }
 
   const fidl::WireSharedClient<fuchsia_device_fs::Exporter>& exporter() const { return exporter_; }
