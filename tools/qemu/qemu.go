@@ -17,6 +17,16 @@ const (
 	DefaultDNS       = "10.0.2.3"
 )
 
+// Config holds emulator configuration values which can be passed to
+// `ffx emu start` as a file through the --config flag.
+type Config struct {
+	Args       []string          `json:"args"`
+	Envs       map[string]string `json:"envs"`
+	Features   []string          `json:"features"`
+	KernelArgs []string          `json:"kernel_args"`
+	Options    []string          `json:"options"`
+}
+
 type Drive struct {
 	// TODO(kjharland): Embed `Device` here.
 
@@ -281,9 +291,6 @@ func (q *QEMUCommandBuilder) validate() error {
 	if len(q.errs) > 0 {
 		return fmt.Errorf("multiple errors: [\n%s\n]", strings.Join(q.errs, ",\n"))
 	}
-	if q.qemuPath == "" {
-		return fmt.Errorf("QEMU binary path must be set.")
-	}
 	if q.kernel == "" {
 		return fmt.Errorf("QEMU kernel path must be set.")
 	}
@@ -296,27 +303,46 @@ func (q *QEMUCommandBuilder) validate() error {
 // Build creates a QEMU invocation given a particular configuration, a list of
 // images, and any specified command-line arguments.
 func (q *QEMUCommandBuilder) Build() ([]string, error) {
-	if err := q.validate(); err != nil {
+	if q.qemuPath == "" {
+		return []string{}, fmt.Errorf("QEMU binary path must be set.")
+	}
+	config, err := q.BuildConfig()
+	if err != nil {
 		return []string{}, err
 	}
-	cmd := []string{
-		q.qemuPath,
-		"-kernel", q.kernel,
-		"-initrd", q.initrd,
-	}
 
-	cmd = append(cmd, q.args...)
+	cmd := []string{q.qemuPath}
+	cmd = append(cmd, config.Args...)
 
-	// Treat the absense of specified networks as a directive to disable networking entirely.
-	if !q.hasNetwork {
-		cmd = append(cmd, "-net", "none")
-	}
-
-	if len(q.kernelArgs) > 0 {
-		cmd = append(cmd, "-append", strings.Join(q.kernelArgs, " "))
+	if len(config.KernelArgs) > 0 {
+		cmd = append(cmd, "-append", strings.Join(config.KernelArgs, " "))
 	}
 
 	return cmd, nil
+}
+
+// BuildConfig returns a Config storing the emulator configuration values.
+// It can be written to a file and passed through the --config flag to `ffx emu start`.
+func (q *QEMUCommandBuilder) BuildConfig() (Config, error) {
+	var config Config
+	if err := q.validate(); err != nil {
+		return config, err
+	}
+	config.Envs = make(map[string]string)
+	config.Features = []string{}
+	config.KernelArgs = q.kernelArgs
+	config.Args = append([]string{
+		"-kernel", q.kernel,
+		"-initrd", q.initrd,
+	}, q.args...)
+	config.Options = []string{}
+
+	// Treat the absence of specified networks as a directive to disable networking entirely.
+	if !q.hasNetwork {
+		config.Args = append(config.Args, "-net", "none")
+	}
+
+	return config, nil
 }
 
 func (q *QEMUCommandBuilder) recordError(err error) {

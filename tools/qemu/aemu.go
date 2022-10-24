@@ -70,38 +70,42 @@ func (a *AEMUCommandBuilder) SetTarget(target Target, kvm bool) {
 }
 
 func (a *AEMUCommandBuilder) Build() ([]string, error) {
-	if err := a.validate(); err != nil {
+	if a.qemuPath == "" {
+		return []string{}, fmt.Errorf("QEMU binary path must be set.")
+	}
+	config, err := a.BuildConfig()
+	if err != nil {
 		return []string{}, err
 	}
+
 	cmd := []string{
 		a.qemuPath,
 	}
-
-	if len(a.features) > 0 {
+	if len(config.Features) > 0 {
 		cmd = append(cmd, "-feature")
-		sort.Sort(sort.StringSlice(a.features))
-		cmd = append(cmd, strings.Join(a.features, ","))
+		sort.Sort(sort.StringSlice(config.Features))
+		cmd = append(cmd, strings.Join(config.Features, ","))
 	}
 
-	cmd = append(cmd, a.aemuArgs...)
+	cmd = append(cmd, config.Options...)
 
 	cmd = append(cmd, "-fuchsia")
-	cmd = append(cmd, "-kernel")
-	cmd = append(cmd, a.kernel)
-	cmd = append(cmd, "-initrd")
-	cmd = append(cmd, a.initrd)
+	cmd = append(cmd, config.Args...)
 
-	cmd = append(cmd, a.args...)
-
-	// Treat the absense of specified networks as a directive to disable networking entirely.
-	if !a.hasNetwork {
-		cmd = append(cmd, "-net", "none")
-	}
-
-	if len(a.kernelArgs) > 0 {
-		sort.Sort(sort.StringSlice(a.kernelArgs))
-		cmd = append(cmd, "-append", strings.Join(a.kernelArgs, " "))
+	if len(config.KernelArgs) > 0 {
+		sort.Sort(sort.StringSlice(config.KernelArgs))
+		cmd = append(cmd, "-append", strings.Join(config.KernelArgs, " "))
 	}
 
 	return cmd, nil
+}
+
+func (a *AEMUCommandBuilder) BuildConfig() (Config, error) {
+	config, err := a.QEMUCommandBuilder.BuildConfig()
+	if err != nil {
+		return config, err
+	}
+	config.Features = a.features
+	config.Options = a.aemuArgs
+	return config, nil
 }

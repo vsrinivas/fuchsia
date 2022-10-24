@@ -32,6 +32,7 @@ func TestQEMUCommandBuilder(t *testing.T) {
 	// Invalid Target
 	b := &QEMUCommandBuilder{}
 	b.SetTarget(Target("badtarget"), false)
+	b.SetBinary("./bin/qemu")
 	cmd, err := b.Build()
 	check(t, expected{
 		cmd: []string{},
