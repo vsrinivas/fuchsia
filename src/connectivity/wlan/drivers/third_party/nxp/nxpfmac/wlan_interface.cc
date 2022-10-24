@@ -129,12 +129,6 @@ zx_status_t WlanInterface::WlanFullmacImplStart(const wlan_fullmac_impl_ifc_prot
 }
 
 void WlanInterface::OnEapolResponse(wlan::drivers::components::Frame&& frame) {
-  std::lock_guard lock(mutex_);
-  if (!fullmac_ifc_.is_valid()) {
-    NXPF_WARN("Received EAPOL response when interface is shut down");
-    return;
-  }
-
   // This work cannot be run on this thread since it's triggered from the mlan main process. There
   // are locks in fullmac that could block this call if fullmac is calling into this driver and
   // causes something to wait for the mlan main process to run. Unfortunately std::function doesn't
@@ -154,6 +148,10 @@ void WlanInterface::OnEapolResponse(wlan::drivers::components::Frame&& frame) {
     memcpy(eapol_ind.src_addr, eth->h_source, sizeof(eapol_ind.src_addr));
 
     std::lock_guard lock(mutex_);
+    if (!fullmac_ifc_.is_valid()) {
+      NXPF_WARN("Received EAPOL response when interface is shut down");
+      return;
+    }
     fullmac_ifc_.EapolInd(&eapol_ind);
   });
   if (status != ZX_OK) {
@@ -172,6 +170,10 @@ void WlanInterface::OnEapolTransmitted(zx_status_t status, const uint8_t* dst_ad
   // causes something to wait for the mlan main process to run.
   status = async::PostTask(context_->device_->GetDispatcher(), [this, response] {
     std::lock_guard lock(mutex_);
+    if (!fullmac_ifc_.is_valid()) {
+      NXPF_WARN("Received EAPOL transmit confirmation when interface is shut down");
+      return;
+    }
     fullmac_ifc_.EapolConf(&response);
   });
   if (status != ZX_OK) {
