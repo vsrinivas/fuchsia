@@ -60,13 +60,20 @@ class DwarfCfi {
   [[nodiscard]] Error DecodeFde(uint8_t version, uint64_t fde_ptr, DwarfCie& cie, DwarfFde& fde);
   [[nodiscard]] Error DecodeCie(uint8_t version, uint64_t cie_ptr, DwarfCie& cie);
 
+  // A heuristic when PC is in PLT. See fxbug.dev/112402.
+  //
+  // This function lives here because it needs to know the PC range of the current module.
+  // As we're adding more heuristics, it might be better to move to a new unwinder with a dedicated
+  // trust level.
+  [[nodiscard]] Error StepPLT(Memory* stack, const Registers& current, Registers& next);
+
   // Use const to prevent accidental modification.
   Memory* const elf_ = nullptr;
   const uint64_t elf_ptr_ = 0;
 
   // Marks the executable section so that we don't need to find the FDE to know a PC is wrong.
-  uint64_t pc_begin_ = 0;
-  uint64_t pc_end_ = 0;
+  uint64_t pc_begin_ = 0;  // inclusive
+  uint64_t pc_end_ = 0;    // exclusive
 
   // .eh_frame_hdr binary search table info.
   uint64_t eh_frame_hdr_ptr_ = 0;

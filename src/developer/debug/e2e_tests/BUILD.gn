@@ -22,6 +22,11 @@ if (is_host) {
       "test_status.cc",
     ]
 
+    # TODO: Enable the test on ASan builder after fxbug.dev/112674 is fixed.
+    if (!is_asan) {
+      sources += [ "test_step_plt.cc" ]
+    }
+
     deps = [
       # In variant builds the variant version of the test executable will be run. However, the test
       # will expect it can still run the host_x64 default variant of ffx, which is still built
@@ -65,6 +70,7 @@ if (is_host) {
       # deps of the unstripped_binaries_list target below.
       "$root_build_dir/exe.unstripped/crasher",
       "$root_build_dir/exe.unstripped/crasher_test",
+      "$root_build_dir/exe.unstripped/step_plt",
       "$root_out_dir/ffx",
     ]
 
@@ -107,6 +113,7 @@ if (is_host) {
     outputs = [ unstripped_binaries_list_file ]
 
     deps = [
+      "inferiors:zxdb_e2e_inferiors($target_toolchain)",
       "//src/developer/forensics/crasher:crasher($target_toolchain)",
       "//src/developer/forensics/crasher:crasher_test($target_toolchain)",
     ]

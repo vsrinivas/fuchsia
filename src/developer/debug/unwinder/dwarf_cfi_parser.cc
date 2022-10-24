@@ -385,7 +385,7 @@ Error DwarfCfiParser::Step(Memory* stack, RegisterID return_address_register,
   // to CFA.
   next.SetSP(cfa);
 
-  // Return address is the address after the call instruction, so setting IP to that simualates a
+  // Return address is the address after the call instruction, so setting IP to that simulates a
   // return. On x64, return_address_register is just RIP so it's a noop. On arm64,
   // return_address_register is LR, which must be copied to IP.
   //

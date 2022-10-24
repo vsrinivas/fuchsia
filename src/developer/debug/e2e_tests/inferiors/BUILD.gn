@@ -1,0 +1,46 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Declare an inferior with a default manifest.
+template("inferior") {
+  _target_name = target_name
+  _target_bin = target_name + "_bin"
+  _target_manifest = target_name + "_manifest"
+
+  executable(_target_bin) {
+    output_name = _target_name
+    forward_variables_from(invoker, "*")
+  }
+
+  generated_file(_target_manifest) {
+    outputs = [ "$target_gen_dir/$_target_manifest.cml" ]
+    output_conversion = "json"
+    contents = {
+      include = [ "syslog/client.shard.cml" ]
+      program = {
+        runner = "elf"
+        binary = "bin/$_target_name"
+      }
+    }
+  }
+
+  fuchsia_component(target_name) {
+    manifest = "$target_gen_dir/$_target_manifest.cml"
+    deps = [
+      ":$_target_bin",
+      ":$_target_manifest",
+    ]
+  }
+}
+
+inferior("step_plt") {
+  sources = [ "step_plt.cc" ]
+  cflags = [ "-finline-functions" ]  # inline std::make_shared.
+}
+
+fuchsia_package("zxdb_e2e_inferiors") {
+  deps = [ ":step_plt" ]
+}
