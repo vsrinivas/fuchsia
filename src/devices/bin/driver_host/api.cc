@@ -150,6 +150,9 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   if (args->flags & DEVICE_ADD_ALLOW_MULTI_COMPOSITE) {
     dev->set_flag(DEV_FLAG_ALLOW_MULTI_COMPOSITE);
   }
+  if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
+    dev->set_flag(DEV_FLAG_MUST_ISOLATE);
+  }
 
   if (!args->power_states) {
     // TODO(fxbug.dev/34081): Remove when all drivers declare power states

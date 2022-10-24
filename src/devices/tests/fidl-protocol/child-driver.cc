@@ -10,6 +10,7 @@
 
 #include <string>
 
+#include <bind/fidl_protocol/testlib/cpp/bind.h>
 #include <ddktl/device.h>
 #include <ddktl/unbind-txn.h>
 
@@ -28,8 +29,13 @@ class Device : public DeviceParent {
     if (status != ZX_OK) {
       return status;
     }
+    // A prop so that the isolated-child-driver can bind to the device created.
+    zx_device_str_prop_t str_props[] = {
+        {.key = bind_fidl_protocol_testlib::IS_CHILD_DEVICE.c_str(),
+         .property_value = str_prop_bool_val(true)},
+    };
     // We've successfully made a fidl call, add a device so the test knows to end.
-    status = device->DdkAdd("child");
+    status = device->DdkAdd(ddk::DeviceAddArgs("child").set_str_props(str_props));
     if (status == ZX_OK) {
       __UNUSED auto ptr = device.release();
     }

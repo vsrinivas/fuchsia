@@ -260,6 +260,7 @@ void MultipleDeviceTestCase::SetUp() {
         /* driver_path */ {},
         /* args */ {}, /* skip_autobind */ false, /* has_init */ false,
         /* always_init */ true,
+        /* must_isolate */ false,
         /*inspect*/ zx::vmo(),
         /* outgoing_dir */ fidl::ClientEnd<fio::Directory>(), &platform_bus_.device);
     ASSERT_OK(status);
@@ -325,7 +326,8 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
       /* props_data */ nullptr,
       /* props_count */ 0, /* str_props_data */ nullptr,
       /* str_props_count */ 0, name, protocol_id, /* driver_path */ driver.data(), /* args */ {},
-      /* skip_autobind */ false, has_init, always_init, std::move(inspect),
+      /* skip_autobind */ false, /* has_init */ has_init, /* always_init */ always_init,
+      /* must_isolate */ false, std::move(inspect),
       /* outgoing_dir */ std::move(outgoing_dir), &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);

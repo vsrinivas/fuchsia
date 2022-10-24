@@ -92,6 +92,8 @@ type AddDeviceConfig = strict bits : uint32 {
     ALLOW_MULTI_COMPOSITE = 0x00000001;
     /// Device should not trigger the auto-bind mechanism
     SKIP_AUTOBIND = 0x00000004;
+    /// Device should run in an isolated driver host from its children.
+    MUST_ISOLATE = 0x00000008;
 };
 
 /// A part of a description of a DeviceFragment

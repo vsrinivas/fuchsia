@@ -433,6 +433,9 @@ zx_status_t DriverHostContext::DriverManagerAdd(const fbl::RefPtr<zx_device_t>& 
   if (child->flags() & DEV_FLAG_UNBINDABLE) {
     add_device_config |= AddDeviceConfig::kSkipAutobind;
   }
+  if (child->flags() & DEV_FLAG_MUST_ISOLATE) {
+    add_device_config |= AddDeviceConfig::kMustIsolate;
+  }
 
   auto coordinator_endpoints = fidl::CreateEndpoints<fuchsia_device_manager::Coordinator>();
   if (coordinator_endpoints.is_error()) {

@@ -237,6 +237,7 @@
 //src/devices/tests/fidl-bindlib-generation/child-driver:driver
 //src/devices/tests/fidl-bindlib-generation/parent-driver:driver
 //src/devices/tests/fidl-protocol:child-driver
+//src/devices/tests/fidl-protocol:isolated-child-driver
 //src/devices/tests/fidl-protocol:parent-driver
 //src/devices/tests/fidl-service:child-driver
 //src/devices/tests/fidl-service:parent-driver
@@ -258,14 +259,14 @@
 //src/devices/tests/v2/composite:root_driver
 //src/devices/tests/v2/ddk-init-test:driver
 //src/devices/tests/v2/devfs_exporter:root_driver
+//src/devices/tests/v2/device_group:leaf_driver
+//src/devices/tests/v2/device_group:root_driver
 //src/devices/tests/v2/dynamic_offers:leaf_driver
 //src/devices/tests/v2/dynamic_offers:root_driver
 //src/devices/tests/v2/init-child-first:driver
 //src/devices/tests/v2/interop:leaf_driver
 //src/devices/tests/v2/interop:root_driver
 //src/devices/tests/v2/interop:v1_driver
-//src/devices/tests/v2/device_group:leaf_driver
-//src/devices/tests/v2/device_group:root_driver
 //src/devices/tests/v2/runtime-dispatcher:leaf-driver
 //src/devices/tests/v2/runtime-dispatcher:root-driver
 //src/devices/tests/v2/runtime-protocol:leaf-driver

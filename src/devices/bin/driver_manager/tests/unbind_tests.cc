@@ -329,7 +329,7 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
       std::move(coordinator_endpoints->server), nullptr /* props_data */, 0 /* props_count */,
       nullptr /* str_props_data */, 0 /* str_props_count */, "child", 0 /* protocol_id */,
       {} /* driver_path */, {} /* args */, false /* skip_autobind */, false /* has_init */,
-      true /* always_init */, zx::vmo() /*inspect*/,
+      true /* always_init */, false /* must_isolate */, zx::vmo() /*inspect*/,
       fidl::ClientEnd<fio::Directory>() /*outgoing_dir*/, &child);
   ASSERT_NOT_OK(status);
   coordinator_loop()->RunUntilIdle();

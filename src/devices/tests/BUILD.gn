@@ -74,6 +74,7 @@ group("drivers") {
     "driver-transport:parent",
     "fidl-bindlib-generation:drivers",
     "fidl-protocol:child",
+    "fidl-protocol:isolated-child",
     "fidl-protocol:parent",
     "fidl-service:child",
     "fidl-service:parent",

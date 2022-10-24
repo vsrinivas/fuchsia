@@ -20,6 +20,7 @@ test("test") {
 
   deps = [
     ":echo_cpp_wire",
+    "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_hlcpp",
     "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_hlcpp",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/driver_test_realm/realm_builder/cpp",
@@ -34,10 +35,15 @@ test("test") {
 fuchsia_unittest_package("fidl-protocol-test") {
   deps = [
     ":child",
+    ":isolated-child",
     ":parent",
     ":test",
     "//src/devices/misc/drivers/test-parent",
   ]
+}
+
+bind_library("fidl_protocol.testlib") {
+  source = "testbindlib.bind"
 }
 
 driver_bind_rules("parent-driver-bind") {
@@ -81,6 +87,7 @@ fuchsia_driver("child-driver") {
   deps = [
     ":child-driver-bind",
     ":echo_cpp_wire",
+    ":fidl_protocol.testlib_cpp",
     "//src/devices/lib/driver",
     "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
@@ -92,6 +99,30 @@ fuchsia_driver_component("child") {
   component_name = "child"
   deps = [ ":child-driver" ]
   info = "child-info.json"
+}
+
+driver_bind_rules("isolated-child-driver-bind") {
+  rules = "isolated-child-driver.bind"
+  header_output = "isolated-child-driver-bind.h"
+  deps = [ ":fidl_protocol.testlib" ]
+}
+
+fuchsia_driver("isolated-child-driver") {
+  output_name = "fidl-protocol-isolated-child"
+  sources = [ "isolated-child-driver.cc" ]
+  deps = [
+    ":isolated-child-driver-bind",
+    "//src/devices/lib/driver",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/lib/ddk",
+    "//src/lib/ddktl",
+  ]
+}
+
+fuchsia_driver_component("isolated-child") {
+  component_name = "isolated-child"
+  deps = [ ":isolated-child-driver" ]
+  info = "isolated-child-info.json"
 }
 
 group("tests") {

@@ -59,12 +59,11 @@ zx::result<> BanjoDevice::Create(zx_device_t* parent, pci::Device* device) {
   };
   // clang-format on
 
-  // Create an isolated devhost to load the proxy pci driver containing the PciProxy
-  // instance which will talk to this device.
+  // Create a devhost to load the proxy pci driver containing the PciProxy instance
+  // which will talk to this device.
   zx_status_t status = banjo_dev->DdkAdd(ddk::DeviceAddArgs(pci_dev->config()->addr())
                                              .set_props(pci_device_props)
-                                             .set_proto_id(ZX_PROTOCOL_PCI)
-                                             .set_flags(DEVICE_ADD_MUST_ISOLATE));
+                                             .set_proto_id(ZX_PROTOCOL_PCI));
   if (status != ZX_OK) {
     zxlogf(ERROR, "[%s] Failed to create pci banjo fragment: %s", pci_dev->config()->addr(),
            zx_status_get_string(status));
