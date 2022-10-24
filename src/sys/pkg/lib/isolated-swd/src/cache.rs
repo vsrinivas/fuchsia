@@ -96,13 +96,15 @@ impl Cache {
 
 #[cfg(test)]
 pub(crate) mod for_tests {
-    use fuchsia_component_test::RealmInstance;
+    use fuchsia_component_test::ChildRef;
 
     use {
         super::*,
-        anyhow::Context,
+        blobfs_ramdisk::BlobfsRamdisk,
         fidl_fuchsia_io as fio,
-        fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, Ref, Route},
+        fuchsia_component_test::{
+            Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route,
+        },
         futures::prelude::*,
         std::sync::Arc,
         vfs::directory::entry::DirectoryEntry,
@@ -112,13 +114,13 @@ pub(crate) mod for_tests {
     pub struct CacheForTest {
         pub blobfs: blobfs_ramdisk::BlobfsRamdisk,
         pub cache: Arc<Cache>,
-        pub realm_instance: RealmInstance,
     }
 
     impl CacheForTest {
-        pub async fn new() -> Result<Self, Error> {
-            let realm_builder = RealmBuilder::new().await.unwrap();
-            let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().context("starting blobfs").unwrap();
+        pub async fn realm_setup(
+            realm_builder: &RealmBuilder,
+            blobfs: &BlobfsRamdisk,
+        ) -> Result<ChildRef, Error> {
             let blobfs_proxy = blobfs.root_dir_proxy().context("getting root dir proxy").unwrap();
             let blobfs_vfs = vfs::remote::remote_dir(blobfs_proxy);
 
@@ -192,6 +194,7 @@ pub(crate) mod for_tests {
                 .add_route(
                     Route::new()
                         .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
+                        .capability(Capability::protocol_by_name("fuchsia.pkg.RetainedPackages"))
                         .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
                         .from(&pkg_cache)
                         .to(Ref::parent()),
@@ -210,8 +213,13 @@ pub(crate) mod for_tests {
                 )
                 .await
                 .unwrap();
+            Ok(pkg_cache)
+        }
 
-            let realm_instance = realm_builder.build().await.unwrap();
+        pub async fn new(
+            realm_instance: &RealmInstance,
+            blobfs: BlobfsRamdisk,
+        ) -> Result<Self, Error> {
             let pkg_cache_proxy = realm_instance
                 .root
                 .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageCacheMarker>()
@@ -235,7 +243,7 @@ pub(crate) mod for_tests {
             )
             .unwrap();
 
-            Ok(CacheForTest { realm_instance, blobfs, cache: Arc::new(cache) })
+            Ok(CacheForTest { blobfs, cache: Arc::new(cache) })
         }
     }
 }
@@ -244,11 +252,17 @@ pub(crate) mod for_tests {
 mod tests {
     use super::for_tests::CacheForTest;
     use fuchsia_async as fasync;
+    use fuchsia_component_test::RealmBuilder;
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_cache_handles_sync() {
-        let cache = CacheForTest::new().await.expect("launching cache");
+        let realm_builder = RealmBuilder::new().await.unwrap();
+        let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().expect("starting blobfs");
 
+        let _cache_ref =
+            CacheForTest::realm_setup(&realm_builder, &blobfs).await.expect("setting up realm");
+        let realm_instance = realm_builder.build().await.unwrap();
+        let cache = CacheForTest::new(&realm_instance, blobfs).await.expect("launching cache");
         let proxy = cache.cache.package_cache_proxy().unwrap();
 
         assert_eq!(proxy.sync().await.unwrap(), Ok(()));
@@ -256,8 +270,12 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     pub async fn test_cache_handles_gc() {
-        let cache = CacheForTest::new().await.expect("launching cache");
-
+        let realm_builder = RealmBuilder::new().await.unwrap();
+        let blobfs = blobfs_ramdisk::BlobfsRamdisk::start().expect("starting blobfs");
+        let _cache_ref =
+            CacheForTest::realm_setup(&realm_builder, &blobfs).await.expect("setting up realm");
+        let realm_instance = realm_builder.build().await.unwrap();
+        let cache = CacheForTest::new(&realm_instance, blobfs).await.expect("launching cache");
         let proxy = cache.cache._space_manager_proxy.clone();
 
         assert_eq!(proxy.gc().await.unwrap(), Ok(()));

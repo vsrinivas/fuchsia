@@ -5,6 +5,7 @@ use {
     crate::{setup::DevhostConfig, storage::Storage},
     anyhow::{bail, format_err, Context, Error},
     fidl::endpoints::ClientEnd,
+    fidl::endpoints::ServerEnd,
     fidl_fuchsia_buildinfo::ProviderMarker as BuildInfoMarker,
     fidl_fuchsia_io as fio, fidl_fuchsia_paver as fpaver, fuchsia_async as fasync,
     fuchsia_component::{client, server::ServiceFs},
@@ -13,7 +14,9 @@ use {
     isolated_ota::{download_and_apply_update, OmahaConfig},
     serde::Deserialize,
     serde_json::{json, Value},
+    std::sync::Arc,
     std::{fs::File, io::BufReader, str::FromStr},
+    vfs::directory::{entry::DirectoryEntry, helper::DirectlyMutable, mutable::simple::Simple},
 };
 
 const PATH_TO_CONFIGS_DIR: &'static str = "/config/data/ota-configs";
@@ -61,10 +64,16 @@ pub struct OtaEnvBuilder {
     ssl_certificates: String,
     storage_type: Option<StorageType>,
     factory_reset: bool,
+    outgoing_dir: Arc<Simple>,
 }
 
 impl OtaEnvBuilder {
-    pub fn new() -> Self {
+    /// Create a new `OtaEnvBuilder`. Requires an `outgoing_dir` which is served
+    /// by an instantiation of a Rust VFS tied to this component's outgoing
+    /// directory. This is required in order to prepare the outgoing directory
+    /// with capabilities like directories and storage for the `pkg-recovery.cm`
+    /// component which will be created as a child.
+    pub fn new(outgoing_dir: Arc<Simple>) -> Self {
         OtaEnvBuilder {
             board_name: BoardName::BuildInfo,
             omaha_config: None,
@@ -73,6 +82,7 @@ impl OtaEnvBuilder {
             ssl_certificates: "/config/ssl".to_owned(),
             storage_type: None,
             factory_reset: true,
+            outgoing_dir,
         }
     }
 
@@ -250,6 +260,7 @@ impl OtaEnvBuilder {
             ssl_certificates,
             storage,
             factory_reset: self.factory_reset,
+            outgoing_dir: self.outgoing_dir,
         })
     }
 }
@@ -265,17 +276,45 @@ pub struct OtaEnv {
     ssl_certificates: File,
     storage: Option<Box<dyn Storage>>,
     factory_reset: bool,
+    outgoing_dir: Arc<Simple>,
 }
 
 impl OtaEnv {
     /// Run the OTA, targeting the given channel and reporting the given version
     /// as the current system version.
     pub async fn do_ota(self, channel: &str, version: &str) -> Result<(), Error> {
+        fn proxy_from_file(file: File) -> Result<fio::DirectoryProxy, Error> {
+            Ok(fio::DirectoryProxy::new(fuchsia_async::Channel::from_channel(
+                fdio::transfer_fd(file)?.into(),
+            )?))
+        }
+
+        // Utilize the repository configs and ssl certificates we were provided,
+        // by placing them in our outgoing directory.
+        self.outgoing_dir.add_entry(
+            "config",
+            vfs::pseudo_directory! {
+                "data" => vfs::pseudo_directory!{
+                        "repositories" => vfs::remote::remote_dir(proxy_from_file(self.repo_dir)?)
+                },
+                "ssl" => vfs::remote::remote_dir(
+                    proxy_from_file(self.ssl_certificates)?
+                ),
+            },
+        )?;
+
+        let blobfs_proxy = self
+            .storage
+            .as_ref()
+            .ok_or_else(|| anyhow::anyhow!("couldn't get storage while applying ota"))?
+            .wipe_or_get_storage()
+            .await?
+            .into_proxy()?;
+        self.outgoing_dir.add_entry("blob", vfs::remote::remote_dir(blobfs_proxy))?;
+
         download_and_apply_update(
             self.blobfs_root,
             self.paver_connector,
-            self.repo_dir,
-            self.ssl_certificates,
             channel,
             &self.board_name,
             version,
@@ -333,8 +372,29 @@ async fn get_running_version() -> Result<String, Error> {
 }
 
 /// Run an OTA from a development host. Returns when the system and SSH keys have been installed.
-pub async fn run_devhost_ota(cfg: DevhostConfig) -> Result<(), Error> {
-    let ota_env = OtaEnvBuilder::new()
+pub async fn run_devhost_ota(
+    cfg: DevhostConfig,
+    out_dir: ServerEnd<fio::NodeMarker>,
+) -> Result<(), Error> {
+    // TODO(fxbug.dev/112997): deduplicate this spinup code with the code in
+    // ota_main.rs. To do that, we'll need to remove the run_devhost_ota call
+    // from //src/recovery/system/src/main.rs and make run_*_ota public to only ota_main.rs.
+    // Also, remove out_dir - ota_main.rs should provide an outgoing directory already spun up.
+    let outgoing_dir_vfs = vfs::mut_pseudo_directory! {};
+
+    let scope = vfs::execution_scope::ExecutionScope::new();
+    outgoing_dir_vfs.clone().open(
+        scope.clone(),
+        fio::OpenFlags::RIGHT_READABLE
+            | fio::OpenFlags::RIGHT_WRITABLE
+            | fio::OpenFlags::RIGHT_EXECUTABLE,
+        0,
+        vfs::path::Path::dot(),
+        out_dir,
+    );
+    fasync::Task::local(async move { scope.wait().await }).detach();
+
+    let ota_env = OtaEnvBuilder::new(outgoing_dir_vfs)
         .devhost(cfg)
         .build()
         .await
@@ -343,7 +403,10 @@ pub async fn run_devhost_ota(cfg: DevhostConfig) -> Result<(), Error> {
 }
 
 /// Run an OTA against a TUF or Omaha server. Returns Ok after the system has successfully been installed.
-pub async fn run_wellknown_ota(storage_type: StorageType) -> Result<(), Error> {
+pub async fn run_wellknown_ota(
+    storage_type: StorageType,
+    outgoing_dir: Arc<Simple>,
+) -> Result<(), Error> {
     let config: RecoveryUpdateConfig = get_config().context("Couldn't get config")?;
 
     let version = get_running_version().await.context("Error reading version")?;
@@ -353,7 +416,7 @@ pub async fn run_wellknown_ota(storage_type: StorageType) -> Result<(), Error> {
     match config.update_type {
         UpdateType::Tuf => {
             println!("recovery-ota: Creating TUF OTA environment");
-            let ota_env = OtaEnvBuilder::new()
+            let ota_env = OtaEnvBuilder::new(outgoing_dir)
                 .storage_type(storage_type)
                 .build()
                 .await
@@ -369,19 +432,34 @@ pub async fn run_wellknown_ota(storage_type: StorageType) -> Result<(), Error> {
             println!("recovery-ota: Creating Omaha OTA environment");
             // Check for testing override
             let service_url = service_url.unwrap_or(DEFAULT_OMAHA_SERVICE_URL.to_string());
+            println!(
+                "recovery-ota: trying Omaha OTA on channel '{}' against version '{}', with service URL '{}' and app id '{}'",
+                &config.default_channel, &version, &service_url, &app_id
+            );
 
-            let ota_env = OtaEnvBuilder::new()
+            let ota_env = OtaEnvBuilder::new(outgoing_dir)
                 .omaha_config(OmahaConfig { app_id: app_id, server_url: service_url })
                 .storage_type(storage_type)
                 .build()
                 .await
-                .context("Failed to create OTA env")?;
+                .context("Failed to create OTA env");
+
+            match ota_env {
+                Ok(ref _ota_env) => {
+                    println!("got no error while creating OTA env...")
+                }
+                Err(ref e) => {
+                    eprintln!("got error while creating OTA env: {:?}", e)
+                }
+            }
 
             println!(
                 "recovery-ota: Starting Omaha OTA on channel '{}' against version '{}'",
                 &config.default_channel, &version
             );
-            ota_env.do_ota(&config.default_channel, &version).await
+            let res = ota_env?.do_ota(&config.default_channel, &version).await;
+            println!("recovery-ota: OTA result: {:?}", res);
+            res
         }
     }
 }
@@ -415,6 +493,7 @@ mod tests {
         fuchsia_pkg_testing::{
             make_epoch_json, serve::HttpResponder, Package, PackageBuilder, RepositoryBuilder,
         },
+        fuchsia_runtime::{take_startup_handle, HandleType},
         futures::future::{ready, BoxFuture},
         hyper::{header, Body, Request, Response, StatusCode},
         mock_paver::MockPaverServiceBuilder,
@@ -651,8 +730,25 @@ mod tests {
                     .unwrap_or("".to_owned()),
             };
 
+            let directory_handle = take_startup_handle(HandleType::DirectoryRequest.into())
+                .expect("cannot take startup handle");
+            let outgoing_dir = fuchsia_zircon::Channel::from(directory_handle).into();
+            let outgoing_dir_vfs = vfs::mut_pseudo_directory! {};
+
+            let scope = vfs::execution_scope::ExecutionScope::new();
+            outgoing_dir_vfs.clone().open(
+                scope.clone(),
+                fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::RIGHT_WRITABLE
+                    | fio::OpenFlags::RIGHT_EXECUTABLE,
+                0,
+                vfs::path::Path::dot(),
+                outgoing_dir,
+            );
+            fasync::Task::local(async move { scope.wait().await }).detach();
+
             // Build the environment, and do the OTA.
-            let ota_env = OtaEnvBuilder::new()
+            let ota_env = OtaEnvBuilder::new(outgoing_dir_vfs)
                 .board_name("x64")
                 .storage_type(StorageType::Fake {
                     blobfs_root: self.storage.blobfs_root().context("Opening blobfs root")?,

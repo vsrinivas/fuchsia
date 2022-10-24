@@ -9,6 +9,7 @@ rustc_library("isolated-ota-env") {
   testonly = true
   edition = "2021"
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
@@ -17,6 +18,7 @@ rustc_library("isolated-ota-env") {
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/fuchsia-fs",
     "//src/lib/storage/vfs/rust:vfs",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
     "//src/sys/pkg/lib/fuchsia-merkle",

@@ -160,6 +160,7 @@ mod tests {
         fidl_fuchsia_paver::PaverRequestStream,
         fuchsia_async as fasync,
         fuchsia_component::server::{ServiceFs, ServiceObj},
+        fuchsia_component_test::RealmBuilder,
         fuchsia_pkg_testing::{make_current_epoch_json, PackageBuilder},
         fuchsia_zircon as zx,
         mock_paver::{hooks as mphooks, PaverEvent},
@@ -208,9 +209,11 @@ mod tests {
             http.add_response(hyper::Response::new(response));
         }
 
-        let resolver = ResolverForTest::new(updater.repo, TEST_REPO_URL.parse().unwrap(), None)
-            .await
-            .expect("Creating resolver");
+        let realm_builder = RealmBuilder::new().await.unwrap();
+        let resolver =
+            ResolverForTest::new(updater.repo, TEST_REPO_URL.parse().unwrap(), None, realm_builder)
+                .await
+                .expect("Creating resolver");
 
         install_update_with_http(
             resolver.cache.blobfs.root_dir_handle().expect("getting blobfs root handle"),

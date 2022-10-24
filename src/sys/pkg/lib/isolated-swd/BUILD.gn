@@ -12,15 +12,11 @@ rustc_library("isolated-swd") {
   with_unit_tests = true
 
   deps = [
-    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
-    "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_rust",
     "//sdk/fidl/fuchsia.paver:fuchsia.paver_rust",
     "//sdk/fidl/fuchsia.pkg:fuchsia.pkg_rust",
-    "//sdk/fidl/fuchsia.posix.socket:fuchsia.posix.socket_rust",
     "//sdk/fidl/fuchsia.space:fuchsia.space_rust",
-    "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_rust",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
@@ -43,6 +39,7 @@ rustc_library("isolated-swd") {
   ]
 
   test_deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//src/lib/fuchsia",
     "//src/lib/fuchsia-component-test",
     "//src/lib/storage/vfs/rust:vfs",
@@ -79,7 +76,7 @@ fuchsia_test_component("isolated-swd-tests-component") {
 isolated_swd_components = [
   "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
   "//src/sys/pkg/bin/pkg-cache:config_values_from_gn-ignore-system-image",
-  "//src/sys/pkg/bin/pkg-resolver:isolated",
+  "//src/sys/pkg/bin/pkg-resolver:component",
   "//src/sys/pkg/bin/system-updater:isolated",
 ]
 
@@ -90,6 +87,7 @@ fuchsia_component("pkg-component") {
     "//src/sys/pkg/bin/fake-system-update-committer",
     "//src/sys/pkg/bin/pkg-cache:component-ignore-system-image",
     "//src/sys/pkg/bin/pkg-cache:config_values_from_gn-ignore-system-image",
+    "//src/sys/pkg/bin/pkg-resolver:component",
   ]
 }
 

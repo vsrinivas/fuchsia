@@ -33,4 +33,21 @@
             from: "#dns_resolver",
         },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack",
+            to: "#realm_builder",
+        },
+        {
+            protocol: "fuchsia.net.name.Lookup",
+            from: "#dns_resolver",
+            to: "#realm_builder",
+        },
+        {
+            protocol: [ "fuchsia.process.Launcher" ],
+            from: "parent",
+            to: "#realm_builder",
+        },
+    ],
 }

@@ -42,6 +42,18 @@
             path: "/config/ssl",
         },
     ],
+    offer: [
+        {
+            protocol: "fuchsia.posix.socket.Provider",
+            from: "#netstack",
+            to: "#realm_builder",
+        },
+        {
+            protocol: "fuchsia.net.name.Lookup",
+            from: "#dns_resolver",
+            to: "#realm_builder",
+        },
+    ],
     facets: {
         "fuchsia.test": {
             "deprecated-allowed-packages": [ "isolated-swd-components" ],

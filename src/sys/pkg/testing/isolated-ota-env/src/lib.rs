@@ -6,7 +6,9 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fidl::endpoints::Proxy,
     fidl::endpoints::{ClientEnd, ServerEnd},
+    fidl_fuchsia_boot::{ArgumentsRequest, ArgumentsRequestStream},
     fidl_fuchsia_io as fio,
+    fidl_fuchsia_io::DirectoryProxy,
     fidl_fuchsia_paver::PaverRequestStream,
     fidl_fuchsia_pkg_ext::RepositoryConfigs,
     fuchsia_async as fasync,
@@ -19,6 +21,7 @@ use {
         download_and_apply_update_with_pre_configured_components, OmahaConfig, UpdateError,
     },
     isolated_swd::cache::Cache,
+    isolated_swd::resolver::Resolver,
     mock_omaha_server::{
         OmahaResponse, OmahaServer, OmahaServerBuilder, ResponseAndMetadata, ResponseMap,
     },
@@ -31,12 +34,12 @@ use {
         str::FromStr,
         sync::Arc,
     },
-    tempfile::TempDir,
     vfs::directory::entry::DirectoryEntry,
 };
 
 const EMPTY_REPO_PATH: &str = "/pkg/empty-repo";
 const TEST_CERTS_PATH: &str = "/pkg/data/ssl";
+const GLOBAL_SSL_CERTS_PATH: &str = "/config/ssl";
 const TEST_REPO_URL: &str = "fuchsia-pkg://integration.test.fuchsia.com";
 
 pub enum OmahaState {
@@ -136,14 +139,15 @@ impl TestEnvBuilder {
         let mut update = PackageBuilder::new("update")
             .add_resource_at("packages.json", self.generate_packages().as_bytes());
 
-        let (repo_config, served_repo, cert_dir, packages, merkle) = if self.repo_config.is_none() {
+        let (repo_config, served_repo, ssl_certs, packages, merkle) = if self.repo_config.is_none()
+        {
             // If no repo config was specified, host a repo containing the provided packages,
             // and an update package containing given images + all packages in the repo.
             for (name, data) in self.images.iter() {
                 update = update.add_resource_at(name, data.as_slice());
             }
 
-            let update = update.build().await.context("Building update package")?;
+            let update = update.build().await.expect("build update package");
             let repo = Arc::new(
                 self.packages
                     .iter()
@@ -153,12 +157,12 @@ impl TestEnvBuilder {
                     )
                     .build()
                     .await
-                    .context("Building repo")?,
+                    .expect("build repo"),
             );
 
-            let served_repo = Arc::clone(&repo).server().start().context("serving repo")?;
+            let served_repo = Arc::clone(&repo).server().start().expect("serve repo");
             let config = RepositoryConfigs::Version1(vec![
-                served_repo.make_repo_config(TEST_REPO_URL.parse()?)
+                served_repo.make_repo_config(TEST_REPO_URL.parse().expect("make repo config"))
             ]);
 
             let update_merkle = update.meta_far_merkle_root().clone();
@@ -169,7 +173,11 @@ impl TestEnvBuilder {
             (
                 config,
                 Some(served_repo),
-                std::fs::File::open(TEST_CERTS_PATH).context("opening test certificates")?,
+                fuchsia_fs::directory::open_in_namespace(
+                    TEST_CERTS_PATH,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .unwrap(),
                 packages,
                 update_merkle,
             )
@@ -179,10 +187,14 @@ impl TestEnvBuilder {
             (
                 self.repo_config.unwrap(),
                 None,
-                std::fs::File::open("/config/ssl").context("opening system ssl certificates")?,
+                fuchsia_fs::directory::open_in_namespace(
+                    GLOBAL_SSL_CERTS_PATH,
+                    fio::OpenFlags::RIGHT_READABLE,
+                )
+                .unwrap(),
                 vec![],
                 Hash::from_str("deadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef")
-                    .context("Making merkle")?,
+                    .expect("make merkle"),
             )
         };
 
@@ -204,7 +216,7 @@ impl TestEnvBuilder {
             paver: Arc::new(self.paver.build()),
             _repo: served_repo,
             repo_config_dir: dir,
-            ssl_certs: cert_dir,
+            ssl_certs,
             update_merkle: merkle,
             version: self.version,
         })
@@ -219,8 +231,8 @@ pub struct TestEnv {
     packages: Vec<Package>,
     paver: Arc<MockPaverService>,
     _repo: Option<ServedRepository>,
-    repo_config_dir: TempDir,
-    ssl_certs: std::fs::File,
+    repo_config_dir: tempfile::TempDir,
+    ssl_certs: DirectoryProxy,
     update_merkle: Hash,
     version: String,
 }
@@ -287,12 +299,13 @@ impl TestEnv {
         realm_builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
+                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .capability(Capability::protocol_by_name(
                         "fuchsia.metrics.MetricEventLoggerFactory",
                     ))
+                    .capability(Capability::protocol_by_name("fuchsia.net.name.Lookup"))
+                    .capability(Capability::protocol_by_name("fuchsia.posix.socket.Provider"))
                     .capability(Capability::protocol_by_name("fuchsia.tracing.provider.Registry"))
-                    .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
                     .from(Ref::parent())
                     .to(&pkg_component),
             )
@@ -301,12 +314,80 @@ impl TestEnv {
 
         realm_builder
             .add_route(
+                // TODO(fxbug.dev/104918): clean up when system-updater-isolated is v2.
                 Route::new()
                     .capability(Capability::protocol_by_name("fuchsia.pkg.PackageCache"))
+                    .capability(Capability::protocol_by_name("fuchsia.pkg.PackageResolver"))
                     .capability(Capability::protocol_by_name("fuchsia.pkg.RetainedPackages"))
                     .capability(Capability::protocol_by_name("fuchsia.space.Manager"))
                     .from(&pkg_component)
                     .to(Ref::parent()),
+            )
+            .await
+            .unwrap();
+
+        realm_builder.add_route(Route::new().from(&pkg_component).to(Ref::parent())).await.unwrap();
+
+        let pkg_resolver_directories_out_dir = vfs::pseudo_directory! {
+            "config" => vfs::pseudo_directory! {
+                "data" => vfs::pseudo_directory!{
+                        "repositories" => vfs::remote::remote_dir(fuchsia_fs::directory::open_in_namespace(self.repo_config_dir.path().to_str().unwrap(), fio::OpenFlags::RIGHT_READABLE).unwrap())
+                },
+                "ssl" => vfs::remote::remote_dir(
+                    self.ssl_certs
+                ),
+            },
+        };
+        let pkg_resolver_directories_out_dir = Mutex::new(Some(pkg_resolver_directories_out_dir));
+        let pkg_resolver_directories = realm_builder
+            .add_local_child(
+                "pkg_resolver_directories",
+                move |handles| {
+                    let pkg_resolver_directories_out_dir = pkg_resolver_directories_out_dir
+                        .lock()
+                        .take()
+                        .expect("mock component should only be launched once");
+                    let scope = vfs::execution_scope::ExecutionScope::new();
+                    let () = pkg_resolver_directories_out_dir.open(
+                        scope.clone(),
+                        fio::OpenFlags::RIGHT_READABLE
+                            | fio::OpenFlags::RIGHT_WRITABLE
+                            | fio::OpenFlags::RIGHT_EXECUTABLE,
+                        0,
+                        vfs::path::Path::dot(),
+                        handles.outgoing_dir.into_channel().into(),
+                    );
+                    async move { Ok(scope.wait().await) }.boxed()
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        // Directory routes
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("config-data")
+                            .path("/config/data")
+                            .rights(fio::R_STAR_DIR),
+                    )
+                    .from(&pkg_resolver_directories)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(
+                        Capability::directory("root-ssl-certificates")
+                            .path(GLOBAL_SSL_CERTS_PATH)
+                            .rights(fio::R_STAR_DIR),
+                    )
+                    .from(&pkg_resolver_directories)
+                    .to(&pkg_component),
             )
             .await
             .unwrap();
@@ -362,6 +443,28 @@ impl TestEnv {
             .await
             .unwrap();
 
+        let channel_clone = self.channel.clone();
+        let boot_args_mock = realm_builder
+            .add_local_child(
+                "boot_arguments",
+                move |handles| {
+                    Box::pin(Self::run_boot_arguments(handles, Some(self.channel.clone())))
+                },
+                ChildOptions::new(),
+            )
+            .await
+            .unwrap();
+
+        realm_builder
+            .add_route(
+                Route::new()
+                    .capability(Capability::protocol_by_name("fuchsia.boot.Arguments"))
+                    .from(&boot_args_mock)
+                    .to(&pkg_component),
+            )
+            .await
+            .unwrap();
+
         let realm_instance = realm_builder.build().await.unwrap();
         let pkg_cache_proxy = realm_instance
             .root
@@ -390,16 +493,34 @@ impl TestEnv {
         )
         .unwrap();
 
+        let pkg_resolver_proxy = realm_instance
+            .root
+            .connect_to_protocol_at_exposed_dir::<fidl_fuchsia_pkg::PackageResolverMarker>()
+            .expect("connect to package resolver");
+        let (resolver_svc_dir, remote) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        realm_instance
+            .root
+            .get_exposed_dir()
+            .clone(
+                fidl_fuchsia_io::OpenFlags::CLONE_SAME_RIGHTS,
+                ServerEnd::from(remote.into_channel()),
+            )
+            .unwrap();
+
+        let resolver =
+            Resolver::new_with_proxy(pkg_resolver_proxy, resolver_svc_dir.into_proxy().unwrap())
+                .unwrap();
+
         let result = download_and_apply_update_with_pre_configured_components(
             blobfs_proxy,
             ClientEnd::from(client),
-            std::fs::File::open(self.repo_config_dir.into_path()).expect("Opening repo config dir"),
-            self.ssl_certs,
-            &self.channel,
+            &channel_clone,
             &self.board,
             &self.version,
             omaha_config,
             Arc::new(cache),
+            Arc::new(resolver),
         )
         .await;
 
@@ -409,6 +530,33 @@ impl TestEnv {
             paver_events: self.paver.take_events(),
             result,
         }
+    }
+
+    async fn serve_boot_arguments(mut stream: ArgumentsRequestStream, channel: Option<String>) {
+        while let Some(req) = stream.try_next().await.unwrap() {
+            match req {
+                ArgumentsRequest::GetString { key, responder } => {
+                    if key == "tuf_repo_config" {
+                        responder.send(channel.as_ref().map(|c| c.as_str())).unwrap();
+                    } else {
+                        eprintln!("Unexpected arguments GetString: {}, closing channel.", key);
+                    }
+                }
+                _ => eprintln!("Unexpected arguments request, closing channel."),
+            }
+        }
+    }
+
+    async fn run_boot_arguments(
+        handles: fuchsia_component_test::LocalComponentHandles,
+        channel: Option<String>,
+    ) -> Result<(), Error> {
+        let mut fs = fuchsia_component::server::ServiceFs::new();
+        fs.dir("svc")
+            .add_fidl_service(move |stream| Self::serve_boot_arguments(stream, channel.clone()));
+        fs.serve_connection(handles.outgoing_dir)?;
+        let () = fs.for_each_concurrent(None, |req| async { req.await }).await;
+        Ok(())
     }
 }
 

@@ -32,6 +32,19 @@
             // system_recovery_ota mounts blob at /blob in its outgoing directory.
             path: "/blob",
         },
+
+        // Renamed versions of config-data and root-ssl-certificates so that this component
+        // can consume the real ones from its parent but override them for pkg-recovery if required.
+        {
+            directory: "config-data-override",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            directory: "root-ssl-certificates-override",
+            rights: [ "r*" ],
+            path: "/config/ssl",
+        },
     ],
     use: [
         {
@@ -57,6 +70,7 @@
         {
             protocol: [
                 "fuchsia.pkg.PackageCache",
+                "fuchsia.pkg.PackageResolver",
                 "fuchsia.pkg.RetainedPackages",
                 "fuchsia.space.Manager",
             ],
@@ -86,11 +100,25 @@
             to: "#fs-collection",
         },
 
-        // Offer the blobfs directory from system_recovery_ota to pkg-recovery child (inherits rights from system_recovery_ota).
+        // Offer directories from system_recovery_ota to pkg-recovery child (inherit rights from system_recovery_ota).
         {
             directory: "primary-system-blobfs",
             from: "self",
             as: "blob-exec",
+            to: "#pkg-recovery",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: "config-data-override",
+            from: "self",
+            as: "config-data",
+            to: "#pkg-recovery",
+            dependency: "weak_for_migration",
+        },
+        {
+            directory: "root-ssl-certificates-override",
+            from: "self",
+            as: "root-ssl-certificates",
             to: "#pkg-recovery",
             dependency: "weak_for_migration",
         },
@@ -102,6 +130,8 @@
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.logger.LogSink",
                 "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",

@@ -43,19 +43,13 @@ pub struct OmahaConfig {
 pub async fn download_and_apply_update_with_pre_configured_components(
     blobfs_proxy: DirectoryProxy,
     paver_connector: ClientEnd<fio::DirectoryMarker>,
-    repository_config_file: std::fs::File,
-    ssl_cert_dir: std::fs::File,
     channel_name: &str,
     board_name: &str,
     version: &str,
     omaha_cfg: Option<OmahaConfig>,
     cache: Arc<Cache>,
+    resolver: Arc<Resolver>,
 ) -> Result<(), UpdateError> {
-    let resolver = Arc::new(
-        Resolver::launch(Arc::clone(&cache), repository_config_file, channel_name, ssl_cert_dir)
-            .map_err(UpdateError::PkgResolverLaunchError)?,
-    );
-
     let blobfs_clone = clone_blobfs(&blobfs_proxy)?;
     if let Some(cfg) = omaha_cfg {
         let () = omaha::install_update(
@@ -108,8 +102,6 @@ pub async fn download_and_apply_update_with_pre_configured_components(
 pub async fn download_and_apply_update(
     blobfs: ClientEnd<fio::DirectoryMarker>,
     paver_connector: ClientEnd<fio::DirectoryMarker>,
-    repository_config_file: std::fs::File,
-    ssl_cert_dir: std::fs::File,
     channel_name: &str,
     board_name: &str,
     version: &str,
@@ -121,16 +113,16 @@ pub async fn download_and_apply_update(
     );
 
     let cache = Arc::new(Cache::new().map_err(UpdateError::PkgCacheLaunchError)?);
+    let resolver = Arc::new(Resolver::new().map_err(UpdateError::PkgResolverLaunchError)?);
     download_and_apply_update_with_pre_configured_components(
         blobfs_proxy,
         paver_connector,
-        repository_config_file,
-        ssl_cert_dir,
         channel_name,
         board_name,
         version,
         omaha_cfg,
         cache,
+        resolver,
     )
     .await
 }

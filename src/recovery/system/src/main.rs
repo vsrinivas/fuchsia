@@ -36,6 +36,7 @@ use carnelian::{
     App, AppAssistant, AppAssistantPtr, AppSender, AssistantCreatorFunc, Coord, LocalBoxFuture,
     MessageTarget, Point, Size, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
 };
+
 use euclid::size2;
 use fdr_lib::{self as fdr, FactoryResetState, ResetEvent};
 #[cfg(feature = "http_setup_server")]
@@ -50,6 +51,8 @@ use fidl_fuchsia_recovery_ui::{
 use fuchsia_async::DurationExt;
 use fuchsia_async::{self as fasync, Task};
 use fuchsia_component::client::connect_to_protocol;
+#[cfg(feature = "http_setup_server")]
+use fuchsia_runtime::{take_startup_handle, HandleType};
 use fuchsia_zircon::{Duration, Event};
 use futures::StreamExt;
 #[cfg(feature = "http_setup_server")]
@@ -673,11 +676,30 @@ impl RecoveryViewAssistant {
                                 MessageTarget::View(view_key),
                                 make_message(RecoveryMessages::StartingOta),
                             );
-                            let result = ota::run_devhost_ota(cfg).await;
-                            local_app_sender.queue_message(
-                                MessageTarget::View(view_key),
-                                make_message(RecoveryMessages::OtaFinished { result }),
-                            );
+                            match take_startup_handle(HandleType::DirectoryRequest.into()) {
+                                Some(out_dir_handle) => {
+                                    let out_dir =
+                                        fuchsia_zircon::Channel::from(out_dir_handle).into();
+
+                                    // TODO(fxbug.dev/112997): make this call the OTA component
+                                    // instead of calling isolated-ota here.
+                                    let result = ota::run_devhost_ota(cfg, out_dir).await;
+                                    local_app_sender.queue_message(
+                                        MessageTarget::View(view_key),
+                                        make_message(RecoveryMessages::OtaFinished { result }),
+                                    );
+                                }
+                                None => {
+                                    local_app_sender.queue_message(
+                                        MessageTarget::View(view_key),
+                                        make_message(RecoveryMessages::OtaFinished {
+                                            result: Err(anyhow::anyhow!(
+                                                "Couldn't take startup handle"
+                                            )),
+                                        }),
+                                    );
+                                }
+                            }
                         }
                     }
                     local_app_sender

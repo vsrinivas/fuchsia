@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{format_err, Context, Error};
+use anyhow::{Context, Error};
 use fidl::endpoints::ServerEnd;
 use fidl_fuchsia_io as fio;
 use fidl_fuchsia_recovery_ui::{
@@ -16,7 +16,8 @@ use ota_lib::{
     ota::{run_wellknown_ota, StorageType},
     storage::{Storage, StorageFactory, TopoPathInitializer},
 };
-use vfs::directory::entry::DirectoryEntry;
+use std::sync::Arc;
+use vfs::directory::{entry::DirectoryEntry, mutable::simple::Simple};
 
 fn to_render2_error(err: fidl::Error) -> Error {
     anyhow::format_err!("Error encountered while calling render2: {:?}", err)
@@ -25,37 +26,28 @@ fn to_render2_error(err: fidl::Error) -> Error {
 async fn main_internal<B, S, P, T, Fut>(
     storage_factory: S,
     ota_progress_proxy: &P,
-    outgoing_dir: ServerEnd<fio::NodeMarker>,
+    out_dir: ServerEnd<fio::NodeMarker>,
     do_ota: T,
 ) -> Result<(), Error>
 where
     B: Storage + 'static,
     S: StorageFactory<B>,
     P: ProgressRendererProxyInterface,
-    T: FnOnce(Box<dyn Storage>) -> Fut,
+    T: FnOnce(Box<dyn Storage>, Arc<Simple>) -> Fut,
     Fut: Future<Output = Result<(), Error>> + 'static,
 {
     let storage = storage_factory.create().await.context("initialising storage")?;
-
-    let blobfs_proxy = storage
-        .wipe_or_get_storage()
-        .await?
-        .into_proxy()
-        .map_err(|e| format_err!("could not convert blobfs to proxy: {:?}", e))?;
-
-    let svc_dir = vfs::pseudo_directory! {
-        "blob" => vfs::remote::remote_dir(blobfs_proxy)
-    };
+    let outgoing_dir_vfs = vfs::mut_pseudo_directory! {};
 
     let scope = vfs::execution_scope::ExecutionScope::new();
-    svc_dir.open(
+    outgoing_dir_vfs.clone().open(
         scope.clone(),
         fio::OpenFlags::RIGHT_READABLE
             | fio::OpenFlags::RIGHT_WRITABLE
             | fio::OpenFlags::RIGHT_EXECUTABLE,
         0,
         vfs::path::Path::dot(),
-        outgoing_dir,
+        out_dir,
     );
     fasync::Task::local(async move { scope.wait().await }).detach();
 
@@ -68,7 +60,7 @@ where
         .await
         .map_err(to_render2_error)?;
 
-    match do_ota(Box::new(storage)).await {
+    match do_ota(Box::new(storage), outgoing_dir_vfs).await {
         Ok(_) => {
             println!("OTA Success!");
             ota_progress_proxy
@@ -110,7 +102,7 @@ async fn main() -> Result<(), Error> {
         topo_path_initializer,
         &ota_progress_proxy,
         fuchsia_zircon::Channel::from(directory_handle).into(),
-        move |storage| run_wellknown_ota(StorageType::Ready(storage)),
+        move |storage, outgoing_dir| run_wellknown_ota(StorageType::Ready(storage), outgoing_dir),
     )
     .await
 }
@@ -118,6 +110,7 @@ async fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::format_err;
     use assert_matches::assert_matches;
     use async_trait::async_trait;
     use fidl::endpoints::{create_endpoints, create_proxy, create_proxy_and_stream, ClientEnd};
@@ -181,12 +174,9 @@ mod tests {
         let fake_storage_factory = FakeStorageFactory { storage: FakeStorage::new() };
         let (progress_proxy, mut progress_stream) =
             create_proxy_and_stream::<ProgressRendererMarker>().unwrap();
-        let (dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
+        let (_dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
         fasync::Task::local(async move {
-            let blob_test_file = fuchsia_fs::directory::open_file(&dir_proxy, "blob/testfile", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
-            assert_eq!("test1", fuchsia_fs::file::read_to_string(&blob_test_file).await.unwrap());
-
             assert_matches!(progress_stream.next().await.unwrap().unwrap(), ProgressRendererRequest::Render2 { payload, responder } => {
                 assert_eq!(payload.status.unwrap(), Status::Active);
                 assert_eq!(payload.percent_complete.unwrap(), 0.0);
@@ -208,7 +198,7 @@ mod tests {
             fake_storage_factory,
             &progress_proxy,
             dir_server.into_channel().into(),
-            |_storage| futures::future::ready(Ok(())),
+            |_storage, _outgoing_dir| futures::future::ready(Ok(())),
         )
         .await
         .unwrap();
@@ -219,11 +209,9 @@ mod tests {
         let fake_storage_factory = FakeStorageFactory { storage: FakeStorage::new() };
         let (progress_proxy, mut progress_stream) =
             create_proxy_and_stream::<ProgressRendererMarker>().unwrap();
-        let (dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
+        let (_dir_proxy, dir_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
 
         fasync::Task::local(async move {
-            assert!(fuchsia_fs::directory::dir_contains(&dir_proxy, "blob").await.unwrap());
-
             assert_matches!(progress_stream.next().await.unwrap().unwrap(), ProgressRendererRequest::Render2 { payload, responder } => {
                 assert_eq!(payload.status.unwrap(), Status::Active);
                 assert_eq!(payload.percent_complete.unwrap(), 0.0);
@@ -244,7 +232,7 @@ mod tests {
             fake_storage_factory,
             &progress_proxy,
             dir_server.into_channel().into(),
-            |_storage| futures::future::ready(Err(format_err!("ota failed"))),
+            |_storage, _outgoing_dir| futures::future::ready(Err(format_err!("ota failed"))),
         )
         .await
         .unwrap_err();

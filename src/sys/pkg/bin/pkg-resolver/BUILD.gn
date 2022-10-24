@@ -160,12 +160,6 @@ fuchsia_test_package("unit-tests-package") {
   test_components = [ ":unit-tests-root" ]
 }
 
-fuchsia_component("isolated") {
-  component_name = "pkg-resolver-isolated"
-  manifest = "meta/pkg-resolver-isolated.cmx"
-  deps = [ "//src/sys/pkg/bin/pkg-resolver:bin" ]
-}
-
 pkg_resolver_config("enable_dynamic_configuration") {
   enable_dynamic_configuration = true
   deps = [ "//build/validate:non_production_tag" ]

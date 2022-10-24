@@ -77,8 +77,9 @@ impl Updater {
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
         let paver = Arc::new(paver);
         fs.add_proxy_service_to::<PaverMarker, _>(Arc::clone(&paver))
-            .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request())
-            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request()?);
+            .add_proxy_service_to::<PackageResolverMarker, _>(resolver.directory_request()?)
+            .add_proxy_service_to::<PackageCacheMarker, _>(cache.directory_request()?)
+            .add_proxy_service::<fidl_fuchsia_logger::LogSinkMarker, _>();
 
         let (paver_proxy, remote) =
             fidl::endpoints::create_proxy::<PaverMarker>().context("Creating paver proxy")?;
@@ -144,7 +145,7 @@ impl Updater {
 
     async fn monitor_update_attempt(mut attempt: UpdateAttempt) -> Result<(), Error> {
         while let Some(state) = attempt.try_next().await.context("fetching next update state")? {
-            println!("Install: {:?}", state);
+            tracing::info!("Install: {:?}", state);
             if state.is_success() {
                 return Ok(());
             } else if state.is_failure() {
@@ -165,7 +166,7 @@ impl Updater {
             result
         {
             // board does not actually support ABR, so return.
-            println!("ABR not supported, not configuring slots.");
+            tracing::info!("ABR not supported, not configuring slots.");
             return Ok(());
         }
         let result = result?;
@@ -194,6 +195,7 @@ pub(crate) mod for_tests {
         super::*,
         crate::resolver::for_tests::{ResolverForTest, EMPTY_REPO_PATH},
         fidl_fuchsia_paver::PaverRequestStream,
+        fuchsia_component_test::RealmBuilder,
         fuchsia_merkle::Hash,
         fuchsia_pkg_testing::{
             Package, PackageBuilder, Repository, RepositoryBuilder, SystemImageBuilder,
@@ -325,6 +327,7 @@ pub(crate) mod for_tests {
                 self.repo.clone(),
                 self.repo_url.clone(),
                 Some(TEST_CHANNEL.to_owned()),
+                RealmBuilder::new().await.unwrap(),
             )
             .await
             .expect("Creating resolver");

@@ -18,6 +18,10 @@
             url: "#meta/pkg-cache-ignore-system-image.cm",
         },
         {
+            name: "pkg-resolver",
+            url: "#meta/pkg-resolver.cm",
+        },
+        {
             // TODO(fxbug.dev/65383) investigate how isolated-ota should work with commits. GC is
             // traditionally blocked on the previous updated being committed. Here, we relax this
             // restriction because it does not make sense for recovery, and use a fake
@@ -27,6 +31,8 @@
         },
     ],
     offer: [
+        // Routes from the parent to children. All are required if you are a
+        // client of this component!
         {
             directory: "blob-exec",
             from: "parent",
@@ -35,6 +41,20 @@
                 "execute",
                 "rw*",
             ],
+        },
+        {
+            // Needed for passing repository configs to pkg-resolver
+            directory: "config-data",
+            from: "parent",
+            to: "#pkg-resolver",
+            rights: [ "r*" ],
+        },
+        {
+            // Needed for handing pkg-resolver the appropriate SSL certificates for network traffic
+            directory: "root-ssl-certificates",
+            from: "parent",
+            to: "#pkg-resolver",
+            rights: [ "r*" ],
         },
         {
             protocol: [
@@ -46,14 +66,34 @@
             to: "#pkg-cache",
         },
         {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#pkg-cache",
+                "#pkg-resolver",
+            ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.metrics.MetricEventLoggerFactory",
+                "fuchsia.net.name.Lookup",
+                "fuchsia.posix.socket.Provider",
+            ],
+            from: "parent",
+            to: "#pkg-resolver",
+        },
+
+        // Routes between children
+        {
             protocol: "fuchsia.update.CommitStatusProvider",
             from: "#fake-system-update-committer",
             to: "#pkg-cache",
         },
         {
-            protocol: [ "fuchsia.logger.LogSink" ],
-            from: "parent",
-            to: "#pkg-cache",
+            protocol: [ "fuchsia.pkg.PackageCache" ],
+            from: "#pkg-cache",
+            to: "#pkg-resolver",
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -64,11 +104,17 @@
     expose: [
         {
             protocol: [
+                // TODO(fxbug.dev/104918) We need these exposed until system-updater-isolated is v2.
                 "fuchsia.pkg.PackageCache",
-                "fuchsia.pkg.RetainedPackages",
                 "fuchsia.space.Manager",
             ],
             from: "#pkg-cache",
+            to: "parent",
+        },
+        {
+            // TODO(fxbug.dev/104918) We need this exposed until system-updater-isolated is v2.
+            protocol: [ "fuchsia.pkg.PackageResolver" ],
+            from: "#pkg-resolver",
             to: "parent",
         },
     ],
