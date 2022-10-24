@@ -1711,118 +1711,6 @@ fn get_nonzero_min(
     }
 }
 
-mod private {
-    use super::*;
-
-    /// Holds an address different from what was configured.
-    #[derive(Debug, PartialEq, Clone, Copy)]
-    pub(super) struct NonConfiguredAddress {
-        address: Option<Ipv6Addr>,
-        configured_address: Option<Ipv6Addr>,
-    }
-
-    impl NonConfiguredAddress {
-        /// Creates a `NonConfiguredAddress`. Returns `None` if the address is
-        /// the same as what was configured.
-        pub(super) fn new(
-            address: Option<Ipv6Addr>,
-            configured_address: Option<Ipv6Addr>,
-        ) -> Option<Self> {
-            if address == configured_address {
-                return None;
-            }
-            Some(Self { address, configured_address })
-        }
-
-        /// Returns the address.
-        pub(super) fn address(&self) -> Option<Ipv6Addr> {
-            let Self { address, configured_address: _ } = self;
-            *address
-        }
-
-        /// Returns the configured address.
-        pub(super) fn configured_address(&self) -> Option<Ipv6Addr> {
-            let Self { address: _, configured_address } = self;
-            *configured_address
-        }
-    }
-
-    /// Holds an IA for an address different from what was configured.
-    #[derive(Debug, PartialEq, Clone, Copy)]
-    pub(super) struct NonConfiguredIaNa {
-        ia: IaNa,
-        configured_address: Option<Ipv6Addr>,
-    }
-
-    impl NonConfiguredIaNa {
-        /// Creates a `NonConfiguredIaNa`. Returns `None` if the address within
-        /// the IA is the same as what was configured.
-        pub(super) fn new(ia: IaNa, configured_address: Option<Ipv6Addr>) -> Option<Self> {
-            let IaNa { address, preferred_lifetime: _, valid_lifetime: _ } = &ia;
-            match configured_address {
-                Some(c) => {
-                    if *address == c {
-                        return None;
-                    }
-                }
-                None => (),
-            }
-            Some(Self { ia, configured_address })
-        }
-
-        /// Returns the address within the IA.
-        pub(crate) fn address(&self) -> Ipv6Addr {
-            let IaNa { address, preferred_lifetime: _, valid_lifetime: _ } = self.ia;
-            address
-        }
-
-        /// Returns the configured address.
-        pub(super) fn configured_address(&self) -> Option<Ipv6Addr> {
-            let Self { ia: _, configured_address } = self;
-            *configured_address
-        }
-    }
-}
-
-use private::*;
-
-/// Represents an address to request in an IA, relative to the configured
-/// address for that IA.
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum AddressToRequest {
-    /// The address to request is the same as the configured address.
-    Configured(Option<Ipv6Addr>),
-    /// The address to request is different than the configured address.
-    NonConfigured(NonConfiguredAddress),
-}
-
-impl AddressToRequest {
-    /// Creates an `AddressToRequest`.
-    fn new(address: Option<Ipv6Addr>, configured_address: Option<Ipv6Addr>) -> Self {
-        let non_conf_addr_opt = NonConfiguredAddress::new(address, configured_address);
-        match non_conf_addr_opt {
-            None => AddressToRequest::Configured(configured_address),
-            Some(non_conf_addr) => AddressToRequest::NonConfigured(non_conf_addr),
-        }
-    }
-
-    /// Returns the address to request.
-    fn address(&self) -> Option<Ipv6Addr> {
-        match self {
-            AddressToRequest::Configured(c) => *c,
-            AddressToRequest::NonConfigured(non_conf_addr) => non_conf_addr.address(),
-        }
-    }
-
-    /// Returns the configured address.
-    fn configured_address(&self) -> Option<Ipv6Addr> {
-        match self {
-            AddressToRequest::Configured(c) => *c,
-            AddressToRequest::NonConfigured(non_conf_addr) => non_conf_addr.configured_address(),
-        }
-    }
-}
-
 /// Provides methods for handling state transitions from requesting state.
 #[derive(Debug)]
 struct Requesting {
@@ -2286,9 +2174,7 @@ fn process_reply_with_leases<B: ByteSlice>(
                         assert_eq!(
                             non_temporary_addresses.insert(
                                 iaid,
-                                AddressEntry::ToRequest(AddressToRequest::Configured(
-                                    current_address_entry.configured_address(),
-                                )),
+                                AddressEntry::ToRequest(current_address_entry.address()),
                             ),
                             None
                         );
@@ -2308,7 +2194,7 @@ fn process_reply_with_leases<B: ByteSlice>(
                         // If the returned address does not match the address recorded by the client
                         // remove old address and add new one; otherwise, extend the lifetimes of
                         // the existing address.
-                        if address != ia.address() {
+                        if address != ia.address {
                             // TODO(https://fxbug.dev/96674): Add
                             // action to remove the previous address.
                             // TODO(https://fxbug.dev/95265): Add action to add
@@ -2320,10 +2206,7 @@ fn process_reply_with_leases<B: ByteSlice>(
                                 "Reply to {}: IA_NA with IAID {:?}: \
                             Address does not match {:?}, removing previous address and \
                             adding new address {:?}.",
-                                request_type,
-                                iaid,
-                                ia.address(),
-                                address,
+                                request_type, iaid, ia.address, address,
                             );
                         } else {
                             // The lifetime was extended, update preferred
@@ -2333,9 +2216,7 @@ fn process_reply_with_leases<B: ByteSlice>(
                             debug!(
                                 "Reply to {}: IA_NA with IAID {:?}: \
                             Lifetime is extended for address {:?}.",
-                                request_type,
-                                iaid,
-                                ia.address()
+                                request_type, iaid, ia.address
                             );
                         }
                     }
@@ -2346,14 +2227,11 @@ fn process_reply_with_leases<B: ByteSlice>(
                 }
                 // Add the address entry as renewed by the
                 // server.
-                let entry = AddressEntry::Assigned(AssignedIaNa::new(
-                    IaNa {
-                        address,
-                        preferred_lifetime,
-                        valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
-                    },
-                    current_address_entry.configured_address(),
-                ));
+                let entry = AddressEntry::Assigned(IaNa {
+                    address,
+                    preferred_lifetime,
+                    valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
+                });
                 assert_eq!(non_temporary_addresses.insert(iaid, entry), None);
                 Ok((non_temporary_addresses, go_to_requesting))
             },
@@ -2511,7 +2389,7 @@ fn advertise_to_address_entries(
                     // Note that the advertised address for an IAID may
                     // be different from what was solicited by the
                     // client.
-                    AddressToRequest::new(Some(*advertised_address), *configured_address)
+                    Some(*advertised_address)
                 }
                 // The configured address was not advertised; the client
                 // will continue to request it in subsequent messages, per
@@ -2520,7 +2398,7 @@ fn advertise_to_address_entries(
                 //    When possible, the client SHOULD use the best
                 //    configuration available and continue to request the
                 //    additional IAs in subsequent messages.
-                None => AddressToRequest::Configured(*configured_address),
+                None => *configured_address,
             };
             (*iaid, AddressEntry::ToRequest(address_to_request))
         })
@@ -2818,11 +2696,7 @@ impl Requesting {
                                         // Discard all currently-assigned addresses.
                                         discard_leases(current_address_entry);
 
-                                        *current_address_entry =
-                                            AddressEntry::ToRequest(AddressToRequest::new(
-                                                None,
-                                                current_address_entry.configured_address(),
-                                            ));
+                                        *current_address_entry = AddressEntry::ToRequest(None);
                                     },
                                 );
                                 // TODO(https://fxbug.dev/96674): append to actions to remove
@@ -2972,83 +2846,26 @@ impl Requesting {
     }
 }
 
-/// Represents an assigned identity association, relative to the configured
-/// address for that IA.
-#[derive(Debug, PartialEq, Clone, Copy)]
-enum AssignedIaNa {
-    /// The assigned address is the same as the configured address for the IA.
-    Configured(IaNa),
-    /// The assigned address is different than the configured address for the
-    /// IA.
-    NonConfigured(NonConfiguredIaNa),
-}
-
-impl AssignedIaNa {
-    /// Creates a new assigned identity association.
-    fn new(ia: IaNa, configured_address: Option<Ipv6Addr>) -> AssignedIaNa {
-        match NonConfiguredIaNa::new(ia, configured_address) {
-            None => AssignedIaNa::Configured(ia),
-            Some(non_conf_ia) => AssignedIaNa::NonConfigured(non_conf_ia),
-        }
-    }
-
-    /// Returns the assigned address.
-    fn address(&self) -> Ipv6Addr {
-        match self {
-            AssignedIaNa::Configured(IaNa {
-                address,
-                preferred_lifetime: _,
-                valid_lifetime: _,
-            }) => *address,
-            AssignedIaNa::NonConfigured(non_conf_ia) => non_conf_ia.address(),
-        }
-    }
-
-    /// Returns the configured address.
-    fn configured_address(&self) -> Option<Ipv6Addr> {
-        match self {
-            AssignedIaNa::Configured(IaNa {
-                address,
-                preferred_lifetime: _,
-                valid_lifetime: _,
-            }) => Some(*address),
-            AssignedIaNa::NonConfigured(non_conf_ia) => non_conf_ia.configured_address(),
-        }
-    }
-}
-
-/// Represents an address entry negotiated by the client.
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum AddressEntry {
     /// The address is assigned.
-    Assigned(AssignedIaNa),
+    Assigned(IaNa),
     /// The address is not assigned, and is to be requested in subsequent
     /// messages.
-    ToRequest(AddressToRequest),
+    ToRequest(Option<Ipv6Addr>),
 }
 
 impl AddressEntry {
     /// Returns the assigned address.
     fn address(&self) -> Option<Ipv6Addr> {
         match self {
-            AddressEntry::Assigned(ia) => Some(ia.address()),
-            AddressEntry::ToRequest(address) => address.address(),
-        }
-    }
-
-    /// Returns the configured address.
-    fn configured_address(&self) -> Option<Ipv6Addr> {
-        match self {
-            AddressEntry::Assigned(ia) => ia.configured_address(),
-            AddressEntry::ToRequest(address) => address.configured_address(),
+            AddressEntry::Assigned(ia) => Some(ia.address),
+            AddressEntry::ToRequest(address) => *address,
         }
     }
 
     fn to_request(&self, without_hints: bool) -> Self {
-        Self::ToRequest(AddressToRequest::new(
-            if without_hints { None } else { self.address() },
-            self.configured_address(),
-        ))
+        Self::ToRequest(if without_hints { None } else { self.address() })
     }
 }
 
@@ -3056,7 +2873,7 @@ impl AddressEntry {
 fn to_configured_addresses(
     addresses: HashMap<v6::IAID, AddressEntry>,
 ) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
-    addresses.iter().map(|(iaid, addr_entry)| (*iaid, addr_entry.configured_address())).collect()
+    addresses.iter().map(|(iaid, addr_entry)| (*iaid, addr_entry.address())).collect()
 }
 
 /// Provides methods for handling state transitions from Assigned state.
@@ -4203,10 +4020,7 @@ pub(crate) mod testutil {
             preferred_lifetime: v6::NonZeroOrMaxU32,
             valid_lifetime: v6::NonZeroOrMaxU32,
         ) -> Self {
-            Self::Assigned(AssignedIaNa::new(
-                IaNa::new_finite(address, preferred_lifetime, valid_lifetime),
-                Some(address),
-            ))
+            Self::Assigned(IaNa::new_finite(address, preferred_lifetime, valid_lifetime))
         }
     }
 
@@ -4477,14 +4291,11 @@ pub(crate) mod testutil {
                 assert_eq!(
                     addrs.insert(
                         *iaid,
-                        AddressEntry::Assigned(AssignedIaNa::new(
-                            IaNa {
-                                address: *address,
-                                preferred_lifetime: *preferred_lifetime,
-                                valid_lifetime: *valid_lifetime
-                            },
-                            Some(*address)
-                        ))
+                        AddressEntry::Assigned(IaNa {
+                            address: *address,
+                            preferred_lifetime: *preferred_lifetime,
+                            valid_lifetime: *valid_lifetime
+                        },)
                     ),
                     None
                 );
@@ -5750,7 +5561,7 @@ mod tests {
             .zip(
                 advertised_non_temporary_addresses
                     .iter()
-                    .map(|addr| AddressEntry::ToRequest(AddressToRequest::new(Some(*addr), None))),
+                    .map(|addr| AddressEntry::ToRequest(Some(*addr))),
             )
             .collect::<HashMap<v6::IAID, AddressEntry>>();
         {
@@ -5838,10 +5649,8 @@ mod tests {
         let Transition { state, actions: _, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
 
-        let expected_non_temporary_addresses: HashMap<v6::IAID, AddressEntry> = HashMap::from([(
-            v6::IAID::new(0),
-            AddressEntry::ToRequest(AddressToRequest::new(None, None)),
-        )]);
+        let expected_non_temporary_addresses: HashMap<v6::IAID, AddressEntry> =
+            HashMap::from([(v6::IAID::new(0), AddressEntry::ToRequest(None))]);
         {
             let Requesting {
                 client_id: _,
@@ -5978,27 +5787,18 @@ mod tests {
         let Transition { state, actions, transaction_id } =
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         let expected_non_temporary_addresses = HashMap::from([
-            (
-                iaid1,
-                AddressEntry::ToRequest(AddressToRequest::new(
-                    None,
-                    Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
-                )),
-            ),
+            (iaid1, AddressEntry::ToRequest(None)),
             (
                 iaid2,
-                AddressEntry::Assigned(AssignedIaNa::new(
-                    IaNa {
-                        address: CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
-                        preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                            PREFERRED_LIFETIME,
-                        )),
-                        valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                            VALID_LIFETIME,
-                        )),
-                    },
-                    None,
-                )),
+                AddressEntry::Assigned(IaNa {
+                    address: CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                    preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        PREFERRED_LIFETIME,
+                    )),
+                    valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                        VALID_LIFETIME,
+                    )),
+                }),
             ),
         ]);
         {
@@ -7439,13 +7239,10 @@ mod tests {
             &client;
         let expected_non_temporary_addresses = HashMap::from([(
             v6::IAID::new(0),
-            AddressEntry::Assigned(AssignedIaNa::new(
-                IaNa::new_finite(
-                    RENEW_NON_TEMPORARY_ADDRESSES[0],
-                    RENEWED_PREFERRED_LIFETIME,
-                    RENEWED_VALID_LIFETIME,
-                ),
-                Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            AddressEntry::Assigned(IaNa::new_finite(
+                RENEW_NON_TEMPORARY_ADDRESSES[0],
+                RENEWED_PREFERRED_LIFETIME,
+                RENEWED_VALID_LIFETIME,
             )),
         )]);
         // Expect the client to transition to Assigned and assign the new
@@ -7557,10 +7354,7 @@ mod tests {
             // requested in subsequent messages.
             (
                 v6::IAID::new(1),
-                AddressEntry::ToRequest(AddressToRequest::new(
-                    Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1]),
-                    Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1]),
-                )),
+                AddressEntry::ToRequest(Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1])),
             ),
         ]);
         // Expect the client to transition to Requesting.
@@ -8117,89 +7911,5 @@ mod tests {
     )]
     fn compute_t(min: v6::NonZeroTimeValue, ratio: Ratio<u32>, expected_t: v6::NonZeroTimeValue) {
         assert_eq!(super::compute_t(min, ratio), expected_t);
-    }
-
-    #[test_case(None, None, false)]
-    #[test_case(None, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), true)]
-    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), None, true)]
-    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), true)]
-    #[test_case(Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), false)]
-    fn create_non_configured_address(
-        address: Option<Ipv6Addr>,
-        configured_address: Option<Ipv6Addr>,
-        expect_address_is_some: bool,
-    ) {
-        assert_eq!(
-            NonConfiguredAddress::new(address, configured_address).is_some(),
-            expect_address_is_some
-        );
-    }
-
-    #[test_case(None, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
-    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), None)]
-    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
-    fn non_configured_address_get_address(
-        address: Option<Ipv6Addr>,
-        configured_address: Option<Ipv6Addr>,
-    ) {
-        let non_conf_ia = NonConfiguredAddress::new(address, configured_address);
-        match non_conf_ia {
-            Some(p) => assert_eq!(p.address(), address),
-            None => panic!("should suceed to create non configured IA"),
-        }
-    }
-
-    #[test_case(None, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
-    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), None)]
-    #[test_case(Some(REPLY_NON_TEMPORARY_ADDRESSES[0]), Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]))]
-    fn non_configured_address_get_configured_address(
-        address: Option<Ipv6Addr>,
-        configured_address: Option<Ipv6Addr>,
-    ) {
-        let non_conf_ia = NonConfiguredAddress::new(address, configured_address);
-        match non_conf_ia {
-            Some(p) => assert_eq!(p.configured_address(), configured_address),
-            None => panic!("should suceed to create non configured IA"),
-        }
-    }
-
-    #[test_case(REPLY_NON_TEMPORARY_ADDRESSES[0], None, true)]
-    #[test_case(REPLY_NON_TEMPORARY_ADDRESSES[0], Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), true)]
-    #[test_case(CONFIGURED_NON_TEMPORARY_ADDRESSES[0], Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), false)]
-    fn create_non_configured_ia(
-        address: Ipv6Addr,
-        configured_address: Option<Ipv6Addr>,
-        expect_ia_is_some: bool,
-    ) {
-        let ia = IaNa {
-            address,
-            preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
-                PREFERRED_LIFETIME,
-            )),
-            valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(VALID_LIFETIME)),
-        };
-        let non_conf_ia_opt = NonConfiguredIaNa::new(ia, configured_address);
-        assert_eq!(non_conf_ia_opt.is_some(), expect_ia_is_some);
-        if let Some(non_conf_ia) = non_conf_ia_opt {
-            assert_eq!(non_conf_ia.address(), address);
-            assert_eq!(non_conf_ia.configured_address(), configured_address);
-        }
-    }
-
-    #[test]
-    fn create_assigned_ia() {
-        let ia1 = IaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
-        let assigned_ia = AssignedIaNa::new(ia1, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
-        assert_eq!(assigned_ia, AssignedIaNa::Configured(ia1));
-        assert_eq!(assigned_ia.address(), CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
-
-        let ia2 = IaNa::new_default(REPLY_NON_TEMPORARY_ADDRESSES[0]);
-        let assigned_ia = AssignedIaNa::new(ia2, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
-        assert_matches!(&assigned_ia, AssignedIaNa::NonConfigured(_non_conf_ia));
-        assert_eq!(assigned_ia.address(), REPLY_NON_TEMPORARY_ADDRESSES[0]);
-
-        let assigned_ia = AssignedIaNa::new(ia2, None);
-        assert_matches!(&assigned_ia, AssignedIaNa::NonConfigured(_non_conf_ia));
-        assert_eq!(assigned_ia.address(), REPLY_NON_TEMPORARY_ADDRESSES[0]);
     }
 }
