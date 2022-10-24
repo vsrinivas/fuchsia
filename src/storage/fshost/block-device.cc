@@ -264,6 +264,7 @@ fs_management::MountOptions GetBlobfsMountOptionsForRecovery(const fshost_config
       .write_compression_level = -1,
       .sandbox_decompression = config.sandbox_decompression(),
       .component_child_name = "blobfs",
+      .component_collection_name = "fs-collection",
   };
 }
 
