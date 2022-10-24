@@ -10,64 +10,85 @@
 
 namespace {
 
-TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction) {
+struct ConfigCheckTestParam {
+  std::optional<fuchsia_hardware_block_verified::wire::HashFunction> hash_function;
+  std::optional<fuchsia_hardware_block_verified::wire::BlockSize> block_size;
+  block_info_t block;
+  zx_status_t status;
+};
+
+class ConfigCheckTest : public zxtest::TestWithParam<ConfigCheckTestParam> {};
+
+TEST_P(ConfigCheckTest, Checks) {
   fidl::Arena allocator;
-  fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
-  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
+  fidl::WireTableBuilder builder =
+      fuchsia_hardware_block_verified::wire::Config::Builder(allocator);
 
-  block_info_t blk;
-  blk.block_size = 4096;
+  const ConfigCheckTestParam& param = GetParam();
+  if (param.hash_function.has_value()) {
+    builder.hash_function(param.hash_function.value());
+  }
+  if (param.block_size.has_value()) {
+    builder.block_size(param.block_size.value());
+  }
 
-  EXPECT_OK(block_verity::CheckConfig(config, blk));
+  EXPECT_STATUS(block_verity::CheckConfig(builder.Build(), param.block), param.status);
 }
 
-TEST(ConfigCheckTest, Accepts4kBlockSHA256HashFunction512BackingBlockSize) {
-  fidl::Arena allocator;
-  fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
-  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
-
-  block_info_t blk;
-  blk.block_size = 512;
-
-  EXPECT_OK(block_verity::CheckConfig(config, blk));
-}
-
-TEST(ConfigCheckTest, RejectsMissingHashFunction) {
-  fidl::Arena allocator;
-  fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
-
-  block_info_t blk;
-  blk.block_size = 4096;
-
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
-}
-
-TEST(ConfigCheckTest, RejectsMissingBlockSize) {
-  fidl::Arena allocator;
-  fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
-
-  block_info_t blk;
-  blk.block_size = 4096;
-
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
-}
-
-TEST(ConfigCheckTest, RejectsIfBlockSizeUnsupportable) {
-  fidl::Arena allocator;
-  fuchsia_hardware_block_verified::wire::Config config(allocator);
-  config.set_hash_function(fuchsia_hardware_block_verified::wire::HashFunction::kSha256);
-  config.set_block_size(fuchsia_hardware_block_verified::wire::BlockSize::kSize4096);
-
-  block_info_t blk;
-  // not a divisor of 4k
-  blk.block_size = 640;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
-  blk.block_size = 8192;
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, block_verity::CheckConfig(config, blk));
-}
+INSTANTIATE_TEST_SUITE_P(
+    ConfigCheckTest, ConfigCheckTest,
+    zxtest::Values(
+        ConfigCheckTestParam{
+            .hash_function = fuchsia_hardware_block_verified::wire::HashFunction::kSha256,
+            .block_size = fuchsia_hardware_block_verified::wire::BlockSize::kSize4096,
+            .block =
+                {
+                    .block_size = 4096,
+                },
+            .status = ZX_OK,
+        },
+        ConfigCheckTestParam{
+            .hash_function = fuchsia_hardware_block_verified::wire::HashFunction::kSha256,
+            .block_size = fuchsia_hardware_block_verified::wire::BlockSize::kSize4096,
+            .block =
+                {
+                    .block_size = 512,
+                },
+            .status = ZX_OK,
+        },
+        ConfigCheckTestParam{
+            .block_size = fuchsia_hardware_block_verified::wire::BlockSize::kSize4096,
+            .block =
+                {
+                    .block_size = 4096,
+                },
+            .status = ZX_ERR_INVALID_ARGS,
+        },
+        ConfigCheckTestParam{
+            .hash_function = fuchsia_hardware_block_verified::wire::HashFunction::kSha256,
+            .block =
+                {
+                    .block_size = 4096,
+                },
+            .status = ZX_ERR_INVALID_ARGS,
+        },
+        ConfigCheckTestParam{
+            .hash_function = fuchsia_hardware_block_verified::wire::HashFunction::kSha256,
+            .block_size = fuchsia_hardware_block_verified::wire::BlockSize::kSize4096,
+            .block =
+                {
+                    .block_size = 640,
+                },
+            .status = ZX_ERR_INVALID_ARGS,
+        },
+        ConfigCheckTestParam{
+            .hash_function = fuchsia_hardware_block_verified::wire::HashFunction::kSha256,
+            .block_size = fuchsia_hardware_block_verified::wire::BlockSize::kSize4096,
+            .block =
+                {
+                    .block_size = 8192,
+                },
+            .status = ZX_ERR_INVALID_ARGS,
+        }));
 
 }  // namespace

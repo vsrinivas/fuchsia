@@ -18,7 +18,8 @@ namespace block_verity {
 // `fuchsia.hardware.block.verified` devices and their children.
 class VerifiedVolumeClient {
  public:
-  VerifiedVolumeClient(zx::channel verity_chan, fbl::unique_fd devfs_root_fd);
+  VerifiedVolumeClient(fidl::ClientEnd<fuchsia_hardware_block_verified::DeviceManager> verity_chan,
+                       fbl::unique_fd devfs_root_fd);
 
   // Disallow copy, assign, and move
   VerifiedVolumeClient(const VerifiedVolumeClient&) = delete;
@@ -64,7 +65,7 @@ class VerifiedVolumeClient {
                                   fbl::unique_fd& verified_block_fd_out);
 
  private:
-  zx::channel verity_chan_;
+  fidl::ClientEnd<fuchsia_hardware_block_verified::DeviceManager> verity_chan_;
   fbl::unique_fd devfs_root_fd_;
 };
 

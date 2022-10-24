@@ -41,22 +41,22 @@ auto BWrite = block_client::SingleWriteBytes;
 const char* kDriverLib = "/boot/driver/block-verity.so";
 
 // Bind the block verity driver to the ramdisk.
-zx_status_t BindVerityDriver(zx::unowned_channel ramdisk_chan) {
-  zx_status_t rc;
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(std::move(ramdisk_chan))
-                  ->Bind(::fidl::StringView::FromExternal(kDriverLib));
-  rc = resp.status();
-  if (rc == ZX_OK) {
-    if (resp->is_error()) {
-      rc = resp->error_value();
-    }
+zx_status_t BindVerityDriver(fidl::UnownedClientEnd<fuchsia_device::Controller> channel) {
+  const fidl::WireResult result =
+      fidl::WireCall(channel)->Bind(fidl::StringView::FromExternal(kDriverLib));
+  if (!result.ok()) {
+    return result.status();
   }
-  return rc;
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    return response.error_value();
+  }
+  return ZX_OK;
 }
 
 class BlockVerityTest : public zxtest::Test {
  public:
-  BlockVerityTest() {}
+  BlockVerityTest() = default;
   void SetUp() override {
     IsolatedDevmgr::Args args;
     ASSERT_OK(driver_integration_test::IsolatedDevmgr::Create(&args, &devmgr_));
@@ -110,7 +110,8 @@ class BlockVerityTest : public zxtest::Test {
 };
 
 TEST_F(BlockVerityTest, Bind) {
-  ASSERT_OK(BindVerityDriver(ramdisk_->channel()));
+  ASSERT_OK(
+      BindVerityDriver(fidl::UnownedClientEnd<fuchsia_device::Controller>(ramdisk_->channel())));
   std::unique_ptr<block_verity::VerifiedVolumeClient> vvc;
   fbl::unique_fd devfs_root(dup(ramdisk_->devfs_root_fd()));
   ASSERT_OK(block_verity::VerifiedVolumeClient::CreateFromBlockDevice(
