@@ -44,11 +44,9 @@
             to: "#trace_manager",
         },
         {
-            directory: "dev",
+            directory: "dev-topological",
             from: "parent",
-            as: "sys",
             to: "#trace_manager",
-            subdir: "sys",
         },
         {
             storage: [ "tmp" ],

@@ -52,7 +52,7 @@
             ],
         },
         {
-            directory: "sys",
+            directory: "dev-topological",
             from: "parent",
             to: "#cpuperf_provider",
         },

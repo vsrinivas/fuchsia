@@ -12,9 +12,9 @@
             protocol: [ "fuchsia.tracing.provider.Registry" ],
         },
         {
-            directory: "sys",
+            directory: "dev-topological",
             rights: [ "r*" ],
-            path: "/dev/sys",
+            path: "/dev",
         },
     ],
 }
