@@ -252,7 +252,7 @@ impl ResolvedInstanceInterface for ComponentInstanceForAnalyzer {
     }
 
     fn address(&self) -> ComponentAddress {
-        ComponentAddress::new_absolute("", "", "", None, None)
+        ComponentAddress::from_absolute_url("none://not_used").unwrap()
     }
 
     fn context_to_resolve_children(&self) -> Option<ComponentResolutionContext> {

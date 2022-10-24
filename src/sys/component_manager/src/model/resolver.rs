@@ -578,9 +578,9 @@ mod tests {
         let abs =
             ComponentAddress::from("fuchsia-pkg://fuchsia.com/package#meta/comp.cm", &root).await?;
         assert_matches!(abs.kind(), ComponentAddressKind::Absolute { .. });
-        assert_eq!(abs.host(), "fuchsia.com");
+        assert_eq!(abs.authority_or_empty_str(), "fuchsia.com");
         assert_eq!(abs.scheme(), "fuchsia-pkg");
-        assert_eq!(abs.path(), "package");
+        assert_eq!(abs.path(), "/package");
         assert_eq!(abs.resource(), Some("meta/comp.cm"));
         Ok(())
     }

@@ -1,0 +1,43 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_test.gni")
+
+rustc_test("cast_resolver_bin") {
+  name = "cast_resolver"
+  edition = "2021"
+  source_root = "integration_test.rs"
+  deps = [
+    "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+    "//sdk/fidl/fuchsia.component.resolution:fuchsia.component.resolution_rust",
+    "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-component-test",
+    "//src/sys/lib/cm_rust",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [ "integration_test.rs" ]
+}
+
+fuchsia_unittest_component("cast_resolver_test_component") {
+  component_name = "cast_resolver_test"
+  deps = [ ":cast_resolver_bin" ]
+}
+
+fuchsia_test_package("cast_resolver_test") {
+  test_components = [ ":cast_resolver_test_component" ]
+  deps = [ "//src/sys/component_manager:component-manager-realm-builder-cmp" ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [ ":cast_resolver_test" ]
+}
