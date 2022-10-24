@@ -15,6 +15,7 @@ use {
         platform::fuchsia::{
             directory::FxDirectory,
             file::FxFile,
+            memory_pressure::{MemoryPressureLevel, MemoryPressureMonitor},
             node::{FxNode, GetResult, NodeCache},
             pager::{Pager, PagerExecutor},
             vmo_data_buffer::VmoDataBuffer,
@@ -25,16 +26,54 @@ use {
     fidl_fuchsia_io as fio,
     fs_inspect::{FsInspectVolume, VolumeData},
     fuchsia_async as fasync,
-    futures::{self, channel::oneshot, FutureExt},
+    futures::{
+        self,
+        channel::oneshot,
+        stream::{self, FusedStream, Stream},
+        FutureExt, StreamExt,
+    },
     std::{
         convert::TryInto,
+        marker::Unpin,
         sync::{Arc, Mutex},
         time::Duration,
     },
     vfs::execution_scope::ExecutionScope,
 };
 
-pub const DEFAULT_FLUSH_PERIOD: Duration = Duration::from_secs(20);
+#[derive(Clone)]
+pub struct FlushTaskConfig {
+    /// The period to wait between flushes at [`MemoryPressureLevel::Normal`].
+    pub mem_normal_period: Duration,
+
+    /// The period to wait between flushes at [`MemoryPressureLevel::Warning`].
+    pub mem_warning_period: Duration,
+
+    /// The period to wait between flushes at [`MemoryPressureLevel::Critical`].
+    pub mem_critical_period: Duration,
+}
+
+impl FlushTaskConfig {
+    pub fn flush_period_from_level(&self, level: &MemoryPressureLevel) -> Duration {
+        match level {
+            MemoryPressureLevel::Normal => self.mem_normal_period,
+            MemoryPressureLevel::Warning => self.mem_warning_period,
+            MemoryPressureLevel::Critical => self.mem_critical_period,
+        }
+    }
+}
+
+impl Default for FlushTaskConfig {
+    fn default() -> Self {
+        // TODO(https://fxbug.dev/110000): investigate a smarter strategy for determining flush
+        // frequency.
+        Self {
+            mem_normal_period: Duration::from_secs(20),
+            mem_warning_period: Duration::from_secs(5),
+            mem_critical_period: Duration::from_millis(1500),
+        }
+    }
+}
 
 /// FxVolume represents an opened volume. It is also a (weak) cache for all opened Nodes within the
 /// volume.
@@ -194,25 +233,76 @@ impl FxVolume {
     /// to disk.
     /// The task will hold a strong reference to the FxVolume while it is running, so the task must
     /// be closed later with Self::terminate, or the FxVolume will never be dropped.
-    pub fn start_flush_task(self: &Arc<Self>, period: Duration) {
+    pub fn start_flush_task(
+        self: &Arc<Self>,
+        config: FlushTaskConfig,
+        mem_monitor: Option<&MemoryPressureMonitor>,
+    ) {
         let mut flush_task = self.flush_task.lock().unwrap();
         if flush_task.is_none() {
             let (tx, rx) = oneshot::channel();
-            *flush_task = Some((fasync::Task::spawn(self.clone().flush_task(period, rx)), tx));
+
+            let task = if let Some(mem_monitor) = mem_monitor {
+                fasync::Task::spawn(self.clone().flush_task(
+                    config,
+                    mem_monitor.get_level_stream(),
+                    rx,
+                ))
+            } else {
+                // With no memory pressure monitoring, just stub the stream out as always pending.
+                fasync::Task::spawn(self.clone().flush_task(config, stream::pending(), rx))
+            };
+
+            *flush_task = Some((task, tx));
         }
     }
 
-    async fn flush_task(self: Arc<Self>, period: Duration, terminate: oneshot::Receiver<()>) {
+    async fn flush_task(
+        self: Arc<Self>,
+        config: FlushTaskConfig,
+        mut level_stream: impl Stream<Item = MemoryPressureLevel> + FusedStream + Unpin,
+        terminate: oneshot::Receiver<()>,
+    ) {
         debug!(store_id = self.store.store_object_id(), "FxVolume::flush_task start");
         let mut terminate = terminate.fuse();
+        // Default to the normal flush period until updates come from the `level_stream`.
+        let mut level = MemoryPressureLevel::Normal;
+        let mut timer = fasync::Timer::new(config.flush_period_from_level(&level)).fuse();
+
         loop {
-            if futures::select!(
-                _ = fasync::Timer::new(period).fuse() => false,
-                _ = terminate => true,
-            ) {
+            let mut should_terminate = false;
+            let mut should_flush = false;
+
+            futures::select_biased! {
+                _ = terminate => should_terminate = true,
+                new_level = level_stream.next() => {
+                    // Because `level_stream` will never terminate, this is safe to unwrap.
+                    let new_level = new_level.unwrap();
+                    // At critical levels, it's okay to undertake expensive work immediately
+                    // to reclaim memory.
+                    should_flush = matches!(new_level, MemoryPressureLevel::Critical);
+                    if new_level != level {
+                        level = new_level;
+                        timer = fasync::Timer::new(config.flush_period_from_level(&level)).fuse();
+                        debug!(
+                            "Background flush period changed to {:?} due to new memory pressure \
+                            level ({:?}).",
+                            config.flush_period_from_level(&level), level
+                        );
+                    }
+                }
+                _ = timer => {
+                    timer = fasync::Timer::new(config.flush_period_from_level(&level)).fuse();
+                    should_flush = true;
+                }
+            };
+            if should_terminate {
                 break;
             }
-            self.flush_all_files().await;
+
+            if should_flush {
+                self.flush_all_files().await;
+            }
         }
         debug!(store_id = self.store.store_object_id(), "FxVolume::flush_task end");
     }
@@ -348,17 +438,18 @@ mod tests {
             },
             platform::fuchsia::{
                 file::FxFile,
+                memory_pressure::{MemoryPressureLevel, MemoryPressureMonitor},
                 testing::{
                     close_dir_checked, close_file_checked, open_dir, open_dir_checked, open_file,
                     open_file_checked, TestFixture,
                 },
-                volume::FxVolumeAndRoot,
+                volume::{FlushTaskConfig, FxVolumeAndRoot},
             },
         },
         fidl_fuchsia_io as fio, fuchsia_async as fasync,
         fuchsia_fs::file,
         fuchsia_zircon::Status,
-        std::sync::Arc,
+        std::{sync::Arc, time::Duration},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
         vfs::file::FileIo,
     };
@@ -652,16 +743,212 @@ mod tests {
             };
             assert!(!data_has_persisted().await);
 
-            vol.volume().start_flush_task(std::time::Duration::from_millis(100));
+            vol.volume().start_flush_task(
+                FlushTaskConfig {
+                    mem_normal_period: Duration::from_millis(100),
+                    mem_warning_period: Duration::from_millis(100),
+                    mem_critical_period: Duration::from_millis(100),
+                },
+                None,
+            );
 
             let mut wait = 100;
             loop {
                 if data_has_persisted().await {
                     break;
                 }
-                fasync::Timer::new(std::time::Duration::from_millis(wait)).await;
+                fasync::Timer::new(Duration::from_millis(wait)).await;
                 wait *= 2;
             }
+
+            vol.volume().terminate().await;
+        }
+
+        filesystem.close().await.expect("close filesystem failed");
+        let device = filesystem.take_device().await;
+        device.ensure_unique();
+    }
+
+    #[fasync::run(2, test)]
+    async fn test_background_flush_with_warning_memory_pressure() {
+        // We have to do a bit of set-up ourselves for this test, since we want to be able to access
+        // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
+        let device = DeviceHolder::new(FakeDevice::new(8192, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+        {
+            let root_volume = root_volume(filesystem.clone()).await.unwrap();
+            let volume =
+                root_volume.new_volume("vol", Some(Arc::new(InsecureCrypt::new()))).await.unwrap();
+            let mut transaction = filesystem
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let object_id = ObjectStore::create_object(
+                &volume,
+                &mut transaction,
+                HandleOptions::default(),
+                None,
+            )
+            .await
+            .expect("create_object failed")
+            .object_id();
+            transaction.commit().await.expect("commit failed");
+            let vol = FxVolumeAndRoot::new(volume.clone(), 0).await.unwrap();
+
+            let file = vol
+                .volume()
+                .get_or_load_node(object_id, ObjectDescriptor::File, None)
+                .await
+                .expect("get_or_load_node failed")
+                .into_any()
+                .downcast::<FxFile>()
+                .expect("Not a file");
+
+            // Write some data to the file, which will only go to the cache for now.
+            file.write_at(0, &[123u8]).await.expect("write_at failed");
+
+            let data_has_persisted = || async {
+                // We have to reopen the object each time since this is a distinct handle from the
+                // one managed by the FxFile.
+                let object =
+                    ObjectStore::open_object(&volume, object_id, HandleOptions::default(), None)
+                        .await
+                        .expect("open_object failed");
+                let data = object.contents(8192).await.expect("read failed");
+                data.len() == 1 && data[..] == [123u8]
+            };
+            assert!(!data_has_persisted().await);
+
+            let (watcher_proxy, watcher_server) =
+                fidl::endpoints::create_proxy().expect("Failed to create FIDL endpoints");
+            let mem_pressure = MemoryPressureMonitor::try_from(watcher_server)
+                .expect("Failed to create MemoryPressureMonitor");
+
+            // Configure the flush task to only flush quickly on warning.
+            let flush_config = FlushTaskConfig {
+                mem_normal_period: Duration::from_secs(20),
+                mem_warning_period: Duration::from_millis(100),
+                mem_critical_period: Duration::from_secs(20),
+            };
+            vol.volume().start_flush_task(flush_config, Some(&mem_pressure));
+
+            // Send the memory pressure update.
+            let _ = watcher_proxy
+                .on_level_changed(MemoryPressureLevel::Warning)
+                .await
+                .expect("Failed to send memory pressure level change");
+
+            // Wait a bit of time for the flush to occur (but less than the normal and critical
+            // periods).
+            const MAX_WAIT: Duration = Duration::from_secs(3);
+            let wait_increments = Duration::from_millis(400);
+            let mut total_waited = Duration::ZERO;
+
+            while total_waited < MAX_WAIT {
+                fasync::Timer::new(wait_increments).await;
+                total_waited += wait_increments;
+
+                if data_has_persisted().await {
+                    break;
+                }
+            }
+
+            assert!(data_has_persisted().await);
+
+            vol.volume().terminate().await;
+        }
+
+        filesystem.close().await.expect("close filesystem failed");
+        let device = filesystem.take_device().await;
+        device.ensure_unique();
+    }
+
+    #[fasync::run(2, test)]
+    async fn test_background_flush_with_critical_memory_pressure() {
+        // We have to do a bit of set-up ourselves for this test, since we want to be able to access
+        // the underlying StoreObjectHandle at the same time as the FxFile which corresponds to it.
+        let device = DeviceHolder::new(FakeDevice::new(8192, 512));
+        let filesystem = FxFilesystem::new_empty(device).await.unwrap();
+        {
+            let root_volume = root_volume(filesystem.clone()).await.unwrap();
+            let volume =
+                root_volume.new_volume("vol", Some(Arc::new(InsecureCrypt::new()))).await.unwrap();
+            let mut transaction = filesystem
+                .clone()
+                .new_transaction(&[], Options::default())
+                .await
+                .expect("new_transaction failed");
+            let object_id = ObjectStore::create_object(
+                &volume,
+                &mut transaction,
+                HandleOptions::default(),
+                None,
+            )
+            .await
+            .expect("create_object failed")
+            .object_id();
+            transaction.commit().await.expect("commit failed");
+            let vol = FxVolumeAndRoot::new(volume.clone(), 0).await.unwrap();
+
+            let file = vol
+                .volume()
+                .get_or_load_node(object_id, ObjectDescriptor::File, None)
+                .await
+                .expect("get_or_load_node failed")
+                .into_any()
+                .downcast::<FxFile>()
+                .expect("Not a file");
+
+            // Write some data to the file, which will only go to the cache for now.
+            file.write_at(0, &[123u8]).await.expect("write_at failed");
+
+            let data_has_persisted = || async {
+                // We have to reopen the object each time since this is a distinct handle from the
+                // one managed by the FxFile.
+                let object =
+                    ObjectStore::open_object(&volume, object_id, HandleOptions::default(), None)
+                        .await
+                        .expect("open_object failed");
+                let data = object.contents(8192).await.expect("read failed");
+                data.len() == 1 && data[..] == [123u8]
+            };
+            assert!(!data_has_persisted().await);
+
+            let (watcher_proxy, watcher_server) =
+                fidl::endpoints::create_proxy().expect("Failed to create FIDL endpoints");
+            let mem_pressure = MemoryPressureMonitor::try_from(watcher_server)
+                .expect("Failed to create MemoryPressureMonitor");
+
+            // Configure the flush task to only flush quickly on warning.
+            let flush_config = FlushTaskConfig {
+                mem_normal_period: Duration::from_secs(20),
+                mem_warning_period: Duration::from_secs(20),
+                mem_critical_period: Duration::from_secs(20),
+            };
+            vol.volume().start_flush_task(flush_config, Some(&mem_pressure));
+
+            // Send the memory pressure update.
+            watcher_proxy
+                .on_level_changed(MemoryPressureLevel::Critical)
+                .await
+                .expect("Failed to send memory pressure level change");
+
+            // Critical memory should trigger a flush immediately so expect a flush very quickly.
+            const MAX_WAIT: Duration = Duration::from_secs(2);
+            let wait_increments = Duration::from_millis(400);
+            let mut total_waited = Duration::ZERO;
+
+            while total_waited < MAX_WAIT {
+                fasync::Timer::new(wait_increments).await;
+                total_waited += wait_increments;
+
+                if data_has_persisted().await {
+                    break;
+                }
+            }
+
+            assert!(data_has_persisted().await);
 
             vol.volume().terminate().await;
         }

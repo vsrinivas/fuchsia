@@ -36,5 +36,11 @@
                 "#fxfs-crypt",
             ],
         },
+        {
+            protocol: [ "fuchsia.memorypressure.Provider" ],
+            from: "parent",
+            to: "#fxfs",
+            availability: "optional",
+        },
     ],
 }

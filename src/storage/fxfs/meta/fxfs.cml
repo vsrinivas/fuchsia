@@ -32,6 +32,12 @@
             ],
         },
     ],
+    use: [
+        {
+            protocol: "fuchsia.memorypressure.Provider",
+            availability: "optional",
+        },
+    ],
     expose: [
         {
             directory: "volumes",

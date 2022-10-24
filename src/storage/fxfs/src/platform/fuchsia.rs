@@ -8,6 +8,7 @@ mod directory;
 mod errors;
 pub mod file;
 pub mod log;
+mod memory_pressure;
 pub mod node;
 pub mod pager;
 mod remote_crypt;

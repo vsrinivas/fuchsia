@@ -10,7 +10,8 @@ use {
         metrics::{DETAIL_NODE, OBJECT_STORES_NODE},
         object_store::volume::root_volume,
         platform::fuchsia::{
-            errors::map_to_status, pager::PagerExecutor, volumes_directory::VolumesDirectory,
+            errors::map_to_status, memory_pressure::MemoryPressureMonitor, pager::PagerExecutor,
+            volumes_directory::VolumesDirectory,
         },
         serialized_types::LATEST_VERSION,
     },
@@ -288,7 +289,20 @@ impl Component {
         let weak_fs = Arc::downgrade(&fs) as Weak<dyn FsInspect + Send + Sync>;
         let inspect_tree =
             Arc::new(FsInspectTree::new(weak_fs, &crate::metrics::FXFS_ROOT_NODE.lock().unwrap()));
-        let volumes = VolumesDirectory::new(root_volume, Arc::downgrade(&inspect_tree)).await?;
+        let mem_monitor = match MemoryPressureMonitor::start().await {
+            Ok(v) => Some(v),
+            Err(e) => {
+                warn!(
+                    error = e.as_value(),
+                    "Failed to connect to memory pressure monitor. Running \
+                without pressure awareness."
+                );
+                None
+            }
+        };
+
+        let volumes =
+            VolumesDirectory::new(root_volume, Arc::downgrade(&inspect_tree), mem_monitor).await?;
 
         self.outgoing_dir.add_entry_impl(
             "volumes".to_string(),
