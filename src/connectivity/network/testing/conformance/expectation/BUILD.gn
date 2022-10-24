@@ -1,0 +1,41 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+
+if (is_host) {
+  suite_expectations = [
+    "arp.go",
+    "dhcp_client.go",
+    "dhcp_server.go",
+    "dhcpv6_client.go",
+    "icmp.go",
+    "icmpv6.go",
+    "icmpv6_router.go",
+    "igmp.go",
+    "ip.go",
+    "ipv6.go",
+    "ipv6_mld.go",
+    "ipv6_pmtu.go",
+    "ipv6_router.go",
+    "ipv6ndp.go",
+    "tcp_advanced.go",
+    "tcp_advanced_v6.go",
+    "tcp_highperf.go",
+    "tcp_highperf_v6.go",
+    "tcpcore.go",
+    "tcpcorev6.go",
+    "udp.go",
+    "udp_v6.go",
+  ]
+
+  go_library("expectation") {
+    sources = [ "expectation.go" ] + suite_expectations
+    deps = [
+      "//src/connectivity/network/testing/conformance/expectation/outcome",
+      "//src/connectivity/network/testing/conformance/expectation/platform",
+      "//src/connectivity/network/testing/conformance/parseoutput",
+    ]
+  }
+}

@@ -1,0 +1,55 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+package expectation
+
+import "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/expectation/outcome"
+
+var icmpv6RouterExpectations map[AnvlCaseNumber]outcome.Outcome = map[AnvlCaseNumber]outcome.Outcome{
+	{1, 1}:  Pass,
+	{1, 2}:  Pass,
+	{2, 1}:  Fail,
+	{2, 2}:  Fail,
+	{2, 3}:  Pass,
+	{3, 1}:  Inconclusive,
+	{3, 2}:  Pass,
+	{4, 1}:  Pass,
+	{4, 2}:  Pass,
+	{4, 3}:  Pass,
+	{4, 4}:  Pass,
+	{4, 5}:  Fail,
+	{4, 6}:  Pass,
+	{4, 7}:  Pass,
+	{4, 8}:  Fail,
+	{4, 9}:  Pass,
+	{4, 10}: Pass,
+	{4, 11}: Fail,
+	{4, 12}: Fail,
+	{4, 13}: Pass,
+	{5, 1}:  Fail,
+	{5, 2}:  Fail,
+	{5, 3}:  Fail,
+	{5, 4}:  Fail,
+	{5, 5}:  Fail,
+	{5, 7}:  Pass,
+	{5, 8}:  Fail,
+	{5, 9}:  Fail,
+	{5, 10}: Fail,
+	{5, 11}: Pass,
+	{5, 12}: Pass,
+	{6, 1}:  Fail,
+	{6, 2}:  Fail,
+	{7, 1}:  Fail,
+	{7, 2}:  Pass,
+	{7, 3}:  Fail,
+	{7, 4}:  Fail,
+	{8, 1}:  Pass,
+	{8, 2}:  Pass,
+	{8, 3}:  Pass,
+	{8, 4}:  Pass,
+	{8, 5}:  Pass,
+	{9, 1}:  Pass,
+	{9, 2}:  Pass,
+	{10, 1}: Pass,
+}
