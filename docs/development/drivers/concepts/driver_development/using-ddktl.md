@@ -37,7 +37,6 @@ Deprecated Mixin class      | Function             | Purpose
 `ddk::Readable`             | **DdkRead()**        | client's **read()**
 `ddk::Writable`             | **DdkWrite()**       | client's **write()**
 `ddk::GetSizable`           | **DdkGetSize()**     | returns size of device
-`ddk::UnbindableDeprecated` | **DdkUnbindDeprecated()**   | called when this device is being removed
 
 When defining the class for your device, you specify which functions it will
 support by including the appropriate mixins.
