@@ -808,11 +808,11 @@ void fb_reboot(char *cmd) {
 
   char *partition = strtok(NULL, "-");
   if (!partition) {
-    bootbyte_set_normal();
+    set_bootbyte(gSys->RuntimeServices, EFI_BOOT_NORMAL);
   } else if (!strncmp(partition, "bootloader", 10)) {
-    bootbyte_set_bootloader();
+    set_bootbyte(gSys->RuntimeServices, EFI_BOOT_BOOTLOADER);
   } else if (!strncmp(partition, "recovery", 8)) {
-    bootbyte_set_recovery();
+    set_bootbyte(gSys->RuntimeServices, EFI_BOOT_RECOVERY);
   }
   fb_send_okay("");
 

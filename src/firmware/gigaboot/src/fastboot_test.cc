@@ -65,6 +65,18 @@ std::string TcpPacket(std::string_view contents) {
   return TcpSizeString(contents.length()) + std::string(contents);
 }
 
+// Stub SetVariable function to allow fastboot tests to set boot action.
+EFIAPI efi_status StubSetVariable(char16_t* name, efi_guid* guid, uint32_t flags, size_t length,
+                                  const void* data) {
+  return EFI_SUCCESS;
+}
+
+// Stub SetVariable function to allow fastboot tests to set boot action.
+EFIAPI efi_status StubGetVariable(char16_t* name, efi_guid* guid, uint32_t* flags, size_t* length,
+                                  void* data) {
+  return EFI_SUCCESS;
+}
+
 // Helper to fake fastboot UDP input and output.
 //
 // On creation, injects custom UDP functions into fastboot so we can run the
@@ -196,6 +208,7 @@ class FakeFastbootTcp {
     // Fastboot uses the global xefi pointers pretty heavily, replace them with
     // our mocks.
     gBS = system_table_.BootServices = mock_tcp_.boot_services().services();
+    system_table_.RuntimeServices = &mock_runtime_services;
     gSys = &system_table_;
     gImg = ImageHandle();
 
@@ -357,6 +370,10 @@ class FakeFastbootTcp {
  private:
   MockTcp mock_tcp_;
   efi_system_table system_table_ = {};
+  efi_runtime_services mock_runtime_services = efi_runtime_services{
+      .GetVariable = StubGetVariable,
+      .SetVariable = StubSetVariable,
+  };
 
   // TX/RX data from the perspective of the fastboot client.
   std::string tx_data_;

@@ -73,7 +73,8 @@ typedef enum {
 //   use_dfv2: updated by get_boot_action, true if boot should be done with DFv2.
 //
 // Returns the chosen boot action.
-BootAction get_boot_action(bool have_network, bool have_fb, bool* use_dfv2);
+BootAction get_boot_action(efi_runtime_services* runtime, bool have_network, bool have_fb,
+                           bool* use_dfv2);
 
 __END_CDECLS
 

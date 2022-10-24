@@ -425,15 +425,26 @@ static BootAction main_boot_menu(bool have_network, bool have_fb, bool* use_dfv2
   }
 }
 
-BootAction get_boot_action(bool have_network, bool have_fb, bool* is_dfv2) {
+BootAction get_boot_action(efi_runtime_services* runtime, bool have_network, bool have_fb,
+                           bool* is_dfv2) {
   // 1. Bootbyte.
-  // Ignore the reboot count, we have a more robust mechanism now in the A/B/R
-  // retry count.
-  unsigned char bootbyte = bootbyte_read() & ~RTC_BOOT_COUNT_MASK;
-  bootbyte_clear();
-  if (bootbyte == RTC_BOOT_RECOVERY) {
+  uint8_t bootbyte = EFI_BOOT_DEFAULT;
+  efi_status status = get_bootbyte(runtime, &bootbyte);
+  if (status != EFI_SUCCESS) {
+    // We only log an error if we get something other than EFI_NOT_FOUND,
+    // as the call could return not found if the variable hasn't been set.
+    if (status != EFI_NOT_FOUND) {
+      ELOG("failed to retrieve bootbyte: %zu. Assuming normal boot", status);
+    }
+  }
+  // Set the reboot reason to default so future boots proceed normally.
+  status = set_bootbyte(runtime, EFI_BOOT_DEFAULT);
+  if (status != EFI_SUCCESS) {
+    WLOG("failed to clear bootbyte: %zu", status);
+  }
+  if (bootbyte == EFI_BOOT_RECOVERY) {
     return kBootActionSlotR;
-  } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
+  } else if (bootbyte == EFI_BOOT_BOOTLOADER) {
     return kBootActionFastboot;
   }
 
@@ -703,7 +714,8 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   }
   bool new_dfv2_state = use_dfv2;
 
-  BootAction boot_action = get_boot_action(have_network, have_fb, &new_dfv2_state);
+  BootAction boot_action =
+      get_boot_action(sys->RuntimeServices, have_network, have_fb, &new_dfv2_state);
   if (new_dfv2_state != use_dfv2) {
     status = set_bool(sys->RuntimeServices, (char16_t*)kDfv2VariableName, new_dfv2_state);
     if (status != EFI_SUCCESS) {
