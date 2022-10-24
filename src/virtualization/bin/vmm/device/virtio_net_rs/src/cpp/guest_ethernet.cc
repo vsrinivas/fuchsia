@@ -356,12 +356,7 @@ void GuestEthernet::NetworkDeviceImplQueueTx(const tx_buffer_t* buffers_list,
       continue;
     }
 
-    // Initiate transfer of memory to the guest.
-    // TODO(fxbug.dev/95485): We probably don't need to post this task to the dispatcher.
-    async::PostTask(loop_.dispatcher(),
-                    [this, id = buffer.id, memory_region = memory_region.value()] {
-                      this->send_guest_rx_(memory_region.data(), memory_region.size(), id);
-                    });
+    this->send_guest_rx_(memory_region.value().data(), memory_region.value().size(), buffer.id);
     in_flight_rx_++;
   }
 }
@@ -391,8 +386,7 @@ void GuestEthernet::NetworkDeviceImplQueueRxSpace(const rx_space_buffer_t* buffe
   }
 
   if (need_notify && !available_buffers_.empty()) {
-    // TODO(fxbug.dev/95485): We probably don't need to post this task to the dispatcher.
-    async::PostTask(loop_.dispatcher(), [this]() { this->ready_for_guest_tx_(); });
+    this->ready_for_guest_tx_();
   }
 }
 
