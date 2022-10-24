@@ -279,6 +279,12 @@
     },
     {
         "kind": "protocol/member",
+        "name": "fuchsia.ui.composition/Flatland.SetImageFlip",
+        "ordinal": "2428019831105840828",
+        "type": "(fuchsia.ui.composition/ContentId image_id,fuchsia.ui.composition/ImageFlip flip)"
+    },
+    {
+        "kind": "protocol/member",
         "name": "fuchsia.ui.composition/Flatland.SetImageOpacity",
         "ordinal": "3290412719197192047",
         "type": "(fuchsia.ui.composition/ContentId image_id,float32 val)"
@@ -425,6 +431,27 @@
         "name": "fuchsia.ui.composition/HitTestInteraction",
         "strictness": "flexible",
         "type": "uint8"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.composition/ImageFlip.LEFT_RIGHT",
+        "value": "1"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.composition/ImageFlip.NONE",
+        "value": "0"
+    },
+    {
+        "kind": "enum/member",
+        "name": "fuchsia.ui.composition/ImageFlip.UP_DOWN",
+        "value": "2"
+    },
+    {
+        "kind": "enum",
+        "name": "fuchsia.ui.composition/ImageFlip",
+        "strictness": "strict",
+        "type": "uint32"
     },
     {
         "kind": "table/member",

@@ -51,6 +51,23 @@ type ColorRgba = struct {
     alpha float32;
 };
 
+/// The set of possible image flip functions to choose from when determining how the image texture
+/// should be displayed.
+@available(added=10)
+type ImageFlip = strict enum {
+    NONE = 0;
+    /// Let V be the vertical axis of reflection, positioned at width/2. Then each pixel's x
+    /// coordinate is reflected across V. The y coordinates remain constant. For instance:
+    /// |1234|                |4321|
+    /// |abcd|  would become  |dcba|
+    LEFT_RIGHT = 1;
+    /// Let H be the horizontal axis of reflection, positioned at height/2. Then each pixel's y
+    /// coordinate is reflected across H. The x coordinates remain constant. For instance:
+    /// |1234|                |abcd|
+    /// |abcd|  would become  |1234|
+    UP_DOWN = 2;
+};
+
 /// The return type of [`GetLayout`]. This table contains most of the information necessary
 /// for a client to decide how to layout their content in a Flatland instance. This data may be
 /// provided to the client before the command that creates the View is presented, so that the
@@ -833,6 +850,17 @@ protocol Flatland {
     SetImageOpacity(struct {
         image_id ContentId;
         val float32;
+    });
+
+    /// Sets the image flip to be applied to a flatland image. This call must be performed after a
+    /// successful |CreateImage| call. If an invalid |image_id| is supplied, the channel will be
+    /// closed due to FlatlandError::BAD_OPERATION. This flip will be applied to the Image before
+    /// parent Transform Orientations. If this function is not called, then the default flip value
+    /// is ImageFlip::NONE.
+    @available(added=10)
+    SetImageFlip(struct {
+        image_id ContentId;
+        flip ImageFlip;
     });
 
     /// Creates a solid-color rectangle. By default a filled-rect does not have a defined

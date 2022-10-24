@@ -1079,6 +1079,27 @@ void Flatland::SetImageBlendingFunction(ContentId image_id,
   image_kv->second.blend_mode = blend_mode;
 }
 
+void Flatland::SetImageFlip(ContentId image_id, fuchsia::ui::composition::ImageFlip flip) {
+  if (image_id.value == kInvalidId) {
+    error_reporter_->ERROR() << "SetImageBlendingFunction called with content id 0";
+    ReportBadOperationError();
+    return;
+  }
+
+  auto content_kv = content_handles_.find(image_id.value);
+  if (content_kv == content_handles_.end()) {
+    error_reporter_->ERROR() << "SetImageBlendingFunction called with non-existent image_id "
+                             << image_id.value;
+    ReportBadOperationError();
+    return;
+  }
+
+  // TODO(fxbug.dev/76313): Add implementation for Flatland image flip.
+  error_reporter_->ERROR() << "SetImageFlip not yet implemeneted.";
+  ReportBadOperationError();
+  return;
+}
+
 void Flatland::CreateFilledRect(ContentId rect_id) {
   if (rect_id.value == kInvalidId) {
     error_reporter_->ERROR() << "CreateFilledRect called with rect_id 0";

@@ -136,6 +136,8 @@ class Flatland : public fuchsia::ui::composition::Flatland,
   void SetImageBlendingFunction(ContentId image_id,
                                 fuchsia::ui::composition::BlendMode blend_mode) override;
   // |fuchsia::ui::composition::Flatland|
+  void SetImageFlip(ContentId image_id, fuchsia::ui::composition::ImageFlip flip) override;
+  // |fuchsia::ui::composition::Flatland|
   void CreateFilledRect(ContentId rect_id) override;
   // |fuchsia::ui::composition::Flatland|
   void SetSolidFill(ContentId rect_id, fuchsia::ui::composition::ColorRgba color,
