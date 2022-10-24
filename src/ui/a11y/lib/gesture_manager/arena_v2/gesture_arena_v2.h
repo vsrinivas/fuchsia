@@ -6,6 +6,7 @@
 #define SRC_UI_A11Y_LIB_GESTURE_MANAGER_ARENA_V2_GESTURE_ARENA_V2_H_
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/pointer/augment/cpp/fidl.h>
 
 #include <list>
 #include <map>
@@ -44,7 +45,7 @@ class InteractionTracker {
   //
   // For ADD events, this records some state to remember to notify the input system
   // when the interaction is consumed or rejected.
-  void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+  void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // Returns true if there are any open interactions.
   //
@@ -168,7 +169,7 @@ class GestureArenaV2 {
   // recognizers.
   //
   // Virtual for testing; overridden by a mock.
-  virtual void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+  virtual void OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // Tries to resolve the arena if it is not resolved already.
   //
@@ -214,7 +215,7 @@ class GestureArenaV2 {
   };
 
   // Dispatches the pointer event to participating recognizers.
-  void DispatchEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+  void DispatchEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event);
 
   // Returns whether there are any participating recognizers.
   bool IsHeld() const;

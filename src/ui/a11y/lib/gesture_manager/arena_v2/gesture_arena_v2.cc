@@ -12,13 +12,6 @@
 
 namespace a11y {
 
-namespace {
-
-using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
-using Phase = fuchsia::ui::input::PointerEventPhase;
-
-}  // namespace
-
 InteractionTracker::InteractionTracker(OnInteractionHandledCallback on_interaction_handled_callback)
     : on_interaction_handled_callback_(std::move(on_interaction_handled_callback)) {
   FX_DCHECK(on_interaction_handled_callback_);
@@ -54,7 +47,13 @@ void InteractionTracker::InvokePointerEventCallbacks(
   interaction_callbacks_.clear();
 }
 
-void InteractionTracker::OnEvent(const AccessibilityPointerEvent& pointer_event) {
+void InteractionTracker::OnEvent(
+    const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
+  FX_CHECK(event.touch_event.has_pointer_sample());
+  const auto& sample = event.touch_event.pointer_sample();
+  const auto& interaction = sample.interaction();
+  const InteractionID interaction_id(interaction.device_id, interaction.pointer_id);
+
   // Note that at some point we must answer whether the interaction was
   // consumed / rejected. For this reason, for each ADD event we store the
   // callback that will be responsible for signaling how that interaction was
@@ -62,19 +61,18 @@ void InteractionTracker::OnEvent(const AccessibilityPointerEvent& pointer_event)
   //
   // It's worth mentioning that our handling is "all or nothing": we either
   // consume or reject all interactions in a gesture.
-  const InteractionID interaction_id(pointer_event.device_id(), pointer_event.pointer_id());
-  switch (pointer_event.phase()) {
-    case Phase::ADD: {
+  switch (sample.phase()) {
+    case fuchsia::ui::pointer::EventPhase::ADD: {
       if (handled_) {
-        on_interaction_handled_callback_(pointer_event.device_id(), pointer_event.pointer_id(),
-                                         *handled_);
+        on_interaction_handled_callback_(interaction.device_id, interaction.pointer_id, *handled_);
       } else {
         interaction_callbacks_[interaction_id]++;
       }
       open_interactions_.insert(interaction_id);
       break;
     }
-    case Phase::REMOVE:
+    case fuchsia::ui::pointer::EventPhase::REMOVE:
+    case fuchsia::ui::pointer::EventPhase::CANCEL:
       open_interactions_.erase(interaction_id);
       break;
     default:
@@ -155,7 +153,7 @@ void GestureArenaV2::Add(GestureRecognizerV2* recognizer) {
 // Possible |Remove| implementation:
 // fxr/c/fuchsia/+/341227/11/src/ui/a11y/lib/gesture_manager/arena/gesture_arena.cc#151
 
-void GestureArenaV2::OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
+void GestureArenaV2::OnEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   FX_CHECK(!recognizers_.empty()) << "The a11y Gesture arena is listening for pointer events "
                                      "but has no added gesture recognizer.";
   if (IsIdle()) {
@@ -163,8 +161,8 @@ void GestureArenaV2::OnEvent(const fuchsia::ui::input::accessibility::PointerEve
     StartNewContest();
   }
 
-  interactions_.OnEvent(pointer_event);
-  DispatchEvent(pointer_event);
+  interactions_.OnEvent(event);
+  DispatchEvent(event);
 }
 
 void GestureArenaV2::TryToResolve() {
@@ -194,10 +192,10 @@ GestureArenaV2::State GestureArenaV2::GetState() {
 }
 
 void GestureArenaV2::DispatchEvent(
-    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
+    const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) {
   for (auto& handle : recognizers_) {
     if (handle.participation_token) {
-      handle.recognizer->HandleEvent(pointer_event);
+      handle.recognizer->HandleEvent(event);
     }
   }
 }

@@ -5,7 +5,7 @@
 #ifndef SRC_UI_A11Y_LIB_GESTURE_MANAGER_ARENA_V2_RECOGNIZER_V2_H_
 #define SRC_UI_A11Y_LIB_GESTURE_MANAGER_ARENA_V2_RECOGNIZER_V2_H_
 
-#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
+#include <fuchsia/ui/pointer/augment/cpp/fidl.h>
 
 #include <memory>
 #include <string>
@@ -52,8 +52,7 @@ class GestureRecognizerV2 {
   // The implementation should eventually call a method on the provided |ParticipationToken| to
   // indicate when it accepts or rejects the gesture. Additionally, it should release the
   // |ParticipationToken| when it no longer wants to receive events.
-  virtual void HandleEvent(
-      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) = 0;
+  virtual void HandleEvent(const fuchsia::ui::pointer::augment::TouchEventWithLocalHit& event) = 0;
 
   // A human-readable string name for the recognizer to be used in logs only, e.g. OneTapRecognizer.
   virtual std::string DebugName() const = 0;
