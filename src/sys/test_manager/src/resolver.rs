@@ -4,7 +4,7 @@
 
 use {
     crate::facet,
-    anyhow::Error,
+    anyhow::{Context, Error},
     diagnostics_log as flog,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_logger as flogger,
@@ -257,7 +257,7 @@ pub async fn serve_hermetic_resolver(
         log_proxy,
         flog::PublishOptions { interest: flog::interest(tracing::Level::INFO), tags: Some(&tags) },
     )
-    .unwrap();
+    .context("Failed to create log publisher from the resolver's namespace")?;
     let log_publisher = Arc::new(log_publisher);
     if let AllowedPackages::All(l) = &other_allowed_packages {
         l.set_logger(log_publisher.clone()).await;
