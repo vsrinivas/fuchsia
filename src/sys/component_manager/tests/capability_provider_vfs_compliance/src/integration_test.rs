@@ -42,7 +42,6 @@ async fn component_manager_namespace() {
         "/svc/fuchsia.process.Launcher",
         "/svc/fuchsia.sys2.CrashIntrospect",
         "/svc/fuchsia.sys2.CrashIntrospect",
-        "/svc/fuchsia.sys2.EventSource",
     ];
 
     let hanging_failed_opens = hanging_nodes.iter().map(|node_path| async move {
