@@ -14,7 +14,7 @@ use futures::{
     future::{AbortHandle, Abortable, Aborted},
     stream::{FuturesUnordered, StreamExt as _},
 };
-use log::debug;
+use log::trace;
 
 use super::{context::Lockable, StackTime};
 
@@ -151,7 +151,7 @@ where
                 // TimerEvent we're currently holding may have be invalidated by
                 // another Task, so it must NOT be given to to the handler.
 
-                debug!("TimerDispatcher work: {:?}", r);
+                trace!("TimerDispatcher work: {:?}", r);
                 match r {
                     PollResult::InstallFuture(fut) => futures.push(fut),
                     PollResult::TimerFired(t) => {
@@ -160,11 +160,11 @@ where
 
                         match disp.commit_timer(t) {
                             Ok(t) => {
-                                debug!("TimerDispatcher: firing timer {:?}", t);
+                                trace!("TimerDispatcher: firing timer {:?}", t);
                                 handler.handle_expired_timer(t);
                             }
                             Err(e) => {
-                                debug!("TimerDispatcher: timer was stale {:?}", e);
+                                trace!("TimerDispatcher: timer was stale {:?}", e);
                             }
                         }
                     }
@@ -186,7 +186,7 @@ where
         let sender = if let Some(s) = self.futures_sender.as_mut() {
             s
         } else {
-            debug!("TimerDispatcher not spawned, ignoring timer {:?}", timer_id);
+            trace!("TimerDispatcher not spawned, ignoring timer {:?}", timer_id);
             return None;
         };
 
