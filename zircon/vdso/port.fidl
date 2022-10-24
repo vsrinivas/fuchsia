@@ -419,7 +419,7 @@ protocol Port {
     /// ## Description
     ///
     /// `zx_port_cancel()` is a non-blocking syscall that cancels
-    /// pending [`zx_object_wait_async()`] calls done with *source* and *key*.
+    /// all pending [`zx_object_wait_async()`] operations made with *source* and *key*.
     ///
     /// When this call succeeds no new packets from the object pointed by
     /// *source* with *key* will be delivered to *handle*, and pending queued
