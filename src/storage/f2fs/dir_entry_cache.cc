@@ -156,10 +156,7 @@ void DirEntryCache::RemoveDirEntry(ino_t parent_ino, std::string_view child_name
 bool DirEntryCache::IsElementInCache(ino_t parent_ino, std::string_view child_name) const {
   std::lock_guard lock(lock_);
   auto search = map_.find(DirEntryCache::GenerateKey(parent_ino, child_name));
-  if (search == map_.end()) {
-    return false;
-  }
-  return true;
+  return search != map_.end();
 }
 
 bool DirEntryCache::IsElementAtHead(ino_t parent_ino, std::string_view child_name) const {

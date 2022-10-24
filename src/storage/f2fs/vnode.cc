@@ -524,8 +524,7 @@ zx_status_t VnodeF2fs::Vget(F2fs *fs, ino_t ino, fbl::RefPtr<VnodeF2fs> *out) {
     return status;
   }
 
-  if (!(ino == fs->GetSuperblockInfo().GetNodeIno() ||
-        ino == fs->GetSuperblockInfo().GetMetaIno())) {
+  if (ino != fs->GetSuperblockInfo().GetNodeIno() && ino != fs->GetSuperblockInfo().GetMetaIno()) {
     if (!fs->GetSuperblockInfo().IsOnRecovery() && vnode_refptr->GetNlink() == 0) {
       vnode_refptr->SetFlag(InodeInfoFlag::kBad);
       vnode_refptr.reset();

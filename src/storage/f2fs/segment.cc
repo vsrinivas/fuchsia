@@ -296,10 +296,7 @@ block_t SegmentManager::SumBlkAddr(int base, int type) {
 }
 
 bool SegmentManager::SecUsageCheck(unsigned int secno) {
-  if (IsCurSec(secno) || (fs_->GetGcManager().GetCurVictimSec() == secno)) {
-    return true;
-  }
-  return false;
+  return IsCurSec(secno) || (fs_->GetGcManager().GetCurVictimSec() == secno);
 }
 
 SegmentManager::SegmentManager(F2fs *fs) : fs_(fs) { superblock_info_ = &fs->GetSuperblockInfo(); }
@@ -810,10 +807,7 @@ void SegmentManager::AllocateNewSegments() {
 bool SegmentManager::HasCursegSpace(CursegType type) {
   SuperblockInfo &superblock_info = fs_->GetSuperblockInfo();
   CursegInfo *curseg = CURSEG_I(type);
-  if (curseg->next_blkoff < superblock_info.GetBlocksPerSeg()) {
-    return true;
-  }
-  return false;
+  return curseg->next_blkoff < superblock_info.GetBlocksPerSeg();
 }
 
 CursegType SegmentManager::GetSegmentType2(Page &page, PageType p_type) {

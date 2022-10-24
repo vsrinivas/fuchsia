@@ -200,7 +200,7 @@ TEST(MultiThreads, Unlink) {
       // Each thread deletes dentries to make |child_dir| empty.
       for (uint32_t child_count = 0; child_count < kNEntries; ++child_count) {
         auto child_name = child_count + nThread * kNEntries;
-        bool is_dir = child_name % 2 == 0 ? true : false;
+        bool is_dir = child_name % 2 == 0;
         FileTester::DeleteChild(child_dir.get(), std::to_string(child_name), is_dir);
       }
     });

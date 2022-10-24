@@ -306,11 +306,7 @@ bool Dir::IsEmptyInlineDir() {
   unsigned int bit_pos = 2;
   bit_pos = FindNextBit(InlineDentryBitmap(ipage.get()), MaxInlineDentry(), bit_pos);
 
-  if (bit_pos < MaxInlineDentry()) {
-    return false;
-  }
-
-  return true;
+  return bit_pos >= MaxInlineDentry();
 }
 
 zx_status_t Dir::ReadInlineDir(fs::VdirCookie *cookie, void *dirents, size_t len,

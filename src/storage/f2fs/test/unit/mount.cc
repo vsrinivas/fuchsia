@@ -70,7 +70,7 @@ void MountTestDisableExt(F2fs *fs, uint32_t expectation) {
   fbl::RefPtr<VnodeF2fs> root;
   FileTester::CreateRoot(fs, &root);
   Dir *root_dir = static_cast<Dir *>(root.get());
-  bool result = (expectation > 0 ? true : false);
+  bool result = (expectation > 0);
 
   for (const char *ext_item : kMediaExtList) {
     std::string name = "test.";

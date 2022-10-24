@@ -359,7 +359,7 @@ zx::result<TraverseResult> FsckWorker::CheckNodeBlock(const Inode *inode, nid_t 
     return do_traverse.take_error();
   }
 
-  if (*do_traverse == true) {
+  if (*do_traverse) {
     // Traverse to underlying structures.
     zx::result<TraverseResult> ret;
     switch (ntype) {
@@ -489,7 +489,7 @@ zx::result<TraverseResult> FsckWorker::TraverseInodeBlock(const Node &node_block
         child_count += ret->link_count;
       }
     }
-  } while (0);
+  } while (false);
 
   return zx::ok(TraverseResult{block_count, child_count});
 }
@@ -2035,7 +2035,7 @@ void FsckWorker::BuildSitEntries() {
         break;
       }
     }
-    if (found == false) {
+    if (!found) {
       std::unique_ptr<FsBlock> sit_block = GetCurrentSitPage(segno);
       sit = reinterpret_cast<SitBlock *>(sit_block.get())
                 ->entries[segment_manager_->SitEntryOffset(segno)];

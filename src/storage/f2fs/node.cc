@@ -214,10 +214,7 @@ void NodeManager::DelFromNatCache(NatEntry &entry) {
 bool NodeManager::IsCheckpointedNode(nid_t nid) {
   fs::SharedLock nat_lock(nat_tree_lock_);
   NatEntry *ne = LookupNatCache(nid);
-  if (ne && !ne->IsCheckpointed()) {
-    return false;
-  }
-  return true;
+  return !(ne && !ne->IsCheckpointed());
 }
 
 NatEntry *NodeManager::GrabNatEntry(nid_t nid) {

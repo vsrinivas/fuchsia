@@ -9,10 +9,8 @@ namespace f2fs {
 bool F2fs::SpaceForRollForward() {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   std::lock_guard stat_lock(superblock_info.GetStatLock());
-  if (superblock_info.GetLastValidBlockCount() + superblock_info.GetAllocValidBlockCount() >
-      superblock_info.GetUserBlockCount())
-    return false;
-  return true;
+  return superblock_info.GetLastValidBlockCount() + superblock_info.GetAllocValidBlockCount() <=
+         superblock_info.GetUserBlockCount();
 }
 
 F2fs::FsyncInodeEntry *F2fs::GetFsyncInode(FsyncInodeList &inode_list, nid_t ino) {
