@@ -104,7 +104,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         }
     }
 
-    async fn unlock(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
+    async fn unlock_storage(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Locked => {
@@ -120,7 +120,7 @@ impl StorageManager for InsecureKeyDirectoryStorageManager {
         }
     }
 
-    async fn lock(&self) -> Result<(), AccountManagerError> {
+    async fn lock_storage(&self) -> Result<(), AccountManagerError> {
         let mut state_lock = self.state.lock().await;
         match *state_lock {
             StorageManagerState::Available => {
@@ -330,7 +330,7 @@ mod test {
             // Drop the data dir reference - this is a precondition of calling lock().
             std::mem::drop(data_dir);
 
-            manager.lock().await.unwrap();
+            manager.lock_storage().await.unwrap();
             manager.destroy().await.unwrap();
             manager.provision(&key).await.unwrap();
 
@@ -353,8 +353,8 @@ mod test {
             create_file_with_content(&data_dir, "test-data-file", "test-data-content").await;
             std::mem::drop(data_dir);
 
-            manager.lock().await.unwrap();
-            manager.unlock(&key).await.unwrap();
+            manager.lock_storage().await.unwrap();
+            manager.unlock_storage(&key).await.unwrap();
 
             // Files should still exist.
             let data_dir = manager.get_root_dir().await.unwrap();
@@ -384,7 +384,7 @@ mod test {
             .unwrap();
 
             let new_manager = InsecureKeyDirectoryStorageManager::new(new_dir_proxy).await.unwrap();
-            new_manager.unlock(&key).await.unwrap();
+            new_manager.unlock_storage(&key).await.unwrap();
 
             // Files should still exist.
             let data_dir = new_manager.get_root_dir().await.unwrap();
@@ -399,9 +399,9 @@ mod test {
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&Key::NoSpecifiedKey).await.unwrap();
-        manager.lock().await.unwrap();
+        manager.lock_storage().await.unwrap();
         assert_eq!(
-            manager.unlock(&*CUSTOM_KEY).await.unwrap_err().api_error,
+            manager.unlock_storage(&*CUSTOM_KEY).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
@@ -409,9 +409,9 @@ mod test {
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&*CUSTOM_KEY).await.unwrap();
-        manager.lock().await.unwrap();
+        manager.lock_storage().await.unwrap();
         assert_eq!(
-            manager.unlock(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
+            manager.unlock_storage(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
@@ -419,10 +419,10 @@ mod test {
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&*CUSTOM_KEY).await.unwrap();
-        manager.lock().await.unwrap();
+        manager.lock_storage().await.unwrap();
         let wrong_key = [99; 32];
         assert_eq!(
-            manager.unlock(&Key::Key256Bit(wrong_key)).await.unwrap_err().api_error,
+            manager.unlock_storage(&Key::Key256Bit(wrong_key)).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
@@ -430,9 +430,9 @@ mod test {
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&Key::NoSpecifiedKey).await.unwrap();
-        manager.lock().await.unwrap();
+        manager.lock_storage().await.unwrap();
         assert_eq!(
-            manager.unlock(&Key::Key256Bit([0; 32])).await.unwrap_err().api_error,
+            manager.unlock_storage(&Key::Key256Bit([0; 32])).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
 
@@ -440,9 +440,9 @@ mod test {
         let (_dir, dir_proxy) = create_temp_directory();
         let manager = InsecureKeyDirectoryStorageManager::new(dir_proxy).await.unwrap();
         manager.provision(&Key::Key256Bit([0; 32])).await.unwrap();
-        manager.lock().await.unwrap();
+        manager.lock_storage().await.unwrap();
         assert_eq!(
-            manager.unlock(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
+            manager.unlock_storage(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::FailedAuthentication
         );
     }

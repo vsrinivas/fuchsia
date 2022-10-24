@@ -112,7 +112,7 @@ impl<SM: StorageManager + 'static> Account<SM> {
                 warn!("account has already been locked");
                 Ok(())
             }
-            State::Unlocked { .. } => Ok(self.storage_manager.lock().await?),
+            State::Unlocked { .. } => Ok(self.storage_manager.lock_storage().await?),
         }
     }
 

@@ -20,11 +20,11 @@ impl StorageManager for EncryptedVolumeStorageManager {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 
-    async fn unlock(&self, _key: &Self::Key) -> Result<(), AccountManagerError> {
+    async fn unlock_storage(&self, _key: &Self::Key) -> Result<(), AccountManagerError> {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 
-    async fn lock(&self) -> Result<(), AccountManagerError> {
+    async fn lock_storage(&self) -> Result<(), AccountManagerError> {
         Err(AccountManagerError::new(ApiError::UnsupportedOperation))
     }
 
@@ -68,7 +68,7 @@ mod test {
     async fn test_volume_storage_manager_unlock_unimplemented() {
         let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
         assert_eq!(
-            manager.unlock(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
+            manager.unlock_storage(&Key::NoSpecifiedKey).await.unwrap_err().api_error,
             ApiError::UnsupportedOperation
         )
     }
@@ -76,7 +76,10 @@ mod test {
     #[fasync::run_until_stalled(test)]
     async fn test_volume_storage_manager_lock_unimplemented() {
         let manager = EncryptedVolumeStorageManager::new(&ACCOUNT_ID).unwrap();
-        assert_eq!(manager.lock().await.unwrap_err().api_error, ApiError::UnsupportedOperation)
+        assert_eq!(
+            manager.lock_storage().await.unwrap_err().api_error,
+            ApiError::UnsupportedOperation
+        )
     }
 
     #[fasync::run_until_stalled(test)]

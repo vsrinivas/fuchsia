@@ -46,14 +46,16 @@ impl TryFrom<&Key> for [u8; 32] {
 /// directory provided by a `StorageManager` and any subdirectories should be
 /// closed prior to locking the `StorageManager`.
 ///
-///       unlock
+///       unlock_
+///       storage
 ///  ┌───────────────┐
 ///  │               ▼
 ///  │             ┌─────────────────────────────────────────┐
 ///  │    ┌──────▶ │                AVAILABLE                │
 ///  │    │        └─────────────────────────────────────────┘
 ///  │    │          │                │           ▲
-///  │    │ unlock   │ lock           │           │ provision
+///  │    │ unlock_  │ lock_          │           │ provision
+///  │    │ storage  │ storage        │           │
 ///  │    │          ▼                │           │
 ///  │    │        ┌───────────────┐  │           │
 ///  │    └─────── │    LOCKED     │  │           │
@@ -79,12 +81,12 @@ pub trait StorageManager: Sized {
     /// Unlocks a locked storage resource.  Moves the `StorageManager` from
     /// the locked or uninitialized state to the available state. Fails if
     /// the key does not match the key originally given through `provision`.
-    async fn unlock(&self, key: &Self::Key) -> Result<(), AccountManagerError>;
+    async fn unlock_storage(&self, key: &Self::Key) -> Result<(), AccountManagerError>;
 
     /// Locks the storage resource.  All connections to the directory should be
     /// closed prior to calling this method.  Moves the `StorageManager` from
     /// the available state to the locked state.
-    async fn lock(&self) -> Result<(), AccountManagerError>;
+    async fn lock_storage(&self) -> Result<(), AccountManagerError>;
 
     /// Removes the underlying storage resources, permanently destroying the
     /// directory managed by the `StorageManager`.  All connections to the

@@ -503,7 +503,7 @@ where
                 // multiple lock/unlock cycles.
                 let storage_manager = (self.storage_manager_factory.lock().await)();
                 let () = storage_manager
-                    .unlock(key)
+                    .unlock_storage(key)
                     .map_err(|err| {
                         warn!(
                             account_id = %id,

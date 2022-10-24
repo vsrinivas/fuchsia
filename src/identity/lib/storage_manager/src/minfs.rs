@@ -131,7 +131,7 @@ where
         Ok(())
     }
 
-    async fn unlock(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
+    async fn unlock_storage(&self, key: &Self::Key) -> Result<(), AccountManagerError> {
         let block_device =
             self.find_account_partition().await.ok_or(faccount::Error::NotFound).map_err(
                 |err| {
@@ -175,7 +175,7 @@ where
         Ok(())
     }
 
-    async fn lock(&self) -> Result<(), AccountManagerError> {
+    async fn lock_storage(&self) -> Result<(), AccountManagerError> {
         let (encrypted_block, minfs) =
             self.state.lock().await.try_lock().map_err(|err| {
                 AccountManagerError::new(AccountApiError::Internal).with_cause(err)
