@@ -32,4 +32,12 @@
             subdir: "virtual-keyboard-test",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "cursor",
+                "web_engine",
+            ],
+        },
+    },
 }

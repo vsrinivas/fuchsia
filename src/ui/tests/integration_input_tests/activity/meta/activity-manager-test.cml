@@ -24,4 +24,14 @@
             to: "#realm_builder",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "cursor",
+                "flatland-scene-manager-test-ui-stack",
+                "gfx-root-presenter-test-ui-stack",
+                "gfx-scene-manager-test-ui-stack",
+            ],
+        },
+    },
 }

@@ -26,4 +26,17 @@
             to: "#realm_builder",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "child-view",
+                "cursor",
+                "flutter_aot_runner",
+                "flutter_jit_runner",
+                "gfx-root-presenter-test-ui-stack",
+                "gfx-scene-manager-test-ui-stack",
+                "parent-view",
+            ],
+        },
+    },
 }

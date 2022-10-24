@@ -41,4 +41,9 @@
             subdir: "web-semantics-test",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "web_engine" ],
+        },
+    },
 }

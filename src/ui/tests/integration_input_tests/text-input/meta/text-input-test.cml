@@ -53,6 +53,15 @@
     // system-test.shard.cml.
     // See ../README.md for instructions.
     facets: {
-        "fuchsia.test": { type: "chromium" },
+        "fuchsia.test": {
+            type: "chromium",
+            "deprecated-allowed-packages": [
+                "cursor",
+                "flatland-scene-manager-test-ui-stack",
+                "flutter_aot_runner",
+                "flutter_jit_runner",
+                "web_engine",
+            ],
+        },
     },
 }
