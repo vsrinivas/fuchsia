@@ -1,11 +1,12 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
 mod credential_manager;
 mod diagnostics;
 mod error;
 mod hash_tree;
-mod label_generator;
+mod label;
 mod lookup_table;
 mod pinweaver;
 mod provision;

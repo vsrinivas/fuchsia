@@ -50,7 +50,7 @@ rustc_binary("bin") {
     "src/diagnostics/mod.rs",
     "src/error.rs",
     "src/hash_tree.rs",
-    "src/label_generator.rs",
+    "src/label.rs",
     "src/lookup_table.rs",
     "src/main.rs",
     "src/pinweaver.rs",

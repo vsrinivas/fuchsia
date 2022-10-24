@@ -5,7 +5,7 @@
 use {
     crate::{
         diagnostics::{Diagnostics, HashTreeOperation},
-        label_generator::{BitstringLabelGenerator, Label},
+        label::{BitstringLabelGenerator, Label},
     },
     serde::{Deserialize, Serialize},
     serde_cbor,
@@ -580,7 +580,7 @@ mod test {
         super::*,
         crate::{
             diagnostics::{Event, FakeDiagnostics},
-            label_generator::BAD_LABEL,
+            label::BAD_LABEL,
         },
         tempfile::TempDir,
     };

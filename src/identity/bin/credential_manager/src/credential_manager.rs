@@ -7,7 +7,7 @@ use {
         diagnostics::{Diagnostics, IncomingManagerMethod, IncomingResetMethod},
         error::ServiceError,
         hash_tree::{HashTree, HashTreeStorage, BITS_PER_LEVEL, LABEL_LENGTH, TREE_HEIGHT},
-        label_generator::Label,
+        label::Label,
         lookup_table::LookupTable,
         pinweaver::{CredentialMetadata, Hash, Mac, PinWeaverProtocol},
     },

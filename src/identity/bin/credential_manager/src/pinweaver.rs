@@ -5,7 +5,7 @@
 use {
     crate::{
         diagnostics::{Diagnostics, PinweaverMethod},
-        label_generator::Label,
+        label::Label,
     },
     async_trait::async_trait,
     fidl_fuchsia_identity_credential::{self as fcred},

@@ -9,7 +9,7 @@ use {
             HashTree, HashTreeError, HashTreeStorage, BITS_PER_LEVEL, CHILDREN_PER_NODE,
             LABEL_LENGTH, TREE_HEIGHT,
         },
-        label_generator::Label,
+        label::Label,
         lookup_table::LookupTable,
         pinweaver::{Hash, PinWeaverProtocol},
     },

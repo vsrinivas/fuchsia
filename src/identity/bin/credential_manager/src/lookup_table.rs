@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::label_generator::Label,
+    crate::label::Label,
     async_trait::async_trait,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
@@ -301,10 +301,7 @@ impl LookupTable for PersistentLookupTable {
 
 #[cfg(test)]
 mod test {
-    use {
-        super::*, crate::label_generator::TEST_LABEL, assert_matches::assert_matches,
-        tempfile::TempDir,
-    };
+    use {super::*, crate::label::TEST_LABEL, assert_matches::assert_matches, tempfile::TempDir};
 
     #[fuchsia::test]
     async fn test_read_before_write() {
