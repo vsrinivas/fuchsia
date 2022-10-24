@@ -384,8 +384,9 @@ zx_status_t Device::SetCountryCodeInFw(char country[3]) {
   IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&ioctl_request);
   if (io_status != IoctlStatus::Success) {
     NXPF_ERR("Failed to set country %s: status %d", country, io_status);
+    return ZX_ERR_IO;
   }
-  return status;
+  return ZX_OK;
 }
 
 void Device::SetCountry(SetCountryRequestView request, fdf::Arena &arena,

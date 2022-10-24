@@ -178,6 +178,29 @@ TEST_F(DeviceTest, SetCountry) {
 
   auto result = wlanphy_client_.sync().buffer(arena)->SetCountry(request);
   ASSERT_OK(result.status());
+  ASSERT_TRUE(result.value().is_ok());
+  ASSERT_TRUE(ioctl_called);
+}
+
+TEST_F(DeviceTest, SetCountryCodeFails) {
+  fdf::Arena arena(kArenaTag);
+
+  auto request = ::fuchsia_wlan_wlanphyimpl::wire::WlanphyCountry::WithAlpha2({'U', 'S'});
+
+  bool ioctl_called = false;
+  mlan_mocks_.SetOnMlanIoctl([&](t_void*, pmlan_ioctl_req req) -> mlan_status {
+    ioctl_called = true;
+    EXPECT_EQ(MLAN_ACT_SET, req->action);
+    EXPECT_EQ(MLAN_IOCTL_MISC_CFG, req->req_id);
+    auto cfg = reinterpret_cast<const mlan_ds_misc_cfg*>(req->pbuf);
+    EXPECT_EQ(MLAN_OID_MISC_COUNTRY_CODE, cfg->sub_command);
+    return MLAN_STATUS_FAILURE;
+  });
+
+  auto result = wlanphy_client_.sync().buffer(arena)->SetCountry(request);
+  ASSERT_OK(result.status());
+  ASSERT_TRUE(result.value().is_error());
+  ASSERT_EQ(ZX_ERR_IO, result.value().error_value());
   ASSERT_TRUE(ioctl_called);
 }
 
@@ -211,10 +234,12 @@ TEST_F(DeviceTest, GetCountry) {
   fdf::Arena arena_for_set(kArenaTag);
   auto set_result = wlanphy_client_.sync().buffer(arena_for_set)->SetCountry(set_request);
   ASSERT_OK(set_result.status());
+  ASSERT_TRUE(set_result.value().is_ok());
 
   fdf::Arena arena_for_get(kArenaTag + 1);
   auto get_result = wlanphy_client_.sync().buffer(arena_for_get)->GetCountry();
   ASSERT_OK(get_result.status());
+  ASSERT_TRUE(get_result.value().is_ok());
 
   ASSERT_TRUE(get_result->value()->country.is_alpha2());
   EXPECT_BYTES_EQ(set_request.alpha2().data(), get_result->value()->country.alpha2().data(),
@@ -252,11 +277,13 @@ TEST_F(DeviceTest, ClearCountry) {
   fdf::Arena arena_for_set(kArenaTag);
   auto set_result = wlanphy_client_.sync().buffer(arena_for_set)->SetCountry(set_request);
   ASSERT_OK(set_result.status());
+  ASSERT_TRUE(set_result.value().is_ok());
 
   // Get country should return US
   fdf::Arena arena_for_get(kArenaTag + 1);
   auto get_result = wlanphy_client_.sync().buffer(arena_for_get)->GetCountry();
   ASSERT_OK(get_result.status());
+  ASSERT_TRUE(get_result.value().is_ok());
 
   ASSERT_TRUE(get_result->value()->country.is_alpha2());
   EXPECT_BYTES_EQ(set_request.alpha2().data(), get_result->value()->country.alpha2().data(),
@@ -265,6 +292,7 @@ TEST_F(DeviceTest, ClearCountry) {
   fdf::Arena arena_for_clear(kArenaTag + 2);
   auto clear_result = wlanphy_client_.sync().buffer(arena_for_clear)->ClearCountry();
   ASSERT_OK(clear_result.status());
+  ASSERT_TRUE(clear_result.value().is_ok());
 
   // Get should return WW
   get_result = wlanphy_client_.sync().buffer(arena_for_get)->GetCountry();
