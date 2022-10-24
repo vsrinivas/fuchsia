@@ -653,6 +653,433 @@ TEST(DisplayPllDcoDividersKabyLakeTest, GetForDpll) {
   EXPECT_EQ(0x6c054u, dpll3_cfgcr2.reg_addr());
 }
 
+TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplier) {
+  auto dpll0_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(1);
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(1u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(1, dpll0_cfgcr0.dco_frequency_multiplier());
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(0x8000);
+  EXPECT_EQ(1u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(0x8000, dpll0_cfgcr0.dco_frequency_multiplier());
+
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example of DVI on DDIB
+  // using 113.309 MHz symbol clock and reference 24 MHz", page 182.
+  // The DCO frequency is 9064.72 Mhz, so the DCO multiplier is
+  // (9,064,720 kHz * 32,768 fraction precision) / (24,000 kHz) = 12,376,364.
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(12'376'364);
+  EXPECT_EQ(377u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(22828u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(12'376'364, dpll0_cfgcr0.dco_frequency_multiplier());
+
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example for DSI0 8X
+  // 556.545 and reference 24 MHz", pages 185-186.
+  // The DCO frequency is 8498.175 MHz, so the DCO multiplier is
+  // (8,498,175 kHz * 32,768 fraction precision) / (24,000 kHz) = 11,602,841.
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(11'602'841);
+  EXPECT_EQ(354u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(2969u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(11'602'841, dpll0_cfgcr0.dco_frequency_multiplier());
+
+  // Frequency value where both fields start and end with 1s, to check for field
+  // trimming / incorrect overflowing.
+  static constexpr int32_t kMultiplierBits = 0b1100110011'110011010110011;
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(kMultiplierBits);
+  EXPECT_EQ(0b1100110011u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0b110011010110011u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(kMultiplierBits, dpll0_cfgcr0.dco_frequency_multiplier());
+}
+
+TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhz) {
+  auto dpll0_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example of DVI on DDIB
+  // using 113.309 MHz symbol clock and reference 24 MHz", page 182.
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'064'720, 24'000);
+  EXPECT_EQ(377u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(22828u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(9'064'720, dpll0_cfgcr0.dco_frequency_khz(24'000));
+
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example for DSI0 8X
+  // 556.545 and reference 24 MHz", pages 185-186.
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'498'175, 24'000);
+  EXPECT_EQ(354u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(2969u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(8'498'175, dpll0_cfgcr0.dco_frequency_khz(24'000));
+}
+
+TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
+  auto dpll0_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  // Test cases from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "DisplayPort Mode PLL
+  // Values" pages 178-179.
+
+  // Values for 24 MHz reference clocks.
+  // DCO frequency = DCO multiplier * 24,000 kHz / (32'768 fraction precision)
+
+  // DCO frequency 8,100,000 kHz, multiplier 11,059,200.
+  // Divider 3 - 2.7 GHz (5.4 GHz link rate)
+  // Divider 6 - 1.35 GHz (2.7 GHz link rate)
+  // Divider 10 - 0.81 GHz (1.62 GHz link rate)
+  // Divider 5 - 1.62 GHz (3.24 GHz link rate)
+  // Divider 2 - 4.05 Ghz (8.1 Ghz link rate)
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'100'000, 24'000);
+  EXPECT_EQ(0x151u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x4000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(11'059'200, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(8'100'000, dpll0_cfgcr0.dco_frequency_khz(24'000));
+
+  // DCO frequency 8,640,000 kHz - multiplier 11,796,480
+  // Divider 8 - 1.08 GHz (2.16 GHz link rate)
+  // Divider 4 - 2.16 GHz (4.32 GHz link rate)
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'640'000, 24'000);
+  EXPECT_EQ(0x168u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(11'796'480, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(8'640'000, dpll0_cfgcr0.dco_frequency_khz(24'000));
+
+  // DCO frequency 9,720,000 kHz - multiplier
+  // Divider 3 - 3.24 GHz (6.48 GHz link rate)
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'720'000, 24'000);
+  EXPECT_EQ(0x195u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(13'271'040, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(9'720'000, dpll0_cfgcr0.dco_frequency_khz(24'000));
+
+  // Values for 19.2 MHz and 38.4 MHz reference clocks.
+  // DCO frequency = DCO multiplier * 19,200 kHz / (32'768 fraction precision)
+  // The DPLL converts 38.4 MHz to 19.2 MHz internally.
+
+  // DCO frequency 8,100,000 kHz, multiplier 13'824'000
+  // Divider 3 - 2.7 GHz (5.4 GHz link rate)
+  // Divider 6 - 1.35 GHz (2.7 GHz link rate)
+  // Divider 10 - 0.81 GHz (1.62 GHz link rate)
+  // Divider 5 - 1.62 GHz (3.24 GHz link rate)
+  // Divider 2 - 4.05 Ghz (8.1 Ghz link rate)
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'100'000, 19'200);
+  EXPECT_EQ(0x1a5u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x7000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(13'824'000, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(8'100'000, dpll0_cfgcr0.dco_frequency_khz(19'200));
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'100'000, 38'400);
+  EXPECT_EQ(0x1a5u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x7000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(13'824'000, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(8'100'000, dpll0_cfgcr0.dco_frequency_khz(38'400));
+
+  // DCO frequency 8,640,000 kHz - multiplier 14,745,600
+  // Divider 8 - 1.08 GHz (2.16 GHz link rate)
+  // Divider 4 - 2.16 GHz (4.32 GHz link rate)
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'640'000, 19'200);
+  EXPECT_EQ(0x1c2u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(14'745'600, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(8'640'000, dpll0_cfgcr0.dco_frequency_khz(19'200));
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'640'000, 38'400);
+  EXPECT_EQ(0x1c2u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(14'745'600, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(8'640'000, dpll0_cfgcr0.dco_frequency_khz(38'400));
+
+  // DCO frequency 9,720,000 kHz - multiplier 16,588,800
+  // Divider 3 - 3.24 GHz (6.48 GHz link rate)
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'720'000, 38'400);
+  EXPECT_EQ(0x1fau, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x2000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(16'588'800, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(9'720'000, dpll0_cfgcr0.dco_frequency_khz(38'400));
+}
+
+TEST(DisplayPllDcoFrequencyTigerLakeTest, GetForDpll) {
+  // The register MMIO addresses come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1
+  // page 650.
+
+  auto dpll0_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+  EXPECT_EQ(0x164284u, dpll0_cfgcr0.reg_addr());
+
+  auto dpll1_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
+          .FromValue(0);
+  EXPECT_EQ(0x16428cu, dpll1_cfgcr0.reg_addr());
+
+  auto tbtpll_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_2)
+          .FromValue(0);
+  EXPECT_EQ(0x16429cu, tbtpll_cfgcr0.reg_addr());
+
+  // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
+  // address is 0x164294.
+}
+
+TEST(DisplayPllDcoDividersTigerLakeTest, QP1Divider) {
+  auto dpll0_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  dpll0_cfgcr1.set_reg_value(0).set_q_p1_divider(7);
+  EXPECT_EQ(7u, dpll0_cfgcr1.q_p1_divider_select());
+  EXPECT_EQ(true, dpll0_cfgcr1.q_p1_divider_select_enabled());
+  EXPECT_EQ(7u, dpll0_cfgcr1.q_p1_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_q_p1_divider(1);
+  EXPECT_EQ(1u, dpll0_cfgcr1.q_p1_divider_select());
+  EXPECT_EQ(false, dpll0_cfgcr1.q_p1_divider_select_enabled());
+  EXPECT_EQ(1u, dpll0_cfgcr1.q_p1_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_q_p1_divider(255);
+  EXPECT_EQ(255u, dpll0_cfgcr1.q_p1_divider_select());
+  EXPECT_EQ(true, dpll0_cfgcr1.q_p1_divider_select_enabled());
+  EXPECT_EQ(255u, dpll0_cfgcr1.q_p1_divider());
+}
+
+TEST(DisplayPllDcoDividersTigerLakeTest, KP2Divider) {
+  // The cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 652.
+
+  auto dpll0_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  dpll0_cfgcr1.set_reg_value(0).set_k_p2_divider(1);
+  EXPECT_EQ(0b001u, static_cast<unsigned>(dpll0_cfgcr1.k_p2_divider_select()));
+  EXPECT_EQ(1u, dpll0_cfgcr1.k_p2_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_k_p2_divider(2);
+  EXPECT_EQ(0b010u, static_cast<unsigned>(dpll0_cfgcr1.k_p2_divider_select()));
+  EXPECT_EQ(2u, dpll0_cfgcr1.k_p2_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_k_p2_divider(3);
+  EXPECT_EQ(0b100u, static_cast<unsigned>(dpll0_cfgcr1.k_p2_divider_select()));
+  EXPECT_EQ(3u, dpll0_cfgcr1.k_p2_divider());
+}
+
+TEST(DisplayPllDcoDividersTigerLakeTest, KP2DividerInvalid) {
+  auto dpll0_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b000));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b011));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b101));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b110));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b111));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+}
+
+TEST(DisplayPllDcoDividersTigerLakeTest, PP0Divider) {
+  // The cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 652.
+
+  auto dpll0_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider(2);
+  EXPECT_EQ(0b0001u, static_cast<unsigned>(dpll0_cfgcr1.p_p0_divider_select()));
+  EXPECT_EQ(2u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider(3);
+  EXPECT_EQ(0b0010u, static_cast<unsigned>(dpll0_cfgcr1.p_p0_divider_select()));
+  EXPECT_EQ(3u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider(5);
+  EXPECT_EQ(0b0100u, static_cast<unsigned>(dpll0_cfgcr1.p_p0_divider_select()));
+  EXPECT_EQ(5u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider(7);
+  EXPECT_EQ(0b1000u, static_cast<unsigned>(dpll0_cfgcr1.p_p0_divider_select()));
+  EXPECT_EQ(7u, dpll0_cfgcr1.p_p0_divider());
+}
+
+TEST(DisplayPllDcoDividersTigerLakeTest, PP0DividerInvalid) {
+  auto dpll0_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b0000));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b0011));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b0111));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+
+  dpll0_cfgcr1.set_reg_value(0).set_p_p0_divider_select(
+      static_cast<tgl_registers::DisplayPllDcoDividersTigerLake::PP0DividerSelect>(0b1111));
+  EXPECT_EQ(0u, dpll0_cfgcr1.p_p0_divider());
+}
+
+TEST(DisplayPllDcoDividersTigerLakeTest, GetForDpll) {
+  // The register MMIO addresses come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1
+  // page 651.
+
+  auto dpll0_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+  EXPECT_EQ(0x164288u, dpll0_cfgcr1.reg_addr());
+
+  auto dpll1_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_1)
+          .FromValue(0);
+  EXPECT_EQ(0x164290u, dpll1_cfgcr1.reg_addr());
+
+  auto tbtpll_cfgcr1 =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_2)
+          .FromValue(0);
+  EXPECT_EQ(0x1642a0u, tbtpll_cfgcr1.reg_addr());
+
+  // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
+  // address is 0x164298.
+}
+
+TEST(DisplayPllDividerTest, TrueLockCriteriaCycles) {
+  // The test cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 653.
+
+  auto dpll0_div0 =
+      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+
+  dpll0_div0.set_reg_value(0).set_true_lock_criteria_cycles(16);
+  EXPECT_EQ(0b00u, dpll0_div0.true_lock_criteria_select());
+  EXPECT_EQ(16, dpll0_div0.true_lock_criteria_cycles());
+
+  dpll0_div0.set_reg_value(0).set_true_lock_criteria_cycles(32);
+  EXPECT_EQ(0b01u, dpll0_div0.true_lock_criteria_select());
+  EXPECT_EQ(32, dpll0_div0.true_lock_criteria_cycles());
+
+  dpll0_div0.set_reg_value(0).set_true_lock_criteria_cycles(48);
+  EXPECT_EQ(0b10u, dpll0_div0.true_lock_criteria_select());
+  EXPECT_EQ(48, dpll0_div0.true_lock_criteria_cycles());
+
+  dpll0_div0.set_reg_value(0).set_true_lock_criteria_cycles(64);
+  EXPECT_EQ(0b11u, dpll0_div0.true_lock_criteria_select());
+  EXPECT_EQ(64, dpll0_div0.true_lock_criteria_cycles());
+}
+
+TEST(DisplayPllDividerTest, EarlyLockCriteriaCycles) {
+  // The test cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 653.
+
+  auto dpll0_div0 =
+      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+
+  dpll0_div0.set_reg_value(0).set_early_lock_criteria_cycles(16);
+  EXPECT_EQ(0b00u, dpll0_div0.early_lock_criteria_select());
+  EXPECT_EQ(16, dpll0_div0.early_lock_criteria_cycles());
+
+  dpll0_div0.set_reg_value(0).set_early_lock_criteria_cycles(32);
+  EXPECT_EQ(0b01u, dpll0_div0.early_lock_criteria_select());
+  EXPECT_EQ(32, dpll0_div0.early_lock_criteria_cycles());
+
+  dpll0_div0.set_reg_value(0).set_early_lock_criteria_cycles(48);
+  EXPECT_EQ(0b10u, dpll0_div0.early_lock_criteria_select());
+  EXPECT_EQ(48, dpll0_div0.early_lock_criteria_cycles());
+
+  dpll0_div0.set_reg_value(0).set_early_lock_criteria_cycles(64);
+  EXPECT_EQ(0b11u, dpll0_div0.early_lock_criteria_select());
+  EXPECT_EQ(64, dpll0_div0.early_lock_criteria_cycles());
+}
+
+TEST(DisplayPllDividerTest, AutomaticFrequencyCalibrationStartPoint) {
+  // The test cases come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages
+  // 653-654.
+
+  auto dpll0_div0 =
+      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(511);
+  EXPECT_EQ(0b000u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(511, dpll0_div0.automatic_frequency_calibration_start_point());
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(639);
+  EXPECT_EQ(0b001u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(639, dpll0_div0.automatic_frequency_calibration_start_point());
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(767);
+  EXPECT_EQ(0b010u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(767, dpll0_div0.automatic_frequency_calibration_start_point());
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(895);
+  EXPECT_EQ(0b011u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(895, dpll0_div0.automatic_frequency_calibration_start_point());
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(127);
+  EXPECT_EQ(0b101u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(127, dpll0_div0.automatic_frequency_calibration_start_point());
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(255);
+  EXPECT_EQ(0b110u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(255, dpll0_div0.automatic_frequency_calibration_start_point());
+
+  dpll0_div0.set_reg_value(0).set_automatic_frequency_calibration_start_point(383);
+  EXPECT_EQ(0b111u, dpll0_div0.automatic_frequency_calibration_start_point_select());
+  EXPECT_EQ(383, dpll0_div0.automatic_frequency_calibration_start_point());
+}
+
+TEST(DisplayPllDividerTest, GetForDpll) {
+  // The register MMIO addresses come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1
+  // page 653.
+
+  auto dpll0_div0 =
+      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_0).FromValue(0);
+  EXPECT_EQ(0x164b00u, dpll0_div0.reg_addr());
+
+  auto dpll1_div0 =
+      tgl_registers::DisplayPllDivider::GetForDpll(tgl_registers::Dpll::DPLL_1).FromValue(0);
+  EXPECT_EQ(0x164c00u, dpll1_div0.reg_addr());
+
+  // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
+  // address is 0x164e00.
+}
+
+TEST(DisplayPllSpreadSpectrumClockingTest, GetForDpll) {
+  // The register MMIO addresses come from IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1
+  // page 658.
+
+  auto dpll0_ssc =
+      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+  EXPECT_EQ(0x164b10u, dpll0_ssc.reg_addr());
+
+  auto dpll1_ssc =
+      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(tgl_registers::Dpll::DPLL_1)
+          .FromValue(0);
+  EXPECT_EQ(0x164c10u, dpll1_ssc.reg_addr());
+
+  // TODO(fxbug.dev/110351): Add a test for DPLL 4, when we support it. The MMIO
+  // address is 0x164e10.
+}
+
 TEST(PllEnableTest, GetForSkylakeDpll) {
   // The register MMIO addresses come from the reference manuals.
 

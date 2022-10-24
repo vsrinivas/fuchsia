@@ -256,7 +256,8 @@ class DisplayPllControl1 : public hwreg::RegisterBase<DisplayPllControl1, uint32
 // Some of this register's reserved fields are not MBZ (must be zero). So, the
 // register can only be updated safely via read-modify-write operations.
 //
-// The Tiger Lake equivalent of this register is DPCLKA_CFGCR0.
+// The Tiger Lake equivalent of this register is `DdiClockConfiguration`
+// (DPCLKA_CFGCR0).
 //
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 pages 532-534
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 530-532
@@ -369,7 +370,8 @@ class DisplayPllDdiMapKabyLake : public hwreg::RegisterBase<DisplayPllDdiMapKaby
 // This register's reserved fields are all MBZ (must be zero). So, this register
 // can be safely written without reading it first.
 //
-// The Tiger Lake equivalent of this register is DPLL_CFGCR0.
+// The Tiger Lake equivalent of this register is
+// `DisplayPllDcoFrequencyTigerLake` (DPLL_CFGCR0).
 //
 // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 525
 // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 530-532
@@ -666,6 +668,453 @@ class DisplayPllDcoDividersKabyLake
 
     const int dpll_index = dpll - Dpll::DPLL_0;
     return hwreg::RegisterAddr<DisplayPllDcoDividersKabyLake>(0x6c044 + (dpll_index - 1) * 8);
+  }
+};
+
+// DPLL_CFGCR0 (Display PLL Configuration and Control Register 0?)
+//
+// This register configures the frequency of the DCO (Digitally-Controlled
+// Oscillator) in the DPLL. This influences the frequency that the DPLL outputs
+// to connected DDIs.
+//
+// This register's reserved fields are all MBZ (must be zero). So, this register
+// can be safely written without reading it first.
+//
+// The Kaby Lake and Skylake equivalent of this register is
+// `DisplayPllDcoFrequencyKabyLake` (DPLL_CFGCR1).
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 650
+class DisplayPllDcoFrequencyTigerLake
+    : public hwreg::RegisterBase<DisplayPllDcoFrequencyTigerLake, uint32_t> {
+ public:
+  // The number of fractional bits in the DCO frequency multiplier.
+  //
+  // The DCO frequency multiplier is a fixed-point (as opposed to
+  // floating-point) number. This constant represents the position of the base-2
+  // equivalent of the decimal point.
+  static constexpr int kMultiplierPrecisionBits = 15;
+
+  DEF_RSVDZ_FIELD(31, 25);
+
+  // These fields have a non-trivial representation. They should be used via the
+  // `dco_frequency_multiplier()` and `set_dco_frequency_multiplier()`
+  // helpers.
+  DEF_FIELD(24, 10, dco_frequency_multiplier_fraction);
+  DEF_FIELD(9, 0, dco_frequency_multiplier_integer);
+
+  // The frequency multiplier for the DCO (Digitally Controlled Oscillator).
+  //
+  // The return value has `kMultiplierPrecisionBits` fractional bits.
+  //
+  // The multiplier is relative to the display engine reference frequency. On
+  // Tiger Lake, there are multiple possible values for this reference
+  // frequency.
+  int32_t dco_frequency_multiplier() const {
+    return static_cast<int32_t>(
+        (static_cast<int32_t>(dco_frequency_multiplier_integer()) << kMultiplierPrecisionBits) |
+        static_cast<int32_t>(dco_frequency_multiplier_fraction()));
+  }
+
+  // See `dco_frequency_multiplier()` for details.
+  DisplayPllDcoFrequencyTigerLake& set_dco_frequency_multiplier(int32_t multiplier) {
+    ZX_ASSERT(multiplier > 0);
+    ZX_ASSERT(multiplier < (1 << 25));
+
+    return set_dco_frequency_multiplier_fraction(multiplier & ((1 << kMultiplierPrecisionBits) - 1))
+        .set_dco_frequency_multiplier_integer(multiplier >> kMultiplierPrecisionBits);
+  }
+
+  // The currently configured DCO (Digitally Controlled Oscillator) frequency.
+  //
+  // `reference_frequency_khz` is the frequency of the display engine's
+  // reference clock, which can be read from the `DisplayStraps` (DSSM)
+  // register.
+  //
+  // This is a convenience method on top of the `dco_frequency_multiplier`
+  // fields.
+  int32_t dco_frequency_khz(int32_t reference_frequency_khz) const {
+    // The formulas in the PRM use truncating division when converting from a
+    // frequency to a DCO multiplier. Rounding up below aims to re-constitue an
+    // original frequency that is round-tripped through the conversion.
+    return static_cast<int32_t>(
+        ((int64_t{dco_frequency_multiplier()} * PllReferenceFrequency(reference_frequency_khz)) +
+         (1 << kMultiplierPrecisionBits) - 1) >>
+        kMultiplierPrecisionBits);
+  }
+
+  // The currently configured DCO (Digitally Controlled Oscillator) frequency.
+  //
+  // `reference_frequency_khz` is the frequency of the display engine's
+  // reference clock, which can be read from the `DisplayStraps` (DSSM)
+  // register.
+  //
+  // This is a convenience method on top of the `dco_frequency_multiplier`
+  // fields.
+  DisplayPllDcoFrequencyTigerLake& set_dco_frequency_khz(int32_t frequency_khz,
+                                                         int32_t reference_frequency_khz) {
+    // The formulas in the PRM use truncating division.
+    return set_dco_frequency_multiplier(
+        static_cast<int32_t>((int64_t{frequency_khz} << kMultiplierPrecisionBits) /
+                             PllReferenceFrequency(reference_frequency_khz)));
+  }
+
+  static auto GetForDpll(Dpll dpll) {
+    ZX_ASSERT_MSG(dpll >= Dpll::DPLL_0, "Unsupported DPLL %d", dpll);
+
+    // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
+    ZX_ASSERT_MSG(dpll <= Dpll::DPLL_2, "Unsupported DPLL %d", dpll);
+
+    const int dpll_index = dpll - Dpll::DPLL_0;
+    static constexpr uint32_t kMmioAddresses[] = {0x164284, 0x16428c, 0x16429c, 0, 0x164294};
+    return hwreg::RegisterAddr<DisplayPllDcoFrequencyTigerLake>(kMmioAddresses[dpll_index]);
+  }
+
+ private:
+  // Computes the PLL reference frequency from the display reference frequency.
+  static int32_t PllReferenceFrequency(int32_t reference_frequency_khz) {
+    ZX_ASSERT(reference_frequency_khz > 0);
+    if (reference_frequency_khz == 38'400) {
+      // The DPLL uses a 19.2Mhz reference frequency if the display reference is
+      // 38.4 MHz. This is documented in IHD-OS-TGL-Vol 12-1.22-Rev2.0 section
+      // "Formula for HDMI Mode DPLL Programming", page 180.
+      return 19'200;
+    }
+    return reference_frequency_khz;
+  }
+};
+
+// DPLL_CFGCR1 (Display PLL Configuration and Control Register 1?)
+//
+// This register configures the frequency dividers between the DCO
+// (Digitally-Controlled Oscillator) in the DPLL and the DPLL's AFE (Analog
+// Front-End) clock output, which goes to connected DDIs. The frequency output
+// by the DPLL to DDIs, also called AFE clock frequency, is the DCO frequency
+// configured in DPLL_CFGCR1 divided by the product of all the dividers (P * Q *
+// K, also documented as P0 * P1 * P2) in this register.
+//
+// Unfortunately, Intel's documentation refers to the DCO frequency dividers
+// both as (P0, P1, P2) and as (P, Q, K). Fortunately, both variations use short
+// names, so we can use both variations in our names below. This facilitates
+// checking our code against documents that use either naming variation.
+//
+// This register's reserved fields are all MBZ (must be zero). So, this register
+// can be safely written without reading it first.
+//
+// The Kaby Lake and Skylake equivalent of this register is
+// `DisplayPllDcoDividersTigerLake` (DPLL_CFGCR2).
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 651-652
+class DisplayPllDcoDividersTigerLake
+    : public hwreg::RegisterBase<DisplayPllDcoDividersTigerLake, uint32_t> {
+ public:
+  DEF_RSVDZ_FIELD(31, 18);
+
+  // This field has a non-trivial representation and should be accessed via the
+  // `q_p1_divider() and `set_q_p1_divider()` helpers.
+  DEF_FIELD(17, 10, q_p1_divider_select);
+
+  // This field has a non-trivial representation and should be accessed via the
+  // `q_p1_divider() and `set_q_p1_divider()` helpers.
+  DEF_BIT(9, q_p1_divider_select_enabled);
+
+  // The value of the Q (P1) divider.
+  //
+  // This field must not be zero. Any other value (1-255) is acceptable.
+  //
+  // The Q divider must be 1 (disabled) if the K divider is not 2. This
+  // requirement is also stated as ensuring a 50% duty cycle for this divider.
+  uint8_t q_p1_divider() const {
+    return (q_p1_divider_select_enabled()) ? q_p1_divider_select() : 1;
+  }
+
+  // See `q_p1_divider()` for details.
+  DisplayPllDcoDividersTigerLake& set_q_p1_divider(uint8_t q_p1_divider) {
+    ZX_ASSERT(q_p1_divider > 0);
+    return set_q_p1_divider_select_enabled(q_p1_divider != 1).set_q_p1_divider_select(q_p1_divider);
+  }
+
+  // Possible values for the `k_p2_divider_select` field.
+  enum class KP2DividerSelect {
+    k1 = 0b001,
+    k2 = 0b010,
+    k3 = 0b100,
+  };
+
+  // This field has a non-trivial representation and should be accessed via the
+  // `k_p2_divider() and `set_k_p2_divider()` helpers.
+  DEF_ENUM_FIELD(KP2DividerSelect, 8, 6, k_p2_divider_select);
+
+  // The K (P2) divider.
+  //
+  // The preferred value is 2. If the K divider is not 2, this constrains both
+  // the Q (P1) divider and the P (P0) divider.
+  //
+  // This helper returns 0 if the field is set to an undocumented value.
+  uint8_t k_p2_divider() const {
+    switch (k_p2_divider_select()) {
+      case KP2DividerSelect::k1:
+        return 1;
+      case KP2DividerSelect::k2:
+        return 2;
+      case KP2DividerSelect::k3:
+        return 3;
+    }
+    return 0;  // The field is set to an undocumented value.
+  }
+
+  // See `k_p2_divider()` for details.
+  DisplayPllDcoDividersTigerLake& set_k_p2_divider(uint8_t k_p2_divider) {
+    KP2DividerSelect k_p2_divider_select;
+    switch (k_p2_divider) {
+      case 1:
+        k_p2_divider_select = KP2DividerSelect::k1;
+        break;
+      case 2:
+        k_p2_divider_select = KP2DividerSelect::k2;
+        break;
+      case 3:
+        k_p2_divider_select = KP2DividerSelect::k3;
+        break;
+      default:
+        ZX_DEBUG_ASSERT_MSG(false, "Invalid K (P2) divider: %d", k_p2_divider);
+        k_p2_divider_select = KP2DividerSelect::k2;
+    };
+    return set_k_p2_divider_select(k_p2_divider_select);
+  }
+
+  // Documented values for the `p_p0_divider_select` field.
+  enum class PP0DividerSelect {
+    k2 = 0b0001,
+    k3 = 0b0010,
+    k5 = 0b0100,
+    k7 = 0b1000,
+  };
+
+  // This field has a non-trivial representation and should be accessed via the
+  // `k_p2_divider() and `set_k_p2_divider()` helpers.
+  DEF_ENUM_FIELD(PP0DividerSelect, 5, 2, p_p0_divider_select);
+
+  // The P (P0) divider.
+  //
+  // The P (P0) divider can only be 1 if the Q (P1) divider is also 1.
+  //
+  // This helper returns 0 if the field is set to an undocumented value.
+  uint8_t p_p0_divider() const {
+    switch (p_p0_divider_select()) {
+      case PP0DividerSelect::k2:
+        return 2;
+      case PP0DividerSelect::k3:
+        return 3;
+      case PP0DividerSelect::k5:
+        return 5;
+      case PP0DividerSelect::k7:
+        return 7;
+    }
+    return 0;  // The field is set to an undocumented value.
+  }
+
+  // See `p_p0_divider()` for details.
+  DisplayPllDcoDividersTigerLake& set_p_p0_divider(uint8_t p_p0_divider) {
+    PP0DividerSelect p_p0_divider_select;
+    switch (p_p0_divider) {
+      case 2:
+        p_p0_divider_select = PP0DividerSelect::k2;
+        break;
+      case 3:
+        p_p0_divider_select = PP0DividerSelect::k3;
+        break;
+      case 5:
+        p_p0_divider_select = PP0DividerSelect::k5;
+        break;
+      case 7:
+        p_p0_divider_select = PP0DividerSelect::k7;
+        break;
+      default:
+        ZX_DEBUG_ASSERT_MSG(false, "Invalid P (P0) divider: %d", p_p0_divider);
+        p_p0_divider_select = PP0DividerSelect::k2;
+    };
+    return set_p_p0_divider_select(p_p0_divider_select);
+  }
+
+  // Possible values for the `reference_clock_select` field.
+  enum class ReferenceClockSelect {
+    kDisplayReference = 0b00,
+    kUnfilteredGenlock = 0b01,
+    kInvalid = 0b10,
+    kFilteredGenlock = 0b11,
+  };
+
+  // The reference clock source for the DCO.
+  //
+  // In most cases, this should be set to `kDisplayReference`, the XTAL (crystal
+  // oscillator) that serves as the display engine reference frequency. The
+  // display controller sets this for genlocked transcoders.
+  DEF_ENUM_FIELD(ReferenceClockSelect, 1, 0, reference_clock_select);
+
+  static auto GetForDpll(Dpll dpll) {
+    ZX_ASSERT_MSG(dpll >= Dpll::DPLL_0, "Unsupported DPLL %d", dpll);
+
+    // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
+    ZX_ASSERT_MSG(dpll <= Dpll::DPLL_2, "Unsupported DPLL %d", dpll);
+
+    const int dpll_index = dpll - Dpll::DPLL_0;
+    static constexpr uint32_t kMmioAddresses[] = {0x164288, 0x164290, 0x1642a0, 0, 0x164298};
+    return hwreg::RegisterAddr<DisplayPllDcoDividersTigerLake>(kMmioAddresses[dpll_index]);
+  }
+};
+
+// DPLL_DIV0 (Display PLL frequency Divider?)
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 653-654
+class DisplayPllDivider : public hwreg::RegisterBase<DisplayPllDivider, uint32_t> {
+ public:
+  DEF_FIELD(31, 30, true_lock_criteria_select);
+  DEF_FIELD(29, 28, early_lock_criteria_select);
+  DEF_FIELD(27, 25, automatic_frequency_calibration_start_point_select);
+
+  DEF_BIT(24, feedback_clock_retiming_enabled);
+
+  // Both loop filter coefficients are shifted right by this value.
+  DEF_FIELD(23, 21, loop_filter_gain_control);
+
+  // The loop filter's integral coefficient = 2 ^ (-field value).
+  //
+  // The maximum allowed value is 11.
+  DEF_FIELD(20, 16, loop_filter_integral_coefficient_exponent);
+
+  // The loop filter's proportional coefficient = 2 ^ (1 - value).
+  DEF_FIELD(15, 12, loop_filter_proportional_coefficient_exponent);
+
+  // The pre-division feedback loop divider. Only 2 and 4 are valid dividers.
+  DEF_FIELD(11, 8, feedback_pre_divider);
+
+  // The post-division feedback loop divider. Also known as the M2 coefficient.
+  DEF_FIELD(7, 0, feedback_post_divider);
+
+  // Number of consecutive cycles of low phase error for early -> true lock.
+  //
+  // If the phase error is below the threshold for this many cycles after the
+  // early lock indicator, the PLL asserts the (external) PLL locked signal.
+  int8_t true_lock_criteria_cycles() const {
+    // The cast is lossless because the underlying field is 2-bits.
+    return static_cast<int8_t>((true_lock_criteria_select() + 1) * 16);
+  }
+
+  // See `true_lock_criteria_cycles()` for details.
+  DisplayPllDivider& set_true_lock_criteria_cycles(int8_t cycles) {
+    ZX_DEBUG_ASSERT(cycles >= 16);
+    ZX_DEBUG_ASSERT(cycles <= 64);
+    ZX_DEBUG_ASSERT(cycles % 16 == 0);
+    // The cast is lossless because the underlying field is 2-bits.
+    return set_true_lock_criteria_select(cycles / 16 - 1);
+  }
+
+  // Number of consecutive cycles of low phase error for early lock.
+  //
+  // Once the phase error is below the threshold for this many cycles, the PLL
+  // asserts the early lock indicator.
+  int8_t early_lock_criteria_cycles() const {
+    // The cast is lossless because the underlying field is 2-bits.
+    return static_cast<int8_t>((early_lock_criteria_select() + 1) * 16);
+  }
+
+  // See `early_lock_criteria_cycles()` for details.
+  DisplayPllDivider& set_early_lock_criteria_cycles(int8_t cycles) {
+    ZX_DEBUG_ASSERT(cycles >= 16);
+    ZX_DEBUG_ASSERT(cycles <= 64);
+    ZX_DEBUG_ASSERT(cycles % 16 == 0);
+    // The cast is lossless because the underlying field is 2-bits.
+    return set_early_lock_criteria_select(cycles / 16 - 1);
+  }
+
+  // The AFC (Automatic Frequency Calibration) start point.
+  int16_t automatic_frequency_calibration_start_point() const {
+    // `raw_point` will be a signed 8-bit integer with the 3 most significant
+    // bits set to the raw field bits.
+    int8_t raw_start_point =
+        static_cast<int8_t>(automatic_frequency_calibration_start_point_select() << 5);
+
+    // We use a multiplication instead of shifting left here because the left
+    // shift gets flagged by UBSan. Shifting left a negative signed integer is
+    // UB until C++20. Fortunately, good compilers optimize the multiplication
+    // to a shift.
+    return static_cast<int16_t>(511 + int16_t{raw_start_point} * 4);
+  }
+
+  // See `automatic_frequency_calibration_start_point()` for details.
+  DisplayPllDivider& set_automatic_frequency_calibration_start_point(int16_t start_point) {
+    ZX_DEBUG_ASSERT(start_point >= 127);
+    ZX_DEBUG_ASSERT(start_point <= 895);
+    ZX_DEBUG_ASSERT((start_point - 511) % 128 == 0);
+
+    uint8_t point_select = static_cast<uint8_t>(((start_point - 511) >> 7) & 7);
+    return set_automatic_frequency_calibration_start_point_select(point_select);
+  }
+
+  static auto GetForDpll(Dpll dpll) {
+    ZX_ASSERT_MSG(dpll >= Dpll::DPLL_0, "Unsupported DPLL %d", dpll);
+
+    // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
+    ZX_ASSERT_MSG(dpll <= Dpll::DPLL_1, "Unsupported DPLL %d", dpll);
+
+    const int dpll_index = dpll - Dpll::DPLL_0;
+    static constexpr uint32_t kMmioAddresses[] = {0x164b00, 0x164c00, 0, 0, 0x16e00};
+    return hwreg::RegisterAddr<DisplayPllDivider>(kMmioAddresses[dpll_index]);
+  }
+};
+
+// DPLL_SSC (Display PLL Spread Spectrum Clocking?)
+//
+// This register does not have any reserved fields. However, the documentation
+// for most fields is not sufficient for us to configure them. So, we can only
+// safely update this register via read-modify-write operations.
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 658-659
+class DisplayPllSpreadSpectrumClocking
+    : public hwreg::RegisterBase<DisplayPllSpreadSpectrumClocking, uint32_t> {
+ public:
+  DEF_FIELD(31, 29, reference_clock_divider);
+  DEF_FIELD(28, 26, step_number_offset);
+
+  // If true, Adaptive Gain Change is enabled for SSC injection.
+  DEF_BIT(25, injection_adaptive_gain_enabled);
+
+  // If true, SSC injection is enabled.
+  DEF_BIT(24, injection_enabled);
+
+  // SSC step size, measured in reference clock cycles.
+  DEF_FIELD(23, 16, step_size_reference_clock_cycles);
+
+  // Selects the frequency update rate for the FLL (Frequency Locked Loop).
+  DEF_FIELD(15, 14, fll_frequency_update_rate);
+
+  // SSC step number.
+  DEF_FIELD(13, 11, step_number);
+
+  // If true, SSC open loop is enabled.
+  DEF_BIT(10, open_loop_enabled);
+
+  // If true, SSC is enabled.
+  DEF_BIT(9, enabled);
+
+  // If true, FLL (Frequency Locked Loop) frequency adjustment is enabled .
+  DEF_BIT(8, fll_frequency_programming_enabled);
+
+  // Selects the guard band after bias calibration.
+  DEF_FIELD(7, 6, bias_calibration_guard_band);
+
+  // Initial DCO (Digitally-Controlled Oscillator) amplification value.
+  DEF_FIELD(5, 0, dco_amplification_initial_value);
+
+  static auto GetForDpll(Dpll dpll) {
+    ZX_ASSERT_MSG(dpll >= Dpll::DPLL_0, "Unsupported DPLL %d", dpll);
+
+    // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
+    ZX_ASSERT_MSG(dpll <= Dpll::DPLL_1, "Unsupported DPLL %d", dpll);
+
+    const int dpll_index = dpll - Dpll::DPLL_0;
+    static constexpr uint32_t kMmioAddresses[] = {0x164b10, 0x164c10, 0, 0, 0x16e10};
+    return hwreg::RegisterAddr<DisplayPllSpreadSpectrumClocking>(kMmioAddresses[dpll_index]);
   }
 };
 
