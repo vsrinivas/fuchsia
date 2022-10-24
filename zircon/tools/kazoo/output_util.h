@@ -30,17 +30,6 @@ std::string GetCUserModeName(const Type& type);
 // zx_xyz_t*, this will have user_out_ptr<xyz>, etc.)
 std::string GetCKernelModeName(const Type& type);
 
-struct JsonTypeNameData {
-  std::string name;
-  bool is_pointer{false};
-  std::string attribute;
-};
-
-// Gets a filled out JsonTypeNameData suitable for output to the definitions.json file. This
-// includes a type name similar to the GetCUserName, separate indication of whether the type is a
-// pointer, and the data for the argument attributes, if any.
-JsonTypeNameData GetJsonName(const Type& type);
-
 // Gets a string representing |type| suitable for output to a Go file.
 std::string GetGoName(const Type& type);
 

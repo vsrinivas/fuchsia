@@ -10,10 +10,6 @@ import("vdso.gni")
 
 public_generated = [
   {
-    arg = "--json"
-    output = "definitions.json"
-  },
-  {
     arg = "--public-header"
     output = "internal/cdecls.inc"
   },

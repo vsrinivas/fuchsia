@@ -22,7 +22,6 @@ struct CommandLineOptions {
   std::optional<std::string> go_vdso_arm64_calls;
   std::optional<std::string> go_vdso_keys;
   std::optional<std::string> go_vdso_x86_calls;
-  std::optional<std::string> json;
   std::optional<std::string> kernel_header;
   std::optional<std::string> kernel_wrappers;
   std::optional<std::string> next_public_header;
@@ -65,9 +64,6 @@ constexpr const char kGoVdsoArm64CallsHelp[] = R"(  --go-vdso-arm64-calls=FILENA
 
 constexpr const char kGoVdsoX86CallsHelp[] = R"(  --go-vdso-x86-calls=FILENAME
     The output name for the Go runtime x86-64 VDSO calls file.)";
-
-constexpr const char kJsonHelp[] = R"(  --json=FILENAME
-    The output name for the .json syscall definitions.)";
 
 constexpr const char kNextPublicHeaderHelp[] = R"(  --next-public-header=FILENAME
     The output name for the .inc file used for the next public vDSO API header.)";
@@ -117,7 +113,6 @@ cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOption
   parser.AddSwitch("go-vdso-keys", 0, kGoVdsoKeysHelp, &CommandLineOptions::go_vdso_keys);
   parser.AddSwitch("go-vdso-x86-calls", 0, kGoVdsoX86CallsHelp,
                    &CommandLineOptions::go_vdso_x86_calls);
-  parser.AddSwitch("json", 0, kJsonHelp, &CommandLineOptions::json);
   parser.AddSwitch("kernel-header", 0, kKernelHeaderHelp, &CommandLineOptions::kernel_header);
   parser.AddSwitch("kernel-wrappers", 0, kKernelWrappersHelp, &CommandLineOptions::kernel_wrappers);
   parser.AddSwitch("next-public-header", 0, kNextPublicHeaderHelp,
@@ -191,7 +186,6 @@ int main(int argc, const char* argv[]) {
       {&options.go_vdso_arm64_calls, GoVdsoArm64Calls},
       {&options.go_vdso_keys, GoVdsoKeys},
       {&options.go_vdso_x86_calls, GoVdsoX86Calls},
-      {&options.json, JsonOutput},
       {&options.kernel_header, KernelDeclarationsOutput},
       {&options.kernel_wrappers, KernelWrappersOutput},
       {&options.private_header, PrivateDeclarationsOutput},
