@@ -56,7 +56,7 @@ bool CompareDpllStates(const DpllState& a, const DpllState& b) {
 
     const auto& dp_a = std::get<DpDpllState>(a);
     const auto& dp_b = std::get<DpDpllState>(b);
-    return dp_a.dp_bit_rate_mhz == dp_b.dp_bit_rate_mhz;
+    return dp_a.ddi_clock_mhz == dp_b.ddi_clock_mhz;
   }
 
   if (std::holds_alternative<HdmiDpllState>(a)) {
@@ -67,53 +67,14 @@ bool CompareDpllStates(const DpllState& a, const DpllState& b) {
     const auto& hdmi_a = std::get<HdmiDpllState>(a);
     const auto& hdmi_b = std::get<HdmiDpllState>(b);
 
-    return hdmi_a.dco_int == hdmi_b.dco_int && hdmi_a.dco_frac == hdmi_b.dco_frac &&
-           hdmi_a.q == hdmi_b.q && hdmi_a.q_mode == hdmi_b.q_mode && hdmi_a.k == hdmi_b.k &&
-           hdmi_a.p == hdmi_b.p && hdmi_a.cf == hdmi_b.cf;
+    return std::tie(hdmi_a.dco_frequency_khz, hdmi_a.dco_center_frequency_mhz, hdmi_a.q_divider,
+                    hdmi_a.k_divider, hdmi_a.p_divider) ==
+           std::tie(hdmi_b.dco_frequency_khz, hdmi_b.dco_center_frequency_mhz, hdmi_b.q_divider,
+                    hdmi_b.k_divider, hdmi_b.p_divider);
   }
 
   ZX_DEBUG_ASSERT_MSG(false, "Comparing unsupported DpllState");
   return false;
-}
-
-std::optional<tgl_registers::DpllControl1::LinkRate> DpBitRateMhzToSkylakeLinkRate(
-    uint32_t dp_bit_rate_mhz) {
-  switch (dp_bit_rate_mhz) {
-    case 5400:
-      return tgl_registers::DpllControl1::LinkRate::k2700Mhz;
-    case 2700:
-      return tgl_registers::DpllControl1::LinkRate::k1350Mhz;
-    case 1620:
-      return tgl_registers::DpllControl1::LinkRate::k810Mhz;
-    case 3240:
-      return tgl_registers::DpllControl1::LinkRate::k1620Mhz;
-    case 2160:
-      return tgl_registers::DpllControl1::LinkRate::k1080Mhz;
-    case 4320:
-      return tgl_registers::DpllControl1::LinkRate::k2160Mhz;
-    default:
-      return std::nullopt;
-  }
-}
-
-std::optional<uint32_t> SkylakeLinkRateToDpBitRateMhz(
-    tgl_registers::DpllControl1::LinkRate link_rate) {
-  switch (link_rate) {
-    case tgl_registers::DpllControl1::LinkRate::k2700Mhz:
-      return 5400;
-    case tgl_registers::DpllControl1::LinkRate::k1350Mhz:
-      return 2700;
-    case tgl_registers::DpllControl1::LinkRate::k810Mhz:
-      return 1620;
-    case tgl_registers::DpllControl1::LinkRate::k1620Mhz:
-      return 3240;
-    case tgl_registers::DpllControl1::LinkRate::k1080Mhz:
-      return 2160;
-    case tgl_registers::DpllControl1::LinkRate::k2160Mhz:
-      return 4320;
-    default:
-      return std::nullopt;
-  }
 }
 
 }  // namespace
@@ -191,76 +152,99 @@ bool DpllSkylake::Enable(const DpllState& state) {
 }
 
 bool DpllSkylake::EnableDp(const DpDpllState& dp_state) {
-  // Configure this DPLL to produce a suitable clock signal.
-  auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
-  dpll_ctrl1.dpll_hdmi_mode(dpll()).set(0);
-  dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-  auto dp_rate = DpBitRateMhzToSkylakeLinkRate(dp_state.dp_bit_rate_mhz);
-  if (!dp_rate.has_value()) {
-    zxlogf(ERROR, "Invalid DP bit rate: %u MHz", dp_state.dp_bit_rate_mhz);
-    return false;
-  }
-  dpll_ctrl1.SetLinkRate(dpll(), *dp_rate);
-  dpll_ctrl1.dpll_override(dpll()).set(1);
-  dpll_ctrl1.WriteTo(mmio_space_);
-  dpll_ctrl1.ReadFrom(mmio_space_);  // Posting read
+  // This implements the "DisplayPort Programming" > "DisplayPort PLL Enable
+  // Sequence" section in the display engine PRMs.
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 page 133
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 page 130
 
-  // Enable this DPLL and wait for it to lock
-  auto dpll_enable = tgl_registers::DpllEnable::GetForSkylakeDpll(dpll()).ReadFrom(mmio_space_);
-  dpll_enable.set_enable_dpll(1);
+  const int32_t display_port_link_rate_mhz = dp_state.ddi_clock_mhz * 2;
+  zxlogf(TRACE, "Configuring DPLL %d: DisplayPort no SSC %d Mhz (link rate %d Mbps)", dpll(),
+         dp_state.ddi_clock_mhz, display_port_link_rate_mhz);
+
+  auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space_);
+  dpll_control1.set_pll_uses_hdmi_configuration_mode(dpll(), false)
+      .set_pll_spread_spectrum_clocking_enabled(dpll(), false)
+      .set_pll_display_port_ddi_frequency_mhz(dpll(), dp_state.ddi_clock_mhz)
+      .set_pll_programming_enabled(dpll(), true)
+      .WriteTo(mmio_space_);
+
+  // The PRM instructs us to read back the configuration register in order to
+  // ensure that the writes completed. This must happen before enabling the PLL.
+  dpll_control1.ReadFrom(mmio_space_);
+
+  auto dpll_enable = tgl_registers::PllEnable::GetForSkylakeDpll(dpll()).ReadFrom(mmio_space_);
+  dpll_enable.set_pll_enabled(true);
   dpll_enable.WriteTo(mmio_space_);
   if (!PollUntil(
           [&] {
-            return tgl_registers::DpllStatus::Get().ReadFrom(mmio_space_).dpll_lock(dpll()).get();
+            return tgl_registers::DisplayPllStatus::Get().ReadFrom(mmio_space_).pll_locked(dpll());
           },
           zx::msec(1), 5)) {
-    zxlogf(ERROR, "DPLL failed to lock");
+    zxlogf(ERROR, "DPLL %d lock failure! DisplayPort no SSC %d Mhz (link rate %d Mbps)", dpll(),
+           dp_state.ddi_clock_mhz, display_port_link_rate_mhz);
     return false;
   }
 
+  zxlogf(TRACE, "Configured DPLL %d for DisplayPort link rate %u MHz", dpll(),
+         display_port_link_rate_mhz);
   return true;
 }
 
 bool DpllSkylake::EnableHdmi(const HdmiDpllState& hdmi_state) {
-  // Set the DPLL control settings
-  auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
-  dpll_ctrl1.dpll_hdmi_mode(dpll()).set(1);
-  dpll_ctrl1.dpll_override(dpll()).set(1);
-  dpll_ctrl1.dpll_ssc_enable(dpll()).set(0);
-  dpll_ctrl1.WriteTo(mmio_space_);
-  dpll_ctrl1.ReadFrom(mmio_space_);  // Posting read
+  ZX_ASSERT_MSG(dpll() != tgl_registers::Dpll::DPLL_0, "DPLL 0 only supports DisplayPort DDIs");
 
-  // Set the DCO frequency
-  auto dpll_cfg1 = tgl_registers::DpllConfig1::Get(dpll()).FromValue(0);
-  dpll_cfg1.set_frequency_enable(1);
-  dpll_cfg1.set_dco_integer(hdmi_state.dco_int);
-  dpll_cfg1.set_dco_fraction(hdmi_state.dco_frac);
-  dpll_cfg1.WriteTo(mmio_space_);
-  dpll_cfg1.ReadFrom(mmio_space_);  // Posting read
+  // This implements the "HDMI and DVI Programming" > "HDMI and DVI PLL Enable
+  // Sequence" section in the display engine PRMs.
+  //
+  // Kaby Lake: IHD-OS-KBL-Vol 12-1.17 page 134
+  // Skylake: IHD-OS-SKL-Vol 12-05.16 page 131
 
-  // Set the divisors and central frequency
-  auto dpll_cfg2 = tgl_registers::DpllConfig2::Get(dpll()).FromValue(0);
-  dpll_cfg2.set_qdiv_ratio(hdmi_state.q);
-  dpll_cfg2.set_qdiv_mode(hdmi_state.q_mode);
-  dpll_cfg2.set_kdiv_ratio(hdmi_state.k);
-  dpll_cfg2.set_pdiv_ratio(hdmi_state.p);
-  dpll_cfg2.set_central_freq(hdmi_state.cf);
-  dpll_cfg2.WriteTo(mmio_space_);
-  dpll_cfg2.ReadFrom(mmio_space_);  // Posting read
+  zxlogf(TRACE,
+         "Configuring DPLL %d: HDMI DCO frequency=%d kHz dividers P*Q*K=%u*%u*%u Center=%u Mhz",
+         dpll(), hdmi_state.dco_frequency_khz, hdmi_state.p_divider, hdmi_state.q_divider,
+         hdmi_state.k_divider, hdmi_state.dco_center_frequency_mhz);
 
-  // Enable and wait for the DPLL
-  auto dpll_enable = tgl_registers::DpllEnable::GetForSkylakeDpll(dpll()).ReadFrom(mmio_space_);
-  dpll_enable.set_enable_dpll(1);
-  dpll_enable.WriteTo(mmio_space_);
+  auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space_);
+  dpll_control1.set_pll_uses_hdmi_configuration_mode(dpll(), true)
+      .set_pll_spread_spectrum_clocking_enabled(dpll(), false)
+      .set_pll_programming_enabled(dpll(), true)
+      .WriteTo(mmio_space_);
+
+  auto dpll_config1 =
+      tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(dpll()).FromValue(0);
+  dpll_config1.set_frequency_programming_enabled(true)
+      .set_dco_frequency_khz(hdmi_state.dco_frequency_khz)
+      .WriteTo(mmio_space_);
+
+  auto dpll_config2 = tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(dpll()).FromValue(0);
+  dpll_config2.set_q_p1_divider(hdmi_state.q_divider)
+      .set_k_p2_divider(hdmi_state.k_divider)
+      .set_p_p0_divider(hdmi_state.p_divider)
+      .set_center_frequency_mhz(hdmi_state.dco_center_frequency_mhz)
+      .WriteTo(mmio_space_);
+
+  // The PRM instructs us to read back the configuration registers in order to
+  // ensure that the writes completed. This must happen before enabling the PLL.
+  dpll_control1.ReadFrom(mmio_space_);
+  dpll_config1.ReadFrom(mmio_space_);
+  dpll_config2.ReadFrom(mmio_space_);
+
+  auto dpll_enable = tgl_registers::PllEnable::GetForSkylakeDpll(dpll()).ReadFrom(mmio_space_);
+  dpll_enable.set_pll_enabled(true).WriteTo(mmio_space_);
   if (!PollUntil(
           [&] {
-            return tgl_registers::DpllStatus ::Get().ReadFrom(mmio_space_).dpll_lock(dpll()).get();
+            return tgl_registers::DisplayPllStatus::Get().ReadFrom(mmio_space_).pll_locked(dpll());
           },
           zx::msec(1), 5)) {
-    zxlogf(ERROR, "hdmi: DPLL failed to lock");
+    zxlogf(ERROR,
+           "DPLL %d lock failure! HDMI DCO frequency=%d kHz dividers P*Q*K=%u*%u*%u Center=%u Mhz",
+           dpll(), hdmi_state.dco_frequency_khz, hdmi_state.p_divider, hdmi_state.q_divider,
+           hdmi_state.k_divider, hdmi_state.dco_center_frequency_mhz);
     return false;
   }
 
+  zxlogf(TRACE, "Configured DPLL %d for HDMI", dpll());
   return true;
 }
 
@@ -270,11 +254,12 @@ bool DpllSkylake::Disable() {
     return true;
   }
 
-  // We don't want to disable DPLL0, since that drives cdclk.
+  // We must not disable DPLL0 here, because it also drives the core display
+  // clocks (CDCLK, CD2XCLK). DPLL0 must only get disabled during display engine
+  // un-initialization.
   if (dpll() != tgl_registers::DPLL_0) {
-    auto dpll_enable = tgl_registers::DpllEnable::GetForSkylakeDpll(dpll()).ReadFrom(mmio_space_);
-    dpll_enable.set_enable_dpll(0);
-    dpll_enable.WriteTo(mmio_space_);
+    auto dpll_enable = tgl_registers::PllEnable::GetForSkylakeDpll(dpll()).ReadFrom(mmio_space_);
+    dpll_enable.set_pll_enabled(false).WriteTo(mmio_space_);
   }
   enabled_ = false;
 
@@ -289,33 +274,33 @@ DpllManagerSkylake::DpllManagerSkylake(fdf::MmioBuffer* mmio_space) : mmio_space
 }
 
 bool DpllManagerSkylake::MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) {
-  // Direct the DPLL to the DDI
-  auto dpll_ctrl2 = tgl_registers::DpllControl2::Get().ReadFrom(mmio_space_);
-  dpll_ctrl2.ddi_select_override(ddi).set(1);
-  dpll_ctrl2.ddi_clock_off(ddi).set(0);
-  dpll_ctrl2.ddi_clock_select(ddi).set(dpll);
-  dpll_ctrl2.WriteTo(mmio_space_);
+  auto dpll_ddi_map = tgl_registers::DisplayPllDdiMapKabyLake::Get().ReadFrom(mmio_space_);
+  dpll_ddi_map.set_ddi_clock_programming_enabled(ddi, true)
+      .set_ddi_clock_disabled(ddi, false)
+      .set_ddi_clock_display_pll(ddi, dpll)
+      .WriteTo(mmio_space_);
 
   return true;
 }
 
 bool DpllManagerSkylake::UnmapImpl(tgl_registers::Ddi ddi) {
-  auto dpll_ctrl2 = tgl_registers::DpllControl2::Get().ReadFrom(mmio_space_);
-  dpll_ctrl2.ddi_clock_off(ddi).set(1);
-  dpll_ctrl2.WriteTo(mmio_space_);
+  auto dpll_ddi_map = tgl_registers::DisplayPllDdiMapKabyLake::Get().ReadFrom(mmio_space_);
+  dpll_ddi_map.set_ddi_clock_disabled(ddi, true).WriteTo(mmio_space_);
 
   return true;
 }
 
 std::optional<DpllState> DpllManagerSkylake::LoadState(tgl_registers::Ddi ddi) {
-  auto dpll_ctrl2 = tgl_registers::DpllControl2::Get().ReadFrom(mmio_space_);
-  if (dpll_ctrl2.ddi_clock_off(ddi).get()) {
+  auto dpll_ddi_map = tgl_registers::DisplayPllDdiMapKabyLake::Get().ReadFrom(mmio_space_);
+  if (dpll_ddi_map.ddi_clock_disabled(ddi)) {
+    zxlogf(TRACE, "Loaded DDI %d DPLL state: DDI clock disabled", ddi);
     return std::nullopt;
   }
 
-  auto dpll = static_cast<tgl_registers::Dpll>(dpll_ctrl2.ddi_clock_select(ddi).get());
-  auto dpll_enable = tgl_registers::DpllEnable::GetForSkylakeDpll(dpll).ReadFrom(mmio_space_);
-  if (!dpll_enable.enable_dpll()) {
+  const tgl_registers::Dpll dpll = dpll_ddi_map.ddi_clock_display_pll(ddi);
+  auto dpll_enable = tgl_registers::PllEnable::GetForSkylakeDpll(dpll).ReadFrom(mmio_space_);
+  if (!dpll_enable.pll_enabled()) {
+    zxlogf(TRACE, "Loaded DDI %d DPLL %d state: DPLL disabled", ddi, dpll);
     return std::nullopt;
   }
 
@@ -330,35 +315,42 @@ std::optional<DpllState> DpllManagerSkylake::LoadState(tgl_registers::Ddi ddi) {
   ddi_to_dpll_[ddi] = plls_[dpll].get();
   ++ref_count_[ddi_to_dpll_[ddi]];
 
-  DpllState new_state;
-  auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
-  bool is_hdmi = dpll_ctrl1.dpll_hdmi_mode(dpll).get();
-  if (is_hdmi) {
-    auto dpll_cfg1 = tgl_registers::DpllConfig1::Get(dpll).ReadFrom(mmio_space_);
-    auto dpll_cfg2 = tgl_registers::DpllConfig2::Get(dpll).ReadFrom(mmio_space_);
+  auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space_);
+  const bool uses_hdmi_mode = dpll_control1.pll_uses_hdmi_configuration_mode(dpll);
+  if (uses_hdmi_mode) {
+    auto dpll_dco_frequency =
+        tgl_registers::DisplayPllDcoFrequencyKabyLake::GetForDpll(dpll).ReadFrom(mmio_space_);
+    auto dpll_dco_dividers =
+        tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(dpll).ReadFrom(mmio_space_);
 
-    new_state = HdmiDpllState{
-        .dco_int = static_cast<uint16_t>(dpll_cfg1.dco_integer()),
-        .dco_frac = static_cast<uint16_t>(dpll_cfg1.dco_fraction()),
-        .q = static_cast<uint8_t>(dpll_cfg2.qdiv_ratio()),
-        .q_mode = static_cast<uint8_t>(dpll_cfg2.qdiv_mode()),
-        .k = static_cast<uint8_t>(dpll_cfg2.kdiv_ratio()),
-        .p = static_cast<uint8_t>(dpll_cfg2.pdiv_ratio()),
-        .cf = static_cast<uint8_t>(dpll_cfg2.central_freq()),
-    };
-  } else {
-    auto dp_bit_rate_mhz = SkylakeLinkRateToDpBitRateMhz(dpll_ctrl1.GetLinkRate(dpll));
-    if (!dp_bit_rate_mhz.has_value()) {
-      zxlogf(ERROR, "Invalid DPLL link rate from DPLL %d", dpll);
-      return std::nullopt;
-    }
+    zxlogf(TRACE,
+           "Loaded DDI %d DPLL %d state: HDMI no SSC DCO frequency=%d kHz divider P*Q*K=%u*%u*%u "
+           "Center=%u Mhz",
+           ddi, dpll, dpll_dco_frequency.dco_frequency_khz(), dpll_dco_dividers.p_p0_divider(),
+           dpll_dco_dividers.q_p1_divider(), dpll_dco_dividers.k_p2_divider(),
+           dpll_dco_dividers.center_frequency_mhz());
 
-    new_state = DpDpllState{
-        .dp_bit_rate_mhz = *dp_bit_rate_mhz,
-    };
+    return std::make_optional(HdmiDpllState{
+        .dco_frequency_khz = dpll_dco_frequency.dco_frequency_khz(),
+        .dco_center_frequency_mhz = dpll_dco_dividers.center_frequency_mhz(),
+        .q_divider = dpll_dco_dividers.q_p1_divider(),
+        .k_divider = dpll_dco_dividers.k_p2_divider(),
+        .p_divider = dpll_dco_dividers.p_p0_divider(),
+    });
   }
 
-  return std::make_optional(new_state);
+  const int16_t ddi_frequency_mhz = dpll_control1.pll_display_port_ddi_frequency_mhz(dpll);
+  if (ddi_frequency_mhz == 0) {
+    zxlogf(ERROR, "DPLL %d has invalid DisplayPort DDI clock. DPLL_CTRL1 value: %x", dpll,
+           dpll_control1.reg_value());
+    return std::nullopt;
+  }
+
+  zxlogf(TRACE, "Loaded DDI %d DPLL %d state: DisplayPort %s %d Mhz (link rate %d Mbps)", ddi, dpll,
+         dpll_control1.pll_spread_spectrum_clocking_enabled(dpll) ? "SSC" : "no SSC",
+         ddi_frequency_mhz, ddi_frequency_mhz * 2);
+
+  return std::make_optional(DpDpllState{.ddi_clock_mhz = ddi_frequency_mhz});
 }
 
 DisplayPll* DpllManagerSkylake::FindBestDpll(tgl_registers::Ddi ddi, bool is_edp,
@@ -490,13 +482,14 @@ bool DekelPllTigerLake::Disable() {
   // Display Clock.
 
   // 3. Disable PLL through MGPLL_ENABLE.
-  auto pll_enable = tgl_registers::DpllEnable::GetForTigerLakeDpll(dpll()).ReadFrom(mmio_space_);
-  pll_enable.ReadFrom(mmio_space_).set_enable_dpll(false).WriteTo(mmio_space_);
+  auto pll_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(dpll()).ReadFrom(mmio_space_);
+  pll_enable.ReadFrom(mmio_space_).set_pll_enabled(false).WriteTo(mmio_space_);
 
   // Step 4. Wait for PLL not locked status in MGPLL_ENABLE.
   // Should complete within 50us.
-  if (!PollUntil([&] { return pll_enable.ReadFrom(mmio_space_).pll_is_locked() == 0; }, zx::usec(1),
-                 50)) {
+  if (!PollUntil(
+          [&] { return !pll_enable.ReadFrom(mmio_space_).pll_locked_tiger_lake_and_lcpll1(); },
+          zx::usec(1), 50)) {
     zxlogf(ERROR, "Dekel PLL %s: Cannot disable PLL", name().c_str());
   }
 
@@ -509,14 +502,12 @@ bool DekelPllTigerLake::Disable() {
   // Display Clock.
 
   // 6. Disable PLL power in MGPLL_ENABLE.
-  pll_enable.set_power_enable_request_tiger_lake(false);
-  pll_enable.WriteTo(mmio_space_);
+  pll_enable.set_power_on_request_tiger_lake(false).WriteTo(mmio_space_);
 
   // 7. Wait for PLL power state disabled in MGPLL_ENABLE.
   // - Should complete immediately.
-  if (!PollUntil(
-          [&] { return pll_enable.ReadFrom(mmio_space_).power_is_enabled_tiger_lake() == 0; },
-          zx::usec(1), 10)) {
+  if (!PollUntil([&] { return !pll_enable.ReadFrom(mmio_space_).powered_on_tiger_lake(); },
+                 zx::usec(1), 10)) {
     zxlogf(ERROR, "Dekel PLL %s: Cannot disable PLL power", name().c_str());
   }
   enabled_ = false;
@@ -538,13 +529,9 @@ bool DekelPllTigerLake::EnableDp(const DpDpllState& state) {
   // Tiger Lake: Section "DKL PLL Enable Sequence",
   //             IHD-OS-TGL-Vol 12-1.22-Rev 2.0, Pages 177-178
 
-  // Step 1. Enable PLL power in `MGPLL_ENABLE` register.
-  auto pll_enable = tgl_registers::DpllEnable::GetForTigerLakeDpll(dpll()).ReadFrom(mmio_space_);
-  pll_enable.set_power_enable_request_tiger_lake(true).WriteTo(mmio_space_);
-
-  // Step 2. Wait for PLL power state enabled in `MGPLL_ENABLE`. Should complete
-  // within 10us.
-  if (!PollUntil([&] { return pll_enable.ReadFrom(mmio_space_).power_is_enabled_tiger_lake(); },
+  auto pll_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(dpll()).ReadFrom(mmio_space_);
+  pll_enable.set_power_on_request_tiger_lake(true).WriteTo(mmio_space_);
+  if (!PollUntil([&] { return pll_enable.ReadFrom(mmio_space_).powered_on_tiger_lake(); },
                  zx::usec(1), 10)) {
     zxlogf(ERROR, "Dekel PLL %s: Cannot enable PLL power", name().c_str());
     return false;
@@ -609,29 +596,30 @@ bool DekelPllTigerLake::EnableDp(const DpDpllState& state) {
   auto core_clock_control =
       tgl_registers::DekelPllClktop2CoreClockControl1::GetForDdi(ddi_id()).ReadFrom(mmio_space_);
 
-  switch (state.dp_bit_rate_mhz) {
-    case 8100: {
+  const int display_port_link_rate_mbps = state.ddi_clock_mhz * 2;
+  switch (display_port_link_rate_mbps) {
+    case 8'100: {
       high_speed_clock_control.set_reg_value(0x0000011D);
       core_clock_control.set_reg_value(0x10080510);
       break;
     }
-    case 5400: {
+    case 5'400: {
       high_speed_clock_control.set_reg_value(0x0000121D);
       core_clock_control.set_reg_value(0x10080510);
       break;
     }
-    case 2700: {
+    case 2'700: {
       high_speed_clock_control.set_reg_value(0x0000521D);
       core_clock_control.set_reg_value(0x10080A12);
       break;
     }
-    case 1620: {
+    case 1'620: {
       high_speed_clock_control.set_reg_value(0x0000621D);
       core_clock_control.set_reg_value(0x10080A12);
       break;
     }
     default: {
-      zxlogf(ERROR, "Unsupported DP bit rate: %u MHz", state.dp_bit_rate_mhz);
+      zxlogf(ERROR, "Unsupported DP link rate: %d Mbps", display_port_link_rate_mbps);
       return false;
     }
   }
@@ -651,12 +639,13 @@ bool DekelPllTigerLake::EnableDp(const DpDpllState& state) {
   // Display Clock.
 
   // Step 6. Enable PLL in MGPLL_ENABLE.
-  pll_enable.ReadFrom(mmio_space_).set_enable_dpll(1).WriteTo(mmio_space_);
+  pll_enable.ReadFrom(mmio_space_).set_pll_enabled(true).WriteTo(mmio_space_);
 
   // Step 7. Wait for PLL lock status in MGPLL_ENABLE.
   // - Timeout and fail after 900us.
-  if (!PollUntil([&] { return pll_enable.ReadFrom(mmio_space_).pll_is_locked(); }, zx::usec(1),
-                 900)) {
+  if (!PollUntil(
+          [&] { return pll_enable.ReadFrom(mmio_space_).pll_locked_tiger_lake_and_lcpll1(); },
+          zx::usec(1), 900)) {
     zxlogf(ERROR, "Dekel PLL (%s): Cannot enable PLL", name().c_str());
     return false;
   }
@@ -805,13 +794,14 @@ std::optional<DpllState> DpllManagerTigerLake::LoadTypeCPllState(tgl_registers::
   // mode, and only match the calculated bit rate to DisplayPort bit rates.
   // It could also be configured to use legacy HDMI / DVI, in which case the
   // symbol rate will fail to match any of the candidates and fail.
-  constexpr int64_t kEpsilonKhz = 50'000;
-  constexpr int64_t kValidDisplayPortBitRatesKhz[] = {1'620'000, 2'700'000, 5'400'000, 8'100'000};
+  static constexpr int64_t kEpsilonKhz = 50'000;
+  static constexpr int64_t kValidDisplayPortBitRatesKhz[] = {1'620'000, 2'700'000, 5'400'000,
+                                                             8'100'000};
 
   for (const auto valid_dp_bit_rate_khz : kValidDisplayPortBitRatesKhz) {
     if (abs(bit_rate_khz - valid_dp_bit_rate_khz) < kEpsilonKhz) {
       return DpDpllState{
-          .dp_bit_rate_mhz = static_cast<uint32_t>(valid_dp_bit_rate_khz / 1000),
+          .ddi_clock_mhz = static_cast<int16_t>(valid_dp_bit_rate_khz / 2000),
       };
     }
   }

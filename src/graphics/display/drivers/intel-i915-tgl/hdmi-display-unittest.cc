@@ -10,6 +10,7 @@
 #include <gtest/gtest.h>
 
 #include "src/graphics/display/drivers/intel-i915-tgl/dpll.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 
 namespace i915_tgl {
@@ -23,6 +24,19 @@ TEST(CreateDpllFrequencyDividerConfigTest, AllDivisors) {
     const DpllFrequencyDividerConfig divider_config = CreateDpllFrequencyDividerConfig(divider);
     EXPECT_EQ(divider, divider_config.p0_p_divider * divider_config.p1_q_divider *
                            divider_config.p2_k_divider);
+
+    EXPECT_GT(divider_config.p0_p_divider, 0);
+    EXPECT_GT(divider_config.p1_q_divider, 0);
+    EXPECT_GT(divider_config.p2_k_divider, 0);
+
+    // The helpers below ZX_DEBUG_ASSERT() on incorrect divider values. The
+    // assignments are on separate lines to facilitate debugging.
+    auto dpll_config2 =
+        tgl_registers::DisplayPllDcoDividersKabyLake::GetForDpll(tgl_registers::DPLL_1)
+            .FromValue(0);
+    dpll_config2.set_p_p0_divider(static_cast<uint8_t>(divider_config.p0_p_divider));
+    dpll_config2.set_q_p1_divider(static_cast<uint8_t>(divider_config.p1_q_divider));
+    dpll_config2.set_k_p2_divider(static_cast<uint8_t>(divider_config.p2_k_divider));
   }
 }
 
@@ -54,13 +68,11 @@ TEST(ComputeDpllConfigurationForHdmiTest, PrmExample1) {
   std::optional<HdmiDpllState> result = ComputeDpllConfigurationForHdmi(symbol_clock_khz);
   ASSERT_TRUE(result.has_value());
 
-  EXPECT_EQ(377u, result->dco_int);
-  EXPECT_EQ(22828u, result->dco_frac);
-  EXPECT_EQ(4u, result->q);
-  EXPECT_EQ(1u, result->q_mode);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kKdiv2, result->k);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kPdiv2, result->p);
-  EXPECT_EQ(tgl_registers::DpllConfig2::k9000Mhz, result->cf);
+  EXPECT_EQ(9'064'720, result->dco_frequency_khz);
+  EXPECT_EQ(4u, result->q_divider);
+  EXPECT_EQ(2u, result->k_divider);
+  EXPECT_EQ(2u, result->p_divider);
+  EXPECT_EQ(9'000, result->dco_center_frequency_mhz);
 }
 
 TEST(ComputeDpllConfigurationForHdmiTest, PrmExample2) {
@@ -80,13 +92,11 @@ TEST(ComputeDpllConfigurationForHdmiTest, PrmExample2) {
   std::optional<HdmiDpllState> result = ComputeDpllConfigurationForHdmi(symbol_clock_khz);
   ASSERT_TRUE(result.has_value());
 
-  EXPECT_EQ(370u, result->dco_int);
-  EXPECT_EQ(28794u, result->dco_frac);
-  EXPECT_EQ(1u, result->q);
-  EXPECT_EQ(0u, result->q_mode);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kKdiv3, result->k);
-  EXPECT_EQ(tgl_registers::DpllConfig2::kPdiv2, result->p);
-  EXPECT_EQ(tgl_registers::DpllConfig2::k9000Mhz, result->cf);
+  EXPECT_EQ(8'901'090, result->dco_frequency_khz);
+  EXPECT_EQ(9'000, result->dco_center_frequency_mhz);
+  EXPECT_EQ(1u, result->q_divider);
+  EXPECT_EQ(3u, result->k_divider);
+  EXPECT_EQ(2u, result->p_divider);
 }
 
 }  // namespace

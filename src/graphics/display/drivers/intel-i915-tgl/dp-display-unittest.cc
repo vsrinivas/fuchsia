@@ -5,6 +5,11 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/dp-display.h"
 
 #include <lib/mmio-ptr/fake.h>
+#include <lib/mmio/mmio.h>
+
+#include <cstdint>
+#include <memory>
+#include <optional>
 
 #include <gtest/gtest.h>
 
@@ -19,6 +24,7 @@
 #include "src/graphics/display/drivers/intel-i915-tgl/pipe-manager.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/power.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-ddi.h"
+#include "src/graphics/display/drivers/intel-i915-tgl/registers-dpll.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers-pipe.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/registers.h"
 
@@ -58,9 +64,8 @@ class TestDpllManager : public DisplayPllManager {
   }
 
   std::optional<DpllState> LoadState(tgl_registers::Ddi ddi) final {
-    DpllState state = DpDpllState{
-        .dp_bit_rate_mhz = 5400,
-    };
+    // DisplayPort HBR2 5.4Gbps / lane
+    DpllState state = DpDpllState{.ddi_clock_mhz = 2'700};
     return std::make_optional(state);
   }
 
@@ -238,9 +243,8 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
   // DpDisplay. Can DpDisplay be told that it is eDP during construction time instead of querying
   // Controller for it every time?
   controller()->igd_opregion_for_testing()->SetIsEdpForTesting(tgl_registers::DDI_A, true);
-  auto dpll_status = tgl_registers::DpllStatus::Get().ReadFrom(mmio_buffer());
-  dpll_status.set_reg_value(1u);
-  dpll_status.WriteTo(mmio_buffer());
+  auto dpll_status = tgl_registers::DisplayPllStatus::Get().ReadFrom(mmio_buffer());
+  dpll_status.set_pll0_locked(true).WriteTo(mmio_buffer());
 
   // Mock the "Panel ready" status.
   auto panel_status = tgl_registers::PchPanelPowerStatus::Get().ReadFrom(mmio_buffer());
@@ -269,9 +273,7 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
   auto display = MakeDisplay(tgl_registers::DDI_A);
   ASSERT_NE(nullptr, display);
 
-  DpllState dpll_state = DpDpllState{
-      .dp_bit_rate_mhz = 4320u,
-  };
+  const DpllState dpll_state = DpDpllState{.ddi_clock_mhz = 2'160};
   display->InitWithDpllState(&dpll_state);
   EXPECT_EQ(4320u, display->link_rate_mhz());
 }

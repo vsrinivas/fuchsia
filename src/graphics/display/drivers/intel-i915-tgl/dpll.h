@@ -18,25 +18,19 @@
 namespace i915_tgl {
 
 struct DpDpllState {
-  // Bit rate (Mbps / MHz) of one DP lane.
-  uint32_t dp_bit_rate_mhz;
+  // The DDI clock rate.
+  //
+  // This is half the bitrate on each link lane, because DDIs use both clock
+  // edges (rising and falling) to push bits onto the links.
+  int16_t ddi_clock_mhz;
 };
 
 struct HdmiDpllState {
-  // Integer part of DCO frequency.
-  uint16_t dco_int;
-  // Fractional part of DCO frequency:
-  // (DCO Frequency/24 - INT(DCO Frequency/24)) * 2^15
-  uint16_t dco_frac;
-  // |p|, |q| and |k| are dividers to calculate the PLL output frequency.
-  // PLL output frequency = DCO Frequency / (p * q * k)
-  uint8_t q;
-  // |q_mode| enables |q| divider.
-  uint8_t q_mode;
-  uint8_t k;
-  uint8_t p;
-  // Central frequency.
-  uint8_t cf;
+  int32_t dco_frequency_khz;
+  int16_t dco_center_frequency_mhz;
+  uint8_t q_divider;
+  uint8_t k_divider;
+  uint8_t p_divider;
 };
 
 using DpllState = std::variant<DpDpllState, HdmiDpllState>;

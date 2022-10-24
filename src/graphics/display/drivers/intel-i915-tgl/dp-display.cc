@@ -1473,8 +1473,8 @@ bool DpDisplay::InitDdi() {
     }
   }
 
-  DpllState state = DpDpllState{
-      .dp_bit_rate_mhz = dp_link_rate_mhz_,
+  const DpllState state = DpDpllState{
+      .ddi_clock_mhz = static_cast<int16_t>(dp_link_rate_mhz_ / 2),
   };
 
   // 4. Enable Port PLL
@@ -1535,15 +1535,15 @@ bool DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
     // Since the link rate is read from the register directly, we can guarantee
     // that it is always valid.
     zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
-           dp_state->dp_bit_rate_mhz);
-    SetLinkRate(dp_state->dp_bit_rate_mhz);
+           dp_state->ddi_clock_mhz * 2);
+    SetLinkRate(dp_state->ddi_clock_mhz * 2);
   }
   return true;
 }
 
 bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
   *config = DpDpllState{
-      .dp_bit_rate_mhz = dp_link_rate_mhz_,
+      .ddi_clock_mhz = static_cast<int16_t>(dp_link_rate_mhz_ / 2),
   };
   return true;
 }

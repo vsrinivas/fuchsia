@@ -345,24 +345,31 @@ bool Controller::BringUpDisplayEngine(bool resume) {
   } else {
     // Enable CDCLK PLL to 337.5mhz if the BIOS didn't already enable it. If it needs to be
     // something special (i.e. for eDP), assume that the BIOS already enabled it.
-    auto dpll_enable =
-        tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space());
-    if (!dpll_enable.enable_dpll()) {
-      // Configure DPLL0
-      auto dpll_ctl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space());
-      dpll_ctl1.SetLinkRate(tgl_registers::DPLL_0, tgl_registers::DpllControl1::LinkRate::k810Mhz);
-      dpll_ctl1.dpll_override(tgl_registers::DPLL_0).set(1);
-      dpll_ctl1.dpll_hdmi_mode(tgl_registers::DPLL_0).set(0);
-      dpll_ctl1.dpll_ssc_enable(tgl_registers::DPLL_0).set(0);
-      dpll_ctl1.WriteTo(mmio_space());
+    auto lcpll1_control =
+        tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space());
+    if (!lcpll1_control.pll_enabled()) {
+      // Configure DPLL0 frequency before enabling it.
+      const auto dpll = tgl_registers::Dpll::DPLL_0;
+      auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space());
+      dpll_control1.set_pll_uses_hdmi_configuration_mode(dpll, false)
+          .set_pll_spread_spectrum_clocking_enabled(dpll, false)
+          .set_pll_display_port_ddi_frequency_mhz(dpll, 810)
+          .set_pll_programming_enabled(dpll, true)
+          .WriteTo(mmio_space());
 
-      // Enable DPLL0 and wait for it
-      dpll_enable.set_enable_dpll(1);
-      dpll_enable.WriteTo(mmio_space());
+      // Enable DPLL0 and wait for it.
+      lcpll1_control.set_pll_enabled(true);
+      lcpll1_control.WriteTo(mmio_space());
+
+      // The PRM instructs us to use the LCPLL1 control register to find out
+      // when DPLL0 locks. This is different from most DPLL enabling sequences,
+      // which use the DPLL status registers.
       if (!PollUntil(
-              [&] { return tgl_registers::Lcpll1Control::Get().ReadFrom(mmio_space()).pll_lock(); },
-              zx::usec(1), 5)) {
-        zxlogf(ERROR, "Failed to configure dpll0");
+              [&] {
+                return lcpll1_control.ReadFrom(mmio_space()).pll_locked_tiger_lake_and_lcpll1();
+              },
+              zx::msec(1), 5)) {
+        zxlogf(ERROR, "DPLL0 / LCPLL1 did not lock in 5us");
         return false;
       }
 

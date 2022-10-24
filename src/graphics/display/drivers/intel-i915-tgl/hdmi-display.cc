@@ -613,54 +613,13 @@ std::optional<HdmiDpllState> ComputeDpllConfigurationForHdmi(uint32_t symbol_clo
   const DpllFrequencyDividerConfig divider_config =
       CreateDpllFrequencyDividerConfig(dco_config.frequency_divider);
 
-  HdmiDpllState dpll_state = {
-      .q = static_cast<uint8_t>(divider_config.p1_q_divider),
-      .q_mode = divider_config.p1_q_divider != 1,
-  };
-
-  if (divider_config.p2_k_divider == 5) {
-    dpll_state.k = tgl_registers::DpllConfig2::kKdiv5;
-  } else if (divider_config.p2_k_divider == 2) {
-    dpll_state.k = tgl_registers::DpllConfig2::kKdiv2;
-  } else if (divider_config.p2_k_divider == 3) {
-    dpll_state.k = tgl_registers::DpllConfig2::kKdiv3;
-  } else {
-    ZX_DEBUG_ASSERT(divider_config.p2_k_divider == 1);
-    dpll_state.k = tgl_registers::DpllConfig2::kKdiv1;
-  }
-  if (divider_config.p0_p_divider == 1) {
-    dpll_state.p = tgl_registers::DpllConfig2::kPdiv1;
-  } else if (divider_config.p0_p_divider == 2) {
-    dpll_state.p = tgl_registers::DpllConfig2::kPdiv2;
-  } else if (divider_config.p0_p_divider == 3) {
-    dpll_state.p = tgl_registers::DpllConfig2::kPdiv3;
-  } else {
-    ZX_DEBUG_ASSERT(divider_config.p0_p_divider == 7);
-    dpll_state.p = tgl_registers::DpllConfig2::kPdiv7;
-  }
-
-  // The DCO frequency fields are computed according to the documentation for the
-  // DPLL_CFGCR1 register.
-  //
-  // Kaby Lake: IHD-OS-KBL-Vol 2c-1.17 Part 1 page 525
-  // Skylake: IHD-OS-SKL-Vol 2c-05.16 Part 1 pages 530-532
-  static constexpr int32_t kReferenceFrequencyMhz = 24;
-  static constexpr int32_t kReferenceFrequencyKhz = kReferenceFrequencyMhz * 1'000;
-  dpll_state.dco_int = static_cast<uint16_t>(dco_config.frequency_khz / kReferenceFrequencyKhz);
-  dpll_state.dco_frac =
-      static_cast<uint16_t>((((int64_t{dco_config.frequency_khz} << 15) / kReferenceFrequencyMhz) -
-                             ((int64_t{dpll_state.dco_int} * 1000) << 15)) /
-                            1000);
-
-  if (dco_config.center_frequency_khz == 9'600'000) {
-    dpll_state.cf = tgl_registers::DpllConfig2::k9600Mhz;
-  } else if (dco_config.center_frequency_khz == 9'000'000) {
-    dpll_state.cf = tgl_registers::DpllConfig2::k9000Mhz;
-  } else {
-    ZX_DEBUG_ASSERT(dco_config.center_frequency_khz == 8'400'000);
-    dpll_state.cf = tgl_registers::DpllConfig2::k8400Mhz;
-  }
-  return std::make_optional(dpll_state);
+  return std::make_optional(HdmiDpllState{
+      .dco_frequency_khz = dco_config.frequency_khz,
+      .dco_center_frequency_mhz = static_cast<int16_t>(dco_config.center_frequency_khz / 1'000),
+      .q_divider = static_cast<uint8_t>(divider_config.p1_q_divider),
+      .k_divider = static_cast<uint8_t>(divider_config.p2_k_divider),
+      .p_divider = static_cast<uint8_t>(divider_config.p0_p_divider),
+  });
 }
 
 // On DisplayDevice creation we cannot determine whether it is an HDMI
@@ -736,7 +695,6 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
     return false;
   }
 
-  // Enable DDI IO power and wait for it
   ZX_DEBUG_ASSERT(controller()->power());
   controller()->power()->SetDdiIoPowerState(ddi(), /*enable=*/true);
   if (!PollUntil([&] { return controller()->power()->GetDdiIoPowerState(ddi()); }, zx::usec(1),
@@ -745,7 +703,6 @@ bool HdmiDisplay::DdiModeset(const display_mode_t& mode) {
     return false;
   }
 
-  // Enable DDI AUX power and wait for it
   controller()->power()->SetAuxIoPowerState(ddi(), /*enable=*/true);
   if (!PollUntil([&] { return controller()->power()->GetAuxIoPowerState(ddi()); }, zx::usec(1),
                  10)) {

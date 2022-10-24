@@ -26,32 +26,32 @@ CoreDisplayClockSkylake::CoreDisplayClockSkylake(fdf::MmioBuffer* mmio_space)
 
 bool CoreDisplayClockSkylake::LoadState() {
   auto dpll_enable =
-      tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
-  if (!dpll_enable.enable_dpll()) {
+      tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
+  if (!dpll_enable.pll_enabled()) {
     zxlogf(ERROR, "Skylake CDCLK LoadState: DPLL0 is disabled");
     return false;
   }
 
-  auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
+  auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space_);
+  const int16_t dpll0_frequency_mhz =
+      dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::DPLL_0);
+  const bool dpll0_uses_vco_8640 = (dpll0_frequency_mhz == 1080) || (dpll0_frequency_mhz == 2160);
+
   auto cdclk_ctl = tgl_registers::CdClockCtl::Get().ReadFrom(mmio_space_);
   auto skl_cd_freq_select = cdclk_ctl.skl_cd_freq_select();
 
-  auto link_rate = dpll_ctrl1.GetLinkRate(tgl_registers::DPLL_0);
-  bool is_vco_8640 = (link_rate == tgl_registers::DpllControl1::LinkRate::k1080Mhz) ||
-                     (link_rate == tgl_registers::DpllControl1::LinkRate::k2160Mhz);
-
   switch (skl_cd_freq_select) {
     case tgl_registers::CdClockCtl::kFreqSelect3XX:
-      set_current_freq_khz(is_vco_8640 ? 308'570 : 337'500);
+      set_current_freq_khz(dpll0_uses_vco_8640 ? 308'570 : 337'500);
       break;
     case tgl_registers::CdClockCtl::kFreqSelect4XX:
-      set_current_freq_khz(is_vco_8640 ? 432'000 : 450'000);
+      set_current_freq_khz(dpll0_uses_vco_8640 ? 432'000 : 450'000);
       break;
     case tgl_registers::CdClockCtl::kFreqSelect540:
       set_current_freq_khz(540'000);
       break;
     case tgl_registers::CdClockCtl::kFreqSelect6XX:
-      set_current_freq_khz(is_vco_8640 ? 617'140 : 675'000);
+      set_current_freq_khz(dpll0_uses_vco_8640 ? 617'140 : 675'000);
       break;
     default:
       zxlogf(ERROR, "Invalid CD Clock frequency");
@@ -102,17 +102,18 @@ bool CoreDisplayClockSkylake::PostChangeFreq(uint32_t freq_khz) {
 
 bool CoreDisplayClockSkylake::CheckFrequency(uint32_t freq_khz) {
   auto dpll_enable =
-      tgl_registers::DpllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
-  if (!dpll_enable.enable_dpll()) {
+      tgl_registers::PllEnable::GetForSkylakeDpll(tgl_registers::DPLL_0).ReadFrom(mmio_space_);
+  if (!dpll_enable.pll_enabled()) {
     zxlogf(ERROR, "Skylake CDCLK CheckFrequency: DPLL0 is disabled");
     return false;
   }
 
-  auto dpll_ctrl1 = tgl_registers::DpllControl1::Get().ReadFrom(mmio_space_);
-  auto link_rate = dpll_ctrl1.GetLinkRate(tgl_registers::DPLL_0);
-  bool is_vco_8640 = link_rate == tgl_registers::DpllControl1::LinkRate::k1080Mhz ||
-                     link_rate == tgl_registers::DpllControl1::LinkRate::k2160Mhz;
-  if (is_vco_8640) {
+  auto dpll_control1 = tgl_registers::DisplayPllControl1::Get().ReadFrom(mmio_space_);
+  const int16_t dpll0_frequency_mhz =
+      dpll_control1.pll_display_port_ddi_frequency_mhz(tgl_registers::DPLL_0);
+  const bool dpll0_uses_vco_8640 = (dpll0_frequency_mhz == 1080) || (dpll0_frequency_mhz == 2160);
+
+  if (dpll0_uses_vco_8640) {
     // VCO 8640
     return freq_khz == 308'570 || freq_khz == 432'000 || freq_khz == 540'000 || freq_khz == 617'140;
   }
