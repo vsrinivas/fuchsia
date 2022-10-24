@@ -1473,12 +1473,16 @@ bool DpDisplay::InitDdi() {
     }
   }
 
-  const DpllState state = DpDpllState{
-      .ddi_clock_mhz = static_cast<int16_t>(dp_link_rate_mhz_ / 2),
+  const DdiPllConfig pll_config = DdiPllConfig{
+      .ddi_clock_khz = static_cast<int32_t>((dp_link_rate_mhz_ * 1'000) / 2),
+      .spread_spectrum_clocking = false,
+      .admits_display_port = true,
+      .admits_hdmi = false,
   };
 
   // 4. Enable Port PLL
-  DisplayPll* dpll = controller()->dpll_manager()->Map(ddi(), type() == Type::kEdp, state);
+  DisplayPll* dpll =
+      controller()->dpll_manager()->SetDdiPllConfig(ddi(), type() == Type::kEdp, pll_config);
   if (dpll == nullptr) {
     zxlogf(ERROR, "Cannot find an available DPLL for DP display on DDI %d", ddi());
     return false;
@@ -1510,14 +1514,14 @@ bool DpDisplay::InitDdi() {
   return true;
 }
 
-bool DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
-  if (dpll_state == nullptr) {
+bool DpDisplay::InitWithDdiPllConfig(const DdiPllConfig& pll_config) {
+  if (pll_config.IsEmpty()) {
     return false;
   }
 
-  ZX_DEBUG_ASSERT(std::holds_alternative<DpDpllState>(*dpll_state));
-  if (!std::holds_alternative<DpDpllState>(*dpll_state)) {
-    zxlogf(ERROR, "Non DP dpll_state is given to DpDisplay!");
+  ZX_DEBUG_ASSERT(pll_config.admits_display_port);
+  if (!pll_config.admits_display_port) {
+    zxlogf(ERROR, "DpDisplay::InitWithDdiPllConfig() - incompatible PLL configuration");
     return false;
   }
 
@@ -1528,24 +1532,25 @@ bool DpDisplay::InitWithDpllState(const DpllState* dpll_state) {
   }
   set_pipe(pipe);
 
-  auto dp_state = std::get_if<DpDpllState>(dpll_state);
   // Some display (e.g. eDP) may have already been configured by the bootloader with a
   // link clock. Assign the link rate based on the already enabled DPLL.
   if (dp_link_rate_mhz_ == 0) {
+    int32_t dp_link_rate_mhz = (pll_config.ddi_clock_khz * 2) / 1'000;
     // Since the link rate is read from the register directly, we can guarantee
     // that it is always valid.
-    zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane",
-           dp_state->ddi_clock_mhz * 2);
-    SetLinkRate(dp_state->ddi_clock_mhz * 2);
+    zxlogf(INFO, "Selected pre-configured DisplayPort link rate: %u Mbps/lane", dp_link_rate_mhz);
+    SetLinkRate(dp_link_rate_mhz);
   }
   return true;
 }
 
-bool DpDisplay::ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) {
-  *config = DpDpllState{
-      .ddi_clock_mhz = static_cast<int16_t>(dp_link_rate_mhz_ / 2),
+DdiPllConfig DpDisplay::ComputeDdiPllConfig(int32_t pixel_clock_10khz) {
+  return DdiPllConfig{
+      .ddi_clock_khz = static_cast<int32_t>(static_cast<int32_t>(dp_link_rate_mhz_) * 500),
+      .spread_spectrum_clocking = false,
+      .admits_display_port = true,
+      .admits_hdmi = false,
   };
-  return true;
 }
 
 bool DpDisplay::DdiModeset(const display_mode_t& mode) { return true; }

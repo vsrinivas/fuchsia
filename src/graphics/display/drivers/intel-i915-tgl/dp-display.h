@@ -197,7 +197,7 @@ class DpDisplay : public DisplayDevice {
 
   // DisplayDevice overrides:
   bool Query() final;
-  bool InitWithDpllState(const DpllState* dpll_state) final;
+  bool InitWithDdiPllConfig(const DdiPllConfig& pll_config) final;
 
   uint8_t lane_count() const { return dp_lane_count_; }
   uint32_t link_rate_mhz() const { return dp_link_rate_mhz_; }
@@ -210,7 +210,7 @@ class DpDisplay : public DisplayDevice {
                           tgl_registers::Trans transcoder) final;
   bool PipeConfigEpilogue(const display_mode_t& mode, tgl_registers::Pipe pipe,
                           tgl_registers::Trans transcoder) final;
-  bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) final;
+  DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) final;
   uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) final;
 
   bool CheckPixelRate(uint64_t pixel_rate) final;
@@ -285,7 +285,7 @@ class DpDisplay : public DisplayDevice {
   // updates the related inspect properties.
   //
   // These values can be initialized by:
-  //   1. InitWithDpllState based on an the current DPLL state
+  //   1. InitWithDdiPllConfig based on an the current DPLL state
   //   2. Init, which selects the highest supported link rate
   //
   // The lane count is always initialized to the maximum value that the device can support in

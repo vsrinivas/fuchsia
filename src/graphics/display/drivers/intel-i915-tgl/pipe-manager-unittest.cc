@@ -61,7 +61,7 @@ class FakeDisplay : public DisplayDevice {
 
   // DisplayDevice overrides:
   bool Query() final { return true; }
-  bool InitWithDpllState(const DpllState* dpll_state) final { return true; }
+  bool InitWithDdiPllConfig(const DdiPllConfig& pll_config) final { return true; }
 
  private:
   // DisplayDevice overrides:
@@ -75,7 +75,7 @@ class FakeDisplay : public DisplayDevice {
                           tgl_registers::Trans trans) final {
     return true;
   }
-  bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) final { return true; }
+  DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) final { return {}; }
   uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) final { return 0; }
   uint32_t i2c_bus_id() const final { return 2 * ddi(); }
   bool CheckPixelRate(uint64_t pixel_rate) final { return true; }

@@ -11,6 +11,7 @@
 #include <lib/zx/result.h>
 #include <lib/zx/vmo.h>
 #include <math.h>
+#include <zircon/assert.h>
 #include <zircon/errors.h>
 
 #include <ddktl/fidl.h>
@@ -96,7 +97,7 @@ bool DisplayDevice::Init() {
   return true;
 }
 
-bool DisplayDevice::InitWithDpllState(const DpllState* dpll_state) {
+bool DisplayDevice::InitWithDdiPllConfig(const DdiPllConfig& pll_config) {
   Pipe* pipe = controller_->pipe_manager()->RequestPipeFromHardwareState(*this, mmio_space());
   if (!pipe) {
     zxlogf(ERROR, "Failed loading pipe from register!");
@@ -182,13 +183,11 @@ bool DisplayDevice::CheckNeedsModeset(const display_mode_t* mode) {
   // Check to see if the hardware was already configured properly. The is primarily to
   // prevent unnecessary modesetting at startup. The extra work this adds to regular
   // modesetting is negligible.
-  DpllState new_state;
-  if (!ComputeDpllState(mode->pixel_clock_10khz, &new_state)) {
-    // ComputeDpllState should be validated in the display's CheckDisplayMode
-    ZX_ASSERT(false);
-  }
-
-  return controller()->dpll_manager()->PllNeedsReset(ddi(), new_state);
+  DdiPllConfig desired_pll_config =
+      ComputeDdiPllConfig(static_cast<int32_t>(info_.pixel_clock_10khz));
+  ZX_DEBUG_ASSERT_MSG(desired_pll_config.IsEmpty(),
+                      "CheckDisplayMode() should have rejected unattainable pixel rates");
+  return !controller()->dpll_manager()->DdiPllMatchesConfig(ddi(), desired_pll_config);
 }
 
 void DisplayDevice::ApplyConfiguration(const display_config_t* config,

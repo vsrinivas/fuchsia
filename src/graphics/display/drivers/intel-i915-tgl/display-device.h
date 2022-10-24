@@ -62,8 +62,8 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   // It would be good to simplify this by:
   // 1. Eliminating the "partially initialized" DisplayDevice state from the point of its owner.
   // 2. Having a single Init factory function with options, such as the current DPLL state, which is
-  // always called to construct a DisplayDevice, possibly merging Query, Init, InitWithDpllState,
-  // and InitBacklight, into a single routine.
+  // always called to construct a DisplayDevice, possibly merging Query, Init,
+  // InitWithDdiPllConfig, and InitBacklight, into a single routine.
   // 3. Perhaps what represents a DDI and a display attached to a DDI should be separate
   // abstractions?
 
@@ -75,7 +75,7 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
   // Initialize the display based on existing hardware state. This method should be used instead of
   // Init() when a display PLL has already been powered up and configured (e.g. by the bootlader)
   // when the driver discovers the display. DDI initialization will not be performed in this case.
-  virtual bool InitWithDpllState(const DpllState* dpll_state);
+  virtual bool InitWithDdiPllConfig(const DdiPllConfig& pll_config);
   // Initializes the display backlight for an already initialized display.
   void InitBacklight();
   // Resumes the ddi after suspend.
@@ -131,7 +131,11 @@ class DisplayDevice : public fidl::WireServer<FidlBacklight::Device> {
 
   // Configures the hardware to display content at the given resolution.
   virtual bool DdiModeset(const display_mode_t& mode) = 0;
-  virtual bool ComputeDpllState(uint32_t pixel_clock_10khz, DpllState* config) = 0;
+
+  // Returns an empty configuration if the desired pixel clock is unattainable.
+  // Otherwise, the returned configuration is guaranteed to be valid.
+  virtual DdiPllConfig ComputeDdiPllConfig(int32_t pixel_clock_10khz) = 0;
+
   // Load the clock rate from hardware if it's necessary when changing the transcoder.
   virtual uint32_t LoadClockRateForTranscoder(tgl_registers::Trans transcoder) = 0;
 

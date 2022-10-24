@@ -507,7 +507,7 @@ bool Controller::ResetDdi(tgl_registers::Ddi ddi, std::optional<tgl_registers::T
     return false;
   }
 
-  if (!dpll_manager_->Unmap(ddi)) {
+  if (!dpll_manager_->ResetDdiPll(ddi)) {
     zxlogf(ERROR, "Failed to unmap DPLL for DDI %d", ddi);
     return false;
   }
@@ -568,13 +568,13 @@ bool Controller::LoadHardwareState(tgl_registers::Ddi ddi, DisplayDevice* device
     return false;
   }
 
-  auto dpll_state = dpll_manager()->LoadState(ddi);
-  if (!dpll_state.has_value()) {
+  DdiPllConfig pll_config = dpll_manager()->LoadState(ddi);
+  if (pll_config.IsEmpty()) {
     zxlogf(ERROR, "Cannot load DPLL state for DDI %d", ddi);
     return false;
   }
 
-  bool init_result = device->InitWithDpllState(&*dpll_state);
+  bool init_result = device->InitWithDdiPllConfig(pll_config);
   if (!init_result) {
     zxlogf(ERROR, "Cannot initialize the display with DPLL state for DDI %d", ddi);
     return false;

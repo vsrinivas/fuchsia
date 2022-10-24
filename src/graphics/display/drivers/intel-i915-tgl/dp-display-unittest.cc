@@ -41,11 +41,11 @@ class TestDpll : public DisplayPll {
   explicit TestDpll(tgl_registers::Dpll dpll) : DisplayPll(dpll) {}
   ~TestDpll() override = default;
 
-  bool Enable(const DpllState& state) final {
+  bool DoEnable(const DdiPllConfig& pll_config) final {
     enabled_ = true;
     return enabled_;
   }
-  bool Disable() final {
+  bool DoDisable() final {
     enabled_ = false;
     return enabled_;
   }
@@ -63,20 +63,24 @@ class TestDpllManager : public DisplayPllManager {
     }
   }
 
-  std::optional<DpllState> LoadState(tgl_registers::Ddi ddi) final {
-    // DisplayPort HBR2 5.4Gbps / lane
-    DpllState state = DpDpllState{.ddi_clock_mhz = 2'700};
-    return std::make_optional(state);
+  DdiPllConfig LoadState(tgl_registers::Ddi ddi) final {
+    return DdiPllConfig{
+        .ddi_clock_khz = 2'700'000,  // DisplayPort HBR2 5.4Gbps / lane
+        .spread_spectrum_clocking = false,
+        .admits_display_port = true,
+        .admits_hdmi = false,
+    };
   }
 
  private:
   constexpr static auto kDplls = {tgl_registers::Dpll::DPLL_0, tgl_registers::Dpll::DPLL_1,
                                   tgl_registers::Dpll::DPLL_2};
 
-  bool MapImpl(tgl_registers::Ddi ddi, tgl_registers::Dpll dpll) final { return true; }
-  bool UnmapImpl(tgl_registers::Ddi ddi) final { return true; }
+  bool SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registers::Dpll pll) final { return true; }
+  bool ResetDdiClockSource(tgl_registers::Ddi ddi) final { return true; }
 
-  DisplayPll* FindBestDpll(tgl_registers::Ddi ddi, bool is_edp, const DpllState& state) final {
+  DisplayPll* FindPllFor(tgl_registers::Ddi ddi, bool is_edp,
+                         const DdiPllConfig& desired_config) final {
     for (const auto dpll : kDplls) {
       if (ref_count_[plls_[dpll].get()] == 0) {
         return plls_[dpll].get();
@@ -265,16 +269,19 @@ TEST_F(DpDisplayTest, LinkRateSelectionViaInit) {
 }
 
 // Tests that the link rate is set to a caller-assigned value upon initialization with
-// InitWithDpllState.
-TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDpllState) {
-  // The max link rate should be disregarded by InitWithDpllState.
+// InitWithDdiPllConfig.
+TEST_F(DpDisplayTest, LinkRateSelectionViaInitWithDdiPllConfig) {
+  // The max link rate should be disregarded by InitWithDdiPllConfig.
   fake_dpcd()->SetMaxLinkRate(dpcd::LinkBw::k5400Mbps);
 
   auto display = MakeDisplay(tgl_registers::DDI_A);
   ASSERT_NE(nullptr, display);
 
-  const DpllState dpll_state = DpDpllState{.ddi_clock_mhz = 2'160};
-  display->InitWithDpllState(&dpll_state);
+  const DdiPllConfig pll_config = {.ddi_clock_khz = 2'160'000,
+                                   .spread_spectrum_clocking = false,
+                                   .admits_display_port = true,
+                                   .admits_hdmi = false};
+  display->InitWithDdiPllConfig(pll_config);
   EXPECT_EQ(4320u, display->link_rate_mhz());
 }
 
