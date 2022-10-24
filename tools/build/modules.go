@@ -6,6 +6,7 @@ package build
 
 import (
 	"path/filepath"
+	"sort"
 
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
@@ -73,9 +74,16 @@ func NewModules(buildDir string) (*Modules, error) {
 		"tool_paths.json":                  &m.tools,
 		"zbi_tests.json":                   &m.zbiTests,
 	}
-	for manifest, dest := range manifests {
+	var manifestNames []string
+	for m := range manifests {
+		manifestNames = append(manifestNames, m)
+	}
+	// Ensure we read the manifests in order, so that if multiple manifests are
+	// missing we always get the same error.
+	sort.Strings(manifestNames)
+	for _, manifest := range manifestNames {
 		path := filepath.Join(buildDir, manifest)
-		if err := jsonutil.ReadFromFile(path, dest); err != nil {
+		if err := jsonutil.ReadFromFile(path, manifests[manifest]); err != nil {
 			return nil, err
 		}
 	}
