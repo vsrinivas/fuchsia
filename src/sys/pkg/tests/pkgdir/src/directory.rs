@@ -700,7 +700,7 @@ async fn verify_content_file_opened(
         let file = fio::FileProxy::new(node.into_channel().unwrap());
         {
             let fio::FileInfo { observer, .. } =
-                file.describe2().await.context("failed to call describe")?;
+                file.describe().await.context("failed to call describe")?;
             let observer = observer.ok_or(anyhow!("expected observer to be set"))?;
             let _: zx::Signals = observer
                 .wait_handle(zx::Signals::USER_0, zx::Time::INFINITE_PAST)

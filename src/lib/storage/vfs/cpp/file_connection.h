@@ -53,7 +53,7 @@ class FileConnection : public Connection, public fidl::WireServer<fuchsia_io::Fi
   // |fuchsia.io/File| operations.
   //
 
-  void Describe2(Describe2Completer::Sync& completer) final;
+  void Describe(DescribeCompleter::Sync& completer) final;
   void Resize(ResizeRequestView request, ResizeCompleter::Sync& completer) final;
   void GetBackingMemory(GetBackingMemoryRequestView request,
                         GetBackingMemoryCompleter::Sync& completer) final;

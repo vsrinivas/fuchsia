@@ -688,7 +688,7 @@
     },
     {
         "kind": "protocol/member",
-        "name": "fuchsia.io/File.Describe2",
+        "name": "fuchsia.io/File.Describe",
         "ordinal": "7545125870053689020",
         "type": "() -> (fuchsia.io/FileInfo payload)"
     },

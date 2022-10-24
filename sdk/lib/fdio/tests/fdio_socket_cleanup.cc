@@ -16,7 +16,7 @@ namespace {
 template <typename Protocol>
 class Server final : public fidl::testing::WireTestBase<Protocol> {
  public:
-  using DescribeResponse = typename fidl::WireResponse<typename Protocol::Describe2>;
+  using DescribeResponse = typename fidl::WireResponse<typename Protocol::Describe>;
 
   Server(const char* protocol, DescribeResponse response)
       : protocol_(protocol), describe_response_(std::move(response)) {}
@@ -41,7 +41,7 @@ class Server final : public fidl::testing::WireTestBase<Protocol> {
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, protocol_.size()));
   }
 
-  void Describe2(typename Super::Describe2Completer::Sync& completer) final {
+  void Describe(typename Super::DescribeCompleter::Sync& completer) final {
     ASSERT_TRUE(describe_response_.has_value(), "Describe called more than once");
     completer.Reply(std::exchange(describe_response_, std::nullopt).value());
     EXPECT_OK(completer.result_of_reply().status());
@@ -79,8 +79,8 @@ TEST(SocketCleanup, SynchronousDatagram) {
   fidl::Arena alloc;
   ASSERT_NO_FATAL_FAILURE(ServeAndExerciseFileDescriptionTeardown(
       fuchsia_posix_socket::wire::kSynchronousDatagramSocketProtocolName,
-      fidl::WireResponse<fuchsia_posix_socket::SynchronousDatagramSocket::Describe2>{
-          fuchsia_posix_socket::wire::SynchronousDatagramSocketDescribe2Response::Builder(alloc)
+      fidl::WireResponse<fuchsia_posix_socket::SynchronousDatagramSocket::Describe>{
+          fuchsia_posix_socket::wire::SynchronousDatagramSocketDescribeResponse::Builder(alloc)
               .event(std::move(client_event))
               .Build()},
       std::move(endpoints.value())));
@@ -102,8 +102,8 @@ TEST(SocketCleanup, Stream) {
   fidl::Arena alloc;
   ASSERT_NO_FATAL_FAILURE(ServeAndExerciseFileDescriptionTeardown(
       fuchsia_posix_socket::wire::kStreamSocketProtocolName,
-      fidl::WireResponse<fuchsia_posix_socket::StreamSocket::Describe2>{
-          fuchsia_posix_socket::wire::StreamSocketDescribe2Response::Builder(alloc)
+      fidl::WireResponse<fuchsia_posix_socket::StreamSocket::Describe>{
+          fuchsia_posix_socket::wire::StreamSocketDescribeResponse::Builder(alloc)
               .socket(std::move(client_socket))
               .Build()},
       std::move(endpoints.value())));
@@ -125,8 +125,8 @@ TEST(SocketCleanup, Datagram) {
   fidl::Arena alloc;
   ASSERT_NO_FATAL_FAILURE(ServeAndExerciseFileDescriptionTeardown(
       fuchsia_posix_socket::wire::kDatagramSocketProtocolName,
-      fidl::WireResponse<fuchsia_posix_socket::DatagramSocket::Describe2>{
-          fuchsia_posix_socket::wire::DatagramSocketDescribe2Response::Builder(alloc)
+      fidl::WireResponse<fuchsia_posix_socket::DatagramSocket::Describe>{
+          fuchsia_posix_socket::wire::DatagramSocketDescribeResponse::Builder(alloc)
               .socket(std::move(client_socket))
               .Build()},
       std::move(endpoints.value())));

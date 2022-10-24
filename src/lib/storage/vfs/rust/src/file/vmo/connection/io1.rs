@@ -292,7 +292,7 @@ impl VmoFileConnection {
             fio::FileRequest::DescribeDeprecated { responder } => {
                 let () = responder.send(&mut self.node_info())?;
             }
-            fio::FileRequest::Describe2 { responder } => {
+            fio::FileRequest::Describe { responder } => {
                 let () = responder.send(fio::FileInfo::EMPTY)?;
             }
             fio::FileRequest::GetConnectionInfo { responder } => {

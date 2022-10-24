@@ -54,7 +54,7 @@ class Console : public fidl::WireServer<fuchsia_logger::LogListenerSafe>,
   void Query(QueryCompleter::Sync& completer) final;
   void Read(ReadRequestView request, ReadCompleter::Sync& completer) final;
   void Write(WriteRequestView request, WriteCompleter::Sync& completer) final;
-  void Describe2(Describe2Completer::Sync& completer) final;
+  void Describe(DescribeCompleter::Sync& completer) final;
 
   void OpenClient(OpenClientRequestView request, OpenClientCompleter::Sync& completer) final;
   void ClrSetFeature(ClrSetFeatureRequestView request,

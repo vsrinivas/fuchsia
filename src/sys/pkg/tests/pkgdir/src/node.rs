@@ -282,7 +282,7 @@ async fn verify_describe_file(
     } else {
         if protocol == fio::FILE_PROTOCOL_NAME.as_bytes() {
             let fio::FileInfo { observer, .. } = fio::FileProxy::new(node.into_channel().unwrap())
-                .describe2()
+                .describe()
                 .await
                 .context("failed to call describe")?;
             match observer {

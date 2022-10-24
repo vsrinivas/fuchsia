@@ -58,7 +58,7 @@ protocol File {
     compose Writable;
 
     @selector("fuchsia.io/File.Describe")
-    Describe2() -> (FileInfo);
+    Describe() -> (FileInfo);
 
     /// Moves the offset at which the next invocation of [`Read`] or [`Write`]
     /// will occur. The seek offset is specific to each file connection.

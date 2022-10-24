@@ -78,13 +78,13 @@ void Console::Write(WriteRequestView request, WriteCompleter::Sync& completer) {
   return completer.ReplySuccess(request->data.count());
 }
 
-void Console::Describe2(Describe2Completer::Sync& completer) {
+void Console::Describe(DescribeCompleter::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = rx_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event); status != ZX_OK) {
     completer.Close(status);
   } else {
     fidl::Arena alloc;
-    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribeResponse::Builder(alloc)
                         .event(std::move(event))
                         .Build());
   }

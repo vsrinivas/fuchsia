@@ -2595,8 +2595,8 @@ func (*datagramSocketImpl) Query(fidl.Context) ([]uint8, error) {
 	return []byte(socket.DatagramSocketProtocolName), nil
 }
 
-func (s *datagramSocketImpl) Describe2(fidl.Context) (socket.DatagramSocketDescribe2Response, error) {
-	var response socket.DatagramSocketDescribe2Response
+func (s *datagramSocketImpl) Describe(fidl.Context) (socket.DatagramSocketDescribeResponse, error) {
+	var response socket.DatagramSocketDescribeResponse
 	handle, err := s.describe()
 	if err != nil {
 		return response, err
@@ -2767,8 +2767,8 @@ func (*synchronousDatagramSocketImpl) Query(fidl.Context) ([]byte, error) {
 	return []byte(socket.SynchronousDatagramSocketProtocolName), nil
 }
 
-func (s *synchronousDatagramSocketImpl) Describe2(fidl.Context) (socket.SynchronousDatagramSocketDescribe2Response, error) {
-	var response socket.SynchronousDatagramSocketDescribe2Response
+func (s *synchronousDatagramSocketImpl) Describe(fidl.Context) (socket.SynchronousDatagramSocketDescribeResponse, error) {
+	var response socket.SynchronousDatagramSocketDescribeResponse
 	event, err := s.describe()
 	if err != nil {
 		return response, err
@@ -3345,8 +3345,8 @@ func (*streamSocketImpl) Query(fidl.Context) ([]uint8, error) {
 	return []byte(socket.StreamSocketProtocolName), nil
 }
 
-func (s *streamSocketImpl) Describe2(fidl.Context) (socket.StreamSocketDescribe2Response, error) {
-	var response socket.StreamSocketDescribe2Response
+func (s *streamSocketImpl) Describe(fidl.Context) (socket.StreamSocketDescribeResponse, error) {
+	var response socket.StreamSocketDescribeResponse
 	handle, err := s.describe()
 	if err != nil {
 		return response, err
@@ -4089,8 +4089,8 @@ func (*rawSocketImpl) Query(fidl.Context) ([]byte, error) {
 	return []byte(rawsocket.SocketProtocolName), nil
 }
 
-func (s *rawSocketImpl) Describe2(fidl.Context) (rawsocket.SocketDescribe2Response, error) {
-	var response rawsocket.SocketDescribe2Response
+func (s *rawSocketImpl) Describe(fidl.Context) (rawsocket.SocketDescribeResponse, error) {
+	var response rawsocket.SocketDescribeResponse
 	event, err := s.describe()
 	if err != nil {
 		return response, err
@@ -4447,8 +4447,8 @@ func (*packetSocketImpl) Query(fidl.Context) ([]uint8, error) {
 	return []byte(packetsocket.SocketProtocolName), nil
 }
 
-func (s *packetSocketImpl) Describe2(fidl.Context) (packetsocket.SocketDescribe2Response, error) {
-	var response packetsocket.SocketDescribe2Response
+func (s *packetSocketImpl) Describe(fidl.Context) (packetsocket.SocketDescribeResponse, error) {
+	var response packetsocket.SocketDescribeResponse
 	event, err := s.describe()
 	if err != nil {
 		return response, err

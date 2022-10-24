@@ -142,7 +142,7 @@ class MockBlockDevice {
       self_->Bind(self_->dispatcher_, request->object.TakeChannel());
     }
 
-    void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
+    void Describe(DescribeCompleter::Sync& completer) override { completer.Reply({}); }
 
     void Query(QueryCompleter::Sync& completer) override {
       const std::string_view kProtocol = fuchsia_io::wire::kFileProtocolName;

@@ -32,13 +32,13 @@ fn with_tcp_stream(f: impl FnOnce(std::net::TcpStream) -> ()) {
                             .send(fposix_socket::STREAM_SOCKET_PROTOCOL_NAME.as_bytes())
                             .expect("send Query response");
                     }
-                    fposix_socket::StreamSocketRequest::Describe2 { responder } => {
+                    fposix_socket::StreamSocketRequest::Describe { responder } => {
                         let (s0, _s1) =
                             zx::Socket::create(zx::SocketOpts::STREAM).expect("create zx socket");
                         let () = responder
-                            .send(fposix_socket::StreamSocketDescribe2Response {
+                            .send(fposix_socket::StreamSocketDescribeResponse {
                                 socket: Some(s0),
-                                ..fposix_socket::StreamSocketDescribe2Response::EMPTY
+                                ..fposix_socket::StreamSocketDescribeResponse::EMPTY
                             })
                             .expect("send Describe response");
                     }

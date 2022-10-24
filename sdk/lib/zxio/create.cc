@@ -100,7 +100,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
                              response.protocol.count()};
   if (got == std::string_view{fio::wire::kFileProtocolName}) {
     const fidl::UnownedClientEnd<fio::File> file(node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(file)->Describe2();
+    fidl::WireResult result = fidl::WireCall(file)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -116,7 +116,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
   }
   if (got == std::string_view{fuchsia_hardware_pty::wire::kDeviceProtocolName}) {
     const fidl::UnownedClientEnd<fuchsia_hardware_pty::Device> device(node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(device)->Describe2();
+    fidl::WireResult result = fidl::WireCall(device)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -128,7 +128,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
   if (got == std::string_view{fuchsia_posix_socket::wire::kDatagramSocketProtocolName}) {
     const fidl::UnownedClientEnd<fuchsia_posix_socket::DatagramSocket> socket(
         node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    fidl::WireResult result = fidl::WireCall(socket)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -144,7 +144,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
   if (got == std::string_view{fuchsia_posix_socket::wire::kStreamSocketProtocolName}) {
     const fidl::UnownedClientEnd<fuchsia_posix_socket::StreamSocket> socket(
         node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    fidl::WireResult result = fidl::WireCall(socket)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -156,7 +156,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
   if (got == std::string_view{fuchsia_posix_socket::wire::kSynchronousDatagramSocketProtocolName}) {
     const fidl::UnownedClientEnd<fuchsia_posix_socket::SynchronousDatagramSocket> socket(
         node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    fidl::WireResult result = fidl::WireCall(socket)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -169,7 +169,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
   if (got == std::string_view{fuchsia_posix_socket_packet::wire::kSocketProtocolName}) {
     const fidl::UnownedClientEnd<fuchsia_posix_socket_packet::Socket> socket(
         node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    fidl::WireResult result = fidl::WireCall(socket)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }
@@ -180,7 +180,7 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
   }
   if (got == std::string_view{fuchsia_posix_socket_raw::wire::kSocketProtocolName}) {
     const fidl::UnownedClientEnd<fuchsia_posix_socket_raw::Socket> socket(node.borrow().channel());
-    fidl::WireResult result = fidl::WireCall(socket)->Describe2();
+    fidl::WireResult result = fidl::WireCall(socket)->Describe();
     if (!result.ok()) {
       return zx::error(result.status());
     }

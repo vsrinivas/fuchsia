@@ -135,8 +135,7 @@ const SOCKET_PROTOCOL_NAME string = "fuchsia.posix.socket.packet/Socket";
 protocol Socket {
     compose fuchsia.posix.socket.BaseSocket;
 
-    @selector("Describe")
-    Describe2() -> (resource table {
+    Describe() -> (resource table {
         /// Signals additional information about the state of the socket such as
         /// readiness or shutdown-ness.
         1: event zx.handle:EVENTPAIR;

@@ -34,7 +34,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
-  void Describe2(Describe2Completer::Sync& completer) final {
+  void Describe(DescribeCompleter::Sync& completer) final {
     zx::eventpair event;
     zx_status_t status = event1_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event);
     if (status != ZX_OK) {
@@ -43,7 +43,7 @@ class WindowSizeTtyServer : public fidl::testing::WireTestBase<fuchsia_hardware_
       return;
     }
     fidl::Arena alloc;
-    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribeResponse::Builder(alloc)
                         .event(std::move(event))
                         .Build());
   }

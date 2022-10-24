@@ -593,8 +593,8 @@ impl<T: 'static + File + IoOpHandler + CloneFile> FileConnection<T> {
                 let mut info = self.node_info()?;
                 responder.send(&mut info)?;
             }
-            fio::FileRequest::Describe2 { responder } => {
-                fuchsia_trace::duration!("storage", "File::Describe2");
+            fio::FileRequest::Describe { responder } => {
+                fuchsia_trace::duration!("storage", "File::Describe");
                 let stream = self.file.duplicate_stream()?;
                 responder.send(fio::FileInfo { stream, ..fio::FileInfo::EMPTY })?;
             }
@@ -1660,7 +1660,7 @@ mod tests {
         let stream = create_stream(&vmo, flags);
         let env = init_mock_stream_file(&stream, flags);
 
-        let fio::FileInfo { stream: desc_stream, .. } = env.proxy.describe2().await.unwrap();
+        let fio::FileInfo { stream: desc_stream, .. } = env.proxy.describe().await.unwrap();
         assert_eq!(
             desc_stream.unwrap().get_koid().unwrap(),
             stream.get_koid().unwrap(),

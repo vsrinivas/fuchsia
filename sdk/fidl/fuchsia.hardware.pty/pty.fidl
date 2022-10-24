@@ -53,8 +53,7 @@ protocol Device {
     compose fuchsia.io.Readable;
     compose fuchsia.io.Writable;
 
-    @selector("Describe")
-    Describe2() -> (resource table {
+    Describe() -> (resource table {
         /// An optional event which transmits information about a device's state.
         ///
         /// The [`DeviceSignal`] values may be observed on this event.

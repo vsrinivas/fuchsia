@@ -85,13 +85,13 @@ void PtyServer::Write(WriteRequestView request, WriteCompleter::Sync& completer)
   return completer.ReplySuccess(out_actual);
 }
 
-void PtyServer::Describe2(Describe2Completer::Sync& completer) {
+void PtyServer::Describe(DescribeCompleter::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = remote_.duplicate(ZX_RIGHTS_BASIC, &event); status != ZX_OK) {
     completer.Close(status);
   } else {
     fidl::Arena alloc;
-    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribeResponse::Builder(alloc)
                         .event(std::move(event))
                         .Build());
   }

@@ -606,7 +606,7 @@ func (*FileWrapper) DescribeDeprecated(fidl.Context) (io.NodeInfoDeprecated, err
 	return nodeInfo, nil
 }
 
-func (fState *fileState) Describe2(fidl.Context) (io.FileInfo, error) {
+func (fState *fileState) Describe(fidl.Context) (io.FileInfo, error) {
 	var fileInfo io.FileInfo
 	return fileInfo, nil
 }

@@ -103,7 +103,7 @@ class ConsoleIn {
     // If stdin is a tty then set up a handler for OOB events.
     if (isatty(STDIN_FILENO)) {
       fdio_cpp::UnownedFdioCaller caller(STDIN_FILENO);
-      auto result = fidl::WireCall(caller.borrow_as<fpty::Device>())->Describe2();
+      auto result = fidl::WireCall(caller.borrow_as<fpty::Device>())->Describe();
       if (!result.ok()) {
         std::cerr << "Unable to get stdin channel description: " << result << std::endl;
         return false;

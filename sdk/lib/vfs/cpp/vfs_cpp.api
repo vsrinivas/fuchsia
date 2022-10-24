@@ -6,7 +6,7 @@
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/directory_connection.h": "19894bdfa376d6ac10578a94d7743c25",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/dirent_filler.h": "ee345a473fcd059824371a39bf82a6c5",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file.h": "34aefcc92dca71dd494a10abaf5eb6c3",
-  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file_connection.h": "06a39e56c6c960f27f507a86ffc6e87b",
+  "pkg/vfs_cpp/include/lib/vfs/cpp/internal/file_connection.h": "966e26282d048c009f0afedc106d10fa",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node.h": "b55acc00dbbf1b2dd3c1eabc80bb4927",
   "pkg/vfs_cpp/include/lib/vfs/cpp/internal/node_connection.h": "24f7eb4319b8e453e9e2415d4f045939",
   "pkg/vfs_cpp/include/lib/vfs/cpp/lazy_dir.h": "037bc987ec92596fa222a4632d7bd07b",

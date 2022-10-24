@@ -41,7 +41,7 @@ class CloseCountingFileServer : public zxio_tests::TestFileServerBase {
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
-  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
+  void Describe(DescribeCompleter::Sync& completer) override { completer.Reply({}); }
 
   uint32_t num_close() const { return num_close_.load(); }
 
@@ -82,7 +82,7 @@ class File : public zxtest::Test {
     if (client_end.is_error()) {
       return client_end.status_value();
     }
-    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->Describe2();
+    fidl::WireResult result = fidl::WireCall<fio::File>(client_end.value())->Describe();
     if (result.status() != ZX_OK) {
       return result.status();
     }
@@ -111,7 +111,7 @@ class TestServerEvent final : public CloseCountingFileServer {
 
   const zx::event& event() const { return event_; }
 
-  void Describe2(Describe2Completer::Sync& completer) final {
+  void Describe(DescribeCompleter::Sync& completer) final {
     zx::event event;
     if (zx_status_t status = event_.duplicate(ZX_RIGHTS_BASIC, &event); status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);
@@ -298,7 +298,7 @@ class TestServerStream final : public CloseCountingFileServer {
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
   }
 
-  void Describe2(Describe2Completer::Sync& completer) final {
+  void Describe(DescribeCompleter::Sync& completer) final {
     zx::stream stream;
     if (zx_status_t status = stream_.duplicate(ZX_RIGHT_SAME_RIGHTS, &stream); status != ZX_OK) {
       completer.Close(ZX_ERR_INTERNAL);

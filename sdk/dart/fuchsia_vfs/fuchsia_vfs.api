@@ -724,13 +724,13 @@
               "returnType": "int",
               "type": "MethodDeclarationImpl"
             },
-            "describe2": {
+            "describe": {
               "isAbstract": false,
               "isGetter": false,
               "isOperator": false,
               "isSetter": false,
               "isStatic": false,
-              "name": "describe2",
+              "name": "describe",
               "returnType": "FileInfo",
               "type": "MethodDeclarationImpl"
             },

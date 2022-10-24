@@ -657,8 +657,7 @@ const DATAGRAM_SOCKET_PROTOCOL_NAME string = "fuchsia.posix.socket/DatagramSocke
 protocol DatagramSocket {
     compose BaseDatagramSocket;
 
-    @selector("Describe")
-    Describe2() -> (resource table {
+    Describe() -> (resource table {
         /// `ZX_SOCKET_DATAGRAM` on which data is sent and received.
         1: socket zx.handle:SOCKET;
         /// Size of the buffer used to receive Tx metadata.
@@ -764,8 +763,7 @@ const SYNCHRONOUS_DATAGRAM_SOCKET_PROTOCOL_NAME string
 protocol SynchronousDatagramSocket {
     compose BaseDatagramSocket;
 
-    @selector("Describe")
-    Describe2() -> (resource table {
+    Describe() -> (resource table {
         /// Signals additional information about the state of the socket such as
         /// readiness or shutdown-ness.
         1: event zx.handle:EVENTPAIR;
@@ -836,8 +834,7 @@ const STREAM_SOCKET_PROTOCOL_NAME string = "fuchsia.posix.socket/StreamSocket";
 protocol StreamSocket {
     compose BaseNetworkSocket;
 
-    @selector("Describe")
-    Describe2() -> (resource table {
+    Describe() -> (resource table {
         /// `ZX_SOCKET_STREAM` on which data is sent and received.
         1: socket zx.handle:SOCKET;
     });

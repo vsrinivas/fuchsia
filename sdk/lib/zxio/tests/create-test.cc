@@ -463,7 +463,7 @@ class TestFileServerWithDescribe : public zxio_tests::TestReadFileServer {
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
-  void Describe2(Describe2Completer::Sync& completer) final { completer.Reply({}); }
+  void Describe(DescribeCompleter::Sync& completer) final { completer.Reply({}); }
 };
 
 using CreateFileTest = CreateTestBase<TestFileServerWithDescribe>;
@@ -616,9 +616,9 @@ class DeviceServer : public fidl::testing::WireTestBase<fuchsia_hardware_pty::De
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
-  void Describe2(Describe2Completer::Sync& completer) final {
+  void Describe(DescribeCompleter::Sync& completer) final {
     fidl::Arena alloc;
-    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribeResponse::Builder(alloc)
                         .event(std::move(event))
                         .Build());
   }

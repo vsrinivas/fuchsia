@@ -2644,7 +2644,7 @@ mod serve_write_blob_tests {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, Arbitrary)]
     enum StubRequestor {
         Clone,
-        Describe2,
+        Describe,
         Sync,
         GetAttr,
         SetAttr,
@@ -2669,7 +2669,7 @@ mod serve_write_blob_tests {
         fn method_name(self) -> &'static str {
             match self {
                 StubRequestor::Clone => "clone",
-                StubRequestor::Describe2 => "describe2",
+                StubRequestor::Describe => "describe",
                 StubRequestor::Sync => "sync",
                 StubRequestor::GetAttr => "get_attr",
                 StubRequestor::SetAttr => "set_attr",
@@ -2694,7 +2694,7 @@ mod serve_write_blob_tests {
                     let () = proxy.clone(fio::OpenFlags::empty(), server_end).unwrap();
                     future::ready(()).boxed()
                 }
-                StubRequestor::Describe2 => proxy.describe2().map(|_| ()).boxed(),
+                StubRequestor::Describe => proxy.describe().map(|_| ()).boxed(),
                 StubRequestor::Sync => proxy.sync().map(|_| ()).boxed(),
                 StubRequestor::GetAttr => proxy.get_attr().map(|_| ()).boxed(),
                 StubRequestor::SetAttr => proxy

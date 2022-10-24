@@ -644,16 +644,16 @@ where
                     &mut fio::NodeInfoDeprecated::StreamSocket(fio::StreamSocket { socket })
                 );
             }
-            fposix_socket::StreamSocketRequest::Describe2 { responder } => {
+            fposix_socket::StreamSocketRequest::Describe { responder } => {
                 let socket = self
                     .peer
                     .duplicate_handle(zx::Rights::SAME_RIGHTS)
                     .expect("failed to duplicate the socket handle");
                 responder_send!(
                     responder,
-                    fposix_socket::StreamSocketDescribe2Response {
+                    fposix_socket::StreamSocketDescribeResponse {
                         socket: Some(socket),
-                        ..fposix_socket::StreamSocketDescribe2Response::EMPTY
+                        ..fposix_socket::StreamSocketDescribeResponse::EMPTY
                     }
                 );
             }

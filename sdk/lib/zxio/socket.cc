@@ -3155,7 +3155,7 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
     }
 
     fidl::ClientEnd<fsocket::StreamSocket>& control = result.value()->s;
-    fidl::WireResult describe_result = fidl::WireCall(control)->Describe2();
+    fidl::WireResult describe_result = fidl::WireCall(control)->Describe();
     if (!describe_result.ok()) {
       return describe_result.status();
     }

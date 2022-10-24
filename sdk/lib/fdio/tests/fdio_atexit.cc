@@ -30,7 +30,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
     completer.Reply(fidl::VectorView<uint8_t>::FromExternal(data, kProtocol.size()));
   }
 
-  void Describe2(Describe2Completer::Sync& completer) override {
+  void Describe(DescribeCompleter::Sync& completer) override {
     zx::socket peer;
     if (const zx_status_t status =
             peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &peer);
@@ -38,7 +38,7 @@ class Server final : public fidl::testing::WireTestBase<fuchsia_posix_socket::St
       return completer.Close(status);
     }
     fidl::Arena alloc;
-    completer.Reply(fuchsia_posix_socket::wire::StreamSocketDescribe2Response::Builder(alloc)
+    completer.Reply(fuchsia_posix_socket::wire::StreamSocketDescribeResponse::Builder(alloc)
                         .socket(std::move(peer))
                         .Build());
   }

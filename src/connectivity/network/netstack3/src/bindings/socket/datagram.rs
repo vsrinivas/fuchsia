@@ -1701,16 +1701,16 @@ where
                     responder_send!(responder, &mut info);
                 }
             }
-            fposix_socket::SynchronousDatagramSocketRequest::Describe2 { responder } => {
+            fposix_socket::SynchronousDatagramSocketRequest::Describe { responder } => {
                 // If the call to duplicate_handle fails, we have no
                 // choice but to drop the responder and close the
                 // channel, since Describe must be infallible.
                 if let Some(fio::SynchronousDatagramSocket { event }) = self.describe() {
                     responder_send!(
                         responder,
-                        fposix_socket::SynchronousDatagramSocketDescribe2Response {
+                        fposix_socket::SynchronousDatagramSocketDescribeResponse {
                             event: Some(event),
-                            ..fposix_socket::SynchronousDatagramSocketDescribe2Response::EMPTY
+                            ..fposix_socket::SynchronousDatagramSocketDescribeResponse::EMPTY
                         }
                     );
                 }

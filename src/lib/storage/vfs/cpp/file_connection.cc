@@ -65,7 +65,7 @@ void FileConnection::DescribeDeprecated(DescribeDeprecatedCompleter::Sync& compl
   });
 }
 
-void FileConnection::Describe2(Describe2Completer::Sync& completer) {
+void FileConnection::Describe(DescribeCompleter::Sync& completer) {
   zx::result result = Connection::NodeDescribe();
   if (result.is_error()) {
     return completer.Close(result.status_value());

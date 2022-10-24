@@ -53,7 +53,7 @@ class TestServer final : public fidl::testing::WireTestBase<fuchsia_io::File> {
     completer.Close(ZX_OK);
   }
 
-  void Describe2(Describe2Completer::Sync& completer) override { completer.Reply({}); }
+  void Describe(DescribeCompleter::Sync& completer) override { completer.Reply({}); }
 
   void GetAttr(GetAttrCompleter::Sync& completer) override {
     completer.Reply(ZX_OK, {

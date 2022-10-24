@@ -495,16 +495,16 @@ async fn handle_datagram_request(
     icmp_echo_receive_buffer: &mut VecDeque<(fnet::SocketAddress, Vec<u8>)>,
 ) -> Result<(), anyhow::Error> {
     match request.context("receive request")? {
-        fposix_socket::SynchronousDatagramSocketRequest::Describe2 { responder } => {
+        fposix_socket::SynchronousDatagramSocketRequest::Describe { responder } => {
             let event = socket
                 .borrow()
                 .peer_event
                 .duplicate_handle(zx::Rights::BASIC)
                 .context("duplicate peer event")?;
             responder
-                .send(fposix_socket::SynchronousDatagramSocketDescribe2Response {
+                .send(fposix_socket::SynchronousDatagramSocketDescribeResponse {
                     event: Some(event),
-                    ..fposix_socket::SynchronousDatagramSocketDescribe2Response::EMPTY
+                    ..fposix_socket::SynchronousDatagramSocketDescribeResponse::EMPTY
                 })
                 .context("send Describe response")?;
         }
@@ -683,16 +683,16 @@ async fn handle_stream_request(
             responder.send(&mut Ok(())).context("send Close response")?;
             socket.borrow().close(sockets);
         }
-        fposix_socket::StreamSocketRequest::Describe2 { responder } => {
+        fposix_socket::StreamSocketRequest::Describe { responder } => {
             let socket = socket
                 .borrow()
                 .peer_socket
                 .duplicate_handle(zx::Rights::SAME_RIGHTS)
                 .context("duplicate socket")?;
             responder
-                .send(fposix_socket::StreamSocketDescribe2Response {
+                .send(fposix_socket::StreamSocketDescribeResponse {
                     socket: Some(socket),
-                    ..fposix_socket::StreamSocketDescribe2Response::EMPTY
+                    ..fposix_socket::StreamSocketDescribeResponse::EMPTY
                 })
                 .context("send Describe response")?;
         }

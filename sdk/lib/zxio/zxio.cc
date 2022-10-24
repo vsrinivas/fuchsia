@@ -606,7 +606,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
         return ZX_OK;
       }
       fidl::ClientEnd<fpacketsocket::Socket>& control = socket_result->value()->socket;
-      fidl::WireResult result = fidl::WireCall(control)->Describe2();
+      fidl::WireResult result = fidl::WireCall(control)->Describe();
       if (!result.ok()) {
         return result.status();
       }
@@ -674,7 +674,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
           }
 
           fidl::ClientEnd<fsocket::StreamSocket>& control = socket_result->value()->s;
-          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          fidl::WireResult result = fidl::WireCall(control)->Describe();
           if (!result.ok()) {
             return result.status();
           }
@@ -750,7 +750,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
       switch (response.Which()) {
         case fsocket::wire::ProviderDatagramSocketResponse::Tag::kDatagramSocket: {
           fidl::ClientEnd<fsocket::DatagramSocket>& control = response.datagram_socket();
-          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          fidl::WireResult result = fidl::WireCall(control)->Describe();
           if (!result.ok()) {
             return result.status();
           }
@@ -794,7 +794,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
         case fsocket::wire::ProviderDatagramSocketResponse::Tag::kSynchronousDatagramSocket: {
           fidl::ClientEnd<fsocket::SynchronousDatagramSocket>& control =
               response.synchronous_datagram_socket();
-          fidl::WireResult result = fidl::WireCall(control)->Describe2();
+          fidl::WireResult result = fidl::WireCall(control)->Describe();
           if (!result.ok()) {
             return result.status();
           }
@@ -852,7 +852,7 @@ zx_status_t zxio_socket(zxio_service_connector service_connector, int domain, in
         return ZX_OK;
       }
       fidl::ClientEnd<frawsocket::Socket>& control = socket_result->value()->s;
-      fidl::WireResult result = fidl::WireCall(control)->Describe2();
+      fidl::WireResult result = fidl::WireCall(control)->Describe();
       if (!result.ok()) {
         return result.status();
       }

@@ -38,11 +38,11 @@ pub async fn get_pty(fd: &impl AsRawFd) -> Result<Option<(fpty::DeviceProxy, zx:
         node.into_channel().expect("There should be no remaining active users of this proxy"),
     );
     let eventpair = device
-        .describe2()
+        .describe()
         .await
-        .context("Call to Describe2 failed")?
+        .context("Call to Describe failed")?
         .event
-        .expect("Device/Describe2 did not contain an event");
+        .expect("Device/Describe did not contain an event");
 
     Ok(Some((device, eventpair)))
 }

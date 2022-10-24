@@ -64,7 +64,7 @@ TEST(FidlTests, TestFidlBasic) {
   }
   const fidl::WireResult describe_result =
       fidl::WireCall(fidl::UnownedClientEnd<fio::File>(endpoints->client.borrow().channel()))
-          ->Describe2();
+          ->Describe();
   ASSERT_OK(describe_result.status());
   ASSERT_FALSE(describe_result.value().has_observer());
   endpoints->client.TakeChannel().reset();

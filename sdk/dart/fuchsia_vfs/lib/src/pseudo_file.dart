@@ -143,7 +143,7 @@ class PseudoFile extends Vnode {
     return NodeInfoDeprecated.withFile(FileObject(event: null));
   }
 
-  FileInfo describe2() {
+  FileInfo describe() {
     return FileInfo();
   }
 
@@ -375,7 +375,7 @@ class _FileConnection extends File {
       file.describeDeprecated();
 
   @override
-  Future<FileInfo> describe2() async => file.describe2();
+  Future<FileInfo> describe() async => file.describe();
 
   @override
   Future<ConnectionInfo> getConnectionInfo() async => file.getConnectionInfo();

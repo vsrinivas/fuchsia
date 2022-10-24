@@ -353,13 +353,13 @@ void ConsoleDevice::Write(WriteRequestView request, WriteCompleter::Sync& comple
   completer.ReplySuccess(len);
 }
 
-void ConsoleDevice::Describe2(Describe2Completer::Sync& completer) {
+void ConsoleDevice::Describe(DescribeCompleter::Sync& completer) {
   zx::eventpair event;
   if (zx_status_t status = event_remote_.duplicate(ZX_RIGHT_SAME_RIGHTS, &event); status != ZX_OK) {
     completer.Close(status);
   } else {
     fidl::Arena alloc;
-    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribe2Response::Builder(alloc)
+    completer.Reply(fuchsia_hardware_pty::wire::DeviceDescribeResponse::Builder(alloc)
                         .event(std::move(event))
                         .Build());
   }
