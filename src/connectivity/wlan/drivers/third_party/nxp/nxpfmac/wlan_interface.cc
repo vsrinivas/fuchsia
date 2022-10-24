@@ -290,7 +290,7 @@ void WlanInterface::WlanFullmacImplQuerySecuritySupport(security_support_t* resp
   std::lock_guard lock(mutex_);
   resp->sae.sme_handler_supported = false;
   resp->sae.driver_handler_supported = false;
-  resp->mfp.supported = false;
+  resp->mfp.supported = true;
 }
 
 void WlanInterface::WlanFullmacImplQuerySpectrumManagementSupport(
