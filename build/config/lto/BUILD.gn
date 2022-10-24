@@ -26,6 +26,19 @@ variant("lto") {
     # Enable whole-program devirtualization and virtual constant propagation.
     "-fwhole-program-vtables",
   ]
+
+  # TODO(fxbug.dev/110476): Temporarily disable branch funneling on lto. Branch
+  # funneling likely generates bad code involving return values not propagated
+  # correctly to other functions. Once this is resolved, come back and remove this.
+  if (is_fuchsia) {
+    disable_branch_funneling = "-wholeprogramdevirt-branch-funnel-threshold=0"
+    cflags = [
+      "-mllvm",
+      "$disable_branch_funneling",
+    ]
+    ldflags = [ "-Wl,-mllvm,$disable_branch_funneling" ]
+  }
+
   rustflags = [ "-Clto=fat" ]
 }
 
