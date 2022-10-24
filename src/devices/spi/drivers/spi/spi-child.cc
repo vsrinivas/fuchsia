@@ -322,4 +322,51 @@ void SpiBanjoChild::SpiConnectServer(zx::channel server) {
   spi_->SpiConnectServer(std::move(server));
 }
 
+void SpiBanjoChild::TransmitVector(TransmitVectorRequestView request,
+                                   TransmitVectorCompleter::Sync& completer) {
+  spi_->TransmitVector(request, completer);
+}
+
+void SpiBanjoChild::ReceiveVector(ReceiveVectorRequestView request,
+                                  ReceiveVectorCompleter::Sync& completer) {
+  spi_->ReceiveVector(request, completer);
+}
+
+void SpiBanjoChild::ExchangeVector(ExchangeVectorRequestView request,
+                                   ExchangeVectorCompleter::Sync& completer) {
+  spi_->ExchangeVector(request, completer);
+}
+
+void SpiBanjoChild::RegisterVmo(RegisterVmoRequestView request,
+                                RegisterVmoCompleter::Sync& completer) {
+  spi_->RegisterVmo(request, completer);
+}
+
+void SpiBanjoChild::UnregisterVmo(UnregisterVmoRequestView request,
+                                  UnregisterVmoCompleter::Sync& completer) {
+  spi_->UnregisterVmo(request, completer);
+}
+
+void SpiBanjoChild::Transmit(TransmitRequestView request, TransmitCompleter::Sync& completer) {
+  spi_->Transmit(request, completer);
+}
+
+void SpiBanjoChild::Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) {
+  spi_->Receive(request, completer);
+}
+
+void SpiBanjoChild::Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) {
+  spi_->Exchange(request, completer);
+}
+
+void SpiBanjoChild::CanAssertCs(CanAssertCsCompleter::Sync& completer) {
+  spi_->CanAssertCs(completer);
+}
+
+void SpiBanjoChild::AssertCs(AssertCsCompleter::Sync& completer) { spi_->AssertCs(completer); }
+
+void SpiBanjoChild::DeassertCs(DeassertCsCompleter::Sync& completer) {
+  spi_->DeassertCs(completer);
+}
+
 }  // namespace spi

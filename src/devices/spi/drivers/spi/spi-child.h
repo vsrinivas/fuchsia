@@ -27,6 +27,9 @@
 // SpiDevice and SpiChild implement the actual SPI logic; SpiFidlChild and SpiBanjoChild serve the
 // fuchsia.hardware.spi protocols over FIDL and Banjo, respectively, but delegate to their SpiChild
 // parent for the SPI operations.
+//
+// SpiBanjoChild also implements ddk::Messageable for the FIDL protocol so that it can be connected
+// to via devfs, but it does not expose the protocol to its device children.
 
 namespace spi {
 
@@ -142,7 +145,9 @@ class SpiFidlChild : public SpiFidlChildType {
 };
 
 class SpiBanjoChild;
-using SpiBanjoChildType = ddk::Device<SpiBanjoChild, ddk::Unbindable>;
+using SpiBanjoChildType =
+    ddk::Device<SpiBanjoChild, ddk::Messageable<fuchsia_hardware_spi::Device>::Mixin,
+                ddk::Unbindable>;
 
 class SpiBanjoChild : public SpiBanjoChildType,
                       public ddk::SpiProtocol<SpiBanjoChild, ddk::base_protocol> {
@@ -152,12 +157,33 @@ class SpiBanjoChild : public SpiBanjoChildType,
   void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease() { delete this; }
 
+  // Banjo implementation
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);
   zx_status_t SpiReceive(uint32_t size, uint8_t* out_rxdata_list, size_t rxdata_count,
                          size_t* out_rxdata_actual);
   zx_status_t SpiExchange(const uint8_t* txdata_list, size_t txdata_count, uint8_t* out_rxdata_list,
                           size_t rxdata_count, size_t* out_rxdata_actual);
   void SpiConnectServer(zx::channel server);
+
+  // FIDL implementation. Only for devfs, not for the device's children.
+  void TransmitVector(TransmitVectorRequestView request,
+                      TransmitVectorCompleter::Sync& completer) override;
+  void ReceiveVector(ReceiveVectorRequestView request,
+                     ReceiveVectorCompleter::Sync& completer) override;
+  void ExchangeVector(ExchangeVectorRequestView request,
+                      ExchangeVectorCompleter::Sync& completer) override;
+
+  void RegisterVmo(RegisterVmoRequestView request, RegisterVmoCompleter::Sync& completer) override;
+  void UnregisterVmo(UnregisterVmoRequestView request,
+                     UnregisterVmoCompleter::Sync& completer) override;
+
+  void Transmit(TransmitRequestView request, TransmitCompleter::Sync& completer) override;
+  void Receive(ReceiveRequestView request, ReceiveCompleter::Sync& completer) override;
+  void Exchange(ExchangeRequestView request, ExchangeCompleter::Sync& completer) override;
+
+  void CanAssertCs(CanAssertCsCompleter::Sync& completer) override;
+  void AssertCs(AssertCsCompleter::Sync& completer) override;
+  void DeassertCs(DeassertCsCompleter::Sync& completer) override;
 
  private:
   // SpiChild is the parent of SpiBanjoChild so it is guaranteed to outlive it,
