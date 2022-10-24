@@ -29,6 +29,8 @@ class KeyRing {
 
   zx_status_t RemoveAllKeys();
 
+  zx_status_t EnableWepKey(uint16_t key_id);
+
  private:
   IoctlAdapter* ioctl_adapter_ = nullptr;
   const uint32_t bss_index_;

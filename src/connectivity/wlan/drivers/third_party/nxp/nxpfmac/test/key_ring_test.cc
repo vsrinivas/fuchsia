@@ -175,4 +175,25 @@ TEST_F(KeyRingTest, RemoveAllKeys) {
   ASSERT_OK(key_ring_->RemoveAllKeys());
 }
 
+TEST_F(KeyRingTest, EnableWepKey) {
+  // Test that the EnableWepKey call correctly enables the given WEP key.
+
+  constexpr uint8_t kKeyId = 12;
+
+  mlan_mock_.SetOnMlanIoctl([&](void*, pmlan_ioctl_req req) -> mlan_status {
+    EXPECT_EQ(MLAN_ACT_SET, req->action);
+    EXPECT_EQ(MLAN_IOCTL_SEC_CFG, req->req_id);
+    EXPECT_EQ(kBssIndex, req->bss_index);
+    auto sec_cfg = reinterpret_cast<mlan_ds_sec_cfg*>(req->pbuf);
+    EXPECT_EQ(MLAN_OID_SEC_CFG_ENCRYPT_KEY, sec_cfg->sub_command);
+    auto& encrypt_key = sec_cfg->param.encrypt_key;
+    EXPECT_TRUE(encrypt_key.is_current_wep_key);
+    EXPECT_EQ(kKeyId, encrypt_key.key_index);
+    ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
+    return MLAN_STATUS_PENDING;
+  });
+
+  ASSERT_OK(key_ring_->EnableWepKey(kKeyId));
+}
+
 }  // namespace

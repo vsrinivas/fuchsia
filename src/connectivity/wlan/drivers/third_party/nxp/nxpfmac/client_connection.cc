@@ -94,18 +94,19 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
   }
 
   if (req->wep_key.key_count > 0) {
-    // TODO(fxbug.dev/108742): This probably needs additional work in order to support WEP
-    status = key_ring_->AddKey(req->wep_key);
+    // The WEP key address should be considered a group key, set address to broadcast address.
+    set_key_descriptor_t wep_key = req->wep_key;
+    memset(wep_key.address, 0xFF, ETH_ALEN);
+    status = key_ring_->AddKey(wep_key);
     if (status != ZX_OK) {
       NXPF_ERR("Could not set WEP key: %s", zx_status_get_string(status));
       return status;
     }
-  }
-
-  status = ConfigureIes(req->selected_bss.ies_list, req->selected_bss.ies_count);
-  if (status != ZX_OK) {
-    NXPF_ERR("Failed to configure IES: %s", zx_status_get_string(status));
-    return status;
+    status = key_ring_->EnableWepKey(wep_key.key_id);
+    if (status != ZX_OK) {
+      NXPF_ERR("Could not enable WEP key: %s", zx_status_get_string(status));
+      return status;
+    }
   }
 
   status = ConfigureIes(req->security_ie_list, req->security_ie_count);
@@ -385,7 +386,11 @@ zx_status_t ClientConnection::SetAuthMode(wlan_auth_type_t auth_type) {
       auth_mode = MLAN_AUTH_MODE_OPEN;
       break;
     case WLAN_AUTH_TYPE_SHARED_KEY:
-      auth_mode = MLAN_AUTH_MODE_SHARED;
+      // When asked to use a shared key (which should only happen for WEP), we will direct the
+      // firmware to use auto-detect, which will fall back on open WEP if shared WEP fails to
+      // succeed. This was chosen to allow us to avoid implementing WEP auto-detection at higher
+      // levels of the wlan stack.
+      auth_mode = MLAN_AUTH_MODE_AUTO;
       break;
     case WLAN_AUTH_TYPE_FAST_BSS_TRANSITION:
       auth_mode = MLAN_AUTH_MODE_FT;

@@ -142,4 +142,18 @@ zx_status_t KeyRing::RemoveAllKeys() {
   return ZX_OK;
 }
 
+zx_status_t KeyRing::EnableWepKey(uint16_t key_id) {
+  IoctlRequest<mlan_ds_sec_cfg> request(
+      MLAN_IOCTL_SEC_CFG, MLAN_ACT_SET, bss_index_,
+      mlan_ds_sec_cfg{.sub_command = MLAN_OID_SEC_CFG_ENCRYPT_KEY,
+                      .param{.encrypt_key{.key_index = key_id, .is_current_wep_key = MTRUE}}});
+
+  const IoctlStatus io_status = ioctl_adapter_->IssueIoctlSync(&request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to enable WEP key: %d", io_status);
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
 }  // namespace wlan::nxpfmac
