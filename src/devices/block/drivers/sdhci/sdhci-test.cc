@@ -63,6 +63,7 @@ class TestSdhci : public Sdhci {
   void* iobuf_virt() const { return iobuf_.virt(); }
 
   void TriggerCardInterrupt() { card_interrupt_ = true; }
+  void InjectTransferError() { inject_error_ = true; }
 
  protected:
   zx_status_t WaitForReset(const SoftwareReset mask) override {
@@ -79,7 +80,11 @@ class TestSdhci : public Sdhci {
           status.set_command_complete(1).WriteTo(&regs_mmio_buffer_);
           return ZX_OK;
         case RequestStatus::TRANSFER_DATA_DMA:
-          status.set_transfer_complete(1).WriteTo(&regs_mmio_buffer_);
+          status.set_transfer_complete(1);
+          if (inject_error_) {
+            status.set_error(1).set_data_crc_error(1);
+          }
+          status.WriteTo(&regs_mmio_buffer_);
           return ZX_OK;
         case RequestStatus::READ_DATA_PIO:
           if (++current_block_ == blocks_remaining_) {
@@ -118,6 +123,7 @@ class TestSdhci : public Sdhci {
   std::atomic<uint16_t> blocks_remaining_ = 0;
   std::atomic<uint16_t> current_block_ = 0;
   std::atomic<bool> card_interrupt_ = false;
+  std::atomic<bool> inject_error_ = false;
 };
 
 class SdhciTest : public zxtest::Test {
@@ -2158,6 +2164,47 @@ TEST_F(SdhciTest, BufferZeroSize) {
       .buffers_count = 1,
   };
 
+  uint32_t response[4] = {};
+  EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
+
+  dut_->DdkUnbind(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(SdhciTest, TransferError) {
+  ASSERT_NO_FATAL_FAILURE(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  Capabilities0::Get()
+      .FromValue(0)
+      .set_adma2_support(1)
+      .set_v3_64_bit_system_address_support(1)
+      .WriteTo(&mmio_);
+  EXPECT_OK(dut_->Init());
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(512, 0, &vmo));
+
+  const sdmmc_buffer_region_t buffer = {
+      .buffer =
+          {
+              .vmo = vmo.get(),
+          },
+      .type = SDMMC_BUFFER_TYPE_VMO_HANDLE,
+      .offset = 0,
+      .size = 512,
+  };
+  const sdmmc_req_new_t request = {
+      .cmd_idx = SDMMC_WRITE_MULTIPLE_BLOCK,
+      .cmd_flags = SDMMC_WRITE_MULTIPLE_BLOCK_FLAGS,
+      .arg = 0x1234abcd,
+      .blocksize = 512,
+      .suppress_error_messages = false,
+      .client_id = 0,
+      .buffers_list = &buffer,
+      .buffers_count = 1,
+  };
+
+  dut_->InjectTransferError();
   uint32_t response[4] = {};
   EXPECT_NOT_OK(dut_->SdmmcRequestNew(&request, response));
 

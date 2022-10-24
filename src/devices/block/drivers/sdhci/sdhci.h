@@ -277,11 +277,15 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
       TA_REQ(mtx_);
 
   void SgHandleInterrupt(InterruptStatus status) TA_REQ(mtx_);
-  void SgCmdStageComplete() TA_REQ(mtx_);
-  void SgTransferComplete() TA_REQ(mtx_);
-  void SgDataStageReadReady() TA_REQ(mtx_);
+  void SgCompleteRequest() TA_REQ(mtx_);
+
+  // Always signals the main thread.
   void SgErrorRecovery() TA_REQ(mtx_);
-  void SgCompleteRequest(zx_status_t status) TA_REQ(mtx_);
+
+  // These return true if the main thread was signaled and no further processing is needed.
+  bool SgCmdStageComplete() TA_REQ(mtx_);
+  bool SgTransferComplete() TA_REQ(mtx_);
+  bool SgDataStageReadReady() TA_REQ(mtx_);
 
   zx::interrupt irq_;
   thrd_t irq_thread_;
@@ -336,6 +340,7 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
       cmd_done = false;
       // No data phase if there is no data present and no busy response.
       data_done = !(cmd_flags & (SDMMC_RESP_DATA_PRESENT | SDMMC_RESP_LEN_48B));
+      status = InterruptStatus::Get().FromValue(0).set_error(1);
     }
 
     uint32_t cmd_idx;
@@ -351,8 +356,10 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
     // The 0-, 32-, or 128-bit response (unused fields set to zero). Set by the interrupt thread and
     // read by the request thread.
     uint32_t response[4];
-    // The final status of the request. Set by the interrupt thread and read by the request thread.
-    zx_status_t status;
+    // If an error occurred, the interrupt thread sets this field to the value of the status
+    // register (and always sets the general error bit). If no error  occurred the interrupt thread
+    // sets this field to zero.
+    InterruptStatus status;
 
     bool is_pending() const { return !cmd_done || !data_done; }
 
@@ -362,7 +369,6 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
       cmd_idx = 0;
       cmd_flags = 0;
       memset(response, 0, sizeof(response));
-      status = ZX_ERR_IO;
     }
   };
 

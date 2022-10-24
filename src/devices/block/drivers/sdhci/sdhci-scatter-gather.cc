@@ -76,7 +76,6 @@ zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_resp
     }
 
     if (zx_status_t status = SgStartRequest(*req, builder); status != ZX_OK) {
-      SgFinishRequest(*req, out_response);
       return status;
     }
   }
@@ -91,6 +90,21 @@ zx_status_t Sdhci::SdmmcRequestNew(const sdmmc_req_new_t* req, uint32_t out_resp
 zx_status_t Sdhci::SgStartRequest(const sdmmc_req_new_t& request, DmaDescriptorBuilder& builder) {
   using BlockSizeType = decltype(BlockSize::Get().FromValue(0).reg_value());
   using BlockCountType = decltype(BlockCount::Get().FromValue(0).reg_value());
+
+  // Every command requires that the Command Inhibit is unset.
+  auto inhibit_mask = PresentState::Get().FromValue(0).set_command_inhibit_cmd(1);
+
+  // Busy type commands must also wait for the DATA Inhibit to be 0 UNLESS
+  // it's an abort command which can be issued with the data lines active.
+  if ((request.cmd_flags & SDMMC_RESP_LEN_48B) && (request.cmd_flags & SDMMC_CMD_TYPE_ABORT)) {
+    inhibit_mask.set_command_inhibit_dat(1);
+  }
+
+  // Wait for the inhibit masks from above to become 0 before issuing the command.
+  zx_status_t status = WaitForInhibit(inhibit_mask);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   TransferMode transfer_mode = TransferMode::Get().FromValue(0);
 
@@ -135,21 +149,6 @@ zx_status_t Sdhci::SgStartRequest(const sdmmc_req_new_t& request, DmaDescriptorB
 
   Command command = Command::Get().FromValue(0);
   PrepareCmd(request, &transfer_mode, &command);
-
-  // Every command requires that the Command Inhibit is unset.
-  auto inhibit_mask = PresentState::Get().FromValue(0).set_command_inhibit_cmd(1);
-
-  // Busy type commands must also wait for the DATA Inhibit to be 0 UNLESS
-  // it's an abort command which can be issued with the data lines active.
-  if ((request.cmd_flags & SDMMC_RESP_LEN_48B) && (request.cmd_flags & SDMMC_CMD_TYPE_ABORT)) {
-    inhibit_mask.set_command_inhibit_dat(1);
-  }
-
-  // Wait for the inhibit masks from above to become 0 before issuing the command.
-  zx_status_t status = WaitForInhibit(inhibit_mask);
-  if (status != ZX_OK) {
-    return status;
-  }
 
   Argument::Get().FromValue(request.arg).WriteTo(&regs_mmio_buffer_);
 
@@ -211,18 +210,71 @@ zx_status_t Sdhci::SgFinishRequest(const sdmmc_req_new_t& request, uint32_t out_
     memcpy(out_response, pending_request_.response, sizeof(uint32_t) * 4);
   }
 
-  zx_status_t status;
   if (request.cmd_flags & SDMMC_CMD_TYPE_ABORT) {
     // SDHCI spec section 3.8.2: reset the data line after an abort to discard data in the buffer.
-    status = WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1).set_reset_dat(1));
-    if (status != ZX_OK) {
-      return status;
-    }
+    [[maybe_unused]] auto _ =
+        WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1).set_reset_dat(1));
   }
 
-  status = pending_request_.status;
+  const InterruptStatus interrupt_status = pending_request_.status;
   pending_request_.Reset();
-  return status;
+
+  if (!interrupt_status.error()) {
+    return ZX_OK;
+  }
+
+  if (interrupt_status.tuning_error()) {
+    zxlogf(ERROR, "Tuning error");
+  }
+  if (interrupt_status.adma_error()) {
+    zxlogf(ERROR, "ADMA error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.auto_cmd_error()) {
+    zxlogf(ERROR, "Auto cmd error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.current_limit_error()) {
+    zxlogf(ERROR, "Current limit error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.data_end_bit_error()) {
+    zxlogf(ERROR, "Data end bit error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.data_crc_error()) {
+    if (request.suppress_error_messages) {
+      zxlogf(DEBUG, "Data CRC error cmd%u", request.cmd_idx);
+    } else {
+      zxlogf(ERROR, "Data CRC error cmd%u", request.cmd_idx);
+    }
+  }
+  if (interrupt_status.data_timeout_error()) {
+    zxlogf(ERROR, "Data timeout error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.command_index_error()) {
+    zxlogf(ERROR, "Command index error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.command_end_bit_error()) {
+    zxlogf(ERROR, "Command end bit error cmd%u", request.cmd_idx);
+  }
+  if (interrupt_status.command_crc_error()) {
+    if (request.suppress_error_messages) {
+      zxlogf(DEBUG, "Command CRC error cmd%u", request.cmd_idx);
+    } else {
+      zxlogf(ERROR, "Command CRC error cmd%u", request.cmd_idx);
+    }
+  }
+  if (interrupt_status.command_timeout_error()) {
+    if (request.suppress_error_messages) {
+      zxlogf(DEBUG, "Command timeout error cmd%u", request.cmd_idx);
+    } else {
+      zxlogf(ERROR, "Command timeout error cmd%u", request.cmd_idx);
+    }
+  }
+  if (interrupt_status.reg_value() ==
+      InterruptStatusEnable::Get().FromValue(0).set_error(1).reg_value()) {
+    // Log an unknown error only if no other bits were set.
+    zxlogf(ERROR, "Unknown error cmd%u", request.cmd_idx);
+  }
+
+  return ZX_ERR_IO;
 }
 
 template <typename DescriptorType>
@@ -460,21 +512,27 @@ zx_status_t Sdhci::DmaDescriptorBuilder::AppendRegions(
 }
 
 void Sdhci::SgHandleInterrupt(const InterruptStatus status) {
-  if (status.command_complete()) {
-    SgCmdStageComplete();
+  if (status.ErrorInterrupt()) {
+    pending_request_.status = status;
+    pending_request_.status.set_error(1);
+    SgErrorRecovery();
+    return;
+  }
+
+  // Clear the interrupt status to indicate that a normal interrupt was handled.
+  pending_request_.status = InterruptStatus::Get().FromValue(0);
+  if (status.buffer_read_ready() && SgDataStageReadReady()) {
+    return;
+  }
+  if (status.command_complete() && SgCmdStageComplete()) {
+    return;
   }
   if (status.transfer_complete()) {
     SgTransferComplete();
   }
-  if (status.buffer_read_ready()) {
-    SgDataStageReadReady();
-  }
-  if (status.ErrorInterrupt()) {
-    SgErrorRecovery();
-  }
 }
 
-void Sdhci::SgCmdStageComplete() {
+bool Sdhci::SgCmdStageComplete() {
   const uint32_t response_0 = Response::Get(0).ReadFrom(&regs_mmio_buffer_).reg_value();
   const uint32_t response_1 = Response::Get(1).ReadFrom(&regs_mmio_buffer_).reg_value();
   const uint32_t response_2 = Response::Get(2).ReadFrom(&regs_mmio_buffer_).reg_value();
@@ -506,42 +564,52 @@ void Sdhci::SgCmdStageComplete() {
 
   // We're done if the command has no data stage or if the data stage completed early
   if (pending_request_.data_done) {
-    SgCompleteRequest(ZX_OK);
+    SgCompleteRequest();
   }
+
+  return pending_request_.data_done;
 }
 
-void Sdhci::SgTransferComplete() {
+bool Sdhci::SgTransferComplete() {
   pending_request_.data_done = true;
   if (pending_request_.cmd_done) {
-    SgCompleteRequest(ZX_OK);
+    SgCompleteRequest();
   }
+
+  return pending_request_.cmd_done;
 }
 
-void Sdhci::SgDataStageReadReady() {
+bool Sdhci::SgDataStageReadReady() {
   if ((pending_request_.cmd_idx == MMC_SEND_TUNING_BLOCK) ||
       (pending_request_.cmd_idx == SD_SEND_TUNING_BLOCK)) {
     // This is the final interrupt expected for tuning transfers, so mark both command and data
     // phases complete.
     pending_request_.cmd_done = true;
     pending_request_.data_done = true;
-    SgCompleteRequest(ZX_OK);
+    SgCompleteRequest();
+    return true;
   }
+
+  return false;
 }
 
 void Sdhci::SgErrorRecovery() {
   // Reset internal state machines
-  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_cmd(1).WriteTo(&regs_mmio_buffer_);
-  WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1));
-  SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_dat(1).WriteTo(&regs_mmio_buffer_);
-  WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_dat(1));
+  {
+    SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_cmd(1).WriteTo(&regs_mmio_buffer_);
+    [[maybe_unused]] auto _ = WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_cmd(1));
+  }
+  {
+    SoftwareReset::Get().ReadFrom(&regs_mmio_buffer_).set_reset_dat(1).WriteTo(&regs_mmio_buffer_);
+    [[maybe_unused]] auto _ = WaitForReset(SoftwareReset::Get().FromValue(0).set_reset_dat(1));
+  }
 
   // Complete any pending txn with error status
-  SgCompleteRequest(ZX_ERR_IO);
+  SgCompleteRequest();
 }
 
-void Sdhci::SgCompleteRequest(const zx_status_t status) {
+void Sdhci::SgCompleteRequest() {
   DisableInterrupts();
-  pending_request_.status = status;
   sync_completion_signal(&req_completion_);
 }
 
