@@ -316,18 +316,22 @@ impl InformationRequesting {
         // Note that although RFC 8415 states that SOL_MAX_RT must be handled,
         // we never send Solicit messages when running in stateless mode, so
         // there is no point in storing or doing anything with it.
-        let ProcessedOptions { server_id, solicit_max_rt_opt: _, result } =
-            match process_options(&msg, ExchangeType::ReplyToInformationRequest, None) {
-                Ok(processed_options) => processed_options,
-                Err(e) => {
-                    warn!("ignoring Reply to Information-Request: {}", e);
-                    return Transition {
-                        state: ClientState::InformationRequesting(self),
-                        actions: Vec::new(),
-                        transaction_id: None,
-                    };
-                }
-            };
+        let ProcessedOptions { server_id, solicit_max_rt_opt: _, result } = match process_options(
+            &msg,
+            ExchangeType::ReplyToInformationRequest,
+            None,
+            &NoIaRequested,
+        ) {
+            Ok(processed_options) => processed_options,
+            Err(e) => {
+                warn!("ignoring Reply to Information-Request: {}", e);
+                return Transition {
+                    state: ClientState::InformationRequesting(self),
+                    actions: Vec::new(),
+                    transaction_id: None,
+                };
+            }
+        };
 
         let Options {
             success_status_message,
@@ -728,6 +732,8 @@ enum OptionsError {
     IaNaOptionError(#[from] IaNaOptionError),
     #[error("duplicate IA_NA option with IAID={0:?} {1:?} and {2:?}")]
     DuplicateIaNaId(v6::IAID, IaNaOption, IaNaOption),
+    #[error("IA_NA with unexpected IAID")]
+    UnexpectedIaNa(v6::IAID, IaNaOption),
     #[error("missing Server Id option")]
     MissingServerId,
     #[error("missing Client Id option")]
@@ -768,6 +774,31 @@ enum ExchangeType {
     ReplyWithLeases(RequestLeasesMessageType),
 }
 
+trait IaChecker {
+    /// Returns true ifff the IA was requested
+    fn was_ia_requested(&self, id: &v6::IAID) -> bool;
+}
+
+struct NoIaRequested;
+
+impl IaChecker for NoIaRequested {
+    fn was_ia_requested(&self, _id: &v6::IAID) -> bool {
+        false
+    }
+}
+
+impl IaChecker for HashMap<v6::IAID, AddressEntry> {
+    fn was_ia_requested(&self, id: &v6::IAID) -> bool {
+        self.get(id).is_some()
+    }
+}
+
+impl IaChecker for HashMap<v6::IAID, Option<Ipv6Addr>> {
+    fn was_ia_requested(&self, id: &v6::IAID) -> bool {
+        self.get(id).is_some()
+    }
+}
+
 // TODO(https://fxbug.dev/104025): Make the choice between ignoring invalid
 // options and discarding the entire message configurable.
 // TODO(https://fxbug.dev/104519): Move this function and associated types
@@ -791,10 +822,11 @@ enum ExchangeType {
 ///
 /// The choice made by this function is (2): an error will be returned in such
 /// cases to inform callers that they should ignore the entire message.
-fn process_options<B: ByteSlice>(
+fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
     msg: &v6::Message<'_, B>,
     exchange_type: ExchangeType,
     want_client_id: Option<[u8; CLIENT_ID_LEN]>,
+    iana_checker: &IaNaChecker,
 ) -> Result<ProcessedOptions, OptionsError> {
     let mut solicit_max_rt_option = None;
     let mut server_id_option = None;
@@ -929,6 +961,14 @@ fn process_options<B: ByteSlice>(
                 }
                 let iaid = v6::IAID::new(iana_data.iaid());
                 let processed_ia_na = process_ia_na(iana_data)?;
+                if !iana_checker.was_ia_requested(&iaid) {
+                    // The RFC does not explicitly call out what to do with
+                    // IAs that were not requested by the client.
+                    //
+                    // Return an error to cause the entire message to be
+                    // ignored.
+                    return Err(OptionsError::UnexpectedIaNa(iaid, processed_ia_na));
+                }
                 match processed_ia_na {
                     IaNaOption::Failure(_) => {}
                     IaNaOption::Success { status_message: _, t1, t2, ref ia_addr } => {
@@ -963,6 +1003,7 @@ fn process_options<B: ByteSlice>(
                         }
                     }
                 }
+
                 // Per RFC 8415, section 21.4, IAIDs are expected to be
                 // unique.
                 //
@@ -1452,27 +1493,31 @@ impl ServerDiscovery {
             collected_sol_max_rt,
         } = self;
 
-        let ProcessedOptions { server_id, solicit_max_rt_opt, result } =
-            match process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)) {
-                Ok(processed_options) => processed_options,
-                Err(e) => {
-                    warn!("ignoring Advertise: {}", e);
-                    return Transition {
-                        state: ClientState::ServerDiscovery(ServerDiscovery {
-                            client_id,
-                            configured_non_temporary_addresses,
-                            configured_delegated_prefixes,
-                            first_solicit_time,
-                            retrans_timeout,
-                            solicit_max_rt,
-                            collected_advertise,
-                            collected_sol_max_rt,
-                        }),
-                        actions: Vec::new(),
-                        transaction_id: None,
-                    };
-                }
-            };
+        let ProcessedOptions { server_id, solicit_max_rt_opt, result } = match process_options(
+            &msg,
+            ExchangeType::AdvertiseToSolicit,
+            Some(client_id),
+            &configured_non_temporary_addresses,
+        ) {
+            Ok(processed_options) => processed_options,
+            Err(e) => {
+                warn!("ignoring Advertise: {}", e);
+                return Transition {
+                    state: ClientState::ServerDiscovery(ServerDiscovery {
+                        client_id,
+                        configured_non_temporary_addresses,
+                        configured_delegated_prefixes,
+                        first_solicit_time,
+                        retrans_timeout,
+                        solicit_max_rt,
+                        collected_advertise,
+                        collected_sol_max_rt,
+                    }),
+                    actions: Vec::new(),
+                    transaction_id: None,
+                };
+            }
+        };
 
         // Process SOL_MAX_RT and discard invalid advertise following RFC 8415,
         // section 18.2.9:
@@ -1846,8 +1891,6 @@ enum ReplyWithLeasesError {
     MismatchedServerId { got: Vec<u8>, want: Vec<u8> },
     #[error("status code error")]
     StatusCodeError(#[from] StatusCodeError),
-    #[error("IA_NA with unexpected IAID")]
-    UnexpectedIaNa(v6::IAID, IaNaOption),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -2032,7 +2075,12 @@ fn process_reply_with_leases<B: ByteSlice>(
     request_type: RequestLeasesMessageType,
 ) -> Result<ProcessedReplyWithLeases, ReplyWithLeasesError> {
     let ProcessedOptions { server_id: got_server_id, solicit_max_rt_opt, result } =
-        process_options(&msg, ExchangeType::ReplyWithLeases(request_type), Some(client_id))?;
+        process_options(
+            &msg,
+            ExchangeType::ReplyWithLeases(request_type),
+            Some(client_id),
+            current_non_temporary_addresses,
+        )?;
 
     match request_type {
         RequestLeasesMessageType::Request | RequestLeasesMessageType::Renew => {
@@ -2079,159 +2127,147 @@ fn process_reply_with_leases<B: ByteSlice>(
         }
     }
 
-    let (mut non_temporary_addresses, go_to_requesting) =
-        non_temporary_addresses.into_iter().try_fold(
-            (HashMap::new(), false),
-            |(mut non_temporary_addresses, mut go_to_requesting), (iaid, ia_na)| {
-                let current_address_entry = match current_non_temporary_addresses.get(&iaid) {
-                    Some(address_entry) => address_entry,
-                    None => {
-                        // The RFC does not explicitly call out what to do with
-                        // IAs that were not requested by the client.
-                        //
-                        // Return an error to cause the entire message to be
-                        // ignored.
-                        return Err(ReplyWithLeasesError::UnexpectedIaNa(iaid, ia_na));
-                    }
-                };
-                let (success_status_message, ia_addr) = match ia_na {
-                    IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
-                        (status_message, ia_addr)
-                    }
-                    IaNaOption::Failure(StatusCodeError(error_code, msg)) => {
-                        if !msg.is_empty() {
-                            warn!(
-                                "Reply to {}: IA_NA with IAID {:?} \
+    let (mut non_temporary_addresses, go_to_requesting) = non_temporary_addresses.into_iter().fold(
+        (HashMap::new(), false),
+        |(mut non_temporary_addresses, mut go_to_requesting), (iaid, ia_na)| {
+            let current_address_entry = current_non_temporary_addresses
+                .get(&iaid)
+                .expect("process_options should have caught unrequested IAs");
+            let (success_status_message, ia_addr) = match ia_na {
+                IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
+                    (status_message, ia_addr)
+                }
+                IaNaOption::Failure(StatusCodeError(error_code, msg)) => {
+                    if !msg.is_empty() {
+                        warn!(
+                            "Reply to {}: IA_NA with IAID {:?} \
                             status code {:?} message: {}",
-                                request_type, iaid, error_code, msg
-                            );
-                        }
-                        discard_leases(&current_address_entry);
-                        let error = process_ia_na_error_status(request_type, error_code);
-                        let without_hints = match error {
-                            IaNaStatusError::Retry { without_hints } => without_hints,
-                            IaNaStatusError::Invalid => {
-                                warn!(
+                            request_type, iaid, error_code, msg
+                        );
+                    }
+                    discard_leases(&current_address_entry);
+                    let error = process_ia_na_error_status(request_type, error_code);
+                    let without_hints = match error {
+                        IaNaStatusError::Retry { without_hints } => without_hints,
+                        IaNaStatusError::Invalid => {
+                            warn!(
                                 "Reply to {}: received unexpected status code {:?} in IA_NA option \
                                 with IAID {:?}",
                                 request_type, error_code, iaid,
                             );
-                                false
-                            }
-                            IaNaStatusError::Rerequest => {
-                                go_to_requesting = true;
-                                false
-                            }
-                        };
-                        assert_eq!(
-                            non_temporary_addresses
-                                .insert(iaid, current_address_entry.to_request(without_hints)),
-                            None
-                        );
-                        return Ok((non_temporary_addresses, go_to_requesting));
-                    }
-                };
-                if let Some(success_status_message) = success_status_message {
-                    if !success_status_message.is_empty() {
-                        info!(
-                            "Reply to {}: IA_NA with IAID {:?} success status code message: {}",
-                            request_type, iaid, success_status_message,
-                        );
-                    }
+                            false
+                        }
+                        IaNaStatusError::Rerequest => {
+                            go_to_requesting = true;
+                            false
+                        }
+                    };
+                    assert_eq!(
+                        non_temporary_addresses
+                            .insert(iaid, current_address_entry.to_request(without_hints)),
+                        None
+                    );
+                    return (non_temporary_addresses, go_to_requesting);
                 }
-                let IaAddress { address, lifetimes } = match ia_addr {
-                    Some(ia_addr) => ia_addr,
-                    None => {
-                        // The server has not included an IA Address option in the IA,
-                        // keep the previously recorded information, per RFC 8415
-                        // section 18.2.10.1:
-                        //
-                        //     -  Leave unchanged any information about leases the
-                        //        client has recorded in the IA but that were not
-                        //        included in the IA from the server.
-                        //
-                        // The address remains assigned until the end of its valid
-                        // lifetime, or it is requested later if it was not assigned.
-                        assert_eq!(
-                            non_temporary_addresses.insert(iaid, *current_address_entry),
-                            None
-                        );
-                        return Ok((non_temporary_addresses, go_to_requesting));
-                    }
-                };
-                let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
-                    Ok(lifetimes) => lifetimes,
-                    Err(e) => {
-                        warn!(
-                            "Reply to {}: IA_NA with IAID {:?}: discarding leases: {}",
-                            request_type, iaid, e
-                        );
-                        discard_leases(&current_address_entry);
-                        assert_eq!(
-                            non_temporary_addresses.insert(
-                                iaid,
-                                AddressEntry::ToRequest(current_address_entry.address()),
-                            ),
-                            None
-                        );
-                        return Ok((non_temporary_addresses, go_to_requesting));
-                    }
-                };
-                // Per RFC 8415 section 21.13:
-                //
-                //    If the server finds that the client has included an
-                //    IA in the Request message for which the server already
-                //    has a binding that associates the IA with the client,
-                //    the server sends a Reply message with existing bindings,
-                //    possibly with updated lifetimes.  The server may update
-                //    the bindings according to its local policies.
-                match current_address_entry {
-                    AddressEntry::Assigned(ia) => {
-                        // If the returned address does not match the address recorded by the client
-                        // remove old address and add new one; otherwise, extend the lifetimes of
-                        // the existing address.
-                        if address != ia.address {
-                            // TODO(https://fxbug.dev/96674): Add
-                            // action to remove the previous address.
-                            // TODO(https://fxbug.dev/95265): Add action to add
-                            // the new address.
-                            // TODO(https://fxbug.dev/96684): Add actions to
-                            // schedule preferred and valid lifetime timers for
-                            // new address and cancel timers for old address.
-                            debug!(
-                                "Reply to {}: IA_NA with IAID {:?}: \
+            };
+            if let Some(success_status_message) = success_status_message {
+                if !success_status_message.is_empty() {
+                    info!(
+                        "Reply to {}: IA_NA with IAID {:?} success status code message: {}",
+                        request_type, iaid, success_status_message,
+                    );
+                }
+            }
+            let IaAddress { address, lifetimes } = match ia_addr {
+                Some(ia_addr) => ia_addr,
+                None => {
+                    // The server has not included an IA Address option in the IA,
+                    // keep the previously recorded information, per RFC 8415
+                    // section 18.2.10.1:
+                    //
+                    //     -  Leave unchanged any information about leases the
+                    //        client has recorded in the IA but that were not
+                    //        included in the IA from the server.
+                    //
+                    // The address remains assigned until the end of its valid
+                    // lifetime, or it is requested later if it was not assigned.
+                    assert_eq!(non_temporary_addresses.insert(iaid, *current_address_entry), None);
+                    return (non_temporary_addresses, go_to_requesting);
+                }
+            };
+            let Lifetimes { preferred_lifetime, valid_lifetime } = match lifetimes {
+                Ok(lifetimes) => lifetimes,
+                Err(e) => {
+                    warn!(
+                        "Reply to {}: IA_NA with IAID {:?}: discarding leases: {}",
+                        request_type, iaid, e
+                    );
+                    discard_leases(&current_address_entry);
+                    assert_eq!(
+                        non_temporary_addresses.insert(
+                            iaid,
+                            AddressEntry::ToRequest(current_address_entry.address()),
+                        ),
+                        None
+                    );
+                    return (non_temporary_addresses, go_to_requesting);
+                }
+            };
+            // Per RFC 8415 section 21.13:
+            //
+            //    If the server finds that the client has included an
+            //    IA in the Request message for which the server already
+            //    has a binding that associates the IA with the client,
+            //    the server sends a Reply message with existing bindings,
+            //    possibly with updated lifetimes.  The server may update
+            //    the bindings according to its local policies.
+            match current_address_entry {
+                AddressEntry::Assigned(ia) => {
+                    // If the returned address does not match the address recorded by the client
+                    // remove old address and add new one; otherwise, extend the lifetimes of
+                    // the existing address.
+                    if address != ia.address {
+                        // TODO(https://fxbug.dev/96674): Add
+                        // action to remove the previous address.
+                        // TODO(https://fxbug.dev/95265): Add action to add
+                        // the new address.
+                        // TODO(https://fxbug.dev/96684): Add actions to
+                        // schedule preferred and valid lifetime timers for
+                        // new address and cancel timers for old address.
+                        debug!(
+                            "Reply to {}: IA_NA with IAID {:?}: \
                             Address does not match {:?}, removing previous address and \
                             adding new address {:?}.",
-                                request_type, iaid, ia.address, address,
-                            );
-                        } else {
-                            // The lifetime was extended, update preferred
-                            // and valid lifetime timers.
-                            // TODO(https://fxbug.dev/96684): add actions to
-                            // reschedule preferred and valid lifetime timers.
-                            debug!(
-                                "Reply to {}: IA_NA with IAID {:?}: \
+                            request_type, iaid, ia.address, address,
+                        );
+                    } else {
+                        // The lifetime was extended, update preferred
+                        // and valid lifetime timers.
+                        // TODO(https://fxbug.dev/96684): add actions to
+                        // reschedule preferred and valid lifetime timers.
+                        debug!(
+                            "Reply to {}: IA_NA with IAID {:?}: \
                             Lifetime is extended for address {:?}.",
-                                request_type, iaid, ia.address
-                            );
-                        }
-                    }
-                    AddressEntry::ToRequest(_) => {
-                        // TODO(https://fxbug.dev/95265): Add action to
-                        // add the new address.
+                            request_type, iaid, ia.address
+                        );
                     }
                 }
-                // Add the address entry as renewed by the
-                // server.
-                let entry = AddressEntry::Assigned(IaNa {
-                    address,
-                    preferred_lifetime,
-                    valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
-                });
-                assert_eq!(non_temporary_addresses.insert(iaid, entry), None);
-                Ok((non_temporary_addresses, go_to_requesting))
-            },
-        )?;
+                AddressEntry::ToRequest(_) => {
+                    // TODO(https://fxbug.dev/95265): Add action to
+                    // add the new address.
+                }
+            }
+            // Add the address entry as renewed by the
+            // server.
+            let entry = AddressEntry::Assigned(IaNa {
+                address,
+                preferred_lifetime,
+                valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
+            });
+            assert_eq!(non_temporary_addresses.insert(iaid, entry), None);
+            (non_temporary_addresses, go_to_requesting)
+        },
+    );
 
     // Per RFC 8415, section 18.2.10.1:
     //
@@ -3255,8 +3291,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                         );
                     }
                     e @ (ReplyWithLeasesError::OptionsError(_)
-                    | ReplyWithLeasesError::MismatchedServerId { got: _, want: _ }
-                    | ReplyWithLeasesError::UnexpectedIaNa(_, _)) => {
+                    | ReplyWithLeasesError::MismatchedServerId { got: _, want: _ }) => {
                         warn!("ignoring Reply to Renew: {}", e);
                     }
                 }
@@ -4985,18 +5020,14 @@ mod tests {
             60,
             &[],
         ))];
+        let iaid = v6::IAID::new(0);
         let options = [
             v6::DhcpOption::StatusCode(v6::StatusCode::Success.into(), ""),
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Preference(ADVERTISE_MAX_PREFERENCE),
             v6::DhcpOption::SolMaxRt(*VALID_MAX_SOLICIT_TIMEOUT_RANGE.end()),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &iana_options,
-            )),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(iaid, T1.get(), T2.get(), &iana_options)),
             v6::DhcpOption::DnsServers(&DNS_SERVERS),
             opt,
         ];
@@ -5005,8 +5036,14 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let requested_ia_nas = HashMap::from([(iaid, None)]);
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(client_id)),
+            process_options(
+                &msg,
+                ExchangeType::AdvertiseToSolicit,
+                Some(client_id),
+                &requested_ia_nas
+            ),
             Err(OptionsError::DuplicateOption(_, _, _))
         );
     }
@@ -5031,8 +5068,9 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        let requested_ia_nas = HashMap::from([(iaid, None)]);
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &requested_ia_nas),
             Err(OptionsError::DuplicateIaNaId(got_iaid, _, _)) if got_iaid == iaid
         );
     }
@@ -5046,7 +5084,12 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
+            process_options(
+                &msg,
+                ExchangeType::AdvertiseToSolicit,
+                Some(CLIENT_ID),
+                &NoIaRequested
+            ),
             Err(OptionsError::MissingServerId)
         );
     }
@@ -5060,7 +5103,12 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
+            process_options(
+                &msg,
+                ExchangeType::AdvertiseToSolicit,
+                Some(CLIENT_ID),
+                &NoIaRequested
+            ),
             Err(OptionsError::MissingClientId)
         );
     }
@@ -5077,7 +5125,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID)),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &NoIaRequested),
             Err(OptionsError::MismatchedClientId { got, want })
                 if got[..] == MISMATCHED_CLIENT_ID && want == CLIENT_ID
         );
@@ -5093,7 +5141,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::ReplyToInformationRequest, None),
+            process_options(&msg, ExchangeType::ReplyToInformationRequest, None, &NoIaRequested),
             Err(OptionsError::UnexpectedClientId(got))
                 if got[..] == CLIENT_ID
         );
@@ -5136,7 +5184,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, exchange_type, Some(CLIENT_ID)),
+            process_options(&msg, exchange_type, Some(CLIENT_ID), &NoIaRequested),
             Err(OptionsError::InvalidOption(_))
         );
     }
@@ -5176,7 +5224,88 @@ mod tests {
         );
         assert_matches!(
             r,
-            Err(ReplyWithLeasesError::UnexpectedIaNa(iaid, _)) if iaid == v6::IAID::new(1)
+            Err(ReplyWithLeasesError::OptionsError(OptionsError::UnexpectedIaNa(iaid, _))) => {
+                assert_eq!(iaid, v6::IAID::new(1));
+            }
+        );
+    }
+
+    #[test]
+    fn ignore_advertise_with_unknown_ia() {
+        let time = Instant::now();
+        let mut client = testutil::start_and_assert_server_discovery(
+            [0, 1, 2],
+            CLIENT_ID,
+            testutil::to_configured_addresses(
+                1,
+                std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+            ),
+            Default::default(),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+
+        let iana_options_0 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
+            60,
+            60,
+            &[],
+        ))];
+        let iana_options_99 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+            60,
+            60,
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::Preference(42),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iana_options_0,
+            )),
+            // An IA_NA with an IAID that was not included in the sent solicit
+            // message.
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(99),
+                T1.get(),
+                T2.get(),
+                &iana_options_99,
+            )),
+        ];
+
+        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+            &client;
+        let builder =
+            v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+
+        // The client should have dropped the Advertise with the unrecognized
+        // IA_NA IAID.
+        assert_eq!(client.handle_message_receive(msg, time), []);
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
+            &client;
+        assert_matches!(
+            state,
+            Some(ClientState::ServerDiscovery(ServerDiscovery {
+                client_id: _,
+                configured_non_temporary_addresses: _,
+                configured_delegated_prefixes: _,
+                first_solicit_time: _,
+                retrans_timeout: _,
+                solicit_max_rt: _,
+                collected_advertise,
+                collected_sol_max_rt: _,
+            })) => {
+                assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
+            }
         );
     }
 
