@@ -2672,7 +2672,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2681,7 +2681,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2690,7 +2690,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/agent_configuration.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2699,7 +2699,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2708,7 +2708,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2717,7 +2717,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_config_data.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2726,7 +2726,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2735,7 +2735,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2744,7 +2744,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/audio_policy_configuration.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2753,7 +2753,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2762,7 +2762,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2771,7 +2771,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/display_configuration.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2780,7 +2780,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2789,7 +2789,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2798,7 +2798,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/input_device_config.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2807,7 +2807,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2816,7 +2816,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2825,7 +2825,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/interface_configuration.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2834,7 +2834,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2843,7 +2843,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2852,7 +2852,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/light_hardware_config.json/result_counts:UsingDefaults"
         },
         {
             "event_codes": [
@@ -2861,7 +2861,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json:ParseFailure"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json/result_counts:ParseFailure"
         },
         {
             "event_codes": [
@@ -2870,7 +2870,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json:Success"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json/result_counts:Success"
         },
         {
             "event_codes": [
@@ -2879,7 +2879,7 @@
             ],
             "metric_id": 9,
             "metric_type": "Occurrence",
-            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json:UsingDefaults"
+            "selector": "core/setui_service:root/config_loads/\\/config\\/data\\/service_flags.json/result_counts:UsingDefaults"
         }
     ],
     "poll_rate_sec": 3600,
