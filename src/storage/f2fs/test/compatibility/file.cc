@@ -219,8 +219,8 @@ TEST_F(FileCompatibilityTest, TruncateHostToFuchsia) {
     for (uint32_t i = 0; i < kTruncateSize / sizeof(buffer); ++i) {
       ASSERT_EQ(extend_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
-      for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
-        ASSERT_EQ(buffer[j], static_cast<uint32_t>(0));
+      for (uint32_t value : buffer) {
+        ASSERT_EQ(value, static_cast<uint32_t>(0));
       }
     }
 
@@ -294,8 +294,8 @@ TEST_F(FileCompatibilityTest, TruncateFuchsiaToHost) {
     for (uint32_t i = 0; i < kTruncateSize / sizeof(buffer); ++i) {
       ASSERT_EQ(extend_file->Read(buffer, sizeof(buffer)), static_cast<ssize_t>(sizeof(buffer)));
 
-      for (uint32_t j = 0; j < sizeof(buffer) / sizeof(uint32_t); ++j) {
-        ASSERT_EQ(buffer[j], static_cast<uint32_t>(0));
+      for (uint32_t value : buffer) {
+        ASSERT_EQ(value, static_cast<uint32_t>(0));
       }
     }
 
@@ -497,8 +497,8 @@ TEST_F(FileCompatibilityTest, FileReadExceedFileSizeOnFuchsia) {
   constexpr uint32_t kReadLocation = 5 * 1024;  // 5kb
 
   char w_buf[kDataSize];
-  for (size_t i = 0; i < kDataSize; ++i) {
-    w_buf[i] = static_cast<char>(rand() % 128);
+  for (char &value : w_buf) {
+    value = static_cast<char>(rand() % 128);
   }
 
   // write on Host

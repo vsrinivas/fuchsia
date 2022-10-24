@@ -521,12 +521,11 @@ zx::result<TraverseResult> FsckWorker::TraverseIndirectNodeBlock(const Inode *in
                                                                  FileType ftype) {
   uint64_t block_count = 1;
   uint32_t child_count = 0;
-  for (uint32_t i = 0; i < kNidsPerBlock; ++i) {
-    if (LeToCpu(node_block.in.nid[i]) == 0x0) {
+  for (uint32_t child_nid : node_block.in.nid) {
+    if (LeToCpu(child_nid) == 0x0) {
       continue;
     }
-    auto ret =
-        CheckNodeBlock(inode, LeToCpu(node_block.in.nid[i]), ftype, NodeType::kTypeDirectNode);
+    auto ret = CheckNodeBlock(inode, LeToCpu(child_nid), ftype, NodeType::kTypeDirectNode);
     if (ret.is_error()) {
       return ret;
     }
@@ -541,12 +540,11 @@ zx::result<TraverseResult> FsckWorker::TraverseDoubleIndirectNodeBlock(const Ino
                                                                        FileType ftype) {
   uint64_t block_count = 1;
   uint32_t child_count = 0;
-  for (int i = 0; i < kNidsPerBlock; ++i) {
-    if (LeToCpu(node_block.in.nid[i]) == 0x0) {
+  for (uint32_t child_nid : node_block.in.nid) {
+    if (LeToCpu(child_nid) == 0x0) {
       continue;
     }
-    auto ret =
-        CheckNodeBlock(inode, LeToCpu(node_block.in.nid[i]), ftype, NodeType::kTypeIndirectNode);
+    auto ret = CheckNodeBlock(inode, LeToCpu(child_nid), ftype, NodeType::kTypeIndirectNode);
     if (ret.is_error()) {
       return ret;
     }
@@ -1032,8 +1030,8 @@ zx_status_t FsckWorker::RepairSit() {
         SitEntry &sit = summary_block->sit_j.entries[i].se;
         memcpy(sit.valid_map, fsck_.main_area_bitmap.get() + sit_byte_offset, kSitVBlockMapSize);
         sit.vblocks = 0;
-        for (uint64_t j = 0; j < kSitVBlockMapSize; ++j) {
-          sit.vblocks += std::bitset<8>(sit.valid_map[j]).count();
+        for (uint8_t valid_bits : sit.valid_map) {
+          sit.vblocks += std::bitset<8>(valid_bits).count();
         }
 
         need_journal_update = true;
@@ -1058,8 +1056,8 @@ zx_status_t FsckWorker::RepairSit() {
                               ->entries[segment_manager_->SitEntryOffset(segno)];
     memcpy(sit_entry.valid_map, fsck_.main_area_bitmap.get() + sit_byte_offset, kSitVBlockMapSize);
     sit_entry.vblocks = 0;
-    for (uint64_t j = 0; j < kSitVBlockMapSize; ++j) {
-      sit_entry.vblocks += std::bitset<8>(sit_entry.valid_map[j]).count();
+    for (uint8_t valid_bits : sit_entry.valid_map) {
+      sit_entry.vblocks += std::bitset<8>(valid_bits).count();
     }
 
     if (auto status = WriteBlock(*sit_block.get(), sit_block_addr); status != ZX_OK) {

@@ -1416,12 +1416,12 @@ zx_status_t SegmentManager::BuildFreeSegmap() {
 }
 
 zx_status_t SegmentManager::BuildCurseg() {
-  for (int i = 0; i < kNrCursegType; ++i) {
-    if (curseg_array_[i].raw_blk = new FsBlock(); !curseg_array_[i].raw_blk) {
+  for (auto &curseg : curseg_array_) {
+    if (curseg.raw_blk = new FsBlock(); !curseg.raw_blk) {
       return ZX_ERR_NO_MEMORY;
     }
-    curseg_array_[i].segno = kNullSegNo;
-    curseg_array_[i].next_blkoff = 0;
+    curseg.segno = kNullSegNo;
+    curseg.next_blkoff = 0;
   }
   return RestoreCursegSummaries();
 }
@@ -1597,8 +1597,8 @@ void SegmentManager::DestroyDirtySegmap() {
 }
 
 void SegmentManager::DestroyCurseg() {
-  for (int i = 0; i < kNrCursegType; ++i)
-    delete curseg_array_[i].raw_blk;
+  for (auto &curseg : curseg_array_)
+    delete curseg.raw_blk;
 }
 
 void SegmentManager::DestroyFreeSegmap() {

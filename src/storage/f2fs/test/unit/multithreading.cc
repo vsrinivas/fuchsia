@@ -140,8 +140,8 @@ TEST(MultiThreads, Create) {
     });
   }
 
-  for (auto nThread = 0; nThread < kNThreads; ++nThread) {
-    threads[nThread].join();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   // Verify dentries.
@@ -206,8 +206,8 @@ TEST(MultiThreads, Unlink) {
     });
   }
 
-  for (auto nThread = 0; nThread < kNThreads; ++nThread) {
-    threads[nThread].join();
+  for (auto& thread : threads) {
+    thread.join();
   }
 
   // If |child_dir| is empty, it should be successful.
