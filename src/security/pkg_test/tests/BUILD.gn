@@ -70,8 +70,11 @@ bad_signature_update("core_bad_signature_update") {
 
 group("tests") {
   testonly = true
-  deps = [
-    ":core_access_ota_blob_as_executable-package($target_toolchain)",
-    ":core_bad_signature_update-package($target_toolchain)",
-  ]
+  deps = [ ":core_bad_signature_update-package($target_toolchain)" ]
+
+  if (!is_coverage) {
+    # TODO(https://fxbug.dev/112796): Re-enable this test in coverage when it no
+    # longer fails with coverage enabled.
+    deps += [ ":core_access_ota_blob_as_executable-package($target_toolchain)" ]
+  }
 }
