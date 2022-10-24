@@ -172,7 +172,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/ui/input/drivers/usb-hid:usb-hid-test",
     "//src/ui/light/drivers/aml-light:aml-light-test",
     "//src/virtualization/bin/guest_runner:bin",
-    "//src/virtualization/bin/vsh:bin",
     "//zircon/system/ulib/fdio-caller/test:fdio-caller",
     "//zircon/system/ulib/fidl-async/test:fidl-async-test",
     "//zircon/system/ulib/log-writer-logger",

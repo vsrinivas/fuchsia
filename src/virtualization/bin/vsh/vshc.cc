@@ -7,7 +7,7 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/fdio/fd.h>
+#include <lib/fdio/cpp/caller.h>
 #include <lib/fit/defer.h>
 #include <lib/syslog/cpp/macros.h>
 #include <poll.h>
@@ -29,8 +29,8 @@ namespace fpty = fuchsia_hardware_pty;
 
 using ::fuchsia::virtualization::HostVsockEndpoint_Connect_Result;
 
-std::optional<fpty::wire::WindowSize> get_window_size(zx::unowned_channel pty) {
-  auto result = fidl::WireCall<fpty::Device>(pty)->GetWindowSize();
+std::optional<fpty::wire::WindowSize> get_window_size(fidl::UnownedClientEnd<fpty::Device> pty) {
+  auto result = fidl::WireCall(pty)->GetWindowSize();
 
   if (!result.ok()) {
     std::cerr << "Call to GetWindowSize failed: " << result << std::endl;
@@ -50,8 +50,9 @@ std::pair<int, int> init_tty() {
   int rows = 24;
 
   if (isatty(STDIN_FILENO)) {
-    fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    auto wsz = get_window_size(zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
+    fdio_cpp::UnownedFdioCaller caller(STDIN_FILENO);
+    fidl::UnownedClientEnd pty = caller.borrow_as<fpty::Device>();
+    auto wsz = get_window_size(pty);
 
     if (!wsz) {
       std::cerr << "Warning: Unable to determine shell geometry, defaulting to 80x24.\n";
@@ -63,14 +64,11 @@ std::pair<int, int> init_tty() {
     // Enable raw mode on tty so that inputs such as ctrl-c are passed on
     // faithfully to the client for forwarding to the remote shell
     // (instead of closing the client side).
-    auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                      ->ClrSetFeature(0, fpty::wire::kFeatureRaw);
+    auto result = fidl::WireCall(pty)->ClrSetFeature(0, fpty::wire::kFeatureRaw);
 
     if (result.status() != ZX_OK || result.value().status != ZX_OK) {
       std::cerr << "Warning: Failed to set FEATURE_RAW, some features may not work.\n";
     }
-
-    fdio_unsafe_release(io);
   }
 
   return {cols, rows};
@@ -78,15 +76,13 @@ std::pair<int, int> init_tty() {
 
 void reset_tty() {
   if (isatty(STDIN_FILENO)) {
-    fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    auto result = fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-                      ->ClrSetFeature(fpty::wire::kFeatureRaw, 0);
+    fdio_cpp::UnownedFdioCaller caller(STDIN_FILENO);
+    auto result =
+        fidl::WireCall(caller.borrow_as<fpty::Device>())->ClrSetFeature(fpty::wire::kFeatureRaw, 0);
 
     if (result.status() != ZX_OK || result.value().status != ZX_OK) {
       std::cerr << "Failed to reset FEATURE_RAW.\n";
     }
-
-    fdio_unsafe_release(io);
   }
 }
 
@@ -106,12 +102,8 @@ class ConsoleIn {
 
     // If stdin is a tty then set up a handler for OOB events.
     if (isatty(STDIN_FILENO)) {
-      auto io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-      auto result =
-          fidl::WireCall<fpty::Device>(zx::unowned_channel(fdio_unsafe_borrow_channel(io)))
-              ->Describe2();
-      fdio_unsafe_release(io);
-
+      fdio_cpp::UnownedFdioCaller caller(STDIN_FILENO);
+      auto result = fidl::WireCall(caller.borrow_as<fpty::Device>())->Describe2();
       if (!result.ok()) {
         std::cerr << "Unable to get stdin channel description: " << result << std::endl;
         return false;
@@ -168,11 +160,10 @@ class ConsoleIn {
     auto queue_next = fit::defer([wait, dispatcher] { wait->Begin(dispatcher); });
 
     // Get the channel backing stdin to use its pty.Device interface.
-    fdio_t* io = fdio_unsafe_fd_to_io(STDIN_FILENO);
-    zx::unowned_channel pty{fdio_unsafe_borrow_channel(io)};
-    auto cleanup = fit::defer([io] { fdio_unsafe_release(io); });
+    fdio_cpp::UnownedFdioCaller caller(STDIN_FILENO);
+    fidl::UnownedClientEnd pty = caller.borrow_as<fpty::Device>();
 
-    auto result = fidl::WireCall<fpty::Device>(pty)->ReadEvents();
+    auto result = fidl::WireCall(pty)->ReadEvents();
     if (!result.ok()) {
       std::cerr << "Call to ReadEvents failed: " << result << std::endl;
       return;
