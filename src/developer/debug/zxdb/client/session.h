@@ -170,6 +170,7 @@ class Session : public SettingStoreObserver {
   void DispatchNotifyLog(const debug_ipc::NotifyLog& notify);
   void DispatchNotifyComponentStarting(const debug_ipc::NotifyComponentStarting& notify);
   void DispatchNotifyComponentExiting(const debug_ipc::NotifyComponentExiting& notify);
+  void DispatchNotifyTestExited(const debug_ipc::NotifyTestExited& notify);
 
   // SettingStoreObserver
   void OnSettingChanged(const SettingStore&, const std::string& setting_name) override;

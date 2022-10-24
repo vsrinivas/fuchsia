@@ -806,6 +806,14 @@ void DebugAgent::OnComponentExited(const std::string& moniker, const std::string
   }
 }
 
+void DebugAgent::OnTestComponentExited(const std::string& url) {
+  debug_ipc::NotifyTestExited notify;
+  notify.url = url;
+  notify.timestamp = GetNowTimestamp();
+
+  SendNotification(notify);
+}
+
 void DebugAgent::InjectProcessForTest(std::unique_ptr<DebuggedProcess> process) {
   procs_[process->koid()] = std::move(process);
 }

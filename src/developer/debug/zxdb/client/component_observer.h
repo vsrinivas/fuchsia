@@ -18,6 +18,9 @@ class ComponentObserver {
 
   // Called when a component has exited.
   virtual void OnComponentExited(const std::string& moniker, const std::string& url) {}
+
+  // Called when a test component has exited and the test_runner has been fully cleaned up.
+  virtual void OnTestExited(const std::string& url) {}
 };
 
 }  // namespace zxdb

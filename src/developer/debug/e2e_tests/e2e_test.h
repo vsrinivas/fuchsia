@@ -12,9 +12,10 @@
 namespace zxdb {
 
 class E2eTest : public TestWithLoop,
+                public BreakpointObserver,
+                public ComponentObserver,
                 public ProcessObserver,
-                public ThreadObserver,
-                public BreakpointObserver {
+                public ThreadObserver {
  public:
   E2eTest();
   ~E2eTest() override;

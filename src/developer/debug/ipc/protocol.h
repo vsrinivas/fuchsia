@@ -32,7 +32,7 @@ namespace debug_ipc {
 //     should increase kMinimumProtocolVersion to the kCurrentProtocolVersion and the support for
 //     old versions can be dropped.
 
-constexpr uint32_t kCurrentProtocolVersion = 52;
+constexpr uint32_t kCurrentProtocolVersion = 53;
 
 #if !defined(FUCHSIA_API_LEVEL)
 #error FUCHSIA_API_LEVEL must be defined
@@ -96,7 +96,8 @@ static_assert(static_cast<int>(debug::Arch::kArm64) == 2);
   FN(NotifyThreadStarting)             \
   FN(NotifyLog)                        \
   FN(NotifyComponentExiting)           \
-  FN(NotifyComponentStarting)
+  FN(NotifyComponentStarting)          \
+  FN(NotifyTestExited)
 
 // A message consists of a MsgHeader followed by a serialized version of
 // whatever struct is associated with that message type. Use the MessageWriter
@@ -141,6 +142,7 @@ struct MsgHeader {
     kNotifyLog = 108,
     kNotifyComponentExiting = 109,
     kNotifyComponentStarting = 110,
+    kNotifyTestExited = 111,
   };
   static const char* TypeToString(Type);
 
@@ -739,6 +741,16 @@ struct NotifyComponentExiting {
   ComponentInfo component;
 
   void Serialize(Serializer& ser, uint32_t ver) { ser | timestamp | component; }
+};
+
+struct NotifyTestExited {
+  static constexpr uint32_t kSupportedSinceVersion = 53;
+
+  uint64_t timestamp = kTimestampDefault;
+
+  std::string url;
+
+  void Serialize(Serializer& ser, uint32_t ver) { ser | timestamp | url; }
 };
 
 #pragma pack(pop)

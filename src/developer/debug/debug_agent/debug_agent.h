@@ -61,6 +61,7 @@ class DebugAgent : public RemoteAPI, public Breakpoint::ProcessDelegate, public 
   // Notified by ComponentManager.
   void OnComponentStarted(const std::string& moniker, const std::string& url);
   void OnComponentExited(const std::string& moniker, const std::string& url);
+  void OnTestComponentExited(const std::string& url);
 
   void InjectProcessForTest(std::unique_ptr<DebuggedProcess> process);
 

@@ -353,6 +353,13 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
     return debug::Status();
   }
 
+  ~TestLauncher() {
+    DEBUG_LOG(Process) << "Test finished url=" << test_url_;
+    if (debug_agent_) {
+      debug_agent_->OnTestComponentExited(test_url_);
+    }
+  }
+
  private:
   // Stdout and stderr are in case_artifact. Logs are in suite_artifact. Others are ignored.
   // NOTE: custom.component_moniker in suite_artifact is NOT the moniker of the test!
@@ -361,7 +368,6 @@ class ZirconComponentManager::TestLauncher : public fxl::RefCountedThreadSafe<Te
       suite_controller_.Unbind();  // Otherwise the run_controller won't return.
       if (result.is_err())
         LOGS(Warn) << "Failed to launch test: " << to_string(result.err());
-      DEBUG_LOG(Process) << "Test finished url=" << test_url_;
       if (component_manager_)
         component_manager_->running_tests_info_.erase(test_url_);
       return;

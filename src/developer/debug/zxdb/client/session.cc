@@ -689,6 +689,12 @@ void Session::DispatchNotifyComponentExiting(const debug_ipc::NotifyComponentExi
   }
 }
 
+void Session::DispatchNotifyTestExited(const debug_ipc::NotifyTestExited& notify) {
+  for (auto& observer : component_observers_) {
+    observer.OnTestExited(notify.url);
+  }
+}
+
 void Session::DispatchNotification(const debug_ipc::MsgHeader& header, std::vector<char> data) {
   DEBUG_LOG(Session) << "Got notification: " << debug_ipc::MsgHeader::TypeToString(header.type);
   switch (header.type) {

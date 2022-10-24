@@ -16,9 +16,10 @@ namespace zxdb {
 E2eTest::E2eTest() {
   session_ = std::make_unique<Session>();
 
+  session_->breakpoint_observers().AddObserver(this);
+  session_->component_observers().AddObserver(this);
   session_->process_observers().AddObserver(this);
   session_->thread_observers().AddObserver(this);
-  session_->breakpoint_observers().AddObserver(this);
 
   // Use mock console so we don't have to deal with plaintext output in CI environment which won't
   // handle control characters from the line input library or UTF-8 characters. Any output will be
@@ -42,9 +43,10 @@ E2eTest::~E2eTest() {
   Err e = session_->Disconnect();
   FX_CHECK(e.ok()) << e.msg();
 
+  session_->breakpoint_observers().RemoveObserver(this);
+  session_->component_observers().RemoveObserver(this);
   session_->process_observers().RemoveObserver(this);
   session_->thread_observers().RemoveObserver(this);
-  session_->breakpoint_observers().RemoveObserver(this);
 
   session_.reset();
 }
