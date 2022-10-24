@@ -18,7 +18,7 @@ zx_status_t guest_ethernet_initialize(GuestEthernet* guest_ethernet,
 void guest_ethernet_destroy(GuestEthernet* guest_ethernet);
 
 // Rust device -> C++ device interface.
-zx_status_t guest_ethernet_send(GuestEthernet* guest_ethernet, void* data, uint16_t length);
+zx_status_t guest_ethernet_send(GuestEthernet* guest_ethernet, const void* data, uint16_t length);
 void guest_ethernet_complete(GuestEthernet* guest_ethernet, uint32_t buffer_id, zx_status_t status);
 
 // C++ device -> Rust device interface.

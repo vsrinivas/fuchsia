@@ -83,7 +83,7 @@ impl GuestEthernet {
         })
     }
 
-    pub fn send(&self, data: *mut u8, len: u16) -> Result<(), zx::Status> {
+    pub fn send(&self, data: *const u8, len: u16) -> Result<(), zx::Status> {
         zx::Status::ok(unsafe { interface::guest_ethernet_send(self.raw_ptr, data, len) })
     }
 

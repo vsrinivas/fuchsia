@@ -47,7 +47,7 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
 
   // Send the packet to the netstack, returning ZX_OK if the packet was sent successfully, and
   // ZX_ERR_SHOULD_WAIT if no buffer space is available and the device should retry later.
-  zx_status_t Send(void* data, uint16_t length);
+  zx_status_t Send(const void* data, uint16_t length);
 
   // Indicate that a packet has been successfully sent to the guest and that the memory can be
   // reclaimed.

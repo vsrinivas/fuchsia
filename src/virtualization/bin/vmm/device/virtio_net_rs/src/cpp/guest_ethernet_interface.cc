@@ -30,7 +30,7 @@ zx_status_t guest_ethernet_initialize(GuestEthernet* guest_ethernet,
   return guest_ethernet->Initialize(rust_guest_ethernet, mac, mac_len, enable_bridge);
 }
 
-zx_status_t guest_ethernet_send(GuestEthernet* guest_ethernet, void* data, uint16_t length) {
+zx_status_t guest_ethernet_send(GuestEthernet* guest_ethernet, const void* data, uint16_t length) {
   FX_CHECK(guest_ethernet != nullptr);
   FX_CHECK(data != nullptr);
   return guest_ethernet->Send(data, length);

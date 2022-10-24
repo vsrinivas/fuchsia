@@ -149,7 +149,7 @@ zx_status_t GuestEthernet::CreateGuestInterface(bool enable_bridge) {
   return ZX_OK;
 }
 
-zx_status_t GuestEthernet::Send(void* data, uint16_t length) {
+zx_status_t GuestEthernet::Send(const void* data, uint16_t length) {
   std::lock_guard guard(mutex_);
 
   if (!io_vmo_) {

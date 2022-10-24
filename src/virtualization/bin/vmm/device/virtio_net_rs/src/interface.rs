@@ -49,7 +49,7 @@ extern "C" {
     // `interface::ready_for_tx` is called as they will just continue to be rejected.
     pub fn guest_ethernet_send(
         guest_ethernet: *mut guest_ethernet_t,
-        data: *mut u8,
+        data: *const u8,
         len: u16,
     ) -> zx_status_t;
 
