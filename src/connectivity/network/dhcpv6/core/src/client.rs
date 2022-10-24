@@ -2834,7 +2834,6 @@ impl Requesting {
                         client_id,
                         non_temporary_addresses,
                         server_id,
-                        collected_advertise,
                         dns_servers: dns_servers.unwrap_or(Vec::new()),
                         solicit_max_rt,
                     }),
@@ -2891,11 +2890,6 @@ struct Assigned {
     ///
     /// [Server Identifier]: https://datatracker.ietf.org/doc/html/rfc8415#section-21.3
     server_id: Vec<u8>,
-    /// The advertise collected from servers during [server discovery], with
-    /// the best advertise at the top of the heap.
-    ///
-    /// [server discovery]: https://datatracker.ietf.org/doc/html/rfc8415#section-18
-    collected_advertise: BinaryHeap<AdvertiseMessage>,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// The [SOL_MAX_RT](https://datatracker.ietf.org/doc/html/rfc8415#section-21.24)
@@ -2913,14 +2907,8 @@ impl Assigned {
         rng: &mut R,
         now: Instant,
     ) -> Transition {
-        let Self {
-            client_id,
-            non_temporary_addresses,
-            server_id,
-            collected_advertise,
-            dns_servers,
-            solicit_max_rt,
-        } = self;
+        let Self { client_id, non_temporary_addresses, server_id, dns_servers, solicit_max_rt } =
+            self;
         // Start renewing addresses, per RFC 8415, section 18.2.4:
         //
         //    At time T1, the client initiates a Renew/Reply message
@@ -2930,7 +2918,6 @@ impl Assigned {
             client_id,
             non_temporary_addresses,
             server_id,
-            collected_advertise,
             options_to_request,
             dns_servers,
             solicit_max_rt,
@@ -2957,7 +2944,6 @@ impl Renewing {
             client_id,
             non_temporary_addresses,
             server_id,
-            collected_advertise,
             dns_servers,
             start_time: _,
             retrans_timeout: _,
@@ -2975,7 +2961,6 @@ impl Renewing {
             client_id,
             non_temporary_addresses,
             server_id,
-            collected_advertise,
             options_to_request,
             dns_servers,
             solicit_max_rt,
@@ -2997,11 +2982,6 @@ struct RenewingOrRebindingInner {
     /// [Server Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// of the server selected during server discovery.
     server_id: Vec<u8>,
-    /// The advertise collected from servers during [server discovery].
-    ///
-    /// [server discovery]:
-    /// https://datatracker.ietf.org/doc/html/rfc8415#section-18
-    collected_advertise: BinaryHeap<AdvertiseMessage>,
     /// Stores the DNS servers received from the reply.
     dns_servers: Vec<Ipv6Addr>,
     /// [elapsed time](https://datatracker.ietf.org/doc/html/rfc8415#section-21.9).
@@ -3037,7 +3017,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         client_id: [u8; CLIENT_ID_LEN],
         non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
         server_id: Vec<u8>,
-        collected_advertise: BinaryHeap<AdvertiseMessage>,
         options_to_request: &[v6::OptionCode],
         dns_servers: Vec<Ipv6Addr>,
         solicit_max_rt: Duration,
@@ -3048,7 +3027,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             client_id,
             non_temporary_addresses,
             server_id,
-            collected_advertise,
             dns_servers,
             start_time: None,
             retrans_timeout: Duration::default(),
@@ -3085,7 +3063,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             client_id,
             non_temporary_addresses,
             server_id,
-            collected_advertise,
             dns_servers,
             start_time,
             retrans_timeout: prev_retrans_timeout,
@@ -3161,7 +3138,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     client_id,
                     non_temporary_addresses,
                     server_id,
-                    collected_advertise,
                     dns_servers,
                     start_time: Some(start_time),
                     retrans_timeout,
@@ -3204,7 +3180,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             client_id,
             non_temporary_addresses: current_non_temporary_addresses,
             server_id,
-            collected_advertise,
             dns_servers: current_dns_servers,
             start_time,
             retrans_timeout,
@@ -3296,7 +3271,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                             client_id,
                             non_temporary_addresses: current_non_temporary_addresses,
                             server_id,
-                            collected_advertise,
                             dns_servers: current_dns_servers,
                             start_time,
                             retrans_timeout,
@@ -3333,7 +3307,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     client_id,
                     current_non_temporary_addresses,
                     &options_to_request,
-                    collected_advertise,
+                    Default::default(), /* collected_advertise */
                     solicit_max_rt,
                     rng,
                     now,
@@ -3345,7 +3319,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                         client_id,
                         non_temporary_addresses,
                         server_id,
-                        collected_advertise,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
                         start_time,
                         retrans_timeout,
@@ -3369,7 +3342,6 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                         client_id,
                         non_temporary_addresses,
                         server_id,
-                        collected_advertise,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
                         solicit_max_rt,
                     }),
@@ -3382,7 +3354,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 server_id,
                 non_temporary_addresses,
                 &options_to_request,
-                collected_advertise,
+                Default::default(), /* collected_advertise */
                 solicit_max_rt,
                 rng,
                 now,
@@ -3577,7 +3549,6 @@ impl ClientState {
                 client_id: _,
                 non_temporary_addresses: _,
                 server_id: _,
-                collected_advertise: _,
                 dns_servers,
                 solicit_max_rt: _,
             })
@@ -3585,7 +3556,6 @@ impl ClientState {
                 client_id: _,
                 non_temporary_addresses: _,
                 server_id: _,
-                collected_advertise: _,
                 dns_servers,
                 start_time: _,
                 retrans_timeout: _,
@@ -3595,7 +3565,6 @@ impl ClientState {
                 client_id: _,
                 non_temporary_addresses: _,
                 server_id: _,
-                collected_advertise: _,
                 dns_servers,
                 start_time: _,
                 retrans_timeout: _,
@@ -4306,7 +4275,6 @@ pub(crate) mod testutil {
             client_id: got_client_id,
             non_temporary_addresses,
             server_id: got_server_id,
-            collected_advertise,
             dns_servers,
             solicit_max_rt,
         } = assert_matches!(
@@ -4318,7 +4286,6 @@ pub(crate) mod testutil {
         assert_eq!(*got_server_id, server_id);
         assert_eq!(dns_servers, expected_dns_servers);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
-        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         (client, actions)
     }
 
@@ -4489,7 +4456,6 @@ pub(crate) mod testutil {
         let old_transaction_id = *transaction_id;
         {
             let Assigned {
-                collected_advertise,
                 client_id: _,
                 non_temporary_addresses: _,
                 server_id: _,
@@ -4499,7 +4465,6 @@ pub(crate) mod testutil {
                 state,
                 Some(ClientState::Assigned(assigned)) => assigned
             );
-            assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         }
         let (expected_oro, maybe_dns_server_action) =
             if let Some(expected_dns_servers) = expected_dns_servers {
@@ -4543,7 +4508,6 @@ pub(crate) mod testutil {
             client_id: got_client_id,
             server_id: got_server_id,
             dns_servers,
-            collected_advertise,
             solicit_max_rt,
             non_temporary_addresses: _,
             start_time: _,
@@ -4556,7 +4520,6 @@ pub(crate) mod testutil {
         assert_eq!(*got_server_id, server_id);
         assert_eq!(dns_servers, expected_dns_servers_as_slice);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
-        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
@@ -4623,7 +4586,6 @@ pub(crate) mod testutil {
             client_id: got_client_id,
             server_id: got_server_id,
             dns_servers,
-            collected_advertise,
             solicit_max_rt,
             non_temporary_addresses: _,
             start_time: _,
@@ -4642,7 +4604,6 @@ pub(crate) mod testutil {
         assert_eq!(*got_server_id, server_id);
         assert_eq!(dns_servers, expected_dns_servers);
         assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
-        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
@@ -5806,7 +5767,6 @@ mod tests {
                 client_id: _,
                 non_temporary_addresses,
                 server_id,
-                collected_advertise,
                 dns_servers: _,
                 solicit_max_rt: _,
             } = assert_matches!(
@@ -5815,7 +5775,6 @@ mod tests {
             );
             assert_eq!(server_id[..], SERVER_ID[0]);
             assert_eq!(non_temporary_addresses, expected_non_temporary_addresses);
-            assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         }
         assert_matches!(
             &actions[..],
@@ -5894,14 +5853,12 @@ mod tests {
                     client_id: _,
                     non_temporary_addresses: _,
                     server_id: _,
-                    collected_advertise,
                     dns_servers: _,
                     solicit_max_rt: _,
                 } = assert_matches!(
                     state,
                     ClientState::Assigned(assigned) => assigned
                 );
-                assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             }
             false =>
             // The client should transition to ServerDiscovery if the reply contains
@@ -6035,14 +5992,12 @@ mod tests {
                 client_id: _,
                 non_temporary_addresses: _,
                 server_id: _,
-                collected_advertise,
                 dns_servers: _,
                 solicit_max_rt: _,
             } = assert_matches!(
                 state,
                 ClientState::Assigned(assigned) => assigned
             );
-            assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             match (expected_t1, expected_t2) {
                 (v6::NonZeroTimeValue::Finite(t1_val), v6::NonZeroTimeValue::Finite(t2_val)) => {
                     assert_matches!(
@@ -6334,7 +6289,6 @@ mod tests {
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let Assigned {
-            collected_advertise,
             client_id: _,
             non_temporary_addresses: _,
             server_id: _,
@@ -6344,7 +6298,6 @@ mod tests {
             state,
             Some(ClientState::Assigned(assigned)) => assigned
         );
-        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         assert_matches!(
             &actions[..],
             [
@@ -6520,18 +6473,12 @@ mod tests {
             state.reply_message_received(&options_to_request, &mut rng, msg, time);
         {
             let Assigned {
-                collected_advertise,
                 solicit_max_rt,
                 client_id: _,
                 non_temporary_addresses: _,
                 server_id: _,
                 dns_servers: _,
             } = assert_matches!(&state, ClientState::Assigned(assigned) => assigned);
-            assert!(
-                collected_advertise.is_empty(),
-                "collected_advertise = {:?}",
-                collected_advertise
-            );
             assert_eq!(*solicit_max_rt, Duration::from_secs(received_sol_max_rt.into()));
         }
     }
@@ -6649,7 +6596,6 @@ mod tests {
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
         let Assigned {
-            collected_advertise,
             client_id: _,
             non_temporary_addresses: _,
             server_id: _,
@@ -6659,7 +6605,6 @@ mod tests {
             state,
             Some(ClientState::Assigned(assigned)) => assigned
         );
-        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
         // Asserts that the actions do not include scheduling the renew timer.
         assert_matches!(&actions[..], [Action::CancelTimer(ClientTimerType::Retransmission)]);
     }
@@ -6693,7 +6638,6 @@ mod tests {
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let expected_transaction_id = *transaction_id;
         let RenewingOrRebindingInner {
-            collected_advertise,
             client_id: _,
             non_temporary_addresses: _,
             server_id: _,
@@ -6702,7 +6646,6 @@ mod tests {
             retrans_timeout: _,
             solicit_max_rt: _,
         } = with_state(state);
-        assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
 
         // Assert renew is retransmitted on retransmission timeout.
         let actions = client.handle_timeout(ClientTimerType::Retransmission, time);
@@ -6720,7 +6663,6 @@ mod tests {
             let RenewingOrRebindingInner {
                 client_id,
                 server_id,
-                collected_advertise,
                 dns_servers,
                 solicit_max_rt,
                 non_temporary_addresses: _,
@@ -6730,7 +6672,6 @@ mod tests {
             assert_eq!(client_id, &CLIENT_ID);
             assert_eq!(server_id[..], SERVER_ID[0]);
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
-            assert!(collected_advertise.is_empty(), "{:?}", collected_advertise);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
         let expected_non_temporary_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
@@ -6830,7 +6771,6 @@ mod tests {
                 client_id: original_client_id,
                 non_temporary_addresses: original_non_temporary_addresses,
                 server_id: original_server_id,
-                collected_advertise: original_collected_advertise,
                 dns_servers: original_dns_servers,
                 start_time: original_start_time,
                 retrans_timeout: original_retrans_timeout,
@@ -6840,7 +6780,6 @@ mod tests {
                 client_id: new_client_id,
                 non_temporary_addresses: new_non_temporary_addresses,
                 server_id: new_server_id,
-                collected_advertise: new_collected_advertise,
                 dns_servers: new_dns_servers,
                 start_time: new_start_time,
                 retrans_timeout: new_retrans_timeout,
@@ -6849,10 +6788,6 @@ mod tests {
             assert_eq!(&original_client_id, new_client_id);
             assert_eq!(&original_non_temporary_addresses, new_non_temporary_addresses);
             assert_eq!(&original_server_id, new_server_id);
-            assert_eq!(
-                original_collected_advertise.into_sorted_vec(),
-                new_collected_advertise.clone().into_sorted_vec()
-            );
             assert_eq!(&original_dns_servers, new_dns_servers);
             assert_eq!(&original_start_time, new_start_time);
             assert_eq!(&original_retrans_timeout, new_retrans_timeout);
@@ -6873,7 +6808,6 @@ mod tests {
                 client_id,
                 non_temporary_addresses,
                 server_id,
-                collected_advertise: _,
                 dns_servers,
                 solicit_max_rt,
             })) if client_id == &CLIENT_ID &&
@@ -6969,7 +6903,6 @@ mod tests {
             client_id,
             non_temporary_addresses,
             server_id,
-            collected_advertise: _,
             dns_servers,
             start_time: _,
             retrans_timeout: _,
@@ -7065,7 +6998,6 @@ mod tests {
                 client_id,
                 non_temporary_addresses,
                 server_id,
-                collected_advertise: _,
                 dns_servers,
                 start_time,
                 retrans_timeout: _,
@@ -7166,7 +7098,6 @@ mod tests {
                 client_id,
                 non_temporary_addresses,
                 server_id,
-                collected_advertise: _,
                 dns_servers,
                 solicit_max_rt,
             })) if *client_id == CLIENT_ID &&
@@ -7253,7 +7184,6 @@ mod tests {
                 client_id,
                 non_temporary_addresses,
                 server_id,
-                collected_advertise: _,
                 dns_servers,
                 solicit_max_rt,
             })) if *client_id == CLIENT_ID &&
