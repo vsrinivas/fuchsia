@@ -410,7 +410,7 @@ impl InformationReceived {
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
-pub(crate) struct IdentityAssociation {
+pub(crate) struct IaNa {
     // TODO(https://fxbug.dev/86950): use UnicastAddr.
     address: Ipv6Addr,
     preferred_lifetime: v6::TimeValue,
@@ -422,7 +422,7 @@ pub(crate) struct IdentityAssociation {
 #[derive(Debug, Clone)]
 struct AdvertiseMessage {
     server_id: Vec<u8>,
-    non_temporary_addresses: HashMap<v6::IAID, IdentityAssociation>,
+    non_temporary_addresses: HashMap<v6::IAID, IaNa>,
     dns_servers: Vec<Ipv6Addr>,
     preference: u8,
     receive_time: Instant,
@@ -515,7 +515,7 @@ impl Eq for AdvertiseMessage {}
 // some address and the corresponding entry in `got_addresses` has the same
 // address.
 fn compute_preferred_address_count(
-    got_addresses: &HashMap<v6::IAID, IdentityAssociation>,
+    got_addresses: &HashMap<v6::IAID, IaNa>,
     configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
 ) -> usize {
     configured_addresses.iter().fold(0, |count, (iaid, address)| {
@@ -567,7 +567,7 @@ struct IaAddress {
 }
 
 #[derive(thiserror::Error, Debug)]
-enum IaNaError {
+enum IaNaOptionError {
     #[error("T1={t1:?} greater than T2={t2:?}")]
     T1GreaterThanT2 { t1: v6::TimeValue, t2: v6::TimeValue },
     #[error("unknown status code {0}")]
@@ -586,7 +586,7 @@ enum IaNaError {
 }
 
 #[derive(Debug)]
-enum IaNa {
+enum IaNaOption {
     Success {
         status_message: Option<String>,
         t1: v6::TimeValue,
@@ -598,7 +598,7 @@ enum IaNa {
 
 // TODO(https://fxbug.dev/104519): Move this function and associated types
 // into packet-formats-dhcp.
-fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError> {
+fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNaOptionError> {
     // Ignore invalid IANA options, per RFC 8415, section 21.4:
     //
     //    If a client receives an IA_NA with T1 greater than T2 and both T1
@@ -610,7 +610,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
         (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
         (t1, t2) => {
             if t1 > t2 {
-                return Err(IaNaError::T1GreaterThanT2 { t1, t2 });
+                return Err(IaNaOptionError::T1GreaterThanT2 { t1, t2 });
             }
         }
     }
@@ -621,11 +621,13 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
         match ia_na_opt {
             v6::ParsedDhcpOption::StatusCode(code, msg) => {
                 let status_code = code.get().try_into().map_err(|e| match e {
-                    v6::ParseError::InvalidStatusCode(code) => IaNaError::InvalidStatusCode(code),
+                    v6::ParseError::InvalidStatusCode(code) => {
+                        IaNaOptionError::InvalidStatusCode(code)
+                    }
                     e => unreachable!("unreachable status code parse error: {}", e),
                 })?;
                 if let Some(existing) = success_status_message {
-                    return Err(IaNaError::DuplicateStatusCode(
+                    return Err(IaNaOptionError::DuplicateStatusCode(
                         (v6::StatusCode::Success, existing),
                         (status_code, msg.to_string()),
                     ));
@@ -635,7 +637,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
                         success_status_message = Some(msg.to_string());
                     }
                     Err(error_status_code) => {
-                        return Ok(IaNa::Failure(StatusCodeError(
+                        return Ok(IaNaOption::Failure(StatusCodeError(
                             error_status_code,
                             msg.to_string(),
                         )))
@@ -664,7 +666,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
                 };
                 let ia_addr = IaAddress { address: ia_addr_data.addr(), lifetimes };
                 if let Some(existing) = ia_addr_opt {
-                    return Err(IaNaError::MultipleIaAddress(existing, ia_addr));
+                    return Err(IaNaOptionError::MultipleIaAddress(existing, ia_addr));
                 }
                 ia_addr_opt = Some(ia_addr);
             }
@@ -680,7 +682,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
             | v6::ParsedDhcpOption::ElapsedTime(_)
             | v6::ParsedDhcpOption::DnsServers(_)
             | v6::ParsedDhcpOption::DomainList(_) => {
-                return Err(IaNaError::InvalidOption(format!("{:?}", ia_na_opt)));
+                return Err(IaNaOptionError::InvalidOption(format!("{:?}", ia_na_opt)));
             }
         }
     }
@@ -689,7 +691,7 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNa, IaNaError>
     //    If the Status Code option (see Section 21.13) does not appear
     //    in a message in which the option could appear, the status
     //    of the message is assumed to be Success.
-    Ok(IaNa::Success { status_message: success_status_message, t1, t2, ia_addr: ia_addr_opt })
+    Ok(IaNaOption::Success { status_message: success_status_message, t1, t2, ia_addr: ia_addr_opt })
 }
 
 #[derive(Debug)]
@@ -703,7 +705,7 @@ struct Options {
     success_status_message: Option<String>,
     next_contact_time: NextContactTime,
     preference: Option<u8>,
-    non_temporary_addresses: HashMap<v6::IAID, IaNa>,
+    non_temporary_addresses: HashMap<v6::IAID, IaNaOption>,
     dns_servers: Option<Vec<Ipv6Addr>>,
 }
 
@@ -727,9 +729,9 @@ enum OptionsError {
     #[error("unknown status code {0} with message '{1}'")]
     InvalidStatusCode(u16, String),
     #[error("IA_NA option error")]
-    IaNaError(#[from] IaNaError),
+    IaNaOptionError(#[from] IaNaOptionError),
     #[error("duplicate IA_NA option with IAID={0:?} {1:?} and {2:?}")]
-    DuplicateIaNaId(v6::IAID, IaNa, IaNa),
+    DuplicateIaNaId(v6::IAID, IaNaOption, IaNaOption),
     #[error("missing Server Id option")]
     MissingServerId,
     #[error("missing Client Id option")]
@@ -932,8 +934,8 @@ fn process_options<B: ByteSlice>(
                 let iaid = v6::IAID::new(iana_data.iaid());
                 let processed_ia_na = process_ia_na(iana_data)?;
                 match processed_ia_na {
-                    IaNa::Failure(_) => {}
-                    IaNa::Success { status_message: _, t1, t2, ref ia_addr } => {
+                    IaNaOption::Failure(_) => {}
+                    IaNaOption::Success { status_message: _, t1, t2, ref ia_addr } => {
                         match ia_addr {
                             None | Some(IaAddress { address: _, lifetimes: Err(_) }) => {}
                             Some(IaAddress {
@@ -979,7 +981,7 @@ fn process_options<B: ByteSlice>(
                         ));
                     }
                     Entry::Vacant(entry) => {
-                        let _: &mut IaNa = entry.insert(processed_ia_na);
+                        let _: &mut IaNaOption = entry.insert(processed_ia_na);
                     }
                 };
             }
@@ -1529,10 +1531,10 @@ impl ServerDiscovery {
             .drain()
             .filter_map(|(iaid, ia_na)| {
                 let (success_status_message, ia_addr) = match ia_na {
-                    IaNa::Success { status_message, t1: _, t2: _, ia_addr } => {
+                    IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
                         (status_message, ia_addr)
                     }
-                    IaNa::Failure(e) => {
+                    IaNaOption::Failure(e) => {
                         warn!(
                             "Advertise from server {:?} contains IA_NA with error status code: {}",
                             server_id, e
@@ -1552,7 +1554,7 @@ impl ServerDiscovery {
                 ia_addr.and_then(|IaAddress { address, lifetimes }| match lifetimes {
                     Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => Some((
                         iaid,
-                        IdentityAssociation {
+                        IaNa {
                             address,
                             preferred_lifetime,
                             valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
@@ -1747,19 +1749,16 @@ mod private {
 
     /// Holds an IA for an address different from what was configured.
     #[derive(Debug, PartialEq, Clone, Copy)]
-    pub(super) struct NonConfiguredIa {
-        ia: IdentityAssociation,
+    pub(super) struct NonConfiguredIaNa {
+        ia: IaNa,
         configured_address: Option<Ipv6Addr>,
     }
 
-    impl NonConfiguredIa {
-        /// Creates a `NonConfiguredIa`. Returns `None` if the address within
+    impl NonConfiguredIaNa {
+        /// Creates a `NonConfiguredIaNa`. Returns `None` if the address within
         /// the IA is the same as what was configured.
-        pub(super) fn new(
-            ia: IdentityAssociation,
-            configured_address: Option<Ipv6Addr>,
-        ) -> Option<Self> {
-            let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = &ia;
+        pub(super) fn new(ia: IaNa, configured_address: Option<Ipv6Addr>) -> Option<Self> {
+            let IaNa { address, preferred_lifetime: _, valid_lifetime: _ } = &ia;
             match configured_address {
                 Some(c) => {
                     if *address == c {
@@ -1773,7 +1772,7 @@ mod private {
 
         /// Returns the address within the IA.
         pub(crate) fn address(&self) -> Ipv6Addr {
-            let IdentityAssociation { address, preferred_lifetime: _, valid_lifetime: _ } = self.ia;
+            let IaNa { address, preferred_lifetime: _, valid_lifetime: _ } = self.ia;
             address
         }
 
@@ -1964,7 +1963,7 @@ enum ReplyWithLeasesError {
     #[error("status code error")]
     StatusCodeError(#[from] StatusCodeError),
     #[error("IA_NA with unexpected IAID")]
-    UnexpectedIaNa(v6::IAID, IaNa),
+    UnexpectedIaNa(v6::IAID, IaNaOption),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -2212,10 +2211,10 @@ fn process_reply_with_leases<B: ByteSlice>(
                     }
                 };
                 let (success_status_message, ia_addr) = match ia_na {
-                    IaNa::Success { status_message, t1: _, t2: _, ia_addr } => {
+                    IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
                         (status_message, ia_addr)
                     }
-                    IaNa::Failure(StatusCodeError(error_code, msg)) => {
+                    IaNaOption::Failure(StatusCodeError(error_code, msg)) => {
                         if !msg.is_empty() {
                             warn!(
                                 "Reply to {}: IA_NA with IAID {:?} \
@@ -2347,8 +2346,8 @@ fn process_reply_with_leases<B: ByteSlice>(
                 }
                 // Add the address entry as renewed by the
                 // server.
-                let entry = AddressEntry::Assigned(AssignedIa::new(
-                    IdentityAssociation {
+                let entry = AddressEntry::Assigned(AssignedIaNa::new(
+                    IaNa {
                         address,
                         preferred_lifetime,
                         valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
@@ -2497,14 +2496,14 @@ fn process_reply_with_leases<B: ByteSlice>(
 /// Create a map of addresses entries to be requested, combining the IAs in the
 /// Advertise with the configured IAs that are not included in the Advertise.
 fn advertise_to_address_entries(
-    advertised_addresses: HashMap<v6::IAID, IdentityAssociation>,
+    advertised_addresses: HashMap<v6::IAID, IaNa>,
     configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
 ) -> HashMap<v6::IAID, AddressEntry> {
     configured_addresses
         .iter()
         .map(|(iaid, configured_address)| {
             let address_to_request = match advertised_addresses.get(iaid) {
-                Some(IdentityAssociation {
+                Some(IaNa {
                     address: advertised_address,
                     preferred_lifetime: _,
                     valid_lifetime: _,
@@ -2976,44 +2975,44 @@ impl Requesting {
 /// Represents an assigned identity association, relative to the configured
 /// address for that IA.
 #[derive(Debug, PartialEq, Clone, Copy)]
-enum AssignedIa {
+enum AssignedIaNa {
     /// The assigned address is the same as the configured address for the IA.
-    Configured(IdentityAssociation),
+    Configured(IaNa),
     /// The assigned address is different than the configured address for the
     /// IA.
-    NonConfigured(NonConfiguredIa),
+    NonConfigured(NonConfiguredIaNa),
 }
 
-impl AssignedIa {
+impl AssignedIaNa {
     /// Creates a new assigned identity association.
-    fn new(ia: IdentityAssociation, configured_address: Option<Ipv6Addr>) -> AssignedIa {
-        match NonConfiguredIa::new(ia, configured_address) {
-            None => AssignedIa::Configured(ia),
-            Some(non_conf_ia) => AssignedIa::NonConfigured(non_conf_ia),
+    fn new(ia: IaNa, configured_address: Option<Ipv6Addr>) -> AssignedIaNa {
+        match NonConfiguredIaNa::new(ia, configured_address) {
+            None => AssignedIaNa::Configured(ia),
+            Some(non_conf_ia) => AssignedIaNa::NonConfigured(non_conf_ia),
         }
     }
 
     /// Returns the assigned address.
     fn address(&self) -> Ipv6Addr {
         match self {
-            AssignedIa::Configured(IdentityAssociation {
+            AssignedIaNa::Configured(IaNa {
                 address,
                 preferred_lifetime: _,
                 valid_lifetime: _,
             }) => *address,
-            AssignedIa::NonConfigured(non_conf_ia) => non_conf_ia.address(),
+            AssignedIaNa::NonConfigured(non_conf_ia) => non_conf_ia.address(),
         }
     }
 
     /// Returns the configured address.
     fn configured_address(&self) -> Option<Ipv6Addr> {
         match self {
-            AssignedIa::Configured(IdentityAssociation {
+            AssignedIaNa::Configured(IaNa {
                 address,
                 preferred_lifetime: _,
                 valid_lifetime: _,
             }) => Some(*address),
-            AssignedIa::NonConfigured(non_conf_ia) => non_conf_ia.configured_address(),
+            AssignedIaNa::NonConfigured(non_conf_ia) => non_conf_ia.configured_address(),
         }
     }
 }
@@ -3022,7 +3021,7 @@ impl AssignedIa {
 #[derive(Debug, PartialEq, Copy, Clone)]
 enum AddressEntry {
     /// The address is assigned.
-    Assigned(AssignedIa),
+    Assigned(AssignedIaNa),
     /// The address is not assigned, and is to be requested in subsequent
     /// messages.
     ToRequest(AddressToRequest),
@@ -4090,12 +4089,10 @@ pub(crate) mod testutil {
         (0..).map(v6::IAID::new).zip(prefixes).collect()
     }
 
-    pub(crate) fn to_default_ias_map(
-        addresses: &[Ipv6Addr],
-    ) -> HashMap<v6::IAID, IdentityAssociation> {
+    pub(crate) fn to_default_ias_map(addresses: &[Ipv6Addr]) -> HashMap<v6::IAID, IaNa> {
         (0..)
             .map(v6::IAID::new)
-            .zip(addresses.iter().map(|address| IdentityAssociation::new_default(*address)))
+            .zip(addresses.iter().map(|address| IaNa::new_default(*address)))
             .collect()
     }
 
@@ -4174,7 +4171,7 @@ pub(crate) mod testutil {
         client
     }
 
-    impl IdentityAssociation {
+    impl IaNa {
         pub(crate) fn new_finite(
             address: Ipv6Addr,
             preferred_lifetime: v6::NonZeroOrMaxU32,
@@ -4191,8 +4188,8 @@ pub(crate) mod testutil {
             }
         }
 
-        pub(crate) fn new_default(address: Ipv6Addr) -> IdentityAssociation {
-            IdentityAssociation {
+        pub(crate) fn new_default(address: Ipv6Addr) -> IaNa {
+            IaNa {
                 address,
                 preferred_lifetime: v6::TimeValue::Zero,
                 valid_lifetime: v6::TimeValue::Zero,
@@ -4206,8 +4203,8 @@ pub(crate) mod testutil {
             preferred_lifetime: v6::NonZeroOrMaxU32,
             valid_lifetime: v6::NonZeroOrMaxU32,
         ) -> Self {
-            Self::Assigned(AssignedIa::new(
-                IdentityAssociation::new_finite(address, preferred_lifetime, valid_lifetime),
+            Self::Assigned(AssignedIaNa::new(
+                IaNa::new_finite(address, preferred_lifetime, valid_lifetime),
                 Some(address),
             ))
         }
@@ -4223,7 +4220,7 @@ pub(crate) mod testutil {
             let non_temporary_addresses = (0..)
                 .map(v6::IAID::new)
                 .zip(non_temporary_addresses.iter().fold(Vec::new(), |mut addrs, address| {
-                    addrs.push(IdentityAssociation::new_default(*address));
+                    addrs.push(IaNa::new_default(*address));
                     addrs
                 }))
                 .collect();
@@ -4255,7 +4252,7 @@ pub(crate) mod testutil {
     /// A helper identity association test type specifying T1/T2, for testing
     /// T1/T2 variations across IAs.
     #[derive(Copy, Clone)]
-    pub(crate) struct TestIdentityAssociation {
+    pub(crate) struct TestIaNa {
         pub(crate) address: Ipv6Addr,
         pub(crate) preferred_lifetime: v6::TimeValue,
         pub(crate) valid_lifetime: v6::TimeValue,
@@ -4263,11 +4260,11 @@ pub(crate) mod testutil {
         pub(crate) t2: v6::TimeValue,
     }
 
-    impl TestIdentityAssociation {
-        /// Creates a `TestIdentityAssociation` with default valid values for
+    impl TestIaNa {
+        /// Creates a `TestIaNa` with default valid values for
         /// lifetimes.
-        pub(crate) fn new_default(address: Ipv6Addr) -> TestIdentityAssociation {
-            TestIdentityAssociation {
+        pub(crate) fn new_default(address: Ipv6Addr) -> TestIaNa {
+            TestIaNa {
                 address,
                 preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                     PREFERRED_LIFETIME,
@@ -4294,7 +4291,7 @@ pub(crate) mod testutil {
     pub(crate) fn request_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIaNa>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
         now: Instant,
@@ -4305,13 +4302,9 @@ pub(crate) mod testutil {
         let configured_non_temporary_addresses = to_configured_addresses(
             non_temporary_addresses_to_assign.len(),
             non_temporary_addresses_to_assign.iter().map(
-                |TestIdentityAssociation {
-                     address,
-                     preferred_lifetime: _,
-                     valid_lifetime: _,
-                     t1: _,
-                     t2: _,
-                 }| *address,
+                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    *address
+                },
             ),
         );
         let options_to_request = if expected_dns_servers.is_empty() {
@@ -4337,7 +4330,7 @@ pub(crate) mod testutil {
         if !expected_dns_servers.is_empty() {
             options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
         }
-        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
+        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIaNa> =
             (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
         let mut iaaddr_opts = HashMap::new();
         for (iaid, ia) in &non_temporary_addresses_to_assign {
@@ -4425,7 +4418,7 @@ pub(crate) mod testutil {
     pub(crate) fn assign_addresses_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIaNa>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
         now: Instant,
@@ -4444,7 +4437,7 @@ pub(crate) mod testutil {
         if !expected_dns_servers.is_empty() {
             options.push(v6::DhcpOption::DnsServers(&expected_dns_servers));
         }
-        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIdentityAssociation> =
+        let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIaNa> =
             (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
         let mut iaaddr_opts = HashMap::new();
         for (iaid, ia) in &non_temporary_addresses_to_assign {
@@ -4480,18 +4473,12 @@ pub(crate) mod testutil {
         let expected_non_temporary_addresses = non_temporary_addresses_to_assign.iter().fold(
             HashMap::new(),
             |mut addrs, (iaid, ia)| {
-                let TestIdentityAssociation {
-                    address,
-                    preferred_lifetime,
-                    valid_lifetime,
-                    t1: _,
-                    t2: _,
-                } = ia;
+                let TestIaNa { address, preferred_lifetime, valid_lifetime, t1: _, t2: _ } = ia;
                 assert_eq!(
                     addrs.insert(
                         *iaid,
-                        AddressEntry::Assigned(AssignedIa::new(
-                            IdentityAssociation {
+                        AddressEntry::Assigned(AssignedIaNa::new(
+                            IaNa {
                                 address: *address,
                                 preferred_lifetime: *preferred_lifetime,
                                 valid_lifetime: *valid_lifetime
@@ -4671,7 +4658,7 @@ pub(crate) mod testutil {
     pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIaNa>,
         expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
@@ -4762,13 +4749,9 @@ pub(crate) mod testutil {
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
-                |TestIdentityAssociation {
-                     address,
-                     preferred_lifetime: _,
-                     valid_lifetime: _,
-                     t1: _,
-                     t2: _,
-                 }| Some(*address),
+                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*address)
+                },
             ))
             .collect();
         testutil::assert_outgoing_stateful_message(
@@ -4795,7 +4778,7 @@ pub(crate) mod testutil {
     pub(crate) fn send_rebind_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
-        non_temporary_addresses_to_assign: Vec<TestIdentityAssociation>,
+        non_temporary_addresses_to_assign: Vec<TestIaNa>,
         expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
@@ -4852,13 +4835,9 @@ pub(crate) mod testutil {
         let expected_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
-                |TestIdentityAssociation {
-                     address,
-                     preferred_lifetime: _,
-                     valid_lifetime: _,
-                     t1: _,
-                     t2: _,
-                 }| Some(*address),
+                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*address)
+                },
             ))
             .collect();
         testutil::assert_outgoing_stateful_message(
@@ -4882,7 +4861,7 @@ mod tests {
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
     use testconsts::*;
-    use testutil::TestIdentityAssociation;
+    use testutil::TestIaNa;
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -5105,9 +5084,9 @@ mod tests {
         want: usize,
     ) {
         // No preferred addresses configured.
-        let got_addresses: HashMap<v6::IAID, IdentityAssociation> = (0..)
+        let got_addresses: HashMap<v6::IAID, IaNa> = (0..)
             .map(v6::IAID::new)
-            .zip(got_addresses.into_iter().map(IdentityAssociation::new_default))
+            .zip(got_addresses.into_iter().map(IaNa::new_default))
             .collect();
         let configured_non_temporary_addresses =
             testutil::to_configured_addresses(configure_count, hints);
@@ -5561,7 +5540,7 @@ mod tests {
             time,
         );
 
-        let ia = IdentityAssociation {
+        let ia = IaNa {
             address: CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 PREFERRED_LIFETIME,
@@ -5720,10 +5699,7 @@ mod tests {
         let (mut _client, _transaction_id) = testutil::request_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_NON_TEMPORARY_ADDRESSES
-                .into_iter()
-                .map(TestIdentityAssociation::new_default)
-                .collect(),
+            CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -6011,8 +5987,8 @@ mod tests {
             ),
             (
                 iaid2,
-                AddressEntry::Assigned(AssignedIa::new(
-                    IdentityAssociation {
+                AddressEntry::Assigned(AssignedIaNa::new(
+                    IaNa {
                         address: CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
                         preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                             PREFERRED_LIFETIME,
@@ -6548,7 +6524,7 @@ mod tests {
             CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .iter()
                 .copied()
-                .map(TestIdentityAssociation::new_default)
+                .map(TestIaNa::new_default)
                 .collect(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6587,7 +6563,7 @@ mod tests {
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             &DNS_SERVERS,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -6764,7 +6740,7 @@ mod tests {
         send_and_assert: fn(
             [u8; CLIENT_ID_LEN],
             [u8; TEST_SERVER_ID_LEN],
-            Vec<TestIdentityAssociation>,
+            Vec<TestIaNa>,
             Option<&[Ipv6Addr]>,
             v6::NonZeroOrMaxU32,
             v6::NonZeroOrMaxU32,
@@ -6819,7 +6795,7 @@ mod tests {
             SERVER_ID[0],
             CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .into_iter()
-                .map(|&addr| TestIdentityAssociation::new_default(addr))
+                .map(|&addr| TestIaNa::new_default(addr))
                 .collect(),
             None,
             T1,
@@ -6845,7 +6821,7 @@ mod tests {
             SERVER_ID[0],
             CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .into_iter()
-                .map(|&addr| TestIdentityAssociation::new_default(addr))
+                .map(|&addr| TestIaNa::new_default(addr))
                 .collect(),
             Some(&DNS_SERVERS),
             T1,
@@ -6861,10 +6837,10 @@ mod tests {
         let (client, actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation {
+            vec![TestIaNa {
                 t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
                 t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Infinity),
-                ..TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])
+                ..TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])
             }],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
@@ -6901,7 +6877,7 @@ mod tests {
     ) {
         let non_temporary_addresses_to_assign = CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
             .into_iter()
-            .map(|&addr| TestIdentityAssociation::new_default(addr))
+            .map(|&addr| TestIaNa::new_default(addr))
             .collect::<Vec<_>>();
         let time = Instant::now();
         let mut client = send_and_assert(
@@ -6960,13 +6936,9 @@ mod tests {
         let expected_non_temporary_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
-                |TestIdentityAssociation {
-                     address,
-                     preferred_lifetime: _,
-                     valid_lifetime: _,
-                     t1: _,
-                     t2: _,
-                 }| Some(*address),
+                |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*address)
+                },
             ))
             .collect();
         testutil::assert_outgoing_stateful_message(
@@ -6999,10 +6971,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             original_server_id.clone(),
-            CONFIGURED_NON_TEMPORARY_ADDRESSES
-                .into_iter()
-                .map(TestIdentityAssociation::new_default)
-                .collect(),
+            CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
             None,
             T1,
             T2,
@@ -7154,7 +7123,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(addr)],
+            vec![TestIaNa::new_default(addr)],
             None,
             T1,
             T2,
@@ -7233,11 +7202,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            non_temporary_addresses
-                .iter()
-                .copied()
-                .map(TestIdentityAssociation::new_default)
-                .collect(),
+            non_temporary_addresses.iter().copied().map(TestIaNa::new_default).collect(),
             None,
             T1,
             T2,
@@ -7335,7 +7300,7 @@ mod tests {
             CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .iter()
                 .copied()
-                .map(TestIdentityAssociation::new_default)
+                .map(TestIaNa::new_default)
                 .collect(),
             None,
             T1,
@@ -7438,7 +7403,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             None,
             T1,
             T2,
@@ -7474,8 +7439,8 @@ mod tests {
             &client;
         let expected_non_temporary_addresses = HashMap::from([(
             v6::IAID::new(0),
-            AddressEntry::Assigned(AssignedIa::new(
-                IdentityAssociation::new_finite(
+            AddressEntry::Assigned(AssignedIaNa::new(
+                IaNa::new_finite(
                     RENEW_NON_TEMPORARY_ADDRESSES[0],
                     RENEWED_PREFERRED_LIFETIME,
                     RENEWED_VALID_LIFETIME,
@@ -7534,7 +7499,7 @@ mod tests {
             CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
                 .iter()
                 .copied()
-                .map(TestIdentityAssociation::new_default)
+                .map(TestIaNa::new_default)
                 .collect(),
             None,
             T1,
@@ -7666,10 +7631,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_NON_TEMPORARY_ADDRESSES
-                .into_iter()
-                .map(TestIdentityAssociation::new_default)
-                .collect(),
+            CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
             None,
             T1,
             T2,
@@ -7869,7 +7831,7 @@ mod tests {
         let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -7887,7 +7849,7 @@ mod tests {
         let (mut client, _actions) = testutil::assign_addresses_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -7914,7 +7876,7 @@ mod tests {
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            vec![TestIdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
             None,
             T1,
             T2,
@@ -8209,14 +8171,14 @@ mod tests {
         configured_address: Option<Ipv6Addr>,
         expect_ia_is_some: bool,
     ) {
-        let ia = IdentityAssociation {
+        let ia = IaNa {
             address,
             preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
                 PREFERRED_LIFETIME,
             )),
             valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(VALID_LIFETIME)),
         };
-        let non_conf_ia_opt = NonConfiguredIa::new(ia, configured_address);
+        let non_conf_ia_opt = NonConfiguredIaNa::new(ia, configured_address);
         assert_eq!(non_conf_ia_opt.is_some(), expect_ia_is_some);
         if let Some(non_conf_ia) = non_conf_ia_opt {
             assert_eq!(non_conf_ia.address(), address);
@@ -8226,18 +8188,18 @@ mod tests {
 
     #[test]
     fn create_assigned_ia() {
-        let ia1 = IdentityAssociation::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
-        let assigned_ia = AssignedIa::new(ia1, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
-        assert_eq!(assigned_ia, AssignedIa::Configured(ia1));
+        let ia1 = IaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
+        let assigned_ia = AssignedIaNa::new(ia1, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
+        assert_eq!(assigned_ia, AssignedIaNa::Configured(ia1));
         assert_eq!(assigned_ia.address(), CONFIGURED_NON_TEMPORARY_ADDRESSES[0]);
 
-        let ia2 = IdentityAssociation::new_default(REPLY_NON_TEMPORARY_ADDRESSES[0]);
-        let assigned_ia = AssignedIa::new(ia2, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
-        assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
+        let ia2 = IaNa::new_default(REPLY_NON_TEMPORARY_ADDRESSES[0]);
+        let assigned_ia = AssignedIaNa::new(ia2, Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]));
+        assert_matches!(&assigned_ia, AssignedIaNa::NonConfigured(_non_conf_ia));
         assert_eq!(assigned_ia.address(), REPLY_NON_TEMPORARY_ADDRESSES[0]);
 
-        let assigned_ia = AssignedIa::new(ia2, None);
-        assert_matches!(&assigned_ia, AssignedIa::NonConfigured(_non_conf_ia));
+        let assigned_ia = AssignedIaNa::new(ia2, None);
+        assert_matches!(&assigned_ia, AssignedIaNa::NonConfigured(_non_conf_ia));
         assert_eq!(assigned_ia.address(), REPLY_NON_TEMPORARY_ADDRESSES[0]);
     }
 }
