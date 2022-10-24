@@ -349,7 +349,8 @@ def main():
 
             if not valid_package_path(package_name, source_dir):
                 continue
-            if source_dir.find('pub.dartlang.org') == -1:
+            if not any(domain in source_dir
+                       for domain in ['/pub.dartlang.org/', '/pub.dev/']):
                 print(
                     'Package %s not from dartlang (%s), ignoring' %
                     (package_name, source_dir))
