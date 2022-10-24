@@ -19,18 +19,25 @@
 
 namespace zxdb {
 
-StepThreadController::StepThreadController(StepMode mode, FunctionReturnCallback function_return)
-    : step_mode_(mode), function_return_callback_(std::move(function_return)) {}
+StepThreadController::StepThreadController(StepMode mode, FunctionReturnCallback function_return,
+                                           fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_mode_(mode),
+      function_return_callback_(std::move(function_return)) {}
 
 StepThreadController::StepThreadController(const FileLine& line,
-                                           FunctionReturnCallback function_return)
-    : step_mode_(StepMode::kSourceLine),
+                                           FunctionReturnCallback function_return,
+                                           fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_mode_(StepMode::kSourceLine),
       file_line_(line),
       function_return_callback_(std::move(function_return)) {}
 
 StepThreadController::StepThreadController(AddressRanges ranges,
-                                           FunctionReturnCallback function_return)
-    : step_mode_(StepMode::kAddressRange),
+                                           FunctionReturnCallback function_return,
+                                           fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_mode_(StepMode::kAddressRange),
       current_ranges_(ranges),
       function_return_callback_(std::move(function_return)) {}
 

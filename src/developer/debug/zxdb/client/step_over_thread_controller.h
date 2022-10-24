@@ -39,12 +39,14 @@ class StepOverThreadController : public ThreadController {
   // The function_return callback (if supplied) will be issued when the "step over" terminates with
   // the completion of the function. It will not be called for every function that is skipped over
   // as part of execution.
-  explicit StepOverThreadController(StepMode mode, FunctionReturnCallback function_return = {});
+  explicit StepOverThreadController(StepMode mode, FunctionReturnCallback function_return = {},
+                                    fit::deferred_callback on_done = {});
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues execution as long as the
   // IP is in range.
   explicit StepOverThreadController(AddressRanges range,
-                                    FunctionReturnCallback function_return = {});
+                                    FunctionReturnCallback function_return = {},
+                                    fit::deferred_callback on_done = {});
 
   ~StepOverThreadController() override;
 

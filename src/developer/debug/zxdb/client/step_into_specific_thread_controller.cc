@@ -13,8 +13,10 @@
 
 namespace zxdb {
 
-StepIntoSpecificThreadController::StepIntoSpecificThreadController(AddressRange over_range)
-    : into_address_(over_range.end()),
+StepIntoSpecificThreadController::StepIntoSpecificThreadController(AddressRange over_range,
+                                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      into_address_(over_range.end()),
       step_over_(std::make_unique<StepOverThreadController>(AddressRanges(over_range))) {}
 
 StepIntoSpecificThreadController::~StepIntoSpecificThreadController() = default;

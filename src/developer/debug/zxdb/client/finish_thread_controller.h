@@ -42,7 +42,8 @@ class FinishThreadController : public ThreadController {
   // outermost physical frame, and never on any inline frames. So it might not get called at all,
   // and the call might not be the outermost function call from the user's perspective.
   FinishThreadController(Stack& stack, size_t frame_to_finish,
-                         FunctionReturnCallback cb = FunctionReturnCallback());
+                         FunctionReturnCallback cb = FunctionReturnCallback(),
+                         fit::deferred_callback on_done = {});
 
   ~FinishThreadController() override;
 

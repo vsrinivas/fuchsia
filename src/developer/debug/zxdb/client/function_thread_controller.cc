@@ -18,7 +18,9 @@
 
 namespace zxdb {
 
-FunctionThreadController::FunctionThreadController(FunctionStep mode) : mode_(mode) {
+FunctionThreadController::FunctionThreadController(FunctionStep mode,
+                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)), mode_(mode) {
   FX_DCHECK(mode != FunctionStep::kDefault);
 }
 

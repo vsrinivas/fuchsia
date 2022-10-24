@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "lib/fit/defer.h"
 #include "lib/fit/function.h"
 #include "src/developer/debug/ipc/protocol.h"
 #include "src/developer/debug/zxdb/client/frame_fingerprint.h"
@@ -157,7 +158,17 @@ class ThreadController {
                                      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
   };
 
-  ThreadController();
+  // The deferred callback is executed when this step controller has completed its work. To a first
+  // approximation, this is when the step is complete.
+  //
+  // BUT when a step is complete may not be obvious or well-defined. The user could step over
+  // "MessageLoop::Run()" which might never complete. If you run "until", then hit a breakpoint, and
+  // step from there, the "until" controller will still be pending even though other step operations
+  // have been executed. The user can also type Control-C to clear all the current stepping state
+  // which can clear the operation before it's conceptually complete.
+  //
+  // Note that this is different than the callback on InitWithThread().
+  explicit ThreadController(fit::deferred_callback on_done = {});
 
   virtual ~ThreadController();
 
@@ -172,7 +183,10 @@ class ThreadController {
   //
   // If the callback does not specify an error, the thread will be resumed when it is called. If the
   // callback has an error, it will be reported and the thread will remain stopped.
-  virtual void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) = 0;
+  //
+  // The callback indicates that the initialization has completed, not that the thread controller
+  // has completed. For controller completion, see the constructor.
+  virtual void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb = nullptr) = 0;
 
   // Returns how to continue the thread when running this controller. This will be called after
   // InitWithThread and after every subsequent kContinue response from OnThreadStop to see how the
@@ -311,6 +325,8 @@ class ThreadController {
   bool enable_debug_logging() const { return enable_debug_logging_; }
 
  private:
+  fit::deferred_callback on_done_;
+
   Thread* thread_ = nullptr;
 
   // Initialized from the setting when the thread is known.

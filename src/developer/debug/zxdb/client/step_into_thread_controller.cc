@@ -25,16 +25,22 @@ namespace zxdb {
 // That would only be issued if we end up stepping *out*, which means there's no prologue and we
 // wouldn't encounter a return at any other time.
 StepIntoThreadController::StepIntoThreadController(StepMode mode,
-                                                   FunctionReturnCallback function_return)
-    : step_into_(std::make_unique<StepThreadController>(mode, std::move(function_return))) {}
+                                                   FunctionReturnCallback function_return,
+                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_into_(std::make_unique<StepThreadController>(mode, std::move(function_return))) {}
 
 StepIntoThreadController::StepIntoThreadController(const FileLine& line,
-                                                   FunctionReturnCallback function_return)
-    : step_into_(std::make_unique<StepThreadController>(line, std::move(function_return))) {}
+                                                   FunctionReturnCallback function_return,
+                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_into_(std::make_unique<StepThreadController>(line, std::move(function_return))) {}
 
 StepIntoThreadController::StepIntoThreadController(AddressRanges ranges,
-                                                   FunctionReturnCallback function_return)
-    : step_into_(std::make_unique<StepThreadController>(ranges, std::move(function_return))) {}
+                                                   FunctionReturnCallback function_return,
+                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_into_(std::make_unique<StepThreadController>(ranges, std::move(function_return))) {}
 
 StepIntoThreadController::~StepIntoThreadController() = default;
 

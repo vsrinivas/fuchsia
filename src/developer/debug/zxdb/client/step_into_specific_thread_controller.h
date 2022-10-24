@@ -31,7 +31,8 @@ class StepThreadController;
 // the desired "into" destination is conditionally skipped.
 class StepIntoSpecificThreadController : public ThreadController {
  public:
-  explicit StepIntoSpecificThreadController(AddressRange over_range);
+  explicit StepIntoSpecificThreadController(AddressRange over_range,
+                                            fit::deferred_callback on_done = {});
 
   ~StepIntoSpecificThreadController() override;
 

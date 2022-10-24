@@ -25,7 +25,7 @@ namespace zxdb {
 // When InitWithThread() is called, the thread should be stopped at a PLT trampoline.
 class StepThroughPltThreadController : public ThreadController {
  public:
-  explicit StepThroughPltThreadController() : weak_factory_(this) {}
+  explicit StepThroughPltThreadController(fit::deferred_callback on_done = {});
 
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;

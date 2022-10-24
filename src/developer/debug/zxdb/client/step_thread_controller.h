@@ -35,14 +35,17 @@ class StepThreadController : public ThreadController {
   //
   // The function_return callback (if supplied) will be issued when the "step into" terminates with
   // the completion of the function.
-  explicit StepThreadController(StepMode mode, FunctionReturnCallback function_return = {});
+  explicit StepThreadController(StepMode mode, FunctionReturnCallback function_return = {},
+                                fit::deferred_callback on_done = {});
 
   // Steps given the source file/line.
-  explicit StepThreadController(const FileLine& line, FunctionReturnCallback function_return = {});
+  explicit StepThreadController(const FileLine& line, FunctionReturnCallback function_return = {},
+                                fit::deferred_callback on_done = {});
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues execution as long as the
   // IP is in range.
-  explicit StepThreadController(AddressRanges ranges, FunctionReturnCallback function_return = {});
+  explicit StepThreadController(AddressRanges ranges, FunctionReturnCallback function_return = {},
+                                fit::deferred_callback on_done = {});
 
   ~StepThreadController() override;
 

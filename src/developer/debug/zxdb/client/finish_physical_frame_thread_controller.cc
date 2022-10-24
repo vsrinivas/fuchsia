@@ -14,10 +14,10 @@
 
 namespace zxdb {
 
-FinishPhysicalFrameThreadController::FinishPhysicalFrameThreadController(Stack& stack,
-                                                                         size_t frame_to_finish,
-                                                                         FunctionReturnCallback cb)
-    : frame_to_finish_(frame_to_finish),
+FinishPhysicalFrameThreadController::FinishPhysicalFrameThreadController(
+    Stack& stack, size_t frame_to_finish, FunctionReturnCallback cb, fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      frame_to_finish_(frame_to_finish),
       function_return_callback_(std::move(cb)),
       weak_factory_(this) {
   FX_DCHECK(frame_to_finish < stack.size());

@@ -48,7 +48,7 @@ ThreadController::StopOp ThreadController::ResumeAsyncCallbackInfo::ForwardStopO
   return kFuture;
 }
 
-ThreadController::ThreadController() = default;
+ThreadController::ThreadController(fit::deferred_callback on_done) : on_done_(std::move(on_done)) {}
 
 ThreadController::~ThreadController() = default;
 

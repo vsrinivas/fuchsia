@@ -19,16 +19,20 @@
 namespace zxdb {
 
 StepOverThreadController::StepOverThreadController(StepMode mode,
-                                                   FunctionReturnCallback function_return)
-    : step_mode_(mode),
+                                                   FunctionReturnCallback function_return,
+                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_mode_(mode),
       step_into_(std::make_unique<StepThreadController>(mode)),
       function_return_callback_(std::move(function_return)) {
   FX_DCHECK(mode != StepMode::kAddressRange);
 }
 
 StepOverThreadController::StepOverThreadController(AddressRanges ranges,
-                                                   FunctionReturnCallback function_return)
-    : step_mode_(StepMode::kAddressRange),
+                                                   FunctionReturnCallback function_return,
+                                                   fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
+      step_mode_(StepMode::kAddressRange),
       address_ranges_(ranges),
       step_into_(std::make_unique<StepThreadController>(std::move(ranges))),
       function_return_callback_(std::move(function_return)) {}

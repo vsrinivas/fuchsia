@@ -35,7 +35,8 @@ class FinishPhysicalFrameThreadController : public ThreadController {
   //
   // The optional callback will be issued in the instruction the physical frame has completed.
   FinishPhysicalFrameThreadController(Stack& stack, size_t frame_to_finish,
-                                      FunctionReturnCallback cb = FunctionReturnCallback());
+                                      FunctionReturnCallback cb = FunctionReturnCallback(),
+                                      fit::deferred_callback on_done = {});
 
   ~FinishPhysicalFrameThreadController() override;
 

@@ -51,12 +51,13 @@ class UntilThreadController : public ThreadController {
   // to a higher frame. When end_bp is 0, every stack pointer will be larger and it will always
   // trigger. Supporting the stack pointer allows this class to be used for stack-aware options (as
   // a subset of "finish" for example).
-  explicit UntilThreadController(std::vector<InputLocation> locations);
+  explicit UntilThreadController(std::vector<InputLocation> locations,
+                                 fit::deferred_callback on_done = {});
 
   // Runs to the given location until the current frame compares to the given frame according to the
   // given comparator. This allows stepping backward in the call stack.
   UntilThreadController(std::vector<InputLocation> locations, FrameFingerprint newest_frame,
-                        FrameComparison cmp);
+                        FrameComparison cmp, fit::deferred_callback on_done = {});
 
   ~UntilThreadController() override;
 

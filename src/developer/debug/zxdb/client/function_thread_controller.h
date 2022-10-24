@@ -17,7 +17,7 @@ namespace zxdb {
 //  - It might step out of unsymbolized functions.
 class FunctionThreadController : public ThreadController {
  public:
-  explicit FunctionThreadController(FunctionStep mode);
+  explicit FunctionThreadController(FunctionStep mode, fit::deferred_callback on_done = {});
 
   // ThreadController implementation.
   void InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) override;

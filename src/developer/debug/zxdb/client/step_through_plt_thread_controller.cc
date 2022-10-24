@@ -15,6 +15,9 @@
 
 namespace zxdb {
 
+StepThroughPltThreadController::StepThroughPltThreadController(fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)), weak_factory_(this) {}
+
 void StepThroughPltThreadController::InitWithThread(Thread* thread,
                                                     fit::callback<void(const Err&)> cb) {
   SetThread(thread);

@@ -21,12 +21,14 @@
 
 namespace zxdb {
 
-UntilThreadController::UntilThreadController(std::vector<InputLocation> locations)
-    : ThreadController(), locations_(std::move(locations)), weak_factory_(this) {}
+UntilThreadController::UntilThreadController(std::vector<InputLocation> locations,
+                                             fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)), locations_(std::move(locations)), weak_factory_(this) {}
 
 UntilThreadController::UntilThreadController(std::vector<InputLocation> locations,
-                                             FrameFingerprint newest_frame, FrameComparison cmp)
-    : ThreadController(),
+                                             FrameFingerprint newest_frame, FrameComparison cmp,
+                                             fit::deferred_callback on_done)
+    : ThreadController(std::move(on_done)),
       locations_(std::move(locations)),
       threshold_frame_(newest_frame),
       comparison_(cmp),
