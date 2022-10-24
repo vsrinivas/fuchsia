@@ -5,8 +5,6 @@
 #define SRC_DEVICES_SERIAL_DRIVERS_VIRTIO_CONSOLE_CONSOLE_H_
 
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
-#include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/ddk/device.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
@@ -122,7 +120,6 @@ class ConsoleDevice : public Device,
   TransferQueue port0_transmit_descriptors_ TA_GUARDED(request_lock_);
   Ring port0_transmit_queue_ TA_GUARDED(request_lock_) = {this};
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   zx::eventpair event_, event_remote_;
 
   std::unordered_map<zx_handle_t, fidl::ServerBindingRef<fuchsia_hardware_pty::Device>> bindings_;

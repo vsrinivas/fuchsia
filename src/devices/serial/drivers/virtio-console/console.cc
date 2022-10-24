@@ -5,7 +5,6 @@
 #include "console.h"
 
 #include <fidl/fuchsia.hardware.pty/cpp/wire.h>
-#include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
@@ -122,15 +121,8 @@ ConsoleDevice::~ConsoleDevice() = default;
 zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   zxlogf(TRACE, "%s: entry", __func__);
 
-  zx_status_t status = zx::eventpair::create(0, &event_, &event_remote_);
-  if (status != ZX_OK) {
+  if (zx_status_t status = zx::eventpair::create(0, &event_, &event_remote_); status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to create event pair (%d)", tag(), status);
-    return status;
-  }
-
-  status = loop_.StartThread("virtio-console-connection");
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: Failed to launch connection processing thread (%d)", tag(), status);
     return status;
   }
 
@@ -144,20 +136,18 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   }
   DriverFeatureAck(VIRTIO_F_VERSION_1);
 
-  status = DeviceStatusFeaturesOk();
-  if (status) {
+  if (zx_status_t status = DeviceStatusFeaturesOk(); status != ZX_OK) {
     zxlogf(ERROR, "%s: Feature negotiation failed (%d)", tag(), status);
     return status;
   }
 
-  status = port0_receive_queue_.Init(0, kDescriptors);
-  if (status) {
+  if (zx_status_t status = port0_receive_queue_.Init(0, kDescriptors); status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to initialize receive queue (%d)", tag(), status);
     return status;
   }
 
-  status = port0_receive_buffer_.Init(bti_, kDescriptors, kChunkSize);
-  if (status) {
+  if (zx_status_t status = port0_receive_buffer_.Init(bti_, kDescriptors, kChunkSize);
+      status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to allocate buffers for receive queue (%d)", tag(), status);
     return status;
   }
@@ -171,14 +161,13 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   // Notify the device
   port0_receive_queue_.Kick();
 
-  status = port0_transmit_queue_.Init(1, kDescriptors);
-  if (status) {
+  if (zx_status_t status = port0_transmit_queue_.Init(1, kDescriptors); status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to initialize transmit queue (%d)", tag(), status);
     return status;
   }
 
-  status = port0_transmit_buffer_.Init(bti_, kDescriptors, kChunkSize);
-  if (status) {
+  if (zx_status_t status = port0_transmit_buffer_.Init(bti_, kDescriptors, kChunkSize);
+      status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to allocate buffers for transmit queue (%d)", tag(), status);
     return status;
   }
@@ -190,12 +179,14 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
     port0_transmit_descriptors_.Add(desc);
   }
 
-  status = DdkAdd("virtio-console");
-  device_ = zxdev();
-  if (status) {
-    zxlogf(ERROR, "%s: Failed to register device (%d)", tag(), status);
-    device_ = nullptr;
-    return status;
+  {
+    zx_status_t status = DdkAdd("virtio-console");
+    device_ = zxdev();
+    if (status != ZX_OK) {
+      zxlogf(ERROR, "%s: Failed to register device (%d)", tag(), status);
+      device_ = nullptr;
+      return status;
+    }
   }
 
   StartIrqThread();
@@ -208,11 +199,9 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
 void ConsoleDevice::Unbind(ddk::UnbindTxn txn) {
   unbind_txn_ = std::move(txn);
 
-  async::PostTask(loop_.dispatcher(), [this]() {
-    for (auto& [handle, binding] : bindings_) {
-      binding.Unbind();
-    }
-  });
+  for (auto& [handle, binding] : bindings_) {
+    binding.Unbind();
+  }
 }
 
 void ConsoleDevice::IrqRingUpdate() {
@@ -272,30 +261,23 @@ void ConsoleDevice::IrqRingUpdate() {
 }
 
 void ConsoleDevice::AddConnection(fidl::ServerEnd<fuchsia_hardware_pty::Device> server_end) {
-  // TODO(https://fxbug.dev/112983): guarantee that `this` is alive when this
-  // task executes (or remove loop_ if it's possible to do this work on the
-  // driver host's loop). At the time of writing it appears that this loop
-  // may still be running while `this` is being destroyed on another thread.
-  async::PostTask(loop_.dispatcher(), [this, server_end = std::move(server_end)]() mutable {
-    const zx_handle_t key = server_end.channel().get();
-    auto [it, inserted] = bindings_.insert(
-        {key,
-         fidl::BindServer(loop_.dispatcher(), std::move(server_end),
-                          static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(this),
-                          [](fidl::WireServer<fuchsia_hardware_pty::Device>* impl, fidl::UnbindInfo,
-                             fidl::ServerEnd<fuchsia_hardware_pty::Device> key) {
-                            ConsoleDevice& self = *static_cast<ConsoleDevice*>(impl);
-                            size_t erased = self.bindings_.erase(key.channel().get());
-                            ZX_ASSERT_MSG(erased == 1, "erased=%zu", erased);
-                            if (self.bindings_.empty()) {
-                              if (std::optional txn = std::exchange(self.unbind_txn_, {});
-                                  txn.has_value()) {
-                                txn.value().Reply();
-                              }
-                            }
-                          })});
-    ZX_ASSERT_MSG(inserted, "handle=%d", key);
-  });
+  const zx_handle_t key = server_end.channel().get();
+  auto [it, inserted] = bindings_.insert(
+      {key, fidl::BindServer(
+                fdf::Dispatcher::GetCurrent()->async_dispatcher(), std::move(server_end),
+                static_cast<fidl::WireServer<fuchsia_hardware_pty::Device>*>(this),
+                [](fidl::WireServer<fuchsia_hardware_pty::Device>* impl, fidl::UnbindInfo,
+                   fidl::ServerEnd<fuchsia_hardware_pty::Device> key) {
+                  ConsoleDevice& self = *static_cast<ConsoleDevice*>(impl);
+                  size_t erased = self.bindings_.erase(key.channel().get());
+                  ZX_ASSERT_MSG(erased == 1, "erased=%zu", erased);
+                  if (self.bindings_.empty()) {
+                    if (std::optional txn = std::exchange(self.unbind_txn_, {}); txn.has_value()) {
+                      txn.value().Reply();
+                    }
+                  }
+                })});
+  ZX_ASSERT_MSG(inserted, "handle=%d", key);
 }
 
 void ConsoleDevice::Clone2(Clone2RequestView request, Clone2Completer::Sync& completer) {
