@@ -291,7 +291,7 @@ func (r *FfxResolver) ffxSupportsZedbootDiscovery(ctx context.Context) (bool, er
 	}
 
 	// FIXME(fxbug.dev/109280): Unfortunately we need to parse the raw string to see if it's true.
-	if string(stdout) != "true\n" {
+	if string(stdout) == "true\n" {
 		return true, nil
 	}
 
