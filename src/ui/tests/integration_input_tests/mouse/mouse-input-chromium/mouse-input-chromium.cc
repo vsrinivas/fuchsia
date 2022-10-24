@@ -157,16 +157,24 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
 
     fuchsia::web::MessagePortPtr message_port;
     bool is_port_registered = false;
+    bool window_resized = false;
     SendMessageToWebPage(message_port.NewRequest(), "REGISTER_PORT");
-    message_port->ReceiveMessage([&is_port_registered](auto web_message) {
+    message_port->ReceiveMessage([&is_port_registered, &window_resized](auto web_message) {
       auto message = StringFromBuffer(web_message.data());
-      FX_CHECK(message == "PORT_REGISTERED") << "Expected PORT_REGISTERED but got " << message;
+      // JS already saw window has size, don't wait for resize.
+      if (message == "PORT_REGISTERED WINDOW_RESIZED") {
+        window_resized = true;
+      } else {
+        FX_CHECK(message == "PORT_REGISTERED") << "Expected PORT_REGISTERED but got " << message;
+      }
       is_port_registered = true;
     });
     RunLoopUntil([&] { return is_port_registered; });
 
-    RunLoopUntil(
-        [&navigation_event_listener] { return navigation_event_listener.window_resized_; });
+    if (!window_resized) {
+      RunLoopUntil(
+          [&navigation_event_listener] { return navigation_event_listener.window_resized_; });
+    }
 
     fuchsia::ui::test::input::MouseInputListenerSyncPtr mouse_input_listener;
     context_->svc()->Connect(mouse_input_listener.NewRequest());
@@ -247,7 +255,11 @@ class WebApp : public fuchsia::ui::app::ViewProvider {
       if (event.data == "REGISTER_PORT") {
         console.log("received REGISTER_PORT");
         port = event.ports[0];
-        port.postMessage('PORT_REGISTERED');
+        if (window.innerWidth != 0) {
+          port.postMessage('PORT_REGISTERED WINDOW_RESIZED');
+        } else {
+          port.postMessage('PORT_REGISTERED');
+        }
       } else {
         console.error('received unexpected message: ' + event.data);
       }
