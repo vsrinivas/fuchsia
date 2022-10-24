@@ -33,7 +33,6 @@ class Device {
 
   virtual zx_status_t Init() = 0;
   virtual void Release();
-  virtual void Unbind(ddk::UnbindTxn txn);
 
   void StartIrqThread();
   // interrupt cases that devices may override

@@ -196,7 +196,7 @@ zx_status_t ConsoleDevice::Init() TA_NO_THREAD_SAFETY_ANALYSIS {
   return ZX_OK;
 }
 
-void ConsoleDevice::Unbind(ddk::UnbindTxn txn) {
+void ConsoleDevice::DdkUnbind(ddk::UnbindTxn txn) {
   unbind_txn_ = std::move(txn);
 
   for (auto& [handle, binding] : bindings_) {

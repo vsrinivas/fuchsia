@@ -27,9 +27,7 @@ namespace virtio {
 
 constexpr int MAX_IOS = 16;
 
-class ScsiDevice : public virtio::Device,
-                   public scsi::Controller,
-                   public ddk::Device<ScsiDevice, ddk::Unbindable> {
+class ScsiDevice : public virtio::Device, public scsi::Controller, public ddk::Device<ScsiDevice> {
  public:
   enum Queue {
     CONTROL = 0,
@@ -39,11 +37,10 @@ class ScsiDevice : public virtio::Device,
 
   ScsiDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend)
       : virtio::Device(device, std::move(bti), std::move(backend)),
-        ddk::Device<ScsiDevice, ddk::Unbindable>(device) {}
+        ddk::Device<ScsiDevice>(device) {}
 
   // virtio::Device overrides
   zx_status_t Init() override;
-  void DdkUnbind(ddk::UnbindTxn txn);
   void DdkRelease();
   // Invoked for most device interrupts.
   virtual void IrqRingUpdate() override;

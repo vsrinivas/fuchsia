@@ -26,7 +26,7 @@
 namespace virtio {
 
 class EthernetDevice;
-using DeviceType = ddk::Device<EthernetDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<EthernetDevice>;
 class EthernetDevice : public Device,
                        // Mixins for protocol device:
                        public DeviceType,
@@ -38,7 +38,6 @@ class EthernetDevice : public Device,
 
   zx_status_t Init() override TA_EXCL(state_lock_);
   void DdkRelease() TA_EXCL(state_lock_);
-  void DdkUnbind(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
 
   // VirtIO callbacks
   void IrqRingUpdate() override TA_EXCL(state_lock_);

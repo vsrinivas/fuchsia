@@ -30,11 +30,6 @@ Device::Device(zx_device_t* bus_device, zx::bti bti, std::unique_ptr<Backend> ba
 
 Device::~Device() { zxlogf(TRACE, "%s: exit", __func__); }
 
-void Device::Unbind(ddk::UnbindTxn txn) {
-  zxlogf(TRACE, "%s unbound", tag());
-  txn.Reply();
-}
-
 void Device::Release() {
   backend_->Terminate();
   irq_thread_should_exit_.store(true, std::memory_order_release);

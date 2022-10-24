@@ -443,8 +443,6 @@ zx_status_t ScsiDevice::Init() {
   return status;
 }
 
-void ScsiDevice::DdkUnbind(ddk::UnbindTxn txn) { virtio::Device::Unbind(std::move(txn)); }
-
 void ScsiDevice::DdkRelease() {
   {
     fbl::AutoLock lock(&lock_);

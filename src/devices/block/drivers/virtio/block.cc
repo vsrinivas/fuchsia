@@ -172,7 +172,7 @@ void BlockDevice::DdkUnbind(ddk::UnbindTxn txn) {
   worker_shutdown_.store(true);
   sync_completion_signal(&worker_signal_);
   sync_completion_signal(&txn_signal_);
-  virtio::Device::Unbind(std::move(txn));
+  txn.Reply();
 }
 
 void BlockDevice::IrqRingUpdate() {

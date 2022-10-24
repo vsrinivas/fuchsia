@@ -62,8 +62,8 @@ class TransferQueue {
 };
 
 class ConsoleDevice;
-using DeviceType =
-    ddk::Device<ConsoleDevice, ddk::Messageable<fuchsia_hardware_pty::Device>::Mixin>;
+using DeviceType = ddk::Device<ConsoleDevice, ddk::Unbindable,
+                               ddk::Messageable<fuchsia_hardware_pty::Device>::Mixin>;
 
 // Actual virtio console implementation
 class ConsoleDevice : public Device,
@@ -73,9 +73,9 @@ class ConsoleDevice : public Device,
   explicit ConsoleDevice(zx_device_t* device, zx::bti bti, std::unique_ptr<Backend> backend);
   ~ConsoleDevice() override;
   void DdkRelease() { virtio::Device::Release(); }
+  void DdkUnbind(ddk::UnbindTxn txn);
 
   zx_status_t Init() override;
-  void Unbind(ddk::UnbindTxn txn) override;
 
   void IrqRingUpdate() override;
   void IrqConfigChange() override {}  // No need to handle configuration changes
