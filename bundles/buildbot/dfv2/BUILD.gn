@@ -197,8 +197,6 @@ group("core") {
   # Add-assign should contain all deps of //src:src_no_e2e.
   # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
   # //src:src_no_e2e pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/developer to this add-assign when all
-  # tests in //src/developer pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src:tests_no_e2e to this add-assign when all
   # tests in //src:tests_no_e2e pass with DFv2 enabled.
   # TODO(fxbug.dev/108563): Add //src/connectivity:connectivity_no_e2e to this
@@ -210,6 +208,7 @@ group("core") {
     "//src/chromium",
     "//src/cobalt",
     "//src/dart",
+    "//src/developer",
     "//src/devices",
     "//src/diagnostics",
     "//src/experiences",
@@ -361,48 +360,6 @@ group("core") {
   deps += [
     "//src/connectivity/network/testing/conformance/expect:tests",
     "//src/connectivity/network/testing/conformance/parseoutput:tests",
-  ]
-
-  # Add-assign should contain all deps of //src/developer.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/developer pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/developer:tests to this add-assign when
-  # all tests in //src/developer:tests pass with DFv2 enabled.
-  deps += [
-    "//src/developer/debug",
-    "//src/developer/ffx",
-    "//src/developer/forensics",
-    "//src/developer/fuchsia-criterion",
-    "//src/developer/remote-control",
-  ]
-
-  # Add-assign should contain all deps of //src/developer:tests.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/developer:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/108563): Add //src/developer/debug:tests to this add-assign
-  # when all tests in //src/developer/debug:tests pass with DFv2 enabled.
-  deps += [
-    "//src/developer/build_info:tests",
-    "//src/developer/ffx:tests",
-    "//src/developer/forensics:tests",
-    "//src/developer/fuchsia-criterion:tests",
-    "//src/developer/memory:tests",
-    "//src/developer/remote-control:tests",
-    "//src/developer/shell:tests",
-    "//src/developer/ssh-key-manager:tests",
-    "//src/developer/sshd-host:tests",
-  ]
-
-  # Add-assign should contain all deps of //src/developer/debug:tests.
-  # TODO(fxbug.dev/108563): Remove the following add-assign when all tests in
-  # //src/developer/debug:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/110058): Add
-  # //src/developer/e2e_tests:zxdb_e2e_tests($host_toolchain) to this add-assign
-  # when all tests in //src/developer/e2e_tests:zxdb_e2e_tests($host_toolchain)
-  # pass with DFv2 enabled.
-  deps += [
-    "//src/developer/debug/debug_agent:tests",
-    "//src/developer/debug/zxdb:tests",
   ]
 
   # Add-assign should contain all deps of //src:e2e_tests.
