@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::environment::FshostEnvironment,
-    anyhow::{format_err, Result},
+    crate::{
+        boot_args::BootArgs, config::apply_boot_args_to_config, environment::FshostEnvironment,
+    },
+    anyhow::{format_err, Context, Result},
     fidl::prelude::*,
     fidl_fuchsia_fshost as fshost, fidl_fuchsia_io as fio,
     fuchsia_runtime::{take_startup_handle, HandleType},
@@ -16,6 +18,7 @@ use {
     },
 };
 
+mod boot_args;
 mod config;
 mod crypt;
 mod device;
@@ -27,7 +30,9 @@ mod watcher;
 
 #[fuchsia::main]
 async fn main() -> Result<()> {
-    let config = fshost_config::Config::take_from_startup_handle();
+    let boot_args = BootArgs::new().await.context("Failed to create boot_args")?;
+    let mut config = fshost_config::Config::take_from_startup_handle();
+    apply_boot_args_to_config(&mut config, &boot_args);
 
     // NB There are tests that look for "fshost started".
     tracing::info!(?config, "fshost started");
@@ -40,7 +45,7 @@ async fn main() -> Result<()> {
     let (shutdown_tx, shutdown_rx) = mpsc::channel::<service::FshostShutdownResponder>(1);
     let (watcher, device_stream) = watcher::Watcher::new().await?;
 
-    let mut env = FshostEnvironment::new(&config);
+    let mut env = FshostEnvironment::new(&config, &boot_args);
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
             fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(),

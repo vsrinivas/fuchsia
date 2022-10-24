@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        boot_args::BootArgs,
         crypt::{fxfs, zxcrypt},
         device::Device,
     },
@@ -78,12 +79,18 @@ impl Filesystem {
 pub struct FshostEnvironment<'a> {
     config: &'a fshost_config::Config,
     blobfs: Filesystem,
+    boot_args: &'a BootArgs,
     data: Filesystem,
 }
 
 impl<'a> FshostEnvironment<'a> {
-    pub fn new(config: &'a fshost_config::Config) -> Self {
-        Self { config, blobfs: Filesystem::Queue(Vec::new()), data: Filesystem::Queue(Vec::new()) }
+    pub fn new(config: &'a fshost_config::Config, boot_args: &'a BootArgs) -> Self {
+        Self {
+            config,
+            blobfs: Filesystem::Queue(Vec::new()),
+            boot_args,
+            data: Filesystem::Queue(Vec::new()),
+        }
     }
 
     /// Returns a proxy for the root of the Blobfs filesystem.  This can be called before Blobfs is
@@ -124,8 +131,19 @@ impl<'a> Environment for FshostEnvironment<'a> {
             tracing::warn!("Failed to set max partition size for blobfs: {:?}", e);
         };
 
-        let fs =
-            Blobfs::from_channel(device.proxy()?.into_channel().unwrap().into())?.serve().await?;
+        let mut blobfs = Blobfs::default();
+        if let Some(compression) = self.boot_args.blobfs_write_compression_algorithm() {
+            blobfs.blob_compression = Some(compression);
+        }
+        if let Some(eviction) = self.boot_args.blobfs_eviction_policy() {
+            blobfs.blob_eviction_policy = Some(eviction);
+        }
+        let fs = fs_management::filesystem::Filesystem::from_channel(
+            device.proxy()?.into_channel().unwrap().into(),
+            blobfs,
+        )?
+        .serve()
+        .await?;
         let root_dir = fs.root();
         for server in queue.drain(..) {
             root_dir.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?;

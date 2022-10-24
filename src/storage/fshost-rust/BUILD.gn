@@ -10,6 +10,7 @@ rustc_binary("fshost-rust") {
   output_name = "fshost_rust"
   edition = "2021"
   deps = [
+    "//sdk/fidl/fuchsia.boot:fuchsia.boot_rust",
     "//sdk/fidl/fuchsia.device:fuchsia.device_rust",
     "//sdk/fidl/fuchsia.fshost:fuchsia.fshost_rust",
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_rust",
@@ -44,6 +45,7 @@ rustc_binary("fshost-rust") {
     "//src/lib/fuchsia-async",
   ]
   sources = [
+    "src/boot_args.rs",
     "src/config.rs",
     "src/crypt.rs",
     "src/crypt/fxfs.rs",

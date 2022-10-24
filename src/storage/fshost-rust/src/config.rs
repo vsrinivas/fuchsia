@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::boot_args::BootArgs;
+
 #[cfg(test)]
 pub fn default_config() -> fshost_config::Config {
     fshost_config::Config {
@@ -33,5 +35,15 @@ pub fn default_config() -> fshost_config::Config {
         use_disk_based_minfs_migration: false,
         use_native_fxfs_crypto: true,
         ramdisk_prefix: "/dev/sys/platform/00:00:2d/ramctl".to_owned(),
+    }
+}
+
+pub fn apply_boot_args_to_config(config: &mut fshost_config::Config, boot_args: &BootArgs) {
+    if boot_args.netboot() {
+        config.netboot = true;
+    }
+
+    if boot_args.check_filesystems() {
+        config.check_filesystems = true;
     }
 }
