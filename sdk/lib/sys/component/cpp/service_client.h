@@ -22,19 +22,19 @@ namespace component {
 // Opens the directory containing incoming services in the application's default
 // incoming namespace. By default the path is "/svc". Users may specify a custom path.
 zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(
-    const char* path = component::kServiceDirectory);
+    cpp17::string_view path = component::kServiceDirectory);
 
 namespace internal {
 
 // Implementations of |component::Connect| that is independent from the actual |Protocol|.
-zx::result<zx::channel> ConnectRaw(const char* path);
-zx::result<> ConnectRaw(zx::channel server_end, const char* path);
+zx::result<zx::channel> ConnectRaw(cpp17::string_view path);
+zx::result<> ConnectRaw(zx::channel server_end, cpp17::string_view path);
 
 // Implementations of |component::ConnectAt| that is independent from the actual |Protocol|.
 zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                                     const char* protocol_name);
+                                     cpp17::string_view protocol_name);
 zx::result<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                          zx::channel server_end, const char* protocol_name);
+                          zx::channel server_end, cpp17::string_view protocol_name);
 
 // Implementations of |component::Clone| that is independent from the actual |Protocol|.
 zx::result<zx::channel> CloneRaw(zx::unowned_channel&& node);
@@ -102,7 +102,7 @@ std::string MakeServiceMemberPath(std::string_view instance) {
 // See documentation on |fdio_service_connect| for details.
 template <typename Protocol>
 zx::result<fidl::ClientEnd<Protocol>> Connect(
-    const char* path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
+    cpp17::string_view path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
   auto channel = internal::ConnectRaw(path);
   if (channel.is_error()) {
     return channel.take_error();
@@ -117,10 +117,10 @@ zx::result<fidl::ClientEnd<Protocol>> Connect(
 // qualified name of the FIDL protocol. The path may be overridden to
 // a custom value.
 //
-// See `Connect(const char*)` for details.
+// See `Connect(cpp17::string_view)` for details.
 template <typename Protocol>
 zx::result<> Connect(fidl::ServerEnd<Protocol> server_end,
-                     const char* path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
+                     cpp17::string_view path = fidl::DiscoverableProtocolDefaultPath<Protocol>) {
   return internal::ConnectRaw(server_end.TakeChannel(), path);
 }
 
@@ -130,12 +130,12 @@ zx::result<> Connect(fidl::ServerEnd<Protocol> server_end,
 // |protocol_name| defaults to the fully qualified name of the FIDL protocol,
 // but may be overridden to a custom value.
 //
-// See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, const char*)` for
+// See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, cpp17::string_view)` for
 // details.
 template <typename Protocol, typename = std::enable_if_t<fidl::IsProtocolV<Protocol>>>
 zx::result<fidl::ClientEnd<Protocol>> ConnectAt(
     fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-    const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
+    cpp17::string_view protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
   auto channel = internal::ConnectAtRaw(svc_dir, protocol_name);
   if (channel.is_error()) {
     return channel.take_error();
@@ -151,9 +151,9 @@ zx::result<fidl::ClientEnd<Protocol>> ConnectAt(
 //
 // See documentation on |fdio_service_connect_at| for details.
 template <typename Protocol, typename = std::enable_if_t<fidl::IsProtocolV<Protocol>>>
-zx::result<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                       fidl::ServerEnd<Protocol> server_end,
-                       const char* protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
+zx::result<> ConnectAt(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir, fidl::ServerEnd<Protocol> server_end,
+    cpp17::string_view protocol_name = fidl::DiscoverableProtocolName<Protocol>) {
   if (zx::result<> status =
           internal::ConnectAtRaw(svc_dir, server_end.TakeChannel(), protocol_name);
       status.is_error()) {
@@ -168,7 +168,7 @@ zx::result<> ConnectAt(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
 // |protocol_name| defaults to the fully qualified name of the FIDL protocol,
 // but may be overridden to a custom value.
 //
-// See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, const char*)` for
+// See `ConnectAt(UnownedClientEnd<fuchsia_io::Directory>, cpp17::string_view)` for
 // details.
 template <typename ServiceMember,
           typename = std::enable_if_t<fidl::IsServiceMemberV<ServiceMember>>>

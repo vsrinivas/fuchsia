@@ -14,4 +14,10 @@ Symbols:
   - { Name: svc_dir_remove_service, Type: Func }
   - { Name: svc_dir_remove_service_by_path, Type: Func }
   - { Name: svc_dir_serve, Type: Func }
+  - { Name: svc_directory_add_directory, Type: Func }
+  - { Name: svc_directory_add_service, Type: Func }
+  - { Name: svc_directory_create, Type: Func }
+  - { Name: svc_directory_destroy, Type: Func }
+  - { Name: svc_directory_remove_entry, Type: Func }
+  - { Name: svc_directory_serve, Type: Func }
 ...

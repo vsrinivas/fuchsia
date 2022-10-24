@@ -6,7 +6,6 @@ group("fidl") {
   testonly = true
   deps = [
     ":tests",
-    "c:all",
     "calculator:all",
     "cpp:all",
     "dart:all",

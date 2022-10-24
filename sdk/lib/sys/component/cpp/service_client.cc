@@ -12,13 +12,13 @@
 
 namespace component {
 
-zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(const char* path) {
+zx::result<fidl::ClientEnd<fuchsia_io::Directory>> OpenServiceRoot(cpp17::string_view path) {
   return component::Connect<fuchsia_io::Directory>(path);
 }
 
 namespace internal {
 
-zx::result<zx::channel> ConnectRaw(const char* path) {
+zx::result<zx::channel> ConnectRaw(cpp17::string_view path) {
   zx::channel client_end, server_end;
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
@@ -29,15 +29,16 @@ zx::result<zx::channel> ConnectRaw(const char* path) {
   return zx::ok(std::move(client_end));
 }
 
-zx::result<> ConnectRaw(zx::channel server_end, const char* path) {
-  if (zx_status_t status = fdio_service_connect(path, server_end.release()); status != ZX_OK) {
+zx::result<> ConnectRaw(zx::channel server_end, cpp17::string_view path) {
+  if (zx_status_t status = fdio_service_connect(std::string(path).c_str(), server_end.release());
+      status != ZX_OK) {
     return zx::error(status);
   }
   return zx::ok();
 }
 
 zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                                     const char* protocol_name) {
+                                     cpp17::string_view protocol_name) {
   zx::channel client_end, server_end;
   if (zx_status_t status = zx::channel::create(0, &client_end, &server_end); status != ZX_OK) {
     return zx::error(status);
@@ -50,9 +51,9 @@ zx::result<zx::channel> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Director
 }
 
 zx::result<> ConnectAtRaw(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_dir,
-                          zx::channel server_end, const char* protocol_name) {
-  if (zx_status_t status =
-          fdio_service_connect_at(svc_dir.handle()->get(), protocol_name, server_end.release());
+                          zx::channel server_end, cpp17::string_view protocol_name) {
+  if (zx_status_t status = fdio_service_connect_at(
+          svc_dir.handle()->get(), std::string(protocol_name).c_str(), server_end.release());
       status != ZX_OK) {
     return zx::error(status);
   }

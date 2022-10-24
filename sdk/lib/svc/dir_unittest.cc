@@ -15,6 +15,7 @@
 #include <zircon/errors.h>
 
 #include <cstdint>
+#include <cstring>
 #include <memory>
 #include <thread>
 
@@ -35,6 +36,25 @@ static void connect(void* context, const char* service_name, zx_handle_t service
   EXPECT_EQ(ZX_OK, binding.write(0, "ok", 2, 0, 0));
 }
 
+// Convenience wrappers for testing only.
+zx_status_t svc_directory_add_service_unsized(svc_dir_t* dir, std::string_view path,
+                                              std::string_view name, void* context,
+                                              svc_connector_t* handler) {
+  return svc_directory_add_service(dir, path.data(), path.length(), name.data(), name.length(),
+                                   context, handler);
+}
+
+zx_status_t svc_directory_add_directory_unsized(svc_dir_t* dir, std::string_view path,
+                                                std::string_view name, zx_handle_t subdir) {
+  return svc_directory_add_directory(dir, path.data(), path.size(), name.data(), name.size(),
+                                     subdir);
+}
+
+zx_status_t svc_directory_remove_entry_unsized(svc_dir_t* dir, std::string_view path,
+                                               std::string_view name) {
+  return svc_directory_remove_entry(dir, path.data(), path.size(), name.data(), name.size());
+}
+
 using ServiceTest = ::gtest::RealLoopFixture;
 
 TEST_F(ServiceTest, Control) {
@@ -43,16 +63,18 @@ TEST_F(ServiceTest, Control) {
 
   std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
-    EXPECT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
-    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, "svc", "foobar", nullptr, connect));
-    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, "svc", "baz", nullptr, nullptr));
-    EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, svc_dir_add_service(dir, "svc", "baz", nullptr, nullptr));
-    EXPECT_EQ(ZX_OK, svc_dir_remove_service(dir, "svc", "baz"));
-    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, "another", "qux", nullptr, nullptr));
+    EXPECT_EQ(ZX_OK, svc_directory_create(&dir));
+    EXPECT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
+    EXPECT_EQ(ZX_OK, svc_directory_add_service_unsized(dir, "svc", "foobar", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_directory_add_service_unsized(dir, "svc", "baz", nullptr, nullptr));
+    EXPECT_EQ(ZX_ERR_ALREADY_EXISTS,
+              svc_directory_add_service_unsized(dir, "svc", "baz", nullptr, nullptr));
+    EXPECT_EQ(ZX_OK, svc_directory_remove_entry_unsized(dir, "svc", "baz"));
+    EXPECT_EQ(ZX_OK, svc_directory_add_service_unsized(dir, "another", "qux", nullptr, nullptr));
 
     RunLoop();
 
-    svc_dir_destroy(dir);
+    svc_directory_destroy(dir);
   });
 
   // Verify that we can connect to a foobar service and get a response.
@@ -74,7 +96,7 @@ TEST_F(ServiceTest, Control) {
   QuitLoop();
   child.join();
 
-  // Verify that connection fails after svc_dir_destroy().
+  // Verify that connection fails after svc_directory_destroy().
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
   fdio_service_connect_at(dir.get(), "svc/foobar", request.release());
   EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
@@ -86,14 +108,15 @@ TEST_F(ServiceTest, PublishLegacyService) {
 
   std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
-    EXPECT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
-    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, nullptr, "foobar", nullptr, connect));
-    EXPECT_EQ(ZX_OK, svc_dir_add_service(dir, nullptr, "baz", nullptr, connect));
-    EXPECT_EQ(ZX_OK, svc_dir_remove_service(dir, nullptr, "baz"));
+    EXPECT_EQ(ZX_OK, svc_directory_create(&dir));
+    EXPECT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
+    EXPECT_EQ(ZX_OK, svc_directory_add_service_unsized(dir, "", "foobar", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_directory_add_service_unsized(dir, "", "baz", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_directory_remove_entry_unsized(dir, "", "baz"));
 
     RunLoop();
 
-    svc_dir_destroy(dir);
+    svc_directory_destroy(dir);
   });
 
   // Verify that we can connect to a foobar service and get a response.
@@ -115,7 +138,7 @@ TEST_F(ServiceTest, PublishLegacyService) {
   QuitLoop();
   child.join();
 
-  // Verify that connection fails after svc_dir_destroy().
+  // Verify that connection fails after svc_directory_destroy().
   EXPECT_EQ(ZX_OK, zx::channel::create(0, &svc, &request));
   fdio_service_connect_at(dir.get(), "foobar", request.release());
   EXPECT_EQ(ZX_OK, svc.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
@@ -127,13 +150,14 @@ TEST_F(ServiceTest, ConnectsByPath) {
 
   std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
-    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
-    ASSERT_EQ(ZX_OK, svc_dir_add_service_by_path(dir, "svc/fuchsia.logger.LogSink/default",
-                                                 "foobar", nullptr, connect));
+    EXPECT_EQ(ZX_OK, svc_directory_create(&dir));
+    EXPECT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
+    ASSERT_EQ(ZX_OK, svc_directory_add_service_unsized(dir, "svc/fuchsia.logger.LogSink/default",
+                                                       "foobar", nullptr, connect));
 
     RunLoop();
 
-    ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
+    ASSERT_EQ(svc_directory_destroy(dir), ZX_OK);
   });
 
   // Verify that we can connect to svc/fuchsia.logger.LogSink/default/foobar
@@ -158,26 +182,29 @@ TEST_F(ServiceTest, RejectsMalformedPaths) {
   ASSERT_EQ(ZX_OK, zx::channel::create(0, &_directory, &dir_request));
 
   svc_dir_t* dir = nullptr;
-  ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+  EXPECT_EQ(ZX_OK, svc_directory_create(&dir));
+  EXPECT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
 
   // The following paths should all fail.
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "/", "foobar", nullptr, connect), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "/svc", "foobar", nullptr, connect),
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "/", "foobar", nullptr, connect),
             ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "/svc//foo", "foobar", nullptr, connect),
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "/svc", "foobar", nullptr, connect),
             ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "svc/", "foobar", nullptr, connect),
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "/svc//foo", "foobar", nullptr, connect),
             ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, ".", "foobar", nullptr, connect), ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "..", "foobar", nullptr, connect),
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "svc/", "foobar", nullptr, connect),
             ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "...", "foobar", nullptr, connect),
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, ".", "foobar", nullptr, connect),
             ZX_ERR_INVALID_ARGS);
-  EXPECT_EQ(svc_dir_add_service_by_path(dir, "svc/..", "foobar", nullptr, connect),
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "..", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "...", "foobar", nullptr, connect),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(svc_directory_add_service_unsized(dir, "svc/..", "foobar", nullptr, connect),
             ZX_ERR_INVALID_ARGS);
 
   // Cleanup resources.
-  ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
+  ASSERT_EQ(svc_directory_destroy(dir), ZX_OK);
 }
 
 TEST_F(ServiceTest, AddSubdDirByPath) {
@@ -192,7 +219,8 @@ TEST_F(ServiceTest, AddSubdDirByPath) {
 
   std::thread child([this, dir_request = std::move(dir_request)]() mutable {
     svc_dir_t* dir = nullptr;
-    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+    ASSERT_EQ(ZX_OK, svc_directory_create(&dir));
+    ASSERT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
 
     auto subdir = std::make_unique<vfs::PseudoDir>();
     subdir->AddEntry(
@@ -211,13 +239,13 @@ TEST_F(ServiceTest, AddSubdDirByPath) {
                       fuchsia::io::OpenFlags::DIRECTORY,
                   std::move(server_end), dispatcher());
 
-    ASSERT_EQ(ZX_OK,
-              svc_dir_add_directory_by_path(dir, kTestPath, kTestDirectory, client_end.release()));
+    ASSERT_EQ(ZX_OK, svc_directory_add_directory_unsized(dir, kTestPath, kTestDirectory,
+                                                         client_end.release()));
 
     RunLoop();
 
-    EXPECT_EQ(svc_dir_remove_entry_by_path(dir, kTestPath, kTestDirectory), ZX_OK);
-    ASSERT_EQ(svc_dir_destroy(dir), ZX_OK);
+    EXPECT_EQ(svc_directory_remove_entry_unsized(dir, kTestPath, kTestDirectory), ZX_OK);
+    ASSERT_EQ(svc_directory_destroy(dir), ZX_OK);
   });
 
   fbl::unique_fd root_fd;
@@ -249,7 +277,8 @@ TEST_F(ServiceTest, AddDirFailsOnBadInput) {
   {
     zx::channel _server_end, client_end;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_server_end, &client_end));
-    EXPECT_EQ(svc_dir_add_directory(/*dir=*/nullptr, "AValidEntry", client_end.release()),
+    EXPECT_EQ(svc_directory_add_directory_unsized(/*dir=*/nullptr, "", "AValidEntry",
+                                                  client_end.release()),
               ZX_ERR_INVALID_ARGS);
   }
 
@@ -259,16 +288,17 @@ TEST_F(ServiceTest, AddDirFailsOnBadInput) {
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_directory, &dir_request));
 
     svc_dir_t* dir = nullptr;
-    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+    ASSERT_EQ(ZX_OK, svc_directory_create(&dir));
+    ASSERT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
 
     zx::channel _subdir, subdir_client;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_subdir, &subdir_client));
 
-    EXPECT_EQ(svc_dir_add_directory_by_path(dir, /*path=*/nullptr, /*name=*/nullptr,
-                                            subdir_client.release()),
+    EXPECT_EQ(svc_directory_add_directory(dir, /*path=*/nullptr, 0, /*name=*/nullptr, 0,
+                                          subdir_client.release()),
               ZX_ERR_INVALID_ARGS);
 
-    svc_dir_destroy(dir);
+    svc_directory_destroy(dir);
   }
 
   // |subdir| is an invalid handle
@@ -277,13 +307,14 @@ TEST_F(ServiceTest, AddDirFailsOnBadInput) {
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_directory, &dir_request));
 
     svc_dir_t* dir = nullptr;
-    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+    ASSERT_EQ(ZX_OK, svc_directory_create(&dir));
+    ASSERT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
 
-    EXPECT_EQ(svc_dir_add_directory_by_path(dir, /*path=*/nullptr, "AValidEntry",
-                                            /*subdir=*/ZX_HANDLE_INVALID),
+    EXPECT_EQ(svc_directory_add_directory_unsized(dir, /*path=*/"", "AValidEntry",
+                                                  /*subdir=*/ZX_HANDLE_INVALID),
               ZX_ERR_INVALID_ARGS);
 
-    svc_dir_destroy(dir);
+    svc_directory_destroy(dir);
   }
 
   // |path| is invalid
@@ -294,18 +325,19 @@ TEST_F(ServiceTest, AddDirFailsOnBadInput) {
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_directory, &dir_request));
 
     svc_dir_t* dir = nullptr;
-    ASSERT_EQ(ZX_OK, svc_dir_create(dispatcher(), dir_request.release(), &dir));
+    ASSERT_EQ(ZX_OK, svc_directory_create(&dir));
+    ASSERT_EQ(ZX_OK, svc_directory_serve(dir, dispatcher(), dir_request.release()));
 
     zx::channel _subdir, subdir_client;
     ASSERT_EQ(ZX_OK, zx::channel::create(0, &_subdir, &subdir_client));
 
     for (auto bad_path : kBadPaths) {
-      EXPECT_EQ(svc_dir_add_directory_by_path(dir, /*path=*/bad_path, /*name=*/"AValidEntry",
-                                              subdir_client.release()),
+      EXPECT_EQ(svc_directory_add_directory_unsized(dir, /*path=*/bad_path, /*name=*/"AValidEntry",
+                                                    subdir_client.release()),
                 ZX_ERR_INVALID_ARGS);
     }
 
-    svc_dir_destroy(dir);
+    svc_directory_destroy(dir);
   }
 }
 

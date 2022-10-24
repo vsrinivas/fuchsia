@@ -26,7 +26,7 @@ constexpr char kPathDelimiter = '/';
 constexpr size_t kPathDelimiterSize = 1;
 
 // Adds a new empty directory |name| to |dir| and sets |out| to new directory.
-zx_status_t AddNewEmptyDirectory(fbl::RefPtr<fs::PseudoDir> dir, const std::string& name,
+zx_status_t AddNewEmptyDirectory(fbl::RefPtr<fs::PseudoDir> dir, std::string_view name,
                                  fbl::RefPtr<fs::PseudoDir>* out) {
   auto subdir = fbl::MakeRefCounted<fs::PseudoDir>();
   zx_status_t status = dir->AddEntry(name, subdir);
@@ -37,11 +37,11 @@ zx_status_t AddNewEmptyDirectory(fbl::RefPtr<fs::PseudoDir> dir, const std::stri
 }
 
 // Disallow empty paths and paths like `.`, `..`, and so on.
-bool IsPathValid(const std::string& path) {
+bool IsPathValid(std::string_view path) {
   return !path.empty() && !std::all_of(path.cbegin(), path.cend(), [](char c) { return c == '.'; });
 }
 
-zx_status_t GetDirectory(fbl::RefPtr<fs::PseudoDir> dir, const std::string& name,
+zx_status_t GetDirectory(fbl::RefPtr<fs::PseudoDir> dir, std::string_view name,
                          bool create_if_empty, fbl::RefPtr<fs::PseudoDir>* out) {
   if (!IsPathValid(name)) {
     return ZX_ERR_INVALID_ARGS;
@@ -62,7 +62,7 @@ zx_status_t GetDirectory(fbl::RefPtr<fs::PseudoDir> dir, const std::string& name
   return ZX_OK;
 }
 
-zx_status_t GetDirectoryByPath(fbl::RefPtr<fs::PseudoDir> root, const std::string& path,
+zx_status_t GetDirectoryByPath(fbl::RefPtr<fs::PseudoDir> root, std::string_view path,
                                bool create_if_empty, fbl::RefPtr<fs::PseudoDir>* out) {
   *out = std::move(root);
 
@@ -80,7 +80,7 @@ zx_status_t GetDirectoryByPath(fbl::RefPtr<fs::PseudoDir> root, const std::strin
   size_t end_pos = path.find(kPathDelimiter);
 
   while (end_pos != std::string::npos) {
-    std::string current_path = path.substr(start_pos, end_pos - start_pos);
+    std::string_view current_path = path.substr(start_pos, end_pos - start_pos);
     zx_status_t status = GetDirectory(*out, current_path, create_if_empty, out);
     if (status != ZX_OK) {
       return status;
@@ -93,12 +93,14 @@ zx_status_t GetDirectoryByPath(fbl::RefPtr<fs::PseudoDir> root, const std::strin
   return GetDirectory(*out, path.substr(start_pos), create_if_empty, out);
 }
 
-zx_status_t AddServiceEntry(fbl::RefPtr<fs::PseudoDir> node, const std::string& service_name,
+zx_status_t AddServiceEntry(fbl::RefPtr<fs::PseudoDir> node, std::string_view service_name,
                             void* context, svc_connector_t handler) {
   return node->AddEntry(service_name,
                         fbl::MakeRefCounted<fs::Service>([service_name = std::string(service_name),
                                                           context, handler](zx::channel channel) {
-                          handler(context, service_name.c_str(), channel.release());
+                          if (handler != nullptr) {
+                            handler(context, service_name.c_str(), channel.release());
+                          }
 
                           return ZX_OK;
                         }));
@@ -111,24 +113,18 @@ struct svc_dir {
   fbl::RefPtr<fs::PseudoDir> root = fbl::MakeRefCounted<fs::PseudoDir>();
 };
 
-zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
-                           svc_dir_t** result) {
-  svc_dir_create_without_serve(result);
-  zx_status_t status = svc_dir_serve(*result, dispatcher, dir_request);
-  if (status != ZX_OK) {
-    svc_dir_destroy(*result);
-    return status;
-  }
-
-  return ZX_OK;
-}
-
-zx_status_t svc_dir_create_without_serve(svc_dir_t** result) {
+zx_status_t svc_directory_create(svc_dir_t** result) {
   *result = new svc_dir_t;
   return ZX_OK;
 }
 
-zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher, zx_handle_t request) {
+zx_status_t svc_directory_destroy(svc_dir_t* dir) {
+  delete dir;
+  return ZX_OK;
+}
+
+zx_status_t svc_directory_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher,
+                                zx_handle_t request) {
   if (dir == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -140,37 +136,33 @@ zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher, zx_han
   return dir->vfs->Serve(dir->root, zx::channel(request), fs::VnodeConnectionOptions::ReadWrite());
 }
 
-zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,
-                                void* context, svc_connector_t handler) {
-  const char* path = type == nullptr ? "" : type;
-  return svc_dir_add_service_by_path(dir, path, service_name, context, handler);
-}
+zx_status_t svc_directory_add_service(svc_dir_t* dir, const char* path, size_t path_size,
+                                      const char* name, size_t name_size, void* context,
+                                      svc_connector_t handler) {
+  if (name == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* path, const char* service_name,
-                                        void* context, svc_connector_t* handler) {
+  const std::string_view safe_path =
+      path == nullptr ? std::string_view("") : std::string_view(path, path_size);
   fbl::RefPtr<fs::PseudoDir> node;
-  zx_status_t status = GetDirectoryByPath(dir->root, path, /*create_if_empty=*/true, &node);
+  zx_status_t status = GetDirectoryByPath(dir->root, safe_path, /*create_if_empty=*/true, &node);
   if (status != ZX_OK) {
     return status;
   }
 
-  return AddServiceEntry(node, service_name, context, handler);
+  return AddServiceEntry(node, std::string_view(name, name_size), context, handler);
 }
 
-zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t subdir) {
-  return svc_dir_add_directory_by_path(dir, /*path=*/nullptr, name, subdir);
-}
-
-zx_status_t svc_dir_add_directory_by_path(svc_dir_t* dir, const char* path, const char* name,
-                                          zx_handle_t subdir) {
+zx_status_t svc_directory_add_directory(svc_dir_t* dir, const char* path, size_t path_size,
+                                        const char* name, size_t name_size, zx_handle_t subdir) {
   if (dir == nullptr || name == nullptr || subdir == ZX_HANDLE_INVALID) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   fbl::RefPtr<fs::PseudoDir> node;
-  // Create an empty string manually if `path` is nullptr. Compiler crashes when
-  // constructing a string from a nullptr.
-  std::string safe_path = path != nullptr ? path : "";
+  std::string_view safe_path =
+      path == nullptr ? std::string_view("") : std::string_view(path, path_size);
   zx_status_t status = GetDirectoryByPath(dir->root, safe_path, /*create_if_empty=*/true, &node);
   if (status != ZX_OK) {
     return status;
@@ -178,42 +170,33 @@ zx_status_t svc_dir_add_directory_by_path(svc_dir_t* dir, const char* path, cons
 
   fidl::ClientEnd<fuchsia_io::Directory> client_end((zx::channel(subdir)));
   auto remote_dir = fbl::MakeRefCounted<fs::RemoteDir>(std::move(client_end));
-  return node->AddEntry(name, std::move(remote_dir));
+  return node->AddEntry(fbl::String(name, name_size), std::move(remote_dir));
+  return ZX_OK;
 }
 
-zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char* service_name) {
-  const char* path = type == nullptr ? "" : type;
-  return svc_dir_remove_service_by_path(dir, path, service_name);
-}
-
-zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
-                                           const char* service_name) {
-  return svc_dir_remove_entry_by_path(dir, path, service_name);
-}
-
-zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
+zx_status_t svc_directory_remove_entry(svc_dir_t* dir, const char* path, size_t path_size,
+                                       const char* name, size_t name_size) {
   if (dir == nullptr || name == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  return dir->root->RemoveEntry(name);
-}
-
-zx_status_t svc_dir_remove_entry_by_path(svc_dir_t* dir, const char* path, const char* name) {
   fbl::RefPtr<fs::PseudoDir> parent_directory;
+  const std::string_view safe_path =
+      path == nullptr ? std::string_view("") : std::string_view(path, path_size);
   zx_status_t status =
-      GetDirectoryByPath(dir->root, path, /*create_if_empty=*/false, &parent_directory);
+      GetDirectoryByPath(dir->root, safe_path, /*create_if_empty=*/false, &parent_directory);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<fs::Vnode> node;
-  status = parent_directory->Lookup(name, &node);
+  fbl::String sized_name(name, name_size);
+  status = parent_directory->Lookup(sized_name, &node);
   if (status != ZX_OK) {
     return status;
   }
 
-  status = parent_directory->RemoveEntry(name, node.get());
+  status = parent_directory->RemoveEntry(sized_name, node.get());
   if (status == ZX_OK) {
     dir->vfs->CloseAllConnectionsForVnode(*node, nullptr);
   }
@@ -221,7 +204,71 @@ zx_status_t svc_dir_remove_entry_by_path(svc_dir_t* dir, const char* path, const
   return status;
 }
 
-zx_status_t svc_dir_destroy(svc_dir_t* dir) {
-  delete dir;
+// Deprecated function implementations
+zx_status_t svc_dir_create(async_dispatcher_t* dispatcher, zx_handle_t dir_request,
+                           svc_dir_t** result) {
+  svc_directory_create(result);
+  zx_status_t status = svc_directory_serve(*result, dispatcher, dir_request);
+  if (status != ZX_OK) {
+    svc_directory_destroy(*result);
+    return status;
+  }
+
   return ZX_OK;
 }
+
+zx_status_t svc_dir_create_without_serve(svc_dir_t** result) {
+  return svc_directory_create(result);
+}
+
+zx_status_t svc_dir_serve(svc_dir_t* dir, async_dispatcher_t* dispatcher, zx_handle_t request) {
+  return svc_directory_serve(dir, dispatcher, request);
+}
+
+zx_status_t svc_dir_add_service(svc_dir_t* dir, const char* type, const char* service_name,
+                                void* context, svc_connector_t handler) {
+  const char* safe_path = type == nullptr ? "" : type;
+  return svc_directory_add_service(dir, safe_path, strlen(safe_path), service_name,
+                                   strlen(service_name), context, handler);
+}
+
+zx_status_t svc_dir_add_service_by_path(svc_dir_t* dir, const char* path, const char* service_name,
+                                        void* context, svc_connector_t* handler) {
+  const char* safe_path = path == nullptr ? "" : path;
+  return svc_directory_add_service(dir, safe_path, strlen(safe_path), service_name,
+                                   strlen(service_name), context, handler);
+}
+
+zx_status_t svc_dir_add_directory(svc_dir_t* dir, const char* name, zx_handle_t subdir) {
+  return svc_directory_add_directory(dir, nullptr, 0, name, strlen(name), subdir);
+}
+
+zx_status_t svc_dir_add_directory_by_path(svc_dir_t* dir, const char* path, const char* name,
+                                          zx_handle_t subdir) {
+  const char* safe_path = path == nullptr ? "" : path;
+  return svc_directory_add_directory(dir, safe_path, strlen(safe_path), name, strlen(name), subdir);
+}
+
+zx_status_t svc_dir_remove_service(svc_dir_t* dir, const char* type, const char* service_name) {
+  const char* safe_path = type == nullptr ? "" : type;
+  return svc_directory_remove_entry(dir, safe_path, strlen(safe_path), service_name,
+                                    strlen(service_name));
+}
+
+zx_status_t svc_dir_remove_service_by_path(svc_dir_t* dir, const char* path,
+                                           const char* service_name) {
+  const char* safe_path = path == nullptr ? "" : path;
+  return svc_directory_remove_entry(dir, safe_path, strlen(safe_path), service_name,
+                                    strlen(service_name));
+}
+
+zx_status_t svc_dir_remove_directory(svc_dir_t* dir, const char* name) {
+  return svc_directory_remove_entry(dir, nullptr, 0, name, strlen(name));
+}
+
+zx_status_t svc_dir_remove_entry_by_path(svc_dir_t* dir, const char* path, const char* name) {
+  const char* safe_path = path == nullptr ? "" : path;
+  return svc_directory_remove_entry(dir, safe_path, strlen(safe_path), name, strlen(name));
+}
+
+zx_status_t svc_dir_destroy(svc_dir_t* dir) { return svc_directory_destroy(dir); }
