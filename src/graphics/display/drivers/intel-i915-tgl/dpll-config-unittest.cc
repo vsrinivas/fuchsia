@@ -70,7 +70,76 @@ TEST(CreateDpllFrequencyDividerConfigKabyLakeTest, PrmExample2) {
   EXPECT_EQ(3, divider_config.p2_k_divider);
 }
 
-TEST(CreateDpllOscillatorConfigForFrequencyKabyLakeTest, PrmExample1) {
+TEST(CreateDpllFrequencyDividerConfigTigerLakeTest, AllDivisors) {
+  for (const int8_t& divider : DpllSupportedFrequencyDividersTigerLake()) {
+    SCOPED_TRACE(testing::Message() << "Divider: " << int{divider});
+
+    const DpllFrequencyDividerConfig divider_config =
+        CreateDpllFrequencyDividerConfigTigerLake(divider);
+    EXPECT_EQ(divider, divider_config.p0_p_divider * divider_config.p1_q_divider *
+                           divider_config.p2_k_divider);
+
+    EXPECT_GT(divider_config.p0_p_divider, 0);
+    EXPECT_GT(divider_config.p1_q_divider, 0);
+    EXPECT_GT(divider_config.p2_k_divider, 0);
+
+    // The helpers below ZX_DEBUG_ASSERT() on incorrect divider values. The
+    // assignments are on separate lines to facilitate debugging.
+    auto pll_dco_dividers =
+        tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(tgl_registers::DPLL_0)
+            .FromValue(0);
+    pll_dco_dividers.set_p_p0_divider(static_cast<uint8_t>(divider_config.p0_p_divider));
+    pll_dco_dividers.set_q_p1_divider(static_cast<uint8_t>(divider_config.p1_q_divider));
+    pll_dco_dividers.set_k_p2_divider(static_cast<uint8_t>(divider_config.p2_k_divider));
+  }
+}
+
+TEST(CreateDpllFrequencyDividerConfigTigerLakeTest, PrmExample1) {
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example of DVI on DDIB
+  // using 113.309 MHz symbol clock and reference 24 MHz", page 182.
+
+  const DpllFrequencyDividerConfig divider_config = CreateDpllFrequencyDividerConfigTigerLake(16);
+  EXPECT_EQ(2, divider_config.p0_p_divider);
+  EXPECT_EQ(4, divider_config.p1_q_divider);
+  EXPECT_EQ(2, divider_config.p2_k_divider);
+}
+
+TEST(CreateDpllFrequencyDividerConfigTigerLakeTest, PrmExample2) {
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example for DSI0 8X
+  // 556.545 and reference 24 MHz", pages 185-186.
+
+  const DpllFrequencyDividerConfig divider_config = CreateDpllFrequencyDividerConfigTigerLake(3);
+  EXPECT_EQ(3, divider_config.p0_p_divider);
+  EXPECT_EQ(1, divider_config.p1_q_divider);
+  EXPECT_EQ(1, divider_config.p2_k_divider);
+}
+
+TEST(CreateDpllFrequencyDividerConfigTigerLakeTest, DisplayPortTable) {
+  // Test cases from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "DisplayPort Mode PLL
+  // Values" pages 178-179.
+
+  struct TableRow {
+    int8_t p, k, q;
+  };
+  static constexpr TableRow kTableRows[] = {
+      {.p = 3, .k = 1, .q = 1}, {.p = 3, .k = 2, .q = 1}, {.p = 5, .k = 2, .q = 1},
+      {.p = 5, .k = 1, .q = 1}, {.p = 2, .k = 2, .q = 2}, {.p = 2, .k = 2, .q = 1},
+      {.p = 2, .k = 1, .q = 1},
+  };
+
+  for (const TableRow& test_row : kTableRows) {
+    const int8_t divider = static_cast<int8_t>(int{test_row.p} * int{test_row.k} * int{test_row.q});
+    SCOPED_TRACE(testing::Message() << "Divider: " << int{divider});
+
+    const DpllFrequencyDividerConfig divider_config =
+        CreateDpllFrequencyDividerConfigTigerLake(divider);
+    EXPECT_EQ(test_row.p, divider_config.p0_p_divider);
+    EXPECT_EQ(test_row.k, divider_config.p2_k_divider);
+    EXPECT_EQ(test_row.q, divider_config.p1_q_divider);
+  }
+}
+
+TEST(CreateDpllOscillatorConfigKabyLakeTest, PrmExample1) {
   // Values from IHD-OS-KBL-Vol 12-1.17 section "Example of DVI on DDIB using
   // 113.309 MHz symbol "clock", page 137.
 
@@ -80,7 +149,7 @@ TEST(CreateDpllOscillatorConfigForFrequencyKabyLakeTest, PrmExample1) {
   EXPECT_EQ(113'309 * 5 * 16, dco_config.frequency_khz);
 }
 
-TEST(CreateDpllOscillatorConfigForFrequencyTest, PrmExample2) {
+TEST(CreateDpllOscillatorConfigKabyLakeTest, PrmExample2) {
   // Values from IHD-OS-KBL-Vol 12-1.17 section "Example of HDMI on DDIC using
   // 296.703 MHz symbol clock", pages 137-138.
 
@@ -88,6 +157,99 @@ TEST(CreateDpllOscillatorConfigForFrequencyTest, PrmExample2) {
   EXPECT_EQ(9'000'000, dco_config.center_frequency_khz);
   EXPECT_EQ(6, dco_config.frequency_divider);
   EXPECT_EQ(296'703 * 5 * 6, dco_config.frequency_khz);
+}
+
+TEST(CreateDpllOscillatorConfigForHdmiTigerLakeTest, PrmExample1) {
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example of DVI on DDIB
+  // using 113.309 MHz symbol clock and reference 24 MHz", page 182.
+
+  const DpllOscillatorConfig dco_config = CreateDpllOscillatorConfigForHdmiTigerLake(113'309 * 5);
+  EXPECT_EQ(8'999'000, dco_config.center_frequency_khz);
+  EXPECT_EQ(16, dco_config.frequency_divider);
+  EXPECT_EQ(9'064'720, dco_config.frequency_khz);
+}
+
+TEST(CreateDpllOscillatorConfigForHdmiTigerLakeTest, PrmExample2) {
+  // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example for DSI0 8X
+  // 556.545 and reference 24 MHz", pages 185-186.
+
+  const DpllOscillatorConfig dco_config = CreateDpllOscillatorConfigForHdmiTigerLake(566'545 * 5);
+  EXPECT_EQ(8'999'000, dco_config.center_frequency_khz);
+  EXPECT_EQ(3, dco_config.frequency_divider);
+  EXPECT_EQ(8'498'175, dco_config.frequency_khz);
+}
+
+TEST(CreateDpllOscillatorConfigForHdmiTigerLakeTest, DisplayPortTable) {
+  // Test cases from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "DisplayPort Mode PLL
+  // Values" pages 178-179.
+
+  struct TableRow {
+    int32_t link_rate;
+    int32_t frequency;
+    int8_t divider;
+  };
+  static constexpr TableRow kTableRows[] = {
+      // The algorithm solutions match the table for the cases below.
+      {.link_rate = 5'400'000, .frequency = 8'100'000, .divider = 3},
+      {.link_rate = 2'160'000, .frequency = 8'640'000, .divider = 8},
+      {.link_rate = 4'320'000, .frequency = 8'640'000, .divider = 4},
+      {.link_rate = 6'480'000, .frequency = 9'720'000, .divider = 3},
+      {.link_rate = 8'100'000, .frequency = 8'100'000, .divider = 2},
+
+      // The algorithm finds different values from the table. The solutions
+      // here are better than the table's solutions in respect to the
+      // algorithm's stated goal of minimizing DCO frequency deviation from the
+      // centrer frequency.
+      {.link_rate = 2'700'000, .frequency = 9'450'000, .divider = 7},
+      {.link_rate = 1'620'000, .frequency = 9'720'000, .divider = 12},
+      {.link_rate = 3'240'000, .frequency = 9'720'000, .divider = 6},
+  };
+
+  for (const TableRow& test_row : kTableRows) {
+    const int32_t afe_clock_khz = static_cast<int32_t>(test_row.link_rate / 2);
+    SCOPED_TRACE(testing::Message()
+                 << "Link rate: " << test_row.link_rate << " kHz AFE clock: " << afe_clock_khz);
+
+    const DpllOscillatorConfig dco_config =
+        CreateDpllOscillatorConfigForHdmiTigerLake(afe_clock_khz);
+    EXPECT_EQ(8'999'000, dco_config.center_frequency_khz);
+    EXPECT_EQ(test_row.frequency, dco_config.frequency_khz);
+    EXPECT_EQ(test_row.divider, dco_config.frequency_divider);
+  }
+}
+
+TEST(CreateDpllOscillatorConfigForDisplayPortTigerLakeTest, DisplayPortTable) {
+  // Test cases from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "DisplayPort Mode PLL
+  // Values" pages 178-179.
+
+  struct TableRow {
+    int32_t link_rate;
+    int32_t frequency;
+    int8_t divider;
+  };
+  static constexpr TableRow kTableRows[] = {
+      // The algorithm solutions match the table for the cases below.
+      {.link_rate = 5'400'000, .frequency = 8'100'000, .divider = 3},
+      {.link_rate = 2'700'000, .frequency = 8'100'000, .divider = 6},
+      {.link_rate = 1'620'000, .frequency = 8'100'000, .divider = 10},
+      {.link_rate = 3'240'000, .frequency = 8'100'000, .divider = 5},
+      {.link_rate = 2'160'000, .frequency = 8'640'000, .divider = 8},
+      {.link_rate = 4'320'000, .frequency = 8'640'000, .divider = 4},
+      {.link_rate = 6'480'000, .frequency = 9'720'000, .divider = 3},
+      {.link_rate = 8'100'000, .frequency = 8'100'000, .divider = 2},
+  };
+
+  for (const TableRow& test_row : kTableRows) {
+    const int32_t afe_clock_khz = static_cast<int32_t>(test_row.link_rate / 2);
+    SCOPED_TRACE(testing::Message()
+                 << "Link rate: " << test_row.link_rate << " kHz AFE clock: " << afe_clock_khz);
+
+    const DpllOscillatorConfig dco_config =
+        CreateDpllOscillatorConfigForDisplayPortTigerLake(afe_clock_khz);
+    EXPECT_EQ(8'999'000, dco_config.center_frequency_khz);
+    EXPECT_EQ(test_row.frequency, dco_config.frequency_khz);
+    EXPECT_EQ(test_row.divider, dco_config.frequency_divider);
+  }
 }
 
 }  // namespace

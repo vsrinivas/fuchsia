@@ -272,6 +272,25 @@ class DpllManagerSkylake : public DisplayPllManager {
   fdf::MmioBuffer* mmio_space_ = nullptr;
 };
 
+// Display PLL (DPLL) for Tiger Lake display engines.
+//
+// DPLLs are shareable across Combo PHYs. Multiple PHYs can use the same DPLL,
+// as long as they require the same frequency and SSC (Spread-Spectrum Clocking)
+// characteristics.
+class DisplayPllTigerLake : public DisplayPll {
+ public:
+  DisplayPllTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll);
+  ~DisplayPllTigerLake() override = default;
+
+ protected:
+  // DisplayPll overrides:
+  bool DoEnable(const DdiPllConfig& pll_config) final;
+  bool DoDisable() final;
+
+ private:
+  fdf::MmioBuffer* mmio_space_ = nullptr;
+};
+
 // DKL (Dekel) PLLs for Tiger Lake display engines.
 //
 // Each TC (Type-C) DDI has a dedicated PLL tied to it.
@@ -304,7 +323,8 @@ class DpllManagerTigerLake : public DisplayPllManager {
   DdiPllConfig LoadState(tgl_registers::Ddi ddi) final;
 
  private:
-  DdiPllConfig LoadTypeCPllState(tgl_registers::Ddi ddi);
+  DdiPllConfig LoadStateForComboDdi(tgl_registers::Ddi ddi);
+  DdiPllConfig LoadStateForTypeCDdi(tgl_registers::Ddi ddi);
 
   // DisplayPllManager overrides:
   bool SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registers::Dpll pll) final;

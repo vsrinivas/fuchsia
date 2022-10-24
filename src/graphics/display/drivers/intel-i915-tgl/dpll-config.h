@@ -17,8 +17,16 @@ namespace i915_tgl {
 // The span will remain valid for the lifetime of the process. The span's
 // elements will be sorted in ascending order.
 //
-// The supported dividers are currently above 1 and below 100.
+// The supported dividers are currently above 1 and below 110.
 cpp20::span<const int8_t> DpllSupportedFrequencyDividersKabyLake();
+
+// Returns to the list of documented DCO frequency dividers in Display PLLs.
+//
+// The span will remain valid for the lifetime of the process. The span's
+// elements are not sorted in ascending order.
+//
+// The supported dividers are currently above 1 and below 110.
+cpp20::span<const int8_t> DpllSupportedFrequencyDividersTigerLake();
 
 // Operating parameters for the DCO in Display PLLs.
 struct DpllOscillatorConfig {
@@ -54,11 +62,14 @@ struct DpllFrequencyDividerConfig {
 // protocols that use 8b/10b coding, the AFE clock frequency is 5x the symbol
 // clock rate for each link lane.
 DpllOscillatorConfig CreateDpllOscillatorConfigKabyLake(int32_t afe_clock_khz);
+DpllOscillatorConfig CreateDpllOscillatorConfigForHdmiTigerLake(int32_t afe_clock_khz);
+DpllOscillatorConfig CreateDpllOscillatorConfigForDisplayPortTigerLake(int32_t afe_clock_khz);
 
 // Finds a DPLL frequency divider configuration that produces `dco_divider`.
 //
 // `dco_divider` must be an element of `DpllSupportedFrequencyDividers()`.
 DpllFrequencyDividerConfig CreateDpllFrequencyDividerConfigKabyLake(int8_t dco_divider);
+DpllFrequencyDividerConfig CreateDpllFrequencyDividerConfigTigerLake(int8_t dco_divider);
 
 }  // namespace i915_tgl
 

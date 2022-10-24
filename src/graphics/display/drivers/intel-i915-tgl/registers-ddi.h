@@ -731,133 +731,132 @@ class DdiAuxData : public hwreg::RegisterBase<DdiAuxData, uint32_t> {
   }
 };
 
-// DPCLKA_CFGCR0
-// DPCLKA (DDI Clocks) Configuration Control Register #0
+// DPCLKA_CFGCR0 (Display Clock Configuration Control Register 0?)
 //
-// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1, Pages 608-610
-class DdiClockConfigControlRegister0
-    : public hwreg::RegisterBase<DdiClockConfigControlRegister0, uint32_t> {
+// This register controls which DPLL (Display PLL) is used as a clock source by
+// each Combo DDI, and whether the DDI's clock is gated. Each Type C DDI has its
+// own dedicated MGPLL, so this register only configures the clock gating for
+// Type C DDIs.
+//
+// The Kaby Lake and Skylake equivalent of this register is
+// `DisplayPllDdiMapKabyLake` (DPLL_CTRL2).
+//
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1, pages 608-610
+// Lakefield: IHD-OS-LKF-Vol 2c-5.21 Part 1, pages 561-563
+class DdiClockConfig : public hwreg::RegisterBase<DdiClockConfig, uint32_t> {
  public:
-  // If this bit is set true, the DDI C Clock will be gated off for display
-  // engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(24, ddi_c_clock_off);
+  DEF_BIT(24, ddi_c_clock_disabled);
+  DEF_BIT(23, ddi_type_c_6_clock_disabled);
+  DEF_BIT(22, ddi_type_c_5_clock_disabled);
+  DEF_BIT(21, ddi_type_c_4_clock_disabled);
 
-  // If this bit is set true, the Type C Port 6 (TC6) Clock will be gated off
-  // for display engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(23, ddi_type_c_6_clock_off);
+  DEF_BIT(14, ddi_type_c_3_clock_disabled);
+  DEF_BIT(13, ddi_type_c_2_clock_disabled);
+  DEF_BIT(12, ddi_type_c_1_clock_disabled);
+  DEF_BIT(11, ddi_b_clock_disabled);
+  DEF_BIT(10, ddi_a_clock_disabled);
 
-  // If this bit is set true, the Type C Port 5 (TC5) Clock will be gated off
-  // for display engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(22, ddi_type_c_5_clock_off);
-
-  // If this bit is set true, the Type C Port 4 (TC4) Clock will be gated off
-  // for display engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(21, ddi_type_c_4_clock_off);
-
-  // If this bit is set true, the Type C Port 3 (TC3) Clock will be gated off
-  // for display engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(14, ddi_type_c_3_clock_off);
-
-  // If this bit is set true, the Type C Port 2 (TC2) Clock will be gated off
-  // for display engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(13, ddi_type_c_2_clock_off);
-
-  // If this bit is set true, the Type C Port 1 (TC1) Clock will be gated off
-  // for display engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(12, ddi_type_c_1_clock_off);
-
-  // If this bit is set true, the DDI B Clock will be gated off for display
-  // engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(11, ddi_b_clock_off);
-
-  // If this bit is set true, the DDI A Clock will be gated off for display
-  // engine.
-  //
-  // Drivers can use `is_clock_off_for_ddi` and `turn_off_clock_for_ddi`
-  // helper methods to read / write to corresponding fields.
-  DEF_BIT(10, ddi_a_clock_off);
-
-  // TODO(fxbug.dev/105240): Add DDI A/B/C Clock Select fields.
-
-  // Helper method to read clock off state at `ddi_*_clock_off` fields for
-  // `ddi`.
-  ValueType is_clock_off_for_ddi(Ddi ddi) const {
-    switch (ddi) {
-      case Ddi::DDI_A:
-        return ddi_a_clock_off();
-      case Ddi::DDI_B:
-        return ddi_b_clock_off();
-      case Ddi::DDI_C:
-        return ddi_c_clock_off();
-      case Ddi::DDI_TC_1:
-        return ddi_type_c_1_clock_off();
-      case Ddi::DDI_TC_2:
-        return ddi_type_c_2_clock_off();
-      case Ddi::DDI_TC_3:
-        return ddi_type_c_3_clock_off();
-      case Ddi::DDI_TC_4:
-        return ddi_type_c_4_clock_off();
-      case Ddi::DDI_TC_5:
-        return ddi_type_c_5_clock_off();
-      case Ddi::DDI_TC_6:
-        return ddi_type_c_6_clock_off();
-      default:
-        ZX_ASSERT_MSG(false, "Invalid ddi %d", ddi);
+  // If true, the DDI's clock is disabled. This is accomplished by gating.
+  bool ddi_clock_disabled(Ddi ddi) const {
+    static constexpr int kComboBitIndices[] = {10, 11, 24};
+    static constexpr int kTypeCBitIndices[] = {12, 13, 14, 21, 22, 23};
+    int bit_index;
+    if (ddi >= Ddi::DDI_TC_1 && ddi <= Ddi::DDI_TC_6) {
+      const int ddi_index = ddi - Ddi::DDI_TC_1;
+      bit_index = kTypeCBitIndices[ddi_index];
+    } else {
+      ZX_ASSERT(ddi >= Ddi::DDI_A);
+      ZX_ASSERT(ddi <= Ddi::DDI_C);
+      const int ddi_index = ddi - Ddi::DDI_A;
+      bit_index = kComboBitIndices[ddi_index];
     }
+    return static_cast<bool>(
+        hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit_index, bit_index).get());
   }
 
-  // Helper method to set clock off state at `ddi_*_clock_off` fields for
-  // `ddi`.
-  SelfType& turn_off_clock_for_ddi(Ddi ddi, bool turn_off) {
-    switch (ddi) {
-      case Ddi::DDI_A:
-        return set_ddi_a_clock_off(turn_off);
-      case Ddi::DDI_B:
-        return set_ddi_b_clock_off(turn_off);
-      case Ddi::DDI_C:
-        return set_ddi_c_clock_off(turn_off);
-      case Ddi::DDI_TC_1:
-        return set_ddi_type_c_1_clock_off(turn_off);
-      case Ddi::DDI_TC_2:
-        return set_ddi_type_c_2_clock_off(turn_off);
-      case Ddi::DDI_TC_3:
-        return set_ddi_type_c_3_clock_off(turn_off);
-      case Ddi::DDI_TC_4:
-        return set_ddi_type_c_4_clock_off(turn_off);
-      case Ddi::DDI_TC_5:
-        return set_ddi_type_c_5_clock_off(turn_off);
-      case Ddi::DDI_TC_6:
-        return set_ddi_type_c_6_clock_off(turn_off);
-      default:
-        ZX_ASSERT_MSG(false, "Invalid ddi %d", ddi);
+  // See `ddi_clock_disabled()` for details.
+  DdiClockConfig& set_ddi_clock_disabled(Ddi ddi, bool clock_disabled) {
+    static constexpr int kComboBitIndices[] = {10, 11, 24};
+    static constexpr int kTypeCBitIndices[] = {12, 13, 14, 21, 22, 23};
+    int bit_index;
+    if (ddi >= Ddi::DDI_TC_1 && ddi <= Ddi::DDI_TC_6) {
+      const int ddi_index = ddi - Ddi::DDI_TC_1;
+      bit_index = kTypeCBitIndices[ddi_index];
+    } else {
+      ZX_ASSERT(ddi >= Ddi::DDI_A);
+      ZX_ASSERT(ddi <= Ddi::DDI_C);
+      const int ddi_index = ddi - Ddi::DDI_A;
+      bit_index = kComboBitIndices[ddi_index];
     }
+    hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index, bit_index).set(clock_disabled ? 1 : 0);
+    return *this;
   }
 
-  static auto Get() { return hwreg::RegisterAddr<DdiClockConfigControlRegister0>(0x164280); }
+  // Documented values for `ddi_*_clock_display_pll_select` fields.
+  enum class DdiClockDisplayPllSelect {
+    kDisplayPll0 = 0b00,
+    kDisplayPll1 = 0b01,
+    kDisplayPll4 = 0b10,
+  };
+
+  // These fields have a non-trivial representation. They should be used via the
+  // `ddi_clock_display_pll()` and `set_ddi_clock_display_pll()` helpers.
+  DEF_ENUM_FIELD(DdiClockDisplayPllSelect, 5, 4, ddi_c_clock_display_pll_select);
+  DEF_ENUM_FIELD(DdiClockDisplayPllSelect, 3, 2, ddi_b_clock_display_pll_select);
+  DEF_ENUM_FIELD(DdiClockDisplayPllSelect, 1, 0, ddi_a_clock_display_pll_select);
+
+  // The DPLL (Display PLL) used as a clock source for a DDI.
+  //
+  // Returns DPLL_INVALID if the field is set to an undocumented value.
+  Dpll ddi_clock_display_pll(Ddi ddi) const {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_C);
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    const int bit_index = ddi_index * 2;
+    const auto dpll_select = static_cast<DdiClockDisplayPllSelect>(
+        hwreg::BitfieldRef<const uint32_t>(reg_value_ptr(), bit_index + 1, bit_index).get());
+
+    switch (dpll_select) {
+      case DdiClockDisplayPllSelect::kDisplayPll0:
+        return Dpll::DPLL_0;
+      case DdiClockDisplayPllSelect::kDisplayPll1:
+        return Dpll::DPLL_1;
+      case DdiClockDisplayPllSelect::kDisplayPll4:
+        // TODO(fxbug.dev/110351): Add support for DPLL4.
+        break;
+    }
+    return Dpll::DPLL_INVALID;  // The field is set to an undocumented value.
+  }
+
+  // See `ddi_clock_display_pll()` for details.
+  DdiClockConfig& set_ddi_clock_display_pll(Ddi ddi, Dpll display_pll) {
+    ZX_ASSERT(ddi >= Ddi::DDI_A);
+    ZX_ASSERT(ddi <= Ddi::DDI_C);
+
+    DdiClockDisplayPllSelect dpll_select;
+    switch (display_pll) {
+      case Dpll::DPLL_0:
+        dpll_select = DdiClockDisplayPllSelect::kDisplayPll0;
+        break;
+      case Dpll::DPLL_1:
+        dpll_select = DdiClockDisplayPllSelect::kDisplayPll1;
+        break;
+
+      // TODO(fxbug.dev/110351): Add support for DPLL4.
+      default:
+        ZX_DEBUG_ASSERT_MSG(false, "Invalid Display PLL: %d", display_pll);
+        dpll_select = DdiClockDisplayPllSelect::kDisplayPll0;
+    }
+
+    const int ddi_index = ddi - Ddi::DDI_A;
+    const int bit_index = ddi_index * 2;
+    hwreg::BitfieldRef<uint32_t>(reg_value_ptr(), bit_index + 1, bit_index)
+        .set(static_cast<uint32_t>(dpll_select));
+    return *this;
+  }
+
+  static auto Get() { return hwreg::RegisterAddr<DdiClockConfig>(0x164280); }
 };
 
 // DDI_CLK_SEL

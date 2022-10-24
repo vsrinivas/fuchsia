@@ -8,6 +8,7 @@
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 
+#include <memory>
 #include <optional>
 #include <tuple>
 
@@ -443,6 +444,95 @@ DisplayPll* DpllManagerSkylake::FindPllFor(tgl_registers::Ddi ddi, bool is_edp,
   return nullptr;
 }
 
+DisplayPllTigerLake::DisplayPllTigerLake(fdf::MmioBuffer* mmio_space, tgl_registers::Dpll dpll)
+    : DisplayPll(dpll), mmio_space_(mmio_space) {}
+
+bool DisplayPllTigerLake::DoEnable(const DdiPllConfig& pll_config) {
+  // This implements the "DisplayPort Combo PHY Programming" > "DisplayPort Mode
+  // PLL Enable Sequence" section in the display engine PRMs. The "HDMI Mode PLL
+  // Enable Sequence" is documented to be identical, modulo SSC ability.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev 2.0 pages 177-178
+
+  DpllOscillatorConfig dco_config =
+      pll_config.admits_hdmi
+          ? CreateDpllOscillatorConfigForHdmiTigerLake(pll_config.ddi_clock_khz)
+          : CreateDpllOscillatorConfigForDisplayPortTigerLake(pll_config.ddi_clock_khz);
+  if (dco_config.frequency_divider == 0) {
+    return false;
+  }
+
+  const DpllFrequencyDividerConfig divider_config =
+      CreateDpllFrequencyDividerConfigTigerLake(dco_config.frequency_divider);
+  zxlogf(TRACE, "Configuring PLL %d: DCO frequency=%d dividers P*Q*K=%u*%u*%u Center=%u Mhz",
+         dpll(), dco_config.frequency_khz, divider_config.p0_p_divider, divider_config.p1_q_divider,
+         divider_config.p2_k_divider, dco_config.center_frequency_khz);
+
+  auto dpll_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(dpll()).ReadFrom(mmio_space_);
+  dpll_enable.set_power_on_request_tiger_lake(true);
+  dpll_enable.WriteTo(mmio_space_);
+  if (!PollUntil([&] { return dpll_enable.ReadFrom(mmio_space_).powered_on_tiger_lake(); },
+                 zx::msec(1), 5)) {
+    zxlogf(ERROR, "DPLL %d power up failure!", dpll());
+    return false;
+  }
+
+  // TODO(costan): Land https://fxrev.dev/740590 first and replace this block
+  //               with a call to reference_frequency_khz_tiger_lake().
+  int32_t reference_clock_khz;
+  {
+    // Load reference clock frequency.
+    auto dssm = tgl_registers::Dssm::Get().ReadFrom(mmio_space_);
+    switch (dssm.GetRefFrequency()) {
+      case tgl_registers::Dssm::RefFrequency::k19_2Mhz:
+        reference_clock_khz = 19'200;
+        break;
+      case tgl_registers::Dssm::RefFrequency::k24Mhz:
+        reference_clock_khz = 24'000;
+        break;
+      case tgl_registers::Dssm::RefFrequency::k38_4Mhz:
+        reference_clock_khz = 38'400;
+        break;
+      default:
+        // Unreachable
+        ZX_ASSERT_MSG(false, "DSSM: Invalid reference frequency field: 0x%x", dssm.ref_frequency());
+    }
+  }
+
+  auto pll_dco_frequency =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(dpll()).FromValue(0);
+  pll_dco_frequency.set_dco_frequency_khz(dco_config.frequency_khz, reference_clock_khz)
+      .WriteTo(mmio_space_);
+
+  auto pll_dco_dividers =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(dpll()).FromValue(0);
+  pll_dco_dividers.set_q_p1_divider(divider_config.p1_q_divider)
+      .set_k_p2_divider(divider_config.p2_k_divider)
+      .set_p_p0_divider(divider_config.p0_p_divider)
+      .WriteTo(mmio_space_);
+
+  // The PRM instructs us to read back any configuration register in order to
+  // ensure that the writes completed. This must happen before enabling the PLL.
+  pll_dco_dividers.ReadFrom(mmio_space_);
+
+  dpll_enable.set_pll_enabled(true);
+  dpll_enable.WriteTo(mmio_space_);
+  if (!PollUntil([&] { return dpll_enable.pll_locked_tiger_lake_and_lcpll1(); }, zx::usec(1),
+                 500)) {
+    zxlogf(ERROR, "DPLL %d lock failure! Failed to lock after 500us", dpll());
+    return false;
+  }
+
+  set_config(pll_config);
+  return true;
+}
+
+bool DisplayPllTigerLake::DoDisable() {
+  auto pll_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(dpll()).ReadFrom(mmio_space_);
+  pll_enable.set_pll_enabled(false).WriteTo(mmio_space_);
+  return true;
+}
+
 namespace {
 
 tgl_registers::Dpll TypeCDdiToDekelPll(tgl_registers::Ddi type_c_ddi) {
@@ -508,11 +598,9 @@ bool DekelPllTigerLake::DoDisable() {
   //             "DKL PLL Disable Sequence"
 
   // Step 1. Configure DPCLKA_CFGCR0 to turn off the clock for the port.
-  auto ddi_clock_config_control =
-      tgl_registers::DdiClockConfigControlRegister0::Get().ReadFrom(mmio_space_);
-  ddi_clock_config_control.turn_off_clock_for_ddi(ddi_id(), /*turn_off=*/true)
-      .WriteTo(mmio_space_)
-      .ReadFrom(mmio_space_);  // Posting read
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().ReadFrom(mmio_space_);
+  ddi_clock_config.set_ddi_clock_disabled(ddi_id(), true).WriteTo(mmio_space_);
+  ddi_clock_config.ReadFrom(mmio_space_);  // Posting read
 
   // Step 2. If the frequency will result in a change to the voltage requirement,
   // follow the "Display Voltage Frequency Switching - Sequence Before Frequency
@@ -702,10 +790,9 @@ bool DekelPllTigerLake::EnableDp(const DdiPllConfig& pll_config) {
       .WriteTo(mmio_space_);
 
   // 10. Configure DPCLKA_CFGCR0 to turn on the clock for the port.
-  auto dpclka_cfgcr0 = tgl_registers::DdiClockConfigControlRegister0::Get().ReadFrom(mmio_space_);
-  dpclka_cfgcr0.turn_off_clock_for_ddi(ddi_id(), /*turn_off=*/false)
-      .WriteTo(mmio_space_)
-      .ReadFrom(mmio_space_);  // Posting read
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().ReadFrom(mmio_space_);
+  ddi_clock_config.set_ddi_clock_disabled(ddi_id(), false).WriteTo(mmio_space_);
+  ddi_clock_config.ReadFrom(mmio_space_);  // Posting read
   return true;
 }
 
@@ -719,7 +806,17 @@ DpllManagerTigerLake::DpllManagerTigerLake(fdf::MmioBuffer* mmio_space) : mmio_s
     plls_[dpll] = std::make_unique<DekelPllTigerLake>(mmio_space_, dpll);
     ref_count_[plls_[dpll].get()] = 0;
   }
-  // TODO(fxbug.dev/105240): Add COMBO PLLs (DPLL 0, 1, 4) to the `plls_` map.
+
+  constexpr std::array kDisplayPllIds = {
+      tgl_registers::Dpll::DPLL_0, tgl_registers::Dpll::DPLL_1,
+      // TODO(fxbug.dev/110351): Add support for DPLL4.
+  };
+  for (const tgl_registers::Dpll display_pll_id : kDisplayPllIds) {
+    const auto [plls_it, success] = plls_.try_emplace(
+        display_pll_id, std::make_unique<DisplayPllTigerLake>(mmio_space_, display_pll_id));
+    ZX_DEBUG_ASSERT_MSG(success, "Display PLL %d already inserted in map", display_pll_id);
+  }
+
   // TODO(fxbug.dev/99980): Add Thunderbolt PLL (DPLL 2) to the `plls_` map.
 
   // Load reference clock frequency.
@@ -753,11 +850,25 @@ bool DpllManagerTigerLake::SetDdiClockSource(tgl_registers::Ddi ddi, tgl_registe
       ZX_ASSERT(ddi - tgl_registers::Ddi::DDI_TC_1 == pll - tgl_registers::Dpll::DPLL_TC_1);
       return true;
     }
+
     case tgl_registers::Dpll::DPLL_0:
-    case tgl_registers::Dpll::DPLL_1:
+    case tgl_registers::Dpll::DPLL_1: {
+      if (ddi < tgl_registers::Ddi::DDI_A || ddi > tgl_registers::Ddi::DDI_C) {
+        return false;
+      }
+      auto dpll_clock_config = tgl_registers::DdiClockConfig::Get().ReadFrom(mmio_space_);
+      dpll_clock_config.set_ddi_clock_disabled(ddi, false)
+          .set_ddi_clock_display_pll(ddi, pll)
+          .WriteTo(mmio_space_);
+      return true;
+    }
+
     case tgl_registers::Dpll::DPLL_2:
+      // TODO(fxbug.dev/99980): Thunderbolt support.
+      zxlogf(ERROR, "SetDdiClockSource() does not support DPLL 2 (for Thunderbolt) yet");
+      return false;
+
     default:
-      // TODO(fxbug.dev/95863): DPLL (Display PLL) support.
       zxlogf(ERROR, "SetDdiClockSource() does not support DPLL %d yet", pll);
       return false;
   }
@@ -771,12 +882,114 @@ bool DpllManagerTigerLake::ResetDdiClockSource(tgl_registers::Ddi ddi) {
     return true;
   }
 
-  // TODO(fxbug.dev/95863): Not implemented yet.
-  zxlogf(WARNING, "ResetDdiClockSource() does not support Combo DDI %d yet", ddi);
+  ZX_DEBUG_ASSERT(ddi >= tgl_registers::Ddi::DDI_A);
+  ZX_DEBUG_ASSERT(ddi <= tgl_registers::Ddi::DDI_C);
+  auto dpll_clock_config = tgl_registers::DdiClockConfig::Get().ReadFrom(mmio_space_);
+  dpll_clock_config.set_ddi_clock_disabled(ddi, true).WriteTo(mmio_space_);
   return true;
 }
 
-DdiPllConfig DpllManagerTigerLake::LoadTypeCPllState(tgl_registers::Ddi ddi) {
+DdiPllConfig DpllManagerTigerLake::LoadStateForComboDdi(tgl_registers::Ddi ddi) {
+  ZX_ASSERT(ddi >= tgl_registers::Ddi::DDI_A);
+  ZX_ASSERT(ddi <= tgl_registers::Ddi::DDI_C);
+
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().ReadFrom(mmio_space_);
+  if (ddi_clock_config.ddi_clock_disabled(ddi)) {
+    zxlogf(TRACE, "Loaded DDI %d DPLL config: DDI clock disabled", ddi);
+    return DdiPllConfig{};
+  }
+
+  const tgl_registers::Dpll dpll = ddi_clock_config.ddi_clock_display_pll(ddi);
+  if (dpll == tgl_registers::DPLL_INVALID) {
+    zxlogf(WARNING,
+           "Invalid DDI %d DPLL config: Invalid clock source DPLL! DDI Clock Config register: %x",
+           ddi, ddi_clock_config.reg_value());
+    return DdiPllConfig{};
+  }
+  if (dpll == tgl_registers::DPLL_2) {
+    zxlogf(WARNING,
+           "Invalid DDI %d DPLL config: clock source is DPLL 2, but DPLL2 reserved for Thunderbot.",
+           ddi);
+    return DdiPllConfig{};
+  }
+
+  auto dpll_enable = tgl_registers::PllEnable::GetForTigerLakeDpll(dpll).ReadFrom(mmio_space_);
+  if (!dpll_enable.pll_enabled()) {
+    zxlogf(TRACE, "Loaded DDI %d DPLL %d config: DPLL disabled", ddi, dpll);
+    return DdiPllConfig{};
+  }
+
+  // We don't currently have enough documentation to configure the DPLL divider
+  // register. However, since the field breakdown is documented, we can log it,
+  // in case it helps any future investigation.
+  auto dpll_divider = tgl_registers::DisplayPllDivider::GetForDpll(dpll).ReadFrom(mmio_space_);
+  zxlogf(
+      TRACE,
+      "Loaded DDI %d DPLL %d dividers: early lock %d, true lock %d, AFC start point %d, "
+      "feedback clock retiming %s, loop filter - integral 2^(-%d) proportional 2^(1-%d) gain 2^%d "
+      "pre-divider %d, post-divider (M2) %d",
+      ddi, dpll, dpll_divider.early_lock_criteria_cycles(),
+      dpll_divider.true_lock_criteria_cycles(),
+      dpll_divider.automatic_frequency_calibration_start_point(),
+      dpll_divider.feedback_clock_retiming_enabled() ? "yes" : "no",
+      dpll_divider.loop_filter_integral_coefficient_exponent(),
+      dpll_divider.loop_filter_proportional_coefficient_exponent(),
+      dpll_divider.loop_filter_gain_control(), dpll_divider.feedback_pre_divider(),
+      dpll_divider.feedback_post_divider());
+
+  auto dpll_dco_frequency =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(dpll).ReadFrom(mmio_space_);
+  auto dpll_dco_dividers =
+      tgl_registers::DisplayPllDcoDividersTigerLake::GetForDpll(dpll).ReadFrom(mmio_space_);
+  auto dpll_spread_spectrum_clocking =
+      tgl_registers::DisplayPllSpreadSpectrumClocking::GetForDpll(dpll).ReadFrom(mmio_space_);
+
+  if (dpll_dco_dividers.reference_clock_select() !=
+      tgl_registers::DisplayPllDcoDividersTigerLake::ReferenceClockSelect::kDisplayReference) {
+    zxlogf(
+        ERROR,
+        "Loaded DDI %d DPLL %d config: DPLL uses genlock clock reference %d. Genlock not supported!",
+        ddi, dpll, dpll_dco_dividers.reference_clock_select());
+    return DdiPllConfig{};
+  }
+
+  // Remove stale mappings first.
+  if (ddi_to_dpll_.find(ddi) != ddi_to_dpll_.end()) {
+    ZX_DEBUG_ASSERT(ref_count_.count(ddi_to_dpll_[ddi]) > 0);
+    ZX_DEBUG_ASSERT(ref_count_[ddi_to_dpll_[ddi]] > 0);
+    --ref_count_[ddi_to_dpll_[ddi]];
+    ddi_to_dpll_.erase(ddi);
+  }
+
+  ddi_to_dpll_[ddi] = plls_[dpll].get();
+  ++ref_count_[ddi_to_dpll_[ddi]];
+
+  const int32_t dco_frequency_khz =
+      dpll_dco_frequency.dco_frequency_khz(static_cast<int32_t>(reference_clock_khz_));
+
+  // P (P0) and K (P2) are <= 7, so their product fits in int8_t.
+  const int16_t dco_frequency_divider =
+      (dpll_dco_dividers.p_p0_divider() * dpll_dco_dividers.k_p2_divider()) *
+      int16_t{dpll_dco_dividers.q_p1_divider()};
+
+  const int32_t ddi_clock_khz = static_cast<int32_t>(dco_frequency_khz / dco_frequency_divider);
+
+  zxlogf(
+      TRACE,
+      "Loaded DDI %d DPLL %d config: %s DDI clock %d kHz DCO frequency=%d kHz divider P*Q*K=%u*%u*%u",
+      ddi, dpll, dpll_spread_spectrum_clocking.enabled() ? "SSC" : "no SSC", ddi_clock_khz,
+      dco_frequency_khz, dpll_dco_dividers.p_p0_divider(), dpll_dco_dividers.q_p1_divider(),
+      dpll_dco_dividers.k_p2_divider());
+
+  return DdiPllConfig{
+      .ddi_clock_khz = ddi_clock_khz,
+      .spread_spectrum_clocking = (dpll_spread_spectrum_clocking.enabled() != 0),
+      .admits_display_port = true,
+      .admits_hdmi = true,
+  };
+}
+
+DdiPllConfig DpllManagerTigerLake::LoadStateForTypeCDdi(tgl_registers::Ddi ddi) {
   ZX_ASSERT(ddi >= tgl_registers::Ddi::DDI_TC_1);
   ZX_ASSERT(ddi <= tgl_registers::Ddi::DDI_TC_6);
 
@@ -874,13 +1087,12 @@ DdiPllConfig DpllManagerTigerLake::LoadState(tgl_registers::Ddi ddi) {
     case tgl_registers::Ddi::DDI_TC_4:
     case tgl_registers::Ddi::DDI_TC_5:
     case tgl_registers::Ddi::DDI_TC_6:
-      return LoadTypeCPllState(ddi);
+      return LoadStateForTypeCDdi(ddi);
 
     case tgl_registers::Ddi::DDI_A:
     case tgl_registers::Ddi::DDI_B:
     case tgl_registers::Ddi::DDI_C:
-      // TODO(fxbug.dev/105240): support loading PLL state from COMBO DDIs.
-      return DdiPllConfig{};
+      return LoadStateForComboDdi(ddi);
   }
 }
 
@@ -894,8 +1106,19 @@ DisplayPll* DpllManagerTigerLake::FindPllFor(tgl_registers::Ddi ddi, bool is_edp
     return plls_[dpll].get();
   }
 
-  // TODO(fxbug.dev/105240): support COMBO DDIs.
-  zxlogf(ERROR, "Unsupported DDI: %d", ddi);
+  constexpr std::array kDisplayPllIds = {
+      tgl_registers::Dpll::DPLL_0, tgl_registers::Dpll::DPLL_1,
+      // TODO(fxbug.dev/110351): Add support for DPLL4.
+  };
+  for (const tgl_registers::Dpll display_pll_id : kDisplayPllIds) {
+    const auto plls_it = plls_.find(display_pll_id);
+    ZX_DEBUG_ASSERT_MSG(plls_it != plls_.end(), "PLL %d not in map", display_pll_id);
+
+    DisplayPll* const display_pll = plls_it->second.get();
+    if (ref_count_[display_pll] == 0 || display_pll->config() == desired_config) {
+      return display_pll;
+    }
+  }
   return nullptr;
 }
 

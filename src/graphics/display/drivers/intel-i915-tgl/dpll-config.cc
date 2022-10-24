@@ -28,6 +28,17 @@ cpp20::span<const int8_t> DpllSupportedFrequencyDividersKabyLake() {
   return kDividers;
 }
 
+cpp20::span<const int8_t> DpllSupportedFrequencyDividersTigerLake() {
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 181-182
+
+  // TODO(costan): These aren't ordered anymore.
+  static constexpr int8_t kDividers[] = {
+      2,  4,  6,  8,  10, 12, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40,  42,  44, 48, 50, 52, 54, 56,
+      60, 64, 66, 68, 70, 72, 76, 78, 80, 84, 88, 90, 92, 96, 98, 100, 102, 3,  5,  7,  9,  15, 21};
+
+  return kDividers;
+}
+
 DpllOscillatorConfig CreateDpllOscillatorConfigKabyLake(int32_t afe_clock_khz) {
   ZX_ASSERT(afe_clock_khz > 0);
 
@@ -140,6 +151,93 @@ DpllOscillatorConfig CreateDpllOscillatorConfigKabyLake(int32_t afe_clock_khz) {
   return result;
 }
 
+DpllOscillatorConfig CreateDpllOscillatorConfigForHdmiTigerLake(int32_t afe_clock_khz) {
+  ZX_ASSERT(afe_clock_khz > 0);
+
+  // The implementation conceptually follows the big `foreach` loop in the
+  // the "Pseudo-code for HDMI Mode DPLL Programming" section in the display
+  // engine PRMs.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 181-182
+
+  static constexpr int32_t kMinFrequencyKhz = 7'998'000;
+  static constexpr int32_t kMaxFrequencyKhz = 10'000'000;
+  static constexpr int32_t kCenterFrequencyKhz = 8'999'000;
+
+  DpllOscillatorConfig result;
+  int32_t min_deviation = std::numeric_limits<int32_t>::max();
+
+  const cpp20::span<const int8_t> supported_dividers = DpllSupportedFrequencyDividersTigerLake();
+
+  // The PLL output (AFE clock) frequency is the DCO (Digitally-Controlled
+  // Oscillator) frequency divided by the frequency divider. More compactly,
+  //     AFE clock frequency = DCO frequency / divider
+  //
+  // Rearranging terms gives us the following equations we'll use below.
+  //     DCO frequency = AFE clock frequency * divider
+  //     divider = DCO frequency / AFE clock frequency
+  //
+  // The target AFE clock frequency is fixed (given to this function), and
+  // there is an acceptable range of the DCO frequencies. This leads to an
+  // acceptable range of dividers, computed below.
+  //
+  // All supported dividers are integers. In order to stay within the range,
+  // we must round down the maximum divider and round up the minimum
+  // divider.
+  const int32_t max_divider = kMaxFrequencyKhz / afe_clock_khz;
+  const int32_t min_divider = (kMinFrequencyKhz + afe_clock_khz - 1) / afe_clock_khz;
+
+  // Iterate over all supported frequency divider values, and save the value
+  // that gives the lowest deviation from the DCO center frequency. The
+  // number of supported dividers is small enough that binary search
+  // wouldn't yield a meaningful improvement.
+  for (const int8_t& candidate_divider : supported_dividers) {
+    if (candidate_divider < min_divider || candidate_divider > max_divider) {
+      continue;
+    }
+
+    // The multiplication will not overflow (causing UB) because the result
+    // is guaranteed to fall in the range of `min_frequency_khz` and
+    // `max_frequency_khz`. This is because of the range checks on
+    // `candidate_divider` above.
+    const int32_t frequency_khz = static_cast<int32_t>(candidate_divider * afe_clock_khz);
+    ZX_DEBUG_ASSERT(frequency_khz >= kMinFrequencyKhz);
+    ZX_DEBUG_ASSERT(frequency_khz <= kMaxFrequencyKhz);
+
+    // `dco_frequency_khz` is within [-12%, +12%] of `dco_frequency_khz`, so
+    // the maximum `absolute_difference` is 12% of the highest DCO center
+    // frequency, which is 1,152,000.
+    const int32_t absolute_deviation = std::abs(frequency_khz - kCenterFrequencyKhz);
+
+    if (absolute_deviation < min_deviation) {
+      min_deviation = absolute_deviation;
+      result = DpllOscillatorConfig{
+          .center_frequency_khz = kCenterFrequencyKhz,
+          .frequency_khz = frequency_khz,
+          .frequency_divider = candidate_divider,
+      };
+    }
+  }
+
+  return result;
+}
+
+DpllOscillatorConfig CreateDpllOscillatorConfigForDisplayPortTigerLake(int32_t afe_clock_khz) {
+  ZX_ASSERT(afe_clock_khz > 0);
+
+  DpllOscillatorConfig result = CreateDpllOscillatorConfigForHdmiTigerLake(afe_clock_khz);
+
+  // These are the only cases where the HDMI algorithm deviates from the
+  // DisplayPort table.
+  if (afe_clock_khz == 1'350'000 || afe_clock_khz == 810'000 || afe_clock_khz == 1'620'000) {
+    result.frequency_khz = 8'100'000;
+    ZX_DEBUG_ASSERT(result.frequency_khz % afe_clock_khz == 0);
+    result.frequency_divider = static_cast<int8_t>(result.frequency_khz / afe_clock_khz);
+  }
+
+  return result;
+}
+
 DpllFrequencyDividerConfig CreateDpllFrequencyDividerConfigKabyLake(int8_t dco_divider) {
   // The implementation conceptually follows the `getMultiplier()` function in
   // the "Pseudocode to Find HDMI and DVI DPLL Programming" section in the
@@ -195,6 +293,48 @@ DpllFrequencyDividerConfig CreateDpllFrequencyDividerConfigKabyLake(int8_t dco_d
         .p0_p_divider = 7, .p1_q_divider = 1, .p2_k_divider = static_cast<int8_t>(dco_divider / 7)};
   }
   ZX_ASSERT_MSG(false, "Unhandled divider %d", dco_divider);
+}
+
+DpllFrequencyDividerConfig CreateDpllFrequencyDividerConfigTigerLake(int8_t dco_divider) {
+  // The implementation conceptually follows the "Good divider found" block in
+  // the "Pseudo-code for HDMI Mode DPLL Programming" section in the display
+  // engine PRMs.
+  //
+  // Tiger Lake: IHD-OS-TGL-Vol 12-1.22-Rev2.0 pages 181-182
+
+  if (dco_divider % 2 == 0) {
+    const int8_t dco_divider_half = static_cast<int8_t>(dco_divider / 2);
+
+    if (dco_divider == 2) {
+      return {.p0_p_divider = 2, .p1_q_divider = 1, .p2_k_divider = 1};
+    }
+
+    // The pseudocode has a few if branches checking for valid P0 (P) divider
+    // values. The comparisons check the divider directly against P0 values, or
+    // against 2x the P0 (P) divider values. The difference only matters for
+    // P0 = 2.
+    //
+    // The loop below is equivalent. It uses Kaby Lake / Skylake PRM approach of
+    // checking the half-divider against P0 (P) values directly, which is
+    // clearer.
+    static constexpr int8_t kP0DividerValues[] = {2, 3, 5, 7};
+    for (const int8_t& p0_divider : kP0DividerValues) {
+      if ((dco_divider_half % p0_divider) == 0) {
+        return {.p0_p_divider = p0_divider,
+                .p1_q_divider = static_cast<int8_t>(dco_divider_half / p0_divider),
+                .p2_k_divider = 2};
+      }
+    }
+
+    ZX_ASSERT_MSG(false, "Unhandled divider %d", dco_divider);
+  }
+
+  if (dco_divider == 3 || dco_divider == 5 || dco_divider == 7) {
+    return {.p0_p_divider = dco_divider, .p1_q_divider = 1, .p2_k_divider = 1};
+  }
+  ZX_ASSERT_MSG(dco_divider % 3 == 0, "Unhandled divider %d", dco_divider);
+  return {
+      .p0_p_divider = static_cast<int8_t>(dco_divider / 3), .p1_q_divider = 1, .p2_k_divider = 3};
 }
 
 }  // namespace i915_tgl

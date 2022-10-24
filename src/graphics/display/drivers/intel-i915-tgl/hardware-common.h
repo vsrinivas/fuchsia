@@ -154,7 +154,7 @@ constexpr std::array kDpllsKabyLake = {
     DPLL_3,
 };
 
-// TODO(fxbug.dev/105240): Add support for DPLL4.
+// TODO(fxbug.dev/110351): Add support for DPLL4.
 constexpr std::array kDpllsTigerLake = {
     DPLL_0, DPLL_1, DPLL_2, DPLL_TC_1, DPLL_TC_2, DPLL_TC_3, DPLL_TC_4, DPLL_TC_5, DPLL_TC_6,
 };

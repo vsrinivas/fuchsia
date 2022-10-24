@@ -748,8 +748,7 @@ void DpDisplay::ConfigureVoltageSwingTigerLake(size_t phy_config_index) {
     case tgl_registers::DDI_A:
     case tgl_registers::DDI_B:
     case tgl_registers::DDI_C:
-      // TODO(fxbug.dev/105240): Implement Voltage swing for COMBO DDI.
-      ZX_DEBUG_ASSERT_MSG(false, "Unsupported DDI: %d", ddi());
+      ConfigureVoltageSwingComboTigerLake(phy_config_index);
       return;
     default:
       ZX_DEBUG_ASSERT_MSG(false, "Unreachable");
@@ -819,6 +818,10 @@ void DpDisplay::ConfigureVoltageSwingTypeCTigerLake(size_t phy_config_index) {
             .ReadFrom(mmio_space());
     display_port_control_2.set_display_port_20bit_mode_supported(0).WriteTo(mmio_space());
   }
+}
+
+void DpDisplay::ConfigureVoltageSwingComboTigerLake(size_t phy_config_index) {
+  // TODO(fxbug.com/112730): Implement Combo PHY programming.
 }
 
 bool DpDisplay::LinkTrainingSetupTigerLake() {

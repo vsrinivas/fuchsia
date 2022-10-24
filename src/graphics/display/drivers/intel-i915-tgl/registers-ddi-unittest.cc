@@ -8,6 +8,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/graphics/display/drivers/intel-i915-tgl/hardware-common.h"
 #include "src/graphics/display/drivers/intel-i915-tgl/mock-mmio-range.h"
 
 namespace i915_tgl {
@@ -190,6 +191,159 @@ TEST(DdiPhyBalanceControlTest, BalanceLegSelectForDdi) {
   dispio_cr_tx_bmu_cr0.set_reg_value(0);
   dispio_cr_tx_bmu_cr0.balance_leg_select_for_ddi(tgl_registers::DDI_E).set(5);
   EXPECT_EQ(5u, dispio_cr_tx_bmu_cr0.balance_leg_select_ddi_e());
+}
+
+TEST(DdiClockConfigTest, DdiClockDisabledComboDdis) {
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().FromValue(0);
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_A, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_a_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_A));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_B, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_b_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_B));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_C, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_c_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_C));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_A, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_a_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_A));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_B, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_b_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_B));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_C, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_c_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_C));
+}
+
+TEST(DdiClockConfigTest, DdiClockDisabledTypeCDdis) {
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().FromValue(0);
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_1, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_type_c_1_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_1));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_2, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_type_c_2_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_2));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_3, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_type_c_3_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_3));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_4, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_type_c_4_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_4));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_5, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_type_c_5_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_5));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_6, true);
+  EXPECT_EQ(true, ddi_clock_config.ddi_type_c_6_clock_disabled());
+  EXPECT_EQ(true, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_6));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_1, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_type_c_1_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_1));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_2, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_type_c_2_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_2));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_3, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_type_c_3_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_3));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_4, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_type_c_4_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_4));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_5, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_type_c_5_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_5));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_6, false);
+  EXPECT_EQ(false, ddi_clock_config.ddi_type_c_6_clock_disabled());
+  EXPECT_EQ(false, ddi_clock_config.ddi_clock_disabled(tgl_registers::Ddi::DDI_TC_6));
+}
+
+TEST(DdiClockConfigTest, DdiClockDisplayPll) {
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().FromValue(0);
+
+  // We would idealy use the bit pattern (0b11) which requires 0->1 transitions
+  // on both edges of the bit field. However, that pattern is invalid, so we'll
+  // just use DPLL1 (0b01).
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_A,
+                                                              tgl_registers::Dpll::DPLL_1);
+  EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll1,
+            ddi_clock_config.ddi_a_clock_display_pll_select());
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_1,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_B,
+                                                              tgl_registers::Dpll::DPLL_1);
+  EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll1,
+            ddi_clock_config.ddi_b_clock_display_pll_select());
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_1,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_B));
+
+  ddi_clock_config.set_reg_value(0).set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_C,
+                                                              tgl_registers::Dpll::DPLL_1);
+  EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll1,
+            ddi_clock_config.ddi_c_clock_display_pll_select());
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_1,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_C));
+
+  // The test uses DPLL0 because the bit pattern (0b00) requires 1->0
+  // transitions on both edges of the bit field.
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_A, tgl_registers::Dpll::DPLL_0);
+  EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll0,
+            ddi_clock_config.ddi_a_clock_display_pll_select());
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_B, tgl_registers::Dpll::DPLL_0);
+  EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll0,
+            ddi_clock_config.ddi_b_clock_display_pll_select());
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_B));
+
+  ddi_clock_config.set_reg_value(0xffff'ffff)
+      .set_ddi_clock_display_pll(tgl_registers::Ddi::DDI_C, tgl_registers::Dpll::DPLL_0);
+  EXPECT_EQ(tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect::kDisplayPll0,
+            ddi_clock_config.ddi_c_clock_display_pll_select());
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_0,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_C));
+
+  // TODO(fxbug.dev/110351): Add one test for DPLL4, when we support it.
+}
+
+TEST(DdiClockConfigTest, DdiClockDisplayPllInvalid) {
+  auto ddi_clock_config = tgl_registers::DdiClockConfig::Get().FromValue(0);
+
+  ddi_clock_config.set_reg_value(0).set_ddi_a_clock_display_pll_select(
+      static_cast<tgl_registers::DdiClockConfig::DdiClockDisplayPllSelect>(0b11));
+  EXPECT_EQ(tgl_registers::Dpll::DPLL_INVALID,
+            ddi_clock_config.ddi_clock_display_pll(tgl_registers::Ddi::DDI_A));
 }
 
 TEST(DpTransportControlTest, GetForKabyLakeDdi) {
