@@ -48,7 +48,7 @@ if (is_host) {
       ":common",
       "asm",
       "c",
-      "go",
+      "golang",
       "//tools/fidl/lib/fidlgen",
       "//tools/lib/color",
       "//tools/lib/flagmisc",

@@ -4,12 +4,11 @@
 
 import("//build/go/go_library.gni")
 
-go_library("go") {
+go_library("golang") {
   visibility = [ "../*" ]
 
-  name = "go.fuchsia.dev/fuchsia/zircon/tools/zither/golang"
   sources = [
-    "go.go",
+    "golang.go",
     "templates/alias.tmpl",
     "templates/bits.tmpl",
     "templates/const.tmpl",
@@ -17,6 +16,7 @@ go_library("go") {
     "templates/file.tmpl",
     "templates/struct.tmpl",
   ]
+
   deps = [
     "..:common",
     "//tools/fidl/lib/fidlgen",
