@@ -304,7 +304,9 @@ zx_status_t Sdhci::DmaDescriptorBuilder::BuildDmaDescriptors(
       desc_it->address = region.phys_addr;
     }
 
-    ZX_DEBUG_ASSERT(region.size <= kMaxDescriptorLength);  // Should be enforced by ProcessBuffer.
+    // Should be enforced by ProcessBuffer.
+    ZX_DEBUG_ASSERT(region.size > 0);
+    ZX_DEBUG_ASSERT(region.size <= kMaxDescriptorLength);
 
     desc_it->length = static_cast<uint16_t>(region.size == kMaxDescriptorLength ? 0 : region.size);
     desc_it->attr = Adma2DescriptorAttributes::Get()
@@ -457,17 +459,21 @@ zx::result<size_t> Sdhci::DmaDescriptorBuilder::GetPinnedRegions(
 
 zx_status_t Sdhci::DmaDescriptorBuilder::AppendRegions(
     const cpp20::span<const fzl::PinnedVmo::Region> regions) {
-  fzl::PinnedVmo::Region current_region{0, 0};
-  for (auto vmo_regions_it = regions.begin();;) {
-    if (region_count_ >= regions_.size()) {
-      return ZX_ERR_OUT_OF_RANGE;
-    }
+  if (regions.empty()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
 
+  fzl::PinnedVmo::Region current_region{0, 0};
+  auto vmo_regions_it = regions.begin();
+  for (; region_count_ < regions_.size(); region_count_++) {
     // Current region is invalid, fetch a new one from the input list.
     if (current_region.size == 0) {
       // No more regions left to process.
       if (vmo_regions_it == regions.end()) {
         return ZX_OK;
+      }
+      if (vmo_regions_it->size == 0) {
+        return ZX_ERR_INVALID_ARGS;
       }
 
       current_region = *vmo_regions_it++;
@@ -506,9 +512,13 @@ zx_status_t Sdhci::DmaDescriptorBuilder::AppendRegions(
       current_region.size = kMaxDescriptorLength;
     }
 
-    regions_[region_count_++] = current_region;
+    regions_[region_count_] = current_region;
     current_region = next_region;
   }
+
+  // If processing did not reach the end of the VMO regions or the current region is still valid we
+  // must have hit the end of the output region buffer.
+  return vmo_regions_it == regions.end() && current_region.size == 0 ? ZX_OK : ZX_ERR_OUT_OF_RANGE;
 }
 
 void Sdhci::SgHandleInterrupt(const InterruptStatus status) {
