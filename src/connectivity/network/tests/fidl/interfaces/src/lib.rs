@@ -895,9 +895,11 @@ async fn test_watcher_race<N: Netstack>(name: &str) {
     }
 }
 
+// TODO(https://fxbug.dev/112627): Split this test up and run against NS3.
 /// Test interface changes are reported through the interface watcher.
-#[variants_test]
-async fn test_watcher<N: Netstack>(name: &str) {
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_watcher() {
+    let name = "test_watcher";
     let sandbox = netemul::TestSandbox::new().expect("create sandbox");
     let realm = sandbox.create_netstack_realm::<Netstack2, _>(name).expect("create realm");
     let stack =
