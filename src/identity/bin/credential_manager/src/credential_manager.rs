@@ -5,6 +5,7 @@
 use {
     crate::{
         diagnostics::{Diagnostics, IncomingManagerMethod, IncomingResetMethod},
+        error::ServiceError,
         hash_tree::{HashTree, HashTreeStorage, BITS_PER_LEVEL, LABEL_LENGTH, TREE_HEIGHT},
         label_generator::Label,
         lookup_table::LookupTable,
@@ -145,42 +146,47 @@ where
         match request {
             ManagerRequest::AddCredential { params, responder } => {
                 info!("AddCredential: Request Received");
-                let mut resp = self.add_credential(&params).await;
-                if let Err(e) = resp {
+                let result = self.add_credential(&params).await;
+                if let Err(e) = &result {
                     warn!("AddCredential: Failed: {:?}", e);
                 } else {
                     info!("AddCredential: Succeeded");
                 }
-                responder.send(&mut resp).context("sending AddCredential response")?;
+                let mut response = result.map_err(ServiceError::into);
+                responder.send(&mut response).context("sending AddCredential response")?;
                 self.diagnostics.incoming_manager_outcome(
                     IncomingManagerMethod::AddCredential,
-                    resp.map(|_| ()),
+                    response.map(|_| ()),
                 );
             }
             ManagerRequest::RemoveCredential { label, responder } => {
                 info!("RemoveCredential: Request Received");
-                let mut resp = self.remove_credential(label).await;
-                if let Err(e) = resp {
+                let result = self.remove_credential(label).await;
+                if let Err(e) = &result {
                     warn!("RemoveCredential: Failed: {:?}", e);
                 } else {
                     info!("RemoveCredential: Succeeded");
                 }
-                responder.send(&mut resp).context("sending RemoveLabel response")?;
-                self.diagnostics
-                    .incoming_manager_outcome(IncomingManagerMethod::RemoveCredential, resp);
+                let mut response = result.map_err(ServiceError::into);
+                responder.send(&mut response).context("sending RemoveLabel response")?;
+                self.diagnostics.incoming_manager_outcome(
+                    IncomingManagerMethod::RemoveCredential,
+                    response.map(|_| ()),
+                );
             }
             ManagerRequest::CheckCredential { params, responder } => {
                 info!("CheckCredential: Request Received");
-                let mut resp = self.check_credential(&params).await;
-                if let Err(e) = resp {
+                let result = self.check_credential(&params).await;
+                if let Err(e) = &result {
                     warn!("CheckCredential: Failed: {:?}", e);
                 } else {
                     info!("CheckCredential: Succeeded");
                 }
-                responder.send(&mut resp).context("sending CheckCredential response")?;
+                let mut response = result.map_err(ServiceError::into);
+                responder.send(&mut response).context("sending CheckCredential response")?;
                 self.diagnostics.incoming_manager_outcome(
                     IncomingManagerMethod::CheckCredential,
-                    resp.map(|_| ()),
+                    response.map(|_| ()),
                 );
             }
         }
@@ -251,10 +257,7 @@ where
 
     /// Attempts to execute a pending commit operation. On failure
     /// returns an appropriate CredentialError.
-    async fn attempt_commit(
-        &self,
-        commit_operation: &CommitOperation,
-    ) -> Result<(), CredentialError> {
+    async fn attempt_commit(&self, commit_operation: &CommitOperation) -> Result<(), ServiceError> {
         match commit_operation {
             CommitOperation::DeleteMetadata { label } => {
                 self.lookup_table().delete(&label).await?;
@@ -277,7 +280,7 @@ where
     async fn add_credential(
         &self,
         params: &fcred::AddCredentialParams,
-    ) -> Result<u64, CredentialError> {
+    ) -> Result<u64, ServiceError> {
         let pinweaver = self.pinweaver.lock().await;
         let pending_commits = self.drain_pending_commits().await;
         let (label, h_aux) = self.alloc_credential().await?;
@@ -297,7 +300,7 @@ where
     async fn check_credential(
         &self,
         params: &fcred::CheckCredentialParams,
-    ) -> Result<fcred::CheckCredentialResponse, CredentialError> {
+    ) -> Result<fcred::CheckCredentialResponse, ServiceError> {
         let pinweaver = self.pinweaver.lock().await;
         let pending_commits = self.drain_pending_commits().await;
         let label =
@@ -319,16 +322,16 @@ where
                 let mac = response.mac.ok_or(CredentialError::InternalError)?;
                 let cred_metadata = response.cred_metadata.ok_or(CredentialError::InternalError)?;
                 self.update_credential(&label, mac, cred_metadata, pending_commits).await?;
-                Err(CredentialError::InvalidSecret)
+                Err(CredentialError::InvalidSecret.into())
             }
-            TryAuthResponse::RateLimited(_) => Err(CredentialError::TooManyAttempts),
-            _ => Err(CredentialError::InternalError),
+            TryAuthResponse::RateLimited(_) => Err(CredentialError::TooManyAttempts.into()),
+            _ => Err(CredentialError::InternalError.into()),
         }
     }
 
     /// Attempts to remove a credential specified by the |label| in both the
     /// cr50 state and in the internal |hash_tree|. Returns nothing on success.
-    async fn remove_credential(&self, label: u64) -> Result<(), CredentialError> {
+    async fn remove_credential(&self, label: u64) -> Result<(), ServiceError> {
         let pinweaver = self.pinweaver.lock().await;
         let mut pending_commits = self.drain_pending_commits().await;
         let label = Label::leaf_label(label, LABEL_LENGTH);
@@ -364,7 +367,7 @@ where
     /// Allocates a new empty credential in the |hash_tree| returning the
     /// leaf |label| and the auxiliary hashes |h_aux| from the leaf through to
     /// the root of the tree.
-    async fn alloc_credential(&self) -> Result<(Label, Vec<Hash>), CredentialError> {
+    async fn alloc_credential(&self) -> Result<(Label, Vec<Hash>), ServiceError> {
         let label = self.hash_tree().get_free_leaf_label()?;
         let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
         Ok((label, h_aux))
@@ -376,7 +379,7 @@ where
     async fn get_credential(
         &self,
         label: &Label,
-    ) -> Result<(Vec<Hash>, CredentialMetadata), CredentialError> {
+    ) -> Result<(Vec<Hash>, CredentialMetadata), ServiceError> {
         let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
         let stored_cred_metadata = self.lookup_table().read(&label).await?.bytes;
         Ok((h_aux, stored_cred_metadata))
@@ -391,7 +394,7 @@ where
         mac: Mac,
         cred_metadata: CredentialMetadata,
         mut pending_commits: MutexGuard<'_, VecDeque<CommitOperation>>,
-    ) -> Result<(), CredentialError> {
+    ) -> Result<(), ServiceError> {
         self.hash_tree().update_leaf_hash(&label, mac)?;
         pending_commits
             .push_back(CommitOperation::WriteMetadata { label: label.clone(), cred_metadata });
@@ -416,14 +419,17 @@ mod test {
         super::*,
         crate::{
             diagnostics::{Event, FakeDiagnostics, HashTreeOperation},
+            error::CredentialErrorWrapper,
             hash_tree::{HashTreeStorageCbor, CHILDREN_PER_NODE, TREE_HEIGHT},
             lookup_table::{LookupTableError, MockLookupTable, ReadResult},
-            pinweaver::MockPinWeaverProtocol,
+            pinweaver::{MockPinWeaverProtocol, PinWeaverErrorCode, PinWeaverProtocolError},
         },
         assert_matches::assert_matches,
         fidl::endpoints::create_proxy_and_stream,
         fidl_fuchsia_identity_credential::{CredentialError as CE, ManagerMarker},
-        fidl_fuchsia_tpm_cr50::{TryAuthFailed, TryAuthRateLimited, TryAuthSuccess},
+        fidl_fuchsia_tpm_cr50::{
+            PinWeaverError, TryAuthFailed, TryAuthRateLimited, TryAuthSuccess,
+        },
         tempfile::TempDir,
     };
 
@@ -555,7 +561,7 @@ mod test {
             .pinweaver
             .expect_insert_leaf()
             .times(1)
-            .returning(|_, _, _| Err(CredentialError::InternalError));
+            .returning(|_, _, _| Err(PinWeaverProtocolError::from(PinWeaverError::LabelInvalid)));
         let test = TestHarness::create(params).await;
         let result = test
             .cm
@@ -570,7 +576,12 @@ mod test {
                 ..fcred::AddCredentialParams::EMPTY
             })
             .await;
-        assert_matches!(result, Err(CredentialError::InternalError));
+        assert_matches!(
+            result,
+            Err(ServiceError::PinWeaver(PinWeaverProtocolError::PinWeaverErrorCode(
+                PinWeaverErrorCode(PinWeaverError::LabelInvalid)
+            )))
+        );
         test.diag.assert_events(&[]);
     }
 
@@ -674,7 +685,10 @@ mod test {
                 ..fcred::CheckCredentialParams::EMPTY
             })
             .await;
-        assert_matches!(result, Err(CredentialError::TooManyAttempts));
+        assert_matches!(
+            result,
+            Err(ServiceError::Credential(CredentialErrorWrapper(CredentialError::TooManyAttempts)))
+        );
         test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
             Event::CredentialCount(1),
@@ -728,7 +742,10 @@ mod test {
                 ..fcred::CheckCredentialParams::EMPTY
             })
             .await;
-        assert_matches!(result, Err(CredentialError::InvalidSecret));
+        assert_matches!(
+            result,
+            Err(ServiceError::Credential(CredentialErrorWrapper(CredentialError::InvalidSecret)))
+        );
         test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
             Event::CredentialCount(1),
@@ -788,7 +805,7 @@ mod test {
             .pinweaver
             .expect_remove_leaf()
             .times(1)
-            .returning(|_, _, _| Err(CredentialError::InternalError));
+            .returning(|_, _, _| Err(PinWeaverProtocolError::from(PinWeaverError::LabelInvalid)));
         let test = TestHarness::create(params).await;
         let label = test
             .cm
@@ -807,7 +824,13 @@ mod test {
         test.cm.drain_pending_commits().await;
         let result = test.cm.remove_credential(label).await;
         test.cm.drain_pending_commits().await;
-        assert_matches!(result, Err(CredentialError::InternalError));
+        assert_matches!(
+            result,
+            Err(ServiceError::PinWeaver(PinWeaverProtocolError::PinWeaverErrorCode(
+                PinWeaverErrorCode(PinWeaverError::LabelInvalid)
+            )))
+        );
+        test.cm.drain_pending_commits().await;
         test.diag.assert_events(&[
             Event::CredentialCount(1),
             Event::HashTreeOutcome(HashTreeOperation::Store, Ok(())),

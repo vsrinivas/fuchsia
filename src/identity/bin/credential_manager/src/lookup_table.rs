@@ -5,9 +5,9 @@
 use {
     crate::label_generator::Label,
     async_trait::async_trait,
-    fidl_fuchsia_identity_credential::CredentialError,
     fidl_fuchsia_io as fio, fuchsia_zircon as zx,
     identity_common::StagedFile,
+    std::fmt,
     thiserror::Error,
     tracing::{info, warn},
 };
@@ -30,6 +30,21 @@ pub struct ReadResult {
 }
 
 #[derive(Error, Debug)]
+pub struct ResetTableError(Vec<LookupTableError>);
+
+impl From<Vec<LookupTableError>> for ResetTableError {
+    fn from(error: Vec<LookupTableError>) -> Self {
+        ResetTableError(error)
+    }
+}
+
+impl fmt::Display for ResetTableError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "{:?}", self.0)
+    }
+}
+
+#[derive(Error, Debug)]
 pub enum LookupTableError {
     #[error("Failed to open: {0}")]
     OpenError(#[from] fuchsia_fs::node::OpenError),
@@ -45,15 +60,10 @@ pub enum LookupTableError {
     UnlinkError(#[source] zx::Status),
     #[error("Failed to operate on staged file: {0}")]
     StagedFileError(#[from] identity_common::StagedFileError),
+    #[error("Reset Failed")]
+    ResetTableError(#[from] ResetTableError),
     #[error("Unknown lookup table error")]
     Unknown,
-}
-
-// TODO(fxbug.dev/98758) Revise how these errors map into CredentialError types.
-impl From<LookupTableError> for CredentialError {
-    fn from(_error: LookupTableError) -> Self {
-        CredentialError::InternalError
-    }
 }
 
 #[cfg_attr(test, automock)]
@@ -71,7 +81,7 @@ pub trait LookupTable {
     /// Resets the entire lookup table deleting all of the credentials. This
     /// is used if the hash_tree enters an unrecoverable state usually
     /// due to a power outage.
-    async fn reset(&mut self) -> Result<(), Vec<LookupTableError>>;
+    async fn reset(&mut self) -> Result<(), LookupTableError>;
 }
 
 /// Implements |LookupTable| with a persistent directory backing it.
@@ -256,10 +266,13 @@ impl LookupTable for PersistentLookupTable {
             })
     }
 
-    async fn reset(&mut self) -> Result<(), Vec<LookupTableError>> {
+    async fn reset(&mut self) -> Result<(), LookupTableError> {
         let dir_result = fuchsia_fs::directory::readdir(&self.dir_proxy).await;
-        let dir_entries =
-            dir_result.map_err(|err| vec![LookupTableError::ReaddirError(err.into())])?;
+        let dir_entries = dir_result.map_err(|err| {
+            LookupTableError::ResetTableError(
+                vec![LookupTableError::ReaddirError(err.into())].into(),
+            )
+        })?;
         let mut failures = Vec::new();
         for entry in dir_entries.iter() {
             if let Err(e) =
@@ -281,7 +294,7 @@ impl LookupTable for PersistentLookupTable {
         if failures.is_empty() {
             Ok(())
         } else {
-            Err(failures)
+            Err(LookupTableError::ResetTableError(failures.into()))
         }
     }
 }

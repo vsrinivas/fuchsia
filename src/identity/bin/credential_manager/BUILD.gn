@@ -48,6 +48,7 @@ rustc_binary("bin") {
     "src/diagnostics/fake.rs",
     "src/diagnostics/inspect.rs",
     "src/diagnostics/mod.rs",
+    "src/error.rs",
     "src/hash_tree.rs",
     "src/label_generator.rs",
     "src/lookup_table.rs",

@@ -4,18 +4,29 @@
 
 use {
     crate::{
+        error::ServiceError,
         hash_tree::{
             HashTree, HashTreeError, HashTreeStorage, BITS_PER_LEVEL, CHILDREN_PER_NODE,
             LABEL_LENGTH, TREE_HEIGHT,
         },
         label_generator::Label,
         lookup_table::LookupTable,
-        pinweaver::PinWeaverProtocol,
+        pinweaver::{Hash, PinWeaverProtocol},
     },
-    fidl_fuchsia_identity_credential::CredentialError,
     fidl_fuchsia_tpm_cr50 as fcr50,
+    thiserror::Error,
     tracing::{error, info, warn},
 };
+
+#[derive(Error, Debug)]
+pub enum ProvisionError {
+    #[error("The on-disk hash tree is more than two steps behind the CR50")]
+    SynchronizationStateUnrecoverable,
+    #[error("Failed to resync hash tree local tree: {:?} does not match cr50: {:?}", .local_root_hash, .root_hash)]
+    ReplayHashMismatch { root_hash: Hash, local_root_hash: Hash },
+    #[error("The cr50::LogEntry FIDL table was incomplete")]
+    ReplayLogEntryIncomplete,
+}
 
 /// Represents the state of the HashTree persisted on disk compared with the HashTree
 /// state returned by the CR50.
@@ -47,13 +58,13 @@ pub async fn provision<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTab
     hash_tree_storage: &HS,
     lookup_table: &mut LT,
     pinweaver: &PW,
-) -> Result<HashTree, CredentialError> {
+) -> Result<HashTree, ServiceError> {
     match hash_tree_storage.load() {
         Ok(hash_tree) => {
             synchronize_state(hash_tree, hash_tree_storage, lookup_table, pinweaver).await
         }
-        Err(HashTreeError::DataStoreNotFound) => {
-            info!("Could not read hash tree file, resetting");
+        Err(HashTreeError::Io(err)) => {
+            info!("Hash Tree IO Error: {}. Resetting State.", err);
             reset_state(hash_tree_storage, lookup_table, pinweaver).await
         }
         Err(err) => {
@@ -61,7 +72,7 @@ pub async fn provision<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTab
             // resetting so we don't destroy data that would be helpful to isolate the problem.
             // TODO(benwright,jsankey): Reconsider this decision once the system is more mature.
             error!("Error loading hash tree: {:?}", err);
-            Err(CredentialError::CorruptedMetadata)
+            Err(ServiceError::HashTree(err))
         }
     }
 }
@@ -73,10 +84,10 @@ async fn reset_state<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTable
     hash_tree_storage: &HS,
     lookup_table: &mut LT,
     pinweaver: &PW,
-) -> Result<HashTree, CredentialError> {
+) -> Result<HashTree, ServiceError> {
     let hash_tree =
         HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("Unable to create hash tree");
-    lookup_table.reset().await.map_err(|_| CredentialError::InternalError)?;
+    lookup_table.reset().await?;
     pinweaver.reset_tree(BITS_PER_LEVEL, TREE_HEIGHT).await?;
     hash_tree_storage.store(&hash_tree)?;
     Ok(hash_tree)
@@ -87,7 +98,7 @@ async fn reset_state<HS: HashTreeStorage, PW: PinWeaverProtocol, LT: LookupTable
 async fn get_sync_state<PW: PinWeaverProtocol>(
     hash_tree: HashTree,
     pinweaver: &PW,
-) -> Result<HashTreeSyncState, CredentialError> {
+) -> Result<HashTreeSyncState, ServiceError> {
     let stored_root_hash = hash_tree.get_root_hash()?;
     let pinweaver_log = pinweaver.get_log(&stored_root_hash).await?;
     Ok(match &pinweaver_log[..] {
@@ -120,7 +131,7 @@ async fn synchronize_state<HS: HashTreeStorage, LT: LookupTable, PW: PinWeaverPr
     hash_tree_storage: &HS,
     lookup_table: &mut LT,
     pinweaver: &PW,
-) -> Result<HashTree, CredentialError> {
+) -> Result<HashTree, ServiceError> {
     let hash_tree_populated_size = hash_tree.populated_size();
     let sync_state = get_sync_state(hash_tree, pinweaver).await?;
     match sync_state {
@@ -147,7 +158,7 @@ async fn synchronize_state<HS: HashTreeStorage, LT: LookupTable, PW: PinWeaverPr
                     "State synchronization failed. Hash tree on disk contained {} items",
                     hash_tree_populated_size
                 );
-                Err(CredentialError::CorruptedMetadata)
+                Err(ServiceError::Provision(ProvisionError::SynchronizationStateUnrecoverable))
             }
         }
     }
@@ -162,27 +173,28 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
     lookup_table: &mut LT,
     pinweaver: &PW,
     log_to_replay: fcr50::LogEntry,
-) -> Result<HashTree, CredentialError> {
-    let message_type = log_to_replay.message_type.ok_or(CredentialError::InternalError)?;
-    let root_hash = log_to_replay.root_hash.ok_or(CredentialError::InternalError)?;
+) -> Result<HashTree, ServiceError> {
+    let message_type =
+        log_to_replay.message_type.ok_or(ProvisionError::ReplayLogEntryIncomplete)?;
+    let root_hash = log_to_replay.root_hash.ok_or(ProvisionError::ReplayLogEntryIncomplete)?;
     // TODO(benwright) Add inspect reporting.
     match &message_type {
         fcr50::MessageType::InsertLeaf => {
             let label = Label::leaf_label(
-                log_to_replay.label.ok_or(CredentialError::InternalError)?,
+                log_to_replay.label.ok_or(ProvisionError::ReplayLogEntryIncomplete)?,
                 LABEL_LENGTH,
             );
             info!(?label, "Replaying InsertLeaf");
             let leaf_hmac = log_to_replay
                 .entry_data
-                .ok_or(CredentialError::InternalError)?
+                .ok_or(ProvisionError::ReplayLogEntryIncomplete)?
                 .leaf_hmac
-                .ok_or(CredentialError::InternalError)?;
+                .ok_or(ProvisionError::ReplayLogEntryIncomplete)?;
             hash_tree.update_leaf_hash(&label, leaf_hmac)?;
         }
         fcr50::MessageType::RemoveLeaf => {
             let label = Label::leaf_label(
-                log_to_replay.label.ok_or(CredentialError::InternalError)?,
+                log_to_replay.label.ok_or(ProvisionError::ReplayLogEntryIncomplete)?,
                 LABEL_LENGTH,
             );
             info!(?label, "Replaying RemoveLeaf");
@@ -194,7 +206,7 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
         }
         fcr50::MessageType::TryAuth => {
             let label = Label::leaf_label(
-                log_to_replay.label.ok_or(CredentialError::InternalError)?,
+                log_to_replay.label.ok_or(ProvisionError::ReplayLogEntryIncomplete)?,
                 LABEL_LENGTH,
             );
             info!(?label, "Replaying TryAuth");
@@ -203,23 +215,29 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
             let response = pinweaver.log_replay(root_hash, h_aux, metadata).await?;
             hash_tree.update_leaf_hash(
                 &label,
-                response.leaf_hash.ok_or(CredentialError::InternalError)?,
+                response.leaf_hash.ok_or(ProvisionError::ReplayLogEntryIncomplete)?,
             )?;
             lookup_table
-                .write(&label, response.cred_metadata.ok_or(CredentialError::InternalError)?)
+                .write(
+                    &label,
+                    response.cred_metadata.ok_or(ProvisionError::ReplayLogEntryIncomplete)?,
+                )
                 .await?;
         }
     };
-    let root_hash = log_to_replay.root_hash.ok_or(CredentialError::InternalError)?;
+    let root_hash = log_to_replay.root_hash.ok_or(ProvisionError::ReplayLogEntryIncomplete)?;
     let local_root_hash = hash_tree.get_root_hash()?;
     if *local_root_hash == root_hash {
         Ok(hash_tree)
     } else {
         error!(
             "Failed to resync hash tree local tree: {:?} does not match cr50: {:?}",
-            root_hash, local_root_hash
+            local_root_hash, root_hash
         );
-        Err(CredentialError::CorruptedMetadata)
+        Err(ServiceError::Provision(ProvisionError::ReplayHashMismatch {
+            root_hash,
+            local_root_hash: local_root_hash.clone(),
+        }))
     }
 }
 
@@ -252,7 +270,7 @@ mod test {
         let mut pinweaver = MockPinWeaverProtocol::new();
         let mut lookup_table = MockLookupTable::new();
         let mut storage = MockHashTreeStorage::new();
-        storage.expect_load().times(1).returning(|| Err(HashTreeError::DataStoreNotFound));
+        storage.expect_load().times(1).returning(|| Err(HashTreeError::Io("".to_string())));
         storage.expect_store().times(1).returning(|_| Ok(()));
         pinweaver.expect_reset_tree().times(1).returning(|_, _| Ok([0; 32]));
         lookup_table.expect_reset().times(1).returning(|| Ok(()));
@@ -281,7 +299,10 @@ mod test {
             Ok(hash_tree)
         });
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
-        assert_matches!(result, Err(CredentialError::CorruptedMetadata));
+        assert_matches!(
+            result,
+            Err(ServiceError::Provision(ProvisionError::SynchronizationStateUnrecoverable))
+        );
     }
 
     #[fuchsia::test]
@@ -317,7 +338,10 @@ mod test {
             Ok(hash_tree)
         });
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
-        assert_matches!(result, Err(CredentialError::CorruptedMetadata));
+        assert_matches!(
+            result,
+            Err(ServiceError::Provision(ProvisionError::SynchronizationStateUnrecoverable))
+        );
     }
 
     #[fuchsia::test]
@@ -511,6 +535,9 @@ mod test {
         });
         storage.expect_load().times(1).return_once(move || Ok(hash_tree));
         let result = provision(&storage, &mut lookup_table, &pinweaver).await;
-        assert_matches!(result, Err(CredentialError::CorruptedMetadata));
+        assert_matches!(
+            result,
+            Err(ServiceError::Provision(ProvisionError::ReplayHashMismatch { .. }))
+        );
     }
 }

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 mod credential_manager;
 mod diagnostics;
+mod error;
 mod hash_tree;
 mod label_generator;
 mod lookup_table;

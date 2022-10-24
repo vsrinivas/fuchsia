@@ -7,11 +7,11 @@ use {
         diagnostics::{Diagnostics, HashTreeOperation},
         label_generator::{BitstringLabelGenerator, Label},
     },
-    fidl_fuchsia_identity_credential::CredentialError,
     serde::{Deserialize, Serialize},
     serde_cbor,
     sha2::{Digest, Sha256},
     std::{collections::VecDeque, fs::File, sync::Arc},
+    thiserror::Error,
 };
 
 #[cfg(test)]
@@ -38,36 +38,28 @@ pub const BITS_PER_LEVEL: u8 = 2;
 /// Default height of the hash tree.
 pub const TREE_HEIGHT: u8 = LABEL_LENGTH / BITS_PER_LEVEL;
 
-#[derive(Copy, Clone, Debug, std::hash::Hash, PartialEq, Eq)]
+#[derive(Error, Debug, Clone, std::hash::Hash, PartialEq, Eq)]
 pub enum HashTreeError {
-    /// No available leaf nodes
+    #[error("No available leaf nodes")]
     NoLeafNodes,
-    /// Unknown leaf label
+    #[error("Unknown leaf label")]
     UnknownLeafLabel,
-    /// Found label but is for a non-leaf node
+    #[error("Found label but is for a non-leaf node")]
     NonLeafLabel,
     /// Invalid tree parameters
+    #[error("Invalid tree parameters {:?} {} {}", .leaf_label, .tree_height, .children_per_node)]
     InvalidTree { leaf_label: Label, tree_height: u8, children_per_node: u8 },
-    /// Invalid input
+    #[error("Invalid input")]
     InvalidInput,
-    /// No available file
-    DataStoreNotFound,
-    /// Unable to deserialize tree
+    // Unfortunately HashTreeError is tightly coupled to the diagnostics
+    // module which requires the HashTrait to be implemented. So we cannot
+    // forward the IO::Error internally.
+    #[error("Hash Tree IO Error {:?}", .0)]
+    Io(String),
+    #[error("Unable to deserialize tree")]
     DeserializationFailed,
-    /// Unable to serialize tree
+    #[error("Unable to serialize tree")]
     SerializationFailed,
-}
-
-// TODO(fxbug.dev/98758) Revise how these errors map into CredentialError types.
-impl From<HashTreeError> for CredentialError {
-    fn from(error: HashTreeError) -> Self {
-        match error {
-            HashTreeError::NoLeafNodes => CredentialError::NoFreeLabel,
-            HashTreeError::NonLeafLabel => CredentialError::InvalidLabel,
-            HashTreeError::UnknownLeafLabel => CredentialError::InvalidLabel,
-            _ => CredentialError::InternalError,
-        }
-    }
 }
 
 /// A HashTree is a representation of a Merkle Tree where each of the leaf
@@ -264,8 +256,8 @@ impl<D: Diagnostics> HashTreeStorage for HashTreeStorageCbor<D> {
     /// Attempts to deserialize the HashTree from the supplied path.
     /// If no file does not exist or is corrupted an error is returned.
     fn load(&self) -> Result<HashTree, HashTreeError> {
-        let inner = || {
-            let file = File::open(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+        let result: Result<HashTree, HashTreeError> = {
+            let file = File::open(&self.path).map_err(|e| HashTreeError::Io(e.to_string()))?;
             let format: StoreHashTree =
                 serde_cbor::from_reader(file).map_err(|_| HashTreeError::DeserializationFailed)?;
             let mut hash_tree = HashTree::new(format.height, format.children_per_node)?;
@@ -278,14 +270,13 @@ impl<D: Diagnostics> HashTreeStorage for HashTreeStorageCbor<D> {
             hash_tree.verify_tree()?;
             Ok(hash_tree)
         };
-        let result = inner();
         match &result {
             Ok(hash_tree) => {
                 self.diagnostics.hash_tree_outcome(HashTreeOperation::Load, Ok(()));
                 self.diagnostics.credential_count(hash_tree.populated_size());
             }
             Err(err) => {
-                self.diagnostics.hash_tree_outcome(HashTreeOperation::Load, Err(*err));
+                self.diagnostics.hash_tree_outcome(HashTreeOperation::Load, Err(err.clone()));
             }
         };
         result
@@ -294,13 +285,12 @@ impl<D: Diagnostics> HashTreeStorage for HashTreeStorageCbor<D> {
     /// Attempts to store the HashTree |hash_tree| at the supplied path.
     /// This function only fails if it fails to serialize or write the data.
     fn store(&self, hash_tree: &HashTree) -> Result<(), HashTreeError> {
-        let inner = || {
-            let file = File::create(&self.path).map_err(|_| HashTreeError::DataStoreNotFound)?;
+        let result = {
+            let file = File::create(&self.path).map_err(|e| HashTreeError::Io(e.to_string()))?;
             let format = StoreHashTree::from(hash_tree);
             serde_cbor::to_writer(file, &format).map_err(|_| HashTreeError::SerializationFailed)
         };
-        let result = inner();
-        self.diagnostics.hash_tree_outcome(HashTreeOperation::Store, result);
+        self.diagnostics.hash_tree_outcome(HashTreeOperation::Store, result.clone());
         result
     }
 }
