@@ -114,6 +114,12 @@ class GraphServer
 
   // How many graph-controlled clocks have been created.
   int64_t num_graph_controlled_clocks_ = 0;
+
+  const Node::GraphContext ctx_ = {
+      .gain_controls = gain_controls_,
+      .global_task_queue = *global_task_queue_,
+      .detached_thread = detached_thread_,
+  };
 };
 
 }  // namespace media_audio

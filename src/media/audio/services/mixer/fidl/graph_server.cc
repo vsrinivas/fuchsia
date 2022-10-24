@@ -616,7 +616,7 @@ void GraphServer::DeleteNode(DeleteNodeRequestView request, DeleteNodeCompleter:
     return;
   }
 
-  Node::Destroy(gain_controls_, *global_task_queue_, detached_thread_, it->second);
+  Node::Destroy(ctx_, it->second);
   nodes_.erase(it);
 
   fidl::Arena arena;
@@ -662,8 +662,7 @@ void GraphServer::CreateEdge(CreateEdgeRequestView request, CreateEdgeCompleter:
     return;
   }
 
-  auto result = Node::CreateEdge(gain_controls_, *global_task_queue_, detached_thread_, source,
-                                 dest, options.take_value());
+  auto result = Node::CreateEdge(ctx_, source, dest, options.take_value());
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;
@@ -705,9 +704,7 @@ void GraphServer::DeleteEdge(DeleteEdgeRequestView request, DeleteEdgeCompleter:
 
   auto& source = source_it->second;
   auto& dest = dest_it->second;
-  // TODO(fxbug.dev/87651): Populate `options`.
-  auto result =
-      Node::DeleteEdge(gain_controls_, *global_task_queue_, detached_thread_, source, dest);
+  auto result = Node::DeleteEdge(ctx_, source, dest);
   if (!result.is_ok()) {
     completer.ReplyError(result.error());
     return;
@@ -905,7 +902,7 @@ void GraphServer::OnShutdown(fidl::UnbindInfo info) {
 
   // Destroy nodes to remove circular references.
   for (auto [id, node] : nodes_) {
-    Node::Destroy(gain_controls_, *global_task_queue_, detached_thread_, node);
+    Node::Destroy(ctx_, node);
   }
   nodes_.clear();
 

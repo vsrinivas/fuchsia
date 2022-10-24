@@ -17,6 +17,7 @@
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"
+#include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/graph_thread.h"
 #include "src/media/audio/services/mixer/fidl/node.h"
@@ -271,16 +272,11 @@ class FakeGraph {
     return it->second;
   }
 
-  // Returns the gain controls used by this FakeGraph.
-  std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls() {
-    return gain_controls_;
-  }
+  // Returns the graph context.
+  const Node::GraphContext& ctx() const { return ctx_; }
 
   // Returns the task queue used by this FakeGraph.
   std::shared_ptr<GlobalTaskQueue> global_task_queue() const { return global_task_queue_; }
-
-  // Returns the detached thread used by this FakeGraph.
-  GraphDetachedThreadPtr detached_thread() const { return detached_thread_; }
 
  private:
   FakeGraph(const FakeGraph&) = delete;
@@ -297,8 +293,15 @@ class FakeGraph {
   std::unordered_map<PipelineDirection, std::unordered_set<NodeId>> pipeline_directions_;
   PipelineDirection default_pipeline_direction_;
 
-  std::shared_ptr<GlobalTaskQueue> global_task_queue_;
-  GraphDetachedThreadPtr detached_thread_;
+  std::shared_ptr<GlobalTaskQueue> global_task_queue_ = std::make_shared<GlobalTaskQueue>();
+  GraphDetachedThreadPtr detached_thread_ =
+      std::make_shared<GraphDetachedThread>(global_task_queue_);
+
+  const Node::GraphContext ctx_ = {
+      .gain_controls = gain_controls_,
+      .global_task_queue = *global_task_queue_,
+      .detached_thread = detached_thread_,
+  };
 };
 
 }  // namespace media_audio

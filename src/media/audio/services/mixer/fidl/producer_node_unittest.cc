@@ -41,6 +41,7 @@ TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
       .unconnected_ordinary_nodes = {1},
   });
 
+  const auto& ctx = graph.ctx();
   auto q = graph.global_task_queue();
 
   auto stream_sink = MakeStreamSink();
@@ -50,14 +51,13 @@ TEST(ProducerNodeTest, CreateEdgeCannotAcceptSource) {
       .reference_clock = DefaultClock(),
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = ctx.detached_thread,
   });
 
-  EXPECT_EQ(producer->thread(), graph.detached_thread());
-  EXPECT_EQ(producer->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(producer->thread(), ctx.detached_thread);
+  EXPECT_EQ(producer->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
 
-  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
-                                 producer, /*options=*/{});
+  auto result = Node::CreateEdge(ctx, graph.node(1), producer, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 }
@@ -67,6 +67,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
       .unconnected_ordinary_nodes = {1},
   });
 
+  auto detached_thread = graph.ctx().detached_thread;
   auto q = graph.global_task_queue();
 
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
@@ -82,30 +83,29 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = detached_thread,
   });
 
   ASSERT_NE(producer, nullptr);
   EXPECT_EQ(producer->type(), Node::Type::kProducer);
   EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
   EXPECT_EQ(producer->reference_clock(), clock);
-  EXPECT_EQ(producer->thread(), graph.detached_thread());
-  EXPECT_EQ(producer->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(producer->thread(), detached_thread);
+  EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread->pipeline_thread());
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(producer->pipeline_stage()->reference_clock(), clock);
 
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), producer,
-                                   dest, /*options=*/{});
+    auto result = Node::CreateEdge(graph.ctx(), producer, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
   EXPECT_EQ(producer->dest(), dest);
   EXPECT_THAT(dest->sources(), ::testing::ElementsAre(producer));
 
-  q->RunForThread(graph.detached_thread()->id());
+  q->RunForThread(detached_thread->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(),
               ::testing::ElementsAre(producer->pipeline_stage()));
 
@@ -143,15 +143,14 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   // Disconnect producer -> dest.
   {
-    auto result =
-        Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), producer, dest);
+    auto result = Node::DeleteEdge(graph.ctx(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
   EXPECT_EQ(producer->dest(), nullptr);
   EXPECT_THAT(dest->sources(), ::testing::ElementsAre());
 
-  q->RunForThread(graph.detached_thread()->id());
+  q->RunForThread(detached_thread->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ::testing::ElementsAre());
 }
 
@@ -160,6 +159,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
       .unconnected_ordinary_nodes = {1},
   });
 
+  auto detached_thread = graph.ctx().detached_thread;
   auto q = graph.global_task_queue();
 
   const auto clock = RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true);
@@ -179,26 +179,25 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = ring_buffer,
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = graph.ctx().detached_thread,
   });
 
   // Connect producer -> dest.
   auto dest = graph.node(1);
   {
-    auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), producer,
-                                   dest, /*options=*/{});
+    auto result = Node::CreateEdge(graph.ctx(), producer, dest, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
   EXPECT_EQ(producer->dest(), dest);
   EXPECT_EQ(producer->pipeline_direction(), PipelineDirection::kInput);
-  EXPECT_EQ(producer->thread(), graph.detached_thread());
-  EXPECT_EQ(producer->pipeline_stage()->thread(), graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(producer->thread(), detached_thread);
+  EXPECT_EQ(producer->pipeline_stage()->thread(), detached_thread->pipeline_thread());
   EXPECT_EQ(producer->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(producer->pipeline_stage()->reference_clock(), clock);
   EXPECT_THAT(dest->sources(), ElementsAre(producer));
 
-  q->RunForThread(graph.detached_thread()->id());
+  q->RunForThread(detached_thread->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ElementsAre(producer->pipeline_stage()));
 
   // Start the producer's internal frame timeline.
@@ -233,15 +232,14 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   // Disconnect producer -> dest.
   {
-    auto result =
-        Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), producer, dest);
+    auto result = Node::DeleteEdge(graph.ctx(), producer, dest);
     ASSERT_TRUE(result.is_ok());
   }
 
   EXPECT_EQ(producer->dest(), nullptr);
   EXPECT_THAT(dest->sources(), ElementsAre());
 
-  q->RunForThread(graph.detached_thread()->id());
+  q->RunForThread(detached_thread->id());
   EXPECT_THAT(dest->fake_pipeline_stage()->sources(), ElementsAre());
 }
 
@@ -256,7 +254,7 @@ TEST(ProducerNodeTest, StopCancelsStart) {
           RealClock::CreateFromMonotonic("ReferenceClock", Clock::kExternalDomain, true),
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = graph.ctx().detached_thread,
   });
 
   // Start then stop immediately -- the stop should cancel the start.
@@ -294,7 +292,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
       .reference_clock = clock,
       .media_ticks_per_ns = kFormat.frames_per_ns(),
       .data_source = stream_sink->server_ptr(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = graph.ctx().detached_thread,
   });
 
   // Start the producer's internal frame timeline.

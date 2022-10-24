@@ -390,7 +390,7 @@ TEST(ReachabilityTest, MoveNodeToThread) {
       .types = {{Node::Type::kConsumer, {2}}},
   });
 
-  auto old_thread = graph.detached_thread();
+  auto old_thread = graph.ctx().detached_thread;
   auto new_thread = graph.CreateThread(1);
 
   EXPECT_THAT(MoveNodeToThread(*graph.node(12), new_thread, old_thread),

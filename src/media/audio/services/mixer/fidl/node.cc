@@ -75,10 +75,8 @@ Node::Node(Type type, std::string_view name, std::shared_ptr<Clock> reference_cl
   }
 }
 
-fpromise::result<void, CreateEdgeError> Node::CreateEdge(
-    std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
-    GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-    NodePtr dest, CreateEdgeOptions options) {
+fpromise::result<void, CreateEdgeError> Node::CreateEdge(const GraphContext& ctx, NodePtr source,
+                                                         NodePtr dest, CreateEdgeOptions options) {
   FX_CHECK(source);
   FX_CHECK(dest);
 
@@ -170,23 +168,24 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(
 
   // Since the source was not previously connected, it must be owned by the detached thread.
   // This means we can move source to dest's thread.
-  auto stages_to_move =
-      MoveNodeToThread(*source, /*new_thread=*/dest->thread(), /*expected_thread=*/detached_thread);
+  auto stages_to_move = MoveNodeToThread(*source, /*new_thread=*/dest->thread(),
+                                         /*expected_thread=*/ctx.detached_thread);
 
   // Update the PipelineStages asynchronously.
   // Fist apply updates that must happen on dest's thread, which includes connecting source -> dest.
-  global_queue.Push(
+  ctx.global_task_queue.Push(
       dest->thread()->id(),
-      [dest_stage = dest->pipeline_stage(),              //
-       source_stage = source->pipeline_stage(),          //
-       stages_to_move = std::move(stages_to_move),       //
-       new_thread = dest->thread()->pipeline_thread(),   //
-       old_thread = detached_thread->pipeline_thread(),  //
-       is_dest_mixer,                                    //
+      [dest_stage = dest->pipeline_stage(),                  //
+       source_stage = source->pipeline_stage(),              //
+       stages_to_move = std::move(stages_to_move),           //
+       new_thread = dest->thread()->pipeline_thread(),       //
+       old_thread = ctx.detached_thread->pipeline_thread(),  //
+       is_dest_mixer,                                        //
        // We exclude the source mixer when both the source and destination are mixers in order to
        // avoid adding the passed in gain controls to this edge twice.
-       is_source_mixer = !is_dest_mixer && (source->type() == Node::Type::kMixer),              //
-       newly_added_gains = AddGains(gain_controls, add_source_options.gain_ids, source, dest),  //
+       is_source_mixer = !is_dest_mixer && (source->type() == Node::Type::kMixer),  //
+       newly_added_gains =
+           AddGains(ctx.gain_controls, add_source_options.gain_ids, source, dest),  //
        add_source_options = std::move(add_source_options)]() mutable {
         // Before we acquire a checker, verify the dest_stage has the expected thread.
         FX_CHECK(dest_stage->thread() == new_thread)
@@ -220,9 +219,7 @@ fpromise::result<void, CreateEdgeError> Node::CreateEdge(
 }
 
 fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
-    std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
-    GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr source,
-    NodePtr dest) {
+    const GraphContext& ctx, NodePtr source, NodePtr dest) {
   FX_CHECK(source);
   FX_CHECK(dest);
 
@@ -284,19 +281,19 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
 
   // Since the source was previously connected to dest, it must be owned by the same thread as dest.
   // Since the source is now disconnected, it moves to the detached thread.
-  auto stages_to_move =
-      MoveNodeToThread(*source, /*new_thread=*/detached_thread, /*expected_thread=*/dest->thread());
+  auto stages_to_move = MoveNodeToThread(*source, /*new_thread=*/ctx.detached_thread,
+                                         /*expected_thread=*/dest->thread());
 
   // The PipelineStages are updated asynchronously.
-  global_queue.Push(
+  ctx.global_task_queue.Push(
       dest->thread()->id(),
       [dest_stage = dest->pipeline_stage(),                   //
        source_stage = source->pipeline_stage(),               //
        stages_to_move = std::move(stages_to_move),            //
-       new_thread = detached_thread->pipeline_thread(),       //
+       new_thread = ctx.detached_thread->pipeline_thread(),   //
        old_thread = dest->thread()->pipeline_thread(),        //
        is_dest_mixer = (dest->type() == Node::Type::kMixer),  //
-       newly_removed_gains = RemoveGains(gain_controls, source, dest)]() {
+       newly_removed_gains = RemoveGains(ctx.gain_controls, source, dest)]() {
         // Before we acquire a checker, verify the dest_stage has the expected thread.
         FX_CHECK(dest_stage->thread() == old_thread)
             << dest_stage->thread()->name() << " != " << new_thread->name();
@@ -325,12 +322,9 @@ fpromise::result<void, fuchsia_audio_mixer::DeleteEdgeError> Node::DeleteEdge(
   return fpromise::ok();
 }
 
-void Node::Destroy(
-    std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
-    GlobalTaskQueue& global_queue, GraphDetachedThreadPtr detached_thread, NodePtr node) {
+void Node::Destroy(const GraphContext& ctx, NodePtr node) {
   // We call DeleteEdge for each existing edge. Since these edges exist, DeleteEdge cannot fail.
-  auto delete_edge = [&gain_controls, &global_queue, &detached_thread](NodePtr source,
-                                                                       NodePtr dest) {
+  auto delete_edge = [&ctx](NodePtr source, NodePtr dest) {
     // When deleting an edge A->B, if A is a dynamically-created child node, then we should delete
     // the edge [A.parent]->B to ensure we cleanup state in A.parent.
     auto lift_source_to_parent = [](NodePtr a) {
@@ -356,9 +350,8 @@ void Node::Destroy(
       }
     };
 
-    auto result =
-        DeleteEdge(gain_controls, global_queue, detached_thread,
-                   lift_source_to_parent(std::move(source)), lift_dest_to_parent(std::move(dest)));
+    auto result = DeleteEdge(ctx, lift_source_to_parent(std::move(source)),
+                             lift_dest_to_parent(std::move(dest)));
     FX_CHECK(result.is_ok()) << result.error();
   };
 
@@ -451,7 +444,7 @@ void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,
 }
 
 std::unordered_map<GainControlId, GainControl> Node::AddGains(
-    std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
+    const std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
     const std::unordered_set<GainControlId>& gain_ids, const NodePtr& source, const NodePtr& dest) {
   std::unordered_map<GainControlId, GainControl> newly_added_gains;
 
@@ -478,7 +471,7 @@ std::unordered_map<GainControlId, GainControl> Node::AddGains(
 }
 
 std::unordered_set<GainControlId> Node::RemoveGains(
-    std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
+    const std::unordered_map<GainControlId, std::shared_ptr<GainControlServer>>& gain_controls,
     const NodePtr& source, const NodePtr& dest) {
   std::unordered_set<GainControlId> newly_removed_gains;
 

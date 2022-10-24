@@ -98,12 +98,13 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
       .formats = {{&kFormat, {1, 2, 3}}},
   });
 
+  const auto& ctx = graph.ctx();
   auto q = graph.global_task_queue();
 
   const auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
       .config = MakeProcessorConfigBuilder(/*block_size_frames=*/6, /*latency_frames=*/10).Build(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = ctx.detached_thread,
   });
   ASSERT_NE(custom_node, nullptr);
   EXPECT_EQ(custom_node->type(), Node::Type::kMeta);
@@ -119,9 +120,8 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
   EXPECT_EQ(child_source_node->dest(), nullptr);
   EXPECT_EQ(child_source_node->reference_clock(), DefaultClock());
-  EXPECT_EQ(child_source_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_source_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_source_node->pipeline_stage()->format(), kFormat);
 
   const auto& child_dest_node = custom_node->child_dests().front();
@@ -131,31 +131,24 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), nullptr);
   EXPECT_EQ(child_dest_node->reference_clock(), DefaultClock());
-  EXPECT_EQ(child_dest_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_dest_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_dest_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_dest_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_dest_node->pipeline_stage()->format(), kFormat);
 
   // Connect graph node `1` to `child_source_node`.
-  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
-                               child_source_node,
-                               /*options=*/{})
-                  .is_ok());
+  ASSERT_TRUE(Node::CreateEdge(ctx, graph.node(1), child_source_node, /*options=*/{}).is_ok());
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(graph.node(1).get()),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre(graph.node(1)));
   EXPECT_EQ(child_source_node->dest(), nullptr);
-  EXPECT_EQ(child_source_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_source_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_source_node->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(child_source_node->pipeline_stage()->reference_clock(), DefaultClock());
 
   // Attempt to connect graph node `2` to `child_source_node`, which should get rejected since
   // `child_source_node` can only have a single source.
-  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(2),
-                                 child_source_node,
-                                 /*options=*/{});
+  auto result = Node::CreateEdge(ctx, graph.node(2), child_source_node, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
   EXPECT_THAT(child_source_node->sources(), ElementsAre(graph.node(1)));
@@ -165,22 +158,18 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_dest_node->dest(), nullptr);
 
   // Connect `child_dest_node` to graph node `3`.
-  ASSERT_TRUE(Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), child_dest_node,
-                               graph.node(3), /*options=*/{})
-                  .is_ok());
+  ASSERT_TRUE(Node::CreateEdge(ctx, child_dest_node, graph.node(3), /*options=*/{}).is_ok());
   EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), graph.node(3));
-  EXPECT_EQ(child_dest_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_dest_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_dest_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_dest_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_dest_node->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(child_dest_node->pipeline_stage()->reference_clock(), DefaultClock());
 
   // Attempt to connect `child_dest_node` to graph node `2`, which should get rejected since
   // `child_dest_node` can only have a single destination.
-  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), child_dest_node,
-                            graph.node(2), /*options=*/{});
+  result = Node::CreateEdge(ctx, child_dest_node, graph.node(2), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
@@ -191,16 +180,13 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Disconnect graph node `1` from `child_source_node`.
-  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
-                               child_source_node)
-                  .is_ok());
+  ASSERT_TRUE(Node::DeleteEdge(ctx, graph.node(1), child_source_node).is_ok());
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
   EXPECT_EQ(child_source_node->dest(), nullptr);
-  EXPECT_EQ(child_source_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_source_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_source_node->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(child_source_node->pipeline_stage()->reference_clock(), DefaultClock());
 
@@ -208,15 +194,12 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_dest_node->dest(), graph.node(3));
 
   // Disconnect `child_dest_node` from graph node `3`.
-  ASSERT_TRUE(Node::DeleteEdge(graph.gain_controls(), *q, graph.detached_thread(), child_dest_node,
-                               graph.node(3))
-                  .is_ok());
+  ASSERT_TRUE(Node::DeleteEdge(ctx, child_dest_node, graph.node(3)).is_ok());
   EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), nullptr);
-  EXPECT_EQ(child_dest_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_dest_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_dest_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_dest_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_dest_node->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(child_dest_node->pipeline_stage()->reference_clock(), DefaultClock());
 
@@ -224,7 +207,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(graph.gain_controls(), *q, graph.detached_thread(), custom_node);
+  Node::Destroy(ctx, custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }
@@ -236,12 +219,13 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
       .formats = {{&mismatching_format, {1}}},
   });
 
+  const auto& ctx = graph.ctx();
   auto q = graph.global_task_queue();
 
   const auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
       .config = MakeProcessorConfigBuilder(/*block_size_frames=*/1, /*latency_frames=*/5).Build(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = ctx.detached_thread,
   });
   ASSERT_NE(custom_node, nullptr);
   EXPECT_EQ(custom_node->reference_clock(), DefaultClock());
@@ -252,9 +236,8 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
   // Presentation delay of child source should be set to `5 + 1 - 1 = 5` frames at `kFrameRate`.
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
             zx::nsec(500'000'000));
-  EXPECT_EQ(child_source_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_source_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_source_node->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(child_source_node->pipeline_stage()->reference_clock(), DefaultClock());
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
@@ -262,23 +245,21 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
 
   // Attempt to connect graph node `1` to `child_source_node`, which should get rejected due to the
   // mismatching source format of graph node `1`.
-  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
-                                 child_source_node,
+  auto result = Node::CreateEdge(ctx, graph.node(1), child_source_node,
                                  /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
   EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
             zx::nsec(500'000'000));
-  EXPECT_EQ(child_source_node->thread(), graph.detached_thread());
-  EXPECT_EQ(child_source_node->pipeline_stage()->thread(),
-            graph.detached_thread()->pipeline_thread());
+  EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
+  EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
   EXPECT_EQ(child_source_node->pipeline_stage()->format(), kFormat);
   EXPECT_EQ(child_source_node->pipeline_stage()->reference_clock(), DefaultClock());
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
   EXPECT_EQ(child_source_node->dest(), nullptr);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(graph.gain_controls(), *q, graph.detached_thread(), custom_node);
+  Node::Destroy(ctx, custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }
@@ -289,12 +270,13 @@ TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
       .formats = {{&kFormat, {1}}},
   });
 
+  const auto& ctx = graph.ctx();
   auto q = graph.global_task_queue();
 
   const auto custom_node = CustomNode::Create({
       .reference_clock = DefaultClock(),
       .config = MakeProcessorConfigBuilder().Build(),
-      .detached_thread = graph.detached_thread(),
+      .detached_thread = ctx.detached_thread,
   });
   ASSERT_NE(custom_node, nullptr);
   EXPECT_EQ(custom_node->reference_clock(), DefaultClock());
@@ -302,33 +284,30 @@ TEST_F(CustomNodeTest, CreateEdgeDisallowed) {
   ASSERT_EQ(custom_node->child_dests().size(), 1ul);
 
   // Adding a source to `custom_node` is not allowed.
-  auto result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
-                                 custom_node, /*options=*/{});
+  auto result = Node::CreateEdge(ctx, graph.node(1), custom_node, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 
   // Adding a source to child destination node is not allowed.
-  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), graph.node(1),
-                            custom_node->child_dests().front(), /*options=*/{});
+  result = Node::CreateEdge(ctx, graph.node(1), custom_node->child_dests().front(), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kDestNodeHasTooManyIncomingEdges);
 
   // Adding a destination to `custom_node` is not allowed.
-  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(), custom_node,
-                            graph.node(1), /*options=*/{});
+  result = Node::CreateEdge(ctx, custom_node, graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 
   // Adding a destination to child source node is not allowed.
-  result = Node::CreateEdge(graph.gain_controls(), *q, graph.detached_thread(),
-                            custom_node->child_sources().front(), graph.node(1), /*options=*/{});
+  result =
+      Node::CreateEdge(ctx, custom_node->child_sources().front(), graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 
   // Clear all child nodes referring to `custom_node` to ensure that the parent will be destroyed.
-  Node::Destroy(graph.gain_controls(), *q, graph.detached_thread(), custom_node);
+  Node::Destroy(ctx, custom_node);
   EXPECT_TRUE(custom_node->child_sources().empty());
   EXPECT_TRUE(custom_node->child_dests().empty());
 }

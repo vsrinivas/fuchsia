@@ -93,9 +93,7 @@ bool FakeNode::CanAcceptSourceFormat(const Format& format) const {
 
 FakeGraph::FakeGraph(Args args)
     : pipeline_directions_(std::move(args.pipeline_directions)),
-      default_pipeline_direction_(args.default_pipeline_direction),
-      global_task_queue_(std::make_shared<GlobalTaskQueue>()),
-      detached_thread_(std::make_shared<GraphDetachedThread>(global_task_queue_)) {
+      default_pipeline_direction_(args.default_pipeline_direction) {
   // Populate `gain_controls_`.
   auto fidl_thread = FidlThread::CreateFromNewThread("FidlThread");
   for (const auto& gain_id : args.gain_controls) {
@@ -198,7 +196,7 @@ FakeGraph::~FakeGraph() {
     node->on_can_accept_source_format_ = nullptr;
     // Remove all circular references so that every FakeNode and FakePipelineStage can be deleted.
     // Do this after clearing closures so the closures don't run.
-    Node::Destroy(gain_controls_, *global_task_queue_, detached_thread_, node);
+    Node::Destroy(ctx_, node);
     // Also clear PipelineStage sources. This is necessary in certain error-case tests, such as
     // tests that intentionally create cycles.
     if (node->type() != Node::Type::kMeta) {

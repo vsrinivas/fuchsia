@@ -79,8 +79,7 @@ ConsumerNodeTest::TestHarness ConsumerNodeTest::MakeTestHarness(FakeGraph::Args 
 
 // This removes a circular references between the consumer and thread objects.
 ConsumerNodeTest::TestHarness::~TestHarness() {
-  Node::Destroy(graph->gain_controls(), *graph->global_task_queue(), graph->detached_thread(),
-                consumer_node);
+  Node::Destroy(graph->ctx(), consumer_node);
   EXPECT_EQ(mix_thread->num_consumers(), 0);
   graph->global_task_queue()->RunForThread(mix_thread->id());
 }
@@ -92,11 +91,9 @@ TEST_F(ConsumerNodeTest, CreateEdgeSourceBadFormat) {
   });
 
   auto& graph = *h.graph;
-  auto& q = *graph.global_task_queue();
 
   // Cannot create an edge where a the source has a different format than the consumer.
-  auto result = Node::CreateEdge(graph.gain_controls(), q, graph.detached_thread(), graph.node(1),
-                                 h.consumer_node, /*options=*/{});
+  auto result = Node::CreateEdge(graph.ctx(), graph.node(1), h.consumer_node, /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
 }
@@ -108,20 +105,17 @@ TEST_F(ConsumerNodeTest, CreateEdgeTooManySources) {
   });
 
   auto& graph = *h.graph;
-  auto& q = *graph.global_task_queue();
 
   // First edge is OK.
   {
-    auto result = Node::CreateEdge(graph.gain_controls(), q, graph.detached_thread(), graph.node(1),
-                                   h.consumer_node,
+    auto result = Node::CreateEdge(graph.ctx(), graph.node(1), h.consumer_node,
                                    /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
   // Cannot create a second incoming edge.
   {
-    auto result = Node::CreateEdge(graph.gain_controls(), q, graph.detached_thread(), graph.node(2),
-                                   h.consumer_node,
+    auto result = Node::CreateEdge(graph.ctx(), graph.node(2), h.consumer_node,
                                    /*options=*/{});
     ASSERT_FALSE(result.is_ok());
     EXPECT_EQ(result.error(),
@@ -136,15 +130,14 @@ TEST_F(ConsumerNodeTest, CreateEdgeDestNotAllowed) {
   });
 
   auto& graph = *h.graph;
-  auto& q = *graph.global_task_queue();
 
   // Cannot use consumers as a source.
-  auto result = Node::CreateEdge(graph.gain_controls(), q, graph.detached_thread(), h.consumer_node,
-                                 graph.node(1), /*options=*/{});
+  auto result = Node::CreateEdge(graph.ctx(), h.consumer_node, graph.node(1), /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(),
             fuchsia_audio_mixer::CreateEdgeError::kSourceNodeHasTooManyOutgoingEdges);
 }
+
 TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   auto h = MakeTestHarness({
       .unconnected_ordinary_nodes = {1},
@@ -157,8 +150,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   // Connect source -> consumer.
   auto source = graph.node(1);
   {
-    auto result = Node::CreateEdge(graph.gain_controls(), q, graph.detached_thread(), source,
-                                   h.consumer_node, /*options=*/{});
+    auto result = Node::CreateEdge(graph.ctx(), source, h.consumer_node, /*options=*/{});
     ASSERT_TRUE(result.is_ok());
   }
 
@@ -215,8 +207,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
 
   // Disconnect source -> consumer.
   {
-    auto result = Node::DeleteEdge(graph.gain_controls(), q, graph.detached_thread(), source,
-                                   h.consumer_node);
+    auto result = Node::DeleteEdge(graph.ctx(), source, h.consumer_node);
     ASSERT_TRUE(result.is_ok());
     EXPECT_THAT(h.consumer_node->sources(), ElementsAre());
   }
