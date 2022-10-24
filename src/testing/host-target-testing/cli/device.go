@@ -72,7 +72,7 @@ func (c *DeviceConfig) newDeviceFinder() (*device.DeviceFinder, error) {
 	}
 
 	if _, err := os.Stat(c.deviceFinderPath); err != nil {
-		return nil, fmt.Errorf("error accessing %v: %v", c.deviceFinderPath, err)
+		return nil, fmt.Errorf("error accessing %v: %w", c.deviceFinderPath, err)
 	}
 
 	return device.NewDeviceFinder(c.deviceFinderPath), nil
@@ -94,7 +94,7 @@ func (c *DeviceConfig) DeviceResolver(ctx context.Context) (device.DeviceResolve
 
 	case FfxResolver:
 		if _, err := os.Stat(c.ffxPath); err != nil {
-			return nil, fmt.Errorf("error accessing %v: %v", c.ffxPath, err)
+			return nil, fmt.Errorf("error accessing %v: %w", c.ffxPath, err)
 		}
 
 		return device.NewFfxResolver(ctx, c.ffxPath, c.deviceName)

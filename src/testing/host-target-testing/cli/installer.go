@@ -6,8 +6,8 @@ package cli
 
 import (
 	"context"
-	"errors"
 	"flag"
+	"fmt"
 	"log"
 	"path/filepath"
 	"time"
@@ -142,7 +142,7 @@ func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Cli
 		return build, nil
 
 	default:
-		return nil, errors.New("Invalid installer mode")
+		return nil, fmt.Errorf("Invalid installer mode %v", c.installerMode)
 	}
 }
 
@@ -173,7 +173,7 @@ func (c *InstallerConfig) Updater(repo *packages.Repository, updatePackageURL st
 		return updater.NewSystemUpdater(repo, updatePackageURL), nil
 
 	default:
-		return nil, errors.New("Invalid installer mode")
+		return nil, fmt.Errorf("Invalid installer mode: %v", c.installerMode)
 	}
 }
 
