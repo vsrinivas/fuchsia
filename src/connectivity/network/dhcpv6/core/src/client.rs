@@ -5,7 +5,7 @@
 //! Core DHCPv6 client state transitions.
 
 use assert_matches::assert_matches;
-use net_types::ip::Ipv6Addr;
+use net_types::ip::{Ipv6Addr, Subnet};
 use num::{rational::Ratio, CheckedMul};
 use packet::serialize::InnerPacketBuilder;
 use packet_formats_dhcp::v6;
@@ -418,6 +418,7 @@ pub(crate) struct IdentityAssociation {
 }
 
 // Holds the information received in an Advertise message.
+// TODO(https://fxbug.dev/112643): Consider IA_PD from advertisements.
 #[derive(Debug, Clone)]
 struct AdvertiseMessage {
     server_id: Vec<u8>,
@@ -1180,6 +1181,8 @@ struct ServerDiscovery {
     client_id: [u8; CLIENT_ID_LEN],
     /// The non-temporary addresses the client is configured to negotiate.
     configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+    /// The delegated prefixes the client is configured to negotiate.
+    configured_delegated_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>>,
     /// The time of the first solicit. `None` before a solicit is sent. Used in
     /// calculating the [elapsed time].
     ///
@@ -1209,6 +1212,7 @@ impl ServerDiscovery {
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
         configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_delegated_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>>,
         options_to_request: &[v6::OptionCode],
         solicit_max_rt: Duration,
         rng: &mut R,
@@ -1217,6 +1221,7 @@ impl ServerDiscovery {
         Self {
             client_id,
             configured_non_temporary_addresses,
+            configured_delegated_prefixes,
             first_solicit_time: None,
             retrans_timeout: Duration::default(),
             solicit_max_rt,
@@ -1255,48 +1260,92 @@ impl ServerDiscovery {
         let Self {
             client_id,
             configured_non_temporary_addresses,
+            configured_delegated_prefixes,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
             collected_advertise,
             collected_sol_max_rt,
         } = self;
-        let mut options = vec![v6::DhcpOption::ClientId(&client_id)];
+        let options = [v6::DhcpOption::ClientId(&client_id)].into_iter();
 
         let (start_time, elapsed_time) = match first_solicit_time {
             None => (now, 0),
             Some(start_time) => (start_time, elapsed_time_in_centisecs(start_time, now)),
         };
-        options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
+        let options = options.chain([v6::DhcpOption::ElapsedTime(elapsed_time)]);
 
         // TODO(https://fxbug.dev/86945): remove `address_hint` construction
         // once `IanaSerializer::new()` takes options by value.
-        let mut address_hint = HashMap::new();
-        for (iaid, addr_opt) in &configured_non_temporary_addresses {
-            let entry = address_hint.insert(
-                *iaid,
-                addr_opt.map(|addr| {
-                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
-                }),
-            );
-            assert_matches!(entry, None);
-        }
+        let address_hint = configured_non_temporary_addresses
+            .iter()
+            .map(|(iaid, addr)| {
+                (
+                    *iaid,
+                    addr.map(|addr| {
+                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let prefix_hint = configured_delegated_prefixes
+            .iter()
+            .map(|(iaid, prefix)| {
+                (
+                    *iaid,
+                    prefix.map(|prefix| {
+                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                            0, /* preferred_lifetime_secs */
+                            0, /* valid_lifetime_secs */
+                            prefix,
+                            &[],
+                        ))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
 
-        // Adds IA_NA options: one IA_NA per address hint, plus IA_NA options
-        // without hints, up to the configured `address_count`, as described in
-        // RFC 8415, section 6.6.
-        for (iaid, addr_hint) in &address_hint {
-            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                *iaid,
-                0,
-                0,
-                addr_hint.as_ref().map_or(&[], AsRef::as_ref),
-            )));
-        }
+        // Adds IA_{NA,PD} options: one IA_{NA,PD} per hint, plus options
+        // without hints, up to the configured count, as described in
+        // RFC 8415, section 6.6:
+        //
+        //   A client can explicitly request multiple addresses by sending
+        //   multiple IA_NA options (and/or IA_TA options; see Section 21.5).  A
+        //   client can send multiple IA_NA (and/or IA_TA) options in its initial
+        //   transmissions. Alternatively, it can send an extra Request message
+        //   with additional new IA_NA (and/or IA_TA) options (or include them in
+        //   a Renew message).
+        //
+        //   The same principle also applies to prefix delegation. In principle,
+        //   DHCP allows a client to request new prefixes to be delegated by
+        //   sending additional IA_PD options (see Section 21.21). However, a
+        //   typical operator usually prefers to delegate a single, larger prefix.
+        //   In most deployments, it is recommended that the client request a
+        //   larger prefix in its initial transmissions rather than request
+        //   additional prefixes later on.
+        let options = options
+            .chain(address_hint.iter().map(|(iaid, hint)| {
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    *iaid,
+                    0,
+                    0,
+                    hint.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }))
+            .chain(prefix_hint.iter().map(|(iaid, hint)| {
+                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                    *iaid,
+                    0, /* t1 */
+                    0, /* t2 */
+                    hint.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }));
 
-        let mut oro = vec![v6::OptionCode::SolMaxRt];
-        oro.extend_from_slice(options_to_request);
-        options.push(v6::DhcpOption::Oro(&oro));
+        let oro = [v6::OptionCode::SolMaxRt]
+            .into_iter()
+            .chain(options_to_request.into_iter().cloned())
+            .collect::<Vec<_>>();
+        let options = options.chain([v6::DhcpOption::Oro(&oro)]).collect::<Vec<_>>();
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Solicit, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -1309,6 +1358,7 @@ impl ServerDiscovery {
             state: ClientState::ServerDiscovery(ServerDiscovery {
                 client_id,
                 configured_non_temporary_addresses,
+                configured_delegated_prefixes,
                 first_solicit_time: Some(start_time),
                 retrans_timeout,
                 solicit_max_rt,
@@ -1335,6 +1385,7 @@ impl ServerDiscovery {
         let Self {
             client_id,
             configured_non_temporary_addresses,
+            configured_delegated_prefixes,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1375,6 +1426,7 @@ impl ServerDiscovery {
         ServerDiscovery {
             client_id,
             configured_non_temporary_addresses,
+            configured_delegated_prefixes,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1394,6 +1446,7 @@ impl ServerDiscovery {
         let Self {
             client_id,
             configured_non_temporary_addresses,
+            configured_delegated_prefixes,
             first_solicit_time,
             retrans_timeout,
             solicit_max_rt,
@@ -1410,6 +1463,7 @@ impl ServerDiscovery {
                         state: ClientState::ServerDiscovery(ServerDiscovery {
                             client_id,
                             configured_non_temporary_addresses,
+                            configured_delegated_prefixes,
                             first_solicit_time,
                             retrans_timeout,
                             solicit_max_rt,
@@ -1451,6 +1505,7 @@ impl ServerDiscovery {
                     state: ClientState::ServerDiscovery(ServerDiscovery {
                         client_id,
                         configured_non_temporary_addresses,
+                        configured_delegated_prefixes,
                         first_solicit_time,
                         retrans_timeout,
                         solicit_max_rt,
@@ -1514,11 +1569,14 @@ impl ServerDiscovery {
                 })
             })
             .collect::<HashMap<_, _>>();
+        // TODO(https://fxbug.dev/112643): Allow empty IA_NA if we only want
+        // IA_PD.
         if non_temporary_addresses.is_empty() {
             return Transition {
                 state: ClientState::ServerDiscovery(ServerDiscovery {
                     client_id,
                     configured_non_temporary_addresses,
+                    configured_delegated_prefixes,
                     first_solicit_time,
                     retrans_timeout,
                     solicit_max_rt,
@@ -1609,6 +1667,7 @@ impl ServerDiscovery {
             state: ClientState::ServerDiscovery(ServerDiscovery {
                 client_id,
                 configured_non_temporary_addresses,
+                configured_delegated_prefixes,
                 first_solicit_time,
                 retrans_timeout,
                 solicit_max_rt,
@@ -1856,6 +1915,9 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
         transaction_id(),
         client_id,
         configured_non_temporary_addresses,
+        // TODO(https://fxbug.dev/80595): Re-request servers with PD if PD was
+        // originally requested.
+        Default::default(), /* configured_delegated_prefixes */
         &options_to_request,
         solicit_max_rt,
         rng,
@@ -3727,6 +3789,7 @@ impl ClientState {
             | ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
                 configured_non_temporary_addresses: _,
+                configured_delegated_prefixes: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -3796,16 +3859,21 @@ impl<R: Rng> ClientStateMachine<R> {
         )
     }
 
-    /// Starts the client in Stateful mode, as defined in [RFC 8415, Section 6.2].
-    /// The client exchanges messages with servers to obtain addresses in
-    /// `configured_non_temporary_addresses`, and the configuration information in
+    /// Starts the client in Stateful mode, as defined in [RFC 8415, Section 6.2]
+    /// and [RFC 8415, Section 6.3].
+    ///
+    /// The client exchanges messages with server(s) to obtain non-temporary
+    /// addresses in `configured_non_temporary_addresses`, delegated prefixes in
+    /// `configured_delegated_prefixes` and the configuration information in
     /// `options_to_request`.
     ///
-    /// [RFC 8415, Section 6.1]: https://tools.ietf.org/html/rfc8415#section-6.2
+    /// [RFC 8415, Section 6.2]: https://tools.ietf.org/html/rfc8415#section-6.2
+    /// [RFC 8415, Section 6.3]: https://tools.ietf.org/html/rfc8415#section-6.3
     pub fn start_stateful(
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
         configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_delegated_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>>,
         options_to_request: Vec<v6::OptionCode>,
         mut rng: R,
         now: Instant,
@@ -3815,6 +3883,7 @@ impl<R: Rng> ClientStateMachine<R> {
                 transaction_id,
                 client_id,
                 configured_non_temporary_addresses,
+                configured_delegated_prefixes,
                 &options_to_request,
                 MAX_SOLICIT_TIMEOUT,
                 &mut rng,
@@ -3935,8 +4004,8 @@ impl<R: Rng> ClientStateMachine<R> {
 
 #[cfg(test)]
 pub(crate) mod testconsts {
-    use net_declare::net_ip_v6;
-    use net_types::ip::Ipv6Addr;
+    use net_declare::{net_ip_v6, net_subnet_v6};
+    use net_types::ip::{Ipv6Addr, Subnet};
     use packet_formats_dhcp::v6;
 
     pub(crate) const INFINITY: u32 = u32::MAX;
@@ -3965,6 +4034,8 @@ pub(crate) mod testconsts {
         net_ip_v6!("::ffff:c00a:456"),
         net_ip_v6!("::ffff:c00a:789"),
     ];
+    pub(crate) const CONFIGURED_DELEGATED_PREFIXES: [Subnet<Ipv6Addr>; 3] =
+        [net_subnet_v6!("a::/64"), net_subnet_v6!("b::/60"), net_subnet_v6!("c::/56")];
 
     pub(crate) const T1: v6::NonZeroOrMaxU32 =
         const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(30));
@@ -4006,6 +4077,19 @@ pub(crate) mod testutil {
         configured_addresses
     }
 
+    pub(crate) fn to_configured_prefixes(
+        prefix_count: usize,
+        preferred_prefixes: impl IntoIterator<Item = Subnet<Ipv6Addr>>,
+    ) -> HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> {
+        let prefixes = preferred_prefixes
+            .into_iter()
+            .map(Some)
+            .chain(std::iter::repeat(None))
+            .take(prefix_count);
+
+        (0..).map(v6::IAID::new).zip(prefixes).collect()
+    }
+
     pub(crate) fn to_default_ias_map(
         addresses: &[Ipv6Addr],
     ) -> HashMap<v6::IAID, IdentityAssociation> {
@@ -4026,6 +4110,7 @@ pub(crate) mod testutil {
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
         configured_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
+        configured_delegated_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>>,
         options_to_request: Vec<v6::OptionCode>,
         rng: R,
         now: Instant,
@@ -4034,6 +4119,7 @@ pub(crate) mod testutil {
             transaction_id.clone(),
             client_id.clone(),
             configured_non_temporary_addresses.clone(),
+            configured_delegated_prefixes.clone(),
             options_to_request.clone(),
             rng,
             now,
@@ -4047,6 +4133,7 @@ pub(crate) mod testutil {
                 state: Some(ClientState::ServerDiscovery(ServerDiscovery {
                     client_id: got_client_id,
                     configured_non_temporary_addresses: got_configured_non_temporary_addresses,
+                    configured_delegated_prefixes: got_configured_delegated_prefixes,
                     first_solicit_time: Some(_),
                     retrans_timeout: INITIAL_SOLICIT_TIMEOUT,
                     solicit_max_rt: MAX_SOLICIT_TIMEOUT,
@@ -4054,12 +4141,15 @@ pub(crate) mod testutil {
                     collected_sol_max_rt,
                 })),
                 rng: _,
-            } if *got_transaction_id == transaction_id &&
-                 *got_options_to_request == options_to_request &&
-                 *got_client_id == client_id &&
-                 *got_configured_non_temporary_addresses == configured_non_temporary_addresses &&
-                 collected_advertise.is_empty() &&
-                 collected_sol_max_rt.is_empty()
+            } => {
+                assert_eq!(got_transaction_id, &transaction_id);
+                assert_eq!(got_options_to_request, &options_to_request);
+                assert_eq!(got_client_id, &client_id);
+                assert_eq!(got_configured_non_temporary_addresses, &configured_non_temporary_addresses);
+                assert_eq!(got_configured_delegated_prefixes, &configured_delegated_prefixes);
+                assert!(collected_advertise.is_empty(), "collected_advertise={:?}", collected_advertise);
+                assert_eq!(collected_sol_max_rt, &[]);
+            }
         );
 
         // Start of server discovery should send a solicit and schedule a
@@ -4078,6 +4168,7 @@ pub(crate) mod testutil {
             None,
             &options_to_request,
             &configured_non_temporary_addresses,
+            &configured_delegated_prefixes,
         );
 
         client
@@ -4232,6 +4323,7 @@ pub(crate) mod testutil {
             transaction_id.clone(),
             client_id.clone(),
             configured_non_temporary_addresses.clone(),
+            Default::default(),
             options_to_request.clone(),
             rng,
             now,
@@ -4293,6 +4385,7 @@ pub(crate) mod testutil {
             Some(&server_id),
             &options_to_request,
             &configured_non_temporary_addresses,
+            &HashMap::new(),
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let request_transaction_id = *transaction_id;
@@ -4457,13 +4550,14 @@ pub(crate) mod testutil {
         expected_server_id: Option<&[u8; TEST_SERVER_ID_LEN]>,
         expected_oro: &[v6::OptionCode],
         expected_non_temporary_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+        expected_delegated_prefixes: &HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>>,
     ) {
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_eq!(msg.msg_type(), expected_msg_type);
 
-        let (mut non_ia_opts, ia_opts, other) = msg.options().fold(
-            (Vec::new(), Vec::new(), Vec::new()),
-            |(mut non_ia_opts, mut ia_opts, mut other), opt| {
+        let (mut non_ia_opts, iana_opts, iapd_opts, other) = msg.options().fold(
+            (Vec::new(), Vec::new(), Vec::new(), Vec::new()),
+            |(mut non_ia_opts, mut iana_opts, mut iapd_opts, mut other), opt| {
                 match opt {
                     v6::ParsedDhcpOption::ClientId(_)
                     | v6::ParsedDhcpOption::ElapsedTime(_)
@@ -4471,10 +4565,11 @@ pub(crate) mod testutil {
                     v6::ParsedDhcpOption::ServerId(_) if expected_server_id.is_some() => {
                         non_ia_opts.push(opt)
                     }
-                    v6::ParsedDhcpOption::Iana(iana_data) => ia_opts.push(iana_data),
+                    v6::ParsedDhcpOption::Iana(iana_data) => iana_opts.push(iana_data),
+                    v6::ParsedDhcpOption::IaPd(iapd_data) => iapd_opts.push(iapd_data),
                     opt => other.push(opt),
                 }
-                (non_ia_opts, ia_opts, other)
+                (non_ia_opts, iana_opts, iapd_opts, other)
             },
         );
         let option_sorter: fn(
@@ -4503,18 +4598,22 @@ pub(crate) mod testutil {
         assert_eq!(non_ia_opts, expected_non_ia_opts);
 
         // Check that the IA options are correct.
-        let sent_addresses = {
-            let mut sent_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> = HashMap::new();
-            for iana_data in ia_opts.iter() {
+        let sent_non_temporary_addresses = {
+            let mut sent_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> =
+                HashMap::new();
+            for iana_data in iana_opts.iter() {
                 if iana_data.iter_options().count() == 0 {
-                    assert_eq!(sent_addresses.insert(v6::IAID::new(iana_data.iaid()), None), None);
+                    assert_eq!(
+                        sent_non_temporary_addresses.insert(v6::IAID::new(iana_data.iaid()), None),
+                        None
+                    );
                     continue;
                 }
                 for iana_option in iana_data.iter_options() {
                     match iana_option {
                         v6::ParsedDhcpOption::IaAddr(iaaddr_data) => {
                             assert_eq!(
-                                sent_addresses.insert(
+                                sent_non_temporary_addresses.insert(
                                     v6::IAID::new(iana_data.iaid()),
                                     Some(iaaddr_data.addr())
                                 ),
@@ -4525,9 +4624,35 @@ pub(crate) mod testutil {
                     }
                 }
             }
-            sent_addresses
+            sent_non_temporary_addresses
         };
-        assert_eq!(&sent_addresses, expected_non_temporary_addresses);
+        assert_eq!(&sent_non_temporary_addresses, expected_non_temporary_addresses);
+
+        let sent_prefixes = {
+            let mut sent_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = HashMap::new();
+            for iapd_data in iapd_opts.iter() {
+                if iapd_data.iter_options().count() == 0 {
+                    assert_eq!(sent_prefixes.insert(v6::IAID::new(iapd_data.iaid()), None), None);
+                    continue;
+                }
+                for iapd_option in iapd_data.iter_options() {
+                    match iapd_option {
+                        v6::ParsedDhcpOption::IaPrefix(iaprefix_data) => {
+                            assert_eq!(
+                                sent_prefixes.insert(
+                                    v6::IAID::new(iapd_data.iaid()),
+                                    Some(iaprefix_data.prefix().unwrap())
+                                ),
+                                None
+                            );
+                        }
+                        option => panic!("unexpected option {:?}", option),
+                    }
+                }
+            }
+            sent_prefixes
+        };
+        assert_eq!(&sent_prefixes, expected_delegated_prefixes);
 
         // Check that there are no other options besides the expected non-IA and
         // IA options.
@@ -4653,6 +4778,7 @@ pub(crate) mod testutil {
             Some(&server_id),
             expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
             &expected_addresses_to_renew,
+            &HashMap::new(),
         );
         client
     }
@@ -4742,6 +4868,7 @@ pub(crate) mod testutil {
             None, /* expected_server_id */
             expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
             &expected_addresses_to_renew,
+            &HashMap::new(),
         );
 
         client
@@ -4911,19 +5038,37 @@ mod tests {
     }
 
     // Test starting the client in stateful mode with different address
-    // configurations.
-    #[test_case(1, std::iter::empty(), Vec::new(); "one_addr_no_hint")]
+    // and prefix configurations.
     #[test_case(
-        2, std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]), vec![v6::OptionCode::DnsServers];
-        "two_addr_one_hint"
+        0, std::iter::empty(),
+        2, (&CONFIGURED_DELEGATED_PREFIXES[0..2]).iter().copied(),
+        Vec::new()
     )]
     #[test_case(
-        2, (&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]).iter().copied(), vec![v6::OptionCode::DnsServers];
-        "two_addr_two_hints"
+        2, (&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]).iter().copied(),
+        0, std::iter::empty(),
+        vec![v6::OptionCode::DnsServers]
+    )]
+    #[test_case(
+        1, std::iter::empty(),
+        2, (&CONFIGURED_DELEGATED_PREFIXES[0..2]).iter().copied(),
+        Vec::new()
+    )]
+    #[test_case(
+        2, std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
+        1, std::iter::empty(),
+        vec![v6::OptionCode::DnsServers]
+    )]
+    #[test_case(
+        2, (&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]).iter().copied(),
+        2, std::iter::once(CONFIGURED_DELEGATED_PREFIXES[0]),
+        vec![v6::OptionCode::DnsServers]
     )]
     fn send_solicit(
         address_count: usize,
         preferred_non_temporary_addresses: impl IntoIterator<Item = Ipv6Addr>,
+        prefix_count: usize,
+        preferred_delegated_prefixes: impl IntoIterator<Item = Subnet<Ipv6Addr>>,
         options_to_request: Vec<v6::OptionCode>,
     ) {
         // The client is checked inside `start_and_assert_server_discovery`.
@@ -4931,6 +5076,7 @@ mod tests {
             [0, 1, 2],
             CLIENT_ID,
             testutil::to_configured_addresses(address_count, preferred_non_temporary_addresses),
+            testutil::to_configured_prefixes(prefix_count, preferred_delegated_prefixes),
             options_to_request,
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -5299,6 +5445,7 @@ mod tests {
                 1,
                 std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             ),
+            Default::default(),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5408,6 +5555,7 @@ mod tests {
                 1,
                 std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             ),
+            Default::default(),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5445,6 +5593,7 @@ mod tests {
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
                 configured_non_temporary_addresses: _,
+                configured_delegated_prefixes: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -5480,6 +5629,7 @@ mod tests {
                 1,
                 std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             ),
+            Default::default(),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -5501,6 +5651,7 @@ mod tests {
             let ServerDiscovery {
                 client_id: _,
                 configured_non_temporary_addresses: _,
+                configured_delegated_prefixes: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -5983,6 +6134,7 @@ mod tests {
                 let ServerDiscovery {
                     client_id: _,
                     configured_non_temporary_addresses: _,
+                    configured_delegated_prefixes: _,
                     first_solicit_time: _,
                     retrans_timeout: _,
                     solicit_max_rt: _,
@@ -6165,6 +6317,7 @@ mod tests {
                 1,
                 std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             ),
+            Default::default(),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,
@@ -6197,6 +6350,7 @@ mod tests {
         let ServerDiscovery {
             client_id: _,
             configured_non_temporary_addresses: _,
+            configured_delegated_prefixes: _,
             first_solicit_time: _,
             retrans_timeout: _,
             solicit_max_rt: _,
@@ -6235,6 +6389,7 @@ mod tests {
             collected_advertise: want_collected_advertise,
             client_id: _,
             configured_non_temporary_addresses: _,
+            configured_delegated_prefixes: _,
             first_solicit_time: _,
             retrans_timeout: _,
             solicit_max_rt: _,
@@ -6374,6 +6529,7 @@ mod tests {
             Some(ClientState::ServerDiscovery(ServerDiscovery {
                 client_id: _,
                 configured_non_temporary_addresses: _,
+                configured_delegated_prefixes: _,
                 first_solicit_time: _,
                 retrans_timeout: _,
                 solicit_max_rt: _,
@@ -6820,6 +6976,7 @@ mod tests {
             expect_server_id.then(|| &SERVER_ID[0]),
             &[],
             &expected_non_temporary_addresses_to_renew,
+            &HashMap::new(),
         );
     }
 
@@ -7483,6 +7640,7 @@ mod tests {
                 .map(v6::IAID::new)
                 .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(Some))
                 .collect(),
+            &HashMap::new(),
         );
     }
 
@@ -7694,6 +7852,7 @@ mod tests {
                 1,
                 std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             ),
+            Default::default(),
             Vec::new(),
             StepRng::new(std::u64::MAX / 2, 0),
             time,

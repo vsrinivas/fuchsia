@@ -177,6 +177,8 @@ fn create_state_machine(
                 transaction_id,
                 v6::duid_uuid(),
                 configured_non_temporary_addresses,
+                // TODO(https://fxbug.dev/80595): Plumb prefixes from FIDL.
+                Default::default(), /* configured_delegated_prefixes */
                 information_config.map_or_else(Vec::new, to_dhcpv6_option_codes),
                 StdRng::from_entropy(),
                 Instant::now(),
