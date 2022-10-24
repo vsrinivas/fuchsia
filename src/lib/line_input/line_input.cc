@@ -35,7 +35,7 @@ LineInputEditor::LineInputEditor(AcceptCallback accept_cb, const std::string& pr
   persistent_history_.emplace_front();
 }
 
-LineInputEditor::~LineInputEditor() { EnsureNoRawMode(); }
+LineInputEditor::~LineInputEditor() { EnsureTerminalMode(kOriginalMode); }
 
 void LineInputEditor::SetAutocompleteCallback(AutocompleteCallback cb) {
   autocomplete_callback_ = std::move(cb);
@@ -178,7 +178,7 @@ void LineInputEditor::Hide() {
   cmd += SpecialCharacters::kTermClearToEnd;
 
   Write(cmd);
-  EnsureNoRawMode();
+  EnsureTerminalMode(kRawInMode);
 }
 
 void LineInputEditor::Show() {
@@ -289,7 +289,7 @@ void LineInputEditor::HandleEnter() {
     persistent_history_.pop_back();
   std::string new_line = GetLine();
   persistent_history_[0] = new_line;
-  EnsureNoRawMode();
+  EnsureTerminalMode(kRawInMode);
 
   accept_callback_(GetLine());
 
@@ -605,7 +605,7 @@ void LineInputEditor::RepaintLine() {
     line_data = prompt + GetReverseHistorySuggestion();
   }
 
-  EnsureRawMode();
+  EnsureTerminalMode(kRawInOutMode);
 
   std::string buf;
   buf.reserve(64);
@@ -680,50 +680,48 @@ void LineInputStdout::Write(const std::string& data) {
   write(STDOUT_FILENO, data.data(), data.size());
 }
 
-void LineInputStdout::EnsureRawMode() {
+void LineInputStdout::EnsureTerminalMode(TerminalMode mode) {
 #if !defined(__Fuchsia__)
-  if (raw_mode_enabled_)
-    return;
+  if (mode == terminal_mode_ || !isatty(STDOUT_FILENO))
+    return;  // Nothing to do.
 
-  if (!raw_termios_) {
-    if (!isatty(STDOUT_FILENO))
-      return;
+  terminal_mode_ = mode;
 
-    // Don't commit until everything succeeds.
+  // Synchronize with the buffered stdio stream.
+  fflush(stdout);
+
+  // Lazy initialize the terminal settings.
+  if (!raw_inout_termios_) {
     original_termios_ = std::make_unique<termios>();
     if (tcgetattr(STDOUT_FILENO, original_termios_.get()) == -1)
       return;
 
-    // Always expect non-raw node to wrap lines for us. Without this, if
-    // somebody's terminal was left in raw mode when they started the debugger,
-    // the non-interactive input will be wrapped incorrectly.
-    original_termios_->c_oflag |= OPOST;
+    raw_inout_termios_ = std::make_unique<termios>(*original_termios_);
+    raw_inout_termios_->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
+    raw_inout_termios_->c_oflag &= ~(OPOST);
+    raw_inout_termios_->c_oflag |= OCRNL;
+    raw_inout_termios_->c_cflag |= CS8;
+    raw_inout_termios_->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
+    raw_inout_termios_->c_cc[VMIN] = 1;
+    raw_inout_termios_->c_cc[VTIME] = 0;
 
-    raw_termios_ = std::make_unique<termios>(*original_termios_);
-
-    raw_termios_->c_iflag &= ~(BRKINT | ICRNL | INPCK | ISTRIP | IXON);
-    raw_termios_->c_oflag &= ~(OPOST);
-    raw_termios_->c_oflag |= OCRNL;
-    raw_termios_->c_cflag |= CS8;
-    raw_termios_->c_lflag &= ~(ECHO | ICANON | IEXTEN | ISIG);
-    raw_termios_->c_cc[VMIN] = 1;
-    raw_termios_->c_cc[VTIME] = 0;
+    // We don't want to actually use the original values for the output flags in "raw input" mode
+    // because the terminal could have been in a bad state when we started the program. Instead, set
+    // the flags specifically for normal output.
+    raw_in_termios_ = std::make_unique<termios>(*raw_inout_termios_);
+    raw_in_termios_->c_oflag = OPOST | ONLCR;
   }
 
-  fflush(stdout);  // Synchronize with the buffered stdio stream.
-  if (tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_termios_.get()) < 0)
-    return;
-
-  raw_mode_enabled_ = true;
-#endif
-}
-
-void LineInputStdout::EnsureNoRawMode() {
-#if !defined(__Fuchsia__)
-  if (raw_mode_enabled_) {
-    fflush(stdout);  // Synchronize with the buffered stdio stream.
-    tcsetattr(STDOUT_FILENO, TCSAFLUSH, original_termios_.get());
-    raw_mode_enabled_ = false;
+  switch (mode) {
+    case kOriginalMode:
+      tcsetattr(STDOUT_FILENO, TCSAFLUSH, original_termios_.get());
+      break;
+    case kRawInOutMode:
+      tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_inout_termios_.get());
+      break;
+    case kRawInMode:
+      tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_in_termios_.get());
+      break;
   }
 #endif
 }

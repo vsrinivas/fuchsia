@@ -181,9 +181,22 @@ class LineInputEditor : public LineInput {
   std::string GetReverseHistorySuggestion() const;
 
  protected:
-  // Enables or disables console raw mode if applicable.
-  virtual void EnsureRawMode() {}
-  virtual void EnsureNoRawMode() {}
+  enum TerminalMode {
+    // The original mode of the terminal when we started. Used for putting it back when we exit.
+    kOriginalMode,
+
+    // Raw input and output. Used for active line input.
+    kRawInOutMode,
+
+    // Raw input only. Output will be formatted as normal in a terminal. Used when the input is
+    // hidden so the app may print with normal behavior but input is still raw. This prevents
+    // echoing input to the terminal when we're not processing it, and Control-C from exiting the
+    // app out from under us.
+    kRawInMode,
+  };
+
+  // Sets the terminal mode to the given value if necessary.
+  virtual void EnsureTerminalMode(TerminalMode mode) {}
 
   // Abstract output function, overridden by a derived class to output to screen.
   virtual void Write(const std::string& data) = 0;
@@ -318,8 +331,7 @@ class LineInputStdout : public LineInputEditor {
 
  protected:
   // LineInputEditor implementation.
-  void EnsureRawMode() override;
-  void EnsureNoRawMode() override;
+  void EnsureTerminalMode(TerminalMode mode) override;
   void Write(const std::string& str) override;
 
  private:
@@ -327,9 +339,10 @@ class LineInputStdout : public LineInputEditor {
   // The terminal is converted into raw mode when the prompt is visible and accepting input. Then
   // it's switched back. This block tracks that information. Use unique_ptr to avoid bringing all
   // terminal headers into this header.
-  bool raw_mode_enabled_ = false;
-  std::unique_ptr<termios> raw_termios_;
+  TerminalMode terminal_mode_ = kOriginalMode;
   std::unique_ptr<termios> original_termios_;
+  std::unique_ptr<termios> raw_inout_termios_;
+  std::unique_ptr<termios> raw_in_termios_;
 #endif
 };
 
