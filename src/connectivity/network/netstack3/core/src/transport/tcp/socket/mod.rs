@@ -572,15 +572,13 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                     Some(port) => port,
                 };
 
-                let idmap_key = id.into();
-                let inactive_state = inactive.remove(idmap_key).expect("invalid unbound socket id");
                 let local_ip = SpecifiedAddr::new(local_ip);
                 if let Some(ip) = local_ip {
                     if ip_transport_ctx.get_device_with_assigned_addr(ip).is_none() {
                         return Err(BindError::NoLocalAddr);
                     }
                 }
-                socketmap
+                let bound = socketmap
                     .listeners_mut()
                     .try_insert(
                         ListenerAddr {
@@ -595,10 +593,9 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                         let MaybeListenerId(x) = entry.id();
                         BoundId(x)
                     })
-                    .map_err(|_: (InsertError, MaybeListener<_>, ())| {
-                        assert_eq!(inactive.insert(idmap_key, inactive_state), None);
-                        BindError::Conflict
-                    })
+                    .map_err(|_: (InsertError, MaybeListener<_>, ())| BindError::Conflict)?;
+                assert_matches!(inactive.remove(id.into()), Some(_));
+                Ok(bound)
             },
         )
     }
@@ -785,9 +782,10 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                         .into_iter()
                         .map(|(conn_id, _passive_open): (_, C::ReturnedBuffers)| conn_id),
                 ) {
-                    let (mut conn, (), conn_addr) = assert_matches!(
-                        socketmap.conns_mut().remove(&conn_id.into()),
-                        Some(conn) => conn);
+                    let _: Option<C::Instant> =
+                        ctx.cancel_timer(TimerId(conn_id.into(), I::VERSION));
+                    let (mut conn, (), conn_addr) =
+                        socketmap.conns_mut().remove(&conn_id.into()).unwrap();
                     if let Some(reset) = conn.state.abort() {
                         let ConnAddr { ip, device: _ } = conn_addr;
                         let ser = tcp_serialize_segment(reset, ip);
@@ -1904,6 +1902,35 @@ mod tests {
         .expect("able to rebind to a free address");
     }
 
+    #[ip_test]
+    fn bind_to_non_existent_address<I: Ip + TcpTestIpExt>()
+    where
+        FakeBufferIpTransportCtx<I>:
+            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
+    {
+        let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
+            TcpCtx::<I>::with_sync_ctx(TcpSyncCtx::new(
+                I::FAKE_CONFIG.local_ip,
+                I::FAKE_CONFIG.local_ip,
+                I::FAKE_CONFIG.subnet.prefix(),
+            ));
+        let unbound = TcpSocketHandler::create_socket(&mut sync_ctx, &mut non_sync_ctx);
+        assert_matches!(
+            TcpSocketHandler::bind(
+                &mut sync_ctx,
+                &mut non_sync_ctx,
+                unbound,
+                *I::FAKE_CONFIG.remote_ip,
+                None
+            ),
+            Err(BindError::NoLocalAddr)
+        );
+
+        sync_ctx.with_tcp_sockets(|sockets| {
+            assert_matches!(sockets.inactive.get(unbound.into()), Some(_));
+        });
+    }
+
     // The test verifies that if client tries to connect to a closed port on
     // server, the connection is aborted and RST is received.
     #[ip_test]
@@ -2231,8 +2258,34 @@ mod tests {
         // shutdown.
         net.run_until_idle(handle_frame, handle_timer);
 
+        // Create a second half-open connection so that we have one entry in the
+        // pending queue.
+        net.with_context(REMOTE, |TcpCtx { sync_ctx, non_sync_ctx }| {
+            let unbound = TcpSocketHandler::create_socket(sync_ctx, non_sync_ctx);
+            let _: ConnectionId = TcpSocketHandler::connect_unbound(
+                sync_ctx,
+                non_sync_ctx,
+                unbound,
+                SocketAddr { ip: I::FAKE_CONFIG.local_ip, port: PORT_1 },
+                Default::default(),
+            )
+            .expect("connect should succeed");
+        });
+
+        let _: StepResult = net.step(handle_frame, handle_timer);
+
+        // We have a timer scheduled for the pending connection.
+        net.with_context(LOCAL, |TcpCtx { sync_ctx: _, non_sync_ctx }| {
+            assert_matches!(non_sync_ctx.timer_ctx().timers().len(), 1);
+        });
+
         let local_bound = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
             TcpSocketHandler::shutdown_listener(sync_ctx, non_sync_ctx, local_listener)
+        });
+
+        // The timer for the pending connection should be cancelled.
+        net.with_context(LOCAL, |TcpCtx { sync_ctx: _, non_sync_ctx }| {
+            assert_eq!(non_sync_ctx.timer_ctx().timers().len(), 0);
         });
 
         net.run_until_idle(handle_frame, handle_timer);
