@@ -134,8 +134,8 @@ zx_status_t Device::Create(
     fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
     fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
     fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-    bool want_init_task, bool skip_autobind, bool must_isolate, zx::vmo inspect,
-    fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device) {
+    bool want_init_task, fuchsia_device_manager::wire::AddDeviceConfig add_device_config,
+    zx::vmo inspect, fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent = parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -150,12 +150,16 @@ zx_status_t Device::Create(
     return ZX_ERR_NO_MEMORY;
   }
 
-  if (skip_autobind) {
+  if (add_device_config & fuchsia_device_manager::AddDeviceConfig::kSkipAutobind) {
     dev->flags |= DEV_CTX_SKIP_AUTOBIND;
   }
 
-  if (must_isolate) {
+  if (add_device_config & fuchsia_device_manager::AddDeviceConfig::kMustIsolate) {
     dev->flags |= DEV_CTX_MUST_ISOLATE;
+  }
+
+  if (add_device_config & fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite) {
+    dev->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   }
 
   // Set up device inspect.
@@ -744,30 +748,17 @@ void Device::AddDevice(AddDeviceRequestView request, AddDeviceCompleter::Sync& c
   std::string_view driver_path(request->args.driver_path.data(), request->args.driver_path.size());
   std::string_view args(request->args.args.data(), request->args.args.size());
 
-  bool skip_autobind =
-      static_cast<bool>(request->args.device_add_config &
-                        fuchsia_device_manager::wire::AddDeviceConfig::kSkipAutobind);
-
-  bool must_isolate =
-      static_cast<bool>(request->args.device_add_config &
-                        fuchsia_device_manager::wire::AddDeviceConfig::kMustIsolate);
-
   fbl::RefPtr<Device> device;
   zx_status_t status = parent->coordinator->device_manager()->AddDevice(
       parent, std::move(request->device_controller), std::move(request->coordinator),
       request->args.property_list.props.data(), request->args.property_list.props.count(),
       request->args.property_list.str_props.data(), request->args.property_list.str_props.count(),
-      name, request->args.protocol_id, driver_path, args, skip_autobind, request->args.has_init,
-      kEnableAlwaysInit, must_isolate, std::move(request->inspect),
+      name, request->args.protocol_id, driver_path, args, request->args.device_add_config,
+      request->args.has_init, kEnableAlwaysInit, std::move(request->inspect),
       std::move(request->outgoing_dir), &device);
 
   if (device != nullptr) {
     device->dfv2_device_symbol_ = request->args.dfv2_device_symbol;
-
-    if (request->args.device_add_config &
-        fuchsia_device_manager::wire::AddDeviceConfig::kAllowMultiComposite) {
-      device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
-    }
   }
 
   uint64_t local_id = device != nullptr ? device->local_id() : 0;

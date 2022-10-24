@@ -31,8 +31,9 @@ class DeviceManager {
                         size_t props_count,
                         const fuchsia_device_manager::wire::DeviceStrProperty* str_props_data,
                         size_t str_props_count, std::string_view name, uint32_t protocol_id,
-                        std::string_view driver_path, std::string_view args, bool skip_autobind,
-                        bool has_init, bool always_init, bool must_isolate, zx::vmo inspect,
+                        std::string_view driver_path, std::string_view args,
+                        fuchsia_device_manager::wire::AddDeviceConfig add_device_config,
+                        bool has_init, bool always_init, zx::vmo inspect,
                         fidl::ClientEnd<fio::Directory> outgoing_dir,
                         fbl::RefPtr<Device>* new_device);
 

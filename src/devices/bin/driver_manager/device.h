@@ -114,8 +114,8 @@ class Device final
       fbl::Array<zx_device_prop_t> props, fbl::Array<StrProperty> str_props,
       fidl::ServerEnd<fuchsia_device_manager::Coordinator> coordinator_request,
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
-      bool want_init_task, bool skip_autobind, bool must_isolate, zx::vmo inspect,
-      fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device);
+      bool want_init_task, fuchsia_device_manager::wire::AddDeviceConfig add_device_config,
+      zx::vmo inspect, fidl::ClientEnd<fio::Directory> outgoing_dir, fbl::RefPtr<Device>* device);
 
   // Create a new composite device.
   static zx_status_t CreateComposite(

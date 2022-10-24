@@ -20,8 +20,8 @@ zx_status_t DeviceManager::AddDevice(
     fidl::ServerEnd<fdm::Coordinator> coordinator, const fdm::wire::DeviceProperty* props_data,
     size_t props_count, const fdm::wire::DeviceStrProperty* str_props_data, size_t str_props_count,
     std::string_view name, uint32_t protocol_id, std::string_view driver_path,
-    std::string_view args, bool skip_autobind, bool has_init, bool always_init, bool must_isolate,
-    zx::vmo inspect, fidl::ClientEnd<fio::Directory> outgoing_dir,
+    std::string_view args, fuchsia_device_manager::wire::AddDeviceConfig add_device_config,
+    bool has_init, bool always_init, zx::vmo inspect, fidl::ClientEnd<fio::Directory> outgoing_dir,
     fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fdm::wire::kDeviceNameMax == ZX_DEVICE_NAME_MAX);
@@ -94,11 +94,11 @@ zx_status_t DeviceManager::AddDevice(
   // TODO(fxbug.dev/43370): remove this check once init tasks can be enabled for all devices.
   bool want_init_task = has_init || always_init;
   fbl::RefPtr<Device> dev;
-  zx_status_t status = Device::Create(
-      coordinator_, parent, std::move(name_str), std::move(driver_path_str), std::move(args_str),
-      protocol_id, std::move(props), std::move(str_props), std::move(coordinator),
-      std::move(device_controller), want_init_task, skip_autobind, must_isolate, std::move(inspect),
-      std::move(outgoing_dir), &dev);
+  zx_status_t status =
+      Device::Create(coordinator_, parent, std::move(name_str), std::move(driver_path_str),
+                     std::move(args_str), protocol_id, std::move(props), std::move(str_props),
+                     std::move(coordinator), std::move(device_controller), want_init_task,
+                     add_device_config, std::move(inspect), std::move(outgoing_dir), &dev);
   if (status != ZX_OK) {
     return status;
   }
