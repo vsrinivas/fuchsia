@@ -12,7 +12,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_zircon as zx,
-    futures::{prelude::*, StreamExt},
+    futures::{lock::Mutex, prelude::*, StreamExt},
     lazy_static::lazy_static,
     std::sync::{
         atomic::{AtomicU64, Ordering},
@@ -25,19 +25,13 @@ lazy_static! {
     static ref ENCLOSING_ENV_ID: AtomicU64 = AtomicU64::new(1);
 }
 
-/// Represents a single CFv1 environment.
-/// Consumer of this protocol have no access to system services.
-/// The logger provided to clients comes from isolated archivist.
-/// TODO(82072): Support collection of inspect by isolated archivist.
-struct EnclosingEnvironment {
+struct EnclosingEnvironmentInner {
     svc_task: Option<fasync::Task<()>>,
     env_controller_proxy: Option<fv1sys::EnvironmentControllerProxy>,
-    env_proxy: fv1sys::EnvironmentProxy,
-    service_directory: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
 }
 
-impl Drop for EnclosingEnvironment {
-    fn drop(&mut self) {
+impl EnclosingEnvironmentInner {
+    fn kill(&mut self) -> fasync::Task<()> {
         let svc_task = self.svc_task.take();
         let env_controller_proxy = self.env_controller_proxy.take();
         fasync::Task::spawn(async move {
@@ -48,7 +42,22 @@ impl Drop for EnclosingEnvironment {
                 let _ = env_controller_proxy.kill().await;
             }
         })
-        .detach();
+    }
+}
+
+/// Represents a single CFv1 environment.
+/// Consumer of this protocol have no access to system services.
+/// The logger provided to clients comes from isolated archivist.
+/// TODO(82072): Support collection of inspect by isolated archivist.
+struct EnclosingEnvironment {
+    inner: Mutex<EnclosingEnvironmentInner>,
+    env_proxy: fv1sys::EnvironmentProxy,
+    service_directory: fidl::endpoints::ClientEnd<fio::DirectoryMarker>,
+}
+
+impl Drop for EnclosingEnvironment {
+    fn drop(&mut self) {
+        self.inner.get_mut().kill().detach();
     }
 }
 
@@ -143,8 +152,11 @@ impl EnclosingEnvironment {
             .context("Cannot create nested env")?;
         env_proxy.get_directory(directory_request).context("cannot get env directory")?;
         Ok(Self {
-            svc_task: svc_task.into(),
-            env_controller_proxy: env_controller_proxy.into(),
+            inner: EnclosingEnvironmentInner {
+                svc_task: svc_task.into(),
+                env_controller_proxy: env_controller_proxy.into(),
+            }
+            .into(),
             env_proxy,
             service_directory,
         }
@@ -238,7 +250,7 @@ pub async fn gen_enclosing_env(
             .context("Cannot create enclosing env")?;
     let enclosing_env_clone = enclosing_env.clone();
     let enclosing_env_clone2 = enclosing_env.clone();
-
+    let enclosing_env_local = enclosing_env.clone();
     fs.dir("svc")
         .add_fidl_service(move |req_stream: fv1sys::EnvironmentRequestStream| {
             debug!("Received Env connection request");
@@ -263,9 +275,11 @@ pub async fn gen_enclosing_env(
             },
         );
 
+    let stop_notifier = handles.register_stop_notifier().await;
     fs.serve_connection(handles.outgoing_dir)?;
-    fs.collect::<()>().await;
-
-    // TODO(fxbug.dev/82021): kill and clean environment
+    let fs_task = fasync::Task::spawn(fs.collect::<()>());
+    let _ = stop_notifier.await; // we don't care about cancelled error
+    enclosing_env_local.inner.lock().await.kill().await;
+    fs_task.cancel().await;
     Ok(())
 }
