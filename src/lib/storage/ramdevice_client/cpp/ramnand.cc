@@ -12,6 +12,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,6 +57,44 @@ zx_status_t WaitForFile(const fbl::unique_fd& dir, const char* file, fbl::unique
 
 namespace ramdevice_client {
 
+__EXPORT
+zx_status_t RamNand::Create(fuchsia_hardware_nand::wire::RamNandInfo config,
+                            std::optional<RamNand>* out) {
+  zx::result ctl = component::Connect<fuchsia_hardware_nand::RamNandCtl>(kBasePath);
+  if (ctl.is_error()) {
+    fprintf(stderr, "could not connect to RamNandCtl: %s\n", ctl.status_string());
+    return ctl.status_value();
+  }
+
+  const fidl::WireResult result = fidl::WireCall(ctl.value())->CreateDevice(std::move(config));
+  if (!result.ok()) {
+    fprintf(stderr, "could not create ram_nand device: %s\n", result.status_string());
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "could not create ram_nand device: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  fbl::String path = fbl::String::Concat({kBasePath, "/", response.name.get()});
+
+  fbl::unique_fd ram_nand_ctl(open(kBasePath, O_RDONLY | O_DIRECTORY));
+  if (!ram_nand_ctl) {
+    fprintf(stderr, "Could not open ram_nand_ctl");
+    return ZX_ERR_INTERNAL;
+  }
+
+  fbl::unique_fd ram_nand;
+  if (zx_status_t status = WaitForFile(ram_nand_ctl, path.c_str(), &ram_nand); status != ZX_OK) {
+    fprintf(stderr, "could not open ram_nand: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  *out = RamNand(std::move(ram_nand), path, response.name.get());
+
+  return ZX_OK;
+}
 __EXPORT
 zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {

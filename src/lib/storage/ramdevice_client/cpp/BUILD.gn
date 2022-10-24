@@ -23,6 +23,9 @@ shared_library("ramdevice-client") {
   public_deps = [
     # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+
+    # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -31,6 +34,7 @@ shared_library("ramdevice-client") {
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
@@ -104,6 +108,9 @@ static_library("ramdevice-client-static") {
   public_deps = [
     # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+
+    # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
   ]
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_c",
@@ -111,6 +118,7 @@ static_library("ramdevice-client-static") {
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",

@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_
 #define SRC_LIB_STORAGE_RAMDEVICE_CLIENT_CPP_INCLUDE_RAMDEVICE_CLIENT_RAMNAND_H_
 
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <inttypes.h>
 #include <lib/zx/channel.h>
@@ -25,6 +26,9 @@ class RamNand {
   static constexpr char kBasePath[] = "/dev/sys/platform/00:00:2e/nand-ctl";
 
   // Creates a ram_nand under ram_nand_ctl running under the main devmgr.
+  static zx_status_t Create(fuchsia_hardware_nand::wire::RamNandInfo config,
+                            std::optional<RamNand>* out);
+
   static zx_status_t Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out);
 
