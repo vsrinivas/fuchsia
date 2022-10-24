@@ -63,9 +63,12 @@ bool VkLoopTest::Initialize() {
     return false;
   }
 
+  // Don't enable validation layers because there's no legal way to destroy
+  // command buffers after a device lost, and attempting to destroy them could
+  // cause the validation layers to assert.
   ctx_ = VulkanContext::Builder{}
              .set_queue_flags(vk::QueueFlagBits::eCompute)
-             .set_validation_errors_ignored(true)
+             .set_validation_layers_enabled(false)
              .Unique();
   if (!ctx_) {
     RTN_MSG(false, "Failed to initialize Vulkan.\n");
