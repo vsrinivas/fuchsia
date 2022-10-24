@@ -94,11 +94,11 @@
             to: [ "#lowpan-ot-driver" ],
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-class-ot-radio",
             to: "#lowpan-ot-driver",
-            subdir: "class/ot-radio",
+            subdir: "ot-radio",
         },
 
         // offers for lowpan-monitor
