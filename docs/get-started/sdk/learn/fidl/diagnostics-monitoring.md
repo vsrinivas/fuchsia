@@ -28,7 +28,7 @@ components. Launch `ffx debug fidl` and configure it to monitor the echo server
 component:
 
 ```posix-terminal
-ffx debug fidl --remote-name echo_server.cm --fidl-ir-path bazel-bin/
+ffx debug fidl --remote-name echo_server.cm --fidl-ir-path bazel-out/
 ```
 
 ```none {:.devsite-disable-click-to-copy}
