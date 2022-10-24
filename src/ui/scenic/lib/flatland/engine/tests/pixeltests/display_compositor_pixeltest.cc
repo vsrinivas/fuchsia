@@ -904,9 +904,7 @@ VK_TEST_P(DisplayCompositorFallbackParameterizedPixelTest, SoftwareRenderingTest
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id =
-      display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
-  EXPECT_NE(render_target_collection_id, 0U);
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
 
   // Now we can finally render.
   RenderData render_data;
@@ -1042,9 +1040,7 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id =
-      display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
-  EXPECT_NE(render_target_collection_id, 0U);
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
 
   // Now we can finally render.
   const uint32_t kNumOverlappingRows = 25;
@@ -1227,9 +1223,7 @@ VK_TEST_P(DisplayCompositorParameterizedTest, MultipleParentPixelTest) {
   DisplayInfo display_info{
       .dimensions = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  auto render_target_collection_id =
-      display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
-  EXPECT_NE(render_target_collection_id, 0U);
+  display_compositor->AddDisplay(display, display_info, /*num_vmos*/ 2, &render_target_info);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);

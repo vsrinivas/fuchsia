@@ -38,6 +38,11 @@ class MockRenderer : public Renderer {
 
   MOCK_METHOD(zx_pixel_format_t, ChoosePreferredPixelFormat,
               (const std::vector<zx_pixel_format_t>&), (const));
+
+  MOCK_METHOD(bool, SupportsRenderInProtected, (), (const));
+
+  MOCK_METHOD(bool, RequiresRenderInProtected, (const std::vector<allocation::ImageMetadata>&),
+              (const));
 };
 
 }  // namespace flatland

@@ -180,6 +180,7 @@ bool VkRenderer::ImportBufferCollection(
       case BufferCollectionUsage::kClientImage:
         image_usage = escher::RectangleCompositor::kTextureUsageFlags;
         image_name = "FlatlandImageMemory";
+        break;
     }
 
     buffer_collection->SetName(10u, image_name);
@@ -448,7 +449,7 @@ escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metad
   }
 
   // Check if allocated buffers are backed by protected memory.
-  bool is_protected =
+  const bool is_protected =
       (escher_->vk_physical_device()
            .getMemoryProperties()
            .memoryTypes[escher::CountTrailingZeros(properties.memoryTypeBits)]
@@ -589,8 +590,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
   }
   FX_DCHECK(local_render_target_map.find(render_target.identifier) !=
             local_render_target_map.end());
-  FX_DCHECK(!has_protected_images ||
-            local_render_target_map.at(render_target.identifier)->use_protected_memory());
+  FX_CHECK(has_protected_images ==
+           local_render_target_map.at(render_target.identifier)->use_protected_memory());
 
   // Escher's frame class acts as a command buffer manager that we use to create a
   // command buffer and submit it to the device queue once we are done.
@@ -740,6 +741,23 @@ zx_pixel_format_t VkRenderer::ChoosePreferredPixelFormat(
   }
   FX_DCHECK(false) << "Preferred format is not available.";
   return ZX_PIXEL_FORMAT_NONE;
+}
+
+bool VkRenderer::SupportsRenderInProtected() const { return escher_->allow_protected_memory(); }
+
+bool VkRenderer::RequiresRenderInProtected(
+    const std::vector<allocation::ImageMetadata>& images) const {
+  std::unique_lock<std::mutex> lock(mutex_);
+  const auto local_texture_map = texture_map_;
+  lock.unlock();
+
+  for (const auto& image : images) {
+    FX_DCHECK(local_texture_map.find(image.identifier) != local_texture_map.end());
+    if (local_texture_map.at(image.identifier)->image()->use_protected_memory()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 void VkRenderer::WaitIdle() { escher_->vk_device().waitIdle(); }

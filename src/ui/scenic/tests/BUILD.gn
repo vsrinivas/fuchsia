@@ -10,6 +10,7 @@ group("tests") {
   public_deps = [
     ":display_integration_tests",
     ":flatland_integration_tests",
+    ":flatland_protected_memory_integration_test",
     ":gfx_integration_tests",
     ":observer_integration_tests",
   ]
@@ -308,6 +309,25 @@ fuchsia_test_component("scoped_observer_registry_integration_test") {
   deps = [ ":scoped_observer_registry_integration_test_bin" ]
 }
 
+executable("protected_memory_integration_test_bin") {
+  testonly = true
+  sources =
+      [ "flatland_integration_tests/protected_memory_integration_test.cc" ]
+  deps = [
+    ":common_deps",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//src/ui/scenic/lib/allocation:allocation",
+    "//src/ui/scenic/lib/utils:utils",
+    "//zircon/system/ulib/fbl",
+  ]
+}
+
+fuchsia_test_component("protected_memory_integration_test") {
+  component_name = "protected_memory_integration_test"
+  manifest = "meta/protected_memory_integration_test.cml"
+  deps = [ ":protected_memory_integration_test_bin" ]
+}
+
 executable("screen_capture_integration_test_bin") {
   testonly = true
   sources = [ "flatland_integration_tests/screen_capture_integration_test.cc" ]
@@ -411,9 +431,9 @@ fuchsia_test_package("gfx_integration_tests") {
 
 fuchsia_test_package("flatland_integration_tests") {
   test_components = [
-    ":flatland_touch_integration_test",
     ":flatland_focus_integration_test",
     ":flatland_mouse_integration_test",
+    ":flatland_touch_integration_test",
     ":screen_capture_integration_test",
     ":screen_capture2_integration_test",
     ":flatland_view_ref_installed_integration_test",
@@ -423,6 +443,18 @@ fuchsia_test_package("flatland_integration_tests") {
     log_settings = {
       max_severity = "ERROR"
     }
+  }
+}
+
+fuchsia_test_package("flatland_protected_memory_integration_test") {
+  test_components = [ ":protected_memory_integration_test" ]
+
+  test_specs = {
+    environments = [
+      astro_env,
+      sherlock_env,
+      nelson_env,
+    ]
   }
 }
 

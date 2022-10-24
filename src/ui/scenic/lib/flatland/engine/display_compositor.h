@@ -91,17 +91,17 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
                    scheduling::FrameRenderer::FramePresentedCallback callback);
 
   // Register a new display to the DisplayCompositor, which also generates the render targets to be
-  // presented on the display when compositing on the GPU. If num_vmos is 0, this function will not
-  // create any render targets for GPU composition for that display. The buffer collection info is
-  // also returned back to the caller via an output parameter |out_collection_info|. This out
-  // parameter is only allowed to be nullptr when num_vmos is 0. Otherwise, a valid handle to return
-  // the buffer collection data is required. This function also returns the ID for the buffer
-  // collection of the render targets.
+  // presented on the display when compositing on the GPU. If |num_render_targets| is 0, this
+  // function will not create any render targets for GPU composition for that display. The buffer
+  // collection info is also returned back to the caller via an output parameter
+  // |out_collection_info|. This out parameter is only allowed to be nullptr when
+  // |num_render_targets| is 0. Otherwise, a valid handle to return the buffer collection data is
+  // required.
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
   // to the Flatland hierarchy.
-  allocation::GlobalBufferCollectionId AddDisplay(
-      scenic_impl::display::Display* display, DisplayInfo info, uint32_t num_vmos,
-      fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
+  void AddDisplay(scenic_impl::display::Display* display, DisplayInfo info,
+                  uint32_t num_render_targets,
+                  fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
   // Values needed to adjust the color of the framebuffer as a postprocessing effect.
   void SetColorConversionValues(const std::array<float, 9>& coefficients,
@@ -120,6 +120,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   // applied by the compositor.  It is the compositor's responsibility to signal any release fences
   // corresponding to the frame identified by |frame_number|.
   void OnVsync(zx::time timestamp, fuchsia::hardware::display::ConfigStamp applied_config_stamp);
+
+  std::vector<allocation::ImageMetadata> AllocateDisplayRenderTargets(
+      bool use_protected_memory, uint32_t num_render_targets, const fuchsia::math::SizeU& size,
+      zx_pixel_format_t pixel_format, fuchsia::sysmem::BufferCollectionInfo_2* out_collection_info);
 
   struct DisplayConfigResponse {
     // Whether or not the config can be successfully applied or not.
@@ -153,7 +157,10 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
     uint32_t curr_vmo = 0;
 
     // The information used to create images for each render target from the vmo data.
-    std::vector<allocation::ImageMetadata> targets;
+    std::vector<allocation::ImageMetadata> render_targets;
+
+    // The information used to create images for each render target from the vmo data.
+    std::vector<allocation::ImageMetadata> protected_render_targets;
 
     // Used to synchronize buffer rendering with setting the buffer on the display.
     std::vector<FrameEventData> frame_event_datas;

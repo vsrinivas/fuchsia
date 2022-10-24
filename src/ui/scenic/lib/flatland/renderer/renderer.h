@@ -29,6 +29,8 @@ using Rectangle2D = escher::Rectangle2D;
 // interface, whose concrete implementation is to be injected into Flatland.
 class Renderer : public allocation::BufferCollectionImporter {
  public:
+  ~Renderer() override = default;
+
   // This function is responsible for rendering a single batch of Flatland rectangles into a
   // render target. This function is designed to be called on the render thread, not on any
   // Flatland instance thread. The specific behavior may differ depending on the specific subclass
@@ -60,7 +62,16 @@ class Renderer : public allocation::BufferCollectionImporter {
   virtual zx_pixel_format_t ChoosePreferredPixelFormat(
       const std::vector<zx_pixel_format_t>& available_formats) const = 0;
 
-  virtual ~Renderer() = default;
+  // Returns true if the renderer is capable of switching to protected mode.
+  virtual bool SupportsRenderInProtected() const = 0;
+
+  // Returns true if the renderer has to switch to protected mode to render the given |images|. If
+  // true, the caller is responsible for providing a render target using the protected memory when
+  // calling Render().
+  // TODO(fxbug.dev/111107): The caller should be able to figure out if the images are protected.
+  // Remove this after moving to prunable tokens in the callers.
+  virtual bool RequiresRenderInProtected(
+      const std::vector<allocation::ImageMetadata>& images) const = 0;
 };
 
 }  // namespace flatland

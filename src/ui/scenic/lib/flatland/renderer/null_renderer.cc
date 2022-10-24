@@ -186,4 +186,11 @@ zx_pixel_format_t NullRenderer::ChoosePreferredPixelFormat(
   return ZX_PIXEL_FORMAT_NONE;
 }
 
+bool NullRenderer::SupportsRenderInProtected() const { return false; }
+
+bool NullRenderer::RequiresRenderInProtected(
+    const std::vector<allocation::ImageMetadata>& images) const {
+  return false;
+}
+
 }  // namespace flatland

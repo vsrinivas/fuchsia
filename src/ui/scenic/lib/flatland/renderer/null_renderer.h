@@ -56,6 +56,13 @@ class NullRenderer final : public Renderer {
   zx_pixel_format_t ChoosePreferredPixelFormat(
       const std::vector<zx_pixel_format_t>& available_formats) const override;
 
+  // |Renderer|.
+  bool SupportsRenderInProtected() const override;
+
+  // |Renderer|.
+  bool RequiresRenderInProtected(
+      const std::vector<allocation::ImageMetadata>& images) const override;
+
  private:
   // This mutex is used to protect access to |collection_map_| and |image_map|.
   std::mutex lock_;
