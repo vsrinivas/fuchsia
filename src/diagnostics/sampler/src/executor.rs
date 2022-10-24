@@ -855,8 +855,9 @@ fn process_int_histogram(
         }
     };
 
-    if diff.iter().any(|v| v.count != 0) {
-        Ok(Some(MetricEventPayload::Histogram(diff)))
+    let non_empty_diff: Vec<HistogramBucket> = diff.into_iter().filter(|v| v.count != 0).collect();
+    if !non_empty_diff.is_empty() {
+        Ok(Some(MetricEventPayload::Histogram(non_empty_diff)))
     } else {
         Ok(None)
     }
@@ -1652,7 +1653,7 @@ mod tests {
         old_val: Option<Property>,
         process_ok: bool,
         event_made: bool,
-        diff: Vec<u64>,
+        diff: Vec<(u32, u64)>,
     }
     fn process_int_histogram_tester(params: IntHistogramTesterParams) {
         let data_source = MetricCacheKey {
@@ -1685,11 +1686,7 @@ mod tests {
                 let expected_histogram_buckets = params
                     .diff
                     .iter()
-                    .enumerate()
-                    .map(|(index, count)| HistogramBucket {
-                        index: u32::try_from(index).unwrap(),
-                        count: *count,
-                    })
+                    .map(|(index, count)| HistogramBucket { index: *index, count: *count })
                     .collect::<Vec<HistogramBucket>>();
 
                 assert_eq!(histogram_buckets, expected_histogram_buckets);
@@ -1710,7 +1707,7 @@ mod tests {
             old_val: None,
             process_ok: true,
             event_made: true,
-            diff: vec![1, 1, 1, 1],
+            diff: vec![(0, 1), (1, 1), (2, 1), (3, 1)],
         });
 
         process_int_histogram_tester(IntHistogramTesterParams {
@@ -1718,7 +1715,7 @@ mod tests {
             old_val: None,
             process_ok: true,
             event_made: true,
-            diff: vec![1, 1, 1, 1],
+            diff: vec![(0, 1), (1, 1), (2, 1), (3, 1)],
         });
 
         // Test an Inspect uint histogram at the boundaries of the type produce valid
@@ -1729,7 +1726,7 @@ mod tests {
             old_val: None,
             process_ok: true,
             event_made: true,
-            diff: vec![u64::MAX, u64::MAX, u64::MAX],
+            diff: vec![(0, u64::MAX), (1, u64::MAX), (2, u64::MAX)],
         });
 
         // Test that an empty Inspect histogram produces no event.
@@ -1752,14 +1749,14 @@ mod tests {
         });
 
         // Test that monotonically increasing histograms are good!.
-        let new_u64_sample = convert_vector_to_uint_histogram(vec![2, 1, 1, 1]);
-        let old_u64_sample = Some(convert_vector_to_uint_histogram(vec![1, 1, 1, 1]));
+        let new_u64_sample = convert_vector_to_uint_histogram(vec![2, 1, 2, 1]);
+        let old_u64_sample = Some(convert_vector_to_uint_histogram(vec![1, 1, 0, 1]));
         process_int_histogram_tester(IntHistogramTesterParams {
             new_val: new_u64_sample,
             old_val: old_u64_sample,
             process_ok: true,
             event_made: true,
-            diff: vec![1, 0, 0, 0],
+            diff: vec![(0, 1), (2, 2)],
         });
 
         let new_i64_sample = convert_vector_to_int_histogram(vec![5, 2, 1, 3]);
@@ -1769,7 +1766,7 @@ mod tests {
             old_val: old_i64_sample,
             process_ok: true,
             event_made: true,
-            diff: vec![4, 1, 0, 2],
+            diff: vec![(0, 4), (1, 1), (3, 2)],
         });
 
         // Test that changing the histogram type resets the cache.
@@ -1780,7 +1777,7 @@ mod tests {
             old_val: old_i64_sample,
             process_ok: true,
             event_made: true,
-            diff: vec![2, 1, 1, 1],
+            diff: vec![(0, 2), (1, 1), (2, 1), (3, 1)],
         });
     }
 
