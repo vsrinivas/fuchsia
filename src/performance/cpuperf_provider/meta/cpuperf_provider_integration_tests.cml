@@ -53,4 +53,9 @@
             to: "#trace_manager",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "trace_manager" ],
+        },
+    },
 }

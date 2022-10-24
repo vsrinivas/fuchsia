@@ -56,4 +56,9 @@
             to: "#test-ui-stack",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "cursor" ],
+        },
+    },
 }

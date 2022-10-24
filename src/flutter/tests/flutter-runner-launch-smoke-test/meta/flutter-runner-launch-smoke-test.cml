@@ -200,4 +200,19 @@
             ],
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "a11y-manager",
+                "flutter_aot_product_runner",
+                "flutter_aot_runner",
+                "flutter_jit_runner",
+                "mock_cobalt",
+                "pingable-flutter-component",
+                "scenic",
+                "stash",
+                "text_manager",
+            ],
+        },
+    },
 }

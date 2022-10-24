@@ -6,4 +6,9 @@
     program: {
         args: [ "--no_network_for_testing" ],
     },
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "activity" ],
+        },
+    },
 }
