@@ -173,11 +173,22 @@ see [Logical operators][#logical-operators].
 For example `message:"Hello world"` queries for log message that contain
 `Hello world`.
 
+Finally, the logging viewer also supports passing raw strings as filters. This
+causes the viewer to filter on any field containing the given value. For example:
+
+* Writing `foo` will show logs where any field contains the word `foo`.
+* Writing `foo bar`` will show logs where any field contains `foo` and `bar` at
+  any position.
+* Writing `"foo bar"` will show logs that contains the string `"foo bar"` anywhere.
+* Writing `not foo` or `!foo` will show logs that do not contain `foo` anywhere.
+
+
 #### Categories {:categories}
 
 The filtering supports the following categories:
 
-* `any`: This lets you filter by any of the supported fields.
+* `any`: This lets you filter by any of the supported fields. This is equivalent to just
+  writing the raw string, for example `any:foo` is the same as `foo`.
 * `manifest`: This lets you filter by the name of the manifest that is in
   the corresponding section of the URL with which the component was launched.
 * `moniker`: This lets you filter by the component that emitted the log.
