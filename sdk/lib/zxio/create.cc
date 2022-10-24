@@ -11,6 +11,7 @@
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
 #include <stdarg.h>
+#include <zircon/errors.h>
 
 #include "private.h"
 
@@ -133,12 +134,17 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
       return zx::error(result.status());
     }
     fidl::WireResponse response = result.value();
+    if (!(response.has_socket() && response.has_tx_meta_buf_size() &&
+          response.has_rx_meta_buf_size() && response.has_metadata_encoding_protocol_version())) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
     return zx::ok(fio::wire::NodeInfoDeprecated::WithDatagramSocket(
         alloc,
         fio::wire::DatagramSocket{
-            .socket = response.has_socket() ? std::move(response.socket()) : zx::socket{},
-            .tx_meta_buf_size = response.has_tx_meta_buf_size() ? response.tx_meta_buf_size() : 0,
-            .rx_meta_buf_size = response.has_rx_meta_buf_size() ? response.rx_meta_buf_size() : 0,
+            .socket = std::move(response.socket()),
+            .tx_meta_buf_size = response.tx_meta_buf_size(),
+            .rx_meta_buf_size = response.rx_meta_buf_size(),
+            .metadata_encoding_protocol_version = response.metadata_encoding_protocol_version(),
         }));
   }
   if (got == std::string_view{fuchsia_posix_socket::wire::kStreamSocketProtocolName}) {
@@ -149,8 +155,11 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
       return zx::error(result.status());
     }
     fidl::WireResponse response = result.value();
+    if (!response.has_socket()) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
     return zx::ok(fio::wire::NodeInfoDeprecated::WithStreamSocket(fio::wire::StreamSocket{
-        .socket = response.has_socket() ? std::move(response.socket()) : zx::socket{},
+        .socket = std::move(response.socket()),
     }));
   }
   if (got == std::string_view{fuchsia_posix_socket::wire::kSynchronousDatagramSocketProtocolName}) {
@@ -161,9 +170,12 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
       return zx::error(result.status());
     }
     fidl::WireResponse response = result.value();
+    if (!response.has_event()) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
     return zx::ok(fio::wire::NodeInfoDeprecated::WithSynchronousDatagramSocket(
         fio::wire::SynchronousDatagramSocket{
-            .event = response.has_event() ? std::move(response.event()) : zx::eventpair{},
+            .event = std::move(response.event()),
         }));
   }
   if (got == std::string_view{fuchsia_posix_socket_packet::wire::kSocketProtocolName}) {
@@ -174,8 +186,11 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
       return zx::error(result.status());
     }
     fidl::WireResponse response = result.value();
+    if (!response.has_event()) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
     return zx::ok(fio::wire::NodeInfoDeprecated::WithPacketSocket(fio::wire::PacketSocket{
-        .event = response.has_event() ? std::move(response.event()) : zx::eventpair{},
+        .event = std::move(response.event()),
     }));
   }
   if (got == std::string_view{fuchsia_posix_socket_raw::wire::kSocketProtocolName}) {
@@ -185,8 +200,11 @@ zx::result<fio::wire::NodeInfoDeprecated> zxio_get_nodeinfo(
       return zx::error(result.status());
     }
     fidl::WireResponse response = result.value();
+    if (!response.has_event()) {
+      return zx::error(ZX_ERR_INVALID_ARGS);
+    }
     return zx::ok(fio::wire::NodeInfoDeprecated::WithRawSocket(fio::wire::RawSocket{
-        .event = response.has_event() ? std::move(response.event()) : zx::eventpair{},
+        .event = std::move(response.event()),
     }));
   }
   return zx::ok(fio::wire::NodeInfoDeprecated::WithService({}));

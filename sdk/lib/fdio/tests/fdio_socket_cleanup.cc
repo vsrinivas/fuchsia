@@ -128,6 +128,10 @@ TEST(SocketCleanup, Datagram) {
       fidl::WireResponse<fuchsia_posix_socket::DatagramSocket::Describe>{
           fuchsia_posix_socket::wire::DatagramSocketDescribeResponse::Builder(alloc)
               .socket(std::move(client_socket))
+              .tx_meta_buf_size(0)
+              .rx_meta_buf_size(0)
+              .metadata_encoding_protocol_version(
+                  fuchsia_io::wire::UdpMetadataEncodingProtocolVersion::kZero)
               .Build()},
       std::move(endpoints.value())));
 
