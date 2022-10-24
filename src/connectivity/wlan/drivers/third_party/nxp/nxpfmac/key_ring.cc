@@ -74,8 +74,21 @@ zx_status_t KeyRing::AddKey(const set_key_descriptor_t& key) {
   switch (key.cipher_suite_type) {
     case CIPHER_SUITE_TYPE_WEP_40:
     case CIPHER_SUITE_TYPE_WEP_104:
-    case CIPHER_SUITE_TYPE_TKIP:
       break;
+    case CIPHER_SUITE_TYPE_TKIP: {
+      // The RX and TX parts of the key needs to be swapped around as they are currently from the
+      // APs point of view. Some supplicants perform this swap so that when the key gets to this
+      // point it's ready to go. Our supplicant does not do this and firmware expects us to do the
+      // swap. Otherwise the key won't work.
+      constexpr size_t kApToClientKeyOffset = 16;
+      constexpr size_t kClientToApKeyOffset = 24;
+      constexpr size_t kKeyLength = 8;
+      uint8_t tmp[kKeyLength];
+      memcpy(tmp, &encrypt_key.key_material[kClientToApKeyOffset], sizeof(tmp));
+      memcpy(&encrypt_key.key_material[kClientToApKeyOffset],
+             &encrypt_key.key_material[kApToClientKeyOffset], sizeof(tmp));
+      memcpy(&encrypt_key.key_material[kApToClientKeyOffset], tmp, sizeof(tmp));
+    } break;
     case CIPHER_SUITE_TYPE_GCMP_128:
       encrypt_key.key_flags |= KEY_FLAG_GCMP;
       break;

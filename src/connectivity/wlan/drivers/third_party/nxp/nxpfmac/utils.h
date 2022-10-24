@@ -14,6 +14,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_UTILS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_UTILS_H_
 
+#include <fuchsia/wlan/ieee80211/c/banjo.h>
 #include <stdint.h>
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
@@ -27,6 +28,13 @@ constexpr uint8_t band_from_channel(uint32_t channel) {
 constexpr bool is_dfs_channel(uint32_t channel) {
   // TODO(https://fxbug.dev/110320): Take regulatory domain into consideration.
   return channel >= 52 && channel <= 144;
+}
+
+// Returns true if `cipher_suite` indicates the use of WPA1, WPA2, or WPA3.
+constexpr bool is_wpa_cipher_suite(uint8_t cipher_suite) {
+  return cipher_suite == CIPHER_SUITE_TYPE_TKIP || cipher_suite == CIPHER_SUITE_TYPE_CCMP_128 ||
+         cipher_suite == CIPHER_SUITE_TYPE_CCMP_256 || cipher_suite == CIPHER_SUITE_TYPE_GCMP_128 ||
+         cipher_suite == CIPHER_SUITE_TYPE_GCMP_256;
 }
 
 }  // namespace wlan::nxpfmac

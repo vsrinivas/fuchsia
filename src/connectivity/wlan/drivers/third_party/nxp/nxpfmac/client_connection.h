@@ -25,8 +25,6 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_request.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan/mlan_ieee.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/waitable_state.h"
 
 namespace wlan::nxpfmac {
@@ -52,9 +50,10 @@ class ClientConnection {
   ClientConnection(ClientConnectionIfc* ifc, DeviceContext* context, KeyRing* key_ring,
                    uint32_t bss_index);
   ~ClientConnection();
-  // Attempt to connect to given bssid on the given channel. Returns ZX_ERR_ALREADY_EXISTS if a
+  // Attempt to connect using the parameters provided in `req`. Returns ZX_ERR_ALREADY_EXISTS if a
   // connection attempt is already in progress. Returns ZX_OK if the request is successfully
-  // initiated, on_connect will be called asynchronously with the result of the connection attempt.
+  // initiated, `on_connect` will be called asynchronously with the result of the connection
+  // attempt.
   zx_status_t Connect(const wlan_fullmac_connect_req_t* req, OnConnectCallback&& on_connect)
       __TA_EXCLUDES(mutex_);
   // Cancel a connection attempt. This will call the on_connect callback passed to Connect if a

@@ -24,6 +24,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ies.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
+#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/utils.h"
 
 namespace wlan::nxpfmac {
 
@@ -87,6 +88,16 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
     return ZX_ERR_ALREADY_BOUND;
   }
 
+  auto ssid = IeView(req->selected_bss.ies_list, req->selected_bss.ies_count).get(SSID);
+  if (!ssid) {
+    NXPF_ERR("Missing SSID in connection request");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  if (ssid->size() > MLAN_MAX_SSID_LENGTH) {
+    NXPF_ERR("SSID length of %zu exceeds max length %u", ssid->size(), MLAN_MAX_SSID_LENGTH);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   zx_status_t status = key_ring_->RemoveAllKeys();
   if (status != ZX_OK) {
     NXPF_ERR("Could not remove all keys: %s", zx_status_get_string(status));
@@ -132,23 +143,22 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
     NXPF_ERR("Failed to get cipher suite from IEs: %s", zx_status_get_string(status));
     return status;
   }
-  if (pairwise_cipher_suite != group_cipher_suite) {
-    NXPF_ERR("Pairwise cipher suite %u and group cipher suite %u do not match, not yet supported",
-             pairwise_cipher_suite, group_cipher_suite);
-    return ZX_ERR_INVALID_ARGS;
-  }
 
-  // The linux driver seems to potentially set both the pairwise and group cipher suite here. But
-  // there is no differentiation in the ioctl to say which is which. So it seems that one would
-  // overwrite the other. Until we know more only set one of them and expect they're both the
-  // same.
   status = SetEncryptMode(pairwise_cipher_suite);
   if (status != ZX_OK) {
     NXPF_ERR("Failed to set pairwise cipher suite: %s", zx_status_get_string(status));
     return status;
   }
+  if (pairwise_cipher_suite != group_cipher_suite) {
+    // Only need to set the group cipher suite if it's different from the pairwise cipher suite.
+    status = SetEncryptMode(group_cipher_suite);
+    if (status != ZX_OK) {
+      NXPF_ERR("Failed to set group cipher suite: %s", zx_status_get_string(status));
+      return status;
+    }
+  }
 
-  if (req->security_ie_count > 0) {
+  if (is_wpa_cipher_suite(pairwise_cipher_suite) || is_wpa_cipher_suite(group_cipher_suite)) {
     status = SetWpaEnabled(true);
     if (status != ZX_OK) {
       NXPF_ERR("Failed to enable WPA: %s", zx_status_get_string(status));
@@ -203,16 +213,8 @@ zx_status_t ClientConnection::Connect(const wlan_fullmac_connect_req_t* req,
       });
   mlan_ssid_bssid& bss = connect_request_->UserReq().param.ssid_bssid;
   memcpy(bss.bssid, req->selected_bss.bssid, ETH_ALEN);
-
-  const IeView ies(req->selected_bss.ies_list, req->selected_bss.ies_count);
-
-  std::optional<Ie> ssid_ie = ies.get(SSID);
-  if (!ssid_ie.has_value()) {
-    NXPF_ERR("No SSID found in IEs");
-    return ZX_ERR_INVALID_ARGS;
-  }
-  bss.ssid.ssid_len = std::min<uint32_t>(ssid_ie->size(), sizeof(bss.ssid.ssid));
-  memcpy(bss.ssid.ssid, ssid_ie->data(), bss.ssid.ssid_len);
+  bss.ssid.ssid_len = ssid->size();
+  memcpy(bss.ssid.ssid, ssid->data(), bss.ssid.ssid_len);
 
   // This should be set before issuing the ioctl. The ioctl completion could theoretically be called
   // before IssueIoctl even returns.
