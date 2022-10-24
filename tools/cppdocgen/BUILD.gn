@@ -26,9 +26,6 @@ group("tests") {
   testonly = true
   deps = [
     "docgen:test",
-    # TODO(brettw) enable this end-to-end test when we can be sure that the build can reliably
-    # run it (this means that the compilation database is reliably generated):
-    #   https://bugs.chromium.org/p/gn/issues/detail?id=111
-    # "e2e_test",
+    "e2e_test",
   ]
 }

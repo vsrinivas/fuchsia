@@ -103,6 +103,11 @@ group("non_hermetic_deps") {
   visibility += [ "//build/bazel/assembly:*" ]
   visibility += [ "//build/bazel/tests/build_action:*" ]
   visibility += [ "//build/bazel/tests/bazel_input_resource_directory:*" ]
+
+  # Clang-doc reads a bunch of prebuilt libc/c++ headers when it runs (like the compiler would) but
+  # doesn't output a depfile. Our scripts are only looking for definitions in our code, so the
+  # effective output isn't dependent on these system files.
+  visibility += [ "//tools/cppdocgen/e2e_test:docgen_e2e_docs_clang_doc" ]
 }
 
 # Build targets that use the legacy zx_library and zx_host_tool templates

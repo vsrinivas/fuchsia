@@ -58,6 +58,14 @@ template("clang_doc_invoke") {
                              "deps",
                              "visibility",
                            ])
+
+    # This action runs Clang-doc which in turn loads the header files we depend on and many of the
+    # headers from the Clang prebuilt. Since clang-doc doesn't support depfiles, we can't know
+    # about all of these implicit header dependencies.
+    #
+    # But since the output of this is normally processed by cpp_docgen which explicitly ignores
+    # any system headers and types, the final output shouldn't be dependent on the prebuilt headers.
+    hermetic_deps = false
   }
 }
 
