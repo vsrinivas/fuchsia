@@ -239,12 +239,44 @@
                 "stopped_v2",
             ],
             from: "parent",
-            to: [
-                "#starnix-tests",
-                "#system-tests",
-                "#tests",
-                "#tier-2-tests",
+            to: "#starnix-tests",
+            scope: "#starnix-tests",
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "destroyed_v2",
+                "directory_ready_v2",
+                "started_v2",
+                "stopped_v2",
             ],
+            from: "parent",
+            to: "#system-tests",
+            scope: "#system-tests",
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "destroyed_v2",
+                "directory_ready_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: "#tier-2-tests",
+            scope: "#tier-2-tests",
+        },
+        {
+            event_stream: [
+                "capability_requested_v2",
+                "destroyed_v2",
+                "directory_ready_v2",
+                "started_v2",
+                "stopped_v2",
+            ],
+            from: "parent",
+            to: "#tests",
+            scope: "#tests",
         },
         {
             protocol: [
