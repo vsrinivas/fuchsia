@@ -430,26 +430,22 @@ struct AdvertiseMessage {
 }
 
 impl AdvertiseMessage {
-    fn is_complete(
-        &self,
-        configured_non_temporary_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
-        options_to_request: &[v6::OptionCode],
-    ) -> bool {
+    fn has_ias(&self) -> bool {
         let Self {
             server_id: _,
             non_temporary_addresses,
-            dns_servers,
+            dns_servers: _,
             preference: _,
             receive_time: _,
-            preferred_non_temporary_addresses_count,
+            preferred_non_temporary_addresses_count: _,
         } = self;
-        non_temporary_addresses.len() >= configured_non_temporary_addresses.len()
-            && *preferred_non_temporary_addresses_count
-                == configured_non_temporary_addresses
-                    .values()
-                    .filter(|&value| value.is_some())
-                    .count()
-            && options_to_request.contains(&v6::OptionCode::DnsServers) == !dns_servers.is_empty()
+        // We know we are performing stateful DHCPv6 since we are performing
+        // Server Discovery/Selection as stateless DHCPv6 does not use Advertise
+        // messages.
+        //
+        // We consider an Advertisement acceptable if at least one IA is
+        // available.
+        !non_temporary_addresses.is_empty()
     }
 }
 
@@ -1486,9 +1482,15 @@ impl ServerDiscovery {
         //    the Advertise message will be discarded by the client.
         //
         //    The client MUST ignore any Advertise message that contains no
-        //    addresses [..], with the exception that the client MUST process
-        //    an included SOL_MAX_RT option.
+        //    addresses (IA Address options (see Section 21.6) encapsulated in
+        //    IA_NA options (see Section 21.4) or IA_TA options (see Section 21.5))
+        //    and no delegated prefixes (IA Prefix options (see Section 21.22)
+        //    encapsulated in IA_PD options (see Section 21.21)), with the
+        //    exception that the client:
         //
+        //    -  MUST process an included SOL_MAX_RT option and
+        //
+        //    -  MUST process an included INF_MAX_RT option.
         let mut collected_sol_max_rt = collected_sol_max_rt;
         if let Some(solicit_max_rt) = solicit_max_rt_opt {
             collected_sol_max_rt.push(solicit_max_rt);
@@ -1571,25 +1573,6 @@ impl ServerDiscovery {
                 })
             })
             .collect::<HashMap<_, _>>();
-        // TODO(https://fxbug.dev/112643): Allow empty IA_NA if we only want
-        // IA_PD.
-        if non_temporary_addresses.is_empty() {
-            return Transition {
-                state: ClientState::ServerDiscovery(ServerDiscovery {
-                    client_id,
-                    configured_non_temporary_addresses,
-                    configured_delegated_prefixes,
-                    first_solicit_time,
-                    retrans_timeout,
-                    solicit_max_rt,
-                    collected_advertise,
-                    collected_sol_max_rt,
-                }),
-                actions: Vec::new(),
-                transaction_id: None,
-            };
-        }
-
         let preferred_non_temporary_addresses_count = compute_preferred_address_count(
             &non_temporary_addresses,
             &configured_non_temporary_addresses,
@@ -1606,13 +1589,29 @@ impl ServerDiscovery {
             receive_time: now,
             preferred_non_temporary_addresses_count,
         };
+        if !advertise.has_ias() {
+            return Transition {
+                state: ClientState::ServerDiscovery(ServerDiscovery {
+                    client_id,
+                    configured_non_temporary_addresses,
+                    configured_delegated_prefixes,
+                    first_solicit_time,
+                    retrans_timeout,
+                    solicit_max_rt,
+                    collected_advertise,
+                    collected_sol_max_rt,
+                }),
+                actions: Vec::new(),
+                transaction_id: None,
+            };
+        }
 
         let solicit_timeout = INITIAL_SOLICIT_TIMEOUT.as_secs_f64();
         let is_retransmitting = retrans_timeout.as_secs_f64()
             >= solicit_timeout + solicit_timeout * RANDOMIZATION_FACTOR_MAX;
 
         // Select server if its preference value is `255` and the advertise is
-        // complete, as described in RFC 8415, section 18.2.1:
+        // acceptable, as described in RFC 8415, section 18.2.1:
         //
         //    If the client receives a valid Advertise message that includes a
         //    Preference option with a preference value of 255, the client
@@ -1635,10 +1634,7 @@ impl ServerDiscovery {
         //    receives any valid Advertise message, and the client acts on the
         //    received Advertise message without waiting for any additional
         //    Advertise messages.
-        if (advertise.preference == ADVERTISE_MAX_PREFERENCE
-            && advertise.is_complete(&configured_non_temporary_addresses, options_to_request))
-            || is_retransmitting
-        {
+        if (advertise.preference == ADVERTISE_MAX_PREFERENCE) || is_retransmitting {
             let solicit_max_rt = get_common_value(&collected_sol_max_rt).unwrap_or(solicit_max_rt);
             let AdvertiseMessage {
                 server_id,
@@ -4872,50 +4868,48 @@ mod tests {
     }
 
     #[test]
-    fn advertise_message_is_complete() {
+    fn advertise_message_has_ias() {
         let configured_non_temporary_addresses = testutil::to_configured_addresses(
             2,
             std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
         );
 
+        // We requested 2 IAs and got both.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
             &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
             &[],
             &configured_non_temporary_addresses,
         );
-        assert!(advertise.is_complete(&configured_non_temporary_addresses, &[]));
+        assert!(advertise.has_ias());
 
-        // Advertise is not complete: does not contain the solicited address
-        // count.
+        // We requested 2 IAs but only got 1.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
             &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1],
             &[],
             &configured_non_temporary_addresses,
         );
-        assert!(!advertise.is_complete(&configured_non_temporary_addresses, &[]));
+        assert!(advertise.has_ias());
 
-        // Advertise is not complete: does not contain the solicited preferred
-        // address.
+        // We requested 2 IAs but got none.
+        let advertise = AdvertiseMessage::new_default(
+            SERVER_ID[0],
+            &[],
+            &[],
+            &configured_non_temporary_addresses,
+        );
+        assert!(!advertise.has_ias());
+
+        // Advertise is acceptable even though it does not contain the solicited
+        // preferred address.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
             &REPLY_NON_TEMPORARY_ADDRESSES[0..2],
             &[],
             &configured_non_temporary_addresses,
         );
-        assert!(!advertise.is_complete(&configured_non_temporary_addresses, &[]));
-
-        // Advertise is complete: contains both the requested addresses and
-        // the requested options.
-        let options_to_request = [v6::OptionCode::DnsServers];
-        let advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
-            &DNS_SERVERS,
-            &configured_non_temporary_addresses,
-        );
-        assert!(advertise.is_complete(&configured_non_temporary_addresses, &options_to_request));
+        assert!(advertise.has_ias());
     }
 
     #[test]
@@ -5187,13 +5181,13 @@ mod tests {
     }
 
     #[test]
-    fn receive_complete_advertise_with_max_preference() {
+    fn receive_advertise_with_max_preference() {
         let time = Instant::now();
         let mut client = testutil::start_and_assert_server_discovery(
             [0, 1, 2],
             CLIENT_ID,
             testutil::to_configured_addresses(
-                1,
+                2,
                 std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
             ),
             Default::default(),
@@ -5208,29 +5202,43 @@ mod tests {
             60,
             &[],
         ))];
-        let options = [
-            v6::DhcpOption::ClientId(&CLIENT_ID),
-            v6::DhcpOption::ServerId(&SERVER_ID[0]),
-            v6::DhcpOption::Preference(42),
-            v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                v6::IAID::new(0),
-                T1.get(),
-                T2.get(),
-                &iana_options,
-            )),
-        ];
-        let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
-            &client;
-        let builder =
-            v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
-        let mut buf = vec![0; builder.bytes_len()];
-        builder.serialize(&mut buf);
-        let mut buf = &buf[..]; // Implements BufferView.
-        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
 
-        // The client should stay in ServerDiscovery when receiving a complete
-        // advertise with preference less than 255.
-        assert!(client.handle_message_receive(msg, time).is_empty());
+        // The client should stay in ServerDiscovery when it gets an Advertise
+        // with:
+        //   - Preference < 255 & and at least one IA, or...
+        //   - Preference == 255 but no IAs
+        for (preference, iana) in [
+            (
+                42,
+                Some(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    v6::IAID::new(0),
+                    T1.get(),
+                    T2.get(),
+                    &iana_options,
+                ))),
+            ),
+            (255, None),
+        ]
+        .into_iter()
+        {
+            let options = [
+                v6::DhcpOption::ClientId(&CLIENT_ID),
+                v6::DhcpOption::ServerId(&SERVER_ID[0]),
+                v6::DhcpOption::Preference(preference),
+            ]
+            .into_iter()
+            .chain(iana)
+            .collect::<Vec<_>>();
+            let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
+                &client;
+            let builder =
+                v6::MessageBuilder::new(v6::MessageType::Advertise, *transaction_id, &options);
+            let mut buf = vec![0; builder.bytes_len()];
+            builder.serialize(&mut buf);
+            let mut buf = &buf[..]; // Implements BufferView.
+            let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+            assert_eq!(client.handle_message_receive(msg, time), []);
+        }
         let iana_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
             60,
