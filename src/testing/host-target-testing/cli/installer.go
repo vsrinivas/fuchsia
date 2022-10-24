@@ -30,6 +30,9 @@ const (
 	// Install OTAs with the system-update-checker.
 	SystemUpdateChecker = "system-update-checker"
 
+	// Install OTAs directly with the system-updater.
+	SystemUpdater = "system-updater"
+
 	// The default fuchsia update package URL.
 	defaultUpdatePackageURL = "fuchsia-pkg://fuchsia.com/update/0"
 )
@@ -141,6 +144,9 @@ func (c *InstallerConfig) ConfigureBuild(ctx context.Context, device *device.Cli
 	case SystemUpdateChecker:
 		return build, nil
 
+	case SystemUpdater:
+		return build, nil
+
 	default:
 		return nil, fmt.Errorf("Invalid installer mode %v", c.installerMode)
 	}
@@ -170,6 +176,9 @@ func (c *InstallerConfig) Updater(repo *packages.Repository, updatePackageURL st
 			return updater.NewSystemUpdateChecker(repo), nil
 		}
 
+		return updater.NewSystemUpdater(repo, updatePackageURL), nil
+
+	case SystemUpdater:
 		return updater.NewSystemUpdater(repo, updatePackageURL), nil
 
 	default:
