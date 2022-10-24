@@ -82,3 +82,16 @@ zx_library("peripheral-test") {
   sdk = "source"
   sdk_headers = [ "usb/peripheral-test.h" ]
 }
+
+zx_library("peripheral-config") {
+  sdk = "source"
+  sdk_headers = [ "usb/peripheral-config.h" ]
+  sources = [ "usb-peripheral-config.cc" ]
+  public_deps = [
+    "//src/devices/usb/lib/usb:cdc",
+    "//src/devices/usb/lib/usb:peripheral",
+    "//src/devices/usb/lib/usb:usb",
+    "//src/lib/ddk:ddk-metadata-headers",
+  ]
+  deps = [ "//zircon/system/ulib/zircon-internal" ]
+}

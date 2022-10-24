@@ -152,6 +152,7 @@ fuchsia_driver("vim3-driver") {
     "//src/devices/usb/lib/usb",
     "//src/devices/usb/lib/usb:cdc",
     "//src/devices/usb/lib/usb:peripheral",
+    "//src/devices/usb/lib/usb:peripheral-config",
     "//src/lib/ddk",
     "//src/lib/ddk:ddk-metadata-headers",
 
@@ -160,7 +161,6 @@ fuchsia_driver("vim3-driver") {
     "//src/lib/ddktl",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
-    "//zircon/system/ulib/zircon-internal",
     "//zircon/system/ulib/zx",
   ]
 

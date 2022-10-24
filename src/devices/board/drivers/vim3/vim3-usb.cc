@@ -10,7 +10,6 @@
 #include <lib/ddk/metadata.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
-#include <lib/zircon-internal/align.h>
 #include <zircon/status.h>
 
 #include <cstring>
@@ -20,6 +19,7 @@
 #include <soc/aml-meson/g12b-clk.h>
 #include <usb/cdc.h>
 #include <usb/dwc2/metadata.h>
+#include <usb/peripheral-config.h>
 #include <usb/peripheral.h>
 #include <usb/usb.h>
 
@@ -113,9 +113,6 @@ static const std::vector<fpbus::Bti> dwc2_btis{
         .bti_id = BTI_USB,
     }},
 };
-
-static const char kManufacturer[] = "Zircon";
-static const char kSerial[] = "0123456789ABCDEF";
 
 // Metadata for DWC2 driver.
 static const dwc2_metadata_t dwc2_metadata = {
@@ -229,13 +226,6 @@ static const device_fragment_t dwc2_fragments[] = {
     {"dwc2-phy", std::size(dwc2_phy_fragment), dwc2_phy_fragment},
 };
 
-static bool is_adb_enabled(zx_device_t* parent) {
-  char flag[32];
-  zx_status_t status =
-      device_get_variable(parent, "driver.adb.enable", flag, sizeof(flag), nullptr);
-  return status == ZX_OK && (!strncmp(flag, "true", sizeof(flag)));
-}
-
 zx_status_t Vim3::UsbInit() {
   // Turn on clocks.
   auto status = clk_impl_.Enable(g12b_clk::G12B_CLK_USB);
@@ -272,37 +262,13 @@ zx_status_t Vim3::UsbInit() {
   }
 
   // Create DWC2 Device
-  constexpr size_t alignment = alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
-                                   ? alignof(UsbConfig)
-                                   : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
-  constexpr size_t config_size = sizeof(UsbConfig) + 1 * sizeof(FunctionDescriptor);
-  UsbConfig* config =
-      reinterpret_cast<UsbConfig*>(aligned_alloc(alignment, ZX_ROUNDUP(config_size, alignment)));
-  if (!config) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  bool enable_adb = is_adb_enabled(parent_);
-  if (!enable_adb) {
-    // USB CDC Ethernet
-    config->vid = GOOGLE_USB_VID;
-    config->pid = GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID;
-    std::strncpy(config->manufacturer, kManufacturer, sizeof(kManufacturer));
-    std::strncpy(config->serial, kSerial, sizeof(kSerial));
-    std::strncpy(config->product, "CDC-Ethernet", sizeof("CDC-Ethernet"));
-    config->functions[0].interface_class = USB_CLASS_COMM;
-    config->functions[0].interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
-    config->functions[0].interface_protocol = 0;
-  } else {
-    // USB ADB
-    config->vid = GOOGLE_USB_VID;
-    config->pid = GOOGLE_USB_ADB_PID;
-    std::strncpy(config->manufacturer, kManufacturer, sizeof(kManufacturer));
-    std::strncpy(config->serial, kSerial, sizeof(kSerial));
-    std::strncpy(config->product, "ADB", sizeof("ADB"));
-    config->functions[0].interface_class = USB_CLASS_VENDOR;
-    config->functions[0].interface_subclass = USB_SUBCLASS_ADB;
-    config->functions[0].interface_protocol = USB_PROTOCOL_ADB;
+  UsbConfig* config = nullptr;
+  size_t config_size = 0;
+  usb::UsbPeripheralConfig peripheral_config(parent_);
+  status = peripheral_config.GetUsbConfigFromBootArgs(&config, &config_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "Failed to get usb config from boot args - %d", status);
+    return status;
   }
 
   dwc2_dev.metadata().value()[0].data().emplace(std::vector<uint8_t>(

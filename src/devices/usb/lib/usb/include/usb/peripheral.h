@@ -25,7 +25,10 @@
 // USB Product ID for CDC Ethernet and Function Test composite device.
 #define GOOGLE_USB_CDC_AND_FUNCTION_TEST_PID 0xA023
 
-// ADB Product ID
+// USB Product ID for ADB Function.
 #define GOOGLE_USB_ADB_PID 0xA025
+
+// USB Product ID for CDC Ethernet and ADB composite device.
+#define GOOGLE_USB_CDC_AND_ADB_PID 0xA026
 
 #endif  // SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_PERIPHERAL_H_
