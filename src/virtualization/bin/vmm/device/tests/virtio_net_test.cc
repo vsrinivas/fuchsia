@@ -32,6 +32,16 @@ constexpr uint16_t kQueueSize = 64;
 constexpr size_t kVmoSize = 4096ul * kQueueSize;
 constexpr size_t kNetclientNumDescriptors = 16;
 
+constexpr auto kCppComponentUrl = "#meta/virtio_net.cm";
+constexpr auto kRustComponentUrl = "#meta/virtio_net_rs.cm";
+constexpr auto kComponentName = "virtio_net";
+constexpr auto kFakeNetwork = "fake_network";
+
+struct VirtioNetTestParam {
+  std::string test_name;
+  std::string component_url;
+};
+
 // A POD struct representing a virtio-net descriptor.
 template <size_t Size>
 struct Packet {
@@ -119,7 +129,8 @@ class FakeNetwork : public fuchsia::net::virtualization::Control,
   std::optional<PortId> port_id_;
 };
 
-class VirtioNetTest : public TestWithDevice {
+class VirtioNetTest : public TestWithDevice,
+                      public ::testing::WithParamInterface<VirtioNetTestParam> {
  protected:
   VirtioNetTest()
       : rx_queue_(phys_mem_, kVmoSize * kNumQueues, kQueueSize),
@@ -134,12 +145,8 @@ class VirtioNetTest : public TestWithDevice {
     using component_testing::RealmRoot;
     using component_testing::Route;
 
-    constexpr auto kComponentUrl = "#meta/virtio_net.cm";
-    constexpr auto kComponentName = "virtio_net";
-    constexpr auto kFakeNetwork = "fake_network";
-
     auto realm_builder = RealmBuilder::Create();
-    realm_builder.AddChild(kComponentName, kComponentUrl);
+    realm_builder.AddChild(kComponentName, GetParam().component_url);
     realm_builder.AddLocalChild(kFakeNetwork, &fake_network_);
 
     realm_builder
@@ -233,6 +240,8 @@ class VirtioNetTest : public TestWithDevice {
     }
   }
 
+  bool IsRustDevice() { return GetParam().test_name == "rust"; }
+
   fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
@@ -240,7 +249,14 @@ class VirtioNetTest : public TestWithDevice {
   std::unique_ptr<component_testing::RealmRoot> realm_;
 };
 
-TEST_F(VirtioNetTest, ConnectDisconnect) {
+INSTANTIATE_TEST_SUITE_P(VirtioNetTestInstantiation, VirtioNetTest,
+                         ::testing::Values(VirtioNetTestParam{"cpp", kCppComponentUrl},
+                                           VirtioNetTestParam{"rust", kRustComponentUrl}),
+                         [](const ::testing::TestParamInfo<VirtioNetTestParam>& info) {
+                           return info.param.test_name;
+                         });
+
+TEST_P(VirtioNetTest, ConnectDisconnect) {
   // Ensure we are connected.
   ASSERT_TRUE(fake_network_.device_client()->HasSession());
 
@@ -254,7 +270,12 @@ TEST_F(VirtioNetTest, ConnectDisconnect) {
   ASSERT_FALSE(fake_network_.device_client()->HasSession());
 }
 
-TEST_F(VirtioNetTest, SendToGuest) {
+TEST_P(VirtioNetTest, SendToGuest) {
+  if (IsRustDevice()) {
+    // TODO(fxbug.dev/95485): Add support for RX.
+    GTEST_SKIP();
+  }
+
   constexpr uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
   // Add a descriptor to the RX queue, allowing the guest to receive a packet.
@@ -283,7 +304,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
   }
 }
 
-TEST_F(VirtioNetTest, ReceiveFromGuest) {
+TEST_P(VirtioNetTest, ReceiveFromGuest) {
   std::vector<NetworkDeviceClient::Buffer> received;
   fake_network_.device_client()->SetRxCallback(
       [&](NetworkDeviceClient::Buffer buffer) { received.push_back(std::move(buffer)); });
@@ -312,7 +333,7 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
             std::basic_string_view(packet.data, kPacketSize));
 }
 
-TEST_F(VirtioNetTest, ResumesReceiveFromGuest) {
+TEST_P(VirtioNetTest, ResumesReceiveFromGuest) {
   std::mutex mutex;
   std::vector<NetworkDeviceClient::Buffer> received;  // guarded by `mutex`
   fake_network_.device_client()->SetRxCallback([&](NetworkDeviceClient::Buffer buffer) {

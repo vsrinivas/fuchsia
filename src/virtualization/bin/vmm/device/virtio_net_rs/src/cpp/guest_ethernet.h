@@ -84,6 +84,8 @@ class GuestEthernet : public ddk::NetworkDeviceImplProtocol<GuestEthernet>,
     kShuttingDown,  // Device is shutting down, waiting for outstanding transmissions to complete.
   };
 
+  void Teardown();
+
   // Notify the netstack that the given buffer has been used. A length of 0 can be sent to indicate
   // that the buffer was unused.
   //

@@ -60,12 +60,20 @@ bool IsTxBufferSupported(const tx_buffer& buffer) {
 }  // namespace
 
 GuestEthernet::~GuestEthernet() {
-  loop_.Shutdown();
+  Teardown();
   loop_.JoinThreads();
 }
 
 zx_status_t GuestEthernet::StartDispatchLoop() {
   return loop_.StartThread("guest-ethernet-dispatcher");
+}
+
+void GuestEthernet::Teardown() {
+  netstack_.Unbind();
+  network_.Unbind();
+  interface_registration_.Unbind();
+
+  device_interface_->Teardown([this]() { loop_.Quit(); });
 }
 
 zx_status_t GuestEthernet::Initialize(const void* rust_guest_ethernet, const uint8_t* mac,
