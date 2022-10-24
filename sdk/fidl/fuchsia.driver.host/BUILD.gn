@@ -9,6 +9,7 @@ fidl("fuchsia.driver.host") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.driver.framework",
+    "//sdk/fidl/fuchsia.ldsvc",
     "//zircon/vdso/zx",
   ]
 }

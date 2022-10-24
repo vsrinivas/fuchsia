@@ -102,4 +102,13 @@ zx::result<uint64_t> DriverHostComponent::GetProcessKoid() const {
   return zx::ok(result->value()->koid);
 }
 
+zx::result<> DriverHostComponent::InstallLoader(
+    fidl::ClientEnd<fuchsia_ldsvc::Loader> loader_client) const {
+  auto result = driver_host_->InstallLoader(std::move(loader_client));
+  if (!result.ok()) {
+    return zx::error(result.status());
+  }
+  return zx::ok();
+}
+
 }  // namespace dfv2

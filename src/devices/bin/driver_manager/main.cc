@@ -280,9 +280,30 @@ int main(int argc, char** argv) {
     LOGF(ERROR, "Failed to connect to driver_index: %d", driver_index_result.error_value());
     return driver_index_result.error_value();
   }
-  auto driver_runner =
-      dfv2::DriverRunner(std::move(realm_result.value()), std::move(driver_index_result.value()),
-                         inspect_manager.inspector(), loop.dispatcher());
+
+  fbl::unique_fd lib_fd;
+  {
+    status = fdio_open_fd("/boot/lib/",
+                          static_cast<uint32_t>(fio::wire::OpenFlags::kDirectory |
+                                                fio::wire::OpenFlags::kRightReadable |
+                                                fio::wire::OpenFlags::kRightExecutable),
+                          lib_fd.reset_and_get_address());
+    if (status != ZX_OK) {
+      LOGF(ERROR, "Failed to open /boot/lib/ : %s", zx_status_get_string(status));
+      return status;
+    }
+  }
+  // The loader needs its own thread because DriverManager makes synchronous calls to the
+  // DriverHosts, which make synchronous calls to load their shared libraries.
+  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  loader_loop.StartThread("loader-loop");
+
+  auto loader_service =
+      DriverHostLoaderService::Create(loader_loop.dispatcher(), std::move(lib_fd));
+  auto driver_runner = dfv2::DriverRunner(
+      std::move(realm_result.value()), std::move(driver_index_result.value()),
+      inspect_manager.inspector(), [loader_service]() { return loader_service->Connect(); },
+      loop.dispatcher());
   driver_runner.PublishComponentRunner(outgoing);
 
   // Find and load v1 or v2 Drivers.
@@ -332,34 +353,16 @@ int main(int argc, char** argv) {
          "continuing");
   }
 
-  fbl::unique_fd lib_fd;
-  {
-    status = fdio_open_fd("/boot/lib/",
-                          static_cast<uint32_t>(fio::wire::OpenFlags::kDirectory |
-                                                fio::wire::OpenFlags::kRightReadable |
-                                                fio::wire::OpenFlags::kRightExecutable),
-                          lib_fd.reset_and_get_address());
-    if (status != ZX_OK) {
-      LOGF(ERROR, "Failed to open /boot/lib/ : %s", zx_status_get_string(status));
-      return status;
-    }
-  }
-
-  // The loader needs its own thread because DriverManager makes synchronous calls to the
-  // DriverHosts, which make synchronous calls to load their shared libraries.
-  async::Loop loader_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-  auto loader_service =
-      DriverHostLoaderService::Create(loader_loop.dispatcher(), std::move(lib_fd));
-  coordinator.set_loader_service_connector([ls = std::move(loader_service)](zx::channel* c) {
-    auto conn = ls->Connect();
-    if (conn.is_error()) {
-      LOGF(ERROR, "Failed to add driver_host loader connection: %s", conn.status_string());
-    } else {
-      *c = conn->TakeChannel();
-    }
-    return conn.status_value();
-  });
-  loader_loop.StartThread();
+  coordinator.set_loader_service_connector(
+      [loader_service = std::move(loader_service)](zx::channel* c) {
+        auto conn = loader_service->Connect();
+        if (conn.is_error()) {
+          LOGF(ERROR, "Failed to add driver_host loader connection: %s", conn.status_string());
+        } else {
+          *c = conn->TakeChannel();
+        }
+        return conn.status_value();
+      });
 
   // TODO(https://fxbug.dev/99076) Remove this when this issue is fixed.
   LOGF(INFO, "driver_manager loader loop started");

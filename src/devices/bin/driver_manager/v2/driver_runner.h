@@ -9,6 +9,7 @@
 #include <fidl/fuchsia.driver.development/cpp/wire.h>
 #include <fidl/fuchsia.driver.host/cpp/wire.h>
 #include <fidl/fuchsia.driver.index/cpp/wire.h>
+#include <fidl/fuchsia.ldsvc/cpp/wire.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/fidl/cpp/wire/wire_messaging.h>
@@ -42,10 +43,13 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
                      public fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>,
                      public CompositeManagerBridge,
                      public NodeManager {
+  using LoaderServiceFactory = fit::function<zx::result<fidl::ClientEnd<fuchsia_ldsvc::Loader>>()>;
+
  public:
   DriverRunner(fidl::ClientEnd<fuchsia_component::Realm> realm,
                fidl::ClientEnd<fuchsia_driver_index::DriverIndex> driver_index,
-               inspect::Inspector& inspector, async_dispatcher_t* dispatcher);
+               inspect::Inspector& inspector, LoaderServiceFactory loader_service_factory,
+               async_dispatcher_t* dispatcher);
 
   // fidl::WireServer<fuchsia_driver_framework::DeviceGroupManager>
   void CreateDeviceGroup(CreateDeviceGroupRequestView request,
@@ -102,6 +106,7 @@ class DriverRunner : public fidl::WireServer<fuchsia_component_runner::Component
   uint64_t next_driver_host_id_ = 0;
   fidl::WireClient<fuchsia_component::Realm> realm_;
   fidl::WireClient<fuchsia_driver_index::DriverIndex> driver_index_;
+  LoaderServiceFactory loader_service_factory_;
   async_dispatcher_t* const dispatcher_;
   std::shared_ptr<Node> root_node_;
 

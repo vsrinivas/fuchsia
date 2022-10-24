@@ -153,9 +153,12 @@ fidl::StringView CollectionName(Collection collection) {
 
 DriverRunner::DriverRunner(fidl::ClientEnd<fcomponent::Realm> realm,
                            fidl::ClientEnd<fdi::DriverIndex> driver_index,
-                           inspect::Inspector& inspector, async_dispatcher_t* dispatcher)
+                           inspect::Inspector& inspector,
+                           LoaderServiceFactory loader_service_factory,
+                           async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
       driver_index_(std::move(driver_index), dispatcher),
+      loader_service_factory_(std::move(loader_service_factory)),
       dispatcher_(dispatcher),
       root_node_(std::make_shared<Node>("root", std::vector<Node*>{}, this, dispatcher)),
       composite_device_manager_(this, dispatcher, [this]() { this->TryBindAllOrphansUntracked(); }),
@@ -557,8 +560,21 @@ zx::result<DriverHost*> DriverRunner::CreateDriverHost() {
     return client_end.take_error();
   }
 
+  auto loader_service_client = loader_service_factory_();
+  if (loader_service_client.is_error()) {
+    LOGF(ERROR, "Failed to connect to service fuchsia.ldsvc/Loader: %s",
+         loader_service_client.status_string());
+    return loader_service_client.take_error();
+  }
+
   auto driver_host =
       std::make_unique<DriverHostComponent>(std::move(*client_end), dispatcher_, &driver_hosts_);
+  auto result = driver_host->InstallLoader(std::move(*loader_service_client));
+  if (result.is_error()) {
+    LOGF(ERROR, "Failed to install loader service: %s", result.status_string());
+    return result.take_error();
+  }
+
   auto driver_host_ptr = driver_host.get();
   driver_hosts_.push_back(std::move(driver_host));
 

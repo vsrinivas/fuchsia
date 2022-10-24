@@ -36,6 +36,8 @@ class DriverHostComponent final
 
   zx::result<uint64_t> GetProcessKoid() const override;
 
+  zx::result<> InstallLoader(fidl::ClientEnd<fuchsia_ldsvc::Loader> loader_client) const;
+
  private:
   fidl::WireSharedClient<fuchsia_driver_host::DriverHost> driver_host_;
 };

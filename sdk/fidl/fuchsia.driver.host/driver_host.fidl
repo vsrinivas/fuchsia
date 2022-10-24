@@ -4,6 +4,7 @@
 library fuchsia.driver.host;
 
 using fuchsia.driver.framework;
+using fuchsia.ldsvc;
 using zx;
 
 /// Protocol through which a driver's lifecycle can be managed.
@@ -43,4 +44,10 @@ protocol DriverHost {
     GetProcessKoid() -> (struct {
         koid uint64;
     }) error zx.status;
+
+    /// Provides a loader service which should be installed via
+    /// `dl_set_loader_service`.
+    InstallLoader(resource struct {
+        loader client_end:fuchsia.ldsvc.Loader;
+    });
 };

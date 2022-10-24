@@ -13,6 +13,7 @@
 #include <lib/fit/function.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 #include <lib/syslog/cpp/macros.h>
+#include <zircon/dlfcn.h>
 
 #include "src/lib/storage/vfs/cpp/service.h"
 
@@ -93,6 +94,11 @@ void DriverHost::GetProcessKoid(GetProcessKoidCompleter::Sync& completer) {
     completer.Reply(zx::error(status));
   }
   completer.Reply(zx::ok(info.koid));
+}
+
+void DriverHost::InstallLoader(InstallLoaderRequest& request,
+                               InstallLoaderCompleter::Sync& completer) {
+  zx::handle old_handle(dl_set_loader_service(request.loader().TakeChannel().release()));
 }
 
 zx::result<> DriverHost::StartDriver(fbl::RefPtr<Driver> driver,
