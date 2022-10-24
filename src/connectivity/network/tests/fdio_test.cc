@@ -108,12 +108,11 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   ASSERT_OK(fdio_fd_transfer(fd.release(), client_end.channel().reset_and_get_address()));
   fidl::WireSyncClient client{std::move(client_end)};
 
-  auto response = client->DescribeDeprecated();
-  ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfoDeprecated& node_info = response->info;
-  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket);
-
-  const zx::socket& socket = node_info.stream_socket().socket;
+  const fidl::WireResult result = client->Describe();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_TRUE(response.has_socket());
+  const zx::socket& socket = response.socket();
 
   EXPECT_STATUS(socket.signal(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED);
   EXPECT_STATUS(socket.signal(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED);
@@ -121,22 +120,34 @@ TEST(SocketTest, ZXSocketSignalNotPermitted) {
   EXPECT_STATUS(socket.signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED);
 }
 
-static const zx::socket& stream_handle(const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
-  return node_info.stream_socket().socket;
+static std::optional<zx::socket> stream_handle(
+    fidl::WireResponse<typename fuchsia_posix_socket::StreamSocket::Describe> response) {
+  if (response.has_socket()) {
+    return std::move(response.socket());
+  };
+  return {};
 }
 
-static const zx::socket& datagram_handle(const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
-  return node_info.datagram_socket().socket;
+static std::optional<zx::socket> datagram_handle(
+    fidl::WireResponse<typename fuchsia_posix_socket::DatagramSocket::Describe> response) {
+  if (response.has_socket()) {
+    return std::move(response.socket());
+  };
+  return {};
 }
 
-static const zx::eventpair& synchronous_datagram_handle(
-    const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
-  return node_info.synchronous_datagram_socket().event;
+static std::optional<zx::eventpair> synchronous_datagram_handle(
+    fidl::WireResponse<typename fuchsia_posix_socket::SynchronousDatagramSocket::Describe>
+        response) {
+  if (response.has_event()) {
+    return std::move(response.event());
+  };
+  return {};
 }
 
-template <int Type, int NetworkProtocol, typename FidlProtocol,
-          fuchsia_io::wire::NodeInfoDeprecated::Tag Tag, typename HandleType,
-          const HandleType& (*GetHandle)(const fuchsia_io::wire::NodeInfoDeprecated& node_info),
+template <int Type, int NetworkProtocol, typename FidlProtocol, typename HandleType,
+          std::optional<HandleType> (*GetHandle)(
+              typename fidl::WireResponse<typename FidlProtocol::Describe>),
           zx_signals_t PeerClosed>
 struct SocketImpl {
   using Client = fidl::WireSyncClient<FidlProtocol>;
@@ -145,29 +156,25 @@ struct SocketImpl {
 
   static int type() { return Type; }
   static int network_protocol() { return NetworkProtocol; }
-  static fuchsia_io::wire::NodeInfoDeprecated::Tag tag() { return Tag; }
-  static const Handle& handle(const fuchsia_io::wire::NodeInfoDeprecated& node_info) {
-    return GetHandle(node_info);
+  static std::optional<Handle> handle(
+      typename fidl::WireResponse<typename FidlProtocol::Describe> response) {
+    return GetHandle(response);
   }
   static zx_signals_t peer_closed() { return PeerClosed; }
 };
 
 using StreamSocketImpl = SocketImpl<SOCK_STREAM, IPPROTO_IP, fuchsia_posix_socket::StreamSocket,
-                                    fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket,
                                     zx::socket, stream_handle, ZX_SOCKET_PEER_CLOSED>;
 
 using SynchronousDatagramSocketImplIcmp =
     SocketImpl<SOCK_DGRAM, IPPROTO_ICMP, fuchsia_posix_socket::SynchronousDatagramSocket,
-               fuchsia_io::wire::NodeInfoDeprecated::Tag::kSynchronousDatagramSocket, zx::eventpair,
-               synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
+               zx::eventpair, synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
 
 using SynchronousDatagramSocketImplIp =
     SocketImpl<SOCK_DGRAM, IPPROTO_IP, fuchsia_posix_socket::SynchronousDatagramSocket,
-               fuchsia_io::wire::NodeInfoDeprecated::Tag::kSynchronousDatagramSocket, zx::eventpair,
-               synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
+               zx::eventpair, synchronous_datagram_handle, ZX_EVENTPAIR_PEER_CLOSED>;
 
 using DatagramSocketImpl = SocketImpl<SOCK_DGRAM, IPPROTO_IP, fuchsia_posix_socket::DatagramSocket,
-                                      fuchsia_io::wire::NodeInfoDeprecated::Tag::kDatagramSocket,
                                       zx::socket, datagram_handle, ZX_SOCKET_PEER_CLOSED>;
 
 template <typename Impl>
@@ -244,25 +251,27 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
       fdio_fd_transfer(this->mutable_fd().release(), client_end.channel().reset_and_get_address()));
   client.Bind(std::move(client_end));
 
-  auto describe_response = client->DescribeDeprecated();
-  ASSERT_OK(describe_response.status());
-  const fuchsia_io::wire::NodeInfoDeprecated& node_info = describe_response->info;
-  ASSERT_EQ(node_info.Which(), TypeParam::tag());
+  const fidl::WireResult describe_result = client->Describe();
+  ASSERT_OK(describe_result.status());
+  const fidl::WireResponse describe_response = describe_result.value();
+  std::optional handle_opt = TypeParam::handle(describe_response);
+  ASSERT_TRUE(handle_opt.has_value());
+  typename TypeParam::Handle& handle = handle_opt.value();
 
   zx_signals_t observed;
 
-  ASSERT_STATUS(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(),
-                                                      zx::deadline_after(zx::msec(100)), &observed),
-                ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(
+      handle.wait_one(TypeParam::peer_closed(), zx::deadline_after(zx::msec(100)), &observed),
+      ZX_ERR_TIMED_OUT);
 
   auto close_response = client->Close();
   EXPECT_OK(close_response.status());
   EXPECT_TRUE(close_response->is_ok()) << zx_status_get_string(close_response->error_value());
 
   // We still have `clone`, nothing should be closed yet.
-  ASSERT_STATUS(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(),
-                                                      zx::deadline_after(zx::msec(100)), &observed),
-                ZX_ERR_TIMED_OUT);
+  ASSERT_STATUS(
+      handle.wait_one(TypeParam::peer_closed(), zx::deadline_after(zx::msec(100)), &observed),
+      ZX_ERR_TIMED_OUT);
 
   clone.reset();
 
@@ -270,7 +279,7 @@ TYPED_TEST(SocketTest, CloseResourcesOnClose) {
   // respect to the `Close` FIDL call above (since its return must come over the channel). The
   // handle closure is not inherently asynchronous, but happens to be as an implementation detail.
   zx::time deadline = zx::deadline_after(zx::sec(5));
-  ASSERT_OK(TypeParam::handle(node_info).wait_one(TypeParam::peer_closed(), deadline, &observed));
+  ASSERT_OK(handle.wait_one(TypeParam::peer_closed(), deadline, &observed));
   ASSERT_OK(client.client_end().channel().wait_one(ZX_CHANNEL_PEER_CLOSED, deadline, &observed));
 }
 
@@ -312,12 +321,11 @@ TEST(SocketTest, AcceptedSocketIsConnected) {
   ASSERT_OK(fdio_fd_transfer(connfd.release(), client_end.channel().reset_and_get_address()));
   fidl::WireSyncClient client{std::move(client_end)};
 
-  auto response = client->DescribeDeprecated();
-  ASSERT_OK(response.status());
-  const fuchsia_io::wire::NodeInfoDeprecated& node_info = response->info;
-  ASSERT_EQ(node_info.Which(), fuchsia_io::wire::NodeInfoDeprecated::Tag::kStreamSocket);
-
-  const zx::socket& socket = node_info.stream_socket().socket;
+  const fidl::WireResult result = client->Describe();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_TRUE(response.has_socket());
+  const zx::socket& socket = response.socket();
 
   zx_signals_t pending;
   ASSERT_STATUS(socket.wait_one(0, zx::time::infinite_past(), &pending), ZX_ERR_TIMED_OUT);

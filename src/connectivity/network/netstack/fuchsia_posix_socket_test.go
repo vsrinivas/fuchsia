@@ -8,7 +8,6 @@ package netstack
 
 import (
 	"context"
-	fidlio "fidl/fuchsia/io"
 	"fmt"
 	"syscall/zx"
 	"testing"
@@ -67,16 +66,13 @@ func TestDatagramSocketWithBlockingEndpoint(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			s.cancel = cancel
 
-			io, err := s.DescribeDeprecated(context.Background())
+			io, err := s.Describe(context.Background())
 			if err != nil {
 				t.Fatalf("got s.Describe(): %s", err)
 			}
-			if got, want := io.Which(), fidlio.I_nodeInfoDeprecatedTag(fidlio.NodeInfoDeprecatedDatagramSocket); got != want {
-				t.Fatalf("got io.Which() = %#v, want %#v", got, want)
-			}
 
 			data := []byte{0, 1, 2, 3, 4}
-			preludeSize := io.DatagramSocket.TxMetaBufSize
+			preludeSize := io.TxMetaBufSize
 			buf := make([]byte, len(data)+int(preludeSize))
 
 			toAddr := &tcpip.FullAddress{
@@ -96,7 +92,7 @@ func TestDatagramSocketWithBlockingEndpoint(t *testing.T) {
 			writeUntilBlocked := func() uint {
 				written := 0
 				for {
-					n, err := io.DatagramSocket.Socket.Write(buf, 0)
+					n, err := io.Socket.Write(buf, 0)
 					if err == nil {
 						if got, want := n, len(buf); got != want {
 							t.Fatalf("got zx.socket.Write(_) = (%d, %s), want (%d, nil)", got, err, want)

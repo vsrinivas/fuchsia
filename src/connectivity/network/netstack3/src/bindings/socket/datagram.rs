@@ -2896,7 +2896,6 @@ mod tests {
     use fidl::{
         encoding::Decodable,
         endpoints::{Proxy, ServerEnd},
-        AsyncChannel,
     };
     use fuchsia_async as fasync;
     use fuchsia_zircon::{self as zx, AsHandleRef};
@@ -2959,12 +2958,9 @@ mod tests {
         proto: fposix_socket::DatagramSocketProtocol,
     ) -> (fposix_socket::SynchronousDatagramSocketProxy, zx::EventPair) {
         let ctlr = get_socket::<A>(test_stack, proto).await;
-        let node_info = ctlr.describe_deprecated().await.expect("Socked describe succeeds");
-        let event = match node_info {
-            fio::NodeInfoDeprecated::SynchronousDatagramSocket(e) => e.event,
-            _ => panic!("Got wrong describe response for UDP socket"),
-        };
-        (ctlr, event)
+        let fposix_socket::SynchronousDatagramSocketDescribeResponse { event, .. } =
+            ctlr.describe().await.expect("Socket describe succeeds");
+        (ctlr, event.expect("Socket describe contains event"))
     }
 
     macro_rules! declare_tests {
@@ -3359,19 +3355,9 @@ mod tests {
                 panic!("expected SynchronousDatagramSocket, found DatagramSocket")
             }
         };
-        let info = socket
-            .into_proxy()
-            .unwrap()
-            .describe_deprecated()
-            .await
-            .expect("Describe call succeeds");
-        match info {
-            fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => (),
-            info => panic!(
-                "Socket Describe call did not return Node of type Socket, got {:?} instead",
-                info
-            ),
-        }
+        let fposix_socket::SynchronousDatagramSocketDescribeResponse { event, .. } =
+            socket.into_proxy().unwrap().describe().await.expect("Describe call succeeds");
+        let _: zx::EventPair = event.expect("Describe call returns event");
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -3460,12 +3446,12 @@ mod tests {
 
     async fn socket_clone(
         socket: &fposix_socket::SynchronousDatagramSocketProxy,
-        flags: fio::OpenFlags,
     ) -> Result<fposix_socket::SynchronousDatagramSocketProxy, Error> {
-        let (server, client) = zx::Channel::create()?;
-        socket.clone(flags, ServerEnd::from(server))?;
-        let channel = AsyncChannel::from_channel(client)?;
-        Ok(fposix_socket::SynchronousDatagramSocketProxy::new(channel))
+        let (client, server) =
+            fidl::endpoints::create_proxy::<fposix_socket::SynchronousDatagramSocketMarker>()?;
+        let server = ServerEnd::new(server.into_channel());
+        let () = socket.clone2(server)?;
+        Ok(client)
     }
 
     async fn clone<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
@@ -3491,39 +3477,10 @@ mod tests {
             .await
             .unwrap();
         let (alice_socket, alice_events) = get_socket_and_event::<A>(t.get(0), proto).await;
-        // Test for the OPEN_FLAG_DESCRIBE.
-        let alice_cloned = socket_clone(
-            &alice_socket,
-            fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::DESCRIBE,
-        )
-        .await
-        .expect("cannot clone socket");
-        let mut events = alice_cloned.take_event_stream();
-        match events.next().await.expect("stream closed").expect("failed to decode") {
-            fposix_socket::SynchronousDatagramSocketEvent::OnOpen_ { s, info } => {
-                assert_eq!(s, zx::sys::ZX_OK);
-                let info = info.unwrap();
-                match *info {
-                    fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => (),
-                    info => panic!(
-                        "Socket Describe call did not return Node of type Socket, got {:?} instead",
-                        info
-                    ),
-                }
-            }
-            event @ fposix_socket::SynchronousDatagramSocketEvent::OnRepresentation {
-                payload: _,
-            } => panic!("Socket Clone produced unexpected event {:?}", event),
-        }
-        // describe() explicitly.
-        let info = alice_cloned.describe_deprecated().await.expect("Describe call succeeds");
-        match info {
-            fio::NodeInfoDeprecated::SynchronousDatagramSocket(_) => (),
-            info => panic!(
-                "Socket Describe call did not return Node of type Socket, got {:?} instead",
-                info
-            ),
-        }
+        let alice_cloned = socket_clone(&alice_socket).await.expect("cannot clone socket");
+        let fposix_socket::SynchronousDatagramSocketDescribeResponse { event: alice_event, .. } =
+            alice_cloned.describe().await.expect("Describe call succeeds");
+        let _: zx::EventPair = alice_event.expect("Describe call returns event");
 
         let () = alice_socket
             .bind(&mut A::create(A::LOCAL_ADDR, 200))
@@ -3537,9 +3494,7 @@ mod tests {
         );
 
         let (bob_socket, bob_events) = get_socket_and_event::<A>(t.get(1), proto).await;
-        let bob_cloned = socket_clone(&bob_socket, fio::OpenFlags::CLONE_SAME_RIGHTS)
-            .await
-            .expect("failed to clone socket");
+        let bob_cloned = socket_clone(&bob_socket).await.expect("failed to clone socket");
         let () = bob_cloned
             .bind(&mut A::create(A::REMOTE_ADDR, 200))
             .await
@@ -3589,73 +3544,6 @@ mod tests {
                 .expect_err("Reading from bob should fail"),
             fposix::Errno::Eagain
         );
-
-        {
-            let alice_readonly =
-                socket_clone(&alice_socket, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
-            let bob_writeonly =
-                socket_clone(&bob_cloned, fio::OpenFlags::RIGHT_WRITABLE).await.unwrap();
-            // We shouldn't allow the following.
-            expect_clone_invalid_args(&alice_readonly, fio::OpenFlags::RIGHT_WRITABLE).await;
-            expect_clone_invalid_args(&bob_writeonly, fio::OpenFlags::RIGHT_READABLE).await;
-
-            assert_eq!(
-                alice_readonly
-                    .send_msg(
-                        Some(&mut A::create(A::LOCAL_ADDR, 200)),
-                        &body,
-                        fposix_socket::DatagramSocketSendControlData::EMPTY,
-                        fposix_socket::SendMsgFlags::empty()
-                    )
-                    .await
-                    .unwrap()
-                    .expect_err("should not send_msg on a readonly socket"),
-                fposix::Errno::Eperm,
-            );
-
-            assert_eq!(
-                bob_writeonly
-                    .recv_msg(false, 2048, false, fposix_socket::RecvMsgFlags::empty())
-                    .await
-                    .unwrap()
-                    .expect_err("should not recv_msg on a writeonly socket"),
-                fposix::Errno::Eperm,
-            );
-
-            assert_eq!(
-                bob_writeonly
-                    .send_msg(
-                        Some(&mut A::create(A::LOCAL_ADDR, 200)),
-                        &body,
-                        fposix_socket::DatagramSocketSendControlData::EMPTY,
-                        fposix_socket::SendMsgFlags::empty()
-                    )
-                    .await
-                    .unwrap()
-                    .expect("failed to send_msg on bob writeonly"),
-                body.len() as i64
-            );
-
-            let alice_readonly_info =
-                alice_readonly.describe_deprecated().await.expect("failed to describe");
-            let alice_readonly_event = match alice_readonly_info {
-                fio::NodeInfoDeprecated::SynchronousDatagramSocket(e) => e.event,
-                _ => panic!("Got wrong describe response for UDP socket"),
-            };
-            assert_eq!(
-                fasync::OnSignals::new(&alice_readonly_event, ZXSIO_SIGNAL_INCOMING).await,
-                Ok(ZXSIO_SIGNAL_INCOMING | ZXSIO_SIGNAL_OUTGOING)
-            );
-
-            let (from, data, _, truncated) = alice_readonly
-                .recv_msg(true, 2048, false, fposix_socket::RecvMsgFlags::empty())
-                .await
-                .unwrap()
-                .expect("failed to recv_msg on alice readonly");
-            assert_eq!(&data[..], body);
-            assert_eq!(truncated, 0);
-            assert_eq!(from.map(|a| *a), Some(A::create(A::REMOTE_ADDR, 200)));
-        }
 
         // Close the socket should not invalidate the cloned socket.
         let () = bob_socket
@@ -3755,7 +3643,7 @@ mod tests {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack, proto).await;
-        let cloned = socket_clone(&socket, fio::OpenFlags::CLONE_SAME_RIGHTS).await.unwrap();
+        let cloned = socket_clone(&socket).await.unwrap();
         let () = socket
             .close()
             .await
@@ -3808,7 +3696,7 @@ mod tests {
         let test_stack = t.get(0);
         let cloned = {
             let socket = get_socket::<A>(test_stack, proto).await;
-            socket_clone(&socket, fio::OpenFlags::CLONE_SAME_RIGHTS).await.unwrap()
+            socket_clone(&socket).await.unwrap()
             // socket goes out of scope indicating an implicit close.
         };
         // Using an explicit close here.
@@ -3831,27 +3719,6 @@ mod tests {
 
     declare_tests!(implicit_close);
 
-    async fn expect_clone_invalid_args(
-        socket: &fposix_socket::SynchronousDatagramSocketProxy,
-        flags: fio::OpenFlags,
-    ) {
-        let cloned = socket_clone(&socket, flags).await.unwrap();
-        {
-            let mut events = cloned.take_event_stream();
-            if let Some(result) = events.next().await {
-                match result.expect("failed to decode") {
-                    fposix_socket::SynchronousDatagramSocketEvent::OnOpen_ { s, .. } => {
-                        assert_eq!(s, zx::sys::ZX_ERR_INVALID_ARGS);
-                    }
-                    fposix_socket::SynchronousDatagramSocketEvent::OnRepresentation { .. } => {
-                        assert!(false);
-                    }
-                }
-            }
-        }
-        assert!(cloned.into_channel().unwrap().is_closed());
-    }
-
     async fn invalid_clone_args<A: TestSockAddr, T>(proto: fposix_socket::DatagramSocketProtocol)
     where
         <A::AddrType as IpAddress>::Version: SocketCollectionIpExt<T>,
@@ -3863,16 +3730,6 @@ mod tests {
         let mut t = TestSetupBuilder::new().add_endpoint().add_empty_stack().build().await.unwrap();
         let test_stack = t.get(0);
         let socket = get_socket::<A>(test_stack, proto).await;
-        // conflicting flags
-        expect_clone_invalid_args(
-            &socket,
-            fio::OpenFlags::CLONE_SAME_RIGHTS | fio::OpenFlags::RIGHT_READABLE,
-        )
-        .await;
-        // append
-        expect_clone_invalid_args(&socket, fio::OpenFlags::APPEND).await;
-        // executable
-        expect_clone_invalid_args(&socket, fio::OpenFlags::RIGHT_EXECUTABLE).await;
         let () = socket
             .close()
             .await
