@@ -75,8 +75,8 @@ template("device_test") {
     forward_variables_from(invoker, [ "test_specs" ])
     package_name = test_name
     test_components = [ ":${component_name}" ]
-    if (defined(invoker.device_component)) {
-      deps = [ invoker.device_component ]
+    if (defined(invoker.device_components)) {
+      deps = invoker.device_components
     }
   }
 }
@@ -84,7 +84,7 @@ template("device_test") {
 device_test("virtio_balloon_device_tests") {
   sources = [ "virtio_balloon_test.cc" ]
   manifest = "meta/virtio_balloon_device_tests.cml"
-  device_component = "//src/virtualization/bin/vmm/device/virtio_balloon:virtio_balloon_component"
+  device_components = [ "//src/virtualization/bin/vmm/device/virtio_balloon:virtio_balloon_component" ]
   configs = [ "//build/config:all_source" ]
 
   deps = [
@@ -108,8 +108,9 @@ device_test("virtio_balloon_device_tests") {
 device_test("virtio_block_device_tests") {
   sources = [ "virtio_block_test.cc" ]
   manifest = "meta/virtio_block_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_block:virtio_block_component"
+  device_components = [
+    "//src/virtualization/bin/vmm/device/virtio_block:virtio_block_component",
+  ]
 
   deps = [
     ":test_with_device",
@@ -135,7 +136,7 @@ device_test("virtio_block_device_tests") {
 device_test("virtio_console_device_tests") {
   sources = [ "virtio_console_test.cc" ]
   manifest = "meta/virtio_console_device_tests.cml"
-  device_component = "//src/virtualization/bin/vmm/device/virtio_console:virtio_console_component"
+  device_components = [ "//src/virtualization/bin/vmm/device/virtio_console:virtio_console_component" ]
 
   deps = [
     ":test_with_device",
@@ -156,8 +157,8 @@ device_test("virtio_console_device_tests") {
 device_test("virtio_gpu_device_tests") {
   sources = [ "virtio_gpu_test.cc" ]
   manifest = "meta/virtio_gpu_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_gpu:virtio_gpu_component"
+  device_components =
+      [ "//src/virtualization/bin/vmm/device/virtio_gpu:virtio_gpu_component" ]
 
   deps = [
     ":test_with_device",
@@ -186,8 +187,9 @@ device_test("virtio_gpu_device_tests") {
 device_test("virtio_input_device_tests") {
   sources = [ "virtio_input_test.cc" ]
   manifest = "meta/virtio_input_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_input:virtio_input_component"
+  device_components = [
+    "//src/virtualization/bin/vmm/device/virtio_input:virtio_input_component",
+  ]
 
   deps = [
     ":test_with_device",
@@ -212,8 +214,9 @@ device_test("virtio_input_device_tests") {
 device_test("virtio_magma_device_tests") {
   sources = [ "virtio_magma_test.cc" ]
   manifest = "meta/virtio_magma_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_magma:virtio_magma_component"
+  device_components = [
+    "//src/virtualization/bin/vmm/device/virtio_magma:virtio_magma_component",
+  ]
 
   deps = [
     ":test_with_device",
@@ -246,8 +249,8 @@ device_test("virtio_magma_device_tests") {
 device_test("virtio_net_device_tests") {
   sources = [ "virtio_net_test.cc" ]
   manifest = "meta/virtio_net_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_net:virtio_net_component"
+  device_components =
+      [ "//src/virtualization/bin/vmm/device/virtio_net:virtio_net_component" ]
 
   deps = [
     ":test_with_device",
@@ -278,8 +281,8 @@ device_test("virtio_net_device_tests") {
 device_test("virtio_rng_device_tests") {
   sources = [ "virtio_rng_test.cc" ]
   manifest = "meta/virtio_rng_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_rng:virtio_rng_component"
+  device_components =
+      [ "//src/virtualization/bin/vmm/device/virtio_rng:virtio_rng_component" ]
 
   deps = [
     ":test_with_device",
@@ -300,8 +303,9 @@ device_test("virtio_rng_device_tests") {
 device_test("virtio_sound_device_tests") {
   sources = [ "virtio_sound_test.cc" ]
   manifest = "meta/virtio_sound_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_sound:virtio_sound_component"
+  device_components = [
+    "//src/virtualization/bin/vmm/device/virtio_sound:virtio_sound_component",
+  ]
 
   deps = [
     ":test_with_device",
@@ -328,8 +332,8 @@ device_test("virtio_sound_device_tests") {
 device_test("virtio_vsock_device_tests") {
   sources = [ "virtio_vsock_test.cc" ]
   manifest = "meta/virtio_vsock_device_tests.cml"
-  device_component =
-      "//src/virtualization/bin/vmm/device/virtio_vsock:virtio_vsock_cmp"
+  device_components =
+      [ "//src/virtualization/bin/vmm/device/virtio_vsock:virtio_vsock_cmp" ]
 
   deps = [
     ":test_with_device",
@@ -351,7 +355,8 @@ device_test("virtio_vsock_device_tests") {
 device_test("virtio_wl_device_tests") {
   sources = [ "virtio_wl_test.cc" ]
   manifest = "meta/virtio_wl_device_tests.cml"
-  device_component = "//src/virtualization/bin/vmm/device:virtio_wl_component"
+  device_components =
+      [ "//src/virtualization/bin/vmm/device:virtio_wl_component" ]
 
   deps = [
     ":test_with_device",
