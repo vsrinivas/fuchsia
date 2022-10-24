@@ -43,7 +43,7 @@ import("//build/bazel/legacy_ninja_build_outputs.gni")
 #   bazel_targets:
 #     A list of Bazel target patterns for the `bazel build` command.
 #     This list cannot be empty since there is no concept of 'default'
-#     targets in Bazel.
+#     targets in Bazel. Note target sets (i.e. `...`) are not supported.
 #     Type: list of Bazel target patterns.
 #
 #   bazel_outputs:
@@ -122,6 +122,14 @@ template("bazel_build_action") {
     _inputs += [ get_label_info(label, "label_with_toolchain") ]
   }
 
+  _bazel_build_files = []
+  foreach(label, invoker.bazel_targets) {
+    dir = get_label_info(label, "dir")
+    assert(get_path_info(dir, "file") != "...",
+           "`...` is not supported in bazel_targets")
+    _bazel_build_files += [ "${dir}/BUILD.bazel" ]
+  }
+
   action(target_name) {
     script = "//build/bazel/scripts/bazel_build_action.py"
 
@@ -130,7 +138,7 @@ template("bazel_build_action") {
     # it. Moreoever, it is testonly=true, which would prevent
     # non-testonly bazel_build_action() from being added to the GN graph.
     # This is "safe" because the file is generated at GN gen time.
-    inputs = [ bazel_launcher ]
+    inputs = [ bazel_launcher ] + _bazel_build_files
     outputs = _outputs
     args = [
              "--bazel-launcher",
