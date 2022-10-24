@@ -98,8 +98,6 @@ void DataPlane::CompleteTx(wlan::drivers::components::Frame &&frame, zx_status_t
   if (likely(frame.Size() >= sizeof(ethhdr))) {
     auto eth = reinterpret_cast<ethhdr *>(frame.Data());
     if (unlikely(eth->h_proto == 0x8e88)) {
-      NXPF_INFO("Completed EAPOL transmit from " FMT_MAC " to " FMT_MAC,
-                FMT_MAC_ARGS(eth->h_source), FMT_MAC_ARGS(eth->h_dest));
       ifc_->OnEapolTransmitted(std::move(frame), status);
       return;
     }
@@ -187,13 +185,11 @@ void DataPlane::NetDevQueueTx(cpp20::span<wlan::drivers::components::Frame> fram
     if (ml_status == MLAN_STATUS_SUCCESS) {
       // Transmission completed immediately, unlikely but who knows?
       NXPF_WARN("Packet transmission completed immediately, suspicious!");
-      network_device_.CompleteTx(cpp20::span<wlan::drivers::components::Frame>(frame_ptr, 1),
-                                 ZX_OK);
+      CompleteTx(std::move(*frame_ptr), ZX_OK);
     } else if (ml_status != MLAN_STATUS_PENDING) {
       // It's not sucess and it's not pending, something went wrong.
       NXPF_ERR("Failed to send packet: %d", ml_status);
-      network_device_.CompleteTx(cpp20::span<wlan::drivers::components::Frame>(frame_ptr, 1),
-                                 ZX_ERR_INTERNAL);
+      CompleteTx(std::move(*frame_ptr), ZX_ERR_INTERNAL);
     }
   }
   zx_status_t status = bus_->TriggerMainProcess();
