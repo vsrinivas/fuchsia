@@ -204,14 +204,14 @@ protocol Vmo {
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     /// [`zx_vmo_write()`]: vmo_write.md
     @blocking
-    @arg_reorder("handle, buffer, offset, buffer_size")
     Read(resource struct {
         handle handle:VMO;
-        offset uint64;
-    }) -> (struct {
+        @out
         @voidptr
-        buffer vector<byte>;
-    }) error status;
+        buffer experimental_pointer<byte>;
+        offset uint64;
+        buffer_size usize;
+    }) -> (struct {}) error status;
 
     // TODO(scottmg): Same problem as Read() above.
     /// ## Summary
@@ -286,12 +286,12 @@ protocol Vmo {
     /// [`zx_vmo_set_cache_policy()`]: vmo_set_cache_policy.md
     /// [`zx_vmo_set_size()`]: vmo_set_size.md
     @blocking
-    @arg_reorder("handle, buffer, offset, buffer_size")
     Write(resource struct {
         handle handle:VMO;
         @voidptr
-        buffer vector<byte>;
+        buffer experimental_pointer<byte>;
         offset uint64;
+        buffer_size usize;
     }) -> (struct {}) error status;
 
     // TODO(fxbug.dev/32803): No rights required?

@@ -209,14 +209,18 @@ Type TypeFromJson(const SyscallLibrary& library, const rapidjson::Value& type,
     }
   }
 
-  if (attributes.find("inout") != attributes.end()) {
-    if (typ->IsVector()) {
-      typ = Type(typ->DataAsVector(), Constness::kMutable);
-    } else if (typ->IsPointer()) {
-      typ = Type(typ->DataAsPointer(), Constness::kMutable);
+  bool inout = attributes.find("inout") != attributes.end();
+  bool out = attributes.find("out") != attributes.end();
+  ZX_ASSERT_MSG(!inout || !out, "@inout and @out cannot both be specified");
+  if (inout) {
+    if (typ->IsVector() || typ->IsPointer()) {
+      typ->set_constness(Constness::kMutable);
     } else {
       typ = Type(TypePointer(*typ), Constness::kMutable);
     }
+  } else if (out) {
+    typ->set_constness(Constness::kMutable);
+    typ->set_optionality(Optionality::kOutputOptional);
   }
 
   if (attributes.find("size32") != attributes.end()) {
@@ -265,7 +269,7 @@ std::string Syscall::GetAttribute(const char* attrib_name) const {
 // - vector to pointer+size
 // - structs become pointer-to-struct (const on input, mutable on output)
 // - etc.
-bool Syscall::MapRequestResponseToKernelAbi(SyscallLibrary* library) {
+void Syscall::MapRequestResponseToKernelAbi(SyscallLibrary* library) {
   ZX_ASSERT(kernel_arguments_.empty());
 
   // Used for input arguments, which default to const unless alread specified mutable.
@@ -301,11 +305,16 @@ bool Syscall::MapRequestResponseToKernelAbi(SyscallLibrary* library) {
   // Map inputs first, converting vectors, strings, and structs to their corresponding input types
   // as we go.
   for (const auto& m : request_.members()) {
-    const Type& type = m.type();
+    Type type = m.type();
+    Optionality opt = type.optionality();
+    if (opt == Optionality::kUnspecified) {
+      opt = Optionality::kInputArgument;
+    }
+
     if (type.IsVector()) {
       Type pointer_to_subtype(
           TypePointer(type.DataAsVector().contained_type(), IsDecayedVectorTag{}),
-          default_to_const(type.constness()), Optionality::kInputArgument);
+          default_to_const(type.constness()), opt);
       kernel_arguments_.emplace_back(m.name(), pointer_to_subtype, m.attributes());
       auto [size_name, is_u32] = get_vector_size_name(m);
       kernel_arguments_.emplace_back(size_name, is_u32 ? Type(TypeUint32{}) : Type(TypeUsize{}),
@@ -314,15 +323,22 @@ bool Syscall::MapRequestResponseToKernelAbi(SyscallLibrary* library) {
       // If it's a struct, map to struct*, const unless otherwise specified. The pointer takes the
       // constness of the struct.
       kernel_arguments_.emplace_back(
-          m.name(),
-          Type(TypePointer(type), default_to_const(type.constness()), Optionality::kInputArgument),
+          m.name(), Type(TypePointer(type), default_to_const(type.constness()), opt),
           m.attributes());
     } else {
+      // This covers the case of a 'disjointed' buffer of handles, which was
+      // certainly intended to be a "vector".
+      if (type.IsPointer()) {
+        const Type& pointed_to = type.DataAsPointer().pointed_to_type();
+        if (std::string name = GetCKernelModeName(pointed_to);
+            name == "zx_handle_t" || name == "zx_handle_info_t") {
+          type = Type(TypePointer(pointed_to, IsDecayedVectorTag{}), type.constness());
+        }
+      }
       // Otherwise, copy it over, unchanged other than to tag it as input.
-      kernel_arguments_.emplace_back(m.name(),
-                                     Type(type.type_data(), default_to_const(m.type().constness()),
-                                          Optionality::kInputArgument),
-                                     m.attributes());
+      kernel_arguments_.emplace_back(
+          m.name(), Type(type.type_data(), default_to_const(m.type().constness()), opt),
+          m.attributes());
     }
   }
 
@@ -374,50 +390,6 @@ bool Syscall::MapRequestResponseToKernelAbi(SyscallLibrary* library) {
           m.attributes());
     }
   }
-
-  // Now that we've got all the arguments in their natural order, honor the
-  // "ArgReorder" attribute, which reorders arguments arbitrarily to match
-  // existing declaration order.
-  return HandleArgReorder();
-}
-
-bool Syscall::HandleArgReorder() {
-  constexpr const char kReorderAttribName[] = "ArgReorder";
-  if (HasAttribute(kReorderAttribName)) {
-    const std::string& target_order_string = GetAttribute(kReorderAttribName);
-    std::vector<std::string> target_order = SplitString(target_order_string, ',', kTrimWhitespace);
-    if (kernel_arguments_.size() != target_order.size()) {
-      fprintf(stderr,
-              "Attempting to reorder arguments for '%s', and there's %zu kernel arguments, but %zu "
-              "arguments in the reorder spec.\n",
-              name().c_str(), kernel_arguments_.size(), target_order.size());
-      return false;
-    }
-
-    std::vector<StructMember> new_kernel_arguments;
-    for (const auto& target : target_order) {
-      bool found = false;
-      for (const auto& ka : kernel_arguments_) {
-        if (ka.name() == target) {
-          new_kernel_arguments.push_back(ka);
-          found = true;
-          break;
-        }
-      }
-
-      if (!found) {
-        fprintf(stderr,
-                "Attempting to reorder arguments for '%s', but '%s' wasn't one of the kernel "
-                "arguments.\n",
-                name().c_str(), target.c_str());
-        return false;
-      }
-    }
-
-    kernel_arguments_ = std::move(new_kernel_arguments);
-  }
-
-  return true;
 }
 
 void Enum::AddMember(const std::string& member_name, EnumMember member) {
@@ -713,10 +685,7 @@ bool SyscallLibraryLoader::LoadProtocols(const rapidjson::Document& document,
         }
       }
 
-      if (!syscall->MapRequestResponseToKernelAbi(library)) {
-        return false;
-      }
-
+      syscall->MapRequestResponseToKernelAbi(library);
       library->syscalls_.push_back(std::move(syscall));
     }
   }

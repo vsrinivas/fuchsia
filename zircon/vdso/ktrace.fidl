@@ -48,13 +48,14 @@ protocol Ktrace {
     /// ## See also
     ///
     /// TODO(fxbug.dev/32938)
-    @arg_reorder("handle, data, offset, data_size, actual")
     Read(resource struct {
         handle handle:RESOURCE;
-        offset uint32;
-    }) -> (struct {
+        @out
         @voidptr
-        data vector<byte>;
+        data experimental_pointer<byte>;
+        offset uint32;
+        data_size usize;
+    }) -> (struct {
         actual usize;
     }) error status;
 

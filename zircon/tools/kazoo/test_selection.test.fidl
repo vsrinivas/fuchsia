@@ -36,14 +36,14 @@ protocol Selection {
         observed signals;
     }) error status;
 
-    // Argument reordering.
-    @arg_reorder("handle,data,offset,data_size,actual")
+    // Out-parameter in request struct.
     KtraceRead(resource struct {
         handle handle:RESOURCE;
-        @inout
+        @out
         @voidptr
-        data vector<byte>;
+        data experimental_pointer<byte>;
         offset uint32;
+        data_size usize;
     }) -> (struct {
         actual usize;
     }) error status;

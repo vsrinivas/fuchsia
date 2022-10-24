@@ -227,18 +227,18 @@ protocol Channel {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_object_wait_many()`]: object_wait_many.md
     /// [`zx_object_wait_one()`]: object_wait_one.md
-    @arg_reorder(
-            "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles")
     @handle_unchecked
     Read(resource struct {
         handle handle:CHANNEL;
         options uint32;
-    }) -> (resource struct {
+        @out
         @voidptr
-        @size32
-        bytes vector<byte>;
-        @size32
-        handles vector<handle>;
+        bytes experimental_pointer<byte>;
+        @out
+        handles experimental_pointer<handle>;
+        num_bytes uint32;
+        num_handles uint32;
+    }) -> (resource struct {
         actual_bytes uint32;
         actual_handles uint32;
     }) error status;
@@ -348,17 +348,17 @@ protocol Channel {
     /// [`zx_object_wait_async()`]: object_wait_async.md
     /// [`zx_object_wait_many()`]: object_wait_many.md
     /// [`zx_object_wait_one()`]: object_wait_one.md
-    @arg_reorder(
-            "handle, options, bytes, handles, num_bytes, num_handles, actual_bytes, actual_handles")
     ReadEtc(resource struct {
         handle handle:CHANNEL;
         options uint32;
-    }) -> (resource struct {
+        @out
         @voidptr
-        @size32
-        bytes vector<byte>;
-        @size32
-        handles vector<HandleInfo>;
+        bytes experimental_pointer<byte>;
+        @out
+        handles experimental_pointer<HandleInfo>;
+        num_bytes uint32;
+        num_handles uint32;
+    }) -> (resource struct {
         actual_bytes uint32;
         actual_handles uint32;
     }) error status;

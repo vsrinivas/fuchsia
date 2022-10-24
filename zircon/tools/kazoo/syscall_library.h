@@ -309,8 +309,7 @@ class Syscall {
 
  private:
   friend class SyscallLibraryLoader;
-  bool MapRequestResponseToKernelAbi(SyscallLibrary* library);
-  bool HandleArgReorder();
+  void MapRequestResponseToKernelAbi(SyscallLibrary* library);
 
   std::string id_;          // "zx/Object"
   std::string name_;        // "GetInfo"
