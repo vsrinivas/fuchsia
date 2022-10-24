@@ -45,7 +45,7 @@ const std::vector<BucketMatch> kBucketMatches = {
      MemoryMigratedMetricDimensionBucket::FlutterApps},
     {"Flutter", "io\\.flutter\\..*", ".*", MemoryMigratedMetricDimensionBucket::Flutter},
     {"Web", "web_engine_exe:.*", ".*", MemoryMigratedMetricDimensionBucket::Web},
-    {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*", MemoryMigratedMetricDimensionBucket::Kronk},
+    {"Kronk", "kronk.cmx", ".*", MemoryMigratedMetricDimensionBucket::Kronk},
     {"Scenic", "scenic.cmx", ".*", MemoryMigratedMetricDimensionBucket::Scenic},
     {"Amlogic", "driver_host:pdev:05:00:f", ".*", MemoryMigratedMetricDimensionBucket::Amlogic},
     {"Netstack", "netstack.cmx", ".*", MemoryMigratedMetricDimensionBucket::Netstack},

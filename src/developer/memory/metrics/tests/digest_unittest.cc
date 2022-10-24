@@ -230,7 +230,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
       {"FlutterApps", "io\\.flutter\\..*", "dart.*"},
       {"Flutter", "io\\.flutter\\..*", ".*"},
       {"Web", "web_engine_exe:.*", ".*"},
-      {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*"},
+      {"Kronk", "kronk.cmx", ".*"},
       {"Scenic", "scenic.cmx", ".*"},
       {"Amlogic", "driver_host:pdev:05:00:f", ".*"},
       {"Netstack", "netstack.cmx", ".*"},
