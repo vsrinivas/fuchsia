@@ -37,7 +37,11 @@ void RecursiveUnmount(const char *path) {
       RecursiveUnmount(subpath.c_str());
     }
   }
-  ASSERT_THAT(umount(path), AnyOf(SyscallSucceeds(), SyscallFailsWithErrno(EINVAL))) << path;
+  // Repeatedly call umount to handle shadowed mounts properly.
+  do {
+    errno = 0;
+    ASSERT_THAT(umount(path), AnyOf(SyscallSucceeds(), SyscallFailsWithErrno(EINVAL))) << path;
+  } while (errno != EINVAL);
 }
 
 class MountTest : public ::testing::Test {
@@ -181,6 +185,17 @@ TEST_F(MountTest, DISABLED_QuizCPropagation) {
 
   ASSERT_SUCCESS(Mount("2", "a/test", MS_BIND));
   ASSERT_TRUE(FileExists("1/1/test/2"));
+}
+
+TEST_F(MountTest, DISABLED_PropagateOntoMountRoot) {
+  ASSERT_SUCCESS(Mount(nullptr, "1", MS_SHARED));
+  ASSERT_SUCCESS(MakeDir("1/1/1"));
+  ASSERT_SUCCESS(MakeDir("a"));
+  ASSERT_SUCCESS(Mount("1/1", "a", MS_BIND));
+  // The propagation of this should be equivalent to shadowing the "a" mount.
+  ASSERT_SUCCESS(Mount("2", "1/1", MS_BIND));
+  ASSERT_TRUE(FileExists("a/2"));
+  DumpMountinfo();
 }
 
 }  // namespace

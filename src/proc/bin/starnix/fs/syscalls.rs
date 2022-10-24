@@ -1092,17 +1092,6 @@ pub fn sys_memfd_create(
     Ok(fd)
 }
 
-// If the lookup ends up at the root of a mount, return its mountpoint instead. This is to make
-// mount shadowing work right.
-fn lookup_for_mount(
-    current_task: &CurrentTask,
-    path_addr: UserCString,
-    flags: LookupFlags,
-) -> Result<NamespaceNode, Errno> {
-    let node = lookup_at(current_task, FdNumber::AT_FDCWD, path_addr, flags)?;
-    Ok(node.escape_mount())
-}
-
 pub fn sys_mount(
     current_task: &CurrentTask,
     source_addr: UserCString,
@@ -1132,12 +1121,10 @@ pub fn sys_mount(
         return Ok(());
     }
 
-    let target = lookup_for_mount(current_task, target_addr, LookupFlags::default())?;
+    let target = lookup_at(current_task, FdNumber::AT_FDCWD, target_addr, LookupFlags::default())?;
 
     let what_to_mount = if flags.contains(MountFlags::BIND) {
         strace!(current_task, "mount(MS_BIND)");
-        // Don't use lookup_for_mount here. If there is a mount on /foo, bind mounting /foo to /bar
-        // should bind from the mount on /foo, not /foo itself.
         let source =
             lookup_at(current_task, FdNumber::AT_FDCWD, source_addr, LookupFlags::default())?;
         WhatToMount::Bind(source)
@@ -1183,7 +1170,7 @@ pub fn sys_umount2(
     } else {
         LookupFlags::default()
     };
-    let target = lookup_for_mount(current_task, target_addr, flags)?;
+    let target = lookup_at(current_task, FdNumber::AT_FDCWD, target_addr, flags)?;
     target.unmount()
 }
 
