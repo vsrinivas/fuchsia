@@ -15,3 +15,8 @@ node "right" {
   fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY ==
     fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY.DRIVER_RIGHT;
 }
+
+optional node "opt" {
+  fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY ==
+    fuchsia.devicegroupbind.test.TEST_BIND_PROPERTY.DRIVER_OPTIONAL;
+}

@@ -23,6 +23,7 @@ namespace {
 // FDF renames these correctly.
 const std::string_view kLeftName = "left-node";
 const std::string_view kRightName = "right-node";
+const std::string_view kOptionalName = "optional-node";
 
 // Group 1 is created before creating both the left and right nodes.
 fdf::DeviceGroup DeviceGroupOne() {
@@ -132,6 +133,56 @@ fdf::DeviceGroup DeviceGroupThree() {
   return {{.topological_path = "test/path3", .nodes = nodes}};
 }
 
+// Group 4 is created before creating the left, optional, and right nodes.
+fdf::DeviceGroup DeviceGroupFour() {
+  auto bind_rules_left = std::vector{
+      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
+                                     bindlib::TEST_BIND_PROPERTY_FOUR_LEFT),
+  };
+
+  auto bind_properties_left = std::vector{
+      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
+                               bindlib::TEST_BIND_PROPERTY_DRIVER_LEFT),
+  };
+
+  auto bind_rules_right = std::vector{
+      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
+                                     bindlib::TEST_BIND_PROPERTY_FOUR_RIGHT),
+  };
+
+  auto bind_properties_right = std::vector{
+      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
+                               bindlib::TEST_BIND_PROPERTY_DRIVER_RIGHT),
+  };
+
+  auto bind_rules_optional = std::vector{
+      driver::MakeAcceptEnumBindRule(bindlib::TEST_BIND_PROPERTY,
+                                     bindlib::TEST_BIND_PROPERTY_FOUR_OPTIONAL),
+  };
+
+  auto bind_properties_optional = std::vector{
+      driver::MakeEnumProperty(bindlib::TEST_BIND_PROPERTY,
+                               bindlib::TEST_BIND_PROPERTY_DRIVER_OPTIONAL),
+  };
+
+  auto nodes = std::vector{
+      fdf::DeviceGroupNode{{
+          .bind_rules = bind_rules_left,
+          .bind_properties = bind_properties_left,
+      }},
+      fdf::DeviceGroupNode{{
+          .bind_rules = bind_rules_right,
+          .bind_properties = bind_properties_right,
+      }},
+      fdf::DeviceGroupNode{{
+          .bind_rules = bind_rules_optional,
+          .bind_properties = bind_properties_optional,
+      }},
+  };
+
+  return {{.topological_path = "test/path4", .nodes = nodes}};
+}
+
 class NumberServer : public fidl::WireServer<ft::Device> {
  public:
   explicit NumberServer(uint32_t number) : number_(number) {}
@@ -185,6 +236,24 @@ class RootDriver : public driver::DriverBase {
       }
     }
 
+    // Add service "optional".
+    {
+      driver::ServiceInstanceHandler handler;
+      ft::Service::Handler service(&handler);
+      auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
+        fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
+                                                       &this->optional_server_);
+      };
+      zx::result<> status = service.add_device(std::move(device));
+      if (status.is_error()) {
+        FDF_LOG(ERROR, "Failed to add device %s", status.status_string());
+      }
+      status = context().outgoing()->AddService<ft::Service>(std::move(handler), kOptionalName);
+      if (status.is_error()) {
+        FDF_LOG(ERROR, "Failed to add service %s", status.status_string());
+      }
+    }
+
     // Setup the device group manager client.
     auto dgm_client = context().incoming()->Connect<fdf::DeviceGroupManager>();
     if (dgm_client.is_error()) {
@@ -199,6 +268,7 @@ class RootDriver : public driver::DriverBase {
     TestGroupOne();
     TestGroupTwo();
     TestGroupThree();
+    TestGroupFour();
     return zx::ok();
   }
 
@@ -282,6 +352,43 @@ class RootDriver : public driver::DriverBase {
     }
   }
 
+  // Add device group
+  // Add left
+  // Add optional
+  // Add right
+  void TestGroupFour() {
+    fit::closure add_right = [this]() {
+      auto right_result = AddChild(kRightName, 4, four_right_controller_,
+                                   bindlib::TEST_BIND_PROPERTY_FOUR_RIGHT, []() {});
+      if (!right_result) {
+        FDF_LOG(ERROR, "Failed to start right child.");
+        DropNode();
+      }
+    };
+
+    fit::closure add_optional_then_right = [this, add_right = std::move(add_right)]() mutable {
+      auto optional_result =
+          AddChild(kOptionalName, 4, four_optional_controller_,
+                   bindlib::TEST_BIND_PROPERTY_FOUR_OPTIONAL, std::move(add_right));
+      if (!optional_result) {
+        FDF_LOG(ERROR, "Failed to start optional child.");
+        DropNode();
+      }
+    };
+
+    fit::closure add_left_then_optional = [this, add_optional =
+                                                     std::move(add_optional_then_right)]() mutable {
+      auto left_result = AddChild(kLeftName, 4, four_left_controller_,
+                                  bindlib::TEST_BIND_PROPERTY_FOUR_LEFT, std::move(add_optional));
+      if (!left_result) {
+        FDF_LOG(ERROR, "Failed to start left child.");
+        DropNode();
+      }
+    };
+
+    AddDeviceGroup(DeviceGroupFour(), std::move(add_left_then_optional));
+  }
+
   bool AddChild(std::string_view name, int group,
                 fidl::SharedClient<fdf::NodeController>& controller, std::string_view property,
                 fit::closure callback) {
@@ -347,11 +454,16 @@ class RootDriver : public driver::DriverBase {
   fidl::SharedClient<fdf::NodeController> three_left_controller_;
   fidl::SharedClient<fdf::NodeController> three_right_controller_;
 
+  fidl::SharedClient<fdf::NodeController> four_left_controller_;
+  fidl::SharedClient<fdf::NodeController> four_right_controller_;
+  fidl::SharedClient<fdf::NodeController> four_optional_controller_;
+
   fidl::SharedClient<fdf::Node> node_client_;
   fidl::SharedClient<fdf::DeviceGroupManager> device_group_manager_;
 
   NumberServer left_server_ = NumberServer(1);
   NumberServer right_server_ = NumberServer(2);
+  NumberServer optional_server_ = NumberServer(3);
 };
 
 }  // namespace

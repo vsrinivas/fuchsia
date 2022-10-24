@@ -12,3 +12,7 @@ primary node "test_primary" {
 node "child_a" {
   fuchsia.BIND_PROTOCOL == 20;
 }
+
+optional node "optional_a" {
+  fuchsia.BIND_PROTOCOL == 42;
+}

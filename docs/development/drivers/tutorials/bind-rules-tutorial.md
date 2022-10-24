@@ -240,6 +240,22 @@ node "acpi" {
 }
 ```
 
+#### Optional nodes
+Optional nodes are nodes that do not have to be present in a device group in order for it
+to be matched up to a composite driver.
+This is only supported when using device groups, optional nodes will not be matched in
+plain old composites where Nodes from the topology are matched to a composite driver.
+
+In the bind rules, putting `optional` before the `node` keyword will mark the node
+as being optional. As a convention, all optional nodes should be written after
+the regular additional nodes.
+
+Optional nodes are used to write composite driver rules that are more generic. For
+example the HID buttons driver supports 9 different button types (volume-up, cam-mute, etc),
+but not all hardware devices will have all of these buttons on them. With optional nodes
+the bind rules can be written to be platform agnostic so the board drivers can create
+composites with an arbitrary set of buttons that the HID buttons driver supports.
+
 ## Bind rules examples
 
 ### Branching bind rules

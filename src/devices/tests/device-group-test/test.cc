@@ -10,10 +10,19 @@ TEST(SimpleDriverTestRealmTest, DriversExist) {
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile("/dev/sys/test/root", &out));
   ASSERT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile("/dev/sys/test/leaf", &out));
   ASSERT_EQ(ZX_OK,
-            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_a", &out));
+            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_a_1", &out));
   ASSERT_EQ(ZX_OK,
-            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_b", &out));
+            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_b_1", &out));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_a_2", &out));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_b_2", &out));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile("/dev/sys/test/device_group_fragment_c_2", &out));
   ASSERT_EQ(ZX_OK,
             device_watcher::RecursiveWaitForFile(
-                "/dev/sys/test/device_group_fragment_a/device_group_driver/device_group", &out));
+                "/dev/sys/test/device_group_fragment_a_1/device_group_driver/device_group", &out));
+  ASSERT_EQ(ZX_OK,
+            device_watcher::RecursiveWaitForFile(
+                "/dev/sys/test/device_group_fragment_a_2/device_group_driver/device_group", &out));
 }

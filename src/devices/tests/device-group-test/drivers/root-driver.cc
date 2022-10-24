@@ -21,7 +21,7 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
   }
   __UNUSED auto ptr = root_dev.release();
 
-  // Add a child that matches the first device group node.
+  // Add 2 children that matches the first device group node.
   zx_device_prop_t fragment_props_1[] = {
       {50, 0, 10},
   };
@@ -30,15 +30,27 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
       {"sandpiper", str_prop_bool_val(false)},
   };
 
-  auto fragment_dev_1 = std::make_unique<RootDriver>(dev);
-  status = fragment_dev_1->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_a")
-                                      .set_props(fragment_props_1)
-                                      .set_str_props(str_fragment_props_1)
-                                      .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+  auto fragment_dev_a_1 = std::make_unique<RootDriver>(dev);
+  status =
+      fragment_dev_a_1->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_a_1")
+                                   .set_props(fragment_props_1)
+                                   .set_str_props(str_fragment_props_1)
+                                   .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
   if (status != ZX_OK) {
     return status;
   }
-  __UNUSED auto fragment_1_ptr = fragment_dev_1.release();
+  __UNUSED auto fragment_a_1_ptr = fragment_dev_a_1.release();
+
+  auto fragment_dev_a_2 = std::make_unique<RootDriver>(dev);
+  status =
+      fragment_dev_a_2->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_a_2")
+                                   .set_props(fragment_props_1)
+                                   .set_str_props(str_fragment_props_1)
+                                   .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+  if (status != ZX_OK) {
+    return status;
+  }
+  __UNUSED auto fragment_a_2_ptr = fragment_dev_a_2.release();
 
   // Add the leaf device.
   zx_device_prop_t leaf_props[] = {
@@ -54,19 +66,45 @@ zx_status_t RootDriver::Bind(void* ctx, zx_device_t* dev) {
   }
   __UNUSED auto leaf_ptr = leaf_dev.release();
 
-  // Add a device that matches the other device group node.
+  // Add 2 devices that matches the other device group node.
   zx_device_str_prop_t str_fragment_props_2[] = {
       {"willet", str_prop_str_val("dunlin")},
   };
 
-  auto fragment_dev_2 = std::make_unique<RootDriver>(dev);
-  status = fragment_dev_2->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_b")
-                                      .set_str_props(str_fragment_props_2)
-                                      .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+  auto fragment_dev_b_1 = std::make_unique<RootDriver>(dev);
+  status =
+      fragment_dev_b_1->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_b_1")
+                                   .set_str_props(str_fragment_props_2)
+                                   .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
   if (status != ZX_OK) {
     return status;
   }
-  __UNUSED auto fragment_2_ptr = fragment_dev_2.release();
+  __UNUSED auto fragment_b_1_ptr = fragment_dev_b_1.release();
+
+  auto fragment_dev_b_2 = std::make_unique<RootDriver>(dev);
+  status =
+      fragment_dev_b_2->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_b_2")
+                                   .set_str_props(str_fragment_props_2)
+                                   .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+  if (status != ZX_OK) {
+    return status;
+  }
+  __UNUSED auto fragment_b_2_ptr = fragment_dev_b_2.release();
+
+  // Add a third devices that matches the optional device group node.
+  zx_device_str_prop_t str_fragment_props_3[] = {
+      {"mockingbird", str_prop_str_val("crow")},
+  };
+
+  auto fragment_dev_c_2 = std::make_unique<RootDriver>(dev);
+  status =
+      fragment_dev_c_2->DdkAdd(ddk::DeviceAddArgs("device_group_fragment_c_2")
+                                   .set_str_props(str_fragment_props_3)
+                                   .set_proto_id(bind_fuchsia_test::BIND_PROTOCOL_COMPAT_CHILD));
+  if (status != ZX_OK) {
+    return status;
+  }
+  __UNUSED auto fragment_c_2_ptr = fragment_dev_c_2.release();
 
   return ZX_OK;
 }

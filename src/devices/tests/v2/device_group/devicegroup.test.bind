@@ -7,10 +7,14 @@ library fuchsia.devicegroupbind.test;
 enum TEST_BIND_PROPERTY {
     DRIVER_LEFT,
     DRIVER_RIGHT,
+    DRIVER_OPTIONAL,
     ONE_LEFT,
     ONE_RIGHT,
     TWO_LEFT,
     TWO_RIGHT,
     THREE_LEFT,
     THREE_RIGHT,
+    FOUR_LEFT,
+    FOUR_RIGHT,
+    FOUR_OPTIONAL,
 };

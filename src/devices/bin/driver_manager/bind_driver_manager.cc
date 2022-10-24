@@ -196,7 +196,7 @@ zx_status_t BindDriverManager::MatchAndBindDeviceGroups(const fbl::RefPtr<Device
     auto bind_result = coordinator_->device_group_manager()->BindDeviceGroupNode(
         std::get<fdi::MatchedDeviceGroupNodeInfo>(driver), device_ptr);
     if (bind_result.is_error()) {
-      LOGF(ERROR, "Failed to bind device group node: %d", bind_result.status_value());
+      LOGF(WARNING, "Failed to bind device group node: %d", bind_result.status_value());
     }
   }
 

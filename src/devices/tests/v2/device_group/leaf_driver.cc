@@ -90,6 +90,16 @@ class LeafDriver : public driver::DriverBase {
       return zx::ok();
     }
 
+    // Check the optional device.
+    number = GetNumber("opt");
+    if (number.is_error()) {
+      FDF_LOG(INFO, "No 'opt' parent.");
+    } else if (*number != 3) {
+      FDF_LOG(ERROR, "Wrong number for opt: expecting 3, saw %d", *number);
+      __UNUSED auto result = waiter->Ack(ZX_ERR_INTERNAL);
+      return zx::ok();
+    }
+
     // Check the default device (which is the left device).
     number = GetNumber("default");
     if (number.is_error()) {

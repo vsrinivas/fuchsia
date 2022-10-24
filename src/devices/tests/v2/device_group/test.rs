@@ -74,5 +74,6 @@ async fn test_devicegroup() -> Result<()> {
     // Wait for the 3 drivers to call Waiter.Done.
     receiver.next().await.ok_or(anyhow!("Receiver failed"))?;
     receiver.next().await.ok_or(anyhow!("Receiver failed"))?;
+    receiver.next().await.ok_or(anyhow!("Receiver failed"))?;
     receiver.next().await.ok_or(anyhow!("Receiver failed"))
 }

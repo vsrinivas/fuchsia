@@ -42,6 +42,16 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       ddk::BindPropertyInt(BIND_PROTOCOL, 20),
   };
 
+  const char* node_3_props_values_1[] = {"crow", "dunlin"};
+  const ddk::DeviceGroupBindRule node_3_bind_rules[] = {
+      ddk::BindRuleAcceptStringList("mockingbird", node_3_props_values_1),
+      ddk::BindRuleRejectInt(20, 10),
+  };
+
+  const device_bind_prop_t node_3_bind_properties[] = {
+      ddk::BindPropertyInt(BIND_PROTOCOL, 42),
+  };
+
   const device_metadata_t metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
@@ -50,9 +60,19 @@ zx_status_t LeafDriver::Bind(void* ctx, zx_device_t* device) {
       },
   };
 
-  status = dev->DdkAddDeviceGroup("device_group",
+  status = dev->DdkAddDeviceGroup("device_group_1",
                                   ddk::DeviceGroupDesc(node_1_bind_rules, node_1_bind_properties)
                                       .AddNode(node_2_bind_rules, node_2_bind_properties)
+                                      .set_metadata(metadata)
+                                      .set_spawn_colocated(true));
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  status = dev->DdkAddDeviceGroup("device_group_2",
+                                  ddk::DeviceGroupDesc(node_1_bind_rules, node_1_bind_properties)
+                                      .AddNode(node_2_bind_rules, node_2_bind_properties)
+                                      .AddNode(node_3_bind_rules, node_3_bind_properties)
                                       .set_metadata(metadata)
                                       .set_spawn_colocated(true));
   if (status != ZX_OK) {
