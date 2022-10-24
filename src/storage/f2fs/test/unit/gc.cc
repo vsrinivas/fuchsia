@@ -18,7 +18,7 @@ constexpr uint64_t kDefaultBlockCount = 143360;
 class GcManagerTest : public F2fsFakeDevTestFixture {
  public:
   GcManagerTest(TestOptions options = TestOptions{.block_count = kDefaultBlockCount})
-      : F2fsFakeDevTestFixture(options) {}
+      : F2fsFakeDevTestFixture(std::move(options)) {}
 
  protected:
   std::vector<std::string> MakeGcTriggerCondition(uint32_t invalidate_ratio = 25) {

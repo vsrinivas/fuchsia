@@ -136,9 +136,9 @@ class TargetOperator : public CompatibilityTestOperator {
         block_count_(block_count) {}
 
   void Mkfs() final { Mkfs(MkfsOptions{}); }
-  void Mkfs(MkfsOptions opt);
+  void Mkfs(const MkfsOptions &opt);
   void Mount() final { Mount(MountOptions{}); }
-  void Mount(MountOptions opt);
+  void Mount(const MountOptions &opt);
   void Unmount() final;
   void Fsck() final;
 

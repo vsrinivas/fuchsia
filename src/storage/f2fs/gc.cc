@@ -389,7 +389,7 @@ zx_status_t GcManager::GcDataSegment(const SummaryBlock &sum_blk, unsigned int s
   if (gc_type == GcType::kFgGc) {
     WritebackOperation op;
     op.bSync = false;
-    op.if_page = [](fbl::RefPtr<Page> page) {
+    op.if_page = [](const fbl::RefPtr<Page> &page) {
       if (page->IsColdData()) {
         return ZX_OK;
       }

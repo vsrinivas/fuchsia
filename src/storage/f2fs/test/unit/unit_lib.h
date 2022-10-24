@@ -22,7 +22,7 @@ struct TestOptions {
 
 class F2fsFakeDevTestFixture : public testing::Test {
  public:
-  F2fsFakeDevTestFixture(TestOptions options = TestOptions());
+  F2fsFakeDevTestFixture(const TestOptions &options = TestOptions());
   ~F2fsFakeDevTestFixture();
 
  protected:

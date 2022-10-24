@@ -145,7 +145,7 @@ int TargetTestFile::Ftruncate(off_t len) {
 
 int TargetTestFile::Fallocate(int mode, off_t offset, off_t len) { return -EOPNOTSUPP; }
 
-void TargetOperator::Mkfs(MkfsOptions opt) {
+void TargetOperator::Mkfs(const MkfsOptions &opt) {
   if (bcache_ == nullptr) {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }
@@ -157,7 +157,7 @@ void TargetOperator::Mkfs(MkfsOptions opt) {
   bcache_ = std::move(*ret);
 }
 
-void TargetOperator::Mount(MountOptions opt) {
+void TargetOperator::Mount(const MountOptions &opt) {
   if (bcache_ == nullptr) {
     ASSERT_EQ(Bcache::Create(std::move(test_image_fd_), block_count_, &bcache_), ZX_OK);
   }

@@ -39,7 +39,7 @@ DirEntryCacheElement &DirEntryCache::AllocateElement(ino_t parent_ino,
   return *element;
 }
 
-void DirEntryCache::DeallocateElement(ElementRefPtr element) {
+void DirEntryCache::DeallocateElement(const ElementRefPtr &element) {
   map_.erase(GenerateKey(element->GetParentIno(), element->GetName()));
 
   if (element->InContainer()) {

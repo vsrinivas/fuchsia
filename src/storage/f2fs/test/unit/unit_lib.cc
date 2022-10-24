@@ -13,7 +13,7 @@ namespace f2fs {
 
 using block_client::FakeBlockDevice;
 
-F2fsFakeDevTestFixture::F2fsFakeDevTestFixture(const TestOptions options)
+F2fsFakeDevTestFixture::F2fsFakeDevTestFixture(const TestOptions &options)
     : block_count_(options.block_count),
       block_size_(options.block_size)
 

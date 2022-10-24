@@ -50,7 +50,7 @@ fpromise::promise<> Writer::SubmitPages(sync_completion_t *completion, PageType 
           if (ret = transaction_handler_->RunRequests(operations.TakeOperations()); ret != ZX_OK) {
             FX_LOGS(WARNING) << "[f2fs] Write IO error. " << ret;
           }
-          operations.Completion(ret, [ret, type](fbl::RefPtr<Page> page) {
+          operations.Completion(ret, [ret, type](const fbl::RefPtr<Page> &page) {
             if (ret != ZX_OK && page->IsUptodate()) {
               if (type == PageType::kMeta || type == PageType::kNrPageType ||
                   ret == ZX_ERR_UNAVAILABLE) {
@@ -117,7 +117,7 @@ zx::result<std::vector<LockedPage>> Reader::SubmitPages(std::vector<LockedPage> 
     ZX_DEBUG_ASSERT(!operation_or.value().IsEmpty());
     zx_status_t ret;
     ret = transaction_handler_->RunRequests(operation_or.value().TakeOperations());
-    operation_or.value().Completion(ret, [ret](fbl::RefPtr<Page> page) {
+    operation_or.value().Completion(ret, [ret](const fbl::RefPtr<Page> &page) {
       if (ret == ZX_OK) {
         page->SetUptodate();
       }

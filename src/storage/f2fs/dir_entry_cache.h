@@ -86,7 +86,7 @@ class DirEntryCache {
  private:
   DirEntryCacheElement &AllocateElement(ino_t parent_ino, std::string_view child_name)
       __TA_REQUIRES(lock_);
-  void DeallocateElement(ElementRefPtr element) __TA_REQUIRES(lock_);
+  void DeallocateElement(const ElementRefPtr &element) __TA_REQUIRES(lock_);
 
   void AddNewDirEntry(ino_t parent_ino, std::string_view child_name, DirEntry &dir_entry,
                       pgoff_t data_page_index) __TA_REQUIRES(lock_);

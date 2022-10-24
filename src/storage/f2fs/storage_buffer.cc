@@ -61,7 +61,7 @@ zx::result<size_t> StorageBuffer::ReserveWriteOperation(fbl::RefPtr<Page> page, 
 }
 
 zx::result<PageOperations> StorageBuffer::ReserveReadOperations(std::vector<LockedPage> &pages,
-                                                                std::vector<block_t> addrs) {
+                                                                const std::vector<block_t> &addrs) {
   if (pages.size() != addrs.size()) {
     return zx::error(ZX_ERR_INVALID_ARGS);
   }
