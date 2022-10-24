@@ -21,7 +21,7 @@ use crate::types::keys::aes_from_anti_spoofing_and_public;
 use crate::types::packets::{
     decrypt_account_key_request, decrypt_key_based_pairing_request, decrypt_passkey_request,
     key_based_pairing_response, parse_key_based_pairing_request, passkey_response,
-    KeyBasedPairingAction, KeyBasedPairingRequest,
+    personalized_name_response, KeyBasedPairingAction, KeyBasedPairingRequest,
 };
 use crate::types::{AccountKey, AccountKeyList, Error, SharedSecret};
 
@@ -222,8 +222,17 @@ impl Provider {
 
         let encrypted_response = key_based_pairing_response(&key, local_public_address);
         if let Err(e) = self.gatt.notify_key_based_pairing(peer_id, encrypted_response) {
-            warn!("Error notifying GATT characteristic: {:?}", e);
+            warn!("Error notifying Key-based Pairing characteristic: {:?}", e);
             return;
+        }
+
+        // Notify the Seeker with the current local host name if known.
+        let name = self.host_watcher.local_name();
+        if request.notify_name && name.is_some() {
+            let encrypted_response = personalized_name_response(&key, name.unwrap());
+            if let Err(e) = self.gatt.notify_additional_data(peer_id, encrypted_response) {
+                warn!("Error notifying Additional Data characteristic: {:?}", e);
+            }
         }
 
         match pairing.new_pairing_procedure(peer_id, key) {
@@ -335,6 +344,10 @@ impl Provider {
             }
             GattRequest::WriteAccountKey { peer_id, encrypted_account_key, response } => {
                 self.handle_write_account_key_request(peer_id, encrypted_account_key, response);
+            }
+            GattRequest::AdditionalData { .. } => {
+                // TODO(fxbug.dev/95796): Handle personalized name write requests.
+                todo!("Handle additional data writes")
             }
         }
     }
@@ -454,7 +467,8 @@ mod tests {
     use crate::fidl_client::tests::MockUpstreamClient;
     use crate::gatt_service::{
         tests::setup_gatt_service, ACCOUNT_KEY_CHARACTERISTIC_HANDLE,
-        KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE, PASSKEY_CHARACTERISTIC_HANDLE,
+        ADDITIONAL_DATA_CHARACTERISTIC_HANDLE, KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+        PASSKEY_CHARACTERISTIC_HANDLE,
     };
     use crate::host_watcher::tests::example_host;
     use crate::pairing::tests::MockPairing;
@@ -887,6 +901,45 @@ mod tests {
         let pairing_complete_fut = mock_upstream.expect_on_pairing_complete(PEER_ID);
         pin_mut!(pairing_complete_fut);
         let () = exec.run_until_stalled(&mut pairing_complete_fut).expect("should resolve");
+    }
+
+    #[fuchsia::test]
+    async fn data_characteristic_notified_after_kbp_request() {
+        let (mut provider, _le_peripheral, gatt, _host_watcher, _mock_pairing, _mock_upstream) =
+            setup_provider().await;
+
+        provider.host_watcher.set_active_host(
+            example_host(HostId(1), /* active= */ true, /* discoverable= */ true)
+                .try_into()
+                .unwrap(),
+        );
+        let (_sender, _provider_server) = server_task(provider);
+
+        // Initiating a key-based pairing request should succeed. We expect the standard KBP
+        // GATT notification as well as the additional characteristic notification.
+        let mut kbp_request = KEY_BASED_PAIRING_REQUEST;
+        // Flags: Notify name
+        kbp_request[1] = 0x20;
+        let mut encrypted_buf = keys::tests::encrypt_message(&kbp_request);
+        encrypted_buf.append(&mut keys::tests::bob_public_key_bytes());
+        gatt_write_results_in_expected_notification(
+            &gatt,
+            KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE,
+            encrypted_buf,
+            Ok(()),
+            /* expect_item= */ true,
+        )
+        .await;
+
+        // Expect another GATT notification.
+        let mut gatt_stream = gatt.take_event_stream();
+        let ValueChangedParameters { handle, .. } = gatt_stream
+            .select_next_some()
+            .await
+            .expect("valid event")
+            .into_on_notify_value()
+            .expect("notification");
+        assert_eq!(handle, Some(ADDITIONAL_DATA_CHARACTERISTIC_HANDLE));
     }
 
     #[fuchsia::test]

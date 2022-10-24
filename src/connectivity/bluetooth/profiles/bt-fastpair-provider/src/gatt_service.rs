@@ -25,6 +25,9 @@ use tracing::{trace, warn};
 use crate::config::Config;
 use crate::types::Error;
 
+/// Characteristic definition for the Fast Pair GATT service.
+/// Defined in https://developers.google.com/nearby/fast-pair/specifications/characteristics
+
 /// The UUID of the Fast Pair Service.
 pub const FAST_PAIR_SERVICE_UUID: u16 = 0xFE2C;
 /// Arbitrary Handle assigned to the Fast Pair Service.
@@ -54,6 +57,11 @@ pub const ACCOUNT_KEY_CHARACTERISTIC_HANDLE: Handle = Handle { value: 4 };
 const FIRMWARE_REVISION_CHARACTERISTIC_UUID: u16 = 0x2A26;
 /// Fixed Handle assigned to the Firmware Revision characteristic.
 const FIRMWARE_REVISION_CHARACTERISTIC_HANDLE: Handle = Handle { value: 5 };
+
+/// Custom characteristic - Additional Data.
+const ADDITIONAL_DATA_CHARACTERISTIC_UUID: &str = "FE2C1237-8366-4814-8EB0-01DE32100BEA";
+/// Fixed Handle assigned to the Additional Data characteristic.
+pub const ADDITIONAL_DATA_CHARACTERISTIC_HANDLE: Handle = Handle { value: 6 };
 
 pub type GattServiceResponder = Box<dyn FnOnce(Result<(), gatt::Error>)>;
 pub enum GattRequest {
@@ -86,6 +94,16 @@ pub enum GattRequest {
         /// A responder used to acknowledge the handling of the verification request.
         response: GattServiceResponder,
     },
+
+    /// A request containing additional Fast Pair data.
+    AdditionalData {
+        /// The ID of the remote peer.
+        peer_id: PeerId,
+        /// The encrypted payload containing the additional data.
+        encrypted_data: Vec<u8>,
+        /// A responder used to acknowledge the handling of the request.
+        response: GattServiceResponder,
+    },
 }
 
 impl GattRequest {
@@ -94,6 +112,7 @@ impl GattRequest {
             Self::KeyBasedPairing { response, .. } => response,
             Self::VerifyPasskey { response, .. } => response,
             Self::WriteAccountKey { response, .. } => response,
+            Self::AdditionalData { response, .. } => response,
         }
     }
 }
@@ -109,6 +128,9 @@ impl std::fmt::Debug for GattRequest {
             }
             Self::VerifyPasskey { peer_id, .. } => {
                 format!("VerifyPasskey({:?})", peer_id)
+            }
+            Self::AdditionalData { peer_id, .. } => {
+                format!("AdditionalData({:?})", peer_id)
             }
         };
         write!(f, "{}", output)
@@ -216,7 +238,22 @@ impl GattService {
             ..Characteristic::EMPTY
         };
 
-        vec![model_id, key_based_pairing, passkey, account_key, firmware_revision]
+        // 5. Additional Data - This supports write & notify with no specific security requirements.
+        let additional_data = Characteristic {
+            handle: Some(ADDITIONAL_DATA_CHARACTERISTIC_HANDLE),
+            type_: Uuid::from_str(ADDITIONAL_DATA_CHARACTERISTIC_UUID).ok().map(Into::into),
+            properties: Some(
+                CharacteristicPropertyBits::WRITE | CharacteristicPropertyBits::NOTIFY,
+            ),
+            permissions: Some(AttributePermissions {
+                write: Some(SecurityRequirements::EMPTY),
+                update: Some(SecurityRequirements::EMPTY),
+                ..AttributePermissions::EMPTY
+            }),
+            ..Characteristic::EMPTY
+        };
+
+        vec![model_id, key_based_pairing, passkey, account_key, firmware_revision, additional_data]
     }
 
     // Returns the GATT service definition for the Fast Pair Provider role.
@@ -250,21 +287,22 @@ impl GattService {
     }
 
     pub fn notify_key_based_pairing(&self, id: PeerId, value: Vec<u8>) -> Result<(), Error> {
-        // TODO(fxbug.dev/96726): Only send request if we have enough credits.
-        let params = ValueChangedParameters {
-            peer_ids: Some(vec![id.into()]),
-            handle: Some(KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE),
-            value: Some(value),
-            ..ValueChangedParameters::EMPTY
-        };
-        self.local_service_server.control_handle().send_on_notify_value(params).map_err(Into::into)
+        self.notify(id, KEY_BASED_PAIRING_CHARACTERISTIC_HANDLE, value)
     }
 
     pub fn notify_passkey(&self, id: PeerId, value: Vec<u8>) -> Result<(), Error> {
+        self.notify(id, PASSKEY_CHARACTERISTIC_HANDLE, value)
+    }
+
+    pub fn notify_additional_data(&self, id: PeerId, value: Vec<u8>) -> Result<(), Error> {
+        self.notify(id, ADDITIONAL_DATA_CHARACTERISTIC_HANDLE, value)
+    }
+
+    fn notify(&self, id: PeerId, handle: Handle, value: Vec<u8>) -> Result<(), Error> {
         // TODO(fxbug.dev/96726): Only send request if we have enough credits.
         let params = ValueChangedParameters {
             peer_ids: Some(vec![id.into()]),
-            handle: Some(PASSKEY_CHARACTERISTIC_HANDLE),
+            handle: Some(handle),
             value: Some(value),
             ..ValueChangedParameters::EMPTY
         };
@@ -324,6 +362,9 @@ impl GattService {
                 encrypted_account_key: value,
                 response,
             }),
+            ADDITIONAL_DATA_CHARACTERISTIC_HANDLE => {
+                Some(GattRequest::AdditionalData { peer_id, encrypted_data: value, response })
+            }
             h => {
                 warn!("Received unsupported write request for handle: {:?}", h);
                 response(Err(gatt::Error::InvalidHandle));

@@ -5,6 +5,7 @@
 use bitfield::bitfield;
 use fuchsia_bluetooth::types::Address;
 use packet_encoding::decodable_enum;
+use sha2::{Digest, Sha256};
 use std::convert::{TryFrom, TryInto};
 use tracing::debug;
 
@@ -73,10 +74,11 @@ pub enum KeyBasedPairingAction {
     // TODO(fxbug.dev/99734): Add Device Action requests.
 }
 
-/// A parsed and validated request.
+/// A parsed and validated key-based pairing request.
 #[derive(Debug, PartialEq)]
 pub struct KeyBasedPairingRequest {
     pub action: KeyBasedPairingAction,
+    pub notify_name: bool,
     _salt: Vec<u8>,
 }
 
@@ -98,6 +100,8 @@ pub fn decrypt_key_based_pairing_request(
             // received in Big Endian. All BT addresses saved in the Sapphire stack are in Little
             // Endian.
             received_provider_address.reverse();
+            // Whether the Provider needs to notify the Seeker of the current device name.
+            let notify_name = flags.notify_name();
 
             if flags.provider_initiates_bonding() || flags.retroactive_write() {
                 let mut seeker_address_bytes = [0; 6];
@@ -111,12 +115,17 @@ pub fn decrypt_key_based_pairing_request(
                 } else {
                     KeyBasedPairingAction::RetroactiveWrite { seeker_address }
                 };
-                return Ok(KeyBasedPairingRequest { action, _salt: request[14..].to_vec() });
+                return Ok(KeyBasedPairingRequest {
+                    action,
+                    notify_name,
+                    _salt: request[14..].to_vec(),
+                });
             }
 
             // Otherwise, this is a standard request to start key-based pairing.
             return Ok(KeyBasedPairingRequest {
                 action: KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address },
+                notify_name,
                 _salt: request[8..].to_vec(),
             });
         }
@@ -205,6 +214,91 @@ pub fn passkey_response(key: &SharedSecret, passkey: u32) -> Vec<u8> {
     // Final 12 bytes is a randomly generated salt value.
     fuchsia_zircon::cprng_draw(&mut response[4..16]);
     key.encrypt(&response).to_vec()
+}
+
+/// Builds and returns an encrypted response for notifying the device's personalized name.
+/// Defined in https://developers.google.com/nearby/fast-pair/specifications/characteristics#AdditionalData
+pub fn personalized_name_response(key: &SharedSecret, name: String) -> Vec<u8> {
+    let mut nonce = [0; 8];
+    fuchsia_zircon::cprng_draw(&mut nonce[..]);
+    personalized_name_response_internal(key, name, nonce)
+}
+
+fn personalized_name_response_internal(
+    key: &SharedSecret,
+    name: String,
+    nonce: [u8; 8],
+) -> Vec<u8> {
+    // The encrypted data is constructed (Steps 2-3 of the encryption procedure).
+    let mut encrypted_blocks = encrypt_personalized_name(key, name, &nonce);
+
+    // The HMAC-SHA256 is calculated using the encrypted data (Step 4).
+    let mut encrypted_data_with_nonce = nonce.to_vec();
+    encrypted_data_with_nonce.extend_from_slice(&encrypted_blocks);
+    let hashed_encrypted_data = hmac_sha256(key, encrypted_data_with_nonce);
+
+    // The encrypted output consists of:
+    // 1) First 8-bytes of the HMAC-SHA256 calculation.
+    // 2) 8-byte nonce
+    // 3) Encrypted data
+    let mut output = vec![0; 16];
+    output[..8].copy_from_slice(&hashed_encrypted_data[..8]);
+    output[8..16].copy_from_slice(&nonce[..8]);
+    output.append(&mut encrypted_blocks);
+    output
+}
+
+/// Returns the HMAC-SHA256 for the provided `encrypted_data`.
+/// `encrypted_data` is prefixed with a randomly generated 8-byte nonce.
+/// Corresponds to step 4 in the personalized name encryption algorithm.
+fn hmac_sha256(key: &SharedSecret, mut encrypted_data: Vec<u8>) -> [u8; 32] {
+    // a) k_with_ipad = concat((K ^ ipad), encrypted_data))
+    let mut k = [0x00u8; 64];
+    k[..16].copy_from_slice(key.as_bytes());
+    let ipad = [0x36u8; 64];
+    let mut k_with_ipad: Vec<u8> = k.iter().zip(ipad.iter()).map(|(&x1, &x2)| x1 ^ x2).collect();
+    k_with_ipad.append(&mut encrypted_data);
+
+    // b) hashed_k_with_ipad = sha256(concat((K ^ ipad), encrypted_data)))
+    let mut hasher = Sha256::new();
+    hasher.update(k_with_ipad);
+    let mut hashed_k_with_ipad: Vec<u8> = hasher.finalize().to_vec();
+
+    // c) k_with_opad = concat((K ^ opad), sha256(concat((K ^ ipad), encrypted_data)))
+    let opad = [0x5cu8; 64];
+    let mut k_with_opad: Vec<u8> = k.iter().zip(opad.iter()).map(|(&x1, &x2)| x1 ^ x2).collect();
+    k_with_opad.append(&mut hashed_k_with_ipad);
+
+    // d) output = sha256(k_with_opad)
+    let mut hasher = Sha256::new();
+    hasher.update(k_with_opad);
+    hasher.finalize().into()
+}
+
+/// Encrypts the provided `name` and returns a byte buffer of the encrypted output.
+/// Corresponds to steps 2-3 in the personalized name encryption algorithm.
+fn encrypt_personalized_name(key: &SharedSecret, name: String, nonce: &[u8; 8]) -> Vec<u8> {
+    let name_bytes = name.into_bytes();
+
+    // The provided `name_bytes` is divided into 16-byte blocks. The last block can be less than 16
+    // bytes.
+    // Each block is combined with a temporary buffer that depends on the index of the block.
+    // The temporary buffer has format: [i, 0x00000000000000, nonce] where:
+    // i = the index of the 16-byte block.
+    // nonce = randomly generated 8-byte value.
+    // Therefore, each block is encrypted as:
+    //   encryptedBlock[i] = block[i] ^ AES(key, concat((uint8) i, 0x00000000000000, nonce))
+    let mut block_mask = [0; 16];
+    block_mask[8..].copy_from_slice(nonce);
+    let mut encrypted_blocks = vec![];
+    for (i, block) in name_bytes.chunks(16).enumerate() {
+        block_mask[0] = i as u8;
+        let encrypted_block = key.encrypt(&block_mask);
+        let mut combined_encrypted_block =
+            block.iter().zip(encrypted_block.iter()).map(|(&x1, &x2)| x1 ^ x2).collect();
+        encrypted_blocks.append(&mut combined_encrypted_block);
+    }
+    encrypted_blocks
 }
 
 #[cfg(test)]
@@ -312,6 +406,7 @@ pub(crate) mod tests {
         let received_provider_address = [0x01, 0x02, 0x03, 0x04, 0x05, 0x06];
         let expected_request = KeyBasedPairingRequest {
             action: KeyBasedPairingAction::SeekerInitiatesPairing { received_provider_address },
+            notify_name: false, // The Flags are empty so we don't expect to notify name.
             _salt: vec![0xaa, 0xaa, 0xbb, 0xbb, 0xcc, 0xcc, 0xdd, 0xdd],
         };
         assert_eq!(request, expected_request);
@@ -322,7 +417,7 @@ pub(crate) mod tests {
         let key = example_aes_key();
         // The request is formatted and encrypted OK.
         let mut retroactive_pairing_request = KEY_BASED_PAIRING_REQUEST;
-        retroactive_pairing_request[1] = 0x10; // Retroactive pairing flags
+        retroactive_pairing_request[1] = 0x10; // Flags: Only retroactive pairing
         let encrypted_request = key.encrypt(&retroactive_pairing_request);
 
         let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
@@ -333,6 +428,7 @@ pub(crate) mod tests {
                 // Received in BE but stored as LE per Sapphire stack.
                 seeker_address: Address::Public([0xcc, 0xcc, 0xbb, 0xbb, 0xaa, 0xaa]),
             },
+            notify_name: false,
             _salt: vec![0xdd, 0xdd],
         };
         assert_eq!(request, expected_request);
@@ -343,7 +439,7 @@ pub(crate) mod tests {
         let key = example_aes_key();
         // The request is formatted and encrypted OK.
         let mut provider_pairing_request = KEY_BASED_PAIRING_REQUEST;
-        provider_pairing_request[1] = 0x40; // Provider initiates pairing flags
+        provider_pairing_request[1] = 0x60; // Flags: Provider initiates pairing & notify name
         let encrypted_request = key.encrypt(&provider_pairing_request);
 
         let request = decrypt_key_based_pairing_request(&encrypted_request, &key)
@@ -354,6 +450,7 @@ pub(crate) mod tests {
                 // Received in BE but stored as LE per Sapphire stack.
                 seeker_address: Address::Public([0xcc, 0xcc, 0xbb, 0xbb, 0xaa, 0xaa]),
             },
+            notify_name: true,
             _salt: vec![0xdd, 0xdd],
         };
         assert_eq!(request, expected_request);
@@ -478,5 +575,75 @@ pub(crate) mod tests {
             0x12, 0x34, 0x56, // Passkey in Big Endian bytes
         ];
         assert_eq!(decrypted_response[..4], expected);
+    }
+
+    /// Shared secret that is used in the Personalized Name test cases in the GFPS.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#aes-ctr_encryption
+    fn personalized_name_key() -> SharedSecret {
+        SharedSecret::new([
+            0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF, 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB,
+            0xCD, 0xEF,
+        ])
+    }
+
+    /// This test verifies the encryption of the personalized name.
+    /// The contents of this test case are pulled from the GFPS specification.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#aes-ctr_encryption
+    #[test]
+    fn personalized_name_aes_encrpytion() {
+        let name = String::from_utf8(vec![
+            0x53, 0x6F, 0x6D, 0x65, 0x6F, 0x6E, 0x65, 0x27, 0x73, 0x20, 0x47, 0x6F, 0x6F, 0x67,
+            0x6C, 0x65, 0x20, 0x48, 0x65, 0x61, 0x64, 0x70, 0x68, 0x6F, 0x6E, 0x65,
+        ])
+        .expect("valid utf8 string");
+        let nonce = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+
+        let result = encrypt_personalized_name(&personalized_name_key(), name, &nonce);
+        let expected_encryption_result = [
+            0xEE, 0x4A, 0x24, 0x83, 0x73, 0x80, 0x52, 0xE4, 0x4E, 0x9B, 0x2A, 0x14, 0x5E, 0x5D,
+            0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53, 0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
+        ];
+        assert_eq!(result[..], expected_encryption_result);
+    }
+
+    /// This test verifies the HMAC-SHA256 calculation.
+    /// The contents of this test case are pulled from the GFPS specification.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#hmac-sha256
+    #[test]
+    fn hmac_sha256_calculation() {
+        let encrypted_data = vec![
+            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xEE, 0x4A, 0x24, 0x83, 0x73, 0x80,
+            0x52, 0xE4, 0x4E, 0x9B, 0x2A, 0x14, 0x5E, 0x5D, 0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53,
+            0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
+        ];
+
+        let result = hmac_sha256(&personalized_name_key(), encrypted_data);
+        let expected_result = [
+            0x55, 0xEC, 0x5E, 0x60, 0x55, 0xAF, 0x6E, 0x92, 0x61, 0x8B, 0x7D, 0x87, 0x10, 0xD4,
+            0x41, 0x37, 0x09, 0xAB, 0x5D, 0xA2, 0x7C, 0xA2, 0x6A, 0x66, 0xF5, 0x2E, 0x5A, 0xD4,
+            0xE8, 0x20, 0x90, 0x52,
+        ];
+        assert_eq!(result[..], expected_result);
+    }
+
+    /// This test verifies the creation of the personalized name response.
+    /// The contents of this test case are pulled from the GFPS specification.
+    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#encode_personalized_name_to_additional_data_packet
+    #[test]
+    fn personalized_name_response() {
+        let name = String::from_utf8(vec![
+            0x53, 0x6F, 0x6D, 0x65, 0x6F, 0x6E, 0x65, 0x27, 0x73, 0x20, 0x47, 0x6F, 0x6F, 0x67,
+            0x6C, 0x65, 0x20, 0x48, 0x65, 0x61, 0x64, 0x70, 0x68, 0x6F, 0x6E, 0x65,
+        ])
+        .expect("valid utf8 string");
+        let nonce = [0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07];
+
+        let response = personalized_name_response_internal(&personalized_name_key(), name, nonce);
+        let expected_encrypted_response = [
+            0x55, 0xEC, 0x5E, 0x60, 0x55, 0xAF, 0x6E, 0x92, 0x00, 0x01, 0x02, 0x03, 0x04, 0x05,
+            0x06, 0x07, 0xEE, 0x4A, 0x24, 0x83, 0x73, 0x80, 0x52, 0xE4, 0x4E, 0x9B, 0x2A, 0x14,
+            0x5E, 0x5D, 0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53, 0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
+        ];
+        assert_eq!(response[..], expected_encrypted_response);
     }
 }

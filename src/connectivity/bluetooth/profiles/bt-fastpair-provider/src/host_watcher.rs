@@ -118,6 +118,10 @@ impl HostWatcher {
     pub fn pairing_mode(&self) -> Option<bool> {
         self.active_host.as_ref().map(|h| h.discoverable)
     }
+
+    pub fn local_name(&self) -> Option<String> {
+        self.active_host.as_ref().map(|h| h.local_name.clone()).flatten()
+    }
 }
 
 impl Stream for HostWatcher {
