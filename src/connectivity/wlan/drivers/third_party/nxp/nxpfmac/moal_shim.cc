@@ -203,8 +203,13 @@ mlan_status moal_shutdown_fw_complete(t_void *pmoal, mlan_status status) {
 
 mlan_status moal_send_packet_complete(t_void *pmoal, pmlan_buffer pmbuf, mlan_status status) {
   wlan::nxpfmac::DataPlane *plane = static_cast<wlan::nxpfmac::DeviceContext *>(pmoal)->data_plane_;
-  auto frame = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
-  plane->CompleteTx(std::move(*frame), status == MLAN_STATUS_SUCCESS ? ZX_OK : ZX_ERR_INTERNAL);
+  // Make sure that we create an actual Frame object here, otherwise it won't be destructed since
+  // it's just stored in the data buffer. This ensures that if the frame is associated with any
+  // storage it will be returned properly.
+  auto frame_ptr = reinterpret_cast<wlan::drivers::components::Frame *>(pmbuf->pdesc);
+  wlan::drivers::components::Frame frame(std::move(*frame_ptr));
+
+  plane->CompleteTx(std::move(frame), status == MLAN_STATUS_SUCCESS ? ZX_OK : ZX_ERR_INTERNAL);
   return MLAN_STATUS_SUCCESS;
 }
 
