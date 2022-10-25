@@ -1126,14 +1126,16 @@ config("no-finite-loops") {
   cflags = [ "-fno-finite-loops" ]
 }
 
-# Tools that must be executed locally.
-pool("local") {
-  depth = default_concurrent_jobs.local
-}
+if (current_toolchain == default_toolchain) {
+  # Tools that must be executed locally.
+  pool("local") {
+    depth = default_concurrent_jobs.local
+  }
 
-# For actions that consume exceptionally large amounts of memory.
-# The largest LTO link actions may fall into this category.
-# See https://fxbug.dev/111094 for context.
-pool("highmem") {
-  depth = 1
+  # For actions that consume exceptionally large amounts of memory.
+  # The largest LTO link actions may fall into this category.
+  # See https://fxbug.dev/111094 for context.
+  pool("highmem") {
+    depth = 1
+  }
 }

@@ -48,8 +48,10 @@ bazel_inputs_manifest("legacy_ninja_build_outputs") {
 # action at a time during the build, since doing so modifies the workspace,
 # in particular the `bazel-bin` symlink that is used to copy the Bazel outputs
 # to the Ninja output directory.
-pool("build_action_pool") {
-  depth = 1
+if (current_toolchain == default_toolchain) {
+  pool("build_action_pool") {
+    depth = 1
+  }
 }
 
 action("generate_main_workspace") {
