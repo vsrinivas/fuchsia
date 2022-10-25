@@ -308,6 +308,7 @@ source_set("snapshot") {
   deps = [
     ":constants",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
   ]
 }
 
@@ -345,6 +346,10 @@ source_set("store") {
     "report_store.h",
     "report_store_metadata.cc",
     "report_store_metadata.h",
+    "snapshot_persistence.cc",
+    "snapshot_persistence.h",
+    "snapshot_persistence_metadata.cc",
+    "snapshot_persistence_metadata.h",
     "snapshot_store.cc",
     "snapshot_store.h",
   ]
@@ -363,6 +368,7 @@ source_set("store") {
     ":report_util",
     "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/feedback_data:constants",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",

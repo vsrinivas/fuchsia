@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "src/developer/forensics/crash_reports/constants.h"
+#include "src/developer/forensics/feedback_data/constants.h"
 
 namespace forensics {
 namespace crash_reports {
@@ -32,6 +33,9 @@ ManagedSnapshot::Archive::Archive(const fuchsia::feedback::Attachment& attachmen
     return;
   }
 }
+
+ManagedSnapshot::Archive::Archive(std::string archive_key, SizedData archive)
+    : key(std::move(archive_key)), value(std::move(archive)) {}
 
 }  // namespace crash_reports
 }  // namespace forensics

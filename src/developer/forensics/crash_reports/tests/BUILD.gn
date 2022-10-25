@@ -275,6 +275,40 @@ executable("snapshot_collector_unittest_exe") {
   ]
 }
 
+executable("snapshot_persistence_metadata_unittest_exe") {
+  testonly = true
+
+  sources = [ "snapshot_persistence_metadata_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:store",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
+    "//src/developer/forensics/utils:storage_size",
+    "//src/lib/files",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("snapshot_persistence_unittest_exe") {
+  testonly = true
+
+  sources = [ "snapshot_persistence_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:constants",
+    "//src/developer/forensics/crash_reports:store",
+    "//src/developer/forensics/feedback_data:constants",
+    "//src/developer/forensics/testing:gmatchers",
+    "//src/developer/forensics/testing:gpretty_printers",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:unit_test_fixture",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("snapshot_store_unittest_exe") {
   testonly = true
 
@@ -442,6 +476,21 @@ fuchsia_unittest_component("snapshot_collector_unittest") {
   ]
 }
 
+fuchsia_unittest_component("snapshot_persistence_metadata_unittest") {
+  deps = [
+    ":snapshot_persistence_metadata_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+  ]
+}
+
+fuchsia_unittest_component("snapshot_persistence_unittest") {
+  deps = [
+    ":snapshot_persistence_unittest_exe",
+    "//src/sys/test_runners:tmp_storage",
+    "//src/sys/test_runners/gtest:death_test",
+  ]
+}
+
 fuchsia_unittest_component("snapshot_store_unittest") {
   deps = [
     ":snapshot_store_unittest_exe",
@@ -482,6 +531,8 @@ fuchsia_test_package("crash-reports-tests") {
     ":report_util_unittest",
     ":sized_data_reader_unittest",
     ":snapshot_collector_unittest",
+    ":snapshot_persistence_metadata_unittest",
+    ":snapshot_persistence_unittest",
     ":snapshot_store_unittest",
     ":report_store_unittest",
     ":report_store_metadata_unittest",

@@ -30,7 +30,8 @@ bool IsSpecialCaseSnapshot(const SnapshotUuid& uuid);
 class ManagedSnapshot {
  public:
   struct Archive {
-    Archive(const fuchsia::feedback::Attachment& archive);
+    explicit Archive(const fuchsia::feedback::Attachment& attachment);
+    Archive(std::string archive_key, SizedData archive);
     std::string key;
     SizedData value;
   };
