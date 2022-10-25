@@ -168,6 +168,13 @@ impl Indexer {
         let properties = args.properties.unwrap();
         let properties = node_to_device_property(&properties)?;
 
+        // Prioritize device groups to avoid match conflicts with composite drivers.
+        let device_group_match =
+            self.device_group_manager.borrow().match_device_group_nodes(&properties);
+        if let Some(device_group) = device_group_match {
+            return Ok(device_group);
+        }
+
         let base_repo = self.base_repo.borrow();
         let base_repo_iter = match base_repo.deref() {
             BaseRepo::Resolved(drivers) => drivers.iter(),
@@ -203,12 +210,6 @@ impl Indexer {
                     None
                 }
             })
-            .chain(
-                self.device_group_manager
-                    .borrow()
-                    .match_device_group_nodes(&properties)
-                    .map(|matched| (false, matched)),
-            )
             .partition(|(fallback, _)| *fallback);
 
         match (non_fallback.len(), fallback.len()) {
@@ -251,7 +252,7 @@ impl Indexer {
         // Iterate over all drivers. Match non-fallback boot drivers, then
         // non-fallback base drivers, then fallback boot drivers, then fallback
         // base drivers.
-        Ok(self
+        let mut matched_drivers: Vec<fdi::MatchedDriver> = self
             .boot_repo
             .iter()
             .filter(|&driver| !driver.fallback)
@@ -261,8 +262,16 @@ impl Indexer {
             .chain(fallback_base_drivers)
             .filter_map(|driver| driver.matches(&properties).ok())
             .filter_map(|d| d)
-            .chain(self.device_group_manager.borrow().match_device_group_nodes(&properties))
-            .collect())
+            .collect();
+
+        // Prioritize device groups to avoid match conflicts with composite drivers.
+        let device_group_match =
+            self.device_group_manager.borrow().match_device_group_nodes(&properties);
+        if let Some(device_group) = device_group_match {
+            matched_drivers.insert(0, device_group);
+        }
+
+        Ok(matched_drivers)
     }
 
     fn add_device_group(&self, group: fdf::DeviceGroup) -> fdi::DriverIndexAddDeviceGroupResult {
@@ -2602,6 +2611,15 @@ mod tests {
 
             assert_eq!(
                 vec![
+                    fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
+                        device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
+                            topological_path: Some("test/path".to_string()),
+                            node_index: Some(0),
+                            num_nodes: Some(1),
+                            ..fdi::MatchedDeviceGroupInfo::EMPTY
+                        }]),
+                        ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
+                    }),
                     fdi::MatchedDriver::Driver(fdi::MatchedDriverInfo {
                         url: Some(
                             "fuchsia-pkg://fuchsia.com/package#driver/my-driver.cm".to_string()
@@ -2611,15 +2629,6 @@ mod tests {
                         package_type: Some(fdi::DriverPackageType::Base),
                         is_fallback: Some(false),
                         ..fdi::MatchedDriverInfo::EMPTY
-                    }),
-                    fdi::MatchedDriver::DeviceGroupNode(fdi::MatchedDeviceGroupNodeInfo {
-                        device_groups: Some(vec![fdi::MatchedDeviceGroupInfo {
-                            topological_path: Some("test/path".to_string()),
-                            node_index: Some(0),
-                            num_nodes: Some(1),
-                            ..fdi::MatchedDeviceGroupInfo::EMPTY
-                        }]),
-                        ..fdi::MatchedDeviceGroupNodeInfo::EMPTY
                     })
                 ],
                 result
