@@ -59,7 +59,7 @@ group("installer") {
   deps = [
     ":system_recovery_installer",
     # TODO (fxbug.dev/102239): This directive does not pick up any tests.
-    # ":system_recovery_installer_tests",
+    #":system_recovery_installer_tests",
   ]
 }
 
@@ -387,8 +387,6 @@ fuchsia_test_package("system_recovery_tests") {
     ":instructions",
     ":recovery_logo",
     ":roboto_regular",
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/sys/pkg/bin/pm:pm_bin",
@@ -494,8 +492,6 @@ fuchsia_test_package("system_recovery_installer_tests") {
     ":instructions",
     ":recovery_logo",
     ":roboto_regular",
-    "//src/connectivity/network/dns:component-legacy",
-    "//src/connectivity/network/netstack:component-legacy",
     "//src/storage/bin/blobfs",
     "//src/storage/bin/minfs",
     "//src/sys/pkg/bin/pm:pm_bin",

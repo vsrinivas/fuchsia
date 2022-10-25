@@ -116,11 +116,6 @@ fuchsia_package("network-legacy-deprecated") {
     "netstack:component",
     "netstack:component-with-fast-udp",
     "netstack3:component-debug",
-
-    # TODO(https://fxbug.dev/85821): Remove once out-of-tree users no longer
-    # reference v1 components.
-    "dns:component-legacy",
-    "netstack:component-legacy",
   ]
 }
 
