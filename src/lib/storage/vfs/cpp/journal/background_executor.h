@@ -7,12 +7,12 @@
 
 #include <lib/fpromise/promise.h>
 #include <lib/fpromise/single_threaded_executor.h>
+#include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
-#include <thread>
 
 namespace fs {
 
@@ -27,6 +27,7 @@ class BackgroundExecutor final : public fpromise::executor {
   BackgroundExecutor(BackgroundExecutor&&) = delete;
   BackgroundExecutor& operator=(const BackgroundExecutor&) = delete;
   BackgroundExecutor& operator=(BackgroundExecutor&&) = delete;
+  ~BackgroundExecutor() override;
 
   // Schedules a unit of work to be processed in a background thread.
   //
@@ -38,15 +39,11 @@ class BackgroundExecutor final : public fpromise::executor {
     executor_.schedule_task(std::move(task));
   }
 
-  // This terminates and joins any background threads.  This must be called before the destructor
-  // runs.
-  void Terminate();
-
  private:
   // Executor which dispatches all scheduled tasks.
   fpromise::single_threaded_executor executor_;
   // Thread which periodically updates all pending data allocations.
-  std::thread thread_;
+  thrd_t thrd_;
 
   // Protects access to the "terminate_" task.
   //

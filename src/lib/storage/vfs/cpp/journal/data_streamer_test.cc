@@ -87,7 +87,7 @@ class DataStreamerFixture : public testing::Test {
   }
 
   MockTransactionHandler& handler() { return handler_; }
-  std::unique_ptr<Journal> TakeJournal() { return std::move(journal_); }
+  std::unique_ptr<Journal> take_journal() { return std::move(journal_); }
 
  private:
   MockVmoidRegistry registry_;
@@ -113,7 +113,7 @@ TEST_F(DataStreamerTest, StreamSmallOperationScheduledToWriteback) {
   };
   handler().SetTransactionCallbacks(callbacks, std::size(callbacks));
   {
-    auto journal = TakeJournal();
+    auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
                          .op = {
@@ -153,7 +153,7 @@ TEST_F(DataStreamerTest, StreamOperationAsLargeAsWritebackIsChunked) {
   };
   handler().SetTransactionCallbacks(callbacks, std::size(callbacks));
   {
-    auto journal = TakeJournal();
+    auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
                          .op = {
@@ -196,7 +196,7 @@ TEST_F(DataStreamerTest, StreamOperationLargerThanWritebackIsChunkedAndNonBlocki
   };
   handler().SetTransactionCallbacks(callbacks, std::size(callbacks));
   {
-    auto journal = TakeJournal();
+    auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     streamer.StreamData({.vmo = zx::unowned_vmo(vmo.get()),
                          .op = {
@@ -229,7 +229,7 @@ TEST_F(DataStreamerTest, StreamManySmallOperationsAreMerged) {
   };
   handler().SetTransactionCallbacks(callbacks, std::size(callbacks));
   {
-    auto journal = TakeJournal();
+    auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     for (size_t i = 0; i < kOperationCount; i++) {
       storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
@@ -259,7 +259,7 @@ TEST_F(DataStreamerTest, StreamFailedOperationFailsFlush) {
   handler().SetTransactionCallbacks(callbacks, std::size(callbacks));
   bool failed_promise_observed = false;
   {
-    auto journal = TakeJournal();
+    auto journal = take_journal();
     DataStreamer streamer(journal.get(), kWritebackLength);
     storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(vmo.get()),
                                        .op = {

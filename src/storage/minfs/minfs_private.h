@@ -166,8 +166,7 @@ class TransactionalFs {
   virtual Allocator& GetInodeAllocator() = 0;
 };
 
-// Constructor is private and we mark the class final because the destructor will call Terminate
-// which will join threads and that won't be safe if it's been derived from.
+// Marked final for cleaning up async thread references in destructor.
 class Minfs final : public TransactionalFs {
  public:
   // Not copyable or movable
