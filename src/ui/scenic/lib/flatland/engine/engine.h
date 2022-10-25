@@ -19,6 +19,7 @@
 #include "src/ui/scenic/lib/flatland/engine/display_compositor.h"
 #include "src/ui/scenic/lib/flatland/flatland_manager.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter_impl.h"
+#include "src/ui/scenic/lib/flatland/flatland_types.h"
 #include "src/ui/scenic/lib/flatland/global_matrix_data.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -28,7 +29,7 @@
 namespace flatland {
 
 using GetRootTransformFunc = fit::function<std::optional<TransformHandle>()>;
-using ImageRectangles = std::vector<Rectangle2D>;
+using ImageRectangles = std::vector<ImageRect>;
 using ImageMetadatas = std::vector<allocation::ImageMetadata>;
 using Renderables = std::pair<ImageRectangles, ImageMetadatas>;
 

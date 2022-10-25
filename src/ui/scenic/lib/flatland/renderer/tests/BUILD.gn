@@ -24,6 +24,7 @@ executable("unittests") {
 
   public_deps = [
     "//src/lib/fsl",
+    "//src/ui/scenic/lib/flatland:flatland_types",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

@@ -48,7 +48,7 @@ class VkRenderer final : public Renderer {
   void ReleaseBufferImage(GlobalImageId image_id) override;
 
   // |Renderer|.
-  void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
+  void Render(const ImageMetadata& render_target, const std::vector<ImageRect>& rectangles,
               const std::vector<ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {},
               bool apply_color_conversion = false) override;

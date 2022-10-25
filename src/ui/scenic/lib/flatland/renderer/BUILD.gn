@@ -16,6 +16,7 @@ source_set("renderer") {
 
   public_deps = [
     "//src/ui/lib/escher/geometry:escher_geometry",
+    "//src/ui/scenic/lib/flatland:flatland_types",
     "//src/ui/scenic/lib/flatland/buffers",
     "//third_party/glm",
   ]

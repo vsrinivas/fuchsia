@@ -13,6 +13,7 @@
 #include "fuchsia/math/cpp/fidl.h"
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/flatland/flatland_types.h"
 
 #include <glm/glm.hpp>
 #include <glm/mat3x3.hpp>
@@ -47,7 +48,7 @@ class Renderer : public allocation::BufferCollectionImporter {
   // these fences to coordinate with other work that needs to wait until rendering is completed
   // to be executed.
   virtual void Render(const allocation::ImageMetadata& render_target,
-                      const std::vector<Rectangle2D>& rectangles,
+                      const std::vector<ImageRect>& rectangles,
                       const std::vector<allocation::ImageMetadata>& images,
                       const std::vector<zx::event>& release_fences = {},
                       bool apply_color_conversion = false) = 0;

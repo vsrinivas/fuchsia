@@ -185,13 +185,11 @@ class DisplayCompositor final : public allocation::BufferCollectionImporter,
   void SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers);
 
   // Takes a solid color rectangle and directly composites it to a hardware layer on the display.
-  void ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D rectangle,
-                       allocation::ImageMetadata image);
+  void ApplyLayerColor(uint32_t layer_id, ImageRect rectangle, allocation::ImageMetadata image);
 
   // Takes an image and directly composites it to a hardware layer on the display.
-  void ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
-                       allocation::ImageMetadata image, scenic_impl::DisplayEventId wait_id,
-                       scenic_impl::DisplayEventId signal_id);
+  void ApplyLayerImage(uint32_t layer_id, ImageRect rectangle, allocation::ImageMetadata image,
+                       scenic_impl::DisplayEventId wait_id, scenic_impl::DisplayEventId signal_id);
 
   // Checks if the display controller is capable of applying the configuration settings that
   // have been set up until that point

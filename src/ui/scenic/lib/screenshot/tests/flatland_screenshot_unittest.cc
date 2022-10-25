@@ -38,7 +38,7 @@ class FlatlandScreenshotTest : public gtest::RealLoopFixture {
     screen_capturer_ = std::make_unique<screen_capture::ScreenCapture>(
         screen_capture_ptr_.NewRequest(), screenshot_importers, renderer_,
         /*get_renderables=*/[](auto...) {
-          return std::make_pair<std::vector<escher::Rectangle2D>,
+          return std::make_pair<std::vector<flatland::ImageRect>,
                                 std::vector<allocation::ImageMetadata>>({}, {});
         });
 

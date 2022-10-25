@@ -29,6 +29,7 @@ using testing::_;
 using allocation::Allocator;
 using allocation::BufferCollectionImporter;
 using flatland::FlatlandManager;
+using flatland::ImageRect;
 using flatland::MockFlatlandPresenter;
 using fuchsia::ui::composition::RegisterBufferCollectionArgs;
 using fuchsia::ui::composition::internal::FrameInfo;
@@ -68,7 +69,7 @@ class ScreenCapture2ManagerTest : public gtest::TestLoopFixture {
   }
 
   flatland::Renderables GetRenderables() {
-    return std::make_pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>>({}, {});
+    return std::make_pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>>({}, {});
   }
 
   void ConfigureScreenCapture(

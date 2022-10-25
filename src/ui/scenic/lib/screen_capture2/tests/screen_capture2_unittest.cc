@@ -27,6 +27,7 @@
 
 using allocation::Allocator;
 using allocation::BufferCollectionImporter;
+using flatland::ImageRect;
 using fuchsia::ui::composition::internal::FrameInfo;
 using fuchsia::ui::composition::internal::ScreenCaptureConfig;
 using fuchsia::ui::composition::internal::ScreenCaptureError;
@@ -49,7 +50,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
         /*enable_copy_fallback=*/false);
 
     renderables_ =
-        std::make_pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>>({}, {});
+        std::make_pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>>({}, {});
   }
 
   void SetUpMockImporter() {
@@ -86,7 +87,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
 
       EXPECT_CALL(*mock_renderer_.get(), Render(_, _, _, _, _))
           .WillRepeatedly([](const allocation::ImageMetadata& render_target,
-                             const std::vector<Rectangle2D>& rectangles,
+                             const std::vector<ImageRect>& rectangles,
                              const std::vector<allocation::ImageMetadata>& images,
                              const std::vector<zx::event>& release_fences,
                              bool apply_color_conversion) {
@@ -123,7 +124,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
     EXPECT_TRUE(configure_result.is_ok());
   }
 
-  std::pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>> GetRenderables() {
+  std::pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>> GetRenderables() {
     return renderables_;
   }
 
@@ -140,7 +141,7 @@ class ScreenCapture2Test : public gtest::TestLoopFixture {
   sys::testing::ComponentContextProvider context_provider_;
 
  private:
-  std::pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>> renderables_;
+  std::pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>> renderables_;
 };
 
 TEST_F(ScreenCapture2Test, ConfigureWithMissingArguments) {

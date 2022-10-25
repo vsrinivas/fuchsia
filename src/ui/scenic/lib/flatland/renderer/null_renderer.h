@@ -10,6 +10,7 @@
 
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/buffers/buffer_collection.h"
+#include "src/ui/scenic/lib/flatland/flatland_types.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
 namespace flatland {
@@ -42,7 +43,7 @@ class NullRenderer final : public Renderer {
 
   // |Renderer|.
   void Render(const allocation::ImageMetadata& render_target,
-              const std::vector<Rectangle2D>& rectangles,
+              const std::vector<ImageRect>& rectangles,
               const std::vector<allocation::ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {},
               bool apply_color_conversion = false) override;

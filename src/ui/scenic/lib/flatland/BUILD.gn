@@ -34,6 +34,7 @@ source_set("flatland") {
   ]
 
   public_deps = [
+    ":flatland_types",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_hlcpp_conversion",
     "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
@@ -70,6 +71,19 @@ source_set("flatland") {
 
   # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+source_set("flatland_types") {
+  sources = [
+    "flatland_types.cc",
+    "flatland_types.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_cpp_hlcpp_conversion",
+    "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_hlcpp",
+    "//third_party/glm",
+  ]
 }
 
 group("pixeltests") {

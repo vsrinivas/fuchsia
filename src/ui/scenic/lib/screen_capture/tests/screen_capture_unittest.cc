@@ -20,6 +20,7 @@
 #include "src/ui/scenic/lib/utils/helpers.h"
 
 using allocation::BufferCollectionImporter;
+using flatland::ImageRect;
 using fuchsia::ui::composition::FrameInfo;
 using fuchsia::ui::composition::GetNextFrameArgs;
 using fuchsia::ui::composition::ScreenCaptureConfig;
@@ -40,7 +41,7 @@ class ScreenCaptureTest : public gtest::TestLoopFixture {
 
     renderer_ = std::make_shared<flatland::MockRenderer>();
     renderables_ =
-        std::make_pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>>({}, {});
+        std::make_pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>>({}, {});
 
     // Capture uninteresting cleanup calls from Allocator dtor.
     EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(_, _))
@@ -68,7 +69,7 @@ class ScreenCaptureTest : public gtest::TestLoopFixture {
     return response;
   }
 
-  std::pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>> GetRenderables() {
+  std::pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>> GetRenderables() {
     return renderables_;
   }
 
@@ -79,7 +80,7 @@ class ScreenCaptureTest : public gtest::TestLoopFixture {
 
  private:
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
-  std::pair<std::vector<Rectangle2D>, std::vector<allocation::ImageMetadata>> renderables_;
+  std::pair<std::vector<ImageRect>, std::vector<allocation::ImageMetadata>> renderables_;
 };
 
 TEST_F(ScreenCaptureTest, ConfigureSingleImporterSuccess) {

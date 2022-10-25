@@ -148,7 +148,7 @@ void NullRenderer::SetColorConversionValues(const std::array<float, 9>& coeffici
 // Check that the buffer collections for each of the images passed in have been validated.
 // DCHECK if they have not.
 void NullRenderer::Render(const allocation::ImageMetadata& render_target,
-                          const std::vector<Rectangle2D>& rectangles,
+                          const std::vector<ImageRect>& rectangles,
                           const std::vector<allocation::ImageMetadata>& images,
                           const std::vector<zx::event>& release_fences,
                           bool apply_color_conversion) {

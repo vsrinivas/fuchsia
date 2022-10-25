@@ -29,6 +29,7 @@ namespace flatland {
 
 using allocation::BufferCollectionUsage;
 using allocation::ImageMetadata;
+using fuchsia::ui::composition::Orientation;
 
 // TODO(fxbug.dev/52632): Move common functions to testing::WithParamInterface instead of function
 // calls.
@@ -394,7 +395,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
   renderer->ReleaseBufferCollection(target_collection_id, BufferCollectionUsage::kRenderTarget);
 
   // We should still be able to render this image.
-  renderer->Render(render_target, {Rectangle2D(glm::vec2(0, 0), glm::vec2(kWidth, kHeight))},
+  renderer->Render(render_target, {ImageRect(glm::vec2(0, 0), glm::vec2(kWidth, kHeight))},
                    {image});
   if (use_vulkan) {
     auto vk_renderer = static_cast<VkRenderer*>(renderer);
@@ -781,12 +782,16 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
                                  .width = kTargetWidth,
                                  .height = kTargetHeight};
 
+  // The texture width and height, also used for unnormalized texture coordinates.
+  const float w = 2;
+  const float h = 1;
+
   // Create the image meta data for the renderable.
   ImageMetadata renderable_texture = {.collection_id = collection_id,
                                       .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
-                                      .width = 2,
-                                      .height = 1};
+                                      .width = static_cast<uint32_t>(w),
+                                      .height = static_cast<uint32_t>(h)};
 
   auto import_res = renderer.ImportBufferImage(render_target, BufferCollectionUsage::kRenderTarget);
   EXPECT_TRUE(import_res);
@@ -798,7 +803,9 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   // with a width/height of (4,2).
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight),
+                       {glm::vec2(0, 0), glm::vec2(w, 0), glm::vec2(w, h), glm::vec2(0, h)},
+                       Orientation::CCW_0_DEGREES);
 
   // Have the client write pixel values to the renderable's texture.
   MapHostPointer(client_collection_info, renderable_texture.vmo_index,
@@ -848,8 +855,9 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   // Now let's update the uvs of the renderable so only the green portion of the image maps onto
   // the rect.
   auto renderable2 =
-      Rectangle2D(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight),
-                  {glm::vec2(0.5, 0), glm::vec2(1.0, 0), glm::vec2(1.0, 1.0), glm::vec2(0.5, 1.0)});
+      ImageRect(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight),
+                {glm::vec2(w / 2, 0), glm::vec2(w, 0), glm::vec2(w, h), glm::vec2(w / 2, h)},
+                Orientation::CCW_0_DEGREES);
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable2}, {renderable_texture});
@@ -960,12 +968,16 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
                                          .width = kTargetWidthFlipped,
                                          .height = kTargetHeightFlipped};
 
+  // The texture width and height, also used for unnormalized texture coordinates.
+  const float w = 2;
+  const float h = 1;
+
   // Create the image meta data for the renderable.
   ImageMetadata renderable_texture = {.collection_id = collection_id,
                                       .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
-                                      .width = 2,
-                                      .height = 1};
+                                      .width = static_cast<uint32_t>(w),
+                                      .height = static_cast<uint32_t>(h)};
 
   auto import_res = renderer.ImportBufferImage(render_target, BufferCollectionUsage::kRenderTarget);
   EXPECT_TRUE(import_res);
@@ -980,7 +992,9 @@ VK_TEST_F(VulkanRendererTest, RotationRenderTest) {
   // with a width/height of (6,2).
   const uint32_t kRenderableWidth = 6;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(5, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(5, 3), glm::vec2(kRenderableWidth, kRenderableHeight),
+                       {glm::vec2(0, 0), glm::vec2(w, 0), glm::vec2(w, h), glm::vec2(0, h)},
+                       Orientation::CCW_0_DEGREES);
 
   // Have the client write pixel values to the renderable's texture.
   MapHostPointer(client_collection_info, renderable_texture.vmo_index,
@@ -1203,7 +1217,7 @@ VK_TEST_F(VulkanRendererTest, SolidColorTest) {
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable}, {renderable_image_data});
@@ -1280,7 +1294,7 @@ VK_TEST_F(VulkanRendererTest, ColorCorrectionTest) {
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable}, {renderable_image_data}, /*fences*/ {},
@@ -1370,8 +1384,8 @@ VK_TEST_F(VulkanRendererTest, MultipleSolidColorTest) {
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
-  Rectangle2D renderable_2(glm::vec2(6, 5), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable_2(glm::vec2(6, 5), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable, renderable_2},
@@ -1481,9 +1495,9 @@ VK_TEST_F(VulkanRendererTest, MixSolidColorAndImageTest) {
   renderer.ImportBufferImage(render_target, BufferCollectionUsage::kRenderTarget);
 
   // Create the two renderables.
-  Rectangle2D renderable(glm::vec2(0, 0), glm::vec2(kRenderableWidth, kRenderableHeight));
-  Rectangle2D renderable_2(glm::vec2(kRenderableWidth + 1, 0),
-                           glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(0, 0), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable_2(glm::vec2(kRenderableWidth + 1, 0),
+                         glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable, renderable_2},
@@ -1586,9 +1600,8 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
-  Rectangle2D transparent_renderable(glm::vec2(7, 3),
-                                     glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect transparent_renderable(glm::vec2(7, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Have the client write pixel values to the renderable's texture.
   MapHostPointer(client_collection_info, renderable_texture.vmo_index,
@@ -1728,9 +1741,8 @@ VK_TEST_F(VulkanRendererTest, MultiplyColorTest) {
   // Create the two renderables.
   const uint32_t kRenderableWidth = 4;
   const uint32_t kRenderableHeight = 2;
-  Rectangle2D renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
-  Rectangle2D transparent_renderable(glm::vec2(7, 3),
-                                     glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect renderable(glm::vec2(6, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
+  ImageRect transparent_renderable(glm::vec2(7, 3), glm::vec2(kRenderableWidth, kRenderableHeight));
 
   // Have the client write white pixel values to image backing the above two renderables.
   MapHostPointer(client_collection_info, renderable_texture.vmo_index,
@@ -1890,7 +1902,7 @@ VK_TEST_P(VulkanRendererParameterizedYuvTest, YuvTest) {
 
   // Create a renderable where the upper-left hand corner should be at position (0,0) with a
   // width/height of (32,32).
-  Rectangle2D image_renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
+  ImageRect image_renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
 
   const uint32_t num_pixels = kTargetWidth * kTargetHeight;
   const uint8_t kFuchsiaYuvValues[] = {110U, 192U, 192U};
@@ -2058,7 +2070,7 @@ VK_TEST_F(VulkanRendererTest, ProtectedMemoryTest) {
 
   // Create a renderable where the upper-left hand corner should be at position (0,0) with a
   // width/height of (32,32).
-  Rectangle2D image_renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
+  ImageRect image_renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
   // Render the renderable to the render target.
   renderer.Render(render_target_metadata, {image_renderable}, {image_metadata});
   renderer.WaitIdle();
@@ -2121,7 +2133,7 @@ VK_TEST_F(VulkanRendererTest, ReadbackTest) {
       .identifier = allocation::kInvalidImageId,
       .multiply_color = {1, 0.4, 0, 1},
       .blend_mode = fuchsia::ui::composition::BlendMode::SRC_OVER};
-  Rectangle2D renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
+  ImageRect renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
 
   // Render the renderable to the render target.
   renderer.Render(render_target, {renderable}, {renderable_image_data});

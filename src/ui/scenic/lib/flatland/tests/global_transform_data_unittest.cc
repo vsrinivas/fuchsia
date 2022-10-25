@@ -23,9 +23,11 @@ namespace test {
 
 namespace {
 
-// Helper function to generate an escher::Rectangle2D from a glm::mat3 for tests that are strictly
-// testing the conversion math.
-escher::Rectangle2D GetRectangleForMatrix(const glm::mat3& matrix) {
+using fuchsia::ui::composition::Orientation;
+
+// Helper function to generate an ImageRect from a glm::mat3 for tests that are strictly testing the
+// conversion math.
+ImageRect GetImageRectForMatrix(const glm::mat3& matrix) {
   // Compute the global rectangle vector and return the first entry.
   allocation::ImageMetadata image = {.width = 1, .height = 1};
   const auto rectangles = ComputeGlobalRectangles({matrix}, {ImageSampleRegion{0, 0, 1, 1}},
@@ -34,10 +36,9 @@ escher::Rectangle2D GetRectangleForMatrix(const glm::mat3& matrix) {
   return rectangles[0];
 }
 
-// Helper function to generate an escher::Rectangle2D from a glm::mat3 for tests that are strictly
-// testing the conversion math.
-escher::Rectangle2D GetRectangleForMatrixAndClip(const glm::mat3& matrix,
-                                                 const TransformClipRegion& clip) {
+// Helper function to generate an ImageRect from a glm::mat3 for tests that are strictly testing the
+// conversion math.
+ImageRect GetImageRectForMatrixAndClip(const glm::mat3& matrix, const TransformClipRegion& clip) {
   // Compute the global rectangle vector and return the first entry.
   allocation::ImageMetadata image = {.width = 1, .height = 1};
   const auto rectangles =
@@ -46,9 +47,6 @@ escher::Rectangle2D GetRectangleForMatrixAndClip(const glm::mat3& matrix,
   return rectangles[0];
 }
 
-// The expected orientation (in a coordinate space where +y points upwards).
-enum class Orientation { CCW_90, CCW_180, CCW_270 };
-
 // Helper function for getting the correct rotation angle. Matrices are specified in view-space
 // coordinates, in which the +y axis points downwards (not upwards). Rotations which are specified
 // as counter-clockwise must actually occur in a clockwise fashion in this coordinate space (a
@@ -56,12 +54,14 @@ enum class Orientation { CCW_90, CCW_180, CCW_270 };
 // rotation).
 float GetOrientationAngleInViewSpaceCoordinates(Orientation angle) {
   switch (angle) {
-    case Orientation::CCW_90:
+    case Orientation::CCW_90_DEGREES:
       return -glm::half_pi<float>();
-    case Orientation::CCW_180:
+    case Orientation::CCW_180_DEGREES:
       return -glm::pi<float>();
-    case Orientation::CCW_270:
+    case Orientation::CCW_270_DEGREES:
       return -glm::three_over_two_pi<float>();
+    case Orientation::CCW_0_DEGREES:
+      return 0.f;
   }
 }
 
@@ -183,70 +183,72 @@ TEST(GlobalMatrixDataTest, GlobalMatricesMultipleUberStructs) {
 
 // Test that if a clip region is completely larger than the rectangle, it has no effect on the
 // rectangle.
-TEST(Rectangle2DTest, ParentCompletelyBiggerThanChildClipTest) {
+TEST(ImageRectTest, ParentCompletelyBiggerThanChildClipTest) {
   const glm::vec2 extent(100.f, 50.f);
   auto matrix = glm::scale(glm::mat3(), extent);
 
   TransformClipRegion clip = {0, 0, 120, 60};
 
-  const escher::Rectangle2D expected_rectangle(
-      glm::vec2(0, 0), extent,
-      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)});
+  const ImageRect expected_rectangle(
+      glm::vec2(0, 0), extent, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      Orientation::CCW_0_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Test that if the child is completely bigger on all sides than the clip, that it gets clamped
 // exactly to the clip region.
-TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipTest) {
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipTest) {
   const glm::vec2 extent(100.f, 90.f);
   auto matrix = glm::scale(glm::mat3(), extent);
 
   TransformClipRegion clip = {20, 30, 35, 40};
 
-  const escher::Rectangle2D expected_rectangle(glm::vec2(clip.x, clip.y),
-                                               glm::vec2(clip.width, clip.height),
-                                               {glm::vec2(.2, .3333), glm::vec2(.55, 0.333333),
-                                                glm::vec2(.55, 0.777777), glm::vec2(.2, 0.777777)});
+  const ImageRect expected_rectangle(glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+                                     {glm::vec2(.2, .3333), glm::vec2(.55, 0.333333),
+                                      glm::vec2(.55, 0.777777), glm::vec2(.2, 0.777777)},
+                                     Orientation::CCW_0_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Test that if the child is completely bigger on all sides than the clip and is rotated by 90
 // degrees, that it gets clamped exactly to the clip region.
-TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy90Test) {
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy90Test) {
   const glm::vec2 extent(100.f, 90.f);
   // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
   // same origin after rotation.
   glm::mat3 matrix = glm::translate(glm::mat3(), {0, extent.x});
-  matrix = glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
   matrix = glm::scale(matrix, extent);
 
   // Note that this clip region is specified in global space and will not be modified by the matrix.
   TransformClipRegion clip = {20, 30, 35, 40};
 
-  // The rectangle was rotated by 90, such that, prior to clipping, it has a new_extent of (90, 100)
-  // and reordered_uvs of [(1, 0), (1, 1), (0, 1), (0, 0)]. The u-coordinate is now linearly
-  // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
-  const escher::Rectangle2D expected_rectangle(glm::vec2(clip.x, clip.y),
-                                               glm::vec2(clip.width, clip.height),
-                                               {glm::vec2(.7, .222222), glm::vec2(.7, .611111),
-                                                glm::vec2(.3, .611111), glm::vec2(.3, .22222)});
+  // The rectangle is rotated by 90 such that, prior to clipping, it has a new extent of (90, 100).
+  // The texel u-coordinate is now linearly interpolated vertically and the v-coordinate is now
+  // linearly interpolated horizontally.
+  const ImageRect expected_rectangle(
+      glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+      {glm::vec2(.3, .22222), glm::vec2(.7, .22222), glm::vec2(.7, .61111), glm::vec2(.3, .61111)},
+      Orientation::CCW_90_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Test that if the child is completely bigger on all sides than the clip and is rotated by 180
 // degrees, that it gets clamped exactly to the clip region.
-TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy180Test) {
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy180Test) {
   const glm::vec2 extent(100.f, 90.f);
   // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
   // same origin after rotation.
   glm::mat3 matrix = glm::translate(glm::mat3(), {extent.x, extent.y});
-  matrix = glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180));
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
   matrix = glm::scale(matrix, extent);
 
   // Note that this clip region is specified in global space and will not be modified by the matrix.
@@ -254,23 +256,24 @@ TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy180Test) {
 
   // After clipping, the UV coordinates are reversed. I.e. if the coordinate was initially 0.2, then
   // it would instead be equal to 0.8.
-  const escher::Rectangle2D expected_rectangle(glm::vec2(clip.x, clip.y),
-                                               glm::vec2(clip.width, clip.height),
-                                               {glm::vec2(.8, .66667), glm::vec2(.45, 0.66667),
-                                                glm::vec2(.45, 0.22222), glm::vec2(.8, 0.22222)});
+  const ImageRect expected_rectangle(glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
+                                     {glm::vec2(.45, .22222), glm::vec2(.8, 0.22222),
+                                      glm::vec2(.8, 0.66667), glm::vec2(.45, 0.66667)},
+                                     Orientation::CCW_180_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Test that if the child is completely bigger on all sides than the clip and is rotated by 270
 // degrees, that it gets clamped exactly to the clip region.
-TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy270Test) {
+TEST(ImageRectTest, ChildCompletelyBiggerThanParentClipRotatedBy270Test) {
   const glm::vec2 extent(100.f, 90.f);
   // Since rotation occurs around the top-left corner, translate the rectangle so that it has the
   // same origin after rotation.
   glm::mat3 matrix = glm::translate(glm::mat3(), {extent.y, 0});
-  matrix = glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270));
+  matrix =
+      glm::rotate(matrix, GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
   matrix = glm::scale(matrix, extent);
 
   // Note that this clip region is specified in global space and will not be modified by the matrix.
@@ -279,17 +282,18 @@ TEST(Rectangle2DTest, ChildCompletelyBiggerThanParentClipRotatedBy270Test) {
   // The rectangle was rotated by 90, such that, prior to clipping, it has a new_extent of (90, 100)
   // and reordered_uvs of [(0, 1), (0, 0), (1, 0), (1, 1)]. The u-coordinate is now linearly
   // interpolated vertically and the v coordinate is now linearly interpolated horizontally.
-  const escher::Rectangle2D expected_rectangle(
+  const ImageRect expected_rectangle(
       glm::vec2(clip.x, clip.y), glm::vec2(clip.width, clip.height),
-      {glm::vec2(.3, .77778), glm::vec2(.3, .38889), glm::vec2(.7, .38889), glm::vec2(.7, .77778)});
+      {glm::vec2(.3, .38889), glm::vec2(.7, .38889), glm::vec2(.7, .7778), glm::vec2(.3, .77778)},
+      Orientation::CCW_270_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Test that if the child doesn't overlap the clip region at all, that the
 // rectangle has zero size.
-TEST(Rectangle2DTest, RectangleAndClipNoOverlap) {
+TEST(ImageRectTest, RectangleAndClipNoOverlap) {
   const glm::vec2 offset(5, 10);
   const glm::vec2 extent(100.f, 50.f);
   glm::mat3 matrix = glm::translate(glm::mat3(), offset);
@@ -297,16 +301,17 @@ TEST(Rectangle2DTest, RectangleAndClipNoOverlap) {
 
   TransformClipRegion clip = {0, 0, 2, 2};
 
-  const escher::Rectangle2D expected_rectangle(
+  const ImageRect expected_rectangle(
       glm::vec2(0, 0), glm::vec2(0, 0),
-      {glm::vec2(0, 0), glm::vec2(0, 0), glm::vec2(0, 0), glm::vec2(0, 0)});
+      {glm::vec2(0, 0), glm::vec2(0, 0), glm::vec2(0, 0), glm::vec2(0, 0)},
+      Orientation::CCW_0_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Test that clipping works in the case of partial overlap.
-TEST(Rectangle2DTest, RectangleAndClipPartialOverlap) {
+TEST(ImageRectTest, RectangleAndClipPartialOverlap) {
   const glm::vec2 offset(20, 30);
   const glm::vec2 extent(100.f, 50.f);
   glm::mat3 matrix = glm::translate(glm::mat3(), offset);
@@ -314,123 +319,81 @@ TEST(Rectangle2DTest, RectangleAndClipPartialOverlap) {
 
   TransformClipRegion clip = {10, 30, 80, 40};
 
-  const escher::Rectangle2D expected_rectangle(
+  const ImageRect expected_rectangle(
       glm::vec2(20, 30), glm::vec2(70, 40),
-      {glm::vec2(0, 0), glm::vec2(0.7, 0), glm::vec2(0.7, 0.8), glm::vec2(0, 0.8)});
+      {glm::vec2(0, 0), glm::vec2(0.7, 0), glm::vec2(0.7, 0.8), glm::vec2(0, 0.8)},
+      Orientation::CCW_0_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrixAndClip(matrix, clip);
+  const auto rectangle = GetImageRectForMatrixAndClip(matrix, clip);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // The following tests ensure that different geometric attributes (translation, rotation, scale)
 // modify the final rectangle as expected.
 
-TEST(Rectangle2DTest, ScaleAndRotate90DegreesTest) {
+TEST(ImageRectTest, ScaleAndRotate90DegreesTest) {
   const glm::vec2 extent(100.f, 50.f);
-  glm::mat3 matrix =
-      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
   matrix = glm::scale(matrix, extent);
 
-  const escher::Rectangle2D expected_rectangle(
+  const ImageRect expected_rectangle(
       glm::vec2(0.f, -100.f), glm::vec2(50.f, 100.f),
-      {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
+      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      Orientation::CCW_90_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrix(matrix);
+  const auto rectangle = GetImageRectForMatrix(matrix);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
-TEST(Rectangle2DTest, ScaleAndRotate180DegreesTest) {
+TEST(ImageRectTest, ScaleAndRotate180DegreesTest) {
   const glm::vec2 extent(100.f, 50.f);
-  glm::mat3 matrix =
-      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180));
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
   matrix = glm::scale(matrix, extent);
 
-  const escher::Rectangle2D expected_rectangle(
+  const ImageRect expected_rectangle(
       glm::vec2(-100.f, -50.f), glm::vec2(100.f, 50.f),
-      {glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0), glm::vec2(1, 0)});
+      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      Orientation::CCW_180_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrix(matrix);
+  const auto rectangle = GetImageRectForMatrix(matrix);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
-TEST(Rectangle2DTest, ScaleAndRotate270DegreesTest) {
+TEST(ImageRectTest, ScaleAndRotate270DegreesTest) {
   const glm::vec2 extent(100.f, 50.f);
-  glm::mat3 matrix =
-      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270));
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
   matrix = glm::scale(matrix, extent);
 
-  const escher::Rectangle2D expected_rectangle(
+  const ImageRect expected_rectangle(
       glm::vec2(-50.f, 0.f), glm::vec2(50.f, 100.f),
-      {glm::vec2(0, 1), glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1)});
+      {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      Orientation::CCW_270_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrix(matrix);
+  const auto rectangle = GetImageRectForMatrix(matrix);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
 // Make sure that floating point transform values that aren't exactly
 // integers are also respected.
-TEST(Rectangle2DTest, FloatingPointTranslateAndScaleTest) {
+TEST(ImageRectTest, FloatingPointTranslateAndScaleTest) {
   const glm::vec2 offset(10.9f, 20.5f);
   const glm::vec2 extent(100.3f, 200.7f);
   glm::mat3 matrix = glm::translate(glm::mat3(), offset);
   matrix = glm::scale(matrix, extent);
 
-  const escher::Rectangle2D expected_rectangle(
-      offset, extent, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)});
+  const ImageRect expected_rectangle(
+      offset, extent, {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+      Orientation::CCW_0_DEGREES);
 
-  const auto rectangle = GetRectangleForMatrix(matrix);
+  const auto rectangle = GetImageRectForMatrix(matrix);
   EXPECT_EQ(rectangle, expected_rectangle);
 }
 
-TEST(Rectangle2DTest, NegativeScaleTest) {
-  // If both the x and y scale components are negative, this is equivalent
-  // to a positive scale rotated by 180 degrees (PI radians).
-  {
-    const glm::vec2 extent(-10.f, -5.f);
-    glm::mat3 matrix = glm::scale(glm::mat3(), extent);
-
-    // These are the expected UVs for a 180 degree rotation.
-    const escher::Rectangle2D expected_rectangle(
-        glm::vec2(-10.f, -5.f), glm::vec2(10.f, 5.f),
-        {glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0), glm::vec2(1, 0)});
-
-    const auto rectangle = GetRectangleForMatrix(matrix);
-    EXPECT_EQ(rectangle, expected_rectangle);
-  }
-
-  // If just the x scale component is negative and the y component is positive,
-  // this is equivalent to a flip about the y axis (horiziontal).
-  {
-    const glm::vec2 extent(-10.f, 5.f);
-    glm::mat3 matrix = glm::scale(glm::mat3(), extent);
-
-    // These are the expected UVs for a horizontal flip.
-    const escher::Rectangle2D expected_rectangle(
-        glm::vec2(-10.f, 0.f), glm::vec2(10.f, 5.f),
-        {glm::vec2(1, 0), glm::vec2(0, 0), glm::vec2(0, 1), glm::vec2(1, 1)});
-
-    const auto rectangle = GetRectangleForMatrix(matrix);
-    EXPECT_EQ(rectangle, expected_rectangle);
-  }
-
-  // If just the y scale component is negative and the x component is positive,
-  // this is equivalent to a vertical flip about the x axis.
-  {
-    const glm::vec2 extent(10.f, -5.f);
-    glm::mat3 matrix = glm::scale(glm::mat3(), extent);
-
-    // These are the expected UVs for a vertical flip.
-    const escher::Rectangle2D expected_rectangle(
-        glm::vec2(0.f, -5.f), glm::vec2(10.f, 5.f),
-        {glm::vec2(0, 1), glm::vec2(1, 1), glm::vec2(1, 0), glm::vec2(0, 0)});
-
-    const auto rectangle = GetRectangleForMatrix(matrix);
-    EXPECT_EQ(rectangle, expected_rectangle);
-  }
-}
-
 // The same operations of translate/rotate/scale on a single matrix.
-TEST(Rectangle2DTest, OrderOfOperationsTest) {
+TEST(ImageRectTest, OrderOfOperationsTest) {
   // First subtest tests swapping scaling and translation.
   {
     // Here we scale and then translate. The origin should be at (10,5) and the extent should also
@@ -438,9 +401,12 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
     const glm::mat3 test_1 =
         glm::scale(glm::translate(glm::mat3(), glm::vec2(10.f, 5.f)), glm::vec2(2.f, 2.f));
 
-    const escher::Rectangle2D expected_rectangle_1(glm::vec2(10.f, 5.f), glm::vec2(2.f, 2.f));
+    const ImageRect expected_rectangle_1(
+        glm::vec2(10.f, 5.f), glm::vec2(2.f, 2.f),
+        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        Orientation::CCW_0_DEGREES);
 
-    const auto rectangle_1 = GetRectangleForMatrix(test_1);
+    const auto rectangle_1 = GetImageRectForMatrix(test_1);
     EXPECT_EQ(rectangle_1, expected_rectangle_1);
 
     // Here we translate first, and then scale the translation, resulting in the origin point
@@ -448,9 +414,12 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
     const glm::mat3 test_2 =
         glm::translate(glm::scale(glm::mat3(), glm::vec2(2.f, 2.f)), glm::vec2(10.f, 5.f));
 
-    const escher::Rectangle2D expected_rectangle_2(glm::vec2(20.f, 10.f), glm::vec2(2.f, 2.f));
+    const ImageRect expected_rectangle_2(
+        glm::vec2(20.f, 10.f), glm::vec2(2.f, 2.f),
+        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        Orientation::CCW_0_DEGREES);
 
-    const auto rectangle_2 = GetRectangleForMatrix(test_2);
+    const auto rectangle_2 = GetImageRectForMatrix(test_2);
     EXPECT_EQ(rectangle_2, expected_rectangle_2);
   }
 
@@ -460,26 +429,29 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
     // origin at (0, -1). We then translate by (10, 5) to wind up at (10, 4).
     const glm::mat3 test_1 =
         glm::rotate(glm::translate(glm::mat3(), glm::vec2(10.f, 5.f)),
-                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
 
-    const escher::Rectangle2D expected_rectangle_1(
+    const ImageRect expected_rectangle_1(
         glm::vec2(10.f, 4.f), glm::vec2(1.f, 1.f),
-        {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
+        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        Orientation::CCW_90_DEGREES);
 
-    const auto rectangle_1 = GetRectangleForMatrix(test_1);
+    const auto rectangle_1 = GetImageRectForMatrix(test_1);
     EXPECT_EQ(rectangle_1, expected_rectangle_1);
 
     // Since we translated first here, the point goes from (0,0) to (10,5) and then rotates
     // 90 degrees counterclockwise. This places the origin at (5, -11).
     const glm::mat3 test_2 = glm::translate(
-        glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90)),
+        glm::rotate(glm::mat3(),
+                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES)),
         glm::vec2(10.f, 5.f));
 
-    const escher::Rectangle2D expected_rectangle_2(
+    const ImageRect expected_rectangle_2(
         glm::vec2(5.f, -11.f), glm::vec2(1.f, 1.f),
-        {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
+        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        Orientation::CCW_90_DEGREES);
 
-    const auto rectangle_2 = GetRectangleForMatrix(test_2);
+    const auto rectangle_2 = GetImageRectForMatrix(test_2);
     EXPECT_EQ(rectangle_2, expected_rectangle_2);
   }
 
@@ -488,25 +460,28 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
     // We rotate first and then scale, so the scaling isn't affected by the rotation.
     const glm::mat3 test_1 =
         glm::rotate(glm::scale(glm::mat3(), glm::vec2(9.f, 7.f)),
-                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
 
-    const escher::Rectangle2D expected_rectangle_1(
+    const ImageRect expected_rectangle_1(
         glm::vec2(0.f, -7.f), glm::vec2(9.f, 7.f),
-        {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
+        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        Orientation::CCW_90_DEGREES);
 
-    const auto rectangle_1 = GetRectangleForMatrix(test_1);
+    const auto rectangle_1 = GetImageRectForMatrix(test_1);
     EXPECT_EQ(rectangle_1, expected_rectangle_1);
 
     // Here we scale and then rotate so the scale winds up rotated.
     const glm::mat3 test_2 = glm::scale(
-        glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90)),
+        glm::rotate(glm::mat3(),
+                    GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES)),
         glm::vec2(9.f, 7.f));
 
-    const escher::Rectangle2D expected_rectangle_2(
+    const ImageRect expected_rectangle_2(
         glm::vec2(0.f, -9.f), glm::vec2(7.f, 9.f),
-        {glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1), glm::vec2(0, 0)});
+        {glm::vec2(0, 0), glm::vec2(1, 0), glm::vec2(1, 1), glm::vec2(0, 1)},
+        Orientation::CCW_90_DEGREES);
 
-    const auto rectangle_2 = GetRectangleForMatrix(test_2);
+    const auto rectangle_2 = GetImageRectForMatrix(test_2);
     EXPECT_EQ(rectangle_2, expected_rectangle_2);
   }
 }
@@ -515,7 +490,7 @@ TEST(Rectangle2DTest, OrderOfOperationsTest) {
 // the global topology vector, with the proper global data (i.e. matrices, images,
 // clip regions and hit regions) for each entry, respecting each separate chain
 // up the hierarchy. This is used for A11Y Magnification.
-TEST(Rectangle2DTest, MultipleParentTest) {
+TEST(ImageRectTest, MultipleParentTest) {
   // Make a global topology representing the following graph.
   // We have a diamond pattern hierarchy where transform 1:4
   // is children to both 1:1 and 1:3.
@@ -842,8 +817,8 @@ TEST(GlobalTransformClipTest, ScaleAndRotate90DegreesTest) {
   GlobalTopologyData::ParentIndexVector parent_indices = {0};
 
   const glm::vec2 scale(3.f, 2.f);
-  glm::mat3 matrix =
-      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90));
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_90_DEGREES));
   matrix = glm::scale(matrix, scale);
   GlobalMatrixVector global_matrices = {matrix};
 
@@ -873,8 +848,8 @@ TEST(GlobalTransformClipTest, ScaleAndRotate180DegreesTest) {
   GlobalTopologyData::ParentIndexVector parent_indices = {0};
 
   const glm::vec2 scale(3.f, 2.f);
-  glm::mat3 matrix =
-      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180));
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_180_DEGREES));
   matrix = glm::scale(matrix, scale);
   GlobalMatrixVector global_matrices = {matrix};
 
@@ -904,8 +879,8 @@ TEST(GlobalTransformClipTest, ScaleAndRotate270DegreesTest) {
   GlobalTopologyData::ParentIndexVector parent_indices = {0};
 
   const glm::vec2 scale(3.f, 2.f);
-  glm::mat3 matrix =
-      glm::rotate(glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270));
+  glm::mat3 matrix = glm::rotate(
+      glm::mat3(), GetOrientationAngleInViewSpaceCoordinates(Orientation::CCW_270_DEGREES));
   matrix = glm::scale(matrix, scale);
   GlobalMatrixVector global_matrices = {matrix};
 
@@ -997,9 +972,9 @@ TEST(GlobalCullRectanglesTest, EmptySizeTest) {
   uint64_t display_height = 500;
 
   // Three rects. First and last have zero size.
-  GlobalRectangleVector rects = {escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(0, 0)),
-                                 escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(20, 20)),
-                                 escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(0, 0))};
+  GlobalRectangleVector rects = {ImageRect(glm::vec2(0, 0), glm::vec2(0, 0)),
+                                 ImageRect(glm::vec2(0, 0), glm::vec2(20, 20)),
+                                 ImageRect(glm::vec2(0, 0), glm::vec2(0, 0))};
 
   GlobalImageVector images;
   images.resize(3);
@@ -1011,7 +986,7 @@ TEST(GlobalCullRectanglesTest, EmptySizeTest) {
   EXPECT_EQ(rects.size(), 1U);
   EXPECT_EQ(images.size(), 1U);
   EXPECT_EQ(images[0].identifier, 1U);
-  EXPECT_EQ(rects[0], escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(20, 20)));
+  EXPECT_EQ(rects[0], ImageRect(glm::vec2(0, 0), glm::vec2(20, 20)));
 }
 
 // Make sure that if you have a single rect/image pair, you get back exactly what you put in.
@@ -1020,7 +995,7 @@ TEST(GlobalCullRectanglesTest, SingleTest) {
   uint64_t display_height = 500;
 
   GlobalRectangleVector rects = {
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height))};
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height))};
   GlobalImageVector images = {allocation::ImageMetadata()};
   images[0].identifier = 20;
 
@@ -1028,8 +1003,7 @@ TEST(GlobalCullRectanglesTest, SingleTest) {
   EXPECT_EQ(rects.size(), 1U);
   EXPECT_EQ(images.size(), 1U);
   EXPECT_EQ(images[0].identifier, 20U);
-  EXPECT_EQ(rects[0],
-            escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)));
+  EXPECT_EQ(rects[0], ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)));
 }
 
 // If a full screen rect comes last, everything before it should be culled, and it should be the
@@ -1039,9 +1013,9 @@ TEST(GlobalCullRectanglesTest, FullScreenRectIsLast) {
   uint64_t display_height = 500;
 
   GlobalRectangleVector rects = {
-      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height))};
+      ImageRect(glm::vec2(10, 20), glm::vec2(30, 40)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height))};
   GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
                               allocation::ImageMetadata()};
   images[2].identifier = 2;
@@ -1050,8 +1024,7 @@ TEST(GlobalCullRectanglesTest, FullScreenRectIsLast) {
   EXPECT_EQ(rects.size(), 1U);
   EXPECT_EQ(images.size(), 1U);
   EXPECT_EQ(images[0].identifier, 2U);
-  EXPECT_EQ(rects[0],
-            escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)));
+  EXPECT_EQ(rects[0], ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)));
 }
 
 // If a full-screen rect is first, the otuput should match the input exactly.
@@ -1060,9 +1033,9 @@ TEST(GlobalCullRectanglesTest, FullScreenRectIsFirst) {
   uint64_t display_height = 500;
 
   GlobalRectangleVector rects = {
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200))};
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(10, 20), glm::vec2(30, 40)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200))};
   GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
                               allocation::ImageMetadata()};
   for (uint32_t i = 0; i < images.size(); i++) {
@@ -1088,17 +1061,17 @@ TEST(GlobalCullRectanglesTest, FullScreenRectIsMiddle) {
   uint64_t display_height = 500;
 
   GlobalRectangleVector rects = {
-      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200))};
+      ImageRect(glm::vec2(10, 20), glm::vec2(30, 40)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200))};
   GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
                               allocation::ImageMetadata()};
   images[1].identifier = 3;
   images[2].identifier = 5;
 
   GlobalRectangleVector expected_rects = {
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200))};
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200))};
   GlobalImageVector expected_images = {images[1], images[2]};
 
   CullRectangles(&rects, &images, display_width, display_height);
@@ -1118,14 +1091,14 @@ TEST(GlobalCullRectanglesTest, MultipleFullScreenRects) {
   uint64_t display_height = 500;
 
   GlobalRectangleVector rects = {
-      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(150, 90)),
-      escher::Rectangle2D(glm::vec2(70, 15), glm::vec2(75, 55)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+      ImageRect(glm::vec2(10, 20), glm::vec2(30, 40)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(150, 90)),
+      ImageRect(glm::vec2(70, 15), glm::vec2(75, 55)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(80, 110), glm::vec2(900, 350))};
   GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
                               allocation::ImageMetadata(), allocation::ImageMetadata(),
                               allocation::ImageMetadata(), allocation::ImageMetadata(),
@@ -1134,8 +1107,8 @@ TEST(GlobalCullRectanglesTest, MultipleFullScreenRects) {
   images[7].identifier = 7;
 
   GlobalRectangleVector expected_rects = {
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(80, 110), glm::vec2(900, 350))};
   GlobalImageVector expected_images = {images[6], images[7]};
 
   CullRectangles(&rects, &images, display_width, display_height);
@@ -1161,14 +1134,14 @@ TEST(GlobalCullRectanglesTest, MultipleFullScreenRectsWithTransparency) {
   // but 1 is not. So we should ultimately only cull the rect at index 0, leaving 7 output
   // rects in total.
   GlobalRectangleVector rects = {
-      escher::Rectangle2D(glm::vec2(10, 20), glm::vec2(30, 40)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(150, 90)),
-      escher::Rectangle2D(glm::vec2(70, 15), glm::vec2(75, 55)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+      ImageRect(glm::vec2(10, 20), glm::vec2(30, 40)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(150, 90)),
+      ImageRect(glm::vec2(70, 15), glm::vec2(75, 55)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(80, 110), glm::vec2(900, 350))};
   GlobalImageVector images = {allocation::ImageMetadata(), allocation::ImageMetadata(),
                               allocation::ImageMetadata(), transparent_image_data,
                               allocation::ImageMetadata(), allocation::ImageMetadata(),
@@ -1179,13 +1152,13 @@ TEST(GlobalCullRectanglesTest, MultipleFullScreenRectsWithTransparency) {
   }
 
   GlobalRectangleVector expected_rects = {
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(300, 200)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(60, 100), glm::vec2(150, 90)),
-      escher::Rectangle2D(glm::vec2(70, 15), glm::vec2(75, 55)),
-      escher::Rectangle2D(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
-      escher::Rectangle2D(glm::vec2(80, 110), glm::vec2(900, 350))};
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(300, 200)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(60, 100), glm::vec2(150, 90)),
+      ImageRect(glm::vec2(70, 15), glm::vec2(75, 55)),
+      ImageRect(glm::vec2(0, 0), glm::vec2(display_width, display_height)),
+      ImageRect(glm::vec2(80, 110), glm::vec2(900, 350))};
 
   GlobalImageVector expected_images;
   for (uint32_t i = 0; i < 7; i++) {

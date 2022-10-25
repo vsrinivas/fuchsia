@@ -15,10 +15,29 @@
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
+using flatland::ImageRect;
 using fuchsia::ui::composition::FrameInfo;
+using fuchsia::ui::composition::Orientation;
 using fuchsia::ui::composition::ScreenCaptureConfig;
 using fuchsia::ui::composition::ScreenCaptureError;
 using std::vector;
+
+namespace {
+
+// The number of orientations in |fuchsia.ui.composition.Orientation|.
+constexpr int kNumOrientations = 4;
+
+Orientation GetNewOrientation(Orientation screen_capture_rotation, Orientation prev_orientation) {
+  // Orientation values are an enum with an uint value in the range [1, 4], where value 1 represents
+  // no rotation and each subsequent value is a (pi/2) rotation such that value 4 represents a
+  // (3pi/2) rotation, or, (-pi/2) rotation.
+  int a = static_cast<int>(screen_capture_rotation) - 1;
+  int b = static_cast<int>(prev_orientation) - 1;
+
+  return static_cast<Orientation>(((a + b) % kNumOrientations) + 1);
+}
+
+}  // namespace
 
 namespace screen_capture {
 
@@ -184,18 +203,20 @@ void ScreenCapture::ClearImages() {
   available_buffers_.clear();
 }
 
-std::vector<Rectangle2D> ScreenCapture::RotateRenderables(
-    const std::vector<Rectangle2D>& rects, fuchsia::ui::composition::Rotation rotation,
-    uint32_t image_width, uint32_t image_height) {
+std::vector<ImageRect> ScreenCapture::RotateRenderables(const std::vector<ImageRect>& rects,
+                                                        fuchsia::ui::composition::Rotation rotation,
+                                                        uint32_t image_width,
+                                                        uint32_t image_height) {
   if (rotation == fuchsia::ui::composition::Rotation::CW_0_DEGREES)
     return rects;
 
-  std::vector<Rectangle2D> final_rects;
+  std::vector<ImageRect> final_rects;
 
   for (const auto& rect : rects) {
     auto origin = rect.origin;
     auto extent = rect.extent;
-    auto uvs = rect.clockwise_uvs;
+    auto texel_uvs = rect.texel_uvs;
+    auto orientation = rect.orientation;
 
     // (x,y) is the origin pre-rotation. (0,0) is the top-left of the image.
     auto x = origin[0];
@@ -205,36 +226,40 @@ std::vector<Rectangle2D> ScreenCapture::RotateRenderables(
     auto w = extent[0];
     auto h = extent[1];
 
-    // Account for rotation of the rectangle itself.
-    std::array<vec2, 4> new_uv_coords;
     // Account for translation of the rectangle in the bounds of the canvas.
     vec2 new_origin;
     // Account for the new extent.
     vec2 new_extent;
+    // Account for the new orientation.
+    Orientation new_orientation;
 
     switch (rotation) {
       case fuchsia::ui::composition::Rotation::CW_90_DEGREES:
-        new_uv_coords = {uvs[3], uvs[0], uvs[1], uvs[2]};
         new_origin = {static_cast<float>(image_width) - y - h, x};
         new_extent = {h, w};
+        // The renderer requires counter-clockwise rotation instead of clockwise as used by screen
+        // capture. 90 clockwise is equivalent to 270 counter-clockwise.
+        new_orientation = GetNewOrientation(Orientation::CCW_270_DEGREES, orientation);
         break;
       case fuchsia::ui::composition::Rotation::CW_180_DEGREES:
-        new_uv_coords = {uvs[2], uvs[3], uvs[0], uvs[1]};
         new_origin = {static_cast<float>(image_width) - x - w,
                       static_cast<float>(image_height) - y - h};
         new_extent = {w, h};
+        new_orientation = GetNewOrientation(Orientation::CCW_180_DEGREES, orientation);
         break;
       case fuchsia::ui::composition::Rotation::CW_270_DEGREES:
-        new_uv_coords = {uvs[1], uvs[2], uvs[3], uvs[0]};
         new_origin = {y, static_cast<float>(image_height) - x - w};
         new_extent = {h, w};
+        // The renderer requires counter-clockwise rotation instead of clockwise as used by screen
+        // capture. 270 clockwise is equivalent to 90 counter-clockwise.
+        new_orientation = GetNewOrientation(Orientation::CCW_90_DEGREES, orientation);
         break;
       default:
         FX_DCHECK(false);
         break;
     }
 
-    final_rects.emplace_back(new_origin, new_extent, new_uv_coords);
+    final_rects.emplace_back(new_origin, new_extent, texel_uvs, new_orientation);
   }
 
   return final_rects;

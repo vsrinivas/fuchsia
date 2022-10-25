@@ -12,9 +12,9 @@
 
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/engine/engine.h"
+#include "src/ui/scenic/lib/flatland/flatland_types.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 
-using Rectangle2D = escher::Rectangle2D;
 using glm::vec2;
 using GetRenderables = std::function<flatland::Renderables()>;
 
@@ -22,9 +22,9 @@ namespace screen_capture {
 
 class ScreenCapture : public fuchsia::ui::composition::ScreenCapture {
  public:
-  static std::vector<Rectangle2D> RotateRenderables(const std::vector<Rectangle2D>& rects,
-                                                    fuchsia::ui::composition::Rotation rotation,
-                                                    uint32_t image_width, uint32_t image_height);
+  static std::vector<flatland::ImageRect> RotateRenderables(
+      const std::vector<flatland::ImageRect>& rects, fuchsia::ui::composition::Rotation rotation,
+      uint32_t image_width, uint32_t image_height);
 
   ScreenCapture(fidl::InterfaceRequest<fuchsia::ui::composition::ScreenCapture> request,
                 const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&

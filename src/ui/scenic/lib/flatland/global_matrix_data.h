@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_MATRIX_DATA_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_MATRIX_DATA_H_
 
-#include "src/ui/lib/escher/geometry/types.h"
+#include "src/ui/scenic/lib/flatland/flatland_types.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
@@ -71,7 +71,7 @@ GlobalHitRegionsMap ComputeGlobalHitRegions(
 // The list of global rectangles for a particular global topology. Each entry is the global
 // rectangle (i.e. relative to the root TransformHandle) of the transform in the corresponding
 // position of the |matrices| supplied to ComputeGlobalRectangles().
-using GlobalRectangleVector = std::vector<escher::Rectangle2D>;
+using GlobalRectangleVector = std::vector<ImageRect>;
 
 // Computes the global rectangle for each matrix in |matrices|.
 GlobalRectangleVector ComputeGlobalRectangles(const GlobalMatrixVector& matrices,

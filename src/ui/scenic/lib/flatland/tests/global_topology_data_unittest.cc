@@ -16,8 +16,11 @@
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
 #include "src/ui/scenic/lib/utils/helpers.h"
 
+#include <glm/glm.hpp>
 #include <glm/gtc/constants.hpp>
+#include <glm/gtc/epsilon.hpp>
 #include <glm/gtc/matrix_access.hpp>
+#include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <glm/gtx/matrix_transform_2d.hpp>
 

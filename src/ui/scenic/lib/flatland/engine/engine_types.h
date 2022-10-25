@@ -10,6 +10,7 @@
 
 #include <functional>
 
+#include "src/ui/scenic/lib/flatland/flatland_types.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/renderer/renderer.h"
 #include "src/ui/scenic/lib/flatland/uber_struct_system.h"
@@ -31,7 +32,7 @@ struct DisplayInfo {
 // of |rectangles| and |images| must be the same, and each rectangle/image pair for a given
 // index represents a single renderable object.
 struct RenderData {
-  std::vector<Rectangle2D> rectangles;
+  std::vector<ImageRect> rectangles;
   std::vector<allocation::ImageMetadata> images;
   // TODO(fxbug.dev/70464): should we remove this, and pass to RenderFrame() as a std::map of
   // RenderData keyed by display_id?  That would have the benefit of guaranteeing by construction
@@ -54,7 +55,7 @@ struct DisplaySrcDstFrames {
   // Rectangle2D struct and ImageMetadata struct, so we just need to convert that over to
   // the proper display controller readable format. The input rectangle contains both the
   // source and destination information.
-  static DisplaySrcDstFrames New(escher::Rectangle2D rectangle, allocation::ImageMetadata image);
+  static DisplaySrcDstFrames New(ImageRect rectangle, allocation::ImageMetadata image);
 };
 
 // Options for BufferCollectionImporter usage modes for DisplayCompositor.

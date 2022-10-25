@@ -23,7 +23,7 @@
 
 using allocation::ImageMetadata;
 using allocation::kInvalidImageId;
-using escher::Rectangle2D;
+using flatland::ImageRect;
 
 namespace {
 
@@ -70,7 +70,7 @@ std::string ImageStr(ImageMetadata image) {
   return output.str();
 }
 
-std::string RectStr(Rectangle2D rect) {
+std::string RectStr(ImageRect rect) {
   std::ostringstream output;
   output << rect;
   return output.str();
@@ -219,7 +219,7 @@ void ExpectImageDumpCount(const std::vector<std::string>& line_dump, int expecte
 // Sets expectations that the image is dumped alongside its associated transform and image rect.
 // Returns the line number of the line following the image dump. This can then be used to specify
 // |beginning_at| to check subsequent image dumps.
-size_t ExpectImageDump(ImageMetadata image, flatland::TransformHandle node, Rectangle2D rect,
+size_t ExpectImageDump(ImageMetadata image, flatland::TransformHandle node, ImageRect rect,
                        const std::vector<std::string>& line_dump, size_t beginning_at = 0) {
   auto line_number = FindImageDumpLineNumber(line_dump, beginning_at);
   EXPECT_LE(line_number, (size_t)-1);
@@ -465,8 +465,8 @@ TEST(SceneDumperTest, ImageRectangleMetadata) {
                                                         topology_data.parent_indices, uber_structs);
 
   GlobalRectangleVector image_rectangles;
-  image_rectangles.push_back(Rectangle2D({50, 60}, {200, 300}));
-  image_rectangles.push_back(Rectangle2D({90, 100}, {400, 500}));
+  image_rectangles.push_back(ImageRect({50, 60}, {200, 300}));
+  image_rectangles.push_back(ImageRect({90, 100}, {400, 500}));
 
   DumpScene(uber_structs, topology_data, images, image_indices, image_rectangles, output);
   auto lines = GetLines(output);

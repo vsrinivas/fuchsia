@@ -16,6 +16,8 @@
 
 namespace flatland {
 
+using fuchsia::ui::composition::Orientation;
+
 const ImageSampleRegion kInvalidSampleRegion = {-1.f, -1.f, -1.f - 1.f};
 const TransformClipRegion kUnclippedRegion = {-INT_MAX / 2, -INT_MAX / 2, INT_MAX, INT_MAX};
 
@@ -121,15 +123,15 @@ fuchsia::math::RectF MatrixMultiplyRectF(const glm::mat3& matrix, fuchsia::math:
   return ConvertVertsToRectF(std::get<1>(MatrixMultiplyVerts(matrix, ConvertRectFToVerts(rect))));
 }
 
-// TODO(fxbug.dev/77993): This will not produce the correct results for the display
-// controller rendering pathway if a rotation is applied to the rectangle.
-// Please see comment with same bug number in display_compositor.cc for more details.
-escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformClipRegion& clip,
-                                      const std::array<glm::vec2, 4>& uvs) {
+ImageRect CreateImageRect(const glm::mat3& matrix, const TransformClipRegion& clip,
+                          const std::array<glm::ivec2, 4>& texel_uvs) {
   // The local space of the renderable has its top-left origin point at (0,0) and grows
   // downward and to the right, so that the bottom-right point is at (1,1). We apply
   // the matrix to the four points that represent this unit square to get the points in
   // the global coordinate space.
+  //
+  // Note that the verts provided are 2D homogenous coordinates, so the third value is always equal
+  // to 1. These are NOT 3D vectors with x, y, z values.
   auto [verts, reordered_verts] = MatrixMultiplyVerts(matrix, {
                                                                   glm::vec3(0, 0, 1),
                                                                   glm::vec3(1, 0, 1),
@@ -138,50 +140,52 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
                                                               });
 
   std::array<glm::vec2, 4> reordered_uvs;
-  // Will equal the original index of the last uv in the reordered uvs.
-  int last_index = 0;
+  // Will equal the index of the vert located at the origin in the reordered verts.
+  int vert_index = 0;
+  bool vert_index_set = false;
   for (uint32_t i = 0; i < 4; i++) {
-    for (uint32_t j = 0; j < 4; j++) {
-      if (glm::all(glm::epsilonEqual(reordered_verts[i], verts[j], 0.001f))) {
-        last_index = j;
-        reordered_uvs[i] = uvs[j];
-        break;
-      }
+    if (glm::all(glm::epsilonEqual(reordered_verts[0], verts[i], 0.001f))) {
+      vert_index = i;
+      vert_index_set = true;
+      break;
     }
   }
 
-  // Grab the origin and extent of the rectangle.
+  FX_DCHECK(vert_index_set) << "Expected |vert_index| to be set";
+
+  // Maps the calculated |vert_index| value to the global Orientation specified by the matrix. Note
+  // this conversion only considers orientation and not reflections. Reflections are a property of
+  // Image Content only, not Transforms (or Viewports), and so are not handled here.
+  constexpr Orientation kIndexToOrientation[4] = {
+      // If |vert_index| = 0, then the list is in the same order (no rotation).
+      Orientation::CCW_0_DEGREES,
+      // If |vert_index| = 1, then the verts have been rotated by 90 degrees (top-left is now
+      // top-right).
+      Orientation::CCW_90_DEGREES,
+      // If |vert_index| = 2, then the verts have been rotated by 180 degrees (top-left is now
+      // bottom-right).
+      Orientation::CCW_180_DEGREES,
+      // If |vert_index| = 3, then the verts have been rotated by 270 degrees (top-left is now
+      // bottom-left).
+      Orientation::CCW_270_DEGREES};
+
+  const Orientation orientation = kIndexToOrientation[vert_index];
+
+  // Grab the origin, extent and orientation of the rectangle.
   auto origin = reordered_verts[0];
   auto extent = reordered_verts[2] - reordered_verts[0];
 
   // Now clip the origin and extent based on the clip rectangle.
   auto [clipped_origin, clipped_extent] = ClipRectangle(clip, origin, extent);
 
-  // If no clipping happened, we can leave the UVs as is and return.
   if (origin == clipped_origin && extent == clipped_extent) {
-    return escher::Rectangle2D(clipped_origin, clipped_extent, reordered_uvs);
+    // If no clipping happened, we can leave the UVs as is and return.
+    return ImageRect(clipped_origin, clipped_extent, texel_uvs, orientation);
   } else if (clipped_origin == glm::vec2(0) && clipped_extent == glm::vec2(0)) {
-    return escher::Rectangle2D(clipped_origin, clipped_extent,
-                               {glm::vec2(0), glm::vec2(0), glm::vec2(0), glm::vec2(0)});
+    // The entire rectangle is outside of the clip region.
+    return ImageRect(clipped_origin, clipped_extent,
+                     {glm::vec2(0), glm::vec2(0), glm::vec2(0), glm::vec2(0)}, orientation);
   }
-
-  // TODO(fxb.dev/108821): Normalized reordered UV calculation should be moved to the renderer.
-
-  // If last_index = 3, then the list is in the same order (no rotation).
-  // If last_index = 2, then the uvs have been reordered starting at index 3 (270 degrees rotation
-  // where bottom-right is new top-right).
-  // If last_index = 1, then the uvs have been reordered starting at index 2 (180 degrees rotation
-  // where bottom-left is new top-right).
-  // If last_index = 0, then the uvs have been reordered starting at index 1 (90 degrees rotation
-  // where top-left is new top-right).
-  const auto first_index = (last_index + 1) % 4;
-  // Normally, the clockwise UVs are ordered such that reordered_uvs[1] - reordered_uvs[0] would
-  // give the range covered by the u coordinate (and not the v coordinate). However, when the
-  // rectangle is rotated by 90 or 270, this would instead be equal to the range covered by the v
-  // coordinate instead. Since glm::vec2 is an array where vec2[0] is equal to u and vec2[1] is
-  // equal to v, we can index into this array depending on the rotation.
-  const auto horizontal = first_index % 2;
-  const auto vertical = (first_index + 1) % 2;
 
   // The rectangle was clipped, so we also have to clip the UV coordinates.
   auto lerp = [](float a, float b, float t) -> float { return a + t * (b - a); };
@@ -189,26 +193,44 @@ escher::Rectangle2D CreateRectangle2D(const glm::mat3& matrix, const TransformCl
   float y_lerp = (clipped_origin.y - origin.y) / extent.y;
   float w_lerp = (clipped_origin.x + clipped_extent.x - origin.x) / extent.x;
   float h_lerp = (clipped_origin.y + clipped_extent.y - origin.y) / extent.y;
-  glm::vec2 uv_0, uv_1, uv_2, uv_3;
 
-  // Top Left
-  uv_0[horizontal] = lerp(reordered_uvs[0][horizontal], reordered_uvs[1][horizontal], x_lerp);
-  uv_0[vertical] = lerp(reordered_uvs[0][vertical], reordered_uvs[3][vertical], y_lerp);
+  // The clipped region, the new origin and the new extent already account for orientation. However,
+  // this is not the case for the texel UVs. If the rectangle was rotated by 90 or 270, then the
+  // x-axis in "texture-space" will now be clipped by the "vertical-axis" of the clip rectangle.
+  // The following calculations need to account for this.
+  //
+  // Once the correct UV coordinates are calculated, they are returned in 'regular' order i.e. in
+  // texture space, starting at the top-left corner and rotating clockwise.
+  //
+  // Note that uv.x is equivalent to uv[0] and uv.y is equivalent to uv[1].
+  const auto rotated_u = vert_index % 2;
+  const auto rotated_v = (vert_index + 1) % 2;
 
-  // Top Right
-  uv_1[horizontal] = lerp(reordered_uvs[0][horizontal], reordered_uvs[1][horizontal], w_lerp);
-  uv_1[vertical] = lerp(reordered_uvs[1][vertical], reordered_uvs[2][vertical], y_lerp);
+  std::array<glm::ivec2, 4> uvs;
 
-  // Bottom Right
-  uv_2[horizontal] = lerp(reordered_uvs[3][horizontal], reordered_uvs[2][horizontal], w_lerp);
-  uv_2[vertical] = lerp(reordered_uvs[1][vertical], reordered_uvs[2][vertical], h_lerp);
+  const uint32_t idx = vert_index;
+  const uint32_t idx_1 = (vert_index + 1) % 4;
+  const uint32_t idx_2 = (vert_index + 2) % 4;
+  const uint32_t idx_3 = (vert_index + 3) % 4;
 
-  // Bottom Left
-  uv_3[horizontal] = lerp(reordered_uvs[3][horizontal], reordered_uvs[2][horizontal], x_lerp);
-  uv_3[vertical] = lerp(reordered_uvs[0][vertical], reordered_uvs[3][vertical], h_lerp);
+  // Top Left (of texture).
+  uvs[idx][rotated_u] = lerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], x_lerp);
+  uvs[idx][rotated_v] = lerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], y_lerp);
+
+  // Top Right (of texture).
+  uvs[idx_1][rotated_u] = lerp(texel_uvs[idx][rotated_u], texel_uvs[idx_1][rotated_u], w_lerp);
+  uvs[idx_1][rotated_v] = lerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], y_lerp);
+
+  // Bottom Right (of texture).
+  uvs[idx_2][rotated_u] = lerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], w_lerp);
+  uvs[idx_2][rotated_v] = lerp(texel_uvs[idx_1][rotated_v], texel_uvs[idx_2][rotated_v], h_lerp);
+
+  // Bottom Left (of texture).
+  uvs[idx_3][rotated_u] = lerp(texel_uvs[idx_3][rotated_u], texel_uvs[idx_2][rotated_u], x_lerp);
+  uvs[idx_3][rotated_v] = lerp(texel_uvs[idx][rotated_v], texel_uvs[idx_3][rotated_v], h_lerp);
 
   // This construction will CHECK if the extent is negative.
-  return escher::Rectangle2D(clipped_origin, clipped_extent, {uv_0, uv_1, uv_2, uv_3});
+  return ImageRect(clipped_origin, clipped_extent, std::move(uvs), orientation);
 }
 
 }  // namespace
@@ -403,16 +425,23 @@ GlobalRectangleVector ComputeGlobalRectangles(
     const auto& clip = clip_regions[i];
     const auto& sample = sample_regions[i];
     const auto& image = images[i];
-    auto w = image.width;
-    auto h = image.height;
-    FX_DCHECK(w >= 0.f && h >= 0.f);
-    const std::array<glm::vec2, 4> uvs = {
-        glm::vec2(sample.x / w, sample.y / h),
-        glm::vec2((sample.x + sample.width) / w, sample.y / h),
-        glm::vec2((sample.x + sample.width) / w, (sample.y + sample.height) / h),
-        glm::vec2(sample.x / w, (sample.y + sample.height) / h)};
 
-    rectangles.emplace_back(CreateRectangle2D(matrix, clip, uvs));
+    {
+      auto w = image.width;
+      auto h = image.height;
+
+      if (w > 0 && h > 0) {
+        FX_DCHECK(sample.x >= 0 && (sample.x + sample.width) <= w);
+        FX_DCHECK(sample.y >= 0 && (sample.y + sample.height) <= h);
+      }
+    }
+
+    const std::array<glm::ivec2, 4> unclipped_texel_uvs = {
+        glm::ivec2(sample.x, sample.y), glm::ivec2(sample.x + sample.width, sample.y),
+        glm::ivec2(sample.x + sample.width, sample.y + sample.height),
+        glm::ivec2(sample.x, sample.y + sample.height)};
+
+    rectangles.emplace_back(CreateImageRect(matrix, clip, unclipped_texel_uvs));
   }
 
   return rectangles;
@@ -425,7 +454,7 @@ void CullRectangles(GlobalRectangleVector* rectangles_in_out, GlobalImageVector*
   unsigned length = rectangles_in_out->size();
 
   auto is_occluder = [display_width, display_height](
-                         const escher::Rectangle2D& rectangle,
+                         const ImageRect& rectangle,
                          const allocation::ImageMetadata& image) -> bool {
     // Only cull if the rect is opaque.
     auto is_opaque = image.blend_mode == fuchsia::ui::composition::BlendMode::SRC;
@@ -446,7 +475,7 @@ void CullRectangles(GlobalRectangleVector* rectangles_in_out, GlobalImageVector*
   // Move all of the remaining renderable data into the output vectors. Entries get erased
   // if they occur before the last occluder index, or if the rectangle at that entry is empty.
   {
-    auto is_rect_empty = [](const escher::Rectangle2D& rect) {
+    auto is_rect_empty = [](const ImageRect& rect) {
       return rect.extent.x <= 0.f && rect.extent.y <= 0.f;
     };
 
@@ -464,7 +493,7 @@ void CullRectangles(GlobalRectangleVector* rectangles_in_out, GlobalImageVector*
     index = 0;
     rectangles_in_out->erase(
         std::remove_if(rectangles_in_out->begin(), rectangles_in_out->end(),
-                       [&index, &occluder_index, &is_rect_empty](const escher::Rectangle2D& rect) {
+                       [&index, &occluder_index, &is_rect_empty](const ImageRect& rect) {
                          auto curr_index = index++;
                          return curr_index < occluder_index || is_rect_empty(rect);
                        }),

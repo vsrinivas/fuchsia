@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "fuchsia/hardware/display/cpp/fidl.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/global_image_data.h"
@@ -20,6 +21,9 @@
 namespace flatland {
 
 namespace {
+
+using fuchsia::ui::composition::Orientation;
+using fhd_Transform = fuchsia::hardware::display::Transform;
 
 // Debugging color used to highlight images that have gone through the GPU rendering path.
 const std::array<float, 4> kDebugColor = {0.9, 0.5, 0.5, 1};
@@ -92,6 +96,21 @@ fuchsia::hardware::display::AlphaMode GetAlphaMode(
       break;
   }
   return alpha_mode;
+}
+
+// Converts a flatland Orientation to the appropriate hardware display transform enum.
+fhd_Transform GetDisplayTransform(Orientation orientation) {
+  switch (orientation) {
+    case Orientation::CCW_0_DEGREES:
+      return fhd_Transform::IDENTITY;
+    case Orientation::CCW_90_DEGREES:
+      return fhd_Transform::ROT_90;
+    case Orientation::CCW_180_DEGREES:
+      return fhd_Transform::ROT_180;
+    case Orientation::CCW_270_DEGREES:
+      return fhd_Transform::ROT_270;
+  }
+  FX_NOTREACHED();
 }
 
 }  // anonymous namespace
@@ -461,7 +480,7 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
   return true;
 }
 
-void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D rectangle,
+void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, ImageRect rectangle,
                                         allocation::ImageMetadata image) {
   std::unique_lock<std::mutex> lock(lock_);
 
@@ -488,17 +507,7 @@ void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D r
 
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
 
-  // TODO(fxbug.dev/77993): The display controller pathway currently does not accurately take into
-  // account rotation, even though the gpu rendering path does. While the gpu renderer can directly
-  // make use of UV rotation to represent rotations, the display controller, making only use of a
-  // source_rect (image sample region), will give false results with this current setup if a
-  // rotation has been applied to the rectangle. On top of that, the current rectangle struct gives
-  // no indication that it has been rotated, as the rotation is stored implicitly, meaning that we
-  // cannot currently exit out of this pathway early if rotation is caught, nor can we accurately
-  // choose the right transform. Therefore we will need explicit rotation data to be plumbed down to
-  // be able to choose the right enum. This will be easier to do once we settle on the proper way to
-  // handle transforms/matrices going forward.
-  auto transform = fuchsia::hardware::display::Transform::IDENTITY;
+  fhd_Transform transform = GetDisplayTransform(rectangle.orientation);
 
   (*display_controller_.get())->SetLayerPrimaryPosition(layer_id, transform, src, dst);
   auto alpha_mode = GetAlphaMode(image.blend_mode);
@@ -506,25 +515,14 @@ void DisplayCompositor::ApplyLayerColor(uint32_t layer_id, escher::Rectangle2D r
 #endif
 }
 
-void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
+void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, ImageRect rectangle,
                                         allocation::ImageMetadata image,
                                         scenic_impl::DisplayEventId wait_id,
                                         scenic_impl::DisplayEventId signal_id) {
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
+  fhd_Transform transform = GetDisplayTransform(rectangle.orientation);
 
   std::unique_lock<std::mutex> lock(lock_);
-
-  // TODO(fxbug.dev/77993): The display controller pathway currently does not accurately take into
-  // account rotation, even though the gpu rendering path does. While the gpu renderer can directly
-  // make use of UV rotation to represent rotations, the display controller, making only use of a
-  // source_rect (image sample region), will give false results with this current setup if a
-  // rotation has been applied to the rectangle. On top of that, the current rectangle struct gives
-  // no indication that it has been rotated, as the rotation is stored implicitly, meaning that we
-  // cannot currently exit out of this pathway early if rotation is caught, nor can we accurately
-  // choose the right transform. Therefore we will need explicit rotation data to be plumbed down to
-  // be able to choose the right enum. This will be easier to do once we settle on the proper way to
-  // handle transforms/matrices going forward.
-  auto transform = fuchsia::hardware::display::Transform::IDENTITY;
 
   // TODO(fxbug.dev/71344): Pixel format should be ignored when using sysmem. We do not want to have
   // to deal with this default image format.

@@ -80,6 +80,46 @@ static escher::TexturePtr CreateDepthTexture(escher::Escher* escher,
   return depth_buffer;
 }
 
+constexpr float clamp(float v, float lo, float hi) { return (v < lo) ? lo : (hi < v) ? hi : v; }
+
+static std::vector<escher::Rectangle2D> GetNormalizedUvRects(
+    const std::vector<flatland::ImageRect>& rectangles,
+    const std::vector<flatland::ImageMetadata>& images) {
+  FX_DCHECK(rectangles.size() == images.size());
+
+  std::vector<escher::Rectangle2D> normalized_rects;
+
+  for (unsigned int i = 0; i < rectangles.size(); i++) {
+    const auto& rect = rectangles[i];
+    const auto& image = images[i];
+    const auto& texel_uvs = rectangles[i].texel_uvs;
+    const auto& orientation = rectangles[i].orientation;
+    float w = image.width;
+    float h = image.height;
+    FX_DCHECK(w >= 0.f && h >= 0.f);
+
+    // Reorder and normalize the texel UVs. Normalization is based on the width and height of the
+    // image that is sampled from. Reordering is based on orientation. The texel UVs are listed
+    // in clockwise-order starting at the top-left corner of the texture. They need to be reordered
+    // so that they are listed in clockwise-order and the UV that maps to the top-left corner of the
+    // escher::Rectangle2D is listed first. For instance, if the rectangle is rotated 90_CCW, the
+    // first texel UV of the ImageRect, at index 0, is at index 3 in the escher::Rectangle2D.
+    std::array<glm::vec2, 4> normalized_uvs;
+    // |fuchsia::ui::composition::Orientation| is an enum value in the range [1, 4].
+    int starting_index = static_cast<int>(orientation) - 1;
+    for (int j = 0; j < 4; j++) {
+      const int index = (starting_index + j) % 4;
+      // Clamp values to ensure they are normalized to the range [0, 1].
+      normalized_uvs[j] =
+          glm::vec2(clamp(texel_uvs[index].x, 0, w) / w, clamp(texel_uvs[index].y, 0, h) / h);
+    }
+
+    normalized_rects.push_back({rect.origin, rect.extent, normalized_uvs});
+  }
+
+  return normalized_rects;
+}
+
 }  // anonymous namespace
 
 namespace flatland {
@@ -553,7 +593,7 @@ escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& m
 }
 
 void VkRenderer::Render(const ImageMetadata& render_target,
-                        const std::vector<Rectangle2D>& rectangles,
+                        const std::vector<ImageRect>& rectangles,
                         const std::vector<ImageMetadata>& images,
                         const std::vector<zx::event>& release_fences, bool apply_color_conversion) {
   TRACE_DURATION("gfx", "VkRenderer::Render");
@@ -642,8 +682,10 @@ void VkRenderer::Render(const ImageMetadata& render_target,
                                                 render_image_layout, VK_QUEUE_FAMILY_FOREIGN_EXT,
                                                 escher_->device()->vk_main_queue_family());
 
+  const auto normalized_rects = GetNormalizedUvRects(rectangles, images);
+
   // Now the compositor can finally draw.
-  compositor_.DrawBatch(command_buffer, rectangles, textures, color_data, output_image,
+  compositor_.DrawBatch(command_buffer, normalized_rects, textures, color_data, output_image,
                         depth_texture, apply_color_conversion);
 
   const auto readback_image_it = local_readback_image_map.find(render_target.identifier);

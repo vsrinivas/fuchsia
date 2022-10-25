@@ -29,7 +29,7 @@ class MockRenderer : public Renderer {
   MOCK_METHOD(void, ReleaseBufferImage, (allocation::GlobalImageId image_id));
 
   MOCK_METHOD(void, Render,
-              (const allocation::ImageMetadata&, const std::vector<Rectangle2D>&,
+              (const allocation::ImageMetadata&, const std::vector<ImageRect>&,
                const std::vector<allocation::ImageMetadata>&, const std::vector<zx::event>&, bool));
 
   MOCK_METHOD(void, SetColorConversionValues,
