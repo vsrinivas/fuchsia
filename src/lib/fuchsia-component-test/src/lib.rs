@@ -62,6 +62,7 @@ enum RefInner {
     Framework,
     Parent,
     Self_,
+    Void,
 }
 
 impl Ref {
@@ -93,6 +94,10 @@ impl Ref {
         Ref { value: RefInner::Self_, scope: None }
     }
 
+    pub fn void() -> Ref {
+        Ref { value: RefInner::Void, scope: None }
+    }
+
     fn check_scope(&self, realm_scope: &Vec<String>) -> Result<(), Error> {
         if let Some(ref_scope) = self.scope.as_ref() {
             if ref_scope != realm_scope {
@@ -116,6 +121,7 @@ impl Into<fdecl::Ref> for Ref {
             RefInner::Framework => fdecl::Ref::Framework(fdecl::FrameworkRef {}),
             RefInner::Parent => fdecl::Ref::Parent(fdecl::ParentRef {}),
             RefInner::Self_ => fdecl::Ref::Self_(fdecl::SelfRef {}),
+            RefInner::Void => fdecl::Ref::VoidType(fdecl::VoidRef {}),
         }
     }
 }
@@ -161,6 +167,9 @@ impl Display for Ref {
             }
             RefInner::Self_ => {
                 write!(f, "self")?;
+            }
+            RefInner::Void => {
+                write!(f, "void")?;
             }
         }
         if let Some(ref_scope) = self.scope.as_ref() {
@@ -241,6 +250,7 @@ impl Capability {
             as_: None,
             type_: fdecl::DependencyType::Strong,
             path: None,
+            availability: None,
         }
     }
 
@@ -253,12 +263,13 @@ impl Capability {
             rights: None,
             subdir: None,
             path: None,
+            availability: None,
         }
     }
 
     /// Creates a new storage capability.
     pub fn storage(name: impl Into<String>) -> StorageCapability {
-        StorageCapability { name: name.into(), as_: None, path: None }
+        StorageCapability { name: name.into(), as_: None, path: None, availability: None }
     }
 
     /// Creates a new service capability, whose name is derived from a protocol marker.
@@ -268,7 +279,7 @@ impl Capability {
 
     /// Creates a new service capability.
     pub fn service_by_name(name: impl Into<String>) -> ServiceCapability {
-        ServiceCapability { name: name.into(), as_: None, path: None }
+        ServiceCapability { name: name.into(), as_: None, path: None, availability: None }
     }
 
     /// Creates a new event capability.
@@ -290,6 +301,7 @@ pub struct ProtocolCapability {
     as_: Option<String>,
     type_: fdecl::DependencyType,
     path: Option<String>,
+    availability: Option<fdecl::Availability>,
 }
 
 impl ProtocolCapability {
@@ -313,6 +325,20 @@ impl ProtocolCapability {
         self.path = Some(path.into());
         self
     }
+
+    /// Marks the availability of this capability as "optional", which allows either this or a
+    /// parent offer to have a source of `void`.
+    pub fn optional(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::Optional);
+        self
+    }
+
+    /// Marks the availability of this capability to be the same as the availability expectations
+    /// set in the target.
+    pub fn availability_same_as_target(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::SameAsTarget);
+        self
+    }
 }
 
 impl Into<ftest::Capability> for ProtocolCapability {
@@ -322,6 +348,7 @@ impl Into<ftest::Capability> for ProtocolCapability {
             as_: self.as_,
             type_: Some(self.type_),
             path: self.path,
+            availability: self.availability,
             ..ftest::Protocol::EMPTY
         })
     }
@@ -337,6 +364,7 @@ pub struct DirectoryCapability {
     rights: Option<fio::Operations>,
     subdir: Option<String>,
     path: Option<String>,
+    availability: Option<fdecl::Availability>,
 }
 
 impl DirectoryCapability {
@@ -371,6 +399,20 @@ impl DirectoryCapability {
         self.path = Some(path.into());
         self
     }
+
+    /// Marks the availability of this capability as "optional", which allows either this or a
+    /// parent offer to have a source of `void`.
+    pub fn optional(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::Optional);
+        self
+    }
+
+    /// Marks the availability of this capability to be the same as the availability expectations
+    /// set in the target.
+    pub fn availability_same_as_target(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::SameAsTarget);
+        self
+    }
 }
 
 impl Into<ftest::Capability> for DirectoryCapability {
@@ -382,6 +424,7 @@ impl Into<ftest::Capability> for DirectoryCapability {
             rights: self.rights,
             subdir: self.subdir,
             path: self.path,
+            availability: self.availability,
             ..ftest::Directory::EMPTY
         })
     }
@@ -394,6 +437,7 @@ pub struct StorageCapability {
     name: String,
     as_: Option<String>,
     path: Option<String>,
+    availability: Option<fdecl::Availability>,
 }
 
 impl StorageCapability {
@@ -409,6 +453,20 @@ impl StorageCapability {
         self.path = Some(path.into());
         self
     }
+
+    /// Marks the availability of this capability as "optional", which allows either this or a
+    /// parent offer to have a source of `void`.
+    pub fn optional(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::Optional);
+        self
+    }
+
+    /// Marks the availability of this capability to be the same as the availability expectations
+    /// set in the target.
+    pub fn availability_same_as_target(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::SameAsTarget);
+        self
+    }
 }
 
 impl Into<ftest::Capability> for StorageCapability {
@@ -417,6 +475,7 @@ impl Into<ftest::Capability> for StorageCapability {
             name: Some(self.name),
             as_: self.as_,
             path: self.path,
+            availability: self.availability,
             ..ftest::Storage::EMPTY
         })
     }
@@ -429,6 +488,7 @@ pub struct ServiceCapability {
     name: String,
     as_: Option<String>,
     path: Option<String>,
+    availability: Option<fdecl::Availability>,
 }
 
 impl ServiceCapability {
@@ -445,6 +505,20 @@ impl ServiceCapability {
         self.path = Some(path.into());
         self
     }
+
+    /// Marks the availability of this capability as "optional", which allows either this or a
+    /// parent offer to have a source of `void`.
+    pub fn optional(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::Optional);
+        self
+    }
+
+    /// Marks the availability of this capability to be the same as the availability expectations
+    /// set in the target.
+    pub fn availability_same_as_target(mut self) -> Self {
+        self.availability = Some(fdecl::Availability::SameAsTarget);
+        self
+    }
 }
 
 impl Into<ftest::Capability> for ServiceCapability {
@@ -453,6 +527,7 @@ impl Into<ftest::Capability> for ServiceCapability {
             name: Some(self.name),
             as_: self.as_,
             path: self.path,
+            availability: self.availability,
             ..ftest::Service::EMPTY
         })
     }
@@ -2292,6 +2367,7 @@ mod tests {
                 as_: None,
                 type_: fdecl::DependencyType::Strong,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2301,6 +2377,7 @@ mod tests {
                 as_: None,
                 type_: fdecl::DependencyType::Strong,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2310,6 +2387,7 @@ mod tests {
                 as_: Some("test2".to_string()),
                 type_: fdecl::DependencyType::Strong,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2319,6 +2397,7 @@ mod tests {
                 as_: None,
                 type_: fdecl::DependencyType::Weak,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2328,6 +2407,27 @@ mod tests {
                 as_: None,
                 type_: fdecl::DependencyType::Strong,
                 path: Some("/svc/test2".to_string()),
+                availability: None,
+            },
+        );
+        assert_eq!(
+            Capability::protocol_by_name("test").optional(),
+            ProtocolCapability {
+                name: "test".to_string(),
+                as_: None,
+                type_: fdecl::DependencyType::Strong,
+                path: None,
+                availability: Some(fdecl::Availability::Optional),
+            },
+        );
+        assert_eq!(
+            Capability::protocol_by_name("test").availability_same_as_target(),
+            ProtocolCapability {
+                name: "test".to_string(),
+                as_: None,
+                type_: fdecl::DependencyType::Strong,
+                path: None,
+                availability: Some(fdecl::Availability::SameAsTarget),
             },
         );
     }
@@ -2343,6 +2443,7 @@ mod tests {
                 rights: None,
                 subdir: None,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2354,6 +2455,7 @@ mod tests {
                 rights: None,
                 subdir: None,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2365,6 +2467,7 @@ mod tests {
                 rights: None,
                 subdir: None,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2376,6 +2479,7 @@ mod tests {
                 rights: Some(fio::RX_STAR_DIR),
                 subdir: None,
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2387,6 +2491,7 @@ mod tests {
                 rights: None,
                 subdir: Some("test2".to_string()),
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2398,6 +2503,31 @@ mod tests {
                 rights: None,
                 subdir: None,
                 path: Some("/test2".to_string()),
+                availability: None,
+            },
+        );
+        assert_eq!(
+            Capability::directory("test").optional(),
+            DirectoryCapability {
+                name: "test".to_string(),
+                as_: None,
+                type_: fdecl::DependencyType::Strong,
+                rights: None,
+                subdir: None,
+                path: None,
+                availability: Some(fdecl::Availability::Optional),
+            },
+        );
+        assert_eq!(
+            Capability::directory("test").availability_same_as_target(),
+            DirectoryCapability {
+                name: "test".to_string(),
+                as_: None,
+                type_: fdecl::DependencyType::Strong,
+                rights: None,
+                subdir: None,
+                path: None,
+                availability: Some(fdecl::Availability::SameAsTarget),
             },
         );
     }
@@ -2406,7 +2536,12 @@ mod tests {
     async fn storage_capability_construction() {
         assert_eq!(
             Capability::storage("test"),
-            StorageCapability { name: "test".to_string(), as_: None, path: None },
+            StorageCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: None,
+                availability: None
+            },
         );
         assert_eq!(
             Capability::storage("test").as_("test2"),
@@ -2414,6 +2549,7 @@ mod tests {
                 name: "test".to_string(),
                 as_: Some("test2".to_string()),
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2422,6 +2558,25 @@ mod tests {
                 name: "test".to_string(),
                 as_: None,
                 path: Some("/test2".to_string()),
+                availability: None,
+            },
+        );
+        assert_eq!(
+            Capability::storage("test").optional(),
+            StorageCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: None,
+                availability: Some(fdecl::Availability::Optional),
+            },
+        );
+        assert_eq!(
+            Capability::storage("test").availability_same_as_target(),
+            StorageCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: None,
+                availability: Some(fdecl::Availability::SameAsTarget),
             },
         );
     }
@@ -2430,7 +2585,12 @@ mod tests {
     async fn service_capability_construction() {
         assert_eq!(
             Capability::service_by_name("test"),
-            ServiceCapability { name: "test".to_string(), as_: None, path: None },
+            ServiceCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: None,
+                availability: None
+            },
         );
         assert_eq!(
             Capability::service_by_name("test").as_("test2"),
@@ -2438,6 +2598,7 @@ mod tests {
                 name: "test".to_string(),
                 as_: Some("test2".to_string()),
                 path: None,
+                availability: None,
             },
         );
         assert_eq!(
@@ -2446,6 +2607,25 @@ mod tests {
                 name: "test".to_string(),
                 as_: None,
                 path: Some("/svc/test2".to_string()),
+                availability: None,
+            },
+        );
+        assert_eq!(
+            Capability::service_by_name("test").optional(),
+            ServiceCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: None,
+                availability: Some(fdecl::Availability::Optional),
+            },
+        );
+        assert_eq!(
+            Capability::service_by_name("test").availability_same_as_target(),
+            ServiceCapability {
+                name: "test".to_string(),
+                as_: None,
+                path: None,
+                availability: Some(fdecl::Availability::SameAsTarget),
             },
         );
     }

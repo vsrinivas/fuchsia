@@ -190,6 +190,11 @@ type Protocol = table {
     /// leading slash and omit a trailing slash, e.g.
     /// `/foo/fuchsia.logger.LogSink`. This field is optional.
     4: path string:fuchsia.component.MAX_PATH_LENGTH;
+
+    /// Optional. Cannot be set to `SameAsTarget` if `to` contains a local
+    /// component.
+    @available(added=10)
+    5: availability fuchsia.component.decl.Availability;
 };
 
 /// A directory capability.
@@ -221,6 +226,11 @@ type Directory = table {
     /// leading slash but no trailing slash, e.g. `/config/data`. This field
     /// is required.
     6: path string:fuchsia.component.MAX_PATH_LENGTH;
+
+    /// Optional. Cannot be set to `SameAsTarget` if `to` contains a local
+    /// component.
+    @available(added=10)
+    7: availability fuchsia.component.decl.Availability;
 };
 
 /// A storage capability
@@ -237,6 +247,11 @@ type Storage = table {
     /// leading slash but no trailing slash, e.g. `/config/data`. This field
     /// is required.
     3: path fuchsia.component.name;
+
+    /// Optional. Cannot be set to `SameAsTarget` if `to` contains a local
+    /// component.
+    @available(added=10)
+    4: availability fuchsia.component.decl.Availability;
 };
 
 /// A service capability
@@ -256,6 +271,11 @@ type Service = table {
     /// leading slash and omit a trailing slash, e.g.
     /// `/foo/fuchsia.echo.EchoService`. This field is optional.
     3: path string:fuchsia.component.MAX_PATH_LENGTH;
+
+    /// Optional. Cannot be set to `SameAsTarget` if `to` contains a local
+    /// component.
+    @available(added=10)
+    4: availability fuchsia.component.decl.Availability;
 };
 
 /// An event capability
@@ -269,6 +289,11 @@ type Event = table {
 
     /// A filter to apply on the event.
     3: filter fuchsia.data.Dictionary;
+
+    /// Optional. Cannot be set to `SameAsTarget` if `to` contains a local
+    /// component.
+    @available(added=10)
+    4: availability fuchsia.component.decl.Availability;
 };
 
 /// An event_stream capability

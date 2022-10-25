@@ -107,6 +107,12 @@
     },
     {
         "kind": "table/member",
+        "name": "fuchsia.component.test/Directory.availability",
+        "ordinal": "7",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
         "name": "fuchsia.component.test/Directory.name",
         "ordinal": "1",
         "type": "string:100"
@@ -175,6 +181,12 @@
     },
     {
         "kind": "table/member",
+        "name": "fuchsia.component.test/Event.availability",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
         "name": "fuchsia.component.test/Event.filter",
         "ordinal": "3",
         "type": "fuchsia.data/Dictionary"
@@ -240,6 +252,12 @@
         "name": "fuchsia.component.test/Protocol.as",
         "ordinal": "2",
         "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.test/Protocol.availability",
+        "ordinal": "5",
+        "type": "fuchsia.component.decl/Availability"
     },
     {
         "kind": "table/member",
@@ -866,6 +884,12 @@
     },
     {
         "kind": "table/member",
+        "name": "fuchsia.component.test/Service.availability",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/Availability"
+    },
+    {
+        "kind": "table/member",
         "name": "fuchsia.component.test/Service.name",
         "ordinal": "1",
         "type": "string:100"
@@ -885,6 +909,12 @@
         "name": "fuchsia.component.test/Storage.as",
         "ordinal": "2",
         "type": "string:100"
+    },
+    {
+        "kind": "table/member",
+        "name": "fuchsia.component.test/Storage.availability",
+        "ordinal": "4",
+        "type": "fuchsia.component.decl/Availability"
     },
     {
         "kind": "table/member",

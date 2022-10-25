@@ -1081,6 +1081,27 @@ impl RealmNode2 {
                 }
 
                 if is_parent_ref(&target) {
+                    match &capability {
+                        ftest::Capability::Protocol(ftest::Protocol { availability, .. })
+                        | ftest::Capability::Directory(ftest::Directory { availability, .. })
+                        | ftest::Capability::Storage(ftest::Storage { availability, .. })
+                        | ftest::Capability::Service(ftest::Service { availability, .. })
+                        | ftest::Capability::Event(ftest::Event { availability, .. }) => {
+                            match availability {
+                                Some(fcdecl::Availability::Required) | None => (),
+                                _ => {
+                                    return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                                        "capability availability cannot be \"SameAsTarget\" or \"Optional\" when the target is the parent",
+                                    )));
+                                }
+                            }
+                        }
+                        _ => {
+                            return Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                                "unknown capability type",
+                            )))
+                        }
+                    }
                     let decl =
                         create_expose_decl(capability.clone(), from.clone(), ExposingIn::Realm)?;
                     push_if_not_present(&mut state_guard.decl.exposes, decl);
@@ -1321,6 +1342,14 @@ fn create_capability_decl(
     })
 }
 
+fn get_offer_availability(availability: &Option<fcdecl::Availability>) -> cm_rust::Availability {
+    match availability {
+        Some(fcdecl::Availability::Optional) => cm_rust::Availability::Optional,
+        Some(fcdecl::Availability::SameAsTarget) => cm_rust::Availability::SameAsTarget,
+        _ => cm_rust::Availability::Required,
+    }
+}
+
 fn create_offer_decl(
     capability: ftest::Capability,
     source: fcdecl::Ref,
@@ -1334,19 +1363,21 @@ fn create_offer_decl(
             let source_name = try_into_source_name(&protocol.name)?;
             let target_name = try_into_target_name(&protocol.name, &protocol.as_)?;
             let dependency_type = into_dependency_type(&protocol.type_);
+            let availability = get_offer_availability(&protocol.availability);
             cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
                 source,
                 source_name,
                 target,
                 target_name,
                 dependency_type,
-                availability: cm_rust::Availability::Required,
+                availability,
             })
         }
         ftest::Capability::Directory(directory) => {
             let source_name = try_into_source_name(&directory.name)?;
             let target_name = try_into_target_name(&directory.name, &directory.as_)?;
             let dependency_type = into_dependency_type(&directory.type_);
+            let availability = get_offer_availability(&directory.availability);
             cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
                 source,
                 source_name,
@@ -1355,23 +1386,25 @@ fn create_offer_decl(
                 rights: directory.rights,
                 subdir: directory.subdir.map(PathBuf::from),
                 dependency_type,
-                availability: cm_rust::Availability::Required,
+                availability,
             })
         }
         ftest::Capability::Storage(storage) => {
             let source_name = try_into_source_name(&storage.name)?;
             let target_name = try_into_target_name(&storage.name, &storage.as_)?;
+            let availability = get_offer_availability(&storage.availability);
             cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
                 source,
                 source_name,
                 target,
                 target_name,
-                availability: cm_rust::Availability::Required,
+                availability,
             })
         }
         ftest::Capability::Service(service) => {
             let source_name = try_into_source_name(&service.name)?;
             let target_name = try_into_target_name(&service.name, &service.as_)?;
+            let availability = get_offer_availability(&service.availability);
             cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
                 source,
                 source_name,
@@ -1379,20 +1412,21 @@ fn create_offer_decl(
                 target_name,
                 source_instance_filter: None,
                 renamed_instances: None,
-                availability: cm_rust::Availability::Required,
+                availability,
             })
         }
         ftest::Capability::Event(event) => {
             let source_name = try_into_source_name(&event.name)?;
             let target_name = try_into_target_name(&event.name, &event.as_)?;
             let filter = event.filter.as_ref().cloned().map(FidlIntoNative::fidl_into_native);
+            let availability = get_offer_availability(&event.availability);
             cm_rust::OfferDecl::Event(cm_rust::OfferEventDecl {
                 source,
                 source_name,
                 target,
                 target_name,
                 filter,
-                availability: cm_rust::Availability::Required,
+                availability,
             })
         }
         ftest::Capability::EventStream(event_stream) => {
@@ -1506,6 +1540,20 @@ fn create_expose_decl(
     })
 }
 
+fn check_and_unwrap_use_availability(
+    availability: Option<fcdecl::Availability>,
+) -> Result<cm_rust::Availability, RealmBuilderError> {
+    match availability {
+        None => Ok(cm_rust::Availability::Required),
+        Some(fcdecl::Availability::SameAsTarget) => {
+            Err(RealmBuilderError::CapabilityInvalid(anyhow::format_err!(
+                "availability can not be \"same_as_target\" if the target is a local component"
+            )))
+        }
+        Some(availability) => Ok(availability.fidl_into_native()),
+    }
+}
+
 fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, RealmBuilderError> {
     Ok(match capability {
         ftest::Capability::Protocol(protocol) => {
@@ -1525,7 +1573,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
                 source_name,
                 target_path,
                 dependency_type,
-                availability: cm_rust::Availability::Required,
+                availability: check_and_unwrap_use_availability(protocol.availability)?,
             })
         }
         ftest::Capability::Directory(directory) => {
@@ -1552,7 +1600,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
                 // we'll set the sub-directory field there.
                 subdir: None,
                 dependency_type,
-                availability: cm_rust::Availability::Required,
+                availability: check_and_unwrap_use_availability(directory.availability)?,
             })
         }
         ftest::Capability::Storage(storage) => {
@@ -1563,7 +1611,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
             cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
                 source_name,
                 target_path,
-                availability: cm_rust::Availability::Required,
+                availability: check_and_unwrap_use_availability(storage.availability)?,
             })
         }
         ftest::Capability::Service(service) => {
@@ -1579,7 +1627,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
                 source_name,
                 target_path,
                 dependency_type: cm_rust::DependencyType::Strong,
-                availability: cm_rust::Availability::Required,
+                availability: check_and_unwrap_use_availability(service.availability)?,
             })
         }
         ftest::Capability::Event(event) => {
@@ -1593,7 +1641,7 @@ fn create_use_decl(capability: ftest::Capability) -> Result<cm_rust::UseDecl, Re
                 target_name: source_name,
                 filter,
                 dependency_type: cm_rust::DependencyType::Strong,
-                availability: cm_rust::Availability::Required,
+                availability: check_and_unwrap_use_availability(event.availability)?,
             })
         }
         ftest::Capability::EventStream(event) => {
@@ -3215,6 +3263,336 @@ mod tests {
         };
         expected_tree.add_binder_expose();
         assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_optional_route() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .add_child_or_panic("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await;
+        realm_and_builder_task
+            .realm_proxy
+            .add_local_child("b", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_local_child")
+            .expect("add_local_child returned an error");
+
+        // Assert that parent -> child optional capabilities generate proper offer decls.
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![
+                    ftest::Capability::Protocol(ftest::Protocol {
+                        name: Some("fuchsia.examples.Hippo".to_owned()),
+                        as_: Some("fuchsia.examples.Elephant".to_owned()),
+                        type_: Some(fcdecl::DependencyType::Strong),
+                        availability: Some(fcdecl::Availability::Optional),
+                        ..ftest::Protocol::EMPTY
+                    }),
+                    ftest::Capability::Directory(ftest::Directory {
+                        name: Some("config-data".to_owned()),
+                        rights: Some(fio::RW_STAR_DIR),
+                        path: Some("/config-data".to_owned()),
+                        subdir: Some("component".to_owned()),
+                        availability: Some(fcdecl::Availability::Optional),
+                        ..ftest::Directory::EMPTY
+                    }),
+                    ftest::Capability::Storage(ftest::Storage {
+                        name: Some("temp".to_string()),
+                        as_: Some("data".to_string()),
+                        path: Some("/data".to_string()),
+                        availability: Some(fcdecl::Availability::Optional),
+                        ..ftest::Storage::EMPTY
+                    }),
+                    ftest::Capability::Service(ftest::Service {
+                        name: Some("fuchsia.examples.Whale".to_string()),
+                        as_: Some("fuchsia.examples.Orca".to_string()),
+                        availability: Some(fcdecl::Availability::Optional),
+                        ..ftest::Service::EMPTY
+                    }),
+                ],
+                fcdecl::Ref::Parent(fcdecl::ParentRef {}),
+                vec![
+                    fcdecl::Ref::Child(fcdecl::ChildRef { name: "a".to_owned(), collection: None }),
+                    fcdecl::Ref::Child(fcdecl::ChildRef { name: "b".to_owned(), collection: None }),
+                ],
+            )
+            .await;
+
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let b_decl = cm_rust::ComponentDecl {
+            program: Some(cm_rust::ProgramDecl {
+                runner: Some(crate::runner::RUNNER_NAME.try_into().unwrap()),
+                info: fdata::Dictionary {
+                    entries: Some(vec![
+                        fdata::DictionaryEntry {
+                            key: runner::LOCAL_COMPONENT_ID_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("0".to_string()))),
+                        },
+                        fdata::DictionaryEntry {
+                            key: ftest::LOCAL_COMPONENT_NAME_KEY.to_string(),
+                            value: Some(Box::new(fdata::DictionaryValue::Str("b".to_string()))),
+                        },
+                    ]),
+                    ..fdata::Dictionary::EMPTY
+                },
+            }),
+            uses: vec![
+                cm_rust::UseDecl::Protocol(cm_rust::UseProtocolDecl {
+                    source: cm_rust::UseSource::Parent,
+                    source_name: "fuchsia.examples.Elephant".into(),
+                    target_path: "/svc/fuchsia.examples.Elephant".try_into().unwrap(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Optional,
+                }),
+                cm_rust::UseDecl::Directory(cm_rust::UseDirectoryDecl {
+                    source: cm_rust::UseSource::Parent,
+                    source_name: "config-data".into(),
+                    target_path: "/config-data".try_into().unwrap(),
+                    rights: fio::RW_STAR_DIR,
+                    subdir: None,
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Optional,
+                }),
+                cm_rust::UseDecl::Storage(cm_rust::UseStorageDecl {
+                    source_name: "data".into(),
+                    target_path: "/data".try_into().unwrap(),
+                    availability: cm_rust::Availability::Optional,
+                }),
+                cm_rust::UseDecl::Service(cm_rust::UseServiceDecl {
+                    source: cm_rust::UseSource::Parent,
+                    source_name: cm_rust::CapabilityName("fuchsia.examples.Orca".to_owned()),
+                    target_path: "/svc/fuchsia.examples.Orca".try_into().unwrap(),
+                    dependency_type: cm_rust::DependencyType::Strong,
+                    availability: cm_rust::Availability::Optional,
+                }),
+            ],
+            ..cm_rust::ComponentDecl::default()
+        };
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test:///a".to_string(),
+                    startup: fcdecl::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                offers: vec![
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Hippo".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "fuchsia.examples.Elephant".into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Hippo".into(),
+                        target: cm_rust::OfferTarget::static_child("b".to_string()),
+                        target_name: "fuchsia.examples.Elephant".into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "config-data".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "config-data".into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        rights: Some(fio::RW_STAR_DIR),
+                        subdir: Some(PathBuf::from("component")),
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "config-data".into(),
+                        target: cm_rust::OfferTarget::static_child("b".to_string()),
+                        target_name: "config-data".into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        rights: Some(fio::RW_STAR_DIR),
+                        subdir: Some(PathBuf::from("component")),
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "temp".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "data".into(),
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "temp".into(),
+                        target: cm_rust::OfferTarget::static_child("b".to_string()),
+                        target_name: "data".into(),
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Whale".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "fuchsia.examples.Orca".into(),
+                        source_instance_filter: None,
+                        renamed_instances: None,
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                    cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Whale".into(),
+                        target: cm_rust::OfferTarget::static_child("b".to_string()),
+                        target_name: "fuchsia.examples.Orca".into(),
+                        source_instance_filter: None,
+                        renamed_instances: None,
+                        availability: cm_rust::Availability::Optional,
+                    }),
+                ],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![(
+                "b".to_string(),
+                ftest::ChildOptions::EMPTY,
+                ComponentTree { decl: b_decl, children: vec![] },
+            )],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn add_same_as_target_route() {
+        let mut realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .add_child_or_panic("a", "test:///a", ftest::ChildOptions::EMPTY)
+            .await;
+
+        // Assert that parent -> child optional capabilities generate proper offer decls.
+        realm_and_builder_task
+            .add_route_or_panic(
+                vec![
+                    ftest::Capability::Protocol(ftest::Protocol {
+                        name: Some("fuchsia.examples.Hippo".to_owned()),
+                        as_: Some("fuchsia.examples.Elephant".to_owned()),
+                        type_: Some(fcdecl::DependencyType::Strong),
+                        availability: Some(fcdecl::Availability::SameAsTarget),
+                        ..ftest::Protocol::EMPTY
+                    }),
+                    ftest::Capability::Directory(ftest::Directory {
+                        name: Some("config-data".to_owned()),
+                        rights: Some(fio::RW_STAR_DIR),
+                        path: Some("/config-data".to_owned()),
+                        subdir: Some("component".to_owned()),
+                        availability: Some(fcdecl::Availability::SameAsTarget),
+                        ..ftest::Directory::EMPTY
+                    }),
+                    ftest::Capability::Storage(ftest::Storage {
+                        name: Some("temp".to_string()),
+                        as_: Some("data".to_string()),
+                        path: Some("/data".to_string()),
+                        availability: Some(fcdecl::Availability::SameAsTarget),
+                        ..ftest::Storage::EMPTY
+                    }),
+                    ftest::Capability::Service(ftest::Service {
+                        name: Some("fuchsia.examples.Whale".to_string()),
+                        as_: Some("fuchsia.examples.Orca".to_string()),
+                        availability: Some(fcdecl::Availability::SameAsTarget),
+                        ..ftest::Service::EMPTY
+                    }),
+                ],
+                fcdecl::Ref::Parent(fcdecl::ParentRef {}),
+                vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_owned(),
+                    collection: None,
+                })],
+            )
+            .await;
+
+        let tree_from_resolver = realm_and_builder_task.call_build_and_get_tree().await;
+        let mut expected_tree = ComponentTree {
+            decl: cm_rust::ComponentDecl {
+                children: vec![cm_rust::ChildDecl {
+                    name: "a".to_string(),
+                    url: "test:///a".to_string(),
+                    startup: fcdecl::StartupMode::Lazy,
+                    on_terminate: None,
+                    environment: None,
+                }],
+                offers: vec![
+                    cm_rust::OfferDecl::Protocol(cm_rust::OfferProtocolDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Hippo".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "fuchsia.examples.Elephant".into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        availability: cm_rust::Availability::SameAsTarget,
+                    }),
+                    cm_rust::OfferDecl::Directory(cm_rust::OfferDirectoryDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "config-data".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "config-data".into(),
+                        dependency_type: cm_rust::DependencyType::Strong,
+                        rights: Some(fio::RW_STAR_DIR),
+                        subdir: Some(PathBuf::from("component")),
+                        availability: cm_rust::Availability::SameAsTarget,
+                    }),
+                    cm_rust::OfferDecl::Storage(cm_rust::OfferStorageDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "temp".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "data".into(),
+                        availability: cm_rust::Availability::SameAsTarget,
+                    }),
+                    cm_rust::OfferDecl::Service(cm_rust::OfferServiceDecl {
+                        source: cm_rust::OfferSource::Parent,
+                        source_name: "fuchsia.examples.Whale".into(),
+                        target: cm_rust::OfferTarget::static_child("a".to_string()),
+                        target_name: "fuchsia.examples.Orca".into(),
+                        source_instance_filter: None,
+                        renamed_instances: None,
+                        availability: cm_rust::Availability::SameAsTarget,
+                    }),
+                ],
+                ..cm_rust::ComponentDecl::default()
+            },
+            children: vec![],
+        };
+        expected_tree.add_binder_expose();
+        assert_eq!(expected_tree, tree_from_resolver);
+    }
+
+    #[fuchsia::test]
+    async fn same_as_target_route_to_local_component() {
+        let realm_and_builder_task = RealmAndBuilderTask::new();
+        realm_and_builder_task
+            .realm_proxy
+            .add_local_child("a", ftest::ChildOptions::EMPTY)
+            .await
+            .expect("failed to call add_local_child")
+            .expect("add_local_child returned an error");
+        let err = realm_and_builder_task
+            .realm_proxy
+            .add_route(
+                &mut vec![ftest::Capability::Protocol(ftest::Protocol {
+                    name: Some("fuchsia.examples.Hippo".to_owned()),
+                    as_: Some("fuchsia.examples.Elephant".to_owned()),
+                    type_: Some(fcdecl::DependencyType::Strong),
+                    availability: Some(fcdecl::Availability::SameAsTarget),
+                    ..ftest::Protocol::EMPTY
+                })]
+                .iter_mut(),
+                &mut fcdecl::Ref::Parent(fcdecl::ParentRef {}),
+                &mut vec![fcdecl::Ref::Child(fcdecl::ChildRef {
+                    name: "a".to_owned(),
+                    collection: None,
+                })]
+                .iter_mut(),
+            )
+            .await
+            .expect("failed to call add_route")
+            .expect_err("add_route should have returned an error");
+        assert_eq!(err, ftest::RealmBuilderError::CapabilityInvalid);
     }
 
     #[fuchsia::test]
