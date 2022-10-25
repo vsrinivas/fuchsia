@@ -67,6 +67,11 @@ int Clover::Thread() {
 
   if ((status = GpioInit()) != ZX_OK) {
     zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
+  if ((status = ClkInit()) != ZX_OK) {
+    zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
   }
 
   init_txn_->Reply(status);

@@ -6,6 +6,15 @@
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_A1_A1_HW_H_
 
 // clock control registers
+#define A1_CLK_BASE 0xfe000800
+#define A1_CLK_LENGTH 0x400
+
+#define A1_MSR_CLK_BASE 0xfe003400
+#define A1_MSR_CLK_LENGTH 0x400
+
+// Analog Control for PLL clock
+#define A1_ANACTRL_BASE 0xfe007c00
+#define A1_ANACTRL_LENGTH 0x400
 
 // gpio
 #define A1_GPIO_BASE 0xfe000400
@@ -25,8 +34,6 @@
 
 // Peripherals - datasheet is nondescript about this section, but it contains
 //  top level ethernet control and temp sensor registers
-
-// Analog Control
 
 // DMC
 

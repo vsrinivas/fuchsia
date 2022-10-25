@@ -10,6 +10,7 @@ board_description = "clover"
 _common_bootfs_deps = [
   "//boards/kernel_cmdline:clover",
   "//src/devices/board/drivers/clover",
+  "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/gpio/drivers/aml-axg-gpio",
 ]
 

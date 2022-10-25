@@ -22,6 +22,7 @@ fuchsia_driver("clover-driver") {
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
   sources = [
+    "clover-clk.cc",
     "clover-gpio.cc",
     "clover.cc",
   ]

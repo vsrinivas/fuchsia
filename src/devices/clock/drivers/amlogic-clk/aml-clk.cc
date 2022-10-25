@@ -16,6 +16,7 @@
 #include <hwreg/bitfields.h>
 #include <soc/aml-meson/aml-clk-common.h>
 
+#include "aml-a1-blocks.h"
 #include "aml-a5-blocks.h"
 #include "aml-axg-blocks.h"
 #include "aml-fclk.h"
@@ -678,6 +679,22 @@ AmlClock::AmlClock(zx_device_t* device, fdf::MmioBuffer hiu_mmio, fdf::MmioBuffe
 
       break;
     }
+    case PDEV_DID_AMLOGIC_A1_CLK: {
+      // clover
+      clk_msr_offsets_ = a1_clk_msr;
+
+      clk_table_ = static_cast<const char* const*>(a1_clk_table);
+      clk_table_count_ = std::size(a1_clk_table);
+
+      gates_ = a1_clk_gates;
+      gate_count_ = std::size(a1_clk_gates);
+      meson_gate_enable_count_.resize(gate_count_);
+
+      muxes_ = a1_muxes;
+      mux_count_ = std::size(a1_muxes);
+
+      break;
+    }
     default:
       ZX_PANIC("aml-clk: Unsupported SOC DID %u\n", device_id);
   }
@@ -734,13 +751,15 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return endpoints.error_value();
   }
 
+  bool has_pbus = true;
+
   status = device_connect_runtime_protocol(
       parent, fuchsia_hardware_platform_bus::Service::PlatformBus::ServiceName,
       fuchsia_hardware_platform_bus::Service::PlatformBus::Name,
       endpoints->server.TakeHandle().release());
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Failed to connect to platform bus: %s", zx_status_get_string(status));
-    return status;
+    zxlogf(WARNING, "Failed to connect to platform bus: %s", zx_status_get_string(status));
+    has_pbus = false;
   }
 
   auto clock_device = std::make_unique<amlogic_clock::AmlClock>(
@@ -752,8 +771,10 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     return status;
   }
 
-  clock_device->Register(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus>(
-      std::move(endpoints->client)));
+  if (has_pbus) {
+    clock_device->Register(fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus>(
+        std::move(endpoints->client)));
+  }
 
   // devmgr is now in charge of the memory for dev.
   __UNUSED auto ptr = clock_device.release();
