@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.driver.test/cpp/wire.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <limits.h>
@@ -21,17 +21,16 @@
 
 namespace {
 
-fuchsia_hardware_nand_RamNandInfo BuildConfig() {
-  fuchsia_hardware_nand_RamNandInfo config = {};
-  config.vmo = ZX_HANDLE_INVALID;
-  config.nand_info = {4096, 4, 5, 6, 0, fuchsia_hardware_nand_Class_TEST, {}};
-  return config;
+fuchsia_hardware_nand::wire::RamNandInfo BuildConfig() {
+  return {
+      .nand_info = {4096, 4, 5, 6, 0, fuchsia_hardware_nand::wire::Class::kTest, {}},
+  };
 }
 
 class NandDevice {
  public:
-  explicit NandDevice(const fuchsia_hardware_nand_RamNandInfo& config = BuildConfig()) {
-    if (ramdevice_client::RamNand::Create(&config, &ram_nand_) == ZX_OK) {
+  explicit NandDevice(fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig()) {
+    if (ramdevice_client::RamNand::Create(std::move(config), &ram_nand_) == ZX_OK) {
       // caller_ want's to own the device, so we re-open it even though
       // ram_nand_ already has it open.
       fbl::unique_fd device(dup(ram_nand_->fd().get()));
@@ -41,7 +40,7 @@ class NandDevice {
 
   ~NandDevice() = default;
 
-  bool IsValid() const { return caller_ ? true : false; }
+  bool IsValid() const { return static_cast<bool>(caller_); }
 
   const char* path() { return ram_nand_->path(); }
   const char* filename() { return ram_nand_->filename(); }
@@ -73,26 +72,26 @@ TEST(RamNandCtlTest, TrivialLifetime) {
 }
 
 TEST(RamNandCtlTest, ExportConfig) {
-  fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+  fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_nand_config = true;
 
-  NandDevice device(config);
+  NandDevice device(std::move(config));
   ASSERT_TRUE(device.IsValid());
 }
 
 TEST(RamNandCtlTest, ExportPartitions) {
-  fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+  fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.export_partition_map = true;
 
-  NandDevice device(config);
+  NandDevice device(std::move(config));
   ASSERT_TRUE(device.IsValid());
 }
 
 TEST(RamNandCtlTest, CreateFailure) {
-  fuchsia_hardware_nand_RamNandInfo config = BuildConfig();
+  fuchsia_hardware_nand::wire::RamNandInfo config = BuildConfig();
   config.nand_info.num_blocks = 0;
 
-  NandDevice device(config);
+  NandDevice device(std::move(config));
   ASSERT_FALSE(device.IsValid());
 }
 

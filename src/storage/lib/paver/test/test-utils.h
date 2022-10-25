@@ -65,7 +65,7 @@ class BlockDevice {
 
 class SkipBlockDevice {
  public:
-  static void Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
+  static void Create(fuchsia_hardware_nand::wire::RamNandInfo nand_info,
                      std::unique_ptr<SkipBlockDevice>* device);
 
   fbl::unique_fd devfs_root() { return ctl_->devfs_root().duplicate(); }
@@ -75,11 +75,11 @@ class SkipBlockDevice {
   ~SkipBlockDevice() = default;
 
  private:
-  SkipBlockDevice(fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl,
+  SkipBlockDevice(std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl,
                   ramdevice_client::RamNand ram_nand, fzl::VmoMapper mapper)
       : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
-  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl_;
+  std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl_;
   ramdevice_client::RamNand ram_nand_;
   fzl::VmoMapper mapper_;
 };
@@ -127,14 +127,14 @@ class FakePartitionClient : public paver::BlockDevicePartitionClient {
   FakePartitionClient(size_t block_count, size_t block_size);
   explicit FakePartitionClient(size_t block_count);
 
-  zx::result<size_t> GetBlockSize();
-  zx::result<size_t> GetPartitionSize();
-  zx::result<> Read(const zx::vmo& vmo, size_t size);
-  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size);
-  zx::result<> Trim();
-  zx::result<> Flush();
-  fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel();
-  fbl::unique_fd block_fd();
+  zx::result<size_t> GetBlockSize() override;
+  zx::result<size_t> GetPartitionSize() override;
+  zx::result<> Read(const zx::vmo& vmo, size_t size) override;
+  zx::result<> Write(const zx::vmo& vmo, size_t vmo_size) override;
+  zx::result<> Trim() override;
+  zx::result<> Flush() override;
+  fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() override;
+  fbl::unique_fd block_fd() override;
 
  protected:
   zx::vmo partition_;
@@ -150,7 +150,7 @@ class FakeSvc {
     root_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
     root_dir_->AddEntry(
         fidl::DiscoverableProtocolName<fuchsia_boot::Arguments>,
-        fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
+        fbl::MakeRefCounted<fs::Service>([this](fidl::ServerEnd<fuchsia_boot::Arguments> request) {
           return fidl::BindSingleInFlightOnly<fidl::WireServer<fuchsia_boot::Arguments>>(
               dispatcher_, std::move(request), &fake_boot_args_);
         }));

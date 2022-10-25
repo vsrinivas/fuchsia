@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_NAND_DRIVERS_BROKER_TEST_PARENT_H_
-#define SRC_STORAGE_NAND_DRIVERS_BROKER_TEST_PARENT_H_
+#ifndef SRC_DEVICES_NAND_DRIVERS_BROKER_TEST_PARENT_H_
+#define SRC_DEVICES_NAND_DRIVERS_BROKER_TEST_PARENT_H_
 
-#include <fuchsia/hardware/nand/c/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <limits.h>
 
 #include <fbl/string_buffer.h>
@@ -18,9 +18,9 @@
 class ParentDevice {
  public:
   struct TestConfig {
-    fuchsia_hardware_nand_Info info;                   // Configuration for a new ram-nand.
-    fuchsia_hardware_nand_PartitionMap partition_map;  // Configuration for a new ram-nand.
-    const char* path;                                  // Path to an existing device.
+    fuchsia_hardware_nand::wire::Info info;                   // Configuration for a new ram-nand.
+    fuchsia_hardware_nand::wire::PartitionMap partition_map;  // Configuration for a new ram-nand.
+    const char* path;                                         // Path to an existing device.
     bool is_broker;        // True is the device is a broker (not a nand).
     uint32_t num_blocks;   // Number of blocks to use.
     uint32_t first_block;  // First block to use.
@@ -32,17 +32,19 @@ class ParentDevice {
   const char* Path() const { return path_.c_str(); }
 
   bool IsValid() const { return ram_nand_ || device_; }
-  bool IsExternal() const { return device_ ? true : false; }
+  bool IsExternal() const { return device_.is_valid(); }
   bool IsBroker() const { return config_.is_broker; }
 
   // Returns a file descriptor for the device.
   int get() { return ram_nand_ ? ram_nand_->fd().get() : device_.get(); }
 
-  const fuchsia_hardware_nand_Info& Info() const { return config_.info; }
-  void SetInfo(const fuchsia_hardware_nand_Info& info);
+  const fuchsia_hardware_nand::wire::Info& Info() const { return config_.info; }
+  void SetInfo(const fuchsia_hardware_nand::wire::Info& info);
 
-  const fuchsia_hardware_nand_PartitionMap& PartitionMap() const { return config_.partition_map; }
-  void SetPartitionMap(const fuchsia_hardware_nand_PartitionMap& partition_map);
+  const fuchsia_hardware_nand::wire::PartitionMap& PartitionMap() const {
+    return config_.partition_map;
+  }
+  void SetPartitionMap(const fuchsia_hardware_nand::wire::PartitionMap& partition_map);
 
   uint32_t NumBlocks() const { return config_.num_blocks; }
   uint32_t FirstBlock() const { return config_.first_block; }
@@ -56,4 +58,4 @@ class ParentDevice {
 
 extern ParentDevice* g_parent_device_;
 
-#endif  // SRC_STORAGE_NAND_DRIVERS_BROKER_TEST_PARENT_H_
+#endif  // SRC_DEVICES_NAND_DRIVERS_BROKER_TEST_PARENT_H_

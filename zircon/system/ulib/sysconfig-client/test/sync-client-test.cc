@@ -23,55 +23,56 @@ constexpr uint32_t kPagesPerBlock = 64;
 constexpr uint32_t kBlockSize = kPageSize * kPagesPerBlock;
 constexpr uint32_t kNumBlocks = 8;
 
-constexpr fuchsia_hardware_nand_RamNandInfo kNandInfo = {
-    .vmo = ZX_HANDLE_INVALID,
-    .nand_info =
-        {
-            .page_size = kPageSize,
-            .pages_per_block = kPagesPerBlock,
-            .num_blocks = kNumBlocks,
-            .ecc_bits = 8,
-            .oob_size = kOobSize,
-            .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
-            .partition_guid = {},
-        },
-    .partition_map =
-        {
-            .device_guid = {},
-            .partition_count = 2,
-            .partitions =
-                {
-                    {
-                        .type_guid = {},
-                        .unique_guid = {},
-                        .first_block = 0,
-                        .last_block = 3,
-                        .copy_count = 0,
-                        .copy_byte_offset = 0,
-                        .name = {},
-                        .hidden = true,
-                        .bbt = true,
-                    },
-                    {
-                        .type_guid = GUID_SYS_CONFIG_VALUE,
-                        .unique_guid = {},
-                        .first_block = 4,
-                        .last_block = 7,
-                        .copy_count = 4,
-                        .copy_byte_offset = 0,
-                        .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
-                        .hidden = false,
-                        .bbt = false,
-                    },
-                },
-        },
-    .export_nand_config = true,
-    .export_partition_map = true,
-};
+fuchsia_hardware_nand::wire::RamNandInfo NandInfo() {
+  return {
+      .nand_info =
+          {
+              .page_size = kPageSize,
+              .pages_per_block = kPagesPerBlock,
+              .num_blocks = kNumBlocks,
+              .ecc_bits = 8,
+              .oob_size = kOobSize,
+              .nand_class = fuchsia_hardware_nand::wire::Class::kPartmap,
+              .partition_guid = {},
+          },
+      .partition_map =
+          {
+              .device_guid = {},
+              .partition_count = 2,
+              .partitions =
+                  {
+                      fuchsia_hardware_nand::wire::Partition{
+                          .type_guid = {},
+                          .unique_guid = {},
+                          .first_block = 0,
+                          .last_block = 3,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {},
+                          .hidden = true,
+                          .bbt = true,
+                      },
+                      {
+                          .type_guid = GUID_SYS_CONFIG_VALUE,
+                          .unique_guid = {},
+                          .first_block = 4,
+                          .last_block = 7,
+                          .copy_count = 4,
+                          .copy_byte_offset = 0,
+                          .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                  },
+          },
+      .export_nand_config = true,
+      .export_partition_map = true,
+  };
+}
 
 class SkipBlockDevice {
  public:
-  static void Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
+  static void Create(fuchsia_hardware_nand::wire::RamNandInfo nand_info,
                      std::optional<SkipBlockDevice>* device);
 
   fbl::unique_fd devfs_root() { return ctl_->devfs_root().duplicate(); }
@@ -80,12 +81,12 @@ class SkipBlockDevice {
 
   ~SkipBlockDevice() = default;
 
-  SkipBlockDevice(fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl,
+  SkipBlockDevice(std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl,
                   ramdevice_client::RamNand ram_nand, fzl::VmoMapper mapper)
       : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
  private:
-  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl_;
+  std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl_;
   ramdevice_client::RamNand ram_nand_;
   fzl::VmoMapper mapper_;
 };
@@ -108,7 +109,7 @@ void CreateBadBlockMap(void* buffer) {
   oob->generation = 1;
 }
 
-void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
+void SkipBlockDevice::Create(fuchsia_hardware_nand::wire::RamNandInfo nand_info,
                              std::optional<SkipBlockDevice>* device) {
   fzl::VmoMapper mapper;
   zx::vmo vmo;
@@ -116,15 +117,12 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
   memset(mapper.start(), 0xff, mapper.size());
   CreateBadBlockMap(mapper.start());
-  zx::vmo dup;
-  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &nand_info.vmo));
 
-  fuchsia_hardware_nand_RamNandInfo info = nand_info;
-  info.vmo = dup.release();
-  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl;
+  std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl;
   ASSERT_OK(ramdevice_client_test::RamNandCtl::Create(&ctl));
   std::optional<ramdevice_client::RamNand> ram_nand;
-  ASSERT_OK(ctl->CreateRamNand(&info, &ram_nand));
+  ASSERT_OK(ctl->CreateRamNand(std::move(nand_info), &ram_nand));
   fbl::unique_fd fd;
   ASSERT_OK(device_watcher::RecursiveWaitForFile(ctl->devfs_root(), "sys/platform", &fd));
   device->emplace(std::move(ctl), *std::move(ram_nand), std::move(mapper));
@@ -148,7 +146,7 @@ void ValidateBuffer(void* buffer, size_t size, uint8_t expected = 0x5c) {
 
 class SyncClientTest : public zxtest::Test {
  protected:
-  SyncClientTest() { ASSERT_NO_FATAL_FAILURE(SkipBlockDevice::Create(kNandInfo, &device_)); }
+  SyncClientTest() { ASSERT_NO_FATAL_FAILURE(SkipBlockDevice::Create(NandInfo(), &device_)); }
 
   void ValidateWritten(size_t offset, size_t size, uint8_t expected = 0x4a) {
     for (size_t block = 4; block < 5; block++) {
@@ -178,7 +176,7 @@ class SyncClientTest : public zxtest::Test {
     }
   }
 
-  void TestLayoutUpdate(const std::optional<sysconfig_header> current_header,
+  void TestLayoutUpdate(std::optional<sysconfig_header> current_header,
                         const sysconfig_header& target_header);
 
   std::optional<SkipBlockDevice> device_;
@@ -626,16 +624,16 @@ class SyncClientBufferedTest : public SyncClientTest {
   void TestWriteWithHeader(const std::vector<PartitionInfo>& parts_to_test_write);
 
  protected:
-  void ValidateReadBuffer(const void* buffer, size_t len, uint8_t expected) const {
+  static void ValidateReadBuffer(const void* buffer, size_t len, uint8_t expected) {
     auto mem = static_cast<const uint8_t*>(buffer);
     for (size_t i = 0; i < len; i++) {
       ASSERT_EQ(mem[i], expected, "offset = %zu", i);
     }
   }
 
-  std::optional<uint8_t> GetExpectedWriteValue(size_t index,
-                                               const std::vector<PartitionInfo>& parts,
-                                               uint8_t unwritten_default) const {
+  static std::optional<uint8_t> GetExpectedWriteValue(size_t index,
+                                                      const std::vector<PartitionInfo>& parts,
+                                                      uint8_t unwritten_default) {
     for (auto& part : parts) {
       if (index >= part.partition_offset && index < part.partition_offset + part.partition_size) {
         return part.write_value;
@@ -810,7 +808,7 @@ void SyncClientBufferedTest::TestWriteWithHeader(
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
   sysconfig::SyncClientBuffered sync_client_buffered(*std::move(client));
   // Sysconfig partition starts at the 5th block in this test environment.
-  // Please refer to kNandInfo definition.
+  // Please refer to NandInfo() definition.
   auto memory = static_cast<uint8_t*>(device_->mapper().start()) + 4 * kBlockSize;
 
   sysconfig_header header = {

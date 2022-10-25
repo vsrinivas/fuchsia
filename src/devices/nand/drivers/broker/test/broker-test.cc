@@ -4,7 +4,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/nand/c/fidl.h>
+#include <fidl/fuchsia.nand/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fidl/cpp/wire/channel.h>
@@ -32,10 +32,10 @@ constexpr uint32_t kMinBlockSize = 4;
 constexpr uint32_t kMinNumBlocks = 5;
 constexpr uint32_t kInMemoryPages = 20;
 
-typedef struct {
+using BrokerData = struct {
   fbl::unique_fd fd;
   fbl::String filename;
-} BrokerData;
+};
 
 fbl::unique_fd OpenBroker(const char* path, fbl::String* out_filename) {
   BrokerData broker_data;
@@ -88,24 +88,26 @@ class NandDevice {
   }
 
   // Provides a channel to issue fidl calls.
-  zx_handle_t channel() { return caller_.borrow_channel(); }
+  fidl::UnownedClientEnd<fuchsia_nand::Broker> channel() {
+    return caller_.borrow_as<fuchsia_nand::Broker>();
+  }
 
   // Wrappers for "queue" operations that take care of preserving the vmo's handle
   // and translating the request to the desired block range on the actual device.
-  zx_status_t Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request);
-  zx_status_t Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request);
-  zx_status_t ReadBytes(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestDataBytes& request);
-  zx_status_t WriteBytes(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestDataBytes& request);
-  zx_status_t Erase(const fuchsia_nand_BrokerRequestData& request);
+  zx_status_t Read(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestData request);
+  zx_status_t Write(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestData request);
+  zx_status_t ReadBytes(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestDataBytes request);
+  zx_status_t WriteBytes(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestDataBytes request);
+  zx_status_t Erase(fuchsia_nand::wire::BrokerRequestData request);
 
   // Erases a given block number.
   zx_status_t EraseBlock(uint32_t block_num);
 
   // Verifies that the buffer pointed to by the operation's vmo contains the given
   // pattern for the desired number of pages, skipping the pages before start.
-  bool CheckPattern(uint8_t expected, int start, int num_pages, const void* memory);
+  bool CheckPattern(uint8_t expected, int start, int num_pages, const void* memory) const;
 
-  const fuchsia_hardware_nand_Info& Info() const { return parent_->Info(); }
+  const fuchsia_hardware_nand::wire::Info& Info() const { return parent_->Info(); }
 
   uint32_t PageSize() const { return parent_->Info().page_size; }
   uint32_t OobSize() const { return parent_->Info().oob_size; }
@@ -157,106 +159,112 @@ NandDevice::NandDevice() {
   is_valid_ = ValidateNandDevice();
 }
 
-zx_status_t NandDevice::Read(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request) {
-  fuchsia_nand_BrokerRequestData request_copy = request;
+zx_status_t NandDevice::Read(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestData request) {
   if (!full_device_) {
-    request_copy.offset_nand = request.offset_nand + first_block_ * BlockSize();
+    request.offset_nand = request.offset_nand + first_block_ * BlockSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumPages());
   }
 
-  uint32_t bit_flips;
-  zx::vmo dup;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.vmo);
   if (status != ZX_OK) {
     return status;
   }
-  request_copy.vmo = dup.release();
-  zx_status_t io_status = fuchsia_nand_BrokerRead(channel(), &request_copy, &status, &bit_flips);
-  return (io_status != ZX_OK) ? io_status : status;
+  const fidl::WireResult result = fidl::WireCall(channel())->Read(std::move(request));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  return response.status;
 }
 
 zx_status_t NandDevice::ReadBytes(const zx::vmo& vmo,
-                                  const fuchsia_nand_BrokerRequestDataBytes& request) {
-  fuchsia_nand_BrokerRequestDataBytes request_copy = request;
+                                  fuchsia_nand::wire::BrokerRequestDataBytes request) {
   if (!full_device_) {
-    request_copy.offset_nand =
+    request.offset_nand =
         request.offset_nand + static_cast<uint64_t>(first_block_) * BlockSize() * PageSize();
     ZX_DEBUG_ASSERT(request.offset_nand < NumPages());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumPages());
   }
 
-  zx::vmo dup;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.vmo);
   if (status != ZX_OK) {
     return status;
   }
-  request_copy.vmo = dup.release();
-  zx_status_t io_status = fuchsia_nand_BrokerReadBytes(channel(), &request_copy, &status);
-  return (io_status != ZX_OK) ? io_status : status;
+  const fidl::WireResult result = fidl::WireCall(channel())->ReadBytes(std::move(request));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  return response.status;
 }
 
-zx_status_t NandDevice::Write(const zx::vmo& vmo, const fuchsia_nand_BrokerRequestData& request) {
-  fuchsia_nand_BrokerRequestData request_copy = request;
+zx_status_t NandDevice::Write(const zx::vmo& vmo, fuchsia_nand::wire::BrokerRequestData request) {
   if (!full_device_) {
-    request_copy.offset_nand = request.offset_nand + first_block_ * BlockSize();
+    request.offset_nand = request.offset_nand + first_block_ * BlockSize();
     ZX_DEBUG_ASSERT(request.offset_nand < static_cast<uint64_t>(NumPages()) * PageSize());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <=
                     static_cast<uint64_t>(NumPages()) * PageSize());
   }
 
-  zx::vmo dup;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.vmo);
   if (status != ZX_OK) {
     return status;
   }
-  request_copy.vmo = dup.release();
-  zx_status_t io_status = fuchsia_nand_BrokerWrite(channel(), &request_copy, &status);
-  return (io_status != ZX_OK) ? io_status : status;
+  const fidl::WireResult result = fidl::WireCall(channel())->Write(std::move(request));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  return response.status;
 }
 
 zx_status_t NandDevice::WriteBytes(const zx::vmo& vmo,
-                                   const fuchsia_nand_BrokerRequestDataBytes& request) {
-  fuchsia_nand_BrokerRequestDataBytes request_copy = request;
+                                   fuchsia_nand::wire::BrokerRequestDataBytes request) {
   if (!full_device_) {
-    request_copy.offset_nand =
+    request.offset_nand =
         request.offset_nand + static_cast<uint64_t>(first_block_) * BlockSize() * PageSize();
     ZX_DEBUG_ASSERT(request.offset_nand < static_cast<uint64_t>(NumPages()) * PageSize());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <=
                     static_cast<uint64_t>(NumPages()) * PageSize());
   }
 
-  zx::vmo dup;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.vmo);
   if (status != ZX_OK) {
     return status;
   }
-  request_copy.vmo = dup.release();
-  zx_status_t io_status = fuchsia_nand_BrokerWriteBytes(channel(), &request_copy, &status);
-  return (io_status != ZX_OK) ? io_status : status;
+  const fidl::WireResult result = fidl::WireCall(channel())->WriteBytes(std::move(request));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  return response.status;
 }
 
-zx_status_t NandDevice::Erase(const fuchsia_nand_BrokerRequestData& request) {
-  fuchsia_nand_BrokerRequestData request_copy = request;
+zx_status_t NandDevice::Erase(fuchsia_nand::wire::BrokerRequestData request) {
   if (!full_device_) {
-    request_copy.offset_nand = request.offset_nand + first_block_;
+    request.offset_nand = request.offset_nand + first_block_;
     ZX_DEBUG_ASSERT(request.offset_nand < NumBlocks());
     ZX_DEBUG_ASSERT(request.offset_nand + request.length <= NumBlocks());
   }
 
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_nand_BrokerErase(channel(), &request_copy, &status);
-  return (io_status != ZX_OK) ? io_status : status;
+  const fidl::WireResult result = fidl::WireCall(channel())->Erase(std::move(request));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  return response.status;
 }
 
 zx_status_t NandDevice::EraseBlock(uint32_t block_num) {
-  fuchsia_nand_BrokerRequestData request = {};
-  request.length = 1;
-  request.offset_nand = block_num;
-  return Erase(request);
+  return Erase({
+      .length = 1,
+      .offset_nand = block_num,
+  });
 }
 
-bool NandDevice::CheckPattern(uint8_t expected, int start, int num_pages, const void* memory) {
+bool NandDevice::CheckPattern(uint8_t expected, int start, int num_pages,
+                              const void* memory) const {
   const uint8_t* buffer = reinterpret_cast<const uint8_t*>(memory) + PageSize() * start;
   for (uint32_t i = 0; i < PageSize() * num_pages; i++) {
     if (buffer[i] != expected) {
@@ -271,13 +279,17 @@ bool NandDevice::ValidateNandDevice() {
     // This looks like using code under test to setup the test, but this
     // path is for external devices, not really the broker. The issue is that
     // ParentDevice cannot query a nand device for the actual parameters.
-    fuchsia_hardware_nand_Info info;
-    zx_status_t status;
-    if (fuchsia_nand_BrokerGetInfo(channel(), &status, &info) != ZX_OK || status != ZX_OK) {
-      printf("Failed to query nand device\n");
+    const fidl::WireResult result = fidl::WireCall(channel())->GetInfo();
+    if (!result.ok()) {
+      printf("failed to query nand device: %s\n", result.status_string());
       return false;
     }
-    parent_->SetInfo(info);
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
+      printf("failed to query nand device: %s\n", zx_status_get_string(status));
+      return false;
+    }
+    parent_->SetInfo(*response.info);
   }
 
   num_blocks_ = parent_->NumBlocks();
@@ -304,10 +316,11 @@ TEST(NandBrokerTest, Query) {
   NandDevice device;
   ASSERT_TRUE(device.IsValid());
 
-  fuchsia_hardware_nand_Info info;
-  zx_status_t status;
-  ASSERT_OK(fuchsia_nand_BrokerGetInfo(device.channel(), &status, &info));
-  ASSERT_OK(status);
+  const fidl::WireResult result = fidl::WireCall(device.channel())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_nand::wire::Info& info = *response.info;
 
   EXPECT_EQ(device.Info().page_size, info.page_size);
   EXPECT_EQ(device.Info().oob_size, info.oob_size);
@@ -326,57 +339,77 @@ TEST(NandBrokerTest, ReadWriteLimits) {
   ASSERT_OK(mapper.CreateAndMap(device.MaxBufferSize(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                 &vmo));
 
-  fuchsia_nand_BrokerRequestData request = {};
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, request));
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, request));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, {}));
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, {}));
 
   if (device.IsFullDevice()) {
-    request.length = 1;
-    request.offset_nand = device.NumPages();
+    {
+      auto request = [&device]() -> fuchsia_nand::wire::BrokerRequestData {
+        return {
+            .length = 1,
+            .offset_nand = device.NumPages(),
+        };
+      };
 
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, request));
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, request));
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, request()));
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, request()));
+    }
 
-    request.length = 2;
-    request.offset_nand = device.NumPages() - 1;
+    {
+      auto request = [&device]() -> fuchsia_nand::wire::BrokerRequestData {
+        return {
+            .length = 2,
+            .offset_nand = device.NumPages() - 1,
+        };
+      };
 
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, request));
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, request));
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Read(vmo, request()));
+      EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Write(vmo, request()));
+    }
   }
 
-  request.length = 1;
-  request.offset_nand = device.NumPages() - 1;
+  auto request = [&device]() -> fuchsia_nand::wire::BrokerRequestData {
+    return {
+        .length = 1,
+        .offset_nand = device.NumPages() - 1,
+    };
+  };
 
-  EXPECT_EQ(ZX_ERR_BAD_HANDLE, device.Read(vmo, request));
-  EXPECT_EQ(ZX_ERR_BAD_HANDLE, device.Write(vmo, request));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, device.Read(vmo, request()));
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE, device.Write(vmo, request()));
 
-  request.data_vmo = true;
+  auto request_with_data_vmo = [request]() {
+    fuchsia_nand::wire::BrokerRequestData base = request();
+    base.data_vmo = true;
+    return base;
+  };
 
-  EXPECT_OK(device.Read(vmo, request));
-  EXPECT_OK(device.Write(vmo, request));
+  EXPECT_OK(device.Read(vmo, request_with_data_vmo()));
+  EXPECT_OK(device.Write(vmo, request_with_data_vmo()));
 }
 
 TEST(NandBrokerTest, EraseLimits) {
   NandDevice device;
   ASSERT_TRUE(device.IsValid());
 
-  fuchsia_nand_BrokerRequestData request = {};
-  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase(request));
-
-  request.offset_nand = device.NumBlocks();
+  EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase({}));
 
   if (device.IsFullDevice()) {
-    request.length = 1;
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase(request));
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase({
+                                       .length = 1,
+                                       .offset_nand = device.NumBlocks(),
+                                   }));
 
-    request.length = 2;
-    request.offset_nand = device.NumBlocks() - 1;
-    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase(request));
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE, device.Erase({
+                                       .length = 2,
+                                       .offset_nand = device.NumBlocks() - 1,
+                                   }));
   }
 
-  request.length = 1;
-  request.offset_nand = device.NumBlocks() - 1;
-  EXPECT_OK(device.Erase(request));
+  EXPECT_OK(device.Erase({
+      .length = 1,
+      .offset_nand = device.NumBlocks() - 1,
+  }));
 }
 
 TEST(NandBrokerTest, ReadWrite) {
@@ -390,16 +423,19 @@ TEST(NandBrokerTest, ReadWrite) {
                                 &vmo));
   memset(mapper.start(), 0x55, mapper.size());
 
-  fuchsia_nand_BrokerRequestData request = {};
-  request.length = 4;
-  request.offset_nand = 4;
-  request.data_vmo = true;
+  auto request = []() -> fuchsia_nand::wire::BrokerRequestData {
+    return {
+        .length = 4,
+        .offset_nand = 4,
+        .data_vmo = true,
+    };
+  };
 
-  ASSERT_OK(device.Write(vmo, request));
+  ASSERT_OK(device.Write(vmo, request()));
 
   memset(mapper.start(), 0, mapper.size());
 
-  ASSERT_OK(device.Read(vmo, request));
+  ASSERT_OK(device.Read(vmo, request()));
   ASSERT_TRUE(device.CheckPattern(0x55, 0, 4, mapper.start()));
 }
 
@@ -415,18 +451,24 @@ TEST(NandBrokerTest, ReadWriteOob) {
   const char desired[] = {'a', 'b', 'c', 'd'};
   memcpy(mapper.start(), desired, sizeof(desired));
 
-  fuchsia_nand_BrokerRequestData request = {};
-  request.length = 1;
-  request.offset_nand = 2;
-  request.oob_vmo = true;
+  auto request = []() -> fuchsia_nand::wire::BrokerRequestData {
+    return {
+        .length = 1,
+        .offset_nand = 2,
+        .oob_vmo = true,
+    };
+  };
 
-  ASSERT_OK(device.Write(vmo, request));
+  ASSERT_OK(device.Write(vmo, request()));
 
-  request.length = 2;
-  request.offset_nand = 1;
   memset(mapper.start(), 0, device.OobSize() * 2);
 
-  ASSERT_OK(device.Read(vmo, request));
+  ASSERT_OK(device.Read(vmo, [request]() {
+    fuchsia_nand::wire::BrokerRequestData base = request();
+    base.length = 2;
+    base.offset_nand = 1;
+    return base;
+  }()));
 
   // The "second page" has the data of interest.
   ASSERT_EQ(0, memcmp(reinterpret_cast<char*>(mapper.start()) + device.OobSize(), desired,
@@ -447,17 +489,20 @@ TEST(NandBrokerTest, ReadWriteDataAndOob) {
   memset(buffer, 0x55, device.PageSize() * 2);
   memset(buffer + device.PageSize() * 2, 0xaa, device.OobSize() * 2);
 
-  fuchsia_nand_BrokerRequestData request = {};
-  request.length = 2;
-  request.offset_nand = 2;
-  request.offset_oob_vmo = 2;  // OOB is right after data.
-  request.data_vmo = true;
-  request.oob_vmo = true;
+  auto request = []() -> fuchsia_nand::wire::BrokerRequestData {
+    return {
+        .length = 2,
+        .offset_nand = 2,
+        .offset_oob_vmo = 2,  // OOB is right after data.
+        .data_vmo = true,
+        .oob_vmo = true,
+    };
+  };
 
-  ASSERT_OK(device.Write(vmo, request));
+  ASSERT_OK(device.Write(vmo, request()));
 
   memset(buffer, 0, device.PageSize() * 4);
-  ASSERT_OK(device.Read(vmo, request));
+  ASSERT_OK(device.Read(vmo, request()));
 
   // Verify data.
   ASSERT_TRUE(device.CheckPattern(0x55, 0, 2, buffer));
@@ -478,23 +523,29 @@ TEST(NandBrokerTest, Erase) {
 
   memset(mapper.start(), 0x55, mapper.size());
 
-  fuchsia_nand_BrokerRequestData request = {};
-  request.length = kMinBlockSize;
-  request.data_vmo = true;
-  request.offset_nand = device.BlockSize();
-  ASSERT_OK(device.Write(vmo, request));
+  auto request = [&device]() -> fuchsia_nand::wire::BrokerRequestData {
+    return {
+        .length = kMinBlockSize,
+        .offset_nand = device.BlockSize(),
+        .data_vmo = true,
+    };
+  };
+  ASSERT_OK(device.Write(vmo, request()));
 
-  request.offset_nand = device.BlockSize() * 2;
-  ASSERT_OK(device.Write(vmo, request));
+  auto request_with_double_offset = [request]() {
+    fuchsia_nand::wire::BrokerRequestData base = request();
+    base.offset_nand *= 2;
+    return base;
+  };
+  ASSERT_OK(device.Write(vmo, request_with_double_offset()));
 
   ASSERT_OK(device.EraseBlock(1));
   ASSERT_OK(device.EraseBlock(2));
 
-  ASSERT_OK(device.Read(vmo, request));
+  ASSERT_OK(device.Read(vmo, request_with_double_offset()));
   ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, mapper.start()));
 
-  request.offset_nand = device.BlockSize();
-  ASSERT_OK(device.Read(vmo, request));
+  ASSERT_OK(device.Read(vmo, request()));
   ASSERT_TRUE(device.CheckPattern(0xff, 0, kMinBlockSize, mapper.start()));
 }
 
@@ -511,14 +562,17 @@ TEST(NandBrokerTest, ReadWriteDataBytes) {
   char* buffer = reinterpret_cast<char*>(mapper.start());
   memset(buffer, 0x55, 2);
 
-  fuchsia_nand_BrokerRequestDataBytes request = {};
-  request.length = 2;
-  request.offset_nand = 2;
+  auto request = []() -> fuchsia_nand::wire::BrokerRequestDataBytes {
+    return {
+        .length = 2,
+        .offset_nand = 2,
+    };
+  };
 
-  ASSERT_OK(device.WriteBytes(vmo, request));
+  ASSERT_OK(device.WriteBytes(vmo, request()));
 
   memset(buffer, 0, 4);
-  ASSERT_OK(device.ReadBytes(vmo, request));
+  ASSERT_OK(device.ReadBytes(vmo, request()));
 
   constexpr uint8_t kExpected[] = {0x55, 0x55};
   // Verify data.

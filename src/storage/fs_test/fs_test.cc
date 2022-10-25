@@ -39,12 +39,9 @@
 #include "src/lib/storage/fs_management/cpp/launch.h"
 #include "src/lib/storage/fs_management/cpp/mkfs_with_default.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/lib/storage/vfs/cpp/fuchsia_vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
-#include "src/storage/blobfs/compression_settings.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/json_filesystem.h"
-#include "src/storage/fs_test/test_filesystem.h"
 #include "src/storage/testing/fvm.h"
 
 namespace fs_test {
@@ -155,8 +152,8 @@ zx::result<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   }
 
   std::optional<ramdevice_client::RamNand> ram_nand;
-  fuchsia_hardware_nand_RamNandInfo config = {
-      .vmo = vmo.release(),
+  fuchsia_hardware_nand::wire::RamNandInfo config = {
+      .vmo = std::move(vmo),
       .nand_info =
           {
               .page_size = kPageSize,
@@ -164,11 +161,11 @@ zx::result<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
               .num_blocks = block_count,
               .ecc_bits = 8,
               .oob_size = kOobSize,
-              .nand_class = fuchsia_hardware_nand_Class_FTL,
+              .nand_class = fuchsia_hardware_nand::wire::Class::kFtl,
           },
       .fail_after = options.fail_after,
   };
-  status = zx::make_result(ramdevice_client::RamNand::Create(&config, &ram_nand));
+  status = zx::make_result(ramdevice_client::RamNand::Create(std::move(config), &ram_nand));
   if (status.is_error()) {
     std::cout << "RamNand::Create failed: " << status.status_string() << std::endl;
     return status.take_error();
@@ -188,9 +185,8 @@ zx::result<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
 std::string StripTrailingSlash(const std::string& in) {
   if (!in.empty() && in.back() == '/') {
     return in.substr(0, in.length() - 1);
-  } else {
-    return in;
   }
+  return in;
 }
 
 zx::result<> FsUnbind(const std::string& mount_path) {
@@ -261,9 +257,8 @@ zx::result<std::pair<RamDevice, std::string>> CreateRamDevice(
     }
 
     return zx::ok(std::make_pair(std::move(ram_device), std::move(fvm_partition_or).value()));
-  } else {
-    return zx::ok(std::make_pair(std::move(ram_device), std::move(device_path)));
   }
+  return zx::ok(std::make_pair(std::move(ram_device), std::move(device_path)));
 }
 
 zx::result<> FsFormat(const std::string& device_path, fs_management::DiskFormat format,
@@ -291,15 +286,13 @@ zx::result<> FsFormat(const std::string& device_path, fs_management::DiskFormat 
 zx::result<std::pair<std::unique_ptr<fs_management::SingleVolumeFilesystemInterface>,
                      fs_management::NamespaceBinding>>
 FsMount(const std::string& device_path, const std::string& mount_path,
-        fs_management::DiskFormat format, const fs_management::MountOptions& mount_options,
+        fs_management::DiskFormat format, const fs_management::MountOptions& options,
         bool is_multi_volume) {
   auto fd = fbl::unique_fd(open(device_path.c_str(), O_RDWR));
   if (!fd) {
     std::cout << "Could not open device: " << device_path << ": errno=" << errno << std::endl;
     return zx::error(ZX_ERR_BAD_STATE);
   }
-
-  fs_management::MountOptions options = mount_options;
 
   // Uncomment the following line to force an fsck at the end of every transaction (where
   // supported).
@@ -456,7 +449,7 @@ std::vector<TestFilesystemOptions> AllTestFilesystems() {
             .filesystem = filesystem.get()});
       }
     }
-    filesystem.release();  // Deliberate leak
+    __UNUSED Filesystem* fs = filesystem.release();  // Deliberate leak
     return options;
   }();
 

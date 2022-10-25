@@ -50,13 +50,15 @@ Existing broker device:
 
 )""";
 
-const fuchsia_hardware_nand_Info kDefaultNandInfo = {.page_size = 4096,
-                                                     .pages_per_block = 4,
-                                                     .num_blocks = 5,
-                                                     .ecc_bits = 6,
-                                                     .oob_size = 4,
-                                                     .nand_class = fuchsia_hardware_nand_Class_TEST,
-                                                     .partition_guid = {}};
+const fuchsia_hardware_nand::wire::Info kDefaultNandInfo = {
+    .page_size = 4096,
+    .pages_per_block = 4,
+    .num_blocks = 5,
+    .ecc_bits = 6,
+    .oob_size = 4,
+    .nand_class = fuchsia_hardware_nand::wire::Class::kTest,
+};
+
 zx_status_t SetupDriverTestRealm() {
   // Connect to DriverTestRealm.
   auto client_end = component::Connect<fuchsia_driver_test::Realm>();
@@ -120,10 +122,10 @@ int main(int argc, char** argv) {
         config.is_broker = true;
         break;
       case 'f':
-        config.first_block = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        config.first_block = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 'n':
-        config.num_blocks = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        config.num_blocks = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 'h':
         printf("%s\n", kUsageMessage);

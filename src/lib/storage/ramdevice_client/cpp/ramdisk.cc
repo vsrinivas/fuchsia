@@ -6,9 +6,8 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <inttypes.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
@@ -16,6 +15,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/defer.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
@@ -34,15 +34,16 @@
 #include <zircon/types.h>
 
 #include <memory>
+#include <utility>
 
 #include <fbl/string.h>
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <ramdevice-client/ramdisk.h>
 
-#define RAMCTL_DEV_PATH "/dev"
-#define RAMCTL_PATH "sys/platform/00:00:2d/ramctl"
-#define BLOCK_EXTENSION "block"
+constexpr char kRamctlDevPath[] = "/dev";
+constexpr char kRamctlPath[] = "sys/platform/00:00:2d/ramctl";
+constexpr char kBlockExtension[] = "block";
 
 static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void* cookie) {
   char* wanted = static_cast<char*>(cookie);
@@ -53,8 +54,6 @@ static zx_status_t driver_watcher_cb(int dirfd, int event, const char* fn, void*
 }
 
 static zx_status_t wait_for_device_impl(int dir_fd, char* path, const zx::time& deadline) {
-  zx_status_t rc;
-
   // Peel off last path segment
   char* sep = strrchr(path, '/');
   if (path[0] == '\0' || (!sep)) {
@@ -68,10 +67,11 @@ static zx_status_t wait_for_device_impl(int dir_fd, char* path, const zx::time& 
 
   // Recursively check the path up to this point
   struct stat buf;
-  if (fstatat(dir_fd, path, &buf, 0) != 0 &&
-      (rc = wait_for_device_impl(dir_fd, path, deadline)) != ZX_OK) {
-    fprintf(stderr, "failed to bind '%s': %s\n", path, zx_status_get_string(rc));
-    return rc;
+  if (fstatat(dir_fd, path, &buf, 0) != 0) {
+    if (zx_status_t status = wait_for_device_impl(dir_fd, path, deadline); status != ZX_OK) {
+      fprintf(stderr, "failed to bind '%s': %s\n", path, zx_status_get_string(status));
+      return status;
+    }
   }
 
   // Early exit if this segment is empty
@@ -87,10 +87,11 @@ static zx_status_t wait_for_device_impl(int dir_fd, char* path, const zx::time& 
   }
 
   // Wait for the next path segment to show up
-  rc = fdio_watch_directory(parent_dir.get(), driver_watcher_cb, deadline.get(), last);
-  if (rc != ZX_ERR_STOP) {
-    fprintf(stderr, "error when waiting for '%s': %s\n", last, zx_status_get_string(rc));
-    return rc;
+  if (zx_status_t status =
+          fdio_watch_directory(parent_dir.get(), driver_watcher_cb, deadline.get(), last);
+      status != ZX_ERR_STOP) {
+    fprintf(stderr, "error when waiting for '%s': %s\n", last, zx_status_get_string(status));
+    return status;
   }
 
   return ZX_OK;
@@ -114,18 +115,18 @@ struct ramdisk_client {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(ramdisk_client);
 
-  static zx_status_t Create(int dev_root_fd, const char* instance_name, zx::duration duration,
+  static zx_status_t Create(int dev_root_fd, std::string_view instance_name, zx::duration duration,
                             std::unique_ptr<ramdisk_client>* out) {
-    fbl::String ramdisk_path = fbl::StringPrintf("%s/%s", RAMCTL_PATH, instance_name);
-    fbl::String block_path = fbl::String::Concat({ramdisk_path, "/", BLOCK_EXTENSION});
+    fbl::String ramdisk_path = fbl::String::Concat({kRamctlPath, "/", instance_name});
+    fbl::String block_path = fbl::String::Concat({ramdisk_path, "/", kBlockExtension});
     fbl::String path;
     fbl::unique_fd dirfd;
     if (dev_root_fd > -1) {
       dirfd.reset(dup(dev_root_fd));
       path = block_path;
     } else {
-      dirfd.reset(open(RAMCTL_DEV_PATH, O_RDONLY | O_DIRECTORY));
-      path = fbl::String::Concat({RAMCTL_DEV_PATH, "/", block_path});
+      dirfd.reset(open(kRamctlDevPath, O_RDONLY | O_DIRECTORY));
+      path = fbl::String::Concat({kRamctlDevPath, "/", block_path});
     }
     if (!dirfd) {
       return ZX_ERR_BAD_STATE;
@@ -165,11 +166,13 @@ struct ramdisk_client {
 
   zx_status_t Rebind() {
     fdio_cpp::FdioCaller disk_client(std::move(block_fd_));
-    zx_status_t io_status, status;
-    io_status = fuchsia_hardware_block_BlockRebindDevice(disk_client.borrow_channel(), &status);
-    if (io_status != ZX_OK) {
-      return io_status;
-    } else if (status != ZX_OK) {
+    const fidl::WireResult result =
+        fidl::WireCall(disk_client.borrow_as<fuchsia_hardware_block::Block>())->RebindDevice();
+    if (!result.ok()) {
+      return result.status();
+    }
+    const fidl::WireResponse response = result.value();
+    if (zx_status_t status = response.status; status != ZX_OK) {
       return status;
     }
     ramdisk_interface_.reset();
@@ -182,26 +185,24 @@ struct ramdisk_client {
     const char* sep = strrchr(relative_path_.c_str(), '/');
     char ramdisk_path[PATH_MAX];
     strlcpy(ramdisk_path, relative_path_.c_str(), sep - relative_path_.c_str() + 1);
-    status = wait_for_device_impl(dev_root_fd_.get(), ramdisk_path, zx::deadline_after(zx::sec(3)));
-    if (status != ZX_OK) {
+    if (zx_status_t status =
+            wait_for_device_impl(dev_root_fd_.get(), ramdisk_path, zx::deadline_after(zx::sec(3)));
+        status != ZX_OK) {
       return status;
     }
-
-    fbl::unique_fd ramdisk_fd(openat(dev_root_fd_.get(), ramdisk_path, O_RDWR));
-    if (!ramdisk_fd) {
-      return ZX_ERR_BAD_STATE;
+    fdio_cpp::UnownedFdioCaller caller(dev_root_fd_);
+    zx::result ramdisk_interface =
+        component::ConnectAt<fuchsia_device::Controller>(caller.directory(), ramdisk_path);
+    if (ramdisk_interface.is_error()) {
+      return ramdisk_interface.status_value();
     }
-    fdio_cpp::FdioCaller ramdisk_caller(std::move(ramdisk_fd));
-    auto ramdisk_interface_or = ramdisk_caller.take_as<fuchsia_device::Controller>();
-    if (ramdisk_interface_or.is_error()) {
-      return ramdisk_interface_or.status_value();
-    }
-    ramdisk_interface_ = std::move(ramdisk_interface_or.value());
+    ramdisk_interface_ = std::move(ramdisk_interface.value());
 
     // Wait for the "block" path to rebind.
     strlcpy(ramdisk_path, relative_path_.c_str(), sizeof(ramdisk_path));
-    status = wait_for_device_impl(dev_root_fd_.get(), ramdisk_path, zx::deadline_after(zx::sec(3)));
-    if (status != ZX_OK) {
+    if (zx_status_t status =
+            wait_for_device_impl(dev_root_fd_.get(), ramdisk_path, zx::deadline_after(zx::sec(3)));
+        status != ZX_OK) {
       return status;
     }
     block_fd_.reset(openat(dev_root_fd_.get(), relative_path_.c_str(), O_RDWR));
@@ -224,7 +225,13 @@ struct ramdisk_client {
     return ZX_OK;
   }
 
-  const zx::channel& ramdisk_interface() const { return ramdisk_interface_.channel(); }
+  fidl::UnownedClientEnd<fuchsia_device::Controller> controller_interface() const {
+    return ramdisk_interface_.borrow();
+  }
+  fidl::UnownedClientEnd<fuchsia_hardware_ramdisk::Ramdisk> ramdisk_interface() const {
+    return fidl::UnownedClientEnd<fuchsia_hardware_ramdisk::Ramdisk>(
+        controller_interface().channel());
+  }
 
   const fbl::unique_fd& block_fd() const { return block_fd_; }
 
@@ -237,7 +244,7 @@ struct ramdisk_client {
                  fidl::ClientEnd<fuchsia_device::Controller> ramdisk_interface,
                  fbl::unique_fd dev_root_fd, fbl::unique_fd block_fd)
       : path_(std::move(path)),
-        relative_path_(relative_path),
+        relative_path_(std::move(relative_path)),
         ramdisk_interface_(std::move(ramdisk_interface)),
         dev_root_fd_(std::move(dev_root_fd)),
         block_fd_(std::move(block_fd)) {}
@@ -271,63 +278,44 @@ zx_status_t wait_for_device(const char* path, zx_duration_t timeout) {
   return wait_for_device_at(/*dirfd=*/-1, path, timeout);
 }
 
-static zx_status_t open_ramctl(int dev_root_fd, zx::channel* out_ramctl) {
+static zx::result<fidl::ClientEnd<fuchsia_hardware_ramdisk::RamdiskController>> open_ramctl(
+    int dev_root_fd) {
   fbl::unique_fd dirfd;
   if (dev_root_fd > -1) {
     dirfd.reset(dup(dev_root_fd));
   } else {
-    dirfd.reset(open(RAMCTL_DEV_PATH, O_RDONLY | O_DIRECTORY));
+    dirfd.reset(open(kRamctlDevPath, O_RDONLY | O_DIRECTORY));
   }
   if (!dirfd) {
-    return ZX_ERR_BAD_STATE;
+    return zx::error(ZX_ERR_BAD_STATE);
   }
-  fbl::unique_fd fd(openat(dirfd.get(), RAMCTL_PATH, O_RDWR));
-  if (!fd) {
-    return ZX_ERR_BAD_STATE;
-  }
-
-  zx_handle_t ramctl_interface_raw;
-  zx_status_t status = fdio_get_service_handle(fd.release(), &ramctl_interface_raw);
-  if (status != ZX_OK) {
-    return status;
-  }
-
-  out_ramctl->reset(ramctl_interface_raw);
-  return ZX_OK;
+  fdio_cpp::FdioCaller caller(std::move(dirfd));
+  return component::ConnectAt<fuchsia_hardware_ramdisk::RamdiskController>(caller.directory(),
+                                                                           kRamctlPath);
 }
 
-static const fuchsia_hardware_ramdisk_GUID* fidl_guid(const uint8_t* type_guid) {
-  static_assert(sizeof(fuchsia_hardware_ramdisk_GUID) == ZBI_PARTITION_GUID_LEN,
-                "Byte array cannot be reinterpreted as FIDL GUID");
-  return reinterpret_cast<const fuchsia_hardware_ramdisk_GUID*>(type_guid);
-}
-
-static zx_status_t ramdisk_create_with_guid_internal(int dev_root_fd, uint64_t blk_size,
-                                                     uint64_t blk_count, const uint8_t* type_guid,
-                                                     ramdisk_client** out) {
-  zx::channel ramctl;
-  zx_status_t status = open_ramctl(dev_root_fd, &ramctl);
-  if (status != ZX_OK) {
-    return status;
+static zx_status_t ramdisk_create_with_guid_internal(
+    int dev_root_fd, uint64_t blk_size, uint64_t blk_count,
+    fidl::ObjectView<fuchsia_hardware_ramdisk::wire::Guid> type_guid, ramdisk_client** out) {
+  zx::result ramctl = open_ramctl(dev_root_fd);
+  if (ramctl.is_error()) {
+    return ramctl.status_value();
   }
 
-  char name[fuchsia_hardware_ramdisk_MAX_NAME_LENGTH + 1];
-  size_t name_len = 0;
-  zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskControllerCreate(
-      ramctl.get(), blk_size, blk_count, fidl_guid(type_guid), &status, name, sizeof(name) - 1,
-      &name_len);
-  if (io_status != ZX_OK) {
-    return io_status;
-  } else if (status != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(ramctl.value())->Create(blk_size, blk_count, type_guid);
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-
-  // Always force 'name' to be null-terminated.
-  name[name_len] = '\0';
 
   std::unique_ptr<ramdisk_client> client;
-  status = ramdisk_client::Create(dev_root_fd, name, zx::sec(3), &client);
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          ramdisk_client::Create(dev_root_fd, response.name.get(), zx::sec(3), &client);
+      status != ZX_OK) {
     return status;
   }
   *out = client.release();
@@ -360,7 +348,11 @@ zx_status_t ramdisk_create_at_with_guid(int dev_root_fd, uint64_t blk_size, uint
   if (type_guid != nullptr && guid_len < ZBI_PARTITION_GUID_LEN) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ramdisk_create_with_guid_internal(dev_root_fd, blk_size, blk_count, type_guid, out);
+  return ramdisk_create_with_guid_internal(
+      dev_root_fd, blk_size, blk_count,
+      fidl::ObjectView<fuchsia_hardware_ramdisk::wire::Guid>::FromExternal(
+          reinterpret_cast<fuchsia_hardware_ramdisk::wire::Guid*>(const_cast<uint8_t*>(type_guid))),
+      out);
 }
 
 __EXPORT
@@ -390,29 +382,30 @@ zx_status_t ramdisk_create_at_from_vmo_with_params(int dev_root_fd, zx_handle_t 
     return ZX_ERR_INVALID_ARGS;
   }
   zx::vmo vmo(raw_vmo);
-  zx::channel ramctl;
-  zx_status_t status = open_ramctl(dev_root_fd, &ramctl);
-  if (status != ZX_OK) {
-    return status;
+  zx::result ramctl = open_ramctl(dev_root_fd);
+  if (ramctl.is_error()) {
+    return ramctl.status_value();
   }
 
-  char name[fuchsia_hardware_ramdisk_MAX_NAME_LENGTH + 1];
-  size_t name_len = 0;
-  zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmoWithParams(
-      ramctl.get(), vmo.release(), block_size, fidl_guid(type_guid), &status, name,
-      sizeof(name) - 1, &name_len);
-  if (io_status != ZX_OK) {
-    return io_status;
-  } else if (status != ZX_OK) {
+  const fidl::WireResult result =
+      fidl::WireCall(ramctl.value())
+          ->CreateFromVmoWithParams(
+              std::move(vmo), block_size,
+              fidl::ObjectView<fuchsia_hardware_ramdisk::wire::Guid>::FromExternal(
+                  reinterpret_cast<fuchsia_hardware_ramdisk::wire::Guid*>(
+                      const_cast<uint8_t*>(type_guid))));
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
     return status;
   }
-
-  // Always force 'name' to be null-terminated.
-  name[name_len] = '\0';
 
   std::unique_ptr<ramdisk_client> client;
-  status = ramdisk_client::Create(dev_root_fd, name, zx::sec(3), &client);
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          ramdisk_client::Create(dev_root_fd, response.name.get(), zx::sec(3), &client);
+      status != ZX_OK) {
     return status;
   }
   *out = client.release();
@@ -427,63 +420,62 @@ const char* ramdisk_get_path(const ramdisk_client_t* client) { return client->pa
 
 __EXPORT
 zx_status_t ramdisk_sleep_after(const ramdisk_client* client, uint64_t block_count) {
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskSleepAfter(
-      client->ramdisk_interface().get(), block_count, &status);
-  if (io_status != ZX_OK) {
-    return io_status;
+  const fidl::WireResult result =
+      fidl::WireCall(client->ramdisk_interface())->SleepAfter(block_count);
+  if (!result.ok()) {
+    return result.status();
   }
-  return status;
+  const fidl::WireResponse response = result.value();
+  return response.s;
 }
 
 __EXPORT
 zx_status_t ramdisk_wake(const ramdisk_client* client) {
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_ramdisk_RamdiskWake(client->ramdisk_interface().get(), &status);
-  if (io_status != ZX_OK) {
-    return io_status;
+  const fidl::WireResult result = fidl::WireCall(client->ramdisk_interface())->Wake();
+  if (!result.ok()) {
+    return result.status();
   }
-  return status;
+  const fidl::WireResponse response = result.value();
+  return response.s;
 }
 
 __EXPORT
 zx_status_t ramdisk_grow(const ramdisk_client* client, uint64_t required_size) {
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskGrow(client->ramdisk_interface().get(),
-                                                               required_size, &status);
-  if (io_status != ZX_OK) {
-    return io_status;
+  const fidl::WireResult result = fidl::WireCall(client->ramdisk_interface())->Grow(required_size);
+  if (!result.ok()) {
+    return result.status();
   }
-  return status;
+  const fidl::WireResponse response = result.value();
+  return response.s;
 }
 
 __EXPORT
 zx_status_t ramdisk_set_flags(const ramdisk_client* client, uint32_t flags) {
-  zx_status_t status;
-  zx_status_t io_status =
-      fuchsia_hardware_ramdisk_RamdiskSetFlags(client->ramdisk_interface().get(), flags, &status);
-  if (io_status != ZX_OK) {
-    return io_status;
+  const fidl::WireResult result = fidl::WireCall(client->ramdisk_interface())->SetFlags(flags);
+  if (!result.ok()) {
+    return result.status();
   }
-  return status;
+  const fidl::WireResponse response = result.value();
+  return response.s;
 }
 
 __EXPORT
 zx_status_t ramdisk_get_block_counts(const ramdisk_client* client,
                                      ramdisk_block_write_counts_t* out_counts) {
-  static_assert(
-      sizeof(ramdisk_block_write_counts_t) == sizeof(fuchsia_hardware_ramdisk_BlockWriteCounts),
-      "Cannot convert between C library / FIDL block counts");
+  static_assert(sizeof(ramdisk_block_write_counts_t) ==
+                    sizeof(fuchsia_hardware_ramdisk::wire::BlockWriteCounts),
+                "Cannot convert between C library / FIDL block counts");
 
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskGetBlockCounts(
-      client->ramdisk_interface().get(), &status,
-      reinterpret_cast<fuchsia_hardware_ramdisk_BlockWriteCounts*>(out_counts));
-  if (io_status != ZX_OK) {
-    return io_status;
+  const fidl::WireResult result = fidl::WireCall(client->ramdisk_interface())->GetBlockCounts();
+  if (!result.ok()) {
+    return result.status();
   }
-  return status;
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.s; status != ZX_OK) {
+    return status;
+  }
+  memcpy(out_counts, response.counts.get(), sizeof(ramdisk_block_write_counts_t));
+  return ZX_OK;
 }
 
 __EXPORT

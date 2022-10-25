@@ -4,8 +4,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -94,53 +93,6 @@ zx_status_t RamNand::Create(fuchsia_hardware_nand::wire::RamNandInfo config,
 
   *out = RamNand(std::move(ram_nand), fbl::String::Concat({kBasePath, "/", name}), name);
 
-  return ZX_OK;
-}
-
-__EXPORT
-zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
-                            std::optional<RamNand>* out) {
-  fbl::unique_fd control(open(kBasePath, O_RDWR));
-  ZX_ASSERT_MSG(control.is_valid(), "Could not open device %s (errno=%s).\n", kBasePath,
-                strerror(errno));
-
-  zx::channel ctl_svc;
-  zx_status_t st = fdio_get_service_handle(control.release(), ctl_svc.reset_and_get_address());
-  if (st != ZX_OK) {
-    fprintf(stderr, "Could not fdio_get_service_handle, %d\n", st);
-    return st;
-  }
-
-  char name[fuchsia_hardware_nand_NAME_LEN + 1];
-  size_t out_name_size;
-  zx_status_t status;
-  st = fuchsia_hardware_nand_RamNandCtlCreateDevice(ctl_svc.get(), config, &status, name,
-                                                    fuchsia_hardware_nand_NAME_LEN, &out_name_size);
-  if (st != ZX_OK || status != ZX_OK) {
-    st = st != ZX_OK ? st : status;
-    fprintf(stderr, "Could not create ram_nand device, %d\n", st);
-    return st;
-  }
-  name[out_name_size] = '\0';
-  fbl::StringBuffer<PATH_MAX> path;
-  path.Append(kBasePath);
-  path.Append("/");
-  path.Append(name);
-
-  fbl::unique_fd ram_nand_ctl(open(kBasePath, O_RDONLY | O_DIRECTORY));
-  if (!ram_nand_ctl) {
-    fprintf(stderr, "Could not open ram_nand_ctl");
-    return ZX_ERR_INTERNAL;
-  }
-
-  fbl::unique_fd ram_nand;
-  st = WaitForFile(ram_nand_ctl, name, &ram_nand);
-  if (st != ZX_OK) {
-    fprintf(stderr, "Could not open ram_nand\n");
-    return st;
-  }
-
-  *out = RamNand(std::move(ram_nand), path.ToString(), fbl::String(name));
   return ZX_OK;
 }
 

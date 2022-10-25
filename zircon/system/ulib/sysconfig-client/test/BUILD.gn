@@ -14,7 +14,7 @@ test("sysconfig-sync-client-test") {
   sources = [ "sync-client-test.cc" ]
   include_dirs = [ ".." ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
     "//src/lib/storage/ramdevice_client/cpp:ramdevice-client-test",
     "//zircon/system/ulib/async-default",
     "//zircon/system/ulib/fbl",
@@ -23,10 +23,6 @@ test("sysconfig-sync-client-test") {
     "//zircon/system/ulib/trace-engine",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("sysconfig-sync-client-test-package") {

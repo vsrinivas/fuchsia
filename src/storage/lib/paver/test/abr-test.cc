@@ -21,10 +21,7 @@
 #include <zxtest/zxtest.h>
 
 #include "gpt/cros.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/uuid/uuid.h"
-#include "src/storage/lib/paver/abr-client-vboot.h"
 #include "src/storage/lib/paver/abr-client.h"
 #include "src/storage/lib/paver/astro.h"
 #include "src/storage/lib/paver/chromebook-x64.h"
@@ -182,7 +179,7 @@ class ChromebookX64AbrTests : public zxtest::Test {
     ASSERT_OK(gpt->Sync());
 
     fdio_cpp::UnownedFdioCaller caller(disk_->fd());
-    auto result2 = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+    auto result2 = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                        ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result2.ok());
     ASSERT_FALSE(result2->is_error());
@@ -194,7 +191,8 @@ class ChromebookX64AbrTests : public zxtest::Test {
                                                       nullptr);
   }
 
-  gpt_partition_t* GetPartitionByName(std::unique_ptr<gpt::GptDevice>& gpt, const char* name) {
+  static gpt_partition_t* GetPartitionByName(std::unique_ptr<gpt::GptDevice>& gpt,
+                                             const char* name) {
     gpt_partition_t* part = nullptr;
     uint16_t name_utf16[sizeof(part->name) / sizeof(uint16_t)];
     memset(name_utf16, 0, sizeof(name_utf16));
@@ -296,7 +294,7 @@ class CurrentSlotUuidTest : public zxtest::Test {
     ASSERT_OK(gpt_->Sync());
 
     fdio_cpp::UnownedFdioCaller caller(disk_->fd());
-    auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+    auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->is_error());

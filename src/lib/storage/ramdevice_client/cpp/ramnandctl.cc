@@ -4,8 +4,7 @@
 
 #include <fcntl.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -27,7 +26,7 @@
 namespace ramdevice_client_test {
 
 __EXPORT
-zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
+zx_status_t RamNandCtl::Create(std::unique_ptr<RamNandCtl>* out) {
   driver_integration_test::IsolatedDevmgr::Args args;
   args.disable_block_watcher = true;
   // TODO(surajmalhotra): Remove creation of isolated devmgr from this lib so that caller can choose
@@ -49,44 +48,37 @@ zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     return st;
   }
 
-  *out = fbl::AdoptRef(new RamNandCtl(std::move(devmgr), std::move(ctl)));
+  *out = std::unique_ptr<RamNandCtl>(new RamNandCtl(std::move(devmgr), std::move(ctl)));
   return ZX_OK;
 }
 
 __EXPORT
-zx_status_t RamNandCtl::CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+zx_status_t RamNandCtl::CreateRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
                                       std::optional<RamNand>* out) {
-  fdio_t* io = fdio_unsafe_fd_to_io(fd().get());
-  if (io == NULL) {
-    fprintf(stderr, "Could not get fdio object\n");
-    return ZX_ERR_INTERNAL;
+  fdio_cpp::UnownedFdioCaller caller(fd());
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_nand::RamNandCtl>())
+          ->CreateDevice(std::move(config));
+  if (!result.ok()) {
+    fprintf(stderr, "Could not create ram_nand device: %s\n", result.status_string());
+    return result.status();
   }
-  zx_handle_t ctl_svc = fdio_unsafe_borrow_channel(io);
-
-  char name[fuchsia_hardware_nand_NAME_LEN + 1];
-  size_t out_name_size;
-  zx_status_t status;
-  zx_status_t st = fuchsia_hardware_nand_RamNandCtlCreateDevice(
-      ctl_svc, config, &status, name, fuchsia_hardware_nand_NAME_LEN, &out_name_size);
-  fdio_unsafe_release(io);
-  if (st != ZX_OK || status != ZX_OK) {
-    st = st != ZX_OK ? st : status;
-    fprintf(stderr, "Could not create ram_nand device, %d\n", st);
-    return st;
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    fprintf(stderr, "Could not create ram_nand device: %s\n", zx_status_get_string(status));
+    return status;
   }
-  name[out_name_size] = '\0';
 
-  // TODO(fxbug.dev/33003): We should be able to open relative to ctl->fd(), but
-  // due to a bug, we have to be relative to devfs_root instead.
-  fbl::StringBuffer<PATH_MAX> path;
-  path.Append("sys/platform/00:00:2e/nand-ctl/");
-  path.Append(name);
+  fbl::String path = fbl::String::Concat({
+      "sys/platform/00:00:2e/nand-ctl/",
+      response.name.get(),
+  });
   fprintf(stderr, "Trying to open (%s)\n", path.c_str());
 
   fbl::unique_fd fd;
-  st = device_watcher::RecursiveWaitForFile(devfs_root(), path.c_str(), &fd);
-  if (st != ZX_OK) {
-    return st;
+  if (zx_status_t status = device_watcher::RecursiveWaitForFile(devfs_root(), path.c_str(), &fd);
+      status != ZX_OK) {
+    return status;
   }
 
   *out = RamNand(std::move(fd));
@@ -94,14 +86,13 @@ zx_status_t RamNandCtl::CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* c
 }
 
 __EXPORT
-zx_status_t RamNandCtl::CreateWithRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+zx_status_t RamNandCtl::CreateWithRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
                                           std::optional<RamNand>* out) {
-  fbl::RefPtr<RamNandCtl> ctl;
-  zx_status_t st = RamNandCtl::Create(&ctl);
-  if (st != ZX_OK) {
-    return st;
+  std::unique_ptr<RamNandCtl> ctl;
+  if (zx_status_t status = RamNandCtl::Create(&ctl); status != ZX_OK) {
+    return status;
   }
-  return ctl->CreateRamNand(config, out);
+  return ctl->CreateRamNand(std::move(config), out);
 }
 
 }  // namespace ramdevice_client_test

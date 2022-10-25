@@ -34,14 +34,9 @@
 #include <soc/aml-common/aml-guid.h>
 #include <zxtest/zxtest.h>
 
-#include "src/lib/storage/fs_management/cpp/mount.h"
-#include "src/lib/storage/vfs/cpp/pseudo_dir.h"
-#include "src/lib/storage/vfs/cpp/service.h"
-#include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
-#include "src/storage/fshost/constants.h"
-#include "src/storage/lib/paver/device-partitioner.h"
+#include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/storage/lib/paver/fvm.h"
-#include "src/storage/lib/paver/luis.h"
+#include "src/storage/lib/paver/gpt.h"
 #include "src/storage/lib/paver/paver.h"
 #include "src/storage/lib/paver/test/test-utils.h"
 #include "src/storage/lib/paver/utils.h"
@@ -54,9 +49,9 @@ namespace partition = fuchsia_hardware_block_partition;
 using device_watcher::RecursiveWaitForFile;
 using driver_integration_test::IsolatedDevmgr;
 
-constexpr std::string_view kFirmwareTypeBootloader("");
-constexpr std::string_view kFirmwareTypeBl2("bl2");
-constexpr std::string_view kFirmwareTypeUnsupported("unsupported_type");
+constexpr std::string_view kFirmwareTypeBootloader;
+constexpr std::string_view kFirmwareTypeBl2 = "bl2";
+constexpr std::string_view kFirmwareTypeUnsupported = "unsupported_type";
 
 // BL2 images must be exactly this size.
 constexpr size_t kBl2ImageSize = 0x10000;
@@ -70,119 +65,123 @@ constexpr uint32_t kBootloaderLastBlock = kBootloaderFirstBlock + kBootloaderBlo
 constexpr uint32_t kBl2FirstBlock = kNumBlocks - 1;
 constexpr uint32_t kFvmFirstBlock = 18;
 
-constexpr fuchsia_hardware_nand_RamNandInfo
-    kNandInfo =
-        {
-            .vmo = ZX_HANDLE_INVALID,
-            .nand_info =
-                {
-                    .page_size = kPageSize,
-                    .pages_per_block = kPagesPerBlock,
-                    .num_blocks = kNumBlocks,
-                    .ecc_bits = 8,
-                    .oob_size = kOobSize,
-                    .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
-                    .partition_guid = {},
-                },
-            .partition_map =
-                {
-                    .device_guid = {},
-                    .partition_count = 8,
-                    .partitions =
-                        {
-                            {
-                                .type_guid = {},
-                                .unique_guid = {},
-                                .first_block = 0,
-                                .last_block = 3,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {},
-                                .hidden = true,
-                                .bbt = true,
-                            },
-                            {
-                                .type_guid = GUID_BOOTLOADER_VALUE,
-                                .unique_guid = {},
-                                .first_block = kBootloaderFirstBlock,
-                                .last_block = kBootloaderLastBlock,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_ZIRCON_A_VALUE,
-                                .unique_guid = {},
-                                .first_block = kBootloaderLastBlock + 1,
-                                .last_block = 9,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_ZIRCON_B_VALUE,
-                                .unique_guid = {},
-                                .first_block = 10,
-                                .last_block = 11,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_ZIRCON_R_VALUE,
-                                .unique_guid = {},
-                                .first_block = 12,
-                                .last_block = 13,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_SYS_CONFIG_VALUE,
-                                .unique_guid = {},
-                                .first_block = 14,
-                                .last_block = 17,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_FVM_VALUE,
-                                .unique_guid = {},
-                                .first_block = kFvmFirstBlock,
-                                .last_block = kBl2FirstBlock - 1,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'f', 'v', 'm'},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                            {
-                                .type_guid = GUID_BL2_VALUE,
-                                .unique_guid = {},
-                                .first_block = kBl2FirstBlock,
-                                .last_block = kBl2FirstBlock,
-                                .copy_count = 0,
-                                .copy_byte_offset = 0,
-                                .name = {'b', 'l', '2',},
-                                .hidden = false,
-                                .bbt = false,
-                            },
-                        },
-                },
-            .export_nand_config = true,
-            .export_partition_map = true,
-};
+fuchsia_hardware_nand::wire::RamNandInfo NandInfo() {
+  return {
+      .nand_info =
+          {
+              .page_size = kPageSize,
+              .pages_per_block = kPagesPerBlock,
+              .num_blocks = kNumBlocks,
+              .ecc_bits = 8,
+              .oob_size = kOobSize,
+              .nand_class = fuchsia_hardware_nand::wire::Class::kPartmap,
+              .partition_guid = {},
+          },
+      .partition_map =
+          {
+              .device_guid = {},
+              .partition_count = 8,
+              .partitions =
+                  {
+                      fuchsia_hardware_nand::wire::Partition{
+                          .type_guid = {},
+                          .unique_guid = {},
+                          .first_block = 0,
+                          .last_block = 3,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {},
+                          .hidden = true,
+                          .bbt = true,
+                      },
+                      {
+                          .type_guid = GUID_BOOTLOADER_VALUE,
+                          .unique_guid = {},
+                          .first_block = kBootloaderFirstBlock,
+                          .last_block = kBootloaderLastBlock,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {'b', 'o', 'o', 't', 'l', 'o', 'a', 'd', 'e', 'r'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                      {
+                          .type_guid = GUID_ZIRCON_A_VALUE,
+                          .unique_guid = {},
+                          .first_block = kBootloaderLastBlock + 1,
+                          .last_block = 9,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'a'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                      {
+                          .type_guid = GUID_ZIRCON_B_VALUE,
+                          .unique_guid = {},
+                          .first_block = 10,
+                          .last_block = 11,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'b'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                      {
+                          .type_guid = GUID_ZIRCON_R_VALUE,
+                          .unique_guid = {},
+                          .first_block = 12,
+                          .last_block = 13,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {'z', 'i', 'r', 'c', 'o', 'n', '-', 'r'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                      {
+                          .type_guid = GUID_SYS_CONFIG_VALUE,
+                          .unique_guid = {},
+                          .first_block = 14,
+                          .last_block = 17,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {'s', 'y', 's', 'c', 'o', 'n', 'f', 'i', 'g'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                      {
+                          .type_guid = GUID_FVM_VALUE,
+                          .unique_guid = {},
+                          .first_block = kFvmFirstBlock,
+                          .last_block = kBl2FirstBlock - 1,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name = {'f', 'v', 'm'},
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                      {
+                          .type_guid = GUID_BL2_VALUE,
+                          .unique_guid = {},
+                          .first_block = kBl2FirstBlock,
+                          .last_block = kBl2FirstBlock,
+                          .copy_count = 0,
+                          .copy_byte_offset = 0,
+                          .name =
+                              {
+                                  'b',
+                                  'l',
+                                  '2',
+                              },
+                          .hidden = false,
+                          .bbt = false,
+                      },
+                  },
+          },
+      .export_nand_config = true,
+      .export_partition_map = true,
+  };
+}
 
 class FakeBootArgs : public fidl::WireServer<fuchsia_boot::Arguments> {
  public:
@@ -220,14 +219,14 @@ class PaverServiceTest : public zxtest::Test {
  public:
   PaverServiceTest();
 
-  ~PaverServiceTest();
+  ~PaverServiceTest() override;
 
  protected:
-  void CreatePayload(size_t num_pages, fuchsia_mem::wire::Buffer* out);
+  static void CreatePayload(size_t num_pages, fuchsia_mem::wire::Buffer* out);
 
   static constexpr size_t kKilobyte = 1 << 10;
 
-  void ValidateWritten(const fuchsia_mem::wire::Buffer& buf, size_t num_pages) {
+  static void ValidateWritten(const fuchsia_mem::wire::Buffer& buf, size_t num_pages) {
     ASSERT_GE(buf.size, num_pages * kPageSize);
     fzl::VmoMapper mapper;
     ASSERT_OK(mapper.Map(buf.vmo, 0,
@@ -252,16 +251,17 @@ PaverServiceTest::PaverServiceTest()
     : loop_(&kAsyncLoopConfigAttachToCurrentThread),
       loop2_(&kAsyncLoopConfigNoAttachToCurrentThread),
       fake_svc_(loop2_.dispatcher(), FakeBootArgs()) {
-  zx::channel client, server;
-  ASSERT_OK(zx::channel::create(0, &client, &server));
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::Paver>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [client, server] = endpoints.value();
 
-  client_ = fidl::WireSyncClient<fuchsia_paver::Paver>(std::move(client));
+  client_ = fidl::WireSyncClient(std::move(client));
 
   ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
 
   ASSERT_OK(paver_get_service_provider()->ops->connect(
       provider_ctx_, loop_.dispatcher(), fidl::DiscoverableProtocolName<fuchsia_paver::Paver>,
-      server.release()));
+      server.TakeChannel().release()));
   loop_.StartThread("paver-svc-test-loop");
   loop2_.StartThread("paver-svc-test-loop-2");
 }
@@ -286,15 +286,15 @@ void PaverServiceTest::CreatePayload(size_t num_pages, fuchsia_mem::wire::Buffer
 class PaverServiceSkipBlockTest : public PaverServiceTest {
  public:
   // Initializes the RAM NAND device.
-  void InitializeRamNand(const fuchsia_hardware_nand_RamNandInfo& nand_info = kNandInfo) {
-    ASSERT_NO_FATAL_FAILURE(SpawnIsolatedDevmgr(nand_info));
+  void InitializeRamNand(fuchsia_hardware_nand::wire::RamNandInfo nand_info = NandInfo()) {
+    ASSERT_NO_FATAL_FAILURE(SpawnIsolatedDevmgr(std::move(nand_info)));
     ASSERT_NO_FATAL_FAILURE(WaitForDevices());
   }
 
  protected:
-  void SpawnIsolatedDevmgr(const fuchsia_hardware_nand_RamNandInfo& nand_info) {
+  void SpawnIsolatedDevmgr(fuchsia_hardware_nand::wire::RamNandInfo nand_info) {
     ASSERT_EQ(device_.get(), nullptr);
-    ASSERT_NO_FATAL_FAILURE(SkipBlockDevice::Create(nand_info, &device_));
+    ASSERT_NO_FATAL_FAILURE(SkipBlockDevice::Create(std::move(nand_info), &device_));
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(device_->devfs_root());
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
@@ -310,30 +310,33 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
   }
 
   void FindBootManager() {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::BootManager>();
+    ASSERT_OK(endpoints.status_value());
+    auto& [local, remote] = endpoints.value();
 
     auto result = client_->FindBootManager(std::move(remote));
     ASSERT_OK(result.status());
-    boot_manager_ = fidl::WireSyncClient<fuchsia_paver::BootManager>(std::move(local));
+    boot_manager_ = fidl::WireSyncClient(std::move(local));
   }
 
   void FindDataSink() {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::DataSink>();
+    ASSERT_OK(endpoints.status_value());
+    auto& [local, remote] = endpoints.value();
 
     auto result = client_->FindDataSink(std::move(remote));
     ASSERT_OK(result.status());
-    data_sink_ = fidl::WireSyncClient<fuchsia_paver::DataSink>(std::move(local));
+    data_sink_ = fidl::WireSyncClient(std::move(local));
   }
 
   void FindSysconfig() {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::Sysconfig>();
+    ASSERT_OK(endpoints.status_value());
+    auto& [local, remote] = endpoints.value();
 
     auto result = client_->FindSysconfig(std::move(remote));
     ASSERT_OK(result.status());
-    sysconfig_ = fidl::WireSyncClient<fuchsia_paver::Sysconfig>(std::move(local));
+    sysconfig_ = fidl::WireSyncClient(std::move(local));
   }
 
   void SetAbr(const AbrData& data) {
@@ -1546,9 +1549,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
   // Make a RAM NAND device without a visible "bootloader" partition so that
   // the partitioner initializes properly but then fails when trying to find it.
-  fuchsia_hardware_nand_RamNandInfo info = kNandInfo;
+  fuchsia_hardware_nand::wire::RamNandInfo info = NandInfo();
   info.partition_map.partitions[1].hidden = true;
-  ASSERT_NO_FATAL_FAILURE(InitializeRamNand(info));
+  ASSERT_NO_FATAL_FAILURE(InitializeRamNand(std::move(info)));
 
   ASSERT_NO_FATAL_FAILURE(FindDataSink());
   fuchsia_mem::wire::Buffer payload;
@@ -1710,7 +1713,7 @@ TEST_F(PaverServiceSkipBlockTest, WipeVolumeEmptyFvm) {
 
 void CheckGuid(const fbl::unique_fd& device, const uint8_t type[GPT_GUID_LEN]) {
   fdio_cpp::UnownedFdioCaller caller(device.get());
-  auto result = fidl::WireCall<partition::Partition>(caller.channel())->GetTypeGuid();
+  auto result = fidl::WireCall(caller.borrow_as<partition::Partition>())->GetTypeGuid();
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   auto* guid = result.value().guid.get();
@@ -1901,13 +1904,14 @@ class PaverServiceBlockTest : public PaverServiceTest {
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(fake_svc_.svc_chan()));
   }
 
-  void UseBlockDevice(zx::channel block_device) {
-    zx::channel local, remote;
-    ASSERT_OK(zx::channel::create(0, &local, &remote));
+  void UseBlockDevice(fidl::ClientEnd<fuchsia_hardware_block::Block> block_device) {
+    zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
+    ASSERT_OK(endpoints.status_value());
+    auto& [local, remote] = endpoints.value();
 
     auto result = client_->UseBlockDevice(std::move(block_device), std::move(remote));
     ASSERT_OK(result.status());
-    data_sink_ = fidl::WireSyncClient<fuchsia_paver::DynamicDataSink>(std::move(local));
+    data_sink_ = fidl::WireSyncClient(std::move(local));
   }
 
   IsolatedDevmgr devmgr_;
@@ -1921,10 +1925,10 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
-
-  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev->fd())));
+  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  ASSERT_OK(gpt_chan.status_value());
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1940,10 +1944,10 @@ TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTablesMultipleDevices)
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev2));
 
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev1->fd(), gpt_chan.reset_and_get_address()));
-
-  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev1->fd())));
+  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  ASSERT_OK(gpt_chan.status_value());
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1957,10 +1961,10 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipePartitionTables) {
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
-
-  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev->fd())));
+  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  ASSERT_OK(gpt_chan.status_value());
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -1978,10 +1982,10 @@ TEST_F(PaverServiceBlockTest, DISABLED_WipeVolume) {
   ASSERT_NO_FATAL_FAILURE(
       BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, &gpt_dev));
 
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev->fd(), gpt_chan.reset_and_get_address()));
-
-  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan)));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev->fd())));
+  zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+  ASSERT_OK(gpt_chan.status_value());
+  ASSERT_NO_FATAL_FAILURE(UseBlockDevice(std::move(gpt_chan.value())));
 
   auto result = data_sink_->InitializePartitionTables();
   ASSERT_OK(result.status());
@@ -2061,7 +2065,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(gpt->Sync());
 
     fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-    auto result = fidl::WireCall<fuchsia_device::Controller>(caller.channel())
+    auto result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
                       ->Rebind(fidl::StringView("gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->is_error());
@@ -2101,18 +2105,18 @@ TEST_F(PaverServiceLuisTest, CreateAbr) {
   ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
   std::shared_ptr<paver::Context> context;
   fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
-  EXPECT_OK(
-      abr::ClientFactory::Create(devmgr_.devfs_root().duplicate(), std::move(svc_root), context));
+  EXPECT_OK(abr::ClientFactory::Create(devmgr_.devfs_root().duplicate(), svc_root, context));
 }
 
 TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
   ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
-  zx::channel sysconfig_local, sysconfig_remote;
-  ASSERT_OK(zx::channel::create(0, &sysconfig_local, &sysconfig_remote));
-  auto result = client_->FindSysconfig(std::move(sysconfig_remote));
+  zx::result endpoints = fidl::CreateEndpoints<fuchsia_paver::Sysconfig>();
+  ASSERT_OK(endpoints.status_value());
+  auto& [local, remote] = endpoints.value();
+  auto result = client_->FindSysconfig(std::move(remote));
   ASSERT_OK(result.status());
 
-  fidl::WireSyncClient<fuchsia_paver::Sysconfig> sysconfig(std::move(sysconfig_local));
+  fidl::WireSyncClient sysconfig(std::move(local));
   auto wipe_result = sysconfig->Wipe();
   ASSERT_EQ(wipe_result.status(), ZX_ERR_PEER_CLOSED);
 }
@@ -2142,12 +2146,16 @@ TEST_F(PaverServiceLuisTest, FindGPTDevicesIgnoreFvmPartitions) {
 TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
   // TODO(b/217597389): Consdier also adding an e2e test for this interface.
   ASSERT_NO_FATAL_FAILURE(InitializeLuisGPTPartitions());
-  zx::channel gpt_chan;
-  ASSERT_OK(fdio_fd_clone(gpt_dev_->fd(), gpt_chan.reset_and_get_address()));
   auto endpoints = fidl::CreateEndpoints<fuchsia_paver::DynamicDataSink>();
   ASSERT_OK(endpoints.status_value());
-  auto [local, remote] = std::move(*endpoints);
-  ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan), std::move(remote)));
+  auto& [local, remote] = endpoints.value();
+
+  {
+    fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev_->fd())));
+    zx::result gpt_chan = caller.clone_as<fuchsia_hardware_block::Block>();
+    ASSERT_OK(gpt_chan.status_value());
+    ASSERT_OK(client_->UseBlockDevice(std::move(gpt_chan.value()), std::move(remote)));
+  }
   fidl::WireSyncClient data_sink{std::move(local)};
 
   // Create a payload
@@ -2168,12 +2176,11 @@ TEST_F(PaverServiceLuisTest, WriteOpaqueVolume) {
   ASSERT_OK(result.status());
 
   // Create a block partition client to read the written content directly.
-  fidl::ClientEnd<fuchsia_hardware_block::Block> block_service_channel;
-  ASSERT_OK(fdio_get_service_handle(gpt_dev_->fd(),
-                                    block_service_channel.channel().reset_and_get_address()));
+  fdio_cpp::FdioCaller caller(fbl::unique_fd(dup(gpt_dev_->fd())));
+  zx::result block_service_channel = caller.clone_as<fuchsia_hardware_block::Block>();
+  ASSERT_OK(block_service_channel.status_value());
   std::unique_ptr<paver::BlockPartitionClient> block_client =
-      std::make_unique<paver::BlockPartitionClient>(
-          component::MaybeClone(block_service_channel, component::AssumeProtocolComposesNode));
+      std::make_unique<paver::BlockPartitionClient>(std::move(block_service_channel.value()));
 
   // Read the partition directly from block and verify.
   zx::vmo block_read_vmo;

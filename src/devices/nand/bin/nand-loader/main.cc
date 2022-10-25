@@ -3,18 +3,19 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <getopt.h>
+#include <lib/fzl/owned-vmo-mapper.h>
 #include <limits.h>
-#include <new>
 #include <stdio.h>
 #include <stdlib.h>
-
-#include <fbl/unique_fd.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
-#include <lib/fzl/owned-vmo-mapper.h>
-#include <ramdevice-client/ramnand.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+
+#include <new>
+
+#include <fbl/unique_fd.h>
+#include <ramdevice-client/ramnand.h>
 
 namespace {
 
@@ -59,16 +60,16 @@ bool GetOptions(int argc, char** argv, Config* config) {
     }
     switch (c) {
       case 'p':
-        config->page_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        config->page_size = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 'o':
-        config->oob_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        config->oob_size = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 'b':
-        config->block_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        config->block_size = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 'n':
-        config->num_blocks = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+        config->num_blocks = static_cast<uint32_t>(strtoul(optarg, nullptr, 0));
         break;
       case 'h':
       default:
@@ -101,19 +102,8 @@ bool ValidateOptions(const Config& config) {
   return true;
 }
 
-fuchsia_hardware_nand_Info GetNandInfo(const Config& config) {
-  fuchsia_hardware_nand_Info info = {};
-  info.page_size = config.page_size;
-  info.pages_per_block = config.block_size;
-  info.num_blocks = config.num_blocks;
-  info.ecc_bits = 8;
-  info.oob_size = config.oob_size;
-  info.nand_class = fuchsia_hardware_nand_Class_FTL;
-  return info;
-}
-
 // Sets the vmo and nand size from the contents of the input file.
-bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* device_config) {
+bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand::wire::RamNandInfo& device_config) {
   if (!path) {
     return true;
   }
@@ -129,7 +119,7 @@ bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* dev
     printf("Unable to get file length\n");
     return false;
   }
-  fuchsia_hardware_nand_Info& info = device_config->nand_info;
+  fuchsia_hardware_nand::wire::Info& info = device_config.nand_info;
 
   uint32_t block_size = info.pages_per_block * (info.oob_size + info.page_size);
   if (in_size % block_size != 0) {
@@ -150,13 +140,11 @@ bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* dev
     return false;
   }
 
-  zx::vmo dup;
-  status = mapper.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &dup);
+  status = mapper.vmo().duplicate(ZX_RIGHT_SAME_RIGHTS, &device_config.vmo);
   if (status != ZX_OK) {
     printf("Unable to duplicate VMO handle\n");
     return false;
   }
-  device_config->vmo = dup.release();
   return true;
 }
 
@@ -173,14 +161,23 @@ int main(int argc, char** argv) {
     return -1;
   }
 
-  fuchsia_hardware_nand_RamNandInfo ram_nand_config = {};
-  ram_nand_config.nand_info = GetNandInfo(config);
-  if (!FinishDeviceConfig(config.path, &ram_nand_config)) {
+  fuchsia_hardware_nand::wire::RamNandInfo ram_nand_config = {
+      .nand_info =
+          {
+              .page_size = config.page_size,
+              .pages_per_block = config.block_size,
+              .num_blocks = config.num_blocks,
+              .ecc_bits = 8,
+              .oob_size = config.oob_size,
+              .nand_class = fuchsia_hardware_nand::wire::Class::kFtl,
+          },
+  };
+  if (!FinishDeviceConfig(config.path, ram_nand_config)) {
     return -1;
   }
 
   std::optional<ramdevice_client::RamNand> ram_nand;
-  if (ramdevice_client::RamNand::Create(&ram_nand_config, &ram_nand) != ZX_OK) {
+  if (ramdevice_client::RamNand::Create(std::move(ram_nand_config), &ram_nand) != ZX_OK) {
     printf("Unable to load device\n");
     return -1;
   }

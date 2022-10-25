@@ -12,22 +12,22 @@
 
 #include "parent.h"
 
-constexpr fuchsia_hardware_nand_Info kNandInfo = {
+constexpr fuchsia_hardware_nand::wire::Info kNandInfo = {
     .page_size = 4096,
     .pages_per_block = 4,
     .num_blocks = 5,
     .ecc_bits = 6,
     .oob_size = 4,
-    .nand_class = fuchsia_hardware_nand_Class_PARTMAP,
+    .nand_class = fuchsia_hardware_nand::wire::Class::kPartmap,
     .partition_guid = {},
 };
 
-constexpr fuchsia_hardware_nand_PartitionMap kPartitionMap = {
+constexpr fuchsia_hardware_nand::wire::PartitionMap kPartitionMap = {
     .device_guid = {},
     .partition_count = 1,
     .partitions =
         {
-            {
+            fuchsia_hardware_nand::wire::Partition{
                 .type_guid = GUID_TEST_VALUE,
                 .unique_guid = {},
                 .first_block = 0,

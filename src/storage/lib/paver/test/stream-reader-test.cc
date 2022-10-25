@@ -18,16 +18,14 @@ namespace {
 
 constexpr char kFileData[] = "lalalala";
 
-TEST(StreamReaderTest, InvalidChannel) {
-  ASSERT_NOT_OK(paver::StreamReader::Create(zx::channel()));
-}
+TEST(StreamReaderTest, InvalidChannel) { ASSERT_NOT_OK(paver::StreamReader::Create({})); }
 
 class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> {
  public:
   FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
-    zx::channel server;
-    ASSERT_OK(zx::channel::create(0, &client_, &server));
-    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server), this);
+    zx::result server = fidl::CreateEndpoints(&client_);
+    ASSERT_OK(server.status_value());
+    fidl::BindSingleInFlightOnly(loop_.dispatcher(), std::move(server.value()), this);
     loop_.StartThread("payload-stream-test-loop");
   }
 
@@ -39,11 +37,11 @@ class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> 
         fidl::ObjectView<fuchsia_paver::wire::ReadInfo>::FromExternal(&info)));
   }
 
-  void ReadError(ReadDataCompleter::Sync& completer) {
+  static void ReadError(ReadDataCompleter::Sync& completer) {
     completer.Reply(fuchsia_paver::wire::ReadResult::WithErr(ZX_ERR_INTERNAL));
   }
 
-  void ReadEof(ReadDataCompleter::Sync& completer) {
+  static void ReadEof(ReadDataCompleter::Sync& completer) {
     completer.Reply(fuchsia_paver::wire::ReadResult::WithEof(true));
   }
 
@@ -67,13 +65,13 @@ class FakePayloadStream : public fidl::WireServer<fuchsia_paver::PayloadStream> 
     completer.Reply(ZX_OK);
   }
 
-  zx::channel client() { return std::move(client_); }
+  fidl::ClientEnd<fuchsia_paver::PayloadStream> client() { return std::move(client_); }
 
   void ReturnErr() { return_err_ = true; }
   void ReturnEof() { return_eof_ = true; }
 
  private:
-  zx::channel client_;
+  fidl::ClientEnd<fuchsia_paver::PayloadStream> client_;
   async::Loop loop_;
   zx::vmo vmo_;
 

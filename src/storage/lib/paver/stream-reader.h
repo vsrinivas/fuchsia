@@ -20,14 +20,15 @@ namespace paver {
 // fvm sparse reader library.
 class StreamReader : public fvm::ReaderInterface {
  public:
-  static zx::result<std::unique_ptr<StreamReader>> Create(zx::channel stream);
+  static zx::result<std::unique_ptr<StreamReader>> Create(
+      fidl::ClientEnd<fuchsia_paver::PayloadStream> stream);
 
-  virtual ~StreamReader() = default;
+  ~StreamReader() override = default;
 
-  virtual zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) final;
+  zx_status_t Read(void* buf, size_t buf_size, size_t* size_actual) final;
 
  private:
-  StreamReader(zx::channel stream, zx::vmo vmo)
+  StreamReader(fidl::ClientEnd<fuchsia_paver::PayloadStream> stream, zx::vmo vmo)
       : stream_(std::move(stream)), vmo_(std::move(vmo)) {}
 
   StreamReader(const StreamReader&) = delete;

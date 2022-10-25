@@ -6,29 +6,13 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/nand/c/fidl.h>
+#include <fidl/fuchsia.hardware.nand/cpp/wire.h>
 #include <lib/fdio/namespace.h>
 
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 
-namespace {
-
-// Returns the configuration for a 48 MB volume.
-fuchsia_hardware_nand_RamNandInfo GetConfig() {
-  fuchsia_hardware_nand_RamNandInfo config = {};
-  config.nand_info.page_size = 4096;
-  config.nand_info.pages_per_block = 64;
-  config.nand_info.num_blocks = 192;
-  config.nand_info.ecc_bits = 8;
-  config.nand_info.oob_size = 8;
-  config.nand_info.nand_class = fuchsia_hardware_nand_Class_FTL;
-  return config;
-}
-
-}  // namespace
-
-FtlTestObserver::FtlTestObserver() {}
+FtlTestObserver::FtlTestObserver() = default;
 
 void FtlTestObserver::OnProgramStart() {
   CreateDevice();
@@ -45,7 +29,7 @@ void FtlTestObserver::OnProgramStart() {
 }
 
 void FtlTestObserver::CreateDevice() {
-  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl;
+  std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl;
   zx_status_t status = ramdevice_client_test::RamNandCtl::Create(&ctl);
   if (status != ZX_OK) {
     printf("Unable to create ram-nand-ctl\n");
@@ -53,10 +37,22 @@ void FtlTestObserver::CreateDevice() {
   }
   ram_nand_ctl_ = std::move(ctl);
 
-  fuchsia_hardware_nand_RamNandInfo config = GetConfig();
+  if (zx_status_t status = ram_nand_ctl_->CreateRamNand(
+          {
+              .nand_info =
+                  {
 
-  if ((*ram_nand_ctl_)->CreateRamNand(&config, &ram_nand_) != ZX_OK) {
-    printf("Unable to create ram-nand\n");
+                      .page_size = 4096,
+                      .pages_per_block = 64,
+                      .num_blocks = 192,
+                      .ecc_bits = 8,
+                      .oob_size = 8,
+                      .nand_class = fuchsia_hardware_nand::wire::Class::kFtl,
+                  },
+          },
+          &ram_nand_);
+      status != ZX_OK) {
+    printf("Unable to create ram-nand: %s\n", zx_status_get_string(status));
   }
 }
 

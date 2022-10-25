@@ -8,7 +8,6 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fuchsia/fs/cpp/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
@@ -16,7 +15,6 @@
 
 #include "lib/fdio/cpp/caller.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
-#include "src/lib/storage/fs_management/cpp/mount.h"
 #include "src/security/kms-stateless/kms-stateless.h"
 #include "src/security/zxcrypt/client.h"
 
@@ -35,16 +33,14 @@ zx_status_t ShredZxcryptDevice(fbl::unique_fd fd, fbl::unique_fd devfs_root_fd) 
   zx::channel driver_chan;
   status = volume.OpenClient(zx::sec(5), driver_chan);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't open channel to zxcrypt volume manager: " << status << " ("
-                   << zx_status_get_string(status) << ")";
+    FX_PLOGS(ERROR, status) << "Couldn't open channel to zxcrypt volume manager";
     return status;
   }
 
   zxcrypt::EncryptedVolumeClient zxc_manager(std::move(driver_chan));
   status = zxc_manager.Shred();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Couldn't shred volume: " << status << " (" << zx_status_get_string(status)
-                   << ")";
+    FX_PLOGS(ERROR, status) << "Couldn't shred volume";
     return status;
   }
 
@@ -63,21 +59,24 @@ zx_status_t ShredFxfsDevice(fbl::unique_fd fd) {
   //     return status.error_value();
   //   }
   // TODO(https://fxbug.dev/98889): Perform secure erase once we have keybag support.
-  zx_status_t call_status;
   fdio_cpp::UnownedFdioCaller caller(fd.get());
-  fuchsia_hardware_block_BlockInfo block_info;
-  if (auto status =
-          fuchsia_hardware_block_BlockGetInfo(caller.borrow_channel(), &call_status, &block_info);
-      status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to fetch block size.";
+  const fidl::WireResult result =
+      fidl::WireCall(caller.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  if (!result.ok()) {
+    FX_PLOGS(ERROR, result.status()) << "Failed to fetch block size";
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to fetch block size";
     return status;
   }
-  ssize_t block_size = block_info.block_size;
+  ssize_t block_size = response.info->block_size;
   std::unique_ptr<uint8_t[]> block = std::make_unique<uint8_t[]>(block_size);
   memset(block.get(), 0, block_size);
   for (off_t offset : {0L, 512L << 10}) {
     if (auto status = ::lseek(fd.get(), offset, SEEK_SET); status < 0) {
-      FX_LOGS(ERROR) << "Seek on fxfs device shred failed.";
+      FX_LOGS(ERROR) << "Seek on fxfs device shred failed";
       return ZX_ERR_IO;
     }
     if (auto status = ::write(fd.get(), block.get(), block_size); status < 0) {
@@ -126,34 +125,31 @@ zx_status_t FactoryReset::Shred() const {
       FX_LOGS(ERROR) << "Error shredding " << de->d_name;
       closedir(dir);
       return status;
-    } else {
-      FX_LOGS(INFO) << "Successfully shredded " << de->d_name;
     }
+    FX_LOGS(INFO) << "Successfully shredded " << de->d_name;
   }
   closedir(dir);
   return ZX_OK;
 }
 
 void FactoryReset::Reset(ResetCallback callback) {
-  FX_LOGS(ERROR) << "Reset called. Starting shred.";
+  FX_LOGS(ERROR) << "Reset called. Starting shred";
   zx_status_t status = Shred();
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Shred failed: " << status << " (" << zx_status_get_string(status) << ")";
-    callback(std::move(status));
+    FX_PLOGS(ERROR, status) << "Shred failed";
+    callback(status);
     return;
   }
-  FX_LOGS(ERROR) << "Finished shred.";
+  FX_LOGS(ERROR) << "Finished shred";
 
   uint8_t key_info[kms_stateless::kExpectedKeyInfoSize] = "zxcrypt";
   status = kms_stateless::RotateHardwareDerivedKeyFromService(key_info);
   if (status == ZX_ERR_NOT_SUPPORTED) {
-    FX_LOGS(ERROR)
-        << "FactoryReset: The device does not support rotatable hardware keys. Ignoring.";
+    FX_LOGS(ERROR) << "FactoryReset: The device does not support rotatable hardware keys. Ignoring";
     status = ZX_OK;
   } else if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "FactoryReset: RotateHardwareDerivedKey() failed: " << status << " ("
-                   << zx_status_get_string(status) << ")";
-    callback(std::move(status));
+    FX_PLOGS(ERROR, status) << "FactoryReset: RotateHardwareDerivedKey() failed";
+    callback(status);
     return;
   }
   // Reboot to initiate the recovery.

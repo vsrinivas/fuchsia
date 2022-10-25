@@ -21,18 +21,14 @@ shared_library("ramdevice-client") {
     "ramnand.cc",
   ]
   public_deps = [
-    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-
     # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
@@ -42,10 +38,6 @@ shared_library("ramdevice-client") {
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # We need to use this group because the public dependencies of
@@ -69,17 +61,16 @@ shared_library("ramdevice-client-test-lib") {
     # <ramdevice-client-test/ramnandctl.h> has #include <lib/driver-integration-test/fixture.h>
     ":ramdevice-client",
 
-    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
+    # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
     "//sdk/lib/sys/component/cpp/testing:cpp",
     "//src/devices/testing/driver-integration-test-shim",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_cpp_wire",
     "//sdk/lib/fdio",
     "//src/devices/testing/driver-integration-test-shim",
     "//src/lib/ddk",
@@ -89,10 +80,6 @@ shared_library("ramdevice-client-test-lib") {
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 static_library("ramdevice-client-static") {
@@ -106,17 +93,13 @@ static_library("ramdevice-client-static") {
     "ramnand.cc",
   ]
   public_deps = [
-    # <ramdevice-client/ramnand.h> has #include <fuchsia/hardware/nand/c/fidl.h>
-    "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_c",
-
     # <ramdevice-client/ramnand.h> has #include <fidl/fuchsia.hardware.nand/cpp/wire.h>
     "//sdk/fidl/fuchsia.hardware.nand:fuchsia.hardware.nand_cpp_wire",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
-    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_c",
+    "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_cpp_wire",
+    "//sdk/fidl/fuchsia.hardware.ramdisk:fuchsia.hardware.ramdisk_cpp_wire",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/component/cpp",
     "//src/lib/ddk",
@@ -126,8 +109,4 @@ static_library("ramdevice-client-static") {
     "//zircon/system/ulib/zx",
   ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }

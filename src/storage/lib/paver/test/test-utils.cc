@@ -18,8 +18,6 @@
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
-#include "src/storage/lib/paver/device-partitioner.h"
-
 namespace {
 
 void CreateBadBlockMap(void* buffer) {
@@ -67,7 +65,7 @@ void BlockDevice::Create(const fbl::unique_fd& devfs_root, const uint8_t* guid,
   device->reset(new BlockDevice(client, block_count, block_size));
 }
 
-void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
+void SkipBlockDevice::Create(fuchsia_hardware_nand::wire::RamNandInfo nand_info,
                              std::unique_ptr<SkipBlockDevice>* device) {
   fzl::VmoMapper mapper;
   zx::vmo vmo;
@@ -77,15 +75,12 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
   memset(mapper.start(), 0xff, mapper.size());
   CreateBadBlockMap(mapper.start());
   vmo.op_range(ZX_VMO_OP_CACHE_CLEAN_INVALIDATE, 0, mapper.size(), nullptr, 0);
-  zx::vmo dup;
-  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup));
+  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &nand_info.vmo));
 
-  fuchsia_hardware_nand_RamNandInfo info = nand_info;
-  info.vmo = dup.release();
-  fbl::RefPtr<ramdevice_client_test::RamNandCtl> ctl;
+  std::unique_ptr<ramdevice_client_test::RamNandCtl> ctl;
   ASSERT_OK(ramdevice_client_test::RamNandCtl::Create(&ctl));
   std::optional<ramdevice_client::RamNand> ram_nand;
-  ASSERT_OK(ctl->CreateRamNand(&info, &ram_nand));
+  ASSERT_OK(ctl->CreateRamNand(std::move(nand_info), &ram_nand));
   fbl::unique_fd fd;
   ASSERT_OK(device_watcher::RecursiveWaitForFile(ctl->devfs_root(), "sys/platform", &fd));
   device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand), std::move(mapper)));

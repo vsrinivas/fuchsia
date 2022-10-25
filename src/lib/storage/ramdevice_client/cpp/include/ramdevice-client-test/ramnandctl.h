@@ -12,15 +12,15 @@ namespace ramdevice_client_test {
 
 using ramdevice_client::RamNand;
 
-class RamNandCtl : public fbl::RefCounted<RamNandCtl> {
+class RamNandCtl {
  public:
   // Creates an isolated devmgr and spawns a ram_nand_ctl device in it.
-  static zx_status_t Create(fbl::RefPtr<RamNandCtl>* out);
+  static zx_status_t Create(std::unique_ptr<RamNandCtl>* out);
 
-  static zx_status_t CreateWithRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+  static zx_status_t CreateWithRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
                                        std::optional<RamNand>* out);
 
-  zx_status_t CreateRamNand(const fuchsia_hardware_nand_RamNandInfo* config,
+  zx_status_t CreateRamNand(fuchsia_hardware_nand::wire::RamNandInfo config,
                             std::optional<RamNand>* out);
 
   ~RamNandCtl() = default;
