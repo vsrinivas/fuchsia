@@ -345,6 +345,13 @@ void EcDevice::QueryThread() {
       char method[5] = {0};
       snprintf(method, sizeof(method), "_Q%02x", event);
       last_query_.Set(method);
+
+      // Log lid close events.
+      // TODO(fxb/111460): Remove this logging when bug is fixed.
+      if (event == 1) {
+        zxlogf(INFO, "received event: %s", method);
+      }
+
       // Don't care about return value.
       __UNUSED auto status = acpi_->EvaluateObject(handle_, method, std::nullopt);
     }
