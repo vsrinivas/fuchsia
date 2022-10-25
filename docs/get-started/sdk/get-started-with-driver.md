@@ -102,9 +102,9 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build --config=fuchsia_x64 //src/qemu_edu/drivers:qemu_edu
    ...
-   INFO: Elapsed time: 246.794s, Critical Path: 49.78s
-   INFO: 971 processes: 597 internal, 374 linux-sandbox.
-   INFO: Build completed successfully, 971 total actions
+   INFO: Elapsed time: 147.841s, Critical Path: 54.46s
+   INFO: 964 processes: 591 internal, 373 linux-sandbox.
+   INFO: Build completed successfully, 964 total actions
    ```
 
 5. To verify that you can use the `ffx` tool in your environment, run the
@@ -118,13 +118,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   9.20220919.2.1
+   10.20221013.1.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the version
-   `9.20220919.2.1`, which indicates that this SDK was built and published on
-   September 19, 2022.)
+   `10.20221013.1.1`, which indicates that this SDK was built and published on
+   October 13, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during development,
    consider updating your `PATH` to include the SDK's `tools` directory
@@ -336,14 +336,14 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/drivers:pkg.component
-   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (8 packages loaded, 514 targets configured).
+   INFO: Analyzed target //src/qemu_edu/drivers:pkg.component (9 packages loaded, 522 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/drivers:pkg.component up-to-date:
      bazel-bin/src/qemu_edu/drivers/pkg.component_run_component.sh
-   INFO: Elapsed time: 92.307s, Critical Path: 56.84s
-   INFO: 989 processes: 606 internal, 382 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 989 total actions
-   INFO: Build completed successfully, 989 total actions
+   INFO: Elapsed time: 89.929s, Critical Path: 53.23s
+   INFO: 982 processes: 600 internal, 381 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 982 total actions
+   INFO: Build completed successfully, 982 total actions
    added repository bazel.pkg.component
    Registering fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
    Successfully bound:
@@ -412,7 +412,7 @@ Do the following:
                             /svc/fuchsia.driver.compat.Service
                             /svc/fuchsia.logger.LogSink
      Exposed Capabilities:  fuchsia.examples.qemuedu.Service
-              Merkle root:  df0fc9b427711e7a47dd286dc4f47d5dea8060607a7e968bf48f2e6fc8bdd4af
+              Merkle root:  0fc11ccc2e5da8031793c122adc86391f51c5849eb5a449dde7bac131750003a
           Execution State:  Running
              Start reason:  Instance is in a single_run collection
     Outgoing Capabilities:  fuchsia.examples.qemuedu.Service
@@ -463,14 +463,14 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/qemu_edu/tools:pkg.eductl_tool -- live
-   INFO: Analyzed target //src/qemu_edu/tools:pkg.eductl_tool (0 packages loaded, 0 targets configured).
+   INFO: Analyzed target //src/qemu_edu/tools:pkg.eductl_tool (1 packages loaded, 15 targets configured).
    INFO: Found 1 target...
    Target //src/qemu_edu/tools:pkg.eductl_tool up-to-date:
      bazel-bin/src/qemu_edu/tools/pkg.eductl_tool_run_driver_tool.sh
-   INFO: Elapsed time: 0.286s, Critical Path: 0.01s
-   INFO: 1 process: 1 internal.
-   INFO: Build completed successfully, 1 total action
-   INFO: Build completed successfully, 1 total action
+   INFO: Elapsed time: 2.406s, Critical Path: 1.84s
+   INFO: 22 processes: 7 internal, 14 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 22 total actions
+   INFO: Build completed successfully, 22 total actions
    added repository bazel.pkg.eductl.tool
    {{ '<strong>' }}Liveness check passed!{{ '</strong>' }}
    ```
@@ -542,7 +542,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx driver list-hosts
-   Driver Host: 5416
+   Driver Host: 5460
        fuchsia-boot:///#meta/bus-pci.cm
        fuchsia-boot:///#meta/display.cm
        fuchsia-boot:///#meta/goldfish-display.cm
@@ -551,45 +551,49 @@ Do the following:
        fuchsia-boot:///#meta/goldfish_sensor.cm
        fuchsia-boot:///#meta/goldfish_sync.cm
        fuchsia-boot:///#meta/hid.cm
-       fuchsia-boot:///#meta/intel-hda.cm
        fuchsia-boot:///#meta/platform-bus-x86.cm
        fuchsia-boot:///#meta/platform-bus.cm
-       fuchsia-boot:///#meta/qemu-audio-codec.cm
-       fuchsia-boot:///#meta/ramdisk.cm
        fuchsia-boot:///#meta/sysmem.cm
        fuchsia-pkg://fuchsia.com/virtual_audio#meta/virtual_audio_driver.cm
 
-   Driver Host: 8248
+   Driver Host: 6757
+       fuchsia-boot:///#meta/ramdisk.cm
+
+   Driver Host: 9571
        fuchsia-boot:///#meta/intel-rtc.cm
 
-   Driver Host: 8317
+   Driver Host: 9764
        fuchsia-boot:///#meta/pc-ps2.cm
 
-   Driver Host: 9604
+   Driver Host: 9864
+       fuchsia-boot:///#meta/hid-input-report.cm
+       fuchsia-boot:///#meta/hid.cm
+       fuchsia-boot:///#meta/virtio_input.cm
+
+   Driver Host: 9988
+       fuchsia-boot:///#meta/intel-hda.cm
+       fuchsia-boot:///#meta/qemu-audio-codec.cm
+
+   Driver Host: 10224
+       fuchsia-boot:///#meta/goldfish_address_space.cm
+
+   Driver Host: 10412
        fuchsia-boot:///#meta/block.core.cm
        fuchsia-boot:///#meta/fvm.cm
        fuchsia-boot:///#meta/virtio_block.cm
 
-   Driver Host: 9781
-       fuchsia-boot:///#meta/hid-input-report.cm
-       fuchsia-boot:///#meta/hid.cm
-       fuchsia-boot:///#meta/virtio_input.cm
+   Driver Host: 10539
+       fuchsia-boot:///#meta/ahci.cm
 
-   Driver Host: 10066
+   Driver Host: 10648
        fuchsia-boot:///#meta/netdevice-migration.cm
        fuchsia-boot:///#meta/network-device.cm
        fuchsia-boot:///#meta/virtio_ethernet.cm
 
-   Driver Host: 10137
+   Driver Host: 10802
        fuchsia-boot:///#meta/hid-input-report.cm
        fuchsia-boot:///#meta/hid.cm
        fuchsia-boot:///#meta/virtio_input.cm
-
-   Driver Host: 10344
-       fuchsia-boot:///#meta/goldfish_address_space.cm
-
-   Driver Host: 10387
-       fuchsia-boot:///#meta/ahci.cm
 
    Driver Host: 134104
        fuchsia-pkg://bazel.pkg.component/qemu_edu#meta/qemu_edu.cm
