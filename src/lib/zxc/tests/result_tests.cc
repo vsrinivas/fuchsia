@@ -128,8 +128,12 @@ struct test_members {
   int b;
 };
 
+constexpr test_members g_test_members{10, 20};
+
 static_assert(fit::result<fit::failed, test_members> { zx::ok(test_members{10, 20}) } -> a == 10);
 static_assert(fit::result<fit::failed, test_members> { zx::ok(test_members{10, 20}) } -> b == 20);
+static_assert(fit::result<fit::failed, const test_members*> { zx::ok(&g_test_members) } -> a == 10);
+static_assert(fit::result<fit::failed, const test_members*> { zx::ok(&g_test_members) } -> b == 20);
 static_assert(fit::result<fit::failed, std::optional<test_members>> {
   zx::ok(test_members{10, 20})
 } -> a == 10);
