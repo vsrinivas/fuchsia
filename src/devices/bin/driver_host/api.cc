@@ -100,6 +100,10 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     return ZX_ERR_INVALID_ARGS;
   }
 
+  if ((args->flags & DEVICE_ADD_INSTANCE) && args->ops->init) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // If the device will be added in the same driver_host and visible,
   // we can connect the client immediately after adding the device.
   // Otherwise we will pass this channel to the devcoordinator via internal::device_add.

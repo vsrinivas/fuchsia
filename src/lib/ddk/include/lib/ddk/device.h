@@ -134,6 +134,8 @@ typedef struct zx_protocol_device {
   //@ ## init
   // The init hook is called when a device is initially added.
   //
+  // This hook is not supported for DEVICE_ADD_INSTANCE devices.
+  //
   // If implemented, the device is guaranteed to be invisible and not able to be unbound until the
   // driver calls **device_init_reply()** on itself. **device_init_reply()** can be called from
   // any thread - it does not necessarily need to be called before the |init| hook returns.
