@@ -14,6 +14,7 @@ use std::path::PathBuf;
 use transfer_manifest::{
     ArtifactEntry, ArtifactType, TransferEntry, TransferManifest, TransferManifestV1,
 };
+use walkdir::{DirEntry, WalkDir};
 
 /// Generate a transfer manifest for uploading and downloading a product bundle.
 #[derive(FromArgs, PartialEq, Debug)]
@@ -67,6 +68,7 @@ impl GenerateTransferManifest {
                     .context("rebasing unlock credential")?,
             });
         }
+
         // Add the images from the systems.
         let mut system = |system: &Option<AssemblyManifest>| -> Result<()> {
             if let Some(system) = system {
@@ -82,6 +84,22 @@ impl GenerateTransferManifest {
         system(&product_bundle.system_a)?;
         system(&product_bundle.system_b)?;
         system(&product_bundle.system_r)?;
+
+        // Add the tuf metadata by walking the metadata directory and listing all the files inside.
+        if let Some(repository) = &product_bundle.repository {
+            let entries: Result<Vec<DirEntry>, _> =
+                WalkDir::new(&repository.metadata_path).into_iter().collect();
+            let entries = entries.context("collecting files in tuf metadata")?;
+            for entry in entries {
+                if entry.file_type().is_file() {
+                    product_bundle_entries.push(ArtifactEntry {
+                        name: diff_paths(entry.path(), canonical_product_bundle_path)
+                            .context("rebasing tuf metadata")?,
+                    });
+                }
+            }
+        }
+
         entries.push(TransferEntry {
             artifact_type: ArtifactType::ProductBundle,
             local: rebased_product_bundle_path.clone(),
