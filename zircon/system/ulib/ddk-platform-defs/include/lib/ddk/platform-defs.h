@@ -117,6 +117,7 @@ __BEGIN_CDECLS
 #define PDEV_PID_AMLOGIC_S905D3     0x05
 #define PDEV_PID_AMLOGIC_A311D      0x06
 #define PDEV_PID_AMLOGIC_A5         0x07
+#define PDEV_PID_AMLOGIC_A1         0x08
 
 #define PDEV_DID_AMLOGIC_GPIO        0x01
 #define PDEV_DID_AMLOGIC_I2C         0x02

@@ -64,6 +64,11 @@ int Clover::Thread() {
   zx_status_t status = ZX_OK;
 
   zxlogf(INFO, "Initializing clover board!!!");
+
+  if ((status = GpioInit()) != ZX_OK) {
+    zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
+  }
+
   init_txn_->Reply(status);
   return status;
 }

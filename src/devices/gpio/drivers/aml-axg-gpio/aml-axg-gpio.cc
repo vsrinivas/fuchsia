@@ -13,6 +13,7 @@
 
 #include <fbl/alloc_checker.h>
 
+#include "a1-blocks.h"
 #include "a113-blocks.h"
 #include "a5-blocks.h"
 #include "fidl/fuchsia.hardware.platform.bus/cpp/markers.h"
@@ -120,6 +121,11 @@ zx_status_t AmlAxgGpio::Create(void* ctx, zx_device_t* parent) {
       gpio_blocks = a5_gpio_blocks;
       block_count = std::size(a5_gpio_blocks);
       gpio_interrupt = &a5_interrupt_block;
+      break;
+    case PDEV_PID_AMLOGIC_A1:
+      gpio_blocks = a1_gpio_blocks;
+      block_count = std::size(a1_gpio_blocks);
+      gpio_interrupt = &a1_interrupt_block;
       break;
     default:
       zxlogf(ERROR, "AmlAxgGpio::Create: unsupported SOC PID %u", info.pid);

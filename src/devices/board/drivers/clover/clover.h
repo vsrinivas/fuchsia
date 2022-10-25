@@ -63,6 +63,7 @@ class Clover : public CloverType {
   Clover& operator=(Clover&&) = delete;
 
   int Thread();
+  zx_status_t GpioInit();
 
   fdf::WireSyncClient<fuchsia_hardware_platform_bus::PlatformBus> pbus_;
   std::optional<ddk::InitTxn> init_txn_;

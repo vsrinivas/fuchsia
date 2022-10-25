@@ -21,7 +21,10 @@ fuchsia_driver("clover-driver") {
     "//build/config:all_source",
     "//build/config/fuchsia:enable_zircon_asserts",
   ]
-  sources = [ "clover.cc" ]
+  sources = [
+    "clover-gpio.cc",
+    "clover.cc",
+  ]
   deps = [
     ":clover-bind",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
