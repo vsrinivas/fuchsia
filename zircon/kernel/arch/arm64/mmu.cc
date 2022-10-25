@@ -348,7 +348,7 @@ uint s2_pte_attr_to_mmu_flags(pte_t pte) {
       PANIC_UNIMPLEMENTED;
   }
 
-  if (pte & MMU_S2_PTE_ATTR_XN) {
+  if (!(pte & MMU_S2_PTE_ATTR_XN)) {
     mmu_flags |= ARCH_MMU_FLAG_PERM_EXECUTE;
   }
 

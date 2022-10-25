@@ -414,6 +414,48 @@ static bool guest_physical_aspace_protect() {
   END_TEST;
 }
 
+static bool guest_physical_aspace_query() {
+  BEGIN_TEST;
+
+  if (!hypervisor_supported()) {
+    return true;
+  }
+
+  // This test is arch independent so be conservative with the permission and assume that read is
+  // needed for any other permission.
+  constexpr uint kMmuFlagTests[] = {
+      ARCH_MMU_FLAG_PERM_READ, ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE,
+      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_EXECUTE,
+      ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE | ARCH_MMU_FLAG_PERM_EXECUTE};
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  zx_status_t status = create_vmo(PAGE_SIZE, &vmo);
+  ASSERT_OK(status);
+
+  auto gpa = create_gpas();
+  ASSERT_OK(gpa.status_value());
+
+  for (const uint flags : kMmuFlagTests) {
+    fbl::RefPtr<VmMapping> mapping;
+    status = gpa->RootVmar()->CreateVmMapping(0, PAGE_SIZE, 0 /* align_pow2 */, VMAR_FLAG_SPECIFIC,
+                                              vmo, 0 /* vmo_offset */, flags, "vmo", &mapping);
+    EXPECT_OK(status);
+    status = mapping->MapRange(0, PAGE_SIZE, true, false);
+    EXPECT_OK(status);
+
+    uint query_flags = 0;
+    status = gpa->arch_aspace().Query(0, nullptr, &query_flags);
+    EXPECT_OK(status);
+    EXPECT_EQ(flags, query_flags);
+
+    // Cleanup the mapping for next iteration.
+    status = mapping->Destroy();
+    EXPECT_OK(status);
+  }
+
+  END_TEST;
+}
+
 static bool direct_physical_aspace_create() {
   BEGIN_TEST;
 
@@ -594,6 +636,7 @@ HYPERVISOR_UNITTEST(guest_physical_aspace_uncached)
 HYPERVISOR_UNITTEST(guest_physical_aspace_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_aspace_write_combining)
 HYPERVISOR_UNITTEST(guest_physical_aspace_protect)
+HYPERVISOR_UNITTEST(guest_physical_aspace_query)
 HYPERVISOR_UNITTEST(direct_physical_aspace_create)
 HYPERVISOR_UNITTEST(id_allocator_alloc_and_free)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
