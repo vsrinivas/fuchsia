@@ -4,13 +4,16 @@
 
 use bitfield::bitfield;
 use fuchsia_bluetooth::types::Address;
+use hmac::{Hmac, Mac, NewMac};
 use packet_encoding::decodable_enum;
-use sha2::{Digest, Sha256};
+use sha2::Sha256;
 use std::convert::{TryFrom, TryInto};
 use tracing::debug;
 
 use crate::types::keys::public_key_from_bytes;
 use crate::types::{AccountKey, Error, SharedSecret};
+
+type HmacSha256 = Hmac<Sha256>;
 
 /// Default size of an encrypted/decrypted GATT request buffer.
 const GATT_REQUEST_BUFFER_SIZE: usize = 16;
@@ -235,7 +238,9 @@ fn personalized_name_response_internal(
     // The HMAC-SHA256 is calculated using the encrypted data (Step 4).
     let mut encrypted_data_with_nonce = nonce.to_vec();
     encrypted_data_with_nonce.extend_from_slice(&encrypted_blocks);
-    let hashed_encrypted_data = hmac_sha256(key, encrypted_data_with_nonce);
+    let mut hmac = HmacSha256::new_from_slice(key.as_bytes()).expect("valid key");
+    hmac.update(&encrypted_data_with_nonce[..]);
+    let hashed_encrypted_data: [u8; 32] = hmac.finalize().into_bytes().into();
 
     // The encrypted output consists of:
     // 1) First 8-bytes of the HMAC-SHA256 calculation.
@@ -246,33 +251,6 @@ fn personalized_name_response_internal(
     output[8..16].copy_from_slice(&nonce[..8]);
     output.append(&mut encrypted_blocks);
     output
-}
-
-/// Returns the HMAC-SHA256 for the provided `encrypted_data`.
-/// `encrypted_data` is prefixed with a randomly generated 8-byte nonce.
-/// Corresponds to step 4 in the personalized name encryption algorithm.
-fn hmac_sha256(key: &SharedSecret, mut encrypted_data: Vec<u8>) -> [u8; 32] {
-    // a) k_with_ipad = concat((K ^ ipad), encrypted_data))
-    let mut k = [0x00u8; 64];
-    k[..16].copy_from_slice(key.as_bytes());
-    let ipad = [0x36u8; 64];
-    let mut k_with_ipad: Vec<u8> = k.iter().zip(ipad.iter()).map(|(&x1, &x2)| x1 ^ x2).collect();
-    k_with_ipad.append(&mut encrypted_data);
-
-    // b) hashed_k_with_ipad = sha256(concat((K ^ ipad), encrypted_data)))
-    let mut hasher = Sha256::new();
-    hasher.update(k_with_ipad);
-    let mut hashed_k_with_ipad: Vec<u8> = hasher.finalize().to_vec();
-
-    // c) k_with_opad = concat((K ^ opad), sha256(concat((K ^ ipad), encrypted_data)))
-    let opad = [0x5cu8; 64];
-    let mut k_with_opad: Vec<u8> = k.iter().zip(opad.iter()).map(|(&x1, &x2)| x1 ^ x2).collect();
-    k_with_opad.append(&mut hashed_k_with_ipad);
-
-    // d) output = sha256(k_with_opad)
-    let mut hasher = Sha256::new();
-    hasher.update(k_with_opad);
-    hasher.finalize().into()
 }
 
 /// Encrypts the provided `name` and returns a byte buffer of the encrypted output.
@@ -604,26 +582,6 @@ pub(crate) mod tests {
             0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53, 0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
         ];
         assert_eq!(result[..], expected_encryption_result);
-    }
-
-    /// This test verifies the HMAC-SHA256 calculation.
-    /// The contents of this test case are pulled from the GFPS specification.
-    /// See https://developers.google.com/nearby/fast-pair/specifications/appendix/testcases#hmac-sha256
-    #[test]
-    fn hmac_sha256_calculation() {
-        let encrypted_data = vec![
-            0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0xEE, 0x4A, 0x24, 0x83, 0x73, 0x80,
-            0x52, 0xE4, 0x4E, 0x9B, 0x2A, 0x14, 0x5E, 0x5D, 0xDF, 0xAA, 0x44, 0xB9, 0xE5, 0x53,
-            0x6A, 0xF4, 0x38, 0xE1, 0xE5, 0xC6,
-        ];
-
-        let result = hmac_sha256(&personalized_name_key(), encrypted_data);
-        let expected_result = [
-            0x55, 0xEC, 0x5E, 0x60, 0x55, 0xAF, 0x6E, 0x92, 0x61, 0x8B, 0x7D, 0x87, 0x10, 0xD4,
-            0x41, 0x37, 0x09, 0xAB, 0x5D, 0xA2, 0x7C, 0xA2, 0x6A, 0x66, 0xF5, 0x2E, 0x5A, 0xD4,
-            0xE8, 0x20, 0x90, 0x52,
-        ];
-        assert_eq!(result[..], expected_result);
     }
 
     /// This test verifies the creation of the personalized name response.

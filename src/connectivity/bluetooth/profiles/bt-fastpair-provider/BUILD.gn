@@ -32,6 +32,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:elliptic-curve",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hmac",
     "//third_party/rust_crates:lru-cache",
     "//third_party/rust_crates:p256",
     "//third_party/rust_crates:serde",
