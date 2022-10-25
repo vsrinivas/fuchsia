@@ -1,0 +1,91 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/v2/internal/library_fuzzer.gni")
+import("//build/host.gni")
+import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
+
+# Build a library fuzzer for the host platform.
+#
+# Parameters: Same as `executable`, plus:
+#
+#   test_inputs (optional)
+#     [list of files] When built by a non-fuzzing toolchain variant, this target will create a host
+#         test that executes the fuzzer on a fixed set of inputs. The empty input is always tested;
+#         fuzzer authors may include additional paths to files containing test inputs.
+#
+template("host_library_fuzzer") {
+  if (is_host) {
+    fuzzer_target = "${target_name}_bin"
+    fuzzer_name = target_name
+    library_fuzzer(fuzzer_target) {
+      target_type = "executable"
+      fuzzer_name = fuzzer_name
+      forward_variables_from(invoker, "*", [ "visibility" ])
+      target_configs = invoker.configs
+    }
+
+    # Always build a test that runs via `fx test`. This tests the fuzzer with fixed inputs, whether
+    # the toolchain variant supports fuzzing or not.
+    test_inputs = [ "//src/lib/fuzzing/test_data/empty_input" ]
+    if (defined(invoker.test_inputs)) {
+      test_inputs += invoker.test_inputs
+    }
+    corpus_target = "${fuzzer_name}_corpus"
+    host_test_data(corpus_target) {
+      visibility = [ ":*" ]
+      sources = test_inputs
+      outputs = [ "$target_gen_dir/$fuzzer_name/{{source_file_part}}" ]
+    }
+    group_deps = [ ":$corpus_target" ]
+
+    test_target = "${fuzzer_name}_test"
+    target = get_label_info(":${target_name}", "label_with_toolchain")
+    host_test(test_target) {
+      visibility = [ ":*" ]
+      target = target
+      binary_path = "$root_out_dir/$fuzzer_name"
+      deps = [
+        ":$corpus_target",
+        ":$fuzzer_target",
+      ]
+      args = []
+      foreach(test_input, test_inputs) {
+        filename = get_path_info(test_input, "file")
+        args += [ rebase_path("$target_gen_dir/$fuzzer_name/$filename",
+                              root_build_dir) ]
+      }
+    }
+    group_deps = [ ":$test_target" ]
+
+    # If the toolchain variant supports fuzzing, also register the fuzzer binary as a host tool and
+    # allow users to fuzz by calling it via `fx host-tool`
+    if (is_fuzzer) {
+      tool_target = "${fuzzer_name}_tool"
+      install_host_tools(tool_target) {
+        testonly = true
+        visibility = [ ":*" ]
+        outputs = [ fuzzer_name ]
+        deps = [ ":$fuzzer_target" ]
+      }
+      group_deps += [ ":$tool_target" ]
+    }
+    group(target_name) {
+      testonly = true
+      forward_variables_from(invoker, [ "visibility" ])
+      deps = group_deps
+    }
+  } else {
+    group(target_name) {
+      testonly = true
+      deps = [ ":$target_name($host_toolchain)" ]
+    }
+    not_needed(invoker, "*")
+  }
+}
+
+set_defaults("host_library_fuzzer") {
+  configs = default_executable_configs
+}

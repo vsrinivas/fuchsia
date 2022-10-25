@@ -1,0 +1,100 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import(
+    "//build/fuzzing/v2/internal/fuchsia_library_fuzzer_component_metadata.gni")
+import("//build/fuzzing/v2/internal/library_fuzzer.gni")
+
+# Creates a fuzzer binary.
+#
+# When built in a fuzzer toolchain variant, this template produces a fuzzer that uses libfuzzer as
+# its fuzzing engine, and that is linked directly against one or more target libraries in the same
+# process. The fuzzer generates and tests inputs in a loop, automatically discovering code paths and
+# finding bugs.
+#
+# When built with a non-fuzzer toolchain variant, it produces a "fuzzer test" that exercises the
+# same code as above with a set of fixed inputs. This is useful for ensuring the fuzzer code is
+# buildable and, if inputs that previously caused are added to the fixed set, acting as a regression
+# test.
+#
+# Parameters are the same as `executable` except that $testonly and
+# $variant_selector_target_type cannot be set, and the following parameters are added:
+#
+#   corpus (optional)
+#     [label] The GN label of the corpus. This is typically a `resource`. These should be a
+#       combination of hand-crafted fuzzer inputs that increase coverage, and artifacts from
+#       previous fuzzing runs, e.g. fuzzer inputs that triggered crashes. These will be used to seed
+#       new fuzzing runs, and as regression unit tests.
+#
+#   dictionary (optional)
+#     [file] If specified, a file containing quoted inputs, one per line, that the fuzzer will use
+#       to generate new mutations.
+#
+#   options (optional)
+#     [list of strings] Each option is of the form "key=value" and indicates command line options
+#       that the fuzzer should be invoked with. Valid keys are libFuzzer options
+#       (https://llvm.org/docs/LibFuzzer.html#options).
+#
+# TODO(fxbug.dev/105707): In order to make building fuzzers build system independent, move extra
+# parameters to the component manifests explicitly and do not generate them.
+#
+template("fuchsia_library_fuzzer") {
+  fuzzer_name = target_name
+  if (defined(invoker.output_name)) {
+    fuzzer_name = invoker.output_name
+  }
+
+  # The group of items to include in the components includes the libFuzzer
+  group_deps = [ "//src/sys/fuzzing/libfuzzer" ]
+
+  # Include the fuzzer corpus in the group.
+  if (defined(invoker.corpus)) {
+    group_deps += [ invoker.corpus ]
+  }
+
+  # Include the fuzzer dictionary.
+  if (defined(invoker.dictionary)) {
+    dictionary_target = "${fuzzer_name}_dictionary"
+    resource(dictionary_target) {
+      sources = [ invoker.dictionary ]
+      outputs = [ "data/{{source_file_part}}" ]
+    }
+    group_deps += [ ":$dictionary_target" ]
+  }
+
+  # Include the metadata used to generate the component manifest source.
+  metadata_target = "${target_name}_metadata"
+  fuchsia_library_fuzzer_component_metadata(metadata_target) {
+    program_binary = "test/$fuzzer_name"
+    forward_variables_from(invoker,
+                           [
+                             "corpus",
+                             "dictionary",
+                             "options",
+                           ])
+  }
+  group_deps += [ ":$metadata_target" ]
+
+  # Include the fuzzer executable.
+  fuzzer_target = "${target_name}_bin"
+  fuzzer_name = target_name
+  library_fuzzer(fuzzer_target) {
+    fuzzer_name = fuzzer_name
+    deps = []
+    forward_variables_from(invoker, "*", [ "visibility" ])
+    target_configs = invoker.configs
+  }
+  group_deps += [ ":$fuzzer_target" ]
+
+  # Assemble the group.
+  group(target_name) {
+    testonly = true
+    forward_variables_from(invoker, [ "visibility" ])
+    deps = group_deps
+  }
+}
+
+set_defaults("fuchsia_library_fuzzer") {
+  configs = default_executable_configs
+}
