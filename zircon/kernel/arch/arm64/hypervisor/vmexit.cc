@@ -292,8 +292,42 @@ zx_status_t handle_system_instruction(uint32_t iss, uint64_t& hcr, GuestState* g
   }
 }
 
+// According to ARM section D13.2.47 on the HPFAR_EL2:
+// "
+// The HPFAR_EL2 is written for:
+// * Translation or Access faults in the second stage of translation.
+// * An abort in the second stage of translation performed during the translation table walk of a
+//   first stage translation, caused by a Translation fault, an Access flag fault, or a Permission
+//   fault.
+// * A stage 2 Address size fault.
+// "
+bool hpfar_valid(uint64_t hpfar_el2, uint32_t esr_el2) {
+  const uint32_t ec = BITS_SHIFT(esr_el2, 31, 26);
+  // Check that this is an instruction or data abort from a lower level.
+  if (ec != 0b100100 && ec != 0b100000) {
+    return false;
+  }
+  const uint32_t iss = BITS(esr_el2, 24, 0);
+  const uint32_t dfsc = BITS(iss, 5, 0);
+  // First check if this is some kind of permission fault.
+  if ((dfsc & 0b001100) == 0b001100) {
+    // Only supported if due to loading a translation table entry.
+    const bool s1ptw = BIT(iss, 7);
+    return s1ptw;
+  }
+  // All the synchronous and other miscellaneous faults have at least one high bit set.
+  if ((dfsc & 0b110000) != 0) {
+    return false;
+  }
+  // Anything left over is an address size, translation or access fault.
+  return true;
+}
+
 zx_status_t handle_instruction_abort(GuestState* guest_state,
                                      hypervisor::GuestPhysicalAspace* gpa) {
+  if (!hpfar_valid(guest_state->hpfar_el2, guest_state->esr_el2)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   const zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
   if (auto result = gpa->PageFault(guest_paddr); result.is_error()) {
     dprintf(CRITICAL, "hypervisor: Unhandled guest instruction abort %#lx\n", guest_paddr);
@@ -305,6 +339,9 @@ zx_status_t handle_instruction_abort(GuestState* guest_state,
 zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
                               hypervisor::GuestPhysicalAspace* gpa, hypervisor::TrapMap* traps,
                               zx_port_packet_t* packet) {
+  if (!hpfar_valid(guest_state->hpfar_el2, guest_state->esr_el2)) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
   zx::result<hypervisor::Trap*> trap = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr);
   switch (trap.status_value()) {

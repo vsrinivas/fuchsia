@@ -1477,6 +1477,14 @@ zx_status_t ArmArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags
     return ZX_ERR_INVALID_ARGS;
   }
 
+  // The stage 2 data and instructions aborts do not contain sufficient information for us to
+  // resolve permission faults, and these kinds of faults generate a hard error. As such we cannot
+  // safely perform protections and instead upgrade any protect to a complete unmap, therefore
+  // causing a regular translation fault that we can handle to repopulate the correct mapping.
+  if (type_ == ArmAspaceType::kGuest) {
+    return Unmap(vaddr, count, EnlargeOperation::Yes, nullptr);
+  }
+
   Guard<CriticalMutex> a{&lock_};
   ASSERT(updates_enabled_);
   if (mmu_flags & ARCH_MMU_FLAG_PERM_EXECUTE) {
