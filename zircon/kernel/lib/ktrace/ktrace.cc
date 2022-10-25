@@ -478,7 +478,6 @@ void KTraceState::WriteNameEtc(uint32_t tag, uint32_t id, uint32_t arg, const ch
 
 void KTraceState::ReportStaticNames() {
   ktrace_report_probes();
-  ktrace_report_vcpu_meta();
   ktrace_report_cpu_pseudo_threads();
 }
 

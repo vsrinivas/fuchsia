@@ -885,49 +885,24 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t 
 }
 
 bool Importer::HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread) {
-  auto& duration = vcpu_durations_[thread];
-  if (duration.valid) {
-    FX_LOGS(WARNING) << "VCPU duration for thread " << thread << " already exists";
-    return false;
-  }
-  duration = VcpuDuration{.begin = event_time, .valid = true};
-  return true;
+  FX_LOGS(WARNING) << "Found vcpu enter event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32_t exit,
                               uint64_t exit_addr) {
-  auto& duration = vcpu_durations_[thread];
-  trace_arg_t args[] = {
-      trace_make_arg(exit_address_name_ref_, trace_make_pointer_arg_value(exit_addr)),
-  };
-  if (!duration.valid) {
-    FX_LOGS(WARNING) << "VCPU duration for thread " << thread << " does not have a beginning";
-    return false;
-  }
-
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetNameRef(vcpu_exit_meta_, "exit", exit);
-  trace_context_write_duration_event_record(context_, duration.begin, event_time, &thread_ref,
-                                            &vcpu_category_ref_, &name_ref, args, std::size(args));
-
-  duration.valid = false;
-  return true;
+  FX_LOGS(WARNING) << "Found vcpu exit event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleVcpuBlock(trace_ticks_t event_time, zx_koid_t thread, uint32_t meta) {
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetNameRef(vcpu_meta_, "meta", meta);
-  trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
-                                                  &vcpu_category_ref_, &name_ref, nullptr, 0u);
-  return true;
+  FX_LOGS(WARNING) << "Found vcpu exit event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread, uint32_t meta) {
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetNameRef(vcpu_meta_, "meta", meta);
-  trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
-                                                &vcpu_category_ref_, &name_ref, nullptr, 0u);
-  return true;
+  FX_LOGS(WARNING) << "Found vcpu exit event that is expected to be migrated to FXT.";
+  return false;
 }
 
 bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,

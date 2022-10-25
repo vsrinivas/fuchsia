@@ -985,7 +985,13 @@ zx_status_t Vcpu::EnterInternal(PreEnterFn pre_enter, PostExitFn post_exit,
       mds_buff_overwrite();
     }
 
-    ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
+    if (unlikely(ktrace_tag_enabled(TAG_VCPU_ENTER))) {
+      fxt_duration_begin(TAG_VCPU_ENTER, current_ticks(),
+                         fxt::ThreadRef(current_thread->pid(), current_thread->tid()),
+                         fxt::StringRef("kernel:vcpu"_stringref->GetFxtId()),
+                         fxt::StringRef("vcpu"_stringref->GetFxtId()));
+    }
+
     GUEST_STATS_INC(vm_entries);
     status = vmx_enter(&vmx_state_);
     GUEST_STATS_INC(vm_exits);
