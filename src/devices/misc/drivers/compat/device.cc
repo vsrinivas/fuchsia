@@ -385,20 +385,23 @@ zx_status_t Device::CreateNode() {
   auto offers = device_server_.CreateOffers(arena);
 
   std::vector<fdf::wire::NodeSymbol> symbols;
-  symbols.emplace_back(arena)
-      .set_name(arena, kDeviceSymbol)
-      .set_address(arena, reinterpret_cast<uint64_t>(&compat_symbol_));
-  symbols.emplace_back(arena)
-      .set_name(arena, kOps)
-      .set_address(arena, reinterpret_cast<uint64_t>(ops_));
+  symbols.emplace_back(fdf::wire::NodeSymbol::Builder(arena)
+                           .name(kDeviceSymbol)
+                           .address(reinterpret_cast<uint64_t>(&compat_symbol_))
+                           .Build());
+  symbols.emplace_back(fdf::wire::NodeSymbol::Builder(arena)
+                           .name(kOps)
+                           .address(reinterpret_cast<uint64_t>(ops_))
+                           .Build());
 
-  fdf::wire::NodeAddArgs args(arena);
   auto valid_name = MakeValidName(name_);
-  args.set_name(arena, fidl::StringView::FromExternal(valid_name))
-      .set_symbols(arena, fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols))
-      .set_offers(arena,
-                  fidl::VectorView<fcd::wire::Offer>::FromExternal(offers.data(), offers.size()))
-      .set_properties(arena, fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(properties_));
+  auto args =
+      fdf::wire::NodeAddArgs::Builder(arena)
+          .name(fidl::StringView::FromExternal(valid_name))
+          .symbols(fidl::VectorView<fdf::wire::NodeSymbol>::FromExternal(symbols))
+          .offers(fidl::VectorView<fcd::wire::Offer>::FromExternal(offers.data(), offers.size()))
+          .properties(fidl::VectorView<fdf::wire::NodeProperty>::FromExternal(properties_))
+          .Build();
 
   // Create NodeController, so we can control the device.
   auto controller_ends = fidl::CreateEndpoints<fdf::NodeController>();
@@ -596,7 +599,8 @@ void Device::InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodeProperty
     }
   }
   if (!found) {
-    properties_.emplace_back(arena_).set_key(arena_, key).set_value(arena_, value);
+    properties_.emplace_back(
+        fdf::wire::NodeProperty::Builder(arena_).key(key).value(value).Build());
   }
 }
 

@@ -271,8 +271,6 @@ config("fidl-wire-deprecated-mutable-tables") {
     "//src/devices/board/lib/acpi:host-acpi",
     "//src/devices/i2c/drivers/i2c:i2c-test-bin",
     "//src/devices/lib/fidl-metadata",
-    "//src/devices/misc/drivers/compat:lib",
-    "//src/devices/misc/drivers/compat:unittests",
     "//src/devices/nand/drivers/broker/test:nand-broker",
     "//src/devices/nand/drivers/broker/test:nandpart-broker",
     "//src/devices/nand/drivers/ram-nand:ram-nand-driver",

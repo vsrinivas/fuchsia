@@ -61,10 +61,6 @@ source_set("lib") {
   # Please remove ad-hoc composition of FIDL protocols and migrate to |fidl::WireDispatch|.
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-wire-try-dispatch" ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_driver("driver") {
@@ -180,10 +176,6 @@ executable("unittests") {
     "//zircon/system/ulib/mock-boot-arguments",
     "//zircon/system/ulib/sync:sync-cpp",
   ]
-
-  # TODO(fxbug.dev/94768): This target uses mutable tables which are deprecated,
-  # rather than builders.
-  configs += [ "//build/cpp:fidl-wire-deprecated-mutable-tables" ]
 }
 
 fuchsia_unittest_package("compat_test") {

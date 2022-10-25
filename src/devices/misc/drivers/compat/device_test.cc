@@ -179,8 +179,10 @@ class DeviceTest : public gtest::TestLoopFixture {
   zx::result<driver::Namespace> CreateNamespace(fidl::ClientEnd<fio::Directory> client_end) {
     fidl::Arena arena;
     fidl::VectorView<frunner::wire::ComponentNamespaceEntry> entries(arena, 1);
-    entries[0].Allocate(arena);
-    entries[0].set_path(arena, "/svc").set_directory(std::move(client_end));
+    entries[0] = frunner::wire::ComponentNamespaceEntry::Builder(arena)
+                     .path("/svc")
+                     .directory(std::move(client_end))
+                     .Build();
     return driver::Namespace::Create(entries);
   }
 
