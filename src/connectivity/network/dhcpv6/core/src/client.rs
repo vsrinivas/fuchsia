@@ -8,7 +8,7 @@ use assert_matches::assert_matches;
 use net_types::ip::{Ipv6Addr, Subnet};
 use num::{rational::Ratio, CheckedMul};
 use packet::serialize::InnerPacketBuilder;
-use packet_formats_dhcp::v6;
+use packet_formats_dhcp::v6::{self, U16};
 use rand::{thread_rng, Rng};
 use std::{
     cmp::{Eq, Ord, PartialEq, PartialOrd},
@@ -321,6 +321,7 @@ impl InformationRequesting {
             ExchangeType::ReplyToInformationRequest,
             None,
             &NoIaRequested,
+            &NoIaRequested,
         ) {
             Ok(processed_options) => processed_options,
             Err(e) => {
@@ -338,6 +339,7 @@ impl InformationRequesting {
             next_contact_time,
             preference: _,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             dns_servers,
         } = match result {
             Ok(options) => options,
@@ -413,6 +415,12 @@ impl InformationReceived {
     }
 }
 
+trait IaType {
+    type Value: Copy + PartialEq + Eq;
+
+    fn value(&self) -> Self::Value;
+}
+
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) struct IaNa {
     // TODO(https://fxbug.dev/86950): use UnicastAddr.
@@ -421,16 +429,42 @@ pub(crate) struct IaNa {
     valid_lifetime: v6::TimeValue,
 }
 
+impl IaType for IaNa {
+    type Value = Ipv6Addr;
+
+    fn value(&self) -> Ipv6Addr {
+        self.address
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub(crate) struct IaPd {
+    // TODO(https://fxbug.dev/86950): use UnicastAddr.
+    prefix: Subnet<Ipv6Addr>,
+    preferred_lifetime: v6::TimeValue,
+    valid_lifetime: v6::TimeValue,
+}
+
+impl IaType for IaPd {
+    type Value = Subnet<Ipv6Addr>;
+
+    fn value(&self) -> Subnet<Ipv6Addr> {
+        self.prefix
+    }
+}
+
 // Holds the information received in an Advertise message.
 // TODO(https://fxbug.dev/112643): Consider IA_PD from advertisements.
 #[derive(Debug, Clone)]
 struct AdvertiseMessage {
     server_id: Vec<u8>,
     non_temporary_addresses: HashMap<v6::IAID, IaNa>,
+    delegated_prefixes: HashMap<v6::IAID, IaPd>,
     dns_servers: Vec<Ipv6Addr>,
     preference: u8,
     receive_time: Instant,
     preferred_non_temporary_addresses_count: usize,
+    preferred_delegated_prefixes_count: usize,
 }
 
 impl AdvertiseMessage {
@@ -438,18 +472,20 @@ impl AdvertiseMessage {
         let Self {
             server_id: _,
             non_temporary_addresses,
+            delegated_prefixes,
             dns_servers: _,
             preference: _,
             receive_time: _,
             preferred_non_temporary_addresses_count: _,
+            preferred_delegated_prefixes_count: _,
         } = self;
         // We know we are performing stateful DHCPv6 since we are performing
         // Server Discovery/Selection as stateless DHCPv6 does not use Advertise
         // messages.
         //
-        // We consider an Advertisement acceptable if at least one IA is
-        // available.
-        !non_temporary_addresses.is_empty()
+        // We consider an Advertisement acceptable if at least one requested IA
+        // is available.
+        !(non_temporary_addresses.is_empty() && delegated_prefixes.is_empty())
     }
 }
 
@@ -464,36 +500,73 @@ impl AdvertiseMessage {
 //    parameters, such as the available set of IAs.
 impl Ord for AdvertiseMessage {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        let Self {
-            server_id: _,
-            non_temporary_addresses,
-            dns_servers,
-            preference,
-            receive_time,
-            preferred_non_temporary_addresses_count,
-        } = self;
-        let Self {
-            server_id: _,
-            non_temporary_addresses: other_non_temporary_addresses,
-            dns_servers: other_dns_server,
-            preference: other_preference,
-            receive_time: other_receive_time,
-            preferred_non_temporary_addresses_count: other_preferred_non_temporary_addresses_count,
-        } = other;
-        (
-            non_temporary_addresses.len(),
-            *preferred_non_temporary_addresses_count,
-            *preference,
-            dns_servers.len(),
-            *other_receive_time,
-        )
-            .cmp(&(
-                other_non_temporary_addresses.len(),
-                *other_preferred_non_temporary_addresses_count,
-                *other_preference,
-                other_dns_server.len(),
-                *receive_time,
-            ))
+        #[derive(PartialEq, Eq, PartialOrd, Ord)]
+        struct Candidate {
+            // First prefer the advertisement with at least one IA_NA.
+            has_ia_na: bool,
+            // Then prefer the advertisement with at least one IA_PD.
+            has_ia_pd: bool,
+            // Then prefer the advertisement with the most IA_NAs.
+            ia_na_count: usize,
+            // Then prefer the advertisement with the most IA_PDs.
+            ia_pd_count: usize,
+            // Then prefer the advertisement with the most IA_NAs that match the
+            // provided hint.
+            preferred_ia_na_count: usize,
+            // Then prefer the advertisement with the most IA_PDs that match the
+            // provided hint.
+            preferred_ia_pd_count: usize,
+            // Then prefer the advertisement with the highest preference value.
+            server_preference: u8,
+            // Then prefer the advertisement with the most number of DNS
+            // servers.
+            dns_server_count: usize,
+            // Then prefer the advertisement received first.
+            other_candidate_rcv_time: Instant,
+        }
+
+        impl Candidate {
+            fn from_advertisements(
+                candidate: &AdvertiseMessage,
+                other_candidate: &AdvertiseMessage,
+            ) -> Self {
+                let AdvertiseMessage {
+                    server_id: _,
+                    non_temporary_addresses,
+                    delegated_prefixes,
+                    dns_servers,
+                    preference,
+                    receive_time: _,
+                    preferred_non_temporary_addresses_count,
+                    preferred_delegated_prefixes_count,
+                } = candidate;
+                let AdvertiseMessage {
+                    server_id: _,
+                    non_temporary_addresses: _,
+                    delegated_prefixes: _,
+                    dns_servers: _,
+                    preference: _,
+                    receive_time: other_receive_time,
+                    preferred_non_temporary_addresses_count: _,
+                    preferred_delegated_prefixes_count: _,
+                } = other_candidate;
+
+                Self {
+                    has_ia_na: !non_temporary_addresses.is_empty(),
+                    has_ia_pd: !delegated_prefixes.is_empty(),
+                    ia_na_count: non_temporary_addresses.len(),
+                    ia_pd_count: delegated_prefixes.len(),
+                    preferred_ia_na_count: *preferred_non_temporary_addresses_count,
+                    preferred_ia_pd_count: *preferred_delegated_prefixes_count,
+                    server_preference: *preference,
+                    dns_server_count: dns_servers.len(),
+                    other_candidate_rcv_time: *other_receive_time,
+                }
+            }
+        }
+
+        Candidate::from_advertisements(self, other)
+            .cmp(&Candidate::from_advertisements(other, self))
     }
 }
 
@@ -511,17 +584,16 @@ impl PartialEq for AdvertiseMessage {
 
 impl Eq for AdvertiseMessage {}
 
-// Returns a count of entries in `configured_addresses` where the value is
-// some address and the corresponding entry in `got_addresses` has the same
-// address.
-fn compute_preferred_address_count(
-    got_addresses: &HashMap<v6::IAID, IaNa>,
-    configured_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+// Returns a count of entries in where the value matches the configured value
+// with the same IAID.
+fn compute_preferred_ia_count<A: IaType>(
+    got: &HashMap<v6::IAID, A>,
+    configured: &HashMap<v6::IAID, Option<A::Value>>,
 ) -> usize {
-    configured_addresses.iter().fold(0, |count, (iaid, address)| {
+    configured.iter().fold(0, |count, (iaid, value)| {
         count
-            + address.map_or(0, |addr| {
-                got_addresses.get(iaid).map_or(0, |got_ia| usize::from(got_ia.address == addr))
+            + value.map_or(0, |addr| {
+                got.get(iaid).map_or(0, |got_ia| usize::from(got_ia.value() == addr))
             })
     })
 }
@@ -568,12 +640,10 @@ struct IaAddress {
 
 #[derive(thiserror::Error, Debug)]
 enum IaNaOptionError {
-    #[error("T1={t1:?} greater than T2={t2:?}")]
-    T1GreaterThanT2 { t1: v6::TimeValue, t2: v6::TimeValue },
-    #[error("unknown status code {0}")]
-    InvalidStatusCode(u16),
-    #[error("duplicate Status Code option {0:?} and {1:?}")]
-    DuplicateStatusCode((v6::StatusCode, String), (v6::StatusCode, String)),
+    #[error("{0}")]
+    T1GreaterThanT2(#[from] T1GreaterThanT2Error),
+    #[error("status code error: {0}")]
+    StatusCode(#[from] StatusCodeError),
     // NB: Currently only one address is requested per IA_NA option, so
     // receiving an IA_NA option with multiple IA Address suboptions is
     // indicative of a misbehaving server.
@@ -593,51 +663,105 @@ enum IaNaOption {
         t2: v6::TimeValue,
         ia_addr: Option<IaAddress>,
     },
-    Failure(StatusCodeError),
+    Failure(ErrorStatusCode),
 }
 
-// TODO(https://fxbug.dev/104519): Move this function and associated types
-// into packet-formats-dhcp.
-fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNaOptionError> {
+#[derive(thiserror::Error, Debug)]
+#[error("T1 is greater than T2")]
+struct T1GreaterThanT2Error {
+    t1: v6::TimeValue,
+    t2: v6::TimeValue,
+}
+
+fn check_time_values(t1: v6::TimeValue, t2: v6::TimeValue) -> Result<(), T1GreaterThanT2Error> {
     // Ignore invalid IANA options, per RFC 8415, section 21.4:
     //
     //    If a client receives an IA_NA with T1 greater than T2 and both T1
     //    and T2 are greater than 0, the client discards the IA_NA option
     //    and processes the remainder of the message as though the server
     //    had not included the invalid IA_NA option.
-    let (t1, t2) = (ia_na_data.t1(), ia_na_data.t2());
     match (t1, t2) {
-        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
+        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => Ok(()),
         (t1, t2) => {
             if t1 > t2 {
-                return Err(IaNaOptionError::T1GreaterThanT2 { t1, t2 });
+                Err(T1GreaterThanT2Error { t1, t2 })
+            } else {
+                Ok(())
             }
         }
     }
+}
+
+#[derive(thiserror::Error, Debug)]
+enum StatusCodeError {
+    #[error("unknown status code {0}")]
+    InvalidStatusCode(u16),
+    #[error("duplicate Status Code option {0:?} and {1:?}")]
+    DuplicateStatusCode((v6::StatusCode, String), (v6::StatusCode, String)),
+}
+
+fn check_status_code(
+    code: U16,
+    msg: &str,
+    success_status_message: &mut Option<String>,
+) -> Result<v6::StatusCode, StatusCodeError> {
+    let status_code = code.get().try_into().map_err(|e| match e {
+        v6::ParseError::InvalidStatusCode(code) => StatusCodeError::InvalidStatusCode(code),
+        e => unreachable!("unreachable status code parse error: {}", e),
+    })?;
+    if let Some(existing) = success_status_message.take() {
+        return Err(StatusCodeError::DuplicateStatusCode(
+            (v6::StatusCode::Success, existing),
+            (status_code, msg.to_string()),
+        ));
+    }
+
+    Ok(status_code)
+}
+
+fn check_lifetimes(
+    valid_lifetime: v6::TimeValue,
+    preferred_lifetime: v6::TimeValue,
+) -> Result<Lifetimes, LifetimesError> {
+    match valid_lifetime {
+        v6::TimeValue::Zero => Err(LifetimesError::ValidLifetimeZero),
+        vl @ v6::TimeValue::NonZero(valid_lifetime) => {
+            // Ignore invalid IA Address options, per RFC
+            // 8415, section 21.6:
+            //
+            //    The client MUST discard any addresses for
+            //    which the preferred lifetime is greater
+            //    than the valid lifetime.
+            if preferred_lifetime > vl {
+                Err(LifetimesError::PreferredLifetimeGreaterThanValidLifetime(Lifetimes {
+                    preferred_lifetime,
+                    valid_lifetime,
+                }))
+            } else {
+                Ok(Lifetimes { preferred_lifetime, valid_lifetime })
+            }
+        }
+    }
+}
+
+// TODO(https://fxbug.dev/104519): Move this function and associated types
+// into packet-formats-dhcp.
+fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNaOptionError> {
+    let (t1, t2) = (ia_na_data.t1(), ia_na_data.t2());
+    check_time_values(t1, t2)?;
 
     let mut ia_addr_opt = None;
     let mut success_status_message = None;
     for ia_na_opt in ia_na_data.iter_options() {
         match ia_na_opt {
             v6::ParsedDhcpOption::StatusCode(code, msg) => {
-                let status_code = code.get().try_into().map_err(|e| match e {
-                    v6::ParseError::InvalidStatusCode(code) => {
-                        IaNaOptionError::InvalidStatusCode(code)
-                    }
-                    e => unreachable!("unreachable status code parse error: {}", e),
-                })?;
-                if let Some(existing) = success_status_message {
-                    return Err(IaNaOptionError::DuplicateStatusCode(
-                        (v6::StatusCode::Success, existing),
-                        (status_code, msg.to_string()),
-                    ));
-                }
+                let status_code = check_status_code(code, msg, &mut success_status_message)?;
                 match status_code.into_result() {
                     Ok(()) => {
                         success_status_message = Some(msg.to_string());
                     }
                     Err(error_status_code) => {
-                        return Ok(IaNaOption::Failure(StatusCodeError(
+                        return Ok(IaNaOption::Failure(ErrorStatusCode(
                             error_status_code,
                             msg.to_string(),
                         )))
@@ -645,26 +769,13 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNa
                 }
             }
             v6::ParsedDhcpOption::IaAddr(ia_addr_data) => {
-                let lifetimes = match ia_addr_data.valid_lifetime() {
-                    v6::TimeValue::Zero => Err(LifetimesError::ValidLifetimeZero),
-                    vl @ v6::TimeValue::NonZero(valid_lifetime) => {
-                        let preferred_lifetime = ia_addr_data.preferred_lifetime();
-                        // Ignore invalid IA Address options, per RFC
-                        // 8415, section 21.6:
-                        //
-                        //    The client MUST discard any addresses for
-                        //    which the preferred lifetime is greater
-                        //    than the valid lifetime.
-                        if preferred_lifetime > vl {
-                            Err(LifetimesError::PreferredLifetimeGreaterThanValidLifetime(
-                                Lifetimes { preferred_lifetime, valid_lifetime },
-                            ))
-                        } else {
-                            Ok(Lifetimes { preferred_lifetime, valid_lifetime })
-                        }
-                    }
+                let ia_addr = IaAddress {
+                    address: ia_addr_data.addr(),
+                    lifetimes: check_lifetimes(
+                        ia_addr_data.valid_lifetime(),
+                        ia_addr_data.preferred_lifetime(),
+                    ),
                 };
-                let ia_addr = IaAddress { address: ia_addr_data.addr(), lifetimes };
                 if let Some(existing) = ia_addr_opt {
                     return Err(IaNaOptionError::MultipleIaAddress(existing, ia_addr));
                 }
@@ -694,6 +805,108 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNa
     Ok(IaNaOption::Success { status_message: success_status_message, t1, t2, ia_addr: ia_addr_opt })
 }
 
+#[derive(thiserror::Error, Debug)]
+enum IaPdOptionError {
+    #[error("{0}")]
+    T1GreaterThanT2(#[from] T1GreaterThanT2Error),
+    #[error("status code error: {0}")]
+    StatusCode(#[from] StatusCodeError),
+    // NB: Currently only one prefix is requested per IA_PD option, so
+    // receiving an IA_PD option with multiple IA Prefix suboptions is
+    // indicative of a misbehaving server.
+    #[error("duplicate IA Prefix option {0:?} and {1:?}")]
+    MultipleIaPrefix(IaPrefix, IaPrefix),
+    // TODO(https://fxbug.dev/104297): Use an owned option type rather
+    // than a string of the debug representation of the invalid option.
+    #[error("invalid option: {0:?}")]
+    InvalidOption(String),
+    #[error("invalid subnet")]
+    InvalidSubnet,
+}
+
+#[derive(Debug)]
+struct IaPrefix {
+    prefix: Subnet<Ipv6Addr>,
+    lifetimes: Result<Lifetimes, LifetimesError>,
+}
+
+#[derive(Debug)]
+enum IaPdOption {
+    Success {
+        status_message: Option<String>,
+        t1: v6::TimeValue,
+        t2: v6::TimeValue,
+        ia_prefix: Option<IaPrefix>,
+    },
+    Failure(ErrorStatusCode),
+}
+
+// TODO(https://fxbug.dev/104519): Move this function and associated types
+// into packet-formats-dhcp.
+fn process_ia_pd(ia_pd_data: &v6::IaPdData<&'_ [u8]>) -> Result<IaPdOption, IaPdOptionError> {
+    let (t1, t2) = (ia_pd_data.t1(), ia_pd_data.t2());
+    check_time_values(t1, t2)?;
+
+    let mut ia_prefix_opt = None;
+    let mut success_status_message = None;
+    for ia_pd_opt in ia_pd_data.iter_options() {
+        match ia_pd_opt {
+            v6::ParsedDhcpOption::StatusCode(code, msg) => {
+                let status_code = check_status_code(code, msg, &mut success_status_message)?;
+                match status_code.into_result() {
+                    Ok(()) => {
+                        success_status_message = Some(msg.to_string());
+                    }
+                    Err(error_status_code) => {
+                        return Ok(IaPdOption::Failure(ErrorStatusCode(
+                            error_status_code,
+                            msg.to_string(),
+                        )))
+                    }
+                }
+            }
+            v6::ParsedDhcpOption::IaPrefix(ia_prefix_data) => {
+                let ia_prefix = IaPrefix {
+                    prefix: ia_prefix_data.prefix().map_err(|_| IaPdOptionError::InvalidSubnet)?,
+                    lifetimes: check_lifetimes(
+                        ia_prefix_data.valid_lifetime(),
+                        ia_prefix_data.preferred_lifetime(),
+                    ),
+                };
+                if let Some(existing) = ia_prefix_opt {
+                    return Err(IaPdOptionError::MultipleIaPrefix(existing, ia_prefix));
+                }
+                ia_prefix_opt = Some(ia_prefix);
+            }
+            v6::ParsedDhcpOption::ClientId(_)
+            | v6::ParsedDhcpOption::ServerId(_)
+            | v6::ParsedDhcpOption::SolMaxRt(_)
+            | v6::ParsedDhcpOption::Preference(_)
+            | v6::ParsedDhcpOption::Iana(_)
+            | v6::ParsedDhcpOption::IaAddr(_)
+            | v6::ParsedDhcpOption::InformationRefreshTime(_)
+            | v6::ParsedDhcpOption::IaPd(_)
+            | v6::ParsedDhcpOption::Oro(_)
+            | v6::ParsedDhcpOption::ElapsedTime(_)
+            | v6::ParsedDhcpOption::DnsServers(_)
+            | v6::ParsedDhcpOption::DomainList(_) => {
+                return Err(IaPdOptionError::InvalidOption(format!("{:?}", ia_pd_opt)));
+            }
+        }
+    }
+    // Missing status code option means success per RFC 8415 section 7.5:
+    //
+    //    If the Status Code option (see Section 21.13) does not appear
+    //    in a message in which the option could appear, the status
+    //    of the message is assumed to be Success.
+    Ok(IaPdOption::Success {
+        status_message: success_status_message,
+        t1,
+        t2,
+        ia_prefix: ia_prefix_opt,
+    })
+}
+
 #[derive(Debug)]
 enum NextContactTime {
     InformationRefreshTime(Option<u32>),
@@ -706,6 +919,7 @@ struct Options {
     next_contact_time: NextContactTime,
     preference: Option<u8>,
     non_temporary_addresses: HashMap<v6::IAID, IaNaOption>,
+    delegated_prefixes: HashMap<v6::IAID, IaPdOption>,
     dns_servers: Option<Vec<Ipv6Addr>>,
 }
 
@@ -713,12 +927,12 @@ struct Options {
 struct ProcessedOptions {
     server_id: Vec<u8>,
     solicit_max_rt_opt: Option<u32>,
-    result: Result<Options, StatusCodeError>,
+    result: Result<Options, ErrorStatusCode>,
 }
 
 #[derive(thiserror::Error, Debug)]
 #[error("error status code={0}, message='{1}'")]
-struct StatusCodeError(v6::ErrorStatusCode, String);
+struct ErrorStatusCode(v6::ErrorStatusCode, String);
 
 #[derive(thiserror::Error, Debug)]
 enum OptionsError {
@@ -729,11 +943,17 @@ enum OptionsError {
     #[error("unknown status code {0} with message '{1}'")]
     InvalidStatusCode(u16, String),
     #[error("IA_NA option error")]
-    IaNaOptionError(#[from] IaNaOptionError),
+    IaNaError(#[from] IaNaOptionError),
+    #[error("IA_PD option error")]
+    IaPdError(#[from] IaPdOptionError),
     #[error("duplicate IA_NA option with IAID={0:?} {1:?} and {2:?}")]
     DuplicateIaNaId(v6::IAID, IaNaOption, IaNaOption),
+    #[error("duplicate IA_PD option with IAID={0:?} {1:?} and {2:?}")]
+    DuplicateIaPdId(v6::IAID, IaPdOption, IaPdOption),
     #[error("IA_NA with unexpected IAID")]
     UnexpectedIaNa(v6::IAID, IaNaOption),
+    #[error("IA_PD with unexpected IAID")]
+    UnexpectedIaPd(v6::IAID, IaPdOption),
     #[error("missing Server Id option")]
     MissingServerId,
     #[error("missing Client Id option")]
@@ -787,13 +1007,19 @@ impl IaChecker for NoIaRequested {
     }
 }
 
-impl IaChecker for HashMap<v6::IAID, AddressEntry> {
+impl<A: IaType> IaChecker for HashMap<v6::IAID, IaEntry<A>> {
     fn was_ia_requested(&self, id: &v6::IAID) -> bool {
         self.get(id).is_some()
     }
 }
 
 impl IaChecker for HashMap<v6::IAID, Option<Ipv6Addr>> {
+    fn was_ia_requested(&self, id: &v6::IAID) -> bool {
+        self.get(id).is_some()
+    }
+}
+
+impl IaChecker for HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> {
     fn was_ia_requested(&self, id: &v6::IAID) -> bool {
         self.get(id).is_some()
     }
@@ -822,17 +1048,19 @@ impl IaChecker for HashMap<v6::IAID, Option<Ipv6Addr>> {
 ///
 /// The choice made by this function is (2): an error will be returned in such
 /// cases to inform callers that they should ignore the entire message.
-fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
+fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>(
     msg: &v6::Message<'_, B>,
     exchange_type: ExchangeType,
     want_client_id: Option<[u8; CLIENT_ID_LEN]>,
     iana_checker: &IaNaChecker,
+    iapd_checker: &IaPdChecker,
 ) -> Result<ProcessedOptions, OptionsError> {
     let mut solicit_max_rt_option = None;
     let mut server_id_option = None;
     let mut client_id_option = None;
     let mut preference = None;
     let mut non_temporary_addresses = HashMap::new();
+    let mut delegated_prefixes = HashMap::new();
     let mut status_code_option = None;
     let mut dns_servers = None;
     let mut refresh_time_option = None;
@@ -844,17 +1072,41 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
     // Infinity.
     let mut min_valid_lifetime = v6::NonZeroTimeValue::Infinity;
 
+    // Updates the minimum preferred/valid and T1/T2 (life)times in response
+    // to an IA option.
+    let mut update_min_lifetimes = |preferred_lifetime, valid_lifetime, t1, t2| {
+        min_preferred_lifetime = maybe_get_nonzero_min(min_preferred_lifetime, preferred_lifetime);
+
+        min_valid_lifetime = std::cmp::min(min_valid_lifetime, valid_lifetime);
+
+        // If T1/T2 are set by the server to values greater than 0,
+        // compute the minimum T1 and T2 values, per RFC 8415,
+        // section 18.2.4:
+        //
+        //    [..] the client SHOULD renew/rebind all IAs from the
+        //    server at the same time, the client MUST select T1 and
+        //    T2 times from all IA options that will guarantee that
+        //    the client initiates transmissions of Renew/Rebind
+        //    messages not later than at the T1/T2 times associated
+        //    with any of the client's bindings (earliest T1/T2).
+        //
+        // Only IAs that with success status are included in the earliest
+        // T1/T2 calculation.
+        min_t1 = maybe_get_nonzero_min(min_t1, t1);
+        min_t2 = maybe_get_nonzero_min(min_t2, t2);
+    };
+
     struct AllowedOptions {
         preference: bool,
         information_refresh_time: bool,
-        ia_na: bool,
+        identity_association: bool,
     }
     // See RFC 8415 appendix B for a summary of which options are allowed in
     // which message types.
     let AllowedOptions {
         preference: preference_allowed,
         information_refresh_time: information_refresh_time_allowed,
-        ia_na: ia_na_allowed,
+        identity_association: identity_association_allowed,
     } = match exchange_type {
         ExchangeType::ReplyToInformationRequest => AllowedOptions {
             preference: false,
@@ -869,11 +1121,13 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
             // Since it's invalid to include IA options in an Information-request message,
             // it is also invalid to receive IA options in a Reply in response to an
             // Information-request message.
-            ia_na: false,
+            identity_association: false,
         },
-        ExchangeType::AdvertiseToSolicit => {
-            AllowedOptions { preference: true, information_refresh_time: false, ia_na: true }
-        }
+        ExchangeType::AdvertiseToSolicit => AllowedOptions {
+            preference: true,
+            information_refresh_time: false,
+            identity_association: true,
+        },
         ExchangeType::ReplyWithLeases(
             RequestLeasesMessageType::Request
             | RequestLeasesMessageType::Renew
@@ -888,7 +1142,7 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
                 //    [...] It is only used in Reply messages in response
                 //    to Information-request messages.
                 information_refresh_time: false,
-                ia_na: true,
+                identity_association: true,
             }
         }
     };
@@ -956,7 +1210,7 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
                 preference = Some(preference_opt);
             }
             v6::ParsedDhcpOption::Iana(ref iana_data) => {
-                if !ia_na_allowed {
+                if !identity_association_allowed {
                     return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
                 }
                 let iaid = v6::IAID::new(iana_data.iaid());
@@ -971,37 +1225,16 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
                 }
                 match processed_ia_na {
                     IaNaOption::Failure(_) => {}
-                    IaNaOption::Success { status_message: _, t1, t2, ref ia_addr } => {
-                        match ia_addr {
-                            None | Some(IaAddress { address: _, lifetimes: Err(_) }) => {}
-                            Some(IaAddress {
-                                address: _,
-                                lifetimes: Ok(Lifetimes { preferred_lifetime, valid_lifetime }),
-                            }) => {
-                                min_preferred_lifetime = maybe_get_nonzero_min(
-                                    min_preferred_lifetime,
-                                    *preferred_lifetime,
-                                );
-                                min_valid_lifetime =
-                                    std::cmp::min(min_valid_lifetime, *valid_lifetime);
-                                // If T1/T2 are set by the server to values greater than 0,
-                                // compute the minimum T1 and T2 values, per RFC 8415,
-                                // section 18.2.4:
-                                //
-                                //    [..] the client SHOULD renew/rebind all IAs from the
-                                //    server at the same time, the client MUST select T1 and
-                                //    T2 times from all IA options that will guarantee that
-                                //    the client initiates transmissions of Renew/Rebind
-                                //    messages not later than at the T1/T2 times associated
-                                //    with any of the client's bindings (earliest T1/T2).
-                                //
-                                // Only IAs that with success status are included in the earliest
-                                // T1/T2 calculation.
-                                min_t1 = maybe_get_nonzero_min(min_t1, t1);
-                                min_t2 = maybe_get_nonzero_min(min_t2, t2);
-                            }
+                    IaNaOption::Success { status_message: _, t1, t2, ref ia_addr } => match ia_addr
+                    {
+                        None | Some(IaAddress { address: _, lifetimes: Err(_) }) => {}
+                        Some(IaAddress {
+                            address: _,
+                            lifetimes: Ok(Lifetimes { preferred_lifetime, valid_lifetime }),
+                        }) => {
+                            update_min_lifetimes(*preferred_lifetime, *valid_lifetime, t1, t2);
                         }
-                    }
+                    },
                 }
 
                 // Per RFC 8415, section 21.4, IAIDs are expected to be
@@ -1041,8 +1274,50 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
                 }
                 status_code_option = Some((status_code, message.to_string()));
             }
-            v6::ParsedDhcpOption::IaPd(_) => {
-                // TODO(https://fxbug.dev/80595): Implement Prefix delegation.
+            v6::ParsedDhcpOption::IaPd(ref iapd_data) => {
+                if !identity_association_allowed {
+                    return Err(OptionsError::InvalidOption(format!("{:?}", opt)));
+                }
+                let iaid = v6::IAID::new(iapd_data.iaid());
+                let processed_ia_pd = process_ia_pd(iapd_data)?;
+                if !iapd_checker.was_ia_requested(&iaid) {
+                    // The RFC does not explicitly call out what to do with
+                    // IAs that were not requested by the client.
+                    //
+                    // Return an error to cause the entire message to be
+                    // ignored.
+                    return Err(OptionsError::UnexpectedIaPd(iaid, processed_ia_pd));
+                }
+                match processed_ia_pd {
+                    IaPdOption::Failure(_) => {}
+                    IaPdOption::Success { status_message: _, t1, t2, ref ia_prefix } => {
+                        match ia_prefix {
+                            None | Some(IaPrefix { prefix: _, lifetimes: Err(_) }) => {}
+                            Some(IaPrefix {
+                                prefix: _,
+                                lifetimes: Ok(Lifetimes { preferred_lifetime, valid_lifetime }),
+                            }) => {
+                                update_min_lifetimes(*preferred_lifetime, *valid_lifetime, t1, t2);
+                            }
+                        }
+                    }
+                }
+                // Per RFC 8415, section 21.21, IAIDs are expected to be unique.
+                //
+                //   A DHCP message may contain multiple IA_PD options (though
+                //   each must have a unique IAID).
+                match delegated_prefixes.entry(iaid) {
+                    Entry::Occupied(entry) => {
+                        return Err(OptionsError::DuplicateIaPdId(
+                            iaid,
+                            entry.remove(),
+                            processed_ia_pd,
+                        ));
+                    }
+                    Entry::Vacant(entry) => {
+                        let _: &mut IaPdOption = entry.insert(processed_ia_pd);
+                    }
+                };
             }
             v6::ParsedDhcpOption::InformationRefreshTime(information_refresh_time) => {
                 if !information_refresh_time_allowed {
@@ -1122,7 +1397,7 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
                 return Ok(ProcessedOptions {
                     server_id,
                     solicit_max_rt_opt: solicit_max_rt_option,
-                    result: Err(StatusCodeError(error_code, message)),
+                    result: Err(ErrorStatusCode(error_code, message)),
                 });
             }
         },
@@ -1204,6 +1479,7 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker>(
             next_contact_time,
             preference,
             non_temporary_addresses,
+            delegated_prefixes,
             dns_servers,
         }),
     })
@@ -1442,17 +1718,23 @@ impl ServerDiscovery {
             let AdvertiseMessage {
                 server_id,
                 non_temporary_addresses: advertised_non_temporary_addresses,
+                delegated_prefixes: advertised_delegated_prefixes,
                 dns_servers: _,
                 preference: _,
                 receive_time: _,
                 preferred_non_temporary_addresses_count: _,
+                preferred_delegated_prefixes_count: _,
             } = advertise;
             return Requesting::start(
                 client_id,
                 server_id,
-                advertise_to_address_entries(
+                advertise_to_ia_entries(
                     advertised_non_temporary_addresses,
                     configured_non_temporary_addresses,
+                ),
+                advertise_to_ia_entries(
+                    advertised_delegated_prefixes,
+                    configured_delegated_prefixes,
                 ),
                 &options_to_request,
                 collected_advertise,
@@ -1498,6 +1780,7 @@ impl ServerDiscovery {
             ExchangeType::AdvertiseToSolicit,
             Some(client_id),
             &configured_non_temporary_addresses,
+            &configured_delegated_prefixes,
         ) {
             Ok(processed_options) => processed_options,
             Err(e) => {
@@ -1544,7 +1827,8 @@ impl ServerDiscovery {
             success_status_message,
             next_contact_time: _,
             preference,
-            mut non_temporary_addresses,
+            non_temporary_addresses,
+            delegated_prefixes,
             dns_servers,
         } = match result {
             Ok(options) => options,
@@ -1575,7 +1859,7 @@ impl ServerDiscovery {
             }
         }
         let non_temporary_addresses = non_temporary_addresses
-            .drain()
+            .into_iter()
             .filter_map(|(iaid, ia_na)| {
                 let (success_status_message, ia_addr) = match ia_na {
                     IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
@@ -1618,13 +1902,62 @@ impl ServerDiscovery {
                 })
             })
             .collect::<HashMap<_, _>>();
-        let preferred_non_temporary_addresses_count = compute_preferred_address_count(
-            &non_temporary_addresses,
-            &configured_non_temporary_addresses,
-        );
+        let delegated_prefixes = delegated_prefixes
+            .into_iter()
+            .filter_map(|(iaid, ia_pd)| {
+                let (success_status_message, ia_prefix) = match ia_pd {
+                    IaPdOption::Success { status_message, t1: _, t2: _, ia_prefix } => {
+                        (status_message, ia_prefix)
+                    }
+                    IaPdOption::Failure(e) => {
+                        warn!(
+                            "Advertise from server {:?} contains IA_PD with error status code: {}",
+                            server_id, e
+                        );
+                        return None;
+                    }
+                };
+                if let Some(success_status_message) = success_status_message {
+                    if !success_status_message.is_empty() {
+                        info!(
+                            "Advertise from server {:?} IA_PD with IAID {:?} \
+                            success status code message: {}",
+                            server_id, iaid, success_status_message,
+                        );
+                    }
+                }
+                ia_prefix.and_then(|IaPrefix { prefix, lifetimes }| match lifetimes {
+                    Ok(Lifetimes { preferred_lifetime, valid_lifetime }) => Some((
+                        iaid,
+                        IaPd {
+                            prefix,
+                            preferred_lifetime,
+                            valid_lifetime: v6::TimeValue::NonZero(valid_lifetime),
+                        },
+                    )),
+                    Err(e) => {
+                        warn!(
+                            "Advertise from server {:?}: \
+                            ignoring IA_PD with IAID {:?} because of invalid lifetimes: {}",
+                            server_id, iaid, e
+                        );
+                        None
+                    }
+                })
+            })
+            .collect::<HashMap<_, _>>();
         let advertise = AdvertiseMessage {
+            preferred_non_temporary_addresses_count: compute_preferred_ia_count(
+                &non_temporary_addresses,
+                &configured_non_temporary_addresses,
+            ),
+            preferred_delegated_prefixes_count: compute_preferred_ia_count(
+                &delegated_prefixes,
+                &configured_delegated_prefixes,
+            ),
             server_id,
             non_temporary_addresses,
+            delegated_prefixes,
             dns_servers: dns_servers.unwrap_or(Vec::new()),
             // Per RFC 8415, section 18.2.1:
             //
@@ -1632,7 +1965,6 @@ impl ServerDiscovery {
             //   option is considered to have a preference value of 0.
             preference: preference.unwrap_or(0),
             receive_time: now,
-            preferred_non_temporary_addresses_count,
         };
         if !advertise.has_ias() {
             return Transition {
@@ -1684,17 +2016,23 @@ impl ServerDiscovery {
             let AdvertiseMessage {
                 server_id,
                 non_temporary_addresses: advertised_non_temporary_addresses,
+                delegated_prefixes: advertised_delegated_prefixes,
                 dns_servers: _,
                 preference: _,
                 receive_time: _,
                 preferred_non_temporary_addresses_count: _,
+                preferred_delegated_prefixes_count: _,
             } = advertise;
             return Requesting::start(
                 client_id,
                 server_id,
-                advertise_to_address_entries(
+                advertise_to_ia_entries(
                     advertised_non_temporary_addresses,
                     configured_non_temporary_addresses,
+                ),
+                advertise_to_ia_entries(
+                    advertised_delegated_prefixes,
+                    configured_delegated_prefixes,
                 ),
                 &options_to_request,
                 collected_advertise,
@@ -1761,8 +2099,10 @@ struct Requesting {
     /// [Client Identifier]:
     /// https://datatracker.ietf.org/doc/html/rfc8415#section-21.2
     client_id: [u8; CLIENT_ID_LEN],
-    /// The non-temporary addresses entries negotiated by the client.
+    /// The non-temporary addresses negotiated by the client.
     non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
+    /// The delegated prefixes negotiated by the client.
+    delegated_prefixes: HashMap<v6::IAID, PrefixEntry>,
     /// The [server identifier] of the server to which the client sends
     /// requests.
     ///
@@ -1805,31 +2145,36 @@ struct Requesting {
 fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
     client_id: [u8; CLIENT_ID_LEN],
     non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
+    delegated_prefixes: HashMap<v6::IAID, PrefixEntry>,
     options_to_request: &[v6::OptionCode],
     mut collected_advertise: BinaryHeap<AdvertiseMessage>,
     solicit_max_rt: Duration,
     rng: &mut R,
     now: Instant,
 ) -> Transition {
-    let configured_non_temporary_addresses = to_configured_addresses(non_temporary_addresses);
+    let configured_non_temporary_addresses = to_configured_values(non_temporary_addresses);
+    let configured_delegated_prefixes = to_configured_values(delegated_prefixes);
     if let Some(advertise) = collected_advertise.pop() {
         // TODO(https://fxbug.dev/96674): Before selecting a different server,
         // add actions to remove the existing assigned addresses, if any.
         let AdvertiseMessage {
             server_id,
             non_temporary_addresses: advertised_non_temporary_addresses,
+            delegated_prefixes: advertised_delegated_prefixes,
             dns_servers: _,
             preference: _,
             receive_time: _,
             preferred_non_temporary_addresses_count: _,
+            preferred_delegated_prefixes_count: _,
         } = advertise;
         return Requesting::start(
             client_id,
             server_id,
-            advertise_to_address_entries(
+            advertise_to_ia_entries(
                 advertised_non_temporary_addresses,
                 configured_non_temporary_addresses,
             ),
+            advertise_to_ia_entries(advertised_delegated_prefixes, configured_delegated_prefixes),
             &options_to_request,
             collected_advertise,
             solicit_max_rt,
@@ -1843,9 +2188,7 @@ fn request_from_alternate_server_or_restart_server_discovery<R: Rng>(
         transaction_id(),
         client_id,
         configured_non_temporary_addresses,
-        // TODO(https://fxbug.dev/80595): Re-request servers with PD if PD was
-        // originally requested.
-        Default::default(), /* configured_delegated_prefixes */
+        configured_delegated_prefixes,
         &options_to_request,
         solicit_max_rt,
         rng,
@@ -1890,7 +2233,7 @@ enum ReplyWithLeasesError {
     #[error("mismatched Server ID, got {got:?} want {want:?}")]
     MismatchedServerId { got: Vec<u8>, want: Vec<u8> },
     #[error("status code error")]
-    StatusCodeError(#[from] StatusCodeError),
+    ErrorStatusCode(#[from] ErrorStatusCode),
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -2080,6 +2423,7 @@ fn process_reply_with_leases<B: ByteSlice>(
             ExchangeType::ReplyWithLeases(request_type),
             Some(client_id),
             current_non_temporary_addresses,
+            &NoIaRequested,
         )?;
 
     match request_type {
@@ -2110,6 +2454,8 @@ fn process_reply_with_leases<B: ByteSlice>(
         next_contact_time,
         preference: _,
         non_temporary_addresses,
+        // TODO(https://fxbug.dev/112973): Consider delegated prefixes.
+        delegated_prefixes: _,
         dns_servers,
     } = result?;
 
@@ -2137,7 +2483,7 @@ fn process_reply_with_leases<B: ByteSlice>(
                 IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
                     (status_message, ia_addr)
                 }
-                IaNaOption::Failure(StatusCodeError(error_code, msg)) => {
+                IaNaOption::Failure(ErrorStatusCode(error_code, msg)) => {
                     if !msg.is_empty() {
                         warn!(
                             "Reply to {}: IA_NA with IAID {:?} \
@@ -2204,10 +2550,8 @@ fn process_reply_with_leases<B: ByteSlice>(
                     );
                     discard_leases(&current_address_entry);
                     assert_eq!(
-                        non_temporary_addresses.insert(
-                            iaid,
-                            AddressEntry::ToRequest(current_address_entry.address()),
-                        ),
+                        non_temporary_addresses
+                            .insert(iaid, AddressEntry::ToRequest(current_address_entry.value())),
                         None
                     );
                     return (non_temporary_addresses, go_to_requesting);
@@ -2403,25 +2747,21 @@ fn process_reply_with_leases<B: ByteSlice>(
     })
 }
 
-/// Create a map of addresses entries to be requested, combining the IAs in the
+/// Create a map of IA entries to be requested, combining the IAs in the
 /// Advertise with the configured IAs that are not included in the Advertise.
-fn advertise_to_address_entries(
-    advertised_addresses: HashMap<v6::IAID, IaNa>,
-    configured_addresses: HashMap<v6::IAID, Option<Ipv6Addr>>,
-) -> HashMap<v6::IAID, AddressEntry> {
-    configured_addresses
+fn advertise_to_ia_entries<A: IaType>(
+    advertised: HashMap<v6::IAID, A>,
+    configured: HashMap<v6::IAID, Option<A::Value>>,
+) -> HashMap<v6::IAID, IaEntry<A>> {
+    configured
         .iter()
-        .map(|(iaid, configured_address)| {
-            let address_to_request = match advertised_addresses.get(iaid) {
-                Some(IaNa {
-                    address: advertised_address,
-                    preferred_lifetime: _,
-                    valid_lifetime: _,
-                }) => {
+        .map(|(iaid, configured)| {
+            let address_to_request = match advertised.get(iaid) {
+                Some(ia) => {
                     // Note that the advertised address for an IAID may
                     // be different from what was solicited by the
                     // client.
-                    Some(*advertised_address)
+                    Some(ia.value())
                 }
                 // The configured address was not advertised; the client
                 // will continue to request it in subsequent messages, per
@@ -2430,9 +2770,9 @@ fn advertise_to_address_entries(
                 //    When possible, the client SHOULD use the best
                 //    configuration available and continue to request the
                 //    additional IAs in subsequent messages.
-                None => *configured_address,
+                None => *configured,
             };
-            (*iaid, AddressEntry::ToRequest(address_to_request))
+            (*iaid, IaEntry::ToRequest(address_to_request))
         })
         .collect::<HashMap<_, _>>()
 }
@@ -2445,6 +2785,7 @@ impl Requesting {
         client_id: [u8; CLIENT_ID_LEN],
         server_id: Vec<u8>,
         non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
+        delegated_prefixes: HashMap<v6::IAID, PrefixEntry>,
         options_to_request: &[v6::OptionCode],
         collected_advertise: BinaryHeap<AdvertiseMessage>,
         solicit_max_rt: Duration,
@@ -2454,6 +2795,7 @@ impl Requesting {
         Self {
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             collected_advertise,
             first_request_time: None,
@@ -2512,6 +2854,7 @@ impl Requesting {
             client_id,
             server_id,
             non_temporary_addresses,
+            delegated_prefixes,
             collected_advertise,
             first_request_time,
             retrans_timeout: prev_retrans_timeout,
@@ -2536,7 +2879,7 @@ impl Requesting {
             assert_matches!(
                 iaaddr_options.insert(
                     *iaid,
-                    addr_entry.address().map(|addr| {
+                    addr_entry.value().map(|addr| {
                         [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
                     }),
                 ),
@@ -2551,6 +2894,7 @@ impl Requesting {
                 iaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
             )));
         }
+        // TODO(https://fxbug.dev/112973): Send Request messages with IA_PD.
 
         // Per RFC 8415, section 18.2.2:
         //
@@ -2584,6 +2928,7 @@ impl Requesting {
             state: ClientState::Requesting(Requesting {
                 client_id,
                 non_temporary_addresses,
+                delegated_prefixes,
                 server_id,
                 collected_advertise,
                 first_request_time,
@@ -2639,6 +2984,7 @@ impl Requesting {
         let Self {
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             collected_advertise,
             first_request_time,
@@ -2650,6 +2996,7 @@ impl Requesting {
             return Self {
                 client_id,
                 non_temporary_addresses,
+                delegated_prefixes,
                 server_id,
                 collected_advertise,
                 first_request_time,
@@ -2667,6 +3014,7 @@ impl Requesting {
         request_from_alternate_server_or_restart_server_discovery(
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             &options_to_request,
             collected_advertise,
             solicit_max_rt,
@@ -2685,6 +3033,7 @@ impl Requesting {
         let Self {
             client_id,
             non_temporary_addresses: mut current_non_temporary_addresses,
+            delegated_prefixes: current_delegated_prefixes,
             server_id,
             collected_advertise,
             first_request_time,
@@ -2709,7 +3058,7 @@ impl Requesting {
             Ok(processed) => processed,
             Err(e) => {
                 match e {
-                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(error_code, message)) => {
+                    ReplyWithLeasesError::ErrorStatusCode(ErrorStatusCode(error_code, message)) => {
                         match error_code {
                             v6::ErrorStatusCode::NotOnLink => {
                                 // Per RFC 8415, section 18.2.10.1:
@@ -2743,6 +3092,7 @@ impl Requesting {
                                 return Requesting {
                                     client_id,
                                     non_temporary_addresses: current_non_temporary_addresses,
+                                    delegated_prefixes: current_delegated_prefixes,
                                     server_id,
                                     collected_advertise,
                                     first_request_time,
@@ -2801,6 +3151,7 @@ impl Requesting {
                             state: ClientState::Requesting(Self {
                                 client_id,
                                 non_temporary_addresses: current_non_temporary_addresses,
+                                delegated_prefixes: current_delegated_prefixes,
                                 server_id,
                                 collected_advertise,
                                 first_request_time,
@@ -2819,6 +3170,7 @@ impl Requesting {
                     state: ClientState::Requesting(Self {
                         client_id,
                         non_temporary_addresses: current_non_temporary_addresses,
+                        delegated_prefixes: current_delegated_prefixes,
                         server_id,
                         collected_advertise,
                         first_request_time,
@@ -2851,6 +3203,7 @@ impl Requesting {
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
                     current_non_temporary_addresses,
+                    current_delegated_prefixes,
                     &options_to_request,
                     collected_advertise,
                     solicit_max_rt,
@@ -2878,34 +3231,36 @@ impl Requesting {
 }
 
 #[derive(Debug, PartialEq, Copy, Clone)]
-enum AddressEntry {
+enum IaEntry<A: IaType> {
     /// The address is assigned.
-    Assigned(IaNa),
+    Assigned(A),
     /// The address is not assigned, and is to be requested in subsequent
     /// messages.
-    ToRequest(Option<Ipv6Addr>),
+    ToRequest(Option<A::Value>),
 }
 
-impl AddressEntry {
-    /// Returns the assigned address.
-    fn address(&self) -> Option<Ipv6Addr> {
+impl<A: IaType> IaEntry<A> {
+    fn value(&self) -> Option<A::Value> {
         match self {
-            AddressEntry::Assigned(ia) => Some(ia.address),
-            AddressEntry::ToRequest(address) => *address,
+            Self::Assigned(ia) => Some(ia.value()),
+            Self::ToRequest(value) => *value,
         }
     }
 
     fn to_request(&self, without_hints: bool) -> Self {
-        Self::ToRequest(if without_hints { None } else { self.address() })
+        Self::ToRequest(if without_hints { None } else { self.value() })
     }
 }
 
-/// Extracts the configured addresses from a map of address entries.
-fn to_configured_addresses(
-    addresses: HashMap<v6::IAID, AddressEntry>,
-) -> HashMap<v6::IAID, Option<Ipv6Addr>> {
-    addresses.iter().map(|(iaid, addr_entry)| (*iaid, addr_entry.address())).collect()
+/// Extracts the configured values from a map of IA entries.
+fn to_configured_values<A: IaType>(
+    entries: HashMap<v6::IAID, IaEntry<A>>,
+) -> HashMap<v6::IAID, Option<A::Value>> {
+    entries.iter().map(|(iaid, entry)| (*iaid, entry.value())).collect()
 }
+
+type AddressEntry = IaEntry<IaNa>;
+type PrefixEntry = IaEntry<IaPd>;
 
 /// Provides methods for handling state transitions from Assigned state.
 #[derive(Debug)]
@@ -3143,7 +3498,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             assert_matches!(
                 iaaddr_options.insert(
                     *iaid,
-                    addr_entry.address().map(|addr| {
+                    addr_entry.value().map(|addr| {
                         [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
                     }),
                 ),
@@ -3256,7 +3611,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     // message had not been received. Note the RFC does not specify what
                     // to do in this case; the client ignores the Reply in order to
                     // preserve existing bindings.
-                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                    ReplyWithLeasesError::ErrorStatusCode(ErrorStatusCode(
                         v6::ErrorStatusCode::UnspecFail,
                         message,
                     )) => {
@@ -3266,7 +3621,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                             message
                         );
                     }
-                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                    ReplyWithLeasesError::ErrorStatusCode(ErrorStatusCode(
                         v6::ErrorStatusCode::UseMulticast,
                         message,
                     )) => {
@@ -3277,7 +3632,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                             message
                         );
                     }
-                    ReplyWithLeasesError::StatusCodeError(StatusCodeError(
+                    ReplyWithLeasesError::ErrorStatusCode(ErrorStatusCode(
                         error_code @ (v6::ErrorStatusCode::NoAddrsAvail
                         | v6::ErrorStatusCode::NoBinding
                         | v6::ErrorStatusCode::NotOnLink
@@ -3337,6 +3692,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
                     current_non_temporary_addresses,
+                    Default::default(), /* current_delegated_prefixes */
                     &options_to_request,
                     Default::default(), /* collected_advertise */
                     solicit_max_rt,
@@ -3384,6 +3740,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 client_id,
                 server_id,
                 non_temporary_addresses,
+                Default::default(), /* delegated_prefixes */
                 &options_to_request,
                 Default::default(), /* collected_advertise */
                 solicit_max_rt,
@@ -3615,6 +3972,7 @@ impl ClientState {
             | ClientState::Requesting(Requesting {
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id: _,
                 collected_advertise: _,
                 first_request_time: _,
@@ -3850,6 +4208,8 @@ pub(crate) mod testconsts {
         net_ip_v6!("::ffff:c00a:456"),
         net_ip_v6!("::ffff:c00a:789"),
     ];
+    pub(crate) const REPLY_DELEGATED_PREFIXES: [Subnet<Ipv6Addr>; 3] =
+        [net_subnet_v6!("d::/64"), net_subnet_v6!("e::/60"), net_subnet_v6!("f::/56")];
     pub(crate) const CONFIGURED_DELEGATED_PREFIXES: [Subnet<Ipv6Addr>; 3] =
         [net_subnet_v6!("a::/64"), net_subnet_v6!("b::/60"), net_subnet_v6!("c::/56")];
 
@@ -4024,12 +4384,24 @@ pub(crate) mod testutil {
         }
     }
 
+    impl IaPd {
+        pub(crate) fn new_default(prefix: Subnet<Ipv6Addr>) -> IaPd {
+            IaPd {
+                prefix,
+                preferred_lifetime: v6::TimeValue::Zero,
+                valid_lifetime: v6::TimeValue::Zero,
+            }
+        }
+    }
+
     impl AdvertiseMessage {
         pub(crate) fn new_default(
             server_id: [u8; TEST_SERVER_ID_LEN],
             non_temporary_addresses: &[Ipv6Addr],
+            delegated_prefixes: &[Subnet<Ipv6Addr>],
             dns_servers: &[Ipv6Addr],
             configured_non_temporary_addresses: &HashMap<v6::IAID, Option<Ipv6Addr>>,
+            configured_delegated_prefixes: &HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>>,
         ) -> AdvertiseMessage {
             let non_temporary_addresses = (0..)
                 .map(v6::IAID::new)
@@ -4038,17 +4410,28 @@ pub(crate) mod testutil {
                     addrs
                 }))
                 .collect();
-            let preferred_non_temporary_addresses_count = compute_preferred_address_count(
+            let delegated_prefixes = (0..)
+                .map(v6::IAID::new)
+                .zip(delegated_prefixes.iter().fold(Vec::new(), |mut prefixes, prefix| {
+                    prefixes.push(IaPd::new_default(*prefix));
+                    prefixes
+                }))
+                .collect();
+            let preferred_non_temporary_addresses_count = compute_preferred_ia_count(
                 &non_temporary_addresses,
                 &configured_non_temporary_addresses,
             );
+            let preferred_delegated_prefixes_count =
+                compute_preferred_ia_count(&delegated_prefixes, &configured_delegated_prefixes);
             AdvertiseMessage {
                 server_id: server_id.to_vec(),
                 non_temporary_addresses,
+                delegated_prefixes,
                 dns_servers: dns_servers.to_vec(),
                 preference: 0,
                 receive_time: Instant::now(),
                 preferred_non_temporary_addresses_count,
+                preferred_delegated_prefixes_count,
             }
         }
     }
@@ -4205,6 +4588,7 @@ pub(crate) mod testutil {
                 retrans_count,
                 solicit_max_rt,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 first_request_time: _,
             } = assert_matches!(&state, Some(ClientState::Requesting(requesting)) => requesting);
             assert_eq!(*got_client_id, client_id);
@@ -4659,6 +5043,8 @@ pub(crate) mod testutil {
 
 #[cfg(test)]
 mod tests {
+    use std::cmp::Ordering;
+
     use super::*;
     use packet::ParsablePacket;
     use rand::rngs::mock::StepRng;
@@ -4894,116 +5280,111 @@ mod tests {
         let configured_non_temporary_addresses =
             testutil::to_configured_addresses(configure_count, hints);
         assert_eq!(
-            super::compute_preferred_address_count(
-                &got_addresses,
-                &configured_non_temporary_addresses
-            ),
+            super::compute_preferred_ia_count(&got_addresses, &configured_non_temporary_addresses),
             want,
         );
     }
 
-    #[test]
-    fn advertise_message_has_ias() {
+    #[test_case(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2], &CONFIGURED_DELEGATED_PREFIXES[0..2], true)]
+    #[test_case(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1], &CONFIGURED_DELEGATED_PREFIXES[0..1], true)]
+    #[test_case(&REPLY_NON_TEMPORARY_ADDRESSES[0..2], &REPLY_DELEGATED_PREFIXES[0..2], true)]
+    #[test_case(&[], &[], false)]
+    fn advertise_message_has_ias(
+        non_temporary_addresses: &[Ipv6Addr],
+        delegated_prefixes: &[Subnet<Ipv6Addr>],
+        expected: bool,
+    ) {
         let configured_non_temporary_addresses = testutil::to_configured_addresses(
             2,
             std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
         );
 
-        // We requested 2 IAs and got both.
-        let advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        assert!(advertise.has_ias());
-
-        // We requested 2 IAs but only got 1.
-        let advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        assert!(advertise.has_ias());
-
-        // We requested 2 IAs but got none.
-        let advertise = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &[],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        assert!(!advertise.has_ias());
+        let configured_delegated_prefixes =
+            testutil::to_configured_prefixes(2, std::iter::once(CONFIGURED_DELEGATED_PREFIXES[0]));
 
         // Advertise is acceptable even though it does not contain the solicited
         // preferred address.
         let advertise = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &REPLY_NON_TEMPORARY_ADDRESSES[0..2],
+            non_temporary_addresses,
+            delegated_prefixes,
             &[],
             &configured_non_temporary_addresses,
+            &configured_delegated_prefixes,
         );
-        assert!(advertise.has_ias());
+        assert_eq!(advertise.has_ias(), expected);
     }
 
-    #[test]
-    fn advertise_message_ord() {
+    struct AdvertiseMessageOrdTestCase<'a> {
+        adv1_non_temporary_addresses: &'a [Ipv6Addr],
+        adv1_delegated_prefixes: &'a [Subnet<Ipv6Addr>],
+        adv2_non_temporary_addresses: &'a [Ipv6Addr],
+        adv2_delegated_prefixes: &'a [Subnet<Ipv6Addr>],
+        expected: Ordering,
+    }
+
+    #[test_case(AdvertiseMessageOrdTestCase{
+        adv1_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
+        adv1_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[0..2],
+        adv2_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
+        adv2_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[0..3],
+        expected: Ordering::Less,
+    }; "adv1 has less IAs")]
+    #[test_case(AdvertiseMessageOrdTestCase{
+        adv1_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
+        adv1_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[0..2],
+        adv2_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[1..3],
+        adv2_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[1..3],
+        expected: Ordering::Greater,
+    }; "adv1 has IAs matching hint")]
+    #[test_case(AdvertiseMessageOrdTestCase{
+        adv1_non_temporary_addresses: &[],
+        adv1_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[0..3],
+        adv2_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1],
+        adv2_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[0..1],
+        expected: Ordering::Less,
+    }; "adv1 missing IA_NA")]
+    #[test_case(AdvertiseMessageOrdTestCase{
+        adv1_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
+        adv1_delegated_prefixes: &CONFIGURED_DELEGATED_PREFIXES[0..1],
+        adv2_non_temporary_addresses: &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
+        adv2_delegated_prefixes: &[],
+        expected: Ordering::Greater,
+    }; "adv2 missing IA_PD")]
+    fn advertise_message_ord(
+        AdvertiseMessageOrdTestCase {
+            adv1_non_temporary_addresses,
+            adv1_delegated_prefixes,
+            adv2_non_temporary_addresses,
+            adv2_delegated_prefixes,
+            expected,
+        }: AdvertiseMessageOrdTestCase<'_>,
+    ) {
         let configured_non_temporary_addresses = testutil::to_configured_addresses(
             3,
             std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
         );
 
-        // `advertise2` is complete, `advertise1` is not.
-        let advertise1 = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        let advertise2 = AdvertiseMessage::new_default(
-            SERVER_ID[1],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        assert!(advertise1 < advertise2);
+        let configured_delegated_prefixes =
+            testutil::to_configured_prefixes(3, std::iter::once(CONFIGURED_DELEGATED_PREFIXES[0]));
 
-        // Neither advertise is complete, but `advertise2` has more addresses,
-        // hence `advertise2` is preferred even though it does not contain the
-        // configured preferred address.
         let advertise1 = AdvertiseMessage::new_default(
             SERVER_ID[0],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1],
+            adv1_non_temporary_addresses,
+            adv1_delegated_prefixes,
             &[],
             &configured_non_temporary_addresses,
+            &configured_delegated_prefixes,
         );
         let advertise2 = AdvertiseMessage::new_default(
             SERVER_ID[1],
-            &REPLY_NON_TEMPORARY_ADDRESSES[0..2],
+            adv2_non_temporary_addresses,
+            adv2_delegated_prefixes,
             &[],
             &configured_non_temporary_addresses,
+            &configured_delegated_prefixes,
         );
-        assert!(advertise1 < advertise2);
-
-        // Both advertise are complete, but `advertise1` was received first.
-        let advertise1 = AdvertiseMessage::new_default(
-            SERVER_ID[0],
-            &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..3],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        let advertise2 = AdvertiseMessage::new_default(
-            SERVER_ID[1],
-            &[
-                CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
-                REPLY_NON_TEMPORARY_ADDRESSES[1],
-                REPLY_NON_TEMPORARY_ADDRESSES[2],
-            ],
-            &[],
-            &configured_non_temporary_addresses,
-        );
-        assert!(advertise1 > advertise2);
+        assert_eq!(advertise1.cmp(&advertise2), expected);
     }
 
     #[test_case(v6::DhcpOption::StatusCode(v6::StatusCode::Success.into(), ""); "status_code")]
@@ -5036,13 +5417,14 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let requested_ia_nas = HashMap::from([(iaid, None)]);
+        let requested_ia_nas = HashMap::from([(iaid, None::<Ipv6Addr>)]);
         assert_matches!(
             process_options(
                 &msg,
                 ExchangeType::AdvertiseToSolicit,
                 Some(client_id),
-                &requested_ia_nas
+                &requested_ia_nas,
+                &NoIaRequested
             ),
             Err(OptionsError::DuplicateOption(_, _, _))
         );
@@ -5068,9 +5450,9 @@ mod tests {
         builder.serialize(&mut buf);
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
-        let requested_ia_nas = HashMap::from([(iaid, None)]);
+        let requested_ia_nas = HashMap::from([(iaid, None::<Ipv6Addr>)]);
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &requested_ia_nas),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &requested_ia_nas, &NoIaRequested),
             Err(OptionsError::DuplicateIaNaId(got_iaid, _, _)) if got_iaid == iaid
         );
     }
@@ -5088,6 +5470,7 @@ mod tests {
                 &msg,
                 ExchangeType::AdvertiseToSolicit,
                 Some(CLIENT_ID),
+                &NoIaRequested,
                 &NoIaRequested
             ),
             Err(OptionsError::MissingServerId)
@@ -5107,6 +5490,7 @@ mod tests {
                 &msg,
                 ExchangeType::AdvertiseToSolicit,
                 Some(CLIENT_ID),
+                &NoIaRequested,
                 &NoIaRequested
             ),
             Err(OptionsError::MissingClientId)
@@ -5125,7 +5509,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &NoIaRequested),
+            process_options(&msg, ExchangeType::AdvertiseToSolicit, Some(CLIENT_ID), &NoIaRequested, &NoIaRequested),
             Err(OptionsError::MismatchedClientId { got, want })
                 if got[..] == MISMATCHED_CLIENT_ID && want == CLIENT_ID
         );
@@ -5141,7 +5525,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, ExchangeType::ReplyToInformationRequest, None, &NoIaRequested),
+            process_options(&msg, ExchangeType::ReplyToInformationRequest, None, &NoIaRequested, &NoIaRequested),
             Err(OptionsError::UnexpectedClientId(got))
                 if got[..] == CLIENT_ID
         );
@@ -5184,7 +5568,7 @@ mod tests {
         let mut buf = &buf[..]; // Implements BufferView.
         let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
         assert_matches!(
-            process_options(&msg, exchange_type, Some(CLIENT_ID), &NoIaRequested),
+            process_options(&msg, exchange_type, Some(CLIENT_ID), &NoIaRequested, &NoIaRequested),
             Err(OptionsError::InvalidOption(_))
         );
     }
@@ -5401,6 +5785,7 @@ mod tests {
         let Requesting {
             client_id: _,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             server_id: _,
             collected_advertise: _,
             first_request_time: _,
@@ -5497,10 +5882,12 @@ mod tests {
                     Some(AdvertiseMessage {
                         server_id: _,
                         non_temporary_addresses,
+                        delegated_prefixes: _,
                         dns_servers: _,
                         preference: _,
                         receive_time: _,
                         preferred_non_temporary_addresses_count: _,
+                        preferred_delegated_prefixes_count: _,
                     }) if *non_temporary_addresses == HashMap::from([(v6::IAID::new(0), ia)])
                 )
             }
@@ -5590,6 +5977,7 @@ mod tests {
         let Requesting {
             client_id: _,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             server_id: _,
             collected_advertise,
             first_request_time: _,
@@ -5621,18 +6009,23 @@ mod tests {
         let options_to_request = vec![];
         let configured_non_temporary_addresses = testutil::to_configured_addresses(1, vec![]);
         let advertised_non_temporary_addresses = [CONFIGURED_NON_TEMPORARY_ADDRESSES[0]];
+        let configured_delegated_prefixes = HashMap::new();
         let mut want_collected_advertise = [
             AdvertiseMessage::new_default(
                 SERVER_ID[1],
                 &CONFIGURED_NON_TEMPORARY_ADDRESSES[1..=1],
                 &[],
+                &[],
                 &configured_non_temporary_addresses,
+                &configured_delegated_prefixes,
             ),
             AdvertiseMessage::new_default(
                 SERVER_ID[2],
                 &CONFIGURED_NON_TEMPORARY_ADDRESSES[2..=2],
                 &[],
+                &[],
                 &configured_non_temporary_addresses,
+                &configured_delegated_prefixes,
             ),
         ]
         .into_iter()
@@ -5643,10 +6036,11 @@ mod tests {
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
-            advertise_to_address_entries(
+            advertise_to_ia_entries(
                 testutil::to_default_ias_map(&advertised_non_temporary_addresses),
                 configured_non_temporary_addresses.clone(),
             ),
+            Default::default(), /* delegated_prefixes */
             &options_to_request[..],
             want_collected_advertise.clone(),
             MAX_SOLICIT_TIMEOUT,
@@ -5665,6 +6059,7 @@ mod tests {
         {
             let Requesting {
                 non_temporary_addresses: got_non_temporary_addresses,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise,
                 client_id: _,
@@ -5707,6 +6102,7 @@ mod tests {
             let Requesting {
                 client_id: _,
                 non_temporary_addresses: got_non_temporary_addresses,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -5753,6 +6149,7 @@ mod tests {
             let Requesting {
                 client_id: _,
                 non_temporary_addresses: got_non_temporary_addresses,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -5800,6 +6197,7 @@ mod tests {
                 collected_advertise,
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 first_request_time: _,
                 retrans_timeout: _,
                 retrans_count: _,
@@ -5837,10 +6235,11 @@ mod tests {
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
-            advertise_to_address_entries(
+            advertise_to_ia_entries(
                 testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]),
                 configured_non_temporary_addresses.clone(),
             ),
+            Default::default(), /* delegated_prefixes */
             &options_to_request[..],
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
@@ -5945,10 +6344,11 @@ mod tests {
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
-            advertise_to_address_entries(
+            advertise_to_ia_entries(
                 testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1]),
                 configured_non_temporary_addresses.clone(),
             ),
+            Default::default(), /* delegated_prefixes */
             &options_to_request[..],
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
@@ -6075,13 +6475,14 @@ mod tests {
             let Transition { state, actions: _, transaction_id } = Requesting::start(
                 CLIENT_ID,
                 SERVER_ID[0].to_vec(),
-                advertise_to_address_entries(
+                advertise_to_ia_entries(
                     testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]),
                     testutil::to_configured_addresses(
                         2,
                         std::iter::once(CONFIGURED_NON_TEMPORARY_ADDRESSES[0]),
                     ),
                 ),
+                Default::default(), /* delegated_prefixes */
                 &[],
                 BinaryHeap::new(),
                 MAX_SOLICIT_TIMEOUT,
@@ -6171,6 +6572,186 @@ mod tests {
                 }
             };
         }
+    }
+
+    #[test]
+    fn use_advertise_from_best_server() {
+        let transaction_id = [0, 1, 2];
+        let time = Instant::now();
+        let mut client = testutil::start_and_assert_server_discovery(
+            transaction_id,
+            CLIENT_ID,
+            testutil::to_configured_addresses(
+                CONFIGURED_NON_TEMPORARY_ADDRESSES.len(),
+                CONFIGURED_NON_TEMPORARY_ADDRESSES,
+            ),
+            testutil::to_configured_prefixes(
+                CONFIGURED_DELEGATED_PREFIXES.len(),
+                CONFIGURED_DELEGATED_PREFIXES,
+            ),
+            Vec::new(),
+            StepRng::new(std::u64::MAX / 2, 0),
+            time,
+        );
+
+        // Server0 advertises only IA_NA but all matching our hints.
+        let iana_options = CONFIGURED_NON_TEMPORARY_ADDRESSES
+            .into_iter()
+            .map(|addr| {
+                [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                    addr,
+                    PREFERRED_LIFETIME.get(),
+                    VALID_LIFETIME.get(),
+                    &[],
+                ))]
+            })
+            .collect::<Vec<_>>();
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain(iana_options.iter().enumerate().map(|(iaid, iana_options)| {
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        v6::IAID::new(iaid.try_into().unwrap()),
+                        T1.get(),
+                        T2.get(),
+                        iana_options,
+                    ))
+                }))
+                .collect::<Vec<_>>();
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(client.handle_message_receive(msg, time)[..], []);
+
+        // Server1 advertises only IA_PD but all matching our hints.
+        let iaprefix_options = CONFIGURED_DELEGATED_PREFIXES
+            .into_iter()
+            .map(|prefix| {
+                [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                    PREFERRED_LIFETIME.get(),
+                    VALID_LIFETIME.get(),
+                    prefix,
+                    &[],
+                ))]
+            })
+            .collect::<Vec<_>>();
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[1])]
+                .into_iter()
+                .chain(iaprefix_options.iter().enumerate().map(|(iaid, iaprefix_options)| {
+                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                        v6::IAID::new(iaid.try_into().unwrap()),
+                        T1.get(),
+                        T2.get(),
+                        iaprefix_options,
+                    ))
+                }))
+                .collect::<Vec<_>>();
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(client.handle_message_receive(msg, time)[..], []);
+
+        // Server2 advertises only a single IA_NA and IA_PD but not matching our
+        // hint.
+        //
+        // This should be the best advertisement the client receives since it
+        // allows the client to get the most diverse set of IAs which the client
+        // prefers over a large quantity of a single IA type.
+        let iaaddr_options = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            REPLY_NON_TEMPORARY_ADDRESSES[0],
+            PREFERRED_LIFETIME.get(),
+            VALID_LIFETIME.get(),
+            &[],
+        ))];
+        let iaprefix_options = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+            PREFERRED_LIFETIME.get(),
+            VALID_LIFETIME.get(),
+            REPLY_DELEGATED_PREFIXES[0],
+            &[],
+        ))];
+        let options = [
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[2]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iaaddr_options,
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                v6::IAID::new(0),
+                T1.get(),
+                T2.get(),
+                &iaprefix_options,
+            )),
+        ];
+        let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
+        let mut buf = vec![0; builder.bytes_len()];
+        builder.serialize(&mut buf);
+        let mut buf = &buf[..]; // Implements BufferView.
+        let msg = v6::Message::parse(&mut buf, ()).expect("failed to parse test buffer");
+        assert_matches!(client.handle_message_receive(msg, time)[..], []);
+
+        // Handle the retransmission timeout for the first time which should
+        // pick a server and transition to requesting with the best server.
+        //
+        // The best server should be `SERVER_ID[2]` and we should have replaced
+        // our hint for IA_NA/IA_PD with IAID == 0 to what was in the server's
+        // advertise message. We keep the hints for the other IAIDs since the
+        // server did not include those IAID in its advertise so the client will
+        // continue to request the hints with the selected server.
+        let actions = client.handle_timeout(ClientTimerType::Retransmission, time);
+        assert_matches!(
+            &actions[..],
+            [
+                Action::CancelTimer(ClientTimerType::Retransmission),
+                Action::SendMessage(buf),
+                Action::ScheduleTimer(ClientTimerType::Retransmission, timeout),
+            ] => {
+                assert_eq!(testutil::msg_type(buf), v6::MessageType::Request);
+                assert_eq!(*timeout, INITIAL_REQUEST_TIMEOUT);
+            }
+        );
+        let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } = client;
+        assert_matches!(
+            state,
+            Some(ClientState::Requesting(Requesting {
+                client_id: _,
+                non_temporary_addresses,
+                delegated_prefixes,
+                server_id,
+                collected_advertise: _,
+                first_request_time: _,
+                retrans_timeout: _,
+                retrans_count: _,
+                solicit_max_rt: _,
+            })) => {
+                assert_eq!(&server_id, &SERVER_ID[2]);
+                assert_eq!(
+                    non_temporary_addresses,
+                    [REPLY_NON_TEMPORARY_ADDRESSES[0]]
+                        .iter()
+                        .chain(CONFIGURED_NON_TEMPORARY_ADDRESSES[1..3].iter())
+                        .enumerate().map(|(iaid, addr)| {
+                            (v6::IAID::new(iaid.try_into().unwrap()), AddressEntry::ToRequest(Some(*addr)))
+                        }).collect::<HashMap<_, _>>()
+                );
+                assert_eq!(
+                    delegated_prefixes,
+                    [REPLY_DELEGATED_PREFIXES[0]]
+                        .iter()
+                        .chain(CONFIGURED_DELEGATED_PREFIXES[1..3].iter())
+                        .enumerate().map(|(iaid, addr)| {
+                            (v6::IAID::new(iaid.try_into().unwrap()), PrefixEntry::ToRequest(Some(*addr)))
+                        }).collect::<HashMap<_, _>>()
+                );
+            }
+        );
     }
 
     // Test that Request retransmission respects max retransmission count.
@@ -6285,6 +6866,7 @@ mod tests {
             let Requesting {
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -6314,6 +6896,7 @@ mod tests {
             let Requesting {
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -6344,6 +6927,7 @@ mod tests {
         let Requesting {
             client_id: _,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             server_id,
             collected_advertise,
             first_request_time: _,
@@ -6370,6 +6954,7 @@ mod tests {
             let Requesting {
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise,
                 first_request_time: _,
@@ -6483,10 +7068,11 @@ mod tests {
         let Transition { state, actions: _, transaction_id } = Requesting::start(
             CLIENT_ID,
             SERVER_ID[0].to_vec(),
-            advertise_to_address_entries(
+            advertise_to_ia_entries(
                 testutil::to_default_ias_map(&CONFIGURED_NON_TEMPORARY_ADDRESSES[0..1]),
                 configured_non_temporary_addresses.clone(),
             ),
+            Default::default(), /* delegated_prefixes */
             &options_to_request[..],
             BinaryHeap::new(),
             MAX_SOLICIT_TIMEOUT,
@@ -6499,6 +7085,7 @@ mod tests {
                 solicit_max_rt,
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -6542,6 +7129,7 @@ mod tests {
                 solicit_max_rt,
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -6578,6 +7166,7 @@ mod tests {
                 solicit_max_rt,
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id: _,
                 first_request_time: _,
                 retrans_timeout: _,
@@ -7429,6 +8018,7 @@ mod tests {
             let Requesting {
                 client_id,
                 non_temporary_addresses,
+                delegated_prefixes: _,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
