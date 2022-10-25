@@ -5,9 +5,9 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
+#include <fidl/fuchsia.hardware.ramdisk/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/watcher.h>
@@ -123,7 +123,7 @@ class RamdiskTest {
   const ramdisk_client_t* ramdisk_client() const { return ramdisk_; }
 
  private:
-  RamdiskTest(ramdisk_client_t* ramdisk) : ramdisk_(ramdisk) {}
+  explicit RamdiskTest(ramdisk_client_t* ramdisk) : ramdisk_(ramdisk) {}
 
   ramdisk_client_t* ramdisk_;
 };
@@ -821,12 +821,12 @@ TEST(RamdiskTests, RamdiskTestFifoNoGroup) {
   fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
 
-typedef struct {
+using TestVmoObject = struct {
   uint64_t vmo_size;
   zx::vmo vmo;
   fuchsia_hardware_block_VmoId vmoid;
   std::unique_ptr<uint8_t[]> buf;
-} TestVmoObject;
+};
 
 // Creates a VMO, fills it with data, and gives it to the block device.
 //
@@ -867,7 +867,7 @@ void WriteStripedVmoHelper(block_client::Client& client, const TestVmoObject& ob
     requests[b].dev_offset = i + b * objs;
   }
   // Write entire vmos at once
-  ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK);
+  ASSERT_EQ(client.Transaction(requests.data(), requests.size()), ZX_OK);
 }
 
 // Verifies the result from "WriteStripedVmoHelper"
@@ -889,7 +889,7 @@ void ReadStripedVmoHelper(block_client::Client& client, const TestVmoObject& obj
     requests[b].dev_offset = i + b * objs;
   }
   // Read entire vmos at once
-  ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK);
+  ASSERT_EQ(client.Transaction(requests.data(), requests.size()), ZX_OK);
 
   // Finally, write from the vmo to an out buffer, where we can compare
   // the results with the input buffer.
@@ -927,8 +927,8 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmo) {
 
   // Create multiple VMOs
   std::vector<TestVmoObject> objs(10);
-  for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(ramdisk->block_fd(), objs[i], kBlockSize));
+  for (auto& obj : objs) {
+    ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(ramdisk->block_fd(), obj, kBlockSize));
   }
 
   for (size_t i = 0; i < objs.size(); i++) {
@@ -941,8 +941,8 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmo) {
         ReadStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
   }
 
-  for (size_t i = 0; i < objs.size(); i++) {
-    ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, objs[i], group));
+  for (const auto& obj : objs) {
+    ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, obj, group));
   }
   fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
@@ -971,7 +971,7 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
   std::vector<std::thread> threads;
   for (size_t i = 0; i < kNumThreads; i++) {
     // Capture i by value to get the updated version each loop iteration.
-    threads.push_back(std::thread([&, i]() {
+    threads.emplace_back([&, i]() {
       groupid_t group = static_cast<groupid_t>(i);
       ASSERT_NO_FATAL_FAILURE(CreateVmoHelper(ramdisk->block_fd(), objs[i], kBlockSize));
       ASSERT_NO_FATAL_FAILURE(
@@ -979,7 +979,7 @@ TEST(RamdiskTests, RamdiskTestFifoMultipleVmoMultithreaded) {
       ASSERT_NO_FATAL_FAILURE(
           ReadStripedVmoHelper(client, objs[i], i, objs.size(), group, kBlockSize));
       ASSERT_NO_FATAL_FAILURE(CloseVmoHelper(client, objs[i], group));
-    }));
+    });
   }
 
   for (auto& thread : threads)
@@ -1025,7 +1025,7 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCount) {
       requests[b].dev_offset = 0;
     }
 
-    ASSERT_EQ(client.Transaction(&requests[0], requests.size()), ZX_OK);
+    ASSERT_EQ(client.Transaction(requests.data(), requests.size()), ZX_OK);
   }
   fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
 }
@@ -1076,7 +1076,7 @@ TEST(RamdiskTests, RamdiskTestFifoLargeOpsCountShutdown) {
   // version of the server; as a consequence, it is preserved
   // to help detect regressions.
   size_t actual;
-  ZX_ASSERT(fifo.write(sizeof(block_fifo_request_t), &requests[0], requests.size(), &actual) ==
+  ZX_ASSERT(fifo.write(sizeof(block_fifo_request_t), requests.data(), requests.size(), &actual) ==
             ZX_OK);
   usleep(100);
   fuchsia_hardware_block_BlockCloseFifo(channel->get(), &status);
@@ -1485,25 +1485,25 @@ TEST(RamdiskTests, RamdiskTestFifoSleepUnavailable) {
 // * This thread must not be waiting when the calling thread blocks in |fifo_txn| (i.e. 'start' must
 //   have been signaled.)
 
-typedef struct wake_args {
+using wake_args_t = struct wake_args {
   const ramdisk_client_t* ramdisk_client;
   uint64_t after;
   sync_completion_t start;
   zx_time_t deadline;
-} wake_args_t;
+};
 
-int fifo_wake_thread(void* arg) {
-  ssize_t res;
-
+zx_status_t fifo_wake_thread(void* arg) {
   // Always send a wake-up call; even if we failed to go to sleep.
   wake_args_t* wake = static_cast<wake_args_t*>(arg);
   auto cleanup = fit::defer([&] { ramdisk_wake(wake->ramdisk_client); });
 
   // Wait for the start-up signal
-  zx_status_t rc = sync_completion_wait_deadline(&wake->start, wake->deadline);
-  sync_completion_reset(&wake->start);
-  if (rc != ZX_OK) {
-    return rc;
+  {
+    zx_status_t status = sync_completion_wait_deadline(&wake->start, wake->deadline);
+    sync_completion_reset(&wake->start);
+    if (status != ZX_OK) {
+      return status;
+    }
   }
 
   // Loop until timeout, |wake_after| txns received, or error getting counts
@@ -1513,8 +1513,9 @@ int fifo_wake_thread(void* arg) {
     if (wake->deadline < zx_clock_get_monotonic()) {
       return ZX_ERR_TIMED_OUT;
     }
-    if ((res = ramdisk_get_block_counts(wake->ramdisk_client, &counts)) != ZX_OK) {
-      return static_cast<zx_status_t>(res);
+    if (zx_status_t status = ramdisk_get_block_counts(wake->ramdisk_client, &counts);
+        status != ZX_OK) {
+      return status;
     }
   } while (counts.received < wake->after);
   return ZX_OK;
@@ -1580,7 +1581,7 @@ TEST_F(RamdiskTestWithClient, RamdiskTestFifoSleepDeferred) {
   }
 
   // Sleep and wake parameters
-  uint32_t flags = fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE;
+  uint32_t flags = fuchsia_hardware_ramdisk::wire::kRamdiskFlagResumeOnWake;
   thrd_t thread;
   wake_args_t wake;
   wake.ramdisk_client = ramdisk_->ramdisk_client();
@@ -1602,8 +1603,8 @@ TEST_F(RamdiskTestWithClient, RamdiskTestFifoSleepDeferred) {
   // Check that the wake thread succeeded.
   ASSERT_EQ(res, 0) << "Background thread failed";
 
-  for (size_t i = 0; i < std::size(requests); ++i) {
-    requests[i].opcode = BLOCKIO_READ;
+  for (auto& request : requests) {
+    request.opcode = BLOCKIO_READ;
   }
 
   // Read data we wrote to disk back into the VMO.
@@ -1682,7 +1683,7 @@ TEST(RamdiskTests, RamdiskCreateAtVmo) {
 
 TEST_F(RamdiskTestWithClient, DiscardOnWake) {
   ASSERT_EQ(ramdisk_set_flags(ramdisk_->ramdisk_client(),
-                              fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE),
+                              fuchsia_hardware_ramdisk::wire::kRamdiskFlagDiscardNotFlushedOnWake),
             ZX_OK);
   ASSERT_EQ(ramdisk_sleep_after(ramdisk_->ramdisk_client(), 100), ZX_OK);
 
@@ -1731,8 +1732,8 @@ TEST_F(RamdiskTestWithClient, DiscardOnWake) {
 
 TEST_F(RamdiskTestWithClient, DiscardRandomOnWake) {
   ASSERT_EQ(ramdisk_set_flags(ramdisk_->ramdisk_client(),
-                              fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_NOT_FLUSHED_ON_WAKE |
-                                  fuchsia_hardware_ramdisk_RAMDISK_FLAG_DISCARD_RANDOM),
+                              fuchsia_hardware_ramdisk::wire::kRamdiskFlagDiscardNotFlushedOnWake |
+                                  fuchsia_hardware_ramdisk::wire::kRamdiskFlagDiscardRandom),
             ZX_OK);
 
   int found = 0;
@@ -1778,7 +1779,7 @@ TEST_F(RamdiskTestWithClient, DiscardRandomOnWake) {
                   0);
       } else if (i > 2) {
         if (memcmp(static_cast<uint8_t*>(mapping_.start()) + zx_system_get_page_size() * i,
-                   &buf_[zx_system_get_page_size() * i], zx_system_get_page_size())) {
+                   &buf_[zx_system_get_page_size() * i], zx_system_get_page_size()) != 0) {
           different |= 1 << (i - 3);
         }
       }

@@ -93,7 +93,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/block/drivers/core:core-unittest-bin",
     "//src/devices/block/drivers/core:shared",
     "//src/devices/block/drivers/ftl/tests:ftl-integration",
-    "//src/devices/block/drivers/ramdisk/test:ramdisk",
     "//src/devices/block/drivers/ums-function:ums-function-driver",
     "//src/devices/board/drivers/astro:astro-driver",
     "//src/devices/board/drivers/av400:av400-driver",
