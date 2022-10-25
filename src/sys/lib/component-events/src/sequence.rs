@@ -64,13 +64,7 @@ impl EventSequence {
     }
 
     /// Verify that the events in this sequence are received from the provided EventStream.
-    pub async fn expect(self, event_stream: EventStream) -> Result<(), Error> {
-        self.expect_and_giveback(event_stream).await.map(|_|())
-    }
-
-    /// Verify that the events in this sequence are received from the provided EventStream,
-    /// and gives back the event stream on success.
-    pub async fn expect_and_giveback(mut self, mut event_stream: EventStream) -> Result<EventStream, Error> {
+    pub async fn expect(mut self, mut event_stream: EventStream) -> Result<(), Error> {
         while !self.groups.is_empty() {
             match event_stream.next().await {
                 Err(e) => return Err(e.into()),
@@ -82,7 +76,7 @@ impl EventSequence {
                 }
             }
         }
-        Ok(event_stream)
+        Ok(())
     }
 
     /// Verifies that the events in this sequence are received from the provided EventSource.
