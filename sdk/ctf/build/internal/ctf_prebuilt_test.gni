@@ -18,6 +18,12 @@ import("//sdk/ctf/build/internal/prebuilt_host_test_manifest.gni")
 #     The absolute path to the extracted CTF release archive.
 #     Type: path
 #
+#   enable_ctf_test_realms (optional)
+#     If set, this test will have access to CTF test realms at runtime.
+#     See //sdk/ctf/test_realm/BUILD.gn for instructions.
+#     Defaults to false.
+#     Type: bool
+#
 #   test (required)
 #     The CTF test manifest entry.
 #     For more info on the manifest entry, see ctf_test_release_archive.gni.
@@ -35,8 +41,12 @@ template("ctf_prebuilt_test") {
     test.log_settings = {
     }
   }
+  if (!defined(test.enable_ctf_test_realms)) {
+    test.enable_ctf_test_realms = false
+  }
 
-  prebuilt_test_package(target_name) {
+  prebuilt_test_package_target = "${target_name}_prebuilt"
+  prebuilt_test_package(prebuilt_test_package_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -46,6 +56,26 @@ template("ctf_prebuilt_test") {
     component_name = test.component_name
     package = test.package_name
     log_settings = test.log_settings
+  }
+
+  # This wrapper package just provides the test realms in a subpackage.
+  fuchsia_package_target = "${target_name}_package"
+  fuchsia_package(fuchsia_package_target) {
+    if (test.enable_ctf_test_realms) {
+      import("//sdk/ctf/build/internal/define_ctf_test_realm_subpackages.gni")
+    }
+    deps = [ ":$prebuilt_test_package_target" ]
+    testonly = true
+  }
+
+  # TODO(113115): We should be able to use the fuchsia_package above as $target_name.
+  # Debug why it fails and remove this group.
+  group(target_name) {
+    deps = [
+      ":$fuchsia_package_target",
+      ":$prebuilt_test_package_target",
+    ]
+    testonly = true
   }
 }
 

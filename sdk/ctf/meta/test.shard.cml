@@ -4,5 +4,6 @@
 {
     facets: {
         "fuchsia.test": { type: "cts" },
+        "fuchsia.test.deprecated-allowed-packages": [],
     },
 }

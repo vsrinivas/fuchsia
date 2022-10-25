@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is imported for its side-effects. In the scope where it is imported
+# it defines a 'subpackages' variable which declares all of the CTF test realms
+# as subpackages.
+
+import("//sdk/ctf/build/ctf_test_realms.gni")
+
+subpackages = []
+foreach(package_label, ctf_test_realms) {
+  subpackages += [
+    {
+      package = package_label
+    },
+  ]
+}

@@ -322,5 +322,11 @@ group("declare_subpackages_allowlist") {
     "//examples/components/routing/integration_tests/rust:*",
     "//examples/components/routing/with_subpackages:*",
     "//examples/components/subpackages:*",
+
+    # CTF targets that need visibility
+    "//sdk/ctf/release:*",
+    "//sdk/ctf/test_realm:*",
+    "//sdk/ctf/tests/*",
+    "//src/sys/component_manager/tests/collections:collections_integration_test_pkg.pm",
   ]
 }

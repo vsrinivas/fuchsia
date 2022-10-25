@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+
+# Defines a test realm that provides capabilities for one or more CTF tests.
+#
+# Parameters
+#
+#   manifest (required)
+#     The path to the component manifest that describes this test realm.
+#     Type: string
+#
+#   deps
+template("ctf_test_realm") {
+  fuchsia_package_with_single_component(target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "manifest",
+                             "testonly",
+                           ])
+    manifest = "meta/$target_name.cml"
+    testonly = true
+  }
+}

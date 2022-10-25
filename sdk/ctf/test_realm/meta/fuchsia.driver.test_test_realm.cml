@@ -1,27 +1,32 @@
-// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 {
     include: [
-        "//sdk/ctf/meta/test.shard.cml",
-        "sys/testing/elf_test_runner.shard.cml",
+        "//sdk/lib/driver_test_realm/meta/client.shard.cml",
         "syslog/client.shard.cml",
     ],
-    program: {
-        binary: "bin/driver_test_realm_cts_test",
-    },
     children: [
         {
             name: "driver_test_realm",
-            url: "fuchsia-pkg://fuchsia.com/driver_test_realm#meta/driver_test_realm.cm",
+            url: "#meta/driver_test_realm.cm",
         },
     ],
-    use: [
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: "#driver_test_realm",
+        },
+    ],
+    expose: [
         {
             directory: "dev",
             from: "#driver_test_realm",
             rights: [ "r*" ],
-            path: "/dev",
         },
         {
             protocol: [
@@ -37,19 +42,4 @@
             from: "#driver_test_realm",
         },
     ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.logger.LogSink",
-                "fuchsia.process.Launcher",
-            ],
-            from: "parent",
-            to: "#driver_test_realm",
-        },
-    ],
-    facets: {
-        "fuchsia.test": {
-            "deprecated-allowed-packages": [ "driver_test_realm" ],
-        },
-    },
 }

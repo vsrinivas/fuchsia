@@ -1,0 +1,27 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file contains the CTF test realm targets.
+#
+# Please follow these steps to add a new realm:
+#
+# 1. Add a new ctf_test_realm target for your test below.
+# 2. Add the realm's manifest file at meta/$target_name.cml.
+# 3. Add the test realm's label to //sdk/ctf/build/ctf_test_realms.gni
+# 4. Set enable_ctf_test_realms=true on your ctf_fuchsia_test_package target.
+#
+# After completing these steps your test can access the new test realm at the
+# the component url: '$target_name#meta/$target_name.cm'. Name the
+# test realm after the FIDL library being tested. For example if you are
+# testing the FIDL library 'fuchsia.io' then your test realm should be named
+# 'fuchsia.io_test_realm'.
+
+import("//sdk/ctf/build/ctf_test_realm.gni")
+
+ctf_test_realm("fuchsia.driver.test_test_realm") {
+  deps = [
+    "//sdk/lib/driver_test_realm",
+    "//src/devices/misc/drivers/test-parent",
+  ]
+}

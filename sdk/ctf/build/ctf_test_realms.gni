@@ -1,0 +1,9 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The list of CTF test realm labels.
+#
+# Follow the instructions at //sdk/ctf/test_realm/BUILD.gn to add a new realm.
+# Please keep this list sorted alphabetically.
+ctf_test_realms = [ "//sdk/ctf/test_realm:fuchsia.driver.test_test_realm" ]

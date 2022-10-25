@@ -4,10 +4,7 @@
 
 import("//build/components.gni")
 import("//build/components/fuchsia_package_archive.gni")
-import("//sdk/ctf/build/internal/ctf_element.gni")
-import("//sdk/ctf/build/internal/ctf_test_release_archive.gni")
-import("//sdk/ctf/build/internal/ctf_version.gni")
-import("//sdk/ctf/build/internal/write_ctf_file.gni")
+import("//sdk/ctf/build/internal/ctf.gni")
 
 # Defines a Fuchsia package containing a test
 #
@@ -32,6 +29,12 @@ import("//sdk/ctf/build/internal/write_ctf_file.gni")
 #   release_in_ctf (optional)
 #     If set, this test is released in CTF. Defaults to true.
 #     Type: bool
+#
+#   enable_ctf_test_realms (optional)
+#     If set, this test will have access to CTF test realms at runtime.
+#     See //sdk/ctf/test_realm/BUILD.gn for instructions.
+#     Defaults to false.
+#     Type: bool
 template("ctf_fuchsia_test_package") {
   if (!defined(invoker.release_in_ctf)) {
     invoker.release_in_ctf = true
@@ -39,16 +42,16 @@ template("ctf_fuchsia_test_package") {
   if (!defined(invoker.package_name)) {
     invoker.package_name = target_name
   }
+  if (!defined(invoker.enable_ctf_test_realms)) {
+    invoker.enable_ctf_test_realms = false
+  }
 
+  not_needed(invoker, [ "enable_ctf_test_realms" ])
   not_needed(invoker, [ "plasa_element" ])
   not_needed(invoker, [ "release_in_ctf" ])
 
   if (current_toolchain == default_toolchain) {
     main_target_name = target_name
-
-    if (cts_version != "") {
-      invoker.package_name += "_$cts_version"
-    }
 
     ctf_element_target = target_name + "_verify_deps"
     ctf_element(ctf_element_target) {
@@ -69,6 +72,16 @@ template("ctf_fuchsia_test_package") {
     fuchsia_test_package_target = target_name + "_pkg"
     fuchsia_test_package(fuchsia_test_package_target) {
       forward_variables_from(invoker, "*")
+
+      # Don't include test realm subpackages if we're building for release,
+      # otherwise the test's deps would be bundled with the test in CIPD.
+      if (cts_version == "" && invoker.enable_ctf_test_realms) {
+        import("//sdk/ctf/build/internal/define_ctf_test_realm_subpackages.gni")
+      }
+
+      if (cts_version != "") {
+        package_name += "_$cts_version"
+      }
     }
 
     if (invoker.release_in_ctf) {

@@ -7,7 +7,7 @@ import("//sdk/ctf/build/ctf.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver_test_realm_cts_test" ]
+  deps = [ ":fuchsia.driver.test_test" ]
 }
 
 ctf_executable("bin") {
@@ -24,15 +24,16 @@ ctf_executable("bin") {
   ]
 }
 
-ctf_fuchsia_component("component") {
-  testonly = true
-  component_name = "driver_test_realm_cts_test"
-  manifest = "meta/driver_test_realm_cts_test.cml"
+ctf_fuchsia_component("test") {
+  component_name = "test"
+  manifest = "meta/fuchsia.driver.test_test.cml"
   deps = [ ":bin" ]
+  testonly = true
 }
 
-ctf_fuchsia_test_package("driver_test_realm_cts_test") {
+ctf_fuchsia_test_package("fuchsia.driver.test_test") {
+  enable_ctf_test_realms = true
   plasa_element = "fidl/fuchsia.driver.test/Realm"
-  package_name = "driver_test_realm_cts_test"
-  test_components = [ ":component" ]
+  package_name = "fuchsia.driver.test_test"
+  test_components = [ ":test" ]
 }

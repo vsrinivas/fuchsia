@@ -40,6 +40,10 @@ import("//sdk/ctf/build/internal/ctf_element.gni")
 #      For example: "fidl/fuchsia.diagnostics/ArchiveAccessor".
 #      TODO(kjharland): Explain the usage for shared libraries.
 #
+#    enable_ctf_test_realms (bool)
+#      Whether this test depends on experimental support for CTF test realms.
+#      Defaults to false.
+#
 # Parameters
 #
 #   archive_name (required)
@@ -66,6 +70,10 @@ import("//sdk/ctf/build/internal/ctf_element.gni")
 #   plasa_element (required)
 #     See 'plasa_element' from above.
 #     Type: string
+#
+#   enable_ctf_test_realms (optional)
+#     See 'enable_ctf_test_realms' from above.
+#     Type: bool
 template("ctf_test_release_archive") {
   assert(defined(invoker.plasa_element), "plasa_element is required")
   assert(defined(invoker.package), "package is required")
@@ -103,6 +111,9 @@ template("ctf_test_release_archive") {
           plasa_element = invoker.plasa_element
           if (defined(invoker.log_settings)) {
             log_settings = invoker.log_settings
+          }
+          if (defined(invoker.enable_ctf_test_realms)) {
+            enable_ctf_test_realms = invoker.enable_ctf_test_realms
           }
         },
       ]
