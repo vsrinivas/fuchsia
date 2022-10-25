@@ -29,5 +29,6 @@ DDK_FIDL_PROTOCOL_DEF(AML_MAILBOX,     10, "fuchsia.hardware.mailbox.Device")
 DDK_FIDL_PROTOCOL_DEF(PLATFORM_BUS,    11, "fuchsia.hardware.platform.bus.PlatformBus")
 DDK_FIDL_PROTOCOL_DEF(INTERRUPT,       12, "fuchsia.hardware.interrupt.Provider")
 DDK_FIDL_PROTOCOL_DEF(PLATFORM_DEVICE, 13, "fuchsia.hardware.platform.device.Device")
+DDK_FIDL_PROTOCOL_DEF(DSP,             14, "fuchsia.hardware.dsp.DspDevice")
 #undef DDK_FIDL_PROTOCOL_DEF
 #endif
