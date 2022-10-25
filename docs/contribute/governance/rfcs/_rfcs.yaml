@@ -2536,3 +2536,16 @@
   reviewers: ['emircan@google.com', 'jsankey@google.com', 'neelsa@google.com', 'sanjayc@google.com', 'yaar@google.com', 'dworsham@google.com', 'aaronwood@google.com', 'markdittmer@google.com']
   submitted: '2022-08-09'
   reviewed: '2022-10-17'
+
+- name: 'RFC-0195'
+  title: 'Positions and ranges in text APIs'
+  short_description: 'Prescribes the use of Unicode scalar values as the base unit for positions and ranges in text editing APIs.'
+  authors: ['kpozin@google.com']
+  file: '0195_positions_and_ranges_in_text_apis.md'
+  area: ['HCI']
+  issue: ['108240']
+  gerrit_change_id: ['717053']
+  status: 'Accepted'
+  reviewers: ['enoharemaien@google.com', 'fmil@google.com', 'gspencer@google.com', 'jmccandless@google.com', 'neelsa@google.com', 'pesk@google.com', 'wez@google.com']
+  submitted: '2022-08-26'
+  reviewed: '2022-10-25'

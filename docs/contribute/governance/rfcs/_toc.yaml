@@ -404,3 +404,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0193_supported_c++_versions.md
   - title: "RFC-0194: Addendum: Sessions"
     path: /docs/contribute/governance/rfcs/0194_addendum_sessions.md
+  - title: "RFC-0195: Positions and text ranges in text APIs"
+    path: /docs/contribute/governance/rfcs/0195_positions_and_ranges_in_text_apis.md
