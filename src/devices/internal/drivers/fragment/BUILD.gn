@@ -78,6 +78,9 @@ fuchsia_driver_component("fragment-component") {
   component_name = "fragment"
   deps = [ ":fragment-driver" ]
   info = "fragment-component-info.json"
+
+  # Note that while this argument is required for the fuchsia_driver_component build rule, the
+  # driver manager treats the fragment driver specially and does not actually examine this argument.
   colocate = true
 }
 
