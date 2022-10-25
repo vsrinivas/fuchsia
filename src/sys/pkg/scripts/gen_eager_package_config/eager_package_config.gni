@@ -72,6 +72,9 @@ import("//build/config.gni")
 #         "1.2.3.4"-style notation. If there is a fallback version of the eager
 #         package in a build, this version MUST match the fallback version.
 #
+#       cache_fallback (optional)
+#         [bool] if fallback to the version in cache packages is allowed.
+#
 #   data_deps (optional)
 #   deps (optional)
 #     Same as for any GN target.

@@ -66,6 +66,7 @@ pub struct InputConfig {
     service_url: String,
     /// The minimum required version of the package.
     minimum_required_version: Version,
+    cache_fallback: Option<bool>,
 }
 
 pub fn generate_omaha_client_config(
@@ -141,6 +142,7 @@ pub fn generate_pkg_resolver_config(
                 ))
                 .clone(),
             minimum_required_version: i.minimum_required_version,
+            cache_fallback: i.cache_fallback.unwrap_or(true),
         })
         .collect();
     if packages.iter().map(|config| config.url.path()).collect::<HashSet<_>>().len()
@@ -191,6 +193,7 @@ pub mod test_support {
                 ],
                 service_url: "https://example.com".to_string(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: Some(true),
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_service_2".parse().unwrap(),
@@ -203,6 +206,7 @@ pub mod test_support {
                 }],
                 service_url: "https://example.com".to_string(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: None,
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_otherservice_1".parse().unwrap(),
@@ -215,6 +219,7 @@ pub mod test_support {
                 }],
                 service_url: "https://other_example.com".to_string(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: None,
             },
             InputConfig {
                 url: "fuchsia-pkg://example.com/package_otherservice_2".parse().unwrap(),
@@ -227,6 +232,7 @@ pub mod test_support {
                 }],
                 service_url: "https://other_example.com".to_string(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: None,
             },
         ]
     }
@@ -425,6 +431,7 @@ mod tests {
             }],
             service_url: "https://example.com".to_string(),
             minimum_required_version: [1, 2, 3, 4].into(),
+            cache_fallback: None,
         }];
         let _omaha_client_config = generate_omaha_client_config(&configs, &key_config);
     }
@@ -443,13 +450,13 @@ mod tests {
             }],
             service_url: "https://example.com".to_string(),
             minimum_required_version: [1, 2, 3, 4].into(),
+            cache_fallback: Some(false),
         }];
         let pkg_resolver_config = generate_pkg_resolver_config(&configs, &key_config);
         let expected = r#"{
             "packages":[
                 {
                     "url": "fuchsia-pkg://example.com/package_service_1",
-                    "executable": false,
                     "public_keys": {
                         "latest": {
                             "key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEHKz/tV8vLO/YnYnrN0smgRUkUoAt\n7qCZFgaBN9g5z3/EgaREkjBNfvZqwRe+/oOo0I8VXytS+fYY3URwKQSODw==\n-----END PUBLIC KEY-----\n",
@@ -457,7 +464,8 @@ mod tests {
                         },
                         "historical": []
                     },
-                    "minimum_required_version": "1.2.3.4"
+                    "minimum_required_version": "1.2.3.4",
+                    "cache_fallback": false
                 }
             ]
         }"#;
@@ -483,6 +491,7 @@ mod tests {
                 }],
                 service_url: "https://example.com".to_string(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: None,
             },
             InputConfig {
                 url: "fuchsia-pkg://another-example.com/package_service_1".parse().unwrap(),
@@ -492,6 +501,7 @@ mod tests {
                 realms: vec![],
                 service_url: "https://example.com".to_string(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: None,
             },
         ];
         let _ = generate_pkg_resolver_config(&configs, &key_config);

@@ -26,10 +26,12 @@ pub struct EagerPackageConfigs {
 #[derive(Clone, Debug, Deserialize, Serialize, PartialEq, Eq)]
 pub struct EagerPackageConfig {
     pub url: UnpinnedAbsolutePackageUrl,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_false")]
     pub executable: bool,
     pub public_keys: PublicKeys,
     pub minimum_required_version: Version,
+    #[serde(default = "return_true", skip_serializing_if = "bool::clone")]
+    pub cache_fallback: bool,
 }
 
 #[cfg(target_os = "fuchsia")]
@@ -85,6 +87,14 @@ pub enum EagerPackageConfigsError {
     DuplicatePath,
 }
 
+fn return_true() -> bool {
+    true
+}
+
+fn is_false(b: &bool) -> bool {
+    !b
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -127,6 +137,7 @@ mod tests {
                     executable: false,
                     public_keys: make_default_public_keys_for_test(),
                     minimum_required_version: [1, 2, 3, 4].into(),
+                    cache_fallback: true,
                 }]
             }
         );

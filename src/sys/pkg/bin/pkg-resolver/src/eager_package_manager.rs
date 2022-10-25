@@ -65,6 +65,7 @@ impl EagerPackage {
         persistent_cup: &mut HashMap<String, CupData>,
         pkg_cache: &cache::Client,
         cache_packages: &CachePackages,
+        cache_fallback: bool,
     ) -> Result<PackageSource, LoadError> {
         let pinned_url_in_cup;
 
@@ -90,7 +91,10 @@ impl EagerPackage {
             }
             Err(e) => {
                 // The config includes an eager package, but no CUP is persisted, try to load it
-                // from cache packages.
+                // from cache packages if allowed by config.
+                if !cache_fallback {
+                    return Err(e);
+                }
                 (cache_packages.find_unpinned_url(url).ok_or(e)?, PackageSource::CachePackages)
             }
         };
@@ -213,8 +217,16 @@ impl<T: Resolver> EagerPackageManager<T> {
             None => (HashMap::new(), true),
         };
         let mut packages = BTreeMap::new();
-        for (i, EagerPackageConfig { url, executable, public_keys, minimum_required_version }) in
-            config.packages.into_iter().enumerate()
+        for (
+            i,
+            EagerPackageConfig {
+                url,
+                executable,
+                public_keys,
+                minimum_required_version,
+                cache_fallback,
+            },
+        ) in config.packages.into_iter().enumerate()
         {
             let mut package = EagerPackage {
                 executable,
@@ -229,6 +241,7 @@ impl<T: Resolver> EagerPackageManager<T> {
                     &mut persistent_cup,
                     &pkg_cache,
                     cache_packages,
+                    cache_fallback,
                 )
                 .await;
 
@@ -834,6 +847,7 @@ mod tests {
                 executable: true,
                 public_keys: make_default_public_keys_for_test(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: true,
             }],
         }
     }
@@ -930,7 +944,8 @@ mod tests {
                         },
                         "historical": []
                     },
-                    "minimum_required_version": "1.2.3.4"
+                    "minimum_required_version": "1.2.3.4",
+                    "cache_fallback": false,
                 },
                 {
                     "url": "fuchsia-pkg://example.com/package2",
@@ -966,18 +981,21 @@ mod tests {
                         executable: true,
                         public_keys: public_keys.clone(),
                         minimum_required_version: [1, 2, 3, 4].into(),
+                        cache_fallback: false,
                     },
                     EagerPackageConfig {
                         url: "fuchsia-pkg://example.com/package2".parse().unwrap(),
                         executable: false,
                         public_keys: public_keys.clone(),
                         minimum_required_version: [1, 2, 3, 4].into(),
+                        cache_fallback: true,
                     },
                     EagerPackageConfig {
                         url: "fuchsia-pkg://example.com/package3".parse().unwrap(),
                         executable: false,
                         public_keys,
                         minimum_required_version: [1, 2, 3, 4].into(),
+                        cache_fallback: true,
                     },
                 ]
             }
@@ -1023,12 +1041,14 @@ mod tests {
                     executable: true,
                     public_keys: make_default_public_keys_for_test(),
                     minimum_required_version: [1, 2, 3, 4].into(),
+                    cache_fallback: true,
                 },
                 EagerPackageConfig {
                     url: url2.clone(),
                     executable: false,
                     public_keys: make_default_public_keys_for_test(),
                     minimum_required_version: [1, 2, 3, 4].into(),
+                    cache_fallback: true,
                 },
             ],
         };
@@ -1157,6 +1177,7 @@ mod tests {
                 executable: true,
                 public_keys,
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: true,
             }],
         };
         let (pkg_cache, pkg_cache_stream) = get_mock_pkg_cache();
@@ -1416,6 +1437,7 @@ mod tests {
                 executable: true,
                 public_keys: make_default_public_keys_for_test(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: true,
             }],
         };
         let mut manager = TestEagerPackageManagerBuilder::default().config(config).build().await;
@@ -1510,6 +1532,7 @@ mod tests {
                 executable: true,
                 public_keys: make_default_public_keys_for_test(),
                 minimum_required_version: [1, 2, 3, 4].into(),
+                cache_fallback: true,
             }],
         };
         let mut manager = TestEagerPackageManagerBuilder::default().config(config).build().await;
@@ -1541,6 +1564,7 @@ mod tests {
                     executable: true,
                     public_keys: make_default_public_keys_for_test(),
                     minimum_required_version: [2, 0, 0, 0].into(),
+                    cache_fallback: true,
                 }],
             })
             .pkg_cache(pkg_cache)
@@ -1572,6 +1596,31 @@ mod tests {
             minimum_required_version: [1, 2, 3, 4].into(),
         };
 
+        // If no cup is persisted, and we do have the package in cached_packages, return that.
+        assert_matches!(
+            ep.load_cup_and_package_directory(
+                &url,
+                &mut HashMap::new(),
+                &pkg_cache,
+                &cache_packages,
+                true,
+            )
+            .await,
+            Ok(PackageSource::CachePackages)
+        );
+        // If no cup is persisted, and cache fallback is not allowed, expect not available error.
+        assert_matches!(
+            ep.load_cup_and_package_directory(
+                &url,
+                &mut HashMap::new(),
+                &pkg_cache,
+                &cache_packages,
+                false,
+            )
+            .await,
+            Err(LoadError::NotAvailable)
+        );
+
         {
             // If version in the response is malformed, expect a parse error.
             let mut persistent_cup = HashMap::from([(
@@ -1589,6 +1638,7 @@ mod tests {
                     &mut persistent_cup,
                     &pkg_cache,
                     &cache_packages,
+                    true,
                 )
                 .await,
                 Err(LoadError::VersionTooOldError(VersionTooOldError::ManifestVersionParseError(
@@ -1615,6 +1665,7 @@ mod tests {
                     &mut persistent_cup,
                     &pkg_cache,
                     &empty_cache_packages,
+                    true,
                 )
                 .await,
                 Err(LoadError::RequestedVersionTooLow)
@@ -1639,6 +1690,7 @@ mod tests {
                     &mut persistent_cup,
                     &pkg_cache,
                     &cache_packages,
+                    true,
                 )
                 .await,
                 Ok(PackageSource::CachePackages)
@@ -1664,6 +1716,7 @@ mod tests {
                     &mut persistent_cup,
                     &pkg_cache,
                     &cache_packages,
+                    true,
                 )
                 .await,
                 Ok(PackageSource::Cup)
@@ -1689,6 +1742,7 @@ mod tests {
                     &mut persistent_cup,
                     &pkg_cache,
                     &cache_packages,
+                    true,
                 )
                 .await,
                 Ok(PackageSource::Cup)
