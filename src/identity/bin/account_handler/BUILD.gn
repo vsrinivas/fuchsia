@@ -37,6 +37,7 @@ rustc_binary("bin") {
   test_deps = [
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:tempfile",
+    "//third_party/rust_crates:typed-builder",
   ]
 
   sources = [

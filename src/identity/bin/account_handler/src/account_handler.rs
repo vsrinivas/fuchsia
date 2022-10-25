@@ -579,6 +579,7 @@ mod tests {
     use futures::future::join;
     use lazy_static::lazy_static;
     use std::sync::Arc;
+    use typed_builder::TypedBuilder;
 
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
 
@@ -667,19 +668,27 @@ mod tests {
         }
     }
 
-    fn request_stream_test<TestFn, Fut>(
+    #[derive(TypedBuilder)]
+    struct RequestStreamTestArgs<TestFn, Fut>
+    where
+        TestFn: FnOnce(AccountHandlerControlProxy) -> Fut,
+        Fut: Future<Output = TestResult>,
+    {
         lifetime: AccountLifetime,
         inspector: Arc<Inspector>,
         test_fn: TestFn,
-    ) where
+    }
+
+    fn request_stream_test<TestFn, Fut>(args: RequestStreamTestArgs<TestFn, Fut>)
+    where
         TestFn: FnOnce(AccountHandlerControlProxy) -> Fut,
         Fut: Future<Output = TestResult>,
     {
         let mut executor = fasync::LocalExecutor::new().expect("Failed to create executor");
-        let (proxy, server_fut) = create_account_handler(lifetime, inspector);
+        let (proxy, server_fut) = create_account_handler(args.lifetime, args.inspector);
 
         let (test_res, _server_result) =
-            executor.run_singlethreaded(join(test_fn(proxy), server_fut));
+            executor.run_singlethreaded(join((args.test_fn)(proxy), server_fut));
 
         assert!(test_res.is_ok());
     }
@@ -688,16 +697,18 @@ mod tests {
     fn test_get_account_before_initialization() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                let (_, account_server_end) = create_endpoints().unwrap();
-                assert_eq!(
-                    proxy.get_account(account_server_end).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    let (_, account_server_end) = create_endpoints().unwrap();
+                    assert_eq!(
+                        proxy.get_account(account_server_end).await?,
+                        Err(ApiError::FailedPrecondition)
+                    );
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -705,18 +716,20 @@ mod tests {
     fn test_get_account_when_locked() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                let (_, account_server_end) = create_endpoints().unwrap();
-                let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
-                proxy.preload(&pre_auth_state).await??;
-                assert_eq!(
-                    proxy.get_account(account_server_end).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    let (_, account_server_end) = create_endpoints().unwrap();
+                    let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
+                    proxy.preload(&pre_auth_state).await??;
+                    assert_eq!(
+                        proxy.get_account(account_server_end).await?,
+                        Err(ApiError::FailedPrecondition)
+                    );
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -724,17 +737,19 @@ mod tests {
     fn test_double_initialize() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
 
-                assert_eq!(
-                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
+                    assert_eq!(
+                        proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await?,
+                        Err(ApiError::FailedPrecondition)
+                    );
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -743,51 +758,53 @@ mod tests {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |account_handler_proxy| {
-                async move {
-                    account_handler_proxy
-                        .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
-                        .await??;
-                    assert_data_tree!(inspector, root: {
-                        account_handler: contains {
-                            account: contains {
-                                open_client_channels: 0u64,
-                            },
-                        }
-                    });
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|account_handler_proxy| {
+                    async move {
+                        account_handler_proxy
+                            .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
+                            .await??;
+                        assert_data_tree!(inspector, root: {
+                            account_handler: contains {
+                                account: contains {
+                                    open_client_channels: 0u64,
+                                },
+                            }
+                        });
 
-                    let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                    account_handler_proxy.get_account(account_server_end).await??;
+                        let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                        account_handler_proxy.get_account(account_server_end).await??;
 
-                    assert_data_tree!(inspector, root: {
-                        account_handler: contains {
-                            lifecycle: "initialized",
-                            account: contains {
-                                open_client_channels: 1u64,
-                            },
-                        }
-                    });
+                        assert_data_tree!(inspector, root: {
+                            account_handler: contains {
+                                lifecycle: "initialized",
+                                account: contains {
+                                    open_client_channels: 1u64,
+                                },
+                            }
+                        });
 
-                    // The account channel should now be usable.
-                    let account_proxy = account_client_end.into_proxy().unwrap();
-                    assert_eq!(
-                        account_proxy.get_auth_state().await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
+                        // The account channel should now be usable.
+                        let account_proxy = account_client_end.into_proxy().unwrap();
+                        assert_eq!(
+                            account_proxy.get_auth_state().await?,
+                            Err(ApiError::UnsupportedOperation)
+                        );
 
-                    // Lock the account and check that channels are closed
-                    account_handler_proxy.lock_account().await??;
-                    assert_data_tree!(inspector, root: {
-                        account_handler: contains {
-                            lifecycle: "locked",
-                        }
-                    });
-                    assert!(account_proxy.get_auth_state().await.is_err());
-                    Ok(())
-                }
-            },
+                        // Lock the account and check that channels are closed
+                        account_handler_proxy.lock_account().await??;
+                        assert_data_tree!(inspector, root: {
+                            account_handler: contains {
+                                lifecycle: "locked",
+                            }
+                        });
+                        assert!(account_proxy.get_auth_state().await.is_err());
+                        Ok(())
+                    }
+                })
+                .build(),
         );
     }
 
@@ -797,40 +814,46 @@ mod tests {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
-                assert_data_tree!(inspector, root: {
-                    account_handler: contains {
-                        lifecycle: "initialized",
-                    }
-                });
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|proxy| async move {
+                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
+                    assert_data_tree!(inspector, root: {
+                        account_handler: contains {
+                            lifecycle: "initialized",
+                        }
+                    });
+                    Ok(())
+                })
+                .build(),
         );
 
         // Ensure the account is persisted by unlocking it
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
-                proxy.preload(&pre_auth_state).await??;
-                assert_data_tree!(inspector, root: {
-                    account_handler: contains {
-                        lifecycle: "locked",
-                    }
-                });
-                proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await??;
-                assert_data_tree!(inspector, root: {
-                    account_handler: contains {
-                        lifecycle: "initialized",
-                    }
-                });
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|proxy| async move {
+                    let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
+                    proxy.preload(&pre_auth_state).await??;
+                    assert_data_tree!(inspector, root: {
+                        account_handler: contains {
+                            lifecycle: "locked",
+                        }
+                    });
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await??;
+                    assert_data_tree!(inspector, root: {
+                        account_handler: contains {
+                            lifecycle: "initialized",
+                        }
+                    });
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -840,16 +863,22 @@ mod tests {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |proxy| async move {
-                proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
-                proxy.lock_account().await??;
-                proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await??;
-                proxy.lock_account().await??;
-                proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await??;
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|proxy| async move {
+                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
+                    proxy.lock_account().await??;
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await??;
+                    proxy.lock_account().await??;
+                    proxy
+                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                        .await??;
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -857,15 +886,19 @@ mod tests {
     fn test_unlock_uninitialized_account() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                assert_eq!(
-                    proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await?,
-                    Err(ApiError::FailedPrecondition)
-                );
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    assert_eq!(
+                        proxy
+                            .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                            .await?,
+                        Err(ApiError::FailedPrecondition)
+                    );
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -873,68 +906,81 @@ mod tests {
     fn test_remove_account() {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
-        request_stream_test(location.to_persistent_lifetime(), Arc::clone(&inspector), |proxy| {
-            async move {
-                assert_data_tree!(inspector, root: {
-                    account_handler: {
-                        account_id: TEST_ACCOUNT_ID_UINT,
-                        lifecycle: "uninitialized",
+        request_stream_test(
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|proxy| {
+                    async move {
+                        assert_data_tree!(inspector, root: {
+                            account_handler: {
+                                account_id: TEST_ACCOUNT_ID_UINT,
+                                lifecycle: "uninitialized",
+                            }
+                        });
+
+                        proxy
+                            .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
+                            .await??;
+                        assert_data_tree!(inspector, root: {
+                            account_handler: {
+                                account_id: TEST_ACCOUNT_ID_UINT,
+                                lifecycle: "initialized",
+                                account: {
+                                    open_client_channels: 0u64,
+                                },
+                                default_persona: {
+                                    persona_id: AnyProperty,
+                                    open_client_channels: 0u64,
+                                },
+                            }
+                        });
+
+                        // Keep an open channel to an account.
+                        let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                        proxy.get_account(account_server_end).await??;
+                        let account_proxy = account_client_end.into_proxy().unwrap();
+
+                        // Make sure remove_account() can make progress with an open channel.
+                        proxy.remove_account().await??;
+
+                        assert_data_tree!(inspector, root: {
+                            account_handler: {
+                                account_id: TEST_ACCOUNT_ID_UINT,
+                                lifecycle: "finished",
+                            }
+                        });
+
+                        // Make sure that the channel is in fact closed.
+                        assert!(account_proxy.get_auth_state().await.is_err());
+
+                        // We cannot remove twice.
+                        assert_eq!(
+                            proxy.remove_account().await?,
+                            Err(ApiError::FailedPrecondition)
+                        );
+                        Ok(())
                     }
-                });
-
-                proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
-                assert_data_tree!(inspector, root: {
-                    account_handler: {
-                        account_id: TEST_ACCOUNT_ID_UINT,
-                        lifecycle: "initialized",
-                        account: {
-                            open_client_channels: 0u64,
-                        },
-                        default_persona: {
-                            persona_id: AnyProperty,
-                            open_client_channels: 0u64,
-                        },
-                    }
-                });
-
-                // Keep an open channel to an account.
-                let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                proxy.get_account(account_server_end).await??;
-                let account_proxy = account_client_end.into_proxy().unwrap();
-
-                // Make sure remove_account() can make progress with an open channel.
-                proxy.remove_account().await??;
-
-                assert_data_tree!(inspector, root: {
-                    account_handler: {
-                        account_id: TEST_ACCOUNT_ID_UINT,
-                        lifecycle: "finished",
-                    }
-                });
-
-                // Make sure that the channel is in fact closed.
-                assert!(account_proxy.get_auth_state().await.is_err());
-
-                // We cannot remove twice.
-                assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
-                Ok(())
-            }
-        });
+                })
+                .build(),
+        )
     }
 
     #[test]
     fn test_remove_locked_account() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
-                // Preloading a non-existing account will succeed, for now
-                proxy.preload(&pre_auth_state).await??;
-                assert_eq!(proxy.remove_account().await?, Err(ApiError::UnsupportedOperation));
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
+                    // Preloading a non-existing account will succeed, for now
+                    proxy.preload(&pre_auth_state).await??;
+                    assert_eq!(proxy.remove_account().await?, Err(ApiError::UnsupportedOperation));
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -942,12 +988,14 @@ mod tests {
     fn test_remove_account_before_initialization() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    assert_eq!(proxy.remove_account().await?, Err(ApiError::FailedPrecondition));
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -955,29 +1003,33 @@ mod tests {
     fn test_terminate() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| {
+                    async move {
+                        proxy
+                            .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
+                            .await??;
 
-                    // Keep an open channel to an account.
-                    let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                    proxy.get_account(account_server_end).await??;
-                    let account_proxy = account_client_end.into_proxy().unwrap();
+                        // Keep an open channel to an account.
+                        let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                        proxy.get_account(account_server_end).await??;
+                        let account_proxy = account_client_end.into_proxy().unwrap();
 
-                    // Terminate the handler
-                    proxy.terminate()?;
+                        // Terminate the handler
+                        proxy.terminate()?;
 
-                    // Check that further operations fail
-                    assert!(proxy.remove_account().await.is_err());
-                    assert!(proxy.terminate().is_err());
+                        // Check that further operations fail
+                        assert!(proxy.remove_account().await.is_err());
+                        assert!(proxy.terminate().is_err());
 
-                    // Make sure that the channel closed too.
-                    assert!(account_proxy.get_auth_state().await.is_err());
-                    Ok(())
-                }
-            },
+                        // Make sure that the channel closed too.
+                        assert!(account_proxy.get_auth_state().await.is_err());
+                        Ok(())
+                    }
+                })
+                .build(),
         );
     }
 
@@ -985,23 +1037,27 @@ mod tests {
     fn test_terminate_locked_account() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| {
-                async move {
-                    proxy.create_account(create_account_request(TEST_ACCOUNT_ID_UINT)).await??;
-                    proxy.lock_account().await??;
-                    proxy.terminate()?;
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| {
+                    async move {
+                        proxy
+                            .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
+                            .await??;
+                        proxy.lock_account().await??;
+                        proxy.terminate()?;
 
-                    // Check that further operations fail
-                    assert!(proxy
-                        .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
-                        .await
-                        .is_err());
-                    assert!(proxy.terminate().is_err());
-                    Ok(())
-                }
-            },
+                        // Check that further operations fail
+                        assert!(proxy
+                            .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                            .await
+                            .is_err());
+                        assert!(proxy.terminate().is_err());
+                        Ok(())
+                    }
+                })
+                .build(),
         );
     }
 
@@ -1009,39 +1065,45 @@ mod tests {
     fn test_load_non_existing_account() {
         let location = TempLocation::new();
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
-                // Preloading a non-existing account will succeed, for now
-                proxy.preload(&pre_auth_state).await??;
-                assert_eq!(
-                    proxy.unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY).await?,
-                    Err(ApiError::NotFound)
-                );
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    let pre_auth_state: Vec<u8> = (&*TEST_PRE_AUTH_EMPTY).try_into()?;
+                    // Preloading a non-existing account will succeed, for now
+                    proxy.preload(&pre_auth_state).await??;
+                    assert_eq!(
+                        proxy
+                            .unlock_account(AccountHandlerControlUnlockAccountRequest::EMPTY)
+                            .await?,
+                        Err(ApiError::NotFound)
+                    );
+                    Ok(())
+                })
+                .build(),
         );
     }
 
     #[test]
     fn test_create_account_ephemeral_with_auth_mechanism() {
         request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy| async move {
-                assert_eq!(
-                    proxy
-                        .create_account(AccountHandlerControlCreateAccountRequest {
-                            id: Some(TEST_ACCOUNT_ID_UINT),
-                            auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
-                            ..AccountHandlerControlCreateAccountRequest::EMPTY
-                        })
-                        .await?,
-                    Err(ApiError::InvalidRequest)
-                );
-                Ok(())
-            },
+            RequestStreamTestArgs::builder()
+                .lifetime(AccountLifetime::Ephemeral)
+                .inspector(Arc::new(Inspector::new()))
+                .test_fn(|proxy| async move {
+                    assert_eq!(
+                        proxy
+                            .create_account(AccountHandlerControlCreateAccountRequest {
+                                id: Some(TEST_ACCOUNT_ID_UINT),
+                                auth_mechanism_id: Some(TEST_AUTH_MECHANISM_ID.to_string()),
+                                ..AccountHandlerControlCreateAccountRequest::EMPTY
+                            })
+                            .await?,
+                        Err(ApiError::InvalidRequest)
+                    );
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -1049,35 +1111,37 @@ mod tests {
     fn test_lock_request_ephemeral_account_failure() {
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::clone(&inspector),
-            |account_handler_proxy| async move {
-                account_handler_proxy
-                    .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
-                    .await??;
+            RequestStreamTestArgs::builder()
+                .lifetime(AccountLifetime::Ephemeral)
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|account_handler_proxy| async move {
+                    account_handler_proxy
+                        .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
+                        .await??;
 
-                // Get a proxy to the Account interface
-                let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                account_handler_proxy.get_account(account_server_end).await??;
-                let account_proxy = account_client_end.into_proxy().unwrap();
+                    // Get a proxy to the Account interface
+                    let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                    account_handler_proxy.get_account(account_server_end).await??;
+                    let account_proxy = account_client_end.into_proxy().unwrap();
 
-                // Send the lock request
-                assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
+                    // Send the lock request
+                    assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
 
-                // Wait for a potentitially faulty lock request to propagate
-                fasync::Timer::new(LOCK_REQUEST_DURATION.clone().after_now()).await;
+                    // Wait for a potentitially faulty lock request to propagate
+                    fasync::Timer::new(LOCK_REQUEST_DURATION.clone().after_now()).await;
 
-                // The channel is still usable
-                assert!(account_proxy.get_persona_ids().await.is_ok());
+                    // The channel is still usable
+                    assert!(account_proxy.get_persona_ids().await.is_ok());
 
-                // The state remains initialized
-                assert_data_tree!(inspector, root: {
-                    account_handler: contains {
-                        lifecycle: "initialized",
-                    }
-                });
-                Ok(())
-            },
+                    // The state remains initialized
+                    assert_data_tree!(inspector, root: {
+                        account_handler: contains {
+                            lifecycle: "initialized",
+                        }
+                    });
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -1086,22 +1150,24 @@ mod tests {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |account_handler_proxy| async move {
-                account_handler_proxy
-                    .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
-                    .await??;
+            RequestStreamTestArgs::builder()
+                .lifetime(location.to_persistent_lifetime())
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|account_handler_proxy| async move {
+                    account_handler_proxy
+                        .create_account(create_account_request(TEST_ACCOUNT_ID_UINT))
+                        .await??;
 
-                // Get a proxy to the Account interface
-                let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                account_handler_proxy.get_account(account_server_end).await??;
-                let account_proxy = account_client_end.into_proxy().unwrap();
+                    // Get a proxy to the Account interface
+                    let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                    account_handler_proxy.get_account(account_server_end).await??;
+                    let account_proxy = account_client_end.into_proxy().unwrap();
 
-                // Send the lock request
-                assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
-                Ok(())
-            },
+                    // Send the lock request
+                    assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
+                    Ok(())
+                })
+                .build(),
         );
     }
 
@@ -1109,19 +1175,21 @@ mod tests {
     fn test_create_account_without_id() {
         let inspector = Arc::new(Inspector::new());
         request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::clone(&inspector),
-            |account_handler_proxy| async move {
-                // Send the invalid request
-                assert_eq!(
-                    account_handler_proxy
-                        .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
-                        .await?,
-                    Err(ApiError::InvalidRequest)
-                );
+            RequestStreamTestArgs::builder()
+                .lifetime(AccountLifetime::Ephemeral)
+                .inspector(Arc::clone(&inspector))
+                .test_fn(|account_handler_proxy| async move {
+                    // Send the invalid request
+                    assert_eq!(
+                        account_handler_proxy
+                            .create_account(AccountHandlerControlCreateAccountRequest::EMPTY)
+                            .await?,
+                        Err(ApiError::InvalidRequest)
+                    );
 
-                Ok(())
-            },
+                    Ok(())
+                })
+                .build(),
         );
     }
 }
