@@ -24,6 +24,8 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/botanist"
 	"go.fuchsia.dev/fuchsia/tools/botanist/constants"
 	"go.fuchsia.dev/fuchsia/tools/build"
+	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
+	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
@@ -120,6 +122,11 @@ type QEMUTarget struct {
 	mac     [6]byte
 	serial  io.ReadWriteCloser
 	ptm     *os.File
+	// isQEMU distinguishes a QEMUTarget from an AEMUTarget
+	// since AEMUTarget inherits from QEMUTarget.
+	// TODO(ihuh): Refactor this to be a general EMUTarget so that
+	// a QEMUTarget would always have isQEMU=true, as its name implies.
+	isQEMU bool
 }
 
 // EMUCommandBuilder defines the common set of functions used to build up an
@@ -137,6 +144,7 @@ type EMUCommandBuilder interface {
 	AddNetwork(qemu.Netdev)
 	AddKernelArg(string)
 	Build() ([]string, error)
+	BuildConfig() (qemu.Config, error)
 }
 
 // NewQEMUTarget returns a new QEMU target with a given configuration.
@@ -152,6 +160,7 @@ func NewQEMUTarget(ctx context.Context, config QEMUConfig, opts Options) (*QEMUT
 		config:  config,
 		opts:    opts,
 		c:       make(chan error),
+		isQEMU:  true,
 	}
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	if _, err := r.Read(t.mac[:]); err != nil {
@@ -206,6 +215,9 @@ func (t *QEMUTarget) SSHClient() (*sshutil.Client, error) {
 
 // Start starts the QEMU target.
 func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args []string) (err error) {
+	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
+	useFFX := t.UseFFXExperimental(2)
+
 	if t.process != nil {
 		return fmt.Errorf("a process has already been started with PID %d", t.process.Pid)
 	}
@@ -260,6 +272,7 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	if zirconA.Reader == nil {
 		return fmt.Errorf("could not find %s", zbiImageName)
 	}
+
 	// The QEMU command needs to be invoked within an empty directory, as QEMU
 	// will attempt to pick up files from its working directory, one notable
 	// culprit being multiboot.bin. This can result in strange behavior.
@@ -293,6 +306,9 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 		tmpFile := filepath.Join(workdir, "authorized_keys")
 		if err := os.WriteFile(tmpFile, authorizedKeys, os.ModePerm); err != nil {
 			return fmt.Errorf("could not write authorized keys to file: %w", err)
+		}
+		if useFFX {
+			t.ffx.ConfigSet(ctx, "ssh.pub", tmpFile)
 		}
 		if err := embedZBIWithKey(ctx, &zirconA, t.config.ZBITool, tmpFile); err != nil {
 			return fmt.Errorf("failed to embed zbi with key: %w", err)
@@ -400,6 +416,50 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	qemuCmd.SetFlag("-nographic")
 	qemuCmd.SetFlag("-monitor", "none")
 
+	if useFFX {
+		config, err := qemuCmd.BuildConfig()
+		if err != nil {
+			return err
+		}
+		configFile := filepath.Join(workdir, "ffx_emu_config.json")
+		if err := jsonutil.WriteToFile(configFile, config); err != nil {
+			return err
+		}
+		// We currently don't have an easy way to get a modular SDK or modify the
+		// virtual device properties.
+		// TODO(fxbug.dev/95938): Stop rewriting files once there is a better alternative.
+		cwd, err := os.Getwd()
+		if err != nil {
+			return err
+		}
+		sdkManifestPath := filepath.Join(cwd, ffxutil.SDKManifestPath)
+		if err := rewriteSDKManifest(sdkManifestPath, t.config.Target, t.isQEMU); err != nil {
+			return err
+		}
+		if err := rewriteVirtualDevice(filepath.Join(cwd, ffxutil.VirtualDevicePath), t.config, int(storageFullMinSize/1000000000)); err != nil {
+			return err
+		}
+		tools := ffxutil.EmuTools{
+			Emulator: absQEMUSystemPath,
+			FVM:      t.config.FVMTool,
+			ZBI:      t.config.ZBITool,
+		}
+		err = t.ffx.EmuStart(ctx, cwd, DefaultQEMUNodename, t.isQEMU, configFile, tools)
+		if err != nil {
+			// The `ffx emu` command may fail but still stage images in its instance dir
+			// that need to be cleaned up with a call to `ffx emu stop`.
+			if stopErr := t.ffx.EmuStop(ctx); stopErr != nil {
+				logger.Errorf(ctx, "failed to stop emulator: %s", stopErr)
+			}
+		}
+		// Show the emulator details for debugging purposes since they are hidden
+		// in the config files passed to `ffx emu`.
+		if showErr := t.ffx.Run(ctx, "emu", "show"); showErr != nil {
+			logger.Errorf(ctx, "failed to run `ffx emu show`: %s", showErr)
+		}
+		return err
+	}
+
 	invocation, err := qemuCmd.Build()
 	if err != nil {
 		return err
@@ -443,8 +503,48 @@ func (t *QEMUTarget) Start(ctx context.Context, images []bootserver.Image, args 
 	return nil
 }
 
+// rewriteSDKManifest rewrites the SDK manifest needed by `ffx emu` to only include the tools
+// we need from the SDK. That way we don't need to ensure all other files referenced by the
+// manifest exist, only the ones included in the manifest.
+func rewriteSDKManifest(manifestPath, targetCPU string, isQEMU bool) error {
+	// TODO(fxbug.dev/99321): Use the tools from the SDK once they are available for
+	// arm64. Until then, we'll have to provide our own.
+	manifest, err := ffxutil.GetFFXEmuManifest(manifestPath, targetCPU, []string{})
+	if err != nil {
+		return err
+	}
+
+	if err := jsonutil.WriteToFile(manifestPath, manifest); err != nil {
+		return fmt.Errorf("failed to modify sdk manifest: %w", err)
+	}
+	return nil
+}
+
+// rewriteVirtualDevice rewrites the virtual_device config used by `ffx emu` with the
+// provided memory and storage values. This is necessary because there is no
+// other way to modify these values currently.
+func rewriteVirtualDevice(path string, config QEMUConfig, storage int) error {
+	device, err := ffxutil.GetVirtualDevice(path)
+	if err != nil {
+		return err
+	}
+	device.Data.Hardware.Memory.Quantity = config.Memory
+	device.Data.Hardware.Memory.Units = "megabytes"
+	device.Data.Hardware.Storage.Quantity = storage
+	device.Data.Hardware.Storage.Units = "gigabytes"
+
+	if err := jsonutil.WriteToFile(path, device); err != nil {
+		return fmt.Errorf("failed to modify virtual_device: %w", err)
+	}
+	return nil
+}
+
 // Stop stops the QEMU target.
 func (t *QEMUTarget) Stop() error {
+	// TODO(fxbug.dev/91352): Remove experimental condition once stable.
+	if t.UseFFXExperimental(2) {
+		return t.ffx.EmuStop(context.Background())
+	}
 	if t.process == nil {
 		return fmt.Errorf("QEMU target has not yet been started")
 	}

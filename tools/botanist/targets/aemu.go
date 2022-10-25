@@ -29,6 +29,7 @@ func NewAEMUTarget(ctx context.Context, config QEMUConfig, opts Options) (*AEMUT
 
 	target.binary = aemuBinaryName
 	target.builder = qemu.NewAEMUCommandBuilder()
+	target.isQEMU = false
 
 	return &AEMUTarget{QEMUTarget: *target}, nil
 }

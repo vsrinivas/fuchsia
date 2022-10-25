@@ -307,6 +307,12 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 		}
 		logger.Debugf(ctx, "successfully started all targets")
 
+		defer func() {
+			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
+			defer cancel()
+			targets.StopTargets(ctx, targetSlice)
+		}()
+
 		// Create a testbed config file. We have to do this after starting the
 		// targets so that we can get their IP addresses.
 		testbedConfig, err := r.createTestbedConfig(targetSlice)
@@ -351,11 +357,6 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				}
 			}
 		}
-		defer func() {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
-			defer cancel()
-			targets.StopTargets(ctx, targetSlice)
-		}()
 		err = r.runAgainstTarget(ctx, t0, args, testbedConfig)
 		// Cancel ctx to notify other goroutines that this routine has completed.
 		// If another goroutine gets an error and the context is canceled, it

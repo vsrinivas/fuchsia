@@ -153,3 +153,48 @@ func GetFFXEmuManifest(manifestPath, targetCPU string, tools []string) (SDKManif
 	manifest.Atoms = requiredAtoms
 	return manifest, nil
 }
+
+// VirtualDevice represents the schema of the virtual_device specification config
+// used by `ffx emu`. It should be kept in sync with build/sdk/virtual_device.gni.
+type VirtualDevice struct {
+	Data     VirtualDeviceData `json:"data"`
+	SchemaID string            `json:"schema_id"`
+}
+
+type VirtualDeviceData struct {
+	Description         string                `json:"description"`
+	Hardware            VirtualDeviceHardware `json:"hardware"`
+	Name                string                `json:"name"`
+	Ports               map[string]int        `json:"ports"`
+	StartUpArgsTemplate string                `json:"start_up_args_template"`
+	Type                string                `json:"type"`
+}
+
+type VirtualDeviceHardware struct {
+	Audio      map[string]string `json:"audio"`
+	CPU        map[string]string `json:"cpu"`
+	Inputs     map[string]string `json:"inputs"`
+	Memory     quantity          `json:"memory"`
+	Storage    quantity          `json:"storage"`
+	WindowSize dimension         `json:"window_size"`
+}
+
+type quantity struct {
+	Quantity int    `json:"quantity"`
+	Units    string `json:"units"`
+}
+
+type dimension struct {
+	Height int    `json:"height"`
+	Units  string `json:"units"`
+	Width  int    `json:"width"`
+}
+
+// GetVirtualDevice returns the contents of the virtual_device config.
+func GetVirtualDevice(path string) (VirtualDevice, error) {
+	var device VirtualDevice
+	if err := jsonutil.ReadFromFile(path, &device); err != nil {
+		return device, fmt.Errorf("failed to read %s: %w", path, err)
+	}
+	return device, nil
+}
