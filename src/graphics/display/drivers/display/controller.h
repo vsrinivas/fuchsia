@@ -126,7 +126,7 @@ class Controller : public ControllerParent,
 
   // Typically called by OpenController/OpenVirtconController.  However, this is made public
   // for use by testing services which provide a fake display controller.
-  zx_status_t CreateClient(bool is_vc, zx::channel device, zx::channel client,
+  zx_status_t CreateClient(bool is_vc, zx::channel client,
                            fit::function<void()> on_client_dead = nullptr);
 
  private:

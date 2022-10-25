@@ -226,33 +226,25 @@ const INVALID_CONFIG_STAMP_VALUE uint64 = 0;
 @discoverable
 @for_deprecated_c_bindings
 protocol Provider {
-    /// Open a virtcon client. `device` should be a handle to one endpoint of a
-    /// channel that (on success) will become an open connection to a new
-    /// instance of a display client device. A protocol request `controller`
-    /// provides an interface to the Controller for the new device. Closing the
-    /// connection to `device` will also close the `controller` interface. If
-    /// the display device already has a virtcon controller then this method
+    /// Open a virtcon client.
+    ///
+    /// A protocol request `controller` provides an interface to the Controller.
+    ///
+    /// If the display device already has a virtcon controller then this method
     /// will return `ZX_ERR_ALREADY_BOUND`.
-    // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
-    // `controller`.
     OpenVirtconController(resource struct {
-        device zx.handle:CHANNEL;
         controller server_end:Controller;
     }) -> (struct {
         s zx.status;
     });
 
-    /// Open a main client. `device` should be a handle to one endpoint of a
-    /// channel that (on success) will become an open connection to a new
-    /// instance of a display client device. A protocol request `controller`
-    /// provides an interface to the Controller for the new device. Closing the
-    /// connection to `device` will also close the `controller` interface. If
-    /// the display device already has a main controller then this method
+    /// Open a main client.
+    ///
+    /// A protocol request `controller` provides an interface to the Controller.
+    ///
+    /// If the display device already has a main controller then this method
     /// will return `ZX_ERR_ALREADY_BOUND`.
-    // TODO(fxbug.dev/33675): Once llcpp is supported in Zircon, unify `device` and
-    // `controller`.
     OpenController(resource struct {
-        device zx.handle:CHANNEL;
         controller server_end:Controller;
     }) -> (struct {
         s zx.status;

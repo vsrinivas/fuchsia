@@ -36,17 +36,14 @@ ChannelPair CreateChannelPair() {
 class DisplayControllerListenerTest : public gtest::TestLoopFixture {
  public:
   void SetUp() {
-    ChannelPair device_channel = CreateChannelPair();
     ChannelPair controller_channel = CreateChannelPair();
 
     mock_display_controller_ = std::make_unique<MockDisplayController>();
-    mock_display_controller_->Bind(std::move(device_channel.server),
-                                   std::move(controller_channel.server));
+    mock_display_controller_->Bind(std::move(controller_channel.server));
 
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(std::move(controller_channel.client));
-    display_controller_listener_ =
-        std::make_unique<DisplayControllerListener>(std::move(device_channel.client), controller);
+    display_controller_listener_ = std::make_unique<DisplayControllerListener>(controller);
   }
 
   DisplayControllerListener* display_controller_listener() {
@@ -69,33 +66,21 @@ using DisplayControllerListenerBasicTest = gtest::TestLoopFixture;
 TEST_F(DisplayControllerListenerBasicTest, ConstructorArgs) {
   {
     // Valid arguments.
-    ChannelPair device_channel = CreateChannelPair();
     ChannelPair controller_channel = CreateChannelPair();
 
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(std::move(controller_channel.client));
-    DisplayControllerListener listener(std::move(device_channel.client), controller);
+    DisplayControllerListener listener(controller);
 
     EXPECT_TRUE(listener.valid());
   }
 
   {
-    zx::channel empty_channel;  // Invalid device.
-    ChannelPair controller_channel = CreateChannelPair();
-
-    auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
-    controller->Bind(std::move(controller_channel.client));
-    DisplayControllerListener listener(std::move(empty_channel), controller);
-    EXPECT_FALSE(listener.valid());
-  }
-
-  {
-    ChannelPair device_channel = CreateChannelPair();
     ChannelPair controller_channel = CreateChannelPair();
 
     // Unbound controller.
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
-    DisplayControllerListener listener(std::move(device_channel.client), controller);
+    DisplayControllerListener listener(controller);
 
     EXPECT_FALSE(listener.valid());
   }
@@ -105,7 +90,7 @@ TEST_F(DisplayControllerListenerBasicTest, ConstructorArgs) {
 
     auto controller = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
     controller->Bind(zx::channel());
-    DisplayControllerListener listener(std::move(device_channel.client), controller);
+    DisplayControllerListener listener(controller);
 
     EXPECT_FALSE(listener.valid());
   }
@@ -122,30 +107,6 @@ TEST_F(DisplayControllerListenerTest, Connect) {
   RunLoopUntilIdle();
   EXPECT_TRUE(display_controller_listener()->valid());
   EXPECT_TRUE(mock_display_controller()->binding().is_bound());
-}
-
-// Verify that DisplayController becomes invalid when the device channel is closed.
-TEST_F(DisplayControllerListenerTest, DisconnectDeviceChannel) {
-  uint on_invalid_count = 0;
-  auto on_invalid_cb = [&on_invalid_count]() { on_invalid_count++; };
-  display_controller_listener()->InitializeCallbacks(std::move(on_invalid_cb),
-                                                     /*displays_changed_cb=*/nullptr,
-                                                     /*client_ownership_change_cb=*/nullptr);
-
-  EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
-  RunLoopUntilIdle();
-  EXPECT_TRUE(display_controller_listener()->valid());
-  EXPECT_TRUE(mock_display_controller()->binding().is_bound());
-
-  mock_display_controller()->ResetDeviceChannel();
-  RunLoopUntilIdle();
-  EXPECT_EQ(1u, on_invalid_count);
-  EXPECT_FALSE(display_controller_listener()->valid());
-
-  // Expect no crashes on teardown.
-  ResetDisplayControllerListener();
-  RunLoopUntilIdle();
 }
 
 // Verify that DisplayController becomes invalid when the controller channel is closed.

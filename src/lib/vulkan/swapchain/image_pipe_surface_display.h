@@ -52,7 +52,6 @@ class ImagePipeSurfaceDisplay : public ImagePipeSurface {
   async::Loop loop_;
   std::map<uint64_t, uint64_t> image_id_map;
 
-  zx::channel dc_device_;
   bool display_connection_exited_ = false;
   bool got_message_response_ = false;
   bool have_display_ = false;

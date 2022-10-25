@@ -68,19 +68,16 @@ TEST_F(DisplayManagerMockTest, DisplayVsyncCallback) {
   size_t num_vsync_acknowledgement = 0;
 
   auto controller_channel = CreateChannelPair();
-  auto device_channel = CreateChannelPair();
 
   display_manager()->BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
-          std::move(controller_channel.client)),
-      std::move(device_channel.client));
+          std::move(controller_channel.client)));
 
   display_manager()->SetDefaultDisplayForTests(
       std::make_shared<display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight));
 
   display::test::MockDisplayController mock_display_controller;
-  mock_display_controller.Bind(std::move(device_channel.server),
-                               std::move(controller_channel.server));
+  mock_display_controller.Bind(std::move(controller_channel.server));
   mock_display_controller.set_acknowledge_vsync_fn(
       [&cookies_sent, &num_vsync_acknowledgement](uint64_t cookie) {
         ASSERT_TRUE(cookies_sent.find(cookie) != cookies_sent.end());

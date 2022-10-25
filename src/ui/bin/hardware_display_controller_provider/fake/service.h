@@ -30,13 +30,11 @@ class ProviderService : public fuchsia::hardware::display::Provider {
 
   // |fuchsia::hardware::display::Provider|.
   void OpenVirtconController(
-      zx::channel device,
       ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller_request,
       OpenVirtconControllerCallback callback) override;
 
   // |fuchsia::hardware::display::Provider|.
   void OpenController(
-      zx::channel device,
       ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller_request,
       OpenControllerCallback callback) override;
 

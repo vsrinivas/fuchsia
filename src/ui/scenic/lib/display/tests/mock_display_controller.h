@@ -48,9 +48,7 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   void WaitForMessage() { binding_.WaitForMessage(); }
 
-  void Bind(zx::channel device_channel, zx::channel controller_channel,
-            async_dispatcher_t* dispatcher = nullptr) {
-    device_channel_ = std::move(device_channel);
+  void Bind(zx::channel controller_channel, async_dispatcher_t* dispatcher = nullptr) {
     binding_.Bind(fidl::InterfaceRequest<fuchsia::hardware::display::Controller>(
                       std::move(controller_channel)),
                   dispatcher);
@@ -171,8 +169,6 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
 
   EventSender_& events() { return binding_.events(); }
 
-  void ResetDeviceChannel() { device_channel_.reset(); }
-
   void ResetControllerBinding() { binding_.Close(ZX_ERR_INTERNAL); }
 
   fidl::Binding<fuchsia::hardware::display::Controller>& binding() { return binding_; }
@@ -208,7 +204,6 @@ class MockDisplayController : public fuchsia::hardware::display::testing::Contro
   bool display_power_on_ = true;
 
   fidl::Binding<fuchsia::hardware::display::Controller> binding_;
-  zx::channel device_channel_;
 };
 
 }  // namespace test

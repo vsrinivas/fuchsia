@@ -12,18 +12,11 @@ namespace scenic_impl {
 namespace display {
 
 DisplayControllerListener::DisplayControllerListener(
-    zx::channel device_channel,
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller)
     : controller_(std::move(controller)),
-      controller_channel_handle_(controller_->unowned_channel()->get()),
-      device_channel_(std::move(device_channel)) {
-  valid_ = device_channel_.is_valid() && controller_channel_handle_ != 0 && controller_->is_bound();
+      controller_channel_handle_(controller_->unowned_channel()->get()) {
+  valid_ = controller_channel_handle_ != 0 && controller_->is_bound();
   if (valid_) {
-    // Listen for when the device channel closes.
-    wait_device_closed_.set_object(device_channel_.get());
-    wait_device_closed_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
-    wait_device_closed_.Begin(async_get_default_dispatcher());
-
     // Listen for when the controller channel closes.
     wait_controller_closed_.set_object(controller_channel_handle_);
     wait_controller_closed_.set_trigger(ZX_CHANNEL_PEER_CLOSED);
@@ -42,9 +35,6 @@ DisplayControllerListener::~DisplayControllerListener() {
 
   if (wait_event_msg_.object() != ZX_HANDLE_INVALID) {
     wait_event_msg_.Cancel();
-  }
-  if (wait_device_closed_.object() != ZX_HANDLE_INVALID) {
-    wait_device_closed_.Cancel();
   }
   if (wait_controller_closed_.object() != ZX_HANDLE_INVALID) {
     wait_controller_closed_.Cancel();
@@ -95,9 +85,6 @@ void DisplayControllerListener::OnPeerClosedAsync(async_dispatcher_t* dispatcher
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
     valid_ = false;
 
-    // We don't want to get another callback, and we don't know which channel closed, so just cancel
-    // both waits.
-    wait_device_closed_.Cancel();
     wait_controller_closed_.Cancel();
     if (on_invalid_cb_) {
       // We want |on_invalid_cb_| to be cleared when we're done, so move it out.

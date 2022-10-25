@@ -298,8 +298,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
       });
   executor_.schedule_task(dc_handles_promise.then(
       [this](fpromise::result<ui_display::DisplayControllerHandles>& handles) {
-        display_manager_->BindDefaultDisplayController(std::move(handles.value().controller),
-                                                       std::move(handles.value().dc_device));
+        display_manager_->BindDefaultDisplayController(std::move(handles.value().controller));
       }));
 
   // Schedule a task to finish initialization once all promises have been completed.

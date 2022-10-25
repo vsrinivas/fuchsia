@@ -86,13 +86,11 @@ class CompositorTest : public SessionTest {
 };
 
 TEST_F(CompositorTest, Validation) {
-  ChannelPair device_channel = CreateChannelPair();
   ChannelPair controller_channel = CreateChannelPair();
 
   display_manager()->BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
-          std::move(controller_channel.client)),
-      std::move(device_channel.client));
+          std::move(controller_channel.client)));
 
   std::array<float, 3> preoffsets = {0, 0, 0};
   std::array<float, 9> matrix = {0.3, 0.6, 0.1, 0.3, 0.6, 0.1, 0.3, 0.6, 0.1};
@@ -104,7 +102,6 @@ TEST_F(CompositorTest, Validation) {
 
   // Create a mock display controller that runs on a separate thread.
   std::thread server([&preoffsets, &matrix, &postoffsets,
-                      device_channel = std::move(device_channel.server),
                       controller_channel = std::move(controller_channel.server)]() mutable {
     async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
@@ -118,7 +115,7 @@ TEST_F(CompositorTest, Validation) {
           EXPECT_EQ(matrix, matrix_out);
           EXPECT_EQ(postoffsets, postoffsets_out);
         });
-    mock_display_controller.Bind(std::move(device_channel), std::move(controller_channel));
+    mock_display_controller.Bind(std::move(controller_channel));
 
     // Waits for initial call to |SetOnVsyncCallback| by DisplayManager.
     mock_display_controller.WaitForMessage();
@@ -143,41 +140,39 @@ TEST_F(CompositorTest, Validation) {
 // Test to make sure that we can set the minimum RGB value for the display via the
 // standard GFX API, across a fidl channel.
 TEST_F(CompositorTest, ValidateMinimumRGB) {
-  ChannelPair device_channel = CreateChannelPair();
   ChannelPair controller_channel = CreateChannelPair();
 
   display_manager()->BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
-          std::move(controller_channel.client)),
-      std::move(device_channel.client));
+          std::move(controller_channel.client)));
 
   // Create a mock display controller that runs on a separate thread.
   uint8_t minimum = 10;
-  std::thread server([&minimum, device_channel = std::move(device_channel.server),
-                      controller_channel = std::move(controller_channel.server)]() mutable {
-    async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  std::thread server(
+      [&minimum, controller_channel = std::move(controller_channel.server)]() mutable {
+        async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
-    display::test::MockDisplayController mock_display_controller;
+        display::test::MockDisplayController mock_display_controller;
 
-    mock_display_controller.set_minimum_rgb_fn([&](uint8_t minimum_out) {
-      // Check that the display controller got the right value.
-      EXPECT_EQ(minimum, minimum_out);
-    });
-    mock_display_controller.Bind(std::move(device_channel), std::move(controller_channel));
+        mock_display_controller.set_minimum_rgb_fn([&](uint8_t minimum_out) {
+          // Check that the display controller got the right value.
+          EXPECT_EQ(minimum, minimum_out);
+        });
+        mock_display_controller.Bind(std::move(controller_channel));
 
-    // Waits for initial call to |SetOnVsyncCallback| by DisplayManager.
-    mock_display_controller.WaitForMessage();
+        // Waits for initial call to |SetOnVsyncCallback| by DisplayManager.
+        mock_display_controller.WaitForMessage();
 
-    // Waits for a call to |SetDisplayMinimumRgb| by client.
-    EXPECT_EQ(0U, mock_display_controller.set_minimum_rgb_count());
-    mock_display_controller.WaitForMessage();
-    EXPECT_EQ(1U, mock_display_controller.set_minimum_rgb_count());
+        // Waits for a call to |SetDisplayMinimumRgb| by client.
+        EXPECT_EQ(0U, mock_display_controller.set_minimum_rgb_count());
+        mock_display_controller.WaitForMessage();
+        EXPECT_EQ(1U, mock_display_controller.set_minimum_rgb_count());
 
-    // Wait for |CheckConfig|.
-    EXPECT_EQ(0U, mock_display_controller.check_config_count());
-    mock_display_controller.WaitForMessage();
-    EXPECT_EQ(1U, mock_display_controller.check_config_count());
-  });
+        // Wait for |CheckConfig|.
+        EXPECT_EQ(0U, mock_display_controller.check_config_count());
+        mock_display_controller.WaitForMessage();
+        EXPECT_EQ(1U, mock_display_controller.check_config_count());
+      });
 
   EXPECT_TRUE(Apply(scenic::NewSetDisplayMinimumRgbCmdHACK(minimum)));
 
@@ -190,11 +185,9 @@ TEST_F(CompositorTestSimple, ColorConversionConfigChecking) {
   fuchsia::hardware::display::ControllerSyncPtr display_controller;
   display::test::MockDisplayController mock_display_controller;
 
-  ChannelPair device_channel = CreateChannelPair();
   ChannelPair controller_channel = CreateChannelPair();
 
-  mock_display_controller.Bind(std::move(device_channel.server),
-                               std::move(controller_channel.server));
+  mock_display_controller.Bind(std::move(controller_channel.server));
 
   display_controller.Bind(std::move(controller_channel.client));
 

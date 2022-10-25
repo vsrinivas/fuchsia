@@ -29,15 +29,13 @@ class HardwareDisplayControllerProviderImpl : public fuchsia::hardware::display:
 
   // |fuchsia::hardware::display::Provider|.
   void OpenVirtconController(
-      zx::channel device,
       ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller,
       OpenVirtconControllerCallback callback) override {
     callback(ZX_ERR_NOT_SUPPORTED);
   }
 
   // |fuchsia::hardware::display::Provider|.
-  void OpenController(zx::channel device,
-                      ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller,
+  void OpenController(::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> controller,
                       OpenControllerCallback callback) override;
 
   void BindDisplayProvider(fidl::InterfaceRequest<fuchsia::hardware::display::Provider> request);

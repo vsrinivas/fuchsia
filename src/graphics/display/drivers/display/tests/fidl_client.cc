@@ -39,14 +39,8 @@ TestFidlClient::Display::Display(const fhd::wire::Info& info) {
 uint64_t TestFidlClient::display_id() const { return displays_[0].id_; }
 
 bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
-  zx::channel device_server, device_client;
   zx::channel dc_server, dc_client;
-  zx_status_t status = zx::channel::create(0, &device_server, &device_client);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "Could not create device channels");
-    return false;
-  }
-  status = zx::channel::create(0, &dc_server, &dc_client);
+  zx_status_t status = zx::channel::create(0, &dc_server, &dc_client);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Could not create controller channels");
     return false;
@@ -54,14 +48,14 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
   zxlogf(INFO, "Opening controller");
   if (is_vc) {
     auto response = fidl::WireCall<fhd::Provider>(zx::unowned_channel(provider))
-                        ->OpenVirtconController(std::move(device_server), std::move(dc_server));
+                        ->OpenVirtconController(std::move(dc_server));
     if (!response.ok()) {
       zxlogf(ERROR, "Could not open VC controller, error=%s", response.FormatDescription().c_str());
       return false;
     }
   } else {
     auto response = fidl::WireCall<fhd::Provider>(zx::unowned_channel(provider))
-                        ->OpenController(std::move(device_server), std::move(dc_server));
+                        ->OpenController(std::move(dc_server));
     if (!response.ok()) {
       zxlogf(ERROR, "Could not open controller, error=%s", response.FormatDescription().c_str());
       return false;
@@ -70,7 +64,6 @@ bool TestFidlClient::CreateChannel(zx_handle_t provider, bool is_vc) {
 
   fbl::AutoLock lock(mtx());
   dc_ = fidl::WireSyncClient<fhd::Controller>(std::move(dc_client));
-  device_handle_.reset(device_client.release());
   return true;
 }
 

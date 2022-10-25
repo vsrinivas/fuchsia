@@ -28,8 +28,7 @@ class DisplayManager {
   ~DisplayManager() = default;
 
   void BindDefaultDisplayController(
-      fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
-      zx::channel dc_device);
+      fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller);
 
   // Gets information about the default display.
   // May return null if there isn't one.

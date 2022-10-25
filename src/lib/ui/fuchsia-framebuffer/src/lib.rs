@@ -637,8 +637,6 @@ pub enum Message {
 }
 
 pub struct FrameBuffer {
-    #[allow(unused)]
-    display_controller: zx::Channel,
     pub controller: ControllerProxy,
     config: Config,
     layer_id: u64,
@@ -780,12 +778,11 @@ impl FrameBuffer {
         fuchsia_component::client::connect_channel_to_protocol_at_path(server_end, &device_path)?;
         let provider = ProviderSynchronousProxy::new(client_end);
 
-        let (device_client, device_server) = zx::Channel::create()?;
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
         let status = if virtcon_mode.is_some() {
-            provider.open_virtcon_controller(device_server, dc_server, zx::Time::INFINITE)
+            provider.open_virtcon_controller(dc_server, zx::Time::INFINITE)
         } else {
-            provider.open_controller(device_server, dc_server, zx::Time::INFINITE)
+            provider.open_controller(dc_server, zx::Time::INFINITE)
         }?;
         let () = zx::Status::ok(status)?;
 
@@ -793,14 +790,13 @@ impl FrameBuffer {
         if let Some(virtcon_mode) = virtcon_mode {
             proxy.set_virtcon_mode(virtcon_mode as u8)?;
         }
-        FrameBuffer::new_with_proxy(virtcon_mode, usage, proxy, device_client, sender).await
+        FrameBuffer::new_with_proxy(virtcon_mode, usage, proxy, sender).await
     }
 
     async fn new_with_proxy(
         initial_virtcon_mode: Option<VirtconMode>,
         usage: FrameUsage,
         proxy: ControllerProxy,
-        device_client: zx::Channel,
         sender: Option<futures::channel::mpsc::UnboundedSender<Message>>,
     ) -> Result<FrameBuffer, Error> {
         let mut stream = proxy.take_event_stream();
@@ -839,14 +835,8 @@ impl FrameBuffer {
             .detach();
         }
 
-        let mut fb = FrameBuffer {
-            initial_virtcon_mode,
-            display_controller: device_client,
-            controller: proxy,
-            config,
-            layer_id: 0,
-            usage,
-        };
+        let mut fb =
+            FrameBuffer { initial_virtcon_mode, controller: proxy, config, layer_id: 0, usage };
 
         let layer_id = fb.create_layer().await?;
         fb.layer_id = layer_id;
@@ -957,8 +947,7 @@ mod test {
         .detach();
 
         let proxy = client.into_proxy()?;
-        let (dummy, _) = zx::Channel::create()?;
-        let _fb = FrameBuffer::new_with_proxy(None, FrameUsage::Cpu, proxy, dummy, None);
+        let _fb = FrameBuffer::new_with_proxy(None, FrameUsage::Cpu, proxy, None);
         if vsync_enabled.get() {
             panic!("Vsync should be disabled");
         }

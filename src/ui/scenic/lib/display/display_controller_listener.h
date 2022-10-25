@@ -35,7 +35,6 @@ class DisplayControllerListener {
   // If |device| or |controller_handle| is invalid, or |controller| is not bound, this instance is
   // invalid.
   DisplayControllerListener(
-      zx::channel device_channel,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> controller);
   ~DisplayControllerListener();
 
@@ -68,9 +67,6 @@ class DisplayControllerListener {
   // |controller_| owns |controller_channel_handle_|, but save its handle here for use.
   zx_handle_t controller_channel_handle_ = 0;
 
-  // |device_channel_| needs to be kept alive to stay connected to |controller_|.
-  zx::channel device_channel_;
-
   // Callback to invoke if we disconnect from |controller_|.
   fit::closure on_invalid_cb_ = nullptr;
 
@@ -80,9 +76,6 @@ class DisplayControllerListener {
   // Waits for a ZX_CHANNEL_READABLE signal.
   async::WaitMethod<DisplayControllerListener, &DisplayControllerListener::OnEventMsgAsync>
       wait_event_msg_{this};
-  // Wait for a ZX_PEER_CLOSED signal.
-  async::WaitMethod<DisplayControllerListener, &DisplayControllerListener::OnPeerClosedAsync>
-      wait_device_closed_{this};
   async::WaitMethod<DisplayControllerListener, &DisplayControllerListener::OnPeerClosedAsync>
       wait_controller_closed_{this};
 

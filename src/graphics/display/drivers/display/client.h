@@ -440,8 +440,6 @@ class ClientProxy {
   // stored due to client non-acknowledgement.
   static constexpr uint32_t kMaxImageHandles = 8;
 
-  void set_device_channel(zx::channel channel) { device_channel_ = std::move(channel); }
-
  protected:
   friend IntegrationTest;
 
@@ -483,7 +481,6 @@ class ClientProxy {
   std::list<config_stamp_pair_t> pending_applied_config_stamps_;
 
  private:
-  zx::channel device_channel_;
   inspect::Node node_;
   inspect::BoolProperty is_owner_property_;
   inspect::ValueList static_properties_;

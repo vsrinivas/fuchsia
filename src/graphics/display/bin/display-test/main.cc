@@ -96,23 +96,16 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     return false;
   }
 
-  zx::channel device_server, device_client;
-  zx_status_t status = zx::channel::create(0, &device_server, &device_client);
-  if (status != ZX_OK) {
-    printf("Failed to create device channel %d (%s)\n", status, zx_status_get_string(status));
-    return false;
-  }
-
   zx::channel dc_server, dc_client;
-  status = zx::channel::create(0, &dc_server, &dc_client);
+  zx_status_t status = zx::channel::create(0, &dc_server, &dc_client);
   if (status != ZX_OK) {
     printf("Failed to create controller channel %d (%s)\n", status, zx_status_get_string(status));
     return false;
   }
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto open_response = fidl::WireCall<fhd::Provider>(caller.channel())
-                           ->OpenController(std::move(device_server), std::move(dc_server));
+  auto open_response =
+      fidl::WireCall<fhd::Provider>(caller.channel())->OpenController(std::move(dc_server));
   if (!open_response.ok()) {
     printf("Failed to call service handle: %s\n", open_response.FormatDescription().c_str());
     return false;
@@ -124,7 +117,6 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
   }
 
   dc = fidl::WireSyncClient<fhd::Controller>(std::move(dc_client));
-  device_handle = device_client.release();
 
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
    public:

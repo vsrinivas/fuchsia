@@ -7,7 +7,6 @@ use argh::FromArgs;
 use fdio;
 use fidl;
 use fidl_fuchsia_hardware_display as display;
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use tracing;
 
@@ -36,10 +35,6 @@ struct DisplayProviderClient {
 #[derive(Debug)]
 struct DisplayControllerClient {
     controller: display::ControllerProxy,
-
-    // TODO(fxbug.dev/33675): The display controller will close our connection
-    // if this unused channel doesn't stay open.
-    _device_client: zx::Channel,
 }
 
 /// The final stage in the process of connecting to the display driver system.
@@ -49,10 +44,6 @@ struct DisplayClient {
     controller: display::ControllerProxy,
 
     display_infos: Vec<display::Info>,
-
-    // TODO(fxbug.dev/33675): The display controller will close our connection
-    // if this unused channel doesn't stay open.
-    _device_client: zx::Channel,
 }
 
 impl DisplayProviderClient {
@@ -64,21 +55,14 @@ impl DisplayProviderClient {
     // Opens the primary display controller from the provider at the default
     // hard-coded path.
     async fn open_display_controller(self) -> Result<DisplayControllerClient, Error> {
-        let (device_client, device_server) =
-            zx::Channel::create().context("Failed to create ZX channel for display controller")?;
         let (display_controller, controller_server) =
             fidl::endpoints::create_proxy::<display::ControllerMarker>()
                 .context("Failed to create fuchsia.hardware.display.Controller proxy")?;
 
-        utils::flatten_zx_status(
-            self.provider.open_controller(device_server, controller_server).await,
-        )
-        .context("Failed to get display Controller from Provider")?;
+        utils::flatten_zx_status(self.provider.open_controller(controller_server).await)
+            .context("Failed to get display Controller from Provider")?;
 
-        Ok(DisplayControllerClient {
-            controller: display_controller,
-            _device_client: device_client,
-        })
+        Ok(DisplayControllerClient { controller: display_controller })
     }
 }
 
@@ -108,11 +92,7 @@ impl DisplayControllerClient {
     async fn into_display_client(mut self) -> Result<DisplayClient, Error> {
         let display_infos = self.wait_for_display_infos().await?;
 
-        Ok(DisplayClient {
-            controller: self.controller,
-            display_infos: display_infos,
-            _device_client: self._device_client,
-        })
+        Ok(DisplayClient { controller: self.controller, display_infos: display_infos })
     }
 }
 
@@ -175,7 +155,6 @@ mod tests {
         let provider_service_future = async move {
             let controller_server = match provider_request_stream.next().await.unwrap() {
                 Ok(display::ProviderRequest::OpenController {
-                    device: _,
                     controller: controller_server,
                     responder,
                 }) => {
@@ -239,7 +218,6 @@ mod tests {
         let provider_service_future = async move {
             let controller_server = match provider_request_stream.next().await.unwrap() {
                 Ok(display::ProviderRequest::OpenController {
-                    device: _,
                     controller: controller_server,
                     responder,
                 }) => {

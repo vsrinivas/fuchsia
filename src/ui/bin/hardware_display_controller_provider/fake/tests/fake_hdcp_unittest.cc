@@ -47,18 +47,10 @@ class FakeHardwareDisplayControllerProviderTest : public gtest::TestLoopFixture 
 };
 
 struct Request {
-  zx::channel client_device;
-  zx::channel server_device;
   fidl::InterfacePtr<fuchsia::hardware::display::Controller> controller;
 };
 
-Request NewRequest() {
-  Request req;
-  auto status = zx::channel::create(0u, &req.client_device, &req.server_device);
-  ZX_ASSERT(status == ZX_OK);
-
-  return req;
-}
+Request NewRequest() { return Request(); }
 
 }  // anonymous namespace
 
@@ -68,12 +60,12 @@ TEST_F(FakeHardwareDisplayControllerProviderTest, NoConflictWithVirtcon) {
   uint32_t num_virtcon_connections = 0;
 
   auto req = NewRequest();
-  service()->OpenController(std::move(req.server_device), req.controller.NewRequest(),
+  service()->OpenController(req.controller.NewRequest(),
                             [&num_connections](zx_status_t status) { ++num_connections; });
 
   auto req2 = NewRequest();
   service()->OpenVirtconController(
-      std::move(req2.server_device), req2.controller.NewRequest(),
+      req2.controller.NewRequest(),
       [&num_virtcon_connections](zx_status_t status) { ++num_virtcon_connections; });
 
   EXPECT_EQ(num_connections, 1U);
@@ -85,26 +77,25 @@ TEST_F(FakeHardwareDisplayControllerProviderTest, MultipleConnections) {
   uint32_t num_connections = 0;
 
   auto req = NewRequest();
-  service()->OpenController(
-      std::move(req.server_device), req.controller.NewRequest(),
-      [&num_connections](zx_status_t status) { EXPECT_EQ(++num_connections, 1U); });
+  service()->OpenController(req.controller.NewRequest(), [&num_connections](zx_status_t status) {
+    EXPECT_EQ(++num_connections, 1U);
+  });
 
   auto req2 = NewRequest();
-  service()->OpenController(
-      std::move(req2.server_device), req2.controller.NewRequest(),
-      [&num_connections](zx_status_t status) { EXPECT_EQ(++num_connections, 2U); });
+  service()->OpenController(req2.controller.NewRequest(), [&num_connections](zx_status_t status) {
+    EXPECT_EQ(++num_connections, 2U);
+  });
 
   auto req3 = NewRequest();
-  service()->OpenController(
-      std::move(req3.server_device), req3.controller.NewRequest(),
-      [&num_connections](zx_status_t status) { EXPECT_EQ(++num_connections, 3U); });
+  service()->OpenController(req3.controller.NewRequest(), [&num_connections](zx_status_t status) {
+    EXPECT_EQ(++num_connections, 3U);
+  });
 
   EXPECT_EQ(num_connections, 1U);
   EXPECT_EQ(service()->num_queued_requests(), 2U);
 
   // Drop the first connection, which will enable the second connection to be made.
   req.controller.Unbind();
-  req.client_device.reset();
   while (service()->num_queued_requests() == 2) {
     // Real wall clock time must elapse for the service to handle a kernel notification
     // that the channel has closed.
@@ -117,7 +108,6 @@ TEST_F(FakeHardwareDisplayControllerProviderTest, MultipleConnections) {
 
   // Drop the second connection, which will enable the third connection to be made.
   req2.controller.Unbind();
-  req2.client_device.reset();
   while (service()->num_queued_requests() == 1) {
     // Real wall clock time must elapse for the service to handle a kernel notification
     // that the channel has closed.

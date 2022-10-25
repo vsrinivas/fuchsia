@@ -24,15 +24,13 @@ DisplayManager::DisplayManager(std::optional<uint64_t> i_can_haz_display_id,
       display_available_cb_(std::move(display_available_cb)) {}
 
 void DisplayManager::BindDefaultDisplayController(
-    fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller,
-    zx::channel dc_device) {
+    fidl::InterfaceHandle<fuchsia::hardware::display::Controller> controller) {
   FX_DCHECK(!default_display_controller_);
   FX_DCHECK(controller);
-  FX_DCHECK(dc_device);
   default_display_controller_ = std::make_shared<fuchsia::hardware::display::ControllerSyncPtr>();
   default_display_controller_->Bind(std::move(controller));
-  default_display_controller_listener_ = std::make_shared<display::DisplayControllerListener>(
-      std::move(dc_device), default_display_controller_);
+  default_display_controller_listener_ =
+      std::make_shared<display::DisplayControllerListener>(default_display_controller_);
   default_display_controller_listener_->InitializeCallbacks(
       /*on_invalid_cb=*/nullptr, fit::bind_member<&DisplayManager::OnDisplaysChanged>(this),
       fit::bind_member<&DisplayManager::OnClientOwnershipChange>(this));

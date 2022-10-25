@@ -79,16 +79,11 @@ class CoreDisplayTest : public zxtest::Test {
   fidl::WireSyncClient<sysmem::BufferCollection> collection_;
 
  private:
-  fidl::ClientEnd<fhd::Controller> device_client_channel_;
   fbl::Vector<fhd::wire::Info> displays_;
   bool capture_supported_ = false;
 };
 
 void CoreDisplayTest::SetUp() {
-  zx::result device_server_channel =
-      fidl::CreateEndpoints<fhd::Controller>(&device_client_channel_);
-  ASSERT_TRUE(device_server_channel.is_ok(), "%s", device_server_channel.status_string());
-
   zx::result dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
   ASSERT_TRUE(dc_endpoints.is_ok(), "%s", dc_endpoints.status_string());
 
@@ -98,8 +93,7 @@ void CoreDisplayTest::SetUp() {
   caller_.reset(std::move(fd));
 
   const fidl::WireResult result = fidl::WireCall(caller_.borrow_as<fhd::Provider>())
-                                      ->OpenController(device_server_channel.value().TakeChannel(),
-                                                       std::move(dc_endpoints->server));
+                                      ->OpenController(std::move(dc_endpoints->server));
   ASSERT_TRUE(result.ok(), "%s", result.status_string());
   const fidl::WireResponse response = result.value();
   ASSERT_OK(response.s);
@@ -319,15 +313,11 @@ void CoreDisplayTest::CaptureSetup() {
 }
 
 TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
-  zx::result device_endpoints = fidl::CreateEndpoints<fhd::Controller>();
-  ASSERT_TRUE(device_endpoints.is_ok(), "%s", device_endpoints.status_string());
-
   zx::result dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
   ASSERT_TRUE(dc_endpoints.is_ok(), "%s", dc_endpoints.status_string());
 
-  const fidl::WireResult result =
-      fidl::WireCall(caller_.borrow_as<fhd::Provider>())
-          ->OpenController(device_endpoints->server.TakeChannel(), std::move(dc_endpoints->server));
+  const fidl::WireResult result = fidl::WireCall(caller_.borrow_as<fhd::Provider>())
+                                      ->OpenController(std::move(dc_endpoints->server));
   ASSERT_TRUE(result.ok(), "%s", result.status_string());
   const fidl::WireResponse response = result.value();
   ASSERT_STATUS(response.s, ZX_ERR_ALREADY_BOUND);

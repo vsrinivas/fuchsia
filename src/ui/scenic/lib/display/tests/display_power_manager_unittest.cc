@@ -58,19 +58,16 @@ TEST_F(DisplayPowerManagerMockTest, Ok) {
   const uint32_t kDisplayHeight = 768;
 
   auto controller_channel = CreateChannelPair();
-  auto device_channel = CreateChannelPair();
 
   display_manager()->BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
-          std::move(controller_channel.client)),
-      std::move(device_channel.client));
+          std::move(controller_channel.client)));
 
   display_manager()->SetDefaultDisplayForTests(
       std::make_shared<display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight));
 
   display::test::MockDisplayController mock_display_controller;
-  mock_display_controller.Bind(std::move(device_channel.server),
-                               std::move(controller_channel.server), dispatcher());
+  mock_display_controller.Bind(std::move(controller_channel.server), dispatcher());
   mock_display_controller.set_set_display_power_result(ZX_OK);
 
   RunLoopUntilIdle();
@@ -112,18 +109,15 @@ TEST_F(DisplayPowerManagerMockTest, Ok) {
 
 TEST_F(DisplayPowerManagerMockTest, NoDisplay) {
   auto controller_channel = CreateChannelPair();
-  auto device_channel = CreateChannelPair();
 
   display_manager()->BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
-          std::move(controller_channel.client)),
-      std::move(device_channel.client));
+          std::move(controller_channel.client)));
 
   display_manager()->SetDefaultDisplayForTests(nullptr);
 
   display::test::MockDisplayController mock_display_controller;
-  mock_display_controller.Bind(std::move(device_channel.server),
-                               std::move(controller_channel.server), dispatcher());
+  mock_display_controller.Bind(std::move(controller_channel.server), dispatcher());
 
   RunLoopUntilIdle();
 
@@ -151,19 +145,16 @@ TEST_F(DisplayPowerManagerMockTest, NotSupported) {
   const uint32_t kDisplayHeight = 768;
 
   auto controller_channel = CreateChannelPair();
-  auto device_channel = CreateChannelPair();
 
   display_manager()->BindDefaultDisplayController(
       fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
-          std::move(controller_channel.client)),
-      std::move(device_channel.client));
+          std::move(controller_channel.client)));
 
   display_manager()->SetDefaultDisplayForTests(
       std::make_shared<display::Display>(kDisplayId, kDisplayWidth, kDisplayHeight));
 
   display::test::MockDisplayController mock_display_controller;
-  mock_display_controller.Bind(std::move(device_channel.server),
-                               std::move(controller_channel.server), dispatcher());
+  mock_display_controller.Bind(std::move(controller_channel.server), dispatcher());
   mock_display_controller.set_set_display_power_result(ZX_ERR_NOT_SUPPORTED);
 
   RunLoopUntilIdle();

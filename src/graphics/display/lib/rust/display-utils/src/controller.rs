@@ -41,11 +41,6 @@ struct ControllerInner {
     proxy: display::ControllerProxy,
     events: Option<display::ControllerEventStream>,
 
-    // TODO(fxbug.dev/33675): This channel is currently necessary to maintain a FIDL client
-    // connection to the display-controller device. It doesn't have any other meaningful purpose
-    // and we should remove it.
-    _redundant_device_channel: zx::Channel,
-
     // All subscribed vsync listeners and their optional ID filters.
     vsync_listeners: Vec<(mpsc::UnboundedSender<VsyncEvent>, Option<DisplayId>)>,
 
@@ -88,8 +83,8 @@ impl Controller {
         let path = watch_first_file(DEV_DIR_PATH)
             .on_timeout(TIMEOUT.after_now(), || Err(Error::DeviceNotFound))
             .await?;
-        let (proxy, redundant_device_channel) = connect_controller(&path).await?;
-        Self::init_with_proxy(proxy, redundant_device_channel).await
+        let proxy = connect_controller(&path).await?;
+        Self::init_with_proxy(proxy).await
     }
 
     /// Initialize a `Controller` instance from a pre-established channel.
@@ -100,10 +95,7 @@ impl Controller {
     // TODO(fxbug.dev/87469): This will currently result in an error if no displays are present on
     // the system (or if one is not attached within `TIMEOUT`). It wouldn't be neceesary to rely on
     // a timeout if the display driver sent en event with no displays.
-    pub async fn init_with_proxy(
-        proxy: display::ControllerProxy,
-        _redundant_device_channel: zx::Channel,
-    ) -> Result<Controller> {
+    pub async fn init_with_proxy(proxy: display::ControllerProxy) -> Result<Controller> {
         let mut events = proxy.take_event_stream();
         let displays = wait_for_initial_displays(&mut events)
             .on_timeout(TIMEOUT.after_now(), || Err(Error::NoDisplays))
@@ -116,7 +108,6 @@ impl Controller {
                 proxy,
                 events: Some(events),
                 displays,
-                _redundant_device_channel,
                 vsync_listeners: Vec::new(),
                 id_counter: 0,
             })),
@@ -382,24 +373,18 @@ async fn watch_first_file<P: AsRef<Path> + AsRef<OsStr>>(dir: P) -> Result<PathB
 
 // Establishes a fuchsia.hardware.display.Controller protocol channel to the display-controller
 // device with the given `dev_path` by connecting as a primary controller.
-// TODO(fxbug.dev/33675): Remove the extra zx::Channel argument once the FIDL protocol has been
-// simplified.
 // TODO(armansito): Consider supporting virtcon client connections.
-async fn connect_controller<P: AsRef<Path>>(
-    dev_path: P,
-) -> Result<(display::ControllerProxy, zx::Channel)> {
+async fn connect_controller<P: AsRef<Path>>(dev_path: P) -> Result<display::ControllerProxy> {
     let device = File::open(dev_path)?;
     let provider = {
         let channel = fdio::clone_channel(&device)?;
         display::ProviderProxy::new(fasync::Channel::from_channel(channel)?)
     };
 
-    let (redundant_local, redundant_remote) = zx::Channel::create()?;
     let (local, remote) = zx::Channel::create()?;
-    let _ =
-        zx::Status::ok(provider.open_controller(redundant_remote, ServerEnd::new(remote)).await?)?;
+    let _ = zx::Status::ok(provider.open_controller(ServerEnd::new(remote)).await?)?;
 
-    Ok((display::ControllerProxy::new(fasync::Channel::from_channel(local)?), redundant_local))
+    Ok(display::ControllerProxy::new(fasync::Channel::from_channel(local)?))
 }
 
 // Waits for a single fuchsia.hardware.display.Controller.OnDisplaysChanged event and returns the
@@ -425,13 +410,11 @@ mod tests {
         display_mocks::{create_proxy_and_mock, MockController},
         fidl_fuchsia_hardware_display as display,
         fuchsia_async::TestExecutor,
-        fuchsia_zircon as zx,
         futures::{pin_mut, select, task::Poll, FutureExt, StreamExt},
     };
 
     async fn init_with_proxy(proxy: display::ControllerProxy) -> Result<Controller> {
-        let (_, remote) = zx::Channel::create()?;
-        Controller::init_with_proxy(proxy, remote).await.context("failed to initialize Controller")
+        Controller::init_with_proxy(proxy).await.context("failed to initialize Controller")
     }
 
     // Returns a Controller and a connected mock FIDL server. This function sets up the initial

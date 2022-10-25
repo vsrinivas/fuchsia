@@ -31,11 +31,10 @@ fn read_info() -> Result<DetectResult, Error> {
         fuchsia_component::client::connect_channel_to_protocol_at_path(server_end, DEVICE_PATH)?;
         ProviderSynchronousProxy::new(client_end)
     };
-    let (_device, controller) = {
-        let (client_end, server_end) = zx::Channel::create()?;
+    let controller = {
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
-        provider.open_controller(server_end, dc_server, zx::Time::INFINITE)?;
-        (client_end, ControllerSynchronousProxy::new(dc_client.into_channel()))
+        provider.open_controller(dc_server, zx::Time::INFINITE)?;
+        ControllerSynchronousProxy::new(dc_client.into_channel())
     };
 
     // Wait for the 'OnDisplaysChanged' event.

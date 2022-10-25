@@ -19,16 +19,8 @@ namespace ui_display {
 
 fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
     std::shared_ptr<fuchsia::hardware::display::ProviderPtr> provider) {
-  // Create the device and interface channels.
-  zx::channel device_server, device_client;
-  zx_status_t status = zx::channel::create(0, &device_server, &device_client);
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to create device channel: " << zx_status_get_string(status);
-    return fpromise::make_ok_promise(DisplayControllerHandles{});
-  }
-
   zx::channel ctrl_server, ctrl_client;
-  status = zx::channel::create(0, &ctrl_server, &ctrl_client);
+  zx_status_t status = zx::channel::create(0, &ctrl_server, &ctrl_client);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create controller channel: " << zx_status_get_string(status);
     return fpromise::make_ok_promise(DisplayControllerHandles{});
@@ -38,10 +30,8 @@ fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
   // response is received.
   fpromise::bridge<DisplayControllerHandles> dc_handles_bridge;
   (*provider)->OpenController(
-      std::move(device_server),
       ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller>(std::move(ctrl_server)),
       [provider, completer = std::move(dc_handles_bridge.completer),
-       device_client = std::move(device_client),
        ctrl_client = std::move(ctrl_client)](zx_status_t status) mutable {
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "GetHardwareDisplayController() provider responded with status: "
@@ -51,8 +41,8 @@ fpromise::promise<DisplayControllerHandles> GetHardwareDisplayController(
         }
 
         DisplayControllerHandles handles{
-            ::fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(std::move(ctrl_client)),
-            std::move(device_client)};
+            ::fidl::InterfaceHandle<fuchsia::hardware::display::Controller>(
+                std::move(ctrl_client))};
         completer.complete_ok(std::move(handles));
       });
 

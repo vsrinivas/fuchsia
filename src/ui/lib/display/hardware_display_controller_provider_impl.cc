@@ -26,7 +26,7 @@ HardwareDisplayControllerProviderImpl::HardwareDisplayControllerProviderImpl(
 
 // |fuchsia::hardware::display::Provider|.
 void HardwareDisplayControllerProviderImpl::OpenController(
-    zx::channel device, ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> request,
+    ::fidl::InterfaceRequest<fuchsia::hardware::display::Controller> request,
     OpenControllerCallback callback) {
   // Watcher's lifetime needs to be at most as long as the lifetime of |this|,
   // and otherwise as long as the lifetime of |callback|.  |this| will own
@@ -36,9 +36,8 @@ void HardwareDisplayControllerProviderImpl::OpenController(
   const uint64_t id = ++last_id;
 
   std::unique_ptr<fsl::DeviceWatcher> watcher = fsl::DeviceWatcher::Create(
-      kDisplayDir,
-      [id, holders = &holders_, device = std::move(device), request = std::move(request),
-       callback = std::move(callback)](int dir_fd, std::string filename) mutable {
+      kDisplayDir, [id, holders = &holders_, request = std::move(request),
+                    callback = std::move(callback)](int dir_fd, std::string filename) mutable {
         // Get display info.
         std::string path = kDisplayDir + "/" + filename;
 
@@ -61,7 +60,7 @@ void HardwareDisplayControllerProviderImpl::OpenController(
         fdio_cpp::FdioCaller caller(std::move(fd));
         zx_status_t status = ZX_OK;
         zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-            caller.borrow_channel(), device.release(), request.TakeChannel().release(), &status);
+            caller.borrow_channel(), request.TakeChannel().release(), &status);
         if (fidl_status != ZX_OK) {
           FX_LOGS(ERROR) << "Failed to call service handle: " << zx_status_get_string(fidl_status);
 

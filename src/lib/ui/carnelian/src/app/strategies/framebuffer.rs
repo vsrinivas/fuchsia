@@ -138,8 +138,6 @@ pub fn first_display_device_path() -> Option<PathBuf> {
 }
 
 pub struct DisplayController {
-    #[allow(unused)]
-    display_controller: zx::Channel,
     pub controller: ControllerProxyPtr,
 }
 
@@ -156,12 +154,11 @@ impl DisplayController {
             .context("while opening device file")?;
         let channel = fdio::clone_channel(&file).context("while cloning channel")?;
         let provider = ProviderSynchronousProxy::new(channel);
-        let (device_client, device_server) = zx::Channel::create()?;
         let (dc_client, dc_server) = endpoints::create_endpoints::<ControllerMarker>()?;
         let status = if virtcon_mode.is_some() {
-            provider.open_virtcon_controller(device_server, dc_server, zx::Time::INFINITE)
+            provider.open_virtcon_controller(dc_server, zx::Time::INFINITE)
         } else {
-            provider.open_controller(device_server, dc_server, zx::Time::INFINITE)
+            provider.open_controller(dc_server, zx::Time::INFINITE)
         }?;
         ensure!(
             status == zx::sys::ZX_OK,
@@ -190,7 +187,7 @@ impl DisplayController {
         fasync::Task::local(f).detach();
         controller.enable_vsync(true).context("enable_vsync failed")?;
 
-        Ok(Self { controller: Rc::new(controller), display_controller: device_client })
+        Ok(Self { controller: Rc::new(controller) })
     }
 
     pub(crate) async fn watch_displays(app_sender: UnboundedSender<MessageInternal>) {

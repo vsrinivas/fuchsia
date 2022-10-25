@@ -756,8 +756,7 @@ static void PrintChannelKoids(bool is_vc, const zx::channel& channel) {
          info.related_koid, info.koid);
 }
 
-zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
-                                     zx::channel client_channel,
+zx_status_t Controller::CreateClient(bool is_vc, zx::channel client_channel,
                                      fit::function<void()> on_client_dead) {
   PrintChannelKoids(is_vc, client_channel);
   fbl::AllocChecker ac;
@@ -790,13 +789,6 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   zx_status_t status = client->Init(&root_, std::move(client_channel));
   if (status != ZX_OK) {
     zxlogf(DEBUG, "Failed to init client %d", status);
-    return status;
-  }
-
-  client->set_device_channel(std::move(device_channel));
-
-  if (status != ZX_OK) {
-    zxlogf(DEBUG, "Failed to add client %d", status);
     return status;
   }
 
@@ -849,14 +841,12 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
 
 void Controller::OpenVirtconController(OpenVirtconControllerRequestView request,
                                        OpenVirtconControllerCompleter::Sync& _completer) {
-  _completer.Reply(
-      CreateClient(/*is_vc=*/true, std::move(request->device), request->controller.TakeChannel()));
+  _completer.Reply(CreateClient(/*is_vc=*/true, request->controller.TakeChannel()));
 }
 
 void Controller::OpenController(OpenControllerRequestView request,
                                 OpenControllerCompleter::Sync& _completer) {
-  _completer.Reply(
-      CreateClient(/*is_vc=*/false, std::move(request->device), request->controller.TakeChannel()));
+  _completer.Reply(CreateClient(/*is_vc=*/false, request->controller.TakeChannel()));
 }
 
 void Controller::OnVsyncMonitor() {
