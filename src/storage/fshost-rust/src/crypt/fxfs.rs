@@ -14,6 +14,16 @@ use {
     std::{ops::Deref, path::Path},
 };
 
+const LEGACY_DATA_KEY: Aes256Key = Aes256Key::create([
+    0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11,
+    0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+]);
+
+const LEGACY_METADATA_KEY: Aes256Key = Aes256Key::create([
+    0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+    0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
+]);
+
 async fn unwrap_or_create_keys(
     mut keybag: KeyBagManager,
     create: bool,
@@ -65,40 +75,56 @@ async fn unwrap_or_create_keys(
 
 // Unwraps the data volume in `fs`.  Any failures should be treated as fatal and the filesystem
 // should be reformatted and re-initialized.
+// Returns the name of the data volume as well as a reference to it.
 pub async fn unlock_data_volume<'a>(
     fs: &'a mut ServingMultiVolumeFilesystem,
-) -> Result<&'a mut ServingVolume, Error> {
-    unlock_or_init_data_volume(fs, false).await
+    config: &'a fshost_config::Config,
+) -> Result<(String, &'a mut ServingVolume), Error> {
+    unlock_or_init_data_volume(fs, config, false).await
 }
 
 // Initializes the data volume in `fs`, which should be freshly reformatted.
+// Returns the name of the data volume as well as a reference to it.
 pub async fn init_data_volume<'a>(
     fs: &'a mut ServingMultiVolumeFilesystem,
-) -> Result<&'a mut ServingVolume, Error> {
-    unlock_or_init_data_volume(fs, true).await
+    config: &'a fshost_config::Config,
+) -> Result<(String, &'a mut ServingVolume), Error> {
+    unlock_or_init_data_volume(fs, config, true).await
 }
 
 async fn unlock_or_init_data_volume<'a>(
     fs: &'a mut ServingMultiVolumeFilesystem,
+    config: &'a fshost_config::Config,
     create: bool,
-) -> Result<&'a mut ServingVolume, Error> {
-    // Open up the unencrypted volume so that we can access the key-bag for data.
-    let root_vol = if create {
-        fs.create_volume("unencrypted", None).await?
-    } else {
-        fs.open_volume("unencrypted", None).await?
-    };
-    root_vol.bind_to_path("/unencrypted_volume")?;
-    if create {
-        std::fs::create_dir("/unencrypted_volume/keys")?;
+) -> Result<(String, &'a mut ServingVolume), Error> {
+    let mut use_native_fxfs_crypto = config.use_native_fxfs_crypto;
+    let has_native_layout = !fs.has_volume("default").await?;
+    if !create && (has_native_layout != use_native_fxfs_crypto) {
+        tracing::warn!("Overriding use_native_fxfs_crypto due to detected different layout");
+        use_native_fxfs_crypto = !use_native_fxfs_crypto;
     }
-    let keybag = KeyBagManager::open(Path::new("/unencrypted_volume/keys/fxfs-data"))?;
 
-    let (data_unwrapped, metadata_unwrapped) = unwrap_or_create_keys(keybag, create).await?;
+    let data_volume_name = if use_native_fxfs_crypto {
+        // Open up the unencrypted volume so that we can access the key-bag for data.
+        let root_vol = if create {
+            fs.create_volume("unencrypted", None).await.context("Failed to create unencrypted")?
+        } else {
+            fs.open_volume("unencrypted", None).await.context("Failed to open unencrypted")?
+        };
+        root_vol.bind_to_path("/unencrypted_volume")?;
+        if create {
+            std::fs::create_dir("/unencrypted_volume/keys")?;
+        }
+        let keybag = KeyBagManager::open(Path::new("/unencrypted_volume/keys/fxfs-data"))?;
 
-    init_crypt_service(data_unwrapped, metadata_unwrapped).await?;
+        let (data_unwrapped, metadata_unwrapped) = unwrap_or_create_keys(keybag, create).await?;
+        init_crypt_service(data_unwrapped, metadata_unwrapped).await?;
+        "data".to_string()
+    } else {
+        init_crypt_service(LEGACY_DATA_KEY, LEGACY_METADATA_KEY).await?;
+        "default".to_string()
+    };
 
-    // OK, crypt is seeded with the stored keys, so we can finally open the data volume.
     let crypt_service = Some(
         connect_to_protocol::<CryptMarker>()
             .expect("Unable to connect to Crypt service")
@@ -107,11 +133,16 @@ async fn unlock_or_init_data_volume<'a>(
             .into_zx_channel()
             .into(),
     );
-    if create {
-        fs.create_volume("data", crypt_service).await
-    } else {
-        fs.open_volume("data", crypt_service).await
-    }
+    Ok((
+        data_volume_name.clone(),
+        if create {
+            fs.create_volume(&data_volume_name, crypt_service)
+                .await
+                .context("Failed to create data")?
+        } else {
+            fs.open_volume(&data_volume_name, crypt_service).await.context("Failed to open data")?
+        },
+    ))
 }
 
 async fn init_crypt_service(data_key: Aes256Key, metadata_key: Aes256Key) -> Result<(), Error> {

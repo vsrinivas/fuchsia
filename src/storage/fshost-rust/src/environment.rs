@@ -47,7 +47,7 @@ pub trait Environment: Send + Sync {
 enum Filesystem {
     Queue(Vec<ServerEnd<fio::DirectoryMarker>>),
     Serving(ServingSingleVolumeFilesystem),
-    ServingMultiVolume(ServingMultiVolumeFilesystem),
+    ServingMultiVolume(ServingMultiVolumeFilesystem, String),
 }
 
 impl Filesystem {
@@ -58,9 +58,9 @@ impl Filesystem {
             Filesystem::Serving(fs) => {
                 fs.root().clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?
             }
-            Filesystem::ServingMultiVolume(fs) => fs
-                .volume("data")
-                .ok_or(anyhow!("no data volume"))?
+            Filesystem::ServingMultiVolume(fs, data_volume_name) => fs
+                .volume(&data_volume_name)
+                .ok_or(anyhow!("data volume {} not found", data_volume_name))?
                 .root()
                 .clone(fio::OpenFlags::CLONE_SAME_RIGHTS, server.into_channel().into())?,
         }
@@ -164,15 +164,15 @@ impl<'a> Environment for FshostEnvironment<'a> {
             "fxfs" => {
                 let mut fs = Fxfs::from_channel(device.proxy()?.into_channel().unwrap().into())?;
                 let mut serving_fs = None;
-                let vol = match fs.serve_multi_volume().await {
+                let res = match fs.serve_multi_volume().await {
                     Ok(fs) => {
                         serving_fs = Some(fs);
-                        fxfs::unlock_data_volume(serving_fs.as_mut().unwrap()).await
+                        fxfs::unlock_data_volume(serving_fs.as_mut().unwrap(), self.config).await
                     }
                     Err(e) => Err(e),
                 };
-                let _ = match vol {
-                    Ok(vol) => vol,
+                let (volume_name, _) = match res {
+                    Ok(v) => v,
                     Err(e) => {
                         tracing::info!("Failed to mount data partition, reformatting: {}", e);
                         // TODO(fxbug.dev/102666): We need to ensure the hardware key source is
@@ -180,10 +180,10 @@ impl<'a> Environment for FshostEnvironment<'a> {
                         let _ = serving_fs.take();
                         fs.format().await?;
                         serving_fs = Some(fs.serve_multi_volume().await?);
-                        fxfs::init_data_volume(serving_fs.as_mut().unwrap()).await?
+                        fxfs::init_data_volume(serving_fs.as_mut().unwrap(), self.config).await?
                     }
                 };
-                Filesystem::ServingMultiVolume(serving_fs.unwrap())
+                Filesystem::ServingMultiVolume(serving_fs.unwrap(), volume_name)
             }
             // Default to minfs
             _ => {

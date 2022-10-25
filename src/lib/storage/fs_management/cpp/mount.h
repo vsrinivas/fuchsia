@@ -185,6 +185,9 @@ class __EXPORT StartedMultiVolumeFilesystem {
   // service used to unlock the volume; if unset, the volume is assumed to be unencrypted.
   zx::result<> CheckVolume(std::string_view name, zx::channel crypt_client);
 
+  // Returns whether the given volume name exists.
+  bool HasVolume(std::string_view name);
+
   // Returns a pointer to the given volume, if it is already open.  The lifetime of the pointer is
   // less than this object.
   __EXPORT const MountedVolume* GetVolume(const std::string& volume) const {

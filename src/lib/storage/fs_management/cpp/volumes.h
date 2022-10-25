@@ -43,6 +43,12 @@ __EXPORT zx::result<> OpenVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> e
 __EXPORT zx::result<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
                                   std::string_view name, zx::channel crypt_client = {});
 
+// Checks if |name| exists in the filesystem instance.
+//
+// Currently this is only supported for Fxfs.
+__EXPORT bool HasVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+                        std::string_view name);
+
 }  // namespace fs_management
 
 #endif  // SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_VOLUMES_H_

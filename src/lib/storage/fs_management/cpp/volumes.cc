@@ -36,10 +36,9 @@ zx::result<> CheckExists(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_d
   if (endpoints_or.is_error())
     return endpoints_or.take_error();
   auto [client, server] = std::move(*endpoints_or);
-  auto res =
-      fidl::WireCall(exposed_dir)
-          ->Open(fuchsia_io::wire::OpenFlags::kNodeReference, fuchsia_io::wire::kModeTypeService,
-                 fidl::StringView::FromExternal(path), std::move(server));
+  auto res = fidl::WireCall(exposed_dir)
+                 ->Open(fuchsia_io::wire::OpenFlags::kNodeReference, 0,
+                        fidl::StringView::FromExternal(path), std::move(server));
   if (!res.ok()) {
     return zx::error(res.error().status());
   }
@@ -116,6 +115,15 @@ __EXPORT zx::result<> CheckVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> 
     return result->take_error();
 
   return zx::ok();
+}
+
+__EXPORT bool HasVolume(fidl::UnownedClientEnd<fuchsia_io::Directory> exposed_dir,
+                        std::string_view name) {
+  std::string path = "volumes/" + std::string(name);
+  if (auto status = CheckExists(exposed_dir, path); status.is_error()) {
+    return false;
+  }
+  return true;
 }
 
 }  // namespace fs_management

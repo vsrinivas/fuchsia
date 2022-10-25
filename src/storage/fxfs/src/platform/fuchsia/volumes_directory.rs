@@ -389,6 +389,7 @@ impl VolumesDirectory {
         outgoing_directory: ServerEnd<fio::DirectoryMarker>,
         options: MountOptions,
     ) -> Result<(), Error> {
+        tracing::info!(%name, %store_id, ?options, "Received mount request");
         let store = self.root_volume.volume_directory().store();
         let fs = store.filesystem();
         let _write_guard = fs

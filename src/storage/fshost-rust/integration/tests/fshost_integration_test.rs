@@ -69,6 +69,22 @@ async fn data_formatted() {
 }
 
 #[fuchsia::test]
+async fn data_mounted_legacy_crypto_format() {
+    let fixture =
+        new_fixture().with_ramdisk().format_data().with_legacy_crypto_format().build().await;
+
+    fixture.check_fs_type("data", data_fs_type()).await;
+    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+    fixture
+        .dir("data")
+        .open(fio::OpenFlags::RIGHT_READABLE, 0, "foo", server)
+        .expect("open failed");
+    file.get_attr().await.expect("get_attr failed");
+
+    fixture.tear_down().await;
+}
+
+#[fuchsia::test]
 async fn data_mounted_no_zxcrypt() {
     let fixture = new_fixture().with_ramdisk().format_data().no_zxcrypt().build().await;
 

@@ -27,6 +27,7 @@ mod mocks;
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
 // These keys match the DATA_KEY and METADATA_KEY respectively, when wrapped with the "zxcrypt"
 // static key used by fshost.
+// Note this isn't used in the legacy crypto format.
 const KEY_BAG_CONTENTS: &'static str = "\
 {
     \"version\":1,
@@ -54,6 +55,18 @@ const DATA_KEY: Aes256Key = Aes256Key::create([
 const METADATA_KEY: Aes256Key = Aes256Key::create([
     0x0f, 0x4d, 0xca, 0x6b, 0x35, 0x0e, 0x85, 0x6a, 0xb3, 0x8c, 0xdd, 0xe9, 0xda, 0x0e, 0xc8, 0x22,
     0x8e, 0xea, 0xd8, 0x05, 0xc4, 0xc9, 0x0b, 0xa8, 0xd8, 0x85, 0x87, 0x50, 0x75, 0x40, 0x1c, 0x4c,
+]);
+
+// Matches the hard-coded value used by fshost when use_native_fxfs_crypto is false.
+const LEGACY_DATA_KEY: Aes256Key = Aes256Key::create([
+    0x0, 0x1, 0x2, 0x3, 0x4, 0x5, 0x6, 0x7, 0x8, 0x9, 0xa, 0xb, 0xc, 0xd, 0xe, 0xf, 0x10, 0x11,
+    0x12, 0x13, 0x14, 0x15, 0x16, 0x17, 0x18, 0x19, 0x1a, 0x1b, 0x1c, 0x1d, 0x1e, 0x1f,
+]);
+
+// Matches the hard-coded value used by fshost when use_native_fxfs_crypto is false.
+const LEGACY_METADATA_KEY: Aes256Key = Aes256Key::create([
+    0xff, 0xfe, 0xfd, 0xfc, 0xfb, 0xfa, 0xf9, 0xf8, 0xf7, 0xf6, 0xf5, 0xf4, 0xf3, 0xf2, 0xf1, 0xf0,
+    0xef, 0xee, 0xed, 0xec, 0xeb, 0xea, 0xe9, 0xe8, 0xe7, 0xe6, 0xe5, 0xe4, 0xe3, 0xe2, 0xe1, 0xe0,
 ]);
 
 pub const FVM_SLICE_SIZE: u64 = 32 * 1024;
@@ -117,6 +130,7 @@ pub struct TestFixtureBuilder {
     with_ramdisk: bool,
     ramdisk_size: u64,
     format_data: bool,
+    with_legacy_crypto_format: bool,
 
     // Whether or not to add a zxcrypt layer between fvm and the main filesystem, if the filesystem
     // supports it. Doesn't do anything for fxfs.
@@ -137,6 +151,7 @@ impl TestFixtureBuilder {
             with_ramdisk: false,
             ramdisk_size: 0,
             format_data: false,
+            with_legacy_crypto_format: false,
             zxcrypt: true,
             fvm_ramdisk: false,
             ramdisk_prefix: None,
@@ -157,6 +172,11 @@ impl TestFixtureBuilder {
 
     pub fn format_data(mut self) -> Self {
         self.format_data = true;
+        self
+    }
+
+    pub fn with_legacy_crypto_format(mut self) -> Self {
+        self.with_legacy_crypto_format = true;
         self
     }
 
@@ -409,99 +429,119 @@ impl TestFixtureBuilder {
 
     async fn init_data(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
         match self.data_filesystem_format {
-            "fxfs" => init_data_fxfs(ramdisk_path, dev).await,
-            "minfs" => init_data_minfs(ramdisk_path, dev, self.zxcrypt && !self.fvm_ramdisk).await,
+            "fxfs" => self.init_data_fxfs(ramdisk_path, dev).await,
+            "minfs" => self.init_data_minfs(ramdisk_path, dev).await,
             _ => panic!("unsupported data filesystem format type"),
         }
     }
-}
 
-async fn init_data_minfs(ramdisk_path: &str, dev: &fio::DirectoryProxy, zxcrypt: bool) {
-    let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
-    let mut data_device =
-        recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
-            .await
-            .expect("recursive_wait_and_open_node failed");
-    if zxcrypt {
-        let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
-            .await
-            .expect("failed to set up zxcrypt");
-        let zxcrypt_path = zxcrypt_path.as_os_str().to_str().unwrap();
-        data_device =
-            recursive_wait_and_open_node(dev, zxcrypt_path.strip_prefix("/dev/").unwrap())
+    async fn init_data_minfs(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+        let zxcrypt = self.zxcrypt && !self.fvm_ramdisk;
+        let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
+        let mut data_device =
+            recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
                 .await
                 .expect("recursive_wait_and_open_node failed");
-    }
-    let mut minfs =
-        fs_management::Minfs::from_channel(data_device.into_channel().unwrap().into_zx_channel())
-            .expect("from_channel failed");
-    minfs.format().await.expect("format failed");
-    let fs = minfs.serve().await.expect("serve_single_volume failed");
-    // Create a file called "foo" that tests can test for presence.
-    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
-    fs.root()
-        .open(
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::CREATE,
-            0,
-            "foo",
-            server,
+        if zxcrypt {
+            let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
+                .await
+                .expect("failed to set up zxcrypt");
+            let zxcrypt_path = zxcrypt_path.as_os_str().to_str().unwrap();
+            data_device =
+                recursive_wait_and_open_node(dev, zxcrypt_path.strip_prefix("/dev/").unwrap())
+                    .await
+                    .expect("recursive_wait_and_open_node failed");
+        }
+        let mut minfs = fs_management::Minfs::from_channel(
+            data_device.into_channel().unwrap().into_zx_channel(),
         )
-        .expect("open failed");
-    // We must solicit a response since otherwise shutdown below could race and creation of
-    // the file could get dropped.
-    let _: Vec<_> = file.query().await.expect("query failed");
-    fs.shutdown().await.expect("shutdown failed");
-}
-
-async fn init_data_fxfs(ramdisk_path: &str, dev: &fio::DirectoryProxy) {
-    let crypt_realm = create_hermetic_crypt_service(DATA_KEY, METADATA_KEY).await;
-    let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
-    let data_device = recursive_wait_and_open_node(dev, data_path.strip_prefix("/dev/").unwrap())
-        .await
-        .expect("recursive_wait_and_open_node failed");
-    let mut fxfs = Fxfs::from_channel(data_device.into_channel().unwrap().into_zx_channel())
         .expect("from_channel failed");
-    fxfs.format().await.expect("format failed");
-    let mut fs = fxfs.serve_multi_volume().await.expect("serve_multi_volume failed");
-    let vol = {
-        let vol = fs.create_volume("unencrypted", None).await.expect("create_volume failed");
-        vol.bind_to_path("/unencrypted_volume").unwrap();
-        // Initialize the key-bag with the static keys.
-        std::fs::create_dir("/unencrypted_volume/keys").expect("create_dir failed");
-        let mut file = std::fs::File::create("/unencrypted_volume/keys/fxfs-data")
-            .expect("create file failed");
-        file.write_all(KEY_BAG_CONTENTS.as_bytes()).expect("write file failed");
+        minfs.format().await.expect("format failed");
+        let fs = minfs.serve().await.expect("serve_single_volume failed");
+        // Create a file called "foo" that tests can test for presence.
+        let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+        fs.root()
+            .open(
+                fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::RIGHT_WRITABLE
+                    | fio::OpenFlags::CREATE,
+                0,
+                "foo",
+                server,
+            )
+            .expect("open failed");
+        // We must solicit a response since otherwise shutdown below could race and creation of
+        // the file could get dropped.
+        let _: Vec<_> = file.query().await.expect("query failed");
+        fs.shutdown().await.expect("shutdown failed");
+    }
 
-        let crypt_service = Some(
-            crypt_realm
-                .root
-                .connect_to_protocol_at_exposed_dir::<CryptMarker>()
-                .expect("Unable to connect to Crypt service")
-                .into_channel()
-                .unwrap()
-                .into_zx_channel()
-                .into(),
-        );
-        fs.create_volume("data", crypt_service).await.expect("create_volume failed")
-    };
-    // Create a file called "foo" that tests can test for presence.
-    let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
-    vol.root()
-        .open(
-            fio::OpenFlags::RIGHT_READABLE
-                | fio::OpenFlags::RIGHT_WRITABLE
-                | fio::OpenFlags::CREATE,
-            0,
-            "foo",
-            server,
-        )
-        .expect("open failed");
-    // We must solicit a response since otherwise shutdown below could race and creation of
-    // the file could get dropped.
-    let _: Vec<_> = file.query().await.expect("query failed");
-    fs.shutdown().await.expect("shutdown failed");
+    async fn init_data_fxfs(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
+        let (data_key, metadata_key) = if self.with_legacy_crypto_format {
+            (LEGACY_DATA_KEY, LEGACY_METADATA_KEY)
+        } else {
+            (DATA_KEY, METADATA_KEY)
+        };
+        let crypt_realm = create_hermetic_crypt_service(data_key, metadata_key).await;
+        let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
+        let data_device =
+            recursive_wait_and_open_node(dev, data_path.strip_prefix("/dev/").unwrap())
+                .await
+                .expect("recursive_wait_and_open_node failed");
+        let mut fxfs = Fxfs::from_channel(data_device.into_channel().unwrap().into_zx_channel())
+            .expect("from_channel failed");
+        fxfs.format().await.expect("format failed");
+        let mut fs = fxfs.serve_multi_volume().await.expect("serve_multi_volume failed");
+        let vol = if self.with_legacy_crypto_format {
+            let crypt_service = Some(
+                crypt_realm
+                    .root
+                    .connect_to_protocol_at_exposed_dir::<CryptMarker>()
+                    .expect("Unable to connect to Crypt service")
+                    .into_channel()
+                    .unwrap()
+                    .into_zx_channel()
+                    .into(),
+            );
+            fs.create_volume("default", crypt_service).await.expect("create_volume failed")
+        } else {
+            let vol = fs.create_volume("unencrypted", None).await.expect("create_volume failed");
+            vol.bind_to_path("/unencrypted_volume").unwrap();
+            // Initialize the key-bag with the static keys.
+            std::fs::create_dir("/unencrypted_volume/keys").expect("create_dir failed");
+            let mut file = std::fs::File::create("/unencrypted_volume/keys/fxfs-data")
+                .expect("create file failed");
+            file.write_all(KEY_BAG_CONTENTS.as_bytes()).expect("write file failed");
+
+            let crypt_service = Some(
+                crypt_realm
+                    .root
+                    .connect_to_protocol_at_exposed_dir::<CryptMarker>()
+                    .expect("Unable to connect to Crypt service")
+                    .into_channel()
+                    .unwrap()
+                    .into_zx_channel()
+                    .into(),
+            );
+            fs.create_volume("data", crypt_service).await.expect("create_volume failed")
+        };
+        // Create a file called "foo" that tests can test for presence.
+        let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
+        vol.root()
+            .open(
+                fio::OpenFlags::RIGHT_READABLE
+                    | fio::OpenFlags::RIGHT_WRITABLE
+                    | fio::OpenFlags::CREATE,
+                0,
+                "foo",
+                server,
+            )
+            .expect("open failed");
+        // We must solicit a response since otherwise shutdown below could race and creation of
+        // the file could get dropped.
+        let _: Vec<_> = file.query().await.expect("query failed");
+        fs.shutdown().await.expect("shutdown failed");
+    }
 }
 
 pub struct TestFixture {

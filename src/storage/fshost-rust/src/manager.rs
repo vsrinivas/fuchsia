@@ -53,8 +53,8 @@ impl<E: Environment> Manager<E> {
                 Err(e) => {
                     tracing::error!(
                         path = %device.topological_path(),
-                        "Failed to match device: {}",
-                        e
+                        ?e,
+                        "Failed to match device",
                     );
                 }
             }

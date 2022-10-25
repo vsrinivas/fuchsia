@@ -129,7 +129,18 @@ zx::result<fs_management::MountedVolume*> UnwrapOrInitDataVolume(
   };
   const auto op = create ? "create" : "unwrap";
 
-  if (!config.use_native_fxfs_crypto()) {
+  // We might find a different layout than we expect.  Respect this, since otherwise the paving
+  // workflow won't work if the paver and the paved version have different values of
+  // use_native_fxfs_crypto (the paver will write SSH keys to one layout and the system will attempt
+  // to open up the other layout).
+  bool use_native_fxfs_crypto = config.use_native_fxfs_crypto();
+  bool has_native_layout = !fs.HasVolume("default");
+  if (!create && (has_native_layout != use_native_fxfs_crypto)) {
+    FX_LOGS(WARNING) << "Overriding use_native_fxfs_crypto due to detected different layout";
+    use_native_fxfs_crypto = !use_native_fxfs_crypto;
+  }
+
+  if (!use_native_fxfs_crypto) {
     FX_LOGS(INFO) << "Using legacy crypto configuration for Fxfs";
     crypto::Bytes data_key, metadata_key;
     data_key.Copy(kLegacyCryptDataKey, sizeof(kLegacyCryptDataKey));

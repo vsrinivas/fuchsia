@@ -280,6 +280,13 @@ __EXPORT zx::result<> StartedMultiVolumeFilesystem::CheckVolume(std::string_view
   return fs_management::CheckVolume(exposed_dir_, volume_name, std::move(crypt_client));
 }
 
+__EXPORT bool StartedMultiVolumeFilesystem::HasVolume(std::string_view volume_name) {
+  if (volumes_.find(volume_name) != volumes_.end()) {
+    return true;
+  }
+  return fs_management::HasVolume(exposed_dir_, volume_name);
+}
+
 __EXPORT
 StartedSingleVolumeMultiVolumeFilesystem::~StartedSingleVolumeMultiVolumeFilesystem() {
   [[maybe_unused]] auto res = Unmount();

@@ -597,6 +597,30 @@ impl ServingMultiVolumeFilesystem {
         self.volumes.remove(volume);
     }
 
+    /// Returns whether the given volume exists.
+    pub async fn has_volume(&mut self, volume: &str) -> Result<bool, Error> {
+        if self.volumes.contains_key(volume) {
+            return Ok(true);
+        }
+        let path = format!("volumes/{}", volume);
+        fuchsia_fs::directory::open_node(
+            &self.exposed_dir,
+            &path,
+            fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::NODE_REFERENCE,
+            0,
+        )
+        .await
+        .map(|_| true)
+        .or_else(|e| {
+            if let fuchsia_fs::node::OpenError::OpenError(status) = &e {
+                if *status == zx::Status::NOT_FOUND {
+                    return Ok(false);
+                }
+            }
+            Err(e.into())
+        })
+    }
+
     /// Creates the volume.  Fails if the volume already exists.
     /// If `crypt` is set, the volume will be encrypted using the provided Crypt instance.
     pub async fn create_volume(
@@ -1156,6 +1180,7 @@ mod tests {
 
         let mut fs = fxfs.serve_multi_volume().await.expect("failed to serve fxfs");
 
+        assert_eq!(fs.has_volume("foo").await.expect("has_volume"), false);
         assert!(
             fs.open_volume("foo", None).await.is_err(),
             "Opening nonexistent volume should fail"
@@ -1168,5 +1193,6 @@ mod tests {
         // volume will race with the asynchronous close and sometimes fail because the volume is
         // still mounted.
         // fs.open_volume("foo", None).await.expect("Open volume failed");
+        assert_eq!(fs.has_volume("foo").await.expect("has_volume"), true);
     }
 }
