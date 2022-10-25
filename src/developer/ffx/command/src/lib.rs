@@ -16,8 +16,8 @@ use std::time::{Duration, Instant};
 mod ffx;
 mod tools;
 
-pub use ffx::{Ffx, FfxCommandLine};
-pub use tools::{ToolRunner, ToolSuite};
+pub use ffx::*;
+pub use tools::*;
 
 fn stamp_file(stamp: &Option<String>) -> Result<Option<File>> {
     if let Some(stamp) = stamp {

@@ -16,6 +16,8 @@ use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
 
+pub use ffx_daemon_proxy::DaemonVersionCheck;
+
 /// The environment variable name used for overriding the command name in help
 /// output.
 const FFX_WRAPPER_INVOKE: &'static str = "FFX_WRAPPER_INVOKE";
@@ -214,6 +216,7 @@ impl Ffx {
         &self,
         hoist_cache_dir: &Path,
         router_interval: Option<Duration>,
+        daemon_check: DaemonVersionCheck,
     ) -> Result<Injection> {
         // todo(fxb/108692) we should get this in the environment context instead and leave the global
         // hoist() unset for ffx but I'm leaving the last couple uses of it in place for the sake of
@@ -224,7 +227,7 @@ impl Ffx {
             router_interval,
         )?)
         .context("initializing hoist")?;
-        Ok(Injection::new(hoist.clone(), self.machine, self.target().await?))
+        Ok(Injection::new(daemon_check, hoist.clone(), self.machine, self.target().await?))
     }
 }
 

@@ -6,7 +6,7 @@ use anyhow::{Context, Result};
 use argh::{FromArgs, SubCommand, SubCommands};
 use async_trait::async_trait;
 use errors::{ffx_error, ResultExt};
-use ffx_command::{Ffx, FfxCommandLine, ToolRunner, ToolSuite};
+use ffx_command::{DaemonVersionCheck, Ffx, FfxCommandLine, ToolRunner, ToolSuite};
 use ffx_config::EnvironmentContext;
 use ffx_core::Injector;
 use fidl::endpoints::Proxy;
@@ -60,7 +60,16 @@ impl<M: FfxMain> ToolRunner for FhoTool<M> {
         let cache_path = self.suite.context.get_cache_path()?;
         std::fs::create_dir_all(&cache_path)?;
         let hoist_cache_dir = tempfile::tempdir_in(&cache_path)?;
-        let injector = self.suite.ffx.initialize_overnet(hoist_cache_dir.path(), None).await?;
+        let build_info = self.suite.context.build_info();
+        let injector = self
+            .suite
+            .ffx
+            .initialize_overnet(
+                hoist_cache_dir.path(),
+                None,
+                DaemonVersionCheck::SameVersionInfo(build_info),
+            )
+            .await?;
         let env = FhoEnvironment {
             ffx: &self.suite.ffx,
             context: &self.suite.context,

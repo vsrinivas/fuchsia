@@ -5,7 +5,7 @@
 use anyhow::Result;
 use argh::{FromArgs, SubCommands};
 use errors::{ffx_error, ResultExt};
-use ffx_command::{Ffx, FfxCommandLine, ToolRunner, ToolSuite};
+use ffx_command::{DaemonVersionCheck, Ffx, FfxCommandLine, ToolRunner, ToolSuite};
 use ffx_config::EnvironmentContext;
 use ffx_lib_args::FfxBuiltIn;
 use ffx_lib_sub_command::SubCommand;
@@ -88,7 +88,13 @@ async fn run_legacy_subcommand(
     let cache_path = context.get_cache_path()?;
     std::fs::create_dir_all(&cache_path)?;
     let hoist_cache_dir = tempfile::tempdir_in(&cache_path)?;
-    let injector = app.initialize_overnet(hoist_cache_dir.path(), router_interval).await?;
+    let injector = app
+        .initialize_overnet(
+            hoist_cache_dir.path(),
+            router_interval,
+            DaemonVersionCheck::SameBuildId(context.daemon_version_string()?),
+        )
+        .await?;
     ffx_lib_suite::ffx_plugin_impl(&injector, subcommand).await
 }
 

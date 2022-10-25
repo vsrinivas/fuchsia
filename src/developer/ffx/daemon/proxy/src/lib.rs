@@ -24,7 +24,18 @@ use timeout::timeout;
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
 
+/// The different ways to check the daemon's version against the local process' information
+#[derive(Clone, Debug)]
+pub enum DaemonVersionCheck {
+    /// Compare the buildid, requires the daemon to have been spawned by the same executable.
+    SameBuildId(String),
+    /// Compare details from VersionInfo other than buildid, requires the daemon to have been
+    /// spawned by the same overall build.
+    SameVersionInfo(VersionInfo),
+}
+
 pub struct Injection {
+    daemon_check: DaemonVersionCheck,
     format: Option<Format>,
     target: Option<String>,
     hoist: Hoist,
@@ -39,8 +50,14 @@ impl std::fmt::Debug for Injection {
 }
 
 impl Injection {
-    pub fn new(hoist: Hoist, format: Option<Format>, target: Option<String>) -> Self {
+    pub fn new(
+        daemon_check: DaemonVersionCheck,
+        hoist: Hoist,
+        format: Option<Format>,
+        target: Option<String>,
+    ) -> Self {
         Self {
+            daemon_check,
             hoist,
             format,
             target,
@@ -108,7 +125,11 @@ impl Injector for Injection {
             .context("Trying to initialize daemon with no global context")?;
 
         self.daemon_once
-            .get_or_try_init(init_daemon_proxy(self.hoist.clone(), context))
+            .get_or_try_init(init_daemon_proxy(
+                self.hoist.clone(),
+                context,
+                self.daemon_check.clone(),
+            ))
             .await
             .map(|proxy| proxy.clone())
     }
@@ -161,7 +182,11 @@ impl Injector for Injection {
     }
 }
 
-async fn init_daemon_proxy(hoist: Hoist, context: EnvironmentContext) -> Result<DaemonProxy> {
+async fn init_daemon_proxy(
+    hoist: Hoist,
+    context: EnvironmentContext,
+    version_check: DaemonVersionCheck,
+) -> Result<DaemonProxy> {
     let ascendd_path = context.load().await?.get_ascendd_path()?;
 
     if cfg!(not(test)) && !is_daemon_running_at_path(&ascendd_path) {
@@ -174,20 +199,6 @@ async fn init_daemon_proxy(hoist: Hoist, context: EnvironmentContext) -> Result<
     // Spawn off the link task, so that FIDL functions can be called (link IO makes progress).
     let link_task = fuchsia_async::Task::local(link.map(|_| ()));
 
-    // TODO(fxbug.dev/111940): Should have a proper test setup for the context.
-    let build_id = if cfg!(test) {
-        "testcurrenthash".to_owned()
-    } else {
-        match context.daemon_version_string() {
-            Ok(s) => s,
-            Err(err) => {
-                tracing::error!("BUG: ffx version information is missing! {:?}", err);
-                link_task.detach();
-                return Ok(proxy);
-            }
-        }
-    };
-
     let daemon_version_info = timeout(proxy_timeout().await?, proxy.get_version_info())
         .await
         .context("timeout")
@@ -199,7 +210,27 @@ async fn init_daemon_proxy(hoist: Hoist, context: EnvironmentContext) -> Result<
         })?
         .context("Getting hash from daemon")?;
 
-    if Some(build_id) == daemon_version_info.build_id {
+    // Check the version against the given comparison scheme.
+    tracing::info!("Checking daemon version: {version_check:?}");
+    tracing::info!("Daemon version info: {daemon_version_info:?}");
+    let matched_proxy = match (version_check, daemon_version_info) {
+        (DaemonVersionCheck::SameBuildId(ours), VersionInfo { build_id: Some(daemon), .. })
+            if ours == daemon =>
+        {
+            true
+        }
+        (DaemonVersionCheck::SameVersionInfo(ours), daemon)
+            if ours.build_version == daemon.build_version
+                && ours.commit_hash == daemon.commit_hash
+                && ours.commit_timestamp == daemon.commit_timestamp =>
+        {
+            true
+        }
+        _ => false,
+    };
+
+    if matched_proxy {
+        tracing::info!("Found matching daemon version, using it.");
         link_task.detach();
         return Ok(proxy);
     }
@@ -270,7 +301,12 @@ mod test {
             }
         });
 
-        let res = init_daemon_proxy(Hoist::new().unwrap(), test_env.context.clone()).await;
+        let res = init_daemon_proxy(
+            Hoist::new().unwrap(),
+            test_env.context.clone(),
+            DaemonVersionCheck::SameBuildId("testcurrenthash".to_owned()),
+        )
+        .await;
         let str = format!("{}", res.err().unwrap());
         assert!(str.contains("link lost"));
         assert!(str.contains("ffx doctor"));
@@ -284,7 +320,12 @@ mod test {
         // Start a listener that never accepts the socket.
         let _listener = UnixListener::bind(sockpath.to_owned()).unwrap();
 
-        let res = init_daemon_proxy(Hoist::new().unwrap(), test_env.context.clone()).await;
+        let res = init_daemon_proxy(
+            Hoist::new().unwrap(),
+            test_env.context.clone(),
+            DaemonVersionCheck::SameBuildId("testcurrenthash".to_owned()),
+        )
+        .await;
         let str = format!("{}", res.err().unwrap());
         assert!(str.contains("Timed out"));
         assert!(str.contains("ffx doctor"));
@@ -386,7 +427,13 @@ mod test {
         let daemons_task =
             test_daemon(local_hoist1.clone(), sockpath1.to_owned(), "testcurrenthash", 0).await;
 
-        let proxy = init_daemon_proxy(local_hoist.clone(), test_env.context.clone()).await.unwrap();
+        let proxy = init_daemon_proxy(
+            local_hoist.clone(),
+            test_env.context.clone(),
+            DaemonVersionCheck::SameBuildId("testcurrenthash".to_owned()),
+        )
+        .await
+        .unwrap();
         proxy.quit().await.unwrap();
         daemons_task.await;
     }
@@ -414,7 +461,13 @@ mod test {
                 .await;
         });
 
-        let proxy = init_daemon_proxy(local_hoist.clone(), test_env.context.clone()).await.unwrap();
+        let proxy = init_daemon_proxy(
+            local_hoist.clone(),
+            test_env.context.clone(),
+            DaemonVersionCheck::SameBuildId("testcurrenthash".to_owned()),
+        )
+        .await
+        .unwrap();
         proxy.quit().await.unwrap();
         daemons_task.await;
     }
@@ -431,7 +484,13 @@ mod test {
         let daemon_task =
             test_daemon(local_hoist1.clone(), sockpath1.to_owned(), "testcurrenthash", 4).await;
 
-        let proxy = init_daemon_proxy(local_hoist.clone(), test_env.context.clone()).await.unwrap();
+        let proxy = init_daemon_proxy(
+            local_hoist.clone(),
+            test_env.context.clone(),
+            DaemonVersionCheck::SameBuildId("testcurrenthash".to_owned()),
+        )
+        .await
+        .unwrap();
         proxy.quit().await.unwrap();
         daemon_task.await;
     }
@@ -448,7 +507,12 @@ mod test {
         let _daemon_task =
             test_daemon(local_hoist1.clone(), sockpath1.to_owned(), "testcurrenthash", 6).await;
 
-        let err = init_daemon_proxy(local_hoist.clone(), test_env.context.clone()).await;
+        let err = init_daemon_proxy(
+            local_hoist.clone(),
+            test_env.context.clone(),
+            DaemonVersionCheck::SameBuildId("testcurrenthash".to_owned()),
+        )
+        .await;
         assert!(err.is_err());
         let str = format!("{:?}", err);
         assert!(str.contains("Timed out"));
