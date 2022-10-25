@@ -67,12 +67,15 @@ zx_status_t AudioOutput::PlayPrepare(AudioSource& source) {
     return res;
   }
 
-  // ALSA under QEMU required huge buffers.
-  //
-  // TODO(johngro) : Add the ability to determine what type of read-ahead the
+  // TODO(112985): Restore QEMU support. ALSA under QEMU required huge buffers.
+  // Add the ability to determine what type of read-ahead the
   // HW is going to require so we can adjust our buffer size to what the HW
   // requires, not what ALSA under QEMU requires.
-  res = GetBuffer(480 * 20 * 3, 3);
+  ZX_ASSERT(format.frame_rate > 1000);  // Only a reasonable rate can be used to get a reasonable
+                                        // ring buffer.
+  const uint32_t ring_buffer_frames = format.frame_rate / 10;  // 100msecs.
+  constexpr uint32_t kInterruptsPerRingBuffer = 3;
+  res = GetBuffer(ring_buffer_frames, kInterruptsPerRingBuffer);
   if (res != ZX_OK) {
     printf("Failed to set output format (res %d)\n", res);
     return res;
