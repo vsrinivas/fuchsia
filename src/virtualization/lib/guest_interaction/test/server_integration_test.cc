@@ -254,7 +254,7 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
     file_contents.push_back(static_cast<char>(i % ('z' - 'A') + 'A'));
   }
   fbl::unique_fd fd;
-  ASSERT_TRUE(fd = fbl::unique_fd(open(test_file, O_WRONLY | O_TRUNC | O_CREAT)))
+  ASSERT_TRUE(fd = fbl::unique_fd(open(test_file, O_WRONLY | O_TRUNC | O_CREAT, S_IRUSR | S_IWUSR)))
       << strerror(errno);
   uint32_t bytes_written = 0;
   while (bytes_written < file_contents.size()) {

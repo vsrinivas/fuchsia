@@ -25,7 +25,7 @@ int PosixPlatform::OpenFile(std::string file_path, FileOpenMode mode) {
     flags |= O_RDONLY;
   }
 
-  int fd = open(file_path.c_str(), flags);
+  int fd = open(file_path.c_str(), flags, S_IRUSR | S_IWUSR | S_IXUSR);
   if (fd < 0) {
     return -errno;
   }
