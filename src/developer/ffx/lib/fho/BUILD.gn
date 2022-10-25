@@ -1,5 +1,6 @@
 # Copyright 2022 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be # found in the LICENSE file.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
 
@@ -19,8 +20,10 @@ rustc_library("lib") {
     "//src/developer/ffx/config:lib",
     "//src/developer/ffx/core:lib",
     "//src/developer/ffx/lib/errors:lib",
+    "//src/developer/ffx/lib/rcs:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/lib/writer:lib",
+    "//src/lib/diagnostics/selectors",
     "//src/lib/fidl/rust/fidl",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",

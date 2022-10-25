@@ -11,6 +11,8 @@ use ffx_config::EnvironmentContext;
 use ffx_core::Injector;
 use fidl::endpoints::Proxy;
 use fidl_fuchsia_developer_ffx as ffx_fidl;
+use selectors::{self, VerboseError};
+use std::time::Duration;
 
 #[derive(FromArgs)]
 #[argh(subcommand)]
@@ -139,6 +141,76 @@ pub trait FfxMain: FfxTool {
 #[async_trait(?Send)]
 pub trait TryFromEnv: Sized {
     async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self>;
+}
+
+/// A trait for looking up a Fuchsia component when using the Protocol struct.
+///
+/// Example usage;
+/// ```rust
+/// struct FooSelector;
+/// impl FuchsiaComponentSelector for FooSelector {
+///     const SELECTOR: &'static str = "core/selector/thing";
+/// }
+///
+/// #[derive(FfxTool)]
+/// struct Tool {
+///     foo_proxy: Protocol<FooProxy, FooSelector>,
+/// }
+/// ```
+pub trait FuchsiaComponentSelector {
+    const SELECTOR: &'static str;
+}
+
+/// A wrapper type used to look up protocols on a Fuchsia target. Whatever has been set as the
+/// default target in the environment will be where the proxy is connected.
+#[derive(Debug, Clone)]
+pub struct Protocol<P: Clone, S> {
+    proxy: P,
+    _s: std::marker::PhantomData<fn(S) -> ()>,
+}
+
+impl<P: Clone, S> Protocol<P, S> {
+    pub fn new(proxy: P) -> Self {
+        Self { proxy, _s: Default::default() }
+    }
+}
+
+impl<P: Clone, S> std::ops::Deref for Protocol<P, S> {
+    type Target = P;
+
+    fn deref(&self) -> &Self::Target {
+        &self.proxy
+    }
+}
+
+#[async_trait(?Send)]
+impl<P: Proxy + Clone, S: FuchsiaComponentSelector> TryFromEnv for Protocol<P, S>
+where
+    P::Protocol: fidl::endpoints::DiscoverableProtocolMarker,
+{
+    async fn try_from_env(env: &FhoEnvironment<'_>) -> Result<Self> {
+        let (proxy, server_end) = fidl::endpoints::create_proxy::<P::Protocol>()?;
+        let _ = selectors::parse_selector::<VerboseError>(S::SELECTOR)?;
+        let retry_count = 1;
+        let mut tries = 0;
+        // TODO(fxbug.dev/113143): Remove explicit retries/timeouts here so they can be
+        // configurable instead.
+        let rcs_instance = loop {
+            tries += 1;
+            let res = env.injector.remote_factory().await;
+            if res.is_ok() || tries > retry_count {
+                break res;
+            }
+        }?;
+        rcs::connect_with_timeout(
+            Duration::from_secs(15),
+            S::SELECTOR,
+            &rcs_instance,
+            server_end.into_channel(),
+        )
+        .await?;
+        Ok(Protocol::new(proxy))
+    }
 }
 
 #[derive(Debug, Clone)]
