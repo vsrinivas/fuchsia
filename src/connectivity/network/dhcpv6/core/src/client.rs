@@ -2871,30 +2871,48 @@ impl Requesting {
         //    The client MUST include a Client Identifier option (see Section
         //    21.2) to identify itself to the server.  The client adds any other
         //    appropriate options, including one or more IA options.
-        let mut options =
-            vec![v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)];
+        let options = [v6::DhcpOption::ServerId(&server_id), v6::DhcpOption::ClientId(&client_id)]
+            .into_iter();
 
-        let mut iaaddr_options = HashMap::new();
-        for (iaid, addr_entry) in &non_temporary_addresses {
-            assert_matches!(
-                iaaddr_options.insert(
+        let iaaddr_options = non_temporary_addresses
+            .iter()
+            .map(|(iaid, ia)| {
+                (
                     *iaid,
-                    addr_entry.value().map(|addr| {
+                    ia.value().map(|addr| {
                         [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
                     }),
-                ),
-                None
-            );
-        }
-        for (iaid, iaddr_opt) in &iaaddr_options {
-            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                *iaid,
-                0,
-                0,
-                iaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
-            )));
-        }
-        // TODO(https://fxbug.dev/112973): Send Request messages with IA_PD.
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let iaprefix_options = delegated_prefixes
+            .iter()
+            .map(|(iaid, ia)| {
+                (
+                    *iaid,
+                    ia.value().map(|prefix| {
+                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(0, 0, prefix, &[]))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let options = options
+            .chain(iaaddr_options.iter().map(|(iaid, iaddr_opt)| {
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                    *iaid,
+                    0,
+                    0,
+                    iaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }))
+            .chain(iaprefix_options.iter().map(|(iaid, iaprefix_opt)| {
+                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                    *iaid,
+                    0,
+                    0,
+                    iaprefix_opt.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }));
 
         // Per RFC 8415, section 18.2.2:
         //
@@ -2907,7 +2925,7 @@ impl Requesting {
             retrans_count += 1;
             start_time
         }));
-        options.push(v6::DhcpOption::ElapsedTime(elapsed_time));
+        let options = options.chain([v6::DhcpOption::ElapsedTime(elapsed_time)]);
 
         // Per RFC 8415, section 18.2.2:
         //
@@ -2918,7 +2936,7 @@ impl Requesting {
         let oro = std::iter::once(v6::OptionCode::SolMaxRt)
             .chain(options_to_request.iter().cloned())
             .collect::<Vec<_>>();
-        options.push(v6::DhcpOption::Oro(&oro));
+        let options = options.chain([v6::DhcpOption::Oro(&oro)]).collect::<Vec<_>>();
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Request, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -4475,6 +4493,35 @@ pub(crate) mod testutil {
         }
     }
 
+    /// A helper identity association test type specifying T1/T2, for testing
+    /// T1/T2 variations across IAs.
+    #[derive(Copy, Clone)]
+    pub(crate) struct TestIaPd {
+        pub(crate) prefix: Subnet<Ipv6Addr>,
+        pub(crate) preferred_lifetime: v6::TimeValue,
+        pub(crate) valid_lifetime: v6::TimeValue,
+        pub(crate) t1: v6::TimeValue,
+        pub(crate) t2: v6::TimeValue,
+    }
+
+    impl TestIaPd {
+        /// Creates a `TestIaPd` with default valid values for
+        /// lifetimes.
+        pub(crate) fn new_default(prefix: Subnet<Ipv6Addr>) -> TestIaPd {
+            TestIaPd {
+                prefix,
+                preferred_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    PREFERRED_LIFETIME,
+                )),
+                valid_lifetime: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(
+                    VALID_LIFETIME,
+                )),
+                t1: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T1)),
+                t2: v6::TimeValue::NonZero(v6::NonZeroTimeValue::Finite(T2)),
+            }
+        }
+    }
+
     /// Creates a stateful client, exchanges messages to bring it in Requesting
     /// state, and sends a Request message. Returns the client in Requesting
     /// state and the transaction ID for the Request-Reply exchange. Asserts the
@@ -4482,13 +4529,14 @@ pub(crate) mod testutil {
     ///
     /// # Panics
     ///
-    /// `request_addresses_and_assert` panics if the Request message cannot be
+    /// `request_and_assert` panics if the Request message cannot be
     /// parsed or does not contain the expected options, or the Requesting state
     /// is incorrect.
-    pub(crate) fn request_addresses_and_assert<R: Rng + std::fmt::Debug>(
+    pub(crate) fn request_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
+        delegated_prefixes_to_assign: Vec<TestIaPd>,
         expected_dns_servers: &[Ipv6Addr],
         rng: R,
         now: Instant,
@@ -4504,6 +4552,14 @@ pub(crate) mod testutil {
                 },
             ),
         );
+        let configured_delegated_prefixes = to_configured_prefixes(
+            delegated_prefixes_to_assign.len(),
+            delegated_prefixes_to_assign.iter().map(
+                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    *prefix
+                },
+            ),
+        );
         let options_to_request = if expected_dns_servers.is_empty() {
             Vec::new()
         } else {
@@ -4513,7 +4569,7 @@ pub(crate) mod testutil {
             transaction_id.clone(),
             client_id.clone(),
             configured_non_temporary_addresses.clone(),
-            Default::default(),
+            configured_delegated_prefixes.clone(),
             options_to_request.clone(),
             rng,
             now,
@@ -4529,29 +4585,52 @@ pub(crate) mod testutil {
         }
         let non_temporary_addresses_to_assign: HashMap<v6::IAID, TestIaNa> =
             (0..).map(v6::IAID::new).zip(non_temporary_addresses_to_assign).collect();
-        let mut iaaddr_opts = HashMap::new();
-        for (iaid, ia) in &non_temporary_addresses_to_assign {
-            assert_matches!(
-                iaaddr_opts.insert(
+        let delegated_prefixes_to_assign: HashMap<v6::IAID, TestIaPd> =
+            (0..).map(v6::IAID::new).zip(delegated_prefixes_to_assign).collect();
+        let iaaddr_opts = non_temporary_addresses_to_assign
+            .iter()
+            .map(|(iaid, ia)| {
+                (
                     *iaid,
                     [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
                         ia.address,
                         testutil::get_value(ia.preferred_lifetime),
                         testutil::get_value(ia.valid_lifetime),
-                        &[]
-                    ))]
-                ),
-                None
-            );
-        }
-        for (iaid, ia) in &non_temporary_addresses_to_assign {
-            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        &[],
+                    ))],
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        options.extend(non_temporary_addresses_to_assign.iter().map(|(iaid, ia)| {
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 *iaid,
                 testutil::get_value(ia.t1),
                 testutil::get_value(ia.t2),
                 iaaddr_opts.get(iaid).unwrap(),
-            )));
-        }
+            ))
+        }));
+        let iaprefix_opts = delegated_prefixes_to_assign
+            .iter()
+            .map(|(iaid, ia)| {
+                (
+                    *iaid,
+                    [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                        testutil::get_value(ia.preferred_lifetime),
+                        testutil::get_value(ia.valid_lifetime),
+                        ia.prefix,
+                        &[],
+                    ))],
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        options.extend(delegated_prefixes_to_assign.iter().map(|(iaid, ia)| {
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                *iaid,
+                testutil::get_value(ia.t1),
+                testutil::get_value(ia.t2),
+                iaprefix_opts.get(iaid).unwrap(),
+            ))
+        }));
         let builder = v6::MessageBuilder::new(v6::MessageType::Advertise, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
@@ -4575,7 +4654,7 @@ pub(crate) mod testutil {
             Some(&server_id),
             &options_to_request,
             &configured_non_temporary_addresses,
-            &HashMap::new(),
+            &configured_delegated_prefixes,
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state, rng: _ } = &client;
         let request_transaction_id = *transaction_id;
@@ -4621,10 +4700,11 @@ pub(crate) mod testutil {
         rng: R,
         now: Instant,
     ) -> (ClientStateMachine<R>, Actions) {
-        let (mut client, transaction_id) = testutil::request_addresses_and_assert(
+        let (mut client, transaction_id) = testutil::request_and_assert(
             client_id.clone(),
             server_id.clone(),
             non_temporary_addresses_to_assign.clone(),
+            Default::default(),
             expected_dns_servers,
             rng,
             now,
@@ -5050,7 +5130,7 @@ mod tests {
     use rand::rngs::mock::StepRng;
     use test_case::test_case;
     use testconsts::*;
-    use testutil::TestIaNa;
+    use testutil::{TestIaNa, TestIaPd};
 
     #[test]
     fn send_information_request_and_receive_reply() {
@@ -5993,10 +6073,11 @@ mod tests {
 
     #[test]
     fn send_request() {
-        let (mut _client, _transaction_id) = testutil::request_addresses_and_assert(
+        let (mut _client, _transaction_id) = testutil::request_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
+            CONFIGURED_DELEGATED_PREFIXES.into_iter().map(TestIaPd::new_default).collect(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             Instant::now(),
@@ -8279,10 +8360,11 @@ mod tests {
     #[should_panic(expected = "received unexpected refresh timeout")]
     fn requesting_refresh_timeout_is_unreachable() {
         let time = Instant::now();
-        let (mut client, _transaction_id) = testutil::request_addresses_and_assert(
+        let (mut client, _transaction_id) = testutil::request_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            Default::default(),
             &[],
             StepRng::new(std::u64::MAX / 2, 0),
             time,
