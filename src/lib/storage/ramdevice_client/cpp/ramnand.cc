@@ -77,7 +77,7 @@ zx_status_t RamNand::Create(fuchsia_hardware_nand::wire::RamNandInfo config,
     return status;
   }
 
-  fbl::String path = fbl::String::Concat({kBasePath, "/", response.name.get()});
+  std::string_view name = response.name.get();
 
   fbl::unique_fd ram_nand_ctl(open(kBasePath, O_RDONLY | O_DIRECTORY));
   if (!ram_nand_ctl) {
@@ -86,15 +86,17 @@ zx_status_t RamNand::Create(fuchsia_hardware_nand::wire::RamNandInfo config,
   }
 
   fbl::unique_fd ram_nand;
-  if (zx_status_t status = WaitForFile(ram_nand_ctl, path.c_str(), &ram_nand); status != ZX_OK) {
+  if (zx_status_t status = WaitForFile(ram_nand_ctl, fbl::String(name).c_str(), &ram_nand);
+      status != ZX_OK) {
     fprintf(stderr, "could not open ram_nand: %s\n", zx_status_get_string(status));
     return status;
   }
 
-  *out = RamNand(std::move(ram_nand), path, response.name.get());
+  *out = RamNand(std::move(ram_nand), fbl::String::Concat({kBasePath, "/", name}), name);
 
   return ZX_OK;
 }
+
 __EXPORT
 zx_status_t RamNand::Create(const fuchsia_hardware_nand_RamNandInfo* config,
                             std::optional<RamNand>* out) {
