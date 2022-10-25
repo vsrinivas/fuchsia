@@ -50,13 +50,9 @@ pub struct EventRouter {
     // The types of all events that can be produced. Used only for validation.
     producers_registered: BTreeSet<EventType>,
 
-    // Ends of the channel used by internal event producers.
-    internal_sender: mpsc::Sender<Event>,
-    internal_receiver: mpsc::Receiver<Event>,
-
-    // Ends of the channel used by all external event producers.
-    external_sender: mpsc::Sender<Event>,
-    external_receiver: mpsc::Receiver<Event>,
+    // Ends of the channel used by event producers.
+    sender: mpsc::Sender<Event>,
+    receiver: mpsc::Receiver<Event>,
 
     inspect_logger: EventStreamLogger,
 }
@@ -64,14 +60,11 @@ pub struct EventRouter {
 impl EventRouter {
     /// Creates a new empty event router.
     pub fn new(node: inspect::Node) -> Self {
-        let (internal_sender, internal_receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
-        let (external_sender, external_receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
+        let (sender, receiver) = mpsc::channel(MAX_EVENT_BUS_CAPACITY);
         Self {
             consumers: BTreeMap::new(),
-            internal_sender,
-            internal_receiver,
-            external_sender,
-            external_receiver,
+            sender,
+            receiver,
             producers_registered: BTreeSet::new(),
             inspect_logger: EventStreamLogger::new(node),
         }
@@ -85,11 +78,7 @@ impl EventRouter {
     {
         let events: BTreeSet<_> = config.events.into_iter().collect();
         self.producers_registered.append(&mut events.clone());
-        let sender = match config.producer_type {
-            ProducerType::Internal => self.internal_sender.clone(),
-            ProducerType::External => self.external_sender.clone(),
-        };
-        let dispatcher = Dispatcher::new(events, sender);
+        let dispatcher = Dispatcher::new(events, self.sender.clone());
         config.producer.set_dispatcher(dispatcher);
     }
 
@@ -123,8 +112,7 @@ impl EventRouter {
             self.validate_routing()?;
         }
 
-        let (terminate_handle, mut stream) =
-            EventStream::new(self.external_receiver, self.internal_receiver);
+        let (terminate_handle, mut stream) = EventStream::new(self.receiver);
         let mut consumers = self.consumers;
         let mut inspect_logger = self.inspect_logger;
 
@@ -183,62 +171,30 @@ impl EventRouter {
     }
 }
 
-/// Stream of events that merges the internal and external stream into a single stream. It also
-/// provides the mechanisms used to notify when the external events have been drained.
+/// Stream of events that  provides the mechanisms used to notify when the events have
+/// been drained.
 #[pin_project]
 struct EventStream {
-    /// The stream containing events originating externally.
+    /// The stream containing events.
     #[pin]
-    external: mpsc::Receiver<Event>,
+    receiver: mpsc::Receiver<Event>,
 
-    /// The stream conitaining events originating internally.
-    #[pin]
-    internal: mpsc::Receiver<Event>,
-
-    /// When this future is ready, the external stream will be closed. Messages still in the buffer
+    /// When this future is ready, the stream will be closed. Messages still in the buffer
     /// will be drained.
     #[pin]
     on_terminate: oneshot::Receiver<()>,
 
-    /// When the external stream has been drained a notification will be sent through this channel.
-    on_external_drained: Option<oneshot::Sender<()>>,
-
-    /// Specifies what stream will be polled first. When true, the external stream is polled first,
-    /// when false, the internal stream is polled first. Polling of both streams will be alteranted
-    /// in a round robin fashion.
-    turn: Turn,
-}
-
-enum Turn {
-    Internal,
-    External,
-}
-
-impl Turn {
-    fn advance(&mut self) {
-        match self {
-            Turn::Internal => *self = Turn::External,
-            Turn::External => *self = Turn::Internal,
-        }
-    }
+    /// When the stream has been drained a notification will be sent through this channel.
+    on_drained: Option<oneshot::Sender<()>>,
 }
 
 impl EventStream {
-    fn new(
-        external: mpsc::Receiver<Event>,
-        internal: mpsc::Receiver<Event>,
-    ) -> (TerminateHandle, Self) {
+    fn new(receiver: mpsc::Receiver<Event>) -> (TerminateHandle, Self) {
         let (snd, rcv) = oneshot::channel();
-        let (external_drain_snd, external_drain_rcv) = oneshot::channel();
+        let (drain_snd, drain_rcv) = oneshot::channel();
         (
-            TerminateHandle { snd, external_drained: external_drain_rcv },
-            Self {
-                external,
-                internal,
-                on_terminate: rcv,
-                on_external_drained: Some(external_drain_snd),
-                turn: Turn::External,
-            },
+            TerminateHandle { snd, drained: drain_rcv },
+            Self { receiver, on_terminate: rcv, on_drained: Some(drain_snd) },
         )
     }
 }
@@ -250,100 +206,61 @@ impl Stream for EventStream {
     /// in a round robin fashion. When one stream finishes, this will keep polling from the
     /// remaining one.
     ///
-    /// When receiving a request for termination, the external event stream will be
+    /// When receiving a request for termination, the event stream will be
     /// closed so that no new messages can be sent through that channel, but it'll still be drained.
     ///
-    /// When the external stream has been drained, a message is sent through the appropriate
+    /// When the stream has been drained, a message is sent through the appropriate
     /// channel.
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let mut this = self.project();
 
-        // First check if request to terminate the external event ingestion has been requested, if
-        // it has, then close the channel to which external events are sent. This will prevent
-        // further messages to be sent, but it remains possible to drain the external channel
+        // First check if request to terminate the event ingestion has been requested, if
+        // it has, then close the channel to which events are sent. This will prevent
+        // further messages to be sent, but it remains possible to drain the channel
         // buffer.
+        //
+        // IMPORTANT: If we ever use this event stream for events emitted internally, then we
+        // should bring back the changed undone in https://fxrev.dev/744413 as internal event
+        // streams shouldn't be closed on termination.
         match this.on_terminate.poll(cx) {
             Poll::Pending => {}
             Poll::Ready(_) => {
-                this.external.close();
+                this.receiver.close();
             }
         }
-
-        // Depending on the turn, pick the stream to be polled first.
-        let ((first_is_external, first), (second_is_external, second)) = match this.turn {
-            Turn::External => ((true, this.external), (false, this.internal)),
-            Turn::Internal => ((false, this.internal), (true, this.external)),
-        };
-
-        // Toggle the turn so we poll the other stream in the next poll_next call.
-        this.turn.advance();
-
-        // Poll the first stream and track whether it's drained or not.
-        let first_drained = match first.poll_next(cx) {
-            Poll::Pending => false,
-            Poll::Ready(None) => {
-                // If this stream is the external one, notify once that it has been drained.
-                if first_is_external {
-                    if let Some(snd) = this.on_external_drained.take() {
-                        snd.send(()).unwrap_or_else(|err| {
-                            error!(?err, "Failed to notify the external events have been drained.");
-                        });
-                    };
-                }
-                true
-            }
-            res @ Poll::Ready(Some(_)) => return res,
-        };
-
-        match second.poll_next(cx) {
+        // Poll the stream and track whether it's drained or not.
+        match this.receiver.poll_next(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => {
-                // If this stream is the external one, notify once that it has been drained.
-                if second_is_external {
-                    if let Some(snd) = this.on_external_drained.take() {
-                        snd.send(()).unwrap_or_else(|err| {
-                            error!(?err, "Failed to notify the external events have been drained.");
-                        });
-                    };
-                }
-
-                // If the first stream was also drained, then we are done. Otherwise, this stream
-                // remains pending.
-                if first_drained {
-                    Poll::Ready(None)
-                } else {
-                    Poll::Pending
-                }
+                // Notify once that it has been drained.
+                if let Some(snd) = this.on_drained.take() {
+                    snd.send(()).unwrap_or_else(|err| {
+                        error!(?err, "Failed to notify the events have been drained.");
+                    });
+                };
+                Poll::Ready(None)
             }
-            res @ Poll::Ready(Some(_)) => {
-                // If the first stream wasn't drained, then make sure we continue with that other
-                // stream in the next call to poll_next as we just had an item to return from this
-                // second stream. Therefore, we undo the toggling of the turn done initially.
-                if !first_drained {
-                    this.turn.advance();
-                }
-                res
-            }
+            res @ Poll::Ready(Some(_)) => res,
         }
     }
 }
 
-/// Allows to termiante external event ingestion.
+/// Allows to termiante event ingestion.
 pub struct TerminateHandle {
     snd: oneshot::Sender<()>,
-    external_drained: oneshot::Receiver<()>,
+    drained: oneshot::Receiver<()>,
 }
 
 impl TerminateHandle {
-    /// Terminates external event ingestion. Buffered events will be drained. The returned future
-    /// will complete once all buffered external events have been drained.
+    /// Terminates event ingestion. Buffered events will be drained. The returned future
+    /// will complete once all buffered events have been drained.
     pub async fn terminate(self) {
         self.snd.send(()).unwrap_or_else(|err| {
-            error!(?err, "Failed to terminate the external event ingestion.");
+            error!(?err, "Failed to terminate the event ingestion.");
         });
-        self.external_drained
+        self.drained
             .await
-            .unwrap_or_else(|err| error!(?err, "Error waiting for external events to be drained."));
+            .unwrap_or_else(|err| error!(?err, "Error waiting for events to be drained."));
     }
 }
 
@@ -453,22 +370,6 @@ pub struct ProducerConfig<'a, T> {
 
     /// The set of events that the `producer` will be allowed to emit.
     pub events: Vec<EventType>,
-
-    /// The type of the producer.
-    pub producer_type: ProducerType,
-}
-
-/// Definition of the type of producers.
-pub enum ProducerType {
-    /// An external producer emits events originating externally and that the archivist ingests.
-    /// These producers can be stopped to ensure all of their events are drained and handled when
-    /// shutting down the archivist.
-    External,
-
-    /// An internal producer emits events that are generated internally in the archivist.
-    /// These producers cannot be stopped and there's no guarantee their messages will be
-    /// drained and handled when shutting down the archivist.
-    Internal,
 }
 
 /// Configuration for an event consumer.
@@ -581,7 +482,6 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
-            producer_type: ProducerType::Internal,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
@@ -604,7 +504,6 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
-            producer_type: ProducerType::External,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
@@ -632,7 +531,6 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
-            producer_type: ProducerType::External,
             events: vec![EventType::LogSinkRequested],
         });
         router.add_consumer(ConsumerConfig {
@@ -692,7 +590,6 @@ mod tests {
         let mut router = EventRouter::new(inspect::Node::default());
         router.add_producer(ProducerConfig {
             producer: &mut producer,
-            producer_type: ProducerType::Internal,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_consumer(ConsumerConfig {
@@ -764,12 +661,10 @@ mod tests {
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
-            producer_type: ProducerType::Internal,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer2,
-            producer_type: ProducerType::Internal,
             events: vec![EventType::LogSinkRequested],
         });
 
@@ -804,7 +699,7 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn event_stream_round_robin_semantics() {
+    async fn event_stream_semantics() {
         let inspector = inspect::Inspector::new();
         let mut router = EventRouter::new(inspector.root().create_child("events"));
         let mut producer1 = TestEventProducer::default();
@@ -816,12 +711,10 @@ mod tests {
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer1,
-            producer_type: ProducerType::Internal,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
             producer: &mut producer2,
-            producer_type: ProducerType::External,
             events: vec![EventType::DiagnosticsReady],
         });
 
@@ -832,13 +725,12 @@ mod tests {
             )
         };
 
-        producer1.emit(EventType::DiagnosticsReady, identity("./b")).await;
-        producer1.emit(EventType::DiagnosticsReady, identity("./d")).await;
-        producer2.emit(EventType::DiagnosticsReady, identity("./a")).await;
-        producer2.emit(EventType::DiagnosticsReady, identity("./c")).await;
+        producer1.emit(EventType::DiagnosticsReady, identity("./a")).await;
+        producer2.emit(EventType::DiagnosticsReady, identity("./b")).await;
+        producer1.emit(EventType::DiagnosticsReady, identity("./c")).await;
+        producer2.emit(EventType::DiagnosticsReady, identity("./d")).await;
 
-        // We should see an event from each producer followed by an event from the other producer.
-        // Also events from each producer must be in order.
+        // We should see the events in order of emission.
         let (_terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
         let events = receiver.take(4).collect::<Vec<_>>().await;
@@ -856,29 +748,25 @@ mod tests {
     }
 
     #[fuchsia::test]
-    async fn external_stream_draining() {
+    async fn stream_draining() {
         let inspector = inspect::Inspector::new();
         let mut router = EventRouter::new(inspector.root().create_child("events"));
-        let mut internal_producer = TestEventProducer::default();
-        let mut external_producer = TestEventProducer::default();
+        let mut producer = TestEventProducer::default();
         let (mut receiver, consumer) = TestEventConsumer::new();
         router.add_consumer(ConsumerConfig {
             consumer: &consumer,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
-            producer: &mut internal_producer,
-            producer_type: ProducerType::Internal,
+            producer: &mut producer,
             events: vec![EventType::DiagnosticsReady],
         });
         router.add_producer(ProducerConfig {
-            producer: &mut external_producer,
-            producer_type: ProducerType::External,
+            producer: &mut producer,
             events: vec![EventType::DiagnosticsReady],
         });
 
-        internal_producer.emit(EventType::DiagnosticsReady, LEGACY_IDENTITY.clone()).await;
-        external_producer.emit(EventType::DiagnosticsReady, IDENTITY.clone()).await;
+        producer.emit(EventType::DiagnosticsReady, IDENTITY.clone()).await;
 
         let (terminate_handle, fut) = router.start(RouterOptions::default()).unwrap();
         let _router_task = fasync::Task::spawn(fut);
@@ -886,17 +774,13 @@ mod tests {
         let drain_finished = fasync::Task::spawn(async move { on_drained.await });
 
         assert_event(receiver.next().await.unwrap(), diagnostics_ready(IDENTITY.clone()));
-        assert_event(receiver.next().await.unwrap(), diagnostics_ready(LEGACY_IDENTITY.clone()));
 
         // This future must be complete now.
         drain_finished.await;
 
-        // We must never see any new event emitted by the external producer. But we must see
-        // events emitted by the internal producer.
-        external_producer.emit(EventType::DiagnosticsReady, IDENTITY.clone()).await;
+        // We must never see any new event emitted by the producer.
+        producer.emit(EventType::DiagnosticsReady, IDENTITY.clone()).await;
         assert!(receiver.next().now_or_never().is_none());
-        internal_producer.emit(EventType::DiagnosticsReady, LEGACY_IDENTITY.clone()).await;
-        assert_event(receiver.next().await.unwrap(), diagnostics_ready(LEGACY_IDENTITY.clone()));
     }
 
     fn assert_event(event: Event, other: Event) {

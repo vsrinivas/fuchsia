@@ -7,10 +7,7 @@ use {
         component_lifecycle, diagnostics,
         error::Error,
         events::{
-            router::{
-                ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, ProducerType,
-                RouterOptions,
-            },
+            router::{ConsumerConfig, EventConsumer, EventRouter, ProducerConfig, RouterOptions},
             sources::{
                 ComponentEventProvider, EventSource, LogConnector, UnattributedLogSinkSource,
             },
@@ -191,7 +188,6 @@ impl Archivist {
         let unattributed_sender = unattributed_log_sink_source.publisher();
         self.event_router.add_producer(ProducerConfig {
             producer: &mut unattributed_log_sink_source,
-            producer_type: ProducerType::External,
             events: vec![EventType::LogSinkRequested],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
@@ -239,7 +235,6 @@ impl Archivist {
             Ok(mut event_source) => {
                 self.event_router.add_producer(ProducerConfig {
                     producer: &mut event_source,
-                    producer_type: ProducerType::External,
                     events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
                 });
                 self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
@@ -262,7 +257,6 @@ impl Archivist {
         let mut component_event_provider = ComponentEventProvider::new(proxy);
         self.event_router.add_producer(ProducerConfig {
             producer: &mut component_event_provider,
-            producer_type: ProducerType::External,
             events: vec![EventType::DiagnosticsReady],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
@@ -283,7 +277,6 @@ impl Archivist {
         let mut connector = LogConnector::new(proxy);
         self.event_router.add_producer(ProducerConfig {
             producer: &mut connector,
-            producer_type: ProducerType::External,
             events: vec![EventType::LogSinkRequested],
         });
         self.incoming_external_event_producers.push(fasync::Task::spawn(async move {
@@ -534,7 +527,6 @@ mod tests {
         let mut fake_producer = FakeProducer {};
         archivist.event_router.add_producer(ProducerConfig {
             producer: &mut fake_producer,
-            producer_type: ProducerType::External,
             events: vec![EventType::LogSinkRequested, EventType::DiagnosticsReady],
         });
 
