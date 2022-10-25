@@ -385,11 +385,10 @@ group("core") {
   # //src/tests/reboot:tests pass with DFv2 enabled.
   # TODO(fxbug.dev/108572): Add //src/tests/shutdown:tests when all tests in
   # //src/tests/shutdown:tests pass with DFv2 enabled.
-  # TODO(fxbug.dev/108573): Add //src/tests/dfv2:tests when all tests in
-  # //src/tests/dfv2:tests pass with DFv2 enabled.
   deps += [
     "//src/tests/assembly:tests",
     "//src/tests/coverage:tests",
+    "//src/tests/dfv2:tests",
     "//src/tests/diagnostics:tests",
     "//src/tests/disable_shell:tests",
     "//src/tests/dlog:tests",
