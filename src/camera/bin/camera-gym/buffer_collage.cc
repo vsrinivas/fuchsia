@@ -84,7 +84,11 @@ BufferCollage::BufferCollage()
     : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), view_provider_binding_(this) {
   SetStopOnError(scenic_);
   SetStopOnError(allocator_);
+
+#if CAMERA_GYM_ENABLE_ROOT_PRESENTER
   SetStopOnError(presenter_);
+#endif
+
   view_provider_binding_.set_error_handler([this](zx_status_t status) {
     FX_PLOGS(DEBUG, status) << "ViewProvider client disconnected.";
     view_provider_binding_.Unbind();
@@ -115,11 +119,13 @@ fpromise::result<std::unique_ptr<BufferCollage>, zx_status_t> BufferCollage::Cre
     FX_PLOGS(ERROR, status);
     return fpromise::error(status);
   }
+#if CAMERA_GYM_ENABLE_ROOT_PRESENTER
   status = collage->presenter_.Bind(std::move(presenter), collage->loop_.dispatcher());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
     return fpromise::error(status);
   }
+#endif
   collage->stop_callback_ = std::move(stop_callback);
 
   // Create a scenic session and set its event handlers.

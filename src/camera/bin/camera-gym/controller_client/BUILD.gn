@@ -38,8 +38,3 @@ executable("bin") {
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
 }
-
-fuchsia_shell_package("camera-gym-ctl") {
-  deps = [ ":bin" ]
-  manifest = "meta/camera-gym-ctl.cmx"
-}

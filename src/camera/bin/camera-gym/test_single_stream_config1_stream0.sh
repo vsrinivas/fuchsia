@@ -18,4 +18,7 @@ then
   exit 1
 fi
 
-fx shell camera-gym-ctl --set-config=1 --add-stream=0
+moniker=`ffx --machine json component show camera-gym-manual.cm | fx jq -r '.[0].moniker'
+echo $moniker
+
+ffx component explore $moniker -c "camera-gym-ctl --set-config=1 --add-stream=0"

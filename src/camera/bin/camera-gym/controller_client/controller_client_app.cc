@@ -20,14 +20,8 @@
 
 namespace camera {
 
-// How to search for the service using Hub:
-static char kGlobStr[] =
-    "/hub/r/session-*/*/c/camera-gym-manual.cmx/*/out/svc/fuchsia.camera.gym.Controller";
-static char kGlobStrNoSession[] =
-    "/hub/c/camera-gym-manual.cmx/*/out/svc/fuchsia.camera.gym.Controller";
-static char kRegexStr[] = "/camera-gym-manual.cmx/(\\d+)";
-
-std::vector<Service> FindCameraGyms();
+// This path will exist when the tool is used in combination with `ffx component explore`.
+static char kServicePath[] = "/out/svc/fuchsia.camera.gym.Controller";
 
 ControllerClientApp::ControllerClientApp(/* const char* name, */ async::Loop& loop)
     : loop_(loop), context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()) {}
@@ -38,56 +32,14 @@ void ControllerClientApp::Start(std::vector<fuchsia::camera::gym::Command> comma
 }
 
 bool ControllerClientApp::ConnectToServer() {
-  auto gyms = FindCameraGyms();
-  FX_LOGS(DEBUG) << "Found " << gyms.size() << " camera gyms";
-  for (const auto& gym : gyms) {
-    FX_LOGS(DEBUG) << " Gym: " << gym.name << " -- " << gym.service_path;
-  }
-  if (gyms.size() == 0) {
-    fprintf(stderr, "ERROR: No test server instances found\n");
-    return false;
-  }
-  if (gyms.size() > 1) {
-    fprintf(stderr, "ERROR: Multiple test server instances found\n");
-    return false;
-  }
   auto request = controller_.NewRequest().TakeChannel();
-  const auto& service_path = gyms[0].service_path;
-  zx_status_t status = fdio_service_connect(service_path.c_str(), request.release());
+  const zx_status_t status = fdio_service_connect(kServicePath, request.release());
   if (status != ZX_OK) {
     fprintf(stderr, "ERROR: FDIO service connect failure (status: %s)\n",
             zx_status_get_string(status));
     return false;
   }
   return true;
-}
-
-static bool FindServicesForPath(char* glob_str, char* regex_str, std::vector<Service>* services) {
-  glob_t glob_buf;
-  bool service_exists = glob(glob_str, 0, nullptr, &glob_buf) == 0;
-  re2::RE2 name_regex(regex_str);
-  if (!service_exists) {
-    return false;
-  }
-  for (size_t i = 0; i < glob_buf.gl_pathc; ++i) {
-    Service service;
-    service.service_path = glob_buf.gl_pathv[i];
-    FX_CHECK(re2::RE2::PartialMatch(service.service_path, name_regex, &service.name))
-        << service.service_path;
-    services->push_back(std::move(service));
-  }
-  globfree(&glob_buf);
-  return true;
-}
-
-std::vector<Service> FindCameraGyms() {
-  std::vector<Service> gyms;
-  if (!FindServicesForPath(kGlobStr, kRegexStr, &gyms)) {
-    if (!FindServicesForPath(kGlobStrNoSession, kRegexStr, &gyms)) {
-      fprintf(stderr, "ERROR: Service does not exist\n");
-    }
-  }
-  return gyms;
 }
 
 void ControllerClientApp::SendCommand(std::vector<fuchsia::camera::gym::Command> commands,

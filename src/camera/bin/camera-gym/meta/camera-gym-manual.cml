@@ -1,0 +1,46 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [ "syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/camera_gym_bin",
+        args: [ "--manual" ],
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.camera.gym.Controller",
+                "fuchsia.ui.app.ViewProvider",
+            ],
+        },
+    ],
+    use: [
+        {
+            protocol: [
+                "fuchsia.camera3.DeviceWatcher",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.ui.scenic.Scenic",
+            ],
+        },
+        {
+            storage: "tmp",
+            path: "/tmp",
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.camera.gym.Controller",
+                "fuchsia.ui.app.ViewProvider",
+            ],
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.component.Binder",
+            from: "framework",
+        },
+    ],
+}

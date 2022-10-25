@@ -18,11 +18,14 @@ then
   exit 1
 fi
 
+moniker=`ffx --machine json component show camera-gym-manual.cm | fx jq -r '.[0].moniker'
+echo $moniker
+
 while true; do
-  fx shell camera-gym-ctl --set-config=0 --add-stream=0 --add-stream=1 --add-stream=2
+  ffx component explore $moniker -c "camera-gym-ctl --set-config=0 --add-stream=0 --add-stream=1 --add-stream=2"
   sleep 2
-  fx shell camera-gym-ctl --set-config=1 --add-stream=0 --add-stream=1
+  ffx component explore $moniker -c "camera-gym-ctl --set-config=1 --add-stream=0 --add-stream=1"
   sleep 2
-  fx shell camera-gym-ctl --set-config=2 --add-stream=0 --add-stream=1
+  ffx component explore $moniker -c "camera-gym-ctl --set-config=2 --add-stream=0 --add-stream=1"
   sleep 2
 done

@@ -16,7 +16,6 @@ declare_args() {
 group("camera-gym") {
   public_deps = [
     ":camera_gym_pkg",
-    "controller_client:camera-gym-ctl",
     "fidl:controller($fidl_toolchain)",
   ]
   deps = [
@@ -154,12 +153,12 @@ template("camera_gym_component") {
 
 camera_gym_component("auto") {
   component_name = "camera-gym"
-  manifest = "meta/camera-gym.cmx"
+  manifest = "meta/camera-gym.cml"
 }
 
 camera_gym_component("manual") {
   component_name = "camera-gym-manual"
-  manifest = "meta/camera-gym-manual.cmx"
+  manifest = "meta/camera-gym-manual.cml"
 }
 
 fuchsia_package("camera_gym_pkg") {
@@ -167,6 +166,7 @@ fuchsia_package("camera_gym_pkg") {
   deps = [
     ":camera_gym_auto",
     ":camera_gym_manual",
+    "controller_client:bin",
   ]
 }
 

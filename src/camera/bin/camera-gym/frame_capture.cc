@@ -19,7 +19,7 @@
 
 namespace camera {
 
-const char* base_dir = "/data";
+const char* base_dir = "/tmp";
 
 FrameCapture::FrameCapture() : archive_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
