@@ -151,8 +151,8 @@ constexpr VkLayerProperties swapchain_layer = {
 };
 
 struct ImagePipeImage {
-  VkImage image;
-  uint32_t id;
+  VkImage image = VK_NULL_HANDLE;
+  uint32_t id = 0;
 };
 
 struct PendingImageInfo {
@@ -180,10 +180,16 @@ class ImagePipeSwapchain {
   ImagePipeSurface* surface() { return surface_; }
 
  private:
+  struct PerImageData {
+    ImagePipeImage image;
+    VkDeviceMemory memory = VK_NULL_HANDLE;
+    VkSemaphore semaphore = VK_NULL_HANDLE;
+    // A fence that keeps track of the status of the previous presentation using a semaphore.
+    VkFence last_presentation_fence = VK_NULL_HANDLE;
+  };
+
   ImagePipeSurface* surface_;
-  std::vector<ImagePipeImage> images_;
-  std::vector<VkDeviceMemory> memories_;
-  std::vector<VkSemaphore> semaphores_;
+  std::vector<PerImageData> per_image_data_;
   std::vector<uint32_t> acquired_ids_;
   std::vector<PendingImageInfo> pending_images_;
   bool is_protected_;
@@ -229,8 +235,11 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
     return VK_ERROR_OUT_OF_DEVICE_MEMORY;
   }
   for (uint32_t i = 0; i < num_images; i++) {
-    images_.push_back({image_infos[i].image, image_infos[i].image_id});
-    memories_.push_back(image_infos[i].memory);
+    per_image_data_.push_back({});
+    PerImageData& per_image_data = per_image_data_.back();
+    per_image_data.image = ImagePipeImage{image_infos[i].image, image_infos[i].image_id};
+    per_image_data.memory = image_infos[i].memory;
+
     VkSemaphoreCreateInfo create_semaphore_info{
         .sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, .pNext = nullptr, .flags = 0};
     VkSemaphore semaphore;
@@ -239,7 +248,18 @@ VkResult ImagePipeSwapchain::Initialize(VkDevice device,
       fprintf(stderr, "vkCreateSemaphore failed: %d", result);
       return result;
     }
-    semaphores_.push_back(semaphore);
+    per_image_data.semaphore = semaphore;
+
+    VkFenceCreateInfo create_fence_info{.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
+                                        .pNext = nullptr,
+                                        .flags = VK_FENCE_CREATE_SIGNALED_BIT};
+    VkFence fence;
+    result = pDisp->CreateFence(device, &create_fence_info, pAllocator, &fence);
+    if (result != VK_SUCCESS) {
+      fprintf(stderr, "vkCreateFence failed: %d", result);
+      return result;
+    }
+    per_image_data.last_presentation_fence = fence;
 
     auto release_fence = PlatformEvent::Create(device, pDisp,
                                                true  // signaled
@@ -292,16 +312,22 @@ void ImagePipeSwapchain::Cleanup(VkDevice device, const VkAllocationCallbacks* p
   // Wait for device to be idle to ensure no QueueSubmit operations caused by Present are pending.
   pDisp->DeviceWaitIdle(device);
 
-  for (auto& image : images_) {
-    surface()->RemoveImage(image.id);
-    pDisp->DestroyImage(device, image.image, pAllocator);
+  for (auto& per_image_data : per_image_data_) {
+    if (per_image_data.image.image) {
+      surface()->RemoveImage(per_image_data.image.id);
+      pDisp->DestroyImage(device, per_image_data.image.image, pAllocator);
+    }
+    if (per_image_data.memory) {
+      pDisp->FreeMemory(device, per_image_data.memory, pAllocator);
+    }
+    if (per_image_data.semaphore) {
+      pDisp->DestroySemaphore(device, per_image_data.semaphore, pAllocator);
+    }
+    if (per_image_data.last_presentation_fence) {
+      pDisp->DestroyFence(device, per_image_data.last_presentation_fence, pAllocator);
+    }
   }
-  for (auto memory : memories_) {
-    pDisp->FreeMemory(device, memory, pAllocator);
-  }
-  for (auto semaphore : semaphores_) {
-    pDisp->DestroySemaphore(device, semaphore, pAllocator);
-  }
+  per_image_data_.clear();
 }
 
 VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR vk_swapchain,
@@ -316,16 +342,16 @@ VKAPI_ATTR void VKAPI_CALL DestroySwapchainKHR(VkDevice device, VkSwapchainKHR v
 
 VkResult ImagePipeSwapchain::GetSwapchainImages(uint32_t* pCount, VkImage* pSwapchainImages) {
   if (pSwapchainImages == NULL) {
-    *pCount = to_uint32(images_.size());
+    *pCount = to_uint32(per_image_data_.size());
     return VK_SUCCESS;
   }
 
-  assert(images_.size() <= *pCount);
+  assert(per_image_data_.size() <= *pCount);
 
-  for (uint32_t i = 0; i < images_.size(); i++)
-    pSwapchainImages[i] = images_[i].image;
+  for (uint32_t i = 0; i < per_image_data_.size(); i++)
+    pSwapchainImages[i] = per_image_data_[i].image.image;
 
-  *pCount = to_uint32(images_.size());
+  *pCount = to_uint32(per_image_data_.size());
   return VK_SUCCESS;
 }
 
@@ -436,6 +462,24 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
   VkLayerDispatchTable* pDisp =
       GetLayerDataPtr(get_dispatch_key(queue), layer_data_map)->device_dispatch_table.get();
 
+  PerImageData& per_image_data = per_image_data_[index];
+
+  // Wait for the previous present to complete before attempting to do
+  // vkImportSemaphoreZirconHandleFUCHSIA on the semaphore it used.  The previous present is
+  // guaranteed to have completed by this point but the validation layers aren't aware of this
+  // because the synchronization goes through external semaphores. As a result, the validation
+  // layers generate a warning."
+  VkResult result = pDisp->WaitForFences(device_, 1, &per_image_data.last_presentation_fence,
+                                         VK_TRUE, UINT64_MAX);
+  if (result != VK_SUCCESS) {
+    return VK_ERROR_DEVICE_LOST;
+  }
+
+  result = pDisp->ResetFences(device_, 1, &per_image_data.last_presentation_fence);
+  if (result != VK_SUCCESS) {
+    return VK_ERROR_DEVICE_LOST;
+  }
+
   auto acquire_fence = PlatformEvent::Create(device_, pDisp, false);
   if (!acquire_fence) {
     fprintf(stderr, "PlatformEvent::Create failed\n");
@@ -448,7 +492,7 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
     return VK_ERROR_DEVICE_LOST;
   }
 
-  VkResult result = image_acquire_fence->ImportToSemaphore(device_, pDisp, semaphores_[index]);
+  result = image_acquire_fence->ImportToSemaphore(device_, pDisp, per_image_data.semaphore);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "ImportToSemaphore failed: %d\n", result);
     return VK_ERROR_SURFACE_LOST_KHR;
@@ -467,8 +511,8 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
                               .pWaitSemaphores = pWaitSemaphores,
                               .pWaitDstStageMask = flag_bits.data(),
                               .signalSemaphoreCount = 1,
-                              .pSignalSemaphores = &semaphores_[index]};
-  result = pDisp->QueueSubmit(queue, 1, &submit_info, VK_NULL_HANDLE);
+                              .pSignalSemaphores = &per_image_data.semaphore};
+  result = pDisp->QueueSubmit(queue, 1, &submit_info, per_image_data.last_presentation_fence);
   if (result != VK_SUCCESS) {
     fprintf(stderr, "vkQueueSubmit failed with result %d", result);
     return VK_ERROR_SURFACE_LOST_KHR;
@@ -503,10 +547,10 @@ VkResult ImagePipeSwapchain::Present(VkQueue queue, uint32_t index, uint32_t wai
 
 #if defined(__Fuchsia__)
     TRACE_DURATION("gfx", "ImagePipeSwapchain::Present", "swapchain_image_index", index, "image_id",
-                   images_[index].id);
+                   per_image_data_[index].image.id);
 #endif
-    surface()->PresentImage(images_[index].id, std::move(acquire_fences), std::move(release_fences),
-                            queue);
+    surface()->PresentImage(per_image_data_[index].image.id, std::move(acquire_fences),
+                            std::move(release_fences), queue);
   }
 
   return VK_SUCCESS;
