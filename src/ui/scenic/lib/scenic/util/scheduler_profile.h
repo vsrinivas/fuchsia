@@ -5,13 +5,15 @@
 #ifndef SRC_UI_SCENIC_LIB_SCENIC_UTIL_SCHEDULER_PROFILE_H_
 #define SRC_UI_SCENIC_LIB_SCENIC_UTIL_SCHEDULER_PROFILE_H_
 
-#include <lib/zx/profile.h>
-#include <lib/zx/time.h>
+#include <lib/zx/thread.h>
+
+#include <string>
 
 namespace util {
 
-// Returns a handle to a scheduler profile for the specified deadline parameters.
-zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx::duration period);
+// Sets the scheduler role of the given thread.
+//
+zx_status_t SetSchedulerRole(const zx::unowned_thread& thread, const std::string& role);
 
 }  // namespace util
 

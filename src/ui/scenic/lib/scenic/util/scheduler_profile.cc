@@ -6,16 +6,22 @@
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/channel.h>
-#include <lib/zx/profile.h>
+#include <lib/zx/result.h>
 #include <lib/zx/thread.h>
+
+#include <optional>
 
 #include "fuchsia/scheduler/cpp/fidl.h"
 #include "lib/fdio/directory.h"
 
-namespace util {
+namespace {
 
-// Returns a handle to a scheduler profile for the specified deadline parameters.
-zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx::duration period) {
+zx::result<fuchsia::scheduler::ProfileProvider_SyncProxy*> GetProfileProvider() {
+  static std::optional<fuchsia::scheduler::ProfileProvider_SyncProxy> provider;
+  if (provider) {
+    return zx::ok(&provider.value());
+  }
+
   // Connect to the scheduler profile service to request a new profile.
   zx::channel channel0, channel1;
   zx_status_t status;
@@ -23,7 +29,7 @@ zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx
   status = zx::channel::create(0u, &channel0, &channel1);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create channel pair: " << status;
-    return {};
+    return zx::error_result(status);
   }
 
   status = fdio_service_connect(
@@ -31,21 +37,41 @@ zx::profile GetSchedulerProfile(zx::duration capacity, zx::duration deadline, zx
       channel0.release());
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to connect to profile provider: " << status;
-    return {};
+    return zx::error_result(status);
   }
 
-  fuchsia::scheduler::ProfileProvider_SyncProxy provider{std::move(channel1)};
+  provider.emplace(std::move(channel1));
+  return zx::ok(&provider.value());
+}
+
+}  // anonymous namespace
+
+namespace util {
+
+zx_status_t SetSchedulerRole(const zx::unowned_thread& thread, const std::string& role) {
+  zx::result provider = GetProfileProvider();
+  if (provider.is_error()) {
+    return provider.error_value();
+  }
+
+  zx::thread duplicate_handle;
+  zx_status_t status = thread->duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate_handle);
+  if (status != ZX_OK) {
+    return status;
+  }
 
   zx_status_t fidl_status = ZX_OK;
-  zx::profile profile;
-  status = provider.GetDeadlineProfile(capacity.get(), deadline.get(), period.get(), "scenic/main",
-                                       &fidl_status, &profile);
-  if (status != ZX_OK || fidl_status != ZX_OK) {
-    FX_LOGS(WARNING) << "Failed to request profile: " << status << ", " << fidl_status;
-    return {};
+  status = provider->SetProfileByRole(std::move(duplicate_handle), role, &fidl_status);
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to request profile: status=" << status;
+    return status;
+  }
+  if (fidl_status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to request profile: fidl_status=" << fidl_status;
+    return fidl_status;
   }
 
-  return profile;
+  return ZX_OK;
 }
 
 }  // namespace util

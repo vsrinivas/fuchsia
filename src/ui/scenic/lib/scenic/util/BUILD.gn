@@ -19,7 +19,10 @@ source_set("util") {
     "//zircon/system/ulib/zx",
   ]
 
-  deps = [ "//src/lib/fxl" ]
+  deps = [
+    "//src/lib/fxl",
+    "//zircon/system/ulib/zxc",
+  ]
 }
 
 source_set("rk4_spring_simulation") {

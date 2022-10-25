@@ -45,20 +45,10 @@ int main(int argc, const char** argv) {
   scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),
                        std::move(display_controller_promise), [&loop] { loop.Quit(); });
 
-  // TODO(fxbug.dev/40858): Migrate to the role-based scheduler API when available,
-  // instead of hard coding parameters.
-  {
-    // TODO(fxbug.dev/44209): Centralize default frame period.
-    const zx::duration capacity = zx::msec(16);
-    const zx::duration deadline = zx::msec(16);
-    const zx::duration period = deadline;
-    const auto profile = util::GetSchedulerProfile(capacity, deadline, period);
-    if (profile) {
-      const auto status = zx::thread::self()->set_profile(profile, 0);
-      if (status != ZX_OK) {
-        FX_LOGS(ERROR) << "Failed to apply profile to main thread: " << status;
-      }
-    }
+  // Apply the scheduler role define for Scenic.
+  const zx_status_t status = util::SetSchedulerRole(zx::thread::self(), "fuchsia.scenic.main");
+  if (status != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to apply profile to main thread: " << status;
   }
 
   loop.Run();
