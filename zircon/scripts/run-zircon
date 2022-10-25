@@ -331,10 +331,7 @@ else
 fi
 
 if [[ -n $AUDIO ]]; then
-    ARGS+=" -soundhw hda"
-    export QEMU_AUDIO_DRV=$AUDIO
-    export QEMU_AUDIO_DAC_FIXED_FREQ=48000
-    export QEMU_AUDIO_TIMER_PERIOD=20
+    ARGS+=" -device intel-hda -device hda-duplex -audiodev id=${AUDIO},driver=${AUDIO}"
 
     case $AUDIO in
         none) ;;
@@ -342,8 +339,7 @@ if [[ -n $AUDIO ]]; then
         oss) ;;
         pa) ;;
         wav)
-            export QEMU_WAV_FREQUENCY=48000
-            export QEMU_WAV_PATH=${AUDIO_WAVFILE}
+            ARGS+=",path=${AUDIO_WAVFILE}"
             ;;
         *)
             echo unrecognized QEMU host audio driver \"$AUDIO\"
