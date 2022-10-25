@@ -558,19 +558,6 @@ zx_status_t PlatformDevice::Start() {
       snprintf(name, sizeof(name), "%02x:%02x:%01x:%01x", vid_, pid_, did_, instance_id_);
     }
   }
-  char argstr[64];
-  snprintf(argstr, sizeof(argstr), "pdev:%s,", name);
-
-  uint32_t device_add_flags = 0;
-
-  // Isolated devices run in separate devhosts.
-  // Protocol devices must be in same devhost as platform bus.
-  // Composite device fragments are also in the same devhost as platform bus,
-  // but the actual composite device will be in a new devhost or devhost belonging to
-  // one of the other fragments.
-  if (type_ == Isolated) {
-    device_add_flags |= DEVICE_ADD_MUST_ISOLATE;
-  }
 
   zx_device_prop_t props[] = {
       {BIND_PLATFORM_DEV_VID, 0, vid_},
@@ -580,14 +567,7 @@ zx_status_t PlatformDevice::Start() {
   };
 
   ddk::DeviceAddArgs args(name);
-  args.set_flags(device_add_flags)
-      .set_props(props)
-      .set_proto_id(ZX_PROTOCOL_PDEV)
-      .set_proxy_args((type_ == Isolated ? argstr : nullptr));
-
-  std::array protocol_offers = {
-      fuchsia_hardware_platform_bus::Service::Name,
-  };
+  args.set_props(props).set_proto_id(ZX_PROTOCOL_PDEV);
 
   if (type_ == Protocol) {
     driver::ServiceInstanceHandler handler;
@@ -618,10 +598,30 @@ zx_status_t PlatformDevice::Start() {
       return result.error_value();
     }
 
+    std::array protocol_offers = {
+        fuchsia_hardware_platform_bus::Service::Name,
+    };
+
     args.set_outgoing_dir(endpoints->client.TakeChannel())
         .set_runtime_service_offers(protocol_offers);
+
+    return DdkAdd(std::move(args));
+  } else if (type_ == Isolated) {
+    // Isolated devices run in separate devhosts.
+    // Protocol devices must be in same devhost as platform bus.
+    // Composite device fragments are also in the same devhost as platform bus,
+    // but the actual composite device will be in a new devhost or devhost belonging to
+    // one of the other fragments.
+    args.set_flags(DEVICE_ADD_MUST_ISOLATE);
+    char argstr[64];
+    snprintf(argstr, sizeof(argstr), "pdev:%s,", name);
+    args.set_proxy_args(argstr);
+    return DdkAdd(std::move(args));
+  } else if (type_ == Fragment) {
+    return DdkAdd(std::move(args));
+  } else {
+    __UNREACHABLE;
   }
-  return DdkAdd(std::move(args));
 }
 
 void PlatformDevice::DdkInit(ddk::InitTxn txn) {
