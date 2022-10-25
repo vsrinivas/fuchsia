@@ -27,11 +27,8 @@ use {
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
-/// A network-byte ordered 16-bit unsigned integer.
-pub type U16 = zerocopy::U16<NetworkEndian>;
-
-/// A network-byte ordered 32-bit unsigned integer.
-pub type U32 = zerocopy::U32<NetworkEndian>;
+type U16 = zerocopy::U16<NetworkEndian>;
+type U32 = zerocopy::U32<NetworkEndian>;
 
 /// A DHCPv6 packet parsing error.
 #[allow(missing_docs)]

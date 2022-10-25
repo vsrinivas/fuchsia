@@ -8,13 +8,14 @@ use assert_matches::assert_matches;
 use net_types::ip::{Ipv6Addr, Subnet};
 use num::{rational::Ratio, CheckedMul};
 use packet::serialize::InnerPacketBuilder;
-use packet_formats_dhcp::v6::{self, U16};
+use packet_formats_dhcp::v6;
 use rand::{thread_rng, Rng};
 use std::{
     cmp::{Eq, Ord, PartialEq, PartialOrd},
     collections::{hash_map::Entry, BinaryHeap, HashMap},
     convert::TryFrom,
     default::Default,
+    fmt::Debug,
     time::{Duration, Instant},
 };
 use tracing::{debug, info, warn};
@@ -639,58 +640,36 @@ struct IaAddress {
 }
 
 #[derive(thiserror::Error, Debug)]
-enum IaNaOptionError {
-    #[error("{0}")]
-    T1GreaterThanT2(#[from] T1GreaterThanT2Error),
+enum IaOptionError<Inner: Debug> {
+    #[error("T1={t1:?} greater than T2={t2:?}")]
+    T1GreaterThanT2 { t1: v6::TimeValue, t2: v6::TimeValue },
     #[error("status code error: {0}")]
     StatusCode(#[from] StatusCodeError),
-    // NB: Currently only one address is requested per IA_NA option, so
-    // receiving an IA_NA option with multiple IA Address suboptions is
+    // NB: Currently only one address/prefix is requested per IA_{NA,PD} option,
+    // so receiving an option with multiple IA Address/Prefix suboptions is
     // indicative of a misbehaving server.
-    #[error("duplicate IA Address option {0:?} and {1:?}")]
-    MultipleIaAddress(IaAddress, IaAddress),
+    #[error("duplicate IA value option {0:?} and {1:?}")]
+    MultipleIaValues(Inner, Inner),
     // TODO(https://fxbug.dev/104297): Use an owned option type rather
     // than a string of the debug representation of the invalid option.
     #[error("invalid option: {0:?}")]
     InvalidOption(String),
 }
 
+type IaNaOptionError = IaOptionError<IaAddress>;
+
 #[derive(Debug)]
-enum IaNaOption {
+enum IaOption<Inner> {
     Success {
         status_message: Option<String>,
         t1: v6::TimeValue,
         t2: v6::TimeValue,
-        ia_addr: Option<IaAddress>,
+        ia_value: Option<Inner>,
     },
     Failure(ErrorStatusCode),
 }
 
-#[derive(thiserror::Error, Debug)]
-#[error("T1 is greater than T2")]
-struct T1GreaterThanT2Error {
-    t1: v6::TimeValue,
-    t2: v6::TimeValue,
-}
-
-fn check_time_values(t1: v6::TimeValue, t2: v6::TimeValue) -> Result<(), T1GreaterThanT2Error> {
-    // Ignore invalid IANA options, per RFC 8415, section 21.4:
-    //
-    //    If a client receives an IA_NA with T1 greater than T2 and both T1
-    //    and T2 are greater than 0, the client discards the IA_NA option
-    //    and processes the remainder of the message as though the server
-    //    had not included the invalid IA_NA option.
-    match (t1, t2) {
-        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => Ok(()),
-        (t1, t2) => {
-            if t1 > t2 {
-                Err(T1GreaterThanT2Error { t1, t2 })
-            } else {
-                Ok(())
-            }
-        }
-    }
-}
+type IaNaOption = IaOption<IaAddress>;
 
 #[derive(thiserror::Error, Debug)]
 enum StatusCodeError {
@@ -700,25 +679,6 @@ enum StatusCodeError {
     DuplicateStatusCode((v6::StatusCode, String), (v6::StatusCode, String)),
 }
 
-fn check_status_code(
-    code: U16,
-    msg: &str,
-    success_status_message: &mut Option<String>,
-) -> Result<v6::StatusCode, StatusCodeError> {
-    let status_code = code.get().try_into().map_err(|e| match e {
-        v6::ParseError::InvalidStatusCode(code) => StatusCodeError::InvalidStatusCode(code),
-        e => unreachable!("unreachable status code parse error: {}", e),
-    })?;
-    if let Some(existing) = success_status_message.take() {
-        return Err(StatusCodeError::DuplicateStatusCode(
-            (v6::StatusCode::Success, existing),
-            (status_code, msg.to_string()),
-        ));
-    }
-
-    Ok(status_code)
-}
-
 fn check_lifetimes(
     valid_lifetime: v6::TimeValue,
     preferred_lifetime: v6::TimeValue,
@@ -726,12 +686,18 @@ fn check_lifetimes(
     match valid_lifetime {
         v6::TimeValue::Zero => Err(LifetimesError::ValidLifetimeZero),
         vl @ v6::TimeValue::NonZero(valid_lifetime) => {
-            // Ignore invalid IA Address options, per RFC
-            // 8415, section 21.6:
+            // Ignore IA {Address,Prefix} options with invalid preferred or
+            // valid lifetimes.
             //
-            //    The client MUST discard any addresses for
-            //    which the preferred lifetime is greater
-            //    than the valid lifetime.
+            // Per RFC 8415 section 21.6,
+            //
+            //    The client MUST discard any addresses for which the preferred
+            //    lifetime is greater than the valid lifetime.
+            //
+            // Per RFC 8415 section 21.22,
+            //
+            //    The client MUST discard any prefixes for which the preferred
+            //    lifetime is greater than the valid lifetime.
             if preferred_lifetime > vl {
                 Err(LifetimesError::PreferredLifetimeGreaterThanValidLifetime(Lifetimes {
                     preferred_lifetime,
@@ -746,40 +712,82 @@ fn check_lifetimes(
 
 // TODO(https://fxbug.dev/104519): Move this function and associated types
 // into packet-formats-dhcp.
-fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNaOptionError> {
-    let (t1, t2) = (ia_na_data.t1(), ia_na_data.t2());
-    check_time_values(t1, t2)?;
+fn process_ia<
+    'a,
+    I: Debug,
+    E: From<IaOptionError<I>> + Debug,
+    F: Fn(&v6::ParsedDhcpOption<'a>) -> Result<I, E>,
+>(
+    t1: v6::TimeValue,
+    t2: v6::TimeValue,
+    options: impl Iterator<Item = v6::ParsedDhcpOption<'a>>,
+    check: F,
+) -> Result<IaOption<I>, E> {
+    // Ignore IA_{NA,PD} options, with invalid T1/T2 values.
+    //
+    // Per RFC 8415, section 21.4:
+    //
+    //    If a client receives an IA_NA with T1 greater than T2 and both T1
+    //    and T2 are greater than 0, the client discards the IA_NA option
+    //    and processes the remainder of the message as though the server
+    //    had not included the invalid IA_NA option.
+    //
+    // Per RFC 8415, section 21.21:
+    //
+    //    If a client receives an IA_PD with T1 greater than T2 and both T1 and
+    //    T2 are greater than 0, the client discards the IA_PD option and
+    //    processes the remainder of the message as though the server had not
+    //    included the IA_PD option.
+    match (t1, t2) {
+        (v6::TimeValue::Zero, _) | (_, v6::TimeValue::Zero) => {}
+        (t1, t2) => {
+            if t1 > t2 {
+                return Err(IaOptionError::T1GreaterThanT2 { t1, t2 }.into());
+            }
+        }
+    }
 
-    let mut ia_addr_opt = None;
+    let mut ia_value = None;
     let mut success_status_message = None;
-    for ia_na_opt in ia_na_data.iter_options() {
-        match ia_na_opt {
+    for opt in options {
+        match opt {
             v6::ParsedDhcpOption::StatusCode(code, msg) => {
-                let status_code = check_status_code(code, msg, &mut success_status_message)?;
+                let mut status_code = || {
+                    let status_code = code.get().try_into().map_err(|e| match e {
+                        v6::ParseError::InvalidStatusCode(code) => {
+                            StatusCodeError::InvalidStatusCode(code)
+                        }
+                        e => unreachable!("unreachable status code parse error: {}", e),
+                    })?;
+                    if let Some(existing) = success_status_message.take() {
+                        return Err(StatusCodeError::DuplicateStatusCode(
+                            (v6::StatusCode::Success, existing),
+                            (status_code, msg.to_string()),
+                        ));
+                    }
+
+                    Ok(status_code)
+                };
+                let status_code = status_code().map_err(IaOptionError::StatusCode)?;
                 match status_code.into_result() {
                     Ok(()) => {
                         success_status_message = Some(msg.to_string());
                     }
                     Err(error_status_code) => {
-                        return Ok(IaNaOption::Failure(ErrorStatusCode(
+                        return Ok(IaOption::Failure(ErrorStatusCode(
                             error_status_code,
                             msg.to_string(),
                         )))
                     }
                 }
             }
-            v6::ParsedDhcpOption::IaAddr(ia_addr_data) => {
-                let ia_addr = IaAddress {
-                    address: ia_addr_data.addr(),
-                    lifetimes: check_lifetimes(
-                        ia_addr_data.valid_lifetime(),
-                        ia_addr_data.preferred_lifetime(),
-                    ),
-                };
-                if let Some(existing) = ia_addr_opt {
-                    return Err(IaNaOptionError::MultipleIaAddress(existing, ia_addr));
+            opt @ (v6::ParsedDhcpOption::IaAddr(_) | v6::ParsedDhcpOption::IaPrefix(_)) => {
+                let new_opt = check(&opt)?;
+                if let Some(existing) = ia_value {
+                    return Err(IaOptionError::MultipleIaValues(existing, new_opt).into());
                 }
-                ia_addr_opt = Some(ia_addr);
+
+                ia_value = Some(new_opt);
             }
             v6::ParsedDhcpOption::ClientId(_)
             | v6::ParsedDhcpOption::ServerId(_)
@@ -788,38 +796,48 @@ fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNa
             | v6::ParsedDhcpOption::Iana(_)
             | v6::ParsedDhcpOption::InformationRefreshTime(_)
             | v6::ParsedDhcpOption::IaPd(_)
-            | v6::ParsedDhcpOption::IaPrefix(_)
             | v6::ParsedDhcpOption::Oro(_)
             | v6::ParsedDhcpOption::ElapsedTime(_)
             | v6::ParsedDhcpOption::DnsServers(_)
             | v6::ParsedDhcpOption::DomainList(_) => {
-                return Err(IaNaOptionError::InvalidOption(format!("{:?}", ia_na_opt)));
+                return Err(IaOptionError::InvalidOption(format!("{:?}", opt)).into());
             }
         }
     }
+
     // Missing status code option means success per RFC 8415 section 7.5:
     //
     //    If the Status Code option (see Section 21.13) does not appear
     //    in a message in which the option could appear, the status
     //    of the message is assumed to be Success.
-    Ok(IaNaOption::Success { status_message: success_status_message, t1, t2, ia_addr: ia_addr_opt })
+    Ok(IaOption::Success { status_message: success_status_message, t1, t2, ia_value })
+}
+
+// TODO(https://fxbug.dev/104519): Move this function and associated types
+// into packet-formats-dhcp.
+fn process_ia_na(ia_na_data: &v6::IanaData<&'_ [u8]>) -> Result<IaNaOption, IaNaOptionError> {
+    process_ia(ia_na_data.t1(), ia_na_data.t2(), ia_na_data.iter_options(), |opt| match opt {
+        v6::ParsedDhcpOption::IaAddr(ia_addr_data) => Ok(IaAddress {
+            address: ia_addr_data.addr(),
+            lifetimes: check_lifetimes(
+                ia_addr_data.valid_lifetime(),
+                ia_addr_data.preferred_lifetime(),
+            ),
+        }),
+        opt @ v6::ParsedDhcpOption::IaPrefix(_) => {
+            Err(IaOptionError::InvalidOption(format!("{:?}", opt)))
+        }
+        opt => unreachable!(
+            "other options should be handled before this fn is called; got = {:?}",
+            opt
+        ),
+    })
 }
 
 #[derive(thiserror::Error, Debug)]
 enum IaPdOptionError {
-    #[error("{0}")]
-    T1GreaterThanT2(#[from] T1GreaterThanT2Error),
-    #[error("status code error: {0}")]
-    StatusCode(#[from] StatusCodeError),
-    // NB: Currently only one prefix is requested per IA_PD option, so
-    // receiving an IA_PD option with multiple IA Prefix suboptions is
-    // indicative of a misbehaving server.
-    #[error("duplicate IA Prefix option {0:?} and {1:?}")]
-    MultipleIaPrefix(IaPrefix, IaPrefix),
-    // TODO(https://fxbug.dev/104297): Use an owned option type rather
-    // than a string of the debug representation of the invalid option.
-    #[error("invalid option: {0:?}")]
-    InvalidOption(String),
+    #[error("generic IA Option error: {0}")]
+    IaOptionError(#[from] IaOptionError<IaPrefix>),
     #[error("invalid subnet")]
     InvalidSubnet,
 }
@@ -830,80 +848,29 @@ struct IaPrefix {
     lifetimes: Result<Lifetimes, LifetimesError>,
 }
 
-#[derive(Debug)]
-enum IaPdOption {
-    Success {
-        status_message: Option<String>,
-        t1: v6::TimeValue,
-        t2: v6::TimeValue,
-        ia_prefix: Option<IaPrefix>,
-    },
-    Failure(ErrorStatusCode),
-}
+type IaPdOption = IaOption<IaPrefix>;
 
 // TODO(https://fxbug.dev/104519): Move this function and associated types
 // into packet-formats-dhcp.
 fn process_ia_pd(ia_pd_data: &v6::IaPdData<&'_ [u8]>) -> Result<IaPdOption, IaPdOptionError> {
-    let (t1, t2) = (ia_pd_data.t1(), ia_pd_data.t2());
-    check_time_values(t1, t2)?;
-
-    let mut ia_prefix_opt = None;
-    let mut success_status_message = None;
-    for ia_pd_opt in ia_pd_data.iter_options() {
-        match ia_pd_opt {
-            v6::ParsedDhcpOption::StatusCode(code, msg) => {
-                let status_code = check_status_code(code, msg, &mut success_status_message)?;
-                match status_code.into_result() {
-                    Ok(()) => {
-                        success_status_message = Some(msg.to_string());
-                    }
-                    Err(error_status_code) => {
-                        return Ok(IaPdOption::Failure(ErrorStatusCode(
-                            error_status_code,
-                            msg.to_string(),
-                        )))
-                    }
-                }
-            }
-            v6::ParsedDhcpOption::IaPrefix(ia_prefix_data) => {
-                let ia_prefix = IaPrefix {
-                    prefix: ia_prefix_data.prefix().map_err(|_| IaPdOptionError::InvalidSubnet)?,
-                    lifetimes: check_lifetimes(
-                        ia_prefix_data.valid_lifetime(),
-                        ia_prefix_data.preferred_lifetime(),
-                    ),
-                };
-                if let Some(existing) = ia_prefix_opt {
-                    return Err(IaPdOptionError::MultipleIaPrefix(existing, ia_prefix));
-                }
-                ia_prefix_opt = Some(ia_prefix);
-            }
-            v6::ParsedDhcpOption::ClientId(_)
-            | v6::ParsedDhcpOption::ServerId(_)
-            | v6::ParsedDhcpOption::SolMaxRt(_)
-            | v6::ParsedDhcpOption::Preference(_)
-            | v6::ParsedDhcpOption::Iana(_)
-            | v6::ParsedDhcpOption::IaAddr(_)
-            | v6::ParsedDhcpOption::InformationRefreshTime(_)
-            | v6::ParsedDhcpOption::IaPd(_)
-            | v6::ParsedDhcpOption::Oro(_)
-            | v6::ParsedDhcpOption::ElapsedTime(_)
-            | v6::ParsedDhcpOption::DnsServers(_)
-            | v6::ParsedDhcpOption::DomainList(_) => {
-                return Err(IaPdOptionError::InvalidOption(format!("{:?}", ia_pd_opt)));
-            }
+    process_ia(ia_pd_data.t1(), ia_pd_data.t2(), ia_pd_data.iter_options(), |opt| match opt {
+        v6::ParsedDhcpOption::IaPrefix(ia_prefix_data) => ia_prefix_data
+            .prefix()
+            .map_err(|_| IaPdOptionError::InvalidSubnet)
+            .map(|prefix| IaPrefix {
+                prefix,
+                lifetimes: check_lifetimes(
+                    ia_prefix_data.valid_lifetime(),
+                    ia_prefix_data.preferred_lifetime(),
+                ),
+            }),
+        opt @ v6::ParsedDhcpOption::IaAddr(_) => {
+            Err(IaOptionError::InvalidOption(format!("{:?}", opt)).into())
         }
-    }
-    // Missing status code option means success per RFC 8415 section 7.5:
-    //
-    //    If the Status Code option (see Section 21.13) does not appear
-    //    in a message in which the option could appear, the status
-    //    of the message is assumed to be Success.
-    Ok(IaPdOption::Success {
-        status_message: success_status_message,
-        t1,
-        t2,
-        ia_prefix: ia_prefix_opt,
+        opt => unreachable!(
+            "other options should be handled before this fn is called; got = {:?}",
+            opt
+        ),
     })
 }
 
@@ -1225,16 +1192,17 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
                 }
                 match processed_ia_na {
                     IaNaOption::Failure(_) => {}
-                    IaNaOption::Success { status_message: _, t1, t2, ref ia_addr } => match ia_addr
-                    {
-                        None | Some(IaAddress { address: _, lifetimes: Err(_) }) => {}
-                        Some(IaAddress {
-                            address: _,
-                            lifetimes: Ok(Lifetimes { preferred_lifetime, valid_lifetime }),
-                        }) => {
-                            update_min_lifetimes(*preferred_lifetime, *valid_lifetime, t1, t2);
+                    IaNaOption::Success { status_message: _, t1, t2, ref ia_value } => {
+                        match ia_value {
+                            None | Some(IaAddress { address: _, lifetimes: Err(_) }) => {}
+                            Some(IaAddress {
+                                address: _,
+                                lifetimes: Ok(Lifetimes { preferred_lifetime, valid_lifetime }),
+                            }) => {
+                                update_min_lifetimes(*preferred_lifetime, *valid_lifetime, t1, t2);
+                            }
                         }
-                    },
+                    }
                 }
 
                 // Per RFC 8415, section 21.4, IAIDs are expected to be
@@ -1290,8 +1258,8 @@ fn process_options<B: ByteSlice, IaNaChecker: IaChecker, IaPdChecker: IaChecker>
                 }
                 match processed_ia_pd {
                     IaPdOption::Failure(_) => {}
-                    IaPdOption::Success { status_message: _, t1, t2, ref ia_prefix } => {
-                        match ia_prefix {
+                    IaPdOption::Success { status_message: _, t1, t2, ref ia_value } => {
+                        match ia_value {
                             None | Some(IaPrefix { prefix: _, lifetimes: Err(_) }) => {}
                             Some(IaPrefix {
                                 prefix: _,
@@ -1862,8 +1830,8 @@ impl ServerDiscovery {
             .into_iter()
             .filter_map(|(iaid, ia_na)| {
                 let (success_status_message, ia_addr) = match ia_na {
-                    IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
-                        (status_message, ia_addr)
+                    IaNaOption::Success { status_message, t1: _, t2: _, ia_value } => {
+                        (status_message, ia_value)
                     }
                     IaNaOption::Failure(e) => {
                         warn!(
@@ -1906,8 +1874,8 @@ impl ServerDiscovery {
             .into_iter()
             .filter_map(|(iaid, ia_pd)| {
                 let (success_status_message, ia_prefix) = match ia_pd {
-                    IaPdOption::Success { status_message, t1: _, t2: _, ia_prefix } => {
-                        (status_message, ia_prefix)
+                    IaPdOption::Success { status_message, t1: _, t2: _, ia_value } => {
+                        (status_message, ia_value)
                     }
                     IaPdOption::Failure(e) => {
                         warn!(
@@ -2480,8 +2448,8 @@ fn process_reply_with_leases<B: ByteSlice>(
                 .get(&iaid)
                 .expect("process_options should have caught unrequested IAs");
             let (success_status_message, ia_addr) = match ia_na {
-                IaNaOption::Success { status_message, t1: _, t2: _, ia_addr } => {
-                    (status_message, ia_addr)
+                IaNaOption::Success { status_message, t1: _, t2: _, ia_value } => {
+                    (status_message, ia_value)
                 }
                 IaNaOption::Failure(ErrorStatusCode(error_code, msg)) => {
                     if !msg.is_empty() {
