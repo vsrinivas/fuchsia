@@ -345,6 +345,7 @@ class AsyncServerBinding : public AsyncBinding {
   static std::shared_ptr<AsyncServerBinding> Create(async_dispatcher_t* dispatcher,
                                                     fidl::internal::AnyTransport&& server_end,
                                                     IncomingMessageDispatcher* interface,
+                                                    ThreadingPolicy threading_policy,
                                                     AnyOnUnboundFn&& on_unbound_fn);
 
   virtual ~AsyncServerBinding() = default;
@@ -367,10 +368,9 @@ class AsyncServerBinding : public AsyncBinding {
   // Do not construct this object outside of this class. This constructor takes
   // a private type following the pass-key idiom to support |make_shared|.
   AsyncServerBinding(async_dispatcher_t* dispatcher, fidl::internal::AnyTransport&& server_end,
-                     IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn,
-                     ConstructionKey key)
-      : AsyncBinding(dispatcher, server_end.borrow(),
-                     ThreadingPolicy::kCreateAndTeardownFromAnyThread),
+                     IncomingMessageDispatcher* interface, ThreadingPolicy threading_policy,
+                     ConstructionKey key, AnyOnUnboundFn&& on_unbound_fn)
+      : AsyncBinding(dispatcher, server_end.borrow(), threading_policy),
         interface_(interface),
         server_end_(std::move(server_end)),
         on_unbound_fn_(std::move(on_unbound_fn)) {}

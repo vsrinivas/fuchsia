@@ -29,18 +29,17 @@ class InstanceImpl final : public fidl::WireServer<examples_canvas_baseline::Ins
   // Bind this implementation to a channel.
   InstanceImpl(async_dispatcher_t* dispatcher,
                fidl::ServerEnd<examples_canvas_baseline::Instance> server_end)
-      : binding_(fidl::BindServer(
-            dispatcher, std::move(server_end), this,
-            [this](InstanceImpl* impl, fidl::UnbindInfo info,
-                   fidl::ServerEnd<examples_canvas_baseline::Instance> server_end) {
-              if (info.reason() != ::fidl::Reason::kPeerClosed) {
-                FX_LOGS(ERROR) << "Shutdown unexpectedly";
-              }
-              delete this;
-            })),
+      : binding_(dispatcher, std::move(server_end), this, std::mem_fn(&InstanceImpl::OnFidlClosed)),
         weak_factory_(this) {
     // Start the update timer on startup. Our server sends one update per second
     ScheduleOnDrawnEvent(dispatcher, zx::sec(1));
+  }
+
+  void OnFidlClosed(fidl::UnbindInfo info) {
+    if (info.reason() != ::fidl::Reason::kPeerClosed) {
+      FX_LOGS(ERROR) << "Shutdown unexpectedly";
+    }
+    delete this;
   }
 
   // [START addline-impl-short]
@@ -114,7 +113,7 @@ class InstanceImpl final : public fidl::WireServer<examples_canvas_baseline::Ins
         after);
   }
 
-  fidl::ServerBindingRef<examples_canvas_baseline::Instance> binding_;
+  fidl::ServerBinding<examples_canvas_baseline::Instance> binding_;
   CanvasState state_ = CanvasState{};
 
   // Generates weak references to this object, which are appropriate to pass into asynchronous

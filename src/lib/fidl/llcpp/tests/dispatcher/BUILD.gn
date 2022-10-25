@@ -47,6 +47,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
     "client_continuation_test.cc",
     "client_controller_test.cc",
     "client_test.cc",
+    "server_binding_test.cc",
     "server_test.cc",
     "shared_client_test.cc",
     "teardown_observer_test.cc",
@@ -62,6 +63,7 @@ test("fidl_llcpp_dispatcher_tests_bin") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/sync:sync-cpp",
     "//zircon/system/ulib/zxtest",
   ]
 }

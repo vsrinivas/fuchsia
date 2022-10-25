@@ -8,14 +8,9 @@
 
 #include <gtest/gtest.h>
 
+#include "sdk/lib/fidl_driver/tests/transport/api_test_helper.h"
 #include "sdk/lib/fidl_driver/tests/transport/scoped_fake_driver.h"
 #include "src/lib/testing/predicates/status.h"
-
-#ifdef NDEBUG
-#define DEBUG_ONLY_TEST_MAY_SKIP() GTEST_SKIP() << "Skipped in release build"
-#else
-#define DEBUG_ONLY_TEST_MAY_SKIP() (void)0
-#endif
 
 // Test creating a typed channel endpoint pair.
 TEST(Endpoints, CreateFromProtocol) {
@@ -63,19 +58,6 @@ TEST(Endpoints, CreateFromProtocolOutParameterStyleServerRetained) {
 
   ASSERT_TRUE(server_end.is_valid());
   ASSERT_TRUE(client_end->is_valid());
-}
-
-std::pair<fdf::Dispatcher, std::shared_ptr<libsync::Completion>> CreateSyncDispatcher() {
-  // Use |FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS| to encourage the driver dispatcher
-  // to spawn more threads to back the same synchronized dispatcher.
-  constexpr uint32_t kSyncDispatcherOptions = FDF_DISPATCHER_OPTION_ALLOW_SYNC_CALLS;
-  std::shared_ptr<libsync::Completion> dispatcher_shutdown =
-      std::make_shared<libsync::Completion>();
-  zx::result dispatcher = fdf::Dispatcher::Create(
-      kSyncDispatcherOptions, "",
-      [dispatcher_shutdown](fdf_dispatcher_t* dispatcher) { dispatcher_shutdown->Signal(); });
-  ZX_ASSERT(dispatcher.status_value() == ZX_OK);
-  return std::make_pair(std::move(*dispatcher), std::move(dispatcher_shutdown));
 }
 
 TEST(WireClient, CannotDestroyInDifferentDispatcherThanBound) {

@@ -372,9 +372,11 @@ fidl::UnbindInfo AsyncBinding::Lifecycle::TransitionToTorndown() {
 
 std::shared_ptr<AsyncServerBinding> AsyncServerBinding::Create(
     async_dispatcher_t* dispatcher, fidl::internal::AnyTransport&& server_end,
-    IncomingMessageDispatcher* interface, AnyOnUnboundFn&& on_unbound_fn) {
+    IncomingMessageDispatcher* interface, ThreadingPolicy threading_policy,
+    AnyOnUnboundFn&& on_unbound_fn) {
   auto binding = std::make_shared<AsyncServerBinding>(dispatcher, std::move(server_end), interface,
-                                                      std::move(on_unbound_fn), ConstructionKey{});
+                                                      threading_policy, ConstructionKey{},
+                                                      std::move(on_unbound_fn));
   binding->InitKeepAlive();
   return binding;
 }

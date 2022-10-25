@@ -237,12 +237,14 @@ class CompleterImplBase {
 // the user pointer type, possibly at an offset, before invoking the
 // user-provided on-unbound handler.
 template <typename Protocol>
-ServerBindingRefType<Protocol> BindServerTypeErased(
-    async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
-    IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound) {
+ServerBindingRefType<Protocol> BindServerTypeErased(async_dispatcher_t* dispatcher,
+                                                    ServerEndType<Protocol> server_end,
+                                                    IncomingMessageDispatcher* interface,
+                                                    ThreadingPolicy threading_policy,
+                                                    AnyOnUnboundFn on_unbound) {
   std::shared_ptr<AsyncServerBinding> internal_binding =
       AsyncServerBinding::Create(dispatcher, internal::MakeAnyTransport(server_end.TakeHandle()),
-                                 interface, std::move(on_unbound));
+                                 interface, threading_policy, std::move(on_unbound));
   ServerBindingRefType<Protocol> binding_ref(internal_binding);
   AsyncServerBinding* binding_ptr = internal_binding.get();
   // The binding object keeps itself alive until unbinding, so dropping the
@@ -263,11 +265,12 @@ template <typename ServerImpl, typename OnUnbound>
 ServerBindingRefType<typename ServerImpl::_EnclosingProtocol> BindServerImpl(
     async_dispatcher_t* dispatcher,
     fidl::internal::ServerEndType<typename ServerImpl::_EnclosingProtocol> server_end,
-    ServerImpl* impl, OnUnbound&& on_unbound) {
+    ServerImpl* impl, OnUnbound&& on_unbound,
+    ThreadingPolicy threading_policy = ThreadingPolicy::kCreateAndTeardownFromAnyThread) {
   using ProtocolType = typename ServerImpl::_EnclosingProtocol;
   using Transport = typename ProtocolType::Transport;
   return BindServerTypeErased<ProtocolType>(
-      dispatcher, std::move(server_end), impl,
+      dispatcher, std::move(server_end), impl, threading_policy,
       [on_unbound = std::forward<OnUnbound>(on_unbound)](
           internal::IncomingMessageDispatcher* any_interface, UnbindInfo info,
           AnyTransport channel) mutable {

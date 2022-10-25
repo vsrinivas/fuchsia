@@ -162,7 +162,8 @@ class ServerBindingRef : public fidl::internal::ServerBindingRefBase {
   // new instance of |ServerBindingRef|.
   friend internal::ServerBindingRefType<Protocol> internal::BindServerTypeErased<Protocol>(
       async_dispatcher_t* dispatcher, fidl::internal::ServerEndType<Protocol> server_end,
-      internal::IncomingMessageDispatcher* interface, internal::AnyOnUnboundFn on_unbound);
+      internal::IncomingMessageDispatcher* interface, internal::ThreadingPolicy threading_policy,
+      internal::AnyOnUnboundFn on_unbound);
 
   explicit ServerBindingRef(std::weak_ptr<internal::AsyncServerBinding> internal_binding)
       : ServerBindingRefBase(std::move(internal_binding)) {}

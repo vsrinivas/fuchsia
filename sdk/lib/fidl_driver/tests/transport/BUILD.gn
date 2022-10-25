@@ -80,7 +80,11 @@ foreach(test_name, test_names) {
 
 # This test uses gtest in order to exercise death conditions.
 test("fidl_driver_api_test_bin") {
-  sources = [ "api_test.cc" ]
+  sources = [
+    "api_test.cc",
+    "api_test_helper.h",
+    "server_binding_test.cc",
+  ]
   deps = [
     ":fidl_driver_transport_testing_lib",
     ":test.transport_cpp_driver",

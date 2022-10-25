@@ -178,6 +178,18 @@ auto SendEvent(const ServerBindingRef<FidlProtocol>& binding_ref) {
 }
 
 // Return an interface for sending FIDL events containing natural domain objects
+// over the endpoint managed by |binding|. Call it like:
+//
+//     fidl::ServerBinding<SomeProtocol> server_binding_{...};
+//     fidl::SendEvent(server_binding_)->FooEvent(args...);
+//
+template <typename FidlProtocol>
+auto SendEvent(const ServerBinding<FidlProtocol>& binding) {
+  return internal::Arrow<internal::NaturalWeakEventSender<FidlProtocol>>(internal::BorrowBinding(
+      static_cast<const fidl::internal::ServerBindingBase<FidlProtocol>&>(binding)));
+}
+
+// Return an interface for sending FIDL events containing natural domain objects
 // over |server_end|. Call it like:
 //
 //     fidl::SendEvent(server_end)->FooEvent(event_body);
