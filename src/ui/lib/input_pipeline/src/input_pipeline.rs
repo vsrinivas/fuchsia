@@ -79,11 +79,17 @@ impl InputPipelineAssembly {
                 // Note: the `handler_name` _should not_ be used as ABI (e.g. referenced from
                 // data processing scripts), as `handler_name` is not guaranteed to be consistent
                 // between releases.
-                fuchsia_trace::duration!("input", "handle_input_event", "name" => handler_name);
-                for out_event in handler.clone().handle_input_event(event).await.into_iter() {
+                let out_events = {
+                    let _async_trace = fuchsia_trace::async_enter!(
+                        fuchsia_trace::Id::new(),
+                        "input",
+                        "handle_input_event",
+                        "name" => handler_name
+                    );
+                    handler.clone().handle_input_event(event).await
+                };
+                for out_event in out_events.into_iter() {
                     if let Err(e) = next_sender.unbounded_send(out_event) {
-                        // Not the greatest of error reports, but at least gives an indication
-                        // of which stage in the stage sequence had a problem.
                         fx_log_err!(
                             "could not forward event output from handler: {:?}: {:?}",
                             handler_name,
