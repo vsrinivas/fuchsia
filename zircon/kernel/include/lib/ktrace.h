@@ -51,6 +51,11 @@ void fxt_string_record(uint16_t index, const char* string, size_t string_length)
 
 }  // namespace ktrace_thunks
 
+// TODO(fxbug.dev/112751)
+constexpr zx_koid_t kKernelPseudoKoidBase = 0x00000000'70000000u;
+constexpr zx_koid_t kKernelPseudoCpuBase = kKernelPseudoKoidBase + 0x00000000'01000000u;
+constexpr zx_koid_t kNoProcess = 0u;
+
 // Specifies whether the trace applies to the current thread or cpu.
 enum class TraceContext {
   Thread,
@@ -94,9 +99,6 @@ inline constexpr uint64_t kRecordCurrentTimestamp = 0xffffffff'ffffffff;
 
 // Check if tracing is enabled for the given tag.
 inline bool ktrace_tag_enabled(uint32_t tag) { return ktrace_thunks::tag_enabled(tag); }
-
-// Emits a tiny trace record.
-inline void ktrace_tiny(uint32_t tag, uint32_t arg) { ktrace_thunks::write_record_tiny(tag, arg); }
 
 // Emits a new trace record in the given context. Compiles to no-op if |enabled|
 // is false.

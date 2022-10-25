@@ -334,66 +334,6 @@ class TestKTraceState : public ::internal::KTraceState {
     END_TEST;
   }
 
-  static bool WriteTinyRecordsTest() {
-    BEGIN_TEST;
-
-    // Create a small trace buffer and initialize it.
-    constexpr uint32_t kGroups = 0x3;
-    TestKTraceState state;
-    ASSERT_TRUE(state.Init(kDefaultBufferSize, kGroups));
-
-    uint32_t expected_offset = sizeof(ktrace_rec_32b_t) * 2;
-    ASSERT_TRUE(state.CheckExpectedOffset(expected_offset));
-
-    // Write a some tiny records
-    constexpr uint32_t kBaseArg = 0xbaad0000;
-    constexpr uint32_t kCnt = 15;
-
-    auto MakeTag = [](uint32_t wr_ndx) { return KTRACE_TAG(wr_ndx + 1, 1, 0); };
-    auto Arg = [](uint32_t wr_ndx) { return kBaseArg + wr_ndx; };
-    uint64_t prev_ts = 0;
-
-    for (uint32_t i = 0; i < kCnt; ++i) {
-      state.WriteRecordTiny(MakeTag(i), Arg(i));
-    }
-
-    // Stop and validate.
-    uint32_t records_enumerated = 0;
-    uint32_t vec_id = 0;
-    auto checker = [&](const ktrace_header_t* hdr) -> bool {
-      BEGIN_TEST;
-
-      ASSERT_NONNULL(hdr);
-      const ktrace_header_t& rec = *(reinterpret_cast<const ktrace_header_t*>(hdr));
-
-      // Check the tag fields
-      const uint32_t expected_tag = MakeTag(vec_id);
-      EXPECT_EQ(16u, KTRACE_LEN(rec.tag));
-      EXPECT_EQ(KTRACE_GROUP(expected_tag), KTRACE_GROUP(rec.tag));
-      EXPECT_EQ(KTRACE_EVENT(expected_tag), KTRACE_EVENT(rec.tag));
-      EXPECT_EQ(KTRACE_FLAGS(expected_tag), KTRACE_FLAGS(rec.tag));
-
-      // Check the timestamp.  We are not allowed to provide an explicit
-      // timestamp, so the best we can do is make sure that they are
-      // monotonically increasing.
-      EXPECT_LE(prev_ts, rec.ts);
-      prev_ts = rec.ts;
-
-      // Check the payload.  Tiny records store their argument in the TID
-      // field.
-      EXPECT_LE(Arg(vec_id), rec.tid);
-
-      ++vec_id;
-      END_TEST;
-    };
-
-    ASSERT_OK(state.Stop());
-    ASSERT_TRUE(state.TestAllRecords(records_enumerated, checker));
-    EXPECT_EQ(kCnt, records_enumerated);
-
-    END_TEST;
-  }
-
   static bool SaturationTest() {
     BEGIN_TEST;
 
@@ -1005,7 +945,6 @@ UNITTEST_START_TESTCASE(ktrace_tests)
 UNITTEST("init/start", ktrace_tests::TestKTraceState::InitStartTest)
 UNITTEST("names", ktrace_tests::TestKTraceState::NamesTest)
 UNITTEST("write record", ktrace_tests::TestKTraceState::WriteRecordsTest)
-UNITTEST("write tiny record", ktrace_tests::TestKTraceState::WriteTinyRecordsTest)
 UNITTEST("saturation", ktrace_tests::TestKTraceState::SaturationTest)
 UNITTEST("rewind", ktrace_tests::TestKTraceState::RewindTest)
 UNITTEST("state check", ktrace_tests::TestKTraceState::StateCheckTest)

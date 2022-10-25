@@ -36,8 +36,8 @@ void main() {
   //
   // - The Tracing suite, which creates exercises the trace-engine code via
   //   TRACE macros
-  // - Syscall/Null and Syscall/ManyArgs which exercise ktrace_tiny records
-  // - Channel/WriteRead which exercises regular ktrace records
+  // - Syscall/Null, Syscall/ManyArgs, and Channel/WriteRead which exercise
+  //   writing events to the kernel trace buffer
   const filterRegex =
       "'(^Tracing/)|(^Syscall/Null\$)|(^Syscall/ManyArgs\$)|(^Channel/WriteRead/1024bytes/1handles\$)'";
 

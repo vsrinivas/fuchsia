@@ -528,10 +528,26 @@ extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags);
 extern "C" void arm64_serror_exception(iframe_t* iframe, uint exception_flags) {
   // SError is largely implementation defined and may or may not be fatal. For now, just count the
   // occurrences and add a tracer to help analyze possible causes.
-  const cpu_num_t cpu = arch_curr_cpu_num();
-  ktrace_tiny(TAG_IRQ_ENTER, 0xaa55 << 8 | cpu);
+
+  if (unlikely(ktrace_tag_enabled(TAG_IRQ_ENTER))) {
+    fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> arg(
+        fxt::StringRef("irq #"_stringref->GetFxtId()), 0xaa55);
+    fxt_duration_begin(TAG_IRQ_ENTER, current_ticks(),
+                       fxt::ThreadRef(kNoProcess, kKernelPseudoCpuBase + arch_curr_cpu_num()),
+                       fxt::StringRef("kernel:irq"_stringref->GetFxtId()),
+                       fxt::StringRef("irq"_stringref->GetFxtId()), arg);
+  }
+
   exceptions_serror.Add(1);
-  ktrace_tiny(TAG_IRQ_EXIT, 0xaa55 << 8 | cpu);
+
+  if (unlikely(ktrace_tag_enabled(TAG_IRQ_EXIT))) {
+    fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> arg(
+        fxt::StringRef("irq #"_stringref->GetFxtId()), 0xaa55);
+    fxt_duration_end(TAG_IRQ_EXIT, current_ticks(),
+                     fxt::ThreadRef(kNoProcess, kKernelPseudoCpuBase + arch_curr_cpu_num()),
+                     fxt::StringRef("kernel:irq"_stringref->GetFxtId()),
+                     fxt::StringRef("irq"_stringref->GetFxtId()), arg);
+  }
 }
 
 /* called from assembly */

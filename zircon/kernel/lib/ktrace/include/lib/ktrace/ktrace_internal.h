@@ -100,7 +100,6 @@ class KTraceState {
   // |payload| must consist of all uint32_t or all uint64_t types.
   template <typename... Args>
   void WriteRecord(uint32_t effective_tag, uint64_t explicit_ts, Args... args);
-  void WriteRecordTiny(uint32_t tag, uint32_t arg) TA_EXCL(write_lock_);
   void WriteNameEtc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always)
       TA_EXCL(write_lock_);
 

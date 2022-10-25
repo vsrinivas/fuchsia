@@ -61,6 +61,19 @@ void ktrace_report_probes() {
   }
 }
 
+// TODO(fxbug.dev/112751)
+void ktrace_report_cpu_pseudo_threads() {
+  const uint max_cpus = arch_max_num_cpus();
+  char name[32];
+  for (uint i = 0; i < max_cpus; i++) {
+    snprintf(name, sizeof(name), "cpu-%u", i);
+    fxt_kernel_object(TAG_THREAD_NAME, /* always */ true, kKernelPseudoCpuBase + i,
+                      ZX_OBJ_TYPE_THREAD, fxt::StringRef(name),
+                      fxt::Argument<fxt::ArgumentType::kKoid, fxt::RefType::kId>(
+                          fxt::StringRef("process"_stringref->GetFxtId()), kNoProcess));
+  }
+}
+
 }  // namespace
 
 namespace internal {
@@ -434,23 +447,6 @@ void KTraceState::WriteRecord(uint32_t effective_tag, uint64_t explicit_ts, Args
   }
 }
 
-void KTraceState::WriteRecordTiny(uint32_t tag, uint32_t arg) {
-  AutoWriteInFlight inflight_manager(*this);
-  if (unlikely(!tag_enabled(tag, inflight_manager.observed_grpmask()))) {
-    return;
-  }
-
-  // Tiny records are always 16 bytes.
-  tag = (tag & 0xFFFFFFF0) | 2;
-
-  if (PendingCommit reservation = Reserve(tag); reservation.is_valid()) {
-    reservation.hdr()->ts = ktrace_timestamp();
-    reservation.hdr()->tid = arg;
-  } else {
-    DisableGroupMask();
-  }
-}
-
 void KTraceState::WriteNameEtc(uint32_t tag, uint32_t id, uint32_t arg, const char* name,
                                bool always) {
   auto ShouldTrace = [tag, always](uint32_t mask) -> bool {
@@ -483,6 +479,7 @@ void KTraceState::WriteNameEtc(uint32_t tag, uint32_t id, uint32_t arg, const ch
 void KTraceState::ReportStaticNames() {
   ktrace_report_probes();
   ktrace_report_vcpu_meta();
+  ktrace_report_cpu_pseudo_threads();
 }
 
 void KTraceState::ReportThreadProcessNames() {

@@ -206,7 +206,8 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
     const TagInfo& tag_info = it->second;
     switch (tag_info.type) {
       case TagType::kBasic:
-        return ImportBasicRecord(record, tag_info);
+        FX_LOGS(WARNING) << "Found basic record that is expected to be migrated to FXT.";
+        return false;
       case TagType::kQuad:
         if (sizeof(ktrace_rec_32b_t) > record_size)
           return false;
@@ -239,24 +240,6 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
     return ImportCounterRecord(record, record_size);
 
   return ImportUnknownRecord(record, record_size);
-}
-
-bool Importer::ImportBasicRecord(const ktrace_header_t* record, const TagInfo& tag_info) {
-  FX_VLOGS(5) << "BASIC: tag=0x" << std::hex << record->tag << " (" << tag_info.name
-              << "), tid=" << std::dec << record->tid << ", timestamp=" << record->ts;
-
-  switch (KTRACE_EVENT(record->tag)) {
-    case KTRACE_EVENT(TAG_IRQ_ENTER):
-      return HandleIRQEnter(record->ts, record->tid & 0xff, record->tid >> 8);
-    case KTRACE_EVENT(TAG_IRQ_EXIT):
-      return HandleIRQExit(record->ts, record->tid & 0xff, record->tid >> 8);
-    case KTRACE_EVENT(TAG_SYSCALL_ENTER):
-      return HandleSyscallEnter(record->ts, record->tid & 0xff, record->tid >> 8);
-    case KTRACE_EVENT(TAG_SYSCALL_EXIT):
-      return HandleSyscallExit(record->ts, record->tid & 0xff, record->tid >> 8);
-    default:
-      return false;
-  }
 }
 
 bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& tag_info) {
@@ -609,40 +592,6 @@ bool Importer::HandleVcpuExitMeta(uint32_t exit, std::string_view name) {
   vcpu_exit_meta_.emplace(
       exit, trace_context_make_registered_string_copy(context_, name.data(), name.length()));
   return true;
-}
-
-bool Importer::HandleIRQEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                              uint32_t irq) {
-  trace_thread_ref_t thread_ref = GetCpuPseudoThreadRef(cpu_number);
-  if (!trace_is_unknown_thread_ref(&thread_ref)) {
-    trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
-    trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
-                                                    &irq_category_ref_, &name_ref, nullptr, 0u);
-  }
-  return true;
-}
-
-bool Importer::HandleIRQExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                             uint32_t irq) {
-  trace_thread_ref_t thread_ref = GetCpuPseudoThreadRef(cpu_number);
-  if (!trace_is_unknown_thread_ref(&thread_ref)) {
-    trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
-    trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
-                                                  &irq_category_ref_, &name_ref, nullptr, 0u);
-  }
-  return true;
-}
-
-bool Importer::HandleSyscallEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                                  uint32_t syscall) {
-  FX_LOGS(WARNING) << "Found syscall enter event that is expected to be migrated to FXT.";
-  return false;
-}
-
-bool Importer::HandleSyscallExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                                 uint32_t syscall) {
-  FX_LOGS(WARNING) << "Found syscall exit event that is expected to be migrated to FXT.";
-  return false;
 }
 
 bool Importer::HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,

@@ -266,20 +266,32 @@ static void gic_handle_irq(iframe_t* frame) {
   if (vector >= 32)
     CPU_STATS_INC(interrupts);
 
-  cpu_num_t cpu = arch_curr_cpu_num();
+  if (unlikely(ktrace_tag_enabled(TAG_IRQ_ENTER))) {
+    fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> arg(
+        fxt::StringRef("irq #"_stringref->GetFxtId()), vector);
+    fxt_duration_begin(TAG_IRQ_ENTER, current_ticks(),
+                       fxt::ThreadRef(kNoProcess, kKernelPseudoCpuBase + arch_curr_cpu_num()),
+                       fxt::StringRef("kernel:irq"_stringref->GetFxtId()),
+                       fxt::StringRef("irq"_stringref->GetFxtId()), arg);
+  }
 
-  ktrace_tiny(TAG_IRQ_ENTER, (vector << 8) | cpu);
-
-  LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n", iar, cpu,
-                Thread::Current::Get(), vector, (uintptr_t)IFRAME_PC(frame));
+  LTRACEF_LEVEL(2, "iar 0x%x cpu %u currthread %p vector %u pc %#" PRIxPTR "\n", iar,
+                arch_curr_cpu_num(), Thread::Current::Get(), vector, (uintptr_t)IFRAME_PC(frame));
 
   // deliver the interrupt
   pdev_invoke_int_if_present(vector);
   GICREG(0, GICC_EOIR) = iar;
 
-  LTRACEF_LEVEL(2, "cpu %u exit\n", cpu);
+  LTRACEF_LEVEL(2, "cpu %u exit\n", arch_curr_cpu_num());
 
-  ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
+  if (unlikely(ktrace_tag_enabled(TAG_IRQ_EXIT))) {
+    fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> arg(
+        fxt::StringRef("irq #"_stringref->GetFxtId()), vector);
+    fxt_duration_end(TAG_IRQ_EXIT, current_ticks(),
+                     fxt::ThreadRef(kNoProcess, kKernelPseudoCpuBase + arch_curr_cpu_num()),
+                     fxt::StringRef("kernel:irq"_stringref->GetFxtId()),
+                     fxt::StringRef("irq"_stringref->GetFxtId()), arg);
+  }
 }
 
 static void gic_send_ipi(cpu_mask_t logical_target, mp_ipi_t ipi) {

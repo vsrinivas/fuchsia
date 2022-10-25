@@ -501,19 +501,29 @@ void x86_exception_handler(iframe_t* frame) {
   bool from_user = is_from_user(frame);
 
   const auto entry_vector = frame->vector;
-  if (entry_vector != X86_INT_PAGE_FAULT) {
+  if (entry_vector != X86_INT_PAGE_FAULT && unlikely(ktrace_tag_enabled(TAG_IRQ_ENTER))) {
     // For page faults, the cpu number for the IRQ_ENTER event might be different from the IRQ_EXIT
     // event. A context switch can occur if the page fault is fulfilled asynchronously by a pager.
     // Hence page fault events are emitted in the thread context, not the cpu context like other
     // irq's. See TAG_PAGE_FAULT in vmm_page_fault_handler().
-    ktrace_tiny(TAG_IRQ_ENTER, (static_cast<uint32_t>(entry_vector) << 8) | arch_curr_cpu_num());
+    fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> arg(
+        fxt::StringRef("irq #"_stringref->GetFxtId()), entry_vector);
+    fxt_duration_begin(TAG_IRQ_ENTER, current_ticks(),
+                       fxt::ThreadRef(kNoProcess, kKernelPseudoCpuBase + arch_curr_cpu_num()),
+                       fxt::StringRef("kernel:irq"_stringref->GetFxtId()),
+                       fxt::StringRef("irq"_stringref->GetFxtId()), arg);
   }
 
   // deliver the interrupt
   handle_exception_types(frame);
 
-  if (entry_vector != X86_INT_PAGE_FAULT) {
-    ktrace_tiny(TAG_IRQ_EXIT, (static_cast<uint32_t>(entry_vector) << 8) | arch_curr_cpu_num());
+  if (entry_vector != X86_INT_PAGE_FAULT && unlikely(ktrace_tag_enabled(TAG_IRQ_EXIT))) {
+    fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId> arg(
+        fxt::StringRef("irq #"_stringref->GetFxtId()), entry_vector);
+    fxt_duration_end(TAG_IRQ_EXIT, current_ticks(),
+                     fxt::ThreadRef(kNoProcess, kKernelPseudoCpuBase + arch_curr_cpu_num()),
+                     fxt::StringRef("kernel:irq"_stringref->GetFxtId()),
+                     fxt::StringRef("irq"_stringref->GetFxtId()), arg);
   }
 
   bool do_preempt = int_handler_finish(&state);

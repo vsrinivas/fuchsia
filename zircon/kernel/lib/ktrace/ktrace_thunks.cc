@@ -23,12 +23,6 @@ void write_record(uint32_t effective_tag, uint64_t explicit_ts, Args... args) {
   }
 }
 
-void write_record_tiny(uint32_t tag, uint32_t arg) {
-  if (unlikely(KTRACE_STATE.tag_enabled(tag))) {
-    KTRACE_STATE.WriteRecordTiny(tag, arg);
-  }
-}
-
 void write_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
   KTRACE_STATE.WriteNameEtc(tag, id, arg, name, always);
 }
@@ -100,9 +94,23 @@ template void fxt_duration_begin(uint32_t tag, uint64_t timestamp,
                                  const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                                  const fxt::StringRef<fxt::RefType::kId>& category_ref,
                                  const fxt::StringRef<fxt::RefType::kId>& name_ref);
+template void fxt_duration_begin(
+    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
+    const fxt::StringRef<fxt::RefType::kId>& category_ref,
+    const fxt::StringRef<fxt::RefType::kId>& name_ref,
+    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg);
 template void fxt_duration_end(uint32_t tag, uint64_t timestamp,
                                const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
                                const fxt::StringRef<fxt::RefType::kId>& category_ref,
                                const fxt::StringRef<fxt::RefType::kId>& name_ref);
+template void fxt_duration_end(uint32_t tag, uint64_t timestamp,
+                               const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
+                               const fxt::StringRef<fxt::RefType::kId>& category_ref,
+                               const fxt::StringRef<fxt::RefType::kInline>& name_ref);
+template void fxt_duration_end(
+    uint32_t tag, uint64_t timestamp, const fxt::ThreadRef<fxt::RefType::kInline>& thread_ref,
+    const fxt::StringRef<fxt::RefType::kId>& category_ref,
+    const fxt::StringRef<fxt::RefType::kId>& name_ref,
+    const fxt::Argument<fxt::ArgumentType::kUint64, fxt::RefType::kId, fxt::RefType::kId>& arg);
 
 }  // namespace ktrace_thunks

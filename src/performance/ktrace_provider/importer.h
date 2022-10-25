@@ -38,7 +38,6 @@ class Importer {
 
  private:
   bool ImportRecord(const ktrace_header_t* record, size_t record_size);
-  bool ImportBasicRecord(const ktrace_header_t* record, const TagInfo& tag_info);
   bool ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& tag_info);
   bool ImportNameRecord(const ktrace_rec_name_t* record, const TagInfo& tag_info);
   bool ImportProbeRecord(const ktrace_header_t* record, size_t record_size);
@@ -57,11 +56,6 @@ class Importer {
   bool HandleVcpuMeta(uint32_t meta, std::string_view name);
   bool HandleVcpuExitMeta(uint32_t exit, std::string_view name);
 
-  bool HandleIRQEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number, uint32_t irq);
-  bool HandleIRQExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number, uint32_t irq);
-  bool HandleSyscallEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
-                          uint32_t syscall);
-  bool HandleSyscallExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number, uint32_t syscall);
   bool HandlePageFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                             uint64_t virtual_address, uint32_t flags);
   bool HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
