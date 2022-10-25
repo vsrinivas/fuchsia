@@ -44,15 +44,15 @@ Name     : i2c-child
 Moniker  : root.sys.platform.pt.acpi.acpi-FWCF.i2c-child
 Driver   : None
 3 Properties
-[ 1/  3] : Key "fuchsia.hardware.i2c"          Value Enum(fuchsia.hardware.i2c.Device.ZirconTransport)
+[ 1/  3] : Key "fuchsia.hardware.i2c.Service"  Value Enum(fuchsia.hardware.i2c.Service.ZirconTransport)
 [ 2/  3] : Key fuchsia.BIND_I2C_ADDRESS        Value 0x0000ff
 [ 3/  3] : Key "fuchsia.driver.framework.dfv2" Value true
 ```
 
 The output above shows that the `i2c-child` node has the following bind properties:
 
-*   Property key `fuchsia.hardware.i2c` with an enum value of
-    `fuchsia.hardware.i2c.Device.ZirconTransport`.
+*   Property key `fuchsia.hardware.i2c.Service` with an enum value of
+    `fuchsia.hardware.i2c.Service.ZirconTransport`.
 *   Property key `fuchsia.BIND_I2C_ADDRESS` with an integer value of `0xFF`.
 
 ### Look up the bind properties in the driver source code {#look-up-the-driver-source-code}
@@ -73,8 +73,8 @@ child node:
 This code shows that the `i2c-child` node is created with the following bind
 properties:
 
-*   Property key `fuchsia.hardware.i2c` with an enum value of
-    `fuchsia.hardware.i2c.Device.ZirconTransport`.
+*   Property key `fuchsia.hardware.i2c.Service` with an enum value of
+    `fuchsia.hardware.i2c.Service.ZirconTransport`.
 *   Property key `fuchsia.BIND_I2C_ADDRESS` with an integer value of `0xFF`.
 
 Note: For more information on the `NodeAddArgs` struct used to pass the bind
@@ -90,7 +90,7 @@ In the previous section, we’ve identified that the `i2c-child` node has the
 following bind properties:
 
 *   Property key `fuchsia.hardware.i2c` with an enum value of
-    `fuchsia.hardware.i2c.Device.ZirconTransport`.
+    `fuchsia.hardware.i2c.Service.ZirconTransport`.
 *   Property key `fuchsia.BIND_I2C_ADDRESS` with an integer value of `0xFF`.
 
 To match these properties, the `i2c_temperature` driver declares the following
@@ -128,11 +128,11 @@ as a build dependency.
 
 To determine which bind libraries are used in the bind rules, you can examine
 the driver source code. In the bind properties of the `i2c-child` node, the
-first property key `fuchsia.hardware.i2c.Device` is from a generated bind
+first property key `fuchsia.hardware.i2c.Service` is from a generated bind
 library from the FIDL protocol:
 
 ```cpp {:.devsite-disable-click-to-copy}
-{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/i2c_temperature/controller/i2c_controller.cc" region_tag="add_child_properties" adjust_indentation="auto" highlight="3,4,5,6,7,8" %}
+{% includecode gerrit_repo="fuchsia/sdk-samples/drivers" gerrit_path="src/i2c_temperature/controller/i2c_controller.cc" region_tag="add_child_properties" adjust_indentation="auto" highlight="3,4" %}
 ```
 
 The prefix `fuchsia_hardware_i2c` implies that this bind property’s key and
