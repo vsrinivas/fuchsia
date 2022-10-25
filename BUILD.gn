@@ -1408,7 +1408,20 @@ group("host") {
   public_deps = [
     "//build/input/board:host($host_toolchain)",
     "//build/input/product:host($host_toolchain)",
+
+    # Tools added by the developer
+    ":developer_host_tools",
   ]
+}
+
+# WARNING: Known to infrastructure
+#
+# This group creates a single ninja build target that can create all targets
+# specified by `host_labels` with `fx build :developer_host_tools`
+group("developer_host_tools") {
+  testonly = true
+  public_deps = []
+
   foreach(label, host_labels) {
     # Strip any toolchain that is provided, and replace with the host toolchain.
     full_label = get_label_info(label, "label_no_toolchain")

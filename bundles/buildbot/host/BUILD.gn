@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# "host-tests" targets are for tests which depend on package artifacts such as
+# the FVM. They should be included using `fx set --with-host`.
+
+# TODO(https://fxbug.dev/93763) use an underscore to match source code layout guidelines
+group("host") {
+  testonly = true
+  deps = [ ":no_e2e" ]
+
+  if (is_linux) {
+    deps += [
+      "//src/tests/installer:tests($host_toolchain)",
+      "//tools/fvdl/e2e:tests($host_toolchain)",
+    ]
+  }
+}
+
+# This group contains no e2e tests. Tests in this group:
+#
+# * Either doesn't transitively depend on any known e2e test libraries;
+# * Or are unit tests for known e2e test libraries.
+group("no_e2e") {
+  testonly = true
+  assert_no_deps = e2e_test_libs
+  deps = [
+    "//build/assembly:host_tests($host_toolchain)",
+    "//build/python:host_tests($host_toolchain)",
+    "//src/lib/assembly:host_tests($host_toolchain)",
+    "//src/security:host_tests($host_toolchain)",
+    "//src/tests/assembly:host_tests($host_toolchain)",
+  ]
+}

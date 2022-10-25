@@ -53,85 +53,15 @@ group("tools") {
   ]
 }
 
-# Tools that are used by the infrastructure for building.
+# DEPRECATED! DO NOT ADD TO THIS GROUP
 group("build_infra") {
-  public_deps = [
-    "//tools/artifactory($host_toolchain)",
-    "//tools/build/ninjago/buildstats($host_toolchain)",
-    "//tools/build/ninjago/ninjatrace($host_toolchain)",
-
-    # The infrastructure uses a version of fint built using the Go toolchain,
-    # rather than Ninja, so we technically don't need to include fint here. But
-    # we still want the build graph to be considered to be affected by fint
-    # changes, because fint is always used by the infrastructure to build
-    # fuchsia and it may affect later infrastructure steps that might be skipped
-    # if the build graph was considered unaffected.
-    "//tools/integration/fint($host_toolchain)",
-  ]
+  public_deps = [ "//bundles/infra/build" ]
 }
 
-# Tools that are used by the infrastructure for running tests.
+# DEPRECATED! DO NOT ADD TO THIS GROUP
 group("test_infra") {
   testonly = true
-
-  # Tools that are only needed on the type of host that does the build.
-  public_deps = [
-    "//tools/integration/testsharder($host_toolchain)",
-
-    # The symbolizer should only be needed on Linux x64, but cross-compilation
-    # doesn't work for this tool and the Mac builders don't use it, so just
-    # build it for the host toolchain.
-    "//tools/symbolizer($host_toolchain)",
-  ]
-
-  # Tools that are only needed on Linux x64, regardless of the current host.
-  linux_x64_only_tools = [
-    "//src/diagnostics/triage:triage_bin",
-    "//tools/debug/covargs",
-    "//tools/testing/resultdb",
-    "//tools/testing/tefmocheck",
-  ]
-
-  # Tools needed on all possible hosts.
-  # Anything that runs on ARM64 hosts during testing should be here,
-  # since in that case the build happens on an X64 host.
-  all_host_tools = [
-    "//src/developer/ffx:ffx_bin",
-    "//src/storage/bin/fvm",
-    "//tools/bootserver",
-    "//tools/botanist",
-    "//tools/testing/testrunner",
-    "//zircon/tools/zbi",
-  ]
-
-  foreach(tool, linux_x64_only_tools) {
-    if (host_os == "linux") {
-      public_deps += [ "$tool($host_x64_toolchain)" ]
-    } else {
-      public_deps += [ "$tool($linux_x64_toolchain)" ]
-    }
-  }
-
-  all_host_toolchains = []
-  if (host_os == "linux") {
-    all_host_toolchains += [ host_x64_toolchain ]
-
-    # The infrastructure never uses an arm64 host for x64 target tests. The only
-    # time we need arm64 host tools is when running arm64 target tests. Note
-    # that the inverse is not true; the infrastructure may use an x64 host for
-    # arm64 target tests.
-    if (target_cpu == "arm64") {
-      all_host_toolchains += [ host_arm64_toolchain ]
-    }
-  } else if (host_os == "mac") {
-    all_host_toolchains += [ host_toolchain ]
-  }
-
-  foreach(tool, all_host_tools) {
-    foreach(toolchain, all_host_toolchains) {
-      public_deps += [ "$tool($toolchain)" ]
-    }
-  }
+  public_deps = [ "//bundles/infra/test" ]
 }
 
 group("e2e_tests") {

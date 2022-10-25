@@ -9,9 +9,11 @@ import("//build/flutter/config.gni")
 # additional base packages that should be included in the build done by
 # a bot to run tests and build-time checks to cover that product's code.
 
+# WARNING: Known to infrastructure
+# DEPRECATED! DO NOT ADD TO THIS GROUP
 group("bringup") {
   testonly = true
-  deps = [ "//bundles/bringup:tests" ]
+  deps = [ "//bundles/buildbot/bringup" ]
 }
 
 # TODO(fxbug.dev/105827): Remove group when all bringup tests pass with DFv2 is
@@ -22,64 +24,22 @@ group("bringup_dfv2") {
   deps = [ "//bundles/buildbot/dfv2:bringup" ]
 }
 
-# This group contains tests that don't depend on any known e2e test libraries.
-# This happens to exclude unit tests for these e2e libraries, so this group is
-# not meant to be used directly. It serves as an intermediate group for
-# constructing `core_no_e2e` below.
-group("no_e2e_dep") {
-  testonly = true
-  assert_no_deps = e2e_test_libs
-
-  deps = [
-    "//build:tests",
-    "//bundles:tools",
-    "//bundles/packages/tests:all",
-    "//examples",
-    "//examples:tests",
-    "//scripts:tests",
-    "//scripts/sdk/gn:tests",
-    "//src/diagnostics:tests",
-    "//src/media/audio/bundles:virtual_audio_driver",
-    "//src/media/bundles:examples",
-    "//src/media/bundles:services",
-    "//src/media/bundles:tools",
-    "//third_party/go:tests",
-    "//tools",
-
-    # The following groups have known e2e tests explicitly excluded.
-    "//bundles/fidl:tests_no_e2e",
-    "//sdk:tests_no_e2e",
-    "//src:src_no_e2e",
-    "//tools:tests_no_e2e",
-  ]
-}
-
-# This group contains no e2e tests. Tests in this group:
-#
-# * Either doesn't transitively depend on any known e2e test libraries;
-# * Or are unit tests for known e2e test libraries.
+# WARNING: Known to infrastructure
+# DEPRECATED! DO NOT ADD TO THIS GROUP
 group("core_no_e2e") {
   testonly = true
-  deps = [ ":no_e2e_dep" ] + e2e_lib_unit_tests
+  deps = [ "//bundles/buildbot/core:no_e2e" ]
 }
 
+# WARNING: Known to infrastructure
+# DEPRECATED! DO NOT ADD TO THIS GROUP
 group("core") {
   testonly = true
-  deps = [
-    ":core_no_e2e",
-
-    # Add in e2e tests excluded from `no_e2e`.
-    "//bundles/fidl:tests",
-    "//sdk:tests",
-    "//src",
-    "//tools",
-  ]
-
-  # Ensure paths to known e2e test libs are always up-to-date.
-  deps += e2e_test_libs
+  deps = [ "//bundles/buildbot/core" ]
 }
 
 # WARNING: Known to infrastructure.
+# DEPRECATED! DO NOT ADD TO THIS GROUP
 group("terminal") {
   testonly = true
 }

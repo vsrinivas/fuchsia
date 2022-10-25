@@ -1,0 +1,20 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This was moved here from //bundles:build_infra
+group("build") {
+  public_deps = [
+    "//tools/artifactory($host_toolchain)",
+    "//tools/build/ninjago/buildstats($host_toolchain)",
+    "//tools/build/ninjago/ninjatrace($host_toolchain)",
+
+    # The infrastructure uses a version of fint built using the Go toolchain,
+    # rather than Ninja, so we technically don't need to include fint here. But
+    # we still want the build graph to be considered to be affected by fint
+    # changes, because fint is always used by the infrastructure to build
+    # fuchsia and it may affect later infrastructure steps that might be skipped
+    # if the build graph was considered unaffected.
+    "//tools/integration/fint($host_toolchain)",
+  ]
+}

@@ -77,3 +77,22 @@ acknowledged, and agree to help make sure that these guidelines are followed for
 future changes to these files.
 
 Global OWNERS are not automatically owners here (through the use of `noparent`).
+
+
+# A map of the new targets
+
+- `//bundles/buildbot/<product>/BUILD.gn` - Infra entry-point for adding tests
+  to `<product>`.
+- `//bundles/buildbot/dfv2/<product>/BUILD.gn` - Infra entry-point for adding
+  tests to `product` with DFv2 enabled (transitional, will be removed when all
+  products switch to DFv2).
+- `//bundles/infra/build` - Infra entry-point added to all build-only or test-
+  running builders (these are host tools).
+- `//bundles/infra/test` - Infra entry-point added to all test-running builders
+  (these are host tools, but the group MUST be defined in the default_toolchain).
+
+- `//bundles/tools` - A number of tools added to by some products (ie, `core`),
+  and used by developers to add a bunch of miscellaneous tools to their build.
+- `//bundles/kitchen_sink` - Even more tools than `//bundles/tools` (which it
+  includes), and miscellaneous other stuff.  This needs to be sorted through and
+  subdivided.

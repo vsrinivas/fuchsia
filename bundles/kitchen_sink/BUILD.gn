@@ -1,0 +1,22 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia, "These can only be defined in the default toolchain")
+
+# This was moved here from //bundles:kitchen_sink
+group("kitchen_sink") {
+  testonly = true
+  public_deps = [
+    "//bundles:tests",
+    "//bundles/tools",
+    "//examples",
+    "//src/graphics/examples",
+    "//src/lib/ui/carnelian:examples",
+    "//src/media/audio/bundles:virtual_audio_driver",
+    "//src/media/bundles:examples",
+    "//src/media/bundles:services",
+    "//src/media/bundles:tools",
+    "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
+  ]
+}

@@ -1,0 +1,94 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This was moved here from //bundles:build_infra and //tools:test_infra
+group("test") {
+  testonly = true
+
+  # Tools that are only needed on the type of host that does the build.
+  public_deps = [
+    "//tools/integration/testsharder($host_toolchain)",
+
+    # The symbolizer should only be needed on Linux x64, but cross-compilation
+    # doesn't work for this tool and the Mac builders don't use it, so just
+    # build it for the host toolchain.
+    "//tools/symbolizer($host_toolchain)",
+
+    # The Linux x64 tools needed regardless of target_arch and host_os
+    ":linux_x64_tools",
+
+    # All host tools (these are built using multiple toolchains depending on the
+    # exactly host/target os & arch pair)
+    ":host_tools",
+  ]
+}
+
+group("linux_x64_tools") {
+  testonly = true
+  visibility = [ ":test" ]
+
+  # Tools that are needed on Linux x64, regardless of the current host.
+  _linux_x64_only_tools = [
+    "//src/diagnostics/triage:triage_bin",
+    "//tools/debug/covargs",
+    "//tools/testing/resultdb",
+    "//tools/testing/tefmocheck",
+  ]
+
+  public_deps = []
+  foreach(tool, _linux_x64_only_tools) {
+    if (host_os == "linux") {
+      public_deps += [ "$tool($host_x64_toolchain)" ]
+    } else {
+      public_deps += [ "$tool($linux_x64_toolchain)" ]
+    }
+  }
+}
+
+group("host_tools") {
+  testonly = true
+  visibility = [ ":test" ]
+
+  # Tools needed on all possible hosts.
+  # Anything that runs on ARM64 hosts during testing should be here,
+  # since in that case the build happens on an X64 host.
+  _all_host_tools = [
+    "//src/developer/ffx:ffx_bin",
+    "//src/storage/bin/fvm",
+    "//tools/bootserver",
+    "//tools/botanist",
+    "//tools/testing/testrunner",
+    "//zircon/tools/zbi",
+  ]
+
+  # Which toolchains are needed when:
+  #
+  #               target_cpu
+  # | host_os |    x64    |         arm64         |
+  # |---------|-----------|-----------------------|
+  # | linux   | host_x64  | host_x64 & host_arm64 |
+  # | mac     | host      | host                  |
+  #
+  _all_host_toolchains = []
+  if (host_os == "linux") {
+    _all_host_toolchains += [ host_x64_toolchain ]
+
+    # The infrastructure never uses an arm64 host for x64 target tests. The only
+    # time we need arm64 host tools is when running arm64 target tests. Note
+    # that the inverse is not true; the infrastructure may use an x64 host for
+    # arm64 target tests.
+    if (target_cpu == "arm64") {
+      _all_host_toolchains += [ host_arm64_toolchain ]
+    }
+  } else if (host_os == "mac") {
+    _all_host_toolchains += [ host_toolchain ]
+  }
+
+  public_deps = []
+  foreach(tool, _all_host_tools) {
+    foreach(toolchain, _all_host_toolchains) {
+      public_deps += [ "$tool($toolchain)" ]
+    }
+  }
+}

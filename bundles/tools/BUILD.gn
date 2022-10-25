@@ -1,0 +1,76 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(is_fuchsia, "This can only be included in default_toolchain contexts")
+
+# This was moved here from //bundles:tools
+group("tools") {
+  testonly = true
+  public_deps = [
+    "//bundles/packages/prod:cmdutils",
+    "//bundles/packages/prod:debug_agent",
+    "//bundles/packages/prod:far",
+    "//bundles/packages/prod:run",
+    "//bundles/packages/prod:tracing",
+    "//src/camera:tools",
+    "//src/connectivity:tools",
+    "//src/connectivity/bluetooth/tools",
+    "//src/connectivity/bluetooth/tools/bt-snoop",
+    "//src/developer/debug/zxdb:zxdb_host",
+    "//src/developer/fastboot",
+    "//src/developer/ffx:ffx_tool",
+    "//src/developer/ffx:runtime",
+    "//src/developer/memory/mem",
+    "//src/devices/bundles:tools",
+    "//src/devices/lib/bind",
+    "//src/diagnostics/archivist:archivist-without-attribution",
+    "//src/graphics/display:tools",
+    "//src/graphics/lib/magma:magma-tools",
+    "//src/identity:tools",
+    "//src/lib/chunked-compression:chunked-compress-host-tool",
+    "//src/lib/icu:tools",
+    "//src/media/bundles:tools",
+    "//src/recovery/factory_reset:tools",
+    "//src/security/scrutiny",
+    "//src/storage:tools",
+    "//src/sys/pkg/bin/pm",
+    "//src/sys/pkg/bin/pm:host",
+    "//src/sys/run_test_component",
+    "//src/sys/run_test_suite",
+    "//src/sys/tools/activity-ctl",
+    "//src/sys/tools/log",
+    "//src/ui/tools:scenic",
+    "//src/ui/tools/tiles_ctl",
+    "//third_party/boringssl:boringssl_tool",
+    "//third_party/cobalt:host",
+    "//third_party/curl",
+    "//third_party/iperf",
+    "//third_party/openssh-portable:openssh-tools",
+    "//tools",
+
+    # Tools that are included via the host_toolchain are in a separate group for
+    # clarity.
+    ":host_tools",
+  ]
+  deps = [ "//build/validate:non_production_tag" ]
+}
+
+# These are the known host_toolchain-compiled tools that are in this
+# entry-point.
+#
+# These should be migrated to a host_toolchain-included context such as
+# //bundles/tools/host.  However, the above group _also_ includes numerous tools
+# that are in the host_toolchain, but are included transitively through its
+# direct deps.  Those should be pulled out into this group, instead.
+group("host_tools") {
+  visibility = [ ":*" ]
+  testonly = true
+  public_deps = [
+    "//build/tools/formatjson5:install($host_toolchain)",
+    "//src/diagnostics/triage:install($host_toolchain)",
+    "//tools/check-licenses:host($host_toolchain)",
+    "//tools/sys-realm-analyzer:host($host_toolchain)",
+    "//tools/whereiscl:host($host_toolchain)",
+  ]
+}
