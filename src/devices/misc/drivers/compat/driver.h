@@ -17,7 +17,6 @@
 #include <unordered_set>
 
 #include "src/devices/misc/drivers/compat/device.h"
-#include "src/devices/misc/drivers/compat/sysmem.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 
@@ -60,7 +59,6 @@ class Driver : public driver::DriverBase {
       std::string name, std::string_view topological_path, uint32_t proto_id);
 
   Device& GetDevice() { return device_; }
-  Sysmem& sysmem() { return sysmem_; }
   const driver::DevfsExporter& devfs_exporter() const { return devfs_exporter_; }
 
   // These accessors are used by other classes in the compat driver so we want to expose
@@ -114,9 +112,6 @@ class Driver : public driver::DriverBase {
 
   // The next unique device id for devices. Starts at 1 because `device_` has id zero.
   uint32_t next_device_id_ = 1;
-
-  // TODO(fxbug.dev/93333): remove this once we have proper composite support.
-  Sysmem sysmem_;
 
   void* library_ = nullptr;
   zx_driver_rec_t* record_ = nullptr;

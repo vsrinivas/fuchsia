@@ -194,9 +194,7 @@ __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* 
                                                   uint32_t proto_id, void* out) {
   bool has_fragment =
       std::find(dev->fragments().begin(), dev->fragments().end(), name) != dev->fragments().end();
-
-  // TODO(fxbug.dev/103734): Fix sysmem routing and remove this.
-  if (!has_fragment && proto_id != ZX_PROTOCOL_SYSMEM) {
+  if (!has_fragment) {
     return ZX_ERR_NOT_FOUND;
   }
 
@@ -205,13 +203,7 @@ __EXPORT zx_status_t device_get_fragment_protocol(zx_device_t* dev, const char* 
            "DFv2 currently only supports primary fragment. Driver requests fragment %s but we are "
            "returning the primary",
            name);
-  zx_status_t status = dev->GetProtocol(proto_id, out);
-  if (status != ZX_OK && proto_id == ZX_PROTOCOL_SYSMEM) {
-    FDF_LOGL(INFO, dev->logger(), "Returning fake sysmem fragment");
-    *static_cast<sysmem_protocol_t*>(out) = *dev->driver()->sysmem().protocol();
-    return ZX_OK;
-  }
-  return status;
+  return dev->GetProtocol(proto_id, out);
 }
 
 __EXPORT zx_status_t device_get_fragment_metadata(zx_device_t* dev, const char* name, uint32_t type,

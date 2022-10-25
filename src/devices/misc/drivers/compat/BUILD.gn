@@ -32,21 +32,17 @@ source_set("lib") {
     "driver.h",
     "loader.cc",
     "loader.h",
-    "sysmem.cc",
-    "sysmem.h",
   ]
   deps = [
     "//sdk/lib/driver_compat",
     "//sdk/lib/driver_compat:symbols",
   ]
   public_deps = [
-    "//sdk/banjo/fuchsia.hardware.sysmem:fuchsia.hardware.sysmem_banjo_cpp",
     "//sdk/fidl/fuchsia.boot:fuchsia.boot_cpp_wire",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.device.composite:fuchsia.device.composite_cpp_wire",
     "//sdk/fidl/fuchsia.driver.compat:fuchsia.driver.compat_cpp_wire",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_cpp_wire",
-    "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_cpp_wire",
     "//sdk/lib/driver2:cpp-promise",
     "//sdk/lib/driver2:devfs_exporter",
     "//sdk/lib/driver2:runtime-deprecated",
@@ -167,7 +163,6 @@ executable("unittests") {
     "device_test.cc",
     "driver_test.cc",
     "loader_test.cc",
-    "sysmem_test.cc",
     "v1_test.h",
   ]
   deps = [

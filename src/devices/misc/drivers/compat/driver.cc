@@ -127,8 +127,7 @@ Driver::Driver(driver::DriverStartArgs start_args, fdf::UnownedDispatcher driver
     : driver::DriverBase("compat", std::move(start_args), std::move(driver_dispatcher)),
       executor_(dispatcher()),
       driver_path_(driver_path),
-      device_(device, ops, this, std::nullopt, nullptr, dispatcher()),
-      sysmem_(this) {
+      device_(device, ops, this, std::nullopt, nullptr, dispatcher()) {
   device_.Bind({std::move(node()), dispatcher()});
   global_driver_list.AddDriver(this);
   ZX_ASSERT(url().has_value());
