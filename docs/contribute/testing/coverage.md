@@ -76,17 +76,17 @@ examples that we'll use to demonstrate the workflow.
 
 * {C++}
 
-```posix-terminal
-fx set core.x64 --variant coverage --with examples/hello_world
-fx build
-```
+  ```posix-terminal
+  fx set core.x64 --variant coverage --with examples/hello_world
+  fx build
+  ```
 
 * {Rust}
 
-```posix-terminal
-fx set core.x64 --variant coverage-rust --with examples/hello_world
-fx build
-```
+  ```posix-terminal
+  fx set core.x64 --variant coverage-rust --with examples/hello_world
+  fx build
+  ```
 
 Let's start an emulator which will be your target device and then start an
 update server, we'll use two terminals for this step. If you already have a
@@ -126,15 +126,15 @@ We execute our tests and generate an html report.
 
 * {C++}
 
-```posix-terminal
-fx coverage --html-output-dir $HOME/fx_coverage hello-world-cpp-unittests
-```
+  ```posix-terminal
+  fx coverage --html-output-dir $HOME/fx_coverage hello-world-cpp-unittests
+  ```
 
 * {Rust}
 
-```posix-terminal
-fx coverage --html-output-dir $HOME/fx_coverage hello-world-rust-tests
-```
+  ```posix-terminal
+  fx coverage --html-output-dir $HOME/fx_coverage hello-world-rust-tests
+  ```
 
 ### View coverage summary in the browser
 
@@ -170,15 +170,15 @@ coverage.
 
 * {C++}
 
-```posix-terminal
-fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-cpp-unittests
-```
+  ```posix-terminal
+  fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-cpp-unittests
+  ```
 
 * {Rust}
 
-```posix-terminal
-fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-rust-tests
-```
+  ```posix-terminal
+  fx coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-rust-tests
+  ```
 
 ### View coverage in VS Code
 
@@ -200,15 +200,15 @@ the test every time you save your code.
 
 * {C++}
 
-```posix-terminal
-fx -i coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-cpp-unittests
-```
+  ```posix-terminal
+  fx -i coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-cpp-unittests
+  ```
 
 * {Rust}
 
-```posix-terminal
-fx -i coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-rust-tests
-```
+  ```posix-terminal
+  fx -i coverage --lcov-output-path $FUCHSIA_DIR/lcov.info hello-world-rust-tests
+  ```
 
 ## End-to-end (E2E) tests exclusion
 
