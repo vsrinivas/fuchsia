@@ -12,12 +12,11 @@ use fidl_fuchsia_logger::LogSinkWaitForInterestChangeResponder;
 use fidl_fuchsia_logger::{
     LogSinkMarker, LogSinkRequest, LogSinkRequestStream, MAX_DATAGRAM_LEN_BYTES,
 };
-use fidl_fuchsia_sys2::EventSourceMarker;
 use fidl_fuchsia_validate_logs::{
     LogSinkPuppetMarker, LogSinkPuppetProxy, PrintfRecordSpec, PrintfValue, PuppetInfo, RecordSpec,
 };
 use fuchsia_async::{Socket, Task};
-use fuchsia_component::{client, server::ServiceFs};
+use fuchsia_component::server::ServiceFs;
 use fuchsia_component_test::{
     Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
 };
@@ -172,12 +171,7 @@ impl Puppet {
             )
             .await?;
 
-        let event_source =
-            EventSource::from_proxy(client::connect_to_protocol::<EventSourceMarker>().unwrap());
-        let mut event_stream = event_source
-            .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
-            .await
-            .unwrap();
+        let mut event_stream = EventStream::open().await.unwrap(); // stopped
 
         let instance = builder.build().await.expect("create instance");
         let instance_child_name = instance.root.child_name().to_string();
