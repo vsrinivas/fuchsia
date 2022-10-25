@@ -224,7 +224,6 @@ const INVALID_CONFIG_STAMP_VALUE uint64 = 0;
 /// the other; if the client tries to open the other then `ZX_ERR_NOT_SUPPORTED` will
 /// be returned.
 @discoverable
-@for_deprecated_c_bindings
 protocol Provider {
     /// Open a virtcon client.
     ///

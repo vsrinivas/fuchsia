@@ -94,7 +94,7 @@ source_set("display") {
   deps = [
     ":layer_common",
     ":surface_header",
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_hlcpp",
     "//sdk/lib/fdio",
     "//src/lib/fsl",
@@ -108,10 +108,6 @@ source_set("display") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 loadable_module("fb") {

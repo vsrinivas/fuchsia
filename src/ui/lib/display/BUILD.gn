@@ -22,7 +22,7 @@ source_set("hdcp_service") {
     "//zircon/system/ulib/zx",
   ]
   deps = [
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_c",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display_hlcpp",
     "//sdk/lib/sys/cpp:cpp",
     "//src/lib/files",
@@ -30,10 +30,6 @@ source_set("hdcp_service") {
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/fdio-caller",
   ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 # Provides a C++ utility function GetHardwareDisplayController() which connects to and interacts

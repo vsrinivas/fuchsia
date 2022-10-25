@@ -7,7 +7,7 @@
 #include <dirent.h>
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/display/c/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fdio/cpp/caller.h>
@@ -120,35 +120,42 @@ bool ImagePipeSurfaceDisplay::Init() {
       return false;
     }
 
-    fbl::unique_fd fd(open(filename.c_str(), O_RDWR));
-    if (!fd) {
-      fprintf(stderr, "%s: Could not open display controller: %s\n", kTag, strerror(errno));
-      return false;
+    zx::result provider = fidl::CreateEndpoints<fuchsia_hardware_display::Provider>();
+    if (provider.is_error()) {
+      fprintf(stderr, "%s: Failed to create provider channel %d (%s)\n", kTag,
+              provider.error_value(), provider.status_string());
     }
 
-    zx::channel dc_server, dc_client;
-    status = zx::channel::create(0, &dc_server, &dc_client);
+    // TODO(fxbug.dev/113114): Use Component::Connect here when it's possible to use this without
+    // depending on libsvc.so
+    status = fdio_service_connect(filename.c_str(), provider->server.TakeChannel().release());
     if (status != ZX_OK) {
-      fprintf(stderr, "%s: Failed to create controller channel %d (%s)\n", kTag, status,
+      fprintf(stderr, "%s: Could not open display controller: %s\n", kTag,
               zx_status_get_string(status));
       return false;
     }
 
-    fdio_cpp::FdioCaller caller(std::move(fd));
-    zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-        caller.borrow_channel(), dc_server.release(), &status);
-    if (fidl_status != ZX_OK) {
-      fprintf(stderr, "%s: Failed to call service handle %d (%s)\n", kTag, fidl_status,
-              zx_status_get_string(fidl_status));
-      return false;
-    }
-    if (status != ZX_OK) {
-      fprintf(stderr, "%s: Failed to open controller %d (%s)\n", kTag, status,
-              zx_status_get_string(status));
+    zx::result dc_endpoints = fidl::CreateEndpoints<fuchsia_hardware_display::Controller>();
+    if (dc_endpoints.is_error()) {
+      fprintf(stderr, "%s: Failed to create controller channel %d (%s)\n", kTag,
+              dc_endpoints.error_value(), dc_endpoints.status_string());
       return false;
     }
 
-    display_controller_.Bind(std::move(dc_client), loop_.dispatcher());
+    fidl::WireResult result =
+        fidl::WireCall(provider->client)->OpenController(std::move(dc_endpoints->server));
+    if (!result.ok()) {
+      fprintf(stderr, "%s: Failed to call service handle %d (%s)\n", kTag, result.status(),
+              result.status_string());
+      return false;
+    }
+    if (result->s != ZX_OK) {
+      fprintf(stderr, "%s: Failed to open controller %d (%s)\n", kTag, result->s,
+              zx_status_get_string(result->s));
+      return false;
+    }
+
+    display_controller_.Bind(dc_endpoints->client.TakeChannel(), loop_.dispatcher());
   }
 
   display_controller_.set_error_handler(

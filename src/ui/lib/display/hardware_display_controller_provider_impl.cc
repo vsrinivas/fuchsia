@@ -5,7 +5,7 @@
 #include "src/ui/lib/display/hardware_display_controller_provider_impl.h"
 
 #include <fcntl.h>
-#include <fuchsia/hardware/display/c/fidl.h>
+#include <fidl/fuchsia.hardware.display/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
@@ -58,11 +58,12 @@ void HardwareDisplayControllerProviderImpl::OpenController(
         // OpenController(), rather than blocking on a synchronous call.  However, it is non-trivial
         // to do so, so for now we use a blocking call to proxy the request.
         fdio_cpp::FdioCaller caller(std::move(fd));
-        zx_status_t status = ZX_OK;
-        zx_status_t fidl_status = fuchsia_hardware_display_ProviderOpenController(
-            caller.borrow_channel(), request.TakeChannel().release(), &status);
-        if (fidl_status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to call service handle: " << zx_status_get_string(fidl_status);
+        fidl::WireResult result =
+            fidl::WireCall(caller.borrow_as<fuchsia_hardware_display::Provider>())
+                ->OpenController(
+                    fidl::ServerEnd<fuchsia_hardware_display::Controller>(request.TakeChannel()));
+        if (!result.ok()) {
+          FX_PLOGS(ERROR, result.status()) << "Failed to call service handle";
 
           // There's not a clearly-better value to return here.  Returning the FIDL error would be
           // somewhat unexpected, since the caller wouldn't receive it as a FIDL status, rather as
@@ -70,13 +71,13 @@ void HardwareDisplayControllerProviderImpl::OpenController(
           callback(ZX_ERR_INTERNAL);
           return;
         }
-        if (status != ZX_OK) {
-          FX_LOGS(ERROR) << "Failed to open display controller : " << zx_status_get_string(status);
-          callback(status);
+        if (result->s != ZX_OK) {
+          FX_PLOGS(ERROR, result->s) << "Failed to open display controller";
+          callback(result->s);
           return;
         }
 
-        callback(status);
+        callback(ZX_OK);
 
         // We no longer need |this| to store this closure, remove it. Do not do
         // any work after this point.
