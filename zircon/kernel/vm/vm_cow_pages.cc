@@ -428,6 +428,9 @@ bool VmCowPages::DedupZeroPage(vm_page_t* page, uint64_t offset) {
   // harm in looking up a random slot as we'll then notice it's the wrong page.
   // Also ignore any references since we cannot efficiently scan them, and they should presumably
   // already be deduped.
+  // Pinned pages cannot be decommited and so also must not be committed. We must also not decommit
+  // pages from kernel VMOs, as the kernel cannot fault them back in, but all kernel pages will be
+  // pinned.
   VmPageOrMarkerRef page_or_marker = page_list_.LookupMutable(offset);
   if (!page_or_marker || !page_or_marker->IsPage() || page_or_marker->Page() != page ||
       page->object.pin_count > 0 || (is_page_dirty_tracked(page) && !is_page_clean(page))) {

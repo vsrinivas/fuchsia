@@ -153,15 +153,6 @@ bool VmObjectPaged::CanDedupZeroPagesLocked() {
     return false;
   }
 
-  // Skip any VMOs that have non user mappings as we cannot safely remove write permissions from
-  // them and indicates this VMO is actually in use by the kernel and we probably would not want to
-  // perform zero page de-duplication on it even if we could.
-  for (auto& m : mapping_list_) {
-    if (!m.aspace()->is_user()) {
-      return false;
-    }
-  }
-
   // Okay to dedup from this VMO.
   return true;
 }
