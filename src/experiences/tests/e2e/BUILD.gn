@@ -65,43 +65,6 @@ dart_test("experiences_ermine_session_shell_e2e_test") {
   ]
 }
 
-dart_test("experiences_ermine_terminal_e2e_test") {
-  null_safe = true
-  sources = [ "ermine_terminal_test.dart" ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.input:fuchsia.input_dart",
-    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input_dart",
-    "//sdk/fidl/fuchsia.ui.input3:fuchsia.ui.input3_dart",
-    "//sdk/testing/sl4f/client",
-    "//sdk/testing/sl4f/flutter_driver_sl4f",
-    "//src/experiences/tests:ermine_driver",
-    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
-    "//third_party/dart-pkg/pub/test",
-  ]
-
-  environments = [
-    {
-      dimensions = {
-        device_type = "AEMU"
-      }
-      tags = [ "e2e-fyi" ]
-    },
-    {
-      dimensions = {
-        device_type = "Intel NUC Kit NUC7i5DNHE"
-      }
-      tags = [ "e2e-fyi" ]
-    },
-    {
-      dimensions = {
-        device_type = "Atlas"
-      }
-      tags = [ "e2e-fyi" ]
-    },
-  ]
-}
-
 dart_test("experiences_ermine_smoke_e2e_test") {
   null_safe = true
   sources = [ "ermine_smoke_test.dart" ]
@@ -157,9 +120,6 @@ group("test") {
     deps = [
       ":experiences_ermine_session_shell_e2e_test($host_toolchain)",
       ":experiences_ermine_smoke_e2e_test($host_toolchain)",
-
-      # TODO(fxbug.dev/110585): Re-enable once terminal is supported.
-      # ":experiences_ermine_terminal_e2e_test($host_toolchain)",
     ]
   }
 }
