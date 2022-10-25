@@ -706,7 +706,7 @@ impl RealmBuilder {
     /// local component implementations. The caller should pass the URL into
     /// `fuchsia.component.Realm#CreateChild`, and keep the task alive until after
     /// `fuchsia.component.Realm#DestroyChild` has been called.
-    async fn initialize(self) -> Result<(String, fasync::Task<()>), Error> {
+    pub async fn initialize(self) -> Result<(String, fasync::Task<()>), Error> {
         let (component_runner_client_end, local_component_runner_task) =
             self.local_component_runner_builder.build().await?;
         let root_url = self.builder_proxy.build(component_runner_client_end).await??;
