@@ -405,6 +405,7 @@ component_config("component_manager_bootfs_config") {
   sources = [
     "//src/security/policy/component_manager_policy.json5",
     "configs/bootfs_config.json5",
+    "configs/enable_introspection.json5",
   ]
   dest = "config/component_manager"
 }

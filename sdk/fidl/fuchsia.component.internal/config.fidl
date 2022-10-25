@@ -87,9 +87,9 @@ type Config = table {
     /// component manager that is undergoing an integration test.
    16: realm_builder_resolver_and_runner RealmBuilderResolverAndRunner;
 
-    /// Disables Component Manager's introspection APIs (RealmQuery, RealmExplorer,
+    /// Enables Component Manager's introspection APIs (RealmQuery, RealmExplorer,
     /// RouteValidator, LifecycleController, etc.) for use by components.
-   18: disable_introspection bool;
+   18: enable_introspection bool;
 };
 
 /// The builtin resolver to use for the fuchsia-boot scheme, if any.

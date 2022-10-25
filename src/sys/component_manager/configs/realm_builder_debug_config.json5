@@ -53,4 +53,5 @@
     ],
     realm_builder_resolver_and_runner: "namespace",
     log_all_events: true,
+    enable_introspection: true,
 }

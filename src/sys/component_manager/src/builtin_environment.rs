@@ -801,44 +801,44 @@ impl BuiltinEnvironment {
         let stop_notifier = Arc::new(RootStopNotifier::new());
         model.root().hooks.install(stop_notifier.hooks()).await;
 
-        let realm_explorer = if runtime_config.disable_introspection {
-            None
-        } else {
+        let realm_explorer = if runtime_config.enable_introspection {
             let realm_explorer = Arc::new(RealmExplorer::new(model.clone()));
             model.root().hooks.install(realm_explorer.hooks()).await;
             Some(realm_explorer)
+        } else {
+            None
         };
 
-        let realm_query = if runtime_config.disable_introspection {
-            None
-        } else {
+        let realm_query = if runtime_config.enable_introspection {
             let realm_query = Arc::new(RealmQuery::new(model.clone()));
             model.root().hooks.install(realm_query.hooks()).await;
             Some(realm_query)
+        } else {
+            None
         };
 
-        let lifecycle_controller = if runtime_config.disable_introspection {
-            None
-        } else {
+        let lifecycle_controller = if runtime_config.enable_introspection {
             let realm_control = Arc::new(LifecycleController::new(model.clone()));
             model.root().hooks.install(realm_control.hooks()).await;
             Some(realm_control)
+        } else {
+            None
         };
 
-        let hub = if runtime_config.disable_introspection {
-            None
-        } else {
+        let hub = if runtime_config.enable_introspection {
             let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
             model.root().hooks.install(hub.hooks()).await;
             Some(hub)
+        } else {
+            None
         };
 
-        let route_validator = if runtime_config.disable_introspection {
-            None
-        } else {
+        let route_validator = if runtime_config.enable_introspection {
             let route_validator = Arc::new(RouteValidator::new(model.clone()));
             model.root().hooks.install(route_validator.hooks()).await;
             Some(route_validator)
+        } else {
+            None
         };
 
         // Set up the handler for routes involving the "pkg" directory

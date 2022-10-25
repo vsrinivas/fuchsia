@@ -37,7 +37,7 @@ struct Config {
     builtin_boot_resolver: Option<BuiltinBootResolver>,
     reboot_on_terminate_enabled: Option<bool>,
     realm_builder_resolver_and_runner: Option<RealmBuilderResolverAndRunner>,
-    disable_introspection: Option<bool>,
+    enable_introspection: Option<bool>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -214,7 +214,7 @@ impl TryFrom<Config> for component_internal::Config {
 
         Ok(Self {
             debug: config.debug,
-            disable_introspection: config.disable_introspection,
+            enable_introspection: config.enable_introspection,
             use_builtin_process_launcher: config.use_builtin_process_launcher,
             maintain_utc_clock: config.maintain_utc_clock,
             list_children_batch_size: config.list_children_batch_size,
@@ -355,7 +355,7 @@ impl Config {
 
     fn extend(mut self, another: Config) -> Result<Self, Error> {
         extend_if_unset!(self, another, debug);
-        extend_if_unset!(self, another, disable_introspection);
+        extend_if_unset!(self, another, enable_introspection);
         extend_if_unset!(self, another, use_builtin_process_launcher);
         extend_if_unset!(self, another, maintain_utc_clock);
         extend_if_unset!(self, another, list_children_batch_size);
@@ -502,7 +502,7 @@ mod tests {
     fn test_compile() {
         let input = r#"{
             debug: true,
-            disable_introspection: true,
+            enable_introspection: true,
             list_children_batch_size: 123,
             maintain_utc_clock: false,
             use_builtin_process_launcher: true,
@@ -589,7 +589,7 @@ mod tests {
             config,
             component_internal::Config {
                 debug: Some(true),
-                disable_introspection: Some(true),
+                enable_introspection: Some(true),
                 maintain_utc_clock: Some(false),
                 use_builtin_process_launcher: Some(true),
                 list_children_batch_size: Some(123),
