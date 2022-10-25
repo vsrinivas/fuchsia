@@ -137,6 +137,10 @@ impl InfoData {
         node.record_string("name", self.name);
         node.record_uint("version_major", self.version_major);
         node.record_uint("version_minor", self.version_minor);
+        node.record_string(
+            "current_version",
+            format!("{}.{}", self.version_major, self.version_minor),
+        );
         node.record_uint("block_size", self.block_size);
         node.record_uint("max_filename_length", self.max_filename_length);
         if self.oldest_version.is_some() {

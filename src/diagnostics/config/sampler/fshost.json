@@ -108,6 +108,15 @@
         },
         {
             "event_codes": [
+                4
+            ],
+            "metric_id": 61,
+            "metric_type": "String",
+            "selector": "bootstrap/fshost/fxfs:root/fxfs/fs.info:current_version",
+            "upload_once": true
+        },
+        {
+            "event_codes": [
                 3,
                 2
             ],

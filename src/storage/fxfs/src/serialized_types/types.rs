@@ -18,6 +18,9 @@ use crate::{
 /// both rewritten, all versions should match this value.
 ///
 /// If making a breaking change, please see EARLIEST_SUPPORTED_VERSION (below).
+///
+/// IMPORTANT: When changing this (major or minor), update the list of possible versions at
+/// https://cs.opensource.google/fuchsia/fuchsia/+/main:third_party/cobalt_config/fuchsia/local_storage/versions.txt.
 pub const LATEST_VERSION: Version = Version { major: 24, minor: 0 };
 
 /// The earliest supported version of the on-disk filesystem format.
