@@ -8,6 +8,7 @@
 #include <fidl/fuchsia.sysinfo/cpp/wire.h>
 #include <fidl/fuchsia.sysmem/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -90,22 +91,21 @@ void Usage();
 
 static bool bind_display(const char* controller, fbl::Vector<Display>* displays) {
   printf("Opening controller\n");
-  fbl::unique_fd fd(open(controller, O_RDWR));
-  if (!fd) {
-    printf("Failed to open display controller (%d)\n", errno);
+  zx::result provider = component::Connect<fhd::Provider>(controller);
+  if (provider.is_error()) {
+    printf("Failed to open display controller (%s)\n", provider.status_string());
     return false;
   }
 
-  zx::channel dc_server, dc_client;
-  zx_status_t status = zx::channel::create(0, &dc_server, &dc_client);
-  if (status != ZX_OK) {
-    printf("Failed to create controller channel %d (%s)\n", status, zx_status_get_string(status));
+  zx::result dc_endpoints = fidl::CreateEndpoints<fhd::Controller>();
+  if (dc_endpoints.is_error()) {
+    printf("Failed to create controller channel %d (%s)\n", dc_endpoints.error_value(),
+           dc_endpoints.status_string());
     return false;
   }
 
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto open_response =
-      fidl::WireCall<fhd::Provider>(caller.channel())->OpenController(std::move(dc_server));
+  fidl::WireResult open_response =
+      fidl::WireCall(provider.value())->OpenController(std::move(dc_endpoints->server));
   if (!open_response.ok()) {
     printf("Failed to call service handle: %s\n", open_response.FormatDescription().c_str());
     return false;
@@ -116,7 +116,7 @@ static bool bind_display(const char* controller, fbl::Vector<Display>* displays)
     return false;
   }
 
-  dc = fidl::WireSyncClient<fhd::Controller>(std::move(dc_client));
+  dc = fidl::WireSyncClient(std::move(dc_endpoints->client));
 
   class EventHandler : public fidl::WireSyncEventHandler<fhd::Controller> {
    public:
@@ -333,34 +333,24 @@ zx_status_t capture_setup() {
   }
 
   // get connection to sysmem
-  zx::channel sysmem_server_channel;
-  zx::channel sysmem_client_channel;
-  status = zx::channel::create(0, &sysmem_server_channel, &sysmem_client_channel);
-  if (status != ZX_OK) {
-    printf("Could not create sysmem channel %d\n", status);
-    return status;
+  zx::result sysmem_client = component::Connect<sysmem::Allocator>();
+  if (sysmem_client.is_error()) {
+    printf("Could not connect to sysmem Allocator %s\n", sysmem_client.status_string());
+    return sysmem_client.status_value();
   }
-  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server_channel.release());
-  if (status != ZX_OK) {
-    printf("Could not connect to sysmem Allocator %d\n", status);
-    return status;
-  }
-  fidl::WireSyncClient<sysmem::Allocator> sysmem_allocator;
-  sysmem_allocator = fidl::WireSyncClient<sysmem::Allocator>(std::move(sysmem_client_channel));
+  auto sysmem_allocator = fidl::WireSyncClient(std::move(sysmem_client.value()));
 
   // Create and import token
-  zx::channel token_server;
-  zx::channel token_client;
-  status = zx::channel::create(0, &token_server, &token_client);
-  if (status != ZX_OK) {
-    printf("Could not create token channel %d\n", status);
-    return status;
+  zx::result token_endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  if (token_endpoints.is_error()) {
+    printf("Could not create token channel %d\n", token_endpoints.error_value());
+    return token_endpoints.error_value();
   }
-  fidl::WireSyncClient<sysmem::BufferCollectionToken> token =
-      fidl::WireSyncClient<sysmem::BufferCollectionToken>(std::move(token_client));
+  auto token = fidl::WireSyncClient(std::move(token_endpoints->client));
 
   // pass token server to sysmem allocator
-  auto alloc_status = sysmem_allocator->AllocateSharedCollection(std::move(token_server));
+  fidl::WireResult alloc_status =
+      sysmem_allocator->AllocateSharedCollection(std::move(token_endpoints->server));
   if (alloc_status.status() != ZX_OK) {
     printf("Could not pass token to sysmem allocator: %s\n",
            alloc_status.FormatDescription().c_str());
@@ -368,23 +358,20 @@ zx_status_t capture_setup() {
   }
 
   // duplicate the token and pass to display driver
-  zx::channel token_dup_client;
-  zx::channel token_dup_server;
-  status = zx::channel::create(0, &token_dup_server, &token_dup_client);
-  if (status != ZX_OK) {
-    printf("Could not create duplicate token channel %d\n", status);
-    return status;
+  zx::result token_dup_endpoints = fidl::CreateEndpoints<sysmem::BufferCollectionToken>();
+  if (token_dup_endpoints.is_error()) {
+    printf("Could not create duplicate token channel %d\n", token_dup_endpoints.error_value());
+    return token_dup_endpoints.error_value();
   }
-  fidl::WireSyncClient<sysmem::BufferCollectionToken> display_token(std::move(token_dup_client));
-  auto dup_res = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
+  fidl::WireSyncClient display_token(std::move(token_dup_endpoints->client));
+  auto dup_res = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_endpoints->server));
   if (dup_res.status() != ZX_OK) {
     printf("Could not duplicate token: %s\n", dup_res.FormatDescription().c_str());
     return dup_res.status();
   }
   // TODO(fxbug.dev/97955) Consider handling the error instead of ignoring it.
   (void)token->Sync();
-  auto import_resp =
-      dc->ImportBufferCollection(kCollectionId, display_token.TakeClientEnd().TakeChannel());
+  auto import_resp = dc->ImportBufferCollection(kCollectionId, display_token.TakeClientEnd());
   if (import_resp.status() != ZX_OK) {
     printf("Could not import token: %s\n", import_resp.FormatDescription().c_str());
     return import_resp.status();
@@ -400,16 +387,14 @@ zx_status_t capture_setup() {
   }
 
   // setup our our constraints for buffer to be allocated
-  zx::channel collection_client;
-  zx::channel collection_server;
-  status = zx::channel::create(0, &collection_server, &collection_client);
-  if (status != ZX_OK) {
-    printf("Could not create collection channel %d\n", status);
-    return status;
+  zx::result collection_endpoints = fidl::CreateEndpoints<sysmem::BufferCollection>();
+  if (collection_endpoints.is_error()) {
+    printf("Could not create collection channel %d\n", collection_endpoints.error_value());
+    return collection_endpoints.error_value();
   }
   // let's return token
-  auto bind_resp = sysmem_allocator->BindSharedCollection(token.TakeClientEnd().TakeChannel(),
-                                                          std::move(collection_server));
+  fidl::WireResult bind_resp = sysmem_allocator->BindSharedCollection(
+      token.TakeClientEnd(), std::move(collection_endpoints->server));
   if (bind_resp.status() != ZX_OK) {
     printf("Could not bind to shared collection: %s\n", bind_resp.FormatDescription().c_str());
     return bind_resp.status();
@@ -447,8 +432,8 @@ zx_status_t capture_setup() {
   image_constraints.display_width_divisor = 1;
   image_constraints.display_height_divisor = 1;
 
-  collection_ = fidl::WireSyncClient<sysmem::BufferCollection>(std::move(collection_client));
-  auto collection_resp = collection_->SetConstraints(true, constraints);
+  collection_ = fidl::WireSyncClient(std::move(collection_endpoints->client));
+  fidl::WireResult collection_resp = collection_->SetConstraints(true, constraints);
   if (collection_resp.status() != ZX_OK) {
     printf("Could not set buffer constraints: %s\n", collection_resp.FormatDescription().c_str());
     return collection_resp.status();
@@ -644,19 +629,12 @@ void usage(void) {
 }
 
 Platforms GetPlatform() {
-  zx::channel sysinfo_server_channel, sysinfo_client_channel;
-  auto status = zx::channel::create(0, &sysinfo_server_channel, &sysinfo_client_channel);
-  if (status != ZX_OK) {
+  zx::result sysinfo = component::Connect<sysinfo::SysInfo>();
+  if (sysinfo.is_error()) {
     return UNKNOWN_PLATFORM;
   }
 
-  const char* sysinfo_path = "svc/fuchsia.sysinfo.SysInfo";
-  fbl::unique_fd sysinfo_fd(open(sysinfo_path, O_RDWR));
-  if (!sysinfo_fd) {
-    return UNKNOWN_PLATFORM;
-  }
-  fdio_cpp::FdioCaller caller_sysinfo(std::move(sysinfo_fd));
-  auto result = fidl::WireCall<sysinfo::SysInfo>(caller_sysinfo.channel())->GetBoardName();
+  auto result = fidl::WireCall<sysinfo::SysInfo>(sysinfo.value())->GetBoardName();
   if (!result.ok() || result.value().status != ZX_OK) {
     return UNKNOWN_PLATFORM;
   }
