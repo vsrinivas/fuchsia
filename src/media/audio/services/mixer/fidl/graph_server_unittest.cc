@@ -294,6 +294,11 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
   };
   std::vector<TestCase> cases = {
       {
+          .name = "MissingServerEnd",
+          .edit = [](auto data_source) { data_source.clear_server_end(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
           .name = "MissingFormat",
           .edit = [](auto data_source) { data_source.clear_format(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
@@ -310,6 +315,11 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
                 data_source.reference_clock(
                     fuchsia_audio_mixer::wire::ReferenceClock::Builder(arena_).Build());
               },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingPayloadBuffer",
+          .edit = [](auto data_source) { data_source.clear_payload_buffer(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -369,51 +379,6 @@ TEST_F(GraphServerTest, CreateProducerStreamSinkFailsBadFields) {
   }
 }
 
-// TODO(fxbug.dev/109458): can be merged into CreateProducerStreamSinkFailsBadFields after fix.
-TEST_F(GraphServerTest, CreateProducerStreamSinkFailsMissingServerEnd) {
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
-              arena_, fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena_)
-                          // no server_end()
-                          .format(kFormat.ToWireFidl(arena_))
-                          .reference_clock(MakeReferenceClock(arena_))
-                          .payload_buffer(MakeVmo())
-                          .media_ticks_per_second_numerator(1)
-                          .media_ticks_per_second_denominator(1)
-                          .Build()))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-}
-
-// TODO(fxbug.dev/109458): can be merged into CreateProducerStreamSinkFailsBadFields after fix.
-TEST_F(GraphServerTest, CreateProducerStreamSinkFailsMissingPayloadBuffer) {
-  auto [stream_sink_client, stream_sink_server] = CreateClientOrDie<fuchsia_media2::StreamSink>();
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithStreamSink(
-              arena_, fuchsia_audio_mixer::wire::StreamSinkProducer::Builder(arena_)
-                          .server_end(std::move(stream_sink_server))
-                          .format(kFormat.ToWireFidl(arena_))
-                          .reference_clock(MakeReferenceClock(arena_))
-                          // no payload_buffer()
-                          .media_ticks_per_second_numerator(1)
-                          .media_ticks_per_second_denominator(1)
-                          .Build()))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-}
-
 TEST_F(GraphServerTest, CreateProducerStreamSinkSuccess) {
   auto result = client()->CreateProducer(
       fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
@@ -437,6 +402,11 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
   };
   std::vector<TestCase> cases = {
       {
+          .name = "MissingVmo",
+          .edit = [](auto ring_buffer) { ring_buffer.clear_vmo(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
           .name = "MissingFormat",
           .edit = [](auto ring_buffer) { ring_buffer.clear_format(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
@@ -449,6 +419,11 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
       {
           .name = "MissingConsumerBytes",
           .edit = [](auto ring_buffer) { ring_buffer.clear_consumer_bytes(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingreferenceClock",
+          .edit = [](auto ring_buffer) { ring_buffer.clear_reference_clock(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
       },
       {
@@ -513,48 +488,6 @@ TEST_F(GraphServerTest, CreateProducerRingBufferFailsBadFields) {
     }
     EXPECT_EQ(result->error_value(), tc.expected_error);
   }
-}
-
-// TODO(fxbug.dev/109458): can be merged into CreateProducerRingBufferFailsBadFields after fix.
-TEST_F(GraphServerTest, CreateProducerRingBufferFailsMissingVmo) {
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-              arena_, fuchsia_audio::wire::RingBuffer::Builder(arena_)
-                          // no vmo()
-                          .format(kFormat.ToWireFidl(arena_))
-                          .producer_bytes(512)
-                          .consumer_bytes(512)
-                          .reference_clock(MakeClock())
-                          .Build()))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-}
-
-// TODO(fxbug.dev/109458): can be merged into CreateProducerRingBufferFailsBadFields after fix.
-TEST_F(GraphServerTest, CreateProducerRingBufferFailsMissingReferenceClock) {
-  auto result = client()->CreateProducer(
-      fuchsia_audio_mixer::wire::GraphCreateProducerRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("producer"))
-          .direction(PipelineDirection::kOutput)
-          .data_source(fuchsia_audio_mixer::wire::ProducerDataSource::WithRingBuffer(
-              arena_, fuchsia_audio::wire::RingBuffer::Builder(arena_)
-                          .vmo(MakeVmo(1024))
-                          .format(kFormat.ToWireFidl(arena_))
-                          .producer_bytes(512)
-                          .consumer_bytes(512)
-                          // no reference_clock()
-                          .Build()))
-          .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateProducerRingBufferSuccess) {
@@ -792,6 +725,11 @@ TEST_F(GraphServerTest, CreateMixerFails) {
 
   const std::vector<TestCase> cases = {
       {
+          .name = "MissingDirection",
+          .edit = [](auto request) { request.clear_direction(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
           .name = "MissingDestFormat",
           .edit = [](auto request) { request.clear_dest_format(); },
           .expected_error = CreateNodeError::kMissingRequiredField,
@@ -846,22 +784,6 @@ TEST_F(GraphServerTest, CreateMixerFails) {
     }
     EXPECT_EQ(result->error_value(), tc.expected_error);
   }
-}
-
-// TODO(fxbug.dev/109458): This can be moved to `CreateMixerFails` above after fix.
-TEST_F(GraphServerTest, CreateMixerFailsMissingDirection) {
-  const auto result =
-      client()->CreateMixer(fuchsia_audio_mixer::wire::GraphCreateMixerRequest::Builder(arena_)
-                                .name(fidl::StringView::FromExternal("mixer"))
-                                // no direction()
-                                .dest_format(kFormat.ToWireFidl(arena_))
-                                .dest_reference_clock(MakeReferenceClock(arena_))
-                                .dest_buffer_frame_count(10)
-                                .Build());
-
-  ASSERT_TRUE(result.ok()) << result;
-  ASSERT_TRUE(result->is_error());
-  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
 }
 
 TEST_F(GraphServerTest, CreateMixerSuccess) {
