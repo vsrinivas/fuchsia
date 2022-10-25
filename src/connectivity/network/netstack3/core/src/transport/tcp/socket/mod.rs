@@ -49,7 +49,7 @@ use crate::{
     algorithm::{PortAlloc, PortAllocImpl},
     context::TimerContext,
     data_structures::{
-        id_map::IdMap,
+        id_map::{Entry as IdMapEntry, IdMap},
         socketmap::{IterShadows as _, SocketMap, Tagged},
     },
     ip::{
@@ -69,6 +69,7 @@ use crate::{
         buffer::{IntoBuffers, ReceiveBuffer, SendBuffer},
         socket::{demux::tcp_serialize_segment, isn::IsnGenerator},
         state::{CloseError, Closed, Initial, State, Takeable},
+        BufferSizes,
     },
     DeviceId, Instant, NonSyncContext, SyncCtx,
 };
@@ -130,7 +131,9 @@ pub trait TcpNonSyncContext: TimerContext<TimerId> {
     fn on_new_connection(&mut self, listener: ListenerId);
     /// Creates new buffers and returns the object that Bindings need to
     /// read/write from/into the created buffers.
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers);
+    fn new_passive_open_buffers(
+        buffer_sizes: BufferSizes,
+    ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers);
 }
 
 /// Sync context for TCP.
@@ -279,10 +282,12 @@ impl<A: IpAddress, D, LI, RI> Tagged<ConnAddr<A, D, LI, RI>> for MaybeClosedConn
     }
 }
 
-#[derive(Debug, Derivative, Clone, PartialEq)]
+#[derive(Debug, Derivative, Clone)]
 #[derivative(Default(bound = ""))]
+#[cfg_attr(test, derive(PartialEq))]
 struct Unbound<D> {
     bound_device: Option<D>,
+    buffer_sizes: BufferSizes,
 }
 
 /// Holds all the TCP socket states.
@@ -326,7 +331,7 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpSockets<I, D, C> {
     ) -> Option<&mut Listener<C::ReturnedBuffers>> {
         self.socketmap.listeners_mut().get_by_id_mut(&MaybeListenerId::from(id)).map(
             |(maybe_listener, _sharing, _local_addr)| match maybe_listener {
-                MaybeListener::Bound => {
+                MaybeListener::Bound(_) => {
                     unreachable!("contract violated: ListenerId points to an inactive entry")
                 }
                 MaybeListener::Listener(l) => l,
@@ -382,22 +387,41 @@ struct Listener<PassiveOpen> {
     backlog: NonZeroUsize,
     ready: VecDeque<(ConnectionId, PassiveOpen)>,
     pending: Vec<ConnectionId>,
+    buffer_sizes: BufferSizes,
     // If ip sockets can be half-specified so that only the local address
     // is needed, we can construct an ip socket here to be reused.
 }
 
 impl<PassiveOpen> Listener<PassiveOpen> {
-    fn new(backlog: NonZeroUsize) -> Self {
-        Self { backlog, ready: VecDeque::new(), pending: Vec::new() }
+    fn new(backlog: NonZeroUsize, buffer_sizes: BufferSizes) -> Self {
+        Self { backlog, ready: VecDeque::new(), pending: Vec::new(), buffer_sizes }
     }
+}
+
+#[derive(Clone, Debug)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+struct BoundState {
+    buffer_sizes: BufferSizes,
 }
 
 /// Represents either a bound socket or a listener socket.
 #[derive(Debug)]
 #[cfg_attr(test, derive(PartialEq))]
 enum MaybeListener<PassiveOpen> {
-    Bound,
+    Bound(BoundState),
     Listener(Listener<PassiveOpen>),
+}
+
+impl<PassiveOpen> MaybeListener<PassiveOpen> {
+    fn buffer_sizes(&self) -> BufferSizes {
+        match self {
+            Self::Bound(BoundState { buffer_sizes }) => buffer_sizes,
+            Self::Listener(Listener { backlog: _, ready: _, pending: _, buffer_sizes }) => {
+                buffer_sizes
+            }
+        }
+        .clone()
+    }
 }
 
 // TODO(https://fxbug.dev/38297): The following IDs are all `Clone + Copy`,
@@ -549,7 +573,8 @@ pub(crate) trait TcpSocketHandler<I: Ip, C: TcpNonSyncContext>:
 
 impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<I, C> for SC {
     fn create_socket(&mut self, _ctx: &mut C) -> UnboundId {
-        UnboundId(self.with_tcp_sockets_mut(|sockets| sockets.inactive.push(Unbound::default())))
+        let unbound = Unbound::default();
+        UnboundId(self.with_tcp_sockets_mut(move |sockets| sockets.inactive.push(unbound)))
     }
 
     fn bind(
@@ -578,6 +603,14 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                         return Err(BindError::NoLocalAddr);
                     }
                 }
+
+                let inactive_entry = match inactive.entry(id.into()) {
+                    IdMapEntry::Vacant(_) => panic!("invalid unbound ID"),
+                    IdMapEntry::Occupied(o) => o,
+                };
+
+                let Unbound { bound_device: _, buffer_sizes } = &inactive_entry.get();
+                let bound_state = BoundState { buffer_sizes: buffer_sizes.clone() };
                 let bound = socketmap
                     .listeners_mut()
                     .try_insert(
@@ -585,7 +618,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                             ip: ListenerIpAddr { addr: local_ip, identifier: port },
                             device: None,
                         },
-                        MaybeListener::Bound,
+                        MaybeListener::Bound(bound_state),
                         // TODO(https://fxbug.dev/101596): Support sharing for TCP sockets.
                         (),
                     )
@@ -594,7 +627,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                         BoundId(x)
                     })
                     .map_err(|_: (InsertError, MaybeListener<_>, ())| BindError::Conflict)?;
-                assert_matches!(inactive.remove(id.into()), Some(_));
+                let _: Unbound<_> = inactive_entry.remove();
                 Ok(bound)
             },
         )
@@ -607,8 +640,9 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                 sockets.socketmap.listeners_mut().get_by_id_mut(&id).expect("invalid listener id");
 
             match listener {
-                MaybeListener::Bound => {
-                    *listener = MaybeListener::Listener(Listener::new(backlog));
+                MaybeListener::Bound(BoundState { buffer_sizes }) => {
+                    *listener =
+                        MaybeListener::Listener(Listener::new(backlog, buffer_sizes.clone()));
                 }
                 MaybeListener::Listener(_) => {
                     unreachable!("invalid bound id that points to a listener entry")
@@ -647,7 +681,8 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
             |ip_transport_ctx, isn, sockets| {
                 let (bound, (), bound_addr) =
                     sockets.socketmap.listeners().get_by_id(&bound_id).expect("invalid socket id");
-                assert_matches!(bound, MaybeListener::Bound);
+                let bound = assert_matches!(bound, MaybeListener::Bound(b) => b);
+                let BoundState { buffer_sizes } = bound.clone();
                 let ListenerAddr { ip, device } = bound_addr;
                 let ListenerIpAddr { addr: local_ip, identifier: local_port } = *ip;
 
@@ -673,6 +708,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                     local_port,
                     remote.port,
                     netstack_buffers,
+                    buffer_sizes.clone(),
                 )?;
                 let _: Option<_> = sockets.socketmap.listeners_mut().remove(&bound_id);
                 Ok(conn_id)
@@ -710,6 +746,13 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                     None => return Err(ConnectError::NoPort),
                 };
 
+                let entry = sockets.inactive.entry(id.into());
+                let inactive = match entry {
+                    IdMapEntry::Vacant(_v) => panic!("invalid unbound ID"),
+                    IdMapEntry::Occupied(o) => o,
+                };
+                let Unbound { buffer_sizes, bound_device: _ } = inactive.get();
+
                 let conn_id = connect_inner(
                     isn,
                     &mut sockets.socketmap,
@@ -719,8 +762,9 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                     local_port,
                     remote.port,
                     netstack_buffers,
+                    buffer_sizes.clone(),
                 )?;
-                let _: Option<_> = sockets.inactive.remove(id.into());
+                let _: Unbound<_> = inactive.remove();
                 Ok(conn_id)
             },
         )
@@ -774,8 +818,11 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
                     .listeners_mut()
                     .get_by_id_mut(&id.into())
                     .expect("invalid listener ID");
-                let Listener { backlog: _, pending, ready } = assert_matches!(
-                    core::mem::replace(maybe_listener, MaybeListener::Bound),
+                let replacement = MaybeListener::Bound(BoundState {
+                    buffer_sizes: maybe_listener.buffer_sizes(),
+                });
+                let Listener { backlog: _, pending, ready, buffer_sizes: _ } = assert_matches!(
+                    core::mem::replace(maybe_listener, replacement),
                     MaybeListener::Listener(listener) => listener);
                 for conn_id in pending.into_iter().chain(
                     ready
@@ -809,16 +856,15 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
     fn get_unbound_info(&self, id: UnboundId) -> UnboundInfo<SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
             let TcpSockets { socketmap: _, inactive, port_alloc: _ } = sockets;
-            inactive.get(id.into()).expect("invalid unbound ID").clone()
+            inactive.get(id.into()).expect("invalid unbound ID").into()
         })
-        .into()
     }
 
     fn get_bound_info(&self, id: BoundId) -> BoundInfo<I::Addr, SC::DeviceId> {
         self.with_tcp_sockets(|sockets| {
             let (bound, (), bound_addr) =
                 sockets.socketmap.listeners().get_by_id(&id.into()).expect("invalid bound ID");
-            assert_matches!(bound, MaybeListener::Bound);
+            assert_matches!(bound, MaybeListener::Bound(_));
             bound_addr.clone()
         })
         .into()
@@ -1065,6 +1111,7 @@ fn connect_inner<I, SC, C>(
     local_port: NonZeroU16,
     remote_port: NonZeroU16,
     netstack_buffers: C::ProvidedBuffers,
+    buffer_sizes: BufferSizes,
 ) -> Result<ConnectionId, ConnectError>
 where
     I: IpExt,
@@ -1085,7 +1132,7 @@ where
         device: None,
     };
     let now = ctx.now();
-    let (syn_sent, syn) = Closed::<Initial>::connect(isn, now, netstack_buffers);
+    let (syn_sent, syn) = Closed::<Initial>::connect(isn, now, netstack_buffers, buffer_sizes);
     let state = State::SynSent(syn_sent);
     let poll_send_at = state.poll_send_at().expect("no retrans timer");
     let conn_id = socketmap
@@ -1199,10 +1246,10 @@ pub struct ConnectionInfo<A: IpAddress, D> {
     pub device: Option<D>,
 }
 
-impl<D> From<Unbound<D>> for UnboundInfo<D> {
-    fn from(unbound: Unbound<D>) -> Self {
-        let Unbound { bound_device: device } = unbound;
-        Self { device }
+impl<D: Clone> From<&'_ Unbound<D>> for UnboundInfo<D> {
+    fn from(unbound: &Unbound<D>) -> Self {
+        let Unbound { bound_device: device, buffer_sizes: _ } = unbound;
+        Self { device: device.clone() }
     }
 }
 
@@ -1499,7 +1546,9 @@ mod tests {
 
         fn on_new_connection(&mut self, _listener: ListenerId) {}
         fn new_passive_open_buffers(
+            buffer_sizes: BufferSizes,
         ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
+            let BufferSizes {} = buffer_sizes;
             let client = ClientBuffers::default();
             (
                 Rc::clone(&client.receive),
@@ -1510,8 +1559,12 @@ mod tests {
     }
 
     impl IntoBuffers<Rc<RefCell<RingBuffer>>, TestSendBuffer> for ClientBuffers {
-        fn into_buffers(self) -> (Rc<RefCell<RingBuffer>>, TestSendBuffer) {
+        fn into_buffers(
+            self,
+            buffer_sizes: BufferSizes,
+        ) -> (Rc<RefCell<RingBuffer>>, TestSendBuffer) {
             let Self { receive, send } = self;
+            let BufferSizes {} = buffer_sizes;
             (receive, TestSendBuffer(send, Default::default()))
         }
     }
@@ -1765,7 +1818,7 @@ mod tests {
             // The listener should create a pending socket.
             assert_matches!(
                 net.sync_ctx(REMOTE).outer.sockets.get_listener_by_id_mut(server),
-                Some(Listener { backlog: _, ready, pending }) => {
+                Some(Listener { backlog: _, ready, pending, buffer_sizes: _ }) => {
                     assert_eq!(ready.len(), 0);
                     assert_eq!(pending.len(), 1);
                 }
@@ -1835,7 +1888,7 @@ mod tests {
         // Check the listener is in correct state.
         assert_eq!(
             net.sync_ctx(REMOTE).outer.sockets.get_listener_by_id_mut(server),
-            Some(&mut Listener::new(backlog)),
+            Some(&mut Listener::new(backlog, BufferSizes::default())),
         );
 
         (net, client, accepted)

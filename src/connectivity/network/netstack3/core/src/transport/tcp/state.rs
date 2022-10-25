@@ -23,7 +23,7 @@ use crate::{
         rtt::Estimator,
         segment::{Payload, Segment},
         seqnum::{SeqNum, WindowSize},
-        Control, UserError,
+        BufferSizes, Control, UserError,
     },
     Instant,
 };
@@ -69,6 +69,7 @@ impl Closed<Initial> {
         iss: SeqNum,
         now: I,
         active_open: ActiveOpen,
+        buffer_sizes: BufferSizes,
     ) -> (SynSent<I, ActiveOpen>, Segment<()>) {
         (
             SynSent {
@@ -76,13 +77,14 @@ impl Closed<Initial> {
                 timestamp: Some(now),
                 retrans_timer: RetransTimer::new(now, Estimator::RTO_INIT),
                 active_open,
+                buffer_sizes,
             },
             Segment::syn(iss, WindowSize::DEFAULT),
         )
     }
 
-    pub(crate) fn listen(iss: SeqNum) -> Listen {
-        Listen { iss }
+    pub(crate) fn listen(iss: SeqNum, buffer_sizes: BufferSizes) -> Listen {
+        Listen { iss, buffer_sizes }
     }
 }
 
@@ -134,6 +136,7 @@ impl<Error> Closed<Error> {
 #[cfg_attr(test, derive(PartialEq, Eq))]
 pub(crate) struct Listen {
     iss: SeqNum,
+    buffer_sizes: BufferSizes,
 }
 
 /// Dispositions of [`Listen::on_segment`].
@@ -150,7 +153,7 @@ impl Listen {
         Segment { seq, ack, wnd: _, contents }: Segment<impl Payload>,
         now: I,
     ) -> ListenOnSegmentDisposition<I> {
-        let Listen { iss } = *self;
+        let Listen { iss, buffer_sizes } = *self;
         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
         //   first check for an RST
         //   An incoming RST should be ignored.  Return.
@@ -190,6 +193,7 @@ impl Listen {
                     timestamp: Some(now),
                     retrans_timer: RetransTimer::new(now, Estimator::RTO_INIT),
                     simultaneous_open: None,
+                    buffer_sizes,
                 },
             );
         }
@@ -220,6 +224,7 @@ pub(crate) struct SynSent<I: Instant, ActiveOpen> {
     timestamp: Option<I>,
     retrans_timer: RetransTimer<I>,
     active_open: ActiveOpen,
+    buffer_sizes: BufferSizes,
 }
 
 /// Dispositions of [`SynSent::on_segment`].
@@ -250,7 +255,13 @@ impl<I: Instant, ActiveOpen: Takeable> SynSent<I, ActiveOpen> {
     where
         ActiveOpen: IntoBuffers<R, S>,
     {
-        let SynSent { iss, timestamp: syn_sent_ts, retrans_timer: _, ref mut active_open } = *self;
+        let SynSent {
+            iss,
+            timestamp: syn_sent_ts,
+            retrans_timer: _,
+            ref mut active_open,
+            buffer_sizes,
+        } = *self;
         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-65):
         //   first check the ACK bit
         //   If the ACK bit is set
@@ -325,7 +336,8 @@ impl<I: Instant, ActiveOpen: Takeable> SynSent<I, ActiveOpen> {
                             if let Some(syn_sent_ts) = syn_sent_ts {
                                 rtt_estimator.sample(now.duration_since(syn_sent_ts));
                             }
-                            let (rcv_buffer, snd_buffer) = active_open.take().into_buffers();
+                            let (rcv_buffer, snd_buffer) =
+                                active_open.take().into_buffers(buffer_sizes);
                             let established = Established {
                                 snd: Send {
                                     nxt: iss + 1,
@@ -373,6 +385,7 @@ impl<I: Instant, ActiveOpen: Takeable> SynSent<I, ActiveOpen> {
                                 timestamp: Some(now),
                                 retrans_timer: RetransTimer::new(now, Estimator::RTO_INIT),
                                 simultaneous_open: Some(active_open.take()),
+                                buffer_sizes,
                             },
                         )
                     }
@@ -414,13 +427,17 @@ pub(crate) struct SynRcvd<I: Instant, ActiveOpen> {
     /// active open connection. Store this information so that we don't use the
     /// wrong routines to construct buffers.
     simultaneous_open: Option<ActiveOpen>,
+    buffer_sizes: BufferSizes,
 }
 
 impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen> From<SynRcvd<I, Infallible>>
     for State<I, R, S, ActiveOpen>
 {
     fn from(
-        SynRcvd { iss, irs, timestamp, retrans_timer, simultaneous_open }: SynRcvd<I, Infallible>,
+        SynRcvd { iss, irs, timestamp, retrans_timer, simultaneous_open, buffer_sizes }: SynRcvd<
+            I,
+            Infallible,
+        >,
     ) -> Self {
         match simultaneous_open {
             None => State::SynRcvd(SynRcvd {
@@ -429,6 +446,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen> From<SynRcvd<I, In
                 timestamp,
                 retrans_timer,
                 simultaneous_open: None,
+                buffer_sizes,
             }),
             Some(infallible) => match infallible {},
         }
@@ -921,7 +939,7 @@ pub(crate) trait BufferProvider<R: ReceiveBuffer, S: SendBuffer> {
 
     /// Creates new send and receive buffers and an object that needs to be
     /// vended to the application.
-    fn new_passive_open_buffers() -> (R, S, Self::PassiveOpen);
+    fn new_passive_open_buffers(buffer_sizes: BufferSizes) -> (R, S, Self::PassiveOpen);
 }
 
 /// Allows the implementor to be replaced by an empty value. The semantics is
@@ -964,7 +982,14 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                     return match listen.on_segment(incoming, now) {
                         ListenOnSegmentDisposition::SendSynAckAndEnterSynRcvd(
                             syn_ack,
-                            SynRcvd { iss, irs, timestamp, retrans_timer, simultaneous_open },
+                            SynRcvd {
+                                iss,
+                                irs,
+                                timestamp,
+                                retrans_timer,
+                                simultaneous_open,
+                                buffer_sizes,
+                            },
                         ) => {
                             match simultaneous_open {
                                 None => {
@@ -974,6 +999,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                                         timestamp,
                                         retrans_timer,
                                         simultaneous_open: None,
+                                        buffer_sizes,
                                     });
                                 }
                                 Some(infallible) => match infallible {},
@@ -1017,6 +1043,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                     timestamp: _,
                     retrans_timer: _,
                     simultaneous_open: _,
+                    buffer_sizes: _,
                 }) => (*irs + 1, WindowSize::DEFAULT, *iss + 1),
                 State::Established(Established { rcv, snd }) => (rcv.nxt(), rcv.wnd(), snd.nxt),
                 State::CloseWait(CloseWait { snd, last_ack, last_wnd }) => {
@@ -1097,6 +1124,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                         timestamp: syn_rcvd_ts,
                         retrans_timer: _,
                         simultaneous_open,
+                        buffer_sizes,
                     }) => {
                         // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-72):
                         //    if the ACK bit is on
@@ -1120,11 +1148,11 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                             let (rcv_buffer, snd_buffer) = match simultaneous_open.take() {
                                 None => {
                                     let (rcv_buffer, snd_buffer, client) =
-                                        BP::new_passive_open_buffers();
+                                        BP::new_passive_open_buffers(*buffer_sizes);
                                     assert_matches!(passive_open.replace(client), None);
                                     (rcv_buffer, snd_buffer)
                                 }
-                                Some(active_open) => active_open.into_buffers(),
+                                Some(active_open) => active_open.into_buffers(*buffer_sizes),
                             };
                             *self = State::Established(Established {
                                 snd: Send {
@@ -1339,19 +1367,24 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
     /// receiver window allows.
     pub(crate) fn poll_send(&mut self, mss: u32, now: I) -> Option<Segment<SendPayload<'_>>> {
         match self {
-            State::SynSent(SynSent { iss, timestamp, retrans_timer, active_open: _ }) => {
-                (retrans_timer.at <= now).then(|| {
-                    *timestamp = None;
-                    retrans_timer.backoff(now);
-                    Segment::syn(*iss, WindowSize::DEFAULT).into()
-                })
-            }
+            State::SynSent(SynSent {
+                iss,
+                timestamp,
+                retrans_timer,
+                active_open: _,
+                buffer_sizes: _,
+            }) => (retrans_timer.at <= now).then(|| {
+                *timestamp = None;
+                retrans_timer.backoff(now);
+                Segment::syn(*iss, WindowSize::DEFAULT).into()
+            }),
             State::SynRcvd(SynRcvd {
                 iss,
                 irs,
                 timestamp,
                 retrans_timer,
                 simultaneous_open: _,
+                buffer_sizes: _,
             }) => (retrans_timer.at <= now).then(|| {
                 *timestamp = None;
                 retrans_timer.backoff(now);
@@ -1436,6 +1469,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 timestamp: _,
                 retrans_timer: _,
                 simultaneous_open,
+                buffer_sizes,
             }) => {
                 // Per RFC 793 (https://tools.ietf.org/html/rfc793#page-60):
                 //   SYN-RECEIVED STATE
@@ -1457,7 +1491,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 // following check makes sure we only proceed if we were
                 // actively opened, i.e., initiated by `connect`.
                 let active_open = simultaneous_open.as_mut().ok_or(CloseError::NoConnection)?;
-                let (rcv_buffer, snd_buffer) = active_open.take().into_buffers();
+                let (rcv_buffer, snd_buffer) = active_open.take().into_buffers(*buffer_sizes);
                 // Note: `Send` in `FinWait1` always has a FIN queued.
                 // Since we don't support sending data when connection
                 // isn't established, so enter FIN-WAIT-1 immediately.
@@ -1542,6 +1576,7 @@ impl<I: Instant, R: ReceiveBuffer, S: SendBuffer, ActiveOpen: Debug + Takeable>
                 timestamp: _,
                 retrans_timer: _,
                 simultaneous_open: _,
+                buffer_sizes: _,
             }) => Some(Segment::rst_ack(*iss, *irs + 1)),
             State::Established(Established { snd, rcv }) => {
                 Some(Segment::rst_ack(snd.nxt, rcv.nxt()))
@@ -1590,7 +1625,7 @@ mod test {
         type PassiveOpen = ();
         type ActiveOpen = ();
 
-        fn new_passive_open_buffers() -> (R, S, Self::PassiveOpen) {
+        fn new_passive_open_buffers(_buffer_sizes: BufferSizes) -> (R, S, Self::PassiveOpen) {
             (R::default(), S::default(), ())
         }
     }
@@ -1728,6 +1763,7 @@ mod test {
             timestamp: Some(FakeInstant::from(RTT)),
             retrans_timer: RetransTimer::new(FakeInstant::from(RTT), Estimator::RTO_INIT),
             simultaneous_open: Some(()),
+            buffer_sizes: BufferSizes::default(),
         }
     ); "SYN only")]
     #[test_case(
@@ -1747,6 +1783,7 @@ mod test {
             timestamp: Some(FakeInstant::default()),
             retrans_timer: RetransTimer::new(FakeInstant::default(), Estimator::RTO_INIT),
             active_open: (),
+            buffer_sizes: BufferSizes::default(),
         };
         syn_sent.on_segment::<_, _, ClientlessBufferProvider>(incoming, FakeInstant::from(RTT))
     }
@@ -1763,11 +1800,12 @@ mod test {
                 timestamp: Some(FakeInstant::default()),
                 retrans_timer: RetransTimer::new(FakeInstant::default(), Estimator::RTO_INIT),
                 simultaneous_open: None,
+                buffer_sizes: BufferSizes::default(),
             }); "accept syn")]
     fn segment_arrives_when_listen(
         incoming: Segment<()>,
     ) -> ListenOnSegmentDisposition<FakeInstant> {
-        let listen = Closed::<Initial>::listen(ISS_1);
+        let listen = Closed::<Initial>::listen(ISS_1, Default::default());
         listen.on_segment(incoming, FakeInstant::default())
     }
 
@@ -1871,6 +1909,7 @@ mod test {
             timestamp: Some(clock.now()),
             retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
             simultaneous_open: Some(()),
+            buffer_sizes: Default::default(),
         });
         clock.sleep(RTT);
         let (seg, _passive_open) =
@@ -2151,7 +2190,8 @@ mod test {
     #[test]
     fn active_passive_open() {
         let mut clock = FakeInstantCtx::default();
-        let (syn_sent, syn_seg) = Closed::<Initial>::connect(ISS_1, clock.now(), ());
+        let (syn_sent, syn_seg) =
+            Closed::<Initial>::connect(ISS_1, clock.now(), (), Default::default());
         assert_eq!(syn_seg, Segment::syn(ISS_1, WindowSize::DEFAULT));
         assert_eq!(
             syn_sent,
@@ -2160,10 +2200,11 @@ mod test {
                 timestamp: Some(clock.now()),
                 retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
                 active_open: (),
+                buffer_sizes: BufferSizes::default(),
             }
         );
         let mut active = State::SynSent(syn_sent);
-        let mut passive = State::Listen(Closed::<Initial>::listen(ISS_2));
+        let mut passive = State::Listen(Closed::<Initial>::listen(ISS_2, Default::default()));
         clock.sleep(RTT / 2);
         let (seg, passive_open) =
             passive.on_segment::<_, ClientlessBufferProvider>(syn_seg, clock.now());
@@ -2176,6 +2217,7 @@ mod test {
             timestamp: Some(clock.now()),
             retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
             simultaneous_open: None,
+            buffer_sizes: Default::default(),
         });
         clock.sleep(RTT / 2);
         let (seg, passive_open) =
@@ -2229,8 +2271,10 @@ mod test {
     #[test]
     fn simultaneous_open() {
         let mut clock = FakeInstantCtx::default();
-        let (syn_sent1, syn1) = Closed::<Initial>::connect(ISS_1, clock.now(), ());
-        let (syn_sent2, syn2) = Closed::<Initial>::connect(ISS_2, clock.now(), ());
+        let (syn_sent1, syn1) =
+            Closed::<Initial>::connect(ISS_1, clock.now(), (), Default::default());
+        let (syn_sent2, syn2) =
+            Closed::<Initial>::connect(ISS_2, clock.now(), (), Default::default());
 
         assert_eq!(syn1, Segment::syn(ISS_1, WindowSize::DEFAULT));
         assert_eq!(syn2, Segment::syn(ISS_2, WindowSize::DEFAULT));
@@ -2257,6 +2301,7 @@ mod test {
             timestamp: Some(clock.now()),
             retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
             simultaneous_open: Some(()),
+            buffer_sizes: BufferSizes::default(),
         });
         assert_matches!(state2, State::SynRcvd(ref syn_rcvd) if syn_rcvd == &SynRcvd {
             iss: ISS_2,
@@ -2264,6 +2309,7 @@ mod test {
             timestamp: Some(clock.now()),
             retrans_timer: RetransTimer::new(clock.now(), Estimator::RTO_INIT),
             simultaneous_open: Some(()),
+            buffer_sizes: BufferSizes::default(),
         });
 
         clock.sleep(RTT);
@@ -2504,7 +2550,8 @@ mod test {
     #[test]
     fn self_connect_retransmission() {
         let mut clock = FakeInstantCtx::default();
-        let (syn_sent, syn) = Closed::<Initial>::connect(ISS_1, clock.now(), ());
+        let (syn_sent, syn) =
+            Closed::<Initial>::connect(ISS_1, clock.now(), (), Default::default());
         let mut state = State::<_, RingBuffer, RingBuffer, ()>::SynSent(syn_sent);
         // Retransmission timer should be installed.
         assert_eq!(state.poll_send_at(), Some(FakeInstant::from(Estimator::RTO_INIT)));
@@ -2731,6 +2778,7 @@ mod test {
             timestamp: None,
             retrans_timer: RetransTimer { at: FakeInstant::default(), rto: Duration::new(0, 0) },
             simultaneous_open: Some(()),
+            buffer_sizes: Default::default(),
         });
         assert_eq!(state.close(), Ok(()));
         assert_matches!(state, State::FinWait1(_));
@@ -3080,6 +3128,7 @@ mod test {
             timestamp: None,
             retrans_timer: RetransTimer { at: FakeInstant::default(), rto: Duration::new(0, 0) },
             simultaneous_open: None,
+            buffer_sizes: BufferSizes::default(),
         }),
         Segment::syn_ack(ISS_2, ISS_1 + 1, WindowSize::DEFAULT).into() =>
         Some(Segment::ack(ISS_1 + 1, ISS_2 + 1, WindowSize::DEFAULT)); "retransmit syn_ack"

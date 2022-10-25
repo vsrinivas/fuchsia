@@ -64,3 +64,10 @@ impl<I: IpExt, D: IpDeviceId, C: TcpNonSyncContext> TcpState<I, D, C> {
         }
     }
 }
+
+/// Named tuple for holding sizes of buffers for a socket.
+///
+/// TODO(https://fxbug.dev/110625): Use this to implement setting SO_SNDBUF.
+#[derive(Copy, Clone, Debug, Default)]
+#[cfg_attr(test, derive(Eq, PartialEq))]
+pub struct BufferSizes {}

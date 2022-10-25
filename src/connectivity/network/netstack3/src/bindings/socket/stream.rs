@@ -48,6 +48,7 @@ use netstack3_core::{
             TcpNonSyncContext, UnboundId,
         },
         state::Takeable,
+        BufferSizes,
     },
     Ctx,
 };
@@ -96,8 +97,12 @@ pub(crate) struct LocalZirconSocketAndNotifier(Arc<zx::Socket>, NeedsDataNotifie
 impl IntoBuffers<ReceiveBufferWithZirconSocket, SendBufferWithZirconSocket>
     for LocalZirconSocketAndNotifier
 {
-    fn into_buffers(self) -> (ReceiveBufferWithZirconSocket, SendBufferWithZirconSocket) {
+    fn into_buffers(
+        self,
+        buffer_sizes: BufferSizes,
+    ) -> (ReceiveBufferWithZirconSocket, SendBufferWithZirconSocket) {
         let Self(socket, notifier) = self;
+        let BufferSizes {} = buffer_sizes;
         socket
             .signal_peer(zx::Signals::NONE, ZXSIO_SIGNAL_CONNECTED)
             .expect("failed to signal that the connection is established");
@@ -139,15 +144,16 @@ impl TcpNonSyncContext for crate::bindings::BindingsNonSyncCtxImpl {
             .expect("failed to signal that the new connection is available");
     }
 
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
-    {
+    fn new_passive_open_buffers(
+        buffer_sizes: BufferSizes,
+    ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
         let (local, peer) =
             zx::Socket::create(zx::SocketOpts::STREAM).expect("failed to create sockets");
         let socket = Arc::new(local);
         let notifier = NeedsDataNotifier::default();
         let watcher = notifier.watcher();
         let (rbuf, sbuf) =
-            LocalZirconSocketAndNotifier(Arc::clone(&socket), notifier).into_buffers();
+            LocalZirconSocketAndNotifier(Arc::clone(&socket), notifier).into_buffers(buffer_sizes);
         (rbuf, sbuf, PeerZirconSocketAndWatcher { peer, socket, watcher })
     }
 }

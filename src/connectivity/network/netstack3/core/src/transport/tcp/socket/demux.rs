@@ -32,12 +32,12 @@ use crate::{
         segment::Segment,
         seqnum::WindowSize,
         socket::{
-            do_send_inner, Acceptor, Connection, ConnectionId, ListenerId, MaybeClosedConnectionId,
-            MaybeListener, SocketAddr, TcpIpTransportContext, TcpNonSyncContext, TcpSyncContext,
-            TimerId,
+            do_send_inner, Acceptor, Connection, ConnectionId, Listener, ListenerId,
+            MaybeClosedConnectionId, MaybeListener, SocketAddr, TcpIpTransportContext,
+            TcpNonSyncContext, TcpSyncContext, TimerId,
         },
         state::{BufferProvider, Closed, Initial, State},
-        Control, UserError,
+        BufferSizes, Control, UserError,
     },
 };
 
@@ -46,8 +46,10 @@ impl<C: TcpNonSyncContext> BufferProvider<C::ReceiveBuffer, C::SendBuffer> for C
 
     type PassiveOpen = C::ReturnedBuffers;
 
-    fn new_passive_open_buffers() -> (C::ReceiveBuffer, C::SendBuffer, Self::PassiveOpen) {
-        <C as TcpNonSyncContext>::new_passive_open_buffers()
+    fn new_passive_open_buffers(
+        buffer_sizes: BufferSizes,
+    ) -> (C::ReceiveBuffer, C::SendBuffer, Self::PassiveOpen) {
+        <C as TcpNonSyncContext>::new_passive_open_buffers(buffer_sizes)
     }
 }
 
@@ -201,15 +203,15 @@ where
                             .get_by_id(&listener_id)
                             .expect("invalid listener_id");
 
-                        let listener = match maybe_listener {
-                            MaybeListener::Bound => {
+                        let Listener {pending, backlog, buffer_sizes, ready: _} = match maybe_listener {
+                            MaybeListener::Bound(_bound) => {
                                 // If the socket is only bound, but not listening.
                                 return false;
                             }
                             MaybeListener::Listener(listener) => listener,
                         };
 
-                        if listener.pending.len() == listener.backlog.get() {
+                        if pending.len() == backlog.get() {
                             // TODO(https://fxbug.dev/101993): Increment the counter.
                             trace!(
                                 "incoming SYN dropped because of the full backlog of the listener"
@@ -243,7 +245,7 @@ where
                             SocketAddr { ip: ip_sock.remote_ip().clone(), port: remote_port },
                         );
 
-                        let mut state = State::Listen(Closed::<Initial>::listen(isn));
+                        let mut state = State::Listen(Closed::<Initial>::listen(isn, buffer_sizes.clone()));
                         let reply = assert_matches!(
                             state.on_segment::<_, C>(incoming, now),
                             (reply, None) => reply
@@ -288,7 +290,7 @@ where
                                 .expect("the listener must still be active");
 
                             match maybe_listener {
-                                MaybeListener::Bound => {
+                                MaybeListener::Bound(_bound) => {
                                     unreachable!(
                                         "the listener must be active because we got here"
                                     );

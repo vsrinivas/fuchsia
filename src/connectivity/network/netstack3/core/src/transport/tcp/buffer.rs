@@ -20,6 +20,7 @@ use crate::transport::tcp::{
     segment::Payload,
     seqnum::{SeqNum, WindowSize},
     state::Takeable,
+    BufferSizes,
 };
 
 /// Common super trait for both sending and receiving buffer.
@@ -577,11 +578,12 @@ impl Assembler {
 /// pair of receive and send buffers.
 pub trait IntoBuffers<R: ReceiveBuffer, S: SendBuffer> {
     /// Converts to receive and send buffers.
-    fn into_buffers(self) -> (R, S);
+    fn into_buffers(self, buffer_sizes: BufferSizes) -> (R, S);
 }
 
 impl<R: Default + ReceiveBuffer, S: Default + SendBuffer> IntoBuffers<R, S> for () {
-    fn into_buffers(self) -> (R, S) {
+    fn into_buffers(self, buffer_sizes: BufferSizes) -> (R, S) {
+        let BufferSizes {} = buffer_sizes;
         Default::default()
     }
 }

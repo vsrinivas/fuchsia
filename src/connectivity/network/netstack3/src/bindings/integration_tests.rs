@@ -32,7 +32,10 @@ use netstack3_core::{
         IpExt,
     },
     transport::{
-        tcp::socket::{ListenerId, TcpNonSyncContext},
+        tcp::{
+            socket::{ListenerId, TcpNonSyncContext},
+            BufferSizes,
+        },
         udp::{BufferUdpContext, UdpBoundId, UdpContext},
     },
     Ctx, NonSyncContext, TimerId,
@@ -190,9 +193,10 @@ impl TcpNonSyncContext for TestNonSyncCtx {
 
     fn on_new_connection(&mut self, _listener: ListenerId) {}
 
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
-    {
-        BindingsNonSyncCtxImpl::new_passive_open_buffers()
+    fn new_passive_open_buffers(
+        buffer_sizes: BufferSizes,
+    ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
+        BindingsNonSyncCtxImpl::new_passive_open_buffers(buffer_sizes)
     }
 }
 

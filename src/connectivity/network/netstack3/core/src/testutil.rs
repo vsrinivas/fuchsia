@@ -30,7 +30,7 @@ use crate::{
         IpLayerEvent, SendIpPacketMeta,
     },
     transport::{
-        tcp::{buffer::RingBuffer, socket::TcpNonSyncContext},
+        tcp::{buffer::RingBuffer, socket::TcpNonSyncContext, BufferSizes},
         udp::{BufferUdpContext, UdpContext},
     },
     Ctx, StackStateBuilder, SyncCtx, TimerId,
@@ -130,8 +130,10 @@ impl TcpNonSyncContext for FakeNonSyncCtx {
 
     fn on_new_connection(&mut self, _listener: crate::transport::tcp::socket::ListenerId) {}
 
-    fn new_passive_open_buffers() -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers)
-    {
+    fn new_passive_open_buffers(
+        buffer_sizes: BufferSizes,
+    ) -> (Self::ReceiveBuffer, Self::SendBuffer, Self::ReturnedBuffers) {
+        let BufferSizes {} = buffer_sizes;
         (RingBuffer::default(), RingBuffer::default(), ())
     }
 }
