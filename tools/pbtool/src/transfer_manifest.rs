@@ -85,11 +85,13 @@ impl GenerateTransferManifest {
         system(&product_bundle.system_b)?;
         system(&product_bundle.system_r)?;
 
-        // Add the tuf metadata by walking the metadata directory and listing all the files inside.
-        if let Some(repository) = &product_bundle.repository {
+        // Add the tuf metadata by walking the metadata directories and listing all the files inside.
+        for repository in &product_bundle.repositories {
             let entries: Result<Vec<DirEntry>, _> =
                 WalkDir::new(&repository.metadata_path).into_iter().collect();
-            let entries = entries.context("collecting files in tuf metadata")?;
+            let entries = entries.with_context(|| {
+                format!("collecting tuf metadata from repository: {}", repository.name)
+            })?;
             for entry in entries {
                 if entry.file_type().is_file() {
                     product_bundle_entries.push(ArtifactEntry {
@@ -108,9 +110,11 @@ impl GenerateTransferManifest {
         });
 
         // Add all the blobs to the transfer manifest.
-        if let Some(repository) = &product_bundle.repository {
-            let blobs =
-                product_bundle.blobs().await.context("gathering blobs from product bundle")?;
+        for repository in &product_bundle.repositories {
+            let blobs = repository
+                .blobs()
+                .await
+                .with_context(|| format!("gathering blobs from repository: {}", repository.name))?;
             let blob_entries =
                 blobs.into_iter().map(|p| ArtifactEntry { name: p.into() }).collect();
             let local = diff_paths(&repository.blobs_path, canonical_product_bundle_path)
@@ -165,7 +169,7 @@ mod tests {
             }),
             system_b: None,
             system_r: None,
-            repository: None,
+            repositories: vec![],
         });
         pb.write(&pb_path).unwrap();
 

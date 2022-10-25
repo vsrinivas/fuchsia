@@ -47,15 +47,18 @@ pub struct ProductBundleV2 {
     #[serde(default)]
     pub system_r: Option<AssemblyManifest>,
 
-    /// The repository that holds the TUF metadata, packages, and blobs.
+    /// The repositories that hold the TUF metadata, packages, and blobs.
     #[serde(default)]
-    pub repository: Option<Repository>,
+    pub repositories: Vec<Repository>,
 }
 
 /// A repository that holds all the packages, blobs, and keys.
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 #[serde(deny_unknown_fields)]
 pub struct Repository {
+    /// The unique name of the repository, such as "fuchsia.com".
+    pub name: String,
+
     /// The path to the TUF repository, relative to the product bundle directory.
     pub metadata_path: Utf8PathBuf,
 
@@ -63,31 +66,30 @@ pub struct Repository {
     pub blobs_path: Utf8PathBuf,
 }
 
-impl ProductBundleV2 {
+impl Repository {
     /// Return the paths-on-host of the blobs contained in the product bundle.
     pub async fn blobs(&self) -> Result<HashSet<Utf8PathBuf>> {
         let mut all_blobs = HashSet::<Utf8PathBuf>::new();
-        if let Some(Repository { metadata_path, blobs_path }) = &self.repository {
-            let repo = FileSystemRepository::new(metadata_path.clone(), blobs_path.clone());
-            let mut client =
-                RepoClient::from_trusted_remote(&repo).await.context("creating the repo client")?;
-            client.update().await.context("updating the repo metadata")?;
-            let packages =
-                client.list_packages(ListFields::empty()).await.context("listing packages")?;
-            for package in &packages {
-                if let Some(name) = &package.name {
-                    if let Some(blobs) =
-                        client.show_package(name.clone()).await.context("showing package")?
-                    {
-                        all_blobs
-                            .extend(blobs.iter().filter_map(|e| e.hash.clone()).map(|p| p.into()));
-                    }
+        let repo = FileSystemRepository::new(self.metadata_path.clone(), self.blobs_path.clone());
+        let mut client =
+            RepoClient::from_trusted_remote(&repo).await.context("creating the repo client")?;
+        client.update().await.context("updating the repo metadata")?;
+        let packages =
+            client.list_packages(ListFields::empty()).await.context("listing packages")?;
+        for package in &packages {
+            if let Some(name) = &package.name {
+                if let Some(blobs) =
+                    client.show_package(name.clone()).await.context("showing package")?
+                {
+                    all_blobs.extend(blobs.iter().filter_map(|e| e.hash.clone()).map(|p| p.into()));
                 }
             }
         }
         Ok(all_blobs)
     }
+}
 
+impl ProductBundleV2 {
     /// Convert all the paths from relative to absolute, assuming `product_bundle_dir` is the
     /// current base all the paths are relative to.
     ///
@@ -124,7 +126,7 @@ impl ProductBundleV2 {
         canonicalize_system(&mut self.system_b)?;
         canonicalize_system(&mut self.system_r)?;
 
-        if let Some(repository) = &mut self.repository {
+        for repository in &mut self.repositories {
             let canonicalize_dir = |path: &Utf8PathBuf| -> Result<Utf8PathBuf> {
                 let dir = product_bundle_dir.join(path);
                 // Create the directory to ensure that canonicalize will work.
@@ -178,7 +180,7 @@ impl ProductBundleV2 {
         relativize_system(&mut self.system_b)?;
         relativize_system(&mut self.system_r)?;
 
-        if let Some(repository) = &mut self.repository {
+        for repository in &mut self.repositories {
             let relativize_dir = |path: &Utf8PathBuf| -> Result<Utf8PathBuf> {
                 let dir = diff_paths(&path, &product_bundle_dir).context("rebasing repository")?;
                 let path = Utf8PathBuf::from_path_buf(dir)
@@ -218,7 +220,7 @@ mod tests {
             system_a: None,
             system_b: None,
             system_r: None,
-            repository: None,
+            repositories: vec![],
         };
         let result = pb.canonicalize_paths(&PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
@@ -270,7 +272,7 @@ mod tests {
             }),
             system_b: None,
             system_r: None,
-            repository: None,
+            repositories: vec![],
         };
         let result = pb.canonicalize_paths(tempdir.path());
         assert!(result.is_ok());
@@ -289,7 +291,7 @@ mod tests {
             system_a: None,
             system_b: None,
             system_r: None,
-            repository: None,
+            repositories: vec![],
         };
         let result = pb.relativize_paths(&PathBuf::from("path/to/product_bundle"));
         assert!(result.is_ok());
@@ -341,7 +343,7 @@ mod tests {
             }),
             system_b: None,
             system_r: None,
-            repository: None,
+            repositories: vec![],
         };
         let result = pb.relativize_paths(tempdir.path());
         assert!(result.is_ok());
@@ -358,10 +360,11 @@ mod tests {
             system_a: None,
             system_b: None,
             system_r: None,
-            repository: Some(Repository {
+            repositories: vec![Repository {
+                name: "fuchsia.com".into(),
                 metadata_path: dir.join("repository"),
                 blobs_path: dir.join("repository").join("blobs"),
-            }),
+            }],
         };
 
         let expected = HashSet::from([
@@ -373,7 +376,7 @@ mod tests {
             "ecc11f7f4b763c5a21be2b4159c9818bbe22ca7e6d8100a72f6a41d3d7b827a9".into(),
         ]);
 
-        let blobs = pb.blobs().await.unwrap();
+        let blobs = pb.repositories[0].blobs().await.unwrap();
         assert_eq!(expected, blobs);
     }
 }

@@ -25,7 +25,7 @@ pub fn create_flash_manifest(args: CreateFlashManifestArgs) -> Result<()> {
         system_a: args.system_a.as_ref().map(manifest_from_file).transpose()?,
         system_b: args.system_b.as_ref().map(manifest_from_file).transpose()?,
         system_r: args.system_r.as_ref().map(manifest_from_file).transpose()?,
-        repository: None,
+        repositories: vec![],
     });
 
     // Create a flash manifest from the product bundle.

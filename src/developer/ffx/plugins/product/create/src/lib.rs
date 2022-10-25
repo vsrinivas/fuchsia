@@ -36,7 +36,7 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
     let (system_r, packages_r) =
         load_assembly_manifest(&cmd.system_r, &cmd.out_dir.join("system_r"))?;
 
-    let repository = if let Some(tuf_keys) = &cmd.tuf_keys {
+    let repositories = if let Some(tuf_keys) = &cmd.tuf_keys {
         let repo_path = Utf8Path::from_path(&cmd.out_dir).context("Creating repository path")?;
         let metadata_path = repo_path.join("repository");
         let blobs_path = repo_path.join("blobs");
@@ -50,12 +50,13 @@ pub async fn pb_create(cmd: CreateCommand) -> Result<()> {
             .commit()
             .await
             .context("Building the repo")?;
-        Some(Repository { metadata_path, blobs_path })
+        let name = "fuchsia.com".to_string();
+        vec![Repository { name, metadata_path, blobs_path }]
     } else {
-        None
+        vec![]
     };
 
-    let product_bundle = ProductBundleV2 { partitions, system_a, system_b, system_r, repository };
+    let product_bundle = ProductBundleV2 { partitions, system_a, system_b, system_r, repositories };
     let product_bundle = ProductBundle::V2(product_bundle);
     product_bundle.write(&cmd.out_dir).context("writing product bundle")?;
     Ok(())
@@ -241,7 +242,7 @@ mod test {
                 system_a: None,
                 system_b: None,
                 system_r: None,
-                repository: None,
+                repositories: vec![],
             })
         );
     }
@@ -278,7 +279,7 @@ mod test {
                 system_a: Some(AssemblyManifest::default()),
                 system_b: None,
                 system_r: Some(AssemblyManifest::default()),
-                repository: None,
+                repositories: vec![],
             })
         );
     }
@@ -319,10 +320,11 @@ mod test {
                 system_a: Some(AssemblyManifest::default()),
                 system_b: None,
                 system_r: Some(AssemblyManifest::default()),
-                repository: Some(Repository {
+                repositories: vec![Repository {
+                    name: "fuchsia.com".into(),
                     metadata_path: Utf8PathBuf::from_path_buf(pb_dir.join("repository")).unwrap(),
                     blobs_path: Utf8PathBuf::from_path_buf(pb_dir.join("blobs")).unwrap(),
-                }),
+                }],
             })
         );
     }
