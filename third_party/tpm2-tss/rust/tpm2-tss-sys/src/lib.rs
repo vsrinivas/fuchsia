@@ -3250,9 +3250,19 @@ pub struct TSS2_TCTI_OPAQUE_CONTEXT_BLOB {
 }
 pub type TSS2_TCTI_CONTEXT = TSS2_TCTI_OPAQUE_CONTEXT_BLOB;
 extern "C" {
+    #[doc = " Default TCTI initializer compatible with the function pointer required"]
+    #[doc = " by TSS2."]
     pub fn Tss2_Tcti_Fuchsia_Init(
         tctiContext: *mut TSS2_TCTI_CONTEXT,
         size: *mut size_t,
+        conf: *const ::std::os::raw::c_char,
+    ) -> TSS2_RC;
+}
+extern "C" {
+    #[doc = " A convenience function that handles allocation internally. This is used by"]
+    #[doc = " the Rust bindings to simplify the memory management."]
+    pub fn Tss2_Tcti_Fuchsia_Init_Ex(
+        tctiContext: *mut *mut TSS2_TCTI_CONTEXT,
         conf: *const ::std::os::raw::c_char,
     ) -> TSS2_RC;
 }
