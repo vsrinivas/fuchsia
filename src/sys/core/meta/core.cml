@@ -793,11 +793,11 @@
             subdir: "gpu",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-gpu-dependency-injection",
             to: "#vulkan_loader",
-            subdir: "class/gpu-dependency-injection",
+            subdir: "gpu-dependency-injection",
         },
         {
             directory: "dev",

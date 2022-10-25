@@ -311,11 +311,11 @@
             subdir: "class/goldfish-sync",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-gpu",
             to: "#test_manager",
-            subdir: "class/gpu",
+            subdir: "gpu",
         },
         {
             directory: "dev",
