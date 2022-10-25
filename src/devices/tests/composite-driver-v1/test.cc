@@ -49,31 +49,14 @@ TEST_P(CompositeTest, DriversExist) {
   EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/child_a", &out));
   EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/child_b", &out));
   EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/child_c", &out));
-  if (GetParam()) {
-    EXPECT_EQ(ZX_ERR_IO,
-              device_watcher::RecursiveWaitForFile(root_fd, "composite_driver_v1", &out));
-    EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
-                         root_fd, "composite_driver_v1/composite_child", &out));
-  } else {
-    EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
-                         root_fd, "sys/test/child_a/composite_driver_v1", &out));
-    EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
-                         root_fd, "sys/test/child_a/composite_driver_v1/composite_child", &out));
-  }
+  EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
+                       root_fd, "sys/test/child_a/composite_driver_v1/composite_child", &out));
 
   EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_a", &out));
   EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_b", &out));
   EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(root_fd, "sys/test/fragment_c", &out));
-  if (GetParam()) {
-    EXPECT_EQ(ZX_ERR_IO, device_watcher::RecursiveWaitForFile(root_fd, "composite-device", &out));
-    EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
-                         root_fd, "composite-device/composite_child", &out));
-  } else {
-    EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
-                         root_fd, "sys/test/fragment_a/composite-device", &out));
-    EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
-                         root_fd, "sys/test/fragment_a/composite-device/composite_child", &out));
-  }
+  EXPECT_EQ(ZX_OK, device_watcher::RecursiveWaitForFile(
+                       root_fd, "sys/test/fragment_a/composite-device/composite_child", &out));
 }
 
 INSTANTIATE_TEST_SUITE_P(CompositeTest, CompositeTest, testing::Bool(),

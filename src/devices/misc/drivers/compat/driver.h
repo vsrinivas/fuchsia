@@ -70,6 +70,8 @@ class Driver : public driver::DriverBase {
   uint32_t GetNextDeviceId() { return next_device_id_++; }
 
  private:
+  bool IsComposite();
+
   // Gets the root resource for the DFv1 driver.
   fpromise::promise<zx::resource, zx_status_t> GetRootResource(
       const fidl::WireSharedClient<fuchsia_boot::RootResource>& root_resource);
