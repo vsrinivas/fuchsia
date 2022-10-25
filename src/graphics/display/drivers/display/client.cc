@@ -1543,8 +1543,6 @@ void Client::TearDown() {
   layers_.clear();
 
   ApplyConfig();
-
-  proxy_->OnClientDead();
 }
 
 void Client::TearDownTest() { server_handle_ = ZX_HANDLE_INVALID; }
@@ -1607,11 +1605,11 @@ Client::Init(zx::channel server_channel) {
   fidl::OnUnboundFn<Client> cb = [](Client* client, fidl::UnbindInfo info,
                                     fidl::ServerEnd<fuchsia_hardware_display::Controller> ch) {
     sync_completion_signal(client->fidl_unbound());
-    // DdkRelease will cancel the FIDL binding before destroying the client. Therefore, we
-    // should TearDown() so that no further tasks are scheduled on the controller loop.
-    if (!info.is_user_initiated()) {
-      client->TearDown();
-    }
+    // Make sure we TearDown() so that no further tasks are scheduled on the controller loop.
+    client->TearDown();
+
+    // The client has died so tell the Proxy which will free the classes.
+    client->proxy_->OnClientDead();
   };
 
   auto binding = fidl::BindServer(controller_->loop().dispatcher(), std::move(server_channel), this,
@@ -1865,9 +1863,16 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 }  // namespace display
 
 void ClientProxy::OnClientDead() {
+  // Copy over the on_client_dead function so we can call it after
+  // freeing the class.
+  fit::function<void()> on_client_dead = std::move(on_client_dead_);
+
+  // This function deletes `this`. Be careful about not using class variables
+  // it completes.
   controller_->OnClientDead(this);
-  if (on_client_dead_) {
-    on_client_dead_();
+
+  if (on_client_dead) {
+    on_client_dead();
   }
 }
 
@@ -1883,23 +1888,10 @@ void ClientProxy::UpdateConfigStampMapping(config_stamp_pair_t stamps) {
 void ClientProxy::CloseTest() { handler_.TearDownTest(); }
 
 void ClientProxy::CloseOnControllerLoop() {
-  mtx_t mtx;
-  mtx_init(&mtx, mtx_plain);
-  cnd_t cnd;
-  cnd_init(&cnd);
-  bool done = false;
-  mtx_lock(&mtx);
   auto task = new async::Task();
-  task->set_handler([client_handler = &handler_, cnd_ptr = &cnd, mtx_ptr = &mtx, done_ptr = &done](
-                        async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
-    mtx_lock(mtx_ptr);
-
+  task->set_handler([client_handler = &handler_](async_dispatcher_t* dispatcher, async::Task* task,
+                                                 zx_status_t status) {
     client_handler->TearDown();
-
-    *done_ptr = true;
-    cnd_signal(cnd_ptr);
-    mtx_unlock(mtx_ptr);
-
     delete task;
   });
   if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
@@ -1908,43 +1900,7 @@ void ClientProxy::CloseOnControllerLoop() {
     // anyway.
     delete task;
     handler_.TearDown();
-  } else {
-    while (!done) {
-      cnd_wait(&cnd, &mtx);
-    }
   }
-  mtx_unlock(&mtx);
-}
-
-zx_status_t ClientProxy::DdkClose(uint32_t flags) {
-  zxlogf(INFO, "DdkClose");
-  CloseOnControllerLoop();
-  return ZX_OK;
-}
-
-void ClientProxy::DdkRelease() {
-  // Schedule release on controller loop. This way, we can safely cancel any pending tasks before
-  // releasing the client.
-  auto* task = new async::Task();
-  task->set_handler(
-      [this](async_dispatcher_t* /*dispatcher*/, async::Task* task, zx_status_t /*status*/) {
-        mtx_lock(&this->task_mtx_);
-        for (auto& t : this->client_scheduled_tasks_) {
-          t->Cancel();
-        }
-        client_scheduled_tasks_.clear();
-        mtx_unlock(&this->task_mtx_);
-        delete task;
-        delete this;
-      });
-
-  // The controller loop is shut down in Controller::DdkRelease, so it is safe to post tasks here.
-  this->handler_.CancelFidlBind();
-  // The unbind function will run on the controller loop, but it will not be scheduled until all
-  // references are dropped. Wait for the handler to actually run.
-  sync_completion_wait(handler_.fidl_unbound(), ZX_TIME_INFINITE);
-  auto status = task->Post(controller_->loop().dispatcher());
-  ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 zx_status_t ClientProxy::Init(inspect::Node* parent_node, zx::channel server_channel) {
@@ -1964,8 +1920,7 @@ zx_status_t ClientProxy::Init(inspect::Node* parent_node, zx::channel server_cha
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer,
                          uint32_t client_id, fit::function<void()> on_client_dead)
-    : ClientParent(controller->zxdev()),
-      controller_(controller),
+    : controller_(controller),
       is_vc_(is_vc),
       handler_(controller_, this, is_vc_, use_kernel_framebuffer, client_id),
       on_client_dead_(std::move(on_client_dead)) {
@@ -1974,8 +1929,7 @@ ClientProxy::ClientProxy(Controller* controller, bool is_vc, bool use_kernel_fra
 
 ClientProxy::ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer,
                          uint32_t client_id, zx::channel server_channel)
-    : ClientParent(nullptr),
-      controller_(controller),
+    : controller_(controller),
       is_vc_(is_vc),
       handler_(controller_, this, is_vc_, use_kernel_framebuffer, client_id,
                std::move(server_channel)) {

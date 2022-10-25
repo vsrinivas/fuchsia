@@ -22,6 +22,7 @@
 #include <lib/zx/vmo.h>
 
 #include <functional>
+#include <list>
 #include <memory>
 #include <queue>
 
@@ -176,6 +177,8 @@ class Controller : public ControllerParent,
   ddk::DisplayCaptureImplProtocolClient dc_capture_;
   ddk::DisplayClampRgbImplProtocolClient dc_clamp_rgb_;
   ddk::I2cImplProtocolClient i2c_;
+
+  std::list<std::unique_ptr<ClientProxy>> clients_ __TA_GUARDED(mtx());
 
   std::atomic<zx::time> last_vsync_timestamp_{};
   inspect::UintProperty last_vsync_ns_property_;

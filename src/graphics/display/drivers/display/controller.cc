@@ -669,6 +669,9 @@ void Controller::OnClientDead(ClientProxy* client) {
     ZX_DEBUG_ASSERT_MSG(false, "Dead client is neither vc nor primary\n");
   }
   HandleClientOwnershipChanges();
+
+  clients_.remove_if(
+      [client](std::unique_ptr<ClientProxy>& list_client) { return list_client.get() == client; });
 }
 
 bool Controller::GetPanelConfig(uint64_t display_id,
@@ -781,12 +784,8 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
   // resolved.
   bool use_kernel_framebuffer = is_vc && kernel_framebuffer_enabled_;
 
-  auto client = fbl::make_unique_checked<ClientProxy>(&ac, this, is_vc, use_kernel_framebuffer,
-                                                      next_client_id_++, std::move(on_client_dead));
-  if (!ac.check()) {
-    zxlogf(DEBUG, "Failed to alloc client");
-    return ZX_ERR_NO_MEMORY;
-  }
+  auto client = std::make_unique<ClientProxy>(this, is_vc, use_kernel_framebuffer,
+                                              next_client_id_++, std::move(on_client_dead));
 
   zx_status_t status = client->Init(&root_, std::move(client_channel));
   if (status != ZX_OK) {
@@ -794,16 +793,15 @@ zx_status_t Controller::CreateClient(bool is_vc, zx::channel device_channel,
     return status;
   }
 
-  status = client->DdkAdd(ddk::DeviceAddArgs(is_vc ? "dc-vc" : "dc")
-                              .set_flags(DEVICE_ADD_INSTANCE)
-                              .set_client_remote(std::move(device_channel)));
+  client->set_device_channel(std::move(device_channel));
 
   if (status != ZX_OK) {
     zxlogf(DEBUG, "Failed to add client %d", status);
     return status;
   }
 
-  ClientProxy* client_ptr = client.release();
+  ClientProxy* client_ptr = client.get();
+  clients_.push_back(std::move(client));
 
   zxlogf(DEBUG, "New %s client [%d] connected.", is_vc ? "dc-vc" : "dc", client_ptr->id());
 
@@ -956,15 +954,23 @@ zx_status_t Controller::Bind(std::unique_ptr<display::Controller>* device_ptr) {
 
 void Controller::DdkUnbind(ddk::UnbindTxn txn) {
   zxlogf(INFO, "Controller::DdkUnbind");
+
   fbl::AutoLock lock(mtx());
   unbinding_ = true;
+  // Tell each client to start releasing. We know `clients_` will not be
+  // modified here because we are holding the lock.
+  for (auto& client : clients_) {
+    client->CloseOnControllerLoop();
+  }
+
   txn.Reply();
 }
 
 void Controller::DdkRelease() {
   vsync_monitor_.Cancel();
-  // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_
+  // Clients may have active work holding mtx_ in loop_.dispatcher(), so shut it down without mtx_.
   loop_.Shutdown();
+
   // Set an empty config so that the display driver releases resources.
   const display_config_t* configs;
   {

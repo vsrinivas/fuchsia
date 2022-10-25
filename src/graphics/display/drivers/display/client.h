@@ -357,12 +357,9 @@ class Client : public fidl::WireServer<fuchsia_hardware_display::Controller> {
   std::map<uint64_t, fbl::RefPtr<GammaTables>> gamma_table_map_;
 };
 
-// ClientProxy manages interactions between its Client instance and the ddk and the
-// controller. Methods on this class are thread safe. This is an instance
-// device, so ddk::Unbindable is not implemented because it would never be
-// called.
-using ClientParent = ddk::Device<ClientProxy, ddk::Closable>;
-class ClientProxy : public ClientParent {
+// ClientProxy manages interactions between its Client instance and the
+// controller. Methods on this class are thread safe.
+class ClientProxy {
  public:
   // "client_id" is assigned by the Controller to distinguish clients.
   ClientProxy(Controller* controller, bool is_vc, bool use_kernel_framebuffer, uint32_t client_id,
@@ -375,8 +372,9 @@ class ClientProxy : public ClientParent {
   ~ClientProxy();
   zx_status_t Init(inspect::Node* parent_node, zx::channel server_channel);
 
-  zx_status_t DdkClose(uint32_t flags);
-  void DdkRelease();
+  // Schedule a task on the controller loop to close this ClientProxy and
+  // have it be freed.
+  void CloseOnControllerLoop();
 
   // Requires holding controller_->mtx() lock
   zx_status_t OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
@@ -442,8 +440,9 @@ class ClientProxy : public ClientParent {
   // stored due to client non-acknowledgement.
   static constexpr uint32_t kMaxImageHandles = 8;
 
+  void set_device_channel(zx::channel channel) { device_channel_ = std::move(channel); }
+
  protected:
-  void CloseOnControllerLoop();
   friend IntegrationTest;
 
   mtx_t mtx_;
@@ -484,6 +483,7 @@ class ClientProxy : public ClientParent {
   std::list<config_stamp_pair_t> pending_applied_config_stamps_;
 
  private:
+  zx::channel device_channel_;
   inspect::Node node_;
   inspect::BoolProperty is_owner_property_;
   inspect::ValueList static_properties_;
