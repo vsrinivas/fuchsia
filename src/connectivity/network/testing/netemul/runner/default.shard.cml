@@ -13,10 +13,13 @@
             protocol: "fuchsia.sys2.LifecycleController",
             from: "framework",
         },
-        { protocol: "fuchsia.sys2.EventSource" },
         {
-            event: [ "destroyed" ],
-            from: "framework",
+            event_stream: [ "destroyed_v2" ],
+            from: "parent",
+
+            // TODO(https://fxbug.dev/81980): Remove path when fully migrated to events_v2
+            // and component manager exposes the event stream at the correct path.
+            path: "/svc/fuchsia.sys2.EventStream2",
         },
     ],
     expose: [

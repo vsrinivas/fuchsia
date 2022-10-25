@@ -4,7 +4,7 @@
 
 use anyhow::{anyhow, Context as _};
 use async_utils::stream::FlattenUnorderedExt as _;
-use component_events::events::{self, Event as _};
+use component_events::events::{self};
 use fidl::endpoints::Proxy as _;
 use fidl::endpoints::{ControlHandle as _, RequestStream as _};
 use fidl_fuchsia_component as fcomponent;
@@ -116,16 +116,14 @@ async fn handle_runner_request(
                     // Retrieve the component event stream from the test root so we can observe its
                     // `destroyed` lifecycle event. The test root will only be destroyed once all
                     // its child components have stopped.
-                    let event_source = events::EventSource::from_proxy(
-                        connect_to_protocol_at_dir_root::<fsys2::EventSourceMarker>(&svc_dir)
-                            .context("connect to protocol")?,
-                    );
-                    let mut event_stream = event_source
-                        .subscribe(vec![events::EventSubscription::new(vec![
-                            events::Destroyed::NAME,
-                        ])])
+                    let connection =
+                        connect_to_protocol_at_dir_root::<fsys2::EventStream2Marker>(&svc_dir)
+                            .context("connect to protocol")?;
+                    connection
+                        .wait_for_ready()
                         .await
-                        .context("failed to subscribe to `Destroyed` events")?;
+                        .context("wait for event subscription to complete")?;
+                    let mut event_stream = events::EventStream::new_v2(connection);
                     let test_stopped_fut = async move {
                         component_events::matcher::EventMatcher::ok()
                             .moniker(".")
