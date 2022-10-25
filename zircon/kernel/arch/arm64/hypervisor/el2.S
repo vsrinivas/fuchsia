@@ -380,14 +380,14 @@ FUNCTION_LABEL(el2_hvc_psci)
 FUNCTION_LABEL(el2_hvc_mexec)
     br x0
 
-// zx_status_t arm64_el2_tlbi_ipa(zx_paddr_t vttbr, zx_vaddr_t addr, bool terminal);
+// zx_status_t arm64_el2_tlbi_ipa(uint64_t vttbr, zx_vaddr_t addr, bool terminal);
 FUNCTION(arm64_el2_tlbi_ipa)
     mov reg_xa, 0
     hvc 2
     ret
 END_FUNCTION(arm64_el2_tlbi_ipa)
 
-// zx_status_t arm64_el2_tlbi_vmid(zx_paddr_t vttbr);
+// zx_status_t arm64_el2_tlbi_vmid(uint64_t vttbr);
 FUNCTION(arm64_el2_tlbi_vmid)
     mov reg_xa, 1
     hvc 2
@@ -453,7 +453,7 @@ FUNCTION_LABEL(el2_hvc_off)
 
     exception_return ZX_OK
 
-// zx_status_t arm64_el2_enter(zx_paddr_t vttbr, zx_paddr_t state, uint64_t hcr);
+// zx_status_t arm64_el2_enter(uint64_t vttbr, zx_paddr_t state, uint64_t hcr);
 FUNCTION(arm64_el2_enter)
     hvc 5
     ret

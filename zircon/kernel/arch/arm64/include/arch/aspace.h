@@ -239,7 +239,7 @@ class ArmVmICacheConsistencyManager final : public ArchVmICacheConsistencyManage
   bool need_invalidate_ = false;
 };
 
-static inline paddr_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {
+static inline uint64_t arm64_vttbr(uint16_t vmid, paddr_t baddr) {
   return static_cast<paddr_t>(vmid) << 48 | baddr;
 }
 

@@ -717,7 +717,7 @@ void ArmArchVmAspace::FlushTLBEntry(vaddr_t vaddr, bool terminal) const {
       return;
     }
     case ArmAspaceType::kGuest: {
-      paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+      uint64_t vttbr = arm64_vttbr(asid_, tt_phys_);
       __UNUSED zx_status_t status = arm64_el2_tlbi_ipa(vttbr, vaddr, terminal);
       DEBUG_ASSERT(status == ZX_OK);
       return;
@@ -743,7 +743,7 @@ void ArmArchVmAspace::FlushAsid() const {
       return;
     }
     case ArmAspaceType::kGuest: {
-      paddr_t vttbr = arm64_vttbr(asid_, tt_phys_);
+      uint64_t vttbr = arm64_vttbr(asid_, tt_phys_);
       zx_status_t status = arm64_el2_tlbi_vmid(vttbr);
       DEBUG_ASSERT(status == ZX_OK);
       return;
