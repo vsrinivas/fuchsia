@@ -72,6 +72,14 @@ class ExampleProtocolMethodRequest {
     return storage_.arg;
   }
 
+  // Setter for arg.
+  //
+
+  ExampleProtocolMethodRequest& arg(::test_exampleusing::Empty value) {
+    storage_.arg = std::move(value);
+    return *this;
+  }
+
   ExampleProtocolMethodRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleProtocolMethodRequest(Storage_{
                                                                                                  .arg = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                              }) {}
@@ -132,6 +140,14 @@ class ExampleStruct {
     return storage_.member;
   }
 
+  // Setter for member.
+  //
+
+  ExampleStruct& member(uint32_t value) {
+    storage_.member = std::move(value);
+    return *this;
+  }
+
   ExampleStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleStruct(Storage_{
                                                                                   .member = {},
                                                                               }) {}
@@ -180,6 +196,14 @@ class ExampleTable {
 
   const std::optional<uint32_t>& member() const { return storage_.member; }
   ::std::optional<uint32_t>& member() { return storage_.member; }
+
+  // Setter for member.
+  //
+
+  ExampleTable& member(std::optional<uint32_t> value) {
+    storage_.member = std::move(value);
+    return *this;
+  }
 
   ExampleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleTable(Storage_{}) {}
 
@@ -248,8 +272,17 @@ class ExampleUnion {
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the variant member.
+  //
+
+  ExampleUnion& variant(uint32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   ExampleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -340,8 +373,17 @@ class ExampleXUnion {
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the variant member.
+  //
+
+  ExampleXUnion& variant(uint32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   ExampleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)

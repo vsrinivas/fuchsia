@@ -63,6 +63,14 @@ class SuperFooRequest {
     return storage_.s;
   }
 
+  // Setter for s.
+  //
+
+  SuperFooRequest& s(::std::string value) {
+    storage_.s = std::move(value);
+    return *this;
+  }
+
   SuperFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SuperFooRequest(Storage_{
                                                                                     .s = {},
                                                                                 }) {}
@@ -121,6 +129,14 @@ class SuperFooResponse {
 
   int64_t& y() {
     return storage_.y;
+  }
+
+  // Setter for y.
+  //
+
+  SuperFooResponse& y(int64_t value) {
+    storage_.y = std::move(value);
+    return *this;
   }
 
   SuperFooResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SuperFooResponse(Storage_{

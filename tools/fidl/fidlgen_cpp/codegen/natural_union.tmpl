@@ -86,8 +86,17 @@ class {{ .Name }} {
     const ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_> {{ .Name }}() const {
       return ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_> {{ .Name }}() {
       return ::fidl::internal::UnionMemberView<{{ .NaturalIndex }}, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the {{ .Name }} member.
+    //
+    {{ .Docs }}
+    {{ $.Name }}& {{ .Name }}({{ .Type }} value) {
+      storage_->emplace<{{ .NaturalIndex }}>(std::move(value));
+      return *this;
     }
   {{- end }}
 

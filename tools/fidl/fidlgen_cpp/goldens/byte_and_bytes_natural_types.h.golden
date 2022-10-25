@@ -59,6 +59,14 @@ class ByteAndBytes {
     return storage_.single_byte;
   }
 
+  // Setter for single_byte.
+  //
+
+  ByteAndBytes& single_byte(uint8_t value) {
+    storage_.single_byte = std::move(value);
+    return *this;
+  }
+
   ByteAndBytes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ByteAndBytes(Storage_{
                                                                                  .single_byte = {},
                                                                              }) {}

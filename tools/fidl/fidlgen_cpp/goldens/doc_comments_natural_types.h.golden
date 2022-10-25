@@ -81,6 +81,17 @@ class Struct {
     return storage_.field;
   }
 
+  // Setter for field.
+  //
+
+  /// struct member comment #1
+  ///
+  /// struct member comment #3
+  Struct& field(int32_t value) {
+    storage_.field = std::move(value);
+    return *this;
+  }
+
   Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Struct(Storage_{
                                                                            .field = {},
                                                                        }) {}
@@ -157,8 +168,20 @@ class StrictUnion {
   const ::fidl::internal::UnionMemberView<1, Storage_> field() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> field() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the field member.
+  //
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  StrictUnion& field(int32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   StrictUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -252,8 +275,20 @@ class FlexibleUnion {
   const ::fidl::internal::UnionMemberView<1, Storage_> field() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> field() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the field member.
+  //
+
+  /// union member comment #1
+  ///
+  /// union member comment #3
+  FlexibleUnion& field(int32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -326,6 +361,17 @@ class Table {
   ///
   /// table field comment #3
   ::std::optional<int32_t>& field() { return storage_.field; }
+
+  // Setter for field.
+  //
+
+  /// table field comment #1
+  ///
+  /// table field comment #3
+  Table& field(std::optional<int32_t> value) {
+    storage_.field = std::move(value);
+    return *this;
+  }
 
   Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
 

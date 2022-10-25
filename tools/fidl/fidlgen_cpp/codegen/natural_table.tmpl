@@ -56,8 +56,17 @@ class {{ .Name }} {
   {{- range .Members }}
     {{ .Docs }}
     const std::optional<{{ .Type }}>& {{ .Name }}() const { return storage_.{{ .Name }}; }
+
     {{- .Docs }}
     ::std::optional<{{ .Type }}>& {{ .Name }}() { return storage_.{{ .Name }}; }
+
+    // Setter for {{ .Name }}.
+    //
+    {{ .Docs }}
+    {{ $.Name }}& {{ .Name }}(std::optional<{{ .Type }}> value) {
+      storage_.{{ .Name }} = std::move(value);
+      return *this;
+    }
   {{- end }}
 
   {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : {{ .Name }}(Storage_{}) {}

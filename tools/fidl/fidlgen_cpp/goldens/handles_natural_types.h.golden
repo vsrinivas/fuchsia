@@ -115,6 +115,14 @@ class Handles {
     return storage_.plain_handle;
   }
 
+  // Setter for plain_handle.
+  //
+
+  Handles& plain_handle(::zx::handle value) {
+    storage_.plain_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::bti&
   bti_handle() const {
     return storage_.bti_handle;
@@ -122,6 +130,14 @@ class Handles {
 
   ::zx::bti& bti_handle() {
     return storage_.bti_handle;
+  }
+
+  // Setter for bti_handle.
+  //
+
+  Handles& bti_handle(::zx::bti value) {
+    storage_.bti_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::channel&
@@ -133,6 +149,14 @@ class Handles {
     return storage_.channel_handle;
   }
 
+  // Setter for channel_handle.
+  //
+
+  Handles& channel_handle(::zx::channel value) {
+    storage_.channel_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::clock&
   clock_handle() const {
     return storage_.clock_handle;
@@ -140,6 +164,14 @@ class Handles {
 
   ::zx::clock& clock_handle() {
     return storage_.clock_handle;
+  }
+
+  // Setter for clock_handle.
+  //
+
+  Handles& clock_handle(::zx::clock value) {
+    storage_.clock_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::debuglog&
@@ -151,6 +183,14 @@ class Handles {
     return storage_.debuglog_handle;
   }
 
+  // Setter for debuglog_handle.
+  //
+
+  Handles& debuglog_handle(::zx::debuglog value) {
+    storage_.debuglog_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::event&
   event_handle() const {
     return storage_.event_handle;
@@ -158,6 +198,14 @@ class Handles {
 
   ::zx::event& event_handle() {
     return storage_.event_handle;
+  }
+
+  // Setter for event_handle.
+  //
+
+  Handles& event_handle(::zx::event value) {
+    storage_.event_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::eventpair&
@@ -169,6 +217,14 @@ class Handles {
     return storage_.eventpair_handle;
   }
 
+  // Setter for eventpair_handle.
+  //
+
+  Handles& eventpair_handle(::zx::eventpair value) {
+    storage_.eventpair_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::exception&
   exception_handle() const {
     return storage_.exception_handle;
@@ -176,6 +232,14 @@ class Handles {
 
   ::zx::exception& exception_handle() {
     return storage_.exception_handle;
+  }
+
+  // Setter for exception_handle.
+  //
+
+  Handles& exception_handle(::zx::exception value) {
+    storage_.exception_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::fifo&
@@ -187,6 +251,14 @@ class Handles {
     return storage_.fifo_handle;
   }
 
+  // Setter for fifo_handle.
+  //
+
+  Handles& fifo_handle(::zx::fifo value) {
+    storage_.fifo_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::guest&
   guest_handle() const {
     return storage_.guest_handle;
@@ -194,6 +266,14 @@ class Handles {
 
   ::zx::guest& guest_handle() {
     return storage_.guest_handle;
+  }
+
+  // Setter for guest_handle.
+  //
+
+  Handles& guest_handle(::zx::guest value) {
+    storage_.guest_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::interrupt&
@@ -205,6 +285,14 @@ class Handles {
     return storage_.interrupt_handle;
   }
 
+  // Setter for interrupt_handle.
+  //
+
+  Handles& interrupt_handle(::zx::interrupt value) {
+    storage_.interrupt_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::iommu&
   iommu_handle() const {
     return storage_.iommu_handle;
@@ -212,6 +300,14 @@ class Handles {
 
   ::zx::iommu& iommu_handle() {
     return storage_.iommu_handle;
+  }
+
+  // Setter for iommu_handle.
+  //
+
+  Handles& iommu_handle(::zx::iommu value) {
+    storage_.iommu_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::job&
@@ -223,6 +319,14 @@ class Handles {
     return storage_.job_handle;
   }
 
+  // Setter for job_handle.
+  //
+
+  Handles& job_handle(::zx::job value) {
+    storage_.job_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::msi&
   msi_handle() const {
     return storage_.msi_handle;
@@ -230,6 +334,14 @@ class Handles {
 
   ::zx::msi& msi_handle() {
     return storage_.msi_handle;
+  }
+
+  // Setter for msi_handle.
+  //
+
+  Handles& msi_handle(::zx::msi value) {
+    storage_.msi_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::pager&
@@ -241,6 +353,14 @@ class Handles {
     return storage_.pager_handle;
   }
 
+  // Setter for pager_handle.
+  //
+
+  Handles& pager_handle(::zx::pager value) {
+    storage_.pager_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::pmt&
   pmt_handle() const {
     return storage_.pmt_handle;
@@ -248,6 +368,14 @@ class Handles {
 
   ::zx::pmt& pmt_handle() {
     return storage_.pmt_handle;
+  }
+
+  // Setter for pmt_handle.
+  //
+
+  Handles& pmt_handle(::zx::pmt value) {
+    storage_.pmt_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::port&
@@ -259,6 +387,14 @@ class Handles {
     return storage_.port_handle;
   }
 
+  // Setter for port_handle.
+  //
+
+  Handles& port_handle(::zx::port value) {
+    storage_.port_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::process&
   process_handle() const {
     return storage_.process_handle;
@@ -266,6 +402,14 @@ class Handles {
 
   ::zx::process& process_handle() {
     return storage_.process_handle;
+  }
+
+  // Setter for process_handle.
+  //
+
+  Handles& process_handle(::zx::process value) {
+    storage_.process_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::profile&
@@ -277,6 +421,14 @@ class Handles {
     return storage_.profile_handle;
   }
 
+  // Setter for profile_handle.
+  //
+
+  Handles& profile_handle(::zx::profile value) {
+    storage_.profile_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::resource&
   resource_handle() const {
     return storage_.resource_handle;
@@ -284,6 +436,14 @@ class Handles {
 
   ::zx::resource& resource_handle() {
     return storage_.resource_handle;
+  }
+
+  // Setter for resource_handle.
+  //
+
+  Handles& resource_handle(::zx::resource value) {
+    storage_.resource_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::socket&
@@ -295,6 +455,14 @@ class Handles {
     return storage_.socket_handle;
   }
 
+  // Setter for socket_handle.
+  //
+
+  Handles& socket_handle(::zx::socket value) {
+    storage_.socket_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::stream&
   stream_handle() const {
     return storage_.stream_handle;
@@ -302,6 +470,14 @@ class Handles {
 
   ::zx::stream& stream_handle() {
     return storage_.stream_handle;
+  }
+
+  // Setter for stream_handle.
+  //
+
+  Handles& stream_handle(::zx::stream value) {
+    storage_.stream_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::suspend_token&
@@ -313,6 +489,14 @@ class Handles {
     return storage_.suspendtoken_handle;
   }
 
+  // Setter for suspendtoken_handle.
+  //
+
+  Handles& suspendtoken_handle(::zx::suspend_token value) {
+    storage_.suspendtoken_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::thread&
   thread_handle() const {
     return storage_.thread_handle;
@@ -320,6 +504,14 @@ class Handles {
 
   ::zx::thread& thread_handle() {
     return storage_.thread_handle;
+  }
+
+  // Setter for thread_handle.
+  //
+
+  Handles& thread_handle(::zx::thread value) {
+    storage_.thread_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::timer&
@@ -331,6 +523,14 @@ class Handles {
     return storage_.timer_handle;
   }
 
+  // Setter for timer_handle.
+  //
+
+  Handles& timer_handle(::zx::timer value) {
+    storage_.timer_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::vcpu&
   vcpu_handle() const {
     return storage_.vcpu_handle;
@@ -338,6 +538,14 @@ class Handles {
 
   ::zx::vcpu& vcpu_handle() {
     return storage_.vcpu_handle;
+  }
+
+  // Setter for vcpu_handle.
+  //
+
+  Handles& vcpu_handle(::zx::vcpu value) {
+    storage_.vcpu_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::vmar&
@@ -349,6 +557,14 @@ class Handles {
     return storage_.vmar_handle;
   }
 
+  // Setter for vmar_handle.
+  //
+
+  Handles& vmar_handle(::zx::vmar value) {
+    storage_.vmar_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::vmo&
   vmo_handle() const {
     return storage_.vmo_handle;
@@ -356,6 +572,14 @@ class Handles {
 
   ::zx::vmo& vmo_handle() {
     return storage_.vmo_handle;
+  }
+
+  // Setter for vmo_handle.
+  //
+
+  Handles& vmo_handle(::zx::vmo value) {
+    storage_.vmo_handle = std::move(value);
+    return *this;
   }
 
   const ::zx::vmo&
@@ -367,6 +591,14 @@ class Handles {
     return storage_.rights_handle;
   }
 
+  // Setter for rights_handle.
+  //
+
+  Handles& rights_handle(::zx::vmo value) {
+    storage_.rights_handle = std::move(value);
+    return *this;
+  }
+
   const ::zx::handle&
   aliased_plain_handle_field() const {
     return storage_.aliased_plain_handle_field;
@@ -374,6 +606,14 @@ class Handles {
 
   ::zx::handle& aliased_plain_handle_field() {
     return storage_.aliased_plain_handle_field;
+  }
+
+  // Setter for aliased_plain_handle_field.
+  //
+
+  Handles& aliased_plain_handle_field(::zx::handle value) {
+    storage_.aliased_plain_handle_field = std::move(value);
+    return *this;
   }
 
   const ::zx::vmo&
@@ -385,6 +625,14 @@ class Handles {
     return storage_.aliased_subtype_handle_field;
   }
 
+  // Setter for aliased_subtype_handle_field.
+  //
+
+  Handles& aliased_subtype_handle_field(::zx::vmo value) {
+    storage_.aliased_subtype_handle_field = std::move(value);
+    return *this;
+  }
+
   const ::zx::vmo&
   aliased_rights_handle_field() const {
     return storage_.aliased_rights_handle_field;
@@ -392,6 +640,14 @@ class Handles {
 
   ::zx::vmo& aliased_rights_handle_field() {
     return storage_.aliased_rights_handle_field;
+  }
+
+  // Setter for aliased_rights_handle_field.
+  //
+
+  Handles& aliased_rights_handle_field(::zx::vmo value) {
+    storage_.aliased_rights_handle_field = std::move(value);
+    return *this;
   }
 
   const ::fidl::ClientEnd<::test_handles::SomeProtocol>&
@@ -403,6 +659,14 @@ class Handles {
     return storage_.some_protocol;
   }
 
+  // Setter for some_protocol.
+  //
+
+  Handles& some_protocol(::fidl::ClientEnd<::test_handles::SomeProtocol> value) {
+    storage_.some_protocol = std::move(value);
+    return *this;
+  }
+
   const ::fidl::ServerEnd<::test_handles::SomeProtocol>&
   request_some_protocol() const {
     return storage_.request_some_protocol;
@@ -410,6 +674,14 @@ class Handles {
 
   ::fidl::ServerEnd<::test_handles::SomeProtocol>& request_some_protocol() {
     return storage_.request_some_protocol;
+  }
+
+  // Setter for request_some_protocol.
+  //
+
+  Handles& request_some_protocol(::fidl::ServerEnd<::test_handles::SomeProtocol> value) {
+    storage_.request_some_protocol = std::move(value);
+    return *this;
   }
 
   Handles(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Handles(Storage_{
@@ -532,6 +804,14 @@ class FdfHandles {
     return storage_.fdf_channel_handle;
   }
 
+  // Setter for fdf_channel_handle.
+  //
+
+  FdfHandles& fdf_channel_handle(::fdf::Channel value) {
+    storage_.fdf_channel_handle = std::move(value);
+    return *this;
+  }
+
   const ::fdf::ClientEnd<::test_handles::DriverProtocol>&
   client_end_driver() const {
     return storage_.client_end_driver;
@@ -541,6 +821,14 @@ class FdfHandles {
     return storage_.client_end_driver;
   }
 
+  // Setter for client_end_driver.
+  //
+
+  FdfHandles& client_end_driver(::fdf::ClientEnd<::test_handles::DriverProtocol> value) {
+    storage_.client_end_driver = std::move(value);
+    return *this;
+  }
+
   const ::fdf::ServerEnd<::test_handles::DriverProtocol>&
   server_end_driver() const {
     return storage_.server_end_driver;
@@ -548,6 +836,14 @@ class FdfHandles {
 
   ::fdf::ServerEnd<::test_handles::DriverProtocol>& server_end_driver() {
     return storage_.server_end_driver;
+  }
+
+  // Setter for server_end_driver.
+  //
+
+  FdfHandles& server_end_driver(::fdf::ServerEnd<::test_handles::DriverProtocol> value) {
+    storage_.server_end_driver = std::move(value);
+    return *this;
   }
 
   FdfHandles(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : FdfHandles(Storage_{

@@ -53,6 +53,14 @@ class ParentFirstRequest {
     return storage_.request;
   }
 
+  // Setter for request.
+  //
+
+  ParentFirstRequest& request(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> value) {
+    storage_.request = std::move(value);
+    return *this;
+  }
+
   ParentFirstRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentFirstRequest(Storage_{
                                                                                        .request = {},
                                                                                    }) {}
@@ -102,6 +110,14 @@ class ChildSecondRequest {
 
   ::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent>& request() {
     return storage_.request;
+  }
+
+  // Setter for request.
+  //
+
+  ChildSecondRequest& request(::fidl::ServerEnd<::test_inheritancewithrecursivedecl::Parent> value) {
+    storage_.request = std::move(value);
+    return *this;
   }
 
   ChildSecondRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChildSecondRequest(Storage_{

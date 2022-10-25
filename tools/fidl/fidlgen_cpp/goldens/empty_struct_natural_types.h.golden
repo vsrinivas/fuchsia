@@ -69,6 +69,14 @@ class Empty {
     return storage_.__reserved;
   }
 
+  // Setter for __reserved.
+  //
+
+  Empty& __reserved(uint8_t value) {
+    storage_.__reserved = std::move(value);
+    return *this;
+  }
+
   Empty(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Empty(Storage_{
                                                                           .__reserved = 0u,
                                                                       }) {}
@@ -127,6 +135,14 @@ class EmptyProtocolSendRequest {
 
   ::test_emptystruct::Empty& e() {
     return storage_.e;
+  }
+
+  // Setter for e.
+  //
+
+  EmptyProtocolSendRequest& e(::test_emptystruct::Empty value) {
+    storage_.e = std::move(value);
+    return *this;
   }
 
   EmptyProtocolSendRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendRequest(Storage_{
@@ -189,6 +205,14 @@ class EmptyProtocolReceiveRequest {
     return storage_.e;
   }
 
+  // Setter for e.
+  //
+
+  EmptyProtocolReceiveRequest& e(::test_emptystruct::Empty value) {
+    storage_.e = std::move(value);
+    return *this;
+  }
+
   EmptyProtocolReceiveRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolReceiveRequest(Storage_{
                                                                                                 .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                             }) {}
@@ -249,6 +273,14 @@ class EmptyProtocolSendAndReceiveRequest {
     return storage_.e;
   }
 
+  // Setter for e.
+  //
+
+  EmptyProtocolSendAndReceiveRequest& e(::test_emptystruct::Empty value) {
+    storage_.e = std::move(value);
+    return *this;
+  }
+
   EmptyProtocolSendAndReceiveRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendAndReceiveRequest(Storage_{
                                                                                                        .e = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                    }) {}
@@ -307,6 +339,14 @@ class EmptyProtocolSendAndReceiveResponse {
 
   ::test_emptystruct::Empty& e() {
     return storage_.e;
+  }
+
+  // Setter for e.
+  //
+
+  EmptyProtocolSendAndReceiveResponse& e(::test_emptystruct::Empty value) {
+    storage_.e = std::move(value);
+    return *this;
   }
 
   EmptyProtocolSendAndReceiveResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : EmptyProtocolSendAndReceiveResponse(Storage_{

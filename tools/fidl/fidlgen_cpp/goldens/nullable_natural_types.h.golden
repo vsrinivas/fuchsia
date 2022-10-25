@@ -82,6 +82,14 @@ class StructWithNullableString {
     return storage_.val;
   }
 
+  // Setter for val.
+  //
+
+  StructWithNullableString& val(::std::optional<::std::string> value) {
+    storage_.val = std::move(value);
+    return *this;
+  }
+
   StructWithNullableString(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableString(Storage_{
                                                                                              .val = {},
                                                                                          }) {}
@@ -142,6 +150,14 @@ class StructWithNullableVector {
     return storage_.val;
   }
 
+  // Setter for val.
+  //
+
+  StructWithNullableVector& val(::std::optional<::std::vector<int32_t>> value) {
+    storage_.val = std::move(value);
+    return *this;
+  }
+
   StructWithNullableVector(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableVector(Storage_{
                                                                                              .val = {},
                                                                                          }) {}
@@ -190,6 +206,14 @@ class StructWithNullableHandle {
 
   ::zx::vmo& val() {
     return storage_.val;
+  }
+
+  // Setter for val.
+  //
+
+  StructWithNullableHandle& val(::zx::vmo value) {
+    storage_.val = std::move(value);
+    return *this;
   }
 
   StructWithNullableHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableHandle(Storage_{
@@ -254,6 +278,14 @@ class SimpleProtocolAddRequest {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  SimpleProtocolAddRequest& a(int32_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   int32_t
   b() const {
     return storage_.b;
@@ -261,6 +293,14 @@ class SimpleProtocolAddRequest {
 
   int32_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  SimpleProtocolAddRequest& b(int32_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   SimpleProtocolAddRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SimpleProtocolAddRequest(Storage_{
@@ -326,6 +366,14 @@ class SimpleProtocolAddResponse {
     return storage_.sum;
   }
 
+  // Setter for sum.
+  //
+
+  SimpleProtocolAddResponse& sum(int32_t value) {
+    storage_.sum = std::move(value);
+    return *this;
+  }
+
   SimpleProtocolAddResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SimpleProtocolAddResponse(Storage_{
                                                                                               .sum = {},
                                                                                           }) {}
@@ -374,6 +422,14 @@ class StructWithNullableProtocol {
 
   ::fidl::ClientEnd<::test_nullable::SimpleProtocol>& val() {
     return storage_.val;
+  }
+
+  // Setter for val.
+  //
+
+  StructWithNullableProtocol& val(::fidl::ClientEnd<::test_nullable::SimpleProtocol> value) {
+    storage_.val = std::move(value);
+    return *this;
   }
 
   StructWithNullableProtocol(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableProtocol(Storage_{
@@ -425,6 +481,14 @@ class StructWithNullableRequest {
 
   ::fidl::ServerEnd<::test_nullable::SimpleProtocol>& val() {
     return storage_.val;
+  }
+
+  // Setter for val.
+  //
+
+  StructWithNullableRequest& val(::fidl::ServerEnd<::test_nullable::SimpleProtocol> value) {
+    storage_.val = std::move(value);
+    return *this;
   }
 
   StructWithNullableRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableRequest(Storage_{
@@ -488,6 +552,14 @@ class Int32Wrapper {
     return storage_.val;
   }
 
+  // Setter for val.
+  //
+
+  Int32Wrapper& val(int32_t value) {
+    storage_.val = std::move(value);
+    return *this;
+  }
+
   Int32Wrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Int32Wrapper(Storage_{
                                                                                  .val = {},
                                                                              }) {}
@@ -546,6 +618,14 @@ class StructWithNullableStruct {
 
   ::std::unique_ptr<::test_nullable::Int32Wrapper>& val() {
     return storage_.val;
+  }
+
+  // Setter for val.
+  //
+
+  StructWithNullableStruct& val(::std::unique_ptr<::test_nullable::Int32Wrapper> value) {
+    storage_.val = std::move(value);
+    return *this;
   }
 
   StructWithNullableStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableStruct(Storage_{
@@ -619,8 +699,17 @@ class SimpleUnion {
   const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> a() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the a member.
+  //
+
+  SimpleUnion& a(int32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static SimpleUnion WithB(float val) {
     return SimpleUnion(std::make_shared<Storage_>(
@@ -631,8 +720,17 @@ class SimpleUnion {
   const ::fidl::internal::UnionMemberView<2, Storage_> b() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> b() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the b member.
+  //
+
+  SimpleUnion& b(float value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   SimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -711,6 +809,14 @@ class StructWithNullableUnion {
 
   ::std::unique_ptr<::test_nullable::SimpleUnion>& val() {
     return storage_.val;
+  }
+
+  // Setter for val.
+  //
+
+  StructWithNullableUnion& val(::std::unique_ptr<::test_nullable::SimpleUnion> value) {
+    storage_.val = std::move(value);
+    return *this;
   }
 
   StructWithNullableUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableUnion(Storage_{

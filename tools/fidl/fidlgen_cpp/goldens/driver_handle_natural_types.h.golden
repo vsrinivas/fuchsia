@@ -59,6 +59,14 @@ class ClientEndWrapper {
     return storage_.value;
   }
 
+  // Setter for value.
+  //
+
+  ClientEndWrapper& value(::fdf::ClientEnd<::test_driverhandle::DriverProtocol> value) {
+    storage_.value = std::move(value);
+    return *this;
+  }
+
   ClientEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ClientEndWrapper(Storage_{
                                                                                      .value = {},
                                                                                  }) {}
@@ -110,6 +118,14 @@ class ServerEndWrapper {
     return storage_.value;
   }
 
+  // Setter for value.
+  //
+
+  ServerEndWrapper& value(::fdf::ServerEnd<::test_driverhandle::DriverProtocol> value) {
+    storage_.value = std::move(value);
+    return *this;
+  }
+
   ServerEndWrapper(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ServerEndWrapper(Storage_{
                                                                                      .value = {},
                                                                                  }) {}
@@ -139,12 +155,9 @@ class T {
   struct Storage_;
 
  public:
-  T(Storage_ storage)
-  noexcept : storage_(std::move(storage)) {}
-  T()
-  noexcept = default;
-  T(T&&)
-  noexcept = default;
+  T(Storage_ storage) noexcept : storage_(std::move(storage)) {}
+  T() noexcept = default;
+  T(T&&) noexcept = default;
   T& operator=(T&&) noexcept = default;
 
   bool IsEmpty() const {
@@ -154,8 +167,24 @@ class T {
   const std::optional<::zx::event>& zircon_handle() const { return storage_.zircon_handle; }
   ::std::optional<::zx::event>& zircon_handle() { return storage_.zircon_handle; }
 
+  // Setter for zircon_handle.
+  //
+
+  T& zircon_handle(std::optional<::zx::event> value) {
+    storage_.zircon_handle = std::move(value);
+    return *this;
+  }
+
   const std::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>& fdf_handle() const { return storage_.fdf_handle; }
   ::std::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>>& fdf_handle() { return storage_.fdf_handle; }
+
+  // Setter for fdf_handle.
+  //
+
+  T& fdf_handle(std::optional<::fdf::ClientEnd<::test_driverhandle::DriverProtocol>> value) {
+    storage_.fdf_handle = std::move(value);
+    return *this;
+  }
 
   T(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : T(Storage_{}) {}
 
@@ -205,6 +234,14 @@ class HandlesInProtocolSendHandlesRequest {
 
   ::test_driverhandle::T& t() {
     return storage_.t;
+  }
+
+  // Setter for t.
+  //
+
+  HandlesInProtocolSendHandlesRequest& t(::test_driverhandle::T value) {
+    storage_.t = std::move(value);
+    return *this;
   }
 
   HandlesInProtocolSendHandlesRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandlesInProtocolSendHandlesRequest(Storage_{

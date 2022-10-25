@@ -64,6 +64,14 @@ class TwoWayAddRequest {
     return storage_.addend1;
   }
 
+  // Setter for addend1.
+  //
+
+  TwoWayAddRequest& addend1(uint16_t value) {
+    storage_.addend1 = std::move(value);
+    return *this;
+  }
+
   uint16_t
   addend2() const {
     return storage_.addend2;
@@ -71,6 +79,14 @@ class TwoWayAddRequest {
 
   uint16_t& addend2() {
     return storage_.addend2;
+  }
+
+  // Setter for addend2.
+  //
+
+  TwoWayAddRequest& addend2(uint16_t value) {
+    storage_.addend2 = std::move(value);
+    return *this;
   }
 
   TwoWayAddRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TwoWayAddRequest(Storage_{
@@ -134,6 +150,14 @@ class TwoWayAddResponse {
 
   uint16_t& sum() {
     return storage_.sum;
+  }
+
+  // Setter for sum.
+  //
+
+  TwoWayAddResponse& sum(uint16_t value) {
+    storage_.sum = std::move(value);
+    return *this;
   }
 
   TwoWayAddResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TwoWayAddResponse(Storage_{

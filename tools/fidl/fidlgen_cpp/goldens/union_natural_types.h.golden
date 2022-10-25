@@ -194,6 +194,14 @@ class Pizza {
       return storage_.toppings;
     }
 
+    // Setter for toppings.
+    //
+    
+    Pizza& toppings(::std::vector<::std::string> value) {
+      storage_.toppings = std::move(value);
+      return *this;
+    }
+
   Pizza(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Pizza(Storage_{
       .toppings ={},
   }) {}
@@ -264,6 +272,14 @@ class Pasta {
     
     ::std::string& sauce() {
       return storage_.sauce;
+    }
+
+    // Setter for sauce.
+    //
+    
+    Pasta& sauce(::std::string value) {
+      storage_.sauce = std::move(value);
+      return *this;
     }
 
   Pasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Pasta(Storage_{
@@ -351,8 +367,17 @@ class PizzaOrPasta {
     const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pizza member.
+    //
+    
+    PizzaOrPasta& pizza(::test_union::Pizza value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static PizzaOrPasta WithPasta(::test_union::Pasta val) {
       return PizzaOrPasta(std::make_shared<Storage_>(
@@ -363,8 +388,17 @@ class PizzaOrPasta {
     const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pasta member.
+    //
+    
+    PizzaOrPasta& pasta(::test_union::Pasta value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   PizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -464,8 +498,17 @@ class ExplicitPizzaOrPasta {
     const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pizza member.
+    //
+    
+    ExplicitPizzaOrPasta& pizza(::test_union::Pizza value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static ExplicitPizzaOrPasta WithPasta(::test_union::Pasta val) {
       return ExplicitPizzaOrPasta(std::make_shared<Storage_>(
@@ -476,8 +519,17 @@ class ExplicitPizzaOrPasta {
     const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pasta member.
+    //
+    
+    ExplicitPizzaOrPasta& pasta(::test_union::Pasta value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   ExplicitPizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -581,8 +633,17 @@ class FlexiblePizzaOrPasta {
     const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pizza member.
+    //
+    
+    FlexiblePizzaOrPasta& pizza(::test_union::Pizza value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static FlexiblePizzaOrPasta WithPasta(::test_union::Pasta val) {
       return FlexiblePizzaOrPasta(std::make_shared<Storage_>(
@@ -593,8 +654,17 @@ class FlexiblePizzaOrPasta {
     const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pasta member.
+    //
+    
+    FlexiblePizzaOrPasta& pasta(::test_union::Pasta value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   FlexiblePizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -693,8 +763,17 @@ class StrictPizzaOrPasta {
     const ::fidl::internal::UnionMemberView<1, Storage_> pizza() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> pizza() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pizza member.
+    //
+    
+    StrictPizzaOrPasta& pizza(::test_union::Pizza value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static StrictPizzaOrPasta WithPasta(::test_union::Pasta val) {
       return StrictPizzaOrPasta(std::make_shared<Storage_>(
@@ -705,8 +784,17 @@ class StrictPizzaOrPasta {
     const ::fidl::internal::UnionMemberView<2, Storage_> pasta() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> pasta() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the pasta member.
+    //
+    
+    StrictPizzaOrPasta& pasta(::test_union::Pasta value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   StrictPizzaOrPasta(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -808,8 +896,17 @@ class Union {
     const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the primitive member.
+    //
+    
+    Union& primitive(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static Union WithStringNeedsConstructor(::std::string val) {
       return Union(std::make_shared<Storage_>(
@@ -820,8 +917,17 @@ class Union {
     const ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the string_needs_constructor member.
+    //
+    
+    Union& string_needs_constructor(::std::string value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
     static Union WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string> val) {
       return Union(std::make_shared<Storage_>(
@@ -832,8 +938,17 @@ class Union {
     const ::fidl::internal::UnionMemberView<3, Storage_> vector_string_also_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<3, Storage_> vector_string_also_needs_constructor() {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the vector_string_also_needs_constructor member.
+    //
+    
+    Union& vector_string_also_needs_constructor(::std::vector<::std::string> value) {
+      storage_->emplace<3>(std::move(value));
+      return *this;
     }
 
   Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -942,8 +1057,17 @@ class FlexibleUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the primitive member.
+    //
+    
+    FlexibleUnion& primitive(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static FlexibleUnion WithStringNeedsConstructor(::std::string val) {
       return FlexibleUnion(std::make_shared<Storage_>(
@@ -954,8 +1078,17 @@ class FlexibleUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the string_needs_constructor member.
+    //
+    
+    FlexibleUnion& string_needs_constructor(::std::string value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
     static FlexibleUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string> val) {
       return FlexibleUnion(std::make_shared<Storage_>(
@@ -966,8 +1099,17 @@ class FlexibleUnion {
     const ::fidl::internal::UnionMemberView<3, Storage_> vector_string_also_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<3, Storage_> vector_string_also_needs_constructor() {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the vector_string_also_needs_constructor member.
+    //
+    
+    FlexibleUnion& vector_string_also_needs_constructor(::std::vector<::std::string> value) {
+      storage_->emplace<3>(std::move(value));
+      return *this;
     }
 
   FlexibleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1071,8 +1213,17 @@ class StrictUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the primitive member.
+    //
+    
+    StrictUnion& primitive(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static StrictUnion WithStringNeedsConstructor(::std::string val) {
       return StrictUnion(std::make_shared<Storage_>(
@@ -1083,8 +1234,17 @@ class StrictUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the string_needs_constructor member.
+    //
+    
+    StrictUnion& string_needs_constructor(::std::string value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
     static StrictUnion WithVectorStringAlsoNeedsConstructor(::std::vector<::std::string> val) {
       return StrictUnion(std::make_shared<Storage_>(
@@ -1095,8 +1255,17 @@ class StrictUnion {
     const ::fidl::internal::UnionMemberView<3, Storage_> vector_string_also_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<3, Storage_> vector_string_also_needs_constructor() {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the vector_string_also_needs_constructor member.
+    //
+    
+    StrictUnion& vector_string_also_needs_constructor(::std::vector<::std::string> value) {
+      storage_->emplace<3>(std::move(value));
+      return *this;
     }
 
   StrictUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1197,8 +1366,17 @@ class FieldCollision {
     const ::fidl::internal::UnionMemberView<1, Storage_> field_collision_tag() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> field_collision_tag() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the field_collision_tag member.
+    //
+    
+    FieldCollision& field_collision_tag(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
 
   FieldCollision(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1295,8 +1473,17 @@ class ExplicitUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> primitive() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> primitive() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the primitive member.
+    //
+    
+    ExplicitUnion& primitive(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static ExplicitUnion WithStringNeedsConstructor(::std::string val) {
       return ExplicitUnion(std::make_shared<Storage_>(
@@ -1307,8 +1494,17 @@ class ExplicitUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> string_needs_constructor() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the string_needs_constructor member.
+    //
+    
+    ExplicitUnion& string_needs_constructor(::std::string value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   ExplicitUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1408,8 +1604,17 @@ class ReverseOrdinalUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> second() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> second() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the second member.
+    //
+    
+    ReverseOrdinalUnion& second(uint32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static ReverseOrdinalUnion WithFirst(uint32_t val) {
       return ReverseOrdinalUnion(std::make_shared<Storage_>(
@@ -1420,8 +1625,17 @@ class ReverseOrdinalUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> first() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> first() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the first member.
+    //
+    
+    ReverseOrdinalUnion& first(uint32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   ReverseOrdinalUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1506,6 +1720,14 @@ class NullableUnionStruct {
     
     ::std::unique_ptr<::test_union::Union>& the_union() {
       return storage_.the_union;
+    }
+
+    // Setter for the_union.
+    //
+    
+    NullableUnionStruct& the_union(::std::unique_ptr<::test_union::Union> value) {
+      storage_.the_union = std::move(value);
+      return *this;
     }
 
   NullableUnionStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : NullableUnionStruct(Storage_{
@@ -1597,8 +1819,17 @@ class FlexibleFoo {
     const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> s() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    FlexibleFoo& s(::std::string value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static FlexibleFoo WithI(int32_t val) {
       return FlexibleFoo(std::make_shared<Storage_>(
@@ -1609,8 +1840,17 @@ class FlexibleFoo {
     const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> i() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    FlexibleFoo& i(int32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1709,8 +1949,17 @@ class StrictFoo {
     const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> s() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    StrictFoo& s(::std::string value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static StrictFoo WithI(int32_t val) {
       return StrictFoo(std::make_shared<Storage_>(
@@ -1721,8 +1970,17 @@ class StrictFoo {
     const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> i() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    StrictFoo& i(int32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   StrictFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1826,8 +2084,17 @@ class ExplicitFoo {
     const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> s() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    ExplicitFoo& s(::std::string value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static ExplicitFoo WithI(int32_t val) {
       return ExplicitFoo(std::make_shared<Storage_>(
@@ -1838,8 +2105,17 @@ class ExplicitFoo {
     const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> i() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    ExplicitFoo& i(int32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   ExplicitFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1938,8 +2214,17 @@ class ExplicitStrictFoo {
     const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> s() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    ExplicitStrictFoo& s(::std::string value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static ExplicitStrictFoo WithI(int32_t val) {
       return ExplicitStrictFoo(std::make_shared<Storage_>(
@@ -1950,8 +2235,17 @@ class ExplicitStrictFoo {
     const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> i() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    ExplicitStrictFoo& i(int32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   ExplicitStrictFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -2055,8 +2349,17 @@ class OlderSimpleUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> i() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    OlderSimpleUnion& i(int64_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static OlderSimpleUnion WithF(float val) {
       return OlderSimpleUnion(std::make_shared<Storage_>(
@@ -2067,8 +2370,17 @@ class OlderSimpleUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> f() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> f() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the f member.
+    //
+    
+    OlderSimpleUnion& f(float value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   OlderSimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -2173,8 +2485,17 @@ class NewerSimpleUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> i() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    NewerSimpleUnion& i(int64_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static NewerSimpleUnion WithS(::std::string val) {
       return NewerSimpleUnion(std::make_shared<Storage_>(
@@ -2185,8 +2506,17 @@ class NewerSimpleUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> s() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> s() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    NewerSimpleUnion& s(::std::string value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
     static NewerSimpleUnion WithV(::std::vector<::std::string> val) {
       return NewerSimpleUnion(std::make_shared<Storage_>(
@@ -2197,8 +2527,17 @@ class NewerSimpleUnion {
     const ::fidl::internal::UnionMemberView<3, Storage_> v() const {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<3, Storage_> v() {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the v member.
+    //
+    
+    NewerSimpleUnion& v(::std::vector<::std::string> value) {
+      storage_->emplace<3>(std::move(value));
+      return *this;
     }
 
   NewerSimpleUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -2302,8 +2641,17 @@ class StrictSimpleXUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> i() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    StrictSimpleXUnion& i(int32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static StrictSimpleXUnion WithF(float val) {
       return StrictSimpleXUnion(std::make_shared<Storage_>(
@@ -2314,8 +2662,17 @@ class StrictSimpleXUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> f() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> f() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the f member.
+    //
+    
+    StrictSimpleXUnion& f(float value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
     static StrictSimpleXUnion WithS(::std::string val) {
       return StrictSimpleXUnion(std::make_shared<Storage_>(
@@ -2326,8 +2683,17 @@ class StrictSimpleXUnion {
     const ::fidl::internal::UnionMemberView<3, Storage_> s() const {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<3, Storage_> s() {
       return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the s member.
+    //
+    
+    StrictSimpleXUnion& s(::std::string value) {
+      storage_->emplace<3>(std::move(value));
+      return *this;
     }
 
   StrictSimpleXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -2415,6 +2781,14 @@ class Empty {
     
     uint8_t& __reserved() {
       return storage_.__reserved;
+    }
+
+    // Setter for __reserved.
+    //
+    
+    Empty& __reserved(uint8_t value) {
+      storage_.__reserved = std::move(value);
+      return *this;
     }
 
   Empty(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Empty(Storage_{
@@ -2505,8 +2879,17 @@ class XUnionContainingEmptyStruct {
     const ::fidl::internal::UnionMemberView<1, Storage_> empty() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> empty() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the empty member.
+    //
+    
+    XUnionContainingEmptyStruct& empty(::test_union::Empty value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
 
   XUnionContainingEmptyStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -2600,8 +2983,17 @@ class StrictBoundedXUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> v() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> v() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the v member.
+    //
+    
+    StrictBoundedXUnion& v(::std::vector<uint8_t> value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
 
   StrictBoundedXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -2685,6 +3077,14 @@ class TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse {
       return storage_.xu;
     }
 
+    // Setter for xu.
+    //
+    
+    TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse& xu(::test_union::StrictBoundedXUnion value) {
+      storage_.xu = std::move(value);
+      return *this;
+    }
+
   TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse(Storage_{
       .xu =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
@@ -2755,6 +3155,14 @@ class TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse {
     
     ::test_union::OlderSimpleUnion& xu() {
       return storage_.xu;
+    }
+
+    // Setter for xu.
+    //
+    
+    TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse& xu(::test_union::OlderSimpleUnion value) {
+      storage_.xu = std::move(value);
+      return *this;
     }
 
   TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(Storage_{
@@ -2830,6 +3238,14 @@ class StructWithNullableXUnion {
     
     ::std::unique_ptr<::test_union::OlderSimpleUnion>& x1() {
       return storage_.x1;
+    }
+
+    // Setter for x1.
+    //
+    
+    StructWithNullableXUnion& x1(::std::unique_ptr<::test_union::OlderSimpleUnion> value) {
+      storage_.x1 = std::move(value);
+      return *this;
     }
 
   StructWithNullableXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructWithNullableXUnion(Storage_{
@@ -2921,8 +3337,17 @@ class ExplicitXUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> i() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> i() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the i member.
+    //
+    
+    ExplicitXUnion& i(int64_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static ExplicitXUnion WithF(float val) {
       return ExplicitXUnion(std::make_shared<Storage_>(
@@ -2933,8 +3358,17 @@ class ExplicitXUnion {
     const ::fidl::internal::UnionMemberView<2, Storage_> f() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> f() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the f member.
+    //
+    
+    ExplicitXUnion& f(float value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   ExplicitXUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -3021,6 +3455,14 @@ class UnionSandwich {
     uint32_t& a() {
       return storage_.a;
     }
+
+    // Setter for a.
+    //
+    
+    UnionSandwich& a(uint32_t value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
     
       const ::test_union::ExplicitXUnion &
     u() const {
@@ -3031,6 +3473,14 @@ class UnionSandwich {
     ::test_union::ExplicitXUnion& u() {
       return storage_.u;
     }
+
+    // Setter for u.
+    //
+    
+    UnionSandwich& u(::test_union::ExplicitXUnion value) {
+      storage_.u = std::move(value);
+      return *this;
+    }
     
       uint32_t
     b() const {
@@ -3040,6 +3490,14 @@ class UnionSandwich {
     
     uint32_t& b() {
       return storage_.b;
+    }
+
+    // Setter for b.
+    //
+    
+    UnionSandwich& b(uint32_t value) {
+      storage_.b = std::move(value);
+      return *this;
     }
 
   UnionSandwich(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : UnionSandwich(Storage_{
@@ -3145,8 +3603,17 @@ class UnionWithAttributes {
     const ::fidl::internal::UnionMemberView<1, Storage_> x() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> x() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the x member.
+    //
+    
+    UnionWithAttributes& x(int64_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
 
   UnionWithAttributes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)

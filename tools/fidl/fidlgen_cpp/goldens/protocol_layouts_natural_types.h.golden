@@ -91,6 +91,14 @@ class LocalTablePayload {
   const std::optional<uint16_t>& a() const { return storage_.a; }
   ::std::optional<uint16_t>& a() { return storage_.a; }
 
+  // Setter for a.
+  //
+
+  LocalTablePayload& a(std::optional<uint16_t> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   LocalTablePayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : LocalTablePayload(Storage_{}) {}
 
  private:
@@ -162,8 +170,17 @@ class LocalUnionPayload {
   const ::fidl::internal::UnionMemberView<1, Storage_> b() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> b() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the b member.
+  //
+
+  LocalUnionPayload& b(bool value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   LocalUnionPayload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -250,8 +267,17 @@ class MainProtocolTwoWayImportWithErrorResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  MainProtocolTwoWayImportWithErrorResult& response(::test_protocollayouts_imported::ImportUnionPayload value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static MainProtocolTwoWayImportWithErrorResult WithErr(uint32_t val) {
     return MainProtocolTwoWayImportWithErrorResult(std::make_shared<Storage_>(
@@ -262,8 +288,17 @@ class MainProtocolTwoWayImportWithErrorResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  MainProtocolTwoWayImportWithErrorResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   MainProtocolTwoWayImportWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -344,6 +379,14 @@ class MainProtocolTwoWayImportWithErrorTopResponse {
     return storage_.result;
   }
 
+  // Setter for result.
+  //
+
+  MainProtocolTwoWayImportWithErrorTopResponse& result(::test_protocollayouts::MainProtocolTwoWayImportWithErrorResult value) {
+    storage_.result = std::move(value);
+    return *this;
+  }
+
   MainProtocolTwoWayImportWithErrorTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayImportWithErrorTopResponse(Storage_{
                                                                                                                  .result = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                              }) {}
@@ -415,8 +458,17 @@ class MainProtocolOnImportWithErrorResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  MainProtocolOnImportWithErrorResult& response(::test_protocollayouts_imported::ImportTablePayload value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static MainProtocolOnImportWithErrorResult WithErr(uint32_t val) {
     return MainProtocolOnImportWithErrorResult(std::make_shared<Storage_>(
@@ -427,8 +479,17 @@ class MainProtocolOnImportWithErrorResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  MainProtocolOnImportWithErrorResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   MainProtocolOnImportWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -509,6 +570,14 @@ class MainProtocolOnImportWithErrorRequest {
     return storage_.result;
   }
 
+  // Setter for result.
+  //
+
+  MainProtocolOnImportWithErrorRequest& result(::test_protocollayouts::MainProtocolOnImportWithErrorResult value) {
+    storage_.result = std::move(value);
+    return *this;
+  }
+
   MainProtocolOnImportWithErrorRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolOnImportWithErrorRequest(Storage_{
                                                                                                          .result = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                      }) {}
@@ -580,8 +649,17 @@ class MainProtocolTwoWayLocalWithErrorResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  MainProtocolTwoWayLocalWithErrorResult& response(::test_protocollayouts::LocalUnionPayload value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static MainProtocolTwoWayLocalWithErrorResult WithErr(uint32_t val) {
     return MainProtocolTwoWayLocalWithErrorResult(std::make_shared<Storage_>(
@@ -592,8 +670,17 @@ class MainProtocolTwoWayLocalWithErrorResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  MainProtocolTwoWayLocalWithErrorResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   MainProtocolTwoWayLocalWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -674,6 +761,14 @@ class MainProtocolTwoWayLocalWithErrorTopResponse {
     return storage_.result;
   }
 
+  // Setter for result.
+  //
+
+  MainProtocolTwoWayLocalWithErrorTopResponse& result(::test_protocollayouts::MainProtocolTwoWayLocalWithErrorResult value) {
+    storage_.result = std::move(value);
+    return *this;
+  }
+
   MainProtocolTwoWayLocalWithErrorTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayLocalWithErrorTopResponse(Storage_{
                                                                                                                 .result = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                             }) {}
@@ -745,8 +840,17 @@ class MainProtocolOnLocalWithErrorResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  MainProtocolOnLocalWithErrorResult& response(::test_protocollayouts::LocalTablePayload value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static MainProtocolOnLocalWithErrorResult WithErr(uint32_t val) {
     return MainProtocolOnLocalWithErrorResult(std::make_shared<Storage_>(
@@ -757,8 +861,17 @@ class MainProtocolOnLocalWithErrorResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  MainProtocolOnLocalWithErrorResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   MainProtocolOnLocalWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -839,6 +952,14 @@ class MainProtocolOnLocalWithErrorRequest {
     return storage_.result;
   }
 
+  // Setter for result.
+  //
+
+  MainProtocolOnLocalWithErrorRequest& result(::test_protocollayouts::MainProtocolOnLocalWithErrorResult value) {
+    storage_.result = std::move(value);
+    return *this;
+  }
+
   MainProtocolOnLocalWithErrorRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolOnLocalWithErrorRequest(Storage_{
                                                                                                         .result = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                     }) {}
@@ -887,6 +1008,14 @@ class MainProtocolOneWayAnonRequest {
 
   const std::optional<uint16_t>& a() const { return storage_.a; }
   ::std::optional<uint16_t>& a() { return storage_.a; }
+
+  // Setter for a.
+  //
+
+  MainProtocolOneWayAnonRequest& a(std::optional<uint16_t> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
 
   MainProtocolOneWayAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolOneWayAnonRequest(Storage_{}) {}
 
@@ -959,8 +1088,17 @@ class MainProtocolTwoWayAnonRequest {
   const ::fidl::internal::UnionMemberView<1, Storage_> b() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> b() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the b member.
+  //
+
+  MainProtocolTwoWayAnonRequest& b(bool value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   MainProtocolTwoWayAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1025,6 +1163,14 @@ class MainProtocolTwoWayAnonResponse {
   const std::optional<uint16_t>& a() const { return storage_.a; }
   ::std::optional<uint16_t>& a() { return storage_.a; }
 
+  // Setter for a.
+  //
+
+  MainProtocolTwoWayAnonResponse& a(std::optional<uint16_t> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   MainProtocolTwoWayAnonResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayAnonResponse(Storage_{}) {}
 
  private:
@@ -1070,6 +1216,14 @@ class MainProtocolTwoWayAnonWithErrorRequest {
 
   const std::optional<uint16_t>& a() const { return storage_.a; }
   ::std::optional<uint16_t>& a() { return storage_.a; }
+
+  // Setter for a.
+  //
+
+  MainProtocolTwoWayAnonWithErrorRequest& a(std::optional<uint16_t> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
 
   MainProtocolTwoWayAnonWithErrorRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayAnonWithErrorRequest(Storage_{}) {}
 
@@ -1142,8 +1296,17 @@ class MainProtocolTwoWayAnonWithErrorResponse {
   const ::fidl::internal::UnionMemberView<1, Storage_> b() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> b() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the b member.
+  //
+
+  MainProtocolTwoWayAnonWithErrorResponse& b(bool value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   MainProtocolTwoWayAnonWithErrorResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1230,8 +1393,17 @@ class MainProtocolTwoWayAnonWithErrorResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  MainProtocolTwoWayAnonWithErrorResult& response(::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResponse value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static MainProtocolTwoWayAnonWithErrorResult WithErr(uint32_t val) {
     return MainProtocolTwoWayAnonWithErrorResult(std::make_shared<Storage_>(
@@ -1242,8 +1414,17 @@ class MainProtocolTwoWayAnonWithErrorResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  MainProtocolTwoWayAnonWithErrorResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   MainProtocolTwoWayAnonWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1324,6 +1505,14 @@ class MainProtocolTwoWayAnonWithErrorTopResponse {
     return storage_.result;
   }
 
+  // Setter for result.
+  //
+
+  MainProtocolTwoWayAnonWithErrorTopResponse& result(::test_protocollayouts::MainProtocolTwoWayAnonWithErrorResult value) {
+    storage_.result = std::move(value);
+    return *this;
+  }
+
   MainProtocolTwoWayAnonWithErrorTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolTwoWayAnonWithErrorTopResponse(Storage_{
                                                                                                                .result = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                            }) {}
@@ -1398,8 +1587,17 @@ class MainProtocolOnAnonRequest {
   const ::fidl::internal::UnionMemberView<1, Storage_> b() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> b() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the b member.
+  //
+
+  MainProtocolOnAnonRequest& b(bool value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   MainProtocolOnAnonRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1463,6 +1661,14 @@ class MainProtocolOnAnonWithErrorResponse {
 
   const std::optional<uint16_t>& a() const { return storage_.a; }
   ::std::optional<uint16_t>& a() { return storage_.a; }
+
+  // Setter for a.
+  //
+
+  MainProtocolOnAnonWithErrorResponse& a(std::optional<uint16_t> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
 
   MainProtocolOnAnonWithErrorResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolOnAnonWithErrorResponse(Storage_{}) {}
 
@@ -1532,8 +1738,17 @@ class MainProtocolOnAnonWithErrorResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  MainProtocolOnAnonWithErrorResult& response(::test_protocollayouts::MainProtocolOnAnonWithErrorResponse value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static MainProtocolOnAnonWithErrorResult WithErr(uint32_t val) {
     return MainProtocolOnAnonWithErrorResult(std::make_shared<Storage_>(
@@ -1544,8 +1759,17 @@ class MainProtocolOnAnonWithErrorResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  MainProtocolOnAnonWithErrorResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   MainProtocolOnAnonWithErrorResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1624,6 +1848,14 @@ class MainProtocolOnAnonWithErrorRequest {
 
   ::test_protocollayouts::MainProtocolOnAnonWithErrorResult& result() {
     return storage_.result;
+  }
+
+  // Setter for result.
+  //
+
+  MainProtocolOnAnonWithErrorRequest& result(::test_protocollayouts::MainProtocolOnAnonWithErrorResult value) {
+    storage_.result = std::move(value);
+    return *this;
   }
 
   MainProtocolOnAnonWithErrorRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MainProtocolOnAnonWithErrorRequest(Storage_{

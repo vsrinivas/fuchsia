@@ -220,6 +220,14 @@ class WithAndWithoutRequestResponseNoRequestWithResponseResponse {
       return storage_.ret;
     }
 
+    // Setter for ret.
+    //
+    
+    WithAndWithoutRequestResponseNoRequestWithResponseResponse& ret(::std::string value) {
+      storage_.ret = std::move(value);
+      return *this;
+    }
+
   WithAndWithoutRequestResponseNoRequestWithResponseResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseNoRequestWithResponseResponse(Storage_{
       .ret ={},
   }) {}
@@ -290,6 +298,14 @@ class WithAndWithoutRequestResponseWithRequestNoResponseRequest {
     
     ::std::string& arg() {
       return storage_.arg;
+    }
+
+    // Setter for arg.
+    //
+    
+    WithAndWithoutRequestResponseWithRequestNoResponseRequest& arg(::std::string value) {
+      storage_.arg = std::move(value);
+      return *this;
     }
 
   WithAndWithoutRequestResponseWithRequestNoResponseRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseWithRequestNoResponseRequest(Storage_{
@@ -364,6 +380,14 @@ class WithAndWithoutRequestResponseWithRequestEmptyResponseRequest {
       return storage_.arg;
     }
 
+    // Setter for arg.
+    //
+    
+    WithAndWithoutRequestResponseWithRequestEmptyResponseRequest& arg(::std::string value) {
+      storage_.arg = std::move(value);
+      return *this;
+    }
+
   WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseWithRequestEmptyResponseRequest(Storage_{
       .arg ={},
   }) {}
@@ -434,6 +458,14 @@ class WithAndWithoutRequestResponseWithRequestWithResponseRequest {
     
     ::std::string& arg() {
       return storage_.arg;
+    }
+
+    // Setter for arg.
+    //
+    
+    WithAndWithoutRequestResponseWithRequestWithResponseRequest& arg(::std::string value) {
+      storage_.arg = std::move(value);
+      return *this;
     }
 
   WithAndWithoutRequestResponseWithRequestWithResponseRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseWithRequestWithResponseRequest(Storage_{
@@ -508,6 +540,14 @@ class WithAndWithoutRequestResponseWithRequestWithResponseResponse {
       return storage_.ret;
     }
 
+    // Setter for ret.
+    //
+    
+    WithAndWithoutRequestResponseWithRequestWithResponseResponse& ret(::std::string value) {
+      storage_.ret = std::move(value);
+      return *this;
+    }
+
   WithAndWithoutRequestResponseWithRequestWithResponseResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseWithRequestWithResponseResponse(Storage_{
       .ret ={},
   }) {}
@@ -578,6 +618,14 @@ class WithAndWithoutRequestResponseOnWithResponseRequest {
     
     ::std::string& ret() {
       return storage_.ret;
+    }
+
+    // Setter for ret.
+    //
+    
+    WithAndWithoutRequestResponseOnWithResponseRequest& ret(::std::string value) {
+      storage_.ret = std::move(value);
+      return *this;
     }
 
   WithAndWithoutRequestResponseOnWithResponseRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithAndWithoutRequestResponseOnWithResponseRequest(Storage_{
@@ -659,6 +707,14 @@ class WithErrorSyntaxResponseAsStructResponse {
     int64_t& a() {
       return storage_.a;
     }
+
+    // Setter for a.
+    //
+    
+    WithErrorSyntaxResponseAsStructResponse& a(int64_t value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
     
       int64_t
     b() const {
@@ -669,6 +725,14 @@ class WithErrorSyntaxResponseAsStructResponse {
     int64_t& b() {
       return storage_.b;
     }
+
+    // Setter for b.
+    //
+    
+    WithErrorSyntaxResponseAsStructResponse& b(int64_t value) {
+      storage_.b = std::move(value);
+      return *this;
+    }
     
       int64_t
     c() const {
@@ -678,6 +742,14 @@ class WithErrorSyntaxResponseAsStructResponse {
     
     int64_t& c() {
       return storage_.c;
+    }
+
+    // Setter for c.
+    //
+    
+    WithErrorSyntaxResponseAsStructResponse& c(int64_t value) {
+      storage_.c = std::move(value);
+      return *this;
     }
 
   WithErrorSyntaxResponseAsStructResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxResponseAsStructResponse(Storage_{
@@ -776,8 +848,17 @@ class WithErrorSyntaxResponseAsStructResult {
     const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> response() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the response member.
+    //
+    
+    WithErrorSyntaxResponseAsStructResult& response(::test_protocols::WithErrorSyntaxResponseAsStructResponse value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static WithErrorSyntaxResponseAsStructResult WithErr(uint32_t val) {
       return WithErrorSyntaxResponseAsStructResult(std::make_shared<Storage_>(
@@ -788,8 +869,17 @@ class WithErrorSyntaxResponseAsStructResult {
     const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> err() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the err member.
+    //
+    
+    WithErrorSyntaxResponseAsStructResult& err(uint32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   WithErrorSyntaxResponseAsStructResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -876,6 +966,14 @@ class WithErrorSyntaxResponseAsStructTopResponse {
       return storage_.result;
     }
 
+    // Setter for result.
+    //
+    
+    WithErrorSyntaxResponseAsStructTopResponse& result(::test_protocols::WithErrorSyntaxResponseAsStructResult value) {
+      storage_.result = std::move(value);
+      return *this;
+    }
+
   WithErrorSyntaxResponseAsStructTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxResponseAsStructTopResponse(Storage_{
       .result =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
@@ -946,6 +1044,14 @@ class WithErrorSyntaxErrorAsPrimitiveResponse {
     
     uint8_t& __reserved() {
       return storage_.__reserved;
+    }
+
+    // Setter for __reserved.
+    //
+    
+    WithErrorSyntaxErrorAsPrimitiveResponse& __reserved(uint8_t value) {
+      storage_.__reserved = std::move(value);
+      return *this;
     }
 
   WithErrorSyntaxErrorAsPrimitiveResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxErrorAsPrimitiveResponse(Storage_{
@@ -1034,8 +1140,17 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
     const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> response() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the response member.
+    //
+    
+    WithErrorSyntaxErrorAsPrimitiveResult& response(::test_protocols::WithErrorSyntaxErrorAsPrimitiveResponse value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static WithErrorSyntaxErrorAsPrimitiveResult WithErr(uint32_t val) {
       return WithErrorSyntaxErrorAsPrimitiveResult(std::make_shared<Storage_>(
@@ -1046,8 +1161,17 @@ class WithErrorSyntaxErrorAsPrimitiveResult {
     const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> err() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the err member.
+    //
+    
+    WithErrorSyntaxErrorAsPrimitiveResult& err(uint32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   WithErrorSyntaxErrorAsPrimitiveResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1134,6 +1258,14 @@ class WithErrorSyntaxErrorAsPrimitiveTopResponse {
       return storage_.result;
     }
 
+    // Setter for result.
+    //
+    
+    WithErrorSyntaxErrorAsPrimitiveTopResponse& result(::test_protocols::WithErrorSyntaxErrorAsPrimitiveResult value) {
+      storage_.result = std::move(value);
+      return *this;
+    }
+
   WithErrorSyntaxErrorAsPrimitiveTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxErrorAsPrimitiveTopResponse(Storage_{
       .result =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
@@ -1204,6 +1336,14 @@ class WithErrorSyntaxErrorAsEnumResponse {
     
     uint8_t& __reserved() {
       return storage_.__reserved;
+    }
+
+    // Setter for __reserved.
+    //
+    
+    WithErrorSyntaxErrorAsEnumResponse& __reserved(uint8_t value) {
+      storage_.__reserved = std::move(value);
+      return *this;
     }
 
   WithErrorSyntaxErrorAsEnumResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxErrorAsEnumResponse(Storage_{
@@ -1292,8 +1432,17 @@ class WithErrorSyntaxErrorAsEnumResult {
     const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> response() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the response member.
+    //
+    
+    WithErrorSyntaxErrorAsEnumResult& response(::test_protocols::WithErrorSyntaxErrorAsEnumResponse value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static WithErrorSyntaxErrorAsEnumResult WithErr(::test_protocols::ErrorEnum val) {
       return WithErrorSyntaxErrorAsEnumResult(std::make_shared<Storage_>(
@@ -1304,8 +1453,17 @@ class WithErrorSyntaxErrorAsEnumResult {
     const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> err() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the err member.
+    //
+    
+    WithErrorSyntaxErrorAsEnumResult& err(::test_protocols::ErrorEnum value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   WithErrorSyntaxErrorAsEnumResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1392,6 +1550,14 @@ class WithErrorSyntaxErrorAsEnumTopResponse {
       return storage_.result;
     }
 
+    // Setter for result.
+    //
+    
+    WithErrorSyntaxErrorAsEnumTopResponse& result(::test_protocols::WithErrorSyntaxErrorAsEnumResult value) {
+      storage_.result = std::move(value);
+      return *this;
+    }
+
   WithErrorSyntaxErrorAsEnumTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxErrorAsEnumTopResponse(Storage_{
       .result =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
@@ -1452,6 +1618,14 @@ class WithErrorSyntaxHandleInResultResponse {
     
     ::zx::handle& h() {
       return storage_.h;
+    }
+
+    // Setter for h.
+    //
+    
+    WithErrorSyntaxHandleInResultResponse& h(::zx::handle value) {
+      storage_.h = std::move(value);
+      return *this;
     }
 
   WithErrorSyntaxHandleInResultResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxHandleInResultResponse(Storage_{
@@ -1529,8 +1703,17 @@ class WithErrorSyntaxHandleInResultResult {
     const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> response() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the response member.
+    //
+    
+    WithErrorSyntaxHandleInResultResult& response(::test_protocols::WithErrorSyntaxHandleInResultResponse value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
     static WithErrorSyntaxHandleInResultResult WithErr(uint32_t val) {
       return WithErrorSyntaxHandleInResultResult(std::make_shared<Storage_>(
@@ -1541,8 +1724,17 @@ class WithErrorSyntaxHandleInResultResult {
     const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<2, Storage_> err() {
       return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the err member.
+    //
+    
+    WithErrorSyntaxHandleInResultResult& err(uint32_t value) {
+      storage_->emplace<2>(std::move(value));
+      return *this;
     }
 
   WithErrorSyntaxHandleInResultResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -1619,6 +1811,14 @@ class WithErrorSyntaxHandleInResultTopResponse {
     
     ::test_protocols::WithErrorSyntaxHandleInResultResult& result() {
       return storage_.result;
+    }
+
+    // Setter for result.
+    //
+    
+    WithErrorSyntaxHandleInResultTopResponse& result(::test_protocols::WithErrorSyntaxHandleInResultResult value) {
+      storage_.result = std::move(value);
+      return *this;
     }
 
   WithErrorSyntaxHandleInResultTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithErrorSyntaxHandleInResultTopResponse(Storage_{
@@ -1698,6 +1898,14 @@ class ChannelProtocolMethodARequest {
     int64_t& a() {
       return storage_.a;
     }
+
+    // Setter for a.
+    //
+    
+    ChannelProtocolMethodARequest& a(int64_t value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
     
       int64_t
     b() const {
@@ -1707,6 +1915,14 @@ class ChannelProtocolMethodARequest {
     
     int64_t& b() {
       return storage_.b;
+    }
+
+    // Setter for b.
+    //
+    
+    ChannelProtocolMethodARequest& b(int64_t value) {
+      storage_.b = std::move(value);
+      return *this;
     }
 
   ChannelProtocolMethodARequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMethodARequest(Storage_{
@@ -1787,6 +2003,14 @@ class ChannelProtocolEventARequest {
     int64_t& a() {
       return storage_.a;
     }
+
+    // Setter for a.
+    //
+    
+    ChannelProtocolEventARequest& a(int64_t value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
     
       int64_t
     b() const {
@@ -1796,6 +2020,14 @@ class ChannelProtocolEventARequest {
     
     int64_t& b() {
       return storage_.b;
+    }
+
+    // Setter for b.
+    //
+    
+    ChannelProtocolEventARequest& b(int64_t value) {
+      storage_.b = std::move(value);
+      return *this;
     }
 
   ChannelProtocolEventARequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolEventARequest(Storage_{
@@ -1876,6 +2108,14 @@ class ChannelProtocolMethodBRequest {
     int64_t& a() {
       return storage_.a;
     }
+
+    // Setter for a.
+    //
+    
+    ChannelProtocolMethodBRequest& a(int64_t value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
     
       int64_t
     b() const {
@@ -1885,6 +2125,14 @@ class ChannelProtocolMethodBRequest {
     
     int64_t& b() {
       return storage_.b;
+    }
+
+    // Setter for b.
+    //
+    
+    ChannelProtocolMethodBRequest& b(int64_t value) {
+      storage_.b = std::move(value);
+      return *this;
     }
 
   ChannelProtocolMethodBRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMethodBRequest(Storage_{
@@ -1965,6 +2213,14 @@ class ChannelProtocolMethodBResponse {
       return storage_.result;
     }
 
+    // Setter for result.
+    //
+    
+    ChannelProtocolMethodBResponse& result(int64_t value) {
+      storage_.result = std::move(value);
+      return *this;
+    }
+
   ChannelProtocolMethodBResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMethodBResponse(Storage_{
       .result ={},
   }) {}
@@ -2026,6 +2282,14 @@ class ChannelProtocolTakeHandleRequest {
     
     ::zx::handle& h() {
       return storage_.h;
+    }
+
+    // Setter for h.
+    //
+    
+    ChannelProtocolTakeHandleRequest& h(::zx::handle value) {
+      storage_.h = std::move(value);
+      return *this;
     }
 
   ChannelProtocolTakeHandleRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolTakeHandleRequest(Storage_{
@@ -2092,6 +2356,14 @@ class ChannelProtocolMutateSocketRequest {
       return storage_.a;
     }
 
+    // Setter for a.
+    //
+    
+    ChannelProtocolMutateSocketRequest& a(::zx::socket value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
+
   ChannelProtocolMutateSocketRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMutateSocketRequest(Storage_{
       .a ={},
   }) {}
@@ -2154,6 +2426,14 @@ class ChannelProtocolMutateSocketResponse {
     
     ::zx::socket& b() {
       return storage_.b;
+    }
+
+    // Setter for b.
+    //
+    
+    ChannelProtocolMutateSocketResponse& b(::zx::socket value) {
+      storage_.b = std::move(value);
+      return *this;
     }
 
   ChannelProtocolMutateSocketResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ChannelProtocolMutateSocketResponse(Storage_{
@@ -2233,6 +2513,14 @@ class SyscallProtocolMethodCRequest {
     int64_t& a() {
       return storage_.a;
     }
+
+    // Setter for a.
+    //
+    
+    SyscallProtocolMethodCRequest& a(int64_t value) {
+      storage_.a = std::move(value);
+      return *this;
+    }
     
       int64_t
     b() const {
@@ -2242,6 +2530,14 @@ class SyscallProtocolMethodCRequest {
     
     int64_t& b() {
       return storage_.b;
+    }
+
+    // Setter for b.
+    //
+    
+    SyscallProtocolMethodCRequest& b(int64_t value) {
+      storage_.b = std::move(value);
+      return *this;
     }
 
   SyscallProtocolMethodCRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SyscallProtocolMethodCRequest(Storage_{
@@ -2325,6 +2621,14 @@ class TransitionalRequestRequest {
       return storage_.x;
     }
 
+    // Setter for x.
+    //
+    
+    TransitionalRequestRequest& x(int64_t value) {
+      storage_.x = std::move(value);
+      return *this;
+    }
+
   TransitionalRequestRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TransitionalRequestRequest(Storage_{
       .x ={},
   }) {}
@@ -2396,6 +2700,14 @@ class TransitionalRequestResponse {
     
     int64_t& y() {
       return storage_.y;
+    }
+
+    // Setter for y.
+    //
+    
+    TransitionalRequestResponse& y(int64_t value) {
+      storage_.y = std::move(value);
+      return *this;
     }
 
   TransitionalRequestResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TransitionalRequestResponse(Storage_{
@@ -2471,6 +2783,14 @@ class TransitionalOneWayRequest {
       return storage_.x;
     }
 
+    // Setter for x.
+    //
+    
+    TransitionalOneWayRequest& x(int64_t value) {
+      storage_.x = std::move(value);
+      return *this;
+    }
+
   TransitionalOneWayRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TransitionalOneWayRequest(Storage_{
       .x ={},
   }) {}
@@ -2542,6 +2862,14 @@ class TransitionalEventRequest {
     
     int64_t& x() {
       return storage_.x;
+    }
+
+    // Setter for x.
+    //
+    
+    TransitionalEventRequest& x(int64_t value) {
+      storage_.x = std::move(value);
+      return *this;
     }
 
   TransitionalEventRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TransitionalEventRequest(Storage_{
@@ -2616,6 +2944,14 @@ class HandleRightsProtocolNoResponseMethodRequest {
       return storage_.h;
     }
 
+    // Setter for h.
+    //
+    
+    HandleRightsProtocolNoResponseMethodRequest& h(::zx::socket value) {
+      storage_.h = std::move(value);
+      return *this;
+    }
+
   HandleRightsProtocolNoResponseMethodRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandleRightsProtocolNoResponseMethodRequest(Storage_{
       .h ={},
   }) {}
@@ -2678,6 +3014,14 @@ class HandleRightsProtocolResponseMethodRequest {
     
     ::zx::socket& h() {
       return storage_.h;
+    }
+
+    // Setter for h.
+    //
+    
+    HandleRightsProtocolResponseMethodRequest& h(::zx::socket value) {
+      storage_.h = std::move(value);
+      return *this;
     }
 
   HandleRightsProtocolResponseMethodRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandleRightsProtocolResponseMethodRequest(Storage_{
@@ -2744,6 +3088,14 @@ class HandleRightsProtocolResponseMethodResponse {
       return storage_.h;
     }
 
+    // Setter for h.
+    //
+    
+    HandleRightsProtocolResponseMethodResponse& h(::zx::socket value) {
+      storage_.h = std::move(value);
+      return *this;
+    }
+
   HandleRightsProtocolResponseMethodResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandleRightsProtocolResponseMethodResponse(Storage_{
       .h ={},
   }) {}
@@ -2806,6 +3158,14 @@ class HandleRightsProtocolAnEventRequest {
     
     ::zx::socket& h() {
       return storage_.h;
+    }
+
+    // Setter for h.
+    //
+    
+    HandleRightsProtocolAnEventRequest& h(::zx::socket value) {
+      storage_.h = std::move(value);
+      return *this;
     }
 
   HandleRightsProtocolAnEventRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandleRightsProtocolAnEventRequest(Storage_{
@@ -2877,6 +3237,14 @@ class ProtocolEnds {
     ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>& client() {
       return storage_.client;
     }
+
+    // Setter for client.
+    //
+    
+    ProtocolEnds& client(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.client = std::move(value);
+      return *this;
+    }
     
       const ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> &
     server() const {
@@ -2886,6 +3254,14 @@ class ProtocolEnds {
     
     ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>& server() {
       return storage_.server;
+    }
+
+    // Setter for server.
+    //
+    
+    ProtocolEnds& server(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.server = std::move(value);
+      return *this;
     }
     
       const ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> &
@@ -2897,6 +3273,14 @@ class ProtocolEnds {
     ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>& client_opt() {
       return storage_.client_opt;
     }
+
+    // Setter for client_opt.
+    //
+    
+    ProtocolEnds& client_opt(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.client_opt = std::move(value);
+      return *this;
+    }
     
       const ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> &
     server_opt() const {
@@ -2906,6 +3290,14 @@ class ProtocolEnds {
     
     ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>& server_opt() {
       return storage_.server_opt;
+    }
+
+    // Setter for server_opt.
+    //
+    
+    ProtocolEnds& server_opt(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.server_opt = std::move(value);
+      return *this;
     }
 
   ProtocolEnds(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolEnds(Storage_{
@@ -2984,6 +3376,14 @@ class WithProtocolEndsClientEndsRequest {
       return storage_.in;
     }
 
+    // Setter for in.
+    //
+    
+    WithProtocolEndsClientEndsRequest& in(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.in = std::move(value);
+      return *this;
+    }
+
   WithProtocolEndsClientEndsRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsClientEndsRequest(Storage_{
       .in ={},
   }) {}
@@ -3046,6 +3446,14 @@ class WithProtocolEndsClientEndsResponse {
     
     ::fidl::ClientEnd<::test_protocols::DiscoverableProtocol>& out() {
       return storage_.out;
+    }
+
+    // Setter for out.
+    //
+    
+    WithProtocolEndsClientEndsResponse& out(::fidl::ClientEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.out = std::move(value);
+      return *this;
     }
 
   WithProtocolEndsClientEndsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsClientEndsResponse(Storage_{
@@ -3112,6 +3520,14 @@ class WithProtocolEndsServerEndsRequest {
       return storage_.in;
     }
 
+    // Setter for in.
+    //
+    
+    WithProtocolEndsServerEndsRequest& in(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.in = std::move(value);
+      return *this;
+    }
+
   WithProtocolEndsServerEndsRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsServerEndsRequest(Storage_{
       .in ={},
   }) {}
@@ -3174,6 +3590,14 @@ class WithProtocolEndsServerEndsResponse {
     
     ::fidl::ServerEnd<::test_protocols::DiscoverableProtocol>& out() {
       return storage_.out;
+    }
+
+    // Setter for out.
+    //
+    
+    WithProtocolEndsServerEndsResponse& out(::fidl::ServerEnd<::test_protocols::DiscoverableProtocol> value) {
+      storage_.out = std::move(value);
+      return *this;
     }
 
   WithProtocolEndsServerEndsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsServerEndsResponse(Storage_{
@@ -3240,6 +3664,14 @@ class WithProtocolEndsStructContainingEndsRequest {
       return storage_.in;
     }
 
+    // Setter for in.
+    //
+    
+    WithProtocolEndsStructContainingEndsRequest& in(::test_protocols::ProtocolEnds value) {
+      storage_.in = std::move(value);
+      return *this;
+    }
+
   WithProtocolEndsStructContainingEndsRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsStructContainingEndsRequest(Storage_{
       .in =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
@@ -3302,6 +3734,14 @@ class WithProtocolEndsStructContainingEndsResponse {
     
     ::test_protocols::ProtocolEnds& out() {
       return storage_.out;
+    }
+
+    // Setter for out.
+    //
+    
+    WithProtocolEndsStructContainingEndsResponse& out(::test_protocols::ProtocolEnds value) {
+      storage_.out = std::move(value);
+      return *this;
     }
 
   WithProtocolEndsStructContainingEndsResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : WithProtocolEndsStructContainingEndsResponse(Storage_{
@@ -3394,6 +3834,14 @@ class ManyParametersFifteenRequest {
     bool& p1() {
       return storage_.p1;
     }
+
+    // Setter for p1.
+    //
+    
+    ManyParametersFifteenRequest& p1(bool value) {
+      storage_.p1 = std::move(value);
+      return *this;
+    }
     
       bool
     p2() const {
@@ -3403,6 +3851,14 @@ class ManyParametersFifteenRequest {
     
     bool& p2() {
       return storage_.p2;
+    }
+
+    // Setter for p2.
+    //
+    
+    ManyParametersFifteenRequest& p2(bool value) {
+      storage_.p2 = std::move(value);
+      return *this;
     }
     
       bool
@@ -3414,6 +3870,14 @@ class ManyParametersFifteenRequest {
     bool& p3() {
       return storage_.p3;
     }
+
+    // Setter for p3.
+    //
+    
+    ManyParametersFifteenRequest& p3(bool value) {
+      storage_.p3 = std::move(value);
+      return *this;
+    }
     
       bool
     p4() const {
@@ -3423,6 +3887,14 @@ class ManyParametersFifteenRequest {
     
     bool& p4() {
       return storage_.p4;
+    }
+
+    // Setter for p4.
+    //
+    
+    ManyParametersFifteenRequest& p4(bool value) {
+      storage_.p4 = std::move(value);
+      return *this;
     }
     
       bool
@@ -3434,6 +3906,14 @@ class ManyParametersFifteenRequest {
     bool& p5() {
       return storage_.p5;
     }
+
+    // Setter for p5.
+    //
+    
+    ManyParametersFifteenRequest& p5(bool value) {
+      storage_.p5 = std::move(value);
+      return *this;
+    }
     
       bool
     p6() const {
@@ -3443,6 +3923,14 @@ class ManyParametersFifteenRequest {
     
     bool& p6() {
       return storage_.p6;
+    }
+
+    // Setter for p6.
+    //
+    
+    ManyParametersFifteenRequest& p6(bool value) {
+      storage_.p6 = std::move(value);
+      return *this;
     }
     
       bool
@@ -3454,6 +3942,14 @@ class ManyParametersFifteenRequest {
     bool& p7() {
       return storage_.p7;
     }
+
+    // Setter for p7.
+    //
+    
+    ManyParametersFifteenRequest& p7(bool value) {
+      storage_.p7 = std::move(value);
+      return *this;
+    }
     
       bool
     p8() const {
@@ -3463,6 +3959,14 @@ class ManyParametersFifteenRequest {
     
     bool& p8() {
       return storage_.p8;
+    }
+
+    // Setter for p8.
+    //
+    
+    ManyParametersFifteenRequest& p8(bool value) {
+      storage_.p8 = std::move(value);
+      return *this;
     }
     
       bool
@@ -3474,6 +3978,14 @@ class ManyParametersFifteenRequest {
     bool& p9() {
       return storage_.p9;
     }
+
+    // Setter for p9.
+    //
+    
+    ManyParametersFifteenRequest& p9(bool value) {
+      storage_.p9 = std::move(value);
+      return *this;
+    }
     
       bool
     p10() const {
@@ -3483,6 +3995,14 @@ class ManyParametersFifteenRequest {
     
     bool& p10() {
       return storage_.p10;
+    }
+
+    // Setter for p10.
+    //
+    
+    ManyParametersFifteenRequest& p10(bool value) {
+      storage_.p10 = std::move(value);
+      return *this;
     }
     
       bool
@@ -3494,6 +4014,14 @@ class ManyParametersFifteenRequest {
     bool& p11() {
       return storage_.p11;
     }
+
+    // Setter for p11.
+    //
+    
+    ManyParametersFifteenRequest& p11(bool value) {
+      storage_.p11 = std::move(value);
+      return *this;
+    }
     
       bool
     p12() const {
@@ -3503,6 +4031,14 @@ class ManyParametersFifteenRequest {
     
     bool& p12() {
       return storage_.p12;
+    }
+
+    // Setter for p12.
+    //
+    
+    ManyParametersFifteenRequest& p12(bool value) {
+      storage_.p12 = std::move(value);
+      return *this;
     }
     
       bool
@@ -3514,6 +4050,14 @@ class ManyParametersFifteenRequest {
     bool& p13() {
       return storage_.p13;
     }
+
+    // Setter for p13.
+    //
+    
+    ManyParametersFifteenRequest& p13(bool value) {
+      storage_.p13 = std::move(value);
+      return *this;
+    }
     
       bool
     p14() const {
@@ -3524,6 +4068,14 @@ class ManyParametersFifteenRequest {
     bool& p14() {
       return storage_.p14;
     }
+
+    // Setter for p14.
+    //
+    
+    ManyParametersFifteenRequest& p14(bool value) {
+      storage_.p14 = std::move(value);
+      return *this;
+    }
     
       bool
     p15() const {
@@ -3533,6 +4085,14 @@ class ManyParametersFifteenRequest {
     
     bool& p15() {
       return storage_.p15;
+    }
+
+    // Setter for p15.
+    //
+    
+    ManyParametersFifteenRequest& p15(bool value) {
+      storage_.p15 = std::move(value);
+      return *this;
     }
 
   ManyParametersFifteenRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ManyParametersFifteenRequest(Storage_{
@@ -3696,8 +4256,17 @@ class TheUnion {
     const ::fidl::internal::UnionMemberView<1, Storage_> v() const {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
     }
+
     ::fidl::internal::UnionMemberView<1, Storage_> v() {
       return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+    }
+
+    // Sets the union to hold the v member.
+    //
+    
+    TheUnion& v(uint32_t value) {
+      storage_->emplace<1>(std::move(value));
+      return *this;
     }
 
   TheUnion(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -3780,6 +4349,14 @@ class MethodWithUnionUnionMethodRequest {
       return storage_.u;
     }
 
+    // Setter for u.
+    //
+    
+    MethodWithUnionUnionMethodRequest& u(::test_protocols::TheUnion value) {
+      storage_.u = std::move(value);
+      return *this;
+    }
+
   MethodWithUnionUnionMethodRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MethodWithUnionUnionMethodRequest(Storage_{
       .u =::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
   }) {}
@@ -3850,6 +4427,14 @@ class MethodWithUnionUnionMethodResponse {
     
     ::std::unique_ptr<::test_protocols::TheUnion>& u() {
       return storage_.u;
+    }
+
+    // Setter for u.
+    //
+    
+    MethodWithUnionUnionMethodResponse& u(::std::unique_ptr<::test_protocols::TheUnion> value) {
+      storage_.u = std::move(value);
+      return *this;
     }
 
   MethodWithUnionUnionMethodResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : MethodWithUnionUnionMethodResponse(Storage_{

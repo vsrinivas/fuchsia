@@ -57,6 +57,14 @@ class ParentGetChildResponse {
     return storage_.c;
   }
 
+  // Setter for c.
+  //
+
+  ParentGetChildResponse& c(::fidl::ClientEnd<::test_protocolrequest::Child> value) {
+    storage_.c = std::move(value);
+    return *this;
+  }
+
   ParentGetChildResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentGetChildResponse(Storage_{
                                                                                            .c = {},
                                                                                        }) {}
@@ -106,6 +114,14 @@ class ParentGetChildRequestResponse {
 
   ::fidl::ServerEnd<::test_protocolrequest::Child>& r() {
     return storage_.r;
+  }
+
+  // Setter for r.
+  //
+
+  ParentGetChildRequestResponse& r(::fidl::ServerEnd<::test_protocolrequest::Child> value) {
+    storage_.r = std::move(value);
+    return *this;
   }
 
   ParentGetChildRequestResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentGetChildRequestResponse(Storage_{
@@ -159,6 +175,14 @@ class ParentTakeChildRequest {
     return storage_.c;
   }
 
+  // Setter for c.
+  //
+
+  ParentTakeChildRequest& c(::fidl::ClientEnd<::test_protocolrequest::Child> value) {
+    storage_.c = std::move(value);
+    return *this;
+  }
+
   ParentTakeChildRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentTakeChildRequest(Storage_{
                                                                                            .c = {},
                                                                                        }) {}
@@ -208,6 +232,14 @@ class ParentTakeChildRequestRequest {
 
   ::fidl::ServerEnd<::test_protocolrequest::Child>& r() {
     return storage_.r;
+  }
+
+  // Setter for r.
+  //
+
+  ParentTakeChildRequestRequest& r(::fidl::ServerEnd<::test_protocolrequest::Child> value) {
+    storage_.r = std::move(value);
+    return *this;
   }
 
   ParentTakeChildRequestRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ParentTakeChildRequestRequest(Storage_{

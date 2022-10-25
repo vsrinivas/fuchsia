@@ -75,6 +75,14 @@ class {{ .Name }} {
     {{ .Type }}& {{ .Name }}() {
       return storage_.{{ .Name }};
     }
+
+    // Setter for {{ .Name }}.
+    //
+    {{ .Docs }}
+    {{ $.Name }}& {{ .Name }}({{ .Type }} value) {
+      storage_.{{ .Name }} = std::move(value);
+      return *this;
+    }
   {{- end }}
 
   {{ .Name }}(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : {{ .Name }}(Storage_{

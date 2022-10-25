@@ -86,8 +86,17 @@ class FlexibleFoo {
   const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> s() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the s member.
+  //
+
+  FlexibleFoo& s(::std::string value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static FlexibleFoo WithI(int32_t val) {
     return FlexibleFoo(std::make_shared<Storage_>(
@@ -98,8 +107,17 @@ class FlexibleFoo {
   const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the i member.
+  //
+
+  FlexibleFoo& i(int32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   FlexibleFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -190,8 +208,17 @@ class StrictFoo {
   const ::fidl::internal::UnionMemberView<1, Storage_> s() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> s() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the s member.
+  //
+
+  StrictFoo& s(::std::string value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static StrictFoo WithI(int32_t val) {
     return StrictFoo(std::make_shared<Storage_>(
@@ -202,8 +229,17 @@ class StrictFoo {
   const ::fidl::internal::UnionMemberView<2, Storage_> i() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> i() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the i member.
+  //
+
+  StrictFoo& i(int32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   StrictFoo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -284,6 +320,14 @@ class ProtocolRequestStrictResponseFlexibleRequest {
     return storage_.s;
   }
 
+  // Setter for s.
+  //
+
+  ProtocolRequestStrictResponseFlexibleRequest& s(::test_requestflexibleenvelope::StrictFoo value) {
+    storage_.s = std::move(value);
+    return *this;
+  }
+
   ProtocolRequestStrictResponseFlexibleRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestStrictResponseFlexibleRequest(Storage_{
                                                                                                                  .s = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                              }) {}
@@ -342,6 +386,14 @@ class ProtocolRequestStrictResponseFlexibleResponse {
 
   ::test_requestflexibleenvelope::FlexibleFoo& f() {
     return storage_.f;
+  }
+
+  // Setter for f.
+  //
+
+  ProtocolRequestStrictResponseFlexibleResponse& f(::test_requestflexibleenvelope::FlexibleFoo value) {
+    storage_.f = std::move(value);
+    return *this;
   }
 
   ProtocolRequestStrictResponseFlexibleResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestStrictResponseFlexibleResponse(Storage_{
@@ -404,6 +456,14 @@ class ProtocolRequestFlexibleResponseStrictRequest {
     return storage_.s;
   }
 
+  // Setter for s.
+  //
+
+  ProtocolRequestFlexibleResponseStrictRequest& s(::test_requestflexibleenvelope::FlexibleFoo value) {
+    storage_.s = std::move(value);
+    return *this;
+  }
+
   ProtocolRequestFlexibleResponseStrictRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestFlexibleResponseStrictRequest(Storage_{
                                                                                                                  .s = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                                                              }) {}
@@ -462,6 +522,14 @@ class ProtocolRequestFlexibleResponseStrictResponse {
 
   ::test_requestflexibleenvelope::StrictFoo& f() {
     return storage_.f;
+  }
+
+  // Setter for f.
+  //
+
+  ProtocolRequestFlexibleResponseStrictResponse& f(::test_requestflexibleenvelope::StrictFoo value) {
+    storage_.f = std::move(value);
+    return *this;
   }
 
   ProtocolRequestFlexibleResponseStrictResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ProtocolRequestFlexibleResponseStrictResponse(Storage_{

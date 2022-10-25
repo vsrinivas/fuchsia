@@ -60,6 +60,14 @@ class DocCommentWithQuotes {
     return storage_.__reserved;
   }
 
+  // Setter for __reserved.
+  //
+
+  DocCommentWithQuotes& __reserved(uint8_t value) {
+    storage_.__reserved = std::move(value);
+    return *this;
+  }
+
   DocCommentWithQuotes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : DocCommentWithQuotes(Storage_{
                                                                                          .__reserved = 0u,
                                                                                      }) {}

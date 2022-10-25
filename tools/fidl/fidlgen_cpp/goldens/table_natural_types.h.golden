@@ -103,8 +103,24 @@ class SimpleTable {
   const std::optional<int64_t>& x() const { return storage_.x; }
   ::std::optional<int64_t>& x() { return storage_.x; }
 
+  // Setter for x.
+  //
+
+  SimpleTable& x(std::optional<int64_t> value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& y() const { return storage_.y; }
   ::std::optional<int64_t>& y() { return storage_.y; }
+
+  // Setter for y.
+  //
+
+  SimpleTable& y(std::optional<int64_t> value) {
+    storage_.y = std::move(value);
+    return *this;
+  }
 
   SimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SimpleTable(Storage_{}) {}
 
@@ -154,6 +170,14 @@ class OlderSimpleTable {
   const std::optional<int64_t>& x() const { return storage_.x; }
   ::std::optional<int64_t>& x() { return storage_.x; }
 
+  // Setter for x.
+  //
+
+  OlderSimpleTable& x(std::optional<int64_t> value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
+
   OlderSimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : OlderSimpleTable(Storage_{}) {}
 
  private:
@@ -200,11 +224,35 @@ class NewerSimpleTable {
   const std::optional<int64_t>& x() const { return storage_.x; }
   ::std::optional<int64_t>& x() { return storage_.x; }
 
+  // Setter for x.
+  //
+
+  NewerSimpleTable& x(std::optional<int64_t> value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& y() const { return storage_.y; }
   ::std::optional<int64_t>& y() { return storage_.y; }
 
+  // Setter for y.
+  //
+
+  NewerSimpleTable& y(std::optional<int64_t> value) {
+    storage_.y = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& z() const { return storage_.z; }
   ::std::optional<int64_t>& z() { return storage_.z; }
+
+  // Setter for z.
+  //
+
+  NewerSimpleTable& z(std::optional<int64_t> value) {
+    storage_.z = std::move(value);
+    return *this;
+  }
 
   NewerSimpleTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : NewerSimpleTable(Storage_{}) {}
 
@@ -255,11 +303,35 @@ class ReverseOrdinalTable {
   const std::optional<int64_t>& z() const { return storage_.z; }
   ::std::optional<int64_t>& z() { return storage_.z; }
 
+  // Setter for z.
+  //
+
+  ReverseOrdinalTable& z(std::optional<int64_t> value) {
+    storage_.z = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& y() const { return storage_.y; }
   ::std::optional<int64_t>& y() { return storage_.y; }
 
+  // Setter for y.
+  //
+
+  ReverseOrdinalTable& y(std::optional<int64_t> value) {
+    storage_.y = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& x() const { return storage_.x; }
   ::std::optional<int64_t>& x() { return storage_.x; }
+
+  // Setter for x.
+  //
+
+  ReverseOrdinalTable& x(std::optional<int64_t> value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
 
   ReverseOrdinalTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ReverseOrdinalTable(Storage_{}) {}
 
@@ -309,6 +381,14 @@ class TableWithAttributes {
 
   const std::optional<int64_t>& x() const { return storage_.x; }
   ::std::optional<int64_t>& x() { return storage_.x; }
+
+  // Setter for x.
+  //
+
+  TableWithAttributes& x(std::optional<int64_t> value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
 
   TableWithAttributes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithAttributes(Storage_{}) {}
 
@@ -397,194 +477,706 @@ class SixtyFourOrdinalTable {
   const std::optional<int64_t>& v1() const { return storage_.v1; }
   ::std::optional<int64_t>& v1() { return storage_.v1; }
 
+  // Setter for v1.
+  //
+
+  SixtyFourOrdinalTable& v1(std::optional<int64_t> value) {
+    storage_.v1 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v2() const { return storage_.v2; }
   ::std::optional<int64_t>& v2() { return storage_.v2; }
+
+  // Setter for v2.
+  //
+
+  SixtyFourOrdinalTable& v2(std::optional<int64_t> value) {
+    storage_.v2 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v3() const { return storage_.v3; }
   ::std::optional<int64_t>& v3() { return storage_.v3; }
 
+  // Setter for v3.
+  //
+
+  SixtyFourOrdinalTable& v3(std::optional<int64_t> value) {
+    storage_.v3 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v4() const { return storage_.v4; }
   ::std::optional<int64_t>& v4() { return storage_.v4; }
+
+  // Setter for v4.
+  //
+
+  SixtyFourOrdinalTable& v4(std::optional<int64_t> value) {
+    storage_.v4 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v5() const { return storage_.v5; }
   ::std::optional<int64_t>& v5() { return storage_.v5; }
 
+  // Setter for v5.
+  //
+
+  SixtyFourOrdinalTable& v5(std::optional<int64_t> value) {
+    storage_.v5 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v6() const { return storage_.v6; }
   ::std::optional<int64_t>& v6() { return storage_.v6; }
+
+  // Setter for v6.
+  //
+
+  SixtyFourOrdinalTable& v6(std::optional<int64_t> value) {
+    storage_.v6 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v7() const { return storage_.v7; }
   ::std::optional<int64_t>& v7() { return storage_.v7; }
 
+  // Setter for v7.
+  //
+
+  SixtyFourOrdinalTable& v7(std::optional<int64_t> value) {
+    storage_.v7 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v8() const { return storage_.v8; }
   ::std::optional<int64_t>& v8() { return storage_.v8; }
+
+  // Setter for v8.
+  //
+
+  SixtyFourOrdinalTable& v8(std::optional<int64_t> value) {
+    storage_.v8 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v9() const { return storage_.v9; }
   ::std::optional<int64_t>& v9() { return storage_.v9; }
 
+  // Setter for v9.
+  //
+
+  SixtyFourOrdinalTable& v9(std::optional<int64_t> value) {
+    storage_.v9 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v10() const { return storage_.v10; }
   ::std::optional<int64_t>& v10() { return storage_.v10; }
+
+  // Setter for v10.
+  //
+
+  SixtyFourOrdinalTable& v10(std::optional<int64_t> value) {
+    storage_.v10 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v11() const { return storage_.v11; }
   ::std::optional<int64_t>& v11() { return storage_.v11; }
 
+  // Setter for v11.
+  //
+
+  SixtyFourOrdinalTable& v11(std::optional<int64_t> value) {
+    storage_.v11 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v12() const { return storage_.v12; }
   ::std::optional<int64_t>& v12() { return storage_.v12; }
+
+  // Setter for v12.
+  //
+
+  SixtyFourOrdinalTable& v12(std::optional<int64_t> value) {
+    storage_.v12 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v13() const { return storage_.v13; }
   ::std::optional<int64_t>& v13() { return storage_.v13; }
 
+  // Setter for v13.
+  //
+
+  SixtyFourOrdinalTable& v13(std::optional<int64_t> value) {
+    storage_.v13 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v14() const { return storage_.v14; }
   ::std::optional<int64_t>& v14() { return storage_.v14; }
+
+  // Setter for v14.
+  //
+
+  SixtyFourOrdinalTable& v14(std::optional<int64_t> value) {
+    storage_.v14 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v15() const { return storage_.v15; }
   ::std::optional<int64_t>& v15() { return storage_.v15; }
 
+  // Setter for v15.
+  //
+
+  SixtyFourOrdinalTable& v15(std::optional<int64_t> value) {
+    storage_.v15 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v16() const { return storage_.v16; }
   ::std::optional<int64_t>& v16() { return storage_.v16; }
+
+  // Setter for v16.
+  //
+
+  SixtyFourOrdinalTable& v16(std::optional<int64_t> value) {
+    storage_.v16 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v17() const { return storage_.v17; }
   ::std::optional<int64_t>& v17() { return storage_.v17; }
 
+  // Setter for v17.
+  //
+
+  SixtyFourOrdinalTable& v17(std::optional<int64_t> value) {
+    storage_.v17 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v18() const { return storage_.v18; }
   ::std::optional<int64_t>& v18() { return storage_.v18; }
+
+  // Setter for v18.
+  //
+
+  SixtyFourOrdinalTable& v18(std::optional<int64_t> value) {
+    storage_.v18 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v19() const { return storage_.v19; }
   ::std::optional<int64_t>& v19() { return storage_.v19; }
 
+  // Setter for v19.
+  //
+
+  SixtyFourOrdinalTable& v19(std::optional<int64_t> value) {
+    storage_.v19 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v20() const { return storage_.v20; }
   ::std::optional<int64_t>& v20() { return storage_.v20; }
+
+  // Setter for v20.
+  //
+
+  SixtyFourOrdinalTable& v20(std::optional<int64_t> value) {
+    storage_.v20 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v21() const { return storage_.v21; }
   ::std::optional<int64_t>& v21() { return storage_.v21; }
 
+  // Setter for v21.
+  //
+
+  SixtyFourOrdinalTable& v21(std::optional<int64_t> value) {
+    storage_.v21 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v22() const { return storage_.v22; }
   ::std::optional<int64_t>& v22() { return storage_.v22; }
+
+  // Setter for v22.
+  //
+
+  SixtyFourOrdinalTable& v22(std::optional<int64_t> value) {
+    storage_.v22 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v23() const { return storage_.v23; }
   ::std::optional<int64_t>& v23() { return storage_.v23; }
 
+  // Setter for v23.
+  //
+
+  SixtyFourOrdinalTable& v23(std::optional<int64_t> value) {
+    storage_.v23 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v24() const { return storage_.v24; }
   ::std::optional<int64_t>& v24() { return storage_.v24; }
+
+  // Setter for v24.
+  //
+
+  SixtyFourOrdinalTable& v24(std::optional<int64_t> value) {
+    storage_.v24 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v25() const { return storage_.v25; }
   ::std::optional<int64_t>& v25() { return storage_.v25; }
 
+  // Setter for v25.
+  //
+
+  SixtyFourOrdinalTable& v25(std::optional<int64_t> value) {
+    storage_.v25 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v26() const { return storage_.v26; }
   ::std::optional<int64_t>& v26() { return storage_.v26; }
+
+  // Setter for v26.
+  //
+
+  SixtyFourOrdinalTable& v26(std::optional<int64_t> value) {
+    storage_.v26 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v27() const { return storage_.v27; }
   ::std::optional<int64_t>& v27() { return storage_.v27; }
 
+  // Setter for v27.
+  //
+
+  SixtyFourOrdinalTable& v27(std::optional<int64_t> value) {
+    storage_.v27 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v28() const { return storage_.v28; }
   ::std::optional<int64_t>& v28() { return storage_.v28; }
+
+  // Setter for v28.
+  //
+
+  SixtyFourOrdinalTable& v28(std::optional<int64_t> value) {
+    storage_.v28 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v29() const { return storage_.v29; }
   ::std::optional<int64_t>& v29() { return storage_.v29; }
 
+  // Setter for v29.
+  //
+
+  SixtyFourOrdinalTable& v29(std::optional<int64_t> value) {
+    storage_.v29 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v30() const { return storage_.v30; }
   ::std::optional<int64_t>& v30() { return storage_.v30; }
+
+  // Setter for v30.
+  //
+
+  SixtyFourOrdinalTable& v30(std::optional<int64_t> value) {
+    storage_.v30 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v31() const { return storage_.v31; }
   ::std::optional<int64_t>& v31() { return storage_.v31; }
 
+  // Setter for v31.
+  //
+
+  SixtyFourOrdinalTable& v31(std::optional<int64_t> value) {
+    storage_.v31 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v32() const { return storage_.v32; }
   ::std::optional<int64_t>& v32() { return storage_.v32; }
+
+  // Setter for v32.
+  //
+
+  SixtyFourOrdinalTable& v32(std::optional<int64_t> value) {
+    storage_.v32 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v33() const { return storage_.v33; }
   ::std::optional<int64_t>& v33() { return storage_.v33; }
 
+  // Setter for v33.
+  //
+
+  SixtyFourOrdinalTable& v33(std::optional<int64_t> value) {
+    storage_.v33 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v34() const { return storage_.v34; }
   ::std::optional<int64_t>& v34() { return storage_.v34; }
+
+  // Setter for v34.
+  //
+
+  SixtyFourOrdinalTable& v34(std::optional<int64_t> value) {
+    storage_.v34 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v35() const { return storage_.v35; }
   ::std::optional<int64_t>& v35() { return storage_.v35; }
 
+  // Setter for v35.
+  //
+
+  SixtyFourOrdinalTable& v35(std::optional<int64_t> value) {
+    storage_.v35 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v36() const { return storage_.v36; }
   ::std::optional<int64_t>& v36() { return storage_.v36; }
+
+  // Setter for v36.
+  //
+
+  SixtyFourOrdinalTable& v36(std::optional<int64_t> value) {
+    storage_.v36 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v37() const { return storage_.v37; }
   ::std::optional<int64_t>& v37() { return storage_.v37; }
 
+  // Setter for v37.
+  //
+
+  SixtyFourOrdinalTable& v37(std::optional<int64_t> value) {
+    storage_.v37 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v38() const { return storage_.v38; }
   ::std::optional<int64_t>& v38() { return storage_.v38; }
+
+  // Setter for v38.
+  //
+
+  SixtyFourOrdinalTable& v38(std::optional<int64_t> value) {
+    storage_.v38 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v39() const { return storage_.v39; }
   ::std::optional<int64_t>& v39() { return storage_.v39; }
 
+  // Setter for v39.
+  //
+
+  SixtyFourOrdinalTable& v39(std::optional<int64_t> value) {
+    storage_.v39 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v40() const { return storage_.v40; }
   ::std::optional<int64_t>& v40() { return storage_.v40; }
+
+  // Setter for v40.
+  //
+
+  SixtyFourOrdinalTable& v40(std::optional<int64_t> value) {
+    storage_.v40 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v41() const { return storage_.v41; }
   ::std::optional<int64_t>& v41() { return storage_.v41; }
 
+  // Setter for v41.
+  //
+
+  SixtyFourOrdinalTable& v41(std::optional<int64_t> value) {
+    storage_.v41 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v42() const { return storage_.v42; }
   ::std::optional<int64_t>& v42() { return storage_.v42; }
+
+  // Setter for v42.
+  //
+
+  SixtyFourOrdinalTable& v42(std::optional<int64_t> value) {
+    storage_.v42 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v43() const { return storage_.v43; }
   ::std::optional<int64_t>& v43() { return storage_.v43; }
 
+  // Setter for v43.
+  //
+
+  SixtyFourOrdinalTable& v43(std::optional<int64_t> value) {
+    storage_.v43 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v44() const { return storage_.v44; }
   ::std::optional<int64_t>& v44() { return storage_.v44; }
+
+  // Setter for v44.
+  //
+
+  SixtyFourOrdinalTable& v44(std::optional<int64_t> value) {
+    storage_.v44 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v45() const { return storage_.v45; }
   ::std::optional<int64_t>& v45() { return storage_.v45; }
 
+  // Setter for v45.
+  //
+
+  SixtyFourOrdinalTable& v45(std::optional<int64_t> value) {
+    storage_.v45 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v46() const { return storage_.v46; }
   ::std::optional<int64_t>& v46() { return storage_.v46; }
+
+  // Setter for v46.
+  //
+
+  SixtyFourOrdinalTable& v46(std::optional<int64_t> value) {
+    storage_.v46 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v47() const { return storage_.v47; }
   ::std::optional<int64_t>& v47() { return storage_.v47; }
 
+  // Setter for v47.
+  //
+
+  SixtyFourOrdinalTable& v47(std::optional<int64_t> value) {
+    storage_.v47 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v48() const { return storage_.v48; }
   ::std::optional<int64_t>& v48() { return storage_.v48; }
+
+  // Setter for v48.
+  //
+
+  SixtyFourOrdinalTable& v48(std::optional<int64_t> value) {
+    storage_.v48 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v49() const { return storage_.v49; }
   ::std::optional<int64_t>& v49() { return storage_.v49; }
 
+  // Setter for v49.
+  //
+
+  SixtyFourOrdinalTable& v49(std::optional<int64_t> value) {
+    storage_.v49 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v50() const { return storage_.v50; }
   ::std::optional<int64_t>& v50() { return storage_.v50; }
+
+  // Setter for v50.
+  //
+
+  SixtyFourOrdinalTable& v50(std::optional<int64_t> value) {
+    storage_.v50 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v51() const { return storage_.v51; }
   ::std::optional<int64_t>& v51() { return storage_.v51; }
 
+  // Setter for v51.
+  //
+
+  SixtyFourOrdinalTable& v51(std::optional<int64_t> value) {
+    storage_.v51 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v52() const { return storage_.v52; }
   ::std::optional<int64_t>& v52() { return storage_.v52; }
+
+  // Setter for v52.
+  //
+
+  SixtyFourOrdinalTable& v52(std::optional<int64_t> value) {
+    storage_.v52 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v53() const { return storage_.v53; }
   ::std::optional<int64_t>& v53() { return storage_.v53; }
 
+  // Setter for v53.
+  //
+
+  SixtyFourOrdinalTable& v53(std::optional<int64_t> value) {
+    storage_.v53 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v54() const { return storage_.v54; }
   ::std::optional<int64_t>& v54() { return storage_.v54; }
+
+  // Setter for v54.
+  //
+
+  SixtyFourOrdinalTable& v54(std::optional<int64_t> value) {
+    storage_.v54 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v55() const { return storage_.v55; }
   ::std::optional<int64_t>& v55() { return storage_.v55; }
 
+  // Setter for v55.
+  //
+
+  SixtyFourOrdinalTable& v55(std::optional<int64_t> value) {
+    storage_.v55 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v56() const { return storage_.v56; }
   ::std::optional<int64_t>& v56() { return storage_.v56; }
+
+  // Setter for v56.
+  //
+
+  SixtyFourOrdinalTable& v56(std::optional<int64_t> value) {
+    storage_.v56 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v57() const { return storage_.v57; }
   ::std::optional<int64_t>& v57() { return storage_.v57; }
 
+  // Setter for v57.
+  //
+
+  SixtyFourOrdinalTable& v57(std::optional<int64_t> value) {
+    storage_.v57 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v58() const { return storage_.v58; }
   ::std::optional<int64_t>& v58() { return storage_.v58; }
+
+  // Setter for v58.
+  //
+
+  SixtyFourOrdinalTable& v58(std::optional<int64_t> value) {
+    storage_.v58 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v59() const { return storage_.v59; }
   ::std::optional<int64_t>& v59() { return storage_.v59; }
 
+  // Setter for v59.
+  //
+
+  SixtyFourOrdinalTable& v59(std::optional<int64_t> value) {
+    storage_.v59 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v60() const { return storage_.v60; }
   ::std::optional<int64_t>& v60() { return storage_.v60; }
+
+  // Setter for v60.
+  //
+
+  SixtyFourOrdinalTable& v60(std::optional<int64_t> value) {
+    storage_.v60 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v61() const { return storage_.v61; }
   ::std::optional<int64_t>& v61() { return storage_.v61; }
 
+  // Setter for v61.
+  //
+
+  SixtyFourOrdinalTable& v61(std::optional<int64_t> value) {
+    storage_.v61 = std::move(value);
+    return *this;
+  }
+
   const std::optional<int64_t>& v62() const { return storage_.v62; }
   ::std::optional<int64_t>& v62() { return storage_.v62; }
+
+  // Setter for v62.
+  //
+
+  SixtyFourOrdinalTable& v62(std::optional<int64_t> value) {
+    storage_.v62 = std::move(value);
+    return *this;
+  }
 
   const std::optional<int64_t>& v63() const { return storage_.v63; }
   ::std::optional<int64_t>& v63() { return storage_.v63; }
 
+  // Setter for v63.
+  //
+
+  SixtyFourOrdinalTable& v63(std::optional<int64_t> value) {
+    storage_.v63 = std::move(value);
+    return *this;
+  }
+
   const std::optional<::test_table::ExtensionTable>& v64() const { return storage_.v64; }
   ::std::optional<::test_table::ExtensionTable>& v64() { return storage_.v64; }
+
+  // Setter for v64.
+  //
+
+  SixtyFourOrdinalTable& v64(std::optional<::test_table::ExtensionTable> value) {
+    storage_.v64 = std::move(value);
+    return *this;
+  }
 
   SixtyFourOrdinalTable(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SixtyFourOrdinalTable(Storage_{}) {}
 

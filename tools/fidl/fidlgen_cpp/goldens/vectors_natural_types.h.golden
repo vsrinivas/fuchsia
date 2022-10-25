@@ -60,6 +60,14 @@ class ExampleUseOfVectors {
     return storage_.vector_of_uint8;
   }
 
+  // Setter for vector_of_uint8.
+  //
+
+  ExampleUseOfVectors& vector_of_uint8(::std::vector<uint8_t> value) {
+    storage_.vector_of_uint8 = std::move(value);
+    return *this;
+  }
+
   const ::std::vector<::std::vector<bool>>&
   vector_of_vector_of_bool() const {
     return storage_.vector_of_vector_of_bool;
@@ -67,6 +75,14 @@ class ExampleUseOfVectors {
 
   ::std::vector<::std::vector<bool>>& vector_of_vector_of_bool() {
     return storage_.vector_of_vector_of_bool;
+  }
+
+  // Setter for vector_of_vector_of_bool.
+  //
+
+  ExampleUseOfVectors& vector_of_vector_of_bool(::std::vector<::std::vector<bool>> value) {
+    storage_.vector_of_vector_of_bool = std::move(value);
+    return *this;
   }
 
   ExampleUseOfVectors(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleUseOfVectors(Storage_{

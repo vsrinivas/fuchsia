@@ -90,6 +90,14 @@ class Padding1ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding1ByteEnd& a(uint16_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint8_t
   b() const {
     return storage_.b;
@@ -97,6 +105,14 @@ class Padding1ByteEnd {
 
   uint8_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding1ByteEnd& b(uint8_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding1ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding1ByteEnd(Storage_{
@@ -166,6 +182,14 @@ class Padding2ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding2ByteEnd& a(uint32_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint16_t
   b() const {
     return storage_.b;
@@ -173,6 +197,14 @@ class Padding2ByteEnd {
 
   uint16_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding2ByteEnd& b(uint16_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding2ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteEnd(Storage_{
@@ -242,6 +274,14 @@ class Padding3ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding3ByteEnd& a(uint32_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint8_t
   b() const {
     return storage_.b;
@@ -249,6 +289,14 @@ class Padding3ByteEnd {
 
   uint8_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding3ByteEnd& b(uint8_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding3ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding3ByteEnd(Storage_{
@@ -318,6 +366,14 @@ class Padding4ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding4ByteEnd& a(uint64_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint32_t
   b() const {
     return storage_.b;
@@ -325,6 +381,14 @@ class Padding4ByteEnd {
 
   uint32_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding4ByteEnd& b(uint32_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding4ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding4ByteEnd(Storage_{
@@ -395,6 +459,14 @@ class Padding5ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding5ByteEnd& a(uint64_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint16_t
   b() const {
     return storage_.b;
@@ -404,6 +476,14 @@ class Padding5ByteEnd {
     return storage_.b;
   }
 
+  // Setter for b.
+  //
+
+  Padding5ByteEnd& b(uint16_t value) {
+    storage_.b = std::move(value);
+    return *this;
+  }
+
   uint8_t
   c() const {
     return storage_.c;
@@ -411,6 +491,14 @@ class Padding5ByteEnd {
 
   uint8_t& c() {
     return storage_.c;
+  }
+
+  // Setter for c.
+  //
+
+  Padding5ByteEnd& c(uint8_t value) {
+    storage_.c = std::move(value);
+    return *this;
   }
 
   Padding5ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding5ByteEnd(Storage_{
@@ -482,6 +570,14 @@ class Padding6ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding6ByteEnd& a(uint64_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint16_t
   b() const {
     return storage_.b;
@@ -489,6 +585,14 @@ class Padding6ByteEnd {
 
   uint16_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding6ByteEnd& b(uint16_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding6ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding6ByteEnd(Storage_{
@@ -558,6 +662,14 @@ class Padding7ByteEnd {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding7ByteEnd& a(uint64_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint8_t
   b() const {
     return storage_.b;
@@ -565,6 +677,14 @@ class Padding7ByteEnd {
 
   uint8_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding7ByteEnd& b(uint8_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding7ByteEnd(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding7ByteEnd(Storage_{
@@ -634,6 +754,14 @@ class Padding1ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding1ByteMiddle& a(uint8_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint16_t
   b() const {
     return storage_.b;
@@ -641,6 +769,14 @@ class Padding1ByteMiddle {
 
   uint16_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding1ByteMiddle& b(uint16_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding1ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding1ByteMiddle(Storage_{
@@ -710,6 +846,14 @@ class Padding2ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding2ByteMiddle& a(uint16_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint32_t
   b() const {
     return storage_.b;
@@ -717,6 +861,14 @@ class Padding2ByteMiddle {
 
   uint32_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding2ByteMiddle& b(uint32_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding2ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteMiddle(Storage_{
@@ -786,6 +938,14 @@ class Padding3ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding3ByteMiddle& a(uint8_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint32_t
   b() const {
     return storage_.b;
@@ -793,6 +953,14 @@ class Padding3ByteMiddle {
 
   uint32_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding3ByteMiddle& b(uint32_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding3ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding3ByteMiddle(Storage_{
@@ -862,6 +1030,14 @@ class Padding4ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding4ByteMiddle& a(uint32_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint64_t
   b() const {
     return storage_.b;
@@ -869,6 +1045,14 @@ class Padding4ByteMiddle {
 
   uint64_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding4ByteMiddle& b(uint64_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding4ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding4ByteMiddle(Storage_{
@@ -939,6 +1123,14 @@ class Padding5ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding5ByteMiddle& a(uint16_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint8_t
   b() const {
     return storage_.b;
@@ -948,6 +1140,14 @@ class Padding5ByteMiddle {
     return storage_.b;
   }
 
+  // Setter for b.
+  //
+
+  Padding5ByteMiddle& b(uint8_t value) {
+    storage_.b = std::move(value);
+    return *this;
+  }
+
   uint64_t
   c() const {
     return storage_.c;
@@ -955,6 +1155,14 @@ class Padding5ByteMiddle {
 
   uint64_t& c() {
     return storage_.c;
+  }
+
+  // Setter for c.
+  //
+
+  Padding5ByteMiddle& c(uint64_t value) {
+    storage_.c = std::move(value);
+    return *this;
   }
 
   Padding5ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding5ByteMiddle(Storage_{
@@ -1026,6 +1234,14 @@ class Padding6ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding6ByteMiddle& a(uint16_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint64_t
   b() const {
     return storage_.b;
@@ -1033,6 +1249,14 @@ class Padding6ByteMiddle {
 
   uint64_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding6ByteMiddle& b(uint64_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding6ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding6ByteMiddle(Storage_{
@@ -1102,6 +1326,14 @@ class Padding7ByteMiddle {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding7ByteMiddle& a(uint8_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint64_t
   b() const {
     return storage_.b;
@@ -1109,6 +1341,14 @@ class Padding7ByteMiddle {
 
   uint64_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding7ByteMiddle& b(uint64_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Padding7ByteMiddle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding7ByteMiddle(Storage_{
@@ -1180,6 +1420,14 @@ class Padding4ByteAlignmentLength12 {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding4ByteAlignmentLength12& a(uint32_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint8_t
   b() const {
     return storage_.b;
@@ -1187,6 +1435,14 @@ class Padding4ByteAlignmentLength12 {
 
   uint8_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Padding4ByteAlignmentLength12& b(uint8_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   uint16_t
@@ -1198,6 +1454,14 @@ class Padding4ByteAlignmentLength12 {
     return storage_.c;
   }
 
+  // Setter for c.
+  //
+
+  Padding4ByteAlignmentLength12& c(uint16_t value) {
+    storage_.c = std::move(value);
+    return *this;
+  }
+
   uint16_t
   d() const {
     return storage_.d;
@@ -1205,6 +1469,14 @@ class Padding4ByteAlignmentLength12 {
 
   uint16_t& d() {
     return storage_.d;
+  }
+
+  // Setter for d.
+  //
+
+  Padding4ByteAlignmentLength12& d(uint16_t value) {
+    storage_.d = std::move(value);
+    return *this;
   }
 
   Padding4ByteAlignmentLength12(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding4ByteAlignmentLength12(Storage_{
@@ -1283,6 +1555,14 @@ class Padding2ByteAlignmentLength6 {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Padding2ByteAlignmentLength6& a(uint8_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   uint16_t
   b() const {
     return storage_.b;
@@ -1292,6 +1572,14 @@ class Padding2ByteAlignmentLength6 {
     return storage_.b;
   }
 
+  // Setter for b.
+  //
+
+  Padding2ByteAlignmentLength6& b(uint16_t value) {
+    storage_.b = std::move(value);
+    return *this;
+  }
+
   uint8_t
   c() const {
     return storage_.c;
@@ -1299,6 +1587,14 @@ class Padding2ByteAlignmentLength6 {
 
   uint8_t& c() {
     return storage_.c;
+  }
+
+  // Setter for c.
+  //
+
+  Padding2ByteAlignmentLength6& c(uint8_t value) {
+    storage_.c = std::move(value);
+    return *this;
   }
 
   Padding2ByteAlignmentLength6(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Padding2ByteAlignmentLength6(Storage_{

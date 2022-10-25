@@ -69,6 +69,14 @@ class StructSmallArray {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  StructSmallArray& a(::std::array<uint32_t, 2> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   StructSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructSmallArray(Storage_{
                                                                                      .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<uint32_t, 2>>::Make(),
                                                                                  }) {}
@@ -129,6 +137,14 @@ class StructLargeArray {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  StructLargeArray& a(::std::array<uint32_t, 100> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   StructLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructLargeArray(Storage_{
                                                                                      .a = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<uint32_t, 100>>::Make(),
                                                                                  }) {}
@@ -178,6 +194,14 @@ class TableSmallArray {
   const std::optional<::std::array<uint32_t, 2>>& a() const { return storage_.a; }
   ::std::optional<::std::array<uint32_t, 2>>& a() { return storage_.a; }
 
+  // Setter for a.
+  //
+
+  TableSmallArray& a(std::optional<::std::array<uint32_t, 2>> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   TableSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableSmallArray(Storage_{}) {}
 
  private:
@@ -223,6 +247,14 @@ class TableLargeArray {
 
   const std::optional<::std::array<uint32_t, 100>>& a() const { return storage_.a; }
   ::std::optional<::std::array<uint32_t, 100>>& a() { return storage_.a; }
+
+  // Setter for a.
+  //
+
+  TableLargeArray& a(std::optional<::std::array<uint32_t, 100>> value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
 
   TableLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableLargeArray(Storage_{}) {}
 
@@ -291,8 +323,17 @@ class UnionSmallArray {
   const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> a() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the a member.
+  //
+
+  UnionSmallArray& a(::std::array<uint32_t, 2> value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionSmallArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -379,8 +420,17 @@ class UnionLargeArray {
   const ::fidl::internal::UnionMemberView<1, Storage_> a() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> a() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the a member.
+  //
+
+  UnionLargeArray& a(::std::array<uint32_t, 100> value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionLargeArray(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)

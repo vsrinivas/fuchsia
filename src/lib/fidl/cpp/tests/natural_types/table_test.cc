@@ -102,7 +102,41 @@ TEST(Table, ValueAccessors) {
   EXPECT_EQ(false, sample_table.b().value());
 }
 
-TEST(Table, SetAndClear) {
+TEST(Table, SetAndClearUsingSetters) {
+  test_types::SampleTable sample_table{};
+  EXPECT_TRUE(sample_table.IsEmpty());
+  sample_table.x(42);
+  sample_table.y(0);
+  EXPECT_FALSE(sample_table.IsEmpty());
+  EXPECT_EQ(sample_table.x(), 42);
+  EXPECT_EQ(sample_table.x().value(), 42);
+  EXPECT_TRUE(sample_table.x());
+  EXPECT_TRUE(sample_table.x().has_value());
+  EXPECT_EQ(sample_table.y(), 0);
+  EXPECT_EQ(sample_table.y().value(), 0);
+  EXPECT_TRUE(sample_table.y());
+  EXPECT_TRUE(sample_table.y().has_value());
+  sample_table.y(std::nullopt);
+  EXPECT_FALSE(sample_table.IsEmpty());
+  EXPECT_FALSE(sample_table.y());
+  EXPECT_FALSE(sample_table.y().has_value());
+  EXPECT_TRUE(sample_table.x());
+  sample_table.x({});
+  EXPECT_TRUE(sample_table.IsEmpty());
+  EXPECT_FALSE(sample_table.x());
+  EXPECT_FALSE(sample_table.x().has_value());
+
+  // Test chaining.
+  sample_table.x(10).y(20);
+  EXPECT_EQ(sample_table.x(), 10);
+  EXPECT_EQ(sample_table.y(), 20);
+
+  auto table = test_types::SampleTable{}.x(5).y(10);
+  EXPECT_EQ(table.x(), 5);
+  EXPECT_EQ(table.y(), 10);
+}
+
+TEST(Table, SetAndClearUsingMutableReferenceGetters) {
   test_types::SampleTable sample_table{};
   EXPECT_TRUE(sample_table.IsEmpty());
   sample_table.x() = 42;

@@ -63,6 +63,14 @@ class Payload {
     return storage_.value;
   }
 
+  // Setter for value.
+  //
+
+  Payload& value(uint32_t value) {
+    storage_.value = std::move(value);
+    return *this;
+  }
+
   Payload(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Payload(Storage_{
                                                                             .value = {},
                                                                         }) {}
@@ -121,6 +129,14 @@ class OneWaySendRequest {
 
   ::test_driveroneway::Payload& payload() {
     return storage_.payload;
+  }
+
+  // Setter for payload.
+  //
+
+  OneWaySendRequest& payload(::test_driveroneway::Payload value) {
+    storage_.payload = std::move(value);
+    return *this;
   }
 
   OneWaySendRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : OneWaySendRequest(Storage_{

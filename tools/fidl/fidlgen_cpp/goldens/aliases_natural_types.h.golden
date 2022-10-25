@@ -59,6 +59,14 @@ class ExampleOfUseOfAliases {
     return storage_.field_of_u32;
   }
 
+  // Setter for field_of_u32.
+  //
+
+  ExampleOfUseOfAliases& field_of_u32(uint32_t value) {
+    storage_.field_of_u32 = std::move(value);
+    return *this;
+  }
+
   const ::std::vector<::std::string>&
   field_of_vec_of_strings() const {
     return storage_.field_of_vec_of_strings;
@@ -66,6 +74,14 @@ class ExampleOfUseOfAliases {
 
   ::std::vector<::std::string>& field_of_vec_of_strings() {
     return storage_.field_of_vec_of_strings;
+  }
+
+  // Setter for field_of_vec_of_strings.
+  //
+
+  ExampleOfUseOfAliases& field_of_vec_of_strings(::std::vector<::std::string> value) {
+    storage_.field_of_vec_of_strings = std::move(value);
+    return *this;
   }
 
   const ::std::vector<::std::string>&
@@ -77,6 +93,14 @@ class ExampleOfUseOfAliases {
     return storage_.field_of_vec_of_strings_at_most_nine;
   }
 
+  // Setter for field_of_vec_of_strings_at_most_nine.
+  //
+
+  ExampleOfUseOfAliases& field_of_vec_of_strings_at_most_nine(::std::vector<::std::string> value) {
+    storage_.field_of_vec_of_strings_at_most_nine = std::move(value);
+    return *this;
+  }
+
   const ::std::vector<::std::string>&
   field_of_vec_of_strings_at_most_5() const {
     return storage_.field_of_vec_of_strings_at_most_5;
@@ -84,6 +108,14 @@ class ExampleOfUseOfAliases {
 
   ::std::vector<::std::string>& field_of_vec_of_strings_at_most_5() {
     return storage_.field_of_vec_of_strings_at_most_5;
+  }
+
+  // Setter for field_of_vec_of_strings_at_most_5.
+  //
+
+  ExampleOfUseOfAliases& field_of_vec_of_strings_at_most_5(::std::vector<::std::string> value) {
+    storage_.field_of_vec_of_strings_at_most_5 = std::move(value);
+    return *this;
   }
 
   const ::std::vector<::test_someotherlibrary::ReferenceMe>&
@@ -95,6 +127,14 @@ class ExampleOfUseOfAliases {
     return storage_.field_of_vec_of_ref_me_at_most_5;
   }
 
+  // Setter for field_of_vec_of_ref_me_at_most_5.
+  //
+
+  ExampleOfUseOfAliases& field_of_vec_of_ref_me_at_most_5(::std::vector<::test_someotherlibrary::ReferenceMe> value) {
+    storage_.field_of_vec_of_ref_me_at_most_5 = std::move(value);
+    return *this;
+  }
+
   const ::zx::channel&
   field_of_channel() const {
     return storage_.field_of_channel;
@@ -102,6 +142,14 @@ class ExampleOfUseOfAliases {
 
   ::zx::channel& field_of_channel() {
     return storage_.field_of_channel;
+  }
+
+  // Setter for field_of_channel.
+  //
+
+  ExampleOfUseOfAliases& field_of_channel(::zx::channel value) {
+    storage_.field_of_channel = std::move(value);
+    return *this;
   }
 
   const ::zx::channel&
@@ -113,6 +161,14 @@ class ExampleOfUseOfAliases {
     return storage_.field_of_client_end;
   }
 
+  // Setter for field_of_client_end.
+  //
+
+  ExampleOfUseOfAliases& field_of_client_end(::zx::channel value) {
+    storage_.field_of_client_end = std::move(value);
+    return *this;
+  }
+
   const ::zx::channel&
   field_of_nullable_client_end() const {
     return storage_.field_of_nullable_client_end;
@@ -120,6 +176,14 @@ class ExampleOfUseOfAliases {
 
   ::zx::channel& field_of_nullable_client_end() {
     return storage_.field_of_nullable_client_end;
+  }
+
+  // Setter for field_of_nullable_client_end.
+  //
+
+  ExampleOfUseOfAliases& field_of_nullable_client_end(::zx::channel value) {
+    storage_.field_of_nullable_client_end = std::move(value);
+    return *this;
   }
 
   ExampleOfUseOfAliases(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleOfUseOfAliases(Storage_{

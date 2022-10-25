@@ -146,10 +146,15 @@ TEST(NaturalTypes, Structs) {
   fuchsia_examples::Color designated_2{{.id = 2, .name = "designated"}};
   ASSERT_EQ(designated_2.id(), 2u);
 
-  // Setters are simply accessors that return non-const references.
+  // Setters take the value to be set as argument.
   fuchsia_examples::Color color;
-  color.id() = 42;
-  color.name() = "yellow";
+  color.id(100);
+  color.name("green");
+  ASSERT_EQ(color.id(), 100u);
+  ASSERT_EQ(color.name(), "green");
+
+  // Setters may also be chained.
+  color.id(42).name("yellow");
   ASSERT_EQ(color.id(), 42u);
   ASSERT_EQ(color.name(), "yellow");
 
@@ -197,19 +202,20 @@ TEST(NaturalTypes, Unions) {
   // |value_or| returns a fallback if the corresponding member is not active.
   ASSERT_EQ(value.int_value().value_or(42), 42);
 
+  // Setters take the value to be set as argument.
   // Setting a field causes that field to become the active member.
-  value.int_value() = 2;
+  value.int_value(2);
   ASSERT_TRUE(value.int_value());
   ASSERT_FALSE(value.string_value());
 
   // |take| invokes the move operation on the member if it is active.
-  value.string_value() = "foo";
+  value.string_value("foo");
   std::optional<std::string> str = value.string_value().take();
   ASSERT_TRUE(str.has_value());
   ASSERT_EQ(str.value(), "foo");
 
   // Equality is implemented for value types.
-  value.string_value() = "bar";
+  value.string_value("bar");
   ASSERT_EQ(value, fuchsia_examples::JsonValue::WithStringValue("bar"));
 
   // Copies and moves.
@@ -245,10 +251,25 @@ TEST(NaturalTypes, Tables) {
   // Each accessor returns a |std::optional<T>|, where |T| is the field type.
   ASSERT_FALSE(user.age().has_value());
 
-  // To set fields, simply use the mutable accessors.
-  user.age() = 100;
-  user.age() = *user.age() + 100;
+  // Setters take the value to be set as argument.
+  user.age(100);
+  user.age(*user.age() + 100);
   ASSERT_EQ(user.age().value(), 200);
+
+  // Setters may also be chained.
+  user.name("foo").age(30);
+  ASSERT_EQ(user.name().value(), "foo");
+  ASSERT_EQ(user.age().value(), 30);
+
+  // Since each field is an |std::optional<T>|, they may also be cleared.
+  user.name().reset();
+  ASSERT_FALSE(user.name().has_value());
+
+  // Assigning an |std::nullopt| also clears the field.
+  user.name("bar");
+  ASSERT_TRUE(user.name().has_value());
+  user.name() = std::nullopt;
+  ASSERT_FALSE(user.name().has_value());
 
   // |value_or| returns a fallback if the corresponding field is absent.
   ASSERT_EQ(user.name().value_or("anonymous"), "anonymous");

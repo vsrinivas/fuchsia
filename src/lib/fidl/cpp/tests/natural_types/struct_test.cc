@@ -99,6 +99,23 @@ TEST(Struct, Equality) {
   EXPECT_NE(test_types::VectorStruct{{.v = vec}}, test_types::VectorStruct{{.v = {}}});
 }
 
+TEST(Struct, Setters) {
+  test_types::CopyableStruct cs;
+  EXPECT_EQ(cs.x(), 0);
+  cs.x(1);
+  EXPECT_EQ(cs.x(), 1);
+
+  // Test chaining.
+  test_types::StructWithPadding sp;
+  sp.a(1).b(2);
+  EXPECT_EQ(sp.a(), 1);
+  EXPECT_EQ(sp.b(), 2u);
+
+  auto sp2 = test_types::StructWithPadding{}.a(1).b(2);
+  EXPECT_EQ(sp2.a(), 1);
+  EXPECT_EQ(sp2.b(), 2u);
+}
+
 TEST(Struct, Accessors) {
   test_types::CopyableStruct cs{{.x = 1}};
   EXPECT_EQ(cs.x(), 1);

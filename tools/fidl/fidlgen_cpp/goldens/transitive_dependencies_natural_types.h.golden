@@ -60,6 +60,14 @@ class Baz {
     return storage_.g;
   }
 
+  // Setter for g.
+  //
+
+  Baz& g(::test_middle::Bar value) {
+    storage_.g = std::move(value);
+    return *this;
+  }
+
   Baz(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Baz(Storage_{
                                                                         .g = ::fidl::internal::DefaultConstructPossiblyInvalidObjectTag{},
                                                                     }) {}

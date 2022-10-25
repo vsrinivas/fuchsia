@@ -62,6 +62,14 @@ class Simple {
     return storage_.f1;
   }
 
+  // Setter for f1.
+  //
+
+  Simple& f1(uint8_t value) {
+    storage_.f1 = std::move(value);
+    return *this;
+  }
+
   bool
   f2() const {
     return storage_.f2;
@@ -69,6 +77,14 @@ class Simple {
 
   bool& f2() {
     return storage_.f2;
+  }
+
+  // Setter for f2.
+  //
+
+  Simple& f2(bool value) {
+    storage_.f2 = std::move(value);
+    return *this;
   }
 
   Simple(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Simple(Storage_{
@@ -135,6 +151,14 @@ class BasicStruct {
     return storage_.x;
   }
 
+  // Setter for x.
+  //
+
+  BasicStruct& x(uint32_t value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
+
   const ::std::string&
   y() const {
     return storage_.y;
@@ -142,6 +166,14 @@ class BasicStruct {
 
   ::std::string& y() {
     return storage_.y;
+  }
+
+  // Setter for y.
+  //
+
+  BasicStruct& y(::std::string value) {
+    storage_.y = std::move(value);
+    return *this;
   }
 
   BasicStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : BasicStruct(Storage_{

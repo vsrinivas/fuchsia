@@ -72,6 +72,14 @@ class Int8Int32 {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Int8Int32& a(int8_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   int32_t
   b() const {
     return storage_.b;
@@ -79,6 +87,14 @@ class Int8Int32 {
 
   int32_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Int8Int32& b(int32_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Int8Int32(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Int8Int32(Storage_{
@@ -148,6 +164,14 @@ class Int16Int8 {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  Int16Int8& a(int16_t value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   int8_t
   b() const {
     return storage_.b;
@@ -155,6 +179,14 @@ class Int16Int8 {
 
   int8_t& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  Int16Int8& b(int8_t value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   Int16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Int16Int8(Storage_{
@@ -223,6 +255,14 @@ class ArrayInt16Int8 {
     return storage_.arr;
   }
 
+  // Setter for arr.
+  //
+
+  ArrayInt16Int8& arr(::std::array<::test_encapsulatedstructs::Int16Int8, 3> value) {
+    storage_.arr = std::move(value);
+    return *this;
+  }
+
   ArrayInt16Int8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ArrayInt16Int8(Storage_{
                                                                                    .arr = ::fidl::internal::DefaultConstructPossiblyInvalidObject<::std::array<::test_encapsulatedstructs::Int16Int8, 3>>::Make(),
                                                                                }) {}
@@ -285,6 +325,14 @@ class StructPaddingTestStruct {
     return storage_.trailing;
   }
 
+  // Setter for trailing.
+  //
+
+  StructPaddingTestStruct& trailing(::test_encapsulatedstructs::Int16Int8 value) {
+    storage_.trailing = std::move(value);
+    return *this;
+  }
+
   const ::test_encapsulatedstructs::Int8Int32&
   inner() const {
     return storage_.inner;
@@ -294,6 +342,14 @@ class StructPaddingTestStruct {
     return storage_.inner;
   }
 
+  // Setter for inner.
+  //
+
+  StructPaddingTestStruct& inner(::test_encapsulatedstructs::Int8Int32 value) {
+    storage_.inner = std::move(value);
+    return *this;
+  }
+
   const ::test_encapsulatedstructs::ArrayInt16Int8&
   array() const {
     return storage_.array;
@@ -301,6 +357,14 @@ class StructPaddingTestStruct {
 
   ::test_encapsulatedstructs::ArrayInt16Int8& array() {
     return storage_.array;
+  }
+
+  // Setter for array.
+  //
+
+  StructPaddingTestStruct& array(::test_encapsulatedstructs::ArrayInt16Int8 value) {
+    storage_.array = std::move(value);
+    return *this;
   }
 
   StructPaddingTestStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructPaddingTestStruct(Storage_{
@@ -359,6 +423,14 @@ class NonInlineStructTestStruct {
     return storage_.element;
   }
 
+  // Setter for element.
+  //
+
+  NonInlineStructTestStruct& element(::std::unique_ptr<::test_encapsulatedstructs::Int16Int8> value) {
+    storage_.element = std::move(value);
+    return *this;
+  }
+
   const ::zx::handle&
   h() const {
     return storage_.h;
@@ -366,6 +438,14 @@ class NonInlineStructTestStruct {
 
   ::zx::handle& h() {
     return storage_.h;
+  }
+
+  // Setter for h.
+  //
+
+  NonInlineStructTestStruct& h(::zx::handle value) {
+    storage_.h = std::move(value);
+    return *this;
   }
 
   NonInlineStructTestStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : NonInlineStructTestStruct(Storage_{
@@ -426,6 +506,14 @@ class TopLevelStruct {
     return storage_.a;
   }
 
+  // Setter for a.
+  //
+
+  TopLevelStruct& a(::test_encapsulatedstructs::StructPaddingTestStruct value) {
+    storage_.a = std::move(value);
+    return *this;
+  }
+
   const ::test_encapsulatedstructs::NonInlineStructTestStruct&
   b() const {
     return storage_.b;
@@ -433,6 +521,14 @@ class TopLevelStruct {
 
   ::test_encapsulatedstructs::NonInlineStructTestStruct& b() {
     return storage_.b;
+  }
+
+  // Setter for b.
+  //
+
+  TopLevelStruct& b(::test_encapsulatedstructs::NonInlineStructTestStruct value) {
+    storage_.b = std::move(value);
+    return *this;
   }
 
   TopLevelStruct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TopLevelStruct(Storage_{

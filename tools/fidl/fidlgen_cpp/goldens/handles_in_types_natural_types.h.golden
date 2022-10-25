@@ -45,6 +45,14 @@ class TableWithHandle {
   const std::optional<::zx::vmo>& h() const { return storage_.h; }
   ::std::optional<::zx::vmo>& h() { return storage_.h; }
 
+  // Setter for h.
+  //
+
+  TableWithHandle& h(std::optional<::zx::vmo> value) {
+    storage_.h = std::move(value);
+    return *this;
+  }
+
   TableWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableWithHandle(Storage_{}) {}
 
  private:
@@ -105,8 +113,17 @@ class UnionWithHandle {
   const ::fidl::internal::UnionMemberView<1, Storage_> h() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> h() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the h member.
+  //
+
+  UnionWithHandle& h(::zx::vmo value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionWithHandle(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -178,6 +195,14 @@ class HandlesInTypes {
     return storage_.normal_handle;
   }
 
+  // Setter for normal_handle.
+  //
+
+  HandlesInTypes& normal_handle(::zx::vmo value) {
+    storage_.normal_handle = std::move(value);
+    return *this;
+  }
+
   const ::std::vector<::zx::vmo>&
   handle_in_vec() const {
     return storage_.handle_in_vec;
@@ -185,6 +210,14 @@ class HandlesInTypes {
 
   ::std::vector<::zx::vmo>& handle_in_vec() {
     return storage_.handle_in_vec;
+  }
+
+  // Setter for handle_in_vec.
+  //
+
+  HandlesInTypes& handle_in_vec(::std::vector<::zx::vmo> value) {
+    storage_.handle_in_vec = std::move(value);
+    return *this;
   }
 
   const ::std::array<::zx::vmo, 5>&
@@ -196,6 +229,14 @@ class HandlesInTypes {
     return storage_.handle_in_array;
   }
 
+  // Setter for handle_in_array.
+  //
+
+  HandlesInTypes& handle_in_array(::std::array<::zx::vmo, 5> value) {
+    storage_.handle_in_array = std::move(value);
+    return *this;
+  }
+
   const ::std::vector<::std::array<::zx::vmo, 5>>&
   handle_in_mixed_vec_array() const {
     return storage_.handle_in_mixed_vec_array;
@@ -203,6 +244,14 @@ class HandlesInTypes {
 
   ::std::vector<::std::array<::zx::vmo, 5>>& handle_in_mixed_vec_array() {
     return storage_.handle_in_mixed_vec_array;
+  }
+
+  // Setter for handle_in_mixed_vec_array.
+  //
+
+  HandlesInTypes& handle_in_mixed_vec_array(::std::vector<::std::array<::zx::vmo, 5>> value) {
+    storage_.handle_in_mixed_vec_array = std::move(value);
+    return *this;
   }
 
   const ::test_handlesintypes::TableWithHandle&
@@ -214,6 +263,14 @@ class HandlesInTypes {
     return storage_.table_with_handle;
   }
 
+  // Setter for table_with_handle.
+  //
+
+  HandlesInTypes& table_with_handle(::test_handlesintypes::TableWithHandle value) {
+    storage_.table_with_handle = std::move(value);
+    return *this;
+  }
+
   const ::test_handlesintypes::UnionWithHandle&
   union_with_handle() const {
     return storage_.union_with_handle;
@@ -221,6 +278,14 @@ class HandlesInTypes {
 
   ::test_handlesintypes::UnionWithHandle& union_with_handle() {
     return storage_.union_with_handle;
+  }
+
+  // Setter for union_with_handle.
+  //
+
+  HandlesInTypes& union_with_handle(::test_handlesintypes::UnionWithHandle value) {
+    storage_.union_with_handle = std::move(value);
+    return *this;
   }
 
   HandlesInTypes(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : HandlesInTypes(Storage_{

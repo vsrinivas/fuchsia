@@ -81,6 +81,14 @@ class OverrideTest {
     return storage_.op;
   }
 
+  // Setter for op.
+  //
+
+  OverrideTest& op(::test_anonymous::Op value) {
+    storage_.op = std::move(value);
+    return *this;
+  }
+
   const ::std::unique_ptr<::test_anonymous::Expression>&
   left() const {
     return storage_.left;
@@ -90,6 +98,14 @@ class OverrideTest {
     return storage_.left;
   }
 
+  // Setter for left.
+  //
+
+  OverrideTest& left(::std::unique_ptr<::test_anonymous::Expression> value) {
+    storage_.left = std::move(value);
+    return *this;
+  }
+
   const ::std::unique_ptr<::test_anonymous::Expression>&
   right() const {
     return storage_.right;
@@ -97,6 +113,14 @@ class OverrideTest {
 
   ::std::unique_ptr<::test_anonymous::Expression>& right() {
     return storage_.right;
+  }
+
+  // Setter for right.
+  //
+
+  OverrideTest& right(::std::unique_ptr<::test_anonymous::Expression> value) {
+    storage_.right = std::move(value);
+    return *this;
   }
 
   OverrideTest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : OverrideTest(Storage_{
@@ -156,11 +180,35 @@ class FunctionApplication {
   const std::optional<::std::string>& func() const { return storage_.func; }
   ::std::optional<::std::string>& func() { return storage_.func; }
 
+  // Setter for func.
+  //
+
+  FunctionApplication& func(std::optional<::std::string> value) {
+    storage_.func = std::move(value);
+    return *this;
+  }
+
   const std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() const { return storage_.args; }
   ::std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>>& args() { return storage_.args; }
 
+  // Setter for args.
+  //
+
+  FunctionApplication& args(std::optional<::std::vector<::std::unique_ptr<::test_anonymous::Expression>>> value) {
+    storage_.args = std::move(value);
+    return *this;
+  }
+
   const std::optional<::test_anonymous::Flags>& flags() const { return storage_.flags; }
   ::std::optional<::test_anonymous::Flags>& flags() { return storage_.flags; }
+
+  // Setter for flags.
+  //
+
+  FunctionApplication& flags(std::optional<::test_anonymous::Flags> value) {
+    storage_.flags = std::move(value);
+    return *this;
+  }
 
   FunctionApplication(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : FunctionApplication(Storage_{}) {}
 
@@ -238,8 +286,17 @@ class Expression {
   const ::fidl::internal::UnionMemberView<1, Storage_> value() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> value() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the value member.
+  //
+
+  Expression& value(uint64_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static Expression WithBinOp(::test_anonymous::OverrideTest val) {
     return Expression(std::make_shared<Storage_>(
@@ -250,8 +307,17 @@ class Expression {
   const ::fidl::internal::UnionMemberView<2, Storage_> bin_op() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> bin_op() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the bin_op member.
+  //
+
+  Expression& bin_op(::test_anonymous::OverrideTest value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
   static Expression WithFunctionApplication(::test_anonymous::FunctionApplication val) {
     return Expression(std::make_shared<Storage_>(
@@ -262,8 +328,17 @@ class Expression {
   const ::fidl::internal::UnionMemberView<3, Storage_> function_application() const {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<3, Storage_> function_application() {
     return ::fidl::internal::UnionMemberView<3, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the function_application member.
+  //
+
+  Expression& function_application(::test_anonymous::FunctionApplication value) {
+    storage_->emplace<3>(std::move(value));
+    return *this;
   }
 
   Expression(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -361,8 +436,17 @@ class UnionMember {
   const ::fidl::internal::UnionMemberView<1, Storage_> union_data() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> union_data() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the union_data member.
+  //
+
+  UnionMember& union_data(uint8_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -438,6 +522,14 @@ class TableData {
     return storage_.data;
   }
 
+  // Setter for data.
+  //
+
+  TableData& data(uint8_t value) {
+    storage_.data = std::move(value);
+    return *this;
+  }
+
   TableData(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableData(Storage_{
                                                                               .data = {},
                                                                           }) {}
@@ -486,6 +578,14 @@ class TableMember {
 
   const std::optional<::std::vector<::test_anonymous::TableData>>& table_data() const { return storage_.table_data; }
   ::std::optional<::std::vector<::test_anonymous::TableData>>& table_data() { return storage_.table_data; }
+
+  // Setter for table_data.
+  //
+
+  TableMember& table_data(std::optional<::std::vector<::test_anonymous::TableData>> value) {
+    storage_.table_data = std::move(value);
+    return *this;
+  }
 
   TableMember(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : TableMember(Storage_{}) {}
 
@@ -545,6 +645,14 @@ class SomeProtocolSomeMethodRequest {
     return storage_.union_member;
   }
 
+  // Setter for union_member.
+  //
+
+  SomeProtocolSomeMethodRequest& union_member(::test_anonymous::UnionMember value) {
+    storage_.union_member = std::move(value);
+    return *this;
+  }
+
   const ::test_anonymous::TableMember&
   table_member() const {
     return storage_.table_member;
@@ -552,6 +660,14 @@ class SomeProtocolSomeMethodRequest {
 
   ::test_anonymous::TableMember& table_member() {
     return storage_.table_member;
+  }
+
+  // Setter for table_member.
+  //
+
+  SomeProtocolSomeMethodRequest& table_member(::test_anonymous::TableMember value) {
+    storage_.table_member = std::move(value);
+    return *this;
   }
 
   SomeProtocolSomeMethodRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SomeProtocolSomeMethodRequest(Storage_{
@@ -615,6 +731,14 @@ class SomeProtocolSomeMethodResponse {
 
   ::test_anonymous::BitsMember& bits_member() {
     return storage_.bits_member;
+  }
+
+  // Setter for bits_member.
+  //
+
+  SomeProtocolSomeMethodResponse& bits_member(::test_anonymous::BitsMember value) {
+    storage_.bits_member = std::move(value);
+    return *this;
   }
 
   SomeProtocolSomeMethodResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SomeProtocolSomeMethodResponse(Storage_{
@@ -688,8 +812,17 @@ class SomeProtocolSomeMethodResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  SomeProtocolSomeMethodResult& response(::test_anonymous::SomeProtocolSomeMethodResponse value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static SomeProtocolSomeMethodResult WithErr(::test_anonymous::SomeProtocolSomeMethodError val) {
     return SomeProtocolSomeMethodResult(std::make_shared<Storage_>(
@@ -700,8 +833,17 @@ class SomeProtocolSomeMethodResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  SomeProtocolSomeMethodResult& err(::test_anonymous::SomeProtocolSomeMethodError value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   SomeProtocolSomeMethodResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -780,6 +922,14 @@ class SomeProtocolSomeMethodTopResponse {
 
   ::test_anonymous::SomeProtocolSomeMethodResult& result() {
     return storage_.result;
+  }
+
+  // Setter for result.
+  //
+
+  SomeProtocolSomeMethodTopResponse& result(::test_anonymous::SomeProtocolSomeMethodResult value) {
+    storage_.result = std::move(value);
+    return *this;
   }
 
   SomeProtocolSomeMethodTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SomeProtocolSomeMethodTopResponse(Storage_{

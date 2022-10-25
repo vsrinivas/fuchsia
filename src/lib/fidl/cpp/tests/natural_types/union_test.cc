@@ -116,13 +116,24 @@ TEST(FlexibleUnion, Move) {
 }
 
 // These operations should be common across strict/flexible unions.
-TEST(Union, SetAndGetFields) {
+TEST(Union, SetAndGetFieldsUsingMutableAccessors) {
   test_types::TestXUnion u = test_types::TestXUnion::WithPrimitive(0);
   u.primitive() = 42;
   EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kPrimitive);
   u.copyable() = test_types::CopyableStruct{42};
   EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kCopyable);
   u.h() = MakeEvent();
+  EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kH);
+  EXPECT_EQ(u.primitive().value_or(0), 0);
+}
+
+TEST(Union, SetFieldsUsingSetters) {
+  test_types::TestXUnion u = test_types::TestXUnion::WithPrimitive(0);
+  u.primitive(42);
+  EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kPrimitive);
+  u.copyable(test_types::CopyableStruct{42});
+  EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kCopyable);
+  u.h(MakeEvent());
   EXPECT_EQ(u.Which(), test_types::TestXUnion::Tag::kH);
   EXPECT_EQ(u.primitive().value_or(0), 0);
 }

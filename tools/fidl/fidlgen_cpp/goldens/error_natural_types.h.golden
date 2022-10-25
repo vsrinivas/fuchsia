@@ -67,6 +67,14 @@ class ExampleFooRequest {
     return storage_.s;
   }
 
+  // Setter for s.
+  //
+
+  ExampleFooRequest& s(::std::string value) {
+    storage_.s = std::move(value);
+    return *this;
+  }
+
   ExampleFooRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooRequest(Storage_{
                                                                                       .s = {},
                                                                                   }) {}
@@ -125,6 +133,14 @@ class ExampleFooResponse {
 
   int64_t& y() {
     return storage_.y;
+  }
+
+  // Setter for y.
+  //
+
+  ExampleFooResponse& y(int64_t value) {
+    storage_.y = std::move(value);
+    return *this;
   }
 
   ExampleFooResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooResponse(Storage_{
@@ -198,8 +214,17 @@ class ExampleFooResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  ExampleFooResult& response(::test_error::ExampleFooResponse value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static ExampleFooResult WithErr(uint32_t val) {
     return ExampleFooResult(std::make_shared<Storage_>(
@@ -210,8 +235,17 @@ class ExampleFooResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  ExampleFooResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   ExampleFooResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -290,6 +324,14 @@ class ExampleFooTopResponse {
 
   ::test_error::ExampleFooResult& result() {
     return storage_.result;
+  }
+
+  // Setter for result.
+  //
+
+  ExampleFooTopResponse& result(::test_error::ExampleFooResult value) {
+    storage_.result = std::move(value);
+    return *this;
   }
 
   ExampleFooTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleFooTopResponse(Storage_{

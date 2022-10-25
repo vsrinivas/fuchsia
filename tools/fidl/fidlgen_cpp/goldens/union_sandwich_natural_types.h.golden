@@ -85,8 +85,17 @@ class UnionSize8Alignment4 {
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the variant member.
+  //
+
+  UnionSize8Alignment4& variant(uint32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionSize8Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -165,6 +174,14 @@ class SandwichUnionSize8Alignment4 {
     return storage_.before;
   }
 
+  // Setter for before.
+  //
+
+  SandwichUnionSize8Alignment4& before(uint32_t value) {
+    storage_.before = std::move(value);
+    return *this;
+  }
+
   const ::test_unionsandwich::UnionSize8Alignment4&
   union_() const {
     return storage_.union_;
@@ -174,6 +191,14 @@ class SandwichUnionSize8Alignment4 {
     return storage_.union_;
   }
 
+  // Setter for union_.
+  //
+
+  SandwichUnionSize8Alignment4& union_(::test_unionsandwich::UnionSize8Alignment4 value) {
+    storage_.union_ = std::move(value);
+    return *this;
+  }
+
   uint32_t
   after() const {
     return storage_.after;
@@ -181,6 +206,14 @@ class SandwichUnionSize8Alignment4 {
 
   uint32_t& after() {
     return storage_.after;
+  }
+
+  // Setter for after.
+  //
+
+  SandwichUnionSize8Alignment4& after(uint32_t value) {
+    storage_.after = std::move(value);
+    return *this;
   }
 
   SandwichUnionSize8Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SandwichUnionSize8Alignment4(Storage_{
@@ -265,8 +298,17 @@ class UnionSize12Alignment4 {
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the variant member.
+  //
+
+  UnionSize12Alignment4& variant(::std::array<uint8_t, 6> value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionSize12Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -345,6 +387,14 @@ class SandwichUnionSize12Alignment4 {
     return storage_.before;
   }
 
+  // Setter for before.
+  //
+
+  SandwichUnionSize12Alignment4& before(uint32_t value) {
+    storage_.before = std::move(value);
+    return *this;
+  }
+
   const ::test_unionsandwich::UnionSize12Alignment4&
   union_() const {
     return storage_.union_;
@@ -354,6 +404,14 @@ class SandwichUnionSize12Alignment4 {
     return storage_.union_;
   }
 
+  // Setter for union_.
+  //
+
+  SandwichUnionSize12Alignment4& union_(::test_unionsandwich::UnionSize12Alignment4 value) {
+    storage_.union_ = std::move(value);
+    return *this;
+  }
+
   int32_t
   after() const {
     return storage_.after;
@@ -361,6 +419,14 @@ class SandwichUnionSize12Alignment4 {
 
   int32_t& after() {
     return storage_.after;
+  }
+
+  // Setter for after.
+  //
+
+  SandwichUnionSize12Alignment4& after(int32_t value) {
+    storage_.after = std::move(value);
+    return *this;
   }
 
   SandwichUnionSize12Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SandwichUnionSize12Alignment4(Storage_{
@@ -436,6 +502,14 @@ class StructSize16Alignment8 {
     return storage_.f1;
   }
 
+  // Setter for f1.
+  //
+
+  StructSize16Alignment8& f1(uint64_t value) {
+    storage_.f1 = std::move(value);
+    return *this;
+  }
+
   uint64_t
   f2() const {
     return storage_.f2;
@@ -443,6 +517,14 @@ class StructSize16Alignment8 {
 
   uint64_t& f2() {
     return storage_.f2;
+  }
+
+  // Setter for f2.
+  //
+
+  StructSize16Alignment8& f2(uint64_t value) {
+    storage_.f2 = std::move(value);
+    return *this;
   }
 
   StructSize16Alignment8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : StructSize16Alignment8(Storage_{
@@ -518,8 +600,17 @@ class UnionSize24Alignment8 {
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the variant member.
+  //
+
+  UnionSize24Alignment8& variant(::test_unionsandwich::StructSize16Alignment8 value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionSize24Alignment8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -598,6 +689,14 @@ class SandwichUnionSize24Alignment8 {
     return storage_.before;
   }
 
+  // Setter for before.
+  //
+
+  SandwichUnionSize24Alignment8& before(uint32_t value) {
+    storage_.before = std::move(value);
+    return *this;
+  }
+
   const ::test_unionsandwich::UnionSize24Alignment8&
   union_() const {
     return storage_.union_;
@@ -607,6 +706,14 @@ class SandwichUnionSize24Alignment8 {
     return storage_.union_;
   }
 
+  // Setter for union_.
+  //
+
+  SandwichUnionSize24Alignment8& union_(::test_unionsandwich::UnionSize24Alignment8 value) {
+    storage_.union_ = std::move(value);
+    return *this;
+  }
+
   uint32_t
   after() const {
     return storage_.after;
@@ -614,6 +721,14 @@ class SandwichUnionSize24Alignment8 {
 
   uint32_t& after() {
     return storage_.after;
+  }
+
+  // Setter for after.
+  //
+
+  SandwichUnionSize24Alignment8& after(uint32_t value) {
+    storage_.after = std::move(value);
+    return *this;
   }
 
   SandwichUnionSize24Alignment8(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SandwichUnionSize24Alignment8(Storage_{
@@ -698,8 +813,17 @@ class UnionSize36Alignment4 {
   const ::fidl::internal::UnionMemberView<1, Storage_> variant() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> variant() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the variant member.
+  //
+
+  UnionSize36Alignment4& variant(::std::array<uint8_t, 32> value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   UnionSize36Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -778,6 +902,14 @@ class SandwichUnionSize36Alignment4 {
     return storage_.before;
   }
 
+  // Setter for before.
+  //
+
+  SandwichUnionSize36Alignment4& before(uint32_t value) {
+    storage_.before = std::move(value);
+    return *this;
+  }
+
   const ::test_unionsandwich::UnionSize36Alignment4&
   union_() const {
     return storage_.union_;
@@ -787,6 +919,14 @@ class SandwichUnionSize36Alignment4 {
     return storage_.union_;
   }
 
+  // Setter for union_.
+  //
+
+  SandwichUnionSize36Alignment4& union_(::test_unionsandwich::UnionSize36Alignment4 value) {
+    storage_.union_ = std::move(value);
+    return *this;
+  }
+
   uint32_t
   after() const {
     return storage_.after;
@@ -794,6 +934,14 @@ class SandwichUnionSize36Alignment4 {
 
   uint32_t& after() {
     return storage_.after;
+  }
+
+  // Setter for after.
+  //
+
+  SandwichUnionSize36Alignment4& after(uint32_t value) {
+    storage_.after = std::move(value);
+    return *this;
   }
 
   SandwichUnionSize36Alignment4(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : SandwichUnionSize36Alignment4(Storage_{

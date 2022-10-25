@@ -68,6 +68,14 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailRequest {
     return storage_.s;
   }
 
+  // Setter for s.
+  //
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailRequest& s(::std::string value) {
+    storage_.s = std::move(value);
+    return *this;
+  }
+
   ExampleUseOfErrorSyntaxCallWhichMayFailRequest(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleUseOfErrorSyntaxCallWhichMayFailRequest(Storage_{
                                                                                                                    .s = {},
                                                                                                                }) {}
@@ -126,6 +134,14 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResponse {
 
   int64_t& value() {
     return storage_.value;
+  }
+
+  // Setter for value.
+  //
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailResponse& value(int64_t value) {
+    storage_.value = std::move(value);
+    return *this;
   }
 
   ExampleUseOfErrorSyntaxCallWhichMayFailResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleUseOfErrorSyntaxCallWhichMayFailResponse(Storage_{
@@ -199,8 +215,17 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
   const ::fidl::internal::UnionMemberView<1, Storage_> response() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> response() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the response member.
+  //
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult& response(::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResponse value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
   static ExampleUseOfErrorSyntaxCallWhichMayFailResult WithErr(uint32_t val) {
     return ExampleUseOfErrorSyntaxCallWhichMayFailResult(std::make_shared<Storage_>(
@@ -211,8 +236,17 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailResult {
   const ::fidl::internal::UnionMemberView<2, Storage_> err() const {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<2, Storage_> err() {
     return ::fidl::internal::UnionMemberView<2, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the err member.
+  //
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailResult& err(uint32_t value) {
+    storage_->emplace<2>(std::move(value));
+    return *this;
   }
 
   ExampleUseOfErrorSyntaxCallWhichMayFailResult(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)
@@ -291,6 +325,14 @@ class ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse {
 
   ::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult& result() {
     return storage_.result;
+  }
+
+  // Setter for result.
+  //
+
+  ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse& result(::test_errorsyntax::ExampleUseOfErrorSyntaxCallWhichMayFailResult value) {
+    storage_.result = std::move(value);
+    return *this;
   }
 
   ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : ExampleUseOfErrorSyntaxCallWhichMayFailTopResponse(Storage_{

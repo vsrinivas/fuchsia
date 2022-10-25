@@ -69,6 +69,14 @@ class Struct {
     return storage_.x;
   }
 
+  // Setter for x.
+  //
+
+  Struct& x(uint32_t value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
+
   Struct(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Struct(Storage_{
                                                                            .x = {},
                                                                        }) {}
@@ -117,6 +125,14 @@ class Table {
 
   const std::optional<uint32_t>& x() const { return storage_.x; }
   ::std::optional<uint32_t>& x() { return storage_.x; }
+
+  // Setter for x.
+  //
+
+  Table& x(std::optional<uint32_t> value) {
+    storage_.x = std::move(value);
+    return *this;
+  }
 
   Table(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Table(Storage_{}) {}
 
@@ -189,8 +205,17 @@ class Union {
   const ::fidl::internal::UnionMemberView<1, Storage_> x() const {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
   }
+
   ::fidl::internal::UnionMemberView<1, Storage_> x() {
     return ::fidl::internal::UnionMemberView<1, Storage_>(storage_);
+  }
+
+  // Sets the union to hold the x member.
+  //
+
+  Union& x(uint32_t value) {
+    storage_->emplace<1>(std::move(value));
+    return *this;
   }
 
   Union(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag)

@@ -60,6 +60,14 @@ class Foo {
     return storage_.field;
   }
 
+  // Setter for field.
+  //
+
+  Foo& field(::test_dependent::MyEnum value) {
+    storage_.field = std::move(value);
+    return *this;
+  }
+
   Foo(::fidl::internal::DefaultConstructPossiblyInvalidObjectTag) : Foo(Storage_{
                                                                         .field = ::test_dependent::MyEnum::kA,
                                                                     }) {}
