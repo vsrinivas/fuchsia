@@ -31,9 +31,7 @@ use {
     fuchsia_fs, fuchsia_syslog as syslog, fuchsia_zircon as zx,
     futures::{lock::Mutex, prelude::*, TryStreamExt},
     std::{
-        fs,
         io::{self, Read, Seek},
-        path::Path,
         path::PathBuf,
         sync::Arc,
     },
@@ -58,20 +56,19 @@ enum IncomingServices {
     WidevineFactoryStoreProvider(WidevineFactoryStoreProviderRequestStream),
 }
 
-// find the toplogical path for a block device
-async fn find_block_device(input: &str) -> Result<String, Error> {
-    let block_dir = Path::new("/dev/class/block");
-    for entry in fs::read_dir(block_dir)? {
-        let entry = entry?.path();
-        let block_path = entry.to_str().unwrap();
-        let file = std::fs::File::open(block_path)?;
-        let result = fdio::device_get_topo_path(&file)?;
-        if result == input {
-            return Ok(block_path.to_string());
-        }
-    }
+async fn find_block_device_filepath(partition_path: &str) -> Result<String, Error> {
+    const DEV_CLASS_BLOCK: &str = "/dev/class/block";
 
-    panic!("Did not find matching block device for {}", &input);
+    let dir =
+        fuchsia_fs::directory::open_in_namespace(DEV_CLASS_BLOCK, fio::OpenFlags::RIGHT_READABLE)?;
+    device_watcher::wait_for_device_with(
+        &dir,
+        |device_watcher::DeviceInfo { filename, topological_path }| {
+            (topological_path == partition_path)
+                .then(|| format!("{}/{}", DEV_CLASS_BLOCK, filename))
+        },
+    )
+    .await
 }
 
 fn parse_bootfs<'a>(vmo: zx::Vmo) -> Arc<directory::immutable::Simple> {
@@ -254,9 +251,9 @@ async fn open_factory_source(factory_config: FactoryConfig) -> Result<fio::Direc
 
             Ok(directory_proxy)
         }
-        FactoryConfig::Ext4(path) => {
-            syslog::fx_log_info!("Reading from EXT4-formatted source: {}", path);
-            let block_path = find_block_device(&path).await?;
+        FactoryConfig::Ext4(partition_path) => {
+            syslog::fx_log_info!("Reading from EXT4-formatted source: {}", partition_path);
+            let block_path = find_block_device_filepath(&partition_path).await?;
             syslog::fx_log_info!("found the block path {}", block_path);
             let mut reader = io::BufReader::new(std::fs::File::open(block_path)?);
             let size = reader.seek(io::SeekFrom::End(0))?;
