@@ -16,6 +16,8 @@ rustc_library("fuchsia-merkle") {
     "//third_party/rust_crates:futures",
   ]
 
+  test_deps = [ "//third_party/rust_crates:test-case" ]
+
   sources = [
     "src/builder.rs",
     "src/lib.rs",
