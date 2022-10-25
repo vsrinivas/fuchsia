@@ -63,7 +63,10 @@ group("fhcp") {
 
 group("device-tests") {
   testonly = true
-  deps = [ "sample:tests" ]
+  deps = [
+    "sample:tests",
+    "//src/ui/input/fhcp:touchpad-test-pkg",
+  ]
 }
 
 group("tests") {
