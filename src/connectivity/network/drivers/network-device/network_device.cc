@@ -15,29 +15,15 @@
 
 namespace network {
 
-NetworkDevice::~NetworkDevice() {
-  if (loop_thread_.has_value()) {
-    // not allowed to destroy device on the loop thread, will cause deadlock
-    ZX_ASSERT(loop_thread_.value() != thrd_current());
-  }
-  loop_.Shutdown();
-}
+NetworkDevice::~NetworkDevice() = default;
 
-zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
+zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent, async_dispatcher_t* dispatcher) {
   fbl::AllocChecker ac;
-  std::unique_ptr netdev = fbl::make_unique_checked<NetworkDevice>(&ac, parent);
+  std::unique_ptr netdev = fbl::make_unique_checked<NetworkDevice>(&ac, parent, dispatcher);
   if (!ac.check()) {
     zxlogf(ERROR, "no memory");
     return ZX_ERR_NO_MEMORY;
   }
-
-  thrd_t thread;
-  if (zx_status_t status = netdev->loop_.StartThread("network-device-handler", &thread);
-      status != ZX_OK) {
-    zxlogf(ERROR, "failed to create handler thread");
-    return status;
-  }
-  netdev->loop_thread_ = thread;
 
   ddk::NetworkDeviceImplProtocolClient netdevice_impl(parent);
   if (!netdevice_impl.is_valid()) {
@@ -45,7 +31,7 @@ zx_status_t NetworkDevice::Create(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  zx::result device = NetworkDeviceInterface::Create(netdev->loop_.dispatcher(), netdevice_impl);
+  zx::result device = NetworkDeviceInterface::Create(netdev->dispatcher_, netdevice_impl);
   if (device.is_error()) {
     zxlogf(ERROR, "failed to create inner device %s", device.status_string());
     return device.status_value();
@@ -83,7 +69,11 @@ void NetworkDevice::GetDevice(GetDeviceRequestView request, GetDeviceCompleter::
 
 static constexpr zx_driver_ops_t network_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = NetworkDevice::Create,
+    .bind =
+        +[](void* ctx, zx_device_t* parent) {
+          return NetworkDevice::Create(ctx, parent,
+                                       fdf::Dispatcher::GetCurrent()->async_dispatcher());
+        },
 };
 
 }  // namespace network

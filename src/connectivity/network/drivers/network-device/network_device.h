@@ -25,11 +25,11 @@ using DeviceType =
 
 class NetworkDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_NETWORK_DEVICE> {
  public:
-  explicit NetworkDevice(zx_device_t* parent)
-      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+  explicit NetworkDevice(zx_device_t* parent, async_dispatcher_t* dispatcher)
+      : DeviceType(parent), dispatcher_(dispatcher) {}
   ~NetworkDevice() override;
 
-  static zx_status_t Create(void* ctx, zx_device_t* parent);
+  static zx_status_t Create(void* ctx, zx_device_t* parent, async_dispatcher_t* dispatcher);
 
   void DdkUnbind(ddk::UnbindTxn unbindTxn);
 
@@ -38,8 +38,7 @@ class NetworkDevice : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL_N
   void GetDevice(GetDeviceRequestView request, GetDeviceCompleter::Sync& _completer) override;
 
  private:
-  std::optional<thrd_t> loop_thread_;
-  async::Loop loop_;
+  async_dispatcher_t* dispatcher_;
   std::unique_ptr<NetworkDeviceInterface> device_;
 };
 }  // namespace network

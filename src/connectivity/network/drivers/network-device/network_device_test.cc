@@ -48,7 +48,8 @@ class NetDeviceDriverTest : public ::testing::Test {
     }
     port_impl_.SetStatus(
         {.mtu = 2048, .flags = static_cast<uint32_t>(netdev::wire::StatusFlags::kOnline)});
-    if (zx_status_t status = NetworkDevice::Create(nullptr, parent_.get()); status != ZX_OK) {
+    if (zx_status_t status = NetworkDevice::Create(nullptr, parent_.get(), loop_.dispatcher());
+        status != ZX_OK) {
       return status;
     }
     port_impl_.AddPort(kPortId, device_impl_.client());

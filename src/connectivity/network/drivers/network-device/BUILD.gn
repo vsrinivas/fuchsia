@@ -23,9 +23,9 @@ source_set("src") {
   public_deps = [
     ":network-device_bind",
     "device:device_ddk",
+    "//src/devices/lib/driver:driver_runtime",
     "//src/lib/ddk",
     "//src/lib/ddktl",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
   ]
 }
 
