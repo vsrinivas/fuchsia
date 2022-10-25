@@ -61,8 +61,8 @@
             protocol: "fuchsia.sys.internal.CrashIntrospect",
             from: "#appmgr",
             to: "#exceptions",
-            source_availability: "unknown",
             dependency: "weak_for_migration",
+            source_availability: "unknown",
         },
         {
             protocol: [
@@ -188,7 +188,10 @@
             from: "#exceptions",
         },
         {
-            protocol: "fuchsia.feedback.CrashReporter",
+            protocol: [
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.DataProvider",
+            ],
             from: "#feedback",
         },
     ],

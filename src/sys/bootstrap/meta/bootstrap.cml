@@ -237,6 +237,12 @@
             to: "#console-launcher",
         },
         {
+            // Allow the console to run `snapshot`.
+            protocol: "fuchsia.feedback.DataProvider",
+            from: "parent",
+            to: "#console-launcher",
+        },
+        {
             // Allow networking from programs running in the console.
             protocol: [
                 "fuchsia.net.name.Lookup",

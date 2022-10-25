@@ -175,7 +175,7 @@
             to: "#core",
         },
 
-        // Non-zircon services for archivist and svchost
+        // Non-zircon services for archivist, svchost, and console.
         {
             protocol: [
                 "fuchsia.component.DetectBinder",
@@ -185,6 +185,7 @@
                 "fuchsia.component.SamplerBinder",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.DataProvider",
                 "fuchsia.metrics.MetricEventLoggerFactory",
                 "fuchsia.pkg.PackageResolver",
                 "fuchsia.pkg.RepositoryManager",
