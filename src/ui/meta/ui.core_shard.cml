@@ -164,18 +164,18 @@
             to: "#ui",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-display-controller",
             to: [ "#ui" ],
-            subdir: "class/display-controller",
+            subdir: "display-controller",
         },
         {
-            directory: "dev",
+            directory: "dev-class",
             from: "parent",
             as: "dev-input-report",
             to: [ "#ui" ],
-            subdir: "class/input-report",
+            subdir: "input-report",
         },
         {
             storage: [ "tmp" ],
