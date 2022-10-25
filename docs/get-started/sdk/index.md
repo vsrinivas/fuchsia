@@ -70,8 +70,8 @@ Do the following:
    git clone https://fuchsia.googlesource.com/sdk-samples/getting-started fuchsia-getting-started --recurse-submodules
    ```
 
-   This creates a new directory named `fuchsia-getting-started`, which clones the content of
-   the SDK samples repository.
+   This `git clone` command creates a new directory named `fuchsia-getting-started` (see the
+   command's second argument above) and clones the content of the SDK samples repository.
 
 1. Go to the new directory:
 
@@ -100,7 +100,7 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel build @fuchsia_sdk//:fuchsia_toolchain_sdk
    ...
-   INFO: Elapsed time: 31.960s, Critical Path: 0.02s
+   INFO: Elapsed time: 64.518s, Critical Path: 0.02s
    INFO: 1 process: 1 internal.
    INFO: Build completed successfully, 1 total action
    ```
@@ -116,13 +116,13 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/ffx sdk version
-   9.20220919.2.1
+   10.20221013.1.1
    ```
 
    At this point, you only need to confirm that you can run `ffx` commands
    without error. (However for your information, the output above shows the version
-   `9.20220919.2.1`, which indicates that this SDK was built and published on
-   September 19, 2022.)
+   `10.20221013.1.1`, which indicates that this SDK was built and published on
+   October 13, 2022.)
 
    Note: To ensure that you’re using the right version of `ffx` during development,
    consider updating your `PATH` to include the SDK's `tools` directory
@@ -256,7 +256,7 @@ Do the following:
    $ tools/ffx target show
    Target:
        Name: "fuchsia-emulator"
-       SSH Address: "127.0.0.1:42001"
+       SSH Address: "127.0.0.1:37787"
    Board:
        Name: "default-board"
        Revision: "1"
@@ -264,10 +264,10 @@ Do the following:
    Device:
        ...
    Build:
-       Version: "9.20220919.2.1"
+       Version: "10.20221013.1.1"
        Product: "workstation_eng"
        Board: "qemu-x64"
-       Commit: "2022-09-19T14:03:10+00:00"
+       Commit: "2022-10-13T20:03:14+00:00"
    Last Reboot:
        Graceful: "false"
        Reason: "Cold"
@@ -275,7 +275,7 @@ Do the following:
    ```
 
    The example output above shows that the target device is running a
-   `workstation_eng.qemu-x64` prebuilt image whose version is `9.20220919.2.1`.
+   `workstation_eng.qemu-x64` prebuilt image whose version is `10.20221013.1.1`.
 
 1. Verify that you can stream the device logs:
 
@@ -368,14 +368,14 @@ Do the following:
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel run --config=fuchsia_x64 //src/hello_world:pkg.component
    INFO: Build options --copt, --cpu, --crosstool_top, and 1 more have changed, discarding analysis cache.
-   INFO: Analyzed target //src/hello_world:pkg.component (53 packages loaded, 1909 targets configured).
+   INFO: Analyzed target //src/hello_world:pkg.component (55 packages loaded, 2434 targets configured).
    INFO: Found 1 target...
    Target //src/hello_world:pkg.component up-to-date:
      bazel-bin/src/hello_world/pkg.component_run_component.sh
-   INFO: Elapsed time: 136.782s, Critical Path: 2.46s
-   INFO: 127 processes: 102 internal, 24 linux-sandbox, 1 local.
-   INFO: Build completed successfully, 127 total actions
-   INFO: Build completed successfully, 127 total actions
+   INFO: Elapsed time: 5.478s, Critical Path: 2.56s
+   INFO: 128 processes: 103 internal, 24 linux-sandbox, 1 local.
+   INFO: Build completed successfully, 128 total actions
+   INFO: Build completed successfully, 128 total actions
    added repository bazel.pkg.component
    WARNING: No component moniker specified. Using value '/core/ffx-laboratory:hello_world'.
    The moniker arg will be required in the future. See fxbug.dev/104212
@@ -403,7 +403,7 @@ Do the following:
           Component State:  Resolved
     Incoming Capabilities:  /svc/fuchsia.logger.LogSink
      Exposed Capabilities:
-              Merkle root:  f4c8c1c3cd9020994dcb0dbf3d88d463dbd206065adb12af6b46bf5f5e315d32
+              Merkle root:  8db83fbe62d9156b03b5b7665ebb1832316492691969ab5936617c370f3f90a9
           Execution State:  Stopped
    ```
 
@@ -852,7 +852,7 @@ Do the following:
 
    ```none {:.devsite-disable-click-to-copy}
    $ tools/bazel test --config=fuchsia_x64 --test_output=all //src/hello_world:test_pkg
-   INFO: Analyzed target //src/hello_world:test_pkg (10 packages loaded, 575 targets configured).
+   INFO: Analyzed target //src/hello_world:test_pkg (10 packages loaded, 577 targets configured).
    INFO: Found 1 test target...
    INFO: From Testing //src/hello_world:test_pkg:
    ==================== Test output for //src/hello_world:test_pkg:
@@ -880,10 +880,10 @@ Do the following:
    ================================================================================
    Target //src/hello_world:test_pkg up-to-date:
      bazel-bin/src/hello_world/test_pkg_test_package.sh
-   INFO: Elapsed time: 16.866s, Critical Path: 9.80s
+   INFO: Elapsed time: 19.563s, Critical Path: 11.83s
    INFO: 105 processes: 46 internal, 56 linux-sandbox, 3 local.
    INFO: Build completed successfully, 105 total actions
-   //src/hello_world:test_pkg                                               PASSED in 3.3s
+   //src/hello_world:test_pkg                                               PASSED in 3.8s
 
    Executed 1 out of 1 test: 1 test passes.
    INFO: Build completed successfully, 105 total actions
@@ -950,7 +950,7 @@ Do the following:
    ================================================================================
    Target //src/hello_world:test_pkg.hello_gtest up-to-date:
      bazel-bin/src/hello_world/test_pkg.hello_gtest_run_component.sh
-   INFO: Elapsed time: 3.810s, Critical Path: 3.42s
+   INFO: Elapsed time: 4.195s, Critical Path: 3.79s
    INFO: 11 processes: 2 internal, 6 linux-sandbox, 3 local.
    INFO: Build completed, 1 test FAILED, 11 total actions
    //src/hello_world:test_pkg.hello_gtest                                   FAILED in 1.8s
