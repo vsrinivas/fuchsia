@@ -18,7 +18,7 @@ class PageList {
   const dma_buffer::PagedBuffer* pages();
 
  private:
-  // No mutex needed for this.  This is only ever read or written by one thread (the main thread).
+  // No mutex needed for this. This is only ever read or written by one thread (the main thread).
   static uint32_t next_id_;
 
   uint32_t id_;

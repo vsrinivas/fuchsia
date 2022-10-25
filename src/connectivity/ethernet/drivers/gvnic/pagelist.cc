@@ -13,7 +13,7 @@ PageList::PageList(std::unique_ptr<dma_buffer::BufferFactory>& buffer_factory, z
   zx_status_t status;
   id_ = next_id_++;
   // TODO(charlieross): Once the requirements for these pagelists are better understood, support
-  // making smaller pagelists.  But for now, make em big.
+  // making smaller pagelists. But for now, make em big.
   length_ = static_cast<uint32_t>(scratch_page->size()) /
             sizeof(uint64_t);  // Make it as large as we can.
   status = buffer_factory->CreatePaged(bti, zx_system_get_page_size() * length_,
@@ -22,7 +22,7 @@ PageList::PageList(std::unique_ptr<dma_buffer::BufferFactory>& buffer_factory, z
                 "buffer_factory->CreatePaged(bti, zx_system_get_page_size() * length_, true, "
                 "&pages_): FAILED (%s)",
                 zx_status_get_string(status));
-  // Can't just memcpy.  Need to assign individually to get the BigEndian goodness.
+  // Can't just memcpy. Need to assign individually to get the BigEndian goodness.
   auto const pl_addrs_tgt = reinterpret_cast<BigEndian<uint64_t>*>(scratch_page->virt());
   auto const pl_addrs_src = pages_->phys();
   for (uint32_t i = 0; i < length_; i++) {

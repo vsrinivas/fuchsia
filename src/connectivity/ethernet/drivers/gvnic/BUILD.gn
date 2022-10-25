@@ -29,14 +29,25 @@ driver_bind_rules("gvnic_bind") {
 fuchsia_driver("gvnic-driver") {
   output_name = "gvnic"
   sources = [
+    "abi.h",
+    "bigendian.h",
+    "circular_queue.h",
     "gvnic.cc",
     "gvnic.h",
+    "pagelist.cc",
+    "pagelist.h",
   ]
   deps = [
     ":gvnic_bind",
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_wire",
+    "//src/connectivity/network/drivers/network-device/device:shared_lock",
     "//src/devices/lib/dma-buffer",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/lib/ddktl",
+    "//src/zircon/lib/zircon",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/inspect",
   ]
@@ -56,14 +67,24 @@ fuchsia_driver_package("gvnic-package") {
 
 test("gvnic-unit-tests") {
   sources = [
+    "abi.h",
+    "bigendian.h",
+    "circular_queue.h",
     "gvnic.cc",
     "gvnic.h",
+    "pagelist.cc",
+    "pagelist.h",
     "unit-tests.cc",
   ]
   deps = [
     ":gvnic_bind",
+    "//sdk/banjo/fuchsia.hardware.network.device:fuchsia.hardware.network.device_banjo_cpp",
+    "//sdk/banjo/fuchsia.hardware.network.mac:fuchsia.hardware.network.mac_banjo_cpp",
+    "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_cpp_wire",
     "//sdk/lib/inspect/testing/cpp:zxtest",
+    "//src/connectivity/network/drivers/network-device/device:shared_lock",
     "//src/devices/lib/dma-buffer",
+    "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
     "//src/devices/testing/mock-ddk",
     "//zircon/system/ulib/zxtest",

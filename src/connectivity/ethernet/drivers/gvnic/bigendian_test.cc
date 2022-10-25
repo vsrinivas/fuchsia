@@ -14,7 +14,7 @@ namespace gvnic {
 // "Le" tests verify that this machine is little endian, and does not use the BigEndian class.
 // "Be" tests check the actual BigEndian class.
 
-// The uint8_t is an edge case.  No actual swappage occurs.
+// The uint8_t is an edge case. No actual swappage occurs.
 TEST(BigEndianTest, Be8) {
   BigEndian<uint8_t> value;
   uint8_t *bytes = reinterpret_cast<uint8_t *>(&value);

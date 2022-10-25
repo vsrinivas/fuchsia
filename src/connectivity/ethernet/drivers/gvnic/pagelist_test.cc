@@ -43,7 +43,7 @@ TEST(PagelistTest, ScratchIsPopulated) {
   std::unique_ptr<dma_buffer::ContiguousBuffer> scratch;
   EXPECT_OK(factory->CreateContiguous(bti, zx_system_get_page_size(), 0, &scratch));
 
-  // Zero out the scratch page.  (Set all entries to 0)
+  // Zero out the scratch page. (Set all entries to 0)
   memset(scratch->virt(), 0, scratch->size());
 
   PageList page_list(factory, bti, scratch);

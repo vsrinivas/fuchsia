@@ -187,11 +187,11 @@ struct __PACKED GvnicAdminqUnregisterPageList {
 static_assert(sizeof(GvnicAdminqUnregisterPageList) == 4);
 
 struct __PACKED GvnicQueueResources {
-  // gVNIC BAR2 is a flat array of 32-bit big endian doorbells.  db_index is the index in BAR2 of a
-  // queue's doorbell.  db_index is network byte order.
+  // gVNIC BAR2 is a flat array of 32-bit big endian doorbells. db_index is the index in BAR2 of a
+  // queue's doorbell. db_index is network byte order.
   BigEndian<uint32_t> db_index;
   // counter_index is the index in a per-NIC guest-allocated counter array of a queue's event
-  // counter.  counter_index is in network byte order.
+  // counter. counter_index is in network byte order.
   BigEndian<uint32_t> counter_index;
   // Padding bytes to push us out to a cacheline ensuing QueueResources structs are
   // cacheline-independent of each other.
@@ -366,7 +366,7 @@ struct __PACKED GvnicRxDesc {
   uint8_t header_length;          // Unused.
   uint8_t packet_data_offset;     // Unused.
   BigEndian<uint16_t> checksum;   // Can be ignored.
-  BigEndian<uint16_t> length;     // Length of the packet in bytes.  (Including 2 byte padding)
+  BigEndian<uint16_t> length;     // Length of the packet in bytes. (Including 2 byte padding)
   BigEndian<uint16_t> flags_seq;  // Useful for GVNIC_RX_FLAG_ERR only.
 };
 static_assert(sizeof(GvnicRxDesc) == 64);

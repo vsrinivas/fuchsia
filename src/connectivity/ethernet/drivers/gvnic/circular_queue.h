@@ -25,7 +25,7 @@ class CircularQueue {
   virtual ~CircularQueue() = default;
 
   void Init(uint32_t capacity) {
-    ZX_ASSERT_MSG(count_ == 0, "Init when not empty.  There are still %u elements in the queue.",
+    ZX_ASSERT_MSG(count_ == 0, "Init when not empty. There are still %u elements in the queue.",
                   count_);
     contents_.reset(capacity > 0 ? new T[capacity] : nullptr);
     capacity_ = capacity;

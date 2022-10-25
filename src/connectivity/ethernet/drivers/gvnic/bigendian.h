@@ -10,7 +10,7 @@
 #include <stdint.h>
 
 // Fuchsia only runs on little endian architectures.
-// So this file assumes that it is true.  Just to be safe:
+// So this file assumes that it is true. Just to be safe:
 static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__);
 
 // Store an object of type 'T' as a big endian value doing automagic byte
@@ -23,7 +23,7 @@ class __attribute__((packed)) BigEndian {
 
   // Function to do the swapping when needed.
   // Leaving the generic implementation commented out for now. Ideally, it
-  // should never be needed.  The specializations below should be exhaustive.
+  // should never be needed. The specializations below should be exhaustive.
   inline static T swap(const T& arg); /* {
     T ret;
     // Start by pointing 1 byte past the input arg.
