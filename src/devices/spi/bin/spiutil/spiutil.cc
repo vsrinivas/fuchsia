@@ -65,21 +65,21 @@ void print_buffer(uint8_t* buffer, size_t length) {
 int main(int argc, char** argv) {
   if (argc < 4) {
     usage(argv[0]);
-    return -1;
+    return ZX_ERR_INTERNAL;
   }
 
   int fd = open(argv[1], O_RDWR);
   if (fd < 0) {
     fprintf(stderr, "%s: %s\n", argv[1], strerror(errno));
     usage(argv[0]);
-    return -2;
+    return ZX_ERR_INTERNAL;
   }
 
   fdio_t* io = fdio_unsafe_fd_to_io(fd);
   if (io == nullptr) {
     fprintf(stderr, "%s: fdio conversion failed\n", argv[1]);
     close(fd);
-    return -3;
+    return ZX_ERR_INTERNAL;
   }
 
   zx_status_t status;
@@ -89,7 +89,11 @@ int main(int argc, char** argv) {
       size_t length = strtoull(argv[3], nullptr, 0);
       uint8_t buffer[length];
       status = spilib_receive(fdio_unsafe_borrow_channel(io), buffer, length);
-      print_buffer(buffer, length);
+      if (status == ZX_OK) {
+        print_buffer(buffer, length);
+      } else {
+        fprintf(stderr, "error: spilib_receive failed: %s\n", zx_status_get_string(status));
+      }
       break;
     }
     case 'w': {
@@ -97,6 +101,9 @@ int main(int argc, char** argv) {
       uint8_t buffer[length];
       convert_args(&argv[3], length, buffer);
       status = spilib_transmit(fdio_unsafe_borrow_channel(io), buffer, length);
+      if (status != ZX_OK) {
+        fprintf(stderr, "error: spilib_transmit failed: %s\n", zx_status_get_string(status));
+      }
       break;
     }
     case 'x': {
@@ -105,13 +112,17 @@ int main(int argc, char** argv) {
       uint8_t recv[length];
       convert_args(&argv[3], length, send);
       status = spilib_exchange(fdio_unsafe_borrow_channel(io), send, recv, length);
-      print_buffer(recv, length);
+      if (status == ZX_OK) {
+        print_buffer(recv, length);
+      } else {
+        fprintf(stderr, "error: spilib_exchange failed: %s\n", zx_status_get_string(status));
+      }
       break;
     }
     default:
       fprintf(stderr, "%c: unrecognized command\n", argv[2][0]);
       usage(argv[0]);
-      status = -4;
+      status = ZX_ERR_INTERNAL;
   }
 
   fdio_unsafe_release(io);
