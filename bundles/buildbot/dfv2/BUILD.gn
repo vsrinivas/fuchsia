@@ -165,9 +165,9 @@ group("core") {
   # tests in //src:src_no_e2e pass with DFv2 enabled.
   deps += [
     "//build:tests",
-    "//bundles:tools",
     "//bundles/fidl:tests_no_e2e",
     "//bundles/packages/tests:all",
+    "//bundles/tools",
     "//examples",
     "//examples:tests",
     "//scripts:tests",
