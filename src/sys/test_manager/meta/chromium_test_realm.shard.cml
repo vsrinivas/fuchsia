@@ -29,6 +29,8 @@
                 "fuchsia.accessibility.semantics.SemanticsManager",
                 "fuchsia.buildinfo.Provider",
                 "fuchsia.device.NameProvider",
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReportingProductRegister",
                 "fuchsia.fonts.Provider",
                 "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Device",

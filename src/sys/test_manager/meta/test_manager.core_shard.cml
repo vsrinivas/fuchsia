@@ -74,7 +74,11 @@
             source_availability: "unknown",
         },
         {
-            protocol: "fuchsia.feedback.CrashReporter",
+            protocol: [
+                "fuchsia.feedback.ComponentDataRegister",
+                "fuchsia.feedback.CrashReporter",
+                "fuchsia.feedback.CrashReportingProductRegister",
+            ],
             from: "#feedback",
             to: "#test_manager",
             source_availability: "unknown",
