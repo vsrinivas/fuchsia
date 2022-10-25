@@ -13,12 +13,8 @@
     },
     use: [
         {
-            protocol: "fuchsia.sys2.EventSource",
+            event_stream: "stopped_v2",
             from: "parent",
-        },
-        {
-            event: "stopped",
-            from: "framework",
         },
     ],
 }
