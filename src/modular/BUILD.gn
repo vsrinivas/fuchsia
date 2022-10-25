@@ -23,7 +23,6 @@ group("tests") {
     "tests",  # tests/ directory
     "//sdk/lib/modular/cpp:modular_cpp_tests",
     "//src/modular/bin/basemgr:basemgr_unittests",
-    "//src/modular/bin/sessionctl:sessionctl_unittests",
     "//src/modular/bin/sessionmgr:sessionmgr_unittests",
     "//src/modular/bin/sessionmgr/agent_runner:agent_runner_unittests",
     "//src/modular/bin/sessionmgr/puppet_master:puppet_master_unittests",
