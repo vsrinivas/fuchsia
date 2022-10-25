@@ -171,6 +171,9 @@ class Node {
   // to the same clock used by the underlying `pipeline_stage()`.
   [[nodiscard]] std::shared_ptr<Clock> reference_clock() const { return reference_clock_; }
 
+  // Reports the kind of pipeline this node participates in.
+  [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
+
   // Returns this ordinary node's source edges.
   // REQUIRED: type() != Type::kMeta
   [[nodiscard]] const std::vector<NodePtr>& sources() const;
@@ -205,9 +208,6 @@ class Node {
   // REQUIRED: type() != Type::kMeta
   void set_thread(std::shared_ptr<GraphThread> t);
 
-  // Reports the kind of pipeline this node participates in.
-  [[nodiscard]] PipelineDirection pipeline_direction() const { return pipeline_direction_; }
-
   // Returns total "self" presentation delay contribution for this node if reached through `source`.
   // This typically consists of the internal processing delay contribution of this node with respect
   // to `source` edge.
@@ -231,14 +231,22 @@ class Node {
   // The following methods are implementation details of CreateEdge.
   //
 
-  // Creates an ordinary child node to accept the next source edge.
-  // Returns nullptr if no more child source nodes can be created.
+  // Creates an ordinary child node to accept the next source edge. Returns nullptr if no more child
+  // source nodes can be created. If this mutates any internal state, that state will NOT be
+  // reverted if CreateEdge fails after calling this method.
+  //
+  // TODO(fxbug.dev/87651): Consider deleting the prior sentence; instead have CreateEdge call
+  // DestroyChildSource on failure.
   //
   // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildSource() = 0;
 
-  // Creates an ordinary child node to accept the next destination edge.
-  // Returns nullptr if no more child destination nodes can be created.
+  // Creates an ordinary child node to accept the next destination edge. Returns nullptr if no more
+  // child destination nodes can be created. If this mutates any internal state, that state will NOT
+  // be reverted if CreateEdge fails after calling this method.
+  //
+  // TODO(fxbug.dev/87651): Consider deleting the prior sentence; instead have CreateEdge call
+  // DestroyChildDest on failure.
   //
   // REQUIRED: type() == Type::kMeta
   virtual NodePtr CreateNewChildDest() = 0;
