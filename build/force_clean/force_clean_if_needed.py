@@ -51,9 +51,10 @@ def main():
 
     # create an empty fences file if it doesn't exist
     if not existing_fences_path.exists():
-        with open(existing_fences_path, "w") as f:
-            if args.verbose:
-                print("created empty landmine file")
+        if args.verbose:
+            print("no fences file found, assuming nothing to clean")
+        return 0
+
     # read existing fences
     if args.verbose:
         print("reading existing build dir's force-clean fences")
