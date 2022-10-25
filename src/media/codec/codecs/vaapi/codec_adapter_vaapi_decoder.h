@@ -435,18 +435,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             constraints.max_coded_width = max_picture_width_;
             constraints.min_coded_height = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
             constraints.max_coded_height = max_picture_height_;
-
-            // This intentionally isn't the height of a 4k frame.  See
-            // max_coded_width_times_coded_height.  We intentionally constrain the max
-            // dimension in width or height to the width of a 4k frame.  While the HW
-            // might be able to go bigger than that as long as the other dimension is
-            // smaller to compensate, we don't really need to enable any larger than
-            // 4k's width in either dimension, so we don't.
-            constraints.min_bytes_per_row = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-
-            // no hard-coded max stride, at least for now
             constraints.max_coded_width_times_coded_height =
                 (max_picture_width_ * max_picture_height_);
+
             constraints.layers = 1;
             constraints.coded_width_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
             constraints.coded_height_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
@@ -488,6 +479,10 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             constraints.required_max_coded_width = required_size.width();
             constraints.required_min_coded_height = required_size.height();
             constraints.required_max_coded_height = required_size.height();
+            constraints.required_min_bytes_per_row = required_size.width();
+            constraints.required_max_bytes_per_row = required_size.width();
+
+            constraints.min_bytes_per_row = required_size.width();
           });
 
       constraints.image_format_constraints_count = 0;
