@@ -21,7 +21,7 @@ local_repository(
 )
 
 local_repository(
-    name = "bazel_rules_go",
+    name = "io_bazel_rules_go",
     path = "third_party/bazel_rules_go",
 )
 
@@ -39,6 +39,22 @@ load(
 
 rules_rust_dependencies()
 rust_register_toolchains()
+
+# buildifier: disable=load-on-top
+load(
+    "@io_bazel_rules_go//go:deps.bzl",
+    "go_register_toolchains",
+    "go_rules_dependencies",
+    "go_wrap_sdk",
+)
+
+go_wrap_sdk(
+    name = "go_sdk",
+    root_file = "//:prebuilt/third_party/go/linux-x64/README.md",
+)
+
+go_rules_dependencies()
+go_register_toolchains()
 
 # Create @rules_fuchsia and @rules_fuchsia_experimental
 local_repository(

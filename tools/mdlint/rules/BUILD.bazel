@@ -1,0 +1,50 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+package(default_visibility = ["//tools/mdlint:__pkg__"])
+
+go_library(
+    name = "rules",
+    srcs = [
+        "bad_headers.go",
+        "bad_lists.go",
+        "casing_of_anchors.go",
+        "mdhelpers.go",
+        "newline_before_code_span.go",
+        "no_extra_space_at_start_of_doc.go",
+        "no_extra_space_on_right.go",
+        "respect_col_length.go",
+        "respectful_code.go",
+        "simple_utf8_chars.go",
+        "verify_internal_links.go",
+    ],
+    embedsrcs = ["respectful_code_words.json"],
+    importpath = "go.fuchsia.dev/fuchsia/tools/mdlint/rules",
+    deps = ["//tools/mdlint/core"],
+)
+
+go_test(
+    name = "rules_test",
+    srcs = [
+        "bad_headers_test.go",
+        "bad_lists_test.go",
+        "casing_of_anchors_test.go",
+        "mdhelpers_test.go",
+        "newline_before_code_span_test.go",
+        "no_extra_space_at_start_of_doc_test.go",
+        "no_extra_space_on_right_test.go",
+        "respect_col_length_test.go",
+        "respectful_code_test.go",
+        "simple_utf8_chars_test.go",
+        "testutils_test.go",
+        "verify_internal_links_test.go",
+    ],
+    embed = [":rules"],
+    deps = [
+        "//third_party/golibs/vendor/github.com/google/go-cmp/cmp",
+        "//tools/mdlint/core",
+    ],
+)

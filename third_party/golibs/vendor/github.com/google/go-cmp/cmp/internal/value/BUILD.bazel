@@ -1,0 +1,18 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+load("@io_bazel_rules_go//go:def.bzl", "go_library", "go_test")
+
+package(default_visibility = ["//third_party/golibs/vendor/github.com/google/go-cmp/cmp:__subpackages__"])
+
+go_library(
+    name = "value",
+    srcs = [
+        "name.go",
+        "pointer_purego.go",
+        "pointer_unsafe.go",
+        "sort.go",
+    ],
+    importpath = "github.com/google/go-cmp/cmp/internal/value",
+)
