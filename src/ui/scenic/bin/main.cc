@@ -45,7 +45,7 @@ int main(int argc, const char** argv) {
   scenic_impl::App app(std::move(app_context), inspector.root().CreateChild("scenic"),
                        std::move(display_controller_promise), [&loop] { loop.Quit(); });
 
-  // Apply the scheduler role define for Scenic.
+  // Apply the scheduler role defined for Scenic.
   const zx_status_t status = util::SetSchedulerRole(zx::thread::self(), "fuchsia.scenic.main");
   if (status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to apply profile to main thread: " << status;
