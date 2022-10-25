@@ -1,0 +1,33 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/bind/bind.gni")
+import("//build/components.gni")
+import("//build/drivers.gni")
+
+driver_bind_rules("device-group-bind") {
+  rules = "device-group.bind"
+  bind_output = "device-group.bindbc"
+}
+
+fuchsia_driver("driver") {
+  testonly = true
+  output_name = "device-group"
+  sources = [ "device-group.cc" ]
+  deps = [
+    ":device-group-bind",
+    "//sdk/lib/driver2:cpp",
+    "//src/devices/lib/driver:driver_runtime",
+    "//src/devices/tests/v2/compat-device-group:fuchsia.compat.devicegroup.test_cpp_wire",
+    "//zircon/system/ulib/async:async-cpp",
+  ]
+}
+
+fuchsia_driver_component("component") {
+  testonly = true
+  component_name = "device_group"
+  manifest = "meta/device-group.cml"
+  deps = [ ":driver" ]
+  info = "device-group-info.json"
+}

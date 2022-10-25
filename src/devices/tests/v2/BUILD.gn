@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "compat:tests",
+    "compat-device-group:tests",
     "compat-globals:tests",
     "compat-runtime:tests",
     "compat-runtime-v1:tests",
@@ -28,6 +29,7 @@ group("drivers") {
   testonly = true
   deps = [
     "compat:drivers",
+    "compat-device-group:drivers",
     "compat-globals:drivers",
     "compat-runtime:drivers",
     "compat-runtime-v1:drivers",

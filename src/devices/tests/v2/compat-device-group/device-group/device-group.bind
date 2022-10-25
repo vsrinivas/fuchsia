@@ -1,0 +1,14 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+composite device_group;
+
+primary node "a" {
+  fuchsia.BIND_PROTOCOL == 100;
+  fuchsia.BIND_USB_VID == 20;
+}
+
+node "b" {
+  fuchsia.BIND_PROTOCOL == 20;
+}

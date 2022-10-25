@@ -137,6 +137,11 @@ __EXPORT zx_status_t device_add_composite(zx_device_t* dev, const char* name,
   return dev->AddComposite(name, comp_desc);
 }
 
+__EXPORT zx_status_t device_add_group(zx_device_t* dev, const char* name,
+                                      const device_group_desc_t* group_desc) {
+  return dev->AddDeviceGroup(name, group_desc);
+}
+
 __EXPORT bool driver_log_severity_enabled_internal(const zx_driver_t* drv,
                                                    fx_log_severity_t severity) {
   return severity >= FX_LOG_SEVERITY_DEFAULT;

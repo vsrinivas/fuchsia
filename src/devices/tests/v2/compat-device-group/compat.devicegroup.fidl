@@ -1,0 +1,15 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.compat.devicegroup.test;
+
+using zx;
+
+// TODO(fxb/113089): Wrap this protocol in a Service.
+@discoverable
+protocol Waiter {
+    Ack(struct {
+        status zx.status;
+    });
+};

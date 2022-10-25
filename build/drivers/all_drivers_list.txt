@@ -247,6 +247,8 @@
 //src/devices/tests/string-bind-test:child-driver-driver
 //src/devices/tests/string-bind-test:parent-driver-driver
 //src/devices/tests/sysdev:sysdev-driver
+//src/devices/tests/v2/compat-device-group/device-group:driver
+//src/devices/tests/v2/compat-device-group/root:driver
 //src/devices/tests/v2/compat-globals/leaf:driver
 //src/devices/tests/v2/compat-globals/root:driver
 //src/devices/tests/v2/compat-runtime-v1/leaf:driver
