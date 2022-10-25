@@ -443,7 +443,9 @@ class ArmArchVmAspace::ConsistencyManager {
     // Check we have queued too many entries already.
     if (num_pending_tlbs_ >= kMaxPendingTlbs) {
       // Most of the time we will now prefer to invalidate the entire ASID, the exception is if
-      // this aspace is using the global ASID.
+      // this aspace is using the global ASID, since we cannot perform a global TLB invalidation
+      // for all ASIDs. Note that there is an instruction to invalidate the entire TLB, but it is
+      // only available in EL2, and we are in EL1.
       if (aspace_.asid_ != MMU_ARM64_GLOBAL_ASID) {
         // Keep counting entries so that we can track how many TLB invalidates we saved by grouping.
         num_pending_tlbs_++;
@@ -735,8 +737,9 @@ void ArmArchVmAspace::FlushAsid() const {
       return;
     }
     case ArmAspaceType::kKernel: {
-      DEBUG_ASSERT(asid_ == MMU_ARM64_GLOBAL_ASID);
-      ARM64_TLBI_NOADDR(alle1is);
+      // The alle1is instruction that invalidates the TLBs for all ASIDs is only available in EL2,
+      // and not EL1.
+      panic("FlushAsid not available for kernel address space");
       return;
     }
     case ArmAspaceType::kGuest: {
