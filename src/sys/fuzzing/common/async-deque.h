@@ -246,10 +246,10 @@ class AsyncDeque {
   std::mutex mutex_;
 
   // Represent outstanding calls to `Receive` that are waiting for items to be sent using `Send`.
-  std::deque<Completer<T>> FXL_GUARDED_BY(mutex_) completers_;
+  std::deque<Completer<T>> completers_ FXL_GUARDED_BY(mutex_);
 
   // Represent items provided to `Send` that are waiting to be `Receive`d.
-  std::deque<T> FXL_GUARDED_BY(mutex_) queue_;
+  std::deque<T> queue_ FXL_GUARDED_BY(mutex_);
 
   // Number of senders. See also `AsyncSender<T>::Clone`.
   uint64_t num_senders_ FXL_GUARDED_BY(mutex_) = 0;

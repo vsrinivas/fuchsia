@@ -21,40 +21,82 @@
 namespace fuzzing {
 namespace {
 
-ZxResult<fdio_spawn_action_t> MakeFdAction(FdAction action, int target_fd, int* piped_fd) {
-  fdio_spawn_action_t tmp;
-  tmp.action = action;
-  switch (action) {
-    case kTransfer: {
-      int fds[2];
-      if (pipe(fds) != 0) {
-        FX_LOGS(ERROR) << "Failed to transfer file descriptor: " << strerror(errno);
-        return fpromise::error(ZX_ERR_IO);
-      }
-      int local_fd = target_fd == STDIN_FILENO ? fds[0] : fds[1];
-      FX_DCHECK(piped_fd);
-      *piped_fd = target_fd == STDIN_FILENO ? fds[1] : fds[0];
-      tmp.fd.local_fd = local_fd;
-      tmp.fd.target_fd = target_fd;
-      break;
-    }
-    case kClone: {
-      tmp.fd.local_fd = target_fd;
-      tmp.fd.target_fd = target_fd;
-      break;
-    }
+constexpr const size_t kBufSize = 0x400;
+
+zx_status_t CreatePipe(int* rpipe, int* wpipe) {
+  int fds[2];
+  if (pipe(fds) != 0) {
+    FX_LOGS(ERROR) << "Failed to transfer file descriptor: " << strerror(errno);
+    return ZX_ERR_IO;
   }
-  return fpromise::ok(std::move(tmp));
+  *rpipe = fds[0];
+  *wpipe = fds[1];
+  return ZX_OK;
+}
+
+zx_status_t ReadAndSend(int fd, AsyncSender<std::string> sender) {
+  if (fd < 0) {
+    FX_LOGS(ERROR) << "Invalid fd: " << fd;
+    return ZX_ERR_INVALID_ARGS;
+  }
+  std::array<char, kBufSize> buf;
+  auto start = buf.begin();
+  auto end = start;
+  std::string line;
+  while (true) {
+    // Has data; repeatedly send strings up to a newline.
+    while (start != end) {
+      auto newline = std::find(start, end, '\n');
+      if (newline == end) {
+        break;
+      }
+      line += std::string(start, newline - start);
+      start = newline + 1;
+      if (auto status = sender.Send(std::move(line)); status != ZX_OK) {
+        return status;
+      }
+      line.clear();
+    }
+    // Need more data. First move any remaining data to the start of the buffer.
+    if (start != buf.begin()) {
+      auto tmp = start;
+      start = buf.begin();
+      memmove(&*start, &*tmp, end - tmp);
+      end -= tmp - start;
+    } else if (end == buf.end()) {
+      // A log line filled the buffer. Add it to `line` and keep going.
+      line += std::string(start, end - start);
+      end = start;
+    }
+    // Now try to read more data from the file descriptor.
+    auto bytes_read = HANDLE_EINTR(read(fd, &*end, buf.end() - end));
+    if (bytes_read < 0) {
+      if (errno == EBADF) {
+        // Stream was closed because process exited.
+        return ZX_ERR_PEER_CLOSED;
+      }
+      FX_LOGS(ERROR) << "Failed to read output from process (fd=" << fd << "): " << strerror(errno);
+      return ZX_ERR_IO;
+    }
+    if (bytes_read == 0) {
+      // File descriptor is closed.just send whatever's left.
+      if (start != end) {
+        line += std::string(start, end - start);
+        if (auto status = sender.Send(std::move(line)); status != ZX_OK) {
+          return status;
+        }
+      }
+      return ZX_ERR_PEER_CLOSED;
+    }
+    end += bytes_read;
+  }
 }
 
 }  // namespace
 
-ChildProcess::ChildProcess(ExecutorPtr executor) : executor_(std::move(executor)) {
-  static_assert(STDERR_FILENO + 1 == kNumStreams);
-  streams_[STDOUT_FILENO].buf = std::make_unique<Stream::Buffer>();
-  streams_[STDERR_FILENO].buf = std::make_unique<Stream::Buffer>();
-  Reset();
-}
+ChildProcess::ChildProcess(ExecutorPtr executor) : executor_(std::move(executor)) { Reset(); }
+
+ChildProcess::~ChildProcess() { KillSync(); }
 
 void ChildProcess::AddArg(const std::string& arg) {
   if (args_.empty()) {
@@ -74,9 +116,9 @@ void ChildProcess::SetEnvVar(const std::string& name, const std::string& value) 
   envvars_[name] = value;
 }
 
-void ChildProcess::SetStdoutFdAction(FdAction action) { streams_[STDOUT_FILENO].action = action; }
+void ChildProcess::SetStdoutFdAction(FdAction action) { stdout_action_ = action; }
 
-void ChildProcess::SetStderrFdAction(FdAction action) { streams_[STDERR_FILENO].action = action; }
+void ChildProcess::SetStderrFdAction(FdAction action) { stderr_action_ = action; }
 
 void ChildProcess::AddChannel(zx::channel channel) { channels_.emplace_back(std::move(channel)); }
 
@@ -110,20 +152,41 @@ zx_status_t ChildProcess::Spawn() {
   argv.push_back(nullptr);
 
   // Build spawn actions
-  std::vector<fdio_spawn_action_t> actions;
-  for (int fileno = STDIN_FILENO; fileno < kNumStreams; ++fileno) {
-    auto& stream = streams_[fileno];
-    if (!stream.on_spawn) {
-      FX_LOGS(ERROR) << "ChildProcess must be reset before it can be respawned.";
-      return ZX_ERR_BAD_STATE;
-    }
-    auto result = MakeFdAction(stream.action, fileno, &stream.fd);
-    if (result.is_error()) {
-      return result.error();
-    }
-    actions.emplace_back(result.take_value());
+  if (spawned_) {
+    FX_LOGS(ERROR) << "ChildProcess must be reset before it can be respawned.";
+    return ZX_ERR_BAD_STATE;
   }
+  spawned_ = true;
+
   auto flags = FDIO_SPAWN_CLONE_ALL & (~FDIO_SPAWN_CLONE_STDIO);
+  std::vector<fdio_spawn_action_t> actions(3);
+
+  auto& stdin_action = actions[0];
+  stdin_action.action = kTransfer;
+  int stdin_wpipe = -1;
+  if (auto status = CreatePipe(&stdin_action.fd.local_fd, &stdin_wpipe); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create pipe to process stdin: " << zx_status_get_string(status);
+    return status;
+  }
+  stdin_action.fd.target_fd = STDIN_FILENO;
+
+  auto& stdout_action = actions[1];
+  stdout_action.action = stdout_action_;
+  int stdout_rpipe = -1;
+  if (auto status = CreatePipe(&stdout_rpipe, &stdout_action.fd.local_fd); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create pipe from process stdout: " << zx_status_get_string(status);
+    return status;
+  }
+  stdout_action.fd.target_fd = STDOUT_FILENO;
+
+  auto& stderr_action = actions[2];
+  stderr_action.action = stderr_action_;
+  int stderr_rpipe = -1;
+  if (auto status = CreatePipe(&stderr_rpipe, &stderr_action.fd.local_fd); status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to create pipe from process stderr: " << zx_status_get_string(status);
+    return status;
+  }
+  stderr_action.fd.target_fd = STDERR_FILENO;
 
   // Build channel actions.
   uint32_t i = 0;
@@ -145,21 +208,56 @@ zx_status_t ChildProcess::Spawn() {
                    << ")";
     return status;
   }
-  return ZX_OK;
-}
 
-ZxPromise<> ChildProcess::SpawnAsync() {
-  return fpromise::make_promise([this]() -> ZxResult<> { return AsZxResult(Spawn()); })
-      .inspect([this](const ZxResult<>& result) {
-        for (auto& stream : streams_) {
-          if (result.is_ok()) {
-            stream.on_spawn.complete_ok();
-          } else if (stream.on_spawn) {
-            stream.on_spawn.complete_error(result.error());
+  // Start threads to handle stdio.
+  stdin_thread_ = std::thread([this, stdin_wpipe] {
+    bool close_input = false;
+    std::vector<std::string> input_lines;
+    while (!close_input) {
+      {
+        std::unique_lock lock(mutex_);
+        input_cond_.wait(lock, [this, &close_input, &input_lines]() FXL_REQUIRE(mutex_) {
+          close_input = input_closed_;
+          input_lines = std::move(input_lines_);
+          input_lines_.clear();
+          return true;
+        });
+      }
+      for (auto& line : input_lines) {
+        const char* buf = line.data();
+        size_t off = 0;
+        size_t len = line.size();
+        while (off < len) {
+          auto num_written = HANDLE_EINTR(write(stdin_wpipe, &buf[off], len - off));
+          if (num_written < 0) {
+            FX_LOGS(ERROR) << "Failed to write input to process: " << strerror(errno);
+            close_input = true;
+            break;
           }
+          off += num_written;
         }
-      })
-      .wrap_with(scope_);
+      }
+    }
+    close(stdin_wpipe);
+  });
+
+  if (stdout_action_ == kTransfer) {
+    AsyncSender<std::string> sender;
+    stdout_ = AsyncReceiver<std::string>::MakePtr(&sender);
+    stdout_thread_ = std::thread([this, stdout_rpipe, sender = std::move(sender)]() mutable {
+      stdout_result_ = ReadAndSend(stdout_rpipe, std::move(sender));
+    });
+  }
+
+  if (stderr_action_ == kTransfer) {
+    AsyncSender<std::string> sender;
+    stderr_ = AsyncReceiver<std::string>::MakePtr(&sender);
+    stderr_thread_ = std::thread([this, stderr_rpipe, sender = std::move(sender)]() mutable {
+      stderr_result_ = ReadAndSend(stderr_rpipe, std::move(sender));
+    });
+  }
+
+  return ZX_OK;
 }
 
 bool ChildProcess::IsAlive() {
@@ -178,145 +276,63 @@ zx_status_t ChildProcess::Duplicate(zx::process* out) {
   return process_.duplicate(ZX_RIGHT_SAME_RIGHTS, out);
 }
 
-ZxPromise<size_t> ChildProcess::WriteToStdin(const void* buf, size_t count) {
-  ZxBridge<> bridge;
-  return AwaitPrevious(STDIN_FILENO, std::move(bridge.consumer))
-      .and_then([this, buf, count]() -> ZxResult<size_t> {
-        auto fd = streams_[STDIN_FILENO].fd;
-        auto num_written = HANDLE_EINTR(write(fd, buf, count));
-        if (num_written < 0) {
-          FX_LOGS(ERROR) << "Failed to write input to process: " << strerror(errno);
-          return fpromise::error(ZX_ERR_IO);
-        }
-        return fpromise::ok(static_cast<size_t>(num_written));
-      })
-      .inspect([completer = std::move(bridge.completer)](const ZxResult<size_t>& result) mutable {
-        completer.complete_ok();
-      })
-      .wrap_with(scope_);
+zx_status_t ChildProcess::WriteToStdin(const std::string& line) {
+  if (!IsAlive()) {
+    FX_LOGS(WARNING) << "Cannot write to process standard input: not running";
+    return ZX_ERR_BAD_STATE;
+  }
+  {
+    std::lock_guard lock(mutex_);
+    if (input_closed_) {
+      FX_LOGS(WARNING) << "Cannot write to process standard input: closed";
+      return ZX_ERR_PEER_CLOSED;
+    }
+    input_lines_.push_back(line);
+  }
+  input_cond_.notify_one();
+  return ZX_OK;
 }
 
-ZxPromise<size_t> ChildProcess::WriteAndCloseStdin(const void* buf, size_t count) {
-  return WriteToStdin(buf, count).inspect([this](const ZxResult<size_t>& result) { CloseStdin(); });
+zx_status_t ChildProcess::WriteAndCloseStdin(const std::string& line) {
+  if (auto status = WriteToStdin(line); status != ZX_OK) {
+    return status;
+  }
+  CloseStdin();
+  return ZX_OK;
 }
 
 void ChildProcess::CloseStdin() {
-  auto& stream = streams_[STDIN_FILENO];
-  close(stream.fd);
-  auto discarded = std::move(stream.previous);
-}
-
-ZxPromise<std::string> ChildProcess::ReadFromStdout() { return ReadLine(STDOUT_FILENO); }
-
-ZxPromise<std::string> ChildProcess::ReadFromStderr() { return ReadLine(STDERR_FILENO); }
-
-ZxPromise<std::string> ChildProcess::ReadLine(int fd) {
-  ZxBridge<> bridge;
-  auto& stream = streams_[fd];
-  return AwaitPrevious(fd, std::move(bridge.consumer))
-      .and_then([&stream, ready = ZxFuture<>()](Context& context) mutable -> ZxResult<std::string> {
-        auto fd = stream.fd;
-        auto* buf = stream.buf.get();
-        if (fd < 0 || !buf) {
-          FX_LOGS(ERROR) << "Invalid fd: " << fd;
-          return fpromise::error(ZX_ERR_INVALID_ARGS);
-        }
-        while (true) {
-          if (stream.start != stream.end) {
-            auto newline = std::find(stream.start, stream.end, '\n');
-            if (newline != stream.end) {
-              // Found a newline; return the string up to it and search again.
-              std::string line(stream.start, newline - stream.start);
-              stream.start = newline + 1;
-              return fpromise::ok(std::move(line));
-            }
-          }
-          if (!ready) {
-            // Need more data. First move any remaining data to the start of the buffer.
-            if (stream.start != buf->begin()) {
-              auto tmp = stream.start;
-              stream.start = buf->begin();
-              memmove(&*stream.start, &*tmp, stream.end - tmp);
-              stream.end -= tmp - stream.start;
-            } else if (stream.end == buf->end()) {
-              FX_LOGS(WARNING) << "a single log line exceeds " << buf->size()
-                               << " characters; skipping...";
-              stream.end = stream.start;
-            }
-            // Now create a future to wait for the file descriptor to be readable.
-            ZxBridge<> bridge;
-            auto task = [completer = std::move(bridge.completer)](zx_status_t status,
-                                                                  uint32_t events) mutable {
-              if (status != ZX_OK) {
-                completer.complete_error(status);
-                return;
-              }
-              completer.complete_ok();
-            };
-            stream.fd_waiter->Wait(std::move(task), fd, POLLIN);
-            ready = bridge.consumer.promise_or(fpromise::error(ZX_ERR_CANCELED));
-          }
-          if (!ready(context)) {
-            return fpromise::pending();
-          }
-          if (ready.is_error()) {
-            auto status = ready.error();
-            if (status == ZX_ERR_CANCELED) {
-              // Stream was closed due to process exiting.
-              return fpromise::error(ZX_ERR_STOP);
-            }
-            FX_LOGS(ERROR) << "Failed to wait for output from process: "
-                           << zx_status_get_string(ready.error());
-            return fpromise::error(ready.error());
-          }
-          // File descriptor is readable; read from it!
-          auto bytes_read = HANDLE_EINTR(read(fd, &*stream.end, buf->end() - stream.end));
-          if (bytes_read < 0) {
-            if (errno == EBADF) {
-              // Stream was closed due to process exiting.
-              return fpromise::error(ZX_ERR_STOP);
-            }
-            FX_LOGS(ERROR) << "Failed to read output from process: " << strerror(errno);
-            return fpromise::error(ZX_ERR_IO);
-          }
-          if (bytes_read == 0 && stream.start != stream.end) {
-            // File descriptor is closed; just return whatever's left.
-            std::string line(stream.start, stream.end - stream.start);
-            stream.start = stream.end;
-            return fpromise::ok(std::move(line));
-          }
-          if (bytes_read == 0) {
-            // Return an error to let the caller know there's no more data available.
-            return fpromise::error(ZX_ERR_STOP);
-          }
-          stream.end += bytes_read;
-          ready = nullptr;
-        }
-      })
-      .inspect([completer = std::move(bridge.completer),
-                verbose = verbose_](const ZxResult<std::string>& result) mutable {
-        if (result.is_error()) {
-          completer.complete_error(result.error());
-          return;
-        }
-        if (verbose) {
-          std::cerr << result.value() << std::endl;
-        }
-        completer.complete_ok();
-      })
-      .wrap_with(scope_);
-}
-
-ZxPromise<> ChildProcess::AwaitPrevious(int fd, ZxConsumer<> consumer) {
-  auto previous = std::move(streams_[fd].previous);
-  if (!previous) {
-    return fpromise::make_promise([]() -> ZxResult<> {
-      FX_LOGS(ERROR) << "Stream has been closed.";
-      return fpromise::error(ZX_ERR_BAD_STATE);
-    });
+  {
+    std::lock_guard lock(mutex_);
+    input_closed_ = true;
   }
-  streams_[fd].previous = std::move(consumer);
-  return previous.promise();
+  input_cond_.notify_one();
+}
+
+ZxPromise<std::string> ChildProcess::ReadFromStdout() {
+  if (!stdout_) {
+    return fpromise::make_promise(
+        []() -> ZxResult<std::string> { return fpromise::error(ZX_ERR_BAD_STATE); });
+  }
+  return stdout_->Receive().or_else([this]() -> ZxResult<std::string> {
+    if (stdout_thread_.joinable()) {
+      stdout_thread_.join();
+    }
+    return fpromise::error(stdout_result_);
+  });
+}
+
+ZxPromise<std::string> ChildProcess::ReadFromStderr() {
+  if (!stderr_) {
+    return fpromise::make_promise(
+        []() -> ZxResult<std::string> { return fpromise::error(ZX_ERR_BAD_STATE); });
+  }
+  return stderr_->Receive().or_else([this]() -> ZxResult<std::string> {
+    if (stderr_thread_.joinable()) {
+      stderr_thread_.join();
+    }
+    return fpromise::error(stderr_result_);
+  });
 }
 
 ZxResult<ProcessStats> ChildProcess::GetStats() {
@@ -350,9 +366,6 @@ ZxPromise<int64_t> ChildProcess::Wait() {
              FX_LOGS(WARNING) << "Failed to terminate process.";
              return fpromise::error(ZX_ERR_BAD_STATE);
            }
-           for (auto& stream : streams_) {
-             auto discarded = std::move(stream.previous);
-           }
            return fpromise::ok(info_.return_code);
          })
       .wrap_with(scope_);
@@ -361,15 +374,8 @@ ZxPromise<int64_t> ChildProcess::Wait() {
 ZxPromise<> ChildProcess::Kill() {
   return fpromise::make_promise(
              [this, wait = ZxFuture<int64_t>()](Context& context) mutable -> ZxResult<> {
-               if (!IsAlive()) {
-                 return fpromise::ok();
-               }
                if (!wait) {
-                 process_.kill();
-                 killed_ = true;
-                 for (auto& stream : streams_) {
-                   close(stream.fd);
-                 }
+                 KillSync();
                  wait = Wait();
                }
                if (!wait(context)) {
@@ -383,24 +389,43 @@ ZxPromise<> ChildProcess::Kill() {
       .wrap_with(scope_);
 }
 
+void ChildProcess::KillSync() {
+  process_.kill();
+
+  CloseStdin();
+  if (stdin_thread_.joinable()) {
+    stdin_thread_.join();
+  }
+
+  if (stdout_thread_.joinable()) {
+    stdout_thread_.join();
+  }
+
+  if (stderr_thread_.joinable()) {
+    stderr_thread_.join();
+  }
+
+  killed_ = true;
+}
+
 void ChildProcess::Reset() {
+  KillSync();
+  spawned_ = false;
+  killed_ = false;
   args_.clear();
+  envvars_.clear();
   channels_.clear();
   process_.reset();
-  for (auto& stream : streams_) {
-    if (stream.buf) {
-      stream.start = stream.buf->begin();
-      stream.end = stream.start;
-    }
-    ZxBridge<> bridge;
-    close(stream.fd);
-    stream.fd = -1;
-    stream.on_spawn = std::move(bridge.completer);
-    stream.previous = std::move(bridge.consumer);
-    stream.fd_waiter = std::make_unique<fsl::FDWaiter>(executor_->dispatcher());
-  }
   memset(&info_, 0, sizeof(info_));
-  killed_ = false;
+  {
+    std::lock_guard lock(mutex_);
+    input_closed_ = false;
+    input_lines_.clear();
+  }
+  stdout_.reset();
+  stdout_result_ = ZX_OK;
+  stderr_.reset();
+  stderr_result_ = ZX_OK;
 }
 
 }  // namespace fuzzing

@@ -37,7 +37,7 @@ ZxPromise<ControllerPtr> EngineIntegrationTest::Start() {
            engine_->set_verbose(verbose());
            return fpromise::ok();
          })
-      .and_then(engine_->SpawnAsync())
+      .and_then([this]() { return AsZxResult(engine_->Spawn()); })
       .and_then(registrar_->TakeProvider())
       .and_then([this, consumer_fut = Future<>(), controller = ControllerPtr()](
                     Context& context,

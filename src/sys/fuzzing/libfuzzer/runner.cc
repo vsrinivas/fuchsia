@@ -411,16 +411,16 @@ void LibFuzzerRunner::AddArgs() {
 }
 
 ZxPromise<Artifact> LibFuzzerRunner::RunAsync() {
-  return fpromise::make_promise([this](Context& context) {
+  return fpromise::make_promise([this](Context& context) -> ZxResult<> {
            process_.set_verbose(verbose_);
            process_.SetStdoutFdAction(FdAction::kClone);
-           return process_.SpawnAsync();
+           if (auto status = process_.Spawn(); status != ZX_OK) {
+             return fpromise::error(status);
+           }
+           status_.set_running(true);
+           start_ = zx::clock::get_monotonic();
+           return fpromise::ok();
          })
-      .and_then([this]() -> ZxResult<> {
-        status_.set_running(true);
-        start_ = zx::clock::get_monotonic();
-        return fpromise::ok();
-      })
       .and_then(ParseOutput())
       .and_then(
           [this, wait = ZxFuture<int64_t>()](
@@ -489,7 +489,8 @@ ZxPromise<FuzzResult> LibFuzzerRunner::ParseOutput() {
           }
           if (read_line.is_error()) {
             auto status = read_line.error();
-            if (status != ZX_ERR_STOP) {
+            if (status != ZX_ERR_PEER_CLOSED) {
+              FX_LOGS(ERROR) << "failed to read libFuzzer output: " << zx_status_get_string(status);
               return fpromise::error(status);
             }
             // TODO(fxbug.dev/109100): Rarely, the process output will be truncated. This causes

@@ -11,11 +11,14 @@
 #include <stdint.h>
 
 #include <array>
+#include <condition_variable>
 #include <memory>
 #include <string>
+#include <thread>
 #include <vector>
 
-#include "src/lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "src/sys/fuzzing/common/async-deque.h"
 #include "src/sys/fuzzing/common/async-types.h"
 #include "src/sys/fuzzing/common/status.h"
 
@@ -29,10 +32,10 @@ enum FdAction : uint32_t {
   kTransfer = FDIO_SPAWN_ACTION_TRANSFER_FD,
 };
 
-class ChildProcess {
+class ChildProcess final {
  public:
   explicit ChildProcess(ExecutorPtr executor);
-  ~ChildProcess() = default;
+  ~ChildProcess();
 
   bool is_verbose() const { return verbose_; }
   bool is_killed() const { return killed_; }
@@ -61,21 +64,18 @@ class ChildProcess {
   // been |Kill|ed and |Reset|, or if spawning fails.
   __WARN_UNUSED_RESULT zx_status_t Spawn();
 
-  // Returns a promise to |Spawn| a new child process.
-  ZxPromise<> SpawnAsync();
-
   // Returns whether the child process has been spawned and is running.
   bool IsAlive();
 
   // Return a copy of the process.
   __WARN_UNUSED_RESULT zx_status_t Duplicate(zx::process* out);
 
-  // Returns a promise to wait for the promise to be spawned and then write data to the its stdin.
-  // The promise will return an error if stdin has already been closed by |CloseStdin| or |Kill|.
-  ZxPromise<size_t> WriteToStdin(const void* buf, size_t len);
+  // Writes a line to process's stdin. Returns an error if the process is not alive of if stdin has
+  // been closed.
+  zx_status_t WriteToStdin(const std::string& line);
 
-  // Combines a promise from |WriteStdin| with a call to |CloseStdin| after it completes.
-  ZxPromise<size_t> WriteAndCloseStdin(const void* buf, size_t len);
+  // Writes a `line` to process's stdin and closes it.
+  zx_status_t WriteAndCloseStdin(const std::string& line);
 
   // Closes the input pipe to the spawned process.
   void CloseStdin();
@@ -103,15 +103,11 @@ class ChildProcess {
   void Reset();
 
  private:
-  // Returns a promise that does not complete before a previous promise for the |stream| completes,
-  // e.g. a previous call to |ReadFrom..| or |WriteTo...|, as appropriate.
-  ZxPromise<> AwaitPrevious(int fd, ZxConsumer<> consumer);
-
-  // Returns a promise to read from the given file descriptor. Multiple calls to this method happen
-  // are sequential for the same |stream|.
-  ZxPromise<std::string> ReadLine(int fd);
+  // Kills the process and waits for the output threads to join.
+  void KillSync();
 
   ExecutorPtr executor_;
+  bool spawned_ = false;
   bool verbose_ = false;
   bool killed_ = false;
 
@@ -124,34 +120,24 @@ class ChildProcess {
   zx::process process_;
   zx_info_process_t info_;
 
-  // Stream-related variables for stdin, stdout, and stderr.
-  static constexpr int kNumStreams = 3;
-  struct Stream {
-    // Piped file descriptor connected to the process.
-    int fd = -1;
+  // Variables to offload writing data to standard input to a dedicated thread.
+  std::mutex mutex_;
+  std::thread stdin_thread_;
+  bool input_closed_ FXL_GUARDED_BY(mutex_) = false;
+  std::vector<std::string> input_lines_ FXL_GUARDED_BY(mutex_);
+  std::condition_variable input_cond_;
 
-    // How to create the file descriptor in the spawned process. See |FdAction|.
-    FdAction action = kTransfer;
+  // Variables to offload reading data from standard output to a dedicated thread.
+  AsyncReceiverPtr<std::string> stdout_;
+  FdAction stdout_action_ = kTransfer;
+  std::thread stdout_thread_;
+  zx_status_t stdout_result_ = ZX_OK;
 
-    // Blocks reads or writes until the process is spawned.
-    ZxCompleter<> on_spawn;
-
-    // Ensures calls to |ReadFrom...| or |WriteTo...| happen sequentially.
-    ZxConsumer<> previous;
-
-    // Used to asynchronously wait for file descriptors to become readable.
-    std::unique_ptr<fsl::FDWaiter> fd_waiter;
-
-    // An internal buffer used when reading from the piped file descriptors.
-    using Buffer = std::array<char, 0x400>;
-    std::unique_ptr<Buffer> buf;
-
-    // Location in the buffer where the next line begins.
-    Buffer::iterator start;
-
-    // Location in the buffer where the received data ends.
-    Buffer::iterator end;
-  } streams_[kNumStreams];
+  // Variables to offload reading data from standard error to a dedicated thread.
+  AsyncReceiverPtr<std::string> stderr_;
+  FdAction stderr_action_ = kTransfer;
+  std::thread stderr_thread_;
+  zx_status_t stderr_result_ = ZX_OK;
 
   Scope scope_;
 

@@ -57,7 +57,6 @@ source_set("common") {
     "../fidl:fuchsia.fuzzer_hlcpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//zircon/system/ulib/async:async-cpp",
