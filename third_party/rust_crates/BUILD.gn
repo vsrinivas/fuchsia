@@ -1090,7 +1090,7 @@ group("xts-mode") {
 }
 
 group("zerocopy") {
-  public_deps = [ ":zerocopy-v0_7_0-alpha_1" ]
+  public_deps = [ ":zerocopy-v0_7_0-alpha" ]
 }
 
 group("zerocopy-derive") {
@@ -2168,8 +2168,6 @@ rust_library("camino-v1_1_1") {
     "--cfg=feature=\"serde\"",
     "--cfg=feature=\"serde1\"",
     "--cfg=path_buf_capacity",
-    "--cfg=shrink_to",
-    "--cfg=try_reserve_2",
   ]
 
   visibility = [ ":*" ]
@@ -12400,10 +12398,10 @@ rust_library("yaml-rust-v0_4_5") {
   visibility = [ ":*" ]
 }
 
-rust_library("zerocopy-v0_7_0-alpha_1") {
+rust_library("zerocopy-v0_7_0-alpha") {
   crate_name = "zerocopy"
   crate_root = "//third_party/rust_crates/vendor/zerocopy/src/lib.rs"
-  output_name = "zerocopy-3434985500281d16"
+  output_name = "zerocopy-de96fa8160f594d2"
   configs -= [ "//build/config/rust:2018_idioms" ]
 
   deps = []
@@ -12414,9 +12412,9 @@ rust_library("zerocopy-v0_7_0-alpha_1") {
 
   rustflags = [
     "--cap-lints=allow",
-    "--edition=2021",
-    "-Cmetadata=3434985500281d16",
-    "-Cextra-filename=-3434985500281d16",
+    "--edition=2018",
+    "-Cmetadata=de96fa8160f594d2",
+    "-Cextra-filename=-de96fa8160f594d2",
   ]
 
   visibility = [ ":*" ]
