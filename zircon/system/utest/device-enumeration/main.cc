@@ -824,8 +824,8 @@ TEST_F(DeviceEnumerationTest, AtlasTest) {
   static const char* kDevicesThatFailInDfv2[] = {
       "sys/platform/pt/pci/01:00.0_/pci-01:00.0-fidl/iwlwifi-wlanphyimpl/wlanphy",
       // Codec headphones.
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-MAXL/acpi-MAXL-passthrough/acpi-MAXL-composite/MAX98373",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-MAXL/acpi-MAXL-passthrough/acpi-MAXL-composite/MAX98373",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-MAXL/pt/acpi-MAXL-composite/MAX98373",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-MAXL/pt/acpi-MAXL-composite/MAX98373",
   };
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
 }
@@ -855,8 +855,8 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "sys/platform/pt/acpi",
       "sys/platform/pt/acpi/acpi-pwrbtn",
       "sys/platform/pt/PCI0/bus/00:1f.2_/pci-00:1f.2-fidl/ahci",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-keyboard",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-mouse",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/pt/acpi-KBD_-composite/i8042/i8042-keyboard",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/pt/acpi-KBD_-composite/i8042/i8042-mouse",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -872,15 +872,15 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
       "sys/platform/pt/PCI0/bus/00:0b.0_/pci-00:0b.0-fidl/goldfish-address-space",
 
       // Verify goldfish pipe root device created.
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/pt/acpi-GFPP-composite/goldfish-pipe",
       // Verify goldfish pipe child devices created.
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite/goldfish-sync",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/pt/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/pt/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-sensor",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFSK/pt/acpi-GFSK-composite/goldfish-sync",
 
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control/goldfish-display",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/pt/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/pt/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control/goldfish-display",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/pt/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kAemuDevicePaths, std::size(kAemuDevicePaths)));

@@ -489,14 +489,14 @@ TEST_F(AcpiManagerTest, TestInterruptsMakeFragments) {
 
   // Validate the device topology we created.
   // We should have:
-  // <root> -> acpi-_SB_ -> acpi-IRQT -> acpi-IRQT-irq000, acpi-IRQT-passthrough
+  // <root> -> acpi-_SB_ -> acpi-IRQT -> acpi-IRQT-irq000, pt
   auto dev = mock_root_->GetLatestChild();
   ASSERT_STREQ("acpi-_SB_", dev->name());
   dev = dev->GetLatestChild();
   ASSERT_STREQ("acpi-IRQT", dev->name());
   ASSERT_EQ(2, dev->children().size());
 
-  std::unordered_set<std::string> expected{"acpi-IRQT-irq000", "acpi-IRQT-passthrough"};
+  std::unordered_set<std::string> expected{"acpi-IRQT-irq000", "pt"};
   for (auto& child : dev->children()) {
     auto pos = expected.find(child->name());
     ASSERT_NE(pos, expected.end(), "Child name %s not expected", child->name());

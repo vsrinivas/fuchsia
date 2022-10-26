@@ -695,13 +695,9 @@ zx::result<> Device::AddDevice(const char* name, cpp20::span<zx_device_prop_t> p
       .release = [](void* dev) {},
   };
 
-  // TODO(fxbug.dev/104709): once the compat shim is fixed, we should give this a very short name
-  // like 'pt' or something.
-  auto passthrough_name = fbl::StringPrintf("%s-passthrough", name);
-
   device_add_args_t passthrough_args{
       .version = DEVICE_ADD_ARGS_VERSION,
-      .name = passthrough_name.data(),
+      .name = "pt",
       .ctx = this,
       .ops = &passthrough_proto,
       .props = props.data(),
