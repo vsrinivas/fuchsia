@@ -34,7 +34,11 @@ pub struct BinderDriver {
     context_manager: RwLock<Option<Arc<BinderObject>>>,
 
     /// Manages the internal state of each process interacting with the binder driver.
-    procs: RwLock<BTreeMap<pid_t, Weak<BinderProcess>>>,
+    ///
+    /// The Driver owns the BinderProcess. There can be at most one connection to the binder driver
+    /// per process. When the last file descriptor to the binder in the process is closed, the
+    /// value is removed from the map.
+    procs: RwLock<BTreeMap<pid_t, Arc<BinderProcess>>>,
 }
 
 impl DeviceOps for Arc<BinderDriver> {
@@ -45,31 +49,44 @@ impl DeviceOps for Arc<BinderDriver> {
         _node: &FsNode,
         _flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
-        let binder_proc = Arc::new(BinderProcess::new(current_task.get_pid()));
-        match self.procs.write().entry(binder_proc.pid) {
+        let pid = current_task.get_pid();
+        let binder_proc = Arc::new(BinderProcess::new(pid));
+        match self.procs.write().entry(pid) {
             BTreeMapEntry::Vacant(entry) => {
                 // The process has not previously opened the binder device.
-                entry.insert(Arc::downgrade(&binder_proc));
-            }
-            BTreeMapEntry::Occupied(mut entry) if entry.get().upgrade().is_none() => {
-                // The process previously closed the binder device, so it can re-open it.
-                entry.insert(Arc::downgrade(&binder_proc));
+                entry.insert(binder_proc);
             }
             _ => {
                 // A process cannot open the same binder device more than once.
                 return error!(EINVAL);
             }
         }
-        Ok(Box::new(BinderConnection { proc: binder_proc, driver: self.clone() }))
+        Ok(Box::new(BinderConnection { pid, driver: self.clone() }))
     }
 }
 
 /// An instance of the binder driver, associated with the process that opened the binder device.
 struct BinderConnection {
     /// The process that opened the binder device.
-    proc: Arc<BinderProcess>,
+    pid: pid_t,
     /// The implementation of the binder driver.
     driver: Arc<BinderDriver>,
+}
+
+impl BinderConnection {
+    fn proc(&self, task: &CurrentTask) -> Result<Arc<BinderProcess>, Errno> {
+        if task.get_pid() == self.pid {
+            self.driver.find_process(self.pid)
+        } else {
+            error!(EINVAL)
+        }
+    }
+}
+
+impl Drop for BinderConnection {
+    fn drop(&mut self) {
+        self.driver.procs.write().remove(&self.pid);
+    }
 }
 
 impl FileOps for BinderConnection {
@@ -86,16 +103,23 @@ impl FileOps for BinderConnection {
         handler: EventHandler,
         options: WaitAsyncOptions,
     ) -> WaitKey {
-        let binder_thread = self
-            .proc
-            .thread_pool
-            .write()
-            .find_or_register_thread(&self.proc, current_task.get_tid());
-        self.driver.wait_async(&self.proc, &binder_thread, waiter, events, handler, options)
+        match self.proc(current_task) {
+            Ok(proc) => {
+                let binder_thread =
+                    proc.thread_pool.write().find_or_register_thread(&proc, current_task.get_tid());
+                self.driver.wait_async(&proc, &binder_thread, waiter, events, handler, options)
+            }
+            Err(_) => {
+                handler(FdEvents::POLLERR);
+                WaitKey::empty()
+            }
+        }
     }
 
-    fn cancel_wait(&self, _current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
-        self.driver.cancel_wait(&self.proc, key)
+    fn cancel_wait(&self, current_task: &CurrentTask, _waiter: &Waiter, key: WaitKey) {
+        if let Ok(proc) = self.proc(current_task) {
+            self.driver.cancel_wait(&proc, key)
+        }
     }
 
     fn ioctl(
@@ -105,12 +129,10 @@ impl FileOps for BinderConnection {
         request: u32,
         user_addr: UserAddress,
     ) -> Result<SyscallResult, Errno> {
-        let binder_thread = self
-            .proc
-            .thread_pool
-            .write()
-            .find_or_register_thread(&self.proc, current_task.get_tid());
-        self.driver.ioctl(current_task, &self.proc, &binder_thread, request, user_addr)
+        let proc = self.proc(current_task)?;
+        let binder_thread =
+            proc.thread_pool.write().find_or_register_thread(&proc, current_task.get_tid());
+        self.driver.ioctl(current_task, &proc, &binder_thread, request, user_addr)
     }
 
     fn get_vmo(
@@ -134,7 +156,15 @@ impl FileOps for BinderConnection {
         mapping_options: MappingOptions,
         filename: NamespaceNode,
     ) -> Result<MappedVmo, Errno> {
-        self.driver.mmap(current_task, &self.proc, addr, length, flags, mapping_options, filename)
+        self.driver.mmap(
+            current_task,
+            &self.proc(current_task)?,
+            addr,
+            length,
+            flags,
+            mapping_options,
+            filename,
+        )
     }
 
     fn read(
@@ -1294,9 +1324,8 @@ impl BinderDriver {
         Arc::new(Self { context_manager: RwLock::new(None), procs: RwLock::new(BTreeMap::new()) })
     }
 
-    #[cfg(test)]
     fn find_process(&self, pid: pid_t) -> Result<Arc<BinderProcess>, Errno> {
-        self.procs.read().get(&pid).and_then(Weak::upgrade).ok_or_else(|| errno!(ENOENT))
+        self.procs.read().get(&pid).map(Arc::clone).ok_or_else(|| errno!(ENOENT))
     }
 
     /// Creates the binder process state to represent a process with `pid`.
@@ -1304,7 +1333,7 @@ impl BinderDriver {
     fn create_process(&self, pid: pid_t) -> Arc<BinderProcess> {
         let binder_process = Arc::new(BinderProcess::new(pid));
         assert!(
-            self.procs.write().insert(pid, Arc::downgrade(&binder_process)).is_none(),
+            self.procs.write().insert(pid, binder_process.clone()).is_none(),
             "process with same pid created"
         );
         binder_process
@@ -1316,7 +1345,7 @@ impl BinderDriver {
     fn create_process_and_thread(&self, pid: pid_t) -> (Arc<BinderProcess>, Arc<BinderThread>) {
         let binder_process = Arc::new(BinderProcess::new(pid));
         assert!(
-            self.procs.write().insert(pid, Arc::downgrade(&binder_process)).is_none(),
+            self.procs.write().insert(pid, binder_process.clone()).is_none(),
             "process with same pid created"
         );
         let binder_thread =
@@ -4296,6 +4325,7 @@ mod tests {
         client_proc.handles.lock().inc_weak(handle.object_index()).expect("inc_weak");
 
         // Now the owner process dies.
+        driver.procs.write().remove(&owner_proc.pid);
         drop(owner_proc);
 
         // Confirm that the object is considered dead. The representation is still alive, but the
@@ -4367,6 +4397,7 @@ mod tests {
         }
 
         // Now the owner process dies.
+        driver.procs.write().remove(&owner_proc.pid);
         drop(owner_proc);
 
         // The client thread should have a notification waiting.
@@ -4394,6 +4425,7 @@ mod tests {
         let handle = client_proc.handles.lock().insert_for_transaction(object);
 
         // Now the owner process dies.
+        driver.procs.write().remove(&owner_proc.pid);
         drop(owner_proc);
 
         const DEATH_NOTIFICATION_COOKIE: binder_uintptr_t = 0xDEADBEEF;
@@ -4467,6 +4499,7 @@ mod tests {
         }
 
         // Now the owner process dies.
+        driver.procs.write().remove(&owner_proc.pid);
         drop(owner_proc);
 
         // The client thread should have no notification.
@@ -4859,6 +4892,7 @@ mod tests {
 
         // Drop the receiving process.
         let TranslateHandlesTestFixture { sender_thread, receiver_proc, .. } = test;
+        test.driver.procs.write().remove(&receiver_proc.pid);
         drop(receiver_proc);
 
         // Check that there is a dead reply command for the sending thread.
@@ -4920,6 +4954,7 @@ mod tests {
 
         // Drop the receiving process and thread.
         let TranslateHandlesTestFixture { sender_thread, receiver_proc, .. } = test;
+        test.driver.procs.write().remove(&receiver_proc.pid);
         drop(receiver_thread);
         drop(receiver_proc);
 
@@ -4997,6 +5032,7 @@ mod tests {
 
         // Drop the receiving process and thread.
         let TranslateHandlesTestFixture { sender_thread, receiver_proc, .. } = test;
+        test.driver.procs.write().remove(&receiver_proc.pid);
         drop(receiver_thread);
         drop(receiver_proc);
 
