@@ -5,7 +5,11 @@
 use {
     anyhow::{Context, Error},
     assert_matches::assert_matches,
-    component_events::{events::*, matcher::*},
+    component_events::{
+        events::*,
+        matcher::*,
+        sequence::{EventSequence, Ordering},
+    },
     fidl_fuchsia_component as fcomponent, fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -58,7 +62,7 @@ async fn verify_ambient_vmex_allowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_ambient_vmex_denied() -> Result<(), Error> {
-    let (_test, realm, mut event_stream) = start_policy_test(CM_URL, ROOT_URL).await?;
+    let (_test, realm, event_stream) = start_policy_test(CM_URL, ROOT_URL).await?;
 
     // This security policy is enforced inside the ELF runner. The component will fail to launch
     // because of the denial, but the connection to fuchsia.component/Binder
@@ -69,10 +73,18 @@ async fn verify_ambient_vmex_denied() -> Result<(), Error> {
         open_exposed_dir(&realm, child_name).await.expect("open_exposed_dir should succeed");
     client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
         .context("failed to connect to fuchsia.component.Binder of child")?;
-
-    let mut matcher = EventMatcher::ok().moniker(format!("./root/{}", child_name));
-    matcher.expect_match::<Started>(&mut event_stream).await;
-    matcher.expect_match::<Stopped>(&mut event_stream).await;
+    let moniker = format!("./root/{}", child_name);
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok().r#type(Started::TYPE).moniker(moniker.clone()),
+                EventMatcher::ok().r#type(Stopped::TYPE).moniker(moniker.clone()),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
 
     Ok(())
 }

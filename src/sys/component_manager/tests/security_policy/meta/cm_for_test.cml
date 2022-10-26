@@ -19,6 +19,7 @@
         {
             protocol: [
                 "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.EventStream2",
                 "fuchsia.sys2.LifecycleController",
                 "fuchsia.sys2.RealmQuery",
             ],
@@ -37,6 +38,7 @@
         {
             protocol: [
                 "fuchsia.sys2.EventSource",
+                "fuchsia.sys2.EventStream2",
                 "fuchsia.sys2.LifecycleController",
                 "fuchsia.sys2.RealmQuery",
             ],

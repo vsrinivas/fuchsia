@@ -4,7 +4,11 @@
 
 use {
     anyhow::{Context, Error},
-    component_events::{events::*, matcher::*},
+    component_events::{
+        events::*,
+        matcher::*,
+        sequence::{EventSequence, Ordering},
+    },
     fidl::endpoints::Proxy,
     fidl_fuchsia_component as fcomponent, fidl_test_policy as ftest, fuchsia_async as fasync,
     fuchsia_component::client,
@@ -22,11 +26,7 @@ const COMPONENT_MANAGER_DEATH_TIMEOUT: i64 = 5;
 async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
     let (test, realm, _event) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
 
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
-        .await
-        .context("failed to subscribe to EventSource")?;
+    let mut event_stream = EventStream::open().await.unwrap();
 
     let child_name = "policy_not_requested";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -66,11 +66,7 @@ async fn verify_main_process_critical_default_denied() -> Result<(), Error> {
 async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
     let (test, realm, _event) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
 
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
-        .await
-        .context("failed to subscribe to EventSource")?;
+    let mut event_stream = EventStream::open().await.unwrap();
 
     let child_name = "policy_allowed";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -112,11 +108,7 @@ async fn verify_main_process_critical_nonzero_flag_used() -> Result<(), Error> {
 async fn verify_main_process_critical_allowed() -> Result<(), Error> {
     let (test, realm, _event) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
 
-    let event_source = EventSource::new().unwrap();
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Stopped::NAME])])
-        .await
-        .context("failed to subscribe to EventSource")?;
+    let mut event_stream = EventStream::open().await.unwrap();
 
     let child_name = "policy_allowed";
     let exposed_dir = open_exposed_dir(&realm, child_name).await.expect("bind should succeed");
@@ -142,18 +134,24 @@ async fn verify_main_process_critical_allowed() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn verify_main_process_critical_denied() -> Result<(), Error> {
-    let (_test, realm, mut event_stream) =
-        start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
+    let (_test, realm, event_stream) = start_policy_test(COMPONENT_MANAGER_URL, ROOT_URL).await?;
 
     let child_name = "policy_denied";
     let exposed_dir =
         open_exposed_dir(&realm, child_name).await.expect("open exposed dir should succeed");
     client::connect_to_protocol_at_dir_root::<fcomponent::BinderMarker>(&exposed_dir)
         .context("failed to connect to fuchsia.component.Binder of child")?;
-
-    let mut matcher = EventMatcher::ok().moniker(format!("./root/{}", child_name));
-    matcher.expect_match::<Started>(&mut event_stream).await;
-    matcher.expect_match::<Stopped>(&mut event_stream).await;
-
+    let moniker = format!("./root/{}", child_name);
+    EventSequence::new()
+        .has_subset(
+            vec![
+                EventMatcher::ok().r#type(Started::TYPE).moniker(moniker.clone()),
+                EventMatcher::ok().r#type(Stopped::TYPE).moniker(moniker),
+            ],
+            Ordering::Unordered,
+        )
+        .expect(event_stream)
+        .await
+        .unwrap();
     Ok(())
 }

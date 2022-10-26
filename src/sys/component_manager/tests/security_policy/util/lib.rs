@@ -4,7 +4,11 @@
 
 use {
     anyhow::Error,
-    component_events::{events::*, matcher::EventMatcher},
+    component_events::{
+        events::*,
+        matcher::EventMatcher,
+        sequence::{EventSequence, Ordering},
+    },
     fidl::endpoints::create_proxy,
     fidl_fuchsia_component as fcomponent, fidl_fuchsia_component_decl as fdecl,
     fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys, fuchsia_component,
@@ -29,20 +33,23 @@ pub async fn start_policy_test(
         .unwrap();
     let instance = builder.build_in_nested_component_manager(component_manager_url).await.unwrap();
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
+    proxy.wait_for_ready().await.unwrap();
 
-    let event_source = EventSource::from_proxy(proxy);
+    let event_stream = EventStream::new_v2(proxy);
 
-    let mut event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Stopped::NAME])])
-        .await?;
     instance.start_component_tree().await.unwrap();
 
     // Wait for the root component to be started so we can connect to its Realm service through the
     // hub.
-    EventMatcher::ok().moniker(".").expect_match::<Started>(&mut event_stream).await;
-    EventMatcher::ok().moniker("./root").expect_match::<Started>(&mut event_stream).await;
-
+    let event_stream = EventSequence::new()
+        .has_subset(
+            vec![EventMatcher::ok().r#type(Started::TYPE).moniker("./root")],
+            Ordering::Unordered,
+        )
+        .expect_and_giveback(event_stream)
+        .await
+        .unwrap();
     // Get to the Realm protocol
     let realm_query =
         instance.root.connect_to_protocol_at_exposed_dir::<fsys::RealmQueryMarker>().unwrap();
