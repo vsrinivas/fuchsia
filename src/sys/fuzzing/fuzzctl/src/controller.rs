@@ -133,11 +133,13 @@ impl<O: OutputSink> Controller<O> {
         input_pairs: Vec<InputPair>,
         corpus_type: fuzz::Corpus,
     ) -> Result<corpus::Stats> {
+        let expected_num_inputs = input_pairs.len();
+        let expected_total_size =
+            input_pairs.iter().fold(0, |total, input_pair| total + input_pair.len());
         let mut corpus_stats = corpus::Stats { num_inputs: 0, total_size: 0 };
         for input_pair in input_pairs.into_iter() {
             let (mut fidl_input, input) = input_pair.as_tuple();
-            corpus_stats.num_inputs += 1;
-            corpus_stats.total_size += fidl_input.size;
+            let fidl_input_size = fidl_input.size;
             let (raw, _) = try_join!(
                 async {
                     self.proxy.add_to_corpus(corpus_type, &mut fidl_input).await.map_err(Error::msg)
@@ -146,9 +148,20 @@ impl<O: OutputSink> Controller<O> {
             )
             .context("`fuchsia.fuzzer.Controller/AddToCorpus` failed")?;
             match zx::Status::from_raw(raw) {
-                zx::Status::OK => {}
+                zx::Status::OK => {
+                    corpus_stats.num_inputs += 1;
+                    corpus_stats.total_size += fidl_input_size;
+                }
                 status => {
-                    bail!("`fuchsia.fuzzer.Controller/AddToCorpus` returned: ZX_ERR_{}", status)
+                    bail!(
+                        "`fuchsia.fuzzer.Controller/AddToCorpus` returned: ZX_ERR_{} \
+                           after writing {} of {} files ({} of {} bytes)",
+                        status,
+                        corpus_stats.num_inputs,
+                        expected_num_inputs,
+                        corpus_stats.total_size,
+                        expected_total_size
+                    )
                 }
             };
         }

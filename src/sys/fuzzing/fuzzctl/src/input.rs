@@ -118,7 +118,7 @@ impl Input {
         let socket = self.socket.take().context("input already sent")?;
         let mut writer = fidl::AsyncSocket::from_socket(socket)
             .context("failed to convert socket for sending fuzz input")?;
-        writer.write(&self.data).await.context("failed to write fuzz input")?;
+        writer.write_all(&self.data).await.context("failed to write fuzz input")?;
         Ok(())
     }
 
