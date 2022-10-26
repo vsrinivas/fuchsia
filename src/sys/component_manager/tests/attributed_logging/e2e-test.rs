@@ -30,7 +30,8 @@ async fn verify_routing_failure_messages() {
         .add_route(
             Route::new()
                 .capability(Capability::protocol_by_name("fuchsia.logger.LogSink"))
-                .capability(Capability::protocol_by_name("fuchsia.sys2.EventSource"))
+                .capability(Capability::event_stream("capability_requested_v2").with_scope(&root))
+                .capability(Capability::event_stream("directory_ready_v2").with_scope(&root))
                 .from(Ref::parent())
                 .to(&root),
         )
@@ -41,6 +42,7 @@ async fn verify_routing_failure_messages() {
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
         instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
+    proxy.wait_for_ready().await.unwrap();
     let event_stream = EventStream::new_v2(proxy);
 
     let expected = EventSequence::new()

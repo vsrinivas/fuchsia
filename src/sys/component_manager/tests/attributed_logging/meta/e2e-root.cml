@@ -33,21 +33,14 @@
             to: "#routing-tests",
         },
         {
-            event: [ "stopped" ],
-            from: "framework",
+            event_stream: "directory_ready_v2",
+            from: "parent",
             to: "#archivist",
         },
         {
-            event: "directory_ready",
-            from: "framework",
+            event_stream: "capability_requested_v2",
+            from: "parent",
             to: "#archivist",
-            filter: { name: "diagnostics" },
-        },
-        {
-            event: "capability_requested",
-            from: "framework",
-            to: "#archivist",
-            filter: { name: "fuchsia.logger.LogSink" },
         },
         {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
