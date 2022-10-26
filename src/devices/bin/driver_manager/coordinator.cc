@@ -732,7 +732,7 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
     return ZX_ERR_BAD_STATE;
   }
 
-  if (!(dev->flags & DEV_CTX_MUST_ISOLATE)) {
+  if (dev->should_colocate()) {
     VLOGF(1, "Binding driver to %s in same driver host as parent", dev->name().data());
     // non-busdev is pretty simple
     if (dev->host() == nullptr) {

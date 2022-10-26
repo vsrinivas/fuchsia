@@ -202,6 +202,18 @@ class Device final
     return true;
   }
 
+  // Returns whether or not a driver that binds to this device should be colocated in the same
+  // driver host.
+  //
+  // Please note that this check is not definitive - even if it returns true, the driver still may
+  // end up in a different driver host, for instance because the driver has `colocate = false` in
+  // its component manifest.
+  bool should_colocate() const {
+    // The decision to colocate or not for composite devices is handled separately, in
+    // composite_device.cc, so here we default to putting them in the same host as their parents.
+    return is_composite() || !(flags & DEV_CTX_MUST_ISOLATE);
+  }
+
   void push_fragment(CompositeDeviceFragment* fragment) { fragments_.push_back(fragment); }
   bool is_fragments_empty() { return fragments_.is_empty(); }
 
