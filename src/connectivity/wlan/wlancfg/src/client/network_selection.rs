@@ -370,19 +370,19 @@ impl NetworkSelector {
 /// network.
 async fn merge_saved_networks_and_scan_data(
     saved_network_manager: &Arc<dyn SavedNetworksManagerApi>,
-    scan_results: Vec<types::ScanResult>,
+    mut scan_results: Vec<types::ScanResult>,
     hasher: &WlanHasher,
 ) -> Vec<InternalBss> {
     let mut merged_networks = vec![];
-    for scan_result in scan_results {
+    for mut scan_result in scan_results.drain(..) {
         for saved_config in saved_network_manager
             .lookup_compatible(&scan_result.ssid, scan_result.security_type_detailed)
             .await
         {
             let multiple_bss_candidates = scan_result.entries.len() > 1;
-            for bss in &scan_result.entries {
+            for bss in scan_result.entries.drain(..) {
                 merged_networks.push(InternalBss {
-                    scanned_bss: bss.clone(),
+                    scanned_bss: bss,
                     multiple_bss_candidates,
                     security_type_detailed: scan_result.security_type_detailed,
                     saved_network_info: InternalSavedNetworkData {
@@ -2020,9 +2020,9 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
                 entries: vec![types::Bss {
                     compatibility: wlan_common::scan::Compatibility::expect_some(
-                        mutual_security_protocols_2.clone(),
+                        mutual_security_protocols_2,
                     ),
-                    bssid: bssid_2.clone(),
+                    bssid: bssid_2,
                     bss_description: bss_desc2_active.clone(),
                     ..generate_random_bss()
                 }],
