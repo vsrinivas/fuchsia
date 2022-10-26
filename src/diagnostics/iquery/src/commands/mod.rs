@@ -3,16 +3,15 @@
 // found in the LICENSE file.
 
 pub use crate::commands::{
-    list::*, list_accessors::*, logs::*, selectors::*, show::*, types::*, utils::*,
+    list::*, list_accessors::*, list_files::*, logs::*, selectors::*, show::*, types::*, utils::*,
 };
 
 #[cfg(target_os = "fuchsia")]
-pub use crate::commands::{list_files::*, target::*};
+pub use crate::commands::target::*;
 
 mod constants;
 mod list;
 mod list_accessors;
-#[cfg(target_os = "fuchsia")]
 mod list_files;
 mod logs;
 mod selectors;

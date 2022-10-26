@@ -4,7 +4,6 @@
 
 use {
     anyhow::Result,
-    byteorder::{LittleEndian, WriteBytesExt},
     diagnostics_data::{Data, DiagnosticsHierarchy, InspectData, Property},
     errors as _, ffx_inspect_common as _, ffx_writer as _,
     fidl::endpoints::ServerEnd,
@@ -15,19 +14,9 @@ use {
         RemoteControlRequest, RemoteDiagnosticsBridgeProxy, RemoteDiagnosticsBridgeRequest,
     },
     fidl_fuchsia_diagnostics::{ClientSelectorConfiguration, DataType, StreamMode},
-    fidl_fuchsia_io as fio,
-    fuchsia_zircon_status::Status,
     futures::{StreamExt, TryStreamExt},
     iquery_test_support,
-    std::{
-        collections::HashMap,
-        io::Write,
-        path::Path,
-        sync::{
-            atomic::{AtomicBool, Ordering},
-            Arc,
-        },
-    },
+    std::sync::Arc,
 };
 
 #[derive(Default)]
@@ -207,144 +196,8 @@ pub fn inspect_bridge_data(
     FakeBridgeData::new(params, expected_responses)
 }
 
-pub trait Entry {
-    fn open(
-        self: Arc<Self>,
-        flags: fio::OpenFlags,
-        mode: u32,
-        path: &str,
-        object: ServerEnd<fio::NodeMarker>,
-    );
-    fn encode(&self, buf: &mut Vec<u8>);
-    fn name(&self) -> String;
-}
-
-pub struct MockDir {
-    subdirs: HashMap<String, Arc<dyn Entry>>,
-    name: String,
-    at_end: AtomicBool,
-}
-
-impl MockDir {
-    pub fn new(name: String) -> Self {
-        MockDir { name, subdirs: HashMap::new(), at_end: AtomicBool::new(false) }
-    }
-
-    pub fn add_entry(mut self, entry: Arc<dyn Entry>) -> Self {
-        self.subdirs.insert(entry.name(), entry);
-        self
-    }
-
-    async fn serve(self: Arc<Self>, object: ServerEnd<fio::DirectoryMarker>) {
-        let mut stream = object.into_stream().unwrap();
-        let _ = stream.control_handle().send_on_open_(
-            Status::OK.into_raw(),
-            Some(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {})),
-        );
-        while let Ok(Some(request)) = stream.try_next().await {
-            match request {
-                fio::DirectoryRequest::Open { flags, mode, path, object, .. } => {
-                    self.clone().open(flags, mode, &path, object);
-                }
-                fio::DirectoryRequest::Clone { flags, object, .. } => {
-                    self.clone().open(flags, fio::MODE_TYPE_DIRECTORY, ".", object);
-                }
-                fio::DirectoryRequest::Rewind { responder, .. } => {
-                    self.at_end.store(false, Ordering::Relaxed);
-                    responder.send(Status::OK.into_raw()).unwrap();
-                }
-                fio::DirectoryRequest::ReadDirents { max_bytes: _, responder, .. } => {
-                    let entries = match self.at_end.compare_exchange(
-                        false,
-                        true,
-                        Ordering::Relaxed,
-                        Ordering::Relaxed,
-                    ) {
-                        Ok(false) => encode_entries(&self.subdirs),
-                        Err(true) => Vec::new(),
-                        _ => unreachable!(),
-                    };
-                    responder.send(Status::OK.into_raw(), &entries).unwrap();
-                }
-                x => panic!("unsupported request: {:?}", x),
-            }
-        }
-    }
-}
-
-fn encode_entries(subdirs: &HashMap<String, Arc<dyn Entry>>) -> Vec<u8> {
-    let mut buf = Vec::new();
-    let mut data = subdirs.iter().collect::<Vec<(_, _)>>();
-    data.sort_by(|a, b| a.0.cmp(b.0));
-    for (_, entry) in data.iter() {
-        entry.encode(&mut buf);
-    }
-    buf
-}
-
-impl Entry for MockDir {
-    fn open(
-        self: Arc<Self>,
-        flags: fio::OpenFlags,
-        mode: u32,
-        path: &str,
-        object: ServerEnd<fio::NodeMarker>,
-    ) {
-        let path = Path::new(path);
-        let mut path_iter = path.iter();
-        let segment = if let Some(segment) = path_iter.next() {
-            if let Some(segment) = segment.to_str() {
-                segment
-            } else {
-                send_error(object, Status::NOT_FOUND);
-                return;
-            }
-        } else {
-            "."
-        };
-        if segment == "." {
-            fuchsia_async::Task::local(self.clone().serve(ServerEnd::new(object.into_channel())))
-                .detach();
-            return;
-        }
-        if let Some(entry) = self.subdirs.get(segment) {
-            entry.clone().open(flags, mode, path_iter.as_path().to_str().unwrap(), object);
-        } else {
-            send_error(object, Status::NOT_FOUND);
-        }
-    }
-
-    fn encode(&self, buf: &mut Vec<u8>) {
-        buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
-        buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
-        buf.write_u8(fio::DirentType::Directory.into_primitive())
-            .expect("writing mockdir type to work");
-        buf.write_all(self.name.as_ref()).expect("writing mockdir name to work");
-    }
-
-    fn name(&self) -> String {
-        self.name.clone()
-    }
-}
-
-impl Entry for fio::DirectoryProxy {
-    fn open(
-        self: Arc<Self>,
-        flags: fio::OpenFlags,
-        mode: u32,
-        path: &str,
-        object: ServerEnd<fio::NodeMarker>,
-    ) {
-        let _ = fio::DirectoryProxy::open(&*self, flags, mode, path, object);
-    }
-
-    fn encode(&self, _buf: &mut Vec<u8>) {
-        unimplemented!();
-    }
-
-    fn name(&self) -> String {
-        unimplemented!();
-    }
+pub fn get_empty_value_json() -> serde_json::Value {
+    serde_json::json!([])
 }
 
 pub fn get_v1_json_dump() -> serde_json::Value {
@@ -402,15 +255,4 @@ pub fn get_v1_single_value_json() -> serde_json::Value {
             }
         ]
     )
-}
-
-pub fn get_empty_value_json() -> serde_json::Value {
-    serde_json::json!([])
-}
-
-fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
-    let stream = object.into_stream().expect("failed to create stream");
-    let control_handle = stream.control_handle();
-    let _ = control_handle.send_on_open_(status.into_raw(), None);
-    control_handle.shutdown_with_epitaph(status);
 }

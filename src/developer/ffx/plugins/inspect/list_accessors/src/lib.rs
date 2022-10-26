@@ -25,7 +25,7 @@ pub async fn list_accessors(
 }
 
 /// Test for `ffx inspect list-accessors`.
-/// The test fixtures lives in `//src/diagnostics/iquery/src/test_support`.
+/// The test fixtures lives in `//src/diagnostics/iquery/test_support`.
 #[cfg(test)]
 mod test {
     use {

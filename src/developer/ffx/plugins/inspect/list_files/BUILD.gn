@@ -2,28 +2,30 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
+import("//src/developer/ffx/build/ffx_plugin.gni")
 
-rustc_library("ffx_inspect_test_utils") {
-  name = "ffx_inspect_test_utils"
+ffx_plugin("ffx_inspect_list_files") {
   version = "0.1.0"
   edition = "2021"
   with_unit_tests = true
-
   deps = [
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol_rust",
-    "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
-    "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/developer/ffx/plugins/inspect/common:ffx_inspect_common",
-    "//src/diagnostics/iquery/test_support:iquery_test_support",
-    "//src/lib/diagnostics/data/rust",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
+    "//src/diagnostics/iquery:lib",
     "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:futures",
+  ]
+
+  test_deps = [
+    "//src/developer/ffx/plugins/inspect/test_utils:ffx_inspect_test_utils",
+    "//src/lib/fuchsia",
+    "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:serde_json",
   ]
+
+  args_deps = [ "//src/diagnostics/iquery:lib" ]
+
+  args_sources = [ "src/args.rs" ]
 
   sources = [ "src/lib.rs" ]
 }

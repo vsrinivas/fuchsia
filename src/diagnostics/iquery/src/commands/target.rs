@@ -3,7 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::commands::{types::DiagnosticsProvider, utils::*},
+    crate::commands::{
+        list_files::{list_files, ListFilesResultItem},
+        types::DiagnosticsProvider,
+        utils::*,
+    },
     crate::types::Error,
     anyhow::anyhow,
     async_trait::async_trait,
@@ -25,6 +29,7 @@ lazy_static! {
     static ref ROOT_REALM_QUERY: &'static str = "fuchsia.sys2.RealmQuery.root";
     static ref ROOT_ARCHIVIST_ACCESSOR: &'static str =
         "./bootstrap/archivist:expose:fuchsia.diagnostics.ArchiveAccessor";
+    static ref CURRENT_DIR: Vec<String> = vec![".".to_string()];
 }
 
 #[derive(Default)]
@@ -54,6 +59,15 @@ impl DiagnosticsProvider for ArchiveAccessorProvider {
     async fn get_accessor_paths(&self, paths: &Vec<String>) -> Result<Vec<String>, Error> {
         get_accessor_selectors_auto_proxy(paths).await
     }
+
+    async fn list_files(&self, monikers: &[String]) -> Result<Vec<ListFilesResultItem>, Error> {
+        list_files_auto_proxy(monikers).await
+    }
+}
+
+async fn list_files_auto_proxy(monikers: &[String]) -> Result<Vec<ListFilesResultItem>, Error> {
+    let (realm_query_proxy, realm_explorer_proxy) = connect_realm_protocols().await?;
+    list_files(realm_query_proxy, realm_explorer_proxy, monikers).await
 }
 
 /// Helper method to connect to both the `RealmQuery` and the `RealmExplorer`.

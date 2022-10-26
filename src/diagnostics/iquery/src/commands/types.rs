@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::commands::list_files::ListFilesResultItem,
     crate::types::{Error, ToText},
     async_trait::async_trait,
     diagnostics_data::{Data, DiagnosticsData},
@@ -24,7 +25,8 @@ pub trait DiagnosticsProvider: Send + Sync {
     ) -> Result<Vec<Data<D>>, Error>;
 
     /// Lists all ArchiveAccessor files under the provided paths. If no paths are provided, it'll list
-    /// under the current directory. At the moment v2 components cannot be seen through the filesystem.
-    /// Therefore this only outputs ArchiveAccessors exposed by v1 components.
+    /// under the current directory.
     async fn get_accessor_paths(&self, paths: &Vec<String>) -> Result<Vec<String>, Error>;
+
+    async fn list_files(&self, monikers: &[String]) -> Result<Vec<ListFilesResultItem>, Error>;
 }

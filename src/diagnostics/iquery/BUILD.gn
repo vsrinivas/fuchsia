@@ -8,6 +8,7 @@ import("//build/rust/rustc_library.gni")
 
 iquery_deps = [
   "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
   "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
   "//src/lib/diagnostics/data/rust",
   "//src/lib/diagnostics/hierarchy/rust",
@@ -34,7 +35,6 @@ if (is_fuchsia) {
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics_rust",
     "//sdk/fidl/fuchsia.inspect:fuchsia.inspect_rust",
     "//sdk/fidl/fuchsia.inspect.deprecated:fuchsia.inspect.deprecated_rust",
-    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
     "//src/diagnostics/lib/inspect-fidl-load",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/reader/rust",
@@ -48,6 +48,7 @@ iquery_sources = [
   "src/commands/constants.rs",
   "src/commands/list.rs",
   "src/commands/list_accessors.rs",
+  "src/commands/list_files.rs",
   "src/commands/logs.rs",
   "src/commands/mod.rs",
   "src/commands/selectors.rs",
@@ -61,7 +62,6 @@ iquery_sources = [
 if (is_fuchsia) {
   iquery_sources += [
     "src/command_line.rs",
-    "src/commands/list_files.rs",
     "src/commands/target.rs",
     "src/constants.rs",
     "src/location.rs",

@@ -2,18 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl;
+use byteorder::{LittleEndian, WriteBytesExt};
 use fidl::encoding::Decodable;
+use fidl::endpoints::ControlHandle;
+use fidl::endpoints::RequestStream;
 use fidl::endpoints::ServerEnd;
 use fidl::endpoints::{create_endpoints, create_proxy};
 use fidl_fuchsia_component_config::ResolvedConfig;
 use fidl_fuchsia_component_decl::{ConfigChecksum, Expose, ExposeProtocol, Ref, SelfRef};
-use fidl_fuchsia_io::{DirectoryMarker, DirectoryRequest};
+use fidl_fuchsia_io::{self as fio, DirectoryMarker};
 use fidl_fuchsia_sys2 as fsys2;
 use fuchsia_async;
-use fuchsia_fs;
+use fuchsia_zircon_status::Status;
 use futures::{StreamExt, TryStreamExt};
 use std::collections::HashMap;
+use std::io::Write;
+use std::path::Path;
+use std::sync::atomic::AtomicBool;
+use std::sync::atomic::Ordering;
 use std::sync::Arc;
 
 /// Provides a mock `RealmExplorer` interface.
@@ -117,26 +123,6 @@ impl MockRealmExplorer {
     }
 }
 
-/// Creates a encoded buffer for DirEntry.
-fn dirents_files(names: &[String]) -> Vec<u8> {
-    let mut bytes = vec![];
-    for name in names {
-        // inode: u64
-        for _ in 0..8 {
-            bytes.push(0);
-        }
-        // size: u8
-        bytes.push(name.len() as u8);
-        // type: u8
-        bytes.push(fuchsia_fs::directory::DirentKind::File as u8);
-        // name: [u8]
-        for byte in name.bytes() {
-            bytes.push(byte);
-        }
-    }
-    bytes
-}
-
 /// Quick alias for for RealmQuery protocol.
 type RealmQueryResult = (fsys2::InstanceInfo, Option<Box<fsys2::ResolvedState>>);
 
@@ -169,6 +155,7 @@ pub struct MockRealmQueryBuilderInner {
     moniker: String,
     exposes: Vec<Expose>,
     out_dir_entry: Vec<String>,
+    diagnostics_dir_entry: Vec<String>,
     parent: Option<Box<MockRealmQueryBuilder>>,
 }
 
@@ -179,28 +166,21 @@ async fn to_realm_query_result(builder: &MockRealmQueryBuilderInner) -> RealmQue
     let (ns_client, _) = create_endpoints::<DirectoryMarker>().unwrap();
     let (outdir_client, outdir_server) = create_endpoints::<DirectoryMarker>().unwrap();
 
-    let out_dirs = builder.out_dir_entry.clone();
-    fuchsia_async::Task::local(async move {
-        let mut first_call = true;
-        let mut stream = outdir_server.into_stream().unwrap();
-        while let Ok(Some(request)) = stream.try_next().await {
-            match request {
-                DirectoryRequest::ReadDirents { max_bytes: _, responder } => {
-                    if first_call {
-                        responder.send(0, dirents_files(&out_dirs).as_slice()).unwrap();
-                        first_call = false;
-                    } else {
-                        responder.send(0, &vec![]).unwrap();
-                    }
-                }
-                DirectoryRequest::Rewind { responder } => {
-                    responder.send(0).unwrap();
-                }
-                _ => panic!(),
-            }
-        }
-    })
-    .detach();
+    let mut mock_dir_top = MockDir::new("out".to_owned());
+    let mut mock_dir_diagnostics = MockDir::new("diagnostics".to_owned());
+
+    for entry in &builder.diagnostics_dir_entry {
+        mock_dir_diagnostics = mock_dir_diagnostics.add_entry(MockFile::new_arc(entry.to_owned()));
+    }
+
+    for entry in &builder.out_dir_entry {
+        mock_dir_top = mock_dir_top.add_entry(MockFile::new_arc(entry.to_owned()));
+    }
+
+    mock_dir_top = mock_dir_top.add_entry(Arc::new(mock_dir_diagnostics));
+
+    fuchsia_async::Task::local(async move { Arc::new(mock_dir_top).serve(outdir_server).await })
+        .detach();
 
     let rs = fsys2::ResolvedState {
         uses: vec![],
@@ -243,9 +223,15 @@ impl MockRealmQueryBuilderInner {
         self
     }
 
-    /// Add an entry to the `DirEntry` results.
-    pub fn dir_entry(mut self, entry: &str) -> Self {
+    /// Add an entry 'out/'.
+    pub fn out_dir_entry(mut self, entry: &str) -> Self {
         self.out_dir_entry.push(entry.to_owned());
+        self
+    }
+
+    /// Add an entry `out/diagnostics`.
+    pub fn diagnostics_dir_entry(mut self, entry: &str) -> Self {
+        self.diagnostics_dir_entry.push(entry.to_owned());
         self
     }
 
@@ -273,6 +259,7 @@ impl MockRealmQueryBuilder {
             moniker: "".to_owned(),
             exposes: vec![],
             out_dir_entry: vec![],
+            diagnostics_dir_entry: vec![],
             parent: Some(Box::new(self)),
         }
     }
@@ -302,7 +289,8 @@ impl Default for MockRealmQuery {
                 target_name: Some("fuchsia.diagnostics.ArchiveAccessor".to_owned()),
                 ..ExposeProtocol::EMPTY
             })])
-            .dir_entry("fuchsia.some.Stuff")
+            .out_dir_entry("fuchsia.some.GarbageAccessor")
+            .diagnostics_dir_entry("fuchsia.inspect.Tree")
             .add()
             .when("other/component")
             .moniker("./other/component")
@@ -323,7 +311,8 @@ impl Default for MockRealmQuery {
                 target_name: Some("fuchsia.io.MagicStuff".to_owned()),
                 ..ExposeProtocol::EMPTY
             })])
-            .dir_entry("fuchsia.diagnostics.MagicArchiveAccessor")
+            .out_dir_entry("fuchsia.diagnostics.MagicArchiveAccessor")
+            .diagnostics_dir_entry("fuchsia.inspect.Tree")
             .add()
             .when("foo/component")
             .moniker("./foo/component")
@@ -380,4 +369,192 @@ impl MockRealmQuery {
         fuchsia_async::Task::local(async move { self.serve(server_end).await }).detach();
         proxy
     }
+}
+
+// Mock directory structure.
+pub trait Entry {
+    fn open(
+        self: Arc<Self>,
+        flags: fio::OpenFlags,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    );
+    fn encode(&self, buf: &mut Vec<u8>);
+    fn name(&self) -> String;
+}
+
+pub struct MockDir {
+    subdirs: HashMap<String, Arc<dyn Entry>>,
+    name: String,
+    at_end: AtomicBool,
+}
+
+impl MockDir {
+    pub fn new(name: String) -> Self {
+        MockDir { name, subdirs: HashMap::new(), at_end: AtomicBool::new(false) }
+    }
+
+    pub fn new_arc(name: String) -> Arc<Self> {
+        Arc::new(Self::new(name))
+    }
+
+    pub fn add_entry(mut self, entry: Arc<dyn Entry>) -> Self {
+        self.subdirs.insert(entry.name(), entry);
+        self
+    }
+
+    async fn serve(self: Arc<Self>, object: ServerEnd<fio::DirectoryMarker>) {
+        let mut stream = object.into_stream().unwrap();
+        let _ = stream.control_handle().send_on_open_(
+            Status::OK.into_raw(),
+            Some(&mut fio::NodeInfoDeprecated::Directory(fio::DirectoryObject {})),
+        );
+        while let Ok(Some(request)) = stream.try_next().await {
+            match request {
+                fio::DirectoryRequest::Open { flags, mode, path, object, .. } => {
+                    self.clone().open(flags, mode, &path, object);
+                }
+                fio::DirectoryRequest::Clone { flags, object, .. } => {
+                    self.clone().open(flags, fio::MODE_TYPE_DIRECTORY, ".", object);
+                }
+                fio::DirectoryRequest::Rewind { responder, .. } => {
+                    self.at_end.store(false, Ordering::Relaxed);
+                    responder.send(Status::OK.into_raw()).unwrap();
+                }
+                fio::DirectoryRequest::ReadDirents { max_bytes: _, responder, .. } => {
+                    let entries = match self.at_end.compare_exchange(
+                        false,
+                        true,
+                        Ordering::Relaxed,
+                        Ordering::Relaxed,
+                    ) {
+                        Ok(false) => encode_entries(&self.subdirs),
+                        Err(true) => Vec::new(),
+                        _ => unreachable!(),
+                    };
+                    responder.send(Status::OK.into_raw(), &entries).unwrap();
+                }
+                x => panic!("unsupported request: {:?}", x),
+            }
+        }
+    }
+}
+
+fn encode_entries(subdirs: &HashMap<String, Arc<dyn Entry>>) -> Vec<u8> {
+    let mut buf = Vec::new();
+    let mut data = subdirs.iter().collect::<Vec<(_, _)>>();
+    data.sort_by(|a, b| a.0.cmp(b.0));
+    for (_, entry) in data.iter() {
+        entry.encode(&mut buf);
+    }
+    buf
+}
+
+impl Entry for MockDir {
+    fn open(
+        self: Arc<Self>,
+        flags: fio::OpenFlags,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
+        let path = Path::new(path);
+        let mut path_iter = path.iter();
+        let segment = if let Some(segment) = path_iter.next() {
+            if let Some(segment) = segment.to_str() {
+                segment
+            } else {
+                send_error(object, Status::NOT_FOUND);
+                return;
+            }
+        } else {
+            "."
+        };
+        if segment == "." {
+            fuchsia_async::Task::local(self.clone().serve(ServerEnd::new(object.into_channel())))
+                .detach();
+            return;
+        }
+        if let Some(entry) = self.subdirs.get(segment) {
+            entry.clone().open(flags, mode, path_iter.as_path().to_str().unwrap(), object);
+        } else {
+            send_error(object, Status::NOT_FOUND);
+        }
+    }
+
+    fn encode(&self, buf: &mut Vec<u8>) {
+        buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
+        buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
+        buf.write_u8(fio::DirentType::Directory.into_primitive())
+            .expect("writing mockdir type to work");
+        buf.write_all(self.name.as_ref()).expect("writing mockdir name to work");
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+impl Entry for fio::DirectoryProxy {
+    fn open(
+        self: Arc<Self>,
+        flags: fio::OpenFlags,
+        mode: u32,
+        path: &str,
+        object: ServerEnd<fio::NodeMarker>,
+    ) {
+        let _ = fio::DirectoryProxy::open(&*self, flags, mode, path, object);
+    }
+
+    fn encode(&self, _buf: &mut Vec<u8>) {
+        unimplemented!();
+    }
+
+    fn name(&self) -> String {
+        unimplemented!();
+    }
+}
+
+struct MockFile {
+    name: String,
+}
+
+impl MockFile {
+    pub fn new(name: String) -> Self {
+        MockFile { name }
+    }
+    pub fn new_arc(name: String) -> Arc<Self> {
+        Arc::new(Self::new(name))
+    }
+}
+
+impl Entry for MockFile {
+    fn open(
+        self: Arc<Self>,
+        _flags: fio::OpenFlags,
+        _mode: u32,
+        _path: &str,
+        _object: ServerEnd<fio::NodeMarker>,
+    ) {
+        unimplemented!();
+    }
+
+    fn encode(&self, buf: &mut Vec<u8>) {
+        buf.write_u64::<LittleEndian>(fio::INO_UNKNOWN).expect("writing mockdir ino to work");
+        buf.write_u8(self.name.len() as u8).expect("writing mockdir size to work");
+        buf.write_u8(fio::DirentType::File.into_primitive()).expect("writing mockdir type to work");
+        buf.write_all(self.name.as_ref()).expect("writing mockdir name to work");
+    }
+
+    fn name(&self) -> String {
+        self.name.clone()
+    }
+}
+
+fn send_error(object: ServerEnd<fio::NodeMarker>, status: Status) {
+    let stream = object.into_stream().expect("failed to create stream");
+    let control_handle = stream.control_handle();
+    let _ = control_handle.send_on_open_(status.into_raw(), None);
+    control_handle.shutdown_with_epitaph(status);
 }

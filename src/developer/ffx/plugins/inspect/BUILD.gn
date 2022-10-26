@@ -11,6 +11,7 @@ ffx_plugin("ffx_inspect") {
     "apply_selectors:ffx_inspect_apply_selectors",
     "list:ffx_inspect_list",
     "list_accessors:ffx_inspect_list_accessors",
+    "list_files:ffx_inspect_list_files",
     "selectors:ffx_inspect_selectors",
     "show:ffx_inspect_show",
   ]

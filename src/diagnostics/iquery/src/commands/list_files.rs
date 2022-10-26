@@ -4,18 +4,17 @@
 
 use {
     crate::{
-        commands::constants::{IQUERY_TIMEOUT, IQUERY_TIMEOUT_SECS},
-        commands::target::connect_realm_protocols,
-        commands::types::*,
-        commands::utils::{
-            get_instance_infos, prepend_leading_moniker, strip_leading_relative_moniker,
+        commands::{
+            constants::{IQUERY_TIMEOUT, IQUERY_TIMEOUT_SECS},
+            types::*,
+            utils::*,
         },
         types::{Error, ToText},
     },
     anyhow::anyhow,
     argh::FromArgs,
     async_trait::async_trait,
-    fidl_fuchsia_io as fio, fuchsia_fs,
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys2,
     futures::StreamExt,
     itertools::Itertools,
     lazy_static::lazy_static,
@@ -25,15 +24,20 @@ use {
 };
 
 lazy_static! {
-    static ref CURRENT_DIR: Vec<String> = vec![".".to_string()];
     static ref MATCHING_REGEX: &'static str =
         r"^((.*\.inspect)|(fuchsia.inspect.Tree)|(fuchsia.inspect.deprecated.Inspect))$";
 }
 
 #[derive(Debug, Serialize, PartialEq, Eq)]
 pub struct ListFilesResultItem {
-    moniker: String,
-    files: Vec<String>,
+    pub(crate) moniker: String,
+    pub(crate) files: Vec<String>,
+}
+
+impl ListFilesResultItem {
+    pub fn new(moniker: String, files: Vec<String>) -> Self {
+        ListFilesResultItem { moniker, files }
+    }
 }
 
 impl PartialOrd for ListFilesResultItem {
@@ -71,6 +75,15 @@ pub struct ListFilesCommand {
     pub monikers: Vec<String>,
 }
 
+#[async_trait]
+impl Command for ListFilesCommand {
+    type Result = Vec<ListFilesResultItem>;
+
+    async fn execute<P: DiagnosticsProvider>(&self, provider: &P) -> Result<Self::Result, Error> {
+        provider.list_files(&self.monikers).await
+    }
+}
+
 async fn recursive_list_inspect_files(proxy: fio::DirectoryProxy) -> Vec<String> {
     let expected_accessor_re = Regex::new(&MATCHING_REGEX).unwrap();
     fuchsia_fs::directory::readdir_recursive(&proxy, Some(IQUERY_TIMEOUT.into()))
@@ -100,79 +113,74 @@ async fn recursive_list_inspect_files(proxy: fio::DirectoryProxy) -> Vec<String>
         .collect::<Vec<_>>()
 }
 
-#[async_trait]
-impl Command for ListFilesCommand {
-    type Result = Vec<ListFilesResultItem>;
+pub async fn list_files(
+    realm_query_proxy: fsys2::RealmQueryProxy,
+    mut realm_explorer_proxy: fsys2::RealmExplorerProxy,
+    monikers: &[String],
+) -> Result<Vec<ListFilesResultItem>, Error> {
+    let monikers = if monikers.is_empty() {
+        get_instance_infos(&mut realm_explorer_proxy)
+            .await?
+            .iter()
+            .map(|e| e.moniker.to_owned())
+            .collect::<Vec<_>>()
+    } else {
+        let mut processed = vec![];
+        for moniker in monikers.iter() {
+            processed.push(prepend_leading_moniker(moniker).await);
+        }
+        processed
+    };
 
-    async fn execute<P: DiagnosticsProvider>(&self, _provider: &P) -> Result<Self::Result, Error> {
-        let (realm_query_proxy, mut realm_explorer_proxy) = connect_realm_protocols().await?;
+    let mut output_vec = vec![];
 
-        let monikers = if self.monikers.is_empty() {
-            get_instance_infos(&mut realm_explorer_proxy)
-                .await?
-                .iter()
-                .map(|e| e.moniker.to_owned())
-                .collect::<Vec<_>>()
-        } else {
-            let mut processed = vec![];
-            for moniker in self.monikers.iter() {
-                processed.push(prepend_leading_moniker(moniker).await);
-            }
-            processed
-        };
+    for moniker in &monikers {
+        let (_, res_info) = realm_query_proxy
+            .get_instance_info(moniker)
+            .await
+            .map_err(|e| Error::ConnectingTo("RealmQuery".to_owned(), e))?
+            .map_err(|e| Error::CommunicatingWith("RealmQuery".to_owned(), anyhow!("{:?}", e)))?;
 
-        let mut output_vec = vec![];
+        if let Some(resolved_state) = res_info {
+            let execution_state = match resolved_state.execution {
+                Some(state) => state,
+                _ => continue,
+            };
 
-        for moniker in &monikers {
-            let (_, res_info) = realm_query_proxy
-                .get_instance_info(moniker)
-                .await
-                .map_err(|e| Error::ConnectingTo("RealmQuery".to_owned(), e))?
-                .map_err(|e| {
-                    Error::CommunicatingWith("RealmQuery".to_owned(), anyhow!("{:?}", e))
-                })?;
+            let out_dir = match execution_state.out_dir {
+                Some(out_dir) => out_dir,
+                _ => continue,
+            };
 
-            if let Some(resolved_state) = res_info {
-                let execution_state = match resolved_state.execution {
-                    Some(state) => state,
-                    _ => continue,
-                };
+            let out_dir_proxy = match out_dir.into_proxy() {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
 
-                let out_dir = match execution_state.out_dir {
-                    Some(out_dir) => out_dir,
-                    _ => continue,
-                };
+            // `fuchsia_fs::directory::open_directory` could block forever when the directory
+            // it is trying to open does not exist.
+            // TODO(https://fxbug.dev/110964): use `open_directory` hang bug is fixed.
+            let diagnostics_dir_proxy = match fuchsia_fs::directory::open_directory_no_describe(
+                &out_dir_proxy,
+                "diagnostics",
+                fuchsia_fs::OpenFlags::RIGHT_READABLE,
+            ) {
+                Ok(p) => p,
+                Err(_) => continue,
+            };
 
-                let out_dir_proxy = match out_dir.into_proxy() {
-                    Ok(p) => p,
-                    Err(_) => continue,
-                };
+            let mut files = recursive_list_inspect_files(diagnostics_dir_proxy).await;
+            files.sort();
 
-                // `fuchsia_fs::directory::open_directory` could block forever when the directory
-                // it is trying to open does not exist.
-                // TODO(https://fxbug.dev/110964): use `open_directory` hang bug is fixed.
-                let diagnostics_dir_proxy = match fuchsia_fs::directory::open_directory_no_describe(
-                    &out_dir_proxy,
-                    "diagnostics",
-                    fuchsia_fs::OpenFlags::RIGHT_READABLE,
-                ) {
-                    Ok(p) => p,
-                    Err(_) => continue,
-                };
-
-                let mut files = recursive_list_inspect_files(diagnostics_dir_proxy).await;
-                files.sort();
-
-                if files.len() > 0 {
-                    output_vec.push(ListFilesResultItem {
-                        moniker: String::from(strip_leading_relative_moniker(moniker).await),
-                        files,
-                    })
-                }
+            if files.len() > 0 {
+                output_vec.push(ListFilesResultItem {
+                    moniker: String::from(strip_leading_relative_moniker(moniker).await),
+                    files,
+                })
             }
         }
-
-        output_vec.sort();
-        Ok(output_vec)
     }
+
+    output_vec.sort();
+    Ok(output_vec)
 }

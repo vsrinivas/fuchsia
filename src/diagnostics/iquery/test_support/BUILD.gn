@@ -26,7 +26,8 @@ rustc_library("iquery_test_support") {
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-fs",
+    "//src/lib/zircon/rust:fuchsia-zircon-status",
+    "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:futures",
   ]
 }

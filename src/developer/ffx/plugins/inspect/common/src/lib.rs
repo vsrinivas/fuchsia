@@ -21,7 +21,7 @@ use {
     fidl_fuchsia_sys2 as fsys2,
     futures::AsyncReadExt as _,
     iquery::{
-        commands::{get_accessor_selectors, DiagnosticsProvider},
+        commands::{get_accessor_selectors, list_files, DiagnosticsProvider, ListFilesResultItem},
         types::{Error, ToText},
     },
     lazy_static::lazy_static,
@@ -167,6 +167,11 @@ impl DiagnosticsProvider for DiagnosticsBridgeProvider {
     async fn get_accessor_paths(&self, paths: &Vec<String>) -> Result<Vec<String>, Error> {
         let (mut query_proxy, mut explorer_proxy) = connect_realm_proxies(&self.rcs_proxy).await?;
         get_accessor_selectors(&mut explorer_proxy, &mut query_proxy, paths).await
+    }
+
+    async fn list_files(&self, monikers: &[String]) -> Result<Vec<ListFilesResultItem>, Error> {
+        let (query_proxy, explorer_proxy) = connect_realm_proxies(&self.rcs_proxy).await?;
+        list_files(query_proxy, explorer_proxy, monikers).await
     }
 }
 

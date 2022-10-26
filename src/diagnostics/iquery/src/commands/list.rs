@@ -128,8 +128,6 @@ pub fn list_response_items_from_components(
 
 /// Lists all components (relative to the scope where the archivist receives events from) of
 /// components that expose inspect.
-/// For v1: this is the realm path plus the realm name
-/// For v2: this is the moniker without the instances ids
 #[derive(Default, FromArgs, PartialEq, Debug)]
 #[argh(subcommand, name = "list")]
 pub struct ListCommand {
