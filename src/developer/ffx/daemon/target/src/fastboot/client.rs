@@ -243,7 +243,7 @@ impl<T: AsyncRead + AsyncWrite + Unpin> FastbootImpl<T> {
                 {
                     Ok(_) => {
                         let reboot_timeout: u64 =
-                            get("fastboot.reboot.reconnect_timeout").await.unwrap_or(30);
+                            get("fastboot.reboot.reconnect_timeout").await.unwrap_or(10);
                         self.clear_interface().await;
                         match try_join!(
                             self.target

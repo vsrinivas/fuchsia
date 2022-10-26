@@ -82,6 +82,7 @@ impl RebootController {
         Ok(proxy)
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     pub(crate) async fn spawn_fastboot(
         &self,
         fastboot: ServerEnd<ffx::FastbootMarker>,
@@ -97,6 +98,7 @@ impl RebootController {
         Ok(())
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     pub(crate) async fn reboot(
         &self,
         state: TargetRebootState,

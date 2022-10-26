@@ -9,7 +9,7 @@ use errors::{ffx_bail, ffx_error, FfxError};
 use ffx_config::EnvironmentContext;
 use ffx_core::Injector;
 use ffx_daemon::{get_daemon_proxy_single_link, is_daemon_running_at_path};
-use ffx_target::{get_remote_proxy, open_target_with_fut};
+use ffx_target::{get_remote_proxy, open_target_with_fut, TargetKind};
 use ffx_writer::{Format, Writer};
 use fidl::endpoints::create_proxy;
 use fidl_fuchsia_developer_ffx::{
@@ -37,7 +37,7 @@ pub enum DaemonVersionCheck {
 pub struct Injection {
     daemon_check: DaemonVersionCheck,
     format: Option<Format>,
-    target: Option<String>,
+    target: Option<TargetKind>,
     hoist: Hoist,
     daemon_once: Once<DaemonProxy>,
     remote_once: Once<RemoteControlProxy>,
@@ -54,7 +54,7 @@ impl Injection {
         daemon_check: DaemonVersionCheck,
         hoist: Hoist,
         format: Option<Format>,
-        target: Option<String>,
+        target: Option<TargetKind>,
     ) -> Self {
         Self {
             daemon_check,
@@ -78,6 +78,7 @@ impl Injection {
         get_remote_proxy(target, self.is_default_target(), daemon_proxy, proxy_timeout).await
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     async fn fastboot_factory_inner(&self) -> Result<FastbootProxy> {
         let daemon_proxy = self.daemon_factory().await?;
         let target = self.target.clone();
@@ -93,6 +94,7 @@ impl Injection {
         Ok(fastboot_proxy)
     }
 
+    #[tracing::instrument(level = "info")]
     async fn target_factory_inner(&self) -> Result<TargetProxy> {
         let target = self.target.clone();
         let daemon_proxy = self.daemon_factory().await?;
@@ -107,9 +109,10 @@ impl Injection {
     }
 
     async fn daemon_timeout_error(&self) -> Result<FfxError> {
+        let target = self.target.as_ref().map(ToString::to_string);
         Ok(FfxError::DaemonError {
             err: DaemonError::Timeout,
-            target: self.target.clone(),
+            target,
             is_default_target: self.is_default_target(),
         })
     }
@@ -134,6 +137,7 @@ impl Injector for Injection {
             .map(|proxy| proxy.clone())
     }
 
+    #[tracing::instrument(level = "info", skip(self))]
     async fn fastboot_factory(&self) -> Result<FastbootProxy> {
         let target = self.target.clone();
         let timeout_error = self.daemon_timeout_error().await?;

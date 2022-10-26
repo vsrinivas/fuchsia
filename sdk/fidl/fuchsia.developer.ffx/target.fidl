@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 library fuchsia.developer.ffx;
 using fuchsia.device;
+using fuchsia.hwinfo;
 using fuchsia.net;
 using fuchsia.buildinfo;
 using fuchsia.developer.remotecontrol as rc;
@@ -290,6 +291,12 @@ protocol TargetCollection {
     }) -> (struct {
         removed bool;
     });
+
+    /// Manually adds a temporary fastboot target at runtime.
+    /// The target is removed after execution.
+    AddInlineFastbootTarget(struct {
+        serial_number string:fuchsia.hwinfo.MAX_VALUE_SIZE;
+    }) -> ();
 };
 
 /// This is a handle to a target received from the target collection.

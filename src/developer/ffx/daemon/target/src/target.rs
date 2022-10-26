@@ -235,6 +235,7 @@ impl Target {
 
     pub fn new_with_fastboot_addrs<S>(
         nodename: Option<S>,
+        serial: Option<String>,
         addrs: BTreeSet<TargetAddr>,
         interface: FastbootInterface,
     ) -> Rc<Self>
@@ -243,6 +244,7 @@ impl Target {
     {
         let target = Self::new();
         target.nodename.replace(nodename.map(Into::into));
+        target.serial.replace(serial);
         target.addrs.replace(
             addrs
                 .iter()
@@ -314,6 +316,7 @@ impl Target {
     pub fn from_fastboot_target_info(mut t: TargetInfo) -> Result<Rc<Self>> {
         Ok(Self::new_with_fastboot_addrs(
             t.nodename.take(),
+            t.serial.take(),
             t.addresses.drain(..).collect(),
             t.fastboot_interface.ok_or(anyhow!("No fastboot mode?"))?,
         ))

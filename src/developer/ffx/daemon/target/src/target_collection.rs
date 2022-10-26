@@ -179,6 +179,7 @@ impl TargetCollection {
             }
             to_update
         } else {
+            tracing::info!("adding new target: {:?}", new_target);
             self.targets.borrow_mut().insert(new_target.id(), new_target.clone());
 
             if let Some(event_queue) = self.events.borrow().as_ref() {
@@ -198,8 +199,10 @@ impl TargetCollection {
     /// several targets in the collection when the query starts, a
     /// DaemonError::TargetAmbiguous error is returned. The matcher is converted to a
     /// TargetQuery for matching, and follows the TargetQuery semantics.
+    #[tracing::instrument(level = "info", skip(self))]
     pub async fn wait_for_match(&self, matcher: Option<String>) -> Result<Rc<Target>, DaemonError> {
         // If there's nothing to match against, unblock on the first target.
+        tracing::info!("Using matcher: {:?}", matcher);
         let target_query = TargetQuery::from(matcher.clone());
 
         // If there is no matcher, and there are already multiple targets in the
@@ -254,7 +257,7 @@ impl TargetCollection {
         TQ: Into<TargetQuery>,
     {
         let target_query: TargetQuery = tq.into();
-
+        tracing::info!("checking if target is connected with query: {:?}", target_query);
         self.targets
             .borrow()
             .values()

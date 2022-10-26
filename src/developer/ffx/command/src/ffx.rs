@@ -10,6 +10,7 @@ use errors::ffx_error;
 use ffx_config::EnvironmentContext;
 use ffx_config::FfxConfigBacked;
 use ffx_daemon_proxy::Injection;
+use ffx_target::TargetKind;
 use ffx_writer::Format;
 use hoist::Hoist;
 use std::collections::HashMap;
@@ -227,7 +228,19 @@ impl Ffx {
             router_interval,
         )?)
         .context("initializing hoist")?;
-        Ok(Injection::new(daemon_check, hoist.clone(), self.machine, self.target().await?))
+
+        let target = match self.target().await? {
+            Some(t) => {
+                if ffx_config::get("ffx.fastboot.inline_target").await.unwrap_or(false) {
+                    Some(TargetKind::FastbootInline(t))
+                } else {
+                    Some(TargetKind::Normal(t))
+                }
+            }
+            None => None,
+        };
+
+        Ok(Injection::new(daemon_check, hoist.clone(), self.machine, target))
     }
 }
 

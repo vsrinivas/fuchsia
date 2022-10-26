@@ -192,15 +192,21 @@ impl FidlProtocol for TargetCollectionProtocol {
                 Ok(())
             }
             ffx::TargetCollectionRequest::OpenTarget { query, responder, target_handle } => {
+                tracing::trace!("handling request to open target");
                 let target = match target_collection.wait_for_match(query.string_matcher).await {
-                    Ok(t) => t,
+                    Ok(t) => {
+                        tracing::trace!("Found target: {t:?}");
+                        t
+                    }
                     Err(e) => {
                         return responder
                             .send(&mut match e {
                                 ffx::DaemonError::TargetAmbiguous => {
+                                    tracing::warn!("Ambiguous Query");
                                     Err(ffx::OpenTargetError::QueryAmbiguous)
                                 }
                                 ffx::DaemonError::TargetNotFound => {
+                                    tracing::warn!("Target Not Found.");
                                     Err(ffx::OpenTargetError::TargetNotFound)
                                 }
                                 e => {
@@ -331,6 +337,29 @@ impl FidlProtocol for TargetCollectionProtocol {
                 .await;
                 responder.send(result).map_err(Into::into)
             }
+            ffx::TargetCollectionRequest::AddInlineFastbootTarget { serial_number, responder } => {
+                let t = TargetInfo {
+                    serial: Some(serial_number),
+                    fastboot_interface: Some(FastbootInterface::Usb),
+                    ..Default::default()
+                };
+                let target =
+                    target_collection.merge_insert(match Target::from_fastboot_target_info(t) {
+                        Ok(ret) => ret,
+                        Err(e) => {
+                            tracing::warn!("encountered unhandled error: {:?}", e);
+                            return responder.send().map_err(Into::into);
+                        }
+                    });
+                target.update_connection_state(|s| match s {
+                    TargetConnectionState::Disconnected | TargetConnectionState::Fastboot(_) => {
+                        TargetConnectionState::Fastboot(Instant::now())
+                    }
+                    _ => s,
+                });
+                tracing::info!("added inline target: {:?}", target);
+                responder.send().map_err(Into::into)
+            }
         }
     }
 
@@ -416,8 +445,9 @@ fn handle_mdns_event(tc: &Rc<TargetCollection>, t: ffx::TargetInfo) {
     };
     if t.fastboot_interface.is_some() {
         tracing::trace!(
-            "Found new fastboot target via mdns: {}",
-            t.nodename.clone().unwrap_or("<unknown>".to_string())
+            "Found new fastboot target via mdns: {}. Address: {:?}",
+            t.nodename.clone().unwrap_or("<unknown>".to_string()),
+            t.addresses
         );
         let target = tc.merge_insert(match Target::from_fastboot_target_info(t) {
             Ok(ret) => ret,

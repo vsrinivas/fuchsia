@@ -16,6 +16,7 @@ rustc_library("lib") {
     "//src/developer/ffx/daemon/proxy:lib",
     "//src/developer/ffx/lib/errors:lib",
     "//src/developer/ffx/lib/metrics:lib",
+    "//src/developer/ffx/lib/target:lib",
     "//src/developer/ffx/lib/writer:lib",
     "//src/lib/analytics/rust:lib",
     "//src/lib/fuchsia-async",
