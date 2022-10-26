@@ -15,17 +15,20 @@ use {
 const ZBI_TYPE_STORAGE_RAMDISK: u32 = 0x4b534452;
 
 pub async fn new_mocks(
+    netboot: bool,
 ) -> impl Fn(LocalComponentHandles) -> BoxFuture<'static, Result<(), Error>> + Sync + Send + 'static
 {
-    let mock = move |handles: LocalComponentHandles| run_mocks(handles).boxed();
+    let mock = move |handles: LocalComponentHandles| run_mocks(handles, netboot).boxed();
 
     mock
 }
 
-async fn run_mocks(handles: LocalComponentHandles) -> Result<(), Error> {
+async fn run_mocks(handles: LocalComponentHandles, netboot: bool) -> Result<(), Error> {
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
-            fboot::ArgumentsMarker::PROTOCOL_NAME => service::host(run_boot_args),
+            fboot::ArgumentsMarker::PROTOCOL_NAME => service::host(move |stream| {
+                run_boot_args(stream, netboot)
+            }),
             fboot::ItemsMarker::PROTOCOL_NAME => service::host(run_boot_items),
         },
         "dev" => vfs::pseudo_directory! {
@@ -90,7 +93,7 @@ async fn run_boot_items(mut stream: fboot::ItemsRequestStream) {
 ///   netsvc.netboot (optional; default false)
 ///   zircon.system.disable-automount (optional; default false)
 ///   zircon.system.filesystem-check (optional; default false)
-async fn run_boot_args(mut stream: fboot::ArgumentsRequestStream) {
+async fn run_boot_args(mut stream: fboot::ArgumentsRequestStream, netboot: bool) {
     while let Some(request) = stream.next().await {
         match request.unwrap() {
             fboot::ArgumentsRequest::GetString { key: _, responder } => {
@@ -104,7 +107,13 @@ async fn run_boot_args(mut stream: fboot::ArgumentsRequestStream) {
             }
             fboot::ArgumentsRequest::GetBools { keys, responder } => {
                 responder
-                    .send(&mut keys.into_iter().map(|bool_pair| bool_pair.defaultval))
+                    .send(&mut keys.into_iter().map(|bool_pair| {
+                        if bool_pair.key == "netsvc.netboot".to_string() && netboot {
+                            true
+                        } else {
+                            bool_pair.defaultval
+                        }
+                    }))
                     .unwrap();
             }
             fboot::ArgumentsRequest::Collect { .. } => {

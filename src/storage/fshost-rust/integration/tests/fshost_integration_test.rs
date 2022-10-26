@@ -247,3 +247,32 @@ async fn tmp_is_available() {
 
     fixture.check_fs_type("tmp", VFS_TYPE_MEMFS).await;
 }
+
+#[fuchsia::test]
+async fn netboot_set() {
+    // Set the netboot flag
+    let fixture = new_fixture().with_ramdisk().netboot().build().await;
+
+    let dev = fixture.dir("dev-topological/class/block");
+
+    // Filesystems will not be mounted but make sure that fvm is bound
+    device_watcher::wait_for_device_with(&dev, |info| {
+        info.topological_path.ends_with("fvm/data-p-2/block").then_some(())
+    })
+    .await
+    .unwrap();
+
+    // Use the same approach as ramdisk_data_ignores_non_ramdisk() to ensure that
+    // neither blobfs nor data were mounted using a timeout
+    futures::select! {
+        _ = fixture.check_fs_type("data", data_fs_type()).fuse() => {
+            panic!("check_fs_type returned unexpectedly - data was mounted");
+        },
+        _ = fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).fuse() => {
+            panic!("check_fs_type returned unexpectedly - blob was mounted");
+        },
+        _ = fasync::Timer::new(std::time::Duration::from_secs(2)).fuse() => (),
+    }
+
+    fixture.tear_down().await;
+}

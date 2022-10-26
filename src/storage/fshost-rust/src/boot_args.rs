@@ -22,7 +22,7 @@ impl BootArgs {
     pub async fn new() -> Result<Self, Error> {
         let arguments_proxy = connect_to_protocol::<ArgumentsMarker>()
             .context("Failed to connect to Arguments protocol")?;
-        
+
         let mut defaults = vec![
             BoolPair { key: "netsvc.netboot".to_string(), defaultval: false },
             BoolPair { key: "zircon.system.filesystem-check".to_string(), defaultval: false },

@@ -141,6 +141,7 @@ pub struct TestFixtureBuilder {
     ramdisk_prefix: Option<&'static str>,
     blobfs_max_bytes: Option<u64>,
     data_max_bytes: Option<u64>,
+    netboot: bool,
 }
 
 impl TestFixtureBuilder {
@@ -157,6 +158,7 @@ impl TestFixtureBuilder {
             ramdisk_prefix: None,
             blobfs_max_bytes: None,
             data_max_bytes: None,
+            netboot: false,
         }
     }
 
@@ -205,8 +207,13 @@ impl TestFixtureBuilder {
         self
     }
 
+    pub fn netboot(mut self) -> Self {
+        self.netboot = true;
+        self
+    }
+
     pub async fn build(self) -> TestFixture {
-        let mocks = mocks::new_mocks().await;
+        let mocks = mocks::new_mocks(self.netboot).await;
         let builder = RealmBuilder::new().await.unwrap();
         let fshost_url = format!("#meta/{}.cm", self.fshost_component_name);
         println!("using {} as test-fshost", fshost_url);

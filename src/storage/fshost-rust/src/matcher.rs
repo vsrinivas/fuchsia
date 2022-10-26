@@ -826,6 +826,47 @@ mod tests {
     }
 
     #[fuchsia::test]
+    async fn test_netboot_flag_true() {
+        let mut matchers =
+            Matchers::new(&fshost_config::Config { netboot: true, ..default_config() });
+
+        // Attach FVM device.
+        assert!(matchers
+            .match_device(
+                &mut MockDevice::new().set_content_format(DiskFormat::Fvm),
+                &mut MockEnv::new().expect_attach_driver(FVM_DRIVER_PATH)
+            )
+            .await
+            .expect("match_device failed"));
+
+        let env = &mut MockEnv::new();
+
+        // Attaching blobfs should fail if netboot is true
+        assert!(!matchers
+            .match_device(
+                &mut MockDevice::new()
+                    .set_topological_path("mock_device/fvm/blobfs-p-1/block")
+                    .set_partition_label(DATA_PARTITION_LABEL)
+                    .set_partition_type(&DATA_TYPE_GUID),
+                env
+            )
+            .await
+            .expect("match_device failed"));
+
+        // Attaching data should fail if netboot is true
+        assert!(!matchers
+            .match_device(
+                &mut MockDevice::new()
+                    .set_topological_path("mock_device/fvm/data-p-2/block")
+                    .set_partition_label(DATA_PARTITION_LABEL)
+                    .set_partition_type(&DATA_TYPE_GUID),
+                env
+            )
+            .await
+            .expect("match_device failed"));
+    }
+
+    #[fuchsia::test]
     async fn test_zxcrypt_matcher() {
         let mut matchers = Matchers::new(&fshost_config::Config {
             fvm_ramdisk: true,
