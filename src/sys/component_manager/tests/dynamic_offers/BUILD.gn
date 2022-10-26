@@ -35,7 +35,7 @@ fuchsia_unittest_component("dynamic_offers_test_component") {
   deps = [ ":dynamic_offers_bin" ]
 }
 
-fuchsia_test_package("dynamic_offers_test") {
+fuchsia_test_package("dyn_offers_test") {
   test_components = [ ":dynamic_offers_test_component" ]
   deps = [ "//src/sys/component_manager:component-manager-realm-builder-cmp" ]
 }
@@ -43,5 +43,5 @@ fuchsia_test_package("dynamic_offers_test") {
 group("tests") {
   testonly = true
 
-  deps = [ ":dynamic_offers_test" ]
+  deps = [ ":dyn_offers_test" ]
 }
