@@ -153,6 +153,9 @@ impl Graveyard {
     /// for this to return before changing to a state where more entries can be added.  Once this
     /// has returned, entries will be tombstoned in the background.
     pub async fn initial_reap(self: &Arc<Self>, store: &ObjectStore) -> Result<usize, Error> {
+        if store.filesystem().options().skip_initial_reap {
+            return Ok(0);
+        }
         async_enter!("Graveyard::initial_reap");
         let mut count = 0;
         let layer_set = store.tree().layer_set();

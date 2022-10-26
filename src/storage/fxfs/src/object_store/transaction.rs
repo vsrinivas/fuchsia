@@ -17,6 +17,7 @@ use {
         serialized_types::Versioned,
     },
     anyhow::Error,
+    assert_matches::assert_matches,
     async_trait::async_trait,
     either::{Either, Left, Right},
     futures::future::poll_fn,
@@ -79,7 +80,7 @@ impl TransactionLocks<'_> {
 }
 
 #[async_trait]
-pub trait TransactionHandler: Send + Sync {
+pub trait TransactionHandler: AsRef<LockManager> + Send + Sync {
     /// Initiates a new transaction.  Implementations should check to see that a transaction can be
     /// created (for example, by checking to see that the journaling system can accept more
     /// transactions), and then call Transaction::new.
@@ -456,7 +457,7 @@ impl<'a> Transaction<'a> {
     /// Creates a new transaction.  This should typically be called by a TransactionHandler's
     /// implementation of new_transaction.  The read locks are acquired before the transaction
     /// locks (see LockManager for the semantics of the different kinds of locks).
-    pub async fn new<H: TransactionHandler + AsRef<LockManager> + 'static>(
+    pub async fn new<H: TransactionHandler + 'static>(
         handler: Arc<H>,
         metadata_reservation: MetadataReservation,
         read_locks: &[LockKey],
@@ -557,6 +558,16 @@ impl<'a> Transaction<'a> {
             .await?;
         Ok(result.unwrap())
     }
+
+    /// Commits the transaction, but allows the transaction to be used again.  The locks are not
+    /// dropped (but write locks will get downgraded to transaction locks).
+    pub async fn commit_and_continue(&mut self) -> Result<(), Error> {
+        debug!(txn = ?self, "Commit");
+        self.handler.clone().commit_transaction(self, &mut |_| {}).await?;
+        assert!(self.mutations.is_empty());
+        self.handler.as_ref().as_ref().downgrade_locks(&self.txn_locks);
+        Ok(())
+    }
 }
 
 impl Drop for Transaction<'_> {
@@ -584,8 +595,8 @@ impl std::fmt::Debug for Transaction<'_> {
 /// There are read locks and write locks, which are as one would expect.  The third kind of lock is
 /// a _transaction_ lock.  When first acquired, these block other writes but do not block reads.
 /// When it is time to commit a transaction, these locks are upgraded to full write locks and then
-/// dropped after committing.  This way, reads are only blocked for the shortest possible time.  It
-/// follows that write locks should be used sparingly.
+/// dropped after committing (unless commit_and_continue is used).  This way, reads are only blocked
+/// for the shortest possible time.  It follows that write locks should be used sparingly.
 pub struct LockManager {
     locks: Mutex<Locks>,
 }
@@ -650,13 +661,41 @@ impl Locks {
             }
         }
     }
+
+    // Downgrades locks from WriteLock to Locked.
+    fn downgrade_locks(&mut self, lock_keys: &[LockKey]) {
+        for lock in lock_keys {
+            let entry = self.keys.get_mut(lock).unwrap();
+            let wakers = std::mem::take(&mut entry.wakers);
+            assert_matches!(entry.state, LockState::WriteLock);
+            entry.state = LockState::Locked;
+            self.sequence += 1;
+            entry.sequence = self.sequence;
+            // This will wake up writers as well as readers, even though the writers will be
+            // blocked.  That's unavoidable unless we separate out readers from writers.
+            for waker in wakers {
+                waker.wake();
+            }
+        }
+    }
 }
 
 #[derive(Debug)]
 struct LockEntry {
+    // `sequence` should be different every time `wakers` is emptied.  Any waiter that has inserted
+    // an entry into wakers can use this value to know whether it should add a new entry to `wakers`
+    // or if it can just update the entry that it inserted previously.
     sequence: u64,
+
+    // In the states that allow readers (ReadLock, Locked and WantWrite), this count can be non-zero
+    // to indicate the number of active readers.
     read_count: u64,
+
+    // The state of the lock (see below).
     state: LockState,
+
+    // A list of wakers that should be woken when the lock changes state so that they can try and
+    // progress (although there is no guarantee that they will).
     wakers: Vec<Waker>,
 }
 
@@ -818,6 +857,12 @@ impl LockManager {
     pub async fn write_lock<'a>(&'a self, lock_keys: &[LockKey]) -> WriteGuard<'a> {
         self.lock(lock_keys, LockState::WriteLock).await.right().unwrap()
     }
+
+    /// Downgrades locks from the WriteLock state to Locked state.  This will panic if the locks are
+    /// not in the WriteLock state.
+    pub fn downgrade_locks(&self, lock_keys: &[LockKey]) {
+        self.locks.lock().unwrap().downgrade_locks(lock_keys);
+    }
 }
 
 #[must_use]
@@ -852,7 +897,9 @@ mod tests {
         super::{LockKey, LockManager, LockState, Mutation, Options, TransactionHandler},
         crate::filesystem::FxFilesystem,
         fuchsia_async as fasync,
-        futures::{channel::oneshot::channel, future::FutureExt, join},
+        futures::{
+            channel::oneshot::channel, future::FutureExt, join, stream::FuturesUnordered, StreamExt,
+        },
         std::{sync::Mutex, task::Poll, time::Duration},
         storage_device::{fake_device::FakeDevice, DeviceHolder},
     };
@@ -1046,5 +1093,24 @@ mod tests {
         {
             let _guard = manager.lock(keys, LockState::ReadLock).await;
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_downgrade_locks() {
+        let manager = LockManager::new();
+        let keys = &[LockKey::object(1, 1)];
+        let _guard = manager.txn_lock(keys).await;
+        manager.commit_prepare_keys(keys).await;
+
+        // Use FuturesUnordered so that we can check that the waker is woken.
+        let mut read_lock: FuturesUnordered<_> = std::iter::once(manager.read_lock(keys)).collect();
+
+        // Trying to acquire a read lock now should be blocked.
+        assert!(matches!(futures::poll!(read_lock.next()), Poll::Pending));
+
+        manager.downgrade_locks(keys);
+
+        // After downgrading, it should be possible to take a read lock.
+        assert!(matches!(futures::poll!(read_lock.next()), Poll::Ready(_)));
     }
 }

@@ -14,9 +14,9 @@ use {
             allocator::{self, Allocator},
             object_record::{AttributeKey, Timestamp},
             transaction::{LockKey, Options, TRANSACTION_METADATA_MAX_AMOUNT},
-            writeback_cache::{StorageReservation, WritebackCache},
+            writeback_cache::{FlushableMetadata, StorageReservation, WritebackCache},
             AssocObj, HandleOwner, Mutation, ObjectKey, ObjectStore, ObjectValue,
-            StoreObjectHandle,
+            StoreObjectHandle, TrimMode, TrimResult,
         },
         round::round_up,
     },
@@ -123,9 +123,10 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
 
     async fn flush_impl(&self, take_lock: bool) -> Result<(), Error> {
         let bs = self.block_size() as u64;
-        let fs = self.store().filesystem();
-        let store_id = self.store().store_object_id;
-        let reservation = self.store().allocator().reserve_at_most(Some(store_id), 0);
+        let store = self.store();
+        let fs = store.filesystem();
+        let store_id = store.store_object_id;
+        let reservation = store.allocator().reserve_at_most(Some(store_id), 0);
 
         // Whilst we are calling take_flushable we need to guard against changes to the cache so
         // that we can grab a snapshot, so we take the cached_write lock and then we can drop it
@@ -161,6 +162,8 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
             )])
             .await;
 
+        let old_size = self.handle.get_size();
+
         let mut flushable = self.cache.take_flushable(
             bs,
             self.handle.get_size(),
@@ -174,6 +177,36 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
         }
 
         std::mem::drop(cached_write_lock);
+
+        if matches!(flushable.metadata, Some(FlushableMetadata { content_size: Some(_), .. })) {
+            // Before proceeding, we must make sure the result of any previous trim has completed
+            // because otherwise there's the potential for us to reveal old extents.
+            let mut transaction = fs
+                .clone()
+                .new_transaction(
+                    &[],
+                    Options {
+                        borrow_metadata_space: true,
+                        skip_journal_checks: self.handle.options.skip_journal_checks,
+                        ..Default::default()
+                    },
+                )
+                .await?;
+            while matches!(
+                store
+                    .trim_some(
+                        &mut transaction,
+                        self.handle.object_id,
+                        self.handle.attribute_id,
+                        TrimMode::FromOffset(old_size)
+                    )
+                    .await?,
+                TrimResult::Incomplete
+            ) {
+                transaction.commit_and_continue().await?;
+            }
+            transaction.commit().await?;
+        }
 
         let mut transaction = fs
             .clone()
@@ -257,7 +290,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 .await?;
             let mut needs_trim = false;
             if let Some(size) = metadata.content_size {
-                needs_trim = self.handle.truncate(&mut transaction, size).await?.0;
+                needs_trim = self.handle.shrink(&mut transaction, size).await?.0;
             }
             self.handle
                 .write_timestamps(
@@ -268,7 +301,7 @@ impl<S: HandleOwner> CachingObjectHandle<S> {
                 .await?;
             transaction.commit_with_callback(|_| self.cache.complete_flush(flushable)).await?;
             if needs_trim {
-                self.store().trim(self.object_id()).await?;
+                self.handle.store().trim(self.object_id()).await?;
             }
         }
         Ok(())
@@ -404,13 +437,15 @@ mod tests {
         super::CACHE_READ_AHEAD_SIZE,
         crate::{
             filesystem::{Filesystem, FxFilesystem, OpenFxFilesystem},
+            fsck::{fsck_with_options, FsckOptions},
             lsm_tree::types::{ItemRef, LayerIterator},
             object_handle::{GetProperties, ObjectHandle, ReadObjectHandle, WriteObjectHandle},
             object_store::{
                 allocator::Allocator,
+                directory::Directory,
                 object_record::{ObjectKey, ObjectKeyData, ObjectValue, Timestamp},
                 transaction::{Options, TransactionHandler},
-                CachingObjectHandle, HandleOptions, ObjectStore,
+                CachingObjectHandle, HandleOptions, ObjectStore, TRANSACTION_MUTATION_THRESHOLD,
             },
         },
         fuchsia_async as fasync,
@@ -991,5 +1026,68 @@ mod tests {
         for chunk in data.chunks(32_768) {
             assert_eq!(chunk, &[123u8; 32_768]);
         }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_trim_before_flush() {
+        let fs = test_filesystem().await;
+        let store = fs.root_store();
+        let root_directory =
+            Directory::open(&store, store.root_directory_object_id()).await.expect("open failed");
+        let object;
+        let mut transaction = fs
+            .clone()
+            .new_transaction(&[], Options::default())
+            .await
+            .expect("new_transaction failed");
+        object = root_directory
+            .create_child_file(&mut transaction, "foo")
+            .await
+            .expect("create_child_file failed");
+        let block_size = object.block_size();
+        let object_size = (TRANSACTION_MUTATION_THRESHOLD as u64 + 10) * 2 * block_size;
+
+        // Create enough extents in it such that when we truncate the object it will require more
+        // than one transaction.
+        {
+            let mut buf = object.allocate_buffer(5);
+            buf.as_mut_slice().fill(1);
+            // Write every other block.
+            for offset in (0..object_size).into_iter().step_by(2 * block_size as usize) {
+                object
+                    .txn_write(&mut transaction, offset, buf.as_ref())
+                    .await
+                    .expect("write failed");
+            }
+            transaction.commit().await.expect("commit failed");
+        }
+
+        // Truncate the file, but don't commit more than the first transaction.
+        let mut transaction = object.new_transaction().await.expect("new_transaction failed");
+        assert_eq!(object.shrink(&mut transaction, 0).await.expect("shrink failed").0, true);
+        transaction.commit().await.expect("commit failed");
+
+        // Grow the file using caching_object_handle.
+        let object = CachingObjectHandle::new(object);
+        object.truncate(object_size).await.expect("truncate failed");
+        object.flush().await.expect("flush failed");
+
+        // The tail of the file should have been zeroed.
+        let buf = object
+            .read_uncached(object_size - 2 * block_size..object_size)
+            .await
+            .expect("read_uncached failed");
+        assert_eq!(buf.as_slice(), &vec![0; 2 * block_size as usize]);
+
+        fsck_with_options(
+            fs.clone(),
+            &FsckOptions {
+                fail_on_warning: true,
+                on_error: Box::new(|err| println!("fsck error: {:?}", err)),
+                ..Default::default()
+            },
+        )
+        .await
+        .expect("fsck_with_options failed");
     }
 }

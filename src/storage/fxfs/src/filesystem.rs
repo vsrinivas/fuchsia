@@ -65,6 +65,10 @@ pub struct Options {
     /// A callback that runs after every transaction has been committed.  This will be called whilst
     /// a lock is held which will block more transactions from being committed.
     pub post_commit_hook: PostCommitHook,
+
+    /// If true, don't do an initial reap of the graveyard at mount time.  This is useful for
+    /// testing.
+    pub skip_initial_reap: bool,
 }
 
 impl Default for Options {
@@ -73,6 +77,7 @@ impl Default for Options {
             roll_metadata_key_byte_count: 128 * 1024 * 1024,
             read_only: false,
             post_commit_hook: None,
+            skip_initial_reap: false,
         }
     }
 }
