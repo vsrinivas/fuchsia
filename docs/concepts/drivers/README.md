@@ -35,6 +35,7 @@ version of the driver framework (DFv2).
 * [Driver communication][driver-communication]
    *   [Service discovery (using `devfs`)][service-discovery]
    *   [FIDL communication][fidl-communication]
+* [Mapping a device's memory in a driver][mapping-memory]
 
 <!-- Reference links -->
 
@@ -58,3 +59,4 @@ version of the driver framework (DFv2).
 [driver-communication]: driver_communication.md
 [service-discovery]: driver_communication.md#service_discovery_using_devfs
 [fidl-communication]: driver_communication.md#fidl_communication
+[mapping-memory]: mapping-a-devices-memory-in-a-driver.md
