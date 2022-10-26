@@ -25,6 +25,9 @@ toc:
 - title: "API development"
   section:
   - include: /docs/development/api/_toc.yaml
+- title: "Audio"
+  section:
+  - include: /docs/development/audio/_toc.yaml
 - title: "Bluetooth"
   section:
   - include: /docs/development/bluetooth/_toc.yaml
@@ -58,9 +61,6 @@ toc:
 - title: "Languages"
   section:
   - include: /docs/development/languages/_toc.yaml
-- title: "Media"
-  section:
-  - include: /docs/development/media/_toc.yaml
 - title: "Networking"
   section:
   - include: /docs/development/networking/_toc.yaml

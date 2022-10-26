@@ -17,9 +17,6 @@ toc:
   section:
   - title: "Overview"
     path: /docs/development/drivers/concepts/driver_architectures/README.md
-  - title: "Audio drivers"
-    section:
-    - include: /docs/development/drivers/concepts/driver_architectures/audio_drivers/_toc.yaml
   - title: "Input drivers drivers"
     section:
     - include: /docs/development/drivers/concepts/driver_architectures/input_drivers/_toc.yaml

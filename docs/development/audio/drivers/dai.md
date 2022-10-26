@@ -122,7 +122,7 @@ samples is valid, it specifies only the 3 valid combinations:
 ### GetRingBufferFormats {#get-ring-buffer-formats}
 
 Same as the streaming interface `GetSupportedFormats` function, see
-[Audio Streaming Interface](audio_streaming.md).
+[Audio Streaming Interface](streaming.md).
 
 ### CreateRingBuffer {#create-ring-buffer}
 
@@ -145,14 +145,14 @@ The DAI format parameter specifies:
 
 The ring buffer format parameter is the same as the streaming interface
 `CreateRingBuffer` function, see
-[Audio Streaming Interface](audio_streaming.md).
+[Audio Streaming Interface](streaming.md).
 
 Once `CreateRingBuffer` is successful, the DAI format configuration is considered
 completed and samples can be sent across the DAI once the `RingBuffer` protocol
 configuration is completed and the `RingBuffer` `Start` function has been called.
 
 For a description of the ring buffer functionality, see the [Audio Streaming
-Interface](audio_streaming.md).
+Interface](streaming.md).
 
 {% comment %}
 > TODO(fxbug.dev/63522): Add support for power control.
@@ -161,5 +161,5 @@ Interface](audio_streaming.md).
 
 ## Signal processing {#signal-processing}
 
-Defined at [Audio Signal Processing](audio_signal_processing.md).
+Defined at [Audio Signal Processing](signal-processing.md).
 

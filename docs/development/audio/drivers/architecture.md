@@ -27,7 +27,7 @@ facilities.
 # Audio interfaces
 
 The main API in use by applications is the [Audio Streaming
-Interface](audio_streaming.md). This API allows applications to capture or
+Interface](streaming.md). This API allows applications to capture or
 render audio. Examples of audio applications using audio drivers with the
 streaming interface include [audio_core](/src/media/audio/audio_core/README.md)
 and [audio-driver-ctl](/src/media/audio/tools/audio-driver-ctl). The former is
@@ -39,7 +39,7 @@ described in the API, but it does not need to be the driver actually configuring
 all the HW. A common split in audio HW is to have an audio engine that
 configures a DAI communicating with an audio HW codec. In this split we can have
 one driver for the audio engine and one for the codec. The [Codec
-Interface](audio_codec.md) allows having a driver for the codec implementation
+Interface](codec.md) allows having a driver for the codec implementation
 and another driver configuring the audio engine HW including the DAI and driving
 the codec(s) configuration. In this configuration the codec(s) are secondary to
 the controller. For instance the mt8167-tdm-output was a driver for
@@ -66,7 +66,7 @@ interface as shown below:
 
 Another way to architect drivers with the engine/codec split is to have a codec
 providing the streaming audio interface, and the audio engine providing a
-[DAI interface](audio_dai.md). For example a
+[DAI interface](dai.md). For example a
 [aml-g12-tdm-dai](/src/media/audio/drivers/aml-g12-tdm/dai.cc) driver for the
 AMLogic g12 audio subsystem (audio engine) providing the DAI interface for other
 drivers or applications to use, and a codec can drive the engine and provide

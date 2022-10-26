@@ -47,7 +47,7 @@ This page is a non-comprehensive index of the zircon documentation.
 + [zxcrypt](/docs/concepts/filesystems/zxcrypt.md)
 
 + [Fuchsia Driver Framework](/docs/development/drivers/concepts/getting_started.md)
-+ [Driver interfaces - audio overview](/docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_overview.md)
++ [Driver interfaces - audio overview](/docs/development/audio/drivers/overview.md)
 
 + [libc](/docs/development/languages/c-cpp/libc.md)
 + [C++ fpromise::promise<> guide](/docs/development/languages/c-cpp/fpromise_promise_guide.md)

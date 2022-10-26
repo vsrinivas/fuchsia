@@ -43,3 +43,31 @@ redirects:
 
 - from: /docs/development/testing/cts/testing_guidelines.md
   to: /docs/development/testing/ctf/testing_guidelines.md
+
+
+- from: /docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_architecture.md
+  to: /docs/development/audio/drivers/architecture.md
+
+
+- from: /docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_codec.md
+  to: /docs/development/audio/drivers/codec.md
+
+
+- from: /docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_dai.md
+  to: /docs/development/audio/drivers/dai.md
+
+
+- from: /docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_overview.md
+  to: /docs/development/audio/drivers/overview.md
+
+
+- from: /docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_signal_processing.md
+  to: /docs/development/audio/drivers/signal-processing.md
+
+
+- from: /docs/development/drivers/concepts/driver_architectures/audio_drivers/audio_streaming.md
+  to: /docs/development/audio/drivers/streaming.md
+
+- from: /docs/development/media/loudness.md
+  to: /docs/development/audio/loudness.md
+
