@@ -27,4 +27,19 @@
             to: "#realm_builder",
         },
     ],
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [
+                "debian_guest",
+                "virtio_balloon",
+                "virtio_block",
+                "virtio_console",
+                "virtio_net",
+                "virtio_rng",
+                "virtio_sound",
+                "virtio_vsock",
+                "vmm",
+            ],
+        },
+    },
 }

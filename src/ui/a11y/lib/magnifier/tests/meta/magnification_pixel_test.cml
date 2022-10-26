@@ -9,4 +9,9 @@
     program: {
         binary: "bin/magnification_pixeltest_bin",
     },
+    facets: {
+        "fuchsia.test": {
+            "deprecated-allowed-packages": [ "cursor" ],
+        },
+    },
 }
