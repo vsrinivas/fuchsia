@@ -105,7 +105,7 @@ base_driver_package_labels += [ "//src/connectivity/bluetooth:core-drivers" ]
 legacy_cache_package_labels += [ "//src/developer/ffx:runtime" ]
 
 legacy_universe_package_labels += [
-  "//bundles:tools",
+  "//bundles/tools",
   "//src/devices/bin/driver_playground:pkg",
   "//src/testing/metrics-logger",
 
