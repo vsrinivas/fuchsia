@@ -979,8 +979,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
       status = aspace_->arch_aspace().Protect(va, 1, range.mmu_flags);
       if (unlikely(status != ZX_OK)) {
         // ZX_ERR_NO_MEMORY is the only legitimate reason for Protect to fail.
-        DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from protect: %d\n",
-                         status);
+        ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from protect: %d\n", status);
 
         TRACEF("failed to modify permissions on existing mapping\n");
         return status;
@@ -998,7 +997,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
       // unmap the old one and put the new one in place
       status = aspace_->arch_aspace().Unmap(va, 1, aspace_->EnlargeArchUnmap(), nullptr);
       if (status != ZX_OK) {
-        DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from unmap: %d\n", status);
+        ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from unmap: %d\n", status);
         TRACEF("failed to remove old mapping before replacing\n");
         return status;
       }
@@ -1008,7 +1007,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
           aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, range.mmu_flags,
                                      ArchVmAspace::ExistingEntryAction::Skip, &mapped);
       if (status != ZX_OK) {
-        DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from map: %d\n", status);
+        ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from map: %d\n", status);
         TRACEF("failed to map replacement page\n");
         return status;
       }
@@ -1029,7 +1028,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, LazyPageReques
         aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, range.mmu_flags,
                                    ArchVmAspace::ExistingEntryAction::Skip, &mapped);
     if (status != ZX_OK) {
-      DEBUG_ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from map: %d\n", status);
+      ASSERT_MSG(status == ZX_ERR_NO_MEMORY, "Unexpected failure from map: %d\n", status);
       TRACEF("failed to map page %d\n", status);
       return status;
     }

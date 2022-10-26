@@ -849,7 +849,9 @@ ssize_t ArmArchVmAspace::MapPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, pa
           vaddr, vaddr_rel, paddr, size, attrs, index_shift, page_size_shift_, page_table);
 
   if ((vaddr_rel | paddr | size) & ((1UL << page_size_shift_) - 1)) {
-    TRACEF("not page aligned\n");
+    TRACEF("not page aligned: vaddr %#" PRIxPTR ", vaddr_rel %#" PRIxPTR ",paddr %#" PRIxPTR
+           ", size %#zx\n",
+           vaddr, vaddr_rel, paddr, size);
     return ZX_ERR_INVALID_ARGS;
   }
 
