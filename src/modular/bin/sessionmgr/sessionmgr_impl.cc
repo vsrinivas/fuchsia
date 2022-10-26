@@ -41,10 +41,6 @@ namespace {
 
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 
-// The name in the outgoing debug directory (hub) for developer session control
-// services.
-constexpr char kSessionCtlDir[] = "sessionctl";
-
 // The name used for the Inspect node that tracks agent restarts.
 constexpr char kAgentRestartNodeName[] = "agent_restarts";
 
@@ -197,8 +193,6 @@ void SessionmgrImpl::InitializeInternal(
                 config_accessor_.story_shell_app_config(), std::move(presentation_protocol),
                 config_accessor_.use_session_shell_for_story_shell_factory(),
                 config_accessor_.sessionmgr_config().present_mods_as_stories(), use_flatland);
-
-            InitializeSessionCtl();
 
             ServeSvcFromV1SessionmgrDir(std::move(svc_from_v1_sessionmgr));
 
@@ -483,14 +477,6 @@ void SessionmgrImpl::InitializeElementManager() {
 
   element_manager_impl_ = std::make_unique<ElementManagerImpl>(session_storage_.get());
   OnTerminate(Reset(&element_manager_impl_));
-}
-
-void SessionmgrImpl::InitializeSessionCtl() {
-  FX_DCHECK(puppet_master_impl_);
-
-  session_ctl_ = std::make_unique<SessionCtl>(sessionmgr_context_->outgoing()->debug_dir(),
-                                              kSessionCtlDir, puppet_master_impl_.get());
-  OnTerminate(Reset(&session_ctl_));
 }
 
 void SessionmgrImpl::ServeSvcFromV1SessionmgrDir(

@@ -75,7 +75,6 @@ source_set("sessionmgr_lib") {
   deps = [
     ":annotations",
     ":component_context",
-    ":session_ctl",
     ":startup_agent_launcher",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/fit",
@@ -107,20 +106,6 @@ source_set("sessionmgr_lib") {
 
   # TODO(fxb/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
-}
-
-source_set("session_ctl") {
-  sources = [
-    "session_ctl.cc",
-    "session_ctl.h",
-  ]
-
-  deps = [
-    "//sdk/lib/vfs/cpp",
-    "//src/lib/fsl",
-    "//src/lib/storage/vfs/cpp",
-    "//src/modular/bin/sessionmgr/puppet_master:puppet_master_impl",
-  ]
 }
 
 source_set("component_context") {

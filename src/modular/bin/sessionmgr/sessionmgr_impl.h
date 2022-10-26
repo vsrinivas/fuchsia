@@ -24,7 +24,6 @@
 #include "src/modular/bin/sessionmgr/element_manager_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/puppet_master_impl.h"
 #include "src/modular/bin/sessionmgr/puppet_master/story_command_executor.h"
-#include "src/modular/bin/sessionmgr/session_ctl.h"
 #include "src/modular/bin/sessionmgr/startup_agent_launcher.h"
 #include "src/modular/bin/sessionmgr/storage/session_storage.h"
 #include "src/modular/bin/sessionmgr/storage/story_storage.h"
@@ -104,7 +103,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                           fuchsia::sys::ServiceList service_list, ViewParams view_params);
   void InitializePuppetMaster();
   void InitializeElementManager();
-  void InitializeSessionCtl();
   void ServeSvcFromV1SessionmgrDir(
       fidl::InterfaceRequest<fuchsia::io::Directory> svc_from_v1_sessionmgr);
 
@@ -206,8 +204,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   std::unique_ptr<StoryCommandExecutor> story_command_executor_;
   std::unique_ptr<PuppetMasterImpl> puppet_master_impl_;
   std::unique_ptr<ElementManagerImpl> element_manager_impl_;
-
-  std::unique_ptr<SessionCtl> session_ctl_;
 
   std::unique_ptr<StartupAgentLauncher> startup_agent_launcher_;
 

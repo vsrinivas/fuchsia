@@ -15,10 +15,6 @@
         {
             protocol: [ "fuchsia.modular.internal.Sessionmgr" ],
         },
-        {
-            protocol: "fuchsia.modular.PuppetMaster",
-            path: "/debug/sessionctl/fuchsia.modular.PuppetMaster",
-        },
     ],
     use: [
         {
@@ -57,10 +53,7 @@
     ],
     expose: [
         {
-            protocol: [
-                "fuchsia.modular.internal.Sessionmgr",
-                "fuchsia.modular.PuppetMaster",
-            ],
+            protocol: [ "fuchsia.modular.internal.Sessionmgr" ],
             from: "self",
         },
     ],

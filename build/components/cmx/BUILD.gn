@@ -152,7 +152,6 @@ group("cmx_allowlist") {
     "//src/modular/bin/basemgr:v1_echo_server_component_manifest_compile",
     "//src/modular/bin/sessionctl:sessionctl_component_manifest_compile",
     "//src/modular/bin/sessionmgr:component-v1_manifest_compile",
-    "//src/modular/tests:sessionctl-test_manifest_compile",
     "//src/modular/tests:sessionmgr-integration-test_manifest_compile",
     "//src/security/fcrypto/test:hmac-fuzzer_component_manifest_compile",
     "//src/storage/fuchsia-fatfs:fat-fuzzer_component_manifest_compile",
