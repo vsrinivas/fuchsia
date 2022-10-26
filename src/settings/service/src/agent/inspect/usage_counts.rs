@@ -155,7 +155,11 @@ impl SettingTypeUsageInspectAgent {
             .entry(setting_type_str.clone())
             .or_insert_with(|| SettingTypeUsageInspectInfo::new(inspect_node, &setting_type_str));
 
-        let key = request.for_inspect();
+        let mut key = request.for_inspect();
+        if key.starts_with("Set") {
+            // Match all Set* requests to Set
+            key = "Set";
+        }
         let usage = setting_type_info
             .requests_by_type
             .get_or_insert_with(key.to_string(), UsageInfo::default);
@@ -260,12 +264,12 @@ mod tests {
         assert_data_tree!(inspector, root: {
             api_usage_counts: {
                 "Display": {
-                    "SetDisplayInfo": {
+                    "Set": {
                         count: 2i64,
                     },
                 },
                 "Intl": {
-                    "SetIntlInfo": {
+                    "Set": {
                        count: 100i64
                     },
                 }
@@ -311,7 +315,7 @@ mod tests {
         assert_data_tree!(inspector, root: {
             api_usage_counts: {
                 "Display": {
-                    "SetDisplayInfo": {
+                    "Set": {
                         count: 2i64,
                     },
                     "Get": {
