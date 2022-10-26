@@ -12,6 +12,7 @@ _common_bootfs_deps = [
   "//src/devices/board/drivers/clover",
   "//src/devices/clock/drivers/amlogic-clk",
   "//src/devices/gpio/drivers/aml-axg-gpio",
+  "//src/devices/sysmem/drivers/sysmem",
 ]
 
 board_bootfs_labels += _common_bootfs_deps

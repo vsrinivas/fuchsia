@@ -74,13 +74,11 @@ zx_status_t Clover::ClkInit() {
   fdf::Arena arena('CLK_');
   auto result = pbus_.buffer(arena)->NodeAdd(fidl::ToWire(fidl_arena, clk_dev));
   if (!result.ok()) {
-    zxlogf(ERROR, "%s: NodeAdd Clk(clk_dev) request failed: %s", __func__,
-           result.FormatDescription().data());
+    zxlogf(ERROR, "NodeAdd Clk(clk_dev) request failed: %s", result.FormatDescription().data());
     return result.status();
   }
   if (result->is_error()) {
-    zxlogf(ERROR, "%s: NodeAdd Clk(clk_dev) failed: %s", __func__,
-           zx_status_get_string(result->error_value()));
+    zxlogf(ERROR, "NodeAdd Clk(clk_dev) failed: %s", zx_status_get_string(result->error_value()));
     return result->error_value();
   }
 

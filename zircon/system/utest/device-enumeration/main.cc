@@ -247,6 +247,7 @@ TEST_F(DeviceEnumerationTest, CloverTest) {
       "sys/platform/pt/clover",
       "sys/platform/05:08:1/aml-axg-gpio",
       "sys/platform/05:08:32/clocks",
+      "sys/platform/00:00:1b/sysmem",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

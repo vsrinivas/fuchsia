@@ -71,7 +71,14 @@ int Clover::Thread() {
     return status;
   }
   if ((status = ClkInit()) != ZX_OK) {
-    zxlogf(ERROR, "GpioInit() failed: %s", zx_status_get_string(status));
+    zxlogf(ERROR, "ClkInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
+  }
+  if ((status = SysmemInit()) != ZX_OK) {
+    zxlogf(ERROR, "SysmemInit() failed: %s", zx_status_get_string(status));
+    init_txn_->Reply(status);
+    return status;
   }
 
   init_txn_->Reply(status);
