@@ -44,6 +44,9 @@ impl ProcDirectory {
             // Fake kmsg as being empty.
             &b"kmsg"[..] =>
                 fs.create_node_with_ops(SimpleFileNode::new(|| Ok(ProcKmsgFile{})), mode!(IFREG, 0o100), FsCred::root()),
+            // File must exist to pass the CgroupsAvailable check, which is a little bit optional
+            // for init but not optional for a lot of the system!
+            &b"cgroups"[..] => fs.create_node_with_ops(ByteVecFile::new_node(vec![]), mode!(IFREG, 0o444), FsCred::root()),
         };
 
         Arc::new(ProcDirectory { kernel, nodes })
