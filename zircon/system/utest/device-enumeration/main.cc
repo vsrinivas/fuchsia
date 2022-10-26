@@ -244,10 +244,9 @@ class DeviceEnumerationTest : public zxtest::Test {
 
 TEST_F(DeviceEnumerationTest, CloverTest) {
   static const char* kDevicePaths[] = {
-      "sys/platform/pt/clover",
-      "sys/platform/05:08:1/aml-axg-gpio",
-      "sys/platform/05:08:32/clocks",
-      "sys/platform/00:00:1b/sysmem",
+      "sys/platform/pt/clover",         "sys/platform/05:08:1/aml-axg-gpio",
+      "sys/platform/05:08:32/clocks",   "sys/platform/00:00:1b/sysmem",
+      "sys/platform/00:00:e/tee/optee",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));

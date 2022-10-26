@@ -15,6 +15,15 @@ driver_bind_rules("clover-bind") {
   ]
 }
 
+driver_bind_rules("clover-tee-bind") {
+  rules = "bind/clover-tee.bind"
+  header_output = "clover-tee-bind.h"
+  deps = [
+    "//src/devices/bind/fuchsia.platform",
+    "//src/devices/bind/fuchsia.sysmem",
+  ]
+}
+
 fuchsia_driver("clover-driver") {
   output_name = "clover"
   configs += [
@@ -25,10 +34,12 @@ fuchsia_driver("clover-driver") {
     "clover-clk.cc",
     "clover-gpio.cc",
     "clover-sysmem.cc",
+    "clover-tee.cc",
     "clover.cc",
   ]
   deps = [
     ":clover-bind",
+    ":clover-tee-bind_header",
     "//sdk/banjo/fuchsia.hardware.iommu:fuchsia.hardware.iommu_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.platform.device:fuchsia.hardware.platform.device_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.serial:fuchsia.hardware.serial_banjo_cpp",
