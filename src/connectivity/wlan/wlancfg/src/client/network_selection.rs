@@ -81,15 +81,15 @@ struct InternalSavedNetworkData {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-struct InternalBss<'a> {
+struct InternalBss {
     saved_network_info: InternalSavedNetworkData,
-    scanned_bss: &'a types::Bss,
+    scanned_bss: types::Bss,
     security_type_detailed: types::SecurityTypeDetailed,
     multiple_bss_candidates: bool,
     hasher: WlanHasher,
 }
 
-impl InternalBss<'_> {
+impl InternalBss {
     /// This function scores a BSS based on 3 factors: (1) RSSI (2) whether the BSS is 2.4 or 5 GHz
     /// and (3) recent failures to connect to this BSS. No single factor is enough to decide which
     /// BSS to connect to.
@@ -209,7 +209,7 @@ impl InternalBss<'_> {
         )
     }
 }
-impl<'a> WriteInspect for InternalBss<'a> {
+impl WriteInspect for InternalBss {
     fn write_inspect<'b>(&self, writer: &InspectNode, key: impl Into<StringReference<'b>>) {
         inspect_insert!(writer, var key: {
             ssid_hash: self.hasher.hash_ssid(&self.saved_network_info.network_id.ssid),
@@ -288,7 +288,7 @@ impl NetworkSelector {
                 warn!("Failed to get scan results for network selection, {:?}", e);
                 (vec![], Err(()))
             }
-            Ok(ref scan_results) => {
+            Ok(scan_results) => {
                 let candidate_networks = merge_saved_networks_and_scan_data(
                     &self.saved_network_manager,
                     scan_results,
@@ -337,7 +337,7 @@ impl NetworkSelector {
             Ok(scan_results) => {
                 let networks = merge_saved_networks_and_scan_data(
                     &self.saved_network_manager,
-                    &scan_results,
+                    scan_results,
                     &self.hasher,
                 )
                 .await;
@@ -368,11 +368,11 @@ impl NetworkSelector {
 
 /// Merge the saved networks and scan results into a vector of BSSs that correspond to a saved
 /// network.
-async fn merge_saved_networks_and_scan_data<'a>(
+async fn merge_saved_networks_and_scan_data(
     saved_network_manager: &Arc<dyn SavedNetworksManagerApi>,
-    scan_results: &'a Vec<types::ScanResult>,
+    scan_results: Vec<types::ScanResult>,
     hasher: &WlanHasher,
-) -> Vec<InternalBss<'a>> {
+) -> Vec<InternalBss> {
     let mut merged_networks = vec![];
     for scan_result in scan_results {
         for saved_config in saved_network_manager
@@ -382,7 +382,7 @@ async fn merge_saved_networks_and_scan_data<'a>(
             let multiple_bss_candidates = scan_result.entries.len() > 1;
             for bss in &scan_result.entries {
                 merged_networks.push(InternalBss {
-                    scanned_bss: bss,
+                    scanned_bss: bss.clone(),
                     multiple_bss_candidates,
                     security_type_detailed: scan_result.security_type_detailed,
                     saved_network_info: InternalSavedNetworkData {
@@ -406,8 +406,8 @@ async fn merge_saved_networks_and_scan_data<'a>(
     merged_networks
 }
 
-fn select_best_connection_candidate<'a>(
-    bss_list: Vec<InternalBss<'a>>,
+fn select_best_connection_candidate(
+    bss_list: Vec<InternalBss>,
     ignore_list: &Vec<types::NetworkIdentifier>,
     inspect_node: &mut AutoPersist<InspectBoundedListNode>,
 ) -> Option<(types::ScannedCandidate, types::WlanChan, types::Bssid)> {
@@ -419,10 +419,10 @@ fn select_best_connection_candidate<'a>(
 
     let selected = bss_list
         .iter()
-        .inspect(|bss| {
+        .inspect(|&bss| {
             info!("{}", bss.to_string_without_pii());
         })
-        .filter(|bss| {
+        .filter(|&bss| {
             // Filter out incompatible BSSs
             if !bss.scanned_bss.is_compatible() {
                 trace!("BSS is incompatible, filtering: {:?}", bss);
@@ -435,7 +435,7 @@ fn select_best_connection_candidate<'a>(
             }
             true
         })
-        .max_by_key(|bss| bss.score());
+        .max_by_key(|&bss| bss.score());
 
     // Log the candidates into Inspect
     inspect_log!(inspect_node.get_mut(), candidates: InspectList(&bss_list), selected?: selected);
@@ -548,11 +548,11 @@ pub fn score_connection_quality(_connection_stats: &PeriodicConnectionStats) -> 
 }
 
 fn record_metrics_on_scan(
-    mut merged_networks: Vec<InternalBss<'_>>,
+    mut merged_networks: Vec<InternalBss>,
     telemetry_sender: &TelemetrySender,
 ) {
     let mut metric_events = vec![];
-    let mut merged_network_map: HashMap<types::NetworkIdentifier, Vec<InternalBss<'_>>> =
+    let mut merged_network_map: HashMap<types::NetworkIdentifier, Vec<InternalBss>> =
         HashMap::new();
     for bss in merged_networks.drain(..) {
         merged_network_map.entry(bss.saved_network_info.network_id.clone()).or_default().push(bss);
@@ -824,21 +824,21 @@ mod tests {
             InternalBss {
                 security_type_detailed: test_security_1,
                 saved_network_info: expected_internal_data_1.clone(),
-                scanned_bss: &mock_scan_results[0].entries[0],
+                scanned_bss: mock_scan_results[0].entries[0].clone(),
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
                 security_type_detailed: test_security_1,
                 saved_network_info: expected_internal_data_1.clone(),
-                scanned_bss: &mock_scan_results[0].entries[1],
+                scanned_bss: mock_scan_results[0].entries[1].clone(),
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
             InternalBss {
                 security_type_detailed: test_security_1,
                 saved_network_info: expected_internal_data_1,
-                scanned_bss: &mock_scan_results[0].entries[2],
+                scanned_bss: mock_scan_results[0].entries[2].clone(),
                 multiple_bss_candidates: true,
                 hasher: hasher.clone(),
             },
@@ -851,7 +851,7 @@ mod tests {
                     recent_failures: Vec::new(),
                     past_connections: PastConnectionsByBssid::new(),
                 },
-                scanned_bss: &mock_scan_results[1].entries[0],
+                scanned_bss: mock_scan_results[1].entries[0].clone(),
                 multiple_bss_candidates: false,
                 hasher: hasher.clone(),
             },
@@ -860,7 +860,7 @@ mod tests {
         // validate the function works
         let result = merge_saved_networks_and_scan_data(
             &test_values.saved_network_manager,
-            &mock_scan_results,
+            mock_scan_results,
             &hasher,
         )
         .await;
@@ -904,7 +904,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss,
+            scanned_bss: bss.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -929,14 +929,14 @@ mod tests {
         let bss_worse = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
-            scanned_bss: &bss_worse,
+            scanned_bss: bss_worse.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
-            scanned_bss: &bss_better,
+            scanned_bss: bss_better.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -958,14 +958,14 @@ mod tests {
         let bss_worse = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
-            scanned_bss: &bss_worse,
+            scanned_bss: bss_worse.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
-            scanned_bss: &bss_better,
+            scanned_bss: bss_better.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -988,14 +988,14 @@ mod tests {
         let bss_worse = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
-            scanned_bss: &bss_worse,
+            scanned_bss: bss_worse.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
-            scanned_bss: &bss_better,
+            scanned_bss: bss_better.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1024,14 +1024,14 @@ mod tests {
         let bss_worse = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
-            scanned_bss: &bss_worse,
+            scanned_bss: bss_worse.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
         let bss_better = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data,
-            scanned_bss: &bss_better,
+            scanned_bss: bss_better.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1060,7 +1060,7 @@ mod tests {
         let internal_bss = InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: internal_data.clone(),
-            scanned_bss: &bss,
+            scanned_bss: bss.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         };
@@ -1108,7 +1108,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_1,
+            scanned_bss: bss_1.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1129,7 +1129,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_2,
+            scanned_bss: bss_2.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1150,7 +1150,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_3,
+            scanned_bss: bss_3.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1176,7 +1176,7 @@ mod tests {
         let mut modified_network = networks[0].clone();
         let modified_bss =
             types::Bss { channel: generate_channel(6), ..modified_network.scanned_bss.clone() };
-        modified_network.scanned_bss = &modified_bss;
+        modified_network.scanned_bss = modified_bss;
         networks[0] = modified_network;
 
         // all networks are 2.4GHz, strongest RSSI network returned
@@ -1238,7 +1238,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_1,
+            scanned_bss: bss_1.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1260,7 +1260,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_2,
+            scanned_bss: bss_2.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1370,7 +1370,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_1,
+            scanned_bss: bss_1.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1390,7 +1390,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_2,
+            scanned_bss: bss_2.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1411,7 +1411,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_3,
+            scanned_bss: bss_3.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1437,7 +1437,7 @@ mod tests {
         let mut modified_network = networks[2].clone();
         let modified_bss =
             types::Bss { compatibility: None, ..modified_network.scanned_bss.clone() };
-        modified_network.scanned_bss = &modified_bss;
+        modified_network.scanned_bss = modified_bss;
         networks[2] = modified_network;
 
         // other network returned
@@ -1497,7 +1497,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_1,
+            scanned_bss: bss_1.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1517,7 +1517,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_2,
+            scanned_bss: bss_2.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1601,7 +1601,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_1,
+            scanned_bss: bss_1.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1621,7 +1621,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_2,
+            scanned_bss: bss_2.clone(),
             multiple_bss_candidates: true,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1642,7 +1642,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &bss_3,
+            scanned_bss: bss_3.clone(),
             multiple_bss_candidates: false,
             hasher: WlanHasher::new(rand::thread_rng().gen::<u64>().to_le_bytes()),
         });
@@ -1893,14 +1893,14 @@ mod tests {
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_1.clone(),
             &credential_1.clone(),
-            bssid_1.clone(),
+            bssid_1,
             fake_successful_connect_result(),
             types::ScanObservation::Passive,
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone(),
             &credential_2.clone(),
-            bssid_2.clone(),
+            bssid_2,
             fake_successful_connect_result(),
             types::ScanObservation::Passive,
         ));
@@ -1917,10 +1917,10 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
                 entries: vec![types::Bss {
                     compatibility: wlan_common::scan::Compatibility::expect_some(
-                        mutual_security_protocols_1.clone(),
+                        mutual_security_protocols_1,
                     ),
-                    bssid: bssid_1.clone(),
-                    channel: channel_1.clone(),
+                    bssid: bssid_1,
+                    channel: channel_1,
                     rssi: 20, // much higher than other result
                     observation: types::ScanObservation::Passive,
                     ..generate_random_bss()
@@ -1932,10 +1932,10 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
                 entries: vec![types::Bss {
                     compatibility: wlan_common::scan::Compatibility::expect_some(
-                        mutual_security_protocols_2.clone(),
+                        mutual_security_protocols_2,
                     ),
-                    bssid: bssid_2.clone(),
-                    channel: channel_2.clone(),
+                    bssid: bssid_2,
+                    channel: channel_2,
                     rssi: -100, // much lower than other result
                     observation: types::ScanObservation::Passive,
                     ..generate_random_bss()
@@ -1959,9 +1959,9 @@ mod tests {
                 compatibility: types::Compatibility::Supported,
                 entries: vec![types::Bss {
                     compatibility: wlan_common::scan::Compatibility::expect_some(
-                        mutual_security_protocols_1.clone(),
+                        mutual_security_protocols_1,
                     ),
-                    bssid: bssid_1.clone(),
+                    bssid: bssid_1,
                     bss_description: bss_desc1_active.clone(),
                     ..generate_random_bss()
                 }],
@@ -2169,7 +2169,7 @@ mod tests {
                 entries: vec![types::Bss {
                     // This network is WPA3, but should still match against the desired WPA2 network
                     compatibility: wlan_common::scan::Compatibility::expect_some(
-                        mutual_security_protocols_1.clone(),
+                        mutual_security_protocols_1,
                     ),
                     bss_description: bss_desc_1.clone(),
                     ..generate_random_bss()
@@ -2295,7 +2295,7 @@ mod tests {
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
-            scanned_bss: &test_bss_1,
+            scanned_bss: test_bss_1.clone(),
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
@@ -2308,7 +2308,7 @@ mod tests {
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
-            scanned_bss: &test_bss_2,
+            scanned_bss: test_bss_2.clone(),
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
@@ -2322,7 +2322,7 @@ mod tests {
         mock_scan_results.push(InternalBss {
             security_type_detailed: types::SecurityTypeDetailed::Wpa2PersonalTkipOnly,
             saved_network_info: test_network_info_1.clone(),
-            scanned_bss: &test_bss_3,
+            scanned_bss: test_bss_3.clone(),
             multiple_bss_candidates: true,
             hasher: hasher.clone(),
         });
@@ -2341,7 +2341,7 @@ mod tests {
                 recent_failures: Vec::new(),
                 past_connections: PastConnectionsByBssid::new(),
             },
-            scanned_bss: &test_bss_4,
+            scanned_bss: test_bss_4.clone(),
             multiple_bss_candidates: false,
             hasher: hasher.clone(),
         });
