@@ -9,7 +9,7 @@ use core::cmp::Ordering;
 use core::convert::Infallible;
 use core::num::NonZeroU8;
 
-use net_types::ip::{Ip, Ipv4, Ipv6, Ipv6Addr};
+use net_types::ip::{Ip, IpVersion, Ipv6Addr};
 use net_types::{SpecifiedAddr, UnicastAddr};
 use packet::{Buf, BufferMut, SerializeError, Serializer};
 
@@ -454,42 +454,27 @@ fn send_ip_packet<
 }
 
 impl<
+        I: Ip + IpExt + IpDeviceStateIpExt,
         B: BufferMut,
         C: IpSocketNonSyncContext,
-        SC: BufferIpSocketContext<Ipv4, C, B>
-            + BufferIpSocketContext<Ipv4, C, Buf<Vec<u8>>>
-            + IpSocketContext<Ipv4, C>,
-    > BufferIpSocketHandler<Ipv4, C, B> for SC
+        SC: BufferIpSocketContext<I, C, B>
+            + BufferIpSocketContext<I, C, Buf<Vec<u8>>>
+            + IpSocketContext<I, C>,
+    > BufferIpSocketHandler<I, C, B> for SC
 {
-    fn send_ip_packet<S: Serializer<Buffer = B>, O: SendOptions<Ipv4>>(
+    fn send_ip_packet<S: Serializer<Buffer = B>, O: SendOptions<I>>(
         &mut self,
         ctx: &mut C,
-        ip_sock: &IpSock<Ipv4, SC::DeviceId, O>,
+        ip_sock: &IpSock<I, SC::DeviceId, O>,
         body: S,
         mtu: Option<u32>,
     ) -> Result<(), (S, IpSockSendError)> {
         // TODO(joshlf): Call `trace!` with relevant fields from the socket.
-        ctx.increment_counter("send_ipv4_packet");
-
-        send_ip_packet(self, ctx, ip_sock, body, mtu)
-    }
-}
-
-impl<
-        B: BufferMut,
-        C: IpSocketNonSyncContext,
-        SC: BufferIpSocketContext<Ipv6, C, B> + BufferIpSocketContext<Ipv6, C, Buf<Vec<u8>>>,
-    > BufferIpSocketHandler<Ipv6, C, B> for SC
-{
-    fn send_ip_packet<S: Serializer<Buffer = B>, O: SendOptions<Ipv6>>(
-        &mut self,
-        ctx: &mut C,
-        ip_sock: &IpSock<Ipv6, SC::DeviceId, O>,
-        body: S,
-        mtu: Option<u32>,
-    ) -> Result<(), (S, IpSockSendError)> {
-        // TODO(joshlf): Call `trace!` with relevant fields from the socket.
-        ctx.increment_counter("send_ipv6_packet");
+        let counter_name = match I::VERSION {
+            IpVersion::V4 => "send_ipv4_packet",
+            IpVersion::V6 => "send_ipv6_packet",
+        };
+        ctx.increment_counter(counter_name);
 
         send_ip_packet(self, ctx, ip_sock, body, mtu)
     }
@@ -1087,7 +1072,7 @@ mod tests {
     use assert_matches::assert_matches;
     use ip_test_macro::ip_test;
     use net_types::{
-        ip::{AddrSubnet, IpAddr, IpAddress, Ipv4Addr, SubnetEither},
+        ip::{AddrSubnet, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, SubnetEither},
         Witness,
     };
     use nonzero_ext::nonzero;

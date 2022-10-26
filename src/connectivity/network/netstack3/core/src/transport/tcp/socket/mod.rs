@@ -1569,11 +1569,7 @@ mod tests {
         }
     }
 
-    impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I>
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    impl<I: TcpTestIpExt> TcpSyncContext<I, TcpNonSyncCtx> for TcpSyncCtx<I> {
         type IpTransportCtx = FakeBufferIpTransportCtx<I>;
 
         fn with_ip_transport_ctx_isn_generator_and_tcp_sockets_mut<
@@ -1711,10 +1707,7 @@ mod tests {
         TcpCtx { sync_ctx, non_sync_ctx }: &mut TcpCtx<I>,
         meta: SendIpPacketMeta<I, FakeDeviceId, SpecifiedAddr<I::Addr>>,
         buffer: Buf<Vec<u8>>,
-    ) where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    ) {
         TcpIpTransportContext::receive_ip_packet(
             sync_ctx,
             non_sync_ctx,
@@ -1730,10 +1723,7 @@ mod tests {
         ctx: &mut TcpCtx<I>,
         _: &mut (),
         TimerId(conn_id, version): TimerId,
-    ) where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    ) {
         assert_eq!(I::VERSION, version);
         let FakeCtxWithSyncCtx { sync_ctx, non_sync_ctx } = ctx;
         TcpSocketHandler::<I, _>::handle_timer(sync_ctx, non_sync_ctx, conn_id)
@@ -1752,11 +1742,7 @@ mod tests {
         bind_client: bool,
         seed: u128,
         drop_rate: f64,
-    ) -> (TcpTestNetwork<I>, ConnectionId, ConnectionId)
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    ) -> (TcpTestNetwork<I>, ConnectionId, ConnectionId) {
         let mut net = new_test_net::<I>();
         let mut rng = new_rng(seed);
 
@@ -1895,11 +1881,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn bind_listen_connect_accept<I: Ip + TcpTestIpExt>() {
         set_logger_for_test();
         for bind_client in [true, false] {
             for listen_addr in [I::UNSPECIFIED_ADDRESS, *I::FAKE_CONFIG.remote_ip] {
@@ -1912,11 +1894,7 @@ mod tests {
     #[ip_test]
     #[test_case(*<I as TestIpExt>::FAKE_CONFIG.local_ip; "same addr")]
     #[test_case(I::UNSPECIFIED_ADDRESS; "any addr")]
-    fn bind_conflict<I: Ip + TcpTestIpExt>(conflict_addr: I::Addr)
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn bind_conflict<I: Ip + TcpTestIpExt>(conflict_addr: I::Addr) {
         set_logger_for_test();
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::<I>::with_sync_ctx(TcpSyncCtx::new(
@@ -1956,11 +1934,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn bind_to_non_existent_address<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn bind_to_non_existent_address<I: Ip + TcpTestIpExt>() {
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::<I>::with_sync_ctx(TcpSyncCtx::new(
                 I::FAKE_CONFIG.local_ip,
@@ -1987,11 +1961,7 @@ mod tests {
     // The test verifies that if client tries to connect to a closed port on
     // server, the connection is aborted and RST is received.
     #[ip_test]
-    fn connect_reset<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn connect_reset<I: Ip + TcpTestIpExt>() {
         set_logger_for_test();
         let mut net = new_test_net::<I>();
 
@@ -2049,11 +2019,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn retransmission<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn retransmission<I: Ip + TcpTestIpExt>() {
         set_logger_for_test();
         run_with_many_seeds(|seed| {
             let (_net, _client, _accepted) =
@@ -2062,11 +2028,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn bound_info<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn bound_info<I: Ip + TcpTestIpExt>() {
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
                 I::FAKE_CONFIG.local_ip,
@@ -2085,11 +2047,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn listener_info<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn listener_info<I: Ip + TcpTestIpExt>() {
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
                 I::FAKE_CONFIG.local_ip,
@@ -2110,11 +2068,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn connection_info<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn connection_info<I: Ip + TcpTestIpExt>() {
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
                 I::FAKE_CONFIG.local_ip,
@@ -2150,11 +2104,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn connection_close<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn connection_close<I: Ip + TcpTestIpExt>() {
         set_logger_for_test();
         let (mut net, local, remote) =
             bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, 0, 0.0);
@@ -2184,11 +2134,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn connection_shutdown_then_close<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn connection_shutdown_then_close<I: Ip + TcpTestIpExt>() {
         set_logger_for_test();
         let (mut net, local, remote) =
             bind_listen_connect_accept_inner::<I>(I::UNSPECIFIED_ADDRESS, false, 0, 0.0);
@@ -2225,11 +2171,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn remove_unbound<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn remove_unbound<I: Ip + TcpTestIpExt>() {
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
                 I::FAKE_CONFIG.local_ip,
@@ -2245,11 +2187,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn remove_bound<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn remove_bound<I: Ip + TcpTestIpExt>() {
         let TcpCtx { mut sync_ctx, mut non_sync_ctx } =
             TcpCtx::with_sync_ctx(TcpSyncCtx::<I>::new(
                 I::FAKE_CONFIG.local_ip,
@@ -2274,11 +2212,7 @@ mod tests {
     }
 
     #[ip_test]
-    fn shutdown_listener<I: Ip + TcpTestIpExt>()
-    where
-        FakeBufferIpTransportCtx<I>:
-            BufferTransportIpContext<I, TcpNonSyncCtx, Buf<Vec<u8>>, DeviceId = FakeDeviceId>,
-    {
+    fn shutdown_listener<I: Ip + TcpTestIpExt>() {
         set_logger_for_test();
         let mut net = new_test_net::<I>();
         let local_listener = net.with_context(LOCAL, |TcpCtx { sync_ctx, non_sync_ctx }| {
