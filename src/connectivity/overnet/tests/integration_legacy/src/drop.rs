@@ -29,6 +29,8 @@ async fn drop_connection_2node(run: usize) -> Result<(), Error> {
 }
 
 #[fuchsia::test]
+#[ignore = "TODO(https://fxbug.dev/110501): Re-enable after CSO lands"]
+#[fuchsia::test]
 async fn drop_connection_3node(run: usize) -> Result<(), Error> {
     let mut node_id_gen = NodeIdGenerator::new("drop_connection_3node", run);
     // Three nodes, connected A->B->C.
