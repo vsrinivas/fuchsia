@@ -10,6 +10,7 @@
 #include "src/media/playback/mediaplayer/ffmpeg/ffmpeg_init.h"
 extern "C" {
 #include "libavformat/avio.h"
+#include "libavutil/mem.h"
 }
 
 namespace media_player {

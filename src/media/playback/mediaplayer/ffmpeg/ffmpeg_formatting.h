@@ -9,6 +9,7 @@
 
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 extern "C" {
+#include "libavcodec/avcodec.h"
 #include "libavformat/avformat.h"
 }
 
