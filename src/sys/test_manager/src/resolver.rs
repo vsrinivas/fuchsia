@@ -4,7 +4,7 @@
 
 use {
     crate::facet,
-    anyhow::{Context, Error},
+    anyhow::Error,
     diagnostics_log as flog,
     fidl::endpoints::ProtocolMarker,
     fidl_fuchsia_component_resolution as fresolution, fidl_fuchsia_logger as flogger,
@@ -12,7 +12,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::LocalComponentHandles,
     fuchsia_url::{AbsoluteComponentUrl, ComponentUrl, PackageUrl},
-    futures::{lock::Mutex, StreamExt, TryStreamExt},
+    futures::{lock::Mutex, FutureExt, StreamExt, TryStreamExt},
     itertools::Itertools,
     std::{collections::HashSet, sync::Arc},
     tracing::{error, info, warn},
@@ -253,12 +253,19 @@ pub async fn serve_hermetic_resolver(
     let log_proxy = handles
         .connect_to_named_protocol::<flogger::LogSinkMarker>(flogger::LogSinkMarker::DEBUG_NAME)?;
     let tags = ["test_resolver"];
-    let (log_publisher, _interest_listener) = flog::Publisher::new_with_proxy(
+    let (log_publisher, _interest_listener) = match flog::Publisher::new_with_proxy(
         log_proxy,
         flog::PublishOptions { interest: flog::interest(tracing::Level::INFO), tags: Some(&tags) },
-    )
-    .context("Failed to create log publisher from the resolver's namespace")?;
-    let log_publisher = Arc::new(log_publisher);
+    ) {
+        Ok((publisher, listener)) => (Arc::new(publisher) as Arc<LogSubscriber>, listener.boxed()),
+        Err(e) => {
+            warn!("Error creating log publisher for resolver: {:?}", e);
+            (
+                Arc::new(tracing::subscriber::NoSubscriber::default()) as Arc<LogSubscriber>,
+                futures::future::ready(()).boxed(),
+            )
+        }
+    };
     if let AllowedPackages::All(l) = &other_allowed_packages {
         l.set_logger(log_publisher.clone()).await;
     }
