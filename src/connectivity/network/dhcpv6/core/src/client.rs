@@ -3783,7 +3783,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         let ProcessedReplyWithLeases {
             server_id: got_server_id,
             non_temporary_addresses,
-            delegated_prefixes: _,
+            delegated_prefixes,
             dns_servers,
             actions,
             next_state,
@@ -3791,7 +3791,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             client_id,
             &server_id,
             &current_non_temporary_addresses,
-            &HashMap::new(),
+            &current_delegated_prefixes,
             &mut solicit_max_rt,
             &msg,
             if IS_REBINDING {
@@ -3908,9 +3908,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 request_from_alternate_server_or_restart_server_discovery(
                     client_id,
                     current_non_temporary_addresses,
-                    // TODO(https://fxbug.dev/113078): Handle restarting server
-                    // discovery with PD.
-                    Default::default(), /* current_delegated_prefixes */
+                    current_delegated_prefixes,
                     &options_to_request,
                     Default::default(), /* collected_advertise */
                     solicit_max_rt,
@@ -3923,9 +3921,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     let inner = RenewingOrRebindingInner {
                         client_id,
                         non_temporary_addresses,
-                        // TODO(https://fxbug.dev/113078): Handle replies to
-                        // Renewing/Rebinding with IA_PD.
-                        delegated_prefixes: Default::default(),
+                        delegated_prefixes,
                         server_id,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
                         start_time,
@@ -3949,9 +3945,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     state: ClientState::Assigned(Assigned {
                         client_id,
                         non_temporary_addresses,
-                        // TODO(https://fxbug.dev/113078): Handle successful
-                        // renew/rebind with PD.
-                        delegated_prefixes: Default::default(),
+                        delegated_prefixes,
                         server_id,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
                         solicit_max_rt,
@@ -3964,8 +3958,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 client_id,
                 server_id,
                 non_temporary_addresses,
-                // TODO(https://fxbug.dev/113078): Handle re-requesting with PD.
-                Default::default(), /* delegated_prefixes */
+                delegated_prefixes,
                 &options_to_request,
                 Default::default(), /* collected_advertise */
                 solicit_max_rt,
@@ -4436,6 +4429,8 @@ pub(crate) mod testconsts {
         net_ip_v6!("::ffff:c00a:456"),
         net_ip_v6!("::ffff:c00a:789"),
     ];
+    pub(crate) const RENEW_DELEGATED_PREFIXES: [Subnet<Ipv6Addr>; 3] =
+        [net_subnet_v6!("1::/64"), net_subnet_v6!("2::/60"), net_subnet_v6!("3::/56")];
     pub(crate) const REPLY_DELEGATED_PREFIXES: [Subnet<Ipv6Addr>; 3] =
         [net_subnet_v6!("d::/64"), net_subnet_v6!("e::/60"), net_subnet_v6!("f::/56")];
     pub(crate) const CONFIGURED_DELEGATED_PREFIXES: [Subnet<Ipv6Addr>; 3] =
@@ -8029,7 +8024,7 @@ mod tests {
             CLIENT_ID,
             original_server_id.clone(),
             CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
-            Default::default(), /* delegated_prefixes_to_assign */
+            CONFIGURED_DELEGATED_PREFIXES.into_iter().map(TestIaPd::new_default).collect(),
             None,
             T1,
             T2,
@@ -8052,6 +8047,21 @@ mod tests {
                 )
             })
             .collect::<HashMap<_, _>>();
+        let iaprefix_opts = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_DELEGATED_PREFIXES)
+            .map(|(iaid, prefix)| {
+                (
+                    iaid,
+                    v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                        RENEWED_PREFERRED_LIFETIME.get(),
+                        RENEWED_VALID_LIFETIME.get(),
+                        prefix,
+                        &[],
+                    )),
+                )
+            })
+            .collect::<HashMap<_, _>>();
         let options =
             [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(reply_server_id)]
                 .into_iter()
@@ -8062,6 +8072,16 @@ mod tests {
                             RENEWED_T1.get(),
                             RENEWED_T2.get(),
                             std::slice::from_ref(iaaddr_opts.get(&iaid).unwrap()),
+                        ))
+                    },
+                ))
+                .chain((0..).map(v6::IAID::new).take(CONFIGURED_DELEGATED_PREFIXES.len()).map(
+                    |iaid| {
+                        v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                            iaid,
+                            RENEWED_T1.get(),
+                            RENEWED_T2.get(),
+                            std::slice::from_ref(iaprefix_opts.get(&iaid).unwrap()),
                         ))
                     },
                 ))
@@ -8122,6 +8142,16 @@ mod tests {
                 AddressEntry::new_assigned(addr, RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME)
             }))
             .collect();
+        let expected_delegated_prefixes = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_DELEGATED_PREFIXES.into_iter().map(|prefix| {
+                PrefixEntry::new_assigned(
+                    prefix,
+                    RENEWED_PREFERRED_LIFETIME,
+                    RENEWED_VALID_LIFETIME,
+                )
+            }))
+            .collect();
         assert_matches!(
             &state,
             Some(ClientState::Assigned(Assigned {
@@ -8134,7 +8164,7 @@ mod tests {
             })) => {
                 assert_eq!(client_id, &CLIENT_ID);
                 assert_eq!(non_temporary_addresses, &expected_non_temporary_addresses);
-                assert_eq!(delegated_prefixes, &HashMap::new());
+                assert_eq!(delegated_prefixes, &expected_delegated_prefixes);
                 assert_eq!(server_id.as_slice(), reply_server_id);
                 assert_eq!(dns_servers.as_slice(), &[] as &[Ipv6Addr]);
                 assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -8178,11 +8208,12 @@ mod tests {
     ) {
         let time = Instant::now();
         let addr = CONFIGURED_NON_TEMPORARY_ADDRESSES[0];
+        let prefix = CONFIGURED_DELEGATED_PREFIXES[0];
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIaNa::new_default(addr)],
-            Default::default(), /* delegated_prefixes_to_assign */
+            vec![TestIaPd::new_default(prefix)],
             None,
             T1,
             T2,
@@ -8224,6 +8255,11 @@ mod tests {
             AddressEntry::new_assigned(addr, PREFERRED_LIFETIME, VALID_LIFETIME),
         ))
         .collect::<HashMap<_, _>>();
+        let expected_delegated_prefixes = std::iter::once((
+            v6::IAID::new(0),
+            PrefixEntry::new_assigned(prefix, PREFERRED_LIFETIME, VALID_LIFETIME),
+        ))
+        .collect::<HashMap<_, _>>();
         let RenewingOrRebindingInner {
             client_id,
             non_temporary_addresses,
@@ -8236,17 +8272,60 @@ mod tests {
         } = with_state(state);
         assert_eq!(*client_id, CLIENT_ID);
         assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
-        assert_eq!(*delegated_prefixes, HashMap::new());
+        assert_eq!(*delegated_prefixes, expected_delegated_prefixes);
         assert_eq!(*server_id, SERVER_ID[0]);
         assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
         assert_eq!(*got_sol_max_rt, Duration::from_secs(sol_max_rt.into()));
         assert_matches!(&actions[..], []);
     }
 
-    #[test_case(RENEW_TEST, v6::IAID::new(0))]
-    #[test_case(RENEW_TEST, v6::IAID::new(1))]
-    #[test_case(REBIND_TEST, v6::IAID::new(0))]
-    #[test_case(REBIND_TEST, v6::IAID::new(1))]
+    struct ReceiveReplyWithMissingIasTestCase {
+        present_ia_na_iaids: Vec<v6::IAID>,
+        present_ia_pd_iaids: Vec<v6::IAID>,
+    }
+
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: Vec::new(),
+            present_ia_pd_iaids: Vec::new(),
+        }; "none presenet")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: vec![v6::IAID::new(0)],
+            present_ia_pd_iaids: Vec::new(),
+        }; "only one IA_NA present")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: Vec::new(),
+            present_ia_pd_iaids: vec![v6::IAID::new(1)],
+        }; "only one IA_PD present")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: vec![v6::IAID::new(0), v6::IAID::new(1)],
+            present_ia_pd_iaids: Vec::new(),
+        }; "only both IA_NAs present")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: Vec::new(),
+            present_ia_pd_iaids: vec![v6::IAID::new(0), v6::IAID::new(1)],
+        }; "only both IA_PDs present")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: vec![v6::IAID::new(1)],
+            present_ia_pd_iaids: vec![v6::IAID::new(0), v6::IAID::new(1)],
+        }; "both IA_PDs and one IA_NA present")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids: vec![v6::IAID::new(0), v6::IAID::new(1)],
+            present_ia_pd_iaids: vec![v6::IAID::new(0)],
+        }; "both IA_NAs and one IA_PD present")]
     fn receive_reply_with_missing_ias(
         RenewRebindTest {
             send_and_assert,
@@ -8255,15 +8334,19 @@ mod tests {
             with_state,
             allow_response_from_any_server: _,
         }: RenewRebindTest,
-        present_iaid: v6::IAID,
+        ReceiveReplyWithMissingIasTestCase {
+            present_ia_na_iaids,
+            present_ia_pd_iaids,
+        }: ReceiveReplyWithMissingIasTestCase,
     ) {
         let non_temporary_addresses = &CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2];
+        let delegated_prefixes = &CONFIGURED_DELEGATED_PREFIXES[0..2];
         let time = Instant::now();
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             non_temporary_addresses.iter().copied().map(TestIaNa::new_default).collect(),
-            Default::default(), /* delegated_prefixes_to_assign */
+            delegated_prefixes.iter().copied().map(TestIaPd::new_default).collect(),
             None,
             T1,
             T2,
@@ -8275,21 +8358,51 @@ mod tests {
 
         // The server includes only the IA with ID equal to `present_iaid` in the
         // reply.
-        let iaaddr_opt = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_NON_TEMPORARY_ADDRESSES[present_iaid.get() as usize],
-            RENEWED_PREFERRED_LIFETIME.get(),
-            RENEWED_VALID_LIFETIME.get(),
-            &[],
-        ))];
+        let iaaddr_opts = present_ia_na_iaids
+            .iter()
+            .map(|iaid| {
+                (
+                    *iaid,
+                    [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                        CONFIGURED_NON_TEMPORARY_ADDRESSES[iaid.get() as usize],
+                        RENEWED_PREFERRED_LIFETIME.get(),
+                        RENEWED_VALID_LIFETIME.get(),
+                        &[],
+                    ))],
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let iaprefix_opts = present_ia_pd_iaids
+            .iter()
+            .map(|iaid| {
+                (
+                    *iaid,
+                    [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                        RENEWED_PREFERRED_LIFETIME.get(),
+                        RENEWED_VALID_LIFETIME.get(),
+                        CONFIGURED_DELEGATED_PREFIXES[iaid.get() as usize],
+                        &[],
+                    ))],
+                )
+            })
+            .collect::<HashMap<_, _>>();
         let options =
             [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
                 .into_iter()
-                .chain(std::iter::once({
+                .chain(present_ia_na_iaids.iter().map(|iaid| {
                     v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                        present_iaid,
+                        *iaid,
                         RENEWED_T1.get(),
                         RENEWED_T2.get(),
-                        &iaaddr_opt,
+                        iaaddr_opts.get(iaid).unwrap().as_ref(),
+                    ))
+                }))
+                .chain(present_ia_pd_iaids.iter().map(|iaid| {
+                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                        *iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        iaprefix_opts.get(iaid).unwrap().as_ref(),
                     ))
                 }))
                 .collect::<Vec<_>>();
@@ -8309,7 +8422,7 @@ mod tests {
             .map(|(iaid, &addr)| {
                 (
                     iaid,
-                    if iaid == present_iaid {
+                    if iaaddr_opts.contains_key(&iaid) {
                         AddressEntry::new_assigned(
                             addr,
                             RENEWED_PREFERRED_LIFETIME,
@@ -8317,6 +8430,24 @@ mod tests {
                         )
                     } else {
                         AddressEntry::new_assigned(addr, PREFERRED_LIFETIME, VALID_LIFETIME)
+                    },
+                )
+            })
+            .collect();
+        let expected_delegated_prefixes = (0..)
+            .map(v6::IAID::new)
+            .zip(delegated_prefixes)
+            .map(|(iaid, &prefix)| {
+                (
+                    iaid,
+                    if iaprefix_opts.contains_key(&iaid) {
+                        PrefixEntry::new_assigned(
+                            prefix,
+                            RENEWED_PREFERRED_LIFETIME,
+                            RENEWED_VALID_LIFETIME,
+                        )
+                    } else {
+                        PrefixEntry::new_assigned(prefix, PREFERRED_LIFETIME, VALID_LIFETIME)
                     },
                 )
             })
@@ -8334,7 +8465,7 @@ mod tests {
             } = with_state(state);
             assert_eq!(*client_id, CLIENT_ID);
             assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
-            assert_eq!(*delegated_prefixes, HashMap::new());
+            assert_eq!(*delegated_prefixes, expected_delegated_prefixes);
             assert_eq!(*server_id, SERVER_ID[0]);
             assert!(start_time.is_some());
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
@@ -8346,7 +8477,7 @@ mod tests {
 
     #[test_case(RENEW_TEST)]
     #[test_case(REBIND_TEST)]
-    fn receive_reply_with_missing_ia_address_for_assigned_entry_does_not_extend_lifetime(
+    fn receive_reply_with_missing_ia_suboption_for_assigned_entry_does_not_extend_lifetime(
         RenewRebindTest {
             send_and_assert,
             message_type: _,
@@ -8355,16 +8486,15 @@ mod tests {
             allow_response_from_any_server: _,
         }: RenewRebindTest,
     ) {
+        const IA_NA_WITHOUT_ADDRESS_IAID: u32 = 0;
+        const IA_PD_WITHOUT_PREFIX_IAID: u32 = 1;
+
         let time = Instant::now();
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
-                .iter()
-                .copied()
-                .map(TestIaNa::new_default)
-                .collect(),
-            Default::default(), /* delegated_prefixes_to_assign */
+            CONFIGURED_NON_TEMPORARY_ADDRESSES.iter().copied().map(TestIaNa::new_default).collect(),
+            CONFIGURED_DELEGATED_PREFIXES.iter().copied().map(TestIaPd::new_default).collect(),
             None,
             T1,
             T2,
@@ -8373,28 +8503,61 @@ mod tests {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
-        let mut options =
-            vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
-        // The server includes an IA Address option in only one of the IAs.
-        let iaaddr_opt_ia1 = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
-            CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
-            RENEWED_PREFERRED_LIFETIME.get(),
-            RENEWED_VALID_LIFETIME.get(),
-            &[],
-        ))];
-
-        options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
-            v6::IAID::new(0),
-            RENEWED_T1.get(),
-            RENEWED_T2.get(),
-            &iaaddr_opt_ia1,
-        )));
-        options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
-            v6::IAID::new(1),
-            RENEWED_T1.get(),
-            RENEWED_T2.get(),
-            &[],
-        )));
+        // The server includes an IA Address/Prefix option in only one of the IAs.
+        let iaaddr_opts = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
+            .map(|(iaid, addr)| {
+                (
+                    iaid,
+                    (iaid.get() != IA_NA_WITHOUT_ADDRESS_IAID).then(|| {
+                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                            addr,
+                            RENEWED_PREFERRED_LIFETIME.get(),
+                            RENEWED_VALID_LIFETIME.get(),
+                            &[],
+                        ))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let iaprefix_opts = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_DELEGATED_PREFIXES)
+            .map(|(iaid, prefix)| {
+                (
+                    iaid,
+                    (iaid.get() != IA_PD_WITHOUT_PREFIX_IAID).then(|| {
+                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                            RENEWED_PREFERRED_LIFETIME.get(),
+                            RENEWED_VALID_LIFETIME.get(),
+                            prefix,
+                            &[],
+                        ))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain(iaaddr_opts.iter().map(|(iaid, iaaddr_opts)| {
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        *iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        iaaddr_opts.as_ref().map_or(&[], AsRef::as_ref),
+                    ))
+                }))
+                .chain(iaprefix_opts.iter().map(|(iaid, iaprefix_opts)| {
+                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                        *iaid,
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        iaprefix_opts.as_ref().map_or(&[], AsRef::as_ref),
+                    ))
+                }))
+                .collect::<Vec<_>>();
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
@@ -8403,24 +8566,34 @@ mod tests {
         let actions = client.handle_message_receive(msg, time);
         let ClientStateMachine { transaction_id: _, options_to_request: _, state, rng: _ } =
             &client;
-        let expected_non_temporary_addresses = HashMap::from([
-            (
-                v6::IAID::new(0),
-                AddressEntry::new_assigned(
-                    CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
-                    RENEWED_PREFERRED_LIFETIME,
-                    RENEWED_VALID_LIFETIME,
-                ),
-            ),
-            (
-                v6::IAID::new(1),
-                AddressEntry::new_assigned(
-                    CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
-                    PREFERRED_LIFETIME,
-                    VALID_LIFETIME,
-                ),
-            ),
-        ]);
+        let expected_non_temporary_addresses = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES)
+            .map(|(iaid, addr)| {
+                let (preferred_lifetime, valid_lifetime) =
+                    if iaid.get() == IA_NA_WITHOUT_ADDRESS_IAID {
+                        (PREFERRED_LIFETIME, VALID_LIFETIME)
+                    } else {
+                        (RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME)
+                    };
+
+                (iaid, AddressEntry::new_assigned(addr, preferred_lifetime, valid_lifetime))
+            })
+            .collect::<HashMap<_, _>>();
+        let expected_delegated_prefixes = (0..)
+            .map(v6::IAID::new)
+            .zip(CONFIGURED_DELEGATED_PREFIXES)
+            .map(|(iaid, prefix)| {
+                let (preferred_lifetime, valid_lifetime) =
+                    if iaid.get() == IA_PD_WITHOUT_PREFIX_IAID {
+                        (PREFERRED_LIFETIME, VALID_LIFETIME)
+                    } else {
+                        (RENEWED_PREFERRED_LIFETIME, RENEWED_VALID_LIFETIME)
+                    };
+
+                (iaid, PrefixEntry::new_assigned(prefix, preferred_lifetime, valid_lifetime))
+            })
+            .collect::<HashMap<_, _>>();
         // Expect the client to transition to Assigned and only extend
         // the lifetime for one IA.
         assert_matches!(
@@ -8435,7 +8608,7 @@ mod tests {
             })) => {
                 assert_eq!(client_id, &CLIENT_ID);
                 assert_eq!(non_temporary_addresses, &expected_non_temporary_addresses);
-                assert_eq!(delegated_prefixes, &HashMap::new());
+                assert_eq!(delegated_prefixes, &expected_delegated_prefixes);
                 assert_eq!(server_id.as_slice(), &SERVER_ID[0]);
                 assert_eq!(dns_servers.as_slice(), &[] as &[Ipv6Addr]);
                 assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -8470,7 +8643,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
-            Default::default(), /* delegated_prefixes_to_assign */
+            vec![TestIaPd::new_default(CONFIGURED_DELEGATED_PREFIXES[0])],
             None,
             T1,
             T2,
@@ -8479,23 +8652,38 @@ mod tests {
         );
         let ClientStateMachine { transaction_id, options_to_request: _, state: _, rng: _ } =
             &client;
-        let mut options =
-            vec![v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])];
-        // The server includes an IA Address with a different address than
+        // The server includes IAs with different values from what was
         // previously assigned.
-        let iaaddr_opt_ia = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+        let iaaddr_opt = [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
             RENEW_NON_TEMPORARY_ADDRESSES[0],
             RENEWED_PREFERRED_LIFETIME.get(),
             RENEWED_VALID_LIFETIME.get(),
             &[],
         ))];
+        let iaprefix_opt = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            RENEW_DELEGATED_PREFIXES[0],
+            &[],
+        ))];
 
-        options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
-            v6::IAID::new(0),
-            RENEWED_T1.get(),
-            RENEWED_T2.get(),
-            &iaaddr_opt_ia,
-        )));
+        let options = [
+            v6::DhcpOption::ClientId(&CLIENT_ID),
+            v6::DhcpOption::ServerId(&SERVER_ID[0]),
+            v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                v6::IAID::new(0),
+                RENEWED_T1.get(),
+                RENEWED_T2.get(),
+                &iaaddr_opt,
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                v6::IAID::new(0),
+                RENEWED_T1.get(),
+                RENEWED_T2.get(),
+                &iaprefix_opt,
+            )),
+        ];
+
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
         builder.serialize(&mut buf);
@@ -8508,6 +8696,14 @@ mod tests {
             v6::IAID::new(0),
             AddressEntry::Assigned(IaNa::new_finite(
                 RENEW_NON_TEMPORARY_ADDRESSES[0],
+                RENEWED_PREFERRED_LIFETIME,
+                RENEWED_VALID_LIFETIME,
+            )),
+        )]);
+        let expected_delegated_prefixes = HashMap::from([(
+            v6::IAID::new(0),
+            PrefixEntry::Assigned(IaPd::new_finite(
+                RENEW_DELEGATED_PREFIXES[0],
                 RENEWED_PREFERRED_LIFETIME,
                 RENEWED_VALID_LIFETIME,
             )),
@@ -8526,7 +8722,7 @@ mod tests {
             })) => {
                 assert_eq!(client_id, &CLIENT_ID);
                 assert_eq!(non_temporary_addresses, &expected_non_temporary_addresses);
-                assert_eq!(delegated_prefixes, &HashMap::new());
+                assert_eq!(delegated_prefixes, &expected_delegated_prefixes);
                 assert_eq!(server_id.as_slice(), &SERVER_ID[0]);
                 assert_eq!(dns_servers.as_slice(), &[] as &[Ipv6Addr]);
                 assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
@@ -8548,8 +8744,53 @@ mod tests {
         );
     }
 
-    #[test_case(RENEW_TEST)]
-    #[test_case(REBIND_TEST)]
+    struct NoBindingTestCase {
+        ia_na_no_binding: bool,
+        ia_pd_no_binding: bool,
+    }
+
+    #[test_case(
+        RENEW_TEST,
+        NoBindingTestCase {
+            ia_na_no_binding: true,
+            ia_pd_no_binding: false,
+        }
+    )]
+    #[test_case(
+        REBIND_TEST,
+        NoBindingTestCase {
+            ia_na_no_binding: true,
+            ia_pd_no_binding: false,
+        }
+    )]
+    #[test_case(
+        RENEW_TEST,
+        NoBindingTestCase {
+            ia_na_no_binding: false,
+            ia_pd_no_binding: true,
+        }
+    )]
+    #[test_case(
+        REBIND_TEST,
+        NoBindingTestCase {
+            ia_na_no_binding: false,
+            ia_pd_no_binding: true,
+        }
+    )]
+    #[test_case(
+        RENEW_TEST,
+        NoBindingTestCase {
+            ia_na_no_binding: true,
+            ia_pd_no_binding: true,
+        }
+    )]
+    #[test_case(
+        REBIND_TEST,
+        NoBindingTestCase {
+            ia_na_no_binding: true,
+            ia_pd_no_binding: true,
+        }
+    )]
     fn no_binding(
         RenewRebindTest {
             send_and_assert,
@@ -8558,17 +8799,24 @@ mod tests {
             with_state: _,
             allow_response_from_any_server: _,
         }: RenewRebindTest,
+        NoBindingTestCase { ia_na_no_binding, ia_pd_no_binding }: NoBindingTestCase,
     ) {
+        const NUM_IAS: u32 = 2;
+
         let time = Instant::now();
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
-            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..2]
+            CONFIGURED_NON_TEMPORARY_ADDRESSES[0..usize::try_from(NUM_IAS).unwrap()]
                 .iter()
                 .copied()
                 .map(TestIaNa::new_default)
                 .collect(),
-            Default::default(), /* delegated_prefixes_to_assign */
+            CONFIGURED_DELEGATED_PREFIXES[0..usize::try_from(NUM_IAS).unwrap()]
+                .iter()
+                .copied()
+                .map(TestIaPd::new_default)
+                .collect(),
             None,
             T1,
             T2,
@@ -8580,28 +8828,67 @@ mod tests {
 
         // Build a reply with NoBinding status in one of the IA options.
         let iaaddr_opts = [
-            vec![v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+            [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
                 CONFIGURED_NON_TEMPORARY_ADDRESSES[0],
                 RENEWED_PREFERRED_LIFETIME.get(),
                 RENEWED_VALID_LIFETIME.get(),
                 &[],
             ))],
-            vec![v6::DhcpOption::StatusCode(
-                v6::ErrorStatusCode::NoBinding.into(),
-                "Binding not found.",
-            )],
-        ];
-        let options = (0..2)
-            .map(|id| {
-                v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                    v6::IAID::new(id),
-                    RENEWED_T1.get(),
-                    RENEWED_T2.get(),
-                    &iaaddr_opts[id as usize],
+            [if ia_na_no_binding {
+                v6::DhcpOption::StatusCode(
+                    v6::ErrorStatusCode::NoBinding.into(),
+                    "Binding not found.",
+                )
+            } else {
+                v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(
+                    CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                    RENEWED_PREFERRED_LIFETIME.get(),
+                    RENEWED_VALID_LIFETIME.get(),
+                    &[],
                 ))
-            })
-            .chain([v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])])
-            .collect::<Vec<_>>();
+            }],
+        ];
+        let iaprefix_opts = [
+            [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                RENEWED_PREFERRED_LIFETIME.get(),
+                RENEWED_VALID_LIFETIME.get(),
+                CONFIGURED_DELEGATED_PREFIXES[0],
+                &[],
+            ))],
+            [if ia_pd_no_binding {
+                v6::DhcpOption::StatusCode(
+                    v6::ErrorStatusCode::NoBinding.into(),
+                    "Binding not found.",
+                )
+            } else {
+                v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+                    RENEWED_PREFERRED_LIFETIME.get(),
+                    RENEWED_VALID_LIFETIME.get(),
+                    CONFIGURED_DELEGATED_PREFIXES[1],
+                    &[],
+                ))
+            }],
+        ];
+        let options =
+            [v6::DhcpOption::ClientId(&CLIENT_ID), v6::DhcpOption::ServerId(&SERVER_ID[0])]
+                .into_iter()
+                .chain((0..NUM_IAS).map(|id| {
+                    v6::DhcpOption::Iana(v6::IanaSerializer::new(
+                        v6::IAID::new(id),
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        &iaaddr_opts[id as usize],
+                    ))
+                }))
+                .chain((0..NUM_IAS).map(|id| {
+                    v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                        v6::IAID::new(id),
+                        RENEWED_T1.get(),
+                        RENEWED_T2.get(),
+                        &iaprefix_opts[id as usize],
+                    ))
+                }))
+                .collect::<Vec<_>>();
 
         let builder = v6::MessageBuilder::new(v6::MessageType::Reply, *transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -8620,12 +8907,39 @@ mod tests {
                     RENEWED_VALID_LIFETIME,
                 ),
             ),
-            // Expect that the address entry for the IA with NoBinding status is
-            // no longer assigned, and replaced by an address entry to be
-            // requested in subsequent messages.
             (
                 v6::IAID::new(1),
-                AddressEntry::ToRequest(Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1])),
+                if ia_na_no_binding {
+                    AddressEntry::ToRequest(Some(CONFIGURED_NON_TEMPORARY_ADDRESSES[1]))
+                } else {
+                    AddressEntry::new_assigned(
+                        CONFIGURED_NON_TEMPORARY_ADDRESSES[1],
+                        RENEWED_PREFERRED_LIFETIME,
+                        RENEWED_VALID_LIFETIME,
+                    )
+                },
+            ),
+        ]);
+        let expected_delegated_prefixes = HashMap::from([
+            (
+                v6::IAID::new(0),
+                PrefixEntry::new_assigned(
+                    CONFIGURED_DELEGATED_PREFIXES[0],
+                    RENEWED_PREFERRED_LIFETIME,
+                    RENEWED_VALID_LIFETIME,
+                ),
+            ),
+            (
+                v6::IAID::new(1),
+                if ia_pd_no_binding {
+                    PrefixEntry::ToRequest(Some(CONFIGURED_DELEGATED_PREFIXES[1]))
+                } else {
+                    PrefixEntry::new_assigned(
+                        CONFIGURED_DELEGATED_PREFIXES[1],
+                        RENEWED_PREFERRED_LIFETIME,
+                        RENEWED_VALID_LIFETIME,
+                    )
+                },
             ),
         ]);
         // Expect the client to transition to Requesting.
@@ -8633,7 +8947,7 @@ mod tests {
             let Requesting {
                 client_id,
                 non_temporary_addresses,
-                delegated_prefixes: _,
+                delegated_prefixes,
                 server_id,
                 collected_advertise: _,
                 first_request_time: _,
@@ -8646,6 +8960,7 @@ mod tests {
             );
             assert_eq!(*client_id, CLIENT_ID);
             assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
+            assert_eq!(*delegated_prefixes, expected_delegated_prefixes);
             assert_eq!(*server_id, SERVER_ID[0]);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
@@ -8667,23 +8982,130 @@ mod tests {
             &CLIENT_ID,
             Some(&SERVER_ID[0]),
             &[],
-            &(0..2)
+            &(0..NUM_IAS)
                 .map(v6::IAID::new)
                 .zip(CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(Some))
                 .collect(),
-            &HashMap::new(),
+            &(0..NUM_IAS)
+                .map(v6::IAID::new)
+                .zip(CONFIGURED_DELEGATED_PREFIXES.into_iter().map(Some))
+                .collect(),
         );
     }
 
-    // Tests that a Reply message containing:
-    //
-    // 1. an IA_NA with IA Address with renewed lifetimes,
-    // 2. an IA_NA with IA Address with the NoAddrsAvail status code, and
-    // 3. an IA_NA with no options;
-    //
-    // results in T1 and T2 being calculated solely based on the first IA_NA.
-    #[test_case(RENEW_TEST)]
-    #[test_case(REBIND_TEST)]
+    struct ReceiveReplyCalculateT1T2 {
+        ia_na_success_t1: v6::NonZeroOrMaxU32,
+        ia_na_success_t2: v6::NonZeroOrMaxU32,
+        ia_pd_success_t1: v6::NonZeroOrMaxU32,
+        ia_pd_success_t2: v6::NonZeroOrMaxU32,
+    }
+
+    const TINY_NON_ZERO_OR_MAX_U32: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(10));
+    const SMALL_NON_ZERO_OR_MAX_U32: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(100));
+    const MEDIUM_NON_ZERO_OR_MAX_U32: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(1000));
+    const LARGE_NON_ZERO_OR_MAX_U32: v6::NonZeroOrMaxU32 =
+        const_unwrap::const_unwrap_option(v6::NonZeroOrMaxU32::new(10000));
+
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: TINY_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: TINY_NON_ZERO_OR_MAX_U32,
+        }; "renew lifetimes matching erroneous IAs")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+        }; "renew same lifetimes")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+        }; "renew IA_NA smaller lifetimes")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+        }; "renew IA_PD smaller lifetimes")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+        }; "renew IA_NA smaller T1 but IA_PD smaller t2")]
+    #[test_case(
+        RENEW_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+        }; "renew IA_PD smaller T1 but IA_NA smaller t2")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: TINY_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: TINY_NON_ZERO_OR_MAX_U32,
+        }; "rebind lifetimes matching erroneous IAs")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+        }; "rebind same lifetimes")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+        }; "rebind IA_NA smaller lifetimes")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+        }; "rebind IA_PD smaller lifetimes")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+        }; "rebind IA_NA smaller T1 but IA_PD smaller t2")]
+    #[test_case(
+        REBIND_TEST,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1: SMALL_NON_ZERO_OR_MAX_U32,
+            ia_na_success_t2: MEDIUM_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t1: TINY_NON_ZERO_OR_MAX_U32,
+            ia_pd_success_t2: LARGE_NON_ZERO_OR_MAX_U32,
+        }; "rebind IA_PD smaller T1 but IA_NA smaller t2")]
+    // Tests that only valid IAs are considered when calculating T1/T2.
     fn receive_reply_calculate_t1_t2(
         RenewRebindTest {
             send_and_assert,
@@ -8692,13 +9114,19 @@ mod tests {
             with_state: _,
             allow_response_from_any_server: _,
         }: RenewRebindTest,
+        ReceiveReplyCalculateT1T2 {
+            ia_na_success_t1,
+            ia_na_success_t2,
+            ia_pd_success_t1,
+            ia_pd_success_t2,
+        }: ReceiveReplyCalculateT1T2,
     ) {
         let time = Instant::now();
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
-            Default::default(), /* delegated_prefixes_to_assign */
+            CONFIGURED_DELEGATED_PREFIXES.into_iter().map(TestIaPd::new_default).collect(),
             None,
             T1,
             T2,
@@ -8717,29 +9145,65 @@ mod tests {
             v6::ErrorStatusCode::NoAddrsAvail.into(),
             "No address available.",
         )];
+        let ia_prefix = [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(
+            RENEWED_PREFERRED_LIFETIME.get(),
+            RENEWED_VALID_LIFETIME.get(),
+            CONFIGURED_DELEGATED_PREFIXES[0],
+            &[],
+        ))];
+        let ia_no_prefixes_avail = [v6::DhcpOption::StatusCode(
+            v6::ErrorStatusCode::NoPrefixAvail.into(),
+            "No prefixes available.",
+        )];
         let options = vec![
             v6::DhcpOption::ClientId(&CLIENT_ID),
             v6::DhcpOption::ServerId(&SERVER_ID[0]),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 v6::IAID::new(0),
-                RENEWED_T1.get(),
-                RENEWED_T2.get(),
+                ia_na_success_t1.get(),
+                ia_na_success_t2.get(),
                 &ia_addr,
             )),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 v6::IAID::new(1),
-                // If the server returns an IA with status code indicating failure, the T1/T2
-                // values for that IA should not be included in the T1/T2 calculation.
-                T1.get(),
-                T2.get(),
+                // If the server returns an IA with status code indicating
+                // failure, the T1/T2 values for that IA should not be included
+                // in the T1/T2 calculation.
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                TINY_NON_ZERO_OR_MAX_U32.get(),
                 &ia_no_addrs_avail,
             )),
             v6::DhcpOption::Iana(v6::IanaSerializer::new(
                 v6::IAID::new(2),
-                // If the server returns an IA with no IA Address option, the T1/T2 values
-                // for that IA should not be included in the T1/T2 calculation.
-                T1.get(),
-                T2.get(),
+                // If the server returns an IA_NA with no IA Address option, the
+                // T1/T2 values for that IA should not be included in the T1/T2
+                // calculation.
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                &[],
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                v6::IAID::new(0),
+                ia_pd_success_t1.get(),
+                ia_pd_success_t2.get(),
+                &ia_prefix,
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                v6::IAID::new(1),
+                // If the server returns an IA with status code indicating
+                // failure, the T1/T2 values for that IA should not be included
+                // in the T1/T2 calculation.
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                &ia_no_prefixes_avail,
+            )),
+            v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                v6::IAID::new(2),
+                // If the server returns an IA_PD with no IA Prefix option, the
+                // T1/T2 values for that IA should not be included in the T1/T2
+                // calculation.
+                TINY_NON_ZERO_OR_MAX_U32.get(),
+                TINY_NON_ZERO_OR_MAX_U32.get(),
                 &[],
             )),
         ];
@@ -8757,8 +9221,19 @@ mod tests {
                 Action::ScheduleTimer(ClientTimerType::Renew, t1),
                 Action::ScheduleTimer(ClientTimerType::Rebind, t2)
             ] => {
-                assert_eq!(*t1, Duration::from_secs(RENEWED_T1.get().into()));
-                assert_eq!(*t2, Duration::from_secs(RENEWED_T2.get().into()));
+                assert_eq!(
+                    *t1,
+                    Duration::from_secs(std::cmp::min(
+                        ia_na_success_t1,
+                        ia_pd_success_t1,
+                    ).get().into()),
+                );
+                assert_eq!(
+                    *t2, Duration::from_secs(std::cmp::min(
+                        ia_na_success_t2,
+                        ia_pd_success_t2,
+                    ).get().into()),
+                );
             }
         );
     }
