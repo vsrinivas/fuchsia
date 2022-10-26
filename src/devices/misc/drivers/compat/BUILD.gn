@@ -7,6 +7,7 @@ import("//build/drivers.gni")
 
 group("compat") {
   deps = [
+    ":compat_v1_child_device_instance_test",
     ":compat_v1_create_test",
     ":compat_v1_device_add_null_test",
     ":compat_v1_missing_test",
@@ -93,6 +94,24 @@ fuchsia_driver("v1_test") {
 fuchsia_driver_component("compat_v1_test") {
   deps = [ ":v1_test" ]
   info = "compat_v1_test-info.json"
+  colocate = true
+}
+
+fuchsia_driver("v1_child_device_instance_test") {
+  sources = [
+    "v1_child_device_instance_test.cc",
+    "v1_test.h",
+  ]
+  deps = [
+    ":v1_test_bind",
+    "//src/devices/lib/driver",
+    "//src/lib/ddk",
+  ]
+}
+
+fuchsia_driver_component("compat_v1_child_device_instance_test") {
+  deps = [ ":v1_child_device_instance_test" ]
+  info = "compat_v1_child_device_instance_test-info.json"
   colocate = true
 }
 
@@ -187,6 +206,7 @@ fuchsia_unittest_package("compat_test") {
     }
   }
   deps = [
+    ":compat_v1_child_device_instance_test",
     ":compat_v1_create_test",
     ":compat_v1_device_add_null_test",
     ":compat_v1_missing_test",

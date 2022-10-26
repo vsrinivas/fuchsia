@@ -20,6 +20,8 @@
 #include <lib/fit/defer.h>
 #include <lib/sync/cpp/completion.h>
 
+#include <unordered_set>
+
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 #include <mock-boot-arguments/server.h>
@@ -234,6 +236,11 @@ class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Expor
 
   void ExportOptions(ExportOptionsRequestView request,
                      ExportOptionsCompleter::Sync& completer) override {
+    auto pair = devfs_paths_.emplace(request->devfs_path.data(), request->devfs_path.size());
+    if (!pair.second) {
+      std::cerr << "Cannot export \"" << request->devfs_path.get() << "\": Path already exists";
+      completer.ReplyError(ZX_ERR_ALREADY_EXISTS);
+    }
     completer.ReplySuccess();
   }
 
@@ -244,6 +251,13 @@ class TestExporter : public fidl::testing::WireTestBase<fuchsia_device_fs::Expor
   void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
     printf("Not implemented: TestExporter::%s", name.data());
   }
+
+  void AssertDevfsPaths(std::unordered_set<std::string> expected) const {
+    ASSERT_EQ(devfs_paths_, expected);
+  }
+
+ private:
+  std::unordered_set<std::string> devfs_paths_;
 };
 
 class TestLogSink : public fidl::testing::WireTestBase<flogger::LogSink> {
@@ -454,6 +468,10 @@ class DriverTest : public gtest::DriverTestLoopFixture {
 
   bool RunTestLoopUntilIdle() { return test_loop_.RunUntilIdle(); }
 
+  void AssertDevfsPaths(std::unordered_set<std::string> expected) const {
+    exporter_.AssertDevfsPaths(expected);
+  }
+
   void WaitForChildDeviceAdded() {
     while (!node().HasChildren()) {
       RunUntilDispatchersIdle();
@@ -505,8 +523,46 @@ TEST_F(DriverTest, Start) {
     EXPECT_FALSE(v1_test->did_create);
     EXPECT_FALSE(v1_test->did_release);
   }
+  AssertDevfsPaths({"/dev/test/my-device/v1"});
 
   // Verify v1_test.so state after release.
+  ShutdownDriverDispatcher();
+  driver.reset();
+  ASSERT_TRUE(RunTestLoopUntilIdle());
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_release);
+  }
+}
+
+TEST_F(DriverTest, Start_ChildDeviceInstance) {
+  zx_protocol_device_t ops{
+      .get_protocol = [](void*, uint32_t, void*) { return ZX_OK; },
+  };
+  auto driver = StartDriver("/pkg/driver/v1_child_device_instance_test.so", &ops);
+
+  // Verify that v1_child_device_instance_test.so has added a child device.
+  WaitForChildDeviceAdded();
+
+  // Verify that v1_child_device_instance_test.so has set a context.
+  std::unique_ptr<V1Test> v1_test(static_cast<V1Test*>(driver->Context()));
+  ASSERT_NE(nullptr, v1_test.get());
+
+  // Verify v1_child_device_instance_test.so state after bind.
+  {
+    const std::lock_guard<std::mutex> lock(v1_test->lock);
+    EXPECT_TRUE(v1_test->did_bind);
+    EXPECT_EQ(ZX_OK, v1_test->status);
+    EXPECT_FALSE(v1_test->did_create);
+    EXPECT_FALSE(v1_test->did_release);
+  }
+
+  // The `v1-child` device should appear in devfs but not `v1-child-instance`
+  // because `v1-child-instance` is a device instance which should not have a
+  // devfs path.
+  AssertDevfsPaths({"/dev/test/my-device/v1", "/dev/test/my-device/v1/v1-child"});
+
+  // Verify v1_child_device_instance_test.so state after release.
   ShutdownDriverDispatcher();
   driver.reset();
   ASSERT_TRUE(RunTestLoopUntilIdle());

@@ -1,0 +1,10 @@
+{
+    "short_description": "Driver Framework DFv2 Instance test driver",
+    "manufacturer": "",
+    "families": [],
+    "models": [],
+    "areas": [
+        "DriverFramework",
+        "Test"
+    ]
+}
