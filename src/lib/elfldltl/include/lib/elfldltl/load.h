@@ -68,7 +68,7 @@ constexpr auto LoadEhdrFromFile(Diagnostics& diagnostics, File& file,
 template <class Elf, class Diagnostics, class File, typename PhdrAllocator>
 constexpr auto LoadHeadersFromFile(Diagnostics& diagnostics, File& file,
                                    PhdrAllocator&& phdr_allocator,
-                                   ElfMachine machine = ElfMachine::kNative)
+                                   std::optional<ElfMachine> machine = ElfMachine::kNative)
     -> decltype(std::make_optional(std::make_pair(
         *file.template ReadFromFile<typename Elf::Ehdr>(0),
         *file.template ReadArrayFromFile<typename Elf::Phdr>(0, phdr_allocator, 0)))) {
