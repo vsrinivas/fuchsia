@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/95485): Remove.
-#![allow(dead_code)]
-
 use {
     anyhow::{anyhow, Error},
     num_derive::FromPrimitive,
@@ -61,3 +58,10 @@ impl TryFrom<u8> for GsoType {
             .ok_or(anyhow!("Unrecognized GsoType: {}", n))
     }
 }
+
+// 5.1.6.3.1 Driver Requirements: Setting Up Receive Buffers
+//
+// VIRTIO_NET_F_MRG_RXBUF is not negotiated AND VIRTIO_NET_F_GUEST_TSO4 OR VIRTIO_NET_F_GUEST_TSO6
+// OR VIRTIO_NET_F_GUEST_UFO are not negotiated, so the guest must place single descriptor buffers
+// of 1526 bytes (MTU + ethernet header + virtio net header).
+pub const REQUIRED_RX_BUFFER_SIZE: usize = 1526;

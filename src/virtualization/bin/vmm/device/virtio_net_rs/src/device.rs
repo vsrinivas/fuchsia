@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/95485): Remove.
-#![allow(dead_code)]
-
 use {
     crate::{guest_ethernet, wire},
     anyhow::{anyhow, Error},
@@ -12,12 +9,13 @@ use {
     fuchsia_zircon as zx,
     futures::{channel::mpsc::UnboundedReceiver, StreamExt},
     machina_virtio_device::{GuestMem, WrappedDescChainStream},
-    std::{cell::RefCell, pin::Pin},
+    std::{cell::RefCell, io::Write, pin::Pin},
     virtio_device::{
-        chain::{ReadableChain, WritableChain},
+        chain::{ReadableChain, Remaining, WritableChain},
         mem::{DeviceRange, DriverMem},
         queue::DriverNotify,
     },
+    zerocopy::AsBytes,
 };
 
 pub struct NetDevice {
@@ -68,7 +66,7 @@ impl NetDevice {
             let readable_chain = ReadableChain::new(chain, guest_mem);
             if let Err(err) = self.handle_readable_chain(readable_chain).await {
                 // TODO(fxbug.dev/95485): See if we want to drop this to debug level due to noise.
-                tracing::error!("Dropping packet: {}", err);
+                tracing::error!("Dropping TX packet: {}", err);
             }
         }
 
@@ -166,7 +164,10 @@ impl NetDevice {
                 }
             };
 
-            self.handle_writable_chain(writable_chain).await?;
+            if let Err(err) = self.handle_writable_chain(writable_chain).await {
+                // TODO(fxbug.dev/95485): See if we want to drop this to debug level due to noise.
+                tracing::error!("Error processing RX packet: {}", err);
+            }
         }
 
         Ok(())
@@ -174,9 +175,85 @@ impl NetDevice {
 
     async fn handle_writable_chain<'a, 'b, N: DriverNotify, M: DriverMem>(
         &self,
-        _chain: WritableChain<'a, 'b, N, M>,
+        chain: WritableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
-        // TODO(fxbug.dev/95485): Do this.
+        let Remaining { bytes, descriptors } = chain.remaining().map_err(|err| {
+            anyhow!("failed to query chain for remaining bytes and descriptors: {}", err)
+        })?;
+        if bytes < wire::REQUIRED_RX_BUFFER_SIZE {
+            return Err(anyhow!(
+                "Writable chain ({} bytes) is smaller than minimum size ({} bytes)",
+                bytes,
+                wire::REQUIRED_RX_BUFFER_SIZE
+            ));
+        }
+        if descriptors != 1 {
+            // 5.1.6.3.2 Device Requirements: Setting Up Receive Buffers
+            //
+            // The device MUST use only a single descriptor if VIRTIO_NET_F_MRG_RXBUF was not
+            // negotiated.
+            return Err(anyhow!("RX buffer incorrectly fragmented over multiple descriptors"));
+        }
+
+        let packet = self
+            .receive_packet_rx
+            .borrow_mut()
+            .next()
+            .await
+            .expect("unexpected end of RX packet stream");
+
+        let result = NetDevice::handle_packet(&packet, bytes, chain);
+        if result.is_err() {
+            self.ethernet.complete(packet, zx::Status::INTERNAL);
+        } else {
+            self.ethernet.complete(packet, zx::Status::OK);
+        }
+
+        result
+    }
+
+    fn handle_packet<'a, 'b, N: DriverNotify, M: DriverMem>(
+        packet: &guest_ethernet::RxPacket,
+        available_bytes: usize,
+        mut chain: WritableChain<'a, 'b, N, M>,
+    ) -> Result<(), Error> {
+        if packet.len > (available_bytes - std::mem::size_of::<wire::VirtioNetHeader>()) {
+            return Err(anyhow!("Packet is too large for provided RX buffers"));
+        }
+
+        let header = wire::VirtioNetHeader {
+            // Section 5.1.6.4.1 Device Requirements: Processing of Incoming Packets
+            //
+            // If VIRTIO_NET_F_MRG_RXBUF has not been negotiated, the device MUST
+            // set num_buffers to 1.
+            num_buffers: wire::LE16::new(1),
+            // If none of the VIRTIO_NET_F_GUEST_TSO4, TSO6 or UFO options have been
+            // negotiated, the device MUST set gso_type to VIRTIO_NET_HDR_GSO_NONE.
+            gso_type: wire::GsoType::None.into(),
+            // If VIRTIO_NET_F_GUEST_CSUM is not negotiated, the device MUST set
+            // flags to zero and SHOULD supply a fully checksummed packet to the
+            // driver.
+            flags: 0,
+            ..wire::VirtioNetHeader::default()
+        };
+
+        // Write the header, updating the bytes written.
+        if let Err(err) = chain.write_all(header.as_bytes()) {
+            return Err(anyhow!("Failed to write packet header: {}", err));
+        }
+
+        // A note on safety:
+        //   * No references (mutable or unmutable) to this range are held elsewhere. Other
+        //     pointers may exist but will not be dereferenced while this slice is held.
+        //   * This is a u8 pointer which has no alignment constraints.
+        //   * This memory is guaranteed valid until Complete is called with the buffer_id.
+        let slice = unsafe { std::slice::from_raw_parts(packet.data, packet.len) };
+
+        // Write the data portion, updating the bytes written.
+        if let Err(err) = chain.write_all(slice) {
+            return Err(anyhow!("Failed to write packet data: {}", err));
+        }
+
         Ok(())
     }
 

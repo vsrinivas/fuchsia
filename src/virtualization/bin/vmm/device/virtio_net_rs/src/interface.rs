@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// TODO(fxbug.dev/95485): Remove.
-#![allow(dead_code)]
-
 //! This FFI interface is not safe to use directly as it involves passing both C++ and Rust
 //! allocated objects across the interface, and callbacks may be invoked from different threads.
 //! Use the guest_ethernet crate to interact with these functions.

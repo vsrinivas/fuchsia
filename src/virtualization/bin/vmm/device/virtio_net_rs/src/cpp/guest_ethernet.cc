@@ -220,6 +220,7 @@ void GuestEthernet::TxComplete(uint32_t buffer_id, size_t length) {
     };
     // Note that this device considers tx from the perspective of the guest, while the netstack
     // considers rx from the perspective of itself. This is a guest to host packet being completed.
+    // TODO(fxbug.dev/95485): Completes should be batched for performance (up to kMaxRxDepth).
     parent_.CompleteRx(&rx_info, /*rx_count=*/1);
   });
 }
@@ -232,6 +233,7 @@ void GuestEthernet::RxComplete(uint32_t buffer_id, zx_status_t status) {
     };
     // Note that this device considers rx from the perspective of the guest, while the netstack
     // considers tx from the perspective of itself. This is a host to guest packet being completed.
+    // TODO(fxbug.dev/95485): Completes should be batched for performance (up to kMaxTxDepth).
     parent_.CompleteTx(&result, /*tx_count=*/1);
   });
 }

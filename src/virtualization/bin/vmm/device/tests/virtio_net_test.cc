@@ -240,8 +240,6 @@ class VirtioNetTest : public TestWithDevice,
     }
   }
 
-  bool IsRustDevice() { return GetParam().test_name == "rust"; }
-
   fuchsia::virtualization::hardware::VirtioNetPtr net_;
   VirtioQueueFake rx_queue_;
   VirtioQueueFake tx_queue_;
@@ -271,18 +269,17 @@ TEST_P(VirtioNetTest, ConnectDisconnect) {
 }
 
 TEST_P(VirtioNetTest, SendToGuest) {
-  if (IsRustDevice()) {
-    // TODO(fxbug.dev/95485): Add support for RX.
-    GTEST_SKIP();
-  }
-
   constexpr uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
 
   // Add a descriptor to the RX queue, allowing the guest to receive a packet.
-  constexpr size_t kPacketSize = 10;
-  Packet<kPacketSize>* packet;
+  // Note that the C++ device didn't correctly validate RX buffer lengths.
+  // TODO(fxbug.dev/95485): Remove the above note once these tests are improved.
+  constexpr size_t kPacketDataSize = 10;
+  constexpr size_t kPacketBufferSize = 1526;
+  Packet<kPacketBufferSize>* packet;
   zx_status_t status =
       DescriptorChainBuilder(rx_queue_).AppendWritableDescriptor(&packet, sizeof(*packet)).Build();
+  net_->NotifyQueue(0);
   ASSERT_EQ(status, ZX_OK);
 
   // Transmit a packet to the guest.
@@ -299,7 +296,7 @@ TEST_P(VirtioNetTest, SendToGuest) {
   EXPECT_EQ(packet->header.base.flags, 0);
 
   // Validate payload.
-  for (size_t i = 0; i != kPacketSize; ++i) {
+  for (size_t i = 0; i != kPacketDataSize; ++i) {
     EXPECT_EQ(packet->data[i], expected_packet[i]);
   }
 }

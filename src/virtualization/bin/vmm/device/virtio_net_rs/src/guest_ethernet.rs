@@ -6,9 +6,6 @@
 //! including appropriate memory management. See the comments in interface.rs for what each
 //! FFI function does. Do not use the interface directly.
 
-// TODO(fxbug.dev/95485): Remove.
-#![allow(dead_code)]
-
 use {
     crate::interface,
     fidl_fuchsia_hardware_ethernet::MacAddress,
@@ -18,8 +15,10 @@ use {
 };
 
 pub struct RxPacket {
-    data: *const u8,
-    len: usize,
+    pub data: *const u8,
+    pub len: usize,
+
+    // Complete must only be called once for this ID.
     buffer_id: u32,
 }
 
@@ -87,8 +86,10 @@ impl GuestEthernet {
         zx::Status::ok(unsafe { interface::guest_ethernet_send(self.raw_ptr, data, len) })
     }
 
-    pub fn complete(&self, buffer_id: u32, status: zx::Status) {
-        unsafe { interface::guest_ethernet_complete(self.raw_ptr, buffer_id, status.into_raw()) }
+    pub fn complete(&self, packet: RxPacket, status: zx::Status) {
+        unsafe {
+            interface::guest_ethernet_complete(self.raw_ptr, packet.buffer_id, status.into_raw())
+        }
     }
 
     // Callback from C++.
