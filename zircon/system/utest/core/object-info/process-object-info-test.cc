@@ -903,5 +903,85 @@ TEST_F(ProcessGetInfoTest, InfoProcessThreadsZeroSizedBufferSucceeds) {
       (CheckZeroSizeBufferSucceeds<zx_koid_t>(ZX_INFO_PROCESS_THREADS, GetHandleProvider())));
 }
 
+TEST(ShareableProcessGetInfoTest, InfoProcessVmosSmokeTest) {
+  // Build a shareable process.
+  static constexpr char kSharedProcessName[] = "object-info-shar-proc";
+  zx::process shared_process;
+  zx::vmar shared_vmar;
+  ASSERT_OK(zx::process::create(*zx::job::default_job(), kSharedProcessName,
+                                sizeof(kSharedProcessName), ZX_PROCESS_SHARED, &shared_process,
+                                &shared_vmar));
+
+  // Build another process that shares its address space.
+  static constexpr char kPrivateProcessName[] = "object-info-priv-proc";
+  zx::process private_process;
+  zx::vmar private_vmar;
+  ASSERT_OK(zx::process::create_shared(shared_process, kPrivateProcessName,
+                                       sizeof(kPrivateProcessName), 0, &private_process,
+                                       &private_vmar));
+
+  // Map a single VMO that contains some code (a busy loop) and a stack into the shared address
+  // space.
+  zx_vaddr_t stack_base, sp;
+  ASSERT_OK(mini_process_load_stack(shared_vmar.get(), true, &stack_base, &sp));
+
+  // Allocate two extra VMOs.
+  const size_t kVmoSize = zx_system_get_page_size();
+  zx::vmo vmo1, vmo2;
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0u, &vmo1));
+  ASSERT_OK(zx::vmo::create(kVmoSize, 0u, &vmo2));
+
+  // Start the shared process and pass a handle to vmo1 to it.
+  zx::thread shared_thread;
+  static constexpr char kSharedThreadName[] = "object-info-shar-thrd";
+  ASSERT_OK(zx::thread::create(shared_process, kSharedThreadName, sizeof(kSharedThreadName), 0u,
+                               &shared_thread));
+  ASSERT_OK(shared_process.start(shared_thread, stack_base, sp, std::move(vmo1), 0));
+  auto shared_cleanup = fit::defer([&] { EXPECT_OK(shared_process.kill()); });
+
+  // Start the private process.
+  zx::thread private_thread;
+  static constexpr char kPrivateThreadName[] = "object-info-priv-thrd";
+  ASSERT_OK(zx::thread::create(private_process, kPrivateThreadName, sizeof(kPrivateThreadName), 0u,
+                               &private_thread));
+  ASSERT_OK(private_process.start(private_thread, stack_base, sp, zx::handle(), 0));
+  auto private_cleanup = fit::defer([&] { EXPECT_OK(private_process.kill()); });
+
+  // Map vmo2 into the private address space only.
+  zx_vaddr_t vaddr;
+  ASSERT_OK(private_vmar.map(ZX_VM_PERM_READ, 0u, vmo2, 0, kVmoSize, &vaddr));
+
+  // Buffer big enough to read all of the test processes' VMO entries: the mini-process VMO, vmo1
+  // and vmo2.
+  const size_t buf_size = 3;
+  std::unique_ptr<zx_info_vmo_t[]> buf(new zx_info_vmo_t[buf_size]);
+
+  // Read the VMO entries of the shared process.
+  size_t actual, available_shared;
+  ASSERT_OK(shared_process.get_info(ZX_INFO_PROCESS_VMOS, buf.get(),
+                                    buf_size * sizeof(zx_info_vmo_t), &actual, &available_shared));
+  ASSERT_EQ(actual, available_shared, "Should have read all entries");
+  EXPECT_EQ(2, available_shared, "Should have vmo1 and the mini-process VMO");
+
+  // Read the VMO entries of the private process.
+  size_t available_private;
+  ASSERT_OK(private_process.get_info(ZX_INFO_PROCESS_VMOS, buf.get(),
+                                     buf_size * sizeof(zx_info_vmo_t), &actual,
+                                     &available_private));
+  ASSERT_EQ(actual, available_private, "Should have read all entries");
+  EXPECT_EQ(available_shared + 1, available_private, "Should have vmo2 too");
+
+  // Verify that the VMO entries from the private address space are accounted correctly if they
+  // don't fit in the buffer.
+  const size_t smallbuf_size = available_shared;
+  std::unique_ptr<zx_info_vmo_t[]> smallbuf(new zx_info_vmo_t[smallbuf_size]);
+  size_t actual_smallbuf, available_smallbuf;
+  ASSERT_OK(private_process.get_info(ZX_INFO_PROCESS_VMOS, smallbuf.get(),
+                                     smallbuf_size * sizeof(zx_info_vmo_t), &actual_smallbuf,
+                                     &available_smallbuf));
+  ASSERT_EQ(smallbuf_size, actual_smallbuf, "Should have filled the buffer");
+  EXPECT_EQ(available_private, available_smallbuf, "Should be the same as the previous call");
+}
+
 }  // namespace
 }  // namespace object_info_test

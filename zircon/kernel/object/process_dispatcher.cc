@@ -717,10 +717,10 @@ zx_status_t ProcessDispatcher::GetVmos(VmoInfoWriter& vmos, size_t max, size_t* 
 
   size_t actual3 = 0;
   size_t available3 = 0;
-  DEBUG_ASSERT(max >= actual2);
+  DEBUG_ASSERT(max >= actual + actual2);
   vmos.AddOffset(actual2);
   if (restricted_aspace_) {
-    s = GetVmAspaceVmos(restricted_aspace_, vmos, max - actual2, &actual3, &available3);
+    s = GetVmAspaceVmos(restricted_aspace_, vmos, max - (actual + actual2), &actual3, &available3);
     if (s != ZX_OK) {
       return s;
     }
