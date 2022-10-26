@@ -90,9 +90,14 @@ async fn destroy_and_recreate() {
     let instance =
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
 
-    let event_stream = EventStream::new_v2(proxy);
+    let event_source = EventSource::from_proxy(proxy);
+
+    let event_stream = event_source
+        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Destroyed::NAME])])
+        .await
+        .unwrap();
 
     instance.start_component_tree().await.unwrap();
 
