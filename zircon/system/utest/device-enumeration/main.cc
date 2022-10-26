@@ -810,9 +810,8 @@ TEST_F(DeviceEnumerationTest, PinecrestTest) {
 
 TEST_F(DeviceEnumerationTest, AtlasTest) {
   static const char* kDevicePaths[] = {
-      "pci-01:00.0-fidl/iwlwifi-wlanphyimpl",
-      "acpi-MAXL-composite/MAX98373",  // Codec left speaker.
-      "acpi-MAXR-composite/MAX98373",  // Codec right speaker.
+      "sys/platform/pt/pci/00:19.2_/pci-00:19.2-fidl/i2c-bus-9d64/i2c/i2c-3-26",
+      "sys/platform/pt/pci/01:00.0_/pci-01:00.0-fidl/iwlwifi-wlanphyimpl",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
@@ -823,8 +822,10 @@ TEST_F(DeviceEnumerationTest, AtlasTest) {
 
   // TODO(fxbug.dev/106517): Fix these devices and move them back.
   static const char* kDevicesThatFailInDfv2[] = {
-      "pci-00:19.2-fidl/i2c-bus-9d64/i2c/i2c-3-26",  // Codec headphones.
-      "pci-01:00.0/iwlwifi-wlanphyimpl/wlanphy",
+      "sys/platform/pt/pci/01:00.0_/pci-01:00.0-fidl/iwlwifi-wlanphyimpl/wlanphy",
+      // Codec headphones.
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-MAXL/acpi-MAXL-passthrough/acpi-MAXL-composite/MAX98373",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-I2C4/acpi-MAXL/acpi-MAXL-passthrough/acpi-MAXL-composite/MAX98373",
   };
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
 }
