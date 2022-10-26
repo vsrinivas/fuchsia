@@ -44,10 +44,7 @@ template("ffx") {
     # we must limit its concurrency with other memory-intensive jobs.
     # See https://fxbug.dev/111094 for context.
     if (disable_rbe) {
-      if (toolchain_variant.tags + [ "lto" ] - [ "lto" ] !=
-          toolchain_variant.tags) {
-        pool = "//build/config:highmem"
-      }
+      pool = "//build/config:highmem($default_toolchain)"
     }
 
     # Use up to 16 threads for codegen

@@ -157,6 +157,12 @@ import("//build/rust/rustc_test.gni")
 template("rustc_binary") {
   not_needed(invoker, [ "version" ])
 
+  # If I delete this block, GN complains about pool being unused,
+  # even though the generated ninja files look correct.
+  if (defined(invoker.pool)) {
+    assert(invoker.pool != "")
+  }
+
   if (defined(invoker.original_target_name)) {
     _original_target_name = invoker.original_target_name
   } else {
@@ -220,6 +226,7 @@ template("rustc_binary") {
     clippy_crate_type = "bin"
     crate_name = _crate_name
     original_target_name = _original_target_name
+
     pass_through = {
       # pass through these variables unmodified
       forward_variables_from(invoker,
@@ -239,6 +246,7 @@ template("rustc_binary") {
                              "enforce_source_listing",
                              "features",
                              "inputs",
+                             "pool",
                              "rustenv",
                              "sources",
                              "testonly",

@@ -280,6 +280,7 @@ template("rustc_artifact") {
 
     forward_variables_from(invoker,
                            [
+                             "pool",
                              "testonly",
                              "visibility",
                            ])

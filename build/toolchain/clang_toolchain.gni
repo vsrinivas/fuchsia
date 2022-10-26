@@ -365,6 +365,9 @@ template("clang_toolchain") {
       }
 
       forward_variables_from(_rust_concurrent_jobs, "*")
+      if (defined(invoker.pool)) {
+        pool = invoker.pool
+      }
 
       # TODO: see the comment below.
       if (use_strip) {
