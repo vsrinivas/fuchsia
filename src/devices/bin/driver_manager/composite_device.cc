@@ -270,13 +270,13 @@ zx_status_t CompositeDevice::TryAssemble() {
     fbl::RefPtr<Device> proxy;
     zx_status_t status;
     if (bound_dev->has_outgoing_directory()) {
-      VLOGF(1, "Preparing new proxy for %s", bound_dev->name().data());
-      fbl::RefPtr<Device> new_proxy;
-      status = coordinator->PrepareNewProxy(bound_dev, driver_host, &new_proxy);
+      VLOGF(1, "Preparing FIDL proxy for %s", bound_dev->name().data());
+      fbl::RefPtr<Device> fidl_proxy;
+      status = coordinator->PrepareFidlProxy(bound_dev, driver_host, &fidl_proxy);
       if (status != ZX_OK) {
         return status;
       }
-      proxy = std::move(new_proxy);
+      proxy = std::move(fidl_proxy);
     } else {
       if (driver_host != nullptr && fragment_dev != nullptr && fragment_dev->proxy() != nullptr &&
           fragment_dev->proxy()->host() != nullptr &&
@@ -285,7 +285,7 @@ zx_status_t CompositeDevice::TryAssemble() {
         return ZX_ERR_BAD_STATE;
       }
 
-      VLOGF(1, "Preparing old proxy for %s", fragment_dev->name().data());
+      VLOGF(1, "Preparing Banjo proxy for %s", fragment_dev->name().data());
       status = coordinator->PrepareProxy(fragment_dev, driver_host);
       if (status != ZX_OK) {
         return status;

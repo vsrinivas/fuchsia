@@ -163,9 +163,9 @@ class Coordinator : public CompositeManagerBridge,
 
   zx_status_t PrepareProxy(const fbl::RefPtr<Device>& dev,
                            fbl::RefPtr<DriverHost> target_driver_host);
-  zx_status_t PrepareNewProxy(const fbl::RefPtr<Device>& dev,
-                              fbl::RefPtr<DriverHost> target_driver_host,
-                              fbl::RefPtr<Device>* new_proxy_out);
+  zx_status_t PrepareFidlProxy(const fbl::RefPtr<Device>& dev,
+                               fbl::RefPtr<DriverHost> target_driver_host,
+                               fbl::RefPtr<Device>* fidl_proxy_out);
 
   async_dispatcher_t* dispatcher() const { return dispatcher_; }
   const zx::resource& root_resource() const { return config_.root_resource; }

@@ -92,10 +92,10 @@ class FakeCompositeDevhost : public fidl::WireServer<fuchsia_device_manager::Dri
 };
 
 // A fake DriverHostController server that checks that it receives a
-// CreateDevice message for a new proxy device.
-class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
+// CreateDevice message for a FIDL proxy device.
+class FakeFidlProxyDevhost : public fidl::WireServer<fuchsia_device_manager::DriverHostController> {
  public:
-  FakeNewProxyDevhost(
+  FakeFidlProxyDevhost(
       fidl::ClientEnd<fuchsia_device_manager::Coordinator>* device_coordinator_client,
       fidl::ServerEnd<fuchsia_device_manager::DeviceController>* device_controller_server)
       : device_coordinator_client_(device_coordinator_client),
@@ -103,7 +103,7 @@ class FakeNewProxyDevhost : public fidl::WireServer<fuchsia_device_manager::Driv
 
   void CreateDevice(CreateDeviceRequestView request,
                     CreateDeviceCompleter::Sync& completer) override {
-    if (request->type.is_new_proxy()) {
+    if (request->type.is_fidl_proxy()) {
       *device_coordinator_client_ = std::move(request->coordinator);
       *device_controller_server_ = std::move(request->device_controller);
       completer.Reply(ZX_OK);
@@ -161,10 +161,10 @@ void CheckCreateCompositeDeviceReceived(
   CheckCreateDeviceReceived(&fake, controller, composite);
 }
 
-void CheckCreateNewProxyDeviceReceived(const fidl::ServerEnd<fdm::DriverHostController>& controller,
-                                       DeviceState* new_proxy) {
-  FakeNewProxyDevhost fake(&new_proxy->coordinator_client, &new_proxy->controller_server);
-  CheckCreateDeviceReceived(&fake, controller, new_proxy);
+void CheckCreateFidlProxyDeviceReceived(
+    const fidl::ServerEnd<fdm::DriverHostController>& controller, DeviceState* fidl_proxy) {
+  FakeFidlProxyDevhost fake(&fidl_proxy->coordinator_client, &fidl_proxy->controller_server);
+  CheckCreateDeviceReceived(&fake, controller, fidl_proxy);
 }
 
 // Helper for BindComposite for issuing an AddComposite for a composite with the
@@ -1293,8 +1293,8 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChildNoFragment) {
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, &protocol_id, 1,
                                                        nullptr, 0, "composite"));
 
-  DeviceState new_proxy;
-  ASSERT_NO_FATAL_FAILURE(CheckCreateNewProxyDeviceReceived(driver_host_server(), &new_proxy));
+  DeviceState fidl_proxy;
+  ASSERT_NO_FATAL_FAILURE(CheckCreateFidlProxyDeviceReceived(driver_host_server(), &fidl_proxy));
 
   // Make sure the composite comes up
   DeviceState composite;
@@ -1357,8 +1357,8 @@ TEST_F(CompositeTestCase, MultibindWithOutgoingDirectory) {
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, &protocol_id, 1,
                                                        nullptr, 0, "composite-1"));
 
-  DeviceState new_proxy;
-  ASSERT_NO_FATAL_FAILURE(CheckCreateNewProxyDeviceReceived(driver_host_server(), &new_proxy));
+  DeviceState fidl_proxy;
+  ASSERT_NO_FATAL_FAILURE(CheckCreateFidlProxyDeviceReceived(driver_host_server(), &fidl_proxy));
 
   // Make sure the composite comes up.
   DeviceState composite;
@@ -1369,8 +1369,8 @@ TEST_F(CompositeTestCase, MultibindWithOutgoingDirectory) {
   ASSERT_NO_FATAL_FAILURE(BindCompositeDefineComposite(platform_bus()->device, &protocol_id2, 1,
                                                        nullptr, 0, "composite-2"));
 
-  DeviceState new_proxy2;
-  ASSERT_NO_FATAL_FAILURE(CheckCreateNewProxyDeviceReceived(driver_host_server(), &new_proxy2));
+  DeviceState fidl_proxy2;
+  ASSERT_NO_FATAL_FAILURE(CheckCreateFidlProxyDeviceReceived(driver_host_server(), &fidl_proxy2));
 
   // Make sure a second composite comes up.
   DeviceState composite2;

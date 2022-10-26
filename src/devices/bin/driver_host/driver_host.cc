@@ -576,8 +576,8 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
     newconn = CreateStubDevice(request);
   } else if (request->type.is_proxy()) {
     newconn = CreateProxyDevice(request);
-  } else if (request->type.is_new_proxy()) {
-    newconn = CreateNewProxyDevice(request);
+  } else if (request->type.is_fidl_proxy()) {
+    newconn = CreateFidlProxyDevice(request);
   } else if (request->type.is_composite()) {
     newconn = CreateCompositeDevice(request);
   } else {
@@ -596,9 +596,9 @@ void DriverHostControllerConnection::CreateDevice(CreateDeviceRequestView reques
   completer.Reply(ZX_OK);
 }
 
-StatusOrConn DriverHostControllerConnection::CreateNewProxyDevice(
+StatusOrConn DriverHostControllerConnection::CreateFidlProxyDevice(
     CreateDeviceRequestView& request) {
-  auto& proxy = request->type.new_proxy();
+  auto& proxy = request->type.fidl_proxy();
 
   auto driver = GetProxyDriver(driver_host_context_);
   if (driver == nullptr) {

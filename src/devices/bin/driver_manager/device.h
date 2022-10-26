@@ -124,7 +124,7 @@ class Device final
       fidl::ClientEnd<fuchsia_device_manager::DeviceController> device_controller,
       fbl::RefPtr<Device>* device);
   zx_status_t CreateProxy();
-  zx_status_t CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out);
+  zx_status_t CreateFidlProxy(fbl::RefPtr<Device>* fidl_proxy_out);
 
   void Serve(fidl::ServerEnd<fuchsia_device_manager::Coordinator> request);
 
@@ -178,7 +178,7 @@ class Device final
   const fbl::RefPtr<Device>& proxy() { return proxy_; }
   fbl::RefPtr<const Device> proxy() const { return proxy_; }
 
-  const std::vector<fbl::RefPtr<Device>>& new_proxies() const { return new_proxies_; }
+  const std::vector<fbl::RefPtr<Device>>& fidl_proxies() const { return fidl_proxies_; }
 
   uint32_t protocol_id() const { return protocol_id_; }
 
@@ -412,9 +412,9 @@ class Device final
 
   fbl::RefPtr<Device> proxy_;
   // A vector of proxies to allow the device's children to connect to its
-  // outgoing directory. Each new proxy has its connection to the outgoing
+  // outgoing directory. Each FIDL proxy has its connection to the outgoing
   // directory.
-  std::vector<fbl::RefPtr<Device>> new_proxies_;
+  std::vector<fbl::RefPtr<Device>> fidl_proxies_;
 
   fbl::Array<const zx_device_prop_t> props_;
 

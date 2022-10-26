@@ -201,7 +201,7 @@ type ProxyDevice = resource struct {
     proxy_args string:<DEVICE_ARGS_MAX, optional>;
 };
 
-type NewProxyDevice = resource struct {
+type FidlProxyDevice = resource struct {
     incoming_dir client_end:fuchsia.io.Directory;
 };
 
@@ -218,9 +218,10 @@ type DeviceType = resource union {
     /// proxy channel.
     2: proxy ProxyDevice;
 
-    /// The parent device lives in another driver host, and provides a directory
-    /// of protocols. This will replace ProxyDevice eventually.
-    3: new_proxy NewProxyDevice;
+    /// This device is a proxy for its parent which lives in another driver host.
+    /// The parent exposes FIDL protocols in its outgoing directory, which have
+    /// been routed to this device.
+    3: fidl_proxy FidlProxyDevice;
 
     /// The device is a composite device with several parents, referred to as
     /// fragments. The device aggregates all parent devices together. The order of the

@@ -311,7 +311,7 @@ zx_status_t Device::CreateProxy() {
   return ZX_OK;
 }
 
-zx_status_t Device::CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out) {
+zx_status_t Device::CreateFidlProxy(fbl::RefPtr<Device>* fidl_proxy_out) {
   auto dev = fbl::MakeRefCounted<Device>(
       this->coordinator, fbl::String::Concat({name_, "-new-proxy"}), fbl::String(), fbl::String(),
       fbl::RefPtr(this), 0, zx::vmo(), fidl::ClientEnd<fio::Directory>());
@@ -323,9 +323,9 @@ zx_status_t Device::CreateNewProxy(fbl::RefPtr<Device>* new_proxy_out) {
 
   dev->InitializeInspectValues();
 
-  *new_proxy_out = dev;
-  new_proxies_.push_back(std::move(dev));
-  VLOGF(1, "Created new_proxy device %p '%s'", this, name_.data());
+  *fidl_proxy_out = dev;
+  fidl_proxies_.push_back(std::move(dev));
+  VLOGF(1, "Created fidl_proxy device %p '%s'", this, name_.data());
   return ZX_OK;
 }
 

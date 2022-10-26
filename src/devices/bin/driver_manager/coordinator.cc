@@ -175,8 +175,8 @@ zx_status_t CreateProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Driver
   return ZX_OK;
 }
 
-zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
-                                 fidl::ClientEnd<fio::Directory> incoming_dir) {
+zx_status_t CreateFidlProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<DriverHost>& dh,
+                                  fidl::ClientEnd<fio::Directory> incoming_dir) {
   auto coordinator_endpoints = fidl::CreateEndpoints<fdm::Coordinator>();
   if (coordinator_endpoints.is_error()) {
     return coordinator_endpoints.error_value();
@@ -184,8 +184,8 @@ zx_status_t CreateNewProxyDevice(const fbl::RefPtr<Device>& dev, fbl::RefPtr<Dri
 
   auto device_controller_request = dev->ConnectDeviceController(dev->coordinator->dispatcher());
 
-  fdm::wire::NewProxyDevice new_proxy{std::move(incoming_dir)};
-  auto type = fdm::wire::DeviceType::WithNewProxy(std::move(new_proxy));
+  fdm::wire::FidlProxyDevice fidl_proxy{std::move(incoming_dir)};
+  auto type = fdm::wire::DeviceType::WithFidlProxy(std::move(fidl_proxy));
 
   dh->controller()
       ->CreateDevice(std::move(coordinator_endpoints->client), std::move(device_controller_request),
@@ -681,12 +681,12 @@ zx_status_t Coordinator::PrepareProxy(const fbl::RefPtr<Device>& dev,
   return ZX_OK;
 }
 
-zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
-                                         fbl::RefPtr<DriverHost> target_driver_host,
-                                         fbl::RefPtr<Device>* new_proxy_out) {
+zx_status_t Coordinator::PrepareFidlProxy(const fbl::RefPtr<Device>& dev,
+                                          fbl::RefPtr<DriverHost> target_driver_host,
+                                          fbl::RefPtr<Device>* fidl_proxy_out) {
   zx_status_t status;
-  if ((status = dev->CreateNewProxy(new_proxy_out)) != ZX_OK) {
-    LOGF(ERROR, "Cannot create new proxy device '%s': %s", dev->name().data(),
+  if ((status = dev->CreateFidlProxy(fidl_proxy_out)) != ZX_OK) {
+    LOGF(ERROR, "Cannot create FIDL proxy device '%s': %s", dev->name().data(),
          zx_status_get_string(status));
     return status;
   }
@@ -702,9 +702,9 @@ zx_status_t Coordinator::PrepareNewProxy(const fbl::RefPtr<Device>& dev,
       return status;
     }
   }
-  (*new_proxy_out)->set_host(std::move(target_driver_host));
-  if (status =
-          CreateNewProxyDevice(*new_proxy_out, (*new_proxy_out)->host(), dev->clone_outgoing_dir());
+  (*fidl_proxy_out)->set_host(std::move(target_driver_host));
+  if (status = CreateFidlProxyDevice(*fidl_proxy_out, (*fidl_proxy_out)->host(),
+                                     dev->clone_outgoing_dir());
       status != ZX_OK) {
     LOGF(ERROR, "Failed to create proxy device '%s' in driver_host '%s': %s", dev->name().data(),
          driver_hostname, zx_status_get_string(status));
@@ -744,16 +744,16 @@ zx_status_t Coordinator::AttemptBind(const MatchedDriverInfo matched_driver,
 
   zx_status_t status;
   if (dev->has_outgoing_directory()) {
-    VLOGF(1, "Preparing new proxy for %s", dev->name().data());
+    VLOGF(1, "Preparing FIDL proxy for %s", dev->name().data());
     auto target_driver_host = (dev->flags & DEV_CTX_MUST_ISOLATE) ? nullptr : dev->host();
-    fbl::RefPtr<Device> new_proxy;
-    status = PrepareNewProxy(dev, target_driver_host, &new_proxy);
+    fbl::RefPtr<Device> fidl_proxy;
+    status = PrepareFidlProxy(dev, target_driver_host, &fidl_proxy);
     if (status != ZX_OK) {
       return status;
     }
-    status = BindDriverToDevice(new_proxy, drv);
+    status = BindDriverToDevice(fidl_proxy, drv);
   } else {
-    VLOGF(1, "Preparing old proxy for %s", dev->name().data());
+    VLOGF(1, "Preparing Banjo proxy for %s", dev->name().data());
     status = PrepareProxy(dev, nullptr /* target_driver_host */);
     if (status != ZX_OK) {
       return status;
