@@ -583,7 +583,9 @@ pgoff_t FileCache::Writeback(WritebackOperation &operation) {
     ZX_DEBUG_ASSERT(page->IsUptodate());
     ZX_DEBUG_ASSERT(page->IsLocked());
     if (vnode_->IsNode() && operation.node_page_cb) {
-      operation.node_page_cb(page.CopyRefPtr());
+      // If it is last dnode page, set |is_last_dnode| flag to process additional operation.
+      bool is_last_dnode = i == (pages.size() - 1);
+      operation.node_page_cb(page.CopyRefPtr(), is_last_dnode);
     }
     zx_status_t ret = vnode_->WriteDirtyPage(page, operation.bReclaim);
     if (ret != ZX_OK) {

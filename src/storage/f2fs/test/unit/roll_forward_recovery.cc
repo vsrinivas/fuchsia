@@ -89,12 +89,19 @@ void CheckFsyncedFile(F2fs *fs, ino_t ino, pgoff_t data_page_count, pgoff_t node
     if (curr_checkpoint_ver != node_page->CpverOfNode()) {
       break;
     }
-    ASSERT_TRUE(node_page->IsFsyncDnode());
 
     if (IsInode(*page)) {
       ASSERT_EQ(node_page->NidOfNode(), node_page->InoOfNode());
-      ASSERT_EQ(node_page->InoOfNode(), ino);
       ASSERT_TRUE(node_page->IsDentDnode());
+    } else {
+      ASSERT_FALSE(node_page->IsDentDnode());
+    }
+
+    // Last dnode page
+    if (node_page_count == (checked_node_page_count + 1)) {
+      ASSERT_TRUE(node_page->IsFsyncDnode());
+    } else {
+      ASSERT_FALSE(node_page->IsFsyncDnode());
     }
 
     fbl::RefPtr<VnodeF2fs> vnode;
@@ -1181,6 +1188,107 @@ TEST(FsyncRecoveryTest, RenameDirectoryWithStrictFsync) {
   root_dir = nullptr;
 
   // 11. Unmount and check filesystem
+  FileTester::Unmount(std::move(fs), &bc);
+  EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
+}
+
+TEST(FsyncRecoveryTest, AtomicFsync) {
+  std::unique_ptr<Bcache> bc;
+  FileTester::MkfsOnFakeDev(&bc);
+
+  std::unique_ptr<F2fs> fs;
+  MountOptions options{};
+  // Enable roll-forward recovery
+  ASSERT_EQ(options.SetValue(options.GetNameView(kOptDisableRollForward), 0), ZX_OK);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+
+  fbl::RefPtr<VnodeF2fs> root;
+  FileTester::CreateRoot(fs.get(), &root);
+  fbl::RefPtr<Dir> root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // 1. Create file and write data pages.
+  const pgoff_t data_page_count = kAddrsPerInode + kAddrsPerBlock * 2 + 1;
+  std::string valid_file_name("valid_fsync_file");
+  auto ret = CreateFileAndWritePages(root_dir.get(), valid_file_name, data_page_count, 0);
+  ASSERT_TRUE(ret.is_ok());
+  auto valid_fsync_vnode = std::move(ret.value());
+
+  std::string invalid_file_name("invalid_fsync_file");
+  ret = CreateFileAndWritePages(root_dir.get(), invalid_file_name, data_page_count, 0);
+  ASSERT_TRUE(ret.is_ok());
+  auto invalid_fsync_vnode = std::move(ret.value());
+
+  // 2. Fsync file
+  uint64_t pre_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  ASSERT_EQ(valid_fsync_vnode->SyncFile(
+                0, safemath::checked_cast<loff_t>(valid_fsync_vnode->GetSize()), 0),
+            ZX_OK);
+  ASSERT_EQ(invalid_fsync_vnode->SyncFile(
+                0, safemath::checked_cast<loff_t>(invalid_fsync_vnode->GetSize()), 0),
+            ZX_OK);
+  uint64_t curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  // Checkpoint should not be performed instead of fsync
+  ASSERT_EQ(pre_checkpoint_ver, curr_checkpoint_ver);
+
+  // 3. currupt invalid_fsync_file's last dnode page
+  block_t last_dnode_blkaddr =
+      fs->GetSegmentManager().NextFreeBlkAddr(CursegType::kCursegWarmNode) - 1;
+  auto fs_block = std::make_unique<FsBlock>();
+  fs->GetBc().Readblk(last_dnode_blkaddr, fs_block->GetData().data());
+  auto node_block = reinterpret_cast<Node *>(fs_block->GetData().data());
+  ASSERT_EQ(curr_checkpoint_ver, LeToCpu(node_block->footer.cp_ver));
+  ASSERT_EQ(node_block->footer.ino, invalid_fsync_vnode->Ino());
+  ASSERT_TRUE(TestBit(static_cast<uint32_t>(BitShift::kFsyncBitShift), &node_block->footer.flag));
+
+  uint32_t dummy_buf[PAGE_SIZE / (sizeof(uint32_t) / sizeof(uint8_t))] = {0};
+  fs->GetBc().Writeblk(last_dnode_blkaddr, dummy_buf);
+
+  ASSERT_EQ(valid_fsync_vnode->Close(), ZX_OK);
+  valid_fsync_vnode = nullptr;
+  ASSERT_EQ(invalid_fsync_vnode->Close(), ZX_OK);
+  invalid_fsync_vnode = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 4. SPO
+  FileTester::SuddenPowerOff(std::move(fs), &bc);
+
+  // 5. Remount with roll-forward recovery
+  FileTester::MountWithOptions(loop.dispatcher(), options, &bc, &fs);
+  curr_checkpoint_ver = fs->GetSuperblockInfo().GetCheckpoint().checkpoint_ver;
+  ASSERT_EQ(pre_checkpoint_ver + 1, curr_checkpoint_ver);
+
+  // 6. Check fsynced file
+  FileTester::CreateRoot(fs.get(), &root);
+  root_dir = fbl::RefPtr<Dir>::Downcast(std::move(root));
+
+  // Valid File can be successfully recovered
+  fbl::RefPtr<fs::Vnode> file_fs_vnode;
+  File *fsync_file_ptr;
+  FileTester::Lookup(root_dir.get(), valid_file_name, &file_fs_vnode);
+  valid_fsync_vnode = fbl::RefPtr<VnodeF2fs>::Downcast(std::move(file_fs_vnode));
+  fsync_file_ptr = static_cast<File *>(valid_fsync_vnode.get());
+  ASSERT_EQ(valid_fsync_vnode->GetSize(), data_page_count * PAGE_SIZE);
+
+  for (uint32_t index = 0; index < data_page_count; ++index) {
+    uint32_t write_buf[PAGE_SIZE / (sizeof(uint32_t) / sizeof(uint8_t))];
+    FileTester::ReadFromFile(fsync_file_ptr, write_buf, PAGE_SIZE,
+                             static_cast<size_t>(index) * PAGE_SIZE);
+    ASSERT_EQ(write_buf[0], index);
+  }
+
+  // Currupted invalid file cannot be recovered
+  FileTester::Lookup(root_dir.get(), invalid_file_name, &file_fs_vnode);
+  ASSERT_EQ(file_fs_vnode, nullptr);
+
+  ASSERT_EQ(valid_fsync_vnode->Close(), ZX_OK);
+  valid_fsync_vnode = nullptr;
+  invalid_fsync_vnode = nullptr;
+  ASSERT_EQ(root_dir->Close(), ZX_OK);
+  root_dir = nullptr;
+
+  // 7. Unmount and check filesystem
   FileTester::Unmount(std::move(fs), &bc);
   EXPECT_EQ(Fsck(std::move(bc), FsckOptions{.repair = false}, &bc), ZX_OK);
 }

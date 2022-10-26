@@ -62,6 +62,7 @@ zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
   // Get blkaddr from which it starts finding fsynced dnode block
   block_t blkaddr = segment_manager_->StartBlock(curseg->segno) + curseg->next_blkoff;
 
+  fbl::RefPtr<NodePage> inode_page;
   while (true) {
     LockedPage page;
     // Since node inode cache cannot be used for recovery, use meta inode cache temporarily and
@@ -75,6 +76,11 @@ zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
       break;
     }
 
+    // Reserve inode page
+    if (IsInode(*page)) {
+      inode_page = fbl::RefPtr<NodePage>::Downcast(page.CopyRefPtr());
+    }
+
     if (!page.GetPage<NodePage>().IsFsyncDnode()) {
       // Check next segment
       blkaddr = page.GetPage<NodePage>().NextBlkaddrOfNode();
@@ -85,12 +91,16 @@ zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
     auto entry_ptr = GetFsyncInode(inode_list, page.GetPage<NodePage>().InoOfNode());
     if (entry_ptr) {
       entry_ptr->SetLastDnodeBlkaddr(blkaddr);
-      if (IsInode(*page) && page.GetPage<NodePage>().IsDentDnode()) {
+      if (inode_page && inode_page->IsDentDnode()) {
         entry_ptr->GetVnode().SetFlag(InodeInfoFlag::kIncLink);
       }
     } else {
-      if (IsInode(*page) && page.GetPage<NodePage>().IsDentDnode()) {
-        if (err = GetNodeManager().RecoverInodePage(page.GetPage<NodePage>()); err != ZX_OK) {
+      // Recover reserved inode page
+      ZX_DEBUG_ASSERT(inode_page);
+      ZX_DEBUG_ASSERT(inode_page->InoOfNode() == page.GetPage<NodePage>().InoOfNode());
+
+      if (inode_page->IsDentDnode()) {
+        if (err = GetNodeManager().RecoverInodePage(*inode_page); err != ZX_OK) {
           break;
         }
       }
@@ -106,9 +116,9 @@ zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
       entry->SetLastDnodeBlkaddr(blkaddr);
       inode_list.push_back(std::move(entry));
     }
-
-    if (IsInode(*page)) {
-      if (err = RecoverInode(entry_ptr->GetVnode(), page.GetPage<NodePage>()); err != ZX_OK) {
+    if (inode_page) {
+      ZX_DEBUG_ASSERT(inode_page->InoOfNode() == page.GetPage<NodePage>().InoOfNode());
+      if (err = RecoverInode(entry_ptr->GetVnode(), *inode_page); err != ZX_OK) {
         break;
       }
     }
@@ -116,6 +126,7 @@ zx_status_t F2fs::FindFsyncDnodes(FsyncInodeList &inode_list) {
     // Get the next block information from footer
     blkaddr = page.GetPage<NodePage>().NextBlkaddrOfNode();
     page->ClearUptodate();
+    inode_page.reset();
   }
   return err;
 }

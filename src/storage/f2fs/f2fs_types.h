@@ -25,6 +25,7 @@ using atomic_t = std::atomic_int;
 using umode_t = uint16_t;
 using VnodeCallback = fit::function<zx_status_t(fbl::RefPtr<VnodeF2fs> &)>;
 using PageCallback = fit::function<zx_status_t(fbl::RefPtr<Page>)>;
+using NodePageCallback = fit::function<zx_status_t(fbl::RefPtr<Page>, bool is_last_dnode)>;
 using SyncCallback = fs::Vnode::SyncCallback;
 
 // A async_dispatcher_t* is needed for some functions on Fuchsia only. In order to avoid ifdefs on

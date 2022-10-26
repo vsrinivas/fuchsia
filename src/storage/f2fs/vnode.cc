@@ -935,6 +935,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   } else {
     // Write dnode pages
     fs()->GetNodeManager().FsyncNodePages(*this);
+    // TODO: Remove when FUA CMD is enabled
     fs()->GetBc().Flush();
 
     // TODO: Add flags to log recovery information to NAT entries and decide whether to write inode

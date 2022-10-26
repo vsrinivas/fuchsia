@@ -42,8 +42,8 @@ struct WritebackOperation {
   bool bReclaim = false;             // If true, it is invoked for memory reclaim.
   VnodeCallback if_vnode = nullptr;  // If set, it determines which vnodes are subject to writeback.
   PageCallback if_page = nullptr;    // If set, it determines which Pages are subject to writeback.
-  PageCallback node_page_cb = nullptr;  // If set, the callback is executed. This callback is for
-                                        // node page only and is executed before writeback.
+  NodePageCallback node_page_cb = nullptr;  // If set, the callback is executed. This callback is
+                                            // for node page only and is executed before writeback.
 };
 
 template <typename T, bool EnableAdoptionValidator = ZX_DEBUG_ASSERT_IMPLEMENTED>
