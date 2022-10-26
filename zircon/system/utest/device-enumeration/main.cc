@@ -854,34 +854,17 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/pt/acpi",
       "sys/platform/pt/acpi/acpi-pwrbtn",
+      "sys/platform/pt/PCI0/bus/00:1f.2_/pci-00:1f.2-fidl/ahci",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-keyboard",
+      "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-mouse",
   };
 
   ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicePaths, std::size(kDevicePaths)));
-
-  []() {
-    if (IsDfv2Enabled()) {
-      return;
-    }
-
-    // TODO(fxbug.dev/106517): Fix these devices and move them back.
-    static const char* kDevicesThatFailInDfv2[] = {
-        "sys/platform/pt/PCI0/bus/00:1f.2_/pci-00:1f.2-fidl/ahci",
-        "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-keyboard",
-        "sys/platform/pt/acpi/acpi-_SB_/acpi-PCI0/acpi-ISA_/acpi-KBD_/acpi-KBD_-passthrough/acpi-KBD_-composite/i8042/i8042-mouse",
-    };
-
-    ASSERT_NO_FATAL_FAILURE(TestRunner(kDevicesThatFailInDfv2, std::size(kDevicesThatFailInDfv2)));
-  }();
 
   if (!device_enumeration::IsAemuBoard()) {
     return;
   }
   printf("INFO: AEMU board detected. Test enumerating AEMU-specific devices.\n");
-
-  // TODO(fxbug.dev/106517): Fix the devices below and remove this.
-  if (IsDfv2Enabled()) {
-    return;
-  }
 
   static const char* kAemuDevicePaths[] = {
       "sys/platform/pt/PCI0/bus/00:01.0_/pci-00:01.0-fidl/virtio-input",
@@ -897,8 +880,6 @@ TEST_F(DeviceEnumerationTest, QemuX64Q35Test) {
 
       "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control",
       "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2/goldfish-control/goldfish-display",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite",
-      "sys/platform/pt/acpi/acpi-_SB_/acpi-GFSK/acpi-GFSK-passthrough/acpi-GFSK-composite",
       "sys/platform/pt/acpi/acpi-_SB_/acpi-GFPP/acpi-GFPP-passthrough/acpi-GFPP-composite/goldfish-pipe/goldfish-pipe-control/goldfish-control-2",
   };
 
