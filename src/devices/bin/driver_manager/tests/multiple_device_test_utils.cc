@@ -310,6 +310,7 @@ void MultipleDeviceTestCase::TearDown() {
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,
                                        uint32_t protocol_id, fbl::String driver, bool has_init,
                                        bool reply_to_init, bool always_init,
+                                       fdm::AddDeviceConfig add_device_config,
                                        fidl::ClientEnd<fio::Directory> outgoing_dir,
                                        zx::vmo inspect, size_t* index) {
   DeviceState state;
@@ -325,8 +326,9 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
       /* props_data */ nullptr,
       /* props_count */ 0, /* str_props_data */ nullptr,
       /* str_props_count */ 0, name, protocol_id, /* driver_path */ driver.data(), /* args */ {},
-      /* add_device_config */ {}, /* has_init */ has_init, /* always_init */ always_init,
-      std::move(inspect), /* outgoing_dir */ std::move(outgoing_dir), &state.device);
+      /* add_device_config */ add_device_config, /* has_init */ has_init,
+      /* always_init */ always_init, std::move(inspect), /* outgoing_dir */ std::move(outgoing_dir),
+      &state.device);
   state.device->flags |= DEV_CTX_ALLOW_MULTI_COMPOSITE;
   ASSERT_OK(status);
   coordinator_loop_.RunUntilIdle();
@@ -345,7 +347,7 @@ void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const 
                                        bool reply_to_init, bool always_init, zx::vmo inspect,
                                        size_t* index) {
   AddDevice(parent, name, protocol_id, driver, has_init, reply_to_init, always_init,
-            fidl::ClientEnd<fio::Directory>(), std::move(inspect), index);
+            fdm::AddDeviceConfig{}, fidl::ClientEnd<fio::Directory>(), std::move(inspect), index);
 }
 
 void MultipleDeviceTestCase::AddDevice(const fbl::RefPtr<Device>& parent, const char* name,

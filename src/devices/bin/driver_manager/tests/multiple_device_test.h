@@ -156,6 +156,7 @@ class MultipleDeviceTestCase : public zxtest::Test {
 
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, bool has_init, bool reply_to_init, bool always_init,
+                 fdm::AddDeviceConfig add_device_config,
                  fidl::ClientEnd<fio::Directory> outgoing_dir, zx::vmo inspect,
                  size_t* device_index);
   void AddDevice(const fbl::RefPtr<Device>& parent, const char* name, uint32_t protocol_id,

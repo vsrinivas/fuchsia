@@ -1281,8 +1281,8 @@ TEST_F(CompositeTestCase, DeviceIteratorCompositeChildNoFragment) {
 
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "parent-device", 1 /* protocol id */,
-                                    "", true, true, true, std::move(endpoints->client), zx::vmo(),
-                                    &parent_index));
+                                    "", true, true, true, fdm::AddDeviceConfig::kMustIsolate,
+                                    std::move(endpoints->client), zx::vmo(), &parent_index));
 
   // If a parent device has these properties, any composite devices will be
   // created without an intermediate fragment device.
@@ -1345,8 +1345,8 @@ TEST_F(CompositeTestCase, MultibindWithOutgoingDirectory) {
 
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURE(AddDevice(platform_bus()->device, "parent-device", 1 /* protocol id */,
-                                    "", true, true, true, std::move(endpoints->client), zx::vmo(),
-                                    &parent_index));
+                                    "", true, true, true, fdm::AddDeviceConfig::kMustIsolate,
+                                    std::move(endpoints->client), zx::vmo(), &parent_index));
 
   // If a parent device has these properties, any composite devices will be
   // created without an intermediate fragment device.

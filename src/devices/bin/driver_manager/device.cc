@@ -179,10 +179,6 @@ zx_status_t Device::Create(
   dev->device_controller_.Bind(std::move(device_controller), coordinator->dispatcher());
   dev->Serve(std::move(coordinator_request));
 
-  if (dev->has_outgoing_directory()) {
-    dev->flags |= DEV_CTX_MUST_ISOLATE;
-  }
-
   // We exist within our parent's device host
   dev->set_host(parent->host());
 
