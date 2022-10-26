@@ -158,7 +158,7 @@ zx::result<VmoNode *> VmoManager::GetVmoNodeUnsafe(const pgoff_t index) {
   return zx::ok(vmo_node);
 }
 
-pgoff_t VmoManager::GetOffsetInVmoNode(pgoff_t page_index) { return page_index % kVmoSize; }
+pgoff_t VmoManager::GetOffsetInVmoNode(pgoff_t page_index) const { return page_index % kVmoSize; }
 
 pgoff_t VmoManager::GetVmoNodeKey(pgoff_t page_index) {
   return page_index - GetOffsetInVmoNode(page_index);

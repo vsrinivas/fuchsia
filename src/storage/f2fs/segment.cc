@@ -206,7 +206,7 @@ uint16_t SegmentManager::CursegBlkoff(int type) {
   return curseg->next_blkoff;
 }
 
-void SegmentManager::CheckSegRange(uint32_t segno) { ZX_ASSERT(segno < segment_count_); }
+void SegmentManager::CheckSegRange(uint32_t segno) const { ZX_ASSERT(segno < segment_count_); }
 
 #if 0  // porting needed
 // This function is used for only debugging.

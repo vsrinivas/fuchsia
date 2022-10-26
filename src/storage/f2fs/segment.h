@@ -196,7 +196,7 @@ class SegmentManager {
   uint32_t CursegSegno(int type);
   uint8_t CursegAllocType(int type);
   uint16_t CursegBlkoff(int type);
-  void CheckSegRange(uint32_t segno);
+  void CheckSegRange(uint32_t segno) const;
   void CheckBlockCount(int segno, SitEntry &raw_sit);
   pgoff_t CurrentSitAddr(uint32_t start);
   pgoff_t NextSitAddr(pgoff_t block_addr);

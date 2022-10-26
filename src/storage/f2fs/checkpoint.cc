@@ -37,7 +37,7 @@ zx_status_t F2fs::GetMetaPage(pgoff_t index, LockedPage *out) {
   return ZX_OK;
 }
 
-zx_status_t F2fs::F2fsWriteMetaPage(LockedPage &page, bool is_reclaim) {
+zx_status_t F2fs::F2fsWriteMetaPage(LockedPage &page, bool is_reclaim) const {
   zx_status_t err = ZX_OK;
 
   page->WaitOnWriteback();
@@ -347,7 +347,7 @@ void F2fs::BlockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
   }
 }
 
-void F2fs::UnblockOperations() __TA_NO_THREAD_SAFETY_ANALYSIS {
+void F2fs::UnblockOperations() const __TA_NO_THREAD_SAFETY_ANALYSIS {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   superblock_info.mutex_unlock_op(LockType::kNodeOp);
   superblock_info.mutex_unlock_op(LockType::kFileOp);

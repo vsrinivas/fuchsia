@@ -201,7 +201,7 @@ zx_status_t F2fs::MakeWriteOperation(LockedPage& page, block_t blk_addr, PageTyp
   return writer_->EnqueuePage(page, blk_addr, type).status_value();
 }
 
-zx_status_t F2fs::MakeTrimOperation(block_t blk_addr, block_t nblocks) {
+zx_status_t F2fs::MakeTrimOperation(block_t blk_addr, block_t nblocks) const {
   return GetBc().Trim(blk_addr, nblocks);
 }
 

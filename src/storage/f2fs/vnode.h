@@ -226,8 +226,8 @@ class VnodeF2fs : public fs::Vnode,
   bool IsSock() const;
   bool IsFifo() const;
   bool HasGid() const;
-  bool IsMeta() __TA_EXCLUDES(mutex_);
-  bool IsNode() __TA_EXCLUDES(mutex_);
+  bool IsMeta() const __TA_EXCLUDES(mutex_);
+  bool IsNode() const __TA_EXCLUDES(mutex_);
 
   void SetName(std::string_view name) { name_ = name; }
   bool IsSameName(std::string_view name) const {
@@ -478,7 +478,7 @@ class VnodeF2fs : public fs::Vnode,
       __TA_EXCLUDES(mutex_);
   zx_status_t CloseNode() final;
 
-  bool NeedToSyncDir() __TA_EXCLUDES(mutex_);
+  bool NeedToSyncDir() const __TA_EXCLUDES(mutex_);
   bool NeedDoCheckpoint() __TA_EXCLUDES(mutex_);
 
 #ifdef __Fuchsia__

@@ -37,7 +37,7 @@ class MkfsWorker {
 
   std::unique_ptr<Bcache> Destroy() { return std::move(bc_); }
 
-  void PrintCurrentOption();
+  void PrintCurrentOption() const;
 
  private:
   friend class MkfsTester;
@@ -56,7 +56,7 @@ class MkfsWorker {
 
   zx_status_t WriteToDisk(FsBlock& buf, block_t bno);
 
-  zx::result<uint32_t> GetCalculatedOp(uint32_t op);
+  zx::result<uint32_t> GetCalculatedOp(uint32_t op) const;
 
   zx_status_t PrepareSuperblock();
   zx_status_t InitSitArea();

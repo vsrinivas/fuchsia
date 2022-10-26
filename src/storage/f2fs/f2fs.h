@@ -202,7 +202,7 @@ class F2fs final {
   // checkpoint.cc
   zx_status_t GrabMetaPage(pgoff_t index, LockedPage *out);
   zx_status_t GetMetaPage(pgoff_t index, LockedPage *out);
-  zx_status_t F2fsWriteMetaPage(LockedPage &page, bool is_reclaim = false);
+  zx_status_t F2fsWriteMetaPage(LockedPage &page, bool is_reclaim = false) const;
 
   bool CanReclaim() const;
   bool IsTearDown() const;
@@ -215,7 +215,7 @@ class F2fs final {
   zx_status_t GetValidCheckpoint();
   zx_status_t ValidateCheckpoint(block_t cp_addr, uint64_t *version, LockedPage *out);
   void BlockOperations();
-  void UnblockOperations();
+  void UnblockOperations() const;
   void DoCheckpoint(bool is_umount);
   void WriteCheckpoint(bool blocked, bool is_umount);
   uint32_t GetFreeSectionsForDirtyPages();
@@ -244,7 +244,7 @@ class F2fs final {
   };
   using FsyncInodeList = fbl::DoublyLinkedList<std::unique_ptr<FsyncInodeEntry>>;
 
-  bool SpaceForRollForward();
+  bool SpaceForRollForward() const;
   FsyncInodeEntry *GetFsyncInode(FsyncInodeList &inode_list, nid_t ino);
   zx_status_t RecoverDentry(NodePage &ipage, VnodeF2fs &vnode);
   zx_status_t RecoverInode(VnodeF2fs &vnode, NodePage &node_page);
@@ -293,7 +293,7 @@ class F2fs final {
   zx::result<LockedPage> MakeReadOperation(LockedPage page, block_t blk_addr, PageType type,
                                            bool is_sync = true);
   zx_status_t MakeWriteOperation(LockedPage &page, block_t blk_addr, PageType type);
-  zx_status_t MakeTrimOperation(block_t blk_addr, block_t nblocks);
+  zx_status_t MakeTrimOperation(block_t blk_addr, block_t nblocks) const;
 
   void ScheduleWriterSubmitPages(sync_completion_t *completion = nullptr,
                                  PageType type = PageType::kNrPageType) {

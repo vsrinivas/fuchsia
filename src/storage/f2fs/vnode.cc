@@ -41,12 +41,12 @@ bool VnodeF2fs::IsFifo() const { return S_ISFIFO(mode_); }
 
 bool VnodeF2fs::HasGid() const { return mode_ & S_ISGID; }
 
-bool VnodeF2fs::IsNode() {
+bool VnodeF2fs::IsNode() const {
   SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   return ino_ == superblock_info.GetNodeIno();
 }
 
-bool VnodeF2fs::IsMeta() {
+bool VnodeF2fs::IsMeta() const {
   SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   return ino_ == superblock_info.GetMetaIno();
 }
@@ -943,7 +943,7 @@ zx_status_t VnodeF2fs::SyncFile(loff_t start, loff_t end, int datasync) {
   return ZX_OK;
 }
 
-bool VnodeF2fs::NeedToSyncDir() {
+bool VnodeF2fs::NeedToSyncDir() const {
   ZX_ASSERT(GetParentNid() < kNullIno);
   return !fs()->GetNodeManager().IsCheckpointedNode(GetParentNid());
 }

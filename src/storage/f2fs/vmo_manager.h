@@ -72,7 +72,7 @@ class VmoManager {
   // Currently, it is set to the f2fs segment size.
   static constexpr size_t kVmoSize = kDefaultBlocksPerSegment;
 
-  pgoff_t GetOffsetInVmoNode(pgoff_t page_index);
+  pgoff_t GetOffsetInVmoNode(pgoff_t page_index) const;
   pgoff_t GetVmoNodeKey(pgoff_t page_index);
 
   using VmoTreeTraits = fbl::DefaultKeyedObjectTraits<pgoff_t, VmoNode>;

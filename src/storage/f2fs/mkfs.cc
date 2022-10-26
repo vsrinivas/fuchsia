@@ -13,7 +13,7 @@
 
 namespace f2fs {
 
-void MkfsWorker::PrintCurrentOption() {
+void MkfsWorker::PrintCurrentOption() const {
   std::cerr << "f2fs mkfs label = " << mkfs_options_.label << std::endl;
   std::cerr << "f2fs mkfs heap-based allocation = " << mkfs_options_.heap_based_allocation
             << std::endl;
@@ -128,7 +128,7 @@ zx_status_t MkfsWorker::WriteToDisk(FsBlock &buf, block_t bno) {
 #endif  // __Fuchsia__
 }
 
-zx::result<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) {
+zx::result<uint32_t> MkfsWorker::GetCalculatedOp(uint32_t user_op) const {
   uint32_t max_op = 0;
   uint32_t max_user_segments = 0;
 

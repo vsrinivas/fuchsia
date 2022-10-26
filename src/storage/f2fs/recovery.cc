@@ -6,7 +6,7 @@
 
 namespace f2fs {
 
-bool F2fs::SpaceForRollForward() {
+bool F2fs::SpaceForRollForward() const {
   SuperblockInfo &superblock_info = GetSuperblockInfo();
   std::lock_guard stat_lock(superblock_info.GetStatLock());
   return superblock_info.GetLastValidBlockCount() + superblock_info.GetAllocValidBlockCount() <=
