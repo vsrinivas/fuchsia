@@ -40,6 +40,12 @@ use {
     thiserror::Error,
 };
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct Remaining {
+    pub bytes: usize,
+    pub descriptors: usize,
+}
+
 /// Errors from walking a descriptor chain.
 #[derive(Error, Debug, Clone, PartialEq, Eq)]
 pub enum ChainError {
@@ -216,7 +222,7 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
         }
     }
 
-    fn remaining(&self) -> Result<usize, ChainError> {
+    fn remaining(&self) -> Result<Remaining, ChainError> {
         let mut state = State::<N, M, E> {
             chain: None,
             mem: self.mem,
@@ -224,11 +230,13 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem, const E: bool> State<'a, 'b, N, M, E
             current: self.current.clone(),
             indirect_chain: self.indirect_chain.clone(),
         };
-        let mut total = 0;
+        let mut bytes = 0;
+        let mut descriptors = 0;
         while let Some(v) = state.next_with_limit(usize::MAX) {
-            total += v?.len();
+            bytes += v?.len();
+            descriptors += 1;
         }
-        Ok(total)
+        Ok(Remaining { bytes, descriptors })
     }
 }
 
@@ -326,12 +334,12 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem> ReadableChain<'a, 'b, N, M> {
         self.next_with_limit(usize::MAX)
     }
 
-    /// Query readable bytes remaining.
+    /// Query readable bytes and descriptors remaining.
     ///
-    /// Returns the number of readable bytes remaining in the chain. This does not imply that
-    /// calling [`next_with_limit`](#next_with_limit) with the result will return that much, see
-    /// [`next_with_limit`](#next_with_limit) for more details.
-    pub fn remaining(&self) -> Result<usize, ChainError> {
+    /// Returns the number of readable bytes and descriptors remaining in the chain. This does not
+    /// imply that calling [`next_with_limit`](#next_with_limit) with the result will return that
+    /// much, see [`next_with_limit`](#next_with_limit) for more details.
+    pub fn remaining(&self) -> Result<Remaining, ChainError> {
         self.state.remaining()
     }
 }
@@ -460,10 +468,10 @@ impl<'a, 'b, N: DriverNotify, M: DriverMem> WritableChain<'a, 'b, N, M> {
         self.next_with_limit(usize::MAX)
     }
 
-    /// Query writable bytes remaining.
+    /// Query writable bytes and descriptors remaining.
     ///
     /// Similar to [`ReadableChain::remaining`]
-    pub fn remaining(&self) -> Result<usize, ChainError> {
+    pub fn remaining(&self) -> Result<Remaining, ChainError> {
         self.state.remaining()
     }
 
@@ -580,15 +588,15 @@ mod tests {
     fn test_smoke_test_body<'a>(state: &mut TestQueue<'a>, driver_mem: &'a IdentityDriverMem) {
         {
             let mut readable = ReadableChain::new(state.queue.next_chain().unwrap(), driver_mem);
-            assert_eq!(readable.remaining(), Ok(12));
+            assert_eq!(readable.remaining(), Ok(Remaining { bytes: 12, descriptors: 3 }));
             check_read(readable.next(), &[1, 2, 3, 4]);
-            assert_eq!(readable.remaining(), Ok(8));
+            assert_eq!(readable.remaining(), Ok(Remaining { bytes: 8, descriptors: 2 }));
             check_read(readable.next_with_limit(2), &[5, 6]);
-            assert_eq!(readable.remaining(), Ok(6));
+            assert_eq!(readable.remaining(), Ok(Remaining { bytes: 6, descriptors: 2 }));
             check_read(readable.next_with_limit(200), &[7, 8]);
-            assert_eq!(readable.remaining(), Ok(4));
+            assert_eq!(readable.remaining(), Ok(Remaining { bytes: 4, descriptors: 1 }));
             check_read(readable.next_with_limit(4), &[9, 10, 11, 12]);
-            assert_eq!(readable.remaining(), Ok(0));
+            assert_eq!(readable.remaining(), Ok(Remaining { bytes: 0, descriptors: 0 }));
             assert!(readable.next().is_none());
 
             let mut writable = WritableChain::from_readable(readable).unwrap();

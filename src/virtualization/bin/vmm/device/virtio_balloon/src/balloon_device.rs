@@ -78,9 +78,9 @@ impl<B: BalloonBackend> BalloonDevice<B> {
         chain: ReadableChain<'a, 'b, N, M>,
     ) {
         match chain.remaining() {
-            Ok(chain_size) => {
+            Ok(remaining) => {
                 // each PFN is LE32, so we divide the amount of memory in read chain by 4
-                tracing::trace!("Deflated {} KiB", chain_size / 4 * PAGE_SIZE / 1024);
+                tracing::trace!("Deflated {} KiB", remaining.bytes / 4 * PAGE_SIZE / 1024);
             }
             Err(_) => {}
         }
@@ -91,7 +91,7 @@ impl<B: BalloonBackend> BalloonDevice<B> {
         mut chain: ReadableChain<'a, 'b, N, M>,
     ) -> Result<(), Error> {
         // each PFN is LE32, so we divide the amount of memory in read chain by 4
-        let inflated_amount = chain.remaining()? / 4 * PAGE_SIZE;
+        let inflated_amount = chain.remaining()?.bytes / 4 * PAGE_SIZE;
         let mut base = 0;
         let mut run = 0;
         // Normally Linux driver will send out descending list of PFNs

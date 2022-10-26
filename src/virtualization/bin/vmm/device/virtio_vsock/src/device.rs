@@ -251,11 +251,11 @@ impl VsockDevice {
         rx_waiters: &mut FuturesUnordered<LocalBoxFuture<'_, WantRxChainResult>>,
     ) -> Result<(), Error> {
         let result = match chain.remaining() {
-            Ok(bytes) => {
-                if bytes < mem::size_of::<VirtioVsockHeader>() {
+            Ok(remaining) => {
+                if remaining.bytes < mem::size_of::<VirtioVsockHeader>() {
                     Err(anyhow!(
                         "Writable chain ({}) is smaller than a vsock header ({})",
-                        bytes,
+                        remaining.bytes,
                         mem::size_of::<VirtioVsockHeader>()
                     ))
                 } else {

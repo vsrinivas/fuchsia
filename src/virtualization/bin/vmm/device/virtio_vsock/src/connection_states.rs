@@ -563,7 +563,8 @@ impl ReadWrite {
         let header_length = std::mem::size_of::<VirtioVsockHeader>();
         let chain_bytes = chain
             .remaining()
-            .map_err(|err| anyhow!("Failed to query chain for remaining bytes: {}", err))?;
+            .map_err(|err| anyhow!("Failed to query chain for remaining bytes: {}", err))?
+            .bytes;
 
         if chain_bytes <= header_length {
             // This chain is too small to transmit data. This is the fault of the guest, not this
@@ -657,7 +658,8 @@ impl ReadWrite {
         let header_bytes = header.len.get();
         let chain_bytes = chain
             .remaining()
-            .map_err(|err| anyhow!("Failed to query chain for remaining bytes: {}", err))?;
+            .map_err(|err| anyhow!("Failed to query chain for remaining bytes: {}", err))?
+            .bytes;
         if chain_bytes != usize::try_from(header_bytes).unwrap() {
             return Err(anyhow!(
                 "Expected {} bytes from reading header, but found {} bytes on chain",

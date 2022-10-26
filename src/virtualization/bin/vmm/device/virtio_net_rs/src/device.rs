@@ -84,7 +84,8 @@ impl NetDevice {
 
         let chain_bytes = chain
             .remaining()
-            .map_err(|err| anyhow!("failed to query chain for remaining bytes: {}", err))?;
+            .map_err(|err| anyhow!("failed to query chain for remaining bytes: {}", err))?
+            .bytes;
         if chain_bytes < std::mem::size_of::<wire::VirtioNetHeader>() {
             return Err(anyhow!("Chain does not contain a VirtioNetHeader"));
         }

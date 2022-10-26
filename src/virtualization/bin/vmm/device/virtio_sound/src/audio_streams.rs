@@ -411,12 +411,12 @@ impl<'a> AudioStream<'a> for AudioOutput<'a> {
             return reply_txq::err(chain, wire::VIRTIO_SND_S_IO_ERR, 0);
         }
 
-        if let Err(err) = conn.validate_buffer(chain.remaining()?) {
+        if let Err(err) = conn.validate_buffer(chain.remaining()?.bytes) {
             tracing::warn!("AudioOutput validate_buffer failed: {}", err);
             return reply_txq::err(chain, wire::VIRTIO_SND_S_BAD_MSG, conn.latency_bytes());
         }
 
-        let buffer_size = chain.remaining()?;
+        let buffer_size = chain.remaining()?.bytes;
         let packet_range = match conn.payload_buffer.packets_avail.pop_front() {
             Some(packet) => packet,
             None => {

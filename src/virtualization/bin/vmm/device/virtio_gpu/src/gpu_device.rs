@@ -15,7 +15,7 @@ use {
     std::collections::{hash_map::Entry, HashMap},
     std::io::{Read, Write},
     tracing,
-    virtio_device::chain::{ReadableChain, WritableChain},
+    virtio_device::chain::{ReadableChain, Remaining, WritableChain},
     virtio_device::mem::{DriverMem, DriverRange},
     virtio_device::queue::DriverNotify,
     zerocopy::{AsBytes, FromBytes},
@@ -33,8 +33,8 @@ fn write_to_chain<'a, 'b, N: DriverNotify, M: DriverMem, T: AsBytes>(
     mut chain: WritableChain<'a, 'b, N, M>,
     message: T,
 ) -> Result<(), Error> {
-    let size = chain.remaining()?;
-    if size < std::mem::size_of::<wire::VirtioGpuCtrlHeader>() {
+    let Remaining { bytes, .. } = chain.remaining()?;
+    if bytes < std::mem::size_of::<wire::VirtioGpuCtrlHeader>() {
         return Err(anyhow!("Insufficient wriable space to write message to the chain"));
     }
     // unwrap here because since we already checked if there is space in the writable chain

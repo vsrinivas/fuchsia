@@ -142,7 +142,7 @@ pub mod reply_rxq {
     pub fn buffer_size<'a, 'b>(chain: &WritableChain<'a, 'b>) -> Result<usize, Error> {
         // Therefore, the size of the writable buffer is the size of the total writable area
         // minus the size of the status field.
-        let total_size = chain.remaining()?;
+        let total_size = chain.remaining()?.bytes;
         let status_size = std::mem::size_of::<wire::VirtioSndPcmStatus>();
         if total_size < status_size {
             Err(anyhow!(
@@ -162,7 +162,7 @@ pub mod reply_rxq {
         status: u32,
         latency_bytes: u32,
     ) -> Result<(), Error> {
-        let remaining = chain.remaining()?;
+        let remaining = chain.remaining()?.bytes;
         let status_size = std::mem::size_of::<wire::VirtioSndPcmStatus>();
         if remaining != status_size {
             panic!(

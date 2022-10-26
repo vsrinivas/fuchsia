@@ -80,15 +80,15 @@ fn zero_range<'a>(range: &DeviceRange<'a>) {
 fn seek_to_status<'a, 'b, N: DriverNotify, M: DriverMem>(
     chain: &mut WritableChain<'a, 'b, N, M>,
 ) -> Result<(), anyhow::Error> {
-    let mut remaining = chain.remaining()?;
-    while remaining > 1 {
+    let mut remaining_bytes = chain.remaining()?.bytes;
+    while remaining_bytes > 1 {
         // Unwrap here since we requested less than the number of remaining bytes.
-        let range = chain.next_with_limit(remaining - 1).unwrap()?;
+        let range = chain.next_with_limit(remaining_bytes - 1).unwrap()?;
         zero_range(&range);
         chain.add_written(range.len() as u32);
-        remaining = chain.remaining()?;
+        remaining_bytes = chain.remaining()?.bytes;
     }
-    if remaining != 1 {
+    if remaining_bytes != 1 {
         return Err(anyhow!("Failed to locate status byte"));
     }
     Ok(())
@@ -207,7 +207,7 @@ impl BlockDevice {
 
         // If we're here the chain should be coherent, meaning we should have a block status and
         // a single byte range left in the chain to write to.
-        if chain.remaining()? != 1 {
+        if chain.remaining()?.bytes != 1 {
             return Err(anyhow!(
                 "Expected a single byte remaining in the chain; unable to report status"
             ));
@@ -236,12 +236,12 @@ impl BlockDevice {
     ) -> Result<(WritableChain<'a, 'b, N, M>, wire::VirtioBlockStatus), anyhow::Error> {
         // If there are extra readable bytes before the writable section of the chain, the request
         // is malformed.
-        if chain.remaining()? != 0 {
+        if chain.remaining()?.bytes != 0 {
             return readable_chain_error(chain, wire::VirtioBlockStatus::IoError);
         }
 
         let mut chain = WritableChain::from_readable(chain)?;
-        let bytes_to_read = chain.remaining()?.checked_sub(1).unwrap();
+        let bytes_to_read = chain.remaining()?.bytes.checked_sub(1).unwrap();
         let sector = Sector::from_raw_sector(header.sector.get());
         if let Err(_e) = check_request(bytes_to_read as u64, sector, self.device_attrs.capacity) {
             // The request is malformed, so don't attempt to process it but do attempt to report
@@ -256,7 +256,7 @@ impl BlockDevice {
         let mut ranges: Vec<DeviceRange<'a>> = Vec::new();
         while let Some(range) = chain.next_with_limit(bytes_to_read_remaining).transpose()? {
             ranges.push(range);
-            let remaining = chain.remaining()?;
+            let remaining = chain.remaining()?.bytes;
             if remaining <= 1 {
                 break;
             }
@@ -292,7 +292,7 @@ impl BlockDevice {
         if self.mode.is_read_only() {
             return readable_chain_error(chain, wire::VirtioBlockStatus::IoError);
         }
-        let bytes_to_write = chain.remaining()?;
+        let bytes_to_write = chain.remaining()?.bytes;
         let sector = Sector::from_raw_sector(header.sector.get());
         if let Err(_e) = check_request(bytes_to_write as u64, sector, self.device_attrs.capacity) {
             // The request is malformed, so don't attempt to process it.
@@ -346,7 +346,7 @@ impl BlockDevice {
         let mut chain = WritableChain::from_incomplete_readable(chain)?;
 
         // Section 5.2.6.1: The length of `data` MUST be 20 bytes for VIRTIO_BLK_T_GET_ID requests.
-        if chain.remaining()? != wire::VIRTIO_BLK_ID_LEN + 1 {
+        if chain.remaining()?.bytes != wire::VIRTIO_BLK_ID_LEN + 1 {
             return writable_chain_error(chain, wire::VirtioBlockStatus::IoError);
         }
 
@@ -363,7 +363,7 @@ impl BlockDevice {
         // We already validated the size of the writable chain and we need to have written the
         // entire data buffer for the id (including null trailing bytes), so this should always
         // hold.
-        assert!(chain.remaining()? == 1);
+        assert!(chain.remaining()?.bytes == 1);
         Ok((chain, wire::VirtioBlockStatus::Ok))
     }
 }
