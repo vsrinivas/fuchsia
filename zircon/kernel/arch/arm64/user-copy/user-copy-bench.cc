@@ -247,7 +247,8 @@ int main(int argc, char** argv) {
          cpu_name.c_str(), use_deadline_profile ? "deadline" : "default", output_path.c_str(),
          seed);
 
-  fbl::unique_fd output_fd(open(output_path.c_str(), O_WRONLY | O_CREAT | O_APPEND));
+  fbl::unique_fd output_fd(
+      open(output_path.c_str(), O_WRONLY | O_CREAT | O_APPEND, S_IRUSR | S_IWUSR));
   if (!output_fd) {
     printf("Failed to open file %s\n", strerror(errno));
     return -1;
