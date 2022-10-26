@@ -36,7 +36,7 @@ inline void SetSegnoInJournal(SummaryBlock *sum, int i, uint32_t segno) {
   sum->sit_j.entries[i].segno = segno;
 }
 
-int UpdateNatsInCursum(SummaryBlock *rs, int i);
+int UpdateNatsInCursum(SummaryBlock *raw_summary, int i);
 
 // For INODE and NODE manager
 constexpr int kXattrNodeOffset = -1;

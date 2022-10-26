@@ -90,9 +90,10 @@ class MapTester {
   static void CheckBlkaddrsInuse(F2fs *fs, std::unordered_set<block_t> &blkaddrs);
   static void CheckDnodePage(NodePage &page, nid_t exp_nid);
   static void DoWriteNat(F2fs *fs, nid_t nid, block_t blkaddr, uint8_t version);
-  static void RemoveTruncatedNode(NodeManager &nm_i, std::vector<nid_t> &nids)
-      __TA_EXCLUDES(nm_i.nat_tree_lock_);
-  static bool IsCachedNat(NodeManager &nm_i, nid_t n) __TA_EXCLUDES(nm_i.nat_tree_lock_);
+  static void RemoveTruncatedNode(NodeManager &node_manager, std::vector<nid_t> &nids)
+      __TA_EXCLUDES(node_manager.nat_tree_lock_);
+  static bool IsCachedNat(NodeManager &node_manager, nid_t n)
+      __TA_EXCLUDES(node_manager.nat_tree_lock_);
   static void ClearAllDirtyNatEntries(NodeManager &manager) __TA_EXCLUDES(manager.nat_tree_lock_);
   static void RemoveAllNatEntries(NodeManager &manager) __TA_EXCLUDES(manager.nat_tree_lock_);
   static nid_t ScanFreeNidList(NodeManager &manager, nid_t start)

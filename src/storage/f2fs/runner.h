@@ -35,7 +35,7 @@ class Runner final : public PlatformVfs {
   zx::result<> ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> root);
 
   // fs::PagedVfs implementation.
-  void Shutdown(fs::FuchsiaVfs::ShutdownCallback closure) final;
+  void Shutdown(fs::FuchsiaVfs::ShutdownCallback cb) final;
   zx::result<fs::FilesystemInfo> GetFilesystemInfo() final;
   void OnNoConnections() final;
 #endif  // __Fuchsia__

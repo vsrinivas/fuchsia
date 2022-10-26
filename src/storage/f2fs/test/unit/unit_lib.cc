@@ -52,9 +52,9 @@ void FileTester::MkfsOnFakeDev(std::unique_ptr<Bcache> *bc, uint64_t block_count
 }
 
 void FileTester::MkfsOnFakeDevWithOptions(std::unique_ptr<Bcache> *bc, const MkfsOptions &options,
-                                          uint64_t blockCount, uint32_t blockSize, bool btrim) {
+                                          uint64_t block_count, uint32_t block_size, bool btrim) {
   auto device = std::make_unique<FakeBlockDevice>(FakeBlockDevice::Config{
-      .block_count = blockCount, .block_size = blockSize, .supports_trim = btrim});
+      .block_count = block_count, .block_size = block_size, .supports_trim = btrim});
   bool readonly_device = false;
   auto bc_or = CreateBcache(std::move(device), &readonly_device);
   ASSERT_TRUE(bc_or.is_ok());

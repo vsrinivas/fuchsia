@@ -60,7 +60,7 @@ class StorageBuffer {
   // |buffer_| for the Pages for read I/Os. If successful, it returns PageOpeartions that
   // convey BufferedOperations and the refptr of the Pages for read I/Os.
   zx::result<PageOperations> ReserveReadOperations(std::vector<LockedPage> &pages,
-                                                   const std::vector<block_t> &blk_addr)
+                                                   const std::vector<block_t> &addrs)
       __TA_EXCLUDES(mutex_);
 
   void ReleaseReadBuffers(const PageOperations &operation, const zx_status_t io_status)

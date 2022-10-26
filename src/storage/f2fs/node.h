@@ -183,7 +183,7 @@ class NodeManager {
   }
   void SetNatBitmap(const uint8_t *bitmap) { memcpy(nat_bitmap_.get(), bitmap, nat_bitmap_size_); }
   uint8_t *GetNatBitmap() const { return nat_bitmap_.get(); }
-  void GetNatBitmap(void *addr);
+  void GetNatBitmap(void *out);
 
   SuperblockInfo &GetSuperblockInfo();
 
@@ -203,10 +203,10 @@ class NodeManager {
   void SetNatCacheDirty(NatEntry &ne) __TA_REQUIRES(nat_tree_lock_);
   void ClearNatCacheDirty(NatEntry &ne) __TA_REQUIRES(nat_tree_lock_);
   NatEntry *LookupNatCache(nid_t n) __TA_REQUIRES_SHARED(nat_tree_lock_);
-  uint32_t GangLookupNatCache(uint32_t nr, NatEntry **ep) __TA_REQUIRES_SHARED(nat_tree_lock_);
+  uint32_t GangLookupNatCache(uint32_t nr, NatEntry **out) __TA_REQUIRES_SHARED(nat_tree_lock_);
   void DelFromNatCache(NatEntry &entry) __TA_REQUIRES_SHARED(nat_tree_lock_);
   NatEntry *GrabNatEntry(nid_t nid) __TA_REQUIRES_SHARED(nat_tree_lock_);
-  void CacheNatEntry(nid_t nid, RawNatEntry &ne);
+  void CacheNatEntry(nid_t nid, RawNatEntry &raw_entry);
   void SetNodeAddr(NodeInfoDeprecated &ni, block_t new_blkaddr);
   int TryToFreeNats(int nr_shrink);
 

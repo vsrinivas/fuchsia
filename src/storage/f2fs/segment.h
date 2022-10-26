@@ -220,7 +220,7 @@ class SegmentManager {
   void InvalidateBlocks(block_t addr);
   void AddSumEntry(CursegType type, Summary *sum, uint16_t offset);
   int NpagesForSummaryFlush();
-  void GetSumPage(uint32_t segno, LockedPage *page);
+  void GetSumPage(uint32_t segno, LockedPage *out);
   void WriteSumPage(SummaryBlock *sum_blk, block_t blk_addr);
   uint32_t CheckPrefreeSegments(int ofs_unit, CursegType type);
   void GetNewSegment(uint32_t *newseg, bool new_sec, int dir);

@@ -247,11 +247,11 @@ class F2fs final {
   bool SpaceForRollForward();
   FsyncInodeEntry *GetFsyncInode(FsyncInodeList &inode_list, nid_t ino);
   zx_status_t RecoverDentry(NodePage &ipage, VnodeF2fs &vnode);
-  zx_status_t RecoverInode(VnodeF2fs &inode, NodePage &node_page);
+  zx_status_t RecoverInode(VnodeF2fs &vnode, NodePage &node_page);
   zx_status_t FindFsyncDnodes(FsyncInodeList &inode_list);
   void DestroyFsyncDnodes(FsyncInodeList &inode_list);
   void CheckIndexInPrevNodes(block_t blkaddr);
-  void DoRecoverData(VnodeF2fs &inode, NodePage &page);
+  void DoRecoverData(VnodeF2fs &vnode, NodePage &page);
   void RecoverData(FsyncInodeList &inode_list, CursegType type);
   void RecoverFsyncData();
 

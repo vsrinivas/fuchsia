@@ -155,7 +155,7 @@ class VnodeF2fs : public fs::Vnode,
   // Caller should ensure node_page is locked.
   zx_status_t ReserveNewBlock(NodePage &node_page, uint32_t ofs_in_node);
 
-  void UpdateExtentCache(block_t blk_addr, pgoff_t fofs);
+  void UpdateExtentCache(block_t blk_addr, pgoff_t file_offset);
   zx_status_t FindDataPage(pgoff_t index, fbl::RefPtr<Page> *out);
   // This function returns block addresses and LockedPages for requested offsets. If there is no
   // node page of a offset or the block address is not assigned, this function adds null LockedPage
