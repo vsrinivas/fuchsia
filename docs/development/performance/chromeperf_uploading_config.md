@@ -115,6 +115,6 @@ for configuring regression alerting. This includes a file for Fuchsia,
 
 
 [internal-doc]: <https://goto.google.com/fuchsia-chromeperf-uploading>
-[performance.dart]: </sdk/testing/sl4f/client/lib/src/performance.dart>
-[catapult_converter]: </src/testing/catapult_converter/>
+[performance.dart]: /sdk/testing/sl4f/client/lib/src/performance.dart
+[catapult_converter]: /src/testing/catapult_converter/
 [upload tool]: <https://fuchsia.googlesource.com/infra/infra/+/HEAD/cmd/catapult/>
