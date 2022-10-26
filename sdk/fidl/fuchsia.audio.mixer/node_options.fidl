@@ -119,15 +119,6 @@ type CustomNodeProperties = resource table {
     2: dest_ids vector<NodeId>:fuchsia.audio.effects.MAX_OUTPUT_STREAMS;
 };
 
-/// Options for consumer nodes, including hidden consumer nodes within Splitter
-/// and Custom nodes.
-type ConsumerOptions = resource table {
-    /// The Consumer's mix job should execute on this thread.
-    ///
-    /// Required.
-    1: thread ThreadId;
-};
-
 /// Every node is part of an output pipeline or an input pipeline.
 ///
 /// Output pipelines, also known as "render" pipelines, produce audio that is

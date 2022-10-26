@@ -213,10 +213,10 @@ protocol Graph {
         /// Required.
         3: data_source ConsumerDataSource;
 
-        /// Configuration for the consumer that is common across types.
+        /// The Consumer's mix job should execute on this thread.
         ///
         /// Required.
-        4: options ConsumerOptions;
+        4: thread ThreadId;
     }) -> (table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;
@@ -262,9 +262,26 @@ protocol Graph {
 
     /// Creates a Splitter node with the given options.
     ///
-    /// Splitter nodes split a single source stream into multiple destination
-    /// streams that are clones of the source stream. For more details, see
-    /// "Execution Model" under the description for [`Graph`].
+    /// Splitter nodes copy a single source stream into multiple destination
+    /// streams. Each Splitter node has a hidden Consumer node which is
+    /// responsible for pulling data from the Splitter's source and writing that
+    /// data to an intermediate buffer. Destination streams read directly from
+    /// this buffer. For more details on this behavior, see "Execution Model"
+    /// under the description for [`Graph`].
+    ///
+    /// Each Splitter is assigned to a thread which drives the hidden Consumer's
+    /// work to fill the intermediate buffer. Destination streams can be
+    /// assigned to any thread. If a destination stream is assigned to the same
+    /// thread as the Splitter, that stream can copy the Splitter's source
+    /// stream without any additional latency. If a destination stream is
+    /// assigned to a different thread T, then extra buffering is required to
+    /// avoid data races -- that extra buffering adds additional latency of
+    /// `T.period`.
+    ///
+    /// Current limitation: The Splitter does not fill its intermediate buffer
+    /// unless it has at least one destination stream that is started and that
+    /// is assigned to the same thread as the Splitter. This limitation may be
+    /// lifted at a future time.
     CreateSplitter(resource table {
         /// Name of this node, used for diagnostics only. See "IDs and names" in the
         /// comments for [`Graph`].
@@ -282,12 +299,10 @@ protocol Graph {
         /// Required.
         3: format fuchsia.audio.Format;
 
-        /// Splitters are composite nodes that process their source through a
-        /// hidden Consumer node. For more details on this behavior, see
-        /// "Execution Model" under the description for [`Graph`].
+        /// The thread which drives this Splitter's hidden consumer.
         ///
         /// Required.
-        4: consumer ConsumerOptions;
+        4: thread ThreadId;
 
         /// Clock for this node's source and destination streams.
         ///
@@ -338,22 +353,10 @@ protocol Graph {
         /// Required.
         3: config fuchsia.audio.effects.ProcessorConfiguration;
 
-        /// Configuration of the hidden Consumer node.
-        ///
-        /// If the Custom node has multiple destinations, this field is
-        /// required. The hidden Consumer reads the Custom node's source
-        /// stream(s) and writes its destination stream(s). It is used to
-        /// partition the graph as described under "Execution Model" under the
-        /// description for [`Graph`].
-        ///
-        /// If the Custom node has a single destination, then a hidden Consumer
-        /// is not used and this field must not be specified.
-        4: consumer ConsumerOptions;
-
         /// Clock for this node's source and destination streams.
         ///
         /// Required.
-        5: reference_clock ReferenceClock;
+        4: reference_clock ReferenceClock;
     }) -> (resource table {
         /// ID of the newly-created node. Guaranteed to be unique.
         1: id NodeId;

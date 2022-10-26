@@ -26,6 +26,7 @@
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 #include "src/media/audio/services/mixer/fidl/mixer_node.h"
 #include "src/media/audio/services/mixer/fidl/producer_node.h"
+#include "src/media/audio/services/mixer/fidl/splitter_node.h"
 #include "src/media/audio/services/mixer/fidl/stream_sink_client.h"
 #include "src/media/audio/services/mixer/fidl/stream_sink_server.h"
 #include "src/media/audio/services/mixer/mix/ring_buffer.h"
@@ -352,14 +353,13 @@ void GraphServer::CreateConsumer(CreateConsumerRequestView request,
   TRACE_DURATION("audio", "Graph:::CreateConsumer");
   ScopedThreadChecker checker(thread().checker());
 
-  if (!request->has_direction() || !request->has_data_source() || !request->has_options() ||
-      !request->options().has_thread()) {
+  if (!request->has_direction() || !request->has_data_source() || !request->has_thread()) {
     FX_LOGS(WARNING) << "CreateConsumer: missing field";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
     return;
   }
 
-  auto mix_thread_it = mix_threads_.find(request->options().thread());
+  auto mix_thread_it = mix_threads_.find(request->thread());
   if (mix_thread_it == mix_threads_.end()) {
     FX_LOGS(WARNING) << "CreateConsumer: invalid thread ID";
     completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
@@ -535,7 +535,52 @@ void GraphServer::CreateSplitter(CreateSplitterRequestView request,
                                  CreateSplitterCompleter::Sync& completer) {
   TRACE_DURATION("audio", "Graph:::CreateSplitter");
   ScopedThreadChecker checker(thread().checker());
-  FX_CHECK(false) << "not implemented";
+
+  if (!request->has_direction() || !request->has_format() || !request->has_thread() ||
+      !request->has_reference_clock()) {
+    FX_LOGS(WARNING) << "CreateSplitter: missing field";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kMissingRequiredField);
+    return;
+  }
+
+  const auto name = NameOrEmpty(*request);
+
+  auto format_result = Format::Create(request->format());
+  if (!format_result.is_ok()) {
+    FX_LOGS(WARNING) << "CreateSplitter: invalid format: " << format_result.error();
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  const auto clock_result =
+      LookupClock(*clock_registry_, *clock_factory_, request->reference_clock(), name);
+  if (!clock_result.is_ok()) {
+    FX_LOGS(WARNING) << "CreateSplitter: invalid clock: " << clock_result.status_string();
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  auto mix_thread_it = mix_threads_.find(request->thread());
+  if (mix_thread_it == mix_threads_.end()) {
+    FX_LOGS(WARNING) << "CreateSplitter: invalid thread ID";
+    completer.ReplyError(fuchsia_audio_mixer::CreateNodeError::kInvalidParameter);
+    return;
+  }
+
+  const auto id = NextNodeId();
+  const auto splitter = SplitterNode::Create({
+      .name = name,
+      .pipeline_direction = request->direction(),
+      .format = format_result.value(),
+      .reference_clock = std::move(clock_result.value()),
+      .consumer_thread = mix_thread_it->second,
+      .detached_thread = detached_thread_,
+  });
+  nodes_[id] = splitter;
+
+  fidl::Arena arena;
+  completer.ReplySuccess(
+      fuchsia_audio_mixer::wire::GraphCreateSplitterResponse::Builder(arena).id(id).Build());
 }
 
 void GraphServer::CreateCustom(CreateCustomRequestView request,

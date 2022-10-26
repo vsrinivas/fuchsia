@@ -146,6 +146,16 @@ MakeDefaultCreateMixerRequest(fidl::AnyArena& arena) {
       .dest_buffer_frame_count(10);
 }
 
+fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateSplitterRequest>
+MakeDefaultCreateSplitterRequest(fidl::AnyArena& arena, ThreadId consumer_thread_id) {
+  return fuchsia_audio_mixer::wire::GraphCreateSplitterRequest::Builder(arena)
+      .name(fidl::StringView::FromExternal("splitter"))
+      .direction(PipelineDirection::kInput)
+      .format(kFormat.ToWireFidl(arena))
+      .thread(consumer_thread_id)
+      .reference_clock(MakeReferenceClock(arena));
+}
+
 fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateThreadRequest>
 MakeDefaultCreateThreadRequest(fidl::AnyArena& arena) {
   auto builder = fuchsia_audio_mixer::wire::GraphCreateThreadRequest::Builder(arena);
@@ -532,7 +542,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             // no direction()
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -548,7 +558,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             .name(fidl::StringView::FromExternal("consumer"))
             .direction(PipelineDirection::kOutput)
             // no data_source()
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -572,24 +582,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
                             .media_ticks_per_second_numerator(1)
                             .media_ticks_per_second_denominator(1)
                             .Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-            .Build());
-
-    ASSERT_TRUE(result.ok()) << result;
-    ASSERT_TRUE(result->is_error());
-    ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
-  }
-
-  {
-    SCOPED_TRACE("MissingOptions");
-
-    auto result = client()->CreateConsumer(
-        fuchsia_audio_mixer::wire::GraphCreateConsumerRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("consumer"))
-            .direction(PipelineDirection::kOutput)
-            .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
-                arena_, MakeDefaultRingBuffer(arena_).Build()))
-            // no options()
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -606,9 +599,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_)
-                         // no thread()
-                         .Build())
+            // no thread()
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -625,9 +616,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_)
-                         .thread(2)  // non-existent thread
-                         .Build())
+            .thread(2)  // non-existent thread
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -648,7 +637,7 @@ TEST_F(GraphServerTest, CreateConsumerFailsBadFields) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, ring_buffer.Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -674,7 +663,7 @@ TEST_F(GraphServerTest, CreateConsumerStreamSinkSuccess) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithStreamSink(
                 arena_, MakeDefaultStreamSinkConsumer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -701,7 +690,7 @@ TEST_F(GraphServerTest, CreateConsumerRingBufferSuccess) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -786,6 +775,22 @@ TEST_F(GraphServerTest, CreateMixerFails) {
   }
 }
 
+// TODO(fxbug.dev/109458): This can be moved to `CreateMixerFails` above after fix.
+TEST_F(GraphServerTest, CreateMixerFailsMissingDirection) {
+  const auto result =
+      client()->CreateMixer(fuchsia_audio_mixer::wire::GraphCreateMixerRequest::Builder(arena_)
+                                .name(fidl::StringView::FromExternal("mixer"))
+                                // no direction()
+                                .dest_format(kFormat.ToWireFidl(arena_))
+                                .dest_reference_clock(MakeReferenceClock(arena_))
+                                .dest_buffer_frame_count(10)
+                                .Build());
+
+  ASSERT_TRUE(result.ok()) << result;
+  ASSERT_TRUE(result->is_error());
+  ASSERT_EQ(result->error_value(), CreateNodeError::kMissingRequiredField);
+}
+
 TEST_F(GraphServerTest, CreateMixerSuccess) {
   const auto result = client()->CreateMixer(MakeDefaultCreateMixerRequest(arena_).Build());
   ASSERT_TRUE(result.ok()) << result;
@@ -794,18 +799,110 @@ TEST_F(GraphServerTest, CreateMixerSuccess) {
 }
 
 //
+// CreateSplitter
+//
+
+TEST_F(GraphServerTest, CreateSplitterFails) {
+  // The splitter's consumer needs a thread.
+  {
+    auto result = client()->CreateThread(MakeDefaultCreateThreadRequest(arena_).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    EXPECT_EQ(result->value()->id(), 1u);
+  }
+
+  struct TestCase {
+    std::string name;
+    std::function<void(
+        fidl::WireTableBuilder<fuchsia_audio_mixer::wire::GraphCreateSplitterRequest>&)>
+        edit;
+    CreateNodeError expected_error;
+  };
+
+  const std::vector<TestCase> cases = {
+      {
+          .name = "MissingDirection",
+          .edit = [](auto request) { request.clear_direction(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingFormat",
+          .edit = [](auto request) { request.clear_format(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingThread",
+          .edit = [](auto request) { request.clear_thread(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "MissingReferenceClock",
+          .edit = [](auto request) { request.clear_reference_clock(); },
+          .expected_error = CreateNodeError::kMissingRequiredField,
+      },
+      {
+          .name = "InvalidFormat",
+          .edit = [this](auto request) { request.format(MakeInvalidFormatFidl(arena_)); },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+      {
+          .name = "InvalidConsumerThread",
+          .edit = [](auto request) { request.thread(2); },
+          .expected_error = CreateNodeError::kInvalidParameter,
+      },
+  };
+
+  for (auto& tc : cases) {
+    SCOPED_TRACE("TestCase: " + tc.name);
+    auto request = MakeDefaultCreateSplitterRequest(arena_, /*consumer_thread_id=*/1);
+    tc.edit(request);
+
+    auto result = client()->CreateSplitter(request.Build());
+    if (!result.ok()) {
+      ADD_FAILURE() << "failed to send method call: " << result;
+      continue;
+    }
+    if (!result->is_error()) {
+      ADD_FAILURE() << "CreateSplitter did not fail";
+      continue;
+    }
+    EXPECT_EQ(result->error_value(), tc.expected_error);
+  }
+}
+
+TEST_F(GraphServerTest, CreateSplitterSuccess) {
+  // The splitter's consumer needs a thread.
+  {
+    auto result = client()->CreateThread(MakeDefaultCreateThreadRequest(arena_).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    EXPECT_EQ(result->value()->id(), 1u);
+  }
+
+  {
+    const auto result =
+        client()->CreateSplitter(MakeDefaultCreateSplitterRequest(arena_, 1).Build());
+    ASSERT_TRUE(result.ok()) << result;
+    ASSERT_FALSE(result->is_error()) << result->error_value();
+    ASSERT_TRUE(result->value()->has_id());
+    EXPECT_EQ(result->value()->id(), 1u);
+  }
+}
+
+//
 // CreateCustom
 //
 
 TEST_F(GraphServerTest, CreateCustomFailsMissingReferenceClock) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          .config(MakeDefaultProcessorConfig(arena_).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          // no reference_clock()
-          .Build());
+  auto result =
+      client()->CreateCustom(fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+                                 .name(fidl::StringView::FromExternal("custom"))
+                                 .direction(PipelineDirection::kInput)
+                                 .config(MakeDefaultProcessorConfig(arena_).Build())
+                                 // no reference_clock()
+                                 .Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
@@ -813,14 +910,13 @@ TEST_F(GraphServerTest, CreateCustomFailsMissingReferenceClock) {
 }
 
 TEST_F(GraphServerTest, CreateCustomFailsMissingDirection) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          // no direction()
-          .config(MakeDefaultProcessorConfig(arena_).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
+  auto result =
+      client()->CreateCustom(fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+                                 .name(fidl::StringView::FromExternal("custom"))
+                                 // no direction()
+                                 .config(MakeDefaultProcessorConfig(arena_).Build())
+                                 .reference_clock(MakeReferenceClock(arena_))
+                                 .Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
@@ -828,14 +924,13 @@ TEST_F(GraphServerTest, CreateCustomFailsMissingDirection) {
 }
 
 TEST_F(GraphServerTest, CreateCustomFailsMissingConfig) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          // no config()
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
+  auto result =
+      client()->CreateCustom(fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+                                 .name(fidl::StringView::FromExternal("custom"))
+                                 .direction(PipelineDirection::kInput)
+                                 // no config()
+                                 .reference_clock(MakeReferenceClock(arena_))
+                                 .Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_TRUE(result->is_error());
@@ -848,7 +943,6 @@ TEST_F(GraphServerTest, CreateCustomFailsInvalidConfig) {
           .name(fidl::StringView::FromExternal("custom"))
           .direction(PipelineDirection::kInput)
           .config(MakeDefaultProcessorConfig(arena_).block_size_frames(-1).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
           .reference_clock(MakeReferenceClock(arena_))
           .Build());
 
@@ -858,14 +952,13 @@ TEST_F(GraphServerTest, CreateCustomFailsInvalidConfig) {
 }
 
 TEST_F(GraphServerTest, CreateCustomSuccess) {
-  auto result = client()->CreateCustom(
-      fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-          .name(fidl::StringView::FromExternal("custom"))
-          .direction(PipelineDirection::kInput)
-          .config(MakeDefaultProcessorConfig(arena_).Build())
-          .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-          .reference_clock(MakeReferenceClock(arena_))
-          .Build());
+  auto result =
+      client()->CreateCustom(fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+                                 .name(fidl::StringView::FromExternal("custom"))
+                                 .direction(PipelineDirection::kInput)
+                                 .config(MakeDefaultProcessorConfig(arena_).Build())
+                                 .reference_clock(MakeReferenceClock(arena_))
+                                 .Build());
 
   ASSERT_TRUE(result.ok()) << result;
   ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -992,9 +1085,7 @@ void GraphServerTest::CreateProducerAndConsumer(NodeId* producer_id, NodeId* con
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_)
-                         .thread(thread_id)
-                         .Build())
+            .thread(thread_id)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -1211,14 +1302,13 @@ TEST_F(GraphServerTest, CreateEdgeSuccessMixerSource) {
   // Custom.
   NodeId custom_source_id;
   {
-    auto result = client()->CreateCustom(
-        fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
-            .name(fidl::StringView::FromExternal("custom"))
-            .direction(PipelineDirection::kInput)
-            .config(MakeDefaultProcessorConfig(arena_).Build())
-            .consumer(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
-            .reference_clock(MakeReferenceClock(arena_))
-            .Build());
+    auto result =
+        client()->CreateCustom(fuchsia_audio_mixer::wire::GraphCreateCustomRequest::Builder(arena_)
+                                   .name(fidl::StringView::FromExternal("custom"))
+                                   .direction(PipelineDirection::kInput)
+                                   .config(MakeDefaultProcessorConfig(arena_).Build())
+                                   .reference_clock(MakeReferenceClock(arena_))
+                                   .Build());
 
     ASSERT_TRUE(result.ok()) << result;
     ASSERT_FALSE(result->is_error()) << result->error_value();
@@ -1480,7 +1570,7 @@ TEST_F(GraphServerTest, DeleteThreadFailsStillInUse) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
@@ -1534,7 +1624,7 @@ TEST_F(GraphServerTest, DeleteThreadSuccessAfterConsumerDeleted) {
             .direction(PipelineDirection::kOutput)
             .data_source(fuchsia_audio_mixer::wire::ConsumerDataSource::WithRingBuffer(
                 arena_, MakeDefaultRingBuffer(arena_).Build()))
-            .options(fuchsia_audio_mixer::wire::ConsumerOptions::Builder(arena_).thread(1).Build())
+            .thread(1)
             .Build());
 
     ASSERT_TRUE(result.ok()) << result;
