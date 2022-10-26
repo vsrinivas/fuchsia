@@ -187,6 +187,10 @@ group("tests") {
     "tools:tests($host_toolchain)",
 
     # Individual library tests, for libraries that are not plugins.
+    "command:tests($host_toolchain)",
+    "config:tests($host_toolchain)",
+    "core:tests($host_toolchain)",
+    "daemon:tests($host_toolchain)",
     "lib:tests($host_toolchain)",
     "logger:tests($host_toolchain)",
     "plugins/package:tests($host_toolchain)",

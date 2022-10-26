@@ -105,9 +105,6 @@ template("ffx") {
     deps = [
       ":" + ffx_name + "_bin_unversioned_test",
       ":" + suite_name + "_tests",
-      "config:tests",
-      "core:tests",
-      "daemon:tests",
     ]
   }
 }

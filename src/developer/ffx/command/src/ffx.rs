@@ -237,25 +237,27 @@ mod test {
 
     #[test]
     fn cmd_only_last_component() {
-        let args = vec!["test/things/ffx", "--help"].map(String::from);
-        let (cmd, remain) = Ffx::prepare_args(args, None);
-        assert_eq!(cmd, vec!["ffx"]);
-        assert_eq!(remain, vec!["--help"]);
+        let args = ["test/things/ffx", "--help"].map(String::from);
+        let cmd_line = FfxCommandLine::new(None, args).expect("Command line should parse");
+        assert_eq!(cmd_line.command, vec!["ffx"]);
+        assert_eq!(cmd_line.args, vec!["--help"]);
     }
 
     #[test]
     fn cmd_override_invoke() {
-        let args = vec!["test/things/ffx", "--help"].map(String::from);
-        let (cmd, remain) = Ffx::prepare_args(args, Some("tools/ffx".to_owned()));
-        assert_eq!(cmd, vec!["tools/ffx"]);
-        assert_eq!(remain, vec!["--help"]);
+        let args = ["test/things/ffx", "--help"].map(String::from);
+        let cmd_line = FfxCommandLine::new(Some("tools/ffx".to_owned()), args)
+            .expect("Command line should parse");
+        assert_eq!(cmd_line.command, vec!["tools/ffx"]);
+        assert_eq!(cmd_line.args, vec!["--help"]);
     }
 
     #[test]
     fn cmd_override_multiple_terms_invoke() {
-        let args = vec!["test/things/ffx", "--help"].map(String::from);
-        let (cmd, remain) = Ffx::prepare_args(args, Some("fx ffx".to_owned()));
-        assert_eq!(cmd, vec!["fx", "ffx"]);
-        assert_eq!(remain, vec!["--help"]);
+        let args = ["test/things/ffx", "--help"].map(String::from);
+        let cmd_line = FfxCommandLine::new(Some("fx ffx".to_owned()), args)
+            .expect("Command line should parse");
+        assert_eq!(cmd_line.command, vec!["fx", "ffx"]);
+        assert_eq!(cmd_line.args, vec!["--help"]);
     }
 }
