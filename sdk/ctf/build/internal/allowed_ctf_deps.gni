@@ -13,6 +13,9 @@ ALLOWED_CTS_DEPS = [
   "//src/sys/pkg/bin/pm:host",
   "//zircon/system/ulib/zxtest:zxtest",
   "//zircon/system/ulib/fbl:fbl",
+  "//sdk/lib/vulkan:vulkan",
+  "//src/lib/vulkan:vulkan",
+  "//src/lib/vulkan/validation_layers:validation_layers",
 
   # TODO(77889): Determine if this can be in the CTF.
   "//zircon/system/public:public",

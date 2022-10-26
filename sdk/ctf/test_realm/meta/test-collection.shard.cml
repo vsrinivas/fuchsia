@@ -42,6 +42,9 @@
                 // Used for intl settings FCT tests.
                 "fuchsia.intl.PropertyProvider",
 
+                // Used for Vulkan CTF tests.
+                "fuchsia.media.ProfileProvider",
+
                 // Used by DriverTestRealm and fdio tests.
                 "fuchsia.process.Launcher",
 
@@ -53,6 +56,11 @@
 
                 // Used for privacy settings FCT tests.
                 "fuchsia.settings.Privacy",
+
+                // Used for Vulkan CTF tests.
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+                "fuchsia.vulkan.loader.Loader",
             ],
             from: "parent",
             to: "#cts-tests",

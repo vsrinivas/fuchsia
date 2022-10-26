@@ -213,7 +213,7 @@ Testing at this stage:
 * Launching the vulkan loader using `fx shell cat
   /svc/fuchsia.vulkan.loader.Loader` and checking `ffx inspect show
   core/vulkan_loader` to see if it's loaded. Errors will go to syslog.
-* Run the [icd_load][icd_load] test. This test will check if any ICD on the
+* Run the [vulkan_icd_load][vulkan_icd_load] test. This test will check if any ICD on the
   system works, so ensure no other ICDs are on the system before running it.
 
 ## Connect the ICD to Magma
@@ -316,7 +316,7 @@ the system driver using the Zircon DDK.
 [intel-i915]: /src/graphics/display/drivers/intel-i915
 [driverdir]: /src/graphics/drivers
 [vkcube]: /src/graphics/examples/vkcube
-[icd_load]: /src/graphics/tests/icd_load
+[vulkan_icd_load]: /sdk/ctf/tests/pkg/vulkan
 [libmagma]: /src/graphics/lib/magma/src/libmagma
 [intelgn]: /src/graphics/lib/magma/gnbuild/magma-intel-gen/BUILD.gn
 [fuchsia.hardware.clock.Clock]: /sdk/banjo/fuchsia.hardware.clock/clock.fidl

@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 {
     include: [
-        "//src/lib/vulkan/vulkan-test.shard.cml",
-        "//src/sys/test_runners/gtest/default.shard.cml",
+        "//sdk/ctf/meta/test.shard.cml",
+        "sys/testing/elf_test_runner.shard.cml",
         "syslog/client.shard.cml",
         "vulkan/client.shard.cml",
     ],
     program: {
-        binary: "bin/icd_load",
+        binary: "bin/vulkan_icd_load",
+        environ: [ "VK_LOADER_DEBUG=all" ],
     },
 }

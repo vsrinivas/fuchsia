@@ -1,0 +1,45 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//sdk/ctf/build/ctf.gni")
+import("//src/lib/vulkan/vulkan.gni")
+
+ctf_executable("vulkan_icd_load_bin") {
+  testonly = true
+  output_name = "vulkan_icd_load"
+
+  sources = [ "icd_load.cc" ]
+  deps = [
+    "//src/lib/vulkan",
+    "//zircon/system/ulib/zxtest",
+  ]
+}
+
+ctf_fuchsia_component("vulkan_icd_load_cmp") {
+  testonly = true
+  component_name = "vulkan_icd_load"
+  deps = [
+    ":vulkan_icd_load_bin",
+    "//sdk/lib/vulkan",
+    "//src/lib/vulkan/validation_layers",
+  ]
+
+  manifest = "meta/vulkan_icd_load.cml"
+}
+
+ctf_fuchsia_test_package("vulkan-icd-load") {
+  package_name = "vulkan_icd_load"
+  test_components = [ ":vulkan_icd_load_cmp" ]
+  test_specs = {
+    environments = vulkan_envs
+    log_settings = {
+      max_severity = "WARN"
+    }
+  }
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":vulkan-icd-load" ]
+}

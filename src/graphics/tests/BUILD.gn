@@ -43,7 +43,6 @@ group("vulkan-tests") {
   deps = [
     "common:vkcontext",
     "icd_conformance",
-    "icd_load",
     "libvulkan",
     "mali_vulkan_test",
     "vk_timer_query",
@@ -51,5 +50,6 @@ group("vulkan-tests") {
     "vkloop",
     "vkpriority",
     "vkreadback",
+    "//sdk/ctf/tests/pkg/vulkan:tests",
   ]
 }

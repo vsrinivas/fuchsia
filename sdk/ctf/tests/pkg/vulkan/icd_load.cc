@@ -2,16 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "icd_load.h"
-
 #include <cstdint>
 #include <cstdio>
 #include <vector>
 
-#include <gtest/gtest.h>
 #include <vulkan/vulkan.h>
+#include <zxtest/zxtest.h>
 
-#include "src/lib/fxl/test/test_settings.h"
+class IcdLoadTest {
+ public:
+  static void LoadIcd();
+};
 
 void IcdLoadTest::LoadIcd() {
   // vkEnumerateInstanceExtensionProperties is the chosen entrypoint because
@@ -48,16 +49,7 @@ TEST(Vulkan, CreateInstance) {
   VkPhysicalDevice device;
   uint32_t physicalDeviceCount = 1;
   VkResult result = vkEnumeratePhysicalDevices(instance, &physicalDeviceCount, &device);
-  EXPECT_TRUE(result == VK_SUCCESS || result == VK_INCOMPLETE) << result;
+  EXPECT_TRUE(result == VK_SUCCESS || result == VK_INCOMPLETE, "result %d", result);
   EXPECT_EQ(1u, physicalDeviceCount);
   vkDestroyInstance(instance, nullptr);
-}
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
 }
