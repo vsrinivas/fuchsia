@@ -19,7 +19,7 @@
 namespace fuzzing {
 
 CoverageDataProviderClient::CoverageDataProviderClient(ExecutorPtr executor)
-    : executor_(std::move(executor)), options_(MakeOptions()) {}
+    : executor_(std::move(executor)), options_(MakeOptions()), receiver_(&sender_) {}
 
 void CoverageDataProviderClient::Configure(const OptionsPtr& options) {
   options_ = options;
@@ -53,7 +53,7 @@ zx_status_t CoverageDataProviderClient::Bind(zx::channel channel) {
                     FX_LOGS(WARNING) << "Failed to receive coverage data.";
                     return fpromise::error();
                   }
-                  if (auto status = pending_.Send(watch.take_value()); status != ZX_OK) {
+                  if (auto status = sender_.Send(watch.take_value()); status != ZX_OK) {
                     FX_LOGS(WARNING) << "Failed to forward received coverage data: "
                                      << zx_status_get_string(status);
                   }
@@ -63,6 +63,6 @@ zx_status_t CoverageDataProviderClient::Bind(zx::channel channel) {
   return ZX_OK;
 }
 
-Promise<CoverageData> CoverageDataProviderClient::GetCoverageData() { return pending_.Receive(); }
+Promise<CoverageData> CoverageDataProviderClient::GetCoverageData() { return receiver_.Receive(); }
 
 }  // namespace fuzzing

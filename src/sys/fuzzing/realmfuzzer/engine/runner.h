@@ -98,10 +98,11 @@ class RealmFuzzerRunner final : public Runner {
   // generation of each input depend on the processing of the previous one.
   ZxPromise<> GenerateInputs(size_t num_inputs, size_t backlog = 0);
 
-  // Returns a promise to generate inputs from "cleaning" the provided |input|. To clean the input,
-  // it replaces each byte with either a space or 0xFF. It keeps the change if the modified input
-  // triggers an error, as determined by examining the test outputs that are sent to the |recycler|.
-  Promise<> GenerateCleanInputs(const Input& input, std::shared_ptr<AsyncDeque<Artifact>> recycler);
+  // Returns a promise to generate inputs from "cleaning" inputs received from the given `receiver`
+  // and return them via the object's `generated_sender_`. To clean the input, it replaces each byte
+  // with either a space or 0xFF. It keeps the change if the modified input triggers an error, as
+  // determined by examining the artifacts that are sent back again via the `receiver`.
+  Promise<> GenerateCleanInputs(AsyncReceiverPtr<Artifact> receiver, size_t attempts_left);
 
   // Returns a promise to |GenerateInputs| and |TestInputs|. This will first iterate through the
   // seed and live corpora before mutating new inputs.  See |GenerateInputs| for details on
@@ -206,7 +207,12 @@ class RealmFuzzerRunner final : public Runner {
   Mutagen mutagen_;
 
   // Queue of generated inputs for a workflow that are consumed by |TestInputs|.
-  AsyncDeque<Input> generated_;
+  AsyncSender<Input> generated_sender_;
+  AsyncReceiver<Input> generated_receiver_;
+
+  // A separate, high-priority queue of previously tested inputs that are suspected to cause leaks.
+  AsyncSender<Input> leak_sender_;
+  AsyncReceiver<Input> leak_receiver_;
 
   // Interfaces to other components.
   TargetAdapterClient adapter_;
@@ -223,7 +229,8 @@ class RealmFuzzerRunner final : public Runner {
   fpromise::suspended_task suspended_;
 
   // Queue of tested input for a workflow that are ready to be processed and/or recycled.
-  AsyncDeque<Input> processed_;
+  AsyncSender<Input> processed_sender_;
+  AsyncReceiver<Input> processed_receiver_;
 
   Workflow workflow_;
 

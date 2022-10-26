@@ -29,7 +29,11 @@ using fuchsia::fuzzer::InstrumentedProcess;
 class CoverageDataProviderImpl final : public fuchsia::fuzzer::CoverageDataProvider {
  public:
   explicit CoverageDataProviderImpl(ExecutorPtr executor)
-      : binding_(this), executor_(std::move(executor)), options_(MakeOptions()) {}
+      : binding_(this),
+        executor_(std::move(executor)),
+        options_(MakeOptions()),
+        receiver_(&sender_) {}
+
   ~CoverageDataProviderImpl() = default;
 
   OptionsPtr options() const { return options_; }
@@ -39,7 +43,7 @@ class CoverageDataProviderImpl final : public fuchsia::fuzzer::CoverageDataProvi
   }
 
   void Pend(CoverageData coverage_data) {
-    auto status = pending_.Send(std::move(coverage_data));
+    auto status = sender_.Send(std::move(coverage_data));
     FX_CHECK(status == ZX_OK) << zx_status_get_string(status);
   }
 
@@ -47,7 +51,7 @@ class CoverageDataProviderImpl final : public fuchsia::fuzzer::CoverageDataProvi
 
   void GetCoverageData(GetCoverageDataCallback callback) override {
     auto task =
-        pending_.Receive()
+        receiver_.Receive()
             .and_then([callback = std::move(callback)](CoverageData& coverage_data) mutable {
               callback(std::move(coverage_data));
               return fpromise::ok();
@@ -62,7 +66,8 @@ class CoverageDataProviderImpl final : public fuchsia::fuzzer::CoverageDataProvi
   fidl::Binding<CoverageDataProvider> binding_;
   ExecutorPtr executor_;
   OptionsPtr options_;
-  AsyncDeque<CoverageData> pending_;
+  AsyncSender<CoverageData> sender_;
+  AsyncReceiver<CoverageData> receiver_;
   Scope scope_;
 };
 

@@ -53,7 +53,8 @@ class FakeCoverage final : public CoverageDataCollector, CoverageDataProvider {
   fidl::Binding<CoverageDataProvider> provider_;
   ExecutorPtr executor_;
   Options options_;
-  AsyncDeque<CoverageData> pipe_;
+  AsyncSender<CoverageData> sender_;
+  AsyncReceiver<CoverageData> receiver_;
   Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeCoverage);

@@ -36,7 +36,8 @@ class CoverageDataProviderClient final {
   ExecutorPtr executor_;
   OptionsPtr options_;
   CoverageDataProviderPtr provider_;
-  AsyncDeque<CoverageData> pending_;
+  AsyncSender<CoverageData> sender_;
+  AsyncReceiver<CoverageData> receiver_;
   Scope scope_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(CoverageDataProviderClient);

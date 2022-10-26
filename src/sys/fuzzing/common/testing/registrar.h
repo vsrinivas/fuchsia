@@ -45,7 +45,8 @@ class FakeRegistrar final : public Registrar {
  private:
   fidl::Binding<Registrar> binding_;
   ExecutorPtr executor_;
-  AsyncDeque<ControllerProviderHandle> providers_;
+  AsyncSender<ControllerProviderHandle> sender_;
+  AsyncReceiver<ControllerProviderHandle> receiver_;
 
   FXL_DISALLOW_COPY_ASSIGN_AND_MOVE(FakeRegistrar);
 };

@@ -10,7 +10,7 @@
 namespace fuzzing {
 
 FakeCoverage::FakeCoverage(ExecutorPtr executor)
-    : collector_(this), provider_(this), executor_(executor) {}
+    : collector_(this), provider_(this), executor_(executor), receiver_(&sender_) {}
 
 fidl::InterfaceRequestHandler<Publisher> FakeCoverage::GetPublisherHandler() {
   return [this](fidl::InterfaceRequest<Publisher> request) {
@@ -43,7 +43,7 @@ fidl::InterfaceRequestHandler<CoverageDataProvider> FakeCoverage::GetProviderHan
 
 void FakeCoverage::Initialize(InstrumentedProcess instrumented, InitializeCallback callback) {
   auto coverage_data = CoverageData::WithInstrumented(std::move(instrumented));
-  if (auto status = pipe_.Send(std::move(coverage_data)); status != ZX_OK) {
+  if (auto status = sender_.Send(std::move(coverage_data)); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to send instrumented process to provider: "
                    << zx_status_get_string(status);
     return;
@@ -53,7 +53,7 @@ void FakeCoverage::Initialize(InstrumentedProcess instrumented, InitializeCallba
 
 void FakeCoverage::AddLlvmModule(zx::vmo inline_8bit_counters, AddLlvmModuleCallback callback) {
   auto coverage_data = CoverageData::WithInline8bitCounters(std::move(inline_8bit_counters));
-  if (auto status = pipe_.Send(std::move(coverage_data)); status != ZX_OK) {
+  if (auto status = sender_.Send(std::move(coverage_data)); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to send inline 8-bit counters to provider: "
                    << zx_status_get_string(status);
     return;
@@ -64,7 +64,7 @@ void FakeCoverage::AddLlvmModule(zx::vmo inline_8bit_counters, AddLlvmModuleCall
 void FakeCoverage::SetOptions(Options options) { options_ = std::move(options); }
 
 void FakeCoverage::GetCoverageData(GetCoverageDataCallback callback) {
-  auto task = pipe_.Receive()
+  auto task = receiver_.Receive()
                   .and_then([callback = std::move(callback)](
                                 CoverageData& coverage_data) mutable -> Result<> {
                     callback(std::move(coverage_data));

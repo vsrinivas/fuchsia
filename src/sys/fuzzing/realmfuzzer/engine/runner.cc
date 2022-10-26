@@ -25,9 +25,17 @@ RunnerPtr RealmFuzzerRunner::MakePtr(ExecutorPtr executor) {
 }
 
 RealmFuzzerRunner::RealmFuzzerRunner(ExecutorPtr executor)
-    : Runner(executor), adapter_(executor), provider_(executor), workflow_(this) {
-  generated_.Close();
-  processed_.Close();
+    : Runner(executor),
+      generated_receiver_(&generated_sender_),
+      leak_receiver_(&leak_sender_),
+      adapter_(executor),
+      provider_(executor),
+      processed_receiver_(&processed_sender_),
+      workflow_(this) {
+  generated_receiver_.Close();
+  processed_receiver_.Close();
+  leak_receiver_.Close();
+
   seed_corpus_ = Corpus::MakePtr();
   live_corpus_ = Corpus::MakePtr();
   pool_ = std::make_shared<ModulePool>();
@@ -113,12 +121,12 @@ Input RealmFuzzerRunner::GetDictionaryAsInput() const { return mutagen_.dictiona
 ZxPromise<FuzzResult> RealmFuzzerRunner::Execute(std::vector<Input> inputs) {
   return fpromise::make_promise([this, inputs = std::move(inputs)]() mutable -> ZxResult<> {
            for (auto& input : inputs) {
-             if (auto status = generated_.Send(std::move(input)); status != ZX_OK) {
+             if (auto status = generated_sender_.Send(std::move(input)); status != ZX_OK) {
                FX_LOGS(ERROR) << "Input queue closed prematurely: " << zx_status_get_string(status);
                return fpromise::error(status);
              }
            }
-           generated_.Close();
+           generated_receiver_.Close();
            return fpromise::ok();
          })
       .and_then(TestInputs(kNoPostProcessing))
@@ -220,21 +228,38 @@ ZxPromise<Input> RealmFuzzerRunner::Minimize(Input input) {
 ZxPromise<Input> RealmFuzzerRunner::Cleanse(Input input) {
   // The general approach of this loop is to take tested inputs and their fuzzing results and return
   // them to |GenerateCleanInputs| as |Artifacts|.
-  return fpromise::make_promise([this, generate = Future<>(),
-                                 recycler = AsyncDeque<Artifact>::MakePtr(),
-                                 test_inputs = ZxFuture<Artifact>(), receive = Future<Input>(),
+  AsyncSender<Artifact> sender;
+  auto receiver = AsyncReceiver<Artifact>::MakePtr(&sender);
+  return fpromise::make_promise([this, generate = Future<>(), sender = std::move(sender),
+                                 receiver = std::move(receiver), test_inputs = ZxFuture<Artifact>(),
+                                 receive = Future<Input>(),
                                  result = Artifact(FuzzResult::NO_ERRORS, std::move(input)),
                                  artifacts = std::array<Artifact, 2>(),
                                  num_artifacts = 0U](Context& context) mutable -> ZxResult<Input> {
            while (true) {
              if (!generate) {
-               generate = GenerateCleanInputs(result.input(), recycler);
+               // To set up initial conditions, simulate having just completed an "extra" attempt.
+               constexpr size_t kMaxCleanseAttempts = 5;
+               auto attempts_left = kMaxCleanseAttempts + 1;
+
+               // Prepare the pipeline with some artifacts that make the attempt succeed and won't
+               // be reverted. This only fails if the `sender` is closed, in which case the promise
+               // below returns an error.
+               for (size_t i = 0; i < 2; ++i) {
+                 if (auto status =
+                         sender.Send(Artifact(FuzzResult::CRASH, result.input().Duplicate()));
+                     status != ZX_OK) {
+                   FX_LOGS(ERROR) << "Failed to prepare fuzzing input pipeline: "
+                                  << zx_status_get_string(status);
+                 }
+               }
+               generate = GenerateCleanInputs(std::move(receiver), attempts_left);
              }
              if (!test_inputs) {
                test_inputs = TestInputs(kNoPostProcessing);
              }
              if (!receive) {
-               receive = processed_.Receive();
+               receive = processed_receiver_.Receive();
              }
              if (generate(context) && generate.is_error()) {
                // |GenerateCleanInputs| only returns an error if its queues close unexpectedly.
@@ -270,8 +295,8 @@ ZxPromise<Input> RealmFuzzerRunner::Cleanse(Input input) {
                continue;
              }
              // Recycle inputs in pairs, one for each "clean" byte.
-             if (recycler->Send(std::move(artifacts[0])) != ZX_OK ||
-                 recycler->Send(std::move(artifacts[1])) != ZX_OK) {
+             if (sender.Send(std::move(artifacts[0])) != ZX_OK ||
+                 sender.Send(std::move(artifacts[1])) != ZX_OK) {
                // No more inputs are needed; all done.
                return fpromise::ok(result.take_input());
              }
@@ -428,8 +453,9 @@ void RealmFuzzerRunner::StartWorkflow(Scope& scope) {
 }
 
 void RealmFuzzerRunner::FinishWorkflow() {
-  generated_.Clear();
-  processed_.Clear();
+  generated_receiver_.Clear();
+  processed_receiver_.Clear();
+  leak_receiver_.Clear();
   stopped_ = true;
   UpdateMonitors(UpdateReason::DONE);
 }
@@ -446,7 +472,7 @@ ZxPromise<> RealmFuzzerRunner::GenerateInputs(size_t num_inputs, size_t backlog)
   return fpromise::make_promise([this, backlog, max_size]() -> ZxResult<> {
            // "Precycle" some inputs by making it look like they are ready for reuse.
            for (size_t i = 0; i <= backlog; i++) {
-             auto status = processed_.Send(Input(max_size));
+             auto status = processed_sender_.Send(Input(max_size));
              if (status != ZX_OK) {
                FX_LOGS(ERROR) << "Input queue closed prematurely while preparing to fuzz: "
                               << zx_status_get_string(status);
@@ -473,7 +499,7 @@ ZxPromise<> RealmFuzzerRunner::GenerateInputs(size_t num_inputs, size_t backlog)
           }
           if (!recycle) {
             // Use inputs recycled from earlier runs to reduce heap allocations.
-            recycle = processed_.Receive();
+            recycle = processed_receiver_.Receive();
           }
           if (!recycle(context)) {
             return fpromise::pending();
@@ -492,7 +518,7 @@ ZxPromise<> RealmFuzzerRunner::GenerateInputs(size_t num_inputs, size_t backlog)
           }
           mutagen_.Mutate(&input);
           ++num_mutations;
-          auto status = generated_.Send(std::move(input));
+          auto status = generated_sender_.Send(std::move(input));
           num_sent++;
           if (status != ZX_OK) {
             // Queue was closed; all done.
@@ -501,25 +527,13 @@ ZxPromise<> RealmFuzzerRunner::GenerateInputs(size_t num_inputs, size_t backlog)
         }
       })
       .and_then([this] {
-        generated_.Close();
+        generated_receiver_.Close();
         return fpromise::ok();
       });
 }
 
-Promise<> RealmFuzzerRunner::GenerateCleanInputs(const Input& input,
-                                                 std::shared_ptr<AsyncDeque<Artifact>> recycler) {
-  // To set up initial conditions, simulate having just completed an "extra" attempt.
-  constexpr size_t kMaxCleanseAttempts = 5;
-  auto attempts_left = kMaxCleanseAttempts + 1;
-  // Prepare the pipeline with some artifacts that make the attempt succeed and won't be reverted.
-  // This only fails if the |recycler| is closed, in which case the promise below returns an error.
-  for (size_t i = 0; i < 2; ++i) {
-    if (auto status = recycler->Send(Artifact(FuzzResult::CRASH, input.Duplicate()));
-        status != ZX_OK) {
-      FX_LOGS(ERROR) << "Failed to prepare fuzzing input pipeline: "
-                     << zx_status_get_string(status);
-    }
-  }
+Promise<> RealmFuzzerRunner::GenerateCleanInputs(AsyncReceiverPtr<Artifact> receiver,
+                                                 size_t attempts_left) {
   // Ensure that a new attempt will be started.
   auto offset = std::numeric_limits<size_t>::max() - 1;
 
@@ -527,14 +541,14 @@ Promise<> RealmFuzzerRunner::GenerateCleanInputs(const Input& input,
   // space or 0xff. Bytes that are already a space or 0xff are skipped. Each iteration over all
   // input bytes is an attempt, and inputs are produced until an attempt doesn't produce any errors
   // or five attempts have been performed.
-  return fpromise::make_promise([this, recycler = std::move(recycler), receive = Future<Artifact>(),
+  return fpromise::make_promise([this, receiver = std::move(receiver), receive = Future<Artifact>(),
                                  artifacts = std::array<Artifact, 2>(), num_artifacts = 0U,
                                  attempts_left, offset, found_error = false,
                                  original = uint8_t(0)](Context& context) mutable -> Result<> {
     while (true) {
       // Recycle two artifacts.
       if (!receive) {
-        receive = recycler->Receive();
+        receive = receiver->Receive();
       }
       if (!receive(context)) {
         return fpromise::pending();
@@ -569,8 +583,8 @@ Promise<> RealmFuzzerRunner::GenerateCleanInputs(const Input& input,
         offset = 0;
         if (--attempts_left == 0 || !found_error) {
           // Out of attempts, or last attempt didn't trigger any error. All done.
-          recycler->Close();
-          generated_.Close();
+          receiver->Close();
+          generated_receiver_.Close();
           return fpromise::ok();
         }
         found_error = false;
@@ -579,8 +593,8 @@ Promise<> RealmFuzzerRunner::GenerateCleanInputs(const Input& input,
       original = data0[offset];
       data0[offset] = 0x20;
       data1[offset] = 0xff;
-      if (generated_.Send(std::move(input0)) != ZX_OK ||
-          generated_.Send(std::move(input1)) != ZX_OK) {
+      if (generated_sender_.Send(std::move(input0)) != ZX_OK ||
+          generated_sender_.Send(std::move(input1)) != ZX_OK) {
         FX_LOGS(ERROR) << "Input queue unexpectedly closed.";
         return fpromise::error();
       }
@@ -632,10 +646,10 @@ ZxPromise<Artifact> RealmFuzzerRunner::FuzzInputs(size_t backlog) {
 
 ZxPromise<Artifact> RealmFuzzerRunner::TestOneAsync(Input input, PostProcessing mode) {
   return fpromise::make_promise([this, input = std::move(input)]() mutable -> ZxResult<> {
-           return AsZxResult(generated_.Send(std::move(input)));
+           return AsZxResult(generated_sender_.Send(std::move(input)));
          })
       .and_then([this]() {
-        generated_.Close();
+        generated_receiver_.Close();
         return fpromise::ok();
       })
       .and_then([this, mode] { return TestInputs(mode); });
@@ -646,7 +660,7 @@ ZxPromise<Artifact> RealmFuzzerRunner::TestCorpusAsync(CorpusPtr corpus, PostPro
   return fpromise::make_promise([this]() -> ZxResult<> {
            // Prime the output queue.
            Reset();
-           return AsZxResult(processed_.Send(Input()));
+           return AsZxResult(processed_sender_.Send(Input()));
          })
       .and_then([this, corpus, mode, collect_errors, test_inputs = ZxFuture<Artifact>(),
                  receive = Future<Input>(),
@@ -656,7 +670,7 @@ ZxPromise<Artifact> RealmFuzzerRunner::TestCorpusAsync(CorpusPtr corpus, PostPro
             test_inputs = TestInputs(mode, collect_errors);
           }
           if (!receive) {
-            receive = processed_.Receive();
+            receive = processed_receiver_.Receive();
           }
           if (test_inputs(context)) {
             // Done testing inputs.
@@ -674,10 +688,10 @@ ZxPromise<Artifact> RealmFuzzerRunner::TestCorpusAsync(CorpusPtr corpus, PostPro
           }
           auto input = receive.take_value();
           if (!corpus->At(offset++, &input)) {
-            generated_.Close();
+            generated_receiver_.Close();
             continue;
           }
-          if (auto status = generated_.Send(std::move(input)); status != ZX_OK) {
+          if (auto status = generated_sender_.Send(std::move(input)); status != ZX_OK) {
             FX_LOGS(ERROR) << "Input queue closed prematurely: " << zx_status_get_string(status);
             return fpromise::error(status);
           }
@@ -771,18 +785,28 @@ ZxPromise<Input> RealmFuzzerRunner::Prepare(bool detect_leaks) {
         }
         return fpromise::ok();
       })
-      .and_then([this, generate = Future<Input>()](Context& context) mutable -> ZxResult<Input> {
+      .and_then([this, leak = Future<Input>(),
+                 generate = Future<Input>()](Context& context) mutable -> ZxResult<Input> {
+        if (!leak) {
+          leak = leak_receiver_.Receive();
+        }
         if (!generate) {
-          generate = generated_.Receive();
+          generate = generated_receiver_.Receive();
         }
-        if (!generate(context)) {
-          return fpromise::pending();
+        if (leak(context)) {
+          if (leak.is_error()) {
+            return fpromise::error(ZX_ERR_STOP);
+          }
+          return fpromise::ok(leak.take_value());
         }
-        if (generate.is_error()) {
-          // No more inputs means the workflow is done.
-          return fpromise::error(ZX_ERR_STOP);
+        if (generate(context)) {
+          if (generate.is_error()) {
+            // No more inputs means the workflow is done.
+            return fpromise::error(ZX_ERR_STOP);
+          }
+          return fpromise::ok(generate.take_value());
         }
-        return fpromise::ok(generate.take_value());
+        return fpromise::pending();
       });
 }
 
@@ -977,7 +1001,8 @@ bool RealmFuzzerRunner::Recycle(Input&& input, size_t& attempts_left, bool suspe
     } else if (suspected) {
       // Leak detection is still possible, and the last run exhibited a suspected leak. Push the
       // input to the front of the queue to retry with leak detection.
-      if (auto status = generated_.Resend(std::move(input)); status != ZX_OK) {
+
+      if (auto status = leak_sender_.Send(std::move(input)); status != ZX_OK) {
         FX_LOGS(WARNING) << "Failed to resend input: " << zx_status_get_string(status);
       } else {
         return true;
@@ -985,7 +1010,7 @@ bool RealmFuzzerRunner::Recycle(Input&& input, size_t& attempts_left, bool suspe
     }
   }
   // Send input to be recycled.
-  if (auto status = processed_.Send(std::move(input)); status != ZX_OK) {
+  if (auto status = processed_sender_.Send(std::move(input)); status != ZX_OK) {
     FX_LOGS(WARNING) << "Failed to recycle input: " << zx_status_get_string(status);
   }
   return false;
@@ -1000,10 +1025,9 @@ void RealmFuzzerRunner::Disconnect() {
 }
 
 void RealmFuzzerRunner::Reset() {
-  generated_.Clear();
-  processed_.Clear();
-  generated_.Reset();
-  processed_.Reset();
+  generated_receiver_.Reset();
+  processed_receiver_.Reset();
+  leak_receiver_.Reset();
 }
 
 }  // namespace fuzzing

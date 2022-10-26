@@ -13,7 +13,7 @@ namespace fuzzing {
 const char* kFakeFuzzerUrl = "fuchsia-pkg://fuchsia.com/fuzzing-common-tests#meta/fake.cm";
 
 FakeRegistrar::FakeRegistrar(ExecutorPtr executor)
-    : binding_(this), executor_(std::move(executor)) {}
+    : binding_(this), executor_(std::move(executor)), receiver_(&sender_) {}
 
 fidl::InterfaceHandle<Registrar> FakeRegistrar::NewBinding() {
   auto handle = binding_.NewBinding(executor_->dispatcher());
@@ -23,13 +23,13 @@ fidl::InterfaceHandle<Registrar> FakeRegistrar::NewBinding() {
 
 void FakeRegistrar::Register(std::string url, ControllerProviderHandle provider,
                              RegisterCallback callback) {
-  auto status = providers_.Send(std::move(provider));
+  auto status = sender_.Send(std::move(provider));
   FX_DCHECK(status == ZX_OK) << zx_status_get_string(status);
   callback();
 }
 
 ZxPromise<ControllerProviderHandle> FakeRegistrar::TakeProvider() {
-  return providers_.Receive().or_else([] { return fpromise::error(ZX_ERR_CANCELED); });
+  return receiver_.Receive().or_else([] { return fpromise::error(ZX_ERR_CANCELED); });
 }
 
 }  // namespace fuzzing

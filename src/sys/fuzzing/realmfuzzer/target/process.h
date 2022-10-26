@@ -154,8 +154,11 @@ class Process final {
   size_t malloc_limit_ = 0;
 
   // Queues for adding modules.
-  AsyncDequePtr<CountersInfo> counters_;
-  AsyncDequePtr<PCsInfo> pcs_;
+  AsyncSender<CountersInfo> counters_sender_;
+  AsyncReceiver<CountersInfo> counters_receiver_;
+
+  AsyncSender<PCsInfo> pcs_sender_;
+  AsyncReceiver<PCsInfo> pcs_receiver_;
 
   // Published coverage data.
   std::vector<Module> modules_;

@@ -114,17 +114,13 @@ void __sanitizer_cov_trace_gep(uintptr_t Idx) {}
 namespace fuzzing {
 
 Process::Process(ExecutorPtr executor)
-    : executor_(executor), eventpair_(executor), next_purge_(zx::time::infinite()) {
+    : executor_(executor),
+      eventpair_(executor),
+      counters_receiver_(&counters_sender_),
+      pcs_receiver_(&pcs_sender_),
+      next_purge_(zx::time::infinite()) {
   FX_CHECK(!gContext.process);
-  // The AsyncDeques must be created on the dispatcher thread.
-  auto task = fpromise::make_promise([this]() -> Result<> {
-                counters_ = AsyncDeque<CountersInfo>::MakePtr();
-                pcs_ = AsyncDeque<PCsInfo>::MakePtr();
-                return fpromise::ok();
-              })
-                  .wrap_with(scope_)
-                  .wrap_with(sequencer_);
-  executor_->schedule_task(std::move(task));
+
   // Forward coverage for modules added up to this point.
   FX_CHECK(gContext.num_counters == gContext.num_pcs);
   for (size_t i = 0; i < gContext.num_counters; ++i) {
@@ -141,7 +137,7 @@ void Process::AddCounters(CountersInfo counters) {
   // Ensure the AsyncDeque is only accessed from the dispatcher thread.
   auto task =
       fpromise::make_promise([this, counters = std::move(counters)]() mutable -> ZxResult<> {
-        if (auto status = counters_->Send(std::move(counters)); status != ZX_OK) {
+        if (auto status = counters_sender_.Send(std::move(counters)); status != ZX_OK) {
           FX_LOGS(WARNING) << "Failed to send counters to engine: " << zx_status_get_string(status);
           return fpromise::error(status);
         }
@@ -155,7 +151,7 @@ void Process::AddCounters(CountersInfo counters) {
 void Process::AddPCs(PCsInfo pcs) {
   // Ensure the AsyncDeque is only accessed from the dispatcher thread.
   auto task = fpromise::make_promise([this, pcs = std::move(pcs)]() mutable -> ZxResult<> {
-                if (auto status = pcs_->Send(std::move(pcs)); status != ZX_OK) {
+                if (auto status = pcs_sender_.Send(std::move(pcs)); status != ZX_OK) {
                   FX_LOGS(WARNING)
                       << "Failed to send PCs to engine: " << zx_status_get_string(status);
                   return fpromise::error(status);
@@ -361,7 +357,7 @@ ZxPromise<> Process::AddModules(zx::eventpair eventpair) {
 
 ZxPromise<> Process::AddModule() {
   Bridge<> bridge;
-  return fpromise::make_promise([recv = Future<CountersInfo>(counters_->Receive())](
+  return fpromise::make_promise([recv = Future<CountersInfo>(counters_receiver_.Receive())](
                                     Context& context) mutable -> ZxResult<CountersInfo> {
            // Get the next |CountersInfo|.
            if (!recv(context)) {
@@ -373,7 +369,7 @@ ZxPromise<> Process::AddModule() {
            }
            return fpromise::ok(recv.take_value());
          })
-      .and_then([recv = Future<PCsInfo>(pcs_->Receive())](
+      .and_then([recv = Future<PCsInfo>(pcs_receiver_.Receive())](
                     Context& context, CountersInfo& counters) mutable -> ZxResult<Module> {
         // Get the next |PCsInfo|.
         if (!recv(context)) {
