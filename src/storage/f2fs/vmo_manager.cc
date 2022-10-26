@@ -26,7 +26,8 @@ zx::result<bool> VmoNode::CreateAndLockVmo(pgoff_t offset) {
   ZX_DEBUG_ASSERT(offset < kVmoSize);
   zx_vaddr_t vmo_size = PageIndexToAddress(kVmoSize);
   if (!vmo_.is_valid()) {
-    if (zx_status_t status = vmo_.create(vmo_size, ZX_VMO_DISCARDABLE, &vmo_); status != ZX_OK) {
+    if (zx_status_t status = zx::vmo::create(vmo_size, ZX_VMO_DISCARDABLE, &vmo_);
+        status != ZX_OK) {
       return zx::error(status);
     }
     if (zx_status_t status = zx::vmar::root_self()->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo_,

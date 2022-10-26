@@ -194,7 +194,7 @@ void VnodeF2fs::VmoRead(uint64_t offset, uint64_t length) {
 zx::result<zx::vmo> VnodeF2fs::PopulateAndGetMmappedVmo(const size_t offset, const size_t length) {
   zx::vmo vmo;
   // It creates a zero-filled vmo, so we don't need to fill an invalidated area with zero.
-  if (auto status = vmo.create(length, 0, &vmo); status != ZX_OK) {
+  if (auto status = zx::vmo::create(length, 0, &vmo); status != ZX_OK) {
     return zx::error(status);
   }
 
