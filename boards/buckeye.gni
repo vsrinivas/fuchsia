@@ -7,9 +7,6 @@ import("//boards/arm64.gni")
 board_name = "buckeye"
 board_description = "speaker platform board"
 
-# TODO(fxbug.dev/101199): fake firmware path to workaround build system bug
-amlogic_decoder_firmware_path = "//fake"
-
 _common_bootfs_deps = [
   "//src/connectivity/ethernet/drivers/ethernet",
   "//src/devices/block/drivers/aml-sdmmc",
