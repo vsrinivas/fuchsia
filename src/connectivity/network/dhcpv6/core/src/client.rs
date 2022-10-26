@@ -3473,13 +3473,12 @@ impl Assigned {
         let Self {
             client_id,
             non_temporary_addresses,
-            // TODO(https://fxbug.dev/113078): Renew with PD.
-            delegated_prefixes: _,
+            delegated_prefixes,
             server_id,
             dns_servers,
             solicit_max_rt,
         } = self;
-        // Start renewing addresses, per RFC 8415, section 18.2.4:
+        // Start renewing bindings, per RFC 8415, section 18.2.4:
         //
         //    At time T1, the client initiates a Renew/Reply message
         //    exchange to extend the lifetimes on any leases in the IA.
@@ -3487,6 +3486,7 @@ impl Assigned {
             transaction_id(),
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             options_to_request,
             dns_servers,
@@ -3513,6 +3513,7 @@ impl Renewing {
         let Self(RenewingOrRebindingInner {
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             dns_servers,
             start_time: _,
@@ -3530,6 +3531,7 @@ impl Renewing {
             transaction_id(),
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             options_to_request,
             dns_servers,
@@ -3546,9 +3548,10 @@ struct RenewingOrRebindingInner {
     /// [Client Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// used for uniquely identifying the client in communication with servers.
     client_id: [u8; CLIENT_ID_LEN],
-    /// The non-temporary addresses the client is initially configured to
-    /// solicit, used when server discovery is restarted.
+    /// The non-temporary addresses negotiated by the client.
     non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
+    /// The delegated prefixes negotiated by the client.
+    delegated_prefixes: HashMap<v6::IAID, PrefixEntry>,
     /// [Server Identifier](https://datatracker.ietf.org/doc/html/rfc8415#section-21.2)
     /// of the server selected during server discovery.
     server_id: Vec<u8>,
@@ -3586,6 +3589,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         transaction_id: [u8; 3],
         client_id: [u8; CLIENT_ID_LEN],
         non_temporary_addresses: HashMap<v6::IAID, AddressEntry>,
+        delegated_prefixes: HashMap<v6::IAID, PrefixEntry>,
         server_id: Vec<u8>,
         options_to_request: &[v6::OptionCode],
         dns_servers: Vec<Ipv6Addr>,
@@ -3596,6 +3600,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         Self(RenewingOrRebindingInner {
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             dns_servers,
             start_time: None,
@@ -3632,6 +3637,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         let Self(RenewingOrRebindingInner {
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             dns_servers,
             start_time,
@@ -3662,40 +3668,57 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
             (v6::MessageType::Renew, Some(v6::DhcpOption::ServerId(&server_id)))
         };
 
-        let mut options = maybe_server_id_opt
+        // TODO(https://fxbug.dev/86945): remove `iaaddr_options` construction
+        // once `IanaSerializer::new()` takes options by value.
+        // TODO(https://fxbug.dev/74324): all addresses in the map should be
+        // valid; invalid addresses to be removed part of the
+        // AddressStateProvider work.
+        let iaaddr_options = non_temporary_addresses
+            .iter()
+            .map(|(iaid, addr_entry)| {
+                (
+                    *iaid,
+                    addr_entry.value().map(|addr| {
+                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let iaprefix_options = delegated_prefixes
+            .iter()
+            .map(|(iaid, prefix_entry)| {
+                (
+                    *iaid,
+                    prefix_entry.value().map(|prefix| {
+                        [v6::DhcpOption::IaPrefix(v6::IaPrefixSerializer::new(0, 0, prefix, &[]))]
+                    }),
+                )
+            })
+            .collect::<HashMap<_, _>>();
+        let options = maybe_server_id_opt
             .into_iter()
             .chain([
                 v6::DhcpOption::ClientId(&client_id),
                 v6::DhcpOption::ElapsedTime(elapsed_time),
                 v6::DhcpOption::Oro(&oro),
             ])
-            .collect::<Vec<_>>();
-
-        // TODO(https://fxbug.dev/86945): remove `iaaddr_options` construction
-        // once `IanaSerializer::new()` takes options by value.
-        let mut iaaddr_options = HashMap::new();
-        // TODO(https://fxbug.dev/74324): all addresses in the map should be
-        // valid; invalid addresses to be removed part of the
-        // AddressStateProvider work.
-        for (iaid, addr_entry) in &non_temporary_addresses {
-            assert_matches!(
-                iaaddr_options.insert(
+            .chain(iaaddr_options.iter().map(|(iaid, iaaddr_opt)| {
+                v6::DhcpOption::Iana(v6::IanaSerializer::new(
                     *iaid,
-                    addr_entry.value().map(|addr| {
-                        [v6::DhcpOption::IaAddr(v6::IaAddrSerializer::new(addr, 0, 0, &[]))]
-                    }),
-                ),
-                None
-            );
-        }
-        for (iaid, iaaddr_opt) in &iaaddr_options {
-            options.push(v6::DhcpOption::Iana(v6::IanaSerializer::new(
-                *iaid,
-                0,
-                0,
-                iaaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
-            )));
-        }
+                    0,
+                    0,
+                    iaaddr_opt.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }))
+            .chain(iaprefix_options.iter().map(|(iaid, iaprefix_opt)| {
+                v6::DhcpOption::IaPd(v6::IaPdSerializer::new(
+                    *iaid,
+                    0,
+                    0,
+                    iaprefix_opt.as_ref().map_or(&[], AsRef::as_ref),
+                ))
+            }))
+            .collect::<Vec<_>>();
 
         let builder = v6::MessageBuilder::new(message_type, transaction_id, &options);
         let mut buf = vec![0; builder.bytes_len()];
@@ -3707,6 +3730,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                 let inner = RenewingOrRebindingInner {
                     client_id,
                     non_temporary_addresses,
+                    delegated_prefixes,
                     server_id,
                     dns_servers,
                     start_time: Some(start_time),
@@ -3749,6 +3773,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
         let Self(RenewingOrRebindingInner {
             client_id,
             non_temporary_addresses: current_non_temporary_addresses,
+            delegated_prefixes: current_delegated_prefixes,
             server_id,
             dns_servers: current_dns_servers,
             start_time,
@@ -3841,6 +3866,7 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                         let inner = RenewingOrRebindingInner {
                             client_id,
                             non_temporary_addresses: current_non_temporary_addresses,
+                            delegated_prefixes: current_delegated_prefixes,
                             server_id,
                             dns_servers: current_dns_servers,
                             start_time,
@@ -3897,6 +3923,9 @@ impl<const IS_REBINDING: bool> RenewingOrRebinding<IS_REBINDING> {
                     let inner = RenewingOrRebindingInner {
                         client_id,
                         non_temporary_addresses,
+                        // TODO(https://fxbug.dev/113078): Handle replies to
+                        // Renewing/Rebinding with IA_PD.
+                        delegated_prefixes: Default::default(),
                         server_id,
                         dns_servers: dns_servers.unwrap_or_else(|| Vec::new()),
                         start_time,
@@ -4140,6 +4169,7 @@ impl ClientState {
             | ClientState::Renewing(RenewingOrRebinding(RenewingOrRebindingInner {
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id: _,
                 dns_servers,
                 start_time: _,
@@ -4149,6 +4179,7 @@ impl ClientState {
             | ClientState::Rebinding(RenewingOrRebinding(RenewingOrRebindingInner {
                 client_id: _,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 server_id: _,
                 dns_servers,
                 start_time: _,
@@ -5163,18 +5194,19 @@ pub(crate) mod testutil {
     }
 
     /// Creates a stateful client, exchanges messages to assign the configured
-    /// addresses, and sends a Renew message. Asserts the content of the client
+    /// leases, and sends a Renew message. Asserts the content of the client
     /// state and of the renew message, and returns the client in Renewing
     /// state.
     ///
     /// # Panics
     ///
-    /// `send_renew_and_assert` panics if address assignment fails, or if
-    /// sending a renew fails.
+    /// `send_renew_and_assert` panics if assignment fails, or if sending a
+    /// renew fails.
     pub(crate) fn send_renew_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
+        delegated_prefixes_to_assign: Vec<TestIaPd>,
         expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
@@ -5186,7 +5218,7 @@ pub(crate) mod testutil {
             client_id.clone(),
             server_id.clone(),
             non_temporary_addresses_to_assign.clone(),
-            Default::default(), /* delegated_prefixes_to_assign */
+            delegated_prefixes_to_assign.clone(),
             expected_dns_servers_as_slice,
             rng,
             now,
@@ -5250,6 +5282,7 @@ pub(crate) mod testutil {
             dns_servers,
             solicit_max_rt,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             start_time: _,
             retrans_timeout: _,
         } = assert_matches!(
@@ -5268,6 +5301,14 @@ pub(crate) mod testutil {
                 },
             ))
             .collect();
+        let expected_prefixes_to_renew: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = (0..)
+            .map(v6::IAID::new)
+            .zip(delegated_prefixes_to_assign.iter().map(
+                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*prefix)
+                },
+            ))
+            .collect();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             v6::MessageType::Renew,
@@ -5275,24 +5316,25 @@ pub(crate) mod testutil {
             Some(&server_id),
             expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
             &expected_addresses_to_renew,
-            &HashMap::new(),
+            &expected_prefixes_to_renew,
         );
         client
     }
 
     /// Creates a stateful client, exchanges messages to assign the configured
-    /// addresses, and sends a Renew then Rebind message. Asserts the content of
+    /// leases, and sends a Renew then Rebind message. Asserts the content of
     /// the client state and of the rebind message, and returns the client in
     /// Rebinding state.
     ///
     /// # Panics
     ///
-    /// `send_rebind_and_assert` panics if address assignment fails, or if
-    /// sending a rebind fails.
+    /// `send_rebind_and_assert` panics if assignmentment fails, or if sending a
+    /// rebind fails.
     pub(crate) fn send_rebind_and_assert<R: Rng + std::fmt::Debug>(
         client_id: [u8; CLIENT_ID_LEN],
         server_id: [u8; TEST_SERVER_ID_LEN],
         non_temporary_addresses_to_assign: Vec<TestIaNa>,
+        delegated_prefixes_to_assign: Vec<TestIaPd>,
         expected_dns_servers: Option<&[Ipv6Addr]>,
         expected_t1_secs: v6::NonZeroOrMaxU32,
         expected_t2_secs: v6::NonZeroOrMaxU32,
@@ -5303,6 +5345,7 @@ pub(crate) mod testutil {
             client_id,
             server_id,
             non_temporary_addresses_to_assign.clone(),
+            delegated_prefixes_to_assign.clone(),
             expected_dns_servers,
             expected_t1_secs,
             expected_t2_secs,
@@ -5328,6 +5371,7 @@ pub(crate) mod testutil {
             dns_servers,
             solicit_max_rt,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             start_time: _,
             retrans_timeout: _,
         }) = assert_matches!(
@@ -5352,6 +5396,14 @@ pub(crate) mod testutil {
                 },
             ))
             .collect();
+        let expected_prefixes_to_renew: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = (0..)
+            .map(v6::IAID::new)
+            .zip(delegated_prefixes_to_assign.iter().map(
+                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*prefix)
+                },
+            ))
+            .collect();
         testutil::assert_outgoing_stateful_message(
             &mut buf,
             v6::MessageType::Rebind,
@@ -5359,7 +5411,7 @@ pub(crate) mod testutil {
             None, /* expected_server_id */
             expected_oro.as_ref().map_or(&[], |oro| &oro[..]),
             &expected_addresses_to_renew,
-            &HashMap::new(),
+            &expected_prefixes_to_renew,
         );
 
         client
@@ -7639,6 +7691,7 @@ mod tests {
             [u8; CLIENT_ID_LEN],
             [u8; TEST_SERVER_ID_LEN],
             Vec<TestIaNa>,
+            Vec<TestIaPd>,
             Option<&[Ipv6Addr]>,
             v6::NonZeroOrMaxU32,
             v6::NonZeroOrMaxU32,
@@ -7695,6 +7748,10 @@ mod tests {
                 .into_iter()
                 .map(|&addr| TestIaNa::new_default(addr))
                 .collect(),
+            CONFIGURED_DELEGATED_PREFIXES[0..2]
+                .into_iter()
+                .map(|&addr| TestIaPd::new_default(addr))
+                .collect(),
             None,
             T1,
             T2,
@@ -7721,6 +7778,7 @@ mod tests {
                 .into_iter()
                 .map(|&addr| TestIaNa::new_default(addr))
                 .collect(),
+            Default::default(), /* delegated_prefixes_to_assign */
             Some(&DNS_SERVERS),
             T1,
             T2,
@@ -7867,11 +7925,16 @@ mod tests {
             .into_iter()
             .map(|&addr| TestIaNa::new_default(addr))
             .collect::<Vec<_>>();
+        let delegated_prefixes_to_assign = CONFIGURED_DELEGATED_PREFIXES[0..2]
+            .into_iter()
+            .map(|&addr| TestIaPd::new_default(addr))
+            .collect::<Vec<_>>();
         let time = Instant::now();
         let mut client = send_and_assert(
             CLIENT_ID,
             SERVER_ID[0],
             non_temporary_addresses_to_assign.clone(),
+            delegated_prefixes_to_assign.clone(),
             None,
             T1,
             T2,
@@ -7883,6 +7946,7 @@ mod tests {
         let RenewingOrRebindingInner {
             client_id: _,
             non_temporary_addresses: _,
+            delegated_prefixes: _,
             server_id: _,
             dns_servers: _,
             start_time: _,
@@ -7909,6 +7973,7 @@ mod tests {
                 dns_servers,
                 solicit_max_rt,
                 non_temporary_addresses: _,
+                delegated_prefixes: _,
                 start_time: _,
                 retrans_timeout: _,
             } = with_state(state);
@@ -7917,11 +7982,19 @@ mod tests {
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
             assert_eq!(*solicit_max_rt, MAX_SOLICIT_TIMEOUT);
         }
-        let expected_non_temporary_addresses_to_renew: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
+        let expected_non_temporary_addresses: HashMap<v6::IAID, Option<Ipv6Addr>> = (0..)
             .map(v6::IAID::new)
             .zip(non_temporary_addresses_to_assign.iter().map(
                 |TestIaNa { address, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
                     Some(*address)
+                },
+            ))
+            .collect();
+        let expected_delegated_prefixes: HashMap<v6::IAID, Option<Subnet<Ipv6Addr>>> = (0..)
+            .map(v6::IAID::new)
+            .zip(delegated_prefixes_to_assign.iter().map(
+                |TestIaPd { prefix, preferred_lifetime: _, valid_lifetime: _, t1: _, t2: _ }| {
+                    Some(*prefix)
                 },
             ))
             .collect();
@@ -7931,8 +8004,8 @@ mod tests {
             &CLIENT_ID,
             expect_server_id.then(|| &SERVER_ID[0]),
             &[],
-            &expected_non_temporary_addresses_to_renew,
-            &HashMap::new(),
+            &expected_non_temporary_addresses,
+            &expected_delegated_prefixes,
         );
     }
 
@@ -7956,6 +8029,7 @@ mod tests {
             CLIENT_ID,
             original_server_id.clone(),
             CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8013,6 +8087,7 @@ mod tests {
             let RenewingOrRebindingInner {
                 client_id: original_client_id,
                 non_temporary_addresses: original_non_temporary_addresses,
+                delegated_prefixes: original_delegated_prefixes,
                 server_id: original_server_id,
                 dns_servers: original_dns_servers,
                 start_time: original_start_time,
@@ -8022,6 +8097,7 @@ mod tests {
             let RenewingOrRebindingInner {
                 client_id: new_client_id,
                 non_temporary_addresses: new_non_temporary_addresses,
+                delegated_prefixes: new_delegated_prefixes,
                 server_id: new_server_id,
                 dns_servers: new_dns_servers,
                 start_time: new_start_time,
@@ -8030,6 +8106,7 @@ mod tests {
             } = with_state(state);
             assert_eq!(&original_client_id, new_client_id);
             assert_eq!(&original_non_temporary_addresses, new_non_temporary_addresses);
+            assert_eq!(&original_delegated_prefixes, new_delegated_prefixes);
             assert_eq!(&original_server_id, new_server_id);
             assert_eq!(&original_dns_servers, new_dns_servers);
             assert_eq!(&original_start_time, new_start_time);
@@ -8105,6 +8182,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIaNa::new_default(addr)],
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8149,6 +8227,7 @@ mod tests {
         let RenewingOrRebindingInner {
             client_id,
             non_temporary_addresses,
+            delegated_prefixes,
             server_id,
             dns_servers,
             start_time: _,
@@ -8157,6 +8236,7 @@ mod tests {
         } = with_state(state);
         assert_eq!(*client_id, CLIENT_ID);
         assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
+        assert_eq!(*delegated_prefixes, HashMap::new());
         assert_eq!(*server_id, SERVER_ID[0]);
         assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
         assert_eq!(*got_sol_max_rt, Duration::from_secs(sol_max_rt.into()));
@@ -8183,6 +8263,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             non_temporary_addresses.iter().copied().map(TestIaNa::new_default).collect(),
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8244,6 +8325,7 @@ mod tests {
             let RenewingOrRebindingInner {
                 client_id,
                 non_temporary_addresses,
+                delegated_prefixes,
                 server_id,
                 dns_servers,
                 start_time,
@@ -8252,6 +8334,7 @@ mod tests {
             } = with_state(state);
             assert_eq!(*client_id, CLIENT_ID);
             assert_eq!(*non_temporary_addresses, expected_non_temporary_addresses);
+            assert_eq!(*delegated_prefixes, HashMap::new());
             assert_eq!(*server_id, SERVER_ID[0]);
             assert!(start_time.is_some());
             assert_eq!(dns_servers, &[] as &[Ipv6Addr]);
@@ -8281,6 +8364,7 @@ mod tests {
                 .copied()
                 .map(TestIaNa::new_default)
                 .collect(),
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8386,6 +8470,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8483,6 +8568,7 @@ mod tests {
                 .copied()
                 .map(TestIaNa::new_default)
                 .collect(),
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8612,6 +8698,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             CONFIGURED_NON_TEMPORARY_ADDRESSES.into_iter().map(TestIaNa::new_default).collect(),
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
@@ -8859,6 +8946,7 @@ mod tests {
             CLIENT_ID,
             SERVER_ID[0],
             vec![TestIaNa::new_default(CONFIGURED_NON_TEMPORARY_ADDRESSES[0])],
+            Default::default(), /* delegated_prefixes_to_assign */
             None,
             T1,
             T2,
