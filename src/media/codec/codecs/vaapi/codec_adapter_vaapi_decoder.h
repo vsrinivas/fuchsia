@@ -21,6 +21,7 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <threads.h>
+#include <zircon/assert.h>
 
 #include <condition_variable>
 #include <memory>
@@ -418,6 +419,11 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
           fit::inline_function<void(fuchsia::sysmem::ImageFormatConstraints & constraints)>;
       auto set_common_constraints =
           CommonConstraintsFunction([this](fuchsia::sysmem::ImageFormatConstraints& constraints) {
+            ZX_ASSERT(media_decoder_);
+            ZX_ASSERT(media_codec_.has_value());
+
+            bool is_h264 = (media_codec_.value() == CodecType::H264);
+
             // Currently only support outputting to NV12
             constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
 
@@ -431,16 +437,16 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             // do with the current stream in particular. We advertise the known min codec width
             // depending on the codec. For the max, we advertise what the current hardware supports,
             // not the codec max.
-            constraints.min_coded_width = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.min_coded_width = is_h264 ? kH264MinBlockSize : kVp9MinBlockSize;
             constraints.max_coded_width = max_picture_width_;
-            constraints.min_coded_height = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.min_coded_height = is_h264 ? kH264MinBlockSize : kVp9MinBlockSize;
             constraints.max_coded_height = max_picture_height_;
             constraints.max_coded_width_times_coded_height =
                 (max_picture_width_ * max_picture_height_);
 
             constraints.layers = 1;
-            constraints.coded_width_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
-            constraints.coded_height_divisor = is_h264_ ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.coded_width_divisor = is_h264 ? kH264MinBlockSize : kVp9MinBlockSize;
+            constraints.coded_height_divisor = is_h264 ? kH264MinBlockSize : kVp9MinBlockSize;
             constraints.start_offset_divisor = 1;
 
             // Odd display dimensions are permitted, but these don't imply odd YV12
@@ -590,6 +596,14 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   static constexpr uint32_t kH264MinBlockSize = 16u;
   static constexpr uint32_t kVp9MinBlockSize = 2u;
 
+  // Used to keep track when mime_type is specified by client
+  enum class CodecType {
+    H264,
+    VP9,
+  };
+
+  static const char* CodecTypeName(CodecType state);
+
   // Used from trace events
   enum DecoderState { kIdle, kDecoding, kError };
 
@@ -654,6 +668,10 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
             fuchsia_sysmem::wire::kFormatModifierLinear);
   }
 
+  // Use to construct the |media_decoder_|. Can only be called iff |media_decoder_| is not
+  // initialized and |media_codec_| has a value.
+  void ConstructDecoder();
+
   // Called directly after a reconfiguration change during a stream. If a the result is
   // fit::error(std::string), there was a problem with the new constraints that can't be solved
   // with a buffer reconfiguration (i.e. the requested buffers exceed the max supported size for our
@@ -668,7 +686,9 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // Loops for the lifetime of a stream.
   void ProcessInputLoop();
 
-  // Releases any resources from the just-ended stream.
+  // Releases any resources from the just-ended stream. This must be called after the |input_queue_|
+  // is cancelled and no further operations are pending on |input_processing_loop_| to ensure that
+  // no further processing on the stream is pending.
   void CleanUpAfterStream();
 
   void DecodeAnnexBBuffer(media::DecoderBuffer buffer);
@@ -779,7 +799,8 @@ class CodecAdapterVaApiDecoder : public CodecAdapter {
   // Will be accessed from the input processing thread if that's active, or the main thread
   // otherwise.
   std::unique_ptr<media::AcceleratedVideoDecoder> media_decoder_;
-  bool is_h264_{false};  // TODO(stefanbossbaly): Remove in favor abstraction in VAAPI layer
+  // Set when CoreCodecInit() is called. Once set it can not be changed.
+  std::optional<CodecType> media_codec_;
   uint32_t decoder_failures_{0};  // The amount of failures the decoder has encountered
   DiagnosticStateWrapper<DecoderState> state_{
       []() {}, DecoderState::kIdle, &DecoderStateName};  // Used for trace events to show when we

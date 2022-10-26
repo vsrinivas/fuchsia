@@ -766,20 +766,20 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
 
   const std::string& mime_type = initial_input_format_details.mime_type();
   if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
-    media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<H264Accelerator>(this),
-                                                          media::H264PROFILE_HIGH);
-    is_h264_ = true;
+    media_codec_ = CodecType::H264;
   } else if (mime_type == "video/vp9") {
-    media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
-                                                         media::VP9PROFILE_PROFILE0);
+    media_codec_ = CodecType::VP9;
   } else {
     SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
     return;
   }
 
+  ZX_ASSERT(media_codec_.has_value());
+  ConstructDecoder();
+
   if (codec_diagnostics_) {
-    std::string codec_name = is_h264_ ? "H264" : "VP9";
-    codec_instance_diagnostics_ = codec_diagnostics_->CreateComponentCodec(codec_name);
+    codec_instance_diagnostics_ =
+        codec_diagnostics_->CreateComponentCodec(CodecTypeName(media_codec_.value()));
   }
 
   VAConfigAttrib attribs[2] = {
@@ -790,13 +790,16 @@ void CodecAdapterVaApiDecoder::CoreCodecInit(
   VAStatus va_status;
   VAProfile va_profile;
 
-  if (mime_type == "video/h264-multi" || mime_type == "video/h264") {
-    va_profile = VAProfileH264High;
-  } else if (mime_type == "video/vp9") {
-    va_profile = VAProfileVP9Profile0;
-  } else {
-    SetCodecFailure("CodecCodecInit(): Unknown mime_type %s\n", mime_type.c_str());
-    return;
+  switch (media_codec_.value()) {
+    case CodecType::H264:
+      va_profile = VAProfileH264High;
+      break;
+    case CodecType::VP9:
+      va_profile = VAProfileVP9Profile0;
+      break;
+    default:
+      SetCodecFailure("CodecCodecInit(): Unknown codec\n");
+      return;
   }
 
   va_status = vaCreateConfig(VADisplayWrapper::GetSingleton()->display(), va_profile, va_entrypoint,
@@ -887,18 +890,11 @@ void CodecAdapterVaApiDecoder::CoreCodecResetStreamAfterCurrentFrame() {
   // outstanding tasks
   WaitForInputProcessingLoopToEnd();
 
+  // Reconstruct |media_decoder_|
   media_decoder_.reset();
-
-  if (is_h264_) {
-    media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<H264Accelerator>(this),
-                                                          media::H264PROFILE_HIGH);
-  } else {
-    media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
-                                                         media::VP9PROFILE_PROFILE0);
-  }
+  ConstructDecoder();
 
   input_queue_.Reset(/*keep_data=*/true);
-
   LaunchInputProcessingLoop();
 }
 
@@ -1031,6 +1027,17 @@ void CodecAdapterVaApiDecoder::DecodeAnnexBBuffer(media::DecoderBuffer buffer) {
   }
 }  // ~buffer
 
+const char* CodecAdapterVaApiDecoder::CodecTypeName(CodecType state) {
+  switch (state) {
+    case CodecType::H264:
+      return "H264";
+    case CodecType::VP9:
+      return "VP9";
+    default:
+      return "UNKNOWN";
+  }
+}
+
 const char* CodecAdapterVaApiDecoder::DecoderStateName(DecoderState state) {
   switch (state) {
     case DecoderState::kIdle:
@@ -1060,6 +1067,25 @@ void CodecAdapterVaApiDecoder::SetCodecFailure(const char* format, Args&&... arg
   // enqueuing of new data, the call to |CoreCodecStopStream()| will happen in the near future,
   // which will clear out any operations that were enqueued in that time.
   input_queue_.StopAllWaits();
+}
+
+void CodecAdapterVaApiDecoder::ConstructDecoder() {
+  ZX_ASSERT(!static_cast<bool>(media_decoder_));
+  ZX_ASSERT(media_codec_.has_value());
+
+  switch (media_codec_.value()) {
+    case CodecType::H264:
+      media_decoder_ = std::make_unique<media::H264Decoder>(std::make_unique<H264Accelerator>(this),
+                                                            media::H264PROFILE_HIGH);
+      break;
+    case CodecType::VP9:
+      media_decoder_ = std::make_unique<media::VP9Decoder>(std::make_unique<VP9Accelerator>(this),
+                                                           media::VP9PROFILE_PROFILE0);
+      break;
+    default:
+      ZX_ASSERT(false);
+      break;
+  }
 }
 
 fit::result<std::string, bool> CodecAdapterVaApiDecoder::IsBufferReconfigurationNeeded() const {
@@ -1225,10 +1251,12 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
   while ((maybe_input_item = input_queue_.WaitForElement())) {
     CodecInputItem input_item = std::move(maybe_input_item.value());
     if (input_item.is_format_details()) {
+      ZX_ASSERT(media_codec_.has_value());
       const std::string& mime_type = input_item.format_details().mime_type();
 
-      if ((!is_h264_ && (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
-          (is_h264_ && mime_type == "video/vp9")) {
+      if ((media_codec_.value() == CodecType::VP9 &&
+           (mime_type == "video/h264-multi" || mime_type == "video/h264")) ||
+          (media_codec_.value() == CodecType::H264 && mime_type == "video/vp9")) {
         SetCodecFailure(
             "CodecCodecInit(): Can not switch codec type after setting it in CoreCodecInit(). "
             "Attempting to switch it to %s\n",
@@ -1240,8 +1268,8 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
         avcc_processor_.ProcessOobBytes(input_item.format_details());
       }
     } else if (input_item.is_end_of_stream()) {
-      // TODO(stefanbossbaly): Encapsulate in abstraction
-      if (is_h264_) {
+      ZX_ASSERT(media_codec_.has_value());
+      if (media_codec_.value() == CodecType::H264) {
         constexpr uint8_t kEndOfStreamNalUnitType = 11;
         // Force frames to be processed.
         std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, kEndOfStreamNalUnitType};
@@ -1282,7 +1310,8 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
             returned_buffer = true;
           }));
 
-      if (is_h264_ && avcc_processor_.is_avcc()) {
+      ZX_ASSERT(media_codec_.has_value());
+      if ((media_codec_.value() == CodecType::H264) && avcc_processor_.is_avcc()) {
         // TODO(fxbug.dev/94139): Remove this copy.
         auto output_avcc_vec = avcc_processor_.ParseVideoAvcc(buffer_start, buffer_size);
         media::DecoderBuffer buffer(output_avcc_vec, packet->buffer(), packet->start_offset(),
@@ -1297,8 +1326,7 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
       // Ensure that the decode buffer has been destroyed and the input packet has been returned
       ZX_ASSERT(returned_buffer);
 
-      // TODO(stefanbossbaly): Encapsulate in abstraction
-      if (is_h264_) {
+      if (media_codec_.value() == CodecType::H264) {
         constexpr uint8_t kAccessUnitDelimiterNalUnitType = 9;
         constexpr uint8_t kPrimaryPicType = 1 << (7 - 3);
         // Force frames to be processed. TODO(jbauman): Key on known_end_access_unit.
@@ -1320,19 +1348,17 @@ void CodecAdapterVaApiDecoder::ProcessInputLoop() {
 }
 
 void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
-  {
-    // TODO(stefanbossbaly): Encapsulate in abstraction
-    if (is_h264_) {
-      // Force frames to be processed.
-      std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, 11};
+  ZX_ASSERT(media_codec_.has_value());
+  if (media_codec_.value() == CodecType::H264) {
+    // Force frames to be processed.
+    std::vector<uint8_t> end_of_stream_delimiter{0, 0, 1, 11};
 
-      media::DecoderBuffer buffer(end_of_stream_delimiter);
-      media_decoder_->SetStream(next_stream_id_++, buffer);
-      auto result = media_decoder_->Decode();
-      if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
-        SetCodecFailure("Unexpected media_decoder::Decode result for end of stream: %d", result);
-        return;
-      }
+    media::DecoderBuffer buffer(end_of_stream_delimiter);
+    media_decoder_->SetStream(next_stream_id_++, buffer);
+    auto result = media_decoder_->Decode();
+    if (result != media::AcceleratedVideoDecoder::kRanOutOfStreamData) {
+      SetCodecFailure("Unexpected media_decoder::Decode result for end of stream: %d", result);
+      return;
     }
   }
 
@@ -1340,6 +1366,15 @@ void CodecAdapterVaApiDecoder::CleanUpAfterStream() {
   if (!res) {
     FX_SLOG(WARNING, "media decoder flush failed");
   }
+
+  // Given that there are no more operations pending on this stream, we should reset the media
+  // decoder. This will also release any DPB surfaces under the decoder's ownership. This is
+  // specifically useful for the tiling case since the decoder references surfaces that are backed
+  // by buffers from sysmem. |CodecImpl| can call |CoreCodecEnsureBuffersNotConfigured()| for
+  // the output buffers and will expect that since |CoreCodecStopStream()| was called the buffers
+  // can be deconfigured.
+  media_decoder_.reset();
+  ConstructDecoder();
 }
 
 void CodecAdapterVaApiDecoder::CoreCodecMidStreamOutputBufferReConfigFinish() {
