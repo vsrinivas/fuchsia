@@ -1,9 +1,10 @@
 # Write a fuzzer
 
 Fuchsia's toolchain supports fuzzing using LLVM's [libFuzzer]. To create a fuzzer for a particular
-interface, you need to implement a [fuzz target function][fuzz-target] that uses a provided sequence
-of bytes to exercise the interface. The sequence of bytes is referred to as a fuzzer "input". The
-fuzz target function is used by libFuzzer to search for inputs that cause panics or other errors.
+interface, you need to implement a [fuzz target function][fuzz-target]{:.external} that uses a
+provided sequence of bytes to exercise the interface. The sequence of bytes is referred to as a
+fuzzer "input". The fuzz target function is used by libFuzzer to search for inputs that cause panics
+or other errors.
 
 ## Sample Code to Fuzz {#samples}
 
@@ -31,6 +32,8 @@ For each of the examples below, assume you want to test code like the following:
   ```
 
 * {Go}
+
+  Note: Go fuzzing is experimental and may not be supported on your development host.
 
   ```golang
   package mypackage
@@ -102,6 +105,8 @@ gracefully on invalid parameters is correct behavior.
 
 * {Go}
 
+  Note: Go fuzzing is experimental and may not be supported on your development host.
+
   For Go the fuzz target function must have the signature `func Fuzz(s []byte)` and return nothing.
 
   ```golang
@@ -119,8 +124,8 @@ Each language has utilities to facilitate making more complicated fuzz target fu
 
 * {C/C++}
 
-  The [`FuzzedDataProvider`][fuzzed-data-provider] class provided by LLVM can help you map portions
-  of the provided `data` to more complex types.
+  The [`FuzzedDataProvider`][fuzzed-data-provider]{:.external} class provided by LLVM can help you
+  map portions of the provided `data` to more complex types.
 
   For example:
 
@@ -146,19 +151,20 @@ Each language has utilities to facilitate making more complicated fuzz target fu
 
   There is one notable disadvantage:
 
-   * Since inputs are dynamically split, it is more difficult to provide a pre-existing [corpus]. It
-     is still feasible to provide a [dictionary].
+   * Since inputs are dynamically split, it is more difficult to provide a pre-existing
+     [corpus][corpus]{:.external}. It is still feasible to provide a
+     [dictionary][dictionary]{:.external}.
 
 * {Rust}
 
   You can create a fuzz target function that takes one or more inputs with the `Arbitrary` trait
-  from the [`arbitrary`][arbitrary] crate. This is the recommended approach.
+  from the [`arbitrary`][arbitrary]{:.external} crate. This is the recommended approach.
 
   To write a fuzz target function that automatically transforms arbitrary inputs:
 
   1. If needed, implement the `Arbitrary` trait for the types used by your test code. If possible,
      the recommended way to do this is by automatically deriving the trait. Otherwise, this can be
-     done "by hand" by following the crate's [instructions][arbitrary].
+     done "by hand" by following the crate's [instructions][arbitrary]{:.external}.
 
      For example, in your `src/lib.rs`:
 
@@ -185,8 +191,10 @@ Each language has utilities to facilitate making more complicated fuzz target fu
 
 * {Go}
 
-  You can use the ["encoding/binary"][binary-encoding] package to "cast" or transform bytes to fixed
-  size types:
+  Note: Go fuzzing is experimental and may not be supported on your development host.
+
+  You can use the ["encoding/binary"][binary-encoding]{:.external} package to "cast" or transform
+  bytes to fixed size types:
 
   ```golang
   import (
