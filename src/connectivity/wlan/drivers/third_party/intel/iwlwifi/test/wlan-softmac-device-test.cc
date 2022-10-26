@@ -100,7 +100,7 @@ class WlanSoftmacDeviceTest : public SingleApTest,
     test_arena_ = *std::move(arena);
   }
 
-  ~WlanSoftmacDeviceTest() override {
+  ~WlanSoftmacDeviceTest() {
     if (!release_called_) {
       mock_ddk::ReleaseFlaggedDevices(device_->zxdev());
     }

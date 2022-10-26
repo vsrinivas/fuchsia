@@ -45,7 +45,8 @@ WlanSoftmacDevice::WlanSoftmacDevice(zx_device* parent, iwl_trans* drvdata, uint
           parent),
       mvmvif_(mvmvif),
       drvdata_(drvdata),
-      iface_id_(iface_id) {}
+      iface_id_(iface_id),
+      mac_started(false) {}
 
 WlanSoftmacDevice::~WlanSoftmacDevice() {}
 
@@ -118,12 +119,16 @@ void WlanSoftmacDevice::Start(StartRequestView request, fdf::Arena& arena,
     return;
   }
 
+  mac_started = true;
   completer.buffer(arena).ReplySuccess(std::move(out_mlme_channel));
 }
 
 void WlanSoftmacDevice::Stop(fdf::Arena& arena, StopCompleter::Sync& completer) {
-  ap_mvm_sta_.reset();
-  mac_stop(mvmvif_);
+  // Remove the stop logic from destructor if higher layer calls this function correctly.
+  if (mac_started) {
+    ap_mvm_sta_.reset();
+    mac_stop(mvmvif_);
+  }
   completer.buffer(arena).Reply();
 }
 
@@ -437,6 +442,10 @@ void WlanSoftmacDevice::DdkInit(ddk::InitTxn txn) {
 
 void WlanSoftmacDevice::DdkRelease() {
   IWL_DEBUG_INFO(this, "Releasing iwlwifi mac-device\n");
+  if (mac_started) {
+    ap_mvm_sta_.reset();
+    mac_stop(mvmvif_);
+  }
   mac_release(mvmvif_);
   delete this;
 }

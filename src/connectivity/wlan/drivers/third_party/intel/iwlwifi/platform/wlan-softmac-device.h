@@ -88,6 +88,9 @@ class WlanSoftmacDevice : public ddk::Device<WlanSoftmacDevice, ddk::Initializab
   iwl_trans* drvdata_;
   uint16_t iface_id_;
 
+  // True if the mac_start() has been executed successfully.
+  bool mac_started;
+
   // Each peer on this interface will require a MvmSta instance.  For now, as we only support client
   // mode, we have only one peer (the AP), which simplifies things.
   std::unique_ptr<MvmSta> ap_mvm_sta_;

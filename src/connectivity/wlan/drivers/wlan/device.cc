@@ -74,6 +74,8 @@ Device::Device(zx_device_t* device, fdf::ClientEnd<fuchsia_wlan_softmac::WlanSof
   auto dispatcher = fdf::Dispatcher::Create(0, "wlansoftmacifc_server", [&](fdf_dispatcher_t*) {
     if (unbind_txn_ != std::nullopt)
       unbind_txn_->Reply();
+    else
+      device_unbind_reply(ethdev_);
   });
 
   if (dispatcher.is_error()) {
@@ -293,11 +295,7 @@ void Device::EthUnbind() {
     errorf("Arena creation failed: %s", arena.status_string());
     return;
   }
-  auto result = client_.sync().buffer(*std::move(arena))->Stop();
-  if (!result.ok()) {
-    errorf("Failed stop softmac device (FIDL error %s)", result.status_string());
-  }
-  device_unbind_reply(ethdev_);
+  client_dispatcher_.ShutdownAsync();
 }
 
 void Device::EthRelease() {
