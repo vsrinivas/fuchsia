@@ -29,7 +29,7 @@ pub enum DiskFormat {
     NandBroker,
 }
 
-fn round_up(val: u64, divisor: u64) -> u64 {
+pub fn round_up(val: u64, divisor: u64) -> u64 {
     ((val + (divisor - 1)) / divisor) * divisor
 }
 

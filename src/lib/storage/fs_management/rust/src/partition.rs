@@ -68,7 +68,7 @@ pub async fn partition_matches(proxy: PartitionAndDeviceProxy, matcher: &Partiti
     match partition_matches_res(proxy, matcher).await {
         Ok(matched) => matched,
         Err(e) => {
-            tracing::error!("partition_matches failed: {}", e);
+            tracing::error!("partition_matches failed: {:?}", e);
             return false;
         }
     }

@@ -57,6 +57,7 @@ rustc_binary("fshost-rust") {
     "src/manager.rs",
     "src/matcher.rs",
     "src/service.rs",
+    "src/volume.rs",
     "src/watcher.rs",
   ]
   with_unit_tests = true

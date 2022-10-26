@@ -21,6 +21,7 @@ use {
     },
     fuchsia_component::client::connect_to_protocol_at_path,
     fuchsia_zircon as zx,
+    std::sync::Arc,
 };
 
 /// Environment is a trait that performs actions when a device is matched.
@@ -77,16 +78,16 @@ impl Filesystem {
 
 /// Implements the Environment trait and keeps track of mounted filesystems.
 pub struct FshostEnvironment<'a> {
-    config: &'a fshost_config::Config,
+    config: Arc<fshost_config::Config>,
     blobfs: Filesystem,
     boot_args: &'a BootArgs,
     data: Filesystem,
 }
 
 impl<'a> FshostEnvironment<'a> {
-    pub fn new(config: &'a fshost_config::Config, boot_args: &'a BootArgs) -> Self {
+    pub fn new(config: &Arc<fshost_config::Config>, boot_args: &'a BootArgs) -> Self {
         Self {
-            config,
+            config: config.clone(),
             blobfs: Filesystem::Queue(Vec::new()),
             boot_args,
             data: Filesystem::Queue(Vec::new()),
@@ -167,7 +168,7 @@ impl<'a> Environment for FshostEnvironment<'a> {
                 let res = match fs.serve_multi_volume().await {
                     Ok(fs) => {
                         serving_fs = Some(fs);
-                        fxfs::unlock_data_volume(serving_fs.as_mut().unwrap(), self.config).await
+                        fxfs::unlock_data_volume(serving_fs.as_mut().unwrap(), &self.config).await
                     }
                     Err(e) => Err(e),
                 };
@@ -180,7 +181,7 @@ impl<'a> Environment for FshostEnvironment<'a> {
                         let _ = serving_fs.take();
                         fs.format().await?;
                         serving_fs = Some(fs.serve_multi_volume().await?);
-                        fxfs::init_data_volume(serving_fs.as_mut().unwrap(), self.config).await?
+                        fxfs::init_data_volume(serving_fs.as_mut().unwrap(), &self.config).await?
                     }
                 };
                 Filesystem::ServingMultiVolume(serving_fs.unwrap(), volume_name)

@@ -12,6 +12,7 @@ use {
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::sys::zx_debug_write,
     futures::channel::mpsc,
+    std::sync::Arc,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
         remote::remote_dir,
@@ -26,6 +27,7 @@ mod environment;
 mod manager;
 mod matcher;
 mod service;
+mod volume;
 mod watcher;
 
 #[fuchsia::main]
@@ -33,7 +35,7 @@ async fn main() -> Result<()> {
     let boot_args = BootArgs::new().await.context("Failed to create boot_args")?;
     let mut config = fshost_config::Config::take_from_startup_handle();
     apply_boot_args_to_config(&mut config, &boot_args);
-
+    let config = Arc::new(config);
     // NB There are tests that look for "fshost started".
     tracing::info!(?config, "fshost started");
 
@@ -48,7 +50,7 @@ async fn main() -> Result<()> {
     let mut env = FshostEnvironment::new(&config, &boot_args);
     let export = vfs::pseudo_directory! {
         "svc" => vfs::pseudo_directory! {
-            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(),
+            fshost::AdminMarker::PROTOCOL_NAME => service::fshost_admin(&config),
             fshost::BlockWatcherMarker::PROTOCOL_NAME =>
                 service::fshost_block_watcher(watcher),
         },

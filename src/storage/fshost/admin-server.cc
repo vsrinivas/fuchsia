@@ -238,7 +238,6 @@ zx::result<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
   }
   FX_LOGS(INFO) << "Using data path " << GetTopologicalPath(partition->get());
 
-  auto detected_format = fs_management::DetectDiskFormat(partition->get());
   bool inside_zxcrypt = false;
   if (format != fs_management::kDiskFormatFxfs && !config_.no_zxcrypt()) {
     // For non-Fxfs configurations, we expect zxcrypt to be present and have already been formatted
@@ -257,7 +256,10 @@ zx::result<> AdminServer::WriteDataFileInner(WriteDataFileRequestView request) {
     }
     inside_zxcrypt = true;
   }
+
   std::string partition_path = GetTopologicalPath(partition->get());
+  auto detected_format = fs_management::DetectDiskFormat(partition->get());
+
   FX_LOGS(INFO) << "Using data partition at " << partition_path << ", has format "
                 << fs_management::DiskFormatString(detected_format);
 
