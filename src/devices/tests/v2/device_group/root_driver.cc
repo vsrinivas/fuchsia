@@ -202,7 +202,7 @@ class RootDriver : public driver::DriverBase {
     node_client_.Bind(std::move(node()), dispatcher());
     // Add service "left".
     {
-      driver::ServiceInstanceHandler handler;
+      component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
         fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
@@ -220,7 +220,7 @@ class RootDriver : public driver::DriverBase {
 
     // Add service "right".
     {
-      driver::ServiceInstanceHandler handler;
+      component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
         fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),
@@ -238,7 +238,7 @@ class RootDriver : public driver::DriverBase {
 
     // Add service "optional".
     {
-      driver::ServiceInstanceHandler handler;
+      component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
       auto device = [this](fidl::ServerEnd<ft::Device> server_end) mutable -> void {
         fidl::BindServer<fidl::WireServer<ft::Device>>(dispatcher(), std::move(server_end),

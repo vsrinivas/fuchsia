@@ -19,6 +19,11 @@ class {{ .Name }} final {
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "{{ .ServiceName }}";
   using Transport = {{ .Transport.Type }};
+  
+  {{- IfdefFuchsia -}}
+  using ServiceInstanceHandler = fidl::ServiceInstanceHandler<{{ .Transport.Type }}>;
+  {{ EndifFuchsia }}
+  
   {{- range .Members }}
   {{ "" }}
   class {{ .ClassName }} final {
@@ -100,7 +105,7 @@ class {{ .Name }} final {
   {{- IfdefFuchsia -}}
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
-    explicit Handler(::fidl::ServiceHandlerInterface* service_handler)
+    explicit Handler(ServiceInstanceHandler* service_handler)
     {{- with .Members }}
         : service_handler_(service_handler) {}
     {{- else }}
@@ -116,14 +121,14 @@ class {{ .Name }} final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_{{ .Name }}(
-        ::fidl::ServiceHandlerInterface::MemberHandler<{{ .ProtocolType }}> handler) {
+        ServiceInstanceHandler::MemberHandler<{{ .ProtocolType }}> handler) {
       return service_handler_->AddMember<{{ .ProtocolType }}>("{{ .Name }}", std::move(handler));
     }
     {{- end }}
 
    private:
     {{- with .Members }}
-    ::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
+    ServiceInstanceHandler* service_handler_;  // not owned.
     {{- end }}
   {{ EndifFuchsia }}
   };

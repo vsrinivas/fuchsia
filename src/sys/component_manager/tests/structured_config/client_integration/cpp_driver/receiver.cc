@@ -21,7 +21,7 @@ class ReceiverDriver : public driver::DriverBase,
         config_(take_config<receiver_config::Config>()) {}
 
   zx::result<> Start() override {
-    driver::ServiceInstanceHandler handler;
+    component::ServiceInstanceHandler handler;
     scrs::ConfigService::Handler device(&handler);
 
     auto puppet = [this](fidl::ServerEnd<scr::ConfigReceiverPuppet> server_end) -> void {

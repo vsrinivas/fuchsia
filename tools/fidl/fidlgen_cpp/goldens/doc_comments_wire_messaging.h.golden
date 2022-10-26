@@ -11,7 +11,7 @@
 #include <lib/fidl/cpp/wire/client.h>
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/server.h>
-#include <lib/fidl/cpp/wire/service_handler_interface.h>
+#include <lib/fidl/cpp/wire/service_handler.h>
 #include <lib/fidl/cpp/wire/sync_call.h>
 #include <lib/fidl/cpp/wire/unknown_interaction_handler.h>
 
@@ -401,6 +401,10 @@ class Service final {
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.doccomments.Service";
   using Transport = ::fidl::internal::ChannelTransport;
+#ifdef __Fuchsia__
+  using ServiceInstanceHandler = fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport>;
+
+#endif  // __Fuchsia__
 
   class Interface final {
    public:
@@ -473,7 +477,7 @@ class Service final {
 #ifdef __Fuchsia__
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
-    explicit Handler(::fidl::ServiceHandlerInterface* service_handler)
+    explicit Handler(ServiceInstanceHandler* service_handler)
         : service_handler_(service_handler) {}
 
     // Adds member "interface" to the service instance. |handler| will be invoked on connection
@@ -483,12 +487,12 @@ class Service final {
     //
     // Returns ZX_ERR_ALREADY_EXISTS if the member was already added.
     ::zx::result<> add_interface(
-        ::fidl::ServiceHandlerInterface::MemberHandler<::test_doccomments::Interface> handler) {
+        ServiceInstanceHandler::MemberHandler<::test_doccomments::Interface> handler) {
       return service_handler_->AddMember<::test_doccomments::Interface>("interface", std::move(handler));
     }
 
    private:
-    ::fidl::ServiceHandlerInterface* service_handler_;  // Not owned.
+    ServiceInstanceHandler* service_handler_;  // not owned.
 
 #endif  // __Fuchsia__
   };

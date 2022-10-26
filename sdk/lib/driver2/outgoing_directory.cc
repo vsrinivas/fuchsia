@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/driver2/handlers.h>
 #include <lib/driver2/outgoing_directory.h>
 
 namespace driver {
@@ -27,7 +28,7 @@ void OutgoingDirectory::RegisterRuntimeToken(zx::channel token, AnyHandler handl
                                    zx_status_t status, fdf::Channel channel) mutable {
     if (status == ZX_OK) {
       ZX_ASSERT(channel.is_valid());
-      handler(fidl::internal::MakeAnyTransport(std::move(channel)));
+      handler(std::move(channel));
     }
     delete protocol;  // Recover the released unique_ptr.
   };

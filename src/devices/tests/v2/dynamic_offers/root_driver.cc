@@ -29,7 +29,7 @@ class RootDriver : public driver::DriverBase, public fidl::Server<ft::Handshake>
     node_.Bind(std::move(node()), dispatcher());
     // Setup the outgoing directory.
     {
-      driver::ServiceInstanceHandler handler;
+      component::ServiceInstanceHandler handler;
       ft::Service::Handler service(&handler);
 
       auto device = [this](fidl::ServerEnd<ft::Handshake> server_end) mutable -> void {

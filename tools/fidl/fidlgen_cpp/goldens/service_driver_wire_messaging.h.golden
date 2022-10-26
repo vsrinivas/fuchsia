@@ -10,7 +10,7 @@
 
 #include <lib/fidl/cpp/wire/connect_service.h>
 #include <lib/fidl/cpp/wire/server.h>
-#include <lib/fidl/cpp/wire/service_handler_interface.h>
+#include <lib/fidl/cpp/wire/service_handler.h>
 #include <lib/fidl/cpp/wire/sync_call.h>
 #include <lib/fidl_driver/cpp/server.h>
 #include <lib/fidl_driver/cpp/wire_client.h>
@@ -28,6 +28,10 @@ class EmptyService final {
   static constexpr bool kIsService = true;
   static constexpr char Name[] = "test.service.EmptyService";
   using Transport = ::fidl::internal::ChannelTransport;
+#ifdef __Fuchsia__
+  using ServiceInstanceHandler = fidl::ServiceInstanceHandler<::fidl::internal::ChannelTransport>;
+
+#endif  // __Fuchsia__
 
   // Client protocol for connecting to member protocols of a service instance.
   class ServiceClient final {
@@ -48,7 +52,7 @@ class EmptyService final {
 #ifdef __Fuchsia__
    public:
     // Constructs a FIDL Service-typed handler. Does not take ownership of |service_handler|.
-    explicit Handler(::fidl::ServiceHandlerInterface* service_handler) { (void)service_handler; }
+    explicit Handler(ServiceInstanceHandler* service_handler) { (void)service_handler; }
 
    private:
 #endif  // __Fuchsia__

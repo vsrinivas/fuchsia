@@ -12,6 +12,9 @@
 #include <lib/fidl_driver/cpp/transport.h>
 #include <lib/sys/component/cpp/outgoing_directory.h>
 
+#include "lib/fidl/cpp/wire/service_handler.h"
+#include "lib/sys/component/cpp/handlers.h"
+
 namespace driver {
 
 // The name of the default FIDL Service instance.
@@ -47,26 +50,21 @@ class OutgoingDirectory final {
   // A |handler| is added to provide an |instance| of a service.
   //
   // The template type |Service| must be the generated type representing a FIDL Service.
-  // The generated class |Service::Handler| helps the caller populate a
-  // |ServiceInstanceHandler|.
+  // The template type must be a specialization of |fidl::ServiceInstanceHandler<Transport>|
+  // where Transport must be either |fidl::internal::ChannelTransport| for |zx::channel|
+  // transports, or |fidl::internal::DriverTransport| for |fdf::Channel| transport. Users
+  // should not use this method directly and instead should use the specialization
+  // for |component::ServiceInstanceHandler| and |driver::ServiceInstanceHandler|
+  // instead.
   //
   // # Errors
   //
   // ZX_ERR_ALREADY_EXISTS: The instance already exists.
   //
   // ZX_ERR_INVALID_ARGS: |instance| is an empty string or |handler| is empty.
-  template <typename Service>
-  zx::result<> AddService(ServiceInstanceHandler handler,
+  template <typename TransportHandler, typename Service>
+  zx::result<> AddService(TransportHandler handler,
                           cpp17::string_view instance = kDefaultInstance) {
-    bool is_channel_transport = false;
-    if constexpr (std::is_same_v<typename Service::Transport, fidl::internal::ChannelTransport>) {
-      is_channel_transport = true;
-    } else if constexpr (std::is_same_v<typename Service::Transport,
-                                        fidl::internal::DriverTransport>) {
-    } else {
-      static_assert(always_false<Service>);
-    }
-
     auto handlers = handler.TakeMemberHandlers();
     if (handlers.empty()) {
       return zx::make_result(ZX_ERR_INVALID_ARGS);
@@ -76,25 +74,49 @@ class OutgoingDirectory final {
         std::string("svc") + "/" + std::string(Service::Name) + "/" + std::string(instance);
 
     for (auto& [member_name, member_handler] : handlers) {
-      auto outgoing_handler = [this, is_channel_transport, handler = std::move(member_handler)](
-                                  zx::channel server_end) mutable {
-        ZX_ASSERT(server_end.is_valid());
-        if (is_channel_transport) {
-          handler(fidl::internal::MakeAnyTransport(std::move(server_end)));
+      component::AnyHandler handler = nullptr;
+      if constexpr (std::is_same_v<TransportHandler, component::ServiceInstanceHandler>) {
+        handler = [member_handler = std::move(member_handler)](zx::channel server_end) mutable {
+          ZX_ASSERT(server_end.is_valid());
+          member_handler(std::move(server_end));
           return;
-        }
-        // The received |server_end| is the token channel handle, which needs to be registered
-        // with the runtime.
-        RegisterRuntimeToken(std::move(server_end), handler.share());
-      };
+        };
+      } else if constexpr (std::is_same_v<TransportHandler, driver::ServiceInstanceHandler>) {
+        handler = [this,
+                   member_handler = std::move(member_handler)](zx::channel server_end) mutable {
+          ZX_ASSERT(server_end.is_valid());
+
+          // The received |server_end| is the token channel handle, which needs to be registered
+          // with the runtime.
+          RegisterRuntimeToken(std::move(server_end), member_handler.share());
+        };
+      } else {
+        static_assert(
+            always_false<TransportHandler>,
+            "TransportHandler must be either fidl::internal::ChannelTransport or fidl::internal::DriverTransport");
+      }
 
       zx::result<> status =
-          component_outgoing_dir_.AddProtocolAt(std::move(outgoing_handler), basepath, member_name);
+          component_outgoing_dir_.AddProtocolAt(std::move(handler), basepath, member_name);
       if (status.is_error()) {
         return status;
       }
     }
     return zx::ok();
+  }
+
+  // Same as above but strictly for services using the driver channel transport.
+  template <typename Service>
+  zx::result<> AddService(driver::ServiceInstanceHandler handler,
+                          cpp17::string_view instance = kDefaultInstance) {
+    return AddService<driver::ServiceInstanceHandler, Service>(std::move(handler), instance);
+  }
+
+  // Same as above but strictly for services using the Zircon channel transport.
+  template <typename Service>
+  zx::result<> AddService(component::ServiceInstanceHandler handler,
+                          cpp17::string_view instance = kDefaultInstance) {
+    return AddService<component::ServiceInstanceHandler, Service>(std::move(handler), instance);
   }
 
   //

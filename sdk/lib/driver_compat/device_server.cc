@@ -75,7 +75,7 @@ zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
 
 zx_status_t DeviceServer::Serve(async_dispatcher_t* dispatcher,
                                 driver::OutgoingDirectory* outgoing) {
-  driver::ServiceInstanceHandler handler;
+  component::ServiceInstanceHandler handler;
   fuchsia_driver_compat::Service::Handler compat_service(&handler);
   auto device = [this, dispatcher](
                     fidl::ServerEnd<fuchsia_driver_compat::Device> server_end) mutable -> void {

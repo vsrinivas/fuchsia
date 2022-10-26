@@ -51,7 +51,7 @@ class LifecycleDriver : public driver::DriverBase, public fidl::WireServer<ft::D
     }
 
     // Serve our Service.
-    driver::ServiceInstanceHandler handler;
+    component::ServiceInstanceHandler handler;
     ft::Service::Handler service(&handler);
 
     auto result = service.add_device([this](fidl::ServerEnd<ft::Device> request) -> void {

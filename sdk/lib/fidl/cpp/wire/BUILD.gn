@@ -71,7 +71,7 @@ sdk_source_set("wire") {
       "include/lib/fidl/cpp/wire/internal/transport_err.h",
       "include/lib/fidl/cpp/wire/message.h",
       "include/lib/fidl/cpp/wire/server.h",
-      "include/lib/fidl/cpp/wire/service_handler_interface.h",
+      "include/lib/fidl/cpp/wire/service_handler.h",
       "include/lib/fidl/cpp/wire/status.h",
       "include/lib/fidl/cpp/wire/sync_call.h",
       "include/lib/fidl/cpp/wire/transaction.h",

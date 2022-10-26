@@ -17,7 +17,7 @@ class RootDriver : public driver::DriverBase,
       : driver::DriverBase("root", std::move(start_args), std::move(driver_dispatcher)) {}
 
   zx::result<> Start() override {
-    driver::ServiceInstanceHandler handler;
+    component::ServiceInstanceHandler handler;
     ft::Device::Handler device(&handler);
 
     auto control = [this](fidl::ServerEnd<ft::ControlPlane> server_end) -> void {

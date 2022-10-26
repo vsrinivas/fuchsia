@@ -118,7 +118,7 @@ class DemoNumber : public driver::DriverBase {
   zx::result<> Start() override {
     // Add the fuchsia.hardware.demo/Demo protocol to be served as
     // "/svc/fuchsia.hardware.demo/default/demo"
-    driver::ServiceInstanceHandler handler;
+    component::ServiceInstanceHandler handler;
     fuchsia_hardware_demo::Service::Handler service(&handler);
 
     auto result =
