@@ -65,6 +65,25 @@ class Da7219Test : public zxtest::Test {
     mock_i2c_.VerifyAndClear();
   }
 
+  void CheckDaiStateWithRate(uint32_t frame_rate) {
+    mock_i2c_.ExpectWriteStop({0x2d, 0x43}, ZX_OK);  // TDM mode disabled, enable, L/R enabled.
+    mock_i2c_.ExpectWriteStop({0x2c, 0xa8}, ZX_OK);  // DAI enable 24 bits per sample.
+
+    fuchsia_hardware_audio::wire::DaiFormat format = {};
+    format.number_of_channels = 2;
+    format.channels_to_use_bitmask = 3;
+    format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
+    format.frame_format = fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
+        fuchsia_hardware_audio::DaiFrameFormatStandard::kI2S);
+    format.frame_rate = frame_rate;
+    format.bits_per_slot = 32;
+    format.bits_per_sample = 24;
+    auto codec_format_info = codec_->SetDaiFormat(std::move(format));
+    ASSERT_OK(codec_format_info.status());
+    EXPECT_FALSE(codec_format_info.value().value()->state.has_turn_off_delay());
+    EXPECT_FALSE(codec_format_info.value().value()->state.has_turn_on_delay());
+  }
+
   zx::interrupt& irq() { return irq_; }
 
  protected:
@@ -118,25 +137,28 @@ TEST_F(Da7219Test, Reset) {
   [[maybe_unused]] auto unused = codec_->Reset();
 }
 
-TEST_F(Da7219Test, GoodSetDai) {
-  // Set DAI.
-  mock_i2c_.ExpectWriteStop({0x2d, 0x43}, ZX_OK);  // TDM mode disabled, output, L/R enabled.
-  mock_i2c_.ExpectWriteStop({0x2c, 0xa8}, ZX_OK);  // 24 bits per sample.
+TEST_F(Da7219Test, GoodSetDai48kHz) {
+  mock_i2c_.ExpectWriteStop({0x2c, 0x00}, ZX_OK);  // DAI disable.
+  mock_i2c_.ExpectWriteStop({0x17, 0x0b}, ZX_OK);  // 48kHz.
+  CheckDaiStateWithRate(48'000);
+}
 
-  fuchsia_hardware_audio::wire::DaiFormat format = {};
-  format.number_of_channels = 2;
-  format.channels_to_use_bitmask = 3;
-  format.sample_format = fuchsia_hardware_audio::wire::DaiSampleFormat::kPcmSigned;
-  format.frame_format = fuchsia_hardware_audio::wire::DaiFrameFormat::WithFrameFormatStandard(
-      fuchsia_hardware_audio::DaiFrameFormatStandard::kI2S);
-  format.frame_rate = 48000;
-  format.bits_per_slot = 32;
-  format.bits_per_sample = 24;
-  auto formats = codec_->GetDaiFormats();
-  auto codec_format_info = codec_->SetDaiFormat(std::move(format));
-  ASSERT_OK(codec_format_info.status());
-  EXPECT_FALSE(codec_format_info.value().value()->state.has_turn_off_delay());
-  EXPECT_FALSE(codec_format_info.value().value()->state.has_turn_on_delay());
+TEST_F(Da7219Test, GoodSetDai8kHz) {
+  mock_i2c_.ExpectWriteStop({0x2c, 0x00}, ZX_OK);  // DAI disable.
+  mock_i2c_.ExpectWriteStop({0x17, 0x01}, ZX_OK);  // 8kHz.
+  CheckDaiStateWithRate(8'000);
+}
+
+TEST_F(Da7219Test, GoodSetDai96kHz) {
+  mock_i2c_.ExpectWriteStop({0x2c, 0x00}, ZX_OK);  // DAI disable.
+  mock_i2c_.ExpectWriteStop({0x17, 0x0f}, ZX_OK);  // 96kHz.
+  CheckDaiStateWithRate(96'000);
+}
+
+TEST_F(Da7219Test, GoodSetDai44100Hz) {
+  mock_i2c_.ExpectWriteStop({0x2c, 0x00}, ZX_OK);  // DAI disable.
+  mock_i2c_.ExpectWriteStop({0x17, 0x0a}, ZX_OK);  // 44.1kHz.
+  CheckDaiStateWithRate(44'100);
 }
 
 TEST_F(Da7219Test, PlugDetectInitiallyUnplugged) {

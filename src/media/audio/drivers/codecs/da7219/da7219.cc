@@ -378,13 +378,40 @@ void Driver::SetDaiFormat(SetDaiFormatRequestView request, SetDaiFormatCompleter
       return;
     }
   }
+  uint8_t frame_rate = 0;
+  switch (format.frame_rate) {
+    case 8'000: frame_rate = Sr::k8000Hz; break;
+    case 11'025: frame_rate = Sr::k11025Hz; break;
+    case 12'000: frame_rate = Sr::k12000Hz; break;
+    case 16'000: frame_rate = Sr::k16000Hz; break;
+    case 22'050: frame_rate = Sr::k22050Hz; break;
+    case 24'000: frame_rate = Sr::k24000Hz; break;
+    case 32'000: frame_rate = Sr::k32000Hz; break;
+    case 44'100: frame_rate = Sr::k44100Hz; break;
+    case 48'000: frame_rate = Sr::k48000Hz; break;
+    case 88'200: frame_rate = Sr::k88200Hz; break;
+    case 96'000: frame_rate = Sr::k96000Hz; break;
+    default: {
+      completer.Close(ZX_ERR_NOT_SUPPORTED);
+      return;
+    }
+  }
   // clang-format on
-
-  zx_status_t status = DaiTdmCtrl::Get()
-                           .set_dai_tdm_mode_en(false)  // Mode set is I2S, not TDM.
-                           .set_dai_oe(true)
-                           .set_dai_tdm_ch_en(DaiTdmCtrl::kLeftChannelAndRightChannelBothEnabled)
-                           .Write(core_->i2c());
+  zx_status_t status = DaiCtrl::Get().set_dai_en(false).Write(core_->i2c());
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+  status = Sr::Get().set_sr(frame_rate).Write(core_->i2c());
+  if (status != ZX_OK) {
+    completer.Close(status);
+    return;
+  }
+  status = DaiTdmCtrl::Get()
+               .set_dai_tdm_mode_en(false)  // Mode set is I2S, not TDM.
+               .set_dai_oe(true)
+               .set_dai_tdm_ch_en(DaiTdmCtrl::kLeftChannelAndRightChannelBothEnabled)
+               .Write(core_->i2c());
   if (status != ZX_OK) {
     completer.Close(status);
     return;

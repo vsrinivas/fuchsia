@@ -44,6 +44,22 @@ struct I2cRegister : public hwreg::I2cRegisterBase<DerivedType, uint8_t, 1> {
   static DerivedType Get() { return hwreg::I2cRegisterAddr<DerivedType>(address).FromValue(0); }
 };
 
+// SR. Sample rate control.
+struct Sr : public I2cRegister<Sr, 0x17> {
+  static constexpr uint8_t k8000Hz = 1;  // Value 0 not in datasheet.
+  static constexpr uint8_t k11025Hz = 2;
+  static constexpr uint8_t k12000Hz = 3;
+  static constexpr uint8_t k16000Hz = 5;  // Value 4 not in datasheet.
+  static constexpr uint8_t k22050Hz = 6;
+  static constexpr uint8_t k24000Hz = 7;
+  static constexpr uint8_t k32000Hz = 9;  // Value 8 not in datasheet.
+  static constexpr uint8_t k44100Hz = 10;
+  static constexpr uint8_t k48000Hz = 11;
+  static constexpr uint8_t k88200Hz = 14;  // Values 12 and 13 not in datasheet.
+  static constexpr uint8_t k96000Hz = 15;
+  DEF_FIELD(3, 0, sr);
+};
+
 // PLL_CTRL.
 struct PllCtrl : public I2cRegister<PllCtrl, 0x20> {
   DEF_FIELD(7, 6, pll_mode);
