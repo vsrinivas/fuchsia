@@ -12,14 +12,21 @@
 namespace forensics::feedback {
 namespace {
 
+constexpr auto kUploadDisabled = crash_reports::CrashServerConfig::UploadPolicy::DISABLED;
+constexpr auto kUploadEnabled = crash_reports::CrashServerConfig::UploadPolicy::ENABLED;
+
 TEST(ConfigTest, GetCrashReportsConfig) {
   files::ScopedTempDir temp_dir;
 
   std::string default_config_path;
   ASSERT_TRUE(temp_dir.NewTempFileWithData(R"({
+    "crash_reporter": {
+        "daily_per_product_quota": -1
+    },
     "crash_server": {
         "upload_policy": "disabled"
-    }
+    },
+    "hourly_snapshot": false
 })",
                                            &default_config_path));
 
@@ -29,8 +36,9 @@ TEST(ConfigTest, GetCrashReportsConfig) {
         "daily_per_product_quota": 100
     },
     "crash_server" : {
-        "upload_policy": "read_from_privacy_settings"
-    }
+        "upload_policy": "enabled"
+    },
+    "hourly_snapshot": true
 })",
                                            &override_config_path));
 
@@ -43,20 +51,28 @@ TEST(ConfigTest, GetCrashReportsConfig) {
   // The override config should be read regardless of the default config being valid.
   auto config = GetCrashReportsConfig("/bad/path", override_config_path);
   ASSERT_TRUE(config);
+  EXPECT_EQ(config->crash_server.upload_policy, kUploadEnabled);
   EXPECT_EQ(config->daily_per_product_quota, 100u);
+  EXPECT_EQ(config->hourly_snapshot, true);
 
   config = GetCrashReportsConfig(invalid_config_path, override_config_path);
   ASSERT_TRUE(config);
+  EXPECT_EQ(config->crash_server.upload_policy, kUploadEnabled);
   EXPECT_EQ(config->daily_per_product_quota, 100u);
+  EXPECT_EQ(config->hourly_snapshot, true);
 
   // The default config should be read if there's an issue using the override config.
   config = GetCrashReportsConfig(default_config_path, "/bad/path");
   ASSERT_TRUE(config);
+  EXPECT_EQ(config->crash_server.upload_policy, kUploadDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, false);
 
   config = GetCrashReportsConfig(default_config_path, invalid_config_path);
   ASSERT_TRUE(config);
+  EXPECT_EQ(config->crash_server.upload_policy, kUploadDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
+  EXPECT_EQ(config->hourly_snapshot, false);
 
   // No config should be returned if neither config can be read.
   EXPECT_FALSE(GetCrashReportsConfig("/bad/path", "/bad/path"));

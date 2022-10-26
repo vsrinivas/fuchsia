@@ -58,7 +58,9 @@ const char kSchema[] = R"({
     }
   },
   "required": [
-    "crash_server"
+    "crash_reporter",
+    "crash_server",
+    "hourly_snapshot"
   ],
   "additionalProperties": false
 })";
@@ -86,43 +88,6 @@ bool CheckAgainstSchema(rapidjson::Document& doc) {
   return true;
 }
 
-// Functions for parsing the config _after_ |doc| has been checked against the schema.
-//
-// These functions will crash if |doc| is is malformed.
-std::optional<uint64_t> ParseCrashReporterConfig(const rapidjson::Document& doc) {
-  if (!doc.HasMember(kCrashReporterKey)) {
-    return std::nullopt;
-  }
-
-  return doc[kCrashReporterKey][kDailyPerProductQuotaKey].GetUint64();
-}
-
-bool ParseHourlySnapshot(const rapidjson::Document& doc) {
-  if (!doc.HasMember(kHourlySnapshot)) {
-    return false;
-  }
-
-  return doc[kHourlySnapshot].GetBool();
-}
-
-std::optional<CrashServerConfig> ParseCrashServerConfig(const rapidjson::Document& doc) {
-  CrashServerConfig config;
-
-  const std::string upload_policy = doc[kCrashServerKey][kCrashServerUploadPolicyKey].GetString();
-  if (upload_policy == "disabled") {
-    config.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
-  } else if (upload_policy == "enabled") {
-    config.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
-  } else if (upload_policy == "read_from_privacy_settings") {
-    config.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
-  } else {
-    FX_LOGS(ERROR) << "unknown upload policy " << upload_policy;
-    return std::nullopt;
-  }
-
-  return config;
-}
-
 }  // namespace
 
 std::optional<Config> ParseConfig(const std::string& filepath) {
@@ -144,17 +109,33 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
     return std::nullopt;
   }
 
-  Config config{.daily_per_product_quota = ParseCrashReporterConfig(doc),
-                .hourly_snapshot = ParseHourlySnapshot(doc)};
-  if (auto crash_server = ParseCrashServerConfig(doc); crash_server.has_value()) {
-    config.crash_server = std::move(crash_server.value());
+  Config config;
+  if (const std::string upload_policy =
+          doc[kCrashServerKey][kCrashServerUploadPolicyKey].GetString();
+      upload_policy == "disabled") {
+    config.crash_server.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
+  } else if (upload_policy == "enabled") {
+    config.crash_server.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
+  } else if (upload_policy == "read_from_privacy_settings") {
+    config.crash_server.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
   } else {
-    return std::nullopt;
+    FX_LOGS(FATAL) << "Upload policy '" << upload_policy << "' not permitted by schema";
   }
+
+  if (const int64_t daily_per_product_quota =
+          doc[kCrashReporterKey][kDailyPerProductQuotaKey].GetInt64();
+      daily_per_product_quota > 0) {
+    config.daily_per_product_quota = daily_per_product_quota;
+  } else {
+    config.daily_per_product_quota = std::nullopt;
+  }
+
+  config.hourly_snapshot = doc[kHourlySnapshot].GetBool();
 
   // If crash reports won't be uploaded, there shouldn't be a quota in the config.
   if (config.crash_server.upload_policy == CrashServerConfig::UploadPolicy::DISABLED) {
-    FX_CHECK(config.daily_per_product_quota == std::nullopt);
+    FX_CHECK(config.daily_per_product_quota == std::nullopt)
+        << "quota is " << *config.daily_per_product_quota;
   }
 
   return config;

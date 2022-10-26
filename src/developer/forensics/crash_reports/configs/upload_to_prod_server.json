@@ -1,5 +1,9 @@
 {
-    "crash_server" : {
+    "crash_reporter": {
+        "daily_per_product_quota": -1
+    },
+    "crash_server": {
         "upload_policy": "enabled"
-    }
+    },
+    "hourly_snapshot": false
 }

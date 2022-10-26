@@ -166,6 +166,19 @@ executable("inspect_manager_unittest_exe") {
   ]
 }
 
+executable("prod_configs_unittest_exe") {
+  testonly = true
+
+  sources = [ "prod_configs_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:config",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/lib/files",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("product_quotas_unittest_exe") {
   testonly = true
 
@@ -386,6 +399,17 @@ source_set("scoped_test_report_store") {
 ###############################################################################
 # RESOURCES
 ###############################################################################
+resource("prod_configss") {
+  sources = [
+    "//src/developer/forensics/crash_reports/configs/default.json",
+    "//src/developer/forensics/crash_reports/configs/upload_to_prod_server.json",
+    "//src/developer/forensics/crash_reports/configs/user.json",
+    "//src/developer/forensics/crash_reports/configs/userdebug.json",
+  ]
+
+  outputs = [ "data/configs/{{source_file_part}}" ]
+}
+
 resource("test_data") {
   sources = [ "resources/test_data.zip" ]
 
@@ -434,6 +458,13 @@ fuchsia_unittest_component("dart_module_parser_unittest") {
 
 fuchsia_unittest_component("inspect_manager_unittest") {
   deps = [ ":inspect_manager_unittest_exe" ]
+}
+
+fuchsia_unittest_component("prod_configs_unittest") {
+  deps = [
+    ":prod_configs_unittest_exe",
+    ":prod_configss",
+  ]
 }
 
 fuchsia_unittest_component("product_quotas_unittest") {
@@ -527,6 +558,7 @@ fuchsia_test_package("crash-reports-tests") {
     ":dart_module_parser_unittest",
     ":reporting_policy_watcher_unittest",
     ":inspect_manager_unittest",
+    ":prod_configs_unittest",
     ":product_quotas_unittest",
     ":queue_unittest",
     ":report_util_unittest",
