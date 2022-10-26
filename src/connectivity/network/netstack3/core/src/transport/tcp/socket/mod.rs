@@ -898,12 +898,15 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
     fn handle_timer(&mut self, ctx: &mut C, conn_id: MaybeClosedConnectionId) {
         self.with_ip_transport_ctx_and_tcp_sockets_mut(|ip_transport_ctx, sockets| {
-            if let Some((conn, (), addr)) = sockets.socketmap.conns_mut().get_by_id_mut(&conn_id) {
-                do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
-                if conn.defunct && matches!(conn.state, State::Closed(_)) {
-                    assert_matches!(sockets.socketmap.conns_mut().remove(&conn_id), Some(_));
-                    let _: Option<_> = ctx.cancel_timer(TimerId(conn_id, I::VERSION));
-                }
+            let (conn, (), addr) = sockets
+                .socketmap
+                .conns_mut()
+                .get_by_id_mut(&conn_id)
+                .expect("invalid connection ID");
+            do_send_inner(conn_id, conn, addr, ip_transport_ctx, ctx);
+            if conn.defunct && matches!(conn.state, State::Closed(_)) {
+                assert_matches!(sockets.socketmap.conns_mut().remove(&conn_id), Some(_));
+                let _: Option<_> = ctx.cancel_timer(TimerId(conn_id, I::VERSION));
             }
         })
     }
