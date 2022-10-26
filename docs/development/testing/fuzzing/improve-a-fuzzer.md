@@ -48,6 +48,7 @@ For example:
 And in `//path/to/library/BUILD.gn`:
 
 ```
+{% verbatim %}
 import("//build/fuzz.gni")
 import("//build/dist/resource.gni")
 
@@ -82,6 +83,7 @@ And in the fuzzer's [component manifest source][component-manifest-source]:
     ]
   }
 }
+{% endverbatim %}
 ```
 
 ## Make code friendlier to fuzzing
