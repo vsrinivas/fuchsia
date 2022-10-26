@@ -84,7 +84,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/developer/memory/metrics",
     "//src/developer/memory/monitor:lib",
     "//src/devices/block/bin/biotime",
-    "//src/devices/block/bin/blktest",
     "//src/devices/block/bin/disk-inspect",
     "//src/devices/block/bin/gpt",
     "//src/devices/block/bin/iochk",

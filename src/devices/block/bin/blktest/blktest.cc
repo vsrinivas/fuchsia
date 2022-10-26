@@ -6,7 +6,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
