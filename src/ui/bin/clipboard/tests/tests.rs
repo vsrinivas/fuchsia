@@ -8,16 +8,21 @@ use {
     anyhow::{ensure, format_err, Error},
     async_utils::hanging_get::client::HangingGetStream,
     clipboard_test_helpers::*,
-    diagnostics_reader::{assert_data_tree, ArchiveReader, DiagnosticsHierarchy, Inspect},
+    diagnostics_reader::{
+        assert_data_tree, tree_assertion, ArchiveReader, DiagnosticsHierarchy, Inspect,
+        TreeAssertion,
+    },
     fidl_fuchsia_ui_clipboard as fclip, fidl_fuchsia_ui_focus as focus,
     fidl_fuchsia_ui_views::ViewRef,
     focus_chain_provider::{FocusChainProviderPublisher, FocusChainProviderRequestStreamHandler},
+    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_component_test::{
         Capability, ChildOptions, LocalComponentHandles, RealmBuilder, RealmInstance, Ref, Route,
     },
     fuchsia_scenic::{self as scenic, ViewRefPair},
     futures::StreamExt,
+    std::time::Duration,
     tracing::*,
 };
 
@@ -158,6 +163,16 @@ impl TestHandles {
             .ok_or(format_err!("expected one inspect hierarchy"))
     }
 
+    pub async fn wait_for_inspect_state(
+        &self,
+        desired_state: TreeAssertion<String>,
+    ) -> Result<(), Error> {
+        while desired_state.run(&self.get_inspect_hierarchy().await?).is_err() {
+            fasync::Timer::new(Duration::from_millis(10)).await
+        }
+        Ok(())
+    }
+
     pub fn get_writer_registry(&self) -> Result<fclip::FocusedWriterRegistryProxy, Error> {
         Ok(self
             .realm
@@ -236,6 +251,17 @@ async fn test_basic_copy_paste_across_different_view_refs() -> Result<(), Error>
         let ViewRefPair { control_ref: _control_ref_b, view_ref: view_ref_b } = ViewRefPair::new()?;
 
         handles.set_focus_chain(vec![&view_ref_a]).await?;
+
+        // Wait for the clipboard service to be healthy
+        handles
+            .wait_for_inspect_state(tree_assertion!(
+                root: contains {
+                    "fuchsia.inspect.Health": contains {
+                        status: "OK"
+                    }
+                }
+            ))
+            .await?;
 
         let writer_registry = handles.get_writer_registry()?;
         let writer_a = writer_registry.get_writer(&view_ref_a).await?;

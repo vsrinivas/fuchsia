@@ -24,6 +24,7 @@ rustc_test("clipboard-tests-bin") {
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia",
+    "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/fuchsia-component-test",
     "//src/lib/ui/fuchsia-scenic:fuchsia-scenic",
