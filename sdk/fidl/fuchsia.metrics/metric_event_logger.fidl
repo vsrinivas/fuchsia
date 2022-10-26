@@ -97,7 +97,9 @@ protocol MetricEventLoggerFactory {
 alias EventVector = vector<uint32>:MAX_METRIC_DIMENSIONS;
 
 /// A histogram that assigns a count to each of several integer ranges.
-/// The order of the vector is immaterial.
+/// To save space/memory/bandwidth, each bucket index should only be included
+/// once, and empty buckets should not be included. The order of the vector
+/// is immaterial.
 alias IntegerHistogram = vector<HistogramBucket>:MAX_HISTOGRAM_BUCKETS;
 
 /// A logger for events that are associated with one project's metrics.
@@ -137,7 +139,8 @@ protocol MetricEventLogger {
     ///
     /// `metric_id` ID of the metric being logged.
     ///
-    /// `histogram` The collection of approximate integer measurements.
+    /// `histogram` The collection of approximate integer measurements. Buckets
+    /// that have no measurement (empty buckets) should not be sent.
     ///
     /// `event_codes` Ordered list of parameters, one for each of the metric's
     /// dimensions. Histograms with the same event codes are aggregated together
@@ -239,5 +242,6 @@ type HistogramBucket = struct {
     index uint32;
 
     /// The number of values in that bucket.
+    /// To save space/memory/bandwidth, empty buckets should not be included.
     count uint64;
 };
