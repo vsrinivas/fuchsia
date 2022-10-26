@@ -70,52 +70,22 @@ impl<W: Write> Write for MerkleTreeWriter<W> {
 mod tests {
     use super::*;
     use crate::Hash;
+    use test_case::test_case;
 
-    macro_rules! test_case {
-        ($name:ident, $input:expr, $output:expr) => {
-            #[test]
-            fn $name() {
-                let input = $input;
-                let mut written = Vec::with_capacity(input.len());
-                let actual = {
-                    let mut tree = MerkleTreeWriter::new(&mut written);
-                    tree.write_all(input.as_slice()).unwrap();
-                    tree.finish().root()
-                };
-                let expected: Hash = $output.parse().unwrap();
-                assert_eq!(expected, actual);
-                assert_eq!(input, written);
-            }
+    #[test_case(vec![], "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b" ; "test_empty")]
+    #[test_case(vec![0xFF; 8192], "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"; "test_oneblock")]
+    #[test_case(vec![0xFF; 65536], "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"; "test_small")]
+    #[test_case(vec![0xFF; 2105344], "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67"; "test_large")]
+    #[test_case(vec![0xFF; 2109440], "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43"; "test_unaligned")]
+    fn tests(input: Vec<u8>, output: &str) {
+        let mut written = Vec::with_capacity(input.len());
+        let actual = {
+            let mut tree = MerkleTreeWriter::new(&mut written);
+            tree.write_all(input.as_slice()).unwrap();
+            tree.finish().root()
         };
+        let expected: Hash = output.parse().unwrap();
+        assert_eq!(expected, actual);
+        assert_eq!(input, written);
     }
-
-    test_case!(
-        test_empty,
-        vec![],
-        "15ec7bf0b50732b49f8228e07d24365338f9e3ab994b00af08e5a3bffe55fd8b"
-    );
-
-    test_case!(
-        test_oneblock,
-        vec![0xFF; 8192],
-        "68d131bc271f9c192d4f6dcd8fe61bef90004856da19d0f2f514a7f4098b0737"
-    );
-
-    test_case!(
-        test_small,
-        vec![0xFF; 65536],
-        "f75f59a944d2433bc6830ec243bfefa457704d2aed12f30539cd4f18bf1d62cf"
-    );
-
-    test_case!(
-        test_large,
-        vec![0xFF; 2105344],
-        "7d75dfb18bfd48e03b5be4e8e9aeea2f89880cb81c1551df855e0d0a0cc59a67"
-    );
-
-    test_case!(
-        test_unaligned,
-        vec![0xFF; 2109440],
-        "7577266aa98ce587922fdc668c186e27f3c742fb1b732737153b70ae46973e43"
-    );
 }
