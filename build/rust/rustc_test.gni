@@ -119,18 +119,7 @@ template("rustc_test_internal") {
                              "visibility",
                            ])
 
-    # TODO(b/218546002): re-enable after OOM fix
-    if (select_variant + [
-          "lto",
-          "thinlto",
-        ] -
-        [
-          "lto",
-          "thinlto",
-        ] != select_variant) {
-      disable_rbe = true
-      not_needed(invoker, [ "disable_rbe" ])
-    } else if (defined(invoker.disable_rbe)) {
+    if (defined(invoker.disable_rbe)) {
       disable_rbe = invoker.disable_rbe
     }
 
