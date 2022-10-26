@@ -10,7 +10,10 @@
 ## Protocol {#Protocol}
 *Defined in [test.requestflexibleenvelope/request_flexible_envelope.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/request_flexible_envelope.test.fidl;l=13)*
 
+
 ### RequestFlexibleResponseStrict {#Protocol.RequestFlexibleResponseStrict}
+
+
 
 
 #### Request {#Protocol.RequestFlexibleResponseStrict_Request}
@@ -39,6 +42,8 @@
 </table>
 
 ### RequestStrictResponseFlexible {#Protocol.RequestStrictResponseFlexible}
+
+
 
 
 #### Request {#Protocol.RequestStrictResponseFlexible_Request}

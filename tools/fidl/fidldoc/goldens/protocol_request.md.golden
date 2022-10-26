@@ -10,10 +10,14 @@
 ## Child {#Child}
 *Defined in [test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=3)*
 
+
 ## Parent {#Parent}
 *Defined in [test.protocolrequest/protocol_request.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_request.test.fidl;l=5)*
 
+
 ### GetChild {#Parent.GetChild}
+
+
 
 
 #### Request {#Parent.GetChild_Request}
@@ -36,6 +40,8 @@
 ### GetChildRequest {#Parent.GetChildRequest}
 
 
+
+
 #### Request {#Parent.GetChildRequest_Request}
 
 &lt;EMPTY&gt;
@@ -56,6 +62,8 @@
 ### TakeChild {#Parent.TakeChild}
 
 
+
+
 #### Request {#Parent.TakeChild_Request}
 
 <table>
@@ -70,6 +78,8 @@
 
 
 ### TakeChildRequest {#Parent.TakeChildRequest}
+
+
 
 
 #### Request {#Parent.TakeChildRequest_Request}

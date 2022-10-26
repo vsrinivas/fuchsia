@@ -10,10 +10,14 @@
 ## DriverProtocol {#DriverProtocol}
 *Defined in [test.driverhandle/driver_handle.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_handle.test.fidl;l=10)*
 
+
 ## HandlesInProtocol {#HandlesInProtocol}
 *Defined in [test.driverhandle/driver_handle.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/driver_handle.test.fidl;l=24)*
 
+
 ### SendHandles {#HandlesInProtocol.SendHandles}
+
+
 
 
 #### Request {#HandlesInProtocol.SendHandles_Request}

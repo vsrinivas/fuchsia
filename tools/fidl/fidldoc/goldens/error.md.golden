@@ -10,7 +10,10 @@
 ## Example {#Example}
 *Defined in [test.error/error.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error.test.fidl;l=3)*
 
+
 ### foo {#Example.foo}
+
+
 
 
 #### Request {#Example.foo_Request}

@@ -10,7 +10,10 @@
 ## MainProtocol {#MainProtocol}
 *Defined in [test.protocollayouts/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocol_layouts/example.test.fidl;l=13)*
 
+
 ### OnAnon {#MainProtocol.OnAnon}
+
+
 
 
 
@@ -30,6 +33,8 @@
 
 
 
+
+
 #### Response {#MainProtocol.OnAnonComposed_Response}
 
 <table>
@@ -43,6 +48,8 @@
 </table>
 
 ### OnAnonComposedWithError {#MainProtocol.OnAnonComposedWithError}
+
+
 
 
 
@@ -62,6 +69,8 @@
 
 
 
+
+
 #### Response {#MainProtocol.OnAnonWithError_Response}
 
 <table>
@@ -75,6 +84,8 @@
 </table>
 
 ### OnImport {#MainProtocol.OnImport}
+
+
 
 
 
@@ -94,6 +105,8 @@
 
 
 
+
+
 #### Response {#MainProtocol.OnImportWithError_Response}
 
 <table>
@@ -107,6 +120,8 @@
 </table>
 
 ### OnLocal {#MainProtocol.OnLocal}
+
+
 
 
 
@@ -126,6 +141,8 @@
 
 
 
+
+
 #### Response {#MainProtocol.OnLocalWithError_Response}
 
 <table>
@@ -139,6 +156,8 @@
 </table>
 
 ### OnNamedComposed {#MainProtocol.OnNamedComposed}
+
+
 
 
 
@@ -158,6 +177,8 @@
 
 
 
+
+
 #### Response {#MainProtocol.OnNamedComposedWithError_Response}
 
 <table>
@@ -171,6 +192,8 @@
 </table>
 
 ### OneWayAnon {#MainProtocol.OneWayAnon}
+
+
 
 
 #### Request {#MainProtocol.OneWayAnon_Request}
@@ -189,6 +212,8 @@
 ### OneWayAnonComposed {#MainProtocol.OneWayAnonComposed}
 
 
+
+
 #### Request {#MainProtocol.OneWayAnonComposed_Request}
 
 <table>
@@ -203,6 +228,8 @@
 
 
 ### OneWayImport {#MainProtocol.OneWayImport}
+
+
 
 
 #### Request {#MainProtocol.OneWayImport_Request}
@@ -221,6 +248,8 @@
 ### OneWayLocal {#MainProtocol.OneWayLocal}
 
 
+
+
 #### Request {#MainProtocol.OneWayLocal_Request}
 
 <table>
@@ -237,6 +266,8 @@
 ### OneWayNamedComposed {#MainProtocol.OneWayNamedComposed}
 
 
+
+
 #### Request {#MainProtocol.OneWayNamedComposed_Request}
 
 <table>
@@ -251,6 +282,8 @@
 
 
 ### TwoWayAnon {#MainProtocol.TwoWayAnon}
+
+
 
 
 #### Request {#MainProtocol.TwoWayAnon_Request}
@@ -281,6 +314,8 @@
 ### TwoWayAnonComposed {#MainProtocol.TwoWayAnonComposed}
 
 
+
+
 #### Request {#MainProtocol.TwoWayAnonComposed_Request}
 
 <table>
@@ -307,6 +342,8 @@
 </table>
 
 ### TwoWayAnonComposedWithError {#MainProtocol.TwoWayAnonComposedWithError}
+
+
 
 
 #### Request {#MainProtocol.TwoWayAnonComposedWithError_Request}
@@ -337,6 +374,8 @@
 ### TwoWayAnonWithError {#MainProtocol.TwoWayAnonWithError}
 
 
+
+
 #### Request {#MainProtocol.TwoWayAnonWithError_Request}
 
 <table>
@@ -363,6 +402,8 @@
 </table>
 
 ### TwoWayImport {#MainProtocol.TwoWayImport}
+
+
 
 
 #### Request {#MainProtocol.TwoWayImport_Request}
@@ -393,6 +434,8 @@
 ### TwoWayImportWithError {#MainProtocol.TwoWayImportWithError}
 
 
+
+
 #### Request {#MainProtocol.TwoWayImportWithError_Request}
 
 <table>
@@ -419,6 +462,8 @@
 </table>
 
 ### TwoWayLocal {#MainProtocol.TwoWayLocal}
+
+
 
 
 #### Request {#MainProtocol.TwoWayLocal_Request}
@@ -449,6 +494,8 @@
 ### TwoWayLocalWithError {#MainProtocol.TwoWayLocalWithError}
 
 
+
+
 #### Request {#MainProtocol.TwoWayLocalWithError_Request}
 
 <table>
@@ -477,6 +524,8 @@
 ### TwoWayNamedComposed {#MainProtocol.TwoWayNamedComposed}
 
 
+
+
 #### Request {#MainProtocol.TwoWayNamedComposed_Request}
 
 <table>
@@ -503,6 +552,8 @@
 </table>
 
 ### TwoWayNamedComposedWithError {#MainProtocol.TwoWayNamedComposedWithError}
+
+
 
 
 #### Request {#MainProtocol.TwoWayNamedComposedWithError_Request}

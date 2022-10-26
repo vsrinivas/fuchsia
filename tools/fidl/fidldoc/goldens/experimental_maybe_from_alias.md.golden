@@ -11,6 +11,7 @@
 *Defined in [test.experimentalmaybefromalias/experimental_maybe_from_alias.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/experimental_maybe_from_alias.test.fidl;l=3)*
 
 
+
 ## **STRUCTS**
 
 ### Testing [resource](/fuchsia-src/reference/fidl/language/language.md#value-vs-resource){:.fidl-attribute} {#Testing data-text="Testing"}

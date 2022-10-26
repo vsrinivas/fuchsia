@@ -11,13 +11,17 @@
 ## OtherProtocol {#OtherProtocol}
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=44)*
 
+
 ## Protocol {#Protocol}
 *Defined in [test.versions/versions.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/versions.test.fidl;l=47)*
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
 
+
 ### Foo {#Protocol.Foo}
 
 <div class="fidl-version-div"><span class="fidl-attribute fidl-version">Deprecated: 3</span> <span class="fidl-attribute fidl-version">Added: 2</span></div>
+
+
 
 #### Request {#Protocol.Foo_Request}
 

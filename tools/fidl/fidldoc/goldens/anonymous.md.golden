@@ -10,7 +10,10 @@
 ## SomeProtocol {#SomeProtocol}
 *Defined in [test.anonymous/anonymous.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/anonymous.test.fidl;l=25)*
 
+
 ### SomeMethod {#SomeProtocol.SomeMethod}
+
+
 
 
 #### Request {#SomeProtocol.SomeMethod_Request}

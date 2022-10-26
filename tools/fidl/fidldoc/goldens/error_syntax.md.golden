@@ -10,7 +10,10 @@
 ## ExampleUseOfErrorSyntax {#ExampleUseOfErrorSyntax}
 *Defined in [test.errorsyntax/child.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/error_syntax/child.test.fidl;l=9)*
 
+
 ### CallWhichMayFail {#ExampleUseOfErrorSyntax.CallWhichMayFail}
+
+
 
 
 #### Request {#ExampleUseOfErrorSyntax.CallWhichMayFail_Request}
@@ -39,6 +42,8 @@
 </table>
 
 ### ComposedCallWhichMayFail {#ExampleUseOfErrorSyntax.ComposedCallWhichMayFail}
+
+
 
 
 #### Request {#ExampleUseOfErrorSyntax.ComposedCallWhichMayFail_Request}

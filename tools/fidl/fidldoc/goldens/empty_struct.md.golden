@@ -10,7 +10,10 @@
 ## EmptyProtocol {#EmptyProtocol}
 *Defined in [test.emptystruct/empty_struct.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/empty_struct.test.fidl;l=5)*
 
+
 ### Receive {#EmptyProtocol.Receive}
+
+
 
 
 
@@ -29,6 +32,8 @@
 ### Send {#EmptyProtocol.Send}
 
 
+
+
 #### Request {#EmptyProtocol.Send_Request}
 
 <table>
@@ -43,6 +48,8 @@
 
 
 ### SendAndReceive {#EmptyProtocol.SendAndReceive}
+
+
 
 
 #### Request {#EmptyProtocol.SendAndReceive_Request}

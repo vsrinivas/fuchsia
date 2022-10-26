@@ -10,7 +10,10 @@
 ## sub {#sub}
 *Defined in [test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=11)*
 
+
 ### foo {#sub.foo}
+
+
 
 
 #### Request {#sub.foo_Request}
@@ -41,7 +44,10 @@
 ## super {#super}
 *Defined in [test.inheritance/inheritance.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/inheritance.test.fidl;l=3)*
 
+
 ### foo {#super.foo}
+
+
 
 
 #### Request {#super.foo_Request}

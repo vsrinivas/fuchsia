@@ -10,7 +10,10 @@
 ## Top {#Top}
 *Defined in [test.foreigntypeinresponseusedthroughcompose/top.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/foreign_type_in_response_used_through_compose/top.test.fidl;l=8)*
 
+
 ### GetFoo {#Top.GetFoo}
+
+
 
 
 #### Request {#Top.GetFoo_Request}

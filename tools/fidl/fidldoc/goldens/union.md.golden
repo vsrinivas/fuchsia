@@ -10,7 +10,10 @@
 ## TestProtocol {#TestProtocol}
 *Defined in [test.union/union.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/union.test.fidl;l=124)*
 
+
 ### FlexibleXUnionHenceResponseMustBeHeapAllocated {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated}
+
+
 
 
 #### Request {#TestProtocol.FlexibleXUnionHenceResponseMustBeHeapAllocated_Request}
@@ -31,6 +34,8 @@
 </table>
 
 ### StrictXUnionHenceResponseMayBeStackAllocated {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated}
+
+
 
 
 #### Request {#TestProtocol.StrictXUnionHenceResponseMayBeStackAllocated_Request}

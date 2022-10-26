@@ -10,7 +10,10 @@
 ## Allowed {#Allowed}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=112)*
 
+
 ### Denied {#Allowed.Denied}
+
+
 
 
 #### Request {#Allowed.Denied_Request}
@@ -33,10 +36,14 @@
 ## ContainsAllowed {#ContainsAllowed}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=144)*
 
+
 ## Denied {#Denied}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=98)*
 
+
 ### ShouldNeverAppearInAnyBinding {#Denied.ShouldNeverAppearInAnyBinding}
+
+
 
 
 #### Request {#Denied.ShouldNeverAppearInAnyBinding_Request}
@@ -67,7 +74,10 @@
 ## DenyEachBinding {#DenyEachBinding}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=51)*
 
+
 ### OnlyDenyCpp {#DenyEachBinding.OnlyDenyCpp}
+
+
 
 
 #### Request {#DenyEachBinding.OnlyDenyCpp_Request}
@@ -98,6 +108,8 @@
 ### OnlyDenyDart {#DenyEachBinding.OnlyDenyDart}
 
 
+
+
 #### Request {#DenyEachBinding.OnlyDenyDart_Request}
 
 <table>
@@ -124,6 +136,8 @@
 </table>
 
 ### OnlyDenyGo {#DenyEachBinding.OnlyDenyGo}
+
+
 
 
 #### Request {#DenyEachBinding.OnlyDenyGo_Request}
@@ -154,6 +168,8 @@
 ### OnlyDenyLibfuzzer {#DenyEachBinding.OnlyDenyLibfuzzer}
 
 
+
+
 #### Request {#DenyEachBinding.OnlyDenyLibfuzzer_Request}
 
 <table>
@@ -180,6 +196,8 @@
 </table>
 
 ### OnlyDenyRust {#DenyEachBinding.OnlyDenyRust}
+
+
 
 
 #### Request {#DenyEachBinding.OnlyDenyRust_Request}
@@ -210,6 +228,8 @@
 ### OnlyDenySyzkaller {#DenyEachBinding.OnlyDenySyzkaller}
 
 
+
+
 #### Request {#DenyEachBinding.OnlyDenySyzkaller_Request}
 
 <table>
@@ -238,7 +258,10 @@
 ## ImportsSameNameContext {#ImportsSameNameContext}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=155)*
 
+
 ### AlwaysAppearsInImportingLibrary {#ImportsSameNameContext.AlwaysAppearsInImportingLibrary}
+
+
 
 
 #### Request {#ImportsSameNameContext.AlwaysAppearsInImportingLibrary_Request}
@@ -247,6 +270,8 @@
 
 
 ### AlwaysDenied {#ImportsSameNameContext.AlwaysDenied}
+
+
 
 
 #### Request {#ImportsSameNameContext.AlwaysDenied_Request}
@@ -265,6 +290,8 @@
 ### Unattributed {#ImportsSameNameContext.Unattributed}
 
 
+
+
 #### Request {#ImportsSameNameContext.Unattributed_Request}
 
 &lt;EMPTY&gt;
@@ -273,8 +300,10 @@
 ## OnlyCppAndDeps {#OnlyCppAndDeps}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=44)*
 
+
 ## OnlyLibfuzzerAndDeps {#OnlyLibfuzzerAndDeps}
 *Defined in [test.bindingsdenylist/example.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/bindings_denylist/example.test.fidl;l=38)*
+
 
 
 ## **STRUCTS**

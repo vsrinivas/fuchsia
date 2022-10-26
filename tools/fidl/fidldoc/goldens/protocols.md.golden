@@ -10,10 +10,14 @@
 ## AnotherDiscoverableProtocol {#AnotherDiscoverableProtocol}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=105)*
 
+
 ## ChannelProtocol {#ChannelProtocol}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=47)*
 
+
 ### EventA {#ChannelProtocol.EventA}
+
+
 
 
 
@@ -38,6 +42,8 @@
 ### MethodA {#ChannelProtocol.MethodA}
 
 
+
+
 #### Request {#ChannelProtocol.MethodA_Request}
 
 <table>
@@ -58,6 +64,8 @@
 
 
 ### MethodB {#ChannelProtocol.MethodB}
+
+
 
 
 #### Request {#ChannelProtocol.MethodB_Request}
@@ -94,6 +102,8 @@
 ### MutateSocket {#ChannelProtocol.MutateSocket}
 
 
+
+
 #### Request {#ChannelProtocol.MutateSocket_Request}
 
 <table>
@@ -122,6 +132,8 @@
 ### TakeHandle {#ChannelProtocol.TakeHandle}
 
 
+
+
 #### Request {#ChannelProtocol.TakeHandle_Request}
 
 <table>
@@ -142,7 +154,10 @@
 ## DiscoverableProtocol {#DiscoverableProtocol}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=100)*
 
+
 ### Method {#DiscoverableProtocol.Method}
+
+
 
 
 #### Request {#DiscoverableProtocol.Method_Request}
@@ -153,7 +168,10 @@
 ## HandleRightsProtocol {#HandleRightsProtocol}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=107)*
 
+
 ### AnEvent {#HandleRightsProtocol.AnEvent}
+
+
 
 
 
@@ -172,6 +190,8 @@
 ### NoResponseMethod {#HandleRightsProtocol.NoResponseMethod}
 
 
+
+
 #### Request {#HandleRightsProtocol.NoResponseMethod_Request}
 
 <table>
@@ -186,6 +206,8 @@
 
 
 ### ResponseMethod {#HandleRightsProtocol.ResponseMethod}
+
+
 
 
 #### Request {#HandleRightsProtocol.ResponseMethod_Request}
@@ -216,7 +238,10 @@
 ## ManyParameters {#ManyParameters}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=146)*
 
+
 ### Fifteen {#ManyParameters.Fifteen}
+
+
 
 
 #### Request {#ManyParameters.Fifteen_Request}
@@ -319,7 +344,10 @@
 ## MethodWithUnion {#MethodWithUnion}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=172)*
 
+
 ### UnionMethod {#MethodWithUnion.UnionMethod}
+
+
 
 
 #### Request {#MethodWithUnion.UnionMethod_Request}
@@ -350,7 +378,10 @@
 ## SyscallProtocol {#SyscallProtocol}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=73)*
 
+
 ### MethodC {#SyscallProtocol.MethodC}
+
+
 
 
 #### Request {#SyscallProtocol.MethodC_Request}
@@ -375,7 +406,10 @@
 ## Transitional {#Transitional}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=80)*
 
+
 ### Event {#Transitional.Event}
+
+
 
 
 
@@ -394,6 +428,8 @@
 ### OneWay {#Transitional.OneWay}
 
 
+
+
 #### Request {#Transitional.OneWay_Request}
 
 <table>
@@ -408,6 +444,8 @@
 
 
 ### Request {#Transitional.Request}
+
+
 
 
 #### Request {#Transitional.Request_Request}
@@ -438,7 +476,10 @@
 ## WithAndWithoutRequestResponse {#WithAndWithoutRequestResponse}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=5)*
 
+
 ### NoRequestEmptyResponse {#WithAndWithoutRequestResponse.NoRequestEmptyResponse}
+
+
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestEmptyResponse_Request}
@@ -453,12 +494,16 @@
 ### NoRequestNoResponse {#WithAndWithoutRequestResponse.NoRequestNoResponse}
 
 
+
+
 #### Request {#WithAndWithoutRequestResponse.NoRequestNoResponse_Request}
 
 &lt;EMPTY&gt;
 
 
 ### NoRequestWithResponse {#WithAndWithoutRequestResponse.NoRequestWithResponse}
+
+
 
 
 #### Request {#WithAndWithoutRequestResponse.NoRequestWithResponse_Request}
@@ -482,11 +527,15 @@
 
 
 
+
+
 #### Response {#WithAndWithoutRequestResponse.OnEmptyResponse_Response}
 
 &lt;EMPTY&gt;
 
 ### OnWithResponse {#WithAndWithoutRequestResponse.OnWithResponse}
+
+
 
 
 
@@ -503,6 +552,8 @@
 </table>
 
 ### WithRequestEmptyResponse {#WithAndWithoutRequestResponse.WithRequestEmptyResponse}
+
+
 
 
 #### Request {#WithAndWithoutRequestResponse.WithRequestEmptyResponse_Request}
@@ -525,6 +576,8 @@
 ### WithRequestNoResponse {#WithAndWithoutRequestResponse.WithRequestNoResponse}
 
 
+
+
 #### Request {#WithAndWithoutRequestResponse.WithRequestNoResponse_Request}
 
 <table>
@@ -539,6 +592,8 @@
 
 
 ### WithRequestWithResponse {#WithAndWithoutRequestResponse.WithRequestWithResponse}
+
+
 
 
 #### Request {#WithAndWithoutRequestResponse.WithRequestWithResponse_Request}
@@ -569,7 +624,10 @@
 ## WithErrorSyntax {#WithErrorSyntax}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=33)*
 
+
 ### ErrorAsEnum {#WithErrorSyntax.ErrorAsEnum}
+
+
 
 
 #### Request {#WithErrorSyntax.ErrorAsEnum_Request}
@@ -592,6 +650,8 @@
 ### ErrorAsPrimitive {#WithErrorSyntax.ErrorAsPrimitive}
 
 
+
+
 #### Request {#WithErrorSyntax.ErrorAsPrimitive_Request}
 
 &lt;EMPTY&gt;
@@ -610,6 +670,8 @@
 </table>
 
 ### HandleInResult {#WithErrorSyntax.HandleInResult}
+
+
 
 
 #### Request {#WithErrorSyntax.HandleInResult_Request}
@@ -632,6 +694,8 @@
 ### ResponseAsStruct {#WithErrorSyntax.ResponseAsStruct}
 
 
+
+
 #### Request {#WithErrorSyntax.ResponseAsStruct_Request}
 
 &lt;EMPTY&gt;
@@ -652,7 +716,10 @@
 ## WithProtocolEnds {#WithProtocolEnds}
 *Defined in [test.protocols/protocols.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/protocols.test.fidl;l=128)*
 
+
 ### ClientEnds {#WithProtocolEnds.ClientEnds}
+
+
 
 
 #### Request {#WithProtocolEnds.ClientEnds_Request}
@@ -683,6 +750,8 @@
 ### ServerEnds {#WithProtocolEnds.ServerEnds}
 
 
+
+
 #### Request {#WithProtocolEnds.ServerEnds_Request}
 
 <table>
@@ -709,6 +778,8 @@
 </table>
 
 ### StructContainingEnds {#WithProtocolEnds.StructContainingEnds}
+
+
 
 
 #### Request {#WithProtocolEnds.StructContainingEnds_Request}

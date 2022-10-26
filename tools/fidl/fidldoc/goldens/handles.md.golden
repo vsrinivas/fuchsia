@@ -10,8 +10,10 @@
 ## DriverProtocol {#DriverProtocol}
 *Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=55)*
 
+
 ## SomeProtocol {#SomeProtocol}
 *Defined in [test.handles/handles.test.fidl](https://cs.opensource.google/fuchsia/fuchsia/+/main:tools/fidl/fidlc/testdata/handles.test.fidl;l=6)*
+
 
 
 ## **STRUCTS**
