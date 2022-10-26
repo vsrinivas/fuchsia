@@ -22,7 +22,7 @@ const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT")
 const VFS_TYPE_BLOBFS: u32 = 0x9e694d21;
 // const VFS_TYPE_FATFS: u32 = 0xce694d21;
 const VFS_TYPE_MINFS: u32 = 0x6e694d21;
-// const VFS_TYPE_MEMFS: u32 = 0x3e694d21;
+const VFS_TYPE_MEMFS: u32 = 0x3e694d21;
 // const VFS_TYPE_FACTORYFS: u32 = 0x1e694d21;
 const VFS_TYPE_FXFS: u32 = 0x73667866;
 const VFS_TYPE_F2FS: u32 = 0xfe694d21;
@@ -239,4 +239,11 @@ async fn partition_max_size_set() {
         fvm_proxy.get_partition_limit(data_instance_guid.as_mut()).await.unwrap();
     assert!(zx::Status::ok(status).is_ok());
     assert_eq!(data_slice_count, DATA_MAX_BYTES / FVM_SLICE_SIZE);
+}
+
+#[fuchsia::test]
+async fn tmp_is_available() {
+    let fixture = new_fixture().build().await;
+
+    fixture.check_fs_type("tmp", VFS_TYPE_MEMFS).await;
 }

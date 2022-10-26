@@ -278,6 +278,7 @@ impl TestFixtureBuilder {
                 Route::new()
                     .capability(Capability::directory("blob").rights(fio::RW_STAR_DIR))
                     .capability(Capability::directory("data").rights(fio::RW_STAR_DIR))
+                    .capability(Capability::directory("tmp").rights(fio::RW_STAR_DIR))
                     .from(&fshost)
                     .to(Ref::parent()),
             )

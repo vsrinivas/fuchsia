@@ -57,10 +57,13 @@ template("fshost_cml") {
         sources += [ "//src/storage/fshost/meta/minfs_fshost.cml" ]
       }
 
-      # These are dependencies that must be included in the package depending on options.
-
+      # These are components that must be included in the package depending on the data filesystem
+      # format.
+      # TODO(fxbug.dev/112753):  Remove these dep when adding fshost to the common platform AIB,
+      # and add these component to the AIB at the same time.
       deps = [
         "//src/storage/bin/blobfs:component",
+        "//src/storage/memfs:memfs_component",
 
         # For now, we always need minfs to support migration
         "//src/storage/bin/minfs:minfs-component",

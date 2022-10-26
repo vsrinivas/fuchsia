@@ -195,10 +195,6 @@ executable("fshost") {
     "//src/lib/storage/ramdevice_client/cpp",
     "//third_party/zstd",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
-
-    # TODO(fxbug.dev/112753):  Remove this dep when adding fshost to the common
-    # platform AIB, and add this component to the AIB at the same time.
-    "//src/storage/memfs:memfs_component",
   ]
 }
 
@@ -512,19 +508,4 @@ fuchsia_structured_config_cpp_elf_lib("fshost_config") {
 fuchsia_structured_config_rust_lib("fshost_config_rust") {
   name = "fshost_config"
   cm_label = ":fshost_manifest_for_config_lib"
-}
-
-# Note: Instead of using a shard to switch the binary we are calling, like the tests do, the main
-# fshost component uses the exact same CML for both cpp and rust, and instead renames the rust
-# binary if the rust fshost is configured.
-renamed_binary("fshost_rust") {
-  source = "$root_out_dir/fshost_rust"
-  source_deps = [ "//src/storage/fshost-rust" ]
-  dest = "bin/fshost"
-
-  deps = [
-    # TODO(fxbug.dev/112753):  Remove this dep when adding fshost to the common
-    # platform AIB, and add this component to the AIB at the same time.
-    "//src/storage/memfs:memfs_component",
-  ]
 }
