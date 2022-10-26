@@ -504,11 +504,19 @@ where
                     // Other addresses can only be bound to if they are assigned
                     // to the device.
                     if !addr.is_multicast() {
-                        let assigned_to = sync_ctx
-                            .get_device_with_assigned_addr(addr)
-                            .ok_or(LocalAddressError::CannotBindToAddress)?;
-                        if device.as_ref().map_or(false, |device| &assigned_to != device) {
-                            return Err(LocalAddressError::AddressMismatch);
+                        let mut assigned_to = sync_ctx
+                            .get_devices_with_assigned_addr(addr);
+                        if let Some(device) = &device {
+                            if !assigned_to.any(|d| &d == device) {
+                                return Err(LocalAddressError::AddressMismatch);
+                            }
+                        } else {
+                            if assigned_to.next() == None {
+                                return Err(LocalAddressError::CannotBindToAddress);
+                            }
+                            if assigned_to.next() != None {
+                                todo!("https://fxbug.dev/112584: handle multiple addresses")
+                            }
                         }
                     }
                     (Some(addr), device, identifier)
@@ -1065,38 +1073,27 @@ pub enum SetMulticastMembershipError {
     WrongDevice,
 }
 
-fn pick_matching_interface<
-    A: SocketMapAddrSpec,
-    C: DatagramStateNonSyncContext<A>,
-    SC: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>,
->(
-    sync_ctx: &SC,
-    interface: MulticastMembershipInterfaceSelector<A::IpAddr, A::DeviceId>,
-) -> Result<Option<A::DeviceId>, SetMulticastMembershipError> {
-    use MulticastMembershipInterfaceSelector::*;
-    match interface {
-        Specified(MulticastInterfaceSelector::Interface(device)) => Ok(Some(device)),
-        AnyInterfaceWithRoute => Ok(None),
-        Specified(MulticastInterfaceSelector::LocalAddress(addr)) => sync_ctx
-            .get_device_with_assigned_addr(addr)
-            .ok_or(SetMulticastMembershipError::NoDeviceWithAddress)
-            .map(Some),
-    }
-}
-
+/// Selects the interface for the given remote address, optionally with a
+/// constraint on the source address.
 fn pick_interface_for_addr<
     A: SocketMapAddrSpec,
     C: DatagramStateNonSyncContext<A>,
     SC: TransportIpContext<A::IpVersion, C, DeviceId = A::DeviceId>,
 >(
-    _sync_ctx: &SC,
-    _addr: MulticastAddr<A::IpAddr>,
-) -> Option<A::DeviceId> {
-    log_unimplemented!(
-        (),
-        "https://fxbug.dev/39479: Implement this by passing `_addr` through the routing table."
-    );
-    None
+    sync_ctx: &SC,
+    _remote_addr: MulticastAddr<A::IpAddr>,
+    source_addr: Option<SpecifiedAddr<A::IpAddr>>,
+) -> Result<A::DeviceId, SetMulticastMembershipError> {
+    if let Some(source_addr) = source_addr {
+        let mut devices = sync_ctx.get_devices_with_assigned_addr(source_addr);
+        if let Some(d) = devices.next() {
+            if devices.next() == None {
+                return Ok(d);
+            }
+        }
+    }
+    log_unimplemented!((), "https://fxbug.dev/39479: Implement this by looking up a route");
+    Err(SetMulticastMembershipError::NoDeviceAvailable)
 }
 
 #[derive(Derivative)]
@@ -1164,7 +1161,6 @@ where
     let id = id.into();
 
     let (change, interface) = sync_ctx.with_sockets_mut(|sync_ctx, state, _allocator| {
-        let interface = pick_matching_interface(sync_ctx, interface)?;
         let DatagramSockets { bound, unbound } = state;
         let bound_device = match id.clone() {
             DatagramSocketId::Unbound(id) => {
@@ -1187,18 +1183,27 @@ where
             }
         };
 
-        // If the socket is bound to a device, check that against the provided
-        // interface ID. If none was provided, use the bound device. If there is
-        // none, try to pick a device using the provided address.
-        let interface = match (bound_device, interface) {
-            (Some(bound_device), None) => Ok(bound_device.clone()),
-            (None, Some(interface)) => Ok(interface),
-            (Some(bound_device), Some(interface)) => (bound_device == &interface)
-                .then(|| interface)
-                .ok_or(SetMulticastMembershipError::WrongDevice),
-            (None, None) => pick_interface_for_addr(sync_ctx, multicast_group)
-                .ok_or(SetMulticastMembershipError::NoDeviceAvailable),
-        }?;
+        let interface = match interface {
+            MulticastMembershipInterfaceSelector::Specified(selector) => match selector {
+                MulticastInterfaceSelector::Interface(device) => {
+                    if bound_device.as_ref().map_or(false, |d| d != &device) {
+                        return Err(SetMulticastMembershipError::WrongDevice);
+                    } else {
+                        device
+                    }
+                }
+                MulticastInterfaceSelector::LocalAddress(addr) => {
+                    pick_interface_for_addr(sync_ctx, multicast_group, Some(addr))?
+                }
+            },
+            MulticastMembershipInterfaceSelector::AnyInterfaceWithRoute => {
+                if let Some(bound_device) = bound_device.as_ref() {
+                    bound_device.clone()
+                } else {
+                    pick_interface_for_addr(sync_ctx, multicast_group, None)?
+                }
+            }
+        };
 
         let DatagramSockets { bound, unbound } = state;
         let ip_options = match id {

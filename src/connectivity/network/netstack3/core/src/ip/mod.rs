@@ -224,14 +224,17 @@ impl<I: IpExt, C, SC: IpDeviceIdContext<I> + ?Sized, B: BufferMut>
 pub(crate) trait TransportIpContext<I: IpExt, C>:
     IpDeviceIdContext<I> + IpSocketHandler<I, C>
 {
+    type DevicesWithAddrIter: Iterator<Item = Self::DeviceId>;
+
     /// Is this one of our local addresses, and is it in the assigned state?
     ///
-    /// If `addr` is the address associated with a local interface and, for
-    /// IPv6, if it is in the "assigned" state, this method returns the
-    /// identifier for the device with the address assigned. Otherwise returns
-    /// `None`.
-    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<I::Addr>)
-        -> Option<Self::DeviceId>;
+    /// Returns an iterator over all the local interfaces for which `addr` is an
+    /// associated address, and, for IPv6, for which it is in the "assigned"
+    /// state.
+    fn get_devices_with_assigned_addr(
+        &self,
+        addr: SpecifiedAddr<I::Addr>,
+    ) -> Self::DevicesWithAddrIter;
 
     /// Get default hop limits.
     ///
@@ -305,7 +308,12 @@ where
 impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C> + NonTestCtxMarker>
     TransportIpContext<Ipv4, C> for SC
 {
-    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<Ipv4Addr>) -> Option<SC::DeviceId> {
+    type DevicesWithAddrIter = <Option<SC::DeviceId> as IntoIterator>::IntoIter;
+
+    fn get_devices_with_assigned_addr(
+        &self,
+        addr: SpecifiedAddr<Ipv4Addr>,
+    ) -> Self::DevicesWithAddrIter {
         match self.address_status(addr) {
             AddressStatus::Present((device, state)) => match state {
                 Ipv4PresentAddressStatus::Unicast => Some(device),
@@ -315,6 +323,7 @@ impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C> + NonTestCtxMark
             },
             AddressStatus::Unassigned => None,
         }
+        .into_iter()
     }
 
     fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {
@@ -328,7 +337,12 @@ impl<C, SC: IpDeviceContext<Ipv4, C> + IpSocketHandler<Ipv4, C> + NonTestCtxMark
 impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C> + NonTestCtxMarker>
     TransportIpContext<Ipv6, C> for SC
 {
-    fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<Ipv6Addr>) -> Option<SC::DeviceId> {
+    type DevicesWithAddrIter = <Option<SC::DeviceId> as IntoIterator>::IntoIter;
+
+    fn get_devices_with_assigned_addr(
+        &self,
+        addr: SpecifiedAddr<Ipv6Addr>,
+    ) -> Self::DevicesWithAddrIter {
         match self.address_status(addr) {
             AddressStatus::Present((device, status)) => match status {
                 Ipv6PresentAddressStatus::UnicastAssigned => Some(device),
@@ -337,6 +351,7 @@ impl<C, SC: IpDeviceContext<Ipv6, C> + IpSocketHandler<Ipv6, C> + NonTestCtxMark
             },
             AddressStatus::Unassigned => None,
         }
+        .into_iter()
     }
 
     fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {

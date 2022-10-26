@@ -2594,9 +2594,13 @@ mod tests {
     where
         Self: IpDeviceIdContext<I, DeviceId = D> + IpSocketHandler<I, FakeUdpNonSyncCtx<I>>,
     {
-        fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<<I as Ip>::Addr>) -> Option<D> {
+        type DevicesWithAddrIter = <Option<D> as IntoIterator>::IntoIter;
+        fn get_devices_with_assigned_addr(
+            &self,
+            addr: SpecifiedAddr<<I as Ip>::Addr>,
+        ) -> Self::DevicesWithAddrIter {
             let ip = &self.get_ref();
-            ip.ip_socket_ctx.find_device_with_addr(addr)
+            ip.ip_socket_ctx.find_device_with_addr(addr).into_iter()
         }
 
         fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {

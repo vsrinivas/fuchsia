@@ -811,11 +811,13 @@ pub(crate) mod testutil {
             })
         }
 
-        fn get_device_with_assigned_addr(
+        type DevicesWithAddrIter = <Option<Self::DeviceId> as IntoIterator>::IntoIter;
+
+        fn get_devices_with_assigned_addr(
             &self,
             addr: SpecifiedAddr<<I>::Addr>,
-        ) -> Option<Self::DeviceId> {
-            self.find_device_with_addr(addr)
+        ) -> Self::DevicesWithAddrIter {
+            self.find_device_with_addr(addr).into_iter()
         }
     }
 
@@ -1004,9 +1006,15 @@ pub(crate) mod testutil {
     where
         Self: IpSocketContext<I, C, DeviceId = D>,
     {
-        fn get_device_with_assigned_addr(&self, addr: SpecifiedAddr<I::Addr>) -> Option<D> {
+        type DevicesWithAddrIter =
+            <FakeIpSocketCtx<I, D> as TransportIpContext<I, C>>::DevicesWithAddrIter;
+
+        fn get_devices_with_assigned_addr(
+            &self,
+            addr: SpecifiedAddr<I::Addr>,
+        ) -> Self::DevicesWithAddrIter {
             let FakeBufferIpSocketCtx { ip_socket_ctx } = self.get_ref();
-            TransportIpContext::<I, C>::get_device_with_assigned_addr(ip_socket_ctx, addr)
+            TransportIpContext::<I, C>::get_devices_with_assigned_addr(ip_socket_ctx, addr)
         }
 
         fn get_default_hop_limits(&self, device: Option<&Self::DeviceId>) -> HopLimits {

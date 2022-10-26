@@ -599,7 +599,7 @@ impl<I: IpExt, C: TcpNonSyncContext, SC: TcpSyncContext<I, C>> TcpSocketHandler<
 
                 let local_ip = SpecifiedAddr::new(local_ip);
                 if let Some(ip) = local_ip {
-                    if ip_transport_ctx.get_device_with_assigned_addr(ip).is_none() {
+                    if ip_transport_ctx.get_devices_with_assigned_addr(ip).next().is_none() {
                         return Err(BindError::NoLocalAddr);
                     }
                 }
