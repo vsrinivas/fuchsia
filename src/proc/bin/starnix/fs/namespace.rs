@@ -73,13 +73,12 @@ type MountHandle = Arc<Mount>;
 
 #[derive(Default)]
 struct MountState {
-    // The keys of this map are always descendants of this mount's root.
+    // The value in this hashmap is a vector because multiple mounts can be stacked on top of the
+    // same mount point. The last one in the vector shadows the others and is used for lookups.
+    // Unmounting will remove the last entry. Mounting will add an entry.
     //
-    // Each directory entry can only have one mount attached. Mount shadowing works by using the
-    // root of the inner mount as a mountpoint. For example, if filesystem A is mounted at /foo,
-    // mounting filesystem B on /foo will create the mount as a child of the A mount, attached to
-    // A's root, instead of the root mount.
-    submounts: HashMap<ArcKey<DirEntry>, MountHandle>,
+    // The keys of this map are always descendants of this mount's root.
+    submounts: HashMap<ArcKey<DirEntry>, Vec<MountHandle>>,
 }
 
 pub enum WhatToMount {
@@ -127,8 +126,10 @@ impl Mount {
             // violation. I'm not convinced it's a real issue, but I can't convince myself it's not
             // either.
             let mut submounts = vec![];
-            for (dir, mount) in &self.state.read().submounts {
-                submounts.push((dir.clone(), mount.clone_mount_recursive()));
+            for (dir, mount_stack) in &self.state.read().submounts {
+                for mount in mount_stack {
+                    submounts.push((dir.clone(), mount.clone_mount_recursive()));
+                }
             }
             let mut clone_state = clone.state.write();
             for (dir, submount) in submounts {
@@ -161,10 +162,7 @@ impl Mount {
             .mountpoint
             .set((Arc::downgrade(self), Arc::clone(dir)))
             .expect("add_submount can only take a newly created mount");
-        // Mount shadowing is implemented by mounting onto the root of the first mount, not by
-        // creating two mounts on the same mountpoint.
-        let old_mount = state.submounts.insert(ArcKey(dir.clone()), mount);
-        assert!(old_mount.is_none(), "can't create two mounts on the same mount point");
+        state.submounts.entry(ArcKey(dir.clone())).or_default().push(mount);
     }
 
     pub fn root(self: &MountHandle) -> NamespaceNode {
@@ -442,8 +440,26 @@ impl NamespaceNode {
                 };
             }
 
-            Ok(child.enter_mount())
+            if let Some(ref mount) = child.mount {
+                if let Some(mounts_at_point) =
+                    mount.state.read().submounts.get(ArcKey::ref_cast(&child.entry))
+                {
+                    if let Some(mount) = mounts_at_point.last() {
+                        return Ok(mount.root());
+                    }
+                }
+            }
+            Ok(child)
         }
+    }
+
+    /// If this is the root of a mount, go up a level and return the mount point. Otherwise return
+    /// the same node.
+    ///
+    /// This is not exactly the same as parent(). If parent() is called on a root, it will escape
+    /// the mount, but then return the parent of the mount point instead of the mount point.
+    pub fn escape_mount(&self) -> NamespaceNode {
+        self.mountpoint().unwrap_or_else(|| self.clone())
     }
 
     /// Traverse up a child-to-parent link in the namespace.
@@ -454,37 +470,6 @@ impl NamespaceNode {
     pub fn parent(&self) -> Option<NamespaceNode> {
         let mountpoint_or_self = self.escape_mount();
         Some(mountpoint_or_self.with_new_entry(mountpoint_or_self.entry.parent()?))
-    }
-
-    /// If this is a mount point, return the root of the mount. Otherwise return self.
-    fn enter_mount(&self) -> NamespaceNode {
-        // While the child is a mountpoint, replace child with the mount's root.
-        fn enter_one_mount(node: &NamespaceNode) -> Option<NamespaceNode> {
-            if let Some(mount) = &node.mount {
-                if let Some(mount) = mount.state.read().submounts.get(ArcKey::ref_cast(&node.entry))
-                {
-                    return Some(mount.root());
-                }
-            }
-            None
-        }
-        let mut inner = self.clone();
-        while let Some(inner_root) = enter_one_mount(&inner) {
-            inner = inner_root;
-        }
-        inner
-    }
-
-    /// If this is the root of a mount, return the mount point. Otherwise return self.
-    ///
-    /// This is not exactly the same as parent(). If parent() is called on a root, it will escape
-    /// the mount, but then return the parent of the mount point instead of the mount point.
-    fn escape_mount(&self) -> NamespaceNode {
-        let mut mountpoint_or_self = self.clone();
-        while let Some(mountpoint) = mountpoint_or_self.mountpoint() {
-            mountpoint_or_self = mountpoint;
-        }
-        mountpoint_or_self
     }
 
     /// Returns the mountpoint at this location in the namespace.
@@ -506,10 +491,10 @@ impl NamespaceNode {
             return self.entry.local_name().to_vec();
         }
         let mut components = vec![];
-        let mut current = self.escape_mount();
-        while let Some(parent) = current.parent() {
-            components.push(current.entry.local_name().to_vec());
-            current = parent.mountpoint().unwrap_or(parent);
+        let mut current_task = self.mountpoint().unwrap_or_else(|| self.clone());
+        while let Some(parent) = current_task.parent() {
+            components.push(current_task.entry.local_name().to_vec());
+            current_task = parent.mountpoint().unwrap_or(parent);
         }
         if components.is_empty() {
             return b"/".to_vec();
@@ -520,19 +505,19 @@ impl NamespaceNode {
     }
 
     pub fn mount(&self, what: WhatToMount, flags: MountFlags) -> Result<(), Errno> {
-        let mountpoint = self.enter_mount();
-        let mount = mountpoint.mount.as_ref().expect("a mountpoint must be part of a mount");
-        mount.add_submount(&mountpoint.entry, Mount::new(what, flags));
+        let mount = self.mount.as_ref().expect("a mountpoint must be part of a mount");
+        mount.add_submount(&self.entry, Mount::new(what, flags));
         Ok(())
     }
 
-    /// If this is the root of a filesystem, unmount. Otherwise return EINVAL.
+    /// Unmount the topmost filesystem from this mount point.
+    /// Make sure you call this on the mount point and not the mount root (i.e. use escape_mount.)
     pub fn unmount(&self) -> Result<(), Errno> {
-        let mountpoint = self.enter_mount().mountpoint().ok_or_else(|| errno!(EINVAL))?;
-        let mount = mountpoint.mount.as_ref().expect("a mountpoint must be part of a mount");
+        let mount = self.mount.as_ref().expect("a mountpoint must be part of a mount");
         let mut mount_state = mount.state.write();
-        // TODO(tbodt): EBUSY
-        mount_state.submounts.remove(mountpoint.mount_hash_key()).ok_or_else(|| errno!(EINVAL))?;
+        let mounts_at_point =
+            mount_state.submounts.get_mut(self.mount_hash_key()).ok_or_else(|| errno!(EINVAL))?;
+        mounts_at_point.pop().ok_or_else(|| errno!(EINVAL))?;
         Ok(())
     }
 
@@ -706,7 +691,6 @@ mod test {
             &ns.root().lookup_child(&current_task, &mut context, b"foo")?.entry,
             foofs1.root()
         ));
-        let foo_dir = ns.root().lookup_child(&current_task, &mut context, b"foo")?;
 
         let ns_clone = ns.clone_namespace();
 
