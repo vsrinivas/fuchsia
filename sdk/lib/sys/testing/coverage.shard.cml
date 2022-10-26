@@ -6,6 +6,7 @@
         {
             protocol: [ "fuchsia.debugdata.Publisher" ],
             from: "debug",
+            availability: "transitional",
         },
     ],
 }
