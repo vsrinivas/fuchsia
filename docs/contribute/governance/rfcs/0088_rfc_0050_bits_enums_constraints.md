@@ -101,7 +101,7 @@ creates inconsistency in the FIDL syntax's underlying logic.
 
 In the case of the second change, consider the following type declaration:
 
-```
+```none {:.devsite-disable-click-to-copy}
 vector<vector<zx.handle:<VMO,zx.READ,optional>>>
 ```
 
@@ -123,22 +123,30 @@ preceding colons. Instead, the new `of` keyword is introduced as a separator,
 valid only when placed between a `bits` or `enum` keyword and its wrapped type.
 Thus, a declaration previously written as:
 
-```type Foo = bits : uint32 {...```
+```none {:.devsite-disable-click-to-copy}
+type Foo = bits : uint32 {...
+```
 
 is now written as:
 
-```type Foo = bits of uint32 {...```
+```none {:.devsite-disable-click-to-copy}
+type Foo = bits of uint32 {...
+```
 
 ### Wrapping constraint lists in square brackets
 
 Constraints lists are now wrapped in square, instead of angled, brackets. Thus,
 a type declaration previously written as:
 
-```vector<vector<zx.handle:<VMO,zx.READ,optional>>>```
+```none {:.devsite-disable-click-to-copy}
+vector<vector<zx.handle:<VMO,zx.READ,optional>>>
+```
 
 is now written as
 
-```vector<vector<zx.handle:[VMO,zx.READ,optional]>>```
+```none {:.devsite-disable-click-to-copy}
+vector<vector<zx.handle:[VMO,zx.READ,optional]>>
+```
 
 ## Implementation
 
