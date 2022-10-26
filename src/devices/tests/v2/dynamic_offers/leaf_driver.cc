@@ -65,4 +65,4 @@ class LeafDriver : public driver::DriverBase {
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<LeafDriver>);
+FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<LeafDriver>);

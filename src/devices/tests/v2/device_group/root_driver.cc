@@ -468,4 +468,4 @@ class RootDriver : public driver::DriverBase {
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<RootDriver>);
+FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<RootDriver>);

@@ -32,4 +32,4 @@ class PackagedDriver : public driver::DriverBase {
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<PackagedDriver>);
+FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<PackagedDriver>);

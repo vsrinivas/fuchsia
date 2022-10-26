@@ -201,7 +201,7 @@ class BasicFactory {
 //
 // This illustrates how to use a |Record| with the default |BasicFactory|:
 // ```
-// FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<MyDriver>);
+// FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<MyDriver>);
 // ```
 //
 // This illustrates how to use a |Record| with a custom factory:
@@ -215,7 +215,7 @@ class BasicFactory {
 // // We must define the record before passing into the macro, otherwise the macro expansion
 // // will think the comma is to pass a second macro argument.
 // using record = driver::Record<MyDriver, CustomFactory>;
-// FUCHSIA_DRIVER_RECORD_CPP_V2(record);
+// FUCHSIA_DRIVER_RECORD_CPP_V3(record);
 // ```
 template <typename Driver, typename Factory = BasicFactory<Driver>>
 class Record {

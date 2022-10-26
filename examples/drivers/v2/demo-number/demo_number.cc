@@ -171,4 +171,4 @@ class DemoNumber : public driver::DriverBase {
 
 }  // namespace demo_number
 
-FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<demo_number::DemoNumber>);
+FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<demo_number::DemoNumber>);

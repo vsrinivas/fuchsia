@@ -24,7 +24,7 @@ class MyDriver : public DriverBase {
 
 // If we don't need a custom factory (default is the BasicFactory in driver_base.h) we can just
 // put in this macro and stop.
-// FUCHSIA_DRIVER_RECORD_CPP_V2(Record<MyDriver>);
+// FUCHSIA_DRIVER_RECORD_CPP_V3(Record<MyDriver>);
 
 // ------------------------------------------------------------------------------------------------
 
@@ -70,5 +70,5 @@ class CustomFactory {
 // We must define the record before passing into the macro, otherwise the macro expansion
 // will think the comma is to pass a second macro argument.
 using record = Record<AnotherDriver, CustomFactory>;
-FUCHSIA_DRIVER_RECORD_CPP_V2(record);
+FUCHSIA_DRIVER_RECORD_CPP_V3(record);
 // ------------------------------------------------------------------------------------------------

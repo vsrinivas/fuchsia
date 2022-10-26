@@ -100,4 +100,4 @@ class ReceiverDriver : public driver::DriverBase,
 
 }  // namespace
 
-FUCHSIA_DRIVER_RECORD_CPP_V2(driver::Record<ReceiverDriver>);
+FUCHSIA_DRIVER_RECORD_CPP_V3(driver::Record<ReceiverDriver>);
