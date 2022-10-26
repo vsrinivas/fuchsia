@@ -63,7 +63,7 @@ class MemfsComponentTest : public ::gtest::RealLoopFixture,
 };
 
 TEST_P(MemfsComponentTest, MaxFileSize) {
-  int fd = openat(root_fd_.get(), "memfs/test_file", O_CREAT | O_RDWR);
+  int fd = openat(root_fd_.get(), "memfs/test_file", O_CREAT | O_RDWR, S_IRUSR | S_IWUSR);
   ASSERT_GE(fd, 0);
 
   // First test that we can create the largest valid file size.

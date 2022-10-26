@@ -102,7 +102,7 @@ void BuildDiskImage(zx::vmo vmo) {
         status = ZX_ERR_INTERNAL;
         return;
       }
-      int file_fd = openat(dir_fd.get(), "file.txt", O_WRONLY | O_CREAT);
+      int file_fd = openat(dir_fd.get(), "file.txt", O_WRONLY | O_CREAT, S_IRUSR | S_IWUSR);
       if (file_fd <= 0) {
         FX_LOGS(ERROR) << "Failed to open minfs file.";
         status = ZX_ERR_INTERNAL;

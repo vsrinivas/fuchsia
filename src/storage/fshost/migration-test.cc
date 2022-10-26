@@ -93,7 +93,7 @@ TEST_F(MigrationTest, MigratesZxcryptMinfs) {
     ASSERT_EQ(data.status_value(), ZX_OK);
     auto binding = fs_management::NamespaceBinding::Create("/mnt/data", std::move(*data));
     ASSERT_EQ(binding.status_value(), ZX_OK);
-    auto fd = fbl::unique_fd(::open("/mnt/data/file", O_RDWR | O_CREAT));
+    auto fd = fbl::unique_fd(::open("/mnt/data/file", O_RDWR | O_CREAT, S_IRUSR | S_IWUSR));
     ASSERT_TRUE(fd) << strerror(errno);
     ASSERT_EQ(::write(fd.get(), kFileContents, strlen(kFileContents)),
               static_cast<ssize_t>(strlen(kFileContents)));
