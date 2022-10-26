@@ -98,7 +98,7 @@ group("tests") {
 
   deps = [
     ":zxdb_tests($host_toolchain)",
-    "//src/developer/debug/zxdb/expr:expr_fuzzers",
+    "//src/developer/debug/zxdb/expr:expr_parser_fuzzer($host_toolchain)",
   ]
 
   if (include_zxdb_large_tests) {

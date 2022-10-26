@@ -58,7 +58,7 @@ template("host_library_fuzzer") {
                               root_build_dir) ]
       }
     }
-    group_deps = [ ":$test_target" ]
+    group_deps += [ ":$test_target" ]
 
     # If the toolchain variant supports fuzzing, also register the fuzzer binary as a host tool and
     # allow users to fuzz by calling it via `fx host-tool`
