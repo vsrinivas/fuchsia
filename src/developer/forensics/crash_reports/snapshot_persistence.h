@@ -17,7 +17,18 @@ namespace forensics::crash_reports {
 // the snapshot storage limits have been reached.
 class SnapshotPersistence {
  public:
-  SnapshotPersistence(std::string temp_dir, std::string persistent_dir);
+  // A directory to store snapshots under and the maximum amount of data that can be stored under
+  // that directory before adds fail.
+  struct Root {
+    std::string dir;
+    StorageSize max_size;
+  };
+
+  SnapshotPersistence(const Root& temp_root, const Root& persistent_root);
+
+  // Adds a snapshot to persistence. Returns true if successful.
+  bool Add(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,
+           StorageSize archive_size);
 
   // Returns true if a snapshot for |uuid| exists on disk.
   bool Contains(const SnapshotUuid& uuid) const;
@@ -26,9 +37,26 @@ class SnapshotPersistence {
   // Contains to verify existence on disk first.
   std::shared_ptr<const ManagedSnapshot::Archive> Get(const SnapshotUuid& uuid);
 
+  // Deletes the snapshot for |uuid| from persistence. Returns true if successful.
+  bool Delete(const SnapshotUuid& uuid);
+
  private:
+  // Adds a snapshot to persistence. Returns true if successful.
+  bool AddToRoot(const SnapshotUuid& uuid, const ManagedSnapshot::Archive& archive,
+                 StorageSize archive_size, SnapshotPersistenceMetadata& root);
+
   // The root that the snapshot for |uuid| is stored under.
   SnapshotPersistenceMetadata& RootFor(const SnapshotUuid& uuid);
+
+  // Pick the root to store an archive with size of |archive_size| under. Returns nullptr if neither
+  // root has enough space for the archive.
+  SnapshotPersistenceMetadata* PickRootForStorage(StorageSize archive_size);
+
+  // Returns a storage root that can be used if |root| fails.
+  SnapshotPersistenceMetadata& FallbackRoot(const SnapshotPersistenceMetadata& root);
+
+  // Returns true if another storage root can be used.
+  bool HasFallbackRoot(const SnapshotPersistenceMetadata& root) const;
 
   SnapshotPersistenceMetadata tmp_metadata_;
   SnapshotPersistenceMetadata cache_metadata_;

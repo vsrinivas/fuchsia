@@ -14,9 +14,12 @@
 namespace forensics::crash_reports {
 
 // In-memory metadata about the snapshot store on disk at |snapshot_store_root|.
+//
+// Note: Clients must use Add and Delete to keep the metadata in sync with the snapshot
+// store in the filesystem. Use with caution!
 class SnapshotPersistenceMetadata {
  public:
-  explicit SnapshotPersistenceMetadata(std::string snapshot_store_root);
+  SnapshotPersistenceMetadata(std::string snapshot_store_root, StorageSize max_size);
 
   // Recreates the metadata from the snapshot store at |snapshot_store_root_|.
   //
@@ -28,6 +31,14 @@ class SnapshotPersistenceMetadata {
   bool IsDirectoryUsable() const;
 
   bool Contains(const SnapshotUuid& uuid) const;
+
+  StorageSize CurrentSize() const;
+  StorageSize RemainingSpace() const;
+
+  const std::string& RootDir() const;
+
+  void Add(const SnapshotUuid& uuid, StorageSize size, std::string_view archive_key);
+  void Delete(const SnapshotUuid& uuid);
 
   // Returns the directory that contains the snapshot |uuid|.
   std::string SnapshotDirectory(const SnapshotUuid& uuid) const;
@@ -50,6 +61,7 @@ class SnapshotPersistenceMetadata {
   std::string snapshot_store_root_;
 
   StorageSize current_size_;
+  StorageSize max_size_;
 
   bool is_directory_usable_;
 

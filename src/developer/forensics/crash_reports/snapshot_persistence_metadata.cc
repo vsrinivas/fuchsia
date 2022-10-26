@@ -7,16 +7,21 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <filesystem>
+#include <utility>
 
 #include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
+#include "src/lib/files/path.h"
 
 namespace forensics::crash_reports {
 
 namespace fs = std::filesystem;
 
-SnapshotPersistenceMetadata::SnapshotPersistenceMetadata(std::string snapshot_store_root)
-    : snapshot_store_root_(std::move(snapshot_store_root)), is_directory_usable_(false) {
+SnapshotPersistenceMetadata::SnapshotPersistenceMetadata(std::string snapshot_store_root,
+                                                         StorageSize max_size)
+    : snapshot_store_root_(std::move(snapshot_store_root)),
+      max_size_(max_size),
+      is_directory_usable_(false) {
   RecreateFromFilesystem();
 }
 
@@ -68,6 +73,32 @@ bool SnapshotPersistenceMetadata::RecreateFromFilesystem() {
 }
 
 bool SnapshotPersistenceMetadata::IsDirectoryUsable() const { return is_directory_usable_; }
+
+StorageSize SnapshotPersistenceMetadata::CurrentSize() const { return current_size_; }
+
+StorageSize SnapshotPersistenceMetadata::RemainingSpace() const {
+  return max_size_ - current_size_;
+}
+
+const std::string& SnapshotPersistenceMetadata::RootDir() const { return snapshot_store_root_; }
+
+void SnapshotPersistenceMetadata::Add(const SnapshotUuid& uuid, StorageSize size,
+                                      std::string_view archive_key) {
+  FX_CHECK(IsDirectoryUsable());
+  current_size_ += size;
+
+  snapshot_metadata_[uuid].size = size;
+  snapshot_metadata_[uuid].dir = files::JoinPath(snapshot_store_root_, uuid);
+  snapshot_metadata_[uuid].snapshot_key = archive_key;
+}
+
+void SnapshotPersistenceMetadata::Delete(const SnapshotUuid& uuid) {
+  FX_CHECK(IsDirectoryUsable());
+  FX_CHECK(Contains(uuid)) << "Contains() should be called before any Delete()";
+
+  current_size_ -= snapshot_metadata_[uuid].size;
+  snapshot_metadata_.erase(uuid);
+}
 
 std::string SnapshotPersistenceMetadata::SnapshotDirectory(const SnapshotUuid& uuid) const {
   FX_CHECK(Contains(uuid));

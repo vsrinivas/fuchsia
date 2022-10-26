@@ -12,6 +12,7 @@
 
 #include "src/developer/forensics/crash_reports/snapshot.h"
 #include "src/developer/forensics/testing/scoped_memfs_manager.h"
+#include "src/developer/forensics/utils/storage_size.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 
@@ -20,7 +21,7 @@ namespace {
 
 class SnapshotPersistenceMetadataTest : public ::testing::Test {
  public:
-  SnapshotPersistenceMetadataTest() : metadata_(tmp_dir_.path()) {}
+  SnapshotPersistenceMetadataTest() : metadata_(tmp_dir_.path(), StorageSize::Megabytes(1)) {}
 
  protected:
   void WriteAttachment(const SnapshotUuid& uuid, const std::string& key, const std::string& data) {
@@ -65,12 +66,31 @@ TEST_F(SnapshotPersistenceMetadataTest, SnapshotDirectory) {
 
 TEST_F(SnapshotPersistenceMetadataTest, RecreateFromFilesystem_FailsInitially) {
   testing::ScopedMemFsManager scoped_mem_fs;
-  SnapshotPersistenceMetadata metadata("/cache/delayed/path");
+  SnapshotPersistenceMetadata metadata("/cache/delayed/path", StorageSize::Megabytes(1));
   ASSERT_FALSE(metadata.IsDirectoryUsable());
 
   scoped_mem_fs.Create("/cache/delayed/path");
   metadata.RecreateFromFilesystem();
   EXPECT_TRUE(metadata.IsDirectoryUsable());
+}
+
+TEST_F(SnapshotPersistenceMetadataTest, AddAndDelete) {
+  const SnapshotUuid kUuid1 = "uuid1";
+  const StorageSize archive_size = StorageSize::Bytes(10);
+  const StorageSize old_metadata_size = metadata().CurrentSize();
+  const StorageSize old_metadata_remaining_space = metadata().RemainingSpace();
+
+  metadata().Add(kUuid1, archive_size, "key 1");
+
+  ASSERT_TRUE(metadata().Contains(kUuid1));
+  EXPECT_EQ(metadata().CurrentSize(), old_metadata_size + archive_size);
+  EXPECT_EQ(metadata().RemainingSpace(), old_metadata_remaining_space - archive_size);
+
+  metadata().Delete(kUuid1);
+
+  EXPECT_FALSE(metadata().Contains(kUuid1));
+  EXPECT_EQ(metadata().CurrentSize(), old_metadata_size);
+  EXPECT_EQ(metadata().RemainingSpace(), old_metadata_remaining_space);
 }
 
 }  // namespace

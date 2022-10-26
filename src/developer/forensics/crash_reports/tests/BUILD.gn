@@ -303,6 +303,7 @@ executable("snapshot_persistence_unittest_exe") {
     "//src/developer/forensics/testing:gmatchers",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//src/developer/forensics/testing:scoped_memfs_manager",
     "//src/developer/forensics/testing:unit_test_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
