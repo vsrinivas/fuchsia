@@ -25,6 +25,22 @@ func init() {
 				},
 				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
 			},
+			{
+				Name:    "StructTree/Depth6",
+				Comment: `Binary tree with depth 6 (63 elements)`,
+				Config: config.Config{
+					"depth": 6,
+				},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+			},
+			{
+				Name:    "StructTree/Depth4",
+				Comment: `Binary tree with depth 4 (15 elements)`,
+				Config: config.Config{
+					"depth": 4,
+				},
+				Allowlist: []config.Binding{config.LLCPP, config.HLCPP, config.CPP, config.Rust, config.Go, config.Walker, config.Reference, config.Dart},
+			},
 		},
 	})
 }

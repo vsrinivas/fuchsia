@@ -36,6 +36,8 @@ fuchsia.fidl_microbenchmarks: Dart/Decode/String/256/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Decode/String/4096/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Decode/StructArray/256/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Decode/StructField/16/WallTime
+fuchsia.fidl_microbenchmarks: Dart/Decode/StructTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Dart/Decode/StructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Decode/StructTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Decode/StructVector/256/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Decode/Table/AllSet/1/WallTime
@@ -93,6 +95,8 @@ fuchsia.fidl_microbenchmarks: Dart/Encode/String/256/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Encode/String/4096/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Encode/StructArray/256/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Encode/StructField/16/WallTime
+fuchsia.fidl_microbenchmarks: Dart/Encode/StructTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Dart/Encode/StructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Encode/StructTree/Depth8/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Encode/StructVector/256/WallTime
 fuchsia.fidl_microbenchmarks: Dart/Encode/Table/AllSet/1/WallTime

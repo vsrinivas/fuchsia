@@ -97,6 +97,12 @@ fuchsia.fidl_microbenchmarks: Go/Decode/StructField/16/WallTime
 fuchsia.fidl_microbenchmarks: Go/Decode/StructField/256/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Decode/StructField/256/Allocations
 fuchsia.fidl_microbenchmarks: Go/Decode/StructField/256/WallTime
+fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth4/AllocatedBytes
+fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth4/Allocations
+fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth6/AllocatedBytes
+fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth6/Allocations
+fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth8/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth8/Allocations
 fuchsia.fidl_microbenchmarks: Go/Decode/StructTree/Depth8/WallTime
@@ -265,6 +271,12 @@ fuchsia.fidl_microbenchmarks: Go/Encode/StructField/16/WallTime
 fuchsia.fidl_microbenchmarks: Go/Encode/StructField/256/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Encode/StructField/256/Allocations
 fuchsia.fidl_microbenchmarks: Go/Encode/StructField/256/WallTime
+fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth4/AllocatedBytes
+fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth4/Allocations
+fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth4/WallTime
+fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth6/AllocatedBytes
+fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth6/Allocations
+fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth6/WallTime
 fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth8/AllocatedBytes
 fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth8/Allocations
 fuchsia.fidl_microbenchmarks: Go/Encode/StructTree/Depth8/WallTime

@@ -390,3 +390,129 @@ benchmark("OptionalStructTree/Depth8") {
         },
     },
 }
+
+// Binary tree with depth 6 composed of recursive optional nodes (63 elements)
+benchmark("OptionalStructTree/Depth6") {
+    bindings_denylist = [go, dart],
+    value = OptionalStructTree{
+        left: OptionalStructTree{
+            left: OptionalStructTree{
+                left: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+                right: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+            },
+            right: OptionalStructTree{
+                left: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+                right: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+            },
+        },
+        right: OptionalStructTree{
+            left: OptionalStructTree{
+                left: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+                right: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+            },
+            right: OptionalStructTree{
+                left: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+                right: OptionalStructTree{
+                    left: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                    right: OptionalStructTree{
+                        left: OptionalStructTree{},
+                        right: OptionalStructTree{},
+                    },
+                },
+            },
+        },
+    },
+}
+
+// Binary tree with depth 4 composed of recursive optional nodes (15 elements)
+benchmark("OptionalStructTree/Depth4") {
+    bindings_denylist = [go, dart],
+    value = OptionalStructTree{
+        left: OptionalStructTree{
+            left: OptionalStructTree{
+                left: OptionalStructTree{},
+                right: OptionalStructTree{},
+            },
+            right: OptionalStructTree{
+                left: OptionalStructTree{},
+                right: OptionalStructTree{},
+            },
+        },
+        right: OptionalStructTree{
+            left: OptionalStructTree{
+                left: OptionalStructTree{},
+                right: OptionalStructTree{},
+            },
+            right: OptionalStructTree{
+                left: OptionalStructTree{},
+                right: OptionalStructTree{},
+            },
+        },
+    },
+}

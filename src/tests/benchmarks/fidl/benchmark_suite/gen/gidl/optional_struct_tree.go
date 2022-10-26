@@ -27,6 +27,22 @@ func init() {
 				// Dart doesn't support recursive type generation.
 				Denylist: []config.Binding{config.Go, config.Dart},
 			},
+			{
+				Name:    "OptionalStructTree/Depth6",
+				Comment: `Binary tree with depth 6 composed of recursive optional nodes (63 elements)`,
+				Config: config.Config{
+					"depth": 6,
+				},
+				Denylist: []config.Binding{config.Go, config.Dart},
+			},
+			{
+				Name:    "OptionalStructTree/Depth4",
+				Comment: `Binary tree with depth 4 composed of recursive optional nodes (15 elements)`,
+				Config: config.Config{
+					"depth": 4,
+				},
+				Denylist: []config.Binding{config.Go, config.Dart},
+			},
 		},
 	})
 }
