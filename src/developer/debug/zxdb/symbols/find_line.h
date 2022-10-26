@@ -45,19 +45,20 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
                                                     const std::string& full_path, int line);
 
 // Recursively searches the given code block (normally a function for the first call) for inlined
-// function calls whose call location could match the given file/line. Like
-// GetAllLineTableMatchesInUnit(), this will also match lines after the requested one. The results
-// will be appended to the given accumulator.
+// function calls whose call location could match the given file/line. The results will be appended
+// to the given accumulator.
 //
 // This is used to workaround the Clang bug
 // https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=112203
 // where it does not emit line table entries for the call location of an inline call. See where this
 // function is called from in ModuleSymbolsImpl for more.
 //
-// The function_die_offset will be used to construct all LineMatches. Since this is searching within
-// one function, the caller should know this for the outermost function.
+// The function_die_offset is the function corresponding to the input block. When the input block is
+// a function (as the initial call will be), this should be set to code_block->GetDieOffset(). But
+// for recursive calls, some blocks will be lexical scopes and we want to maintain the DIE offset
+// of the parent *function* containing it.
 void AppendLineMatchesForInlineCalls(const CodeBlock* block, const std::string& full_path, int line,
-                                     uint64_t function_die_offset,
+                                     uint64_t block_fn_die_offset,
                                      std::vector<LineMatch>* accumulator);
 
 // Filters the set of matches to get all instances of the closest match for the line, with a maximum

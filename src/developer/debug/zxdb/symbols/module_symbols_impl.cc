@@ -667,10 +667,9 @@ std::vector<Location> ModuleSymbolsImpl::ResolveElfName(const SymbolContext& sym
 //    See https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=112203 and
 //    https://github.com/llvm/llvm-project/issues/58483.
 //
-//    To work around this, for every function with a line table match from complication 1,
-//    we search for inlined function calls whose call location could match the input location.
-//    (Note: neither GDB nor LLDB do this as of this writing, this is more of a workaround for a
-//    Clang bug.)
+//    To work around this, for every function with a line table match from complication 1, we search
+//    for inlined function calls whose call location matches the input location. (Note: neither GDB
+//    nor LLDB do this as of this writing, this is more of a workaround for a Clang bug.)
 //
 // 3. The above step can find many different locations. Maybe some code from the file in question is
 //    inlined into the compilation unit, but not the function with the line in it. Or different
@@ -701,7 +700,6 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
     // Complication 1 above: find all matches for this line in the unit.
     std::vector<LineMatch> unit_matches =
         GetAllLineTableMatchesInUnit(line_table, canonical_file, line_number);
-
     matches.insert(matches.end(), unit_matches.begin(), unit_matches.end());
   }
 
@@ -715,41 +713,62 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   // we currently don't have a convenient way to map this back to a Symbol object. Instead, look up
   // the corresponding function based on address of the previously found match.
   //
-  // TODO: This will work for most cases but isn't quite sufficient. If you have an inlined function
-  // that consists only of a call to another inlined function (maybe in another file), the calling
-  // inlined function will never get identified in the previous loop and we'll never search its
-  // inlined call locations in this loop. Having an inline only call another inline isn't actually
-  // that uncommon in places like the STL.
+  // There are some limitations of this approach. But since neither GDB nor LLDB use inline call
+  // site information at all, our implementation is already better than the competition.
   //
-  // The correct approach would be brute-force search all functions in all units identified at the
-  // top of this function for inlined calls and check their call locations. However, our current
-  // implementation doesn't make it easy to go through all functions in a unit, and neither GDB nor
-  // LLDB handle the inlined call location searching at all. Therefore, this implementation seems
-  // good enough for now.
+  //  - TODO #1: This will work for most cases but isn't quite sufficient. If you have an inlined
+  //    function that consists only of a call to another inlined function (maybe in another file),
+  //    the calling inlined function will never get identified in the previous loop and we'll never
+  //    search its inlined call locations in this loop. Having an inline only call another inline
+  //    isn't actually that uncommon in places like the STL.
+  //
+  //  - TODO #2: For optimized code, sometimes the line you ask for doesn't have any code. To
+  //    support this, the line table searching code looks for lines after the one you asked for
+  //    also. To prevent matching all later lines in the file, it searches for *transitions* between
+  //    code before the line being searched for to code equal to or after the line being searched
+  //    for. The inline call site searching code doesn't have enough context to search for these
+  //    transitions so only searches for exact matches.
+  //
+  // The correct approach would be brute-force search all functions in the units identified at the
+  // top of this function that reference the file in question. We would check these functions for
+  // inlined calls and save their call locations. (As of this writing, our current symbol
+  // implementation doesn't make it easy to go through all functions in a unit).
+  //
+  // Then we would take these inline call locations and merge them into the line table in some way
+  // (probably we would make up a completely new line table that's processed in all the ways we need
+  // and cache it on the unit). This way, GetAllLineTableMatchesInUnit() can take inline call
+  // locations into account when looking for code line transitions. Then if you request a breakpoint
+  // for an optimized-out line *before* the inline call, it can "slide" down to the inline call
+  // even if there was no line table entry for it.
   std::set<uint64_t> checked_functions;          // LineMatch.function_die_offsets we've checked.
   size_t original_match_count = matches.size();  // Don't check anything the loop appends.
   for (size_t i = 0; i < original_match_count; i++) {
     const LineMatch& match = matches[i];
 
-    if (checked_functions.find(match.function_die_offset) != checked_functions.end()) {
+    if (checked_functions.find(match.function_die_offset) != checked_functions.end())
       continue;  // Already checked this function.
-    }
     checked_functions.insert(match.function_die_offset);
 
     auto unit = binary_->UnitForRelativeAddress(match.address);
     if (!unit)
       continue;  // Some kind of corruption.
 
-    if (uint64_t fn_die_offset = unit->FunctionDieOffsetForRelativeAddress(match.address)) {
-      if (auto fn = RefPtrTo(symbol_factory_->CreateSymbol(fn_die_offset)->As<Function>())) {
-        // Make sure we have the outermost function and not some random code block inside it.
-        // We want to do this *per* inline function.
-        fn = fn->GetContainingFunction(Function::kInlineOrPhysical);
+    if (auto fn =
+            RefPtrTo(symbol_factory_->CreateSymbol(match.function_die_offset)->As<Function>())) {
+      // Make sure we have the outermost function and not some random code block inside it.
+      //
+      // If GetContainingFunction() returns a different function that we put in (i.e. we put in
+      // an inline) but we've already checked it, give up. Don't do this if it gives us the
+      // same thing back since we've inserted our current function's DIE offset in the map but
+      // not checked it yet.
+      auto containing_fn = fn->GetContainingFunction(Function::kPhysicalOnly);
+      if (fn->GetDieOffset() != containing_fn->GetDieOffset() &&
+          checked_functions.find(fn->GetDieOffset()) != checked_functions.end())
+        continue;  // Already checked this toplevel function.
 
-        // Append any new matches.
-        AppendLineMatchesForInlineCalls(fn.get(), canonical_file, line_number,
-                                        match.function_die_offset, &matches);
-      }
+      // Append any new matches.
+      AppendLineMatchesForInlineCalls(containing_fn.get(), canonical_file, line_number,
+                                      containing_fn->GetDieOffset(), &matches);
     }
   }
 
@@ -758,10 +777,11 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
   // bigger than the input line, so this will be the closest).
   for (const LineMatch& match : GetBestLineMatches(matches)) {
     uint64_t abs_addr = symbol_context.RelativeToAbsolute(match.address);
-    if (options.symbolize)
+    if (options.symbolize) {
       output->push_back(LocationForAddress(symbol_context, abs_addr, options, nullptr));
-    else
+    } else {
       output->push_back(Location(Location::State::kAddress, abs_addr));
+    }
   }
 }
 

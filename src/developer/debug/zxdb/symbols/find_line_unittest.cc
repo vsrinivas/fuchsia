@@ -6,11 +6,20 @@
 
 #include <gtest/gtest.h>
 
+#include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/mock_line_table.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_factory.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 
 namespace zxdb {
+
+// For outputting error messages for LineMatch.
+std::ostream& operator<<(std::ostream& out, const LineMatch& m) {
+  return out << "LineMatch(" << to_hex_string(m.address) << ", " << m.line << ", "
+             << to_hex_string(m.function_die_offset) << ")";
+}
 
 TEST(FindLine, GetAllLineTableMatchesInUnit) {
   // The same file name can appear more than once as a line table "file" (they could be duplicates,
@@ -76,10 +85,21 @@ TEST(FindLine, AppendLineMatchesForInlineCalls) {
   const char kFilename[] = "file.cc";
   const int kLine = 100;
 
+  // This will set the DIE offsets for the symbols we make.
+  MockSymbolFactory symbol_factory;
+
+  // The structure we're setting up is:
+  //
+  // DW_TAG_subprogram outer_fn
+  //   DW_TAG_lexical_block outer_block
+  //     DW_TAG_inlined_subroutine inline_call1 (called BEFORE query line)
+  //     DW_TAG_inlined_subroutine inline_call2 (called AT query line)
+  //     DW_TAG_inlined_subroutine inline_call3 (called AFTER query line)
   constexpr uint64_t kFnBegin = 0x1000;
   constexpr uint64_t kFnEnd = 0x2000;
   auto outer_fn = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   outer_fn->set_code_ranges(AddressRanges(AddressRange(kFnBegin, kFnEnd)));
+  symbol_factory.SetMockSymbol(0x8642345, outer_fn);
 
   // This block covers the whole function (just to check recursive logic).
   auto outer_block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
@@ -91,6 +111,7 @@ TEST(FindLine, AppendLineMatchesForInlineCalls) {
   auto inline_call1 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   inline_call1->set_code_ranges(AddressRanges(AddressRange(kInlineCall1Begin, kInlineCall1End)));
   inline_call1->set_call_line(FileLine(kFilename, kLine - 1));
+  symbol_factory.SetMockSymbol(0x71283123, inline_call1);
 
   // This inlined function is called at the line in question.
   constexpr uint64_t kInlineCall2Begin = kFnBegin + 0x200;
@@ -98,32 +119,125 @@ TEST(FindLine, AppendLineMatchesForInlineCalls) {
   auto inline_call2 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   inline_call2->set_code_ranges(AddressRanges(AddressRange(kInlineCall2Begin, kInlineCall2End)));
   inline_call2->set_call_line(FileLine(kFilename, kLine));
+  symbol_factory.SetMockSymbol(0x973641, inline_call2);
 
-  // This inlined function is called at the line in question.
+  // This inlined function is called after the line in question.
   constexpr uint64_t kInlineCall3Begin = kFnBegin + 0x300;
   constexpr uint64_t kInlineCall3End = kFnBegin + 0x400;
   auto inline_call3 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
   inline_call3->set_code_ranges(AddressRanges(AddressRange(kInlineCall3Begin, kInlineCall3End)));
   inline_call3->set_call_line(FileLine(kFilename, kLine + 1));
+  symbol_factory.SetMockSymbol(0x123612935, inline_call3);
 
   // Hook up the hierarchy.
+  SymbolTestParentSetter call1_parent_setter(inline_call1, outer_block);
+  SymbolTestParentSetter call2_parent_setter(inline_call2, outer_block);
+  SymbolTestParentSetter call3_parent_setter(inline_call3, outer_block);
   outer_block->set_inner_blocks(
       {LazySymbol(inline_call1), LazySymbol(inline_call2), LazySymbol(inline_call3)});
+
+  SymbolTestParentSetter outer_block_parent_setter(outer_block, outer_fn);
   outer_fn->set_inner_blocks({LazySymbol(outer_block)});
 
   std::vector<LineMatch> result;
-  constexpr uint64_t kFunctionDieOffset = 0x12398645;
-  AppendLineMatchesForInlineCalls(outer_fn.get(), kFilename, kLine, kFunctionDieOffset, &result);
+  AppendLineMatchesForInlineCalls(outer_fn.get(), kFilename, kLine, outer_fn->GetDieOffset(),
+                                  &result);
 
-  // We should get the two later inlined calls (exact match and one following it).
-  ASSERT_EQ(2u, result.size());
-  EXPECT_EQ(result[0], LineMatch(kInlineCall2Begin, kLine, kFunctionDieOffset));
-  EXPECT_EQ(result[1], LineMatch(kInlineCall3Begin, kLine + 1, kFunctionDieOffset));
+  // We should get only the exact match.
+  ASSERT_EQ(1u, result.size());
+  EXPECT_EQ(result[0], LineMatch(kInlineCall2Begin, kLine, outer_fn->GetDieOffset())) << result[0];
 
-  // These should be collapsed down to only the exact match by GetBestLineMatches().
+  // Let's pretend the line table found another match after the line in question (this would
+  // normally be the case).
+  result.emplace_back(kInlineCall2Begin + 10, kLine + 1, outer_fn->GetDieOffset());
+
+  // GetBestLineMatches() should return only the inline match because it's an exact match.
   std::vector<LineMatch> best = GetBestLineMatches(result);
   ASSERT_EQ(1u, best.size());
-  EXPECT_EQ(best[0], LineMatch(kInlineCall2Begin, kLine, kFunctionDieOffset));
+  EXPECT_EQ(best[0], LineMatch(kInlineCall2Begin, kLine, outer_fn->GetDieOffset())) << best[0];
+}
+
+// Nested inline calls can mean there is more than one match for a line in a given physical
+// function. This happens if the breakpoint is requested at an given line calling an inner inline
+// function nested inside an inlined function that is called more than once.
+TEST(FindLine, AppendLineMatchesForInlineCalls_Multiple) {
+  // The location we're searching for.
+  const char kFilename[] = "file.cc";
+  const int kLine = 100;
+
+  // This will set the DIE offsets for the symbols we make.
+  MockSymbolFactory symbol_factory;
+
+  // The structure we're setting up is:
+  //
+  // DW_TAG_subprogram outer_fn
+  //   DW_TAG_inlined_subroutine inline1_call1   (called before query line)
+  //     DW_TAG_inlined_subroutine inline2_call1 (called at query line)
+  //   DW_TAG_inlined_subroutine inline1_call2   (called after query line)
+  //     DW_TAG_inlined_subroutine inline2_call2 (called at query line)
+  constexpr uint64_t kFnBegin = 0x1000;
+  constexpr uint64_t kFnEnd = 0x2000;
+  auto outer_fn = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
+  outer_fn->set_code_ranges(AddressRanges(AddressRange(kFnBegin, kFnEnd)));
+  symbol_factory.SetMockSymbol(0x8642345, outer_fn);
+
+  // First level of inline functions
+  constexpr uint64_t kInline1Call1Begin = kFnBegin + 0x100;
+  constexpr uint64_t kInline1Call1End = kFnBegin + 0x200;
+  auto inline1_call1 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline1_call1->set_code_ranges(AddressRanges(AddressRange(kInline1Call1Begin, kInline1Call1End)));
+  inline1_call1->set_call_line(FileLine(kFilename, kLine - 50));
+  symbol_factory.SetMockSymbol(0x71283123, inline1_call1);
+
+  constexpr uint64_t kInline1Call2Begin = kFnBegin + 0x200;
+  constexpr uint64_t kInline1Call2End = kFnBegin + 0x300;
+  auto inline1_call2 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline1_call2->set_code_ranges(AddressRanges(AddressRange(kInline1Call2Begin, kInline1Call2End)));
+  inline1_call2->set_call_line(FileLine(kFilename, kLine + 300));
+  symbol_factory.SetMockSymbol(0x973641, inline1_call2);
+
+  // Second level of inlined functions (called at the query line).
+  constexpr uint64_t kInline2Call1Begin = kInline1Call1Begin + 0x10;
+  constexpr uint64_t kInline2Call1End = kInline2Call1Begin + 0x20;
+  auto inline2_call1 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline2_call1->set_code_ranges(AddressRanges(AddressRange(kInline2Call1Begin, kInline2Call1End)));
+  inline2_call1->set_call_line(FileLine(kFilename, kLine));
+  symbol_factory.SetMockSymbol(0x123612935, inline2_call1);
+
+  constexpr uint64_t kInline2Call2Begin = kInline1Call2Begin + 0x10;
+  constexpr uint64_t kInline2Call2End = kInline2Call2Begin + 0x20;
+  auto inline2_call2 = fxl::MakeRefCounted<Function>(DwarfTag::kInlinedSubroutine);
+  inline2_call2->set_code_ranges(AddressRanges(AddressRange(kInline2Call2Begin, kInline2Call2End)));
+  inline2_call2->set_call_line(FileLine(kFilename, kLine));
+  symbol_factory.SetMockSymbol(0x123612935, inline2_call2);
+
+  // Hook up the hierarchy.
+  SymbolTestParentSetter call11_parent_setter(inline1_call1, outer_fn);
+  SymbolTestParentSetter call12_parent_setter(inline1_call2, outer_fn);
+  outer_fn->set_inner_blocks({LazySymbol(inline1_call1), LazySymbol(inline1_call2)});
+
+  SymbolTestParentSetter call21_parent_setter(inline2_call1, inline1_call1);
+  inline1_call1->set_inner_blocks({LazySymbol(inline2_call1)});
+
+  SymbolTestParentSetter call22_parent_setter(inline2_call2, inline1_call2);
+  inline1_call2->set_inner_blocks({LazySymbol(inline2_call2)});
+
+  std::vector<LineMatch> result;
+  AppendLineMatchesForInlineCalls(outer_fn.get(), kFilename, kLine, outer_fn->GetDieOffset(),
+                                  &result);
+
+  // This should return the two exact matches.
+  ASSERT_EQ(2u, result.size());
+  EXPECT_EQ(result[0], LineMatch(kInline2Call1Begin, kLine, inline1_call1->GetDieOffset()))
+      << std::hex << result[0].function_die_offset << " " << inline1_call1->GetDieOffset();
+  EXPECT_EQ(result[1], LineMatch(kInline2Call2Begin, kLine, inline1_call2->GetDieOffset()))
+      << std::hex << result[1].function_die_offset << " " << inline1_call2->GetDieOffset();
+
+  // Both matches should be kept when ranking. The order is not important.
+  std::vector<LineMatch> best = GetBestLineMatches(result);
+  ASSERT_EQ(2u, best.size());
+  EXPECT_TRUE((result[0] == best[0] && result[1] == best[1]) ||
+              (result[0] == best[1] && result[1] == best[0]));
 }
 
 TEST(FindLine, GetBestLineMatches) {

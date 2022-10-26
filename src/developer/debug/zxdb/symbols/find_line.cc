@@ -90,7 +90,7 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
 }
 
 void AppendLineMatchesForInlineCalls(const CodeBlock* block, const std::string& full_path, int line,
-                                     uint64_t function_die_offset,
+                                     uint64_t block_fn_die_offset,
                                      std::vector<LineMatch>* accumulator) {
   std::vector<LineMatch> result;
 
@@ -99,24 +99,37 @@ void AppendLineMatchesForInlineCalls(const CodeBlock* block, const std::string& 
     if (!child_block)
       continue;  // Shouldn't happen, maybe corrupt?
 
+    // This offset will be used for the recursive call and will depend on the type of item
+    // we're recursing into.
+    uint64_t containing_die_offset = block_fn_die_offset;
+
     if (const Function* child_fn = child_block->As<Function>()) {
+      // Checks that the call line is an exact match. Unlike the line table code, we don't want
+      // to get something bigger since that might match random inline calls after the line in
+      // question. See the call location in ModuleSymbolsImpl for more.
       if (child_fn->is_inline() && child_fn->call_line().file() == full_path &&
-          child_fn->call_line().line() >= line) {
+          child_fn->call_line().line() == line) {
         // Found a potential match.
         const AddressRange& addr_range = child_fn->code_ranges().GetExtent();
         if (addr_range.size() > 0) {
           // Some inlined functions may be optimized away, only add those with code.
+          //
+          // Note that the DIE offset we use here is that of the caller function. This is because
+          // the caller is the one where the call file/line matches, and which should be used to
+          // pick the best one in GetBestLineMatches() below.
           accumulator->emplace_back(addr_range.begin(), child_fn->call_line().line(),
-                                    function_die_offset);
+                                    block_fn_die_offset);
         }
       }
-    } else {
-      // Recurse into all child code blocks. We don't need to recurse into inline functions (handled
-      // above) because the toplevel call to AppendLineMatchesForInlineCalls() will be per-function
-      // (counting inlines as functions for the purposes of uniquifying matches).
-      AppendLineMatchesForInlineCalls(child_block, full_path, line, function_die_offset,
-                                      accumulator);
+
+      // When recursing into a function, we want to use the function's DIE offset, otherwise
+      // inherit the caller's DIE offset (the default value of containing_die_offset above).
+      containing_die_offset = child_fn->GetDieOffset();
     }
+
+    // Recurse into all child code blocks including inlines.
+    AppendLineMatchesForInlineCalls(child_block, full_path, line, containing_die_offset,
+                                    accumulator);
   }
 }
 
