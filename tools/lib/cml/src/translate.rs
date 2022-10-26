@@ -1127,6 +1127,7 @@ fn extract_use_availability(in_obj: &Use) -> Result<fdecl::Availability, Error> 
     match in_obj.availability.as_ref() {
         Some(Availability::Required) | None => Ok(fdecl::Availability::Required),
         Some(Availability::Optional) => Ok(fdecl::Availability::Optional),
+        Some(Availability::Transitional) => Ok(fdecl::Availability::Transitional),
         _ => Err(Error::internal(
             "availability \"same_as_target\" not supported for use declarations",
         )),
@@ -2080,7 +2081,7 @@ mod tests {
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
                     { "protocol": "fuchsia.sys2.DebugProto", "from": "debug" },
-                    { "protocol": "fuchsia.sys2.Echo", "from": "self", "availability": "optional" },
+                    { "protocol": "fuchsia.sys2.Echo", "from": "self", "availability": "transitional" },
                     { "directory": "assets", "rights" : ["read_bytes"], "path": "/data/assets" },
                     {
                         "directory": "config",
@@ -2189,7 +2190,7 @@ mod tests {
                             source: Some(fdecl::Ref::Self_(fdecl::SelfRef {})),
                             source_name: Some("fuchsia.sys2.Echo".to_string()),
                             target_path: Some("/svc/fuchsia.sys2.Echo".to_string()),
-                            availability: Some(fdecl::Availability::Optional),
+                            availability: Some(fdecl::Availability::Transitional),
                             ..fdecl::UseProtocol::EMPTY
                         }
                     ),
