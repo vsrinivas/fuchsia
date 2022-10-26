@@ -60,6 +60,14 @@ pub fn make_data_hdr(
 }
 
 pub fn make_data_frame_single_llc(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4]>) -> Vec<u8> {
+    make_data_frame_single_llc_payload(addr4, ht_ctrl, &[11, 11, 11][..])
+}
+
+pub fn make_data_frame_single_llc_payload(
+    addr4: Option<[u8; 6]>,
+    ht_ctrl: Option<[u8; 4]>,
+    payload: &[u8],
+) -> Vec<u8> {
     let qos_ctrl = [1, 1];
     let mut bytes = make_data_hdr(addr4, qos_ctrl, ht_ctrl);
     #[rustfmt::skip]
@@ -68,9 +76,8 @@ pub fn make_data_frame_single_llc(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4
         7, 7, 7, // DSAP, SSAP & control
         8, 8, 8, // OUI
         9, 10, // eth type
-        // Trailing bytes
-        11, 11, 11,
     ]);
+    bytes.extend_from_slice(payload);
     bytes
 }
 

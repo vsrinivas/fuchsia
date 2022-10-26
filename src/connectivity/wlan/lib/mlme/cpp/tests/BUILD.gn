@@ -68,30 +68,6 @@ test("ap_mlme_tests") {
   ]
 }
 
-test("client_mlme_tests") {
-  output_name = "wlan_client_mlme_unittest"
-
-  sources = [ "client_mlme_unittest.cc" ]
-
-  deps = [
-    ":test_main",
-    "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common_banjo_c",
-    "//sdk/fidl/fuchsia.wlan.ieee80211:fuchsia.wlan.ieee80211_hlcpp",
-    "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme_hlcpp",
-    "//src/connectivity/wlan/lib/common/cpp:common",
-    "//src/connectivity/wlan/lib/mlme/cpp:mlme",
-    "//third_party/googletest:gtest",
-  ]
-
-  # TODO(https://fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
-
-  configs += [
-    "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config",
-    "//build/config/fuchsia:enable_zircon_asserts",
-  ]
-}
-
 test("mac_tests") {
   output_name = "wlan_mac_unittest"
 
@@ -180,7 +156,6 @@ fuchsia_driver_package("wlanphy-testdev-driver") {
 tests = [
   "ap_mlme",
   "buffer_utils",
-  "client_mlme",
   "common",
   "mac",
 ]

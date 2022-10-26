@@ -514,6 +514,29 @@ mod test_utils {
         (control_handle, c2)
     }
 
+    pub(crate) fn fake_key(address: [u8; 6]) -> fidl_mlme::SetKeyDescriptor {
+        fidl_mlme::SetKeyDescriptor {
+            cipher_suite_oui: [1, 2, 3],
+            cipher_suite_type: 4,
+            key_type: fidl_mlme::KeyType::Pairwise,
+            address,
+            key_id: 6,
+            key: vec![1, 2, 3, 4, 5, 6, 7],
+            rsc: 8,
+        }
+    }
+
+    pub(crate) fn fake_mlme_set_keys_req(
+        exec: &fasync::TestExecutor,
+        address: [u8; 6],
+    ) -> fidl_mlme::MlmeRequest {
+        let (control_handle, _) = fake_control_handle(&exec);
+        fidl_mlme::MlmeRequest::SetKeysReq {
+            req: fidl_mlme::SetKeysRequest { keylist: vec![fake_key(address)] },
+            control_handle,
+        }
+    }
+
     pub struct FakeMlme {
         device: Device,
     }

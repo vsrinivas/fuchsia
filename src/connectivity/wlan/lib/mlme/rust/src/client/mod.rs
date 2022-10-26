@@ -2217,6 +2217,29 @@ mod tests {
     }
 
     #[test]
+    fn send_keys() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut me = m.make_mlme();
+        me.make_client_station_protected();
+        let mut client = me.get_bound_client().expect("client should be present");
+        client.move_to_associated_state();
+
+        assert!(m.fake_device.keys.is_empty());
+        client.handle_mlme_msg(crate::test_utils::fake_mlme_set_keys_req(&exec, BSSID.0));
+        assert_eq!(m.fake_device.keys.len(), 1);
+
+        let sent_key = crate::test_utils::fake_key(BSSID.0);
+        let key_len = m.fake_device.keys[0].key_len as usize;
+        assert_eq!(m.fake_device.keys[0].key[0..key_len], sent_key.key[..]);
+        assert_eq!(m.fake_device.keys[0].key_idx, sent_key.key_id as u8);
+        assert_eq!(
+            m.fake_device.keys[0].key_type,
+            banjo_fuchsia_hardware_wlan_associnfo::WlanKeyType::PAIRWISE
+        );
+    }
+
+    #[test]
     fn send_ps_poll_frame() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);

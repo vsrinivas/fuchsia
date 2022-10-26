@@ -1358,13 +1358,14 @@ mod tests {
                 Context, ParsedConnectRequest, TimedEventClass,
             },
             device::{Device, FakeDevice},
-            test_utils::{fake_control_handle, MockWlanRxInfo},
+            test_utils::{fake_control_handle, fake_mlme_set_keys_req, MockWlanRxInfo},
         },
         akm::AkmAlgorithm,
         banjo_fuchsia_hardware_wlan_associnfo as banjo_wlan_associnfo,
         banjo_fuchsia_wlan_common as banjo_common, banjo_fuchsia_wlan_internal as banjo_internal,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         ieee80211::Bssid,
+        test_case::test_case,
         wlan_common::{
             assert_variant,
             buffer_writer::BufferWriter,
@@ -2068,6 +2069,54 @@ mod tests {
     }
 
     #[test]
+    fn associated_skip_empty_data() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
+        let state =
+            Associated(Association { controlled_port_open: true, ..empty_association(&mut sta) });
+
+        let data_frame = make_data_frame_single_llc_payload(None, None, &[]);
+        let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
+        state.on_data_frame(&mut sta, &fixed, addr4, qos, body);
+
+        // Verify data frame was discarded.
+        assert!(m.fake_device.eth_queue.is_empty());
+    }
+
+    #[test_case(true, true; "port open and protected")]
+    #[test_case(false, true; "port closed and protected")]
+    #[test_case(true, false; "port open and unprotected")]
+    #[test_case(false, false; "port closed and unprotected (not a typical state)")]
+    fn associated_send_keep_alive_after_null_data_frame(
+        controlled_port_open: bool,
+        protected: bool,
+    ) {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut sta =
+            if protected { make_protected_client_station() } else { make_client_station() };
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
+        let state = Associated(Association { controlled_port_open, ..empty_association(&mut sta) });
+
+        let data_frame = make_null_data_frame();
+        let (fixed, addr4, qos, body) = parse_data_frame(&data_frame[..]);
+        state.on_data_frame(&mut sta, &fixed, addr4, qos, body);
+
+        // Verify data frame was not forwarded up.
+        assert!(m.fake_device.eth_queue.is_empty());
+        assert_eq!(m.fake_device.wlan_queue.len(), 1);
+        let (resp_header, _, _, resp_body) = parse_data_frame(&m.fake_device.wlan_queue[0].0[..]);
+        let fc = resp_header.frame_ctrl;
+        assert_eq!(fc.to_ds(), true);
+        assert_eq!(fc.from_ds(), false);
+        assert!(resp_body.is_empty());
+    }
+
+    #[test]
     fn associated_handle_eapol_closed_controlled_port() {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
@@ -2504,6 +2553,36 @@ mod tests {
                 association_ies: vec![],
             }
         );
+    }
+
+    #[test]
+    fn state_transitions_authing_state_wrong_algorithm() {
+        let exec = fasync::TestExecutor::new().expect("failed to create an executor");
+        let mut m = MockObjects::new(&exec);
+        let mut ctx = m.make_ctx();
+        let mut sta = make_client_station();
+        let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
+        let mut state =
+            States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
+
+        #[rustfmt::skip]
+        let auth_resp_wrong = vec![
+            // Mgmt Header:
+            0b1011_00_00, 0b00000000, // Frame Control
+            0, 0, // Duration
+            3, 3, 3, 3, 3, 3, // Addr1 == IFACE_MAC
+            3, 3, 3, 3, 3, 3, // Addr2
+            6, 6, 6, 6, 6, 6, // Addr3
+            0x10, 0, // Sequence Control
+            // Auth Header:
+            8, 0, // Algorithm Number (wrong algorithm: SAE)
+            2, 0, // Txn Sequence Number
+            0, 0, // Status Code
+        ];
+        state =
+            state.on_mac_frame(&mut sta, &auth_resp_wrong[..], MockWlanRxInfo::default().into());
+        assert_variant!(state, States::Joined(_), "not in joined state");
+        assert!(m.fake_device.bss_cfg.is_none());
     }
 
     #[test]
@@ -2981,12 +3060,14 @@ mod tests {
         }
     }
 
-    #[test]
-    fn assoc_send_eth_frame_becomes_data_frame() {
+    #[test_case(false; "unprotected bss")]
+    #[test_case(true; "protected bss")]
+    fn assoc_send_eth_frame_becomes_data_frame(protected: bool) {
         let exec = fasync::TestExecutor::new().expect("failed to create an executor");
         let mut m = MockObjects::new(&exec);
         let mut ctx = m.make_ctx();
-        let mut sta = make_client_station();
+        let mut sta =
+            if protected { make_protected_client_station() } else { make_client_station() };
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
         let state = States::from(statemachine::testing::new_state(Associated(Association {
             controlled_port_open: true,
@@ -3005,11 +3086,15 @@ mod tests {
 
         assert_eq!(m.fake_device.wlan_queue.len(), 1);
         let (data_frame, _tx_flags) = m.fake_device.wlan_queue.remove(0);
+        let mut fc_byte_2 = 0b00000001;
+        if protected {
+            fc_byte_2 |= 0b01000000;
+        }
         assert_eq!(
             &data_frame[..],
             &[
                 // Data header
-                0b00001000, 0b00000001, // Frame Control
+                0b00001000, fc_byte_2, // Frame Control
                 0, 0, // Duration
                 6, 6, 6, 6, 6, 6, // addr1
                 3, 3, 3, 3, 3, 3, // addr2 (from src_addr above)
@@ -3295,24 +3380,6 @@ mod tests {
         );
     }
 
-    fn fake_mlme_set_keys_req(exec: &fasync::TestExecutor) -> fidl_mlme::MlmeRequest {
-        let (control_handle, _) = fake_control_handle(&exec);
-        fidl_mlme::MlmeRequest::SetKeysReq {
-            req: fidl_mlme::SetKeysRequest {
-                keylist: vec![fidl_mlme::SetKeyDescriptor {
-                    cipher_suite_oui: [1, 2, 3],
-                    cipher_suite_type: 4,
-                    key_type: fidl_mlme::KeyType::Pairwise,
-                    address: [5; 6],
-                    key_id: 6,
-                    key: vec![1, 2, 3, 4, 5, 6, 7],
-                    rsc: 8,
-                }],
-            },
-            control_handle,
-        }
-    }
-
     #[test]
     #[allow(deprecated)]
     fn mlme_set_keys_not_associated() {
@@ -3323,15 +3390,15 @@ mod tests {
         let mut sta = sta.bind(&mut ctx, &mut m.scanner, &mut m.channel_state);
 
         let state = States::from(statemachine::testing::new_state(Joined));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec, BSSID.0));
         assert_eq!(m.fake_device.keys.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(open_authenticating(&mut sta)));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec, BSSID.0));
         assert_eq!(m.fake_device.keys.len(), 0);
 
         let state = States::from(statemachine::testing::new_state(Associating::default()));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec, BSSID.0));
         assert_eq!(m.fake_device.keys.len(), 0);
     }
 
@@ -3346,7 +3413,7 @@ mod tests {
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec, BSSID.0));
         assert_eq!(m.fake_device.keys.len(), 0);
     }
 
@@ -3361,7 +3428,7 @@ mod tests {
 
         let state =
             States::from(statemachine::testing::new_state(Associated(empty_association(&mut sta))));
-        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec));
+        let _state = state.handle_mlme_msg(&mut sta, fake_mlme_set_keys_req(&exec, BSSID.0));
         assert_eq!(m.fake_device.keys.len(), 1);
         let conf = assert_variant!(m.fake_device.next_mlme_msg::<fidl_mlme::SetKeysConfirm>(), Ok(conf) => conf);
         assert_eq!(conf.results.len(), 1);
@@ -3381,7 +3448,7 @@ mod tests {
             m.fake_device.keys[0].key_type,
             banjo_fuchsia_hardware_wlan_associnfo::WlanKeyType::PAIRWISE
         );
-        assert_eq!(m.fake_device.keys[0].peer_addr, [5; 6]);
+        assert_eq!(m.fake_device.keys[0].peer_addr, BSSID.0);
         assert_eq!(m.fake_device.keys[0].key_idx, 6);
         assert_eq!(m.fake_device.keys[0].key_len, 7);
         assert_eq!(
@@ -3408,7 +3475,7 @@ mod tests {
         m.fake_device.set_key_results.push(zx::Status::BAD_STATE);
         m.fake_device.set_key_results.push(zx::Status::OK);
         // Create a SetKeysReq with one success and one failure.
-        let mut set_keys_req = fake_mlme_set_keys_req(&exec);
+        let mut set_keys_req = fake_mlme_set_keys_req(&exec, BSSID.0);
         match &mut set_keys_req {
             fidl_mlme::MlmeRequest::SetKeysReq { req, .. } => {
                 req.keylist
