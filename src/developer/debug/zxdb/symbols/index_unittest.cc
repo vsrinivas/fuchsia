@@ -14,8 +14,8 @@
 
 #include "src/developer/debug/zxdb/common/string_util.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
-#include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
+#include "src/developer/debug/zxdb/symbols/symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 #include "src/lib/fxl/strings/split_string.h"
 

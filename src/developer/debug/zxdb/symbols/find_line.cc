@@ -78,9 +78,8 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
           }
           if (row_line == best_line) {
             // Accumulate all matching results.
-            auto subroutine = line_table.GetSubroutineForRow(row);
             result.emplace_back(row.Address.Address, row_line,
-                                subroutine.isValid() ? subroutine.getOffset() : 0);
+                                line_table.GetFunctionDieOffsetForRow(row));
           }
         }
       }

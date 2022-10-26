@@ -22,9 +22,9 @@ std::optional<std::string> MockLineTable::GetFileNameByIndex(uint64_t file_id) c
   return file_names_[file_id - 1];
 }
 
-llvm::DWARFDie MockLineTable::GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const {
+uint64_t MockLineTable::GetFunctionDieOffsetForRow(const llvm::DWARFDebugLine::Row& row) const {
   // For now, don't support subroutine lookup in the mock.
-  return llvm::DWARFDie();
+  return 0;
 }
 
 // static

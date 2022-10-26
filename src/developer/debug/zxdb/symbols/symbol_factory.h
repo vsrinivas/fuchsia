@@ -13,7 +13,9 @@
 
 namespace zxdb {
 
+class LazySymbol;
 class Symbol;
+class UncachedLazySymbol;
 
 // This class converts the information from a LazySymbol to a real Symbol.
 //
@@ -33,6 +35,10 @@ class SymbolFactory : public fxl::RefCountedThreadSafe<SymbolFactory> {
   // This function should never return null. To indicate failure, return a new default-constructed
   // Symbol object.
   virtual fxl::RefPtr<Symbol> CreateSymbol(uint64_t die_offset) const = 0;
+
+  // Returns a LazySymbol referencing the given DIE or DIE offset.
+  LazySymbol MakeLazy(uint64_t die_offset) const;
+  UncachedLazySymbol MakeUncachedLazy(uint64_t die_offset) const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(SymbolFactory);

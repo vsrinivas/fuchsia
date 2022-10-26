@@ -7,10 +7,10 @@
 
 #include <gtest/gtest.h>
 
-#include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/module_symbols_impl.h"
+#include "src/developer/debug/zxdb/symbols/symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 
 // See test_data/README.md for how to download the data required for this test and enable the build

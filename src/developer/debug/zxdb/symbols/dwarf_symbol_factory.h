@@ -27,11 +27,8 @@ class DwarfSymbolFactory : public SymbolFactory {
   // SymbolFactory implementation.
   fxl::RefPtr<Symbol> CreateSymbol(uint64_t die_offset) const override;
 
-  // Returns a LazySymbol referencing the given DIE or DIE offset.
-  LazySymbol MakeLazy(const llvm::DWARFDie& die) const;
-  LazySymbol MakeLazy(uint64_t die_offset) const;
-  UncachedLazySymbol MakeUncachedLazy(const llvm::DWARFDie& die) const;
-  UncachedLazySymbol MakeUncachedLazy(uint64_t die_offset) const;
+  using SymbolFactory::MakeLazy;
+  using SymbolFactory::MakeUncachedLazy;
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(DwarfSymbolFactory);
@@ -39,6 +36,9 @@ class DwarfSymbolFactory : public SymbolFactory {
 
   explicit DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols);
   ~DwarfSymbolFactory() override;
+
+  LazySymbol MakeLazy(const llvm::DWARFDie& die) const;
+  UncachedLazySymbol MakeUncachedLazy(const llvm::DWARFDie& die) const;
 
   llvm::DWARFContext* GetLLVMContext() const;
 

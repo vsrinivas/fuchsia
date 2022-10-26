@@ -12,7 +12,7 @@
 
 namespace zxdb {
 
-class DwarfSymbolFactory;
+class SymbolFactory;
 
 // An in-progress replacement for IndexNode. Not ready to use yet.
 class IndexNode {
@@ -101,10 +101,10 @@ class IndexNode {
   // If non-null, |factory_for_loc| will be used to add extra location information to certain types
   // of entries. Currently this prints out the relative code ranges for functions, and the DIE
   // offset of the indexed item for everything else.
-  void Dump(std::ostream& out, DwarfSymbolFactory* factory_for_loc = nullptr,
+  void Dump(std::ostream& out, SymbolFactory* factory_for_loc = nullptr,
             int indent_level = 0) const;
-  void Dump(const std::string& name, std::ostream& out,
-            DwarfSymbolFactory* factory_for_loc = nullptr, int indent_level = 0) const;
+  void Dump(const std::string& name, std::ostream& out, SymbolFactory* factory_for_loc = nullptr,
+            int indent_level = 0) const;
 
   const std::vector<SymbolRef>& dies() const { return dies_; }
 

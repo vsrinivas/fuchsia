@@ -15,26 +15,30 @@ class LineTableImpl : public LineTable {
   // Constructor for an empty line table.
   LineTableImpl() {}
 
-  // The passed-in pointers must outlive this class.
-  LineTableImpl(llvm::DWARFUnit* unit, const llvm::DWARFDebugLine::LineTable* line_table);
+  // The passed-in line table pointer must outlive this class.
+  LineTableImpl(fxl::WeakPtr<DwarfUnit> unit, const llvm::DWARFDebugLine::LineTable* line_table);
 
   ~LineTableImpl() override;
 
   // LineTable public implementation.
   size_t GetNumFileNames() const override;
   std::optional<std::string> GetFileNameByIndex(uint64_t file_id) const override;
-  llvm::DWARFDie GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const override;
+  uint64_t GetFunctionDieOffsetForRow(const llvm::DWARFDebugLine::Row& row) const override;
 
  protected:
   // LineTable protected implementation.
   const std::vector<llvm::DWARFDebugLine::Row>& GetRows() const override;
 
  private:
-  // Possibly null.
-  // TODO(brettw) remove when GetSubroutineForRow() is removed (see TODO in line_table.h).
-  llvm::DWARFUnit* unit_ = nullptr;
+  bool is_valid() const { return unit_ && line_table_; }
 
-  // This will be null if the unit has no line table or if default constructred.
+  // Possibly null.
+  fxl::WeakPtr<DwarfUnit> unit_;
+
+  // This will be null if the unit has no line table or if default constructed. If the unit_ is
+  // null, this pointer should be considered invalid since the memory will be backed by that object.
+  //
+  // Use is_valid() to check.
   const llvm::DWARFDebugLine::LineTable* line_table_ = nullptr;
 };
 

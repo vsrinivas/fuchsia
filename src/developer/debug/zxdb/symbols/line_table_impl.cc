@@ -11,20 +11,20 @@
 
 namespace zxdb {
 
-LineTableImpl::LineTableImpl(llvm::DWARFUnit* unit,
+LineTableImpl::LineTableImpl(fxl::WeakPtr<DwarfUnit> unit,
                              const llvm::DWARFDebugLine::LineTable* line_table)
-    : unit_(unit), line_table_(line_table) {}
+    : unit_(std::move(unit)), line_table_(line_table) {}
 
 LineTableImpl::~LineTableImpl() = default;
 
 size_t LineTableImpl::GetNumFileNames() const {
-  if (!line_table_)
+  if (!is_valid())
     return 0;
   return line_table_->Prologue.FileNames.size();
 }
 
 const std::vector<llvm::DWARFDebugLine::Row>& LineTableImpl::GetRows() const {
-  if (!line_table_) {
+  if (!is_valid()) {
     const static std::vector<llvm::DWARFDebugLine::Row> kEmptyRows;
     return kEmptyRows;
   }
@@ -32,7 +32,7 @@ const std::vector<llvm::DWARFDebugLine::Row>& LineTableImpl::GetRows() const {
 }
 
 std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) const {
-  if (!line_table_) {
+  if (!is_valid()) {
     // In the null case GetNumFileNames() will return 0 and the caller should have checked the
     // index was in range.
     FX_NOTREACHED();
@@ -47,10 +47,10 @@ std::optional<std::string> LineTableImpl::GetFileNameByIndex(uint64_t file_id) c
   return std::nullopt;
 }
 
-llvm::DWARFDie LineTableImpl::GetSubroutineForRow(const llvm::DWARFDebugLine::Row& row) const {
+uint64_t LineTableImpl::GetFunctionDieOffsetForRow(const llvm::DWARFDebugLine::Row& row) const {
   if (!unit_)
-    return llvm::DWARFDie();
-  return unit_->getSubroutineForAddress(row.Address.Address);
+    return 0;
+  return unit_->FunctionDieOffsetForRelativeAddress(row.Address.Address);
 }
 
 }  // namespace zxdb

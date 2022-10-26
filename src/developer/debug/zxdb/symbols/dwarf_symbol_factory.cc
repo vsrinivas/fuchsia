@@ -230,19 +230,11 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(const llvm::DWARFDie& die) 
 }
 
 LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) const {
-  return LazySymbol(fxl::RefPtr<const SymbolFactory>(this), die.getOffset());
-}
-
-LazySymbol DwarfSymbolFactory::MakeLazy(uint64_t die_offset) const {
-  return LazySymbol(fxl::RefPtr<const SymbolFactory>(this), die_offset);
+  return MakeLazy(die.getOffset());
 }
 
 UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(const llvm::DWARFDie& die) const {
-  return UncachedLazySymbol(fxl::RefPtr<const SymbolFactory>(this), die.getOffset());
-}
-
-UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(uint64_t die_offset) const {
-  return UncachedLazySymbol(fxl::RefPtr<const SymbolFactory>(this), die_offset);
+  return MakeUncachedLazy(die.getOffset());
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die, DwarfTag tag,

@@ -8,15 +8,15 @@
 
 #include <sstream>
 
-#include "src/developer/debug/zxdb/symbols/dwarf_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/symbol_factory.h"
 
 namespace zxdb {
 
 namespace {
 
 void DumpMap(const IndexNode::Map& map, int indent, const char* heading,
-             DwarfSymbolFactory* factory_for_loc, std::ostream& out) {
+             SymbolFactory* factory_for_loc, std::ostream& out) {
   if (map.empty())
     return;
 
@@ -95,16 +95,15 @@ std::string IndexNode::AsString(int indent_level) const {
   return out.str();
 }
 
-void IndexNode::Dump(std::ostream& out, DwarfSymbolFactory* factory_for_loc,
-                     int indent_level) const {
+void IndexNode::Dump(std::ostream& out, SymbolFactory* factory_for_loc, int indent_level) const {
   DumpMap(namespaces(), indent_level + 1, "Namespaces:", factory_for_loc, out);
   DumpMap(types(), indent_level + 1, "Types:", factory_for_loc, out);
   DumpMap(functions(), indent_level + 1, "Functions:", factory_for_loc, out);
   DumpMap(vars(), indent_level + 1, "Variables:", factory_for_loc, out);
 }
 
-void IndexNode::Dump(const std::string& name, std::ostream& out,
-                     DwarfSymbolFactory* factory_for_loc, int indent_level) const {
+void IndexNode::Dump(const std::string& name, std::ostream& out, SymbolFactory* factory_for_loc,
+                     int indent_level) const {
   out << std::string(indent_level * 2, ' ');
   if (name.empty())
     out << "<<empty index string>>";

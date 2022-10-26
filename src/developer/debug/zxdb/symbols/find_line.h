@@ -11,10 +11,6 @@
 #include <tuple>
 #include <vector>
 
-namespace llvm {
-class DWARFUnit;
-}
-
 namespace zxdb {
 
 class CodeBlock;

@@ -143,6 +143,7 @@ static_library("symbols") {
     "symbol.cc",
     "symbol_context.cc",
     "symbol_data_provider.cc",
+    "symbol_factory.cc",
     "symbol_utils.cc",
     "system_symbols.cc",
     "target_symbols.cc",

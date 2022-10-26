@@ -488,9 +488,10 @@ std::optional<Location> ModuleSymbolsImpl::DwarfLocationForAddress(
     lazy_function = LazySymbol(optional_func);
   } else {
     // Resolve the function for this address.
-    if (llvm::DWARFDie subroutine = unit->FunctionForRelativeAddress(relative_address)) {
-      // getSubroutineForAddress() will return the most specific inlined function for the address.
-      lazy_function = symbol_factory_->MakeLazy(subroutine);
+    if (uint64_t fn_die_offset = unit->FunctionDieOffsetForRelativeAddress(relative_address)) {
+      // FunctionForRelativeAddress() will return the most specific inlined function for the
+      // address.
+      lazy_function = symbol_factory_->MakeLazy(fn_die_offset);
       function = RefPtrTo(lazy_function.Get()->As<Function>());
 
       // The is_inline() check is strictly unnecessary since ambiguous inline computations will
@@ -739,8 +740,8 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(const SymbolContext& sym
     if (!unit)
       continue;  // Some kind of corruption.
 
-    if (llvm::DWARFDie subroutine_die = unit->FunctionForRelativeAddress(match.address)) {
-      if (auto fn = RefPtrTo(symbol_factory_->MakeLazy(subroutine_die).Get()->As<Function>())) {
+    if (uint64_t fn_die_offset = unit->FunctionDieOffsetForRelativeAddress(match.address)) {
+      if (auto fn = RefPtrTo(symbol_factory_->CreateSymbol(fn_die_offset)->As<Function>())) {
         // Make sure we have the outermost function and not some random code block inside it.
         // We want to do this *per* inline function.
         fn = fn->GetContainingFunction(Function::kInlineOrPhysical);

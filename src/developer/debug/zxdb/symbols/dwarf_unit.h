@@ -8,10 +8,10 @@
 #include <string>
 
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
-#include "llvm/DebugInfo/DWARF/DWARFUnit.h"
 #include "src/developer/debug/zxdb/symbols/arch.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -31,20 +31,21 @@ class LineTable;
 // not the CompileUnit DIE.
 class DwarfUnit : public fxl::RefCountedThreadSafe<DwarfUnit> {
  public:
-  // Returns the DIE information, if possible, for the function covering the given absolute address.
-  // TODO(brettw) return something higher-level than a DWARFDie.
-  llvm::DWARFDie FunctionForAddress(const SymbolContext& symbol_context,
-                                    TargetPointer absolute_address) const {
-    return FunctionForRelativeAddress(symbol_context.AbsoluteToRelative(absolute_address));
+  // Creates a weak pointer to this class. The units can get removed when modules or process are
+  // unloaded so if you need to keep a pointer, either keep a weak ptr or an owning refptr.
+  fxl::WeakPtr<DwarfUnit> GetWeakPtr() const { return weak_factory_.GetWeakPtr(); }
+
+  // Returns the DIE offset, if possible, for the function covering the given absolute/relative
+  // address. This will the most specific inlined subroutine if there are any. Returns 0 on failure.
+  uint64_t FunctionDieOffsetForAddress(const SymbolContext& symbol_context,
+                                       TargetPointer absolute_address) const {
+    return FunctionDieOffsetForRelativeAddress(symbol_context.AbsoluteToRelative(absolute_address));
   }
+  virtual uint64_t FunctionDieOffsetForRelativeAddress(uint64_t relative_address) const = 0;
 
   // Returns the offset of the beginning of this unit within the symbol file. Returns 0 on failure.
   // The only failure case is that the symbols were unloaded.
   virtual uint64_t GetOffset() const = 0;
-
-  // Returns the DIE information, if possible, for the function covering the given relative address.
-  // TODO(brettw) return something higher-level than a DWARFDie.
-  virtual llvm::DWARFDie FunctionForRelativeAddress(uint64_t relative_address) const = 0;
 
   // The compilation directory is what the compiler decides to write. In normal usage this will be
   // an absolute directory on the current computer. In the Fuchsia in-tree build this will be
@@ -70,7 +71,11 @@ class DwarfUnit : public fxl::RefCountedThreadSafe<DwarfUnit> {
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(DwarfUnit);
 
+  DwarfUnit() : weak_factory_(this) {}
   virtual ~DwarfUnit() = default;
+
+  // For line table back-pointers.
+  mutable fxl::WeakPtrFactory<DwarfUnit> weak_factory_;
 };
 
 }  // namespace zxdb

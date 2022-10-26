@@ -43,7 +43,7 @@ class Variable;
 class ModuleSymbolsImpl final : public ModuleSymbols {
  public:
   DwarfBinaryImpl* binary() { return binary_.get(); }
-  DwarfSymbolFactory* symbol_factory() { return symbol_factory_.get(); }
+  SymbolFactory* symbol_factory() { return symbol_factory_.get(); }
 
   fxl::WeakPtr<ModuleSymbolsImpl> GetWeakPtr();
 
@@ -180,7 +180,7 @@ class ModuleSymbolsImpl final : public ModuleSymbols {
   // relative address. Theoretically there can be more than one symbol for the same address.
   std::vector<const ElfSymbolRecord*> elf_addresses_;
 
-  fxl::RefPtr<DwarfSymbolFactory> symbol_factory_;
+  fxl::RefPtr<SymbolFactory> symbol_factory_;
 
   fxl::WeakPtrFactory<ModuleSymbolsImpl> weak_factory_;
 

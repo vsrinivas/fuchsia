@@ -7,6 +7,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
+#include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_binary_impl.h"
 #include "src/developer/debug/zxdb/symbols/line_table_impl.h"
 
@@ -15,10 +16,14 @@ namespace zxdb {
 DwarfUnitImpl::DwarfUnitImpl(DwarfBinaryImpl* binary, llvm::DWARFUnit* unit)
     : binary_(binary->GetWeakPtr()), unit_(unit) {}
 
-llvm::DWARFDie DwarfUnitImpl::FunctionForRelativeAddress(uint64_t relative_address) const {
+uint64_t DwarfUnitImpl::FunctionDieOffsetForRelativeAddress(uint64_t relative_address) const {
   if (!binary_)
-    return llvm::DWARFDie();
-  return unit_->getSubroutineForAddress(relative_address);
+    return 0;
+
+  llvm::DWARFDie die = unit_->getSubroutineForAddress(relative_address);
+  if (!die.isValid())
+    return 0;
+  return die.getOffset();
 }
 
 uint64_t DwarfUnitImpl::GetOffset() const {
@@ -41,7 +46,7 @@ std::string DwarfUnitImpl::GetCompilationDir() const {
 const LineTable& DwarfUnitImpl::GetLineTable() const {
   if (!line_table_) {
     if (binary_) {
-      line_table_.emplace(unit_, GetLLVMLineTable());
+      line_table_.emplace(GetWeakPtr(), GetLLVMLineTable());
     } else {
       line_table_.emplace();
     }
