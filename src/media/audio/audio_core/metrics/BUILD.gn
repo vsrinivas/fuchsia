@@ -15,9 +15,9 @@ source_set("metrics") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_cpp",
+    "//sdk/lib/sys/component/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fidl/cpp/contrib/connection:service_hub_connector",
-    "//zircon/system/ulib/service:service-llcpp",
   ]
 
   deps = [

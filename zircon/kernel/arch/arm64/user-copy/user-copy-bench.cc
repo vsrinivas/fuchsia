@@ -7,9 +7,9 @@
 #include <fcntl.h>
 #include <fidl/fuchsia.kernel/cpp/wire.h>
 #include <getopt.h>
-#include <lib/service/llcpp/service.h>
 #include <lib/stdcompat/array.h>
 #include <lib/stdcompat/span.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -53,7 +53,7 @@ void RandomizeBuffers(cpp20::span<uint8_t> buffer, unsigned int& seed) {
 
 // Platform specific logic to bind thread execution to a particular cpu base on index.
 [[maybe_unused]] bool BindToCpu(int cpu_num, bool use_deadline) {
-  auto client_or = service::Connect<fuchsia_kernel::RootJob>();
+  auto client_or = component::Connect<fuchsia_kernel::RootJob>();
   if (!client_or.is_ok()) {
     printf("Failed to connect to %s\n.", fidl::DiscoverableProtocolName<fuchsia_kernel::RootJob>);
     return false;

@@ -10,7 +10,7 @@
 
 #ifndef SYSLOG_STATIC
 #include <fidl/fuchsia.logger/cpp/wire.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #endif
 
 SYSLOG_EXPORT
@@ -154,7 +154,7 @@ zx_status_t fx_logger_create_internal(const fx_logger_config_t* config, fx_logge
   if (config->log_sink_channel == ZX_HANDLE_INVALID &&
       config->log_sink_socket == ZX_HANDLE_INVALID) {
     zx::result socket = []() -> zx::result<zx::socket> {
-      zx::result logger = service::Connect<fuchsia_logger::LogSink>();
+      zx::result logger = component::Connect<fuchsia_logger::LogSink>();
       if (logger.is_error()) {
         return logger.take_error();
       }

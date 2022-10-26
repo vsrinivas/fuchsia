@@ -167,8 +167,8 @@ fidl::WireSyncClient bar{std::move(bar_ends->client)};
 [`fdio_service_connect`][fdio-service-connect] is commonly used to connect to
 FIDL services in a component's namespace. Because its signature is C, it becomes
 quite verbose to use, especially in the presence of typed channels. We have
-created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
-[`service::ConnectAt<Protocol>`][service-connect-at], and
+created ergonomic wrappers: [`component::Connect<Protocol>`][service-connect],
+[`component::ConnectAt<Protocol>`][service-connect-at], and
 [`component::OpenServiceRoot`][open-service-root]. They are located in the
 [sdk/lib/sys/component/cpp][lib-component] library.
 
@@ -193,7 +193,7 @@ created ergonomic wrappers: [`service::Connect<Protocol>`][service-connect],
   // The channel creation and service connection is done in one function.
   // By default it opens the protocol name.
   // Returns |zx::result<fidl::ClientEnd<Foo>>|.
-  auto client_end = service::Connect<Foo>();
+  auto client_end = component::Connect<Foo>();
   if (!client_end.is_ok())
     return client_end.status_value();
   // Note: can omit template argument

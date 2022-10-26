@@ -5,12 +5,12 @@
 #include "src/media/audio/audio_core/metrics/metrics_impl.h"
 
 #include <lib/fidl/cpp/wire/channel.h>
+#include <lib/sys/component/cpp/service_client.h>
 
 #include <utility>
 #include <vector>
 
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "zircon/system/ulib/service/include/lib/service/llcpp/service.h"
 
 namespace media::audio {
 
@@ -51,7 +51,7 @@ void MetricsImpl::LogIntegerHistogram(uint32_t metric_id,
 }
 
 void MetricsImpl::ConnectToServiceHub(ServiceHubConnectResolver resolver) {
-  auto connection = service::ConnectAt<MetricEventLoggerFactory>(directory_);
+  auto connection = component::ConnectAt<MetricEventLoggerFactory>(directory_);
   if (connection.is_ok()) {
     resolver.resolve(std::move(connection.value()));
   }

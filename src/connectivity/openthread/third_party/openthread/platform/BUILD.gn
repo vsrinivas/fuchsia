@@ -50,7 +50,6 @@ source_set("platform") {
     "//third_party/openthread:lib-ot-core",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
     "//zircon/system/ulib/zx",
   ]

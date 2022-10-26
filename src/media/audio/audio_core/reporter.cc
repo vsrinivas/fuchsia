@@ -13,7 +13,6 @@
 #include "fidl/fuchsia.io/cpp/markers.h"
 #include "fidl/fuchsia.metrics/cpp/natural_types.h"
 #include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "lib/service/llcpp/service.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
 #include "src/media/audio/audio_core/metrics/metrics_impl.h"
@@ -1041,7 +1040,7 @@ void Reporter::InitInspect() {
 void Reporter::InitCobalt() {
   impl_->metrics_impl = std::make_unique<media::audio::MetricsImpl>(
       impl_->threading_model.FidlDomain().dispatcher(),
-      fidl::ClientEnd<fuchsia_io::Directory>(service::OpenServiceRoot()->TakeChannel()),
+      fidl::ClientEnd<fuchsia_io::Directory>(component::OpenServiceRoot()->TakeChannel()),
       kProjectId);
 }
 

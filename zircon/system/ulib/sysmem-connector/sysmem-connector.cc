@@ -12,7 +12,7 @@
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fit/function.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/sysmem-connector/sysmem-connector.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/process.h>
@@ -160,11 +160,11 @@ zx_status_t SysmemConnector::DeviceAdded(int dirfd, int event, const char* filen
 
   {
     const fdio_cpp::UnownedFdioCaller caller(dirfd);
-    zx::result status = service::ConnectAt<fuchsia_sysmem::DriverConnector>(
+    zx::result status = component::ConnectAt<fuchsia_sysmem::DriverConnector>(
         caller.borrow_as<fuchsia_io::Directory>(), filename);
     if (status.is_error()) {
-      printf("sysmem-connector: service::ConnectAt(%s, %s): %s\n", sysmem_directory_path_, filename,
-             status.status_string());
+      printf("sysmem-connector: component::ConnectAt(%s, %s): %s\n", sysmem_directory_path_,
+             filename, status.status_string());
       // If somehow connecting to this device instance fails, keep watching for
       // another device instance.
       return ZX_OK;

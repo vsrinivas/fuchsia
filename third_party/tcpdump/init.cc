@@ -7,7 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl/cpp/interface_handle.h>
-#include <lib/service/llcpp/service.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/vfs/cpp/composed_service_dir.h>
 #include <lib/zx/channel.h>
 #include <zircon/assert.h>
@@ -37,7 +37,7 @@ __attribute__((constructor)) void init_packet_socket_provider() {
     return;
   }
 
-  zx::result netstack_expose_dir = service::OpenServiceRoot(kNetstackExposeDir);
+  zx::result netstack_expose_dir = component::OpenServiceRoot(kNetstackExposeDir);
   switch (zx_status_t status = netstack_expose_dir.status_value(); status) {
     case ZX_OK:
       break;
@@ -54,7 +54,7 @@ __attribute__((constructor)) void init_packet_socket_provider() {
   // Our composed service directory should be a superset of the default service
   // directory.
   {
-    zx::result result = service::OpenServiceRoot();
+    zx::result result = component::OpenServiceRoot();
     ZX_ASSERT_MSG(result.is_ok(), "Failed to open root service directory: %s",
                   result.status_string());
     // TODO(https://fxbug.dev/72980): Avoid this type-unsafe conversion.
@@ -71,7 +71,7 @@ __attribute__((constructor)) void init_packet_socket_provider() {
       std::make_unique<vfs::Service>(
           [netstack_expose_dir = std::move(netstack_expose_dir.value())](
               zx::channel request, async_dispatcher_t* dispatcher) mutable {
-            zx::result result = service::ConnectAt(
+            zx::result result = component::ConnectAt(
                 netstack_expose_dir.borrow(),
                 fidl::ServerEnd<fuchsia_posix_socket_packet::Provider>(std::move(request)));
             ZX_ASSERT_MSG(result.is_ok(), "Failed to connect to packet socker provider: %s",
