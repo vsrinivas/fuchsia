@@ -168,26 +168,6 @@ Device::~Device() {
   // owns the device. If the device does not have a parent, then ops_ belongs to another driver, and
   // it's that driver's responsibility to be shut down.
   if (parent_) {
-    // Technically we shouldn't unbind here, since unbind should go parent to child.
-    // However, this is much simpler than going parent to child, and this
-    // *technically* upholds the same invariant, because at this point we know
-    // the device does not have any children.
-    // Also, if a device has unbind, it would be an error to call Release before
-    // Unbind.
-    // This may be a potential difference in behavior from DFv1, so this needs
-    // to be investigated further. For now, it will let us run integration tests.
-    // TODO(fxbug.dev/92196)
-    if (HasOp(ops_, &zx_protocol_device_t::unbind)) {
-      ops_->unbind(compat_symbol_.context);
-
-      // TODO(http://fxbug.dev/97457): Stop blocking here once we have prepare_stop
-      // If we haven't seen unbind complete then wait for it.
-      // This blocks the main thread, but if the driver didn't complete unbind
-      // during the unbind call, we assume it's handling it on a second thread.
-      zx_status_t status = unbind_completed_.Wait(zx::sec(10));
-      ZX_ASSERT_MSG(status == ZX_OK, "Timed out waiting for unbind to be completed");
-    }
-
     // Call the parent's pre-release.
     if (HasOp((*parent_)->ops_, &zx_protocol_device_t::child_pre_release)) {
       (*parent_)->ops_->child_pre_release((*parent_)->compat_symbol_.context,
@@ -217,7 +197,43 @@ void Device::Unbind() {
   node_ = {};
 }
 
-void Device::CompleteUnbind() { unbind_completed_.Signal(); }
+void Device::UnbindOp(fit::callback<void()> unbind_completed) {
+  ZX_ASSERT_MSG(!unbind_completed_, "Cannot call UnbindOp twice");
+  unbind_completed_ = std::move(unbind_completed);
+
+  // We conduct a post-order traversal. That is all children must be unbound prior to calling unbind
+  // on ourself.
+  if (HasChildren()) {
+    children_to_unbind_ = std::size(children_);
+    for (auto& child : children_) {
+      child->UnbindOp([this]() {
+        if (--children_to_unbind_ == 0) {
+          // We post this as a task in case unbind is completed in a different thread. We need to
+          // invoke unbind in the dispatcher_'s thread context.
+          async::PostTask(dispatcher_, fit::bind_member(this, &Device::PerformUnbind));
+        }
+      });
+    }
+  } else {
+    PerformUnbind();
+  }
+}
+
+void Device::PerformUnbind() {
+  // We don't call unbind on the root parent device because it belongs to another driver. We use the
+  // fact that the root parent doesn't have a parent_ to determine we are the parent.
+  if (parent_.has_value() && HasOp(ops_, &zx_protocol_device_t::unbind)) {
+    // CompleteUnbind will be called from |device_unbind_reply|.
+    ops_->unbind(compat_symbol_.context);
+  } else {
+    CompleteUnbind();
+  }
+}
+
+void Device::CompleteUnbind() {
+  ZX_ASSERT(unbind_completed_);
+  unbind_completed_();
+}
 
 const char* Device::Name() const { return name_.data(); }
 
@@ -567,7 +583,9 @@ fpromise::promise<void> Device::Remove() {
   return finished_bridge.consumer.promise();
 }
 
-void Device::RemoveChild(std::shared_ptr<Device>& child) { children_.remove(child); }
+void Device::RemoveChild(std::shared_ptr<Device>& child) {
+  child->UnbindOp([this, child]() { children_.remove(child); });
+}
 
 void Device::InsertOrUpdateProperty(fuchsia_driver_framework::wire::NodePropertyKey key,
                                     fuchsia_driver_framework::wire::NodePropertyValue value) {

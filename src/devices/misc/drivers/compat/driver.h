@@ -34,6 +34,7 @@ class Driver : public driver::DriverBase {
   ~Driver() override;
 
   zx::result<> Start() override;
+  void PrepareStop(PrepareStopContext* context) override;
 
   // Returns the context that DFv1 driver provided.
   void* Context() const;

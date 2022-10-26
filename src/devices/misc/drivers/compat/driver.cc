@@ -215,6 +215,11 @@ zx::result<> Driver::Start() {
 
 bool Driver::IsComposite() { return !parent_clients_.empty(); }
 
+void Driver::PrepareStop(PrepareStopContext* context) {
+  // TODO(http://fxbug.dev/97457): Query whether we should call suspend or unbind.
+  device_.UnbindOp([context]() { context->complete(context, ZX_OK); });
+}
+
 promise<zx::resource, zx_status_t> Driver::GetRootResource(
     const fidl::WireSharedClient<fboot::RootResource>& root_resource) {
   bridge<zx::resource, zx_status_t> bridge;
@@ -724,4 +729,4 @@ zx::result<std::unique_ptr<driver::DriverBase>> DriverFactory::CreateDriver(
 }  // namespace compat
 
 using record = driver::Record<compat::Driver, compat::DriverFactory>;
-FUCHSIA_DRIVER_RECORD_CPP_V2(record);
+FUCHSIA_DRIVER_RECORD_CPP_V3(record);

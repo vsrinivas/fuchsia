@@ -54,6 +54,9 @@ class Device : public std::enable_shared_from_this<Device>,
   // Unbinds a device from a DFv2 node.
   void Unbind();
 
+  // Call the Unbind op for the device.
+  void UnbindOp(fit::callback<void()> unbind_completed);
+
   // Removes all of the child devices.
   fpromise::promise<void> RemoveChildren();
 
@@ -103,6 +106,7 @@ class Device : public std::enable_shared_from_this<Device>,
 
   zx_status_t CreateNode();
 
+  void PerformUnbind();
   void CompleteUnbind();
 
   // Serves the |fuchsia_driver_framework::RuntimeConnector| protocol,
@@ -175,8 +179,9 @@ class Device : public std::enable_shared_from_this<Device>,
   bool pending_rebind_ = false;
   bool pending_removal_ = false;
 
-  // Signaled when unbind is replied to.
-  libsync::Completion unbind_completed_;
+  // Called when unbind is replied to.
+  fit::callback<void()> unbind_completed_;
+  std::atomic<size_t> children_to_unbind_;
 
   // The default protocol of the device.
   device_t compat_symbol_;
@@ -196,10 +201,11 @@ class Device : public std::enable_shared_from_this<Device>,
   // parent_ will be std::nullopt when the Device is the fake device created
   // by the Driver class in the DFv1 shim. When parent_ is std::nullopt, the
   // Device will be freed when the Driver is freed.
-  std::optional<Device*> parent_;
 
   fidl::WireSharedClient<fuchsia_driver_framework::Node> node_;
   fidl::WireSharedClient<fuchsia_driver_framework::NodeController> controller_;
+
+  const std::optional<Device*> parent_;
 
   // The Device's children. The Device has full ownership of the children,
   // but these are shared pointers so that the NodeController can get a weak
