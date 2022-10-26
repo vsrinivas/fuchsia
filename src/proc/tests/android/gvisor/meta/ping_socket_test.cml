@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/ping_socket_test",
-        args: [ "--gunit_filter=-*.ICMPPortExhaustion:*.ReceiveTOS:*.ReceiveTClass:*.ReceiveTTL:*.ReceiveHopLimit:*.ReceiveIPPacketInfo:*.ReceiveIPv6PktInfo:*/Fixture.Bind/ICMP_socket_V6Any:*/Fixture.Bind/ICMP_socket_V6Loopback:*/Fixture.Bind/ICMP_socket_V6Multicast:*/Fixture.Bind/ICMP_socket_V6MulticastInterfaceLocalAllNodes:*/Fixture.Bind/ICMP_socket_V6MulticastLinkLocalAllNodes:*/Fixture.Bind/ICMP_socket_V6MulticastLinkLocalAllRouters:*/Fixture.Bind/ICMP_socket_IPv6UnknownUnicast" ],
+        args: [ "--gunit_filter=-*.ICMPPortExhaustion:*.ReceiveTOS:*.ReceiveTClass:*.ReceiveTTL:*.ReceiveHopLimit:*.ReceiveIPPacketInfo:*.ReceiveIPv6PktInfo:*/Fixture.Bind/ICMP_socket_V6Any:*/Fixture.Bind/ICMP_socket_V6Loopback:*/Fixture.Bind/ICMP_socket_V6Multicast:*/Fixture.Bind/ICMP_socket_V6MulticastInterfaceLocalAllNodes:*/Fixture.Bind/ICMP_socket_V6MulticastLinkLocalAllNodes:*/Fixture.Bind/ICMP_socket_V6MulticastLinkLocalAllRouters:*/Fixture.Bind/ICMP_socket_IPv6UnknownUnicast:PingSocket.PayloadTooLarge" ],
     },
 }
