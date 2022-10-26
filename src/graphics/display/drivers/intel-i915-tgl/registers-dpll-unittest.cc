@@ -658,43 +658,90 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplier) {
       tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
           .FromValue(0);
 
-  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(1);
+  const bool no_tiger_lake_38mhz_workaround = false;
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(1, no_tiger_lake_38mhz_workaround);
   EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(1u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(1, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(1, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
 
-  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(0x8000);
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(0x7ffe,
+                                                             no_tiger_lake_38mhz_workaround);
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x7ffeu, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(0x7ffe, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(0x8000,
+                                                             no_tiger_lake_38mhz_workaround);
   EXPECT_EQ(1u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(0x8000, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(0x8000, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
 
   // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example of DVI on DDIB
   // using 113.309 MHz symbol clock and reference 24 MHz", page 182.
   // The DCO frequency is 9064.72 Mhz, so the DCO multiplier is
   // (9,064,720 kHz * 32,768 fraction precision) / (24,000 kHz) = 12,376,364.
 
-  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(12'376'364);
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(12'376'364,
+                                                             no_tiger_lake_38mhz_workaround);
   EXPECT_EQ(377u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(22828u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(12'376'364, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(12'376'364, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
 
   // Values from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "Example for DSI0 8X
   // 556.545 and reference 24 MHz", pages 185-186.
   // The DCO frequency is 8498.175 MHz, so the DCO multiplier is
   // (8,498,175 kHz * 32,768 fraction precision) / (24,000 kHz) = 11,602,841.
 
-  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(11'602'841);
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(11'602'841,
+                                                             no_tiger_lake_38mhz_workaround);
   EXPECT_EQ(354u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(2969u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(11'602'841, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(11'602'841, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
 
   // Frequency value where both fields start and end with 1s, to check for field
   // trimming / incorrect overflowing.
   static constexpr int32_t kMultiplierBits = 0b1100110011'110011010110011;
-  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(kMultiplierBits);
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(kMultiplierBits,
+                                                             no_tiger_lake_38mhz_workaround);
   EXPECT_EQ(0b1100110011u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0b110011010110011u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(kMultiplierBits, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(kMultiplierBits, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
+}
+
+TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyMultiplierTigerLake38MhzWorkaround) {
+  auto dpll0_cfgcr0 =
+      tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
+          .FromValue(0);
+
+  // The DPLL converts 38.4 MHz to 19.2 MHz internally, presumably by doubling
+  // the divider. On Tiger Lake display engines, this conversion appears to be
+  // done twice for the DCO fraction field. So, we must compensate by dividing
+  // the DCO fraction by 2. Source: IHD-OS-TGL-Vol 14-12.21 pages 32 and 62.
+
+  const bool tiger_lake_38mhz_workaround = true;
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(2, tiger_lake_38mhz_workaround);
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(1u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(2, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(0x7ffe, tiger_lake_38mhz_workaround);
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x3fffu, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(0x7ffe, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(0x8000, tiger_lake_38mhz_workaround);
+  EXPECT_EQ(1u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(0x8000, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
+
+  // Frequency value where both fields start and end with 1s, to check for field
+  // trimming / incorrect overflowing.
+  static constexpr int32_t kMultiplierBits = 0b1100110011'11011011011011'0;
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_multiplier(kMultiplierBits,
+                                                             tiger_lake_38mhz_workaround);
+  EXPECT_EQ(0b1100110011u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0b11011011011011u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(kMultiplierBits, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
 }
 
 TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhz) {
@@ -723,6 +770,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   auto dpll0_cfgcr0 =
       tgl_registers::DisplayPllDcoFrequencyTigerLake::GetForDpll(tgl_registers::Dpll::DPLL_0)
           .FromValue(0);
+  const bool no_tiger_lake_38mhz_workaround = false;
 
   // Test cases from IHD-OS-TGL-Vol 12-1.22-Rev2.0 section "DisplayPort Mode PLL
   // Values" pages 178-179.
@@ -739,7 +787,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'100'000, 24'000);
   EXPECT_EQ(0x151u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0x4000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(11'059'200, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(11'059'200, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
   EXPECT_EQ(8'100'000, dpll0_cfgcr0.dco_frequency_khz(24'000));
 
   // DCO frequency 8,640,000 kHz - multiplier 11,796,480
@@ -748,7 +796,7 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'640'000, 24'000);
   EXPECT_EQ(0x168u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(11'796'480, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(11'796'480, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
   EXPECT_EQ(8'640'000, dpll0_cfgcr0.dco_frequency_khz(24'000));
 
   // DCO frequency 9,720,000 kHz - multiplier
@@ -756,12 +804,17 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'720'000, 24'000);
   EXPECT_EQ(0x195u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(13'271'040, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(13'271'040, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
   EXPECT_EQ(9'720'000, dpll0_cfgcr0.dco_frequency_khz(24'000));
 
   // Values for 19.2 MHz and 38.4 MHz reference clocks.
   // DCO frequency = DCO multiplier * 19,200 kHz / (32'768 fraction precision)
-  // The DPLL converts 38.4 MHz to 19.2 MHz internally.
+  //
+  // The DPLL converts 38.4 MHz to 19.2 MHz internally, presumably by doubling
+  // the divider. On Tiger Lake display engines, this conversion appears to be
+  // done twice for the DCO fraction field. So, we must compensate by dividing
+  // the DCO fraction by 2. Source: IHD-OS-TGL-Vol 14-12.21 pages 32 and 62.
+  const bool tiger_lake_38mhz_workaround = true;
 
   // DCO frequency 8,100,000 kHz, multiplier 13'824'000
   // Divider 3 - 2.7 GHz (5.4 GHz link rate)
@@ -772,13 +825,13 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'100'000, 19'200);
   EXPECT_EQ(0x1a5u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0x7000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(13'824'000, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(13'824'000, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
   EXPECT_EQ(8'100'000, dpll0_cfgcr0.dco_frequency_khz(19'200));
 
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'100'000, 38'400);
   EXPECT_EQ(0x1a5u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
-  EXPECT_EQ(0x7000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(13'824'000, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(0x3800u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(13'824'000, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
   EXPECT_EQ(8'100'000, dpll0_cfgcr0.dco_frequency_khz(38'400));
 
   // DCO frequency 8,640,000 kHz - multiplier 14,745,600
@@ -787,21 +840,27 @@ TEST(DisplayPllDcoFrequencyTigerLakeTest, DcoFrequencyKhzDisplayPortTable) {
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'640'000, 19'200);
   EXPECT_EQ(0x1c2u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(14'745'600, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(14'745'600, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
   EXPECT_EQ(8'640'000, dpll0_cfgcr0.dco_frequency_khz(19'200));
 
   dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(8'640'000, 38'400);
   EXPECT_EQ(0x1c2u, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(14'745'600, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(14'745'600, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
   EXPECT_EQ(8'640'000, dpll0_cfgcr0.dco_frequency_khz(38'400));
 
   // DCO frequency 9,720,000 kHz - multiplier 16,588,800
   // Divider 3 - 3.24 GHz (6.48 GHz link rate)
-  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'720'000, 38'400);
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'720'000, 19'200);
   EXPECT_EQ(0x1fau, dpll0_cfgcr0.dco_frequency_multiplier_integer());
   EXPECT_EQ(0x2000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
-  EXPECT_EQ(16'588'800, dpll0_cfgcr0.dco_frequency_multiplier());
+  EXPECT_EQ(16'588'800, dpll0_cfgcr0.dco_frequency_multiplier(no_tiger_lake_38mhz_workaround));
+  EXPECT_EQ(9'720'000, dpll0_cfgcr0.dco_frequency_khz(19'200));
+
+  dpll0_cfgcr0.set_reg_value(0).set_dco_frequency_khz(9'720'000, 38'400);
+  EXPECT_EQ(0x1fau, dpll0_cfgcr0.dco_frequency_multiplier_integer());
+  EXPECT_EQ(0x1000u, dpll0_cfgcr0.dco_frequency_multiplier_fraction());
+  EXPECT_EQ(16'588'800, dpll0_cfgcr0.dco_frequency_multiplier(tiger_lake_38mhz_workaround));
   EXPECT_EQ(9'720'000, dpll0_cfgcr0.dco_frequency_khz(38'400));
 }
 

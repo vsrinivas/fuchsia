@@ -683,7 +683,10 @@ class DisplayPllDcoDividersKabyLake
 // The Kaby Lake and Skylake equivalent of this register is
 // `DisplayPllDcoFrequencyKabyLake` (DPLL_CFGCR1).
 //
-// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 650
+// Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 page 650 and
+//             IHD-OS-TGL-Vol 14-12.21 pages 32 and 62.
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 page 614
+// Ice Lake: IHD-OS-ICLLP-Vol 2c-1.22-Rev2.0 Part 1 pages 471-472
 class DisplayPllDcoFrequencyTigerLake
     : public hwreg::RegisterBase<DisplayPllDcoFrequencyTigerLake, uint32_t> {
  public:
@@ -694,7 +697,14 @@ class DisplayPllDcoFrequencyTigerLake
   // equivalent of the decimal point.
   static constexpr int kMultiplierPrecisionBits = 15;
 
-  DEF_RSVDZ_FIELD(31, 25);
+  DEF_RSVDZ_FIELD(31, 26);
+
+  // Enables SSC (Spread Spectrum Clocking) on Ice Lake display engines.
+  //
+  // On Tiger Lake, SSC is configured in the `DisplayPllSpreadSpectrumClocking`
+  // (DPLL_SSC) register. The SSC entries in IHD-OS-TGL-Vol 14-12.21 pages 8 and
+  // 47 suggest that this change landed late / unintentionally.
+  DEF_BIT(25, spread_spectrum_clocking_enabled_ice_lake);
 
   // These fields have a non-trivial representation. They should be used via the
   // `dco_frequency_multiplier()` and `set_dco_frequency_multiplier()`
@@ -706,22 +716,37 @@ class DisplayPllDcoFrequencyTigerLake
   //
   // The return value has `kMultiplierPrecisionBits` fractional bits.
   //
+  // `tiger_lake_38mhz_workaround` must be true iff targeting a Tiger Lake
+  // display engine with a 38.4 MHz reference. clock.
+  //
   // The multiplier is relative to the display engine reference frequency. On
   // Tiger Lake, there are multiple possible values for this reference
   // frequency.
-  int32_t dco_frequency_multiplier() const {
-    return static_cast<int32_t>(
-        (static_cast<int32_t>(dco_frequency_multiplier_integer()) << kMultiplierPrecisionBits) |
-        static_cast<int32_t>(dco_frequency_multiplier_fraction()));
+  int32_t dco_frequency_multiplier(bool tiger_lake_38mhz_workaround) const {
+    const int32_t raw_integer_multiplier = static_cast<int32_t>(dco_frequency_multiplier_integer());
+    const int32_t raw_fractional_multiplier =
+        static_cast<int32_t>(dco_frequency_multiplier_fraction());
+    const int32_t adjusted_fractional_multiplier = raw_fractional_multiplier
+                                                   << (tiger_lake_38mhz_workaround ? 1 : 0);
+
+    // `integer_multiplier` and `raw_fractional_multiplier` do not have any
+    // overlapping bits. However, `adjusted_fractional_multiplier` may overlap
+    // by 1 bit, in case of incorrect configuration.
+    return (raw_integer_multiplier << kMultiplierPrecisionBits) + adjusted_fractional_multiplier;
   }
 
   // See `dco_frequency_multiplier()` for details.
-  DisplayPllDcoFrequencyTigerLake& set_dco_frequency_multiplier(int32_t multiplier) {
+  DisplayPllDcoFrequencyTigerLake& set_dco_frequency_multiplier(int32_t multiplier,
+                                                                bool tiger_lake_38mhz_workaround) {
     ZX_ASSERT(multiplier > 0);
     ZX_ASSERT(multiplier < (1 << 25));
 
-    return set_dco_frequency_multiplier_fraction(multiplier & ((1 << kMultiplierPrecisionBits) - 1))
-        .set_dco_frequency_multiplier_integer(multiplier >> kMultiplierPrecisionBits);
+    const int32_t raw_integer_multiplier = multiplier >> kMultiplierPrecisionBits;
+    const int32_t raw_fractional_multiplier = multiplier & ((1 << kMultiplierPrecisionBits) - 1);
+    const int32_t adjusted_fractional_multiplier =
+        raw_fractional_multiplier >> (tiger_lake_38mhz_workaround ? 1 : 0);
+    return set_dco_frequency_multiplier_fraction(adjusted_fractional_multiplier)
+        .set_dco_frequency_multiplier_integer(raw_integer_multiplier);
   }
 
   // The currently configured DCO (Digitally Controlled Oscillator) frequency.
@@ -733,11 +758,14 @@ class DisplayPllDcoFrequencyTigerLake
   // This is a convenience method on top of the `dco_frequency_multiplier`
   // fields.
   int32_t dco_frequency_khz(int32_t reference_frequency_khz) const {
+    const bool tiger_lake_38mhz_workaround = reference_frequency_khz == 38'400;
+    const int32_t pll_reference_khz = PllReferenceFrequencyKhz(reference_frequency_khz);
+
     // The formulas in the PRM use truncating division when converting from a
     // frequency to a DCO multiplier. Rounding up below aims to re-constitue an
     // original frequency that is round-tripped through the conversion.
     return static_cast<int32_t>(
-        ((int64_t{dco_frequency_multiplier()} * PllReferenceFrequency(reference_frequency_khz)) +
+        ((int64_t{dco_frequency_multiplier(tiger_lake_38mhz_workaround)} * pll_reference_khz) +
          (1 << kMultiplierPrecisionBits) - 1) >>
         kMultiplierPrecisionBits);
   }
@@ -752,10 +780,13 @@ class DisplayPllDcoFrequencyTigerLake
   // fields.
   DisplayPllDcoFrequencyTigerLake& set_dco_frequency_khz(int32_t frequency_khz,
                                                          int32_t reference_frequency_khz) {
+    const bool tiger_lake_38mhz_workaround = reference_frequency_khz == 38'400;
+    const int32_t pll_reference_khz = PllReferenceFrequencyKhz(reference_frequency_khz);
+
     // The formulas in the PRM use truncating division.
-    return set_dco_frequency_multiplier(
-        static_cast<int32_t>((int64_t{frequency_khz} << kMultiplierPrecisionBits) /
-                             PllReferenceFrequency(reference_frequency_khz)));
+    const int32_t frequency_multiplier = static_cast<int32_t>(
+        (int64_t{frequency_khz} << kMultiplierPrecisionBits) / pll_reference_khz);
+    return set_dco_frequency_multiplier(frequency_multiplier, tiger_lake_38mhz_workaround);
   }
 
   static auto GetForDpll(Dpll dpll) {
@@ -764,6 +795,7 @@ class DisplayPllDcoFrequencyTigerLake
     // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
     ZX_ASSERT_MSG(dpll <= Dpll::DPLL_2, "Unsupported DPLL %d", dpll);
 
+    // The MMIO addresses vary across Tiger Lake, DG1, and Ice Lake.
     const int dpll_index = dpll - Dpll::DPLL_0;
     static constexpr uint32_t kMmioAddresses[] = {0x164284, 0x16428c, 0x16429c, 0, 0x164294};
     return hwreg::RegisterAddr<DisplayPllDcoFrequencyTigerLake>(kMmioAddresses[dpll_index]);
@@ -771,7 +803,7 @@ class DisplayPllDcoFrequencyTigerLake
 
  private:
   // Computes the PLL reference frequency from the display reference frequency.
-  static int32_t PllReferenceFrequency(int32_t reference_frequency_khz) {
+  static int32_t PllReferenceFrequencyKhz(int32_t reference_frequency_khz) {
     ZX_ASSERT(reference_frequency_khz > 0);
     if (reference_frequency_khz == 38'400) {
       // The DPLL uses a 19.2Mhz reference frequency if the display reference is
@@ -804,6 +836,8 @@ class DisplayPllDcoFrequencyTigerLake
 // `DisplayPllDcoDividersTigerLake` (DPLL_CFGCR2).
 //
 // Tiger Lake: IHD-OS-TGL-Vol 2c-1.22-Rev2.0 Part 1 pages 651-652
+// DG1: IHD-OS-DG1-Vol 2c-2.21 Part 1 pages 615-616
+// Ice Lake: IHD-OS-ICLLP-Vol 2c-1.22-Rev2.0 Part 1 pages 473-474
 class DisplayPllDcoDividersTigerLake
     : public hwreg::RegisterBase<DisplayPllDcoDividersTigerLake, uint32_t> {
  public:
@@ -957,6 +991,7 @@ class DisplayPllDcoDividersTigerLake
     // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
     ZX_ASSERT_MSG(dpll <= Dpll::DPLL_2, "Unsupported DPLL %d", dpll);
 
+    // The MMIO addresses vary across Tiger Lake, DG1, and Ice Lake.
     const int dpll_index = dpll - Dpll::DPLL_0;
     static constexpr uint32_t kMmioAddresses[] = {0x164288, 0x164290, 0x1642a0, 0, 0x164298};
     return hwreg::RegisterAddr<DisplayPllDcoDividersTigerLake>(kMmioAddresses[dpll_index]);
@@ -1112,6 +1147,7 @@ class DisplayPllSpreadSpectrumClocking
     // TODO(fxbug.dev/110351): Allow DPLL 4, once we support it.
     ZX_ASSERT_MSG(dpll <= Dpll::DPLL_1, "Unsupported DPLL %d", dpll);
 
+    // The MMIO addresses vary across Tiger Lake and DG1.
     const int dpll_index = dpll - Dpll::DPLL_0;
     static constexpr uint32_t kMmioAddresses[] = {0x164b10, 0x164c10, 0, 0, 0x16e10};
     return hwreg::RegisterAddr<DisplayPllSpreadSpectrumClocking>(kMmioAddresses[dpll_index]);
