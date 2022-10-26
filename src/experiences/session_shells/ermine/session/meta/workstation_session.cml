@@ -88,7 +88,6 @@
                 "fuchsia.ui.input3.Keyboard",
                 "fuchsia.ui.keyboard.focus.Controller",
                 "fuchsia.ui.scenic.Scenic",
-                "fuchsia.ui.shortcut.Registry",
                 "fuchsia.ui.shortcut2.Registry",
                 "fuchsia.ui.views.ViewRefInstalled",
                 "fuchsia.update.channelcontrol.ChannelControl",

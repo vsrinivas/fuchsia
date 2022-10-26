@@ -189,7 +189,7 @@ impl<T> Window<T> {
 
             if let Err(error) = registry.set_view(&mut view_ref_for_shortcuts, listener_client_end)
             {
-                error!("Failed to set_view on fuchsia.ui.shortcut.Registry: {:?}", error);
+                error!("Failed to set_view on fuchsia.ui.shortcut2.Registry: {:?}", error);
                 return;
             }
 
