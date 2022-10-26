@@ -182,6 +182,7 @@ pub fn dispatch_syscall(
         removexattr[2],
         rename[2],
         renameat[4],
+        renameat2[5],
         restart_syscall[0],
         rmdir[1],
         rt_sigaction[4],

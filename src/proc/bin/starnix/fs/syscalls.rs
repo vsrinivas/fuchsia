@@ -621,6 +621,22 @@ pub fn sys_renameat(
     new_dir_fd: FdNumber,
     new_user_path: UserCString,
 ) -> Result<(), Errno> {
+    sys_renameat2(current_task, old_dir_fd, old_user_path, new_dir_fd, new_user_path, 0)
+}
+
+pub fn sys_renameat2(
+    current_task: &CurrentTask,
+    old_dir_fd: FdNumber,
+    old_user_path: UserCString,
+    new_dir_fd: FdNumber,
+    new_user_path: UserCString,
+    flags: u32,
+) -> Result<(), Errno> {
+    if flags != 0 {
+        not_implemented!(current_task, "renameat flags {:?}", flags);
+        return error!(EINVAL);
+    }
+
     let lookup = |dir_fd, user_path| {
         lookup_parent_at(current_task, dir_fd, user_path, |parent, basename| {
             Ok((parent, basename.to_vec()))
