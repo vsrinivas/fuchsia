@@ -4,6 +4,7 @@
 
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
+#include "src/developer/debug/zxdb/common/ref_ptr_to.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
@@ -15,6 +16,21 @@ namespace zxdb {
 Symbol::Symbol() = default;
 Symbol::Symbol(DwarfTag tag) : tag_(tag) {}
 Symbol::~Symbol() = default;
+
+LazySymbol Symbol::GetLazySymbol() const {
+  if (lazy_this_.is_valid())
+    return lazy_this_.GetCached(RefPtrTo(this));
+
+  // In this case, this symbol is likely a synthetic symbol (like a built-in type) or something
+  // created manually in a unit test. Create a LazySymbol that just holds a reference.
+  return LazySymbol(RefPtrTo(this));
+}
+
+uint64_t Symbol::GetDieOffset() const {
+  if (lazy_this_.is_valid())
+    return lazy_this_.die_offset();
+  return 0;
+}
 
 const std::string& Symbol::GetAssignedName() const {
   const static std::string empty;

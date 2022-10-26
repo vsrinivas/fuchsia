@@ -277,13 +277,24 @@ OutputBuffer FormatVariableLocation(int indent, const std::string& title,
   return out;
 }
 
+std::string FormatDieTagAndOffset(const Symbol* symbol) {
+  std::string out = DwarfTagToString(symbol->tag(), true);
+  if (uint64_t die_offset = symbol->GetDieOffset()) {
+    out.append(" @ offset ");
+    out.append(to_hex_string(die_offset));
+  } else {
+    out.append(" (synthetic symbol)");
+  }
+  return out;
+}
+
 OutputBuffer FormatType(const ProcessSymbols* process_symbols, const Type* type) {
   OutputBuffer out;
   out.Append(Syntax::kHeading, "Type: ");
   out.Append(GetFormattedName(type));
 
   out.Append(Syntax::kHeading, "\n  DWARF tag: ");
-  out.Append(DwarfTagToString(type->tag(), true) + "\n");
+  out.Append(FormatDieTagAndOffset(type) + "\n");
   out.Append(FormatCompilationUnitAndModule(0, type));
   out.Append(Syntax::kHeading, "  Byte size: ");
   out.Append(std::to_string(type->byte_size()) + "\n");
@@ -327,7 +338,7 @@ OutputBuffer FormatVariable(const std::string& heading, int indent,
   out.Append(FormatTypeDescription("Type", variable->type()));
   out.Append(FormatCompilationUnitAndModule(indent, variable));
   out.Append(Syntax::kHeading, indent_str + "  DWARF tag: ");
-  out.Append(DwarfTagToString(variable->tag(), true) + "\n");
+  out.Append(FormatDieTagAndOffset(variable) + "\n");
 
   out.Append(FormatVariableLocation(indent + 1, "DWARF location", symbol_context,
                                     variable->location(), opts));
@@ -340,10 +351,11 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
   OutputBuffer out;
 
   // Type and name.
-  if (function->is_inline())
+  if (function->is_inline()) {
     out.Append(Syntax::kHeading, "Inline function: ");
-  else
+  } else {
     out.Append(Syntax::kHeading, "Function: ");
+  }
 
   FormatFunctionNameOptions name_opts;
   name_opts.name.bold_last = true;
@@ -351,6 +363,9 @@ OutputBuffer FormatFunction(const SymbolContext& symbol_context, const Function*
 
   out.Append(FormatFunctionName(function, name_opts));
   out.Append("\n");
+
+  out.Append(Syntax::kHeading, "  DWARF tag: ");
+  out.Append(FormatDieTagAndOffset(function) + "\n");
 
   // Linkage name.
   if (!function->linkage_name().empty()) {
@@ -408,7 +423,7 @@ OutputBuffer FormatDataMember(const DataMember* data_member) {
   out.Append(Syntax::kHeading, "  Offset within container: ");
   out.Append(fxl::StringPrintf("%" PRIu32 "\n", data_member->member_location()));
   out.Append(Syntax::kHeading, "  DWARF tag: ");
-  out.Append(DwarfTagToString(data_member->tag(), true) + "\n");
+  out.Append(FormatDieTagAndOffset(data_member) + "\n");
 
   return out;
 }
@@ -437,6 +452,8 @@ OutputBuffer FormatOtherSymbol(const Symbol* symbol) {
   OutputBuffer out;
   out.Append(Syntax::kHeading, "Other symbol: ");
   out.Append(symbol->GetFullName() + "\n");
+  out.Append(Syntax::kHeading, "  DWARF tag: ");
+  out.Append(FormatDieTagAndOffset(symbol) + "\n");
   return out;
 }
 
@@ -464,7 +481,10 @@ OutputBuffer FormatCallSiteParameter(const SymbolContext& symbol_context,
 OutputBuffer FormatCallSite(const SymbolContext& symbol_context, const CallSite* call_site,
                             const FormatSymbolOptions& opts) {
   OutputBuffer out;
-  out.Append(Syntax::kHeading, "Call Site\n  Return to: ");
+  out.Append(Syntax::kHeading, "Call Site\n  DWARF tag: ");
+  out.Append(FormatDieTagAndOffset(call_site) + "\n");
+
+  out.Append(Syntax::kHeading, "  Return to: ");
   if (call_site->return_pc()) {
     out.Append(to_hex_string(symbol_context.RelativeToAbsolute(*call_site->return_pc())));
   } else {

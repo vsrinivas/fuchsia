@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/symbols/call_site_parameter.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
+#include "src/developer/debug/zxdb/symbols/mock_symbol_factory.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
@@ -32,6 +33,11 @@ TEST(FormatSymbol, Variable) {
   auto var = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable, "my_var", int32_type,
                                            VariableLocation(loc_entries));
 
+  // Provide a DIE offset of this symbol so we can test its output. The MockSymbolFactory will
+  // set this on the symbol in SetMockSymbol to the requested offset.
+  MockSymbolFactory symbol_factory;
+  symbol_factory.SetMockSymbol(0x12345, var);
+
   FormatSymbolOptions opts;
   opts.arch = debug::Arch::kX64;
 
@@ -41,7 +47,7 @@ TEST(FormatSymbol, Variable) {
   const char kExpectedBytes[] =
       "Variable: my_var\n"
       "  Type: int32_t\n"
-      "  DWARF tag: DW_TAG_variable (0x34)\n"
+      "  DWARF tag: DW_TAG_variable (0x34) @ offset 0x12345\n"
       "  DWARF location (address range + DWARF expression):\n"
       "    [0x1000, 0x2000): 0x30 0x71 0x01\n"
       "    [0x3000, 0x4000): 0x31\n";
@@ -53,7 +59,7 @@ TEST(FormatSymbol, Variable) {
   const char kExpectedOps[] =
       "Variable: my_var\n"
       "  Type: int32_t\n"
-      "  DWARF tag: DW_TAG_variable (0x34)\n"
+      "  DWARF tag: DW_TAG_variable (0x34) @ offset 0x12345\n"
       "  DWARF location (address range + DWARF expression):\n"
       "    [0x1000, 0x2000): DW_OP_lit0, DW_OP_breg1(1)\n"
       "    [0x3000, 0x4000): DW_OP_lit1\n";
@@ -65,7 +71,7 @@ TEST(FormatSymbol, Variable) {
   const char kExpectedPretty[] =
       "Variable: my_var\n"
       "  Type: int32_t\n"
-      "  DWARF tag: DW_TAG_variable (0x34)\n"
+      "  DWARF tag: DW_TAG_variable (0x34) @ offset 0x12345\n"
       "  DWARF location (address range + DWARF expression):\n"
       "    [0x1000, 0x2000): push(0), register(rdx) + 1\n"
       "    [0x3000, 0x4000): push(1)\n";
@@ -77,7 +83,7 @@ TEST(FormatSymbol, BaseType) {
   OutputBuffer out = FormatSymbol(nullptr, int32_type.get(), FormatSymbolOptions());
   const char kExpected[] =
       "Type: int32_t\n"
-      "  DWARF tag: DW_TAG_base_type (0x24)\n"
+      "  DWARF tag: DW_TAG_base_type (0x24) (synthetic symbol)\n"
       "  Byte size: 4\n"
       "  DWARF base type: DW_ATE_signed (0x05)\n";
   EXPECT_EQ(kExpected, out.AsString());
@@ -109,7 +115,7 @@ TEST(FormatSymbol, Collection) {
   OutputBuffer out = FormatSymbol(nullptr, coll.get(), FormatSymbolOptions());
   const char kExpectedHeader[] =
       "Type: MyStruct\n"
-      "  DWARF tag: DW_TAG_structure_type (0x13)\n"
+      "  DWARF tag: DW_TAG_structure_type (0x13) (synthetic symbol)\n"
       "  Byte size: 12\n"
       "  Calling convention: DW_CC_normal\n";
   const char kMembers[] =  // Split off to allow re-use below.
@@ -127,7 +133,7 @@ TEST(FormatSymbol, Collection) {
   coll_typedef->set_assigned_name("MyTypedef");
   const char kTypedefHeader[] =
       "Type: MyTypedef\n"
-      "  DWARF tag: DW_TAG_typedef (0x16)\n"
+      "  DWARF tag: DW_TAG_typedef (0x16) (synthetic symbol)\n"
       "  Byte size: 12\n"
       "  Underlying type: MyStruct\n";
   out = FormatSymbol(nullptr, coll_typedef.get(), FormatSymbolOptions());
@@ -146,6 +152,7 @@ TEST(FormatSymbol, CallSite) {
   OutputBuffer out = FormatSymbol(nullptr, call.get(), FormatSymbolOptions());
   EXPECT_EQ(
       "Call Site\n"
+      "  DWARF tag: DW_TAG_call_site (0x48) (synthetic symbol)\n"
       "  Return to: 0x1000\n"
       "  Parameters:\n"
       "    Call site parameter:\n"

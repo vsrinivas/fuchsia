@@ -32,7 +32,7 @@ class SymbolFactory : public fxl::RefCountedThreadSafe<SymbolFactory> {
  public:
   // This function should never return null. To indicate failure, return a new default-constructed
   // Symbol object.
-  virtual fxl::RefPtr<Symbol> CreateSymbol(uint64_t factory_data) const = 0;
+  virtual fxl::RefPtr<Symbol> CreateSymbol(uint64_t die_offset) const = 0;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(SymbolFactory);

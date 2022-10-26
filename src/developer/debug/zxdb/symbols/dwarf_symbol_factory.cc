@@ -123,11 +123,11 @@ DwarfSymbolFactory::DwarfSymbolFactory(fxl::WeakPtr<ModuleSymbolsImpl> symbols)
     : symbols_(std::move(symbols)) {}
 DwarfSymbolFactory::~DwarfSymbolFactory() = default;
 
-fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(uint64_t factory_data) const {
+fxl::RefPtr<Symbol> DwarfSymbolFactory::CreateSymbol(uint64_t die_offset) const {
   if (!symbols_)
     return fxl::MakeRefCounted<Symbol>();
 
-  llvm::DWARFDie die = GetLLVMContext()->getDIEForOffset(factory_data);
+  llvm::DWARFDie die = GetLLVMContext()->getDIEForOffset(die_offset);
   if (!die.isValid())
     return fxl::MakeRefCounted<Symbol>();
 
@@ -214,6 +214,8 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(const llvm::DWARFDie& die) 
       // All unhandled Tag types get a Symbol that has the correct tag, but no other data.
       symbol = fxl::MakeRefCounted<Symbol>(static_cast<DwarfTag>(die.getTag()));
   }
+
+  symbol->set_lazy_this(MakeUncachedLazy(die));
 
   // Set the parent block if it hasn't been set already by the type-specific factory. In particular,
   // we want the function/variable specification's parent block if there was a specification since
@@ -956,6 +958,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(const llvm::DWARFDie&
   if (name)
     result->set_assigned_name(*name);
 
+  result->set_lazy_this(MakeUncachedLazy(die));
   if (parent)
     result->set_parent(MakeUncachedLazy(parent));
 

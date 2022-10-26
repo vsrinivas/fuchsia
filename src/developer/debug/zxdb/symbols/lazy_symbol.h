@@ -28,13 +28,24 @@ class LazySymbolBase {
   LazySymbolBase(const LazySymbolBase& other) = default;
   LazySymbolBase(LazySymbolBase&& other) = default;
 
-  LazySymbolBase(fxl::RefPtr<const SymbolFactory> factory, uint64_t factory_data)
-      : factory_(std::move(factory)), factory_data_(factory_data) {}
+  LazySymbolBase(fxl::RefPtr<const SymbolFactory> factory, uint64_t die_offset)
+      : factory_(std::move(factory)), die_offset_(die_offset) {}
 
   ~LazySymbolBase() = default;
 
   LazySymbolBase& operator=(const LazySymbolBase& other);
   LazySymbolBase& operator=(LazySymbolBase&& other);
+
+  // Returns the DIE offset of the symbol that will be created. This will be 0 for invalid or
+  // uninitialized LazySymbols, as well as most synthetic symbols (like built-in types and
+  // especially types created in unit tests).
+  //
+  // Do not compare to 0 for testing validity; use is_valid() instead which will handle the
+  // synthetic cases.
+  //
+  // Otherwise, the main use of this can be for comparing symbol identity without decoding them in
+  // cases where you know the symbols aren't synthetic.
+  uint64_t die_offset() const { return die_offset_; }
 
  protected:
   // Validity tests both for the factory and the symbol since non-lazy ones don't need a factory.
@@ -46,13 +57,14 @@ class LazySymbolBase {
   // Returns a cached null symbol for error cases.
   static fxl::RefPtr<Symbol> GetNullSymbol();
 
+  const fxl::RefPtr<const SymbolFactory>& factory() const { return factory_; }
+
  private:
   // May be null if this contains no type reference.
   fxl::RefPtr<const SymbolFactory> factory_;
 
-  // Opaque data passed to the factory to construct a type Symbol for this. In the DWARF factory,
-  // this is a DIE offset.
-  uint64_t factory_data_ = 0;
+  // Offset of the DIE for this symbol.
+  uint64_t die_offset_ = 0;
 };
 
 // Use for references from a parent symbol object to its children.
@@ -62,7 +74,11 @@ class LazySymbol : public LazySymbolBase {
   LazySymbol(const LazySymbol& other) = default;
   LazySymbol(LazySymbol&& other) = default;
 
-  LazySymbol(fxl::RefPtr<const SymbolFactory> factory, uint64_t factory_data);
+  // If the value of the cached object is known at creation time, it can be provided as the
+  // pre_cached parameter. Otherwise it is fine to leave this empty (it is an optimization to
+  // prevent re-decoding).
+  LazySymbol(fxl::RefPtr<const SymbolFactory> factory, uint64_t die_offset,
+             fxl::RefPtr<Symbol> pre_cached = {});
 
   // Implicitly creates a non-lazy one with a pre-cooked object, mostly for tests.
   template <class SymbolType>
@@ -90,7 +106,7 @@ class UncachedLazySymbol : public LazySymbolBase {
   UncachedLazySymbol(const UncachedLazySymbol& other) = default;
   UncachedLazySymbol(UncachedLazySymbol&& other) = default;
 
-  UncachedLazySymbol(fxl::RefPtr<const SymbolFactory> factory, uint64_t factory_data);
+  UncachedLazySymbol(fxl::RefPtr<const SymbolFactory> factory, uint64_t die_offset);
 
   ~UncachedLazySymbol();
 
@@ -103,6 +119,13 @@ class UncachedLazySymbol : public LazySymbolBase {
   // Returns the type associated with this LazySymbol. If this class is invalid or the symbol fails
   // to resolve this will return an empty one. It will never return a null pointer.
   fxl::RefPtr<Symbol> Get() const;
+
+  // Returns a LazySymbol that references the same symbol as this object. This can be used in cases
+  // where you need a LazySymbol from an uncached one. This is safe as long as you're not storing it
+  // in such a way that it will create a reference cycle.
+  //
+  // If known in advance, the cached result may be provided as an optimization.
+  LazySymbol GetCached(fxl::RefPtr<Symbol> cached_value = {}) const;
 
   // Makes an object with a static reference to an explicit symbol. Used for tests.
   //

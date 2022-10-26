@@ -36,12 +36,12 @@ constexpr uint64_t kUnitOffset = 0x2000000;
 class DwarfExprEvalTest : public TestWithLoop {
  public:
   DwarfExprEvalTest()
-      : symbol_factory_(fxl::MakeRefCounted<MockSymbolFactory>()),
-        provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()),
-        eval_(UnitSymbolFactory(symbol_factory_, kUnitOffset), provider_, symbol_context_) {}
+      : provider_(fxl::MakeRefCounted<MockSymbolDataProvider>()),
+        eval_(UnitSymbolFactory(symbol_factory_.factory_ref(), kUnitOffset), provider_,
+              symbol_context_) {}
 
   DwarfExprEval& eval() { return eval_; }
-  MockSymbolFactory& symbol_factory() { return *symbol_factory_; }
+  MockSymbolFactory& symbol_factory() { return symbol_factory_; }
   fxl::RefPtr<MockSymbolDataProvider> provider() { return provider_; }
   const SymbolContext symbol_context() const { return symbol_context_; }
 
@@ -80,7 +80,7 @@ class DwarfExprEvalTest : public TestWithLoop {
               const char* expected_message = nullptr);
 
  private:
-  fxl::RefPtr<MockSymbolFactory> symbol_factory_;
+  MockSymbolFactory symbol_factory_;
   fxl::RefPtr<MockSymbolDataProvider> provider_;
   SymbolContext symbol_context_ = SymbolContext(kModuleBase);
   DwarfExprEval eval_;

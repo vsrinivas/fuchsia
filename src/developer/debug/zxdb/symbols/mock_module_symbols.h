@@ -62,7 +62,7 @@ class MockModuleSymbols : public ModuleSymbols {
   ModuleSymbolStatus GetStatus() const override;
   std::time_t GetModificationTime() const override { return modification_time_; }
   std::string GetBuildDir() const override { return build_dir_; }
-  SymbolFactory* GetSymbolFactory() const override { return symbol_factory_.get(); }
+  const SymbolFactory* GetSymbolFactory() const override { return symbol_factory_.factory(); }
   uint64_t GetMappedLength() const override { return mapped_length_; }
   std::vector<Location> ResolveInputLocation(const SymbolContext& symbol_context,
                                              const InputLocation& input_location,
@@ -87,7 +87,7 @@ class MockModuleSymbols : public ModuleSymbols {
   ~MockModuleSymbols() override;
 
  private:
-  fxl::RefPtr<MockSymbolFactory> symbol_factory_ = fxl::MakeRefCounted<MockSymbolFactory>();
+  MockSymbolFactory symbol_factory_;
 
   Index index_;
 

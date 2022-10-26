@@ -21,12 +21,11 @@ class LazySymbol;
 class ModuleSymbolsImpl;
 class UncachedLazySymbol;
 
-// Implementation of SymbolFactory that reads from the DWARF symbols in the
-// given module.
+// Implementation of SymbolFactory that reads from the DWARF symbols in the given module.
 class DwarfSymbolFactory : public SymbolFactory {
  public:
   // SymbolFactory implementation.
-  fxl::RefPtr<Symbol> CreateSymbol(uint64_t factory_data) const override;
+  fxl::RefPtr<Symbol> CreateSymbol(uint64_t die_offset) const override;
 
   // Returns a LazySymbol referencing the given DIE or DIE offset.
   LazySymbol MakeLazy(const llvm::DWARFDie& die) const;

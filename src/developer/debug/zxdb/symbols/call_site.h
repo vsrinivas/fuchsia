@@ -39,7 +39,7 @@ class CallSite : public Symbol {
   FRIEND_MAKE_REF_COUNTED(CallSite);
 
   explicit CallSite(std::optional<TargetPointer> return_pc, std::vector<LazySymbol> params)
-      : return_pc_(return_pc), parameters_(std::move(params)) {}
+      : Symbol(DwarfTag::kCallSite), return_pc_(return_pc), parameters_(std::move(params)) {}
 
   std::optional<TargetPointer> return_pc_;
 
