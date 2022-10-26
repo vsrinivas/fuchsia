@@ -715,7 +715,7 @@ template("assembled_system") {
                              "visibility",
                            ])
 
-    # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
+    # This will not be resolved except by moving to Bazel.
     hermetic_deps = false
 
     args = [

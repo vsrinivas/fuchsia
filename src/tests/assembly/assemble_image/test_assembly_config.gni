@@ -154,7 +154,7 @@ template("test_assembly_config") {
     python_action("${target_name}") {
       testonly = true
 
-      # TODO(fxbug.dev/77290) - Add depfile support and then remove the following
+      # This will not be resolved except by moving to Bazel.
       hermetic_deps = false
       binary_label = ":bin"
       args = [

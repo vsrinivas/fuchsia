@@ -68,8 +68,8 @@ group("non_hermetic_deps") {
   # action_tracer.py due to how it cleans it's dynamic outputs.
   visibility += [ "//bundles/assembly/*" ]
 
-  # TODO(http://fxbug.dev/77290): Remove entries when
-  # //build/images/assemble_system.gni no longer needs `hermetic_deps = false`.
+  # //build/images/assemble_system.gni needs `hermetic_deps = false`, and that
+  # will not be resolved except by moving to Bazel.
   visibility += [
     "//build/images/*",
     "//src/security/ffx_test/*",
