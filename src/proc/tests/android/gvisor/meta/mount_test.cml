@@ -5,7 +5,7 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/mount_test",
-        args: [ "--gunit_filter=-*.Tmpfs*:*.OpenFileBusy:*.ActiveSubmountBusy:*.MountTmpfsMagicValIgnored:*.MountReadonly:*.MountNoAtime:*.MountNoExec:*.MountInfo" ],
+        args: [ "--gunit_filter=-*.Tmpfs*:*.OpenFileBusy:*.ActiveSubmountBusy:*.MountTmpfsMagicValIgnored:*.MountReadonly:*.MountNoAtime:*.MountNoExec:*.MountInfo:MountTest.BindToSelf:MountTest.MakeShared:MountTest.MakeMultipleShared:MountTest.ReuseGroupIDs:MountTest.InerheritPropagation:MountTest.MakePrivate:MountTest.ArgumentsAreIgnored:MountTest.MultiplePropagationFlagsFails:MountTest.SetMountPropagationOfStackedMounts:MountTest.MakePeer:MountTest.PropagateMountEvent:MountTest.PropagateUmountEvent:MountTest.UmountIgnoresPeersWithChildren:MountTest.BindSharedOnShared:MountTest.BindSharedOnPrivate:MountTest.BindPeerGroupsWithChildren:MountTest.BindParentToChild" ],
         user: "root:x:0:0",
     },
 }
