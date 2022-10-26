@@ -1207,6 +1207,118 @@ fn initiate_record_defect(
     fut.boxed()
 }
 
+async fn handle_iface_manager_request(
+    iface_manager: &mut IfaceManagerService,
+    network_selector: Arc<NetworkSelector>,
+    operation_futures: &mut FuturesUnordered<BoxFuture<'static, IfaceManagerOperation>>,
+    request: IfaceManagerRequest,
+) {
+    match request {
+        IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder, reason }) => {
+            let fut = iface_manager.disconnect(network_id, reason);
+            let disconnect_fut = async move {
+                if responder.send(fut.await).is_err() {
+                    error!("could not respond to DisconnectRequest");
+                }
+                IfaceManagerOperation::ConfigureStateMachine
+            };
+            operation_futures.push(disconnect_fut.boxed());
+        }
+        IfaceManagerRequest::Connect(ConnectRequest { request, responder }) => {
+            if responder
+                .send(iface_manager.handle_connect_request(request, network_selector.clone()).await)
+                .is_err()
+            {
+                error!("could not respond to ScanForConnectionSelection");
+            }
+        }
+        IfaceManagerRequest::RecordIdleIface(RecordIdleIfaceRequest { iface_id, responder }) => {
+            iface_manager.record_idle_client(iface_id);
+            if responder.send(()).is_err() {
+                error!("could not respond to RecordIdleIfaceRequest");
+            }
+        }
+        IfaceManagerRequest::HasIdleIface(HasIdleIfaceRequest { responder }) => {
+            if responder.send(!iface_manager.idle_clients().is_empty()).is_err() {
+                error!("could not respond to  HasIdleIfaceRequest");
+            }
+        }
+        IfaceManagerRequest::AddIface(AddIfaceRequest { iface_id, responder }) => {
+            if let Err(e) = iface_manager.handle_added_iface(iface_id).await {
+                warn!("failed to add new interface {}: {:?}", iface_id, e);
+            }
+            if responder.send(()).is_err() {
+                error!("could not respond to AddIfaceRequest");
+            }
+        }
+        IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { iface_id, responder }) => {
+            iface_manager.handle_removed_iface(iface_id).await;
+            if responder.send(()).is_err() {
+                error!("could not respond to RemoveIfaceRequest");
+            }
+        }
+        IfaceManagerRequest::GetScanProxy(ScanProxyRequest { responder }) => {
+            if responder.send(iface_manager.get_sme_proxy_for_scan().await).is_err() {
+                error!("could not respond to ScanRequest");
+            }
+        }
+        IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest {
+            reason,
+            responder,
+        }) => {
+            let fut = iface_manager.stop_client_connections(reason);
+            let stop_client_connections_fut = async move {
+                if responder.send(fut.await).is_err() {
+                    error!("could not respond to StopClientConnectionsRequest");
+                }
+                IfaceManagerOperation::ConfigureStateMachine
+            };
+            operation_futures.push(stop_client_connections_fut.boxed());
+        }
+        IfaceManagerRequest::StartClientConnections(StartClientConnectionsRequest {
+            responder,
+        }) => {
+            if responder.send(iface_manager.start_client_connections().await).is_err() {
+                error!("could not respond to StartClientConnectionRequest");
+            }
+        }
+        IfaceManagerRequest::StartAp(StartApRequest { config, responder }) => {
+            if responder.send(iface_manager.start_ap(config).await).is_err() {
+                error!("could not respond to StartApRequest");
+            }
+        }
+        IfaceManagerRequest::StopAp(StopApRequest { ssid, password, responder }) => {
+            let stop_ap_fut = iface_manager.stop_ap(ssid, password);
+            let stop_ap_fut = async move {
+                if responder.send(stop_ap_fut.await).is_err() {
+                    error!("could not respond to StopApRequest");
+                }
+                IfaceManagerOperation::ConfigureStateMachine
+            };
+            operation_futures.push(stop_ap_fut.boxed());
+        }
+        IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder }) => {
+            let stop_all_aps_fut = iface_manager.stop_all_aps();
+            let stop_all_aps_fut = async move {
+                if responder.send(stop_all_aps_fut.await).is_err() {
+                    error!("could not respond to StopAllApsRequest");
+                }
+                IfaceManagerOperation::ConfigureStateMachine
+            };
+            operation_futures.push(stop_all_aps_fut.boxed());
+        }
+        IfaceManagerRequest::HasWpa3Iface(HasWpa3IfaceRequest { responder }) => {
+            if responder.send(iface_manager.has_wpa3_capable_client().await).is_err() {
+                error!("could not respond to HasWpa3IfaceRequest");
+            }
+        }
+        IfaceManagerRequest::SetCountry(req) => {
+            let regulatory_fut = initiate_set_country(iface_manager, req);
+            operation_futures.push(regulatory_fut);
+        }
+    };
+}
+
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -1289,104 +1401,12 @@ pub(crate) async fn serve_iface_manager_requests(
                 // current network, and if so trigger a connection
             }
             req = requests.select_next_some() => {
-                match req {
-                    IfaceManagerRequest::Disconnect(DisconnectRequest { network_id, responder, reason }) => {
-                        let fut = iface_manager.disconnect(network_id, reason);
-                        let disconnect_fut = async move {
-                            if responder.send(fut.await).is_err() {
-                                error!("could not respond to DisconnectRequest");
-                            }
-                            IfaceManagerOperation::ConfigureStateMachine
-                        };
-                        operation_futures.push(disconnect_fut.boxed());
-                    }
-                    IfaceManagerRequest::Connect(ConnectRequest { request, responder }) => {
-                        if responder.send(iface_manager.handle_connect_request(request, network_selector.clone()).await).is_err() {
-                            error!("could not respond to ScanForConnectionSelection");
-                        }
-                    }
-                    IfaceManagerRequest::RecordIdleIface(RecordIdleIfaceRequest { iface_id, responder } ) => {
-                        iface_manager.record_idle_client(iface_id);
-                        if responder.send(()).is_err() {
-                            error!("could not respond to RecordIdleIfaceRequest");
-                        }
-                    }
-                    IfaceManagerRequest::HasIdleIface(HasIdleIfaceRequest { responder }) => {
-                        if responder.send(!iface_manager.idle_clients().is_empty()).is_err() {
-                            error!("could not respond to  HasIdleIfaceRequest");
-                        }
-                    }
-                    IfaceManagerRequest::AddIface(AddIfaceRequest { iface_id, responder } ) => {
-                        if let Err(e) = iface_manager.handle_added_iface(iface_id).await {
-                            warn!("failed to add new interface {}: {:?}", iface_id, e);
-                        }
-                        if responder.send(()).is_err() {
-                            error!("could not respond to AddIfaceRequest");
-                        }
-                    }
-                    IfaceManagerRequest::RemoveIface(RemoveIfaceRequest { iface_id, responder }) => {
-                        iface_manager.handle_removed_iface(iface_id).await;
-                        if responder.send(()).is_err() {
-                            error!("could not respond to RemoveIfaceRequest");
-                        }
-                    }
-                    IfaceManagerRequest::GetScanProxy(ScanProxyRequest {  responder }) => {
-                        if responder.send(iface_manager.get_sme_proxy_for_scan().await).is_err() {
-                            error!("could not respond to ScanRequest");
-                        }
-                    }
-                    IfaceManagerRequest::StopClientConnections(StopClientConnectionsRequest { reason, responder }) => {
-                        let fut = iface_manager.stop_client_connections(reason);
-                        let stop_client_connections_fut = async move {
-                            if responder.send(fut.await).is_err() {
-                                error!("could not respond to StopClientConnectionsRequest");
-                            }
-                            IfaceManagerOperation::ConfigureStateMachine
-                        };
-                        operation_futures.push(stop_client_connections_fut.boxed());
-                    }
-                    IfaceManagerRequest::StartClientConnections(StartClientConnectionsRequest { responder }) => {
-                        if responder.send(iface_manager.start_client_connections().await).is_err() {
-                            error!("could not respond to StartClientConnectionRequest");
-                        }
-                    }
-                    IfaceManagerRequest::StartAp(StartApRequest { config, responder }) => {
-                        if responder.send(iface_manager.start_ap(config).await).is_err() {
-                            error!("could not respond to StartApRequest");
-                        }
-                    }
-                    IfaceManagerRequest::StopAp(StopApRequest { ssid, password, responder }) => {
-                        let stop_ap_fut = iface_manager.stop_ap(ssid, password);
-                        let stop_ap_fut = async move {
-                            if responder.send(stop_ap_fut.await).is_err() {
-                                error!("could not respond to StopApRequest");
-                            }
-                            IfaceManagerOperation::ConfigureStateMachine
-                        };
-                        operation_futures.push(stop_ap_fut.boxed());
-                    }
-                    IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder }) => {
-                        let stop_all_aps_fut = iface_manager.stop_all_aps();
-                        let stop_all_aps_fut = async move {
-                            if responder.send(stop_all_aps_fut.await).is_err() {
-                                error!("could not respond to StopAllApsRequest");
-                            }
-                            IfaceManagerOperation::ConfigureStateMachine
-                        };
-                        operation_futures.push(stop_all_aps_fut.boxed());
-                    }
-                    IfaceManagerRequest::HasWpa3Iface(HasWpa3IfaceRequest { responder }) => {
-                        if responder.send(iface_manager.has_wpa3_capable_client().await).is_err() {
-                            error!("could not respond to HasWpa3IfaceRequest");
-                        }
-
-                    }
-                    IfaceManagerRequest::SetCountry(req) => {
-                        let regulatory_fut =
-                            initiate_set_country(&mut iface_manager, req);
-                        operation_futures.push(regulatory_fut);
-                    }
-                };
+                handle_iface_manager_request(
+                    &mut iface_manager,
+                    network_selector.clone(),
+                    &mut operation_futures,
+                    req
+                ).await;
             }
         }
     }
