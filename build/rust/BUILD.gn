@@ -99,6 +99,7 @@ if (current_toolchain != default_toolchain) {
     visibility = [
       # This is the supported group for developers to add tools to, going
       # forward, and the group used by `fx set --cargo-toml-gen`.
+      "//:developer_host_tools",
       "//:host",
     ]
   }
