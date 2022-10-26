@@ -215,6 +215,7 @@ A seed corpus should match a [`resource`][resource] target that is included in t
 For example:
 
 ```
+{% verbatim %}
 import("//build/dist/resource.gni")
 
 resource("my-corpus") {
@@ -225,6 +226,7 @@ resource("my-corpus") {
   ]
   outputs = [ "data/my-corpus/{{source_file_part}}" ]
 }
+{% endverbatim %}
 ```
 
 ## Fuchsia fuzzer package GN template {#fuchsia-fuzzer-package}
