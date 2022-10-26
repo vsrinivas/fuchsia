@@ -142,6 +142,8 @@ struct LoadSegmentTypes {
     using SegmentBase::SegmentBase;
 
     constexpr size_type vaddr() const { return this->offset(); }
+
+    constexpr size_type filesz() const { return 0; }
   };
 
   template <class First, class Second>
