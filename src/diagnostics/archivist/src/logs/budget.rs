@@ -149,6 +149,7 @@ mod tests {
         encode::Encoder, Argument, Record, Severity as StreamSeverity, Value,
     };
     use fidl_fuchsia_diagnostics::StreamMode;
+    use fuchsia_trace as ftrace;
     use futures::{Stream, StreamExt};
     use std::{
         io::Cursor,
@@ -194,7 +195,9 @@ mod tests {
         container_b.ingest_message(fake_message_bytes(1)).await;
         container_a.ingest_message(fake_message_bytes(2)).await;
 
-        let mut cursor = CursorWrapper(container_b.cursor(StreamMode::SnapshotThenSubscribe));
+        let mut cursor = CursorWrapper(
+            container_b.cursor(StreamMode::SnapshotThenSubscribe, ftrace::Id::random()),
+        );
         assert_eq!(cursor.next().await, Some(Arc::new(fake_message(1))));
 
         container_b.mark_stopped().await;

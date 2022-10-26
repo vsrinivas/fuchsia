@@ -24,6 +24,7 @@ use fidl_fuchsia_logger::{
     LogSinkWaitForInterestChangeResponder,
 };
 use fuchsia_async::Task;
+use fuchsia_trace as ftrace;
 use fuchsia_zircon as zx;
 use futures::{
     channel::{mpsc, oneshot},
@@ -131,7 +132,11 @@ impl LogsArtifactsContainer {
     /// When messages are evicted from our internal buffers before a client can read them, they
     /// are counted as rolled out messages which gets appended to the metadata of the next message.
     /// If there is no next message, there is no way to know how many messages were rolled out.
-    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<LogsData>> {
+    pub fn cursor(
+        &self,
+        mode: StreamMode,
+        parent_trace_id: ftrace::Id,
+    ) -> PinStream<Arc<LogsData>> {
         let identity = self.identity.clone();
         let earliest_timestamp = self.buffer.peek_front().map(|f| f.timestamp()).unwrap_or(0);
         Box::pin(
@@ -142,6 +147,16 @@ impl LogsArtifactsContainer {
                     move |(last_timestamp, dropped_messages), item| {
                         futures::future::ready(match item {
                             LazyItem::Next(m) => {
+                                let trace_id = ftrace::Id::random();
+                                let _trace_guard = ftrace::async_enter!(
+                                    trace_id,
+                                    "app",
+                                    "LogContainer::cursor.parse_message",
+                                    // An async duration cannot have multiple concurrent child async durations
+                                    // so we include the nonce as metadata to manually determine relationship.
+                                    "parent_trace_id" => u64::from(parent_trace_id),
+                                    "trace_id" => u64::from(trace_id)
+                                );
                                 *last_timestamp = m.timestamp();
                                 match m.parse(&identity) {
                                     Ok(m) => Some(Some(Arc::new(maybe_add_rolled_out_error(

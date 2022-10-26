@@ -24,7 +24,7 @@ use {
     },
     fuchsia_async::{self as fasync, Task},
     fuchsia_inspect::NumericProperty,
-    fuchsia_zircon as zx,
+    fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::{
         channel::mpsc::UnboundedSender,
         future::{select, Either},
@@ -134,8 +134,16 @@ impl ArchiveAccessor {
 
         let performance_config: PerformanceConfig = PerformanceConfig::try_from(&params)?;
 
+        let trace_id = ftrace::Id::random();
         match params.data_type.ok_or(AccessorError::MissingDataType)? {
             DataType::Inspect => {
+                let _trace_guard = ftrace::async_enter!(
+                    trace_id,
+                    "app",
+                    "ArchiveAccessor::run_server",
+                    "data_type" => "Inspect",
+                    "trace_id" => u64::from(trace_id)
+                );
                 if !matches!(mode, StreamMode::Snapshot) {
                     return Err(AccessorError::UnsupportedMode);
                 }
@@ -159,7 +167,7 @@ impl ArchiveAccessor {
                 };
 
                 let unpopulated_container_vec =
-                    pipeline.read().await.fetch_inspect_data(&selectors).await;
+                    pipeline.read().await.fetch_inspect_data(&selectors, trace_id).await;
 
                 let per_component_budget_opt = if unpopulated_container_vec.is_empty() {
                     None
@@ -180,16 +188,27 @@ impl ArchiveAccessor {
                         selectors,
                         output_rewriter,
                         stats.clone(),
+                        trace_id,
                     ),
                     requests,
                     mode,
                     stats,
                     per_component_budget_opt,
+                    trace_id,
                 )?
                 .run()
                 .await
             }
             DataType::Logs => {
+                let _trace_guard = ftrace::async_enter!(
+                    trace_id,
+                    "app",
+                    "ArchiveAccessor::run_server",
+                    "data_type" => "Logs",
+                    // An async duration cannot have multiple concurrent child async durations
+                    // so we include the nonce as metadata to manually determine relationship.
+                    "trace_id" => u64::from(trace_id)
+                );
                 let stats = Arc::new(accessor_stats.new_logs_batch_iterator());
                 let selectors = match params.client_selector_configuration {
                     Some(ClientSelectorConfiguration::Selectors(selectors)) => {
@@ -201,10 +220,12 @@ impl ArchiveAccessor {
                 let logs = pipeline
                     .read()
                     .await
-                    .logs(mode, selectors)
+                    .logs(mode, selectors, trace_id)
                     .await
                     .map(move |inner: _| (*inner).clone());
-                BatchIterator::new_serving_arrays(logs, requests, mode, stats)?.run().await
+                BatchIterator::new_serving_arrays(logs, requests, mode, stats, trace_id)?
+                    .run()
+                    .await
             }
         }
     }
@@ -284,6 +305,7 @@ pub struct BatchIterator {
     stats: Arc<BatchIteratorConnectionStats>,
     data: FormattedStream,
     truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
+    parent_trace_id: ftrace::Id,
 }
 
 // Checks if a given schema is within a components budget, and if it is, updates the budget,
@@ -317,6 +339,7 @@ impl BatchIterator {
         mode: StreamMode,
         stats: Arc<BatchIteratorConnectionStats>,
         per_component_byte_limit_opt: Option<usize>,
+        parent_trace_id: ftrace::Id,
     ) -> Result<Self, AccessorError>
     where
         Items: Stream<Item = Data<D>> + Send + 'static,
@@ -334,6 +357,17 @@ impl BatchIterator {
             let result_stats = result_stats_for_fut.clone();
             let budget_tracker = budget_tracker_shared.clone();
             async move {
+                let trace_id = ftrace::Id::random();
+                let _trace_guard = ftrace::async_enter!(
+                    trace_id,
+                    "app",
+                    "BatchIterator::new.serialize",
+                    // An async duration cannot have multiple concurrent child async durations
+                    // so we include the nonce as metadata to manually determine relationship.
+                    "parent_trace_id" => u64::from(parent_trace_id),
+                    "trace_id" => u64::from(trace_id),
+                    "moniker" => d.moniker.as_ref()
+                );
                 let mut unlocked_counter = stream_owned_counter.lock().await;
                 let mut tracker_guard = budget_tracker.lock().await;
                 unlocked_counter.total_schemas += 1;
@@ -383,6 +417,7 @@ impl BatchIterator {
             requests,
             stats,
             Some(truncation_counter),
+            parent_trace_id,
         )
     }
 
@@ -391,6 +426,7 @@ impl BatchIterator {
         requests: BatchIteratorRequestStream,
         mode: StreamMode,
         stats: Arc<BatchIteratorConnectionStats>,
+        parent_trace_id: ftrace::Id,
     ) -> Result<Self, AccessorError>
     where
         D: Serialize + Send + 'static,
@@ -398,7 +434,13 @@ impl BatchIterator {
     {
         let data =
             JsonPacketSerializer::new(stats.clone(), FORMATTED_CONTENT_CHUNK_SIZE_TARGET, data);
-        Self::new_inner(new_batcher(data, stats.clone(), mode), requests, stats, None)
+        Self::new_inner(
+            new_batcher(data, stats.clone(), mode),
+            requests,
+            stats,
+            None,
+            parent_trace_id,
+        )
     }
 
     fn new_inner(
@@ -406,9 +448,10 @@ impl BatchIterator {
         requests: BatchIteratorRequestStream,
         stats: Arc<BatchIteratorConnectionStats>,
         truncation_counter: Option<Arc<Mutex<SchemaTruncationCounter>>>,
+        parent_trace_id: ftrace::Id,
     ) -> Result<Self, AccessorError> {
         stats.open_connection();
-        Ok(Self { data, requests: Some(requests), stats, truncation_counter })
+        Ok(Self { data, requests: Some(requests), stats, truncation_counter, parent_trace_id })
     }
 
     pub async fn run(mut self) -> Result<(), AccessorError> {
@@ -424,6 +467,16 @@ impl BatchIterator {
             let BatchIteratorRequest::GetNext { responder } = res?;
             self.stats.add_request();
             let start_time = zx::Time::get_monotonic();
+            let trace_id = ftrace::Id::random();
+            let _trace_guard = ftrace::async_enter!(
+                trace_id,
+                "app",
+                "BatchIterator::run.get_send_batch",
+                // An async duration cannot have multiple concurrent child async durations
+                // so we include the nonce as metadata to manually determine relationship.
+                "parent_trace_id" => u64::from(self.parent_trace_id),
+                "trace_id" => u64::from(trace_id)
+            );
             let batch = match select(self.data.next(), channel_closed_fut.clone()).await {
                 // if we get None back, treat that as a terminal batch with an empty vec
                 Either::Left((batch_option, _)) => batch_option.unwrap_or_default(),
@@ -637,6 +690,7 @@ mod tests {
             StreamMode::Subscribe,
             Arc::new(AccessorStats::new(Node::default()).new_inspect_batch_iterator()),
             None,
+            ftrace::Id::random(),
         )
         .expect("create batch iterator");
 

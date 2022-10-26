@@ -117,6 +117,7 @@ async fn init_diagnostics(config: &Config) -> Result<(), Error> {
 
     diagnostics::init();
 
+    fuchsia_trace_provider::trace_provider_create_with_fdio();
     Ok(())
 }
 

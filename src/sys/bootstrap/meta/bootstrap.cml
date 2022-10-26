@@ -169,6 +169,7 @@
             protocol: "fuchsia.tracing.provider.Registry",
             from: "parent",
             to: [
+                "#archivist",
                 "#boot-drivers",
                 "#console-launcher",
                 "#driver-hosts",

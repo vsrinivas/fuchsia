@@ -28,7 +28,7 @@ use {
     },
     fidl_fuchsia_io as fio,
     fidl_fuchsia_logger::{LogMarker, LogRequest, LogRequestStream},
-    fuchsia_async as fasync, fuchsia_fs, fuchsia_inspect as inspect,
+    fuchsia_async as fasync, fuchsia_fs, fuchsia_inspect as inspect, fuchsia_trace as ftrace,
     futures::channel::{mpsc, oneshot},
     futures::prelude::*,
     lazy_static::lazy_static,
@@ -173,7 +173,8 @@ impl DataRepo {
             let listener = Listener::new(listener, options)?;
             let mode =
                 if dump_logs { StreamMode::Snapshot } else { StreamMode::SnapshotThenSubscribe };
-            let logs = self.logs_cursor(mode, None).await;
+            // NOTE: The LogListener code path isn't instrumented for tracing at the moment.
+            let logs = self.logs_cursor(mode, None, ftrace::Id::random()).await;
             if let Some(s) = selectors {
                 self.inner.write().await.update_logs_interest(connection_id, s).await;
             }
@@ -209,9 +210,10 @@ impl DataRepo {
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
+        parent_trace_id: ftrace::Id,
     ) -> impl Stream<Item = Arc<LogsData>> + Send + 'static {
         let mut repo = self.inner.write().await;
-        let (mut merged, mpx_handle) = Multiplexer::new();
+        let (mut merged, mpx_handle) = Multiplexer::new(parent_trace_id);
         if let Some(selectors) = selectors {
             merged.set_selectors(selectors);
         }
@@ -219,7 +221,8 @@ impl DataRepo {
             .iter()
             .filter_map(|(_, c)| c)
             .filter_map(|c| {
-                c.logs_cursor(mode).map(|cursor| (c.identity.relative_moniker.clone(), cursor))
+                c.logs_cursor(mode, parent_trace_id)
+                    .map(|cursor| (c.identity.relative_moniker.clone(), cursor))
             })
             .for_each(|(n, c)| {
                 mpx_handle.send(n, c);
@@ -559,7 +562,10 @@ impl MultiplexerBroker {
     /// in their results.
     pub async fn send(&mut self, container: &Arc<LogsArtifactsContainer>) {
         self.live_iterators.lock().await.retain(|_, (mode, recipient)| {
-            recipient.send(container.identity.relative_moniker.clone(), container.cursor(*mode))
+            recipient.send(
+                container.identity.relative_moniker.clone(),
+                container.cursor(*mode, recipient.parent_trace_id()),
+            )
         });
     }
 
@@ -754,7 +760,7 @@ mod tests {
         bar_container.ingest_message(make_message("b", 2)).await;
         foo_container.ingest_message(make_message("c", 3)).await;
 
-        let stream = repo.logs_cursor(StreamMode::Snapshot, None).await;
+        let stream = repo.logs_cursor(StreamMode::Snapshot, None, ftrace::Id::random()).await;
 
         let results =
             stream.map(|value| value.msg().unwrap().to_string()).collect::<Vec<_>>().await;
@@ -764,6 +770,7 @@ mod tests {
             .logs_cursor(
                 StreamMode::Snapshot,
                 Some(vec![selectors::parse_selector::<FastError>("foo:root").unwrap()]),
+                ftrace::Id::random(),
             )
             .await;
 
@@ -775,7 +782,8 @@ mod tests {
     #[fuchsia::test]
     async fn multiplexer_broker_cleanup() {
         let repo = DataRepo::default().await;
-        let stream = repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None).await;
+        let stream =
+            repo.logs_cursor(StreamMode::SnapshotThenSubscribe, None, ftrace::Id::random()).await;
 
         assert_eq!(repo.read().await.logs_multiplexers.live_iterators.lock().await.len(), 1);
 

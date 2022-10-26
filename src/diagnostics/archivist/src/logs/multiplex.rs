@@ -4,6 +4,7 @@
 
 use crate::events::types::Moniker;
 use fidl_fuchsia_diagnostics::Selector;
+use fuchsia_trace as ftrace;
 use futures::channel::mpsc::{UnboundedReceiver, UnboundedSender};
 use futures::{Stream, StreamExt};
 use lazy_static::lazy_static;
@@ -40,7 +41,7 @@ pub struct Multiplexer<I> {
 }
 
 impl<I> Multiplexer<I> {
-    pub fn new() -> (Self, MultiplexerHandle<I>) {
+    pub fn new(parent_trace_id: ftrace::Id) -> (Self, MultiplexerHandle<I>) {
         let (sender, incoming) = futures::channel::mpsc::unbounded();
         let id = MULTIPLEXER_ID.fetch_add(1, std::sync::atomic::Ordering::Relaxed);
         (
@@ -52,7 +53,7 @@ impl<I> Multiplexer<I> {
                 id,
                 on_drop_id_sender: None,
             },
-            MultiplexerHandle { sender, id },
+            MultiplexerHandle { sender, id, trace_id: parent_trace_id },
         )
     }
 
@@ -151,6 +152,7 @@ impl<I: Ord + Unpin> Stream for Multiplexer<I> {
 pub struct MultiplexerHandle<I> {
     sender: UnboundedSender<IncomingStream<PinStream<I>>>,
     id: usize,
+    pub trace_id: ftrace::Id,
 }
 
 impl<I> MultiplexerHandle<I> {
@@ -161,6 +163,10 @@ impl<I> MultiplexerHandle<I> {
 
     pub fn multiplexer_id(&self) -> usize {
         self.id
+    }
+
+    pub fn parent_trace_id(&self) -> ftrace::Id {
+        self.trace_id
     }
 
     /// Notify the multiplexer that no new sub-streams will be arriving.
@@ -247,7 +253,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn empty_multiplexer_terminates() {
-        let (mux, handle) = Multiplexer::<i32>::new();
+        let (mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         handle.close();
         let observed: Vec<i32> = mux.collect().await;
         let expected: Vec<i32> = vec![];
@@ -256,7 +262,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn empty_input_streams_terminate() {
-        let (mux, handle) = Multiplexer::<i32>::new();
+        let (mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
 
         handle.send(vec!["empty1"].into(), Box::pin(iter2stream(vec![])) as PinStream<i32>);
         handle.send(vec!["empty2"].into(), Box::pin(iter2stream(vec![])) as PinStream<i32>);
@@ -270,7 +276,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn outputs_are_ordered() {
-        let (mux, handle) = Multiplexer::<i32>::new();
+        let (mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         handle
             .send(vec!["first"].into(), Box::pin(iter2stream(vec![1, 3, 5, 7])) as PinStream<i32>);
         handle
@@ -285,7 +291,7 @@ mod tests {
 
     #[fuchsia::test]
     async fn semi_sorted_substream_semi_sorted() {
-        let (mux, handle) = Multiplexer::<i32>::new();
+        let (mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         handle.send(
             vec!["unordered"].into(),
             Box::pin(iter2stream(vec![1, 7, 3, 5])) as PinStream<i32>,
@@ -305,7 +311,7 @@ mod tests {
     #[fuchsia::test]
     async fn single_stream() {
         let (mut send, recv) = futures::channel::mpsc::unbounded();
-        let (mut mux, handle) = Multiplexer::<i32>::new();
+        let (mut mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         handle.send(vec!["recv"].into(), Box::pin(recv) as PinStream<i32>);
 
         assert!(mux.next().now_or_never().is_none());
@@ -329,7 +335,7 @@ mod tests {
     async fn two_streams_merged() {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (mut send2, recv2) = futures::channel::mpsc::unbounded();
-        let (mut mux, handle) = Multiplexer::<i32>::new();
+        let (mut mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         handle.send(vec!["recv1"].into(), Box::pin(recv1) as PinStream<i32>);
         handle.send(vec!["recv2"].into(), Box::pin(recv2) as PinStream<i32>);
 
@@ -366,7 +372,7 @@ mod tests {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (mut send2, recv2) = futures::channel::mpsc::unbounded();
         let (mut send3, recv3) = futures::channel::mpsc::unbounded();
-        let (mut mux, handle) = Multiplexer::<i32>::new();
+        let (mut mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         handle.send(vec!["recv1"].into(), Box::pin(recv1) as PinStream<i32>);
         handle.send(vec!["recv2"].into(), Box::pin(recv2) as PinStream<i32>);
 
@@ -398,7 +404,7 @@ mod tests {
     async fn snapshot_with_stopped_substream() {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (mut send2, recv2) = futures::channel::mpsc::unbounded();
-        let (mut mux, handle) = Multiplexer::<i32>::new();
+        let (mut mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         send1.unbounded_send(1).unwrap();
         send1.disconnect();
         handle.send(vec!["recv1"].into(), Box::pin(recv1));
@@ -422,7 +428,7 @@ mod tests {
     async fn multiplexer_selectors() {
         let (mut send1, recv1) = futures::channel::mpsc::unbounded();
         let (send2, recv2) = futures::channel::mpsc::unbounded();
-        let (mut mux, handle) = Multiplexer::<i32>::new();
+        let (mut mux, handle) = Multiplexer::<i32>::new(ftrace::Id::random());
         mux.set_selectors(vec![selectors::parse_selector::<FastError>("recv1:root").unwrap()]);
 
         handle.send(vec!["recv1"].into(), Box::pin(recv1) as PinStream<i32>);

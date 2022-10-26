@@ -14,6 +14,7 @@ use {
     diagnostics_data::{self, LogsData},
     fidl_fuchsia_diagnostics::{LogInterestSelector, StreamMode},
     fuchsia_inspect_derive::WithInspect,
+    fuchsia_trace as ftrace,
     std::sync::Arc,
 };
 
@@ -100,8 +101,12 @@ impl ComponentDiagnostics {
     }
 
     /// Return a cursor over messages from this component with the given `mode`.
-    pub fn logs_cursor(&self, mode: StreamMode) -> Option<PinStream<Arc<LogsData>>> {
-        self.logs.as_ref().map(|l| l.cursor(mode))
+    pub fn logs_cursor(
+        &self,
+        mode: StreamMode,
+        parent_trace_id: ftrace::Id,
+    ) -> Option<PinStream<Arc<LogsData>>> {
+        self.logs.as_ref().map(|l| l.cursor(mode, parent_trace_id))
     }
 
     /// Returns `true` if the DataRepo should continue holding this container. This container should

@@ -15,7 +15,7 @@ use {
     diagnostics_hierarchy::{DiagnosticsHierarchy, InspectHierarchyMatcher},
     fidl_fuchsia_diagnostics::{self, Selector},
     fuchsia_inspect::reader::PartialNodeHierarchy,
-    fuchsia_zircon as zx,
+    fuchsia_trace as ftrace, fuchsia_zircon as zx,
     futures::prelude::*,
     selectors,
     std::{
@@ -103,6 +103,7 @@ impl ReaderServer {
         selectors: Option<Vec<Selector>>,
         output_rewriter: Option<OutputRewriter>,
         stats: Arc<BatchIteratorConnectionStats>,
+        parent_trace_id: ftrace::Id,
     ) -> impl Stream<Item = Data<Inspect>> + Send + 'static {
         let server = Arc::new(Self { selectors, output_rewriter });
 
@@ -111,7 +112,7 @@ impl ReaderServer {
         futures::stream::iter(unpopulated_diagnostics_sources.into_iter())
             .map(move |unpopulated| {
                 let global_stats = stats.global_stats().clone();
-                unpopulated.populate(batch_timeout, global_stats)
+                unpopulated.populate(batch_timeout, global_stats, parent_trace_id)
             })
             .flatten()
             .map(future::ready)
@@ -120,7 +121,7 @@ impl ReaderServer {
             // filter each component's inspect
             .filter_map(move |populated| {
                 let server_clone = server.clone();
-                async move { server_clone.filter_snapshot(populated) }
+                async move { server_clone.filter_snapshot(populated, parent_trace_id) }
             })
     }
 
@@ -128,19 +129,63 @@ impl ReaderServer {
         snapshot_data: SnapshotData,
         static_matcher: Option<InspectHierarchyMatcher>,
         client_matcher: Option<InspectHierarchyMatcher>,
+        moniker: &str,
+        parent_trace_id: ftrace::Id,
     ) -> NodeHierarchyData {
+        let filename = snapshot_data.filename.clone();
         let node_hierarchy_data = match static_matcher {
             // The only way we have a None value for the PopulatedDataContainer is
             // if there were no provided static selectors, which is only valid in
             // the AllAccess pipeline. For all other pipelines, if no static selectors
             // matched, the data wouldn't have ended up in the repository to begin
             // with.
-            None => snapshot_data.into(),
+            None => {
+                let trace_id = ftrace::Id::random();
+                let _trace_guard = ftrace::async_enter!(
+                    trace_id,
+                    "app",
+                    "SnapshotData -> NodeHierarchyData",
+                    // An async duration cannot have multiple concurrent child async durations
+                    // so we include the nonce as metadata to manually determine relationship.
+                    "parent_trace_id" => u64::from(parent_trace_id),
+                    "trace_id" => u64::from(trace_id),
+                    "moniker" => moniker,
+                    "filename" => filename.as_ref()
+                );
+                snapshot_data.into()
+            }
             Some(static_matcher) => {
-                let node_hierarchy_data: NodeHierarchyData = snapshot_data.into();
+                let node_hierarchy_data: NodeHierarchyData = {
+                    let trace_id = ftrace::Id::random();
+                    let _trace_guard = ftrace::async_enter!(
+                        trace_id,
+                        "app",
+                        "SnapshotData -> NodeHierarchyData",
+                        // An async duration cannot have multiple concurrent child async durations
+                        // so we include the nonce as metadata to manually determine relationship.
+                        "parent_trace_id" => u64::from(parent_trace_id),
+                        "trace_id" => u64::from(trace_id),
+                        "moniker" => moniker,
+                        "filename" => filename.as_ref()
+                    );
+                    snapshot_data.into()
+                };
 
                 match node_hierarchy_data.hierarchy {
                     Some(node_hierarchy) => {
+                        let trace_id = ftrace::Id::random();
+                        let _trace_guard = ftrace::async_enter!(
+                            trace_id,
+                            "app",
+                            "ReaderServer::filter_single_components_snapshot.filter_hierarchy",
+                            // An async duration cannot have multiple concurrent child async durations
+                            // so we include the nonce as metadata to manually determine relationship.
+                            "parent_trace_id" => u64::from(parent_trace_id),
+                            "trace_id" => u64::from(trace_id),
+                            "moniker" => moniker,
+                            "filename" => node_hierarchy_data.filename.as_ref(),
+                            "selector_type" => "static"
+                        );
                         match diagnostics_hierarchy::filter_hierarchy(
                             node_hierarchy,
                             &static_matcher,
@@ -199,6 +244,19 @@ impl ReaderServer {
                     hierarchy: None,
                 },
                 Some(node_hierarchy) => {
+                    let trace_id = ftrace::Id::random();
+                    let _trace_guard = ftrace::async_enter!(
+                        trace_id,
+                        "app",
+                        "ReaderServer::filter_single_components_snapshot.filter_hierarchy",
+                        // An async duration cannot have multiple concurrent child async durations
+                        // so we include the nonce as metadata to manually determine relationship.
+                        "parent_trace_id" => u64::from(parent_trace_id),
+                        "trace_id" => u64::from(trace_id),
+                        "moniker" => moniker,
+                        "filename" => node_hierarchy_data.filename.as_ref(),
+                        "selector_type" => "client"
+                    );
                     match diagnostics_hierarchy::filter_hierarchy(node_hierarchy, &dynamic_matcher)
                     {
                         Ok(Some(filtered_hierarchy)) => NodeHierarchyData {
@@ -242,6 +300,7 @@ impl ReaderServer {
     fn filter_snapshot(
         &self,
         pumped_inspect_data: PopulatedInspectDataContainer,
+        parent_trace_id: ftrace::Id,
     ) -> Option<Data<Inspect>> {
         // Since a single PopulatedInspectDataContainer shares a moniker for all pieces of data it
         // contains, we can store the result of component selector filtering to avoid reapplying
@@ -303,6 +362,8 @@ impl ReaderServer {
             pumped_inspect_data.snapshot,
             pumped_inspect_data.inspect_matcher,
             client_selectors,
+            identity.to_string().as_str(),
+            parent_trace_id,
         );
         Some(Data::for_inspect(
             sanitized_moniker,
@@ -1054,14 +1115,16 @@ mod tests {
             aggregated_content_limit_bytes: None,
         };
 
+        let trace_id = ftrace::Id::random();
         let reader_server = Box::pin(ReaderServer::stream(
-            inspect_pipeline.read().await.fetch_inspect_data(&None).await,
+            inspect_pipeline.read().await.fetch_inspect_data(&None, trace_id).await,
             test_performance_config,
             // No selectors
             None,
             // No output rewriter
             None,
             stats.clone(),
+            trace_id,
         ));
         let (consumer, batch_iterator_requests) =
             create_proxy_and_stream::<BatchIteratorMarker>().unwrap();
@@ -1074,6 +1137,7 @@ mod tests {
                     StreamMode::Snapshot,
                     stats,
                     None,
+                    ftrace::Id::random(),
                 )
                 .unwrap()
                 .run()

@@ -14,7 +14,7 @@ use {
     fidl_fuchsia_diagnostics::{self, ArchiveAccessorMarker, Selector, StreamMode},
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_inspect as inspect,
+    fuchsia_inspect as inspect, fuchsia_trace as ftrace,
     futures::{channel::mpsc, prelude::*},
     selectors,
     std::{collections::HashMap, convert::TryInto, path::Path, sync::Arc},
@@ -207,8 +207,9 @@ impl Pipeline {
         &self,
         mode: StreamMode,
         selectors: Option<Vec<Selector>>,
+        parent_trace_id: ftrace::Id,
     ) -> impl Stream<Item = Arc<LogsData>> {
-        self.data_repo.logs_cursor(mode, selectors).await
+        self.data_repo.logs_cursor(mode, selectors, parent_trace_id).await
     }
 
     pub fn remove(&mut self, relative_moniker: &[String]) {
@@ -241,10 +242,20 @@ impl Pipeline {
     pub async fn fetch_inspect_data(
         &self,
         component_selectors: &Option<Vec<Selector>>,
+        parent_trace_id: ftrace::Id,
     ) -> Vec<UnpopulatedInspectDataContainer> {
         let moniker_to_static_selector_opt =
             self.static_selectors.as_ref().map(|_| &self.moniker_to_static_matcher_map);
 
+        let trace_id = ftrace::Id::random();
+        let _trace_guard = ftrace::async_enter!(
+            trace_id,
+            "app",
+            "Pipeline::fetch_inspect_data",
+            // An async duration cannot have multiple concurrent child async durations
+            // so we include the nonce as metadata to manually determine relationship.
+            "parent_trace_id" => u64::from(parent_trace_id)
+        );
         self.data_repo
             .read()
             .await

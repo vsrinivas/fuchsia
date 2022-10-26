@@ -479,6 +479,24 @@
                     },
                 },
                 {
+                    using_node: "/bootstrap/archivist",
+                    capability: "fuchsia.tracing.provider.Registry",
+                    error: {
+                        error: {
+                            analyzer_model_error: {
+                                routing_error: {
+                                    offer_from_child_expose_not_found: {
+                                        child_moniker: "core",
+                                        moniker: "/",
+                                        capability_id: "fuchsia.tracing.provider.Registry",
+                                    },
+                                },
+                            },
+                        },
+                        message: "`/` tried to offer `fuchsia.tracing.provider.Registry` from its child `#core`, but `#core` does not expose `fuchsia.tracing.provider.Registry`.",
+                    },
+                },
+                {
                     using_node: "/bootstrap/fshost",
                     capability: "fuchsia.tracing.provider.Registry",
                     error: {

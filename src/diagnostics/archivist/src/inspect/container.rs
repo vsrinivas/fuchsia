@@ -15,6 +15,7 @@ use fidl::endpoints::Proxy;
 use fidl_fuchsia_io as fio;
 use fuchsia_async::{self as fasync, DurationExt, TimeoutExt};
 use fuchsia_inspect::reader::snapshot::{Snapshot, SnapshotTree};
+use fuchsia_trace as ftrace;
 use fuchsia_zircon as zx;
 use futures::{channel::oneshot, FutureExt, Stream};
 use inspect_fidl_load as deprecated_inspect;
@@ -82,7 +83,21 @@ impl SnapshotData {
         filename: ImmutableString,
         data: InspectData,
         lazy_child_timeout: zx::Duration,
+        identity: &ComponentIdentity,
+        parent_trace_id: ftrace::Id,
     ) -> SnapshotData {
+        let trace_id = ftrace::Id::random();
+        let _trace_guard = ftrace::async_enter!(
+            trace_id,
+            "app",
+            "SnapshotData::new",
+            // An async duration cannot have multiple concurrent child async durations
+            // so we include the nonce as metadata to manually determine relationship.
+            "parent_trace_id" => u64::from(parent_trace_id),
+            "trace_id" => u64::from(trace_id),
+            "moniker" => identity.to_string().as_ref(),
+            "filename" => filename.as_ref()
+        );
         match data {
             InspectData::Tree(tree) => {
                 let lazy_child_timeout =
@@ -173,6 +188,8 @@ struct State {
     batch_timeout: Option<zx::Duration>,
     elapsed_time: zx::Duration,
     global_stats: Arc<GlobalConnectionStats>,
+    trace_guard: Arc<ftrace::AsyncScope>,
+    trace_id: ftrace::Id,
 }
 
 impl State {
@@ -187,6 +204,8 @@ impl State {
             batch_timeout: self.batch_timeout,
             global_stats: self.global_stats,
             elapsed_time: self.elapsed_time + (zx::Time::get_monotonic() - start_time),
+            trace_guard: self.trace_guard,
+            trace_id: self.trace_id,
         }
     }
 
@@ -224,6 +243,8 @@ impl State {
                             self.batch_timeout.unwrap_or(zx::Duration::from_seconds(
                                 constants::PER_COMPONENT_ASYNC_TIMEOUT_SECONDS,
                             )) / constants::LAZY_NODE_TIMEOUT_PROPORTION,
+                            &self.unpopulated.identity,
+                            self.trace_id,
                         )
                         .await;
                         let result = PopulatedInspectDataContainer {
@@ -260,7 +281,19 @@ impl<'a> UnpopulatedInspectDataContainer {
         self,
         timeout: i64,
         global_stats: Arc<GlobalConnectionStats>,
+        parent_trace_id: ftrace::Id,
     ) -> impl Stream<Item = PopulatedInspectDataContainer> {
+        let trace_id = ftrace::Id::random();
+        let trace_guard = ftrace::async_enter!(
+            trace_id,
+            "app",
+            "ReaderServer::stream.populate",
+            // An async duration cannot have multiple concurrent child async durations
+            // so we include the nonce as metadata to manually determine relationship.
+            "parent_trace_id" => u64::from(parent_trace_id),
+            "trace_id" => u64::from(trace_id),
+            "moniker" => self.identity.to_string().as_ref()
+        );
         let this = Arc::new(self);
         let state = State {
             status: Status::Begin,
@@ -268,6 +301,8 @@ impl<'a> UnpopulatedInspectDataContainer {
             batch_timeout: Some(zx::Duration::from_seconds(timeout)),
             global_stats,
             elapsed_time: zx::Duration::from_nanos(0),
+            trace_guard: Arc::new(trace_guard),
+            trace_id,
         };
 
         futures::stream::unfold(state, |state| {
@@ -276,6 +311,8 @@ impl<'a> UnpopulatedInspectDataContainer {
             let elapsed_time = state.elapsed_time;
             let global_stats = state.global_stats.clone();
             let start_time = zx::Time::get_monotonic();
+            let trace_guard = state.trace_guard.clone();
+            let trace_id = state.trace_id;
 
             let fut = state.iterate(start_time);
             match timeout {
@@ -301,6 +338,8 @@ impl<'a> UnpopulatedInspectDataContainer {
                                 global_stats,
                                 elapsed_time: elapsed_time
                                     + (zx::Time::get_monotonic() - start_time),
+                                trace_guard,
+                                trace_id,
                             },
                         ))
                     })
@@ -340,8 +379,11 @@ mod test {
             component_diagnostics_proxy: directory,
             inspect_matcher: None,
         };
-        let mut stream =
-            container.populate(0, Arc::new(GlobalConnectionStats::new(Node::default())));
+        let mut stream = container.populate(
+            0,
+            Arc::new(GlobalConnectionStats::new(Node::default())),
+            ftrace::Id::random(),
+        );
         let res = stream.next().await.unwrap();
         assert_eq!(res.snapshot.filename.as_ref(), *NO_FILE_SUCCEEDED);
         assert_eq!(
@@ -360,8 +402,11 @@ mod test {
             component_diagnostics_proxy: directory,
             inspect_matcher: None,
         };
-        let mut stream =
-            container.populate(1000000, Arc::new(GlobalConnectionStats::new(Node::default())));
+        let mut stream = container.populate(
+            1000000,
+            Arc::new(GlobalConnectionStats::new(Node::default())),
+            ftrace::Id::random(),
+        );
         assert!(stream.next().await.is_none());
     }
 }
