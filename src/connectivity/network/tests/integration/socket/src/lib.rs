@@ -36,7 +36,9 @@ use net_types::ip::{Ipv4, Ipv6};
 use netemul::{RealmTcpListener as _, RealmTcpStream as _, RealmUdpSocket as _, TestInterface};
 use netstack_testing_common::{
     ping,
-    realms::{Netstack, Netstack2, Netstack2WithFastUdp, NetstackVersion, TestSandboxExt as _},
+    realms::{
+        Netstack, Netstack2, Netstack2WithFastUdp, Netstack3, NetstackVersion, TestSandboxExt as _,
+    },
     Result,
 };
 use netstack_testing_macros::variants_test;
@@ -834,6 +836,103 @@ async fn tcp_socket_send_recv<
         assert_eq!(&buf[..read_count], PAYLOAD);
     }
     tcp_socket_accept_cross_ns::<I, Client, Server, E, _, _>(name, send_recv).await
+}
+
+#[variants_test]
+async fn tcp_socket_shutdown_connection<
+    I: net_types::ip::Ip + TestIpExt,
+    E: netemul::Endpoint,
+    Client: Netstack,
+    Server: Netstack,
+>(
+    name: &str,
+) {
+    tcp_socket_accept_cross_ns::<I, Client, Server, E, _, _>(
+        name,
+        |mut client: fasync::net::TcpStream, mut server: fasync::net::TcpStream| async move {
+            client.shutdown(std::net::Shutdown::Both).expect("failed to shutdown the client");
+            assert_eq!(
+                client.write(b"Hello").await.map_err(|e| e.kind()),
+                Err(std::io::ErrorKind::BrokenPipe)
+            );
+            assert_matches!(server.read_to_end(&mut Vec::new()).await, Ok(0));
+            server.shutdown(std::net::Shutdown::Both).expect("failed to shutdown the server");
+            assert_eq!(
+                server.write(b"Hello").await.map_err(|e| e.kind()),
+                Err(std::io::ErrorKind::BrokenPipe)
+            );
+            assert_matches!(client.read_to_end(&mut Vec::new()).await, Ok(0));
+        },
+    )
+    .await
+}
+
+// TODO(https://fxbug.dev/112135): Parametrize netstack.
+#[variants_test]
+async fn tcp_socket_shutdown_listener<I: net_types::ip::Ip + TestIpExt, E: netemul::Endpoint>(
+    name: &str,
+) {
+    let sandbox = netemul::TestSandbox::new().expect("failed to create sandbox");
+    let net = sandbox.create_network("net").await.expect("failed to create network");
+
+    let client = sandbox
+        .create_netstack_realm::<Netstack3, _>(format!("{}_client", name))
+        .expect("failed to create client realm");
+    let client_interface = client
+        .join_network::<E, _>(&net, "client-ep")
+        .await
+        .expect("failed to join network in realm");
+    client_interface
+        .add_address_and_subnet_route(I::CLIENT_SUBNET)
+        .await
+        .expect("configure address");
+
+    let server = sandbox
+        .create_netstack_realm::<Netstack3, _>(format!("{}_server", name))
+        .expect("failed to create server realm");
+    let server_interface = server
+        .join_network::<E, _>(&net, "server-ep")
+        .await
+        .expect("failed to join network in realm");
+    server_interface
+        .add_address_and_subnet_route(I::SERVER_SUBNET)
+        .await
+        .expect("configure address");
+
+    let fnet_ext::IpAddress(client_ip) = I::CLIENT_SUBNET.addr.into();
+    let fnet_ext::IpAddress(server_ip) = I::SERVER_SUBNET.addr.into();
+    let client_addr = std::net::SocketAddr::new(client_ip, 8080);
+    let server_addr = std::net::SocketAddr::new(server_ip, 8080);
+
+    // Create listener sockets on both netstacks and shut them down.
+    let client = socket2::Socket::from(
+        std::net::TcpListener::listen_in_realm(&client, client_addr)
+            .await
+            .expect("failed to create the client socket"),
+    );
+    assert_matches!(client.shutdown(std::net::Shutdown::Both), Ok(()));
+
+    let server = socket2::Socket::from(
+        std::net::TcpListener::listen_in_realm(&server, server_addr)
+            .await
+            .expect("failed to create the server socket"),
+    );
+
+    assert_matches!(server.shutdown(std::net::Shutdown::Both), Ok(()));
+
+    // Listen again on the server socket.
+    assert_matches!(server.listen(1), Ok(()));
+    let server = fasync::net::TcpListener::from_std(server.into()).unwrap();
+
+    // Call connect on the client socket.
+    let _client = fasync::net::TcpStream::connect_from_raw(client, server_addr)
+        .expect("failed to connect client socket")
+        .await;
+
+    // Both should succeed and we have an established connection.
+    let (_, _accepted, from) = server.accept().await.expect("accept failed");
+    let fnet_ext::IpAddress(client_ip) = I::CLIENT_SUBNET.addr.into();
+    assert_eq!(from.ip(), client_ip);
 }
 
 #[variants_test]

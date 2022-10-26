@@ -42,10 +42,11 @@ use netstack3_core::{
         buffer::{Buffer, IntoBuffers, ReceiveBuffer, RingBuffer, SendBuffer, SendPayload},
         segment::Payload,
         socket::{
-            accept, bind, connect_bound, connect_unbound, create_socket, get_bound_info,
-            get_connection_info, get_listener_info, listen, AcceptError, BindError, BoundId,
-            BoundInfo, ConnectError, ConnectionId, ConnectionInfo, ListenerId, SocketAddr,
-            TcpNonSyncContext, UnboundId,
+            accept, bind, close_conn, connect_bound, connect_unbound, create_socket,
+            get_bound_info, get_connection_info, get_listener_info, listen, remove_bound,
+            remove_unbound, shutdown_conn, shutdown_listener, AcceptError, BindError, BoundId,
+            BoundInfo, ConnectError, ConnectionId, ConnectionInfo, ListenerId, NoConnection,
+            SocketAddr, TcpNonSyncContext, UnboundId,
         },
         state::Takeable,
         BufferSizes,
@@ -74,9 +75,11 @@ pub(crate) trait SocketWorkerDispatcher:
     fn register_listener(&mut self, id: ListenerId, socket: zx::Socket);
     /// Unregisters an existing listener when it is about to be closed.
     ///
+    /// Returns the zircon socket that used to be registered.
+    ///
     /// # Panics
     /// Panics if `id` is non-existent.
-    fn unregister_listener(&mut self, id: ListenerId);
+    fn unregister_listener(&mut self, id: ListenerId) -> zx::Socket;
 }
 
 impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
@@ -84,8 +87,8 @@ impl SocketWorkerDispatcher for crate::bindings::BindingsNonSyncCtxImpl {
         assert_matches!(self.tcp_listeners.insert(id.into(), socket), None);
     }
 
-    fn unregister_listener(&mut self, id: ListenerId) {
-        assert_matches!(self.tcp_listeners.remove(id.into()), Some(_));
+    fn unregister_listener(&mut self, id: ListenerId) -> zx::Socket {
+        self.tcp_listeners.remove(id.into()).expect("invalid ListenerId")
     }
 }
 
@@ -203,18 +206,47 @@ impl ReceiveBuffer for ReceiveBufferWithZirconSocket {
 
     fn make_readable(&mut self, count: usize) {
         self.out_of_order.make_readable(count);
+        let mut shut_rd = false;
         let nread = self.out_of_order.read_with(|avail| {
             let mut total = 0;
             for chunk in avail {
-                assert_eq!(
-                    self.socket.write(*chunk).expect("failed to write into the zircon socket"),
-                    chunk.len()
-                );
+                let written = match self.socket.write(*chunk) {
+                    Ok(n) => n,
+                    Err(zx::Status::BAD_STATE) => {
+                        // The socket has been shutdown for read, discard.
+                        shut_rd = true;
+                        return total;
+                    }
+                    Err(err) => panic!("failed to write into the zircon socket: {:?}", err),
+                };
+                assert_eq!(written, chunk.len());
                 total += chunk.len();
             }
             total
         });
+        // TODO(https://fxbug.dev/112391): Instead of inferring the state in
+        // Bindings, we can reclaim the memory more promptly by teaching Core
+        // about SHUT_RD.
+        if shut_rd {
+            if self.out_of_order.cap() != 0 {
+                self.out_of_order = RingBuffer::new(0);
+            }
+            return;
+        }
         assert_eq!(count, nread);
+    }
+}
+
+impl Drop for ReceiveBufferWithZirconSocket {
+    fn drop(&mut self) {
+        // Make sure the FDIO is aware that we are not writing anymore so that
+        // it can transition into the right state.
+        self.socket
+            .set_disposition(
+                /* disposition */ Some(zx::SocketWriteDisposition::Disabled),
+                /* peer_disposition */ None,
+            )
+            .expect("failed to set socket disposition");
     }
 }
 
@@ -268,10 +300,10 @@ impl SendBufferWithZirconSocket {
                             ControlFlow::Break(acc + n)
                         }
                     }
-                    Err(zx::Status::SHOULD_WAIT | zx::Status::PEER_CLOSED) => {
-                        ControlFlow::Break(acc)
-                    }
-                    Err(e) => panic!("unexpected error: {:?}", e),
+                    Err(
+                        zx::Status::SHOULD_WAIT | zx::Status::PEER_CLOSED | zx::Status::BAD_STATE,
+                    ) => ControlFlow::Break(acc),
+                    Err(e) => panic!("failed to read from the zircon socket: {:?}", e),
                 }
             });
         let (ControlFlow::Continue(bytes_written) | ControlFlow::Break(bytes_written)) =
@@ -382,6 +414,12 @@ impl IntoErrno for ConnectError {
     }
 }
 
+impl IntoErrno for NoConnection {
+    fn into_errno(self) -> fidl_fuchsia_posix::Errno {
+        fposix::Errno::Enotconn
+    }
+}
+
 /// Spawns a task that sends more data from the `socket` each time we observe
 /// a wakeup through the `watcher`.
 fn spawn_send_task<I: IpExt, C>(
@@ -454,11 +492,16 @@ where
                 futures.push(request_stream.into_future())
             }
 
-            // TODO(https://fxbug.dev/103979): Remove socket from core.
+            let mut guard = self.ctx.lock().await;
+            let Ctx { sync_ctx, non_sync_ctx } = &mut *guard;
             match self.id {
-                SocketId::Unbound(_, _) | SocketId::Bound(_, _) | SocketId::Connection(_) => {}
+                SocketId::Unbound(unbound, _) => remove_unbound::<I, _>(sync_ctx, unbound),
+                SocketId::Bound(bound, _) => remove_bound::<I, _>(sync_ctx, bound),
+                SocketId::Connection(conn) => close_conn::<I, _>(sync_ctx, non_sync_ctx, conn),
                 SocketId::Listener(listener) => {
-                    self.ctx.lock().await.non_sync_ctx.unregister_listener(listener)
+                    let bound = shutdown_listener::<I, _>(sync_ctx, non_sync_ctx, listener);
+                    let _: zx::Socket = non_sync_ctx.unregister_listener(listener);
+                    remove_bound::<I, _>(sync_ctx, bound)
                 }
             }
         })
@@ -623,6 +666,43 @@ where
         }
     }
 
+    async fn shutdown(&mut self, mode: fposix_socket::ShutdownMode) -> Result<(), fposix::Errno> {
+        match self.id {
+            SocketId::Unbound(_, _) | SocketId::Bound(_, _) => Err(fposix::Errno::Enotconn),
+            SocketId::Connection(conn_id) => {
+                let mut my_disposition: Option<zx::SocketWriteDisposition> = None;
+                let mut peer_disposition: Option<zx::SocketWriteDisposition> = None;
+                if mode.contains(fposix_socket::ShutdownMode::WRITE) {
+                    peer_disposition = Some(zx::SocketWriteDisposition::Disabled);
+                    let mut guard = self.ctx.lock().await;
+                    let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
+                    shutdown_conn::<I, _>(&sync_ctx, non_sync_ctx, conn_id)
+                        .map_err(IntoErrno::into_errno)?;
+                }
+                if mode.contains(fposix_socket::ShutdownMode::READ) {
+                    my_disposition = Some(zx::SocketWriteDisposition::Disabled);
+                }
+                self.peer
+                    .set_disposition(peer_disposition, my_disposition)
+                    .expect("failed to set socket disposition");
+                Ok(())
+            }
+            SocketId::Listener(listener) => {
+                if mode.contains(fposix_socket::ShutdownMode::READ) {
+                    let mut guard = self.ctx.lock().await;
+                    let Ctx { sync_ctx, non_sync_ctx } = guard.deref_mut();
+                    let bound = shutdown_listener::<I, _>(&sync_ctx, non_sync_ctx, listener);
+                    let local = non_sync_ctx.unregister_listener(listener);
+                    self.id = SocketId::Bound(
+                        bound,
+                        LocalZirconSocketAndNotifier(Arc::new(local), NeedsDataNotifier::default()),
+                    );
+                }
+                Ok(())
+            }
+        }
+    }
+
     /// Returns a [`ControlFlow`] to indicate whether the parent stream should
     /// continue being polled or dropped.
     ///
@@ -677,6 +757,10 @@ where
                 todo!("https://fxbug.dev/77623: rights_request={:?}", rights_request);
             }
             fposix_socket::StreamSocketRequest::Close { responder } => {
+                // We don't just close the socket because this socket worker is
+                // potentially shared by a bunch of sockets because the client
+                // can call `dup` on this socket. We will do the cleanup at the
+                // end of this task.
                 responder_send!(responder, &mut Ok(()));
                 return ControlFlow::Break(());
             }
@@ -831,8 +915,8 @@ where
             fposix_socket::StreamSocketRequest::GetPeerName { responder } => {
                 responder_send!(responder, &mut self.get_peer_name().await);
             }
-            fposix_socket::StreamSocketRequest::Shutdown { mode: _, responder } => {
-                responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
+            fposix_socket::StreamSocketRequest::Shutdown { mode, responder } => {
+                responder_send!(responder, &mut self.shutdown(mode).await);
             }
             fposix_socket::StreamSocketRequest::SetIpTypeOfService { value: _, responder } => {
                 responder_send!(responder, &mut Err(fposix::Errno::Eopnotsupp));
