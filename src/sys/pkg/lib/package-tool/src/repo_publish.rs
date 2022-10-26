@@ -13,6 +13,7 @@ use {
         repository::{Error as RepoError, PmRepository},
     },
     std::{
+        collections::BTreeSet,
         fs::File,
         io::{BufWriter, Write},
     },
@@ -46,15 +47,21 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     };
 
     // Load in all the package manifests up front so we'd error out if any are missing or malformed.
-    let mut deps = vec![];
+    let mut deps = BTreeSet::new();
     let mut packages = vec![];
     for package_manifest_path in cmd.package_manifests {
-        packages.push(
-            PackageManifest::try_load_from(package_manifest_path.as_std_path())
-                .with_context(|| format!("reading package manifest {}", package_manifest_path))?,
-        );
+        let package_manifest = PackageManifest::try_load_from(package_manifest_path.as_std_path())
+            .with_context(|| format!("reading package manifest {}", package_manifest_path))?;
 
-        deps.push(package_manifest_path);
+        // Track the package manifest path as a dependency.
+        deps.insert(package_manifest_path);
+
+        // Track all the blobs from the package manifest as a dependency.
+        for blob in package_manifest.blobs() {
+            deps.insert(blob.source_path.clone().into());
+        }
+
+        packages.push(package_manifest);
     }
 
     for package_list_manifest_path in cmd.package_list_manifests {
@@ -62,17 +69,27 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
             format!("opening package manifest list {}", package_list_manifest_path)
         })?;
 
-        for package_manifest_path in PackageManifestList::from_reader(file).with_context(|| {
+        let package_list_manifest = PackageManifestList::from_reader(file).with_context(|| {
             format!("reading package manifest list {}", package_list_manifest_path)
-        })? {
-            packages.push(
-                PackageManifest::try_load_from(&package_manifest_path).with_context(|| {
-                    format!("reading package manifest {}", package_manifest_path)
-                })?,
-            );
-        }
+        })?;
 
-        deps.push(package_list_manifest_path);
+        // Track the package list manifest path as a dependency.
+        deps.insert(package_list_manifest_path);
+
+        for package_manifest_path in package_list_manifest {
+            let package_manifest = PackageManifest::try_load_from(&package_manifest_path)
+                .with_context(|| format!("reading package manifest {}", package_manifest_path))?;
+
+            // Track the package manifest path as a dependency.
+            deps.insert(package_manifest_path);
+
+            // Track all the blobs from the package manifest as a dependency.
+            for blob in package_manifest.blobs() {
+                deps.insert(blob.source_path.clone().into());
+            }
+
+            packages.push(package_manifest);
+        }
     }
 
     // Try to connect to the repository. This should succeed if we have at least some root metadata
@@ -484,6 +501,9 @@ mod tests {
 
         let pkg1_manifest_path = root.join("package1.json");
         let pkg2_manifest_path = root.join("package2.json");
+        let pkg3_manifest_path = root.join("package3.json");
+        let pkg4_manifest_path = root.join("package4.json");
+        let pkg5_manifest_path = root.join("package5.json");
 
         // Bundle up package3, package4, and package5 into package list manifests.
         let pkg_list1_manifest =
@@ -529,8 +549,20 @@ mod tests {
 
         let blob_repo_path = repo_path.join("repository").join("blobs");
 
+        let mut expected_deps = BTreeSet::from([
+            pkg1_manifest_path,
+            pkg2_manifest_path,
+            pkg3_manifest_path,
+            pkg4_manifest_path,
+            pkg5_manifest_path,
+            pkg_list1_manifest_path,
+            pkg_list2_manifest_path,
+        ]);
+
         for package_manifest in manifests {
             for blob in package_manifest.blobs() {
+                expected_deps.insert(blob.source_path.clone().into());
+
                 let blob_path = blob_repo_path.join(&blob.merkle.to_string());
 
                 assert_eq!(
@@ -543,12 +575,9 @@ mod tests {
         assert_eq!(
             std::fs::read_to_string(&depfile_path).unwrap(),
             format!(
-                "{}: {} {} {} {}",
+                "{}: {}",
                 repo_path.join("repository").join("timestamp.json"),
-                pkg1_manifest_path,
-                pkg2_manifest_path,
-                pkg_list1_manifest_path,
-                pkg_list2_manifest_path
+                expected_deps.iter().map(|p| p.as_str()).collect::<Vec<_>>().join(" "),
             )
         );
     }
