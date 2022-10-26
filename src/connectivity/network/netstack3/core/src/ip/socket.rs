@@ -405,6 +405,12 @@ impl<I: Ip> SendOptions<I> for DefaultSendOptions {
     }
 }
 
+impl<I: Ip, S: SendOptions<I>> SendOptions<I> for &'_ S {
+    fn hop_limit(&self, destination: &SpecifiedAddr<<I as Ip>::Addr>) -> Option<NonZeroU8> {
+        S::hop_limit(self, destination)
+    }
+}
+
 fn send_ip_packet<
     I: IpExt + IpDeviceStateIpExt + packet_formats::ip::IpExt,
     B: BufferMut,
@@ -974,7 +980,6 @@ pub(crate) mod testutil {
         }
     }
 
-    #[derive(Default)]
     pub(crate) struct FakeBufferIpSocketCtx<I: IpDeviceStateIpExt, D> {
         ip_socket_ctx: FakeIpSocketCtx<I, D>,
     }

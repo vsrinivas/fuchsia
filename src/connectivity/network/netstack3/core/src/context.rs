@@ -301,6 +301,7 @@ pub(crate) mod testutil {
     };
 
     use assert_matches::assert_matches;
+    use derivative::Derivative;
     use packet::Buf;
     use rand_xorshift::XorShiftRng;
 
@@ -1171,7 +1172,8 @@ pub(crate) mod testutil {
         }
     }
 
-    #[derive(Default)]
+    #[derive(Derivative)]
+    #[derivative(Default(bound = "Outer: Default, S: Default"))]
     pub(crate) struct WrappedFakeSyncCtx<Outer, S, Meta, DeviceId> {
         pub(crate) inner: FakeSyncCtx<S, Meta, DeviceId>,
         pub(crate) outer: Outer,
@@ -1201,6 +1203,8 @@ pub(crate) mod testutil {
 
     /// A test helper used to provide an implementation of a synchronized
     /// context.
+    #[derive(Derivative)]
+    #[derivative(Default(bound = "S: Default"))]
     pub(crate) struct FakeSyncCtx<S, Meta, DeviceId> {
         state: S,
         frames: FakeFrameCtx<Meta>,
@@ -1216,12 +1220,6 @@ pub(crate) mod testutil {
     impl<S, Meta, DeviceId> AsMut<FakeSyncCtx<S, Meta, DeviceId>> for FakeSyncCtx<S, Meta, DeviceId> {
         fn as_mut(&mut self) -> &mut FakeSyncCtx<S, Meta, DeviceId> {
             self
-        }
-    }
-
-    impl<S: Default, Meta, DeviceId> Default for FakeSyncCtx<S, Meta, DeviceId> {
-        fn default() -> FakeSyncCtx<S, Meta, DeviceId> {
-            FakeSyncCtx::with_state(S::default())
         }
     }
 
