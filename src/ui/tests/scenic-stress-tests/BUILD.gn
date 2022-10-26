@@ -12,7 +12,7 @@ rustc_test("scenic-stressor-bin") {
   name = "scenic_stressor"
   edition = "2021"
   testonly = true
-  source_root = "src/main.rs"
+  source_root = "src/gfx_main.rs"
 
   deps = [
     "//sdk/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx_rust",
@@ -34,9 +34,9 @@ rustc_test("scenic-stressor-bin") {
   ]
 
   sources = [
-    "src/environment.rs",
+    "src/gfx_environment.rs",
+    "src/gfx_main.rs",
     "src/input_actor.rs",
-    "src/main.rs",
     "src/pointer_state.rs",
     "src/session.rs",
     "src/session_actor.rs",

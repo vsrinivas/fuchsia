@@ -15,8 +15,12 @@ pub struct InputActor {
 }
 
 impl InputActor {
-    pub fn new(injector: pointerinjector::DeviceProxy) -> Self {
-        let state = PointerState::new();
+    pub fn new(
+        injector: pointerinjector::DeviceProxy,
+        display_width: u16,
+        display_height: u16,
+    ) -> Self {
+        let state = PointerState::new(display_width, display_height);
         Self { injector, state }
     }
 }

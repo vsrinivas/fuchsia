@@ -2,28 +2,34 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    crate::session::{DISPLAY_HEIGHT, DISPLAY_WIDTH},
-    fidl_fuchsia_ui_pointerinjector as pointerinjector,
-    fuchsia_zircon::Time,
-};
+use {fidl_fuchsia_ui_pointerinjector as pointerinjector, fuchsia_zircon::Time};
 
 /// State tracking for touch events. Touch events follow a cycle of states:
-/// Add -> Down -> Move -> Up -> Remove -> Add -> ...
+/// Add -> Change -> Remove -> Add -> ...
 ///
 /// This struct generates these states repeatedly, at random coordinates on the display.
 /// Note that when a touch event hits an object on the scene graph, a pointer event is sent to the
-/// corresponding session's listener.
+/// corresponding scenic client.
 pub struct PointerState {
     phase: pointerinjector::EventPhase,
     pointer_id: u32,
     x: u16,
     y: u16,
+    display_width: u16,
+    display_height: u16,
 }
 
 impl PointerState {
-    pub fn new() -> Self {
-        Self { phase: pointerinjector::EventPhase::Remove, pointer_id: 1, x: 0, y: 0 }
+    pub fn new(display_width: u16, display_height: u16) -> Self {
+        Self {
+            // Initial phase is "Remove", so that the first call to next_event() yields "Add".
+            phase: pointerinjector::EventPhase::Remove,
+            pointer_id: 1,
+            x: 0,
+            y: 0,
+            display_width,
+            display_height,
+        }
     }
 
     /// Transition from one phase to the next.
@@ -37,7 +43,7 @@ impl PointerState {
     }
 
     /// Generate a pointer event for the current state.
-    /// The pointer is placed at random coordinates on the display.
+    /// The pointer coordinates move in a diagonal pattern across the display.
     pub fn next_event(&mut self) -> pointerinjector::Event {
         self.next_phase();
 
@@ -49,8 +55,8 @@ impl PointerState {
         };
 
         // Update coordinates.
-        self.y = (self.y + (self.x == DISPLAY_WIDTH) as u16) % (DISPLAY_HEIGHT + 1);
-        self.x = (self.x + 1) % (DISPLAY_WIDTH + 1);
+        self.y = (self.y + (self.x == self.display_width) as u16) % (self.display_height + 1);
+        self.x = (self.x + 1) % (self.display_width + 1);
 
         pointerinjector::Event {
             timestamp: Some(Time::get_monotonic().into_nanos()),

@@ -20,12 +20,12 @@ use {
 
 /// Contains the running instance of scenic and the actors that operate on it.
 /// This object lives for the entire duration of the test.
-pub struct ScenicEnvironment {
+pub struct GfxEnvironment {
     args: Args,
     realm_instance: RealmInstance,
 }
 
-impl ScenicEnvironment {
+impl GfxEnvironment {
     pub async fn new(args: Args) -> Self {
         let builder = RealmBuilder::new().await.unwrap();
         let hdcp = builder.add_child("hdcp", "#meta/hdcp.cm", ChildOptions::new()).await.unwrap();
@@ -91,14 +91,14 @@ impl ScenicEnvironment {
     }
 }
 
-impl std::fmt::Debug for ScenicEnvironment {
+impl std::fmt::Debug for GfxEnvironment {
     fn fmt(&self, fmt: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        fmt.debug_struct("ScenicEnvironment").field("args", &self.args).finish()
+        fmt.debug_struct("GfxEnvironment").field("args", &self.args).finish()
     }
 }
 
 #[async_trait]
-impl Environment for ScenicEnvironment {
+impl Environment for GfxEnvironment {
     fn target_operations(&self) -> Option<u64> {
         self.args.num_operations
     }
@@ -163,7 +163,8 @@ impl Environment for ScenicEnvironment {
                 .expect("Failed to register injector");
 
             // Create the input actor.
-            let input_actor = Arc::new(Mutex::new(InputActor::new(device_proxy)));
+            let input_actor =
+                Arc::new(Mutex::new(InputActor::new(device_proxy, DISPLAY_WIDTH, DISPLAY_HEIGHT)));
             ActorRunner::new("input_actor", Some(Duration::from_millis(16)), input_actor)
         };
 

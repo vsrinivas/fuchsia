@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod environment;
+mod gfx_environment;
 mod input_actor;
 mod pointer_state;
 mod session;
 mod session_actor;
 
 use {
-    argh::FromArgs, environment::ScenicEnvironment, fuchsia_async as fasync, stress_test::run_test,
-    tracing::Level,
+    argh::FromArgs, fuchsia_async as fasync, gfx_environment::GfxEnvironment,
+    stress_test::run_test, tracing::Level,
 };
 
 #[derive(Clone, Debug, FromArgs)]
@@ -52,7 +52,7 @@ async fn test() {
     }
 
     // Setup the scenic environment
-    let env = ScenicEnvironment::new(args).await;
+    let env = GfxEnvironment::new(args).await;
 
     // Run the test
     run_test(env).await;
