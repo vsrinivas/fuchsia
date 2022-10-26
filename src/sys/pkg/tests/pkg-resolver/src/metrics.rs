@@ -409,6 +409,8 @@ async fn load_repository_for_channel_success_no_rewrite_rule() {
 // Test the HTTP status range space for metrics handling for a blob fetch.
 mod pkg_resolver_blob_fetch {
     use super::*;
+    use metrics::FetchBlobMigratedMetricDimensionResult::*;
+    use test_case::test_case;
 
     struct StatusTest {
         min_code: u16,
@@ -417,33 +419,7 @@ mod pkg_resolver_blob_fetch {
         status: metrics::FetchBlobMigratedMetricDimensionResult,
     }
 
-    // Macro to construct a test table table.
-    macro_rules! test_cases {
-        ( $( $name:ident => [ $( ( $min:expr, $max:expr, $count:expr, $status:ident ), )+ ], )+ ) => {
-            $(
-                #[fasync::run_singlethreaded(test)]
-                async fn $name() {
-                    let test_table: Vec<StatusTest> = vec![
-                        $(
-                            StatusTest {
-                                min_code: $min,
-                                max_code: $max,
-                                count: $count,
-                                status: metrics::FetchBlobMigratedMetricDimensionResult::$status,
-                            },
-                        )+
-                    ];
-
-                    verify_status_ranges(&test_table).await
-                }
-            )+
-        }
-    }
-
-    // Test cases are:
-    // (start code, end code, number of expected metrics, metric name)
-    test_cases! {
-        status_ranges_101_2xx => [
+    #[test_case(vec![
             // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
@@ -451,11 +427,11 @@ mod pkg_resolver_blob_fetch {
             // We're not sending a body, so we expect a C-L issue rather than Success.
             (200, 200, 1, ContentLengthMismatch),
             (201, 299, 2, Http2xx),
-        ],
-        status_ranges_3xx => [
+        ]; "status_ranges_101_2xx")]
+    #[test_case(vec![
             (300, 399, 2, Http3xx),
-        ],
-        status_ranges_4xx => [
+        ]; "status_ranges_3xx")]
+    #[test_case(vec![
             (400, 400, 2, HttpBadRequest),
             (401, 401, 2, HttpUnauthorized),
             (402, 402, 2, Http4xx),
@@ -472,18 +448,30 @@ mod pkg_resolver_blob_fetch {
             // We expect 4 metrics here because this response triggers a different retry policy.
             (429, 429, 4, HttpTooManyRequests),
             (430, 499, 2, Http4xx),
-        ],
-        status_ranges_5xx => [
+        ]; "status_ranges_4xx")]
+    #[test_case(vec![
             (500, 500, 2, HttpInternalServerError),
             (501, 501, 2, Http5xx),
             (502, 502, 2, HttpBadGateway),
             (503, 503, 2, HttpServiceUnavailable),
             (504, 504, 2, HttpGatewayTimeout),
             (505, 599, 2, Http5xx),
-        ],
-        // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
-        // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
-        // these because StatusCode won't let us create new ones in this range.
+        ]; "status_ranges_5xx")]
+    // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
+    // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
+    // these because StatusCode won't let us create new ones in this range.
+    #[fasync::run_singlethreaded(test)]
+    async fn tests(tests: Vec<(u16, u16, usize, metrics::FetchBlobMigratedMetricDimensionResult)>) {
+        let test_table: Vec<StatusTest> = tests
+            .into_iter()
+            .map(|(min_code, max_code, count, status)| StatusTest {
+                min_code,
+                max_code,
+                count,
+                status,
+            })
+            .collect();
+        verify_status_ranges(&test_table).await
     }
 
     async fn verify_status_ranges(test_table: &[StatusTest]) {
@@ -535,6 +523,8 @@ mod pkg_resolver_blob_fetch {
 // Test the HTTP status range space for metrics related to TUF client construction.
 mod pkg_resolver_create_tuf_client {
     use super::*;
+    use metrics::CreateTufClientMigratedMetricDimensionResult::*;
+    use test_case::test_case;
 
     struct StatusTest {
         min_code: u16,
@@ -542,32 +532,7 @@ mod pkg_resolver_create_tuf_client {
         status: metrics::CreateTufClientMigratedMetricDimensionResult,
     }
 
-    // Macro to construct a test table table.
-    macro_rules! test_cases {
-        ( $( $name:ident => [ $( ( $min:expr, $max:expr, $status:ident ), )+ ], )+ ) => {
-            $(
-                #[fasync::run_singlethreaded(test)]
-                async fn $name() {
-                    let test_table: Vec<StatusTest> = vec![
-                        $(
-                            StatusTest {
-                                min_code: $min,
-                                max_code: $max,
-                                status: metrics::CreateTufClientMigratedMetricDimensionResult::$status,
-                            },
-                        )+
-                    ];
-
-                    verify_status_ranges(&test_table).await
-                }
-            )+
-        }
-    }
-
-    // Test cases are:
-    // (start code, end code, metric name)
-    test_cases! {
-        status_ranges_101_2xx => [
+    #[test_case(vec![
             // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
@@ -575,11 +540,11 @@ mod pkg_resolver_create_tuf_client {
             // We're not sending a body, so our empty response will report as an BadHttpStatus issue.
             (200, 200, UnexpectedTufErrorVariant),
             (201, 299, Http2xx),
-        ],
-        status_ranges_3xx => [
+        ]; "status_ranges_101_2xx")]
+    #[test_case(vec![
             (300, 399, Http3xx),
-        ],
-        status_ranges_4xx => [
+        ]; "status_ranges_3xx")]
+    #[test_case(vec![
             (400, 400, HttpBadRequest),
             (401, 401, HttpUnauthorized),
             (402, 402, Http4xx),
@@ -596,18 +561,25 @@ mod pkg_resolver_create_tuf_client {
             (417, 428, Http4xx),
             (429, 429, HttpTooManyRequests),
             (430, 499, Http4xx),
-        ],
-        status_ranges_5xx => [
+        ]; "status_ranges_4xx")]
+    #[test_case(vec![
             (500, 500, HttpInternalServerError),
             (501, 501, Http5xx),
             (502, 502, HttpBadGateway),
             (503, 503, HttpServiceUnavailable),
             (504, 504, HttpGatewayTimeout),
             (505, 599, Http5xx),
-        ],
-        // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
-        // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
-        // these because StatusCode won't let us create new ones in this range.
+        ]; "status_ranges_5xx")]
+    #[fasync::run_singlethreaded(test)]
+    // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
+    // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
+    // these because StatusCode won't let us create new ones in this range.
+    async fn tests(tests: Vec<(u16, u16, metrics::CreateTufClientMigratedMetricDimensionResult)>) {
+        let test_table: Vec<StatusTest> = tests
+            .into_iter()
+            .map(|(min_code, max_code, status)| StatusTest { min_code, max_code, status })
+            .collect();
+        verify_status_ranges(&test_table).await
     }
 
     async fn verify_status_ranges(test_table: &[StatusTest]) {
@@ -650,6 +622,8 @@ mod pkg_resolver_create_tuf_client {
 // Test the HTTP status range space for metrics related to TUF update clients.
 mod pkg_resolver_update_tuf_client {
     use super::*;
+    use metrics::UpdateTufClientMigratedMetricDimensionResult::*;
+    use test_case::test_case;
 
     struct StatusTest {
         min_code: u16,
@@ -657,32 +631,7 @@ mod pkg_resolver_update_tuf_client {
         status: metrics::UpdateTufClientMigratedMetricDimensionResult,
     }
 
-    // Macro to construct a test table table.
-    macro_rules! test_cases {
-        ( $( $name:ident => [ $( ( $min:expr, $max:expr, $status:ident ), )+ ], )+ ) => {
-            $(
-                #[fasync::run_singlethreaded(test)]
-                async fn $name() {
-                    let test_table: Vec<StatusTest> = vec![
-                        $(
-                            StatusTest {
-                                min_code: $min,
-                                max_code: $max,
-                                status: metrics::UpdateTufClientMigratedMetricDimensionResult::$status,
-                            },
-                        )+
-                    ];
-
-                    verify_status_ranges(&test_table).await
-                }
-            )+
-        }
-    }
-
-    // Test cases are:
-    // (start code, end code, metric name)
-    test_cases! {
-        status_ranges_101_2xx => [
+    #[test_case(vec![
             // Hyper doesn't support 100-level responses other than protocol upgrade, and silently
             // turns them into a 500 and closes the connection. That results in flakiness when we can
             // request faster than the connection is removed from the pool.
@@ -690,11 +639,11 @@ mod pkg_resolver_update_tuf_client {
             // We're not sending a body, so our empty response will report as a BadHttpStatus issue.
             (200, 200, UnexpectedTufErrorVariant),
             (201, 299, Http2xx),
-        ],
-        status_ranges_3xx => [
+        ]; "status_ranges_101_2xx")]
+    #[test_case(vec![
             (300, 399, Http3xx),
-        ],
-        status_ranges_4xx => [
+        ]; "status_ranges_3xx")]
+    #[test_case(vec![
             (400, 400, HttpBadRequest),
             (401, 401, HttpUnauthorized),
             (402, 402, Http4xx),
@@ -711,18 +660,25 @@ mod pkg_resolver_update_tuf_client {
             (417, 428, Http4xx),
             (429, 429, HttpTooManyRequests),
             (430, 499, Http4xx),
-        ],
-        status_ranges_5xx => [
+        ]; "status_ranges_4xx")]
+    #[test_case(vec![
             (500, 500, HttpInternalServerError),
             (501, 501, Http5xx),
             (502, 502, HttpBadGateway),
             (503, 503, HttpServiceUnavailable),
             (504, 504, HttpGatewayTimeout),
             (505, 599, Http5xx),
-        ],
-        // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
-        // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
-        // these because StatusCode won't let us create new ones in this range.
+        ]; "status_ranges_5xx")]
+    #[fasync::run_singlethreaded(test)]
+    // 600-999 aren't real, but are sometimes used in e.g. CDN configurations to track state
+    // machine transitions, and occasionally leak on bugs. Unfortunately, we don't get to test
+    // these because StatusCode won't let us create new ones in this range.
+    async fn tests(tests: Vec<(u16, u16, metrics::UpdateTufClientMigratedMetricDimensionResult)>) {
+        let test_table: Vec<StatusTest> = tests
+            .into_iter()
+            .map(|(min_code, max_code, status)| StatusTest { min_code, max_code, status })
+            .collect();
+        verify_status_ranges(&test_table).await
     }
 
     async fn verify_status_ranges(test_table: &[StatusTest]) {

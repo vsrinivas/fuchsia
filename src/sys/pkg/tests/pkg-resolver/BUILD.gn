@@ -281,6 +281,7 @@ rustc_test("metrics") {
     "//third_party/cobalt/src/lib/client/rust:cobalt-client",
     "//third_party/rust_crates:assert_matches",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:test-case",
   ]
   sources = [ "src/metrics.rs" ]
 }
