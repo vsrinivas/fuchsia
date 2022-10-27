@@ -5839,62 +5839,93 @@ static void init_vif_event(struct brcmf_cfg80211_vif_event* event) {
   mtx_init(&event->vif_event_lock, mtx_plain);
 }
 
-static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
-  zx_status_t err;
-  bcme_status_t fw_err = BCME_OK;
-  uint32_t bcn_timeout;
-  uint32_t roamtrigger[2];
-  uint32_t roam_delta[2];
+// Setup roam engine firmware offload (if supported).
+// Note: there is a separate function for configuring the offload.
+static zx_status_t brcmf_setup_roam_engine(struct brcmf_if* ifp) {
+  bcme_status_t fwerr;
+  zx_status_t status = ZX_OK;
+  ifp->drvr->settings->roam_engine_enabled = false;
 
-  if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
-    return ZX_OK;  // TODO(fxbug.dev/29354) Find out why, and document.
-  }
-  /* Configure beacon timeout value based upon roaming setting */
-  if (ifp->drvr->settings->roamoff) {
-    bcn_timeout = BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_OFF;
+  // Iovar is "roam_off" which makes enable 0, while disable is 1.
+  enum {
+    ROAM_ENGINE_ENABLED = 0,
+    ROAM_ENGINE_DISABLED = 1,
+  };
+  if (brcmf_feat_is_enabled(ifp, BRCMF_FEAT_ROAM_ENGINE)) {
+    status = brcmf_fil_iovar_int_set(ifp, "roam_off", ROAM_ENGINE_ENABLED, &fwerr);
+    if (status == ZX_OK) {
+      BRCMF_INFO("Roam engine firmware offload is enabled");
+      ifp->drvr->settings->roam_engine_enabled = true;
+    } else {
+      BRCMF_WARN("Could not enable roam engine offload, firmware error %s",
+                 brcmf_fil_get_errstr(fwerr));
+    }
   } else {
-    bcn_timeout = BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ON;
+    status = brcmf_fil_iovar_int_set(ifp, "roam_off", ROAM_ENGINE_DISABLED, &fwerr);
+    if (status == ZX_OK || status == ZX_ERR_NOT_SUPPORTED) {
+      // Note: if iovar is not supported, then roam engine is effectively disabled.
+      BRCMF_INFO("Roam engine firmware offload is disabled");
+      status = ZX_OK;
+    } else {
+      BRCMF_WARN("Could not disable roam engine offload, firmware error %s",
+                 brcmf_fil_get_errstr(fwerr));
+    }
   }
-  err = brcmf_fil_iovar_int_set(ifp, "bcn_timeout", bcn_timeout, &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("bcn_timeout error: %s, fw err %s", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    goto roam_setup_done;
-  }
+  return status;
+}
 
-  /* Enable/Disable built-in roaming to allow supplicant to take care of
-   * roaming.
-   */
-  BRCMF_INFO("Setting roam_off = %s", ifp->drvr->settings->roamoff ? "Off" : "On");
-  err = brcmf_fil_iovar_int_set(ifp, "roam_off", ifp->drvr->settings->roamoff, &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("roam_off error: %s, fw err %s", zx_status_get_string(err),
-              brcmf_fil_get_errstr(fw_err));
-    goto roam_setup_done;
+static zx_status_t brcmf_configure_roam_engine(struct brcmf_if* ifp) {
+  if (!brcmf_feat_is_enabled(ifp, BRCMF_FEAT_ROAM_ENGINE)) {
+    return ZX_OK;
   }
-
-  roamtrigger[0] = WL_ROAM_TRIGGER_LEVEL;
-  roamtrigger[1] = BRCM_BAND_ALL;
-  err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_ROAM_TRIGGER, roamtrigger, sizeof(roamtrigger),
-                               &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("WLC_SET_ROAM_TRIGGER error: %s, fw err %s", zx_status_get_string(err),
+  bcme_status_t fw_err = BCME_OK;
+  uint32_t roam_trigger[2];
+  uint32_t roam_delta[2];
+  roam_trigger[0] = WL_ROAM_TRIGGER_LEVEL;
+  roam_trigger[1] = BRCM_BAND_ALL;
+  zx_status_t status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_ROAM_TRIGGER, roam_trigger,
+                                              sizeof(roam_trigger), &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("Failed to set roam trigger, error: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    goto roam_setup_done;
+    return status;
   }
 
   roam_delta[0] = WL_ROAM_DELTA;
   roam_delta[1] = BRCM_BAND_ALL;
-  err =
+  status =
       brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_ROAM_DELTA, roam_delta, sizeof(roam_delta), &fw_err);
-  if (err != ZX_OK) {
-    BRCMF_ERR("WLC_SET_ROAM_DELTA error: %s, fw err %s", zx_status_get_string(err),
+  if (status != ZX_OK) {
+    BRCMF_ERR("Failed to set roam delta, error: %s, fw err %s", zx_status_get_string(status),
               brcmf_fil_get_errstr(fw_err));
-    goto roam_setup_done;
   }
+  return status;
+}
 
-roam_setup_done:
-  return err;
+static zx_status_t brcmf_configure_beacon_timeout(struct brcmf_if* ifp) {
+  uint32_t bcn_timeout = BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ENGINE_OFF;
+  /* Configure beacon timeout value based upon roaming setting */
+  if (ifp->drvr->settings->roam_engine_enabled) {
+    bcn_timeout = BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ENGINE_ON;
+  }
+  bcme_status_t fw_err;
+  const zx_status_t status = brcmf_fil_iovar_int_set(ifp, "bcn_timeout", bcn_timeout, &fw_err);
+  if (status != ZX_OK) {
+    BRCMF_ERR("Failed to set bcn_timeout, error: %s, fw err %s", zx_status_get_string(status),
+              brcmf_fil_get_errstr(fw_err));
+  }
+  return status;
+}
+
+static zx_status_t brcmf_dongle_roam(struct brcmf_if* ifp) {
+  if (brcmf_feat_is_quirk_enabled(ifp, BRCMF_FEAT_QUIRK_IS_4359)) {
+    return ZX_OK;  // TODO(fxbug.dev/29354) Find out why, and document.
+  }
+  zx_status_t status = brcmf_setup_roam_engine(ifp);
+  if (status == ZX_OK) {
+    status = brcmf_configure_roam_engine(ifp);
+  }
+  return status;
 }
 
 static zx_status_t brcmf_dongle_scantime(struct brcmf_if* ifp) {
@@ -5972,6 +6003,10 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   brcmf_dongle_scantime(ifp);
 
   err = brcmf_dongle_roam(ifp);
+  if (err != ZX_OK) {
+    goto default_conf_out;
+  }
+  err = brcmf_configure_beacon_timeout(ifp);
   if (err != ZX_OK) {
     goto default_conf_out;
   }

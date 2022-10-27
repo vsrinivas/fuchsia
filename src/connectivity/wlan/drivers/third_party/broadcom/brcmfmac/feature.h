@@ -44,6 +44,7 @@
  * FWSUP: Firmware supplicant.
  * DHIST: Detailed histograms for station and antenna metrics.
  * EXTSAE: External supplicant version of SAE authentication.
+ * ROAM_ENGINE: Firmware offload of roaming decisions.
  */
 #define BRCMF_FEAT_LIST           \
   BRCMF_FEAT_DEF(AP)              \
@@ -68,7 +69,8 @@
   BRCMF_FEAT_DEF(GSCAN)           \
   BRCMF_FEAT_DEF(FWSUP)           \
   BRCMF_FEAT_DEF(DHIST)           \
-  BRCMF_FEAT_DEF(EXTSAE)
+  BRCMF_FEAT_DEF(EXTSAE)          \
+  BRCMF_FEAT_DEF(ROAM_ENGINE)
 
 /*
  * Quirks:

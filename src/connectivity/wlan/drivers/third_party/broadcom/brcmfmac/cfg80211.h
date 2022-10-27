@@ -162,8 +162,8 @@
 #define BRCMF_MAX_DEFAULT_KEYS 6
 
 /* beacon loss timeout defaults */
-#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ON  2
-#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_OFF 8
+#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ENGINE_ON  2
+#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ENGINE_OFF 8
 
 // clang-format on
 
@@ -401,7 +401,6 @@ enum brcmf_disconnect_mode {
  * @channel: current channel.
  * @ibss_starter: indicates this sta is ibss starter.
  * @dongle_up: indicate whether dongle up or not.
- * @roam_on: on/off switch for dongle self-roaming.
  * @scan_tried: indicates if first scan attempted.
  * @scan_in_progress: indicates if a scan is in progress
  * @dcmd_buf: dcmd buffer.

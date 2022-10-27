@@ -34,7 +34,7 @@ constexpr uint32_t kBufKeyB4M4 = 1;
  *
  * @feature_disable: Feature_disable bitmask.
  * @fcmode: FWS flow control.
- * @roamoff: Firmware roaming off?
+ * @roam_engine_enabled: Firmware roam engine offload enabled?
  * @ignore_probe_fail: Ignore probe failure.
  * @country_codes: If available, pointer to struct for translating country codes
  * @bus: Bus specific platform data. Only SDIO at the mmoment.
@@ -42,7 +42,7 @@ constexpr uint32_t kBufKeyB4M4 = 1;
 struct brcmf_mp_device {
   unsigned int feature_disable;
   int fcmode;
-  bool roamoff;
+  bool roam_engine_enabled;
   bool ignore_probe_fail;
   struct brcmfmac_pd_cc* country_codes;
   struct {

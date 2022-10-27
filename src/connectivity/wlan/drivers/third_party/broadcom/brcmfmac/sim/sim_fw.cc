@@ -127,6 +127,8 @@ zx_status_t SimFirmware::SetupIovarTable() {
       {"ndoe", sizeof(ndoe_), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt, &ndoe_},
       {"nmode", sizeof(uint32_t), nullptr, &SimFirmware::IovarNmodeGet},
       {"pfn_macaddr", ETH_ALEN, &SimFirmware::IovarPfnMacaddrSet, &SimFirmware::IovarPfnMacaddrGet},
+      {"roam_off", sizeof(roam_off_), &SimFirmware::IovarSet, &SimFirmware::IovarGet, std::nullopt,
+       &roam_off_},
       {"rrm", sizeof(uint32_t), nullptr, &SimFirmware::IovarRrmGet},
       {"rxchain", sizeof(uint32_t), nullptr, &SimFirmware::IovarRxchainGet},
       {"snr", sizeof(int32_t), nullptr, &SimFirmware::IovarSnrGet},

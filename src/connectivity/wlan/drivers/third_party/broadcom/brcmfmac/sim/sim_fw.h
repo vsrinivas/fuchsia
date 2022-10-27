@@ -541,6 +541,7 @@ class SimFirmware {
   int32_t stbc_tx_ = 0;         // 0 = disabled, 1 = enabled, -1 = auto
   uint32_t txstreams_ = 1;      // Number of Tx streams
   uint32_t wnm_ = 1;            // This feature is enabled by default in firmware.
+  uint32_t roam_off_ = 0;       // Roam engine is enabled by default.
   uint32_t buf_key_b4_m4_ = 0;  // Buffer key until EAPOL 4th frame is sent out
 
   std::unordered_map<std::string, SimIovar> iovar_table_;

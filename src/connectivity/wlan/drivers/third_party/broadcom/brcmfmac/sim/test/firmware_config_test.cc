@@ -36,8 +36,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "zircon/system/ulib/sync/include/lib/sync/cpp/completion.h"
 
-namespace wlan {
-namespace brcmfmac {
+namespace wlan::brcmfmac {
 namespace {
 
 class FirmwareConfigTest : public SimTest {
@@ -152,6 +151,60 @@ TEST_F(FirmwareConfigTest, StbcTxAndTxstreams) {
   EXPECT_EQ(status, ZX_OK);
 }
 
+TEST_F(FirmwareConfigTest, RoamEngineDisabledByDefault) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  const auto get_status = brcmf_fil_iovar_int_get(ifp, "roam_off", &iovar, nullptr);
+
+  ASSERT_EQ(get_status, ZX_OK);
+  EXPECT_EQ(1U, iovar);
+}
+
+TEST_F(FirmwareConfigTest, RoamEngineEnabledViaFeatureFlag) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  device_->GetSim()->drvr->feat_flags |= BIT(BRCMF_FEAT_ROAM_ENGINE);
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  const auto get_status = brcmf_fil_iovar_int_get(ifp, "roam_off", &iovar, nullptr);
+
+  ASSERT_EQ(get_status, ZX_OK);
+  EXPECT_EQ(0U, iovar);
+}
+
+TEST_F(FirmwareConfigTest, BeaconTimeoutDefault) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  const auto get_status = brcmf_fil_iovar_int_get(ifp, "bcn_timeout", &iovar, nullptr);
+
+  ASSERT_EQ(get_status, ZX_OK);
+  EXPECT_EQ(8U, iovar);
+}
+
+TEST_F(FirmwareConfigTest, BeaconTimeoutWhenRoamEngineIsSetup) {
+  Init();
+  SimInterface ifc;
+  uint32_t iovar;
+
+  device_->GetSim()->drvr->feat_flags |= BIT(BRCMF_FEAT_ROAM_ENGINE);
+  EXPECT_EQ(StartInterface(WLAN_MAC_ROLE_CLIENT, &ifc), ZX_OK);
+  struct brcmf_if* ifp = brcmf_get_ifp(device_->GetSim()->drvr, ifc.iface_id_);
+  const auto get_status = brcmf_fil_iovar_int_get(ifp, "bcn_timeout", &iovar, nullptr);
+
+  ASSERT_EQ(get_status, ZX_OK);
+  // Driver uses different value for beacon timeout if roam engine is enabled.
+  EXPECT_EQ(2U, iovar);
+}
+
 }  // namespace
-}  // namespace brcmfmac
-}  // namespace wlan
+}  // namespace wlan::brcmfmac

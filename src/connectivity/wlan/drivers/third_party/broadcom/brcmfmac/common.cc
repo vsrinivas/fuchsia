@@ -52,8 +52,8 @@ static int brcmf_feature_disable;
 // Mode of firmware signalled flow control
 static int brcmf_fcmode;
 
-// Do not use internal roaming engine
-static bool brcmf_roamoff = 1;
+// Do not use firmware roam engine
+const static bool kRoamEngineDefault = false;
 
 #if !defined(NDEBUG)
 /* always succeed brcmf_bus_started() for debugging */
@@ -618,7 +618,7 @@ void brcmf_get_module_param(enum brcmf_bus_type bus_type, uint32_t chip, uint32_
   /* start by using the module paramaters */
   settings->feature_disable = brcmf_feature_disable;
   settings->fcmode = brcmf_fcmode;
-  settings->roamoff = brcmf_roamoff;
+  settings->roam_engine_enabled = kRoamEngineDefault;
 #if !defined(NDEBUG)
   settings->ignore_probe_fail = !!brcmf_ignore_probe_fail;
 #endif  // !defined(NDEBUG)
