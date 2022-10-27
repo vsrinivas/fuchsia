@@ -67,7 +67,7 @@ pub async fn cmd_package_build(cmd: PackageBuildCommand) -> Result<()> {
     if let Some(subpackages_manifest) = &subpackages_manifest {
         for (url, hash) in subpackages_manifest.to_subpackages()? {
             builder
-                .add_subpackage(url.clone(), hash.clone())
+                .add_subpackage(url.clone(), hash)
                 .with_context(|| format!("adding subpackage {} : {}", url, hash))?;
         }
     }

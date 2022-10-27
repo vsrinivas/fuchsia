@@ -4,6 +4,7 @@
 
 // TODO(fxb/104019): Consider enabling globally.
 #![deny(unused_crate_dependencies)]
+#![warn(clippy::all)]
 
 mod args;
 mod package_build;

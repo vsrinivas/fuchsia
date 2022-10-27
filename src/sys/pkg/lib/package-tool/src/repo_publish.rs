@@ -130,7 +130,7 @@ pub async fn cmd_repo_publish(cmd: RepoPublishCommand) -> Result<()> {
     };
 
     if let Some(repo_signing_keys) = &repo_signing_keys {
-        repo_builder = repo_builder.signing_repo_keys(&repo_signing_keys);
+        repo_builder = repo_builder.signing_repo_keys(repo_signing_keys);
     }
 
     repo_builder = repo_builder
