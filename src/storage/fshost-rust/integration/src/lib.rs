@@ -5,7 +5,7 @@
 use {
     device_watcher::recursive_wait_and_open_node,
     fidl::endpoints::{create_proxy, Proxy},
-    fidl_fuchsia_boot as fboot, fidl_fuchsia_fshost as fshost,
+    fidl_fuchsia_boot as fboot,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
     fidl_fuchsia_io as fio, fidl_fuchsia_logger as flogger, fidl_fuchsia_process as fprocess,
     fs_management::{Blobfs, Fxfs, BLOBFS_TYPE_GUID, DATA_TYPE_GUID},
@@ -22,6 +22,7 @@ use {
     uuid::Uuid,
 };
 
+pub mod fshost_builder;
 mod mocks;
 
 // We use a static key-bag so that the crypt instance can be shared across test executions safely.
@@ -124,8 +125,9 @@ pub async fn create_hermetic_crypt_service(
 }
 
 pub struct TestFixtureBuilder {
-    fshost_component_name: &'static str,
     data_filesystem_format: &'static str,
+
+    netboot: bool,
 
     with_ramdisk: bool,
     ramdisk_size: u64,
@@ -136,30 +138,25 @@ pub struct TestFixtureBuilder {
     // supports it. Doesn't do anything for fxfs.
     zxcrypt: bool,
 
-    // Direct config overrides.
-    fvm_ramdisk: bool,
-    ramdisk_prefix: Option<&'static str>,
-    blobfs_max_bytes: Option<u64>,
-    data_max_bytes: Option<u64>,
-    netboot: bool,
+    fshost: fshost_builder::FshostBuilder,
 }
 
 impl TestFixtureBuilder {
     pub fn new(fshost_component_name: &'static str, data_filesystem_format: &'static str) -> Self {
         Self {
-            fshost_component_name,
             data_filesystem_format,
+            netboot: false,
             with_ramdisk: false,
             ramdisk_size: 0,
             format_data: false,
             with_legacy_crypto_format: false,
             zxcrypt: true,
-            fvm_ramdisk: false,
-            ramdisk_prefix: None,
-            blobfs_max_bytes: None,
-            data_max_bytes: None,
-            netboot: false,
+            fshost: fshost_builder::FshostBuilder::new(fshost_component_name),
         }
+    }
+
+    pub fn fshost(&mut self) -> &mut fshost_builder::FshostBuilder {
+        &mut self.fshost
     }
 
     pub fn with_ramdisk(self) -> Self {
@@ -182,28 +179,8 @@ impl TestFixtureBuilder {
         self
     }
 
-    pub fn no_zxcrypt(mut self) -> Self {
+    pub fn without_zxcrypt(mut self) -> Self {
         self.zxcrypt = false;
-        self
-    }
-
-    pub fn fvm_ramdisk(mut self) -> Self {
-        self.fvm_ramdisk = true;
-        self
-    }
-
-    pub fn ramdisk_prefix(mut self, prefix: &'static str) -> Self {
-        self.ramdisk_prefix = Some(prefix);
-        self
-    }
-
-    pub fn blobfs_max_bytes(mut self, max_size: u64) -> Self {
-        self.blobfs_max_bytes = Some(max_size);
-        self
-    }
-
-    pub fn data_max_bytes(mut self, max_size: u64) -> Self {
-        self.data_max_bytes = Some(max_size);
         self
     }
 
@@ -215,38 +192,7 @@ impl TestFixtureBuilder {
     pub async fn build(self) -> TestFixture {
         let mocks = mocks::new_mocks(self.netboot).await;
         let builder = RealmBuilder::new().await.unwrap();
-        let fshost_url = format!("#meta/{}.cm", self.fshost_component_name);
-        println!("using {} as test-fshost", fshost_url);
-        let fshost = builder
-            .add_child("test-fshost", fshost_url, ChildOptions::new().eager())
-            .await
-            .unwrap();
-
-        builder.init_mutable_config_from_package(&fshost).await.unwrap();
-        // fshost config overrides
-        if !self.zxcrypt {
-            builder.set_config_value_bool(&fshost, "no_zxcrypt", !self.zxcrypt).await.unwrap();
-        }
-        if self.fvm_ramdisk {
-            builder.set_config_value_bool(&fshost, "fvm_ramdisk", self.fvm_ramdisk).await.unwrap();
-        }
-        if let Some(prefix) = self.ramdisk_prefix {
-            builder.set_config_value_string(&fshost, "ramdisk_prefix", prefix).await.unwrap();
-        }
-
-        if let Some(blobfs_max_bytes) = self.blobfs_max_bytes {
-            builder
-                .set_config_value_uint64(&fshost, "blobfs_max_bytes", blobfs_max_bytes)
-                .await
-                .unwrap();
-        }
-
-        if let Some(data_max_bytes) = self.data_max_bytes {
-            builder
-                .set_config_value_uint64(&fshost, "data_max_bytes", data_max_bytes)
-                .await
-                .unwrap();
-        }
+        let fshost = self.fshost.build(&builder).await;
 
         let mocks = builder
             .add_local_child("mocks", move |h| mocks(h).boxed(), ChildOptions::new())
@@ -255,47 +201,9 @@ impl TestFixtureBuilder {
         builder
             .add_route(
                 Route::new()
-                    .capability(Capability::protocol::<fshost::AdminMarker>())
-                    .from(&fshost)
-                    .to(Ref::parent()),
-            )
-            .await
-            .unwrap();
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol::<flogger::LogSinkMarker>())
-                    .from(Ref::parent())
-                    .to(&fshost),
-            )
-            .await
-            .unwrap();
-        builder
-            .add_route(
-                Route::new()
                     .capability(Capability::protocol::<fboot::ArgumentsMarker>())
                     .capability(Capability::protocol::<fboot::ItemsMarker>())
                     .from(&mocks)
-                    .to(&fshost),
-            )
-            .await
-            .unwrap();
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::directory("blob").rights(fio::RW_STAR_DIR))
-                    .capability(Capability::directory("data").rights(fio::RW_STAR_DIR))
-                    .capability(Capability::directory("tmp").rights(fio::RW_STAR_DIR))
-                    .from(&fshost)
-                    .to(Ref::parent()),
-            )
-            .await
-            .unwrap();
-        builder
-            .add_route(
-                Route::new()
-                    .capability(Capability::protocol::<fprocess::LauncherMarker>())
-                    .from(Ref::parent())
                     .to(&fshost),
             )
             .await
@@ -444,13 +352,12 @@ impl TestFixtureBuilder {
     }
 
     async fn init_data_minfs(&self, ramdisk_path: &str, dev: &fio::DirectoryProxy) {
-        let zxcrypt = self.zxcrypt && !self.fvm_ramdisk;
         let data_path = format!("{}/fvm/data-p-2/block", ramdisk_path);
         let mut data_device =
             recursive_wait_and_open_node(&dev, &data_path.strip_prefix("/dev/").unwrap())
                 .await
                 .expect("recursive_wait_and_open_node failed");
-        if zxcrypt {
+        if self.zxcrypt {
             let zxcrypt_path = zxcrypt::set_up_insecure_zxcrypt(Path::new(&data_path))
                 .await
                 .expect("failed to set up zxcrypt");

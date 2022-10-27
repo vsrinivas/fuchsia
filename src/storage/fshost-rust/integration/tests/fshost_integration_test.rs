@@ -38,13 +38,14 @@ fn data_fs_type() -> u32 {
     }
 }
 
-fn new_fixture() -> TestFixtureBuilder {
+fn new_builder() -> TestFixtureBuilder {
     TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
 }
 
 #[fuchsia::test]
 async fn blobfs_and_data_mounted() {
-    let fixture = new_fixture().with_ramdisk().format_data().build().await;
+    let builder = new_builder().with_ramdisk().format_data();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -61,7 +62,8 @@ async fn blobfs_and_data_mounted() {
 
 #[fuchsia::test]
 async fn data_formatted() {
-    let fixture = new_fixture().with_ramdisk().build().await;
+    let builder = new_builder().with_ramdisk();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
 
@@ -70,8 +72,8 @@ async fn data_formatted() {
 
 #[fuchsia::test]
 async fn data_mounted_legacy_crypto_format() {
-    let fixture =
-        new_fixture().with_ramdisk().format_data().with_legacy_crypto_format().build().await;
+    let builder = new_builder().with_ramdisk().format_data().with_legacy_crypto_format();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
     let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
@@ -86,7 +88,9 @@ async fn data_mounted_legacy_crypto_format() {
 
 #[fuchsia::test]
 async fn data_mounted_no_zxcrypt() {
-    let fixture = new_fixture().with_ramdisk().format_data().no_zxcrypt().build().await;
+    let mut builder = new_builder().with_ramdisk().format_data().without_zxcrypt();
+    builder.fshost().set_no_zxcrypt();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
     let (file, server) = create_proxy::<fio::NodeMarker>().unwrap();
@@ -101,7 +105,9 @@ async fn data_mounted_no_zxcrypt() {
 
 #[fuchsia::test]
 async fn data_formatted_no_zxcrypt() {
-    let fixture = new_fixture().with_ramdisk().no_zxcrypt().build().await;
+    let mut builder = new_builder().with_ramdisk().without_zxcrypt();
+    builder.fshost().set_no_zxcrypt();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("data", data_fs_type()).await;
 
@@ -112,8 +118,8 @@ async fn data_formatted_no_zxcrypt() {
 // option is false). WipeStorage should only function within a recovery context.
 #[fuchsia::test]
 async fn wipe_storage_not_supported() {
-    let fixture =
-        TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT).build().await;
+    let builder = new_builder();
+    let fixture = builder.build().await;
 
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
@@ -132,7 +138,9 @@ async fn wipe_storage_not_supported() {
 
 #[fuchsia::test]
 async fn ramdisk_blob_and_data_mounted() {
-    let fixture = new_fixture().with_ramdisk().format_data().fvm_ramdisk().build().await;
+    let mut builder = new_builder().with_ramdisk().format_data().without_zxcrypt();
+    builder.fshost().set_fvm_ramdisk();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -148,9 +156,10 @@ async fn ramdisk_blob_and_data_mounted() {
 
 #[fuchsia::test]
 async fn ramdisk_data_ignores_non_ramdisk() {
+    let mut builder = new_builder().with_ramdisk().without_zxcrypt();
     // Fake out the ramdisk checking by providing a nonsense ramdisk prefix.
-    let fixture =
-        new_fixture().with_ramdisk().fvm_ramdisk().ramdisk_prefix("/not/the/prefix").build().await;
+    builder.fshost().set_fvm_ramdisk().set_ramdisk_prefix("/not/the/prefix");
+    let fixture = builder.build().await;
 
     let dev = fixture.dir("dev-topological/class/block");
 
@@ -198,12 +207,9 @@ async fn get_instance_guid_from_path(dir_proxy: &fio::DirectoryProxy, path: &str
 
 #[fuchsia::test]
 async fn partition_max_size_set() {
-    let fixture = new_fixture()
-        .with_ramdisk()
-        .data_max_bytes(DATA_MAX_BYTES)
-        .blobfs_max_bytes(BLOBFS_MAX_BYTES)
-        .build()
-        .await;
+    let mut builder = new_builder().with_ramdisk();
+    builder.fshost().set_data_max_bytes(DATA_MAX_BYTES).set_blobfs_max_bytes(BLOBFS_MAX_BYTES);
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("blob", VFS_TYPE_BLOBFS).await;
     fixture.check_fs_type("data", data_fs_type()).await;
@@ -243,7 +249,8 @@ async fn partition_max_size_set() {
 
 #[fuchsia::test]
 async fn tmp_is_available() {
-    let fixture = new_fixture().build().await;
+    let builder = new_builder();
+    let fixture = builder.build().await;
 
     fixture.check_fs_type("tmp", VFS_TYPE_MEMFS).await;
 }
@@ -251,7 +258,8 @@ async fn tmp_is_available() {
 #[fuchsia::test]
 async fn netboot_set() {
     // Set the netboot flag
-    let fixture = new_fixture().with_ramdisk().netboot().build().await;
+    let builder = new_builder().with_ramdisk().netboot();
+    let fixture = builder.build().await;
 
     let dev = fixture.dir("dev-topological/class/block");
 

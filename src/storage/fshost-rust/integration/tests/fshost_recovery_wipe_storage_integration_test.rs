@@ -20,6 +20,10 @@ use {
 const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
 
+fn new_builder() -> TestFixtureBuilder {
+    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+}
+
 // Blob containing 8192 bytes of 0xFF ("oneblock").
 const TEST_BLOB_LEN: u64 = 8192;
 const TEST_BLOB_DATA: [u8; TEST_BLOB_LEN as usize] = [0xFF; TEST_BLOB_LEN as usize];
@@ -42,8 +46,8 @@ async fn write_test_blob(directory: &fio::DirectoryProxy) {
 // Ensure fuchsia.fshost.Admin/WipeStorage fails if we cannot identify a storage device to wipe.
 #[fuchsia::test]
 async fn wipe_storage_no_fvm_device() {
-    let fixture =
-        TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT).build().await;
+    let builder = new_builder();
+    let fixture = builder.build().await;
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     let (_, blobfs_server) = create_proxy::<fio::DirectoryMarker>().unwrap();
@@ -59,10 +63,8 @@ async fn wipe_storage_no_fvm_device() {
 // Demonstrate high level usage of the fuchsia.fshost.Admin/WipeStorage method.
 #[fuchsia::test]
 async fn wipe_storage_write_blob() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .build()
-        .await;
+    let builder = new_builder().with_ramdisk();
+    let fixture = builder.build().await;
 
     // Invoke WipeStorage, which will unbind the FVM, reprovision it, and format/mount Blobfs.
     let admin =
@@ -79,10 +81,8 @@ async fn wipe_storage_write_blob() {
 // Verify that all existing blobs are purged after running fuchsia.fshost.Admin/WipeStorage.
 #[fuchsia::test]
 async fn wipe_storage_blobfs_formatted() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .build()
-        .await;
+    let builder = new_builder().with_ramdisk();
+    let fixture = builder.build().await;
 
     // Mount Blobfs and write a blob.
     {
@@ -126,11 +126,8 @@ async fn wipe_storage_blobfs_formatted() {
 #[fuchsia::test]
 async fn wipe_storage_data_unformatted() {
     const BUFF_LEN: usize = 512;
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .format_data()
-        .build()
-        .await;
+    let builder = new_builder().with_ramdisk().format_data();
+    let fixture = builder.build().await;
 
     let data_dev_path =
         format!("{}/fvm/data-p-2/block", fixture.ramdisk.as_ref().unwrap().get_path());

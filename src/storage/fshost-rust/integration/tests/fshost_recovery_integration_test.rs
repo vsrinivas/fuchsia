@@ -29,6 +29,10 @@ const FSHOST_COMPONENT_NAME: &'static str = std::env!("FSHOST_COMPONENT_NAME");
 const DATA_FILESYSTEM_FORMAT: &'static str = std::env!("DATA_FILESYSTEM_FORMAT");
 const PAYLOAD: &[u8] = b"top secret stuff";
 
+fn new_builder() -> TestFixtureBuilder {
+    TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
+}
+
 fn generate_insecure_key(name: &[u8]) -> WrappingKey {
     let mut bytes = [0u8; AES128_KEY_SIZE];
     bytes[..name.len()].copy_from_slice(&name);
@@ -141,10 +145,8 @@ async fn verify_file_contents(ramdisk: RamdiskClient, expected_volume_size: u64,
 
 #[fuchsia::test]
 async fn write_data_file_unformatted() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_ramdisk()
-        .build()
-        .await;
+    let builder = new_builder().with_ramdisk();
+    let fixture = builder.build().await;
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     call_write_data_file(&admin).await;
@@ -159,10 +161,8 @@ async fn write_data_file_unformatted() {
 
 #[fuchsia::test]
 async fn write_data_file_unformatted_small_disk() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .with_sized_ramdisk(25165824)
-        .build()
-        .await;
+    let builder = new_builder().with_sized_ramdisk(25165824);
+    let fixture = builder.build().await;
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     call_write_data_file(&admin).await;
@@ -176,11 +176,8 @@ async fn write_data_file_unformatted_small_disk() {
 
 #[fuchsia::test]
 async fn write_data_file_formatted() {
-    let fixture = TestFixtureBuilder::new(FSHOST_COMPONENT_NAME, DATA_FILESYSTEM_FORMAT)
-        .format_data()
-        .with_ramdisk()
-        .build()
-        .await;
+    let builder = new_builder().format_data().with_ramdisk();
+    let fixture = builder.build().await;
     let admin =
         fixture.realm.root.connect_to_protocol_at_exposed_dir::<fshost::AdminMarker>().unwrap();
     call_write_data_file(&admin).await;
