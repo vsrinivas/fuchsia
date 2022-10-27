@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use {
     fuchsia_archive::{ChunkType, DIR_CHUNK_TYPE, DIR_NAMES_CHUNK_TYPE, MAGIC_INDEX_VALUE},
     std::{

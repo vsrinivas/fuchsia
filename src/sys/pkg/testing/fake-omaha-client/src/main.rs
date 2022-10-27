@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use {
     fuchsia_async::TimeoutExt,
     futures::{future::BoxFuture, lock::Mutex, prelude::*},
@@ -43,6 +45,7 @@ async fn collect_from_future(response_future: ResponseFuture) -> Result<Response
 }
 
 impl FuchsiaHyperHttpRequest {
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         FuchsiaHyperHttpRequest { client: fuchsia_hyper::new_https_client() }
     }

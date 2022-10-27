@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use {
     assert_matches::assert_matches,
     fidl_fuchsia_update_installer::{
