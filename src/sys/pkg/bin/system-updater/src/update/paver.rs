@@ -209,11 +209,11 @@ pub async fn write_image_buffer(
     desired_config: NonCurrentConfiguration,
 ) -> Result<(), Error> {
     let target = classify_image(image, desired_config)?;
-    let payload = Payload { display_name: &image.name(), buffer };
+    let payload = Payload { display_name: image.name(), buffer };
 
     match target {
         ImageTarget::Firmware { subtype, configuration } => {
-            write_firmware_to_configurations(data_sink, configuration, &subtype, payload).await?;
+            write_firmware_to_configurations(data_sink, configuration, subtype, payload).await?;
         }
         ImageTarget::Asset { asset, configuration } => {
             write_asset_to_configurations(data_sink, configuration, asset, payload).await?;
@@ -260,7 +260,7 @@ async fn paver_query_configuration_status(
     boot_manager: &BootManagerProxy,
     configuration: Configuration,
 ) -> Result<ConfigurationStatus, Error> {
-    match boot_manager.query_configuration_status(configuration.into()).await {
+    match boot_manager.query_configuration_status(configuration).await {
         Ok(Ok(configuration_status)) => Ok(configuration_status),
         Ok(Err(status)) => {
             Err(anyhow!("query_configuration_status responded with {}", Status::from_raw(status)))
@@ -447,7 +447,7 @@ pub async fn write_image(
     desired_config: NonCurrentConfiguration,
 ) -> Result<(), Error> {
     let buffer = update_pkg
-        .open_image(&image)
+        .open_image(image)
         .await
         .with_context(|| format!("error opening {}", image.name()))?;
 

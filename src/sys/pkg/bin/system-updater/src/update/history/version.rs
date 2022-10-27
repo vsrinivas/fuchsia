@@ -179,8 +179,9 @@ impl Version {
         let update_hash = match last_target_version {
             Some(version) => {
                 if vbmeta_hash == version.vbmeta_hash
-                    && (system_image_hash == "" || system_image_hash == version.system_image_hash)
-                    && (zbi_hash == "" || zbi_hash == version.zbi_hash)
+                    && (system_image_hash.is_empty()
+                        || system_image_hash == version.system_image_hash)
+                    && (zbi_hash.is_empty() || zbi_hash == version.zbi_hash)
                     && (build_version.is_empty() || build_version == version.build_version)
                 {
                     version.update_hash.clone()
@@ -232,7 +233,7 @@ async fn get_image_hash_from_update_package(
     image: ImageType,
 ) -> Result<String, Error> {
     let buffer = update_package.open_image(&update_package::Image::new(image, None)).await?;
-    Ok(sha256_hash_with_no_trailing_zeros(buffer)?)
+    sha256_hash_with_no_trailing_zeros(buffer)
 }
 
 async fn get_vbmeta_and_zbi_hash_from_environment(

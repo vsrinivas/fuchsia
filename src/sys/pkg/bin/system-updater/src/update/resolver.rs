@@ -32,7 +32,7 @@ pub(super) async fn resolve_update_package(
     pkg_resolver: &PackageResolverProxy,
     url: &AbsolutePackageUrl,
 ) -> Result<UpdatePackage, ResolveError> {
-    let dir = resolve_package(pkg_resolver, &url).await?;
+    let dir = resolve_package(pkg_resolver, url).await?;
     Ok(UpdatePackage::new(dir))
 }
 

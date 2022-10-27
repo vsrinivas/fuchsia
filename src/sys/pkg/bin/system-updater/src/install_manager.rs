@@ -114,7 +114,7 @@ async fn run<N, U, E>(
                         req,
                         &mut monitor_queue,
                         &attempt_id,
-                        &update_url,
+                        update_url,
                         should_write_recovery,
                     )
                     .await
@@ -209,7 +209,7 @@ async fn handle_active_control_request<N>(
         ControlRequest::Monitor(MonitorRequestData { attempt_id: id, monitor, responder }) => {
             // If an attempt ID is provided, ensure it matches the current attempt.
             if let Some(id) = id {
-                if &id != attempt_id {
+                if id != attempt_id {
                     let _ = responder.send(false);
                     return;
                 }

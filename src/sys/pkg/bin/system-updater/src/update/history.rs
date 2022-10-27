@@ -181,7 +181,7 @@ impl UpdateHistory {
 
     /// Start a new update attempt, returns an PendingAttempt with initial information, caller
     /// should fill in additional information and pass it back to `record_update_attempt()`.
-    #[must_use]
+    #[allow(clippy::too_many_arguments)]
     pub fn start_update_attempt<'a>(
         &self,
         options: Options,
@@ -298,9 +298,8 @@ impl UpdateHistory {
         let bytes = serde_json::to_vec(&history);
 
         async move {
-            match bytes {
-                Ok(bytes) => writer(bytes).await,
-                Err(_) => {}
+            if let Ok(bytes) = bytes {
+                writer(bytes).await
             }
         }
     }
@@ -330,7 +329,7 @@ mod serde_system_time {
     }
 
     fn nanos_to_system_time(nanos: u64) -> SystemTime {
-        SystemTime::UNIX_EPOCH + Duration::from_nanos(nanos.into())
+        SystemTime::UNIX_EPOCH + Duration::from_nanos(nanos)
     }
 
     pub fn serialize<S>(time: &SystemTime, serializer: S) -> Result<S::Ok, S::Error>

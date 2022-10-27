@@ -61,7 +61,7 @@ pub(super) use {
 };
 
 const COBALT_FLUSH_TIMEOUT: Duration = Duration::from_secs(30);
-const SOURCE_EPOCH_RAW: &str = &include_str!(env!("EPOCH_PATH"));
+const SOURCE_EPOCH_RAW: &str = include_str!(env!("EPOCH_PATH"));
 
 /// Error encountered in the Prepare state.
 #[derive(Debug, Error)]
@@ -453,12 +453,12 @@ impl ImagesToWrite {
             let resource = zbi.resource();
             let proxy = &url_directory_map[package_url];
             let image = Image::new(ImageType::Zbi, None);
-            write_image(&proxy, resource, &image, data_sink, desired_config).await?;
+            write_image(proxy, resource, &image, data_sink, desired_config).await?;
         }
 
         if let Some(vbmeta) = &self.fuchsia.vbmeta {
             let package_url = vbmeta.package_url();
-            let proxy = &url_directory_map[&package_url];
+            let proxy = &url_directory_map[package_url];
             let image = Image::new(ImageType::FuchsiaVbmeta, None);
             let resource = vbmeta.resource();
             write_image(proxy, resource, &image, data_sink, desired_config).await?;
@@ -466,7 +466,7 @@ impl ImagesToWrite {
 
         if let Some(zbi) = &self.recovery.zbi {
             let package_url = zbi.package_url();
-            let proxy = &url_directory_map[&package_url];
+            let proxy = &url_directory_map[package_url];
             let image = Image::new(ImageType::Recovery, None);
             let resource = zbi.resource();
             write_image(proxy, resource, &image, data_sink, desired_config).await?;
@@ -474,7 +474,7 @@ impl ImagesToWrite {
 
         if let Some(vbmeta) = &self.recovery.vbmeta {
             let package_url = vbmeta.package_url();
-            let proxy = &url_directory_map[&package_url];
+            let proxy = &url_directory_map[package_url];
             let image = Image::new(ImageType::RecoveryVbmeta, None);
             let resource = vbmeta.resource();
             write_image(proxy, resource, &image, data_sink, desired_config).await?;
@@ -800,11 +800,11 @@ impl<'a> Attempt<'a> {
 
             for (filename, imagemetadata) in manifest.firmware() {
                 match firmware_to_write(
-                    &filename,
-                    &imagemetadata,
+                    filename,
+                    imagemetadata,
                     current_config,
                     &self.env.data_sink,
-                    &Image::new(ImageType::Firmware, Some(&filename)),
+                    &Image::new(ImageType::Firmware, Some(filename)),
                 )
                 .await
                 {
@@ -833,6 +833,7 @@ impl<'a> Attempt<'a> {
     }
 
     /// Pave the various raw images (zbi, firmware, vbmeta) for fuchsia and/or recovery.
+    #[allow(clippy::too_many_arguments)]
     async fn stage_images(
         &mut self,
         co: &mut async_generator::Yield<State>,
@@ -924,20 +925,18 @@ impl<'a> Attempt<'a> {
         let images = images.verify(mode).map_err(StageError::Verify)?.filter(|image| {
             if self.config.should_write_recovery {
                 true
+            } else if image.classify().targets_recovery() {
+                fx_log_info!("Skipping recovery image: {}", image.name());
+                false
             } else {
-                if image.classify().targets_recovery() {
-                    fx_log_info!("Skipping recovery image: {}", image.name());
-                    false
-                } else {
-                    true
-                }
+                true
             }
         });
         fx_log_info!("Images to write via legacy path: {:?}", images);
         let desired_config = current_configuration.to_non_current_configuration();
         fx_log_info!("Targeting configuration: {:?}", desired_config);
 
-        write_images(&self.env.data_sink, &update_pkg, desired_config, images.iter())
+        write_images(&self.env.data_sink, update_pkg, desired_config, images.iter())
             .await
             .map_err(StageError::Write)?;
         paver::paver_flush_data_sink(&self.env.data_sink).await.map_err(StageError::PaverFlush)?;
@@ -1055,7 +1054,7 @@ async fn write_image(
     desired_config: paver::NonCurrentConfiguration,
 ) -> Result<(), StageError> {
     let buffer = proxy.open_image(path).await.map_err(StageError::OpenImageError)?;
-    paver::write_image_buffer(data_sink, buffer, &image, desired_config)
+    paver::write_image_buffer(data_sink, buffer, image, desired_config)
         .await
         .map_err(StageError::Write)?;
     Ok(())
@@ -1067,7 +1066,7 @@ async fn write_image(
 ///
 /// Ok(Some(url)) indicates that the firmware image in the update differs from what is on the device.
 async fn firmware_to_write(
-    filename: &String,
+    filename: &str,
     image_metadata: &update_package::ImageMetadata,
     current_config: paver::CurrentConfiguration,
     data_sink: &DataSinkProxy,
@@ -1075,13 +1074,14 @@ async fn firmware_to_write(
 ) -> Result<Option<AbsoluteComponentUrl>, PrepareError> {
     let desired_config = current_config.to_non_current_configuration();
     if let Some(non_current_config) = desired_config.to_configuration() {
-        if let Some(_) = does_firmware_match_hash_and_size(
+        if (does_firmware_match_hash_and_size(
             data_sink,
             non_current_config,
             filename,
             image_metadata,
         )
-        .await?
+        .await?)
+            .is_some()
         {
             return Ok(None);
         }
@@ -1119,9 +1119,9 @@ async fn asset_to_write(
 ) -> Result<Option<AbsoluteComponentUrl>, PrepareError> {
     let desired_config = current_config.to_non_current_configuration();
     if let Some(non_current_config) = desired_config.to_configuration() {
-        if let Some(_) =
-            does_asset_match_hash_and_size(data_sink, non_current_config, asset, image_metadata)
-                .await?
+        if (does_asset_match_hash_and_size(data_sink, non_current_config, asset, image_metadata)
+            .await?)
+            .is_some()
         {
             return Ok(None);
         }
@@ -1151,13 +1151,14 @@ async fn recovery_to_write(
     data_sink: &DataSinkProxy,
     asset: Asset,
 ) -> Result<Option<AbsoluteComponentUrl>, PrepareError> {
-    if let Some(_) = does_asset_match_hash_and_size(
+    if (does_asset_match_hash_and_size(
         data_sink,
         fidl_fuchsia_paver::Configuration::Recovery,
         asset,
         image_metadata,
     )
-    .await?
+    .await?)
+        .is_some()
     {
         return Ok(None);
     }
@@ -1167,7 +1168,7 @@ async fn recovery_to_write(
 async fn does_firmware_match_hash_and_size(
     data_sink: &DataSinkProxy,
     desired_configuration: fidl_fuchsia_paver::Configuration,
-    subtype: &String,
+    subtype: &str,
     image: &update_package::ImageMetadata,
 ) -> Result<Option<Buffer>, PrepareError> {
     if let Ok(buffer) = paver::paver_read_firmware(data_sink, desired_configuration, subtype).await
@@ -1177,7 +1178,7 @@ async fn does_firmware_match_hash_and_size(
             return Ok(Some(buffer));
         }
     }
-    return Ok(None);
+    Ok(None)
 }
 
 async fn does_asset_match_hash_and_size(
@@ -1202,14 +1203,14 @@ fn calculate_hash(buffer: &Buffer, mut remaining: usize) -> Result<Hash, Prepare
 
     while remaining > 0 {
         let mut chunk = [0; 4096];
-        let chunk_len = remaining.min(4096) as usize;
+        let chunk_len = remaining.min(4096);
         let chunk = &mut chunk[..chunk_len];
 
         buffer.vmo.read(chunk, offset).map_err(PrepareError::VmoRead)?;
         hasher.update(chunk);
 
-        offset = offset + chunk_len as u64;
-        remaining = remaining - chunk_len as usize;
+        offset += chunk_len as u64;
+        remaining -= chunk_len;
     }
 
     Ok(Hash::from(*AsRef::<[u8; 32]>::as_ref(&hasher.finalize())))
