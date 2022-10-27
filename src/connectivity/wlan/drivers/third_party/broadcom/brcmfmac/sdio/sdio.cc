@@ -1296,7 +1296,11 @@ static zx_status_t brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
     // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
     BRCMF_WARN_THROTTLE("Failed to acquire RX space for %u glom entries", num_entries);
     ++bus->sdcnt.rx_outofbufs;
-    return ZX_ERR_NO_RESOURCES;
+    // Attempt to acquire internal RX space to be able to receive commands and events.
+    glom_frames = brcmf_sdio_acquire_internal_rx_space(bus, num_entries);
+    if (glom_frames.size() != num_entries) {
+      return ZX_ERR_NO_RESOURCES;
+    }
   }
 
   uint16_t total_len = 0;
@@ -1331,7 +1335,7 @@ static zx_status_t brcmf_sdio_prepare_rxglom_frames(struct brcmf_sdio* bus) {
       // size of a data frame. This means that we do not need to ever return this frame to
       // netstack so it's safe to use an internal frame that should have the required capacity.
       std::optional<wlan::drivers::components::Frame> internal_frame =
-          brcmf_sdio_acquire_internal_rx_space(bus);
+          brcmf_sdio_acquire_single_internal_rx_space(bus);
       if (!internal_frame) {
         BRCMF_ERR("Failed to acquire internal frame for event in RX glom chain");
         return ZX_ERR_NO_RESOURCES;
@@ -1503,7 +1507,7 @@ static void brcmf_sdio_read_control_frame(struct brcmf_sdio* bus,
   // Control frames need to use the internal RX space because they may exceed the space available
   // in the RX space provided by upper layers.
   std::optional<wlan::drivers::components::Frame> ctl_frame_opt =
-      brcmf_sdio_acquire_internal_rx_space(bus);
+      brcmf_sdio_acquire_single_internal_rx_space(bus);
   if (!ctl_frame_opt) {
     BRCMF_ERR("Failed to acquire space for control frame");
     return;
@@ -1605,21 +1609,31 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       continue;
     }
 
-    rd->len_left = rd->len;
-    uint32_t head_read = 0;
-    std::optional<wlan::drivers::components::Frame> frame;
-    if (rd->len == 0) {
-      TRACE_DURATION("brcmfmac:isr", "read header");
-
-      frame = brcmf_sdio_acquire_single_rx_space(bus);
-      if (!frame) {
-      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
-        BRCMF_WARN_THROTTLE("Failed to acquire frame for RX");
+    std::optional<wlan::drivers::components::Frame> frame = brcmf_sdio_acquire_single_rx_space(bus);
+    if (!frame) {
+      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX
+      // buffers
+      BRCMF_WARN_THROTTLE("Failed to acquire frame for RX");
+      if (rd->len == 0) {
+        // Only count header read fails if we were going to do a header-only read below.
         ++bus->sdcnt.rx_hdrfail;
-        ++bus->sdcnt.rx_outofbufs;
+      }
+      ++bus->sdcnt.rx_outofbufs;
+      // Attempt to use internal RX space instead, this allows processing of commands and events
+      // at least.
+      frame = brcmf_sdio_acquire_single_internal_rx_space(bus);
+      if (!frame) {
+        // RX fail will also log a message so the combination of the log message above and RX fail
+        // will indicate that both attempts to acquire frames failed.
         brcmf_sdio_rxfail(bus, false, false);
         continue;
       }
+    }
+
+    rd->len_left = rd->len;
+    uint32_t head_read = 0;
+    if (rd->len == 0) {
+      TRACE_DURATION("brcmfmac:isr", "read header");
 
       // Ensure that the data pointer after BRCMF_FIRSTREAD is aligned to the SDIO block size.
       frame_align_data(*frame, BRCMF_FIRSTREAD, bus->sdiodev->func2->blocksize);
@@ -1649,21 +1663,11 @@ static uint32_t brcmf_sdio_read_frames(struct brcmf_sdio* bus, uint32_t max_fram
       }
       rd->len_left = rd->len > BRCMF_FIRSTREAD ? rd->len - BRCMF_FIRSTREAD : 0;
       head_read = BRCMF_FIRSTREAD;
-    } else {
-      // We are going to read header and data all in one go, acquire a frame
-      frame = brcmf_sdio_acquire_single_rx_space(bus);
-      if (!frame) {
-      // TODO(https://fxbug.dev/102298): Consider this line for detect rule about lack of RX buffers
-        BRCMF_WARN_THROTTLE("Failed to acquire rx frame");
-        brcmf_sdio_rxfail(bus, false, false);
-        ++bus->sdcnt.rx_outofbufs;
-        break;
-      }
+      frame->ShrinkHead(head_read);
     }
 
     brcmf_sdio_pad(bus, &rd->len_left);
 
-    frame->ShrinkHead(head_read);
     frame_align(*frame, rd->len_left, bus->head_align);
 
     if (frame->Size() > 0) {
@@ -4000,7 +4004,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     goto fail;
   }
 
-  frame = brcmf_sdio_acquire_internal_rx_space(bus);
+  frame = brcmf_sdio_acquire_single_internal_rx_space(bus);
   if (!frame) {
     BRCMF_ERR("Failed to acquire RX frame");
     goto fail;
@@ -4239,7 +4243,13 @@ std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_single_rx_spa
   return storage.Acquire();
 }
 
-std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_internal_rx_space(
+wlan::drivers::components::FrameContainer brcmf_sdio_acquire_internal_rx_space(
+    struct brcmf_sdio* bus, size_t num) {
+  std::lock_guard lock(bus->rx_tx_data.rx_space_internal);
+  return bus->rx_tx_data.rx_space_internal.Acquire(num);
+}
+
+std::optional<wlan::drivers::components::Frame> brcmf_sdio_acquire_single_internal_rx_space(
     struct brcmf_sdio* bus) {
   std::lock_guard lock(bus->rx_tx_data.rx_space_internal);
   return bus->rx_tx_data.rx_space_internal.Acquire();
