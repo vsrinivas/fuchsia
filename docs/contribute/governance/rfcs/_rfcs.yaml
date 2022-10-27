@@ -2549,3 +2549,16 @@
   reviewers: ['enoharemaien@google.com', 'fmil@google.com', 'gspencer@google.com', 'jmccandless@google.com', 'neelsa@google.com', 'pesk@google.com', 'wez@google.com']
   submitted: '2022-08-26'
   reviewed: '2022-10-25'
+
+- name: 'RFC-0196'
+  title: 'FIDL large messages'
+  short_description: 'Support for sending large messages over FIDL protocols.'
+  authors: ['azaslavsky@google.com']
+  file: '0196_fidl_large_messages.md'
+  area: ['FIDL']
+  issue: ['100478']
+  gerrit_change_id: ['695625']
+  status: 'Accepted'
+  reviewers: ['abarth@google.com', 'chcl@google.com', 'cpu@google.com', 'mseaborn@google.com', 'nickcano@google.com', 'surajmalhotra@google.com']
+  submitted: '2022-06-28'
+  reviewed: '2022-10-27'

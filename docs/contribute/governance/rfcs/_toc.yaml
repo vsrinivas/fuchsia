@@ -406,3 +406,5 @@ toc:
     path: /docs/contribute/governance/rfcs/0194_addendum_sessions.md
   - title: "RFC-0195: Positions and text ranges in text APIs"
     path: /docs/contribute/governance/rfcs/0195_positions_and_ranges_in_text_apis.md
+  - title: "RFC-0196: FIDL large messages"
+    path: /docs/contribute/governance/rfcs/0196_fidl_large_messages.md
