@@ -19,6 +19,7 @@ sdk://fidl/fuchsia.hardware.i2c
 sdk://fidl/fuchsia.hardware.pci
 sdk://fidl/fuchsia.input
 sdk://fidl/fuchsia.input.report
+sdk://fidl/fuchsia.inspect
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
 sdk://fidl/fuchsia.logger
@@ -51,6 +52,8 @@ sdk://pkg/fit
 sdk://pkg/fit-promise
 sdk://pkg/hwreg
 sdk://pkg/input_report_reader
+sdk://pkg/inspect
+sdk://pkg/inspect_component_cpp
 sdk://pkg/magma_client
 sdk://pkg/mmio
 sdk://pkg/mmio-ptr
