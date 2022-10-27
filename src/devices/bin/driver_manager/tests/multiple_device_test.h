@@ -6,6 +6,7 @@
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_TESTS_MULTIPLE_DEVICE_TEST_H_
 
 #include <fidl/fuchsia.boot/cpp/wire.h>
+#include <fidl/fuchsia.device.manager/cpp/wire_test_base.h>
 #include <fidl/fuchsia.fshost/cpp/wire.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/time.h>
@@ -35,7 +36,7 @@ class CoordinatorForTest {
 // Stands in for a device in the driver host (with its Coordinator and
 // DeviceController FIDL connections), which does not actually exist in these
 // unit tests.
-class DeviceState : public fidl::WireServer<fdm::DeviceController> {
+class DeviceState : public fidl::testing::WireTestBase<fdm::DeviceController> {
  public:
   DeviceState() = default;
   DeviceState(DeviceState&& other)
@@ -90,12 +91,13 @@ class DeviceState : public fidl::WireServer<fdm::DeviceController> {
  private:
   void Dispatch();
 
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
+    ADD_FAILURE("%s is unimplemented and should not be called", name.c_str());
+  }
   void BindDriver(BindDriverRequestView request, BindDriverCompleter::Sync& completer) override {
     bind_driver_path_ = std::string(request->driver_path.get());
     bind_completer_ = completer.ToAsync();
   }
-  void ConnectProxy(ConnectProxyRequestView request,
-                    ConnectProxyCompleter::Sync& _completer) override {}
   void Init(InitCompleter::Sync& completer) override { init_completer_ = completer.ToAsync(); }
   void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {
     suspend_flags_ = request->flags;
@@ -111,7 +113,6 @@ class DeviceState : public fidl::WireServer<fdm::DeviceController> {
   void CompleteRemoval(CompleteRemovalCompleter::Sync& completer) override {
     remove_completer_ = completer.ToAsync();
   }
-  void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
 
   std::optional<BindDriverCompleter::Async> bind_completer_;
   std::string bind_driver_path_;

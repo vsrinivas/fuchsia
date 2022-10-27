@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device.manager/cpp/wire_test_base.h>
 #include <fidl/fuchsia.driver.test.logger/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -66,7 +67,7 @@ class FidlTransaction : public fidl::Transaction {
   std::optional<fidl::UnbindInfo> detected_error_;
 };
 
-class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceController> {
+class FakeDevice : public fidl::testing::WireTestBase<fuchsia_device_manager::DeviceController> {
  public:
   FakeDevice(fidl::ServerEnd<fuchsia_driver_test_logger::Logger> test_output,
              const fidl::StringView expected_driver = {})
@@ -80,18 +81,14 @@ class FakeDevice : public fidl::WireServer<fuchsia_device_manager::DeviceControl
       completer.Reply(ZX_ERR_INTERNAL, zx::channel{});
     }
   }
-  void ConnectProxy(ConnectProxyRequestView request,
-                    ConnectProxyCompleter::Sync& _completer) override {}
-  void Init(InitCompleter::Sync& completer) override {}
-  void Suspend(SuspendRequestView request, SuspendCompleter::Sync& completer) override {}
-  void Resume(ResumeRequestView request, ResumeCompleter::Sync& completer) override {}
-  void Unbind(UnbindCompleter::Sync& completer) override {}
-  void CompleteRemoval(CompleteRemovalCompleter::Sync& completer) override {}
-  void Open(OpenRequestView request, OpenCompleter::Sync& _completer) override {}
 
   bool bind_called() { return bind_called_; }
 
  private:
+  void NotImplemented_(const std::string& name, ::fidl::CompleterBase& completer) override {
+    ADD_FAILURE("%s is unimplemented and should not be called", name.c_str());
+  }
+
   fidl::ServerEnd<fuchsia_driver_test_logger::Logger> test_output_;
   const fidl::StringView expected_driver_;
   bool bind_called_ = false;
