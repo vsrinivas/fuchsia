@@ -75,7 +75,7 @@ the `CATAPULT_*` environment variables do not get set.
 that the conversion succeeds, but it produces `*.catapult_json_disabled`
 files rather than `*.catapult_json` files.
 
-### Limitations and hazards
+## Limitations and hazards
 
 *   **"Push" model:** Chromeperf uploading uses a "push" model. Each
     CI build has the ability to upload results under any builder name,
