@@ -2,7 +2,7 @@
 {
   "scope": "core",
   "profiles": {
-    "fuchsia.scenic.main:hz=60": { "capacity": "16ms", "deadline": "16ms", "period": "16ms" },
+    "fuchsia.scenic.main": { "capacity": "16ms", "deadline": "16ms", "period": "16ms" },
     "fuchsia.netstack.go-worker": { "priority": 25 },
     "fuchsia.devices.usb.xhci.interrupter": { "capacity": "100us", "deadline": "125us", "period": "125us" },
     "fuchsia.devices.usb.audio": { "capacity": "250us", "deadline": "1ms", "period": "1ms" },
