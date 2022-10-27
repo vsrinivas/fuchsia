@@ -1,9 +1,8 @@
-# ffx workflows
+# SDK workflows
 
-[`ffx`][ffx-reference] is a CLI (command line interface) tool that supports
-common Fuchsia development workflows, such as interacting with Fuchsia
-target devices and managing [Fuchsia components][fuchsia-components] and
-[Fuchsia packages][fuchsia-packages].
+Below is the list of workflows you can perform in the Fuchsia SDK development environment to
+interact with Fuchsia systems, devices, and software.
+
 
 ## Table of contents
 
