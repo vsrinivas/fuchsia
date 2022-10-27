@@ -184,7 +184,7 @@ impl RetainedIndex {
     /// using data from `self` when possible.
     pub fn replace(&mut self, mut other: Self) {
         for (meta_hash, other_packages_entry) in other.packages.iter_mut() {
-            if let Some(this_packages_entry) = self.packages.remove(&meta_hash) {
+            if let Some(this_packages_entry) = self.packages.remove(meta_hash) {
                 if let Some(this_retained_hashes) = this_packages_entry.hashes {
                     if let Some(ref mut other_retained_hashes) = other_packages_entry.hashes {
                         other_retained_hashes.extend(this_retained_hashes)

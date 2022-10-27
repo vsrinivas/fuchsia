@@ -122,7 +122,7 @@ impl BasePackages {
             .await
             .with_context(|| format!("making RootDir for {}", package))?;
         let external_hashes = package_dir.external_file_hashes().copied().collect::<Vec<_>>();
-        Ok(std::iter::once(package.clone()).chain(external_hashes))
+        Ok(std::iter::once(package).chain(external_hashes))
     }
 
     /// Returns `true` iff `pkg` is the hash of a base package.
@@ -275,10 +275,7 @@ mod tests {
         let (env, base_packages) = TestEnv::new(&[&a_base_package]).await;
 
         assert_eq!(
-            base_packages
-                .paths_and_hashes()
-                .map(|(p, h)| (p.clone(), h.clone()))
-                .collect::<HashSet<_>>(),
+            base_packages.paths_and_hashes().map(|(p, h)| (p.clone(), *h)).collect::<HashSet<_>>(),
             HashSet::from_iter([
                 ("system_image/0".parse().unwrap(), *env.system_image.meta_far_merkle_root()),
                 ("a-base-package/0".parse().unwrap(), a_base_package_hash),
@@ -291,10 +288,7 @@ mod tests {
         let (env, base_packages) = TestEnv::new(&[]).await;
 
         assert_eq!(
-            base_packages
-                .paths_and_hashes()
-                .map(|(p, h)| (p.clone(), h.clone()))
-                .collect::<HashSet<_>>(),
+            base_packages.paths_and_hashes().map(|(p, h)| (p.clone(), *h)).collect::<HashSet<_>>(),
             HashSet::from_iter([(
                 "system_image/0".parse().unwrap(),
                 *env.system_image.meta_far_merkle_root()

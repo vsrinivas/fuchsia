@@ -55,7 +55,7 @@ impl PkgfsVersions {
         self.base_packages
             .paths_and_hashes()
             .map(|(_path, hash)| hash.to_string())
-            .chain(active_packages.into_iter().map(|(_path, hash)| hash.to_string()))
+            .chain(active_packages.into_values().map(|hash| hash.to_string()))
             .map(|hash| (hash, super::DirentType::Directory))
             .collect()
     }
@@ -210,7 +210,7 @@ mod tests {
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
             vfs::directory::entry::DirectoryEntry::open(
-                Arc::clone(&self),
+                Arc::clone(self),
                 ExecutionScope::new(),
                 flags,
                 0,

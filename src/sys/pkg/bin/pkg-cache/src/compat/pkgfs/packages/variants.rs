@@ -106,7 +106,7 @@ impl Directory for PkgfsPackagesVariants {
 
         let entries = self.variants();
 
-        let mut remaining = match pos {
+        let remaining = match pos {
             TraversalPosition::Start => {
                 // Yield "." first. If even that can't fit in the response, return the same
                 // traversal position so we try again next time (where the client hopefully
@@ -135,10 +135,10 @@ impl Directory for PkgfsPackagesVariants {
                 // efficient.
                 unreachable!()
             }
-            TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal().into())),
+            TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal())),
         };
 
-        while let Some(variant) = remaining.next() {
+        for variant in remaining {
             let variant = variant.to_string();
             match sink
                 .append(&EntryInfo::new(fio::INO_UNKNOWN, fio::DirentType::Directory), &variant)
@@ -206,7 +206,7 @@ mod tests {
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
             vfs::directory::entry::DirectoryEntry::open(
-                Arc::clone(&self),
+                Arc::clone(self),
                 ExecutionScope::new(),
                 flags,
                 0,
@@ -241,7 +241,7 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn variants_listing_is_contents_keys() {
         let pkgfs_packages_variants = PkgfsPackagesVariants::new_test(package_variant_hashmap! {
-            "0" => hash(0x0_0),
+            "0" => hash(0x0000),
             "zero" => hash(0),
             "nil" => hash(0),
             "not-0" => hash(42),

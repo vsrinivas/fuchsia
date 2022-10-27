@@ -57,7 +57,7 @@ impl DynamicIndex {
     pub fn packages(&self) -> HashMap<Hash, Package> {
         let mut package_map = HashMap::new();
         for (key, val) in &self.packages {
-            package_map.insert(key.clone(), val.package.clone());
+            package_map.insert(*key, val.package.clone());
         }
         package_map
     }
@@ -238,7 +238,7 @@ impl DynamicIndex {
                     *package = Package::Active { path: path.clone(), required_blobs };
                     *package_node = PackageNode::Active {
                         state: child_node.create_string("state", "active"),
-                        path: child_node.create_string("path", format!("{}", path.clone())),
+                        path: child_node.create_string("path", format!("{}", path)),
                         required_blobs: child_node
                             .create_int("required_blobs", required_blobs_size),
                         time: child_node.create_int("time", zx::Time::get_monotonic().into_nanos()),

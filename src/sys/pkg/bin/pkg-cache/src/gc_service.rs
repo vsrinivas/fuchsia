@@ -79,7 +79,7 @@ async fn gc(
         // Evict all eligible blobs from blobfs.
         info!("Garbage collecting {} blobs...", eligible_blobs.len());
         for (i, blob) in eligible_blobs.iter().enumerate() {
-            blobfs.delete_blob(&blob).await?;
+            blobfs.delete_blob(blob).await?;
             if (i + 1) % 100 == 0 {
                 info!("{} blobs collected...", i + 1);
             }

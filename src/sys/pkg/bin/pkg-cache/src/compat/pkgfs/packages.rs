@@ -85,8 +85,8 @@ impl PkgfsPackages {
     async fn directory_entries(&self) -> BTreeMap<String, super::DirentType> {
         self.packages()
             .await
-            .into_iter()
-            .map(|(k, _)| (k.into(), super::DirentType::Directory))
+            .into_keys()
+            .map(|k| (k.into(), super::DirentType::Directory))
             .collect()
     }
 }
@@ -219,7 +219,7 @@ mod tests {
                 fidl::endpoints::create_proxy::<fio::DirectoryMarker>().unwrap();
 
             vfs::directory::entry::DirectoryEntry::open(
-                Arc::clone(&self),
+                Arc::clone(self),
                 ExecutionScope::new(),
                 flags,
                 0,

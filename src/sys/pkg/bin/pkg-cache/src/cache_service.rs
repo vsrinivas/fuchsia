@@ -45,6 +45,7 @@ mod missing_blobs;
 // This encodes a host to interpolate when responding to BasePackageIndex requests.
 const BASE_PACKAGE_HOST: &str = "fuchsia.com";
 
+#[allow(clippy::too_many_arguments)]
 pub(crate) async fn serve(
     package_index: Arc<async_lock::RwLock<PackageIndex>>,
     blobfs: blobfs::Client,
@@ -205,6 +206,7 @@ fn make_pkgdir_flags(executability_status: ExecutabilityStatus) -> fio::OpenFlag
         }
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Fetch a package, and optionally open it.
 async fn get(
     package_index: &async_lock::RwLock<PackageIndex>,
@@ -308,6 +310,7 @@ async fn get(
     Ok(())
 }
 
+#[allow(clippy::too_many_arguments)]
 /// Open a package directory.
 async fn open(
     package_index: &async_lock::RwLock<PackageIndex>,
@@ -530,7 +533,7 @@ async fn serve_needed_blobs(
         state.set("need-content-blobs");
 
         // Step 3: Open and write all needed data blobs.
-        let () = handle_open_blobs(&mut stream, missing_blobs, blobfs, &node, trace_id).await?;
+        let () = handle_open_blobs(&mut stream, missing_blobs, blobfs, node, trace_id).await?;
 
         let () = serve_iterator.await;
         Ok(root_dir)
@@ -956,9 +959,8 @@ async fn serve_write_blob(
     let mut close = || {
         let closer = closer.take().map(|closer| closer.close());
         async move {
-            match closer {
-                Some(closer) => closer.await,
-                None => {}
+            if let Some(closer) = closer {
+                closer.await
             }
         }
     };
@@ -1073,7 +1075,7 @@ async fn serve_base_package_index(
             package_url: fpkg::PackageUrl {
                 url: format!("fuchsia-pkg://{}/{}", package_host, path.name()),
             },
-            meta_far_blob_id: BlobId::from(hash.clone()).into(),
+            meta_far_blob_id: BlobId::from(*hash).into(),
         })
         .collect::<Vec<PackageIndexEntry>>();
     package_entries.sort_unstable_by(|a, b| a.package_url.url.cmp(&b.package_url.url));
@@ -1419,7 +1421,7 @@ mod serve_needed_blobs_tests {
                     .map_err(Status::from_raw)
                     .expect("resize error");
                 let result =
-                    blob.write(&mut [0]).await.expect("write failed").map_err(Status::from_raw);
+                    blob.write(&[0]).await.expect("write failed").map_err(Status::from_raw);
                 assert_eq!(result, Err(Status::IO_DATA_INTEGRITY));
                 assert_matches!(
                     blob.close().await,
@@ -1474,7 +1476,7 @@ mod serve_needed_blobs_tests {
                     .map_err(Status::from_raw)
                     .expect("resize error");
                 let _: u64 = blob
-                    .write(&mut [0])
+                    .write(&[0])
                     .await
                     .expect("write failed")
                     .map_err(Status::from_raw)
@@ -1510,7 +1512,7 @@ mod serve_needed_blobs_tests {
     pub(super) async fn serve_minimal_far(blobfs: &mut blobfs::Mock, meta_hash: Hash) -> Task<()> {
         let far_data = crate::test_utils::get_meta_far("fake-package", [], []);
 
-        let blob = blobfs.expect_open_blob(meta_hash.into()).await;
+        let blob = blobfs.expect_open_blob(meta_hash).await;
         Task::spawn(async move { blob.serve_contents(&far_data[..]).await })
     }
 
@@ -2051,7 +2053,7 @@ mod serve_needed_blobs_tests {
                     .map_err(Status::from_raw)
                     .expect("resize error");
                 let result =
-                    blob.write(&mut [0]).await.expect("write failed").map_err(Status::from_raw);
+                    blob.write(&[0]).await.expect("write failed").map_err(Status::from_raw);
                 assert_eq!(result, Err(Status::IO_DATA_INTEGRITY));
                 assert_matches!(
                     blob.close().await,
@@ -2106,7 +2108,7 @@ mod serve_needed_blobs_tests {
                     .map_err(Status::from_raw)
                     .expect("resize error");
                 let _: u64 = blob
-                    .write(&mut [0])
+                    .write(&[0])
                     .await
                     .expect("write failed")
                     .map_err(Status::from_raw)

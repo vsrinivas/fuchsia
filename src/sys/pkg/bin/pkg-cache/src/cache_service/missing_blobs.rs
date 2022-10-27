@@ -112,7 +112,7 @@ impl<'a> MissingBlobs<'a> {
                 if !self.visited_subpackages.insert(*root_dir.hash()) {
                     return Ok(());
                 }
-                &root_dir
+                root_dir
             }
             RootDirOrHash::Hash(hash) => {
                 if !self.visited_subpackages.insert(hash) {
@@ -233,7 +233,7 @@ impl<'a> MissingBlobs<'a> {
     /// cache_service.rs unit tests (that were written before subpackages were added) from
     /// hanging).
     fn close_sender_if_all_sent_subpackages_cached(&self) {
-        if let None = self.sent_subpackages.intersection(&self.sent_but_not_cached_hashes).next() {
+        if self.sent_subpackages.intersection(&self.sent_but_not_cached_hashes).next().is_none() {
             let () = self.sender.close_channel();
         }
     }
@@ -277,7 +277,11 @@ mod tests {
             &self,
             blobs: HashSet<Hash>,
         ) -> futures::future::BoxFuture<'_, Result<(), anyhow::Error>> {
-            async move { Ok(self.blobs.write().await.extend(blobs)) }.boxed()
+            async move {
+                self.blobs.write().await.extend(blobs);
+                Ok(())
+            }
+            .boxed()
         }
     }
 

@@ -2,6 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::from_over_into)]
+#![allow(clippy::too_many_arguments)]
+
 use {
     crate::{base_packages::BasePackages, index::PackageIndex},
     anyhow::{anyhow, format_err, Context as _, Error},
@@ -52,9 +58,7 @@ impl ConnectedProtocol for CobaltConnectedService {
     type Message = MetricEvent;
     type SendError = Error;
 
-    fn get_protocol<'a>(
-        &'a mut self,
-    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+    fn get_protocol(&mut self) -> future::BoxFuture<'_, Result<MetricEventLoggerProxy, Error>> {
         async {
             let (logger_proxy, server_end) =
                 fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;

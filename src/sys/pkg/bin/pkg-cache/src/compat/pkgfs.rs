@@ -50,7 +50,7 @@ async fn read_dirents<'a>(
     zx::Status,
 > {
     use dirents_sink::AppendResult;
-    let mut remaining = match pos {
+    let remaining = match pos {
         TraversalPosition::Start => {
             // Yield "." first. If even that can't fit in the response, return the same
             // traversal position so we try again next time (where the client hopefully
@@ -74,10 +74,10 @@ async fn read_dirents<'a>(
             // directory, so neither approach is ideal.
             unreachable!()
         }
-        TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal().into())),
+        TraversalPosition::End => return Ok((TraversalPosition::End, sink.seal())),
     };
 
-    while let Some((next, dirent_type)) = remaining.next() {
+    for (next, dirent_type) in remaining {
         match sink.append(&EntryInfo::new(fio::INO_UNKNOWN, (*dirent_type).into()), next) {
             AppendResult::Ok(new_sink) => sink = new_sink,
             AppendResult::Sealed(sealed) => {
@@ -123,7 +123,7 @@ pub fn make_dir(
         )),
         "ctl" => vfs::pseudo_directory! {
             "validation" => Arc::new(validation::Validation::new(
-                blobfs.clone(),
+                blobfs,
                 base_packages.list_blobs().to_owned()
             ))
         },
