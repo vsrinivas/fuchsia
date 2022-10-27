@@ -55,7 +55,7 @@ pub fn run_component_features(
             "wayland" => {
                 let kernel = current_task.kernel();
                 let dev =
-                    kernel.device_registry.write().register_misc_chrdev(MagmaFile::new_file)?;
+                    kernel.device_registry.write().register_dyn_chrdev(MagmaFile::new_file)?;
                 dev_tmp_fs(current_task).root().add_node_ops_dev(
                     b"magma0",
                     mode!(IFCHR, 0o600),

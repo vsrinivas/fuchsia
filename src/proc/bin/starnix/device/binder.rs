@@ -2608,7 +2608,7 @@ const BINDERS: &[&FsStr] = &[b"binder", b"hwbinder", b"vndbinder"];
 
 fn make_binder_nodes(kernel: &Kernel, dir: &DirEntryHandle) -> Result<(), Errno> {
     for name in BINDERS {
-        let dev = kernel.device_registry.write().register_misc_chrdev(BinderDriver::new())?;
+        let dev = kernel.device_registry.write().register_dyn_chrdev(BinderDriver::new())?;
         dir.add_node_ops_dev(name, mode!(IFCHR, 0o600), dev, SpecialNode)?;
     }
     Ok(())

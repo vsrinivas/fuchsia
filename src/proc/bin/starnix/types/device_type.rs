@@ -8,6 +8,9 @@ pub const MEM_MAJOR: u32 = 1;
 pub const TTY_ALT_MAJOR: u32 = 5;
 pub const MISC_MAJOR: u32 = 10;
 pub const FB_MAJOR: u32 = 29;
+// TODO(tbodt): Use the rest of the range of majors marked as RESERVED FOR DYNAMIC ASSIGMENT in
+// devices.txt.
+pub const DYN_MAJOR: u32 = 234;
 
 #[derive(Copy, Clone, Debug, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct DeviceType(dev_t);

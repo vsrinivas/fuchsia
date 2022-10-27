@@ -53,7 +53,7 @@ where
 pub struct DeviceRegistry {
     /// Maps device identifier to character device implementation.
     char_devices: BTreeMap<u32, Box<dyn DeviceOps>>,
-    misc_devices: Arc<RwLock<MiscRegistry>>,
+    dyn_devices: Arc<RwLock<DynRegistry>>,
     next_anon_minor: u32,
 }
 
@@ -61,10 +61,10 @@ impl DeviceRegistry {
     pub fn new() -> Self {
         let mut registry = Self {
             char_devices: BTreeMap::new(),
-            misc_devices: Arc::new(RwLock::new(MiscRegistry::new())),
+            dyn_devices: Arc::new(RwLock::new(DynRegistry::new())),
             next_anon_minor: 1,
         };
-        registry.char_devices.insert(MISC_MAJOR, Box::new(Arc::clone(&registry.misc_devices)));
+        registry.char_devices.insert(DYN_MAJOR, Box::new(Arc::clone(&registry.dyn_devices)));
         registry
     }
 
@@ -72,10 +72,15 @@ impl DeviceRegistry {
     pub fn new_with_common_devices() -> Self {
         let mut registry = Self::new();
         registry.register_chrdev_major(MemDevice, MEM_MAJOR).unwrap();
+        registry.register_chrdev_major(MiscDevice, MISC_MAJOR).unwrap();
         registry
     }
 
-    pub fn register_chrdev_major(&mut self, device: impl DeviceOps, major: u32) -> Result<(), Errno> {
+    pub fn register_chrdev_major(
+        &mut self,
+        device: impl DeviceOps,
+        major: u32,
+    ) -> Result<(), Errno> {
         match self.char_devices.entry(major) {
             Entry::Vacant(e) => {
                 e.insert(Box::new(device));
@@ -88,9 +93,8 @@ impl DeviceRegistry {
         }
     }
 
-    pub fn register_misc_chrdev(&mut self, device: impl DeviceOps) -> Result<DeviceType, Errno>
-    {
-        self.misc_devices.write().register(device)
+    pub fn register_dyn_chrdev(&mut self, device: impl DeviceOps) -> Result<DeviceType, Errno> {
+        self.dyn_devices.write().register(device)
     }
 
     pub fn next_anonymous_dev_id(&mut self) -> DeviceType {
@@ -119,14 +123,14 @@ impl DeviceRegistry {
     }
 }
 
-struct MiscRegistry {
-    misc_devices: BTreeMap<u32, Box<dyn DeviceOps>>,
+struct DynRegistry {
+    dyn_devices: BTreeMap<u32, Box<dyn DeviceOps>>,
     next_dynamic_minor: u32,
 }
 
-impl MiscRegistry {
+impl DynRegistry {
     fn new() -> Self {
-        Self { misc_devices: BTreeMap::new(), next_dynamic_minor: 0 }
+        Self { dyn_devices: BTreeMap::new(), next_dynamic_minor: 0 }
     }
 
     fn register(&mut self, device: impl DeviceOps) -> Result<DeviceType, Errno> {
@@ -135,12 +139,12 @@ impl MiscRegistry {
             return error!(ENOMEM);
         }
         self.next_dynamic_minor += 1;
-        self.misc_devices.insert(minor, Box::new(device));
-        Ok(DeviceType::new(MISC_MAJOR, minor))
+        self.dyn_devices.insert(minor, Box::new(device));
+        Ok(DeviceType::new(DYN_MAJOR, minor))
     }
 }
 
-impl DeviceOps for Arc<RwLock<MiscRegistry>> {
+impl DeviceOps for Arc<RwLock<DynRegistry>> {
     fn open(
         &self,
         current_task: &CurrentTask,
@@ -149,7 +153,7 @@ impl DeviceOps for Arc<RwLock<MiscRegistry>> {
         flags: OpenFlags,
     ) -> Result<Box<dyn FileOps>, Errno> {
         let state = self.read();
-        let device = state.misc_devices.get(&id.minor()).ok_or_else(|| errno!(ENODEV))?;
+        let device = state.dyn_devices.get(&id.minor()).ok_or_else(|| errno!(ENODEV))?;
         device.open(current_task, id, node, flags)
     }
 }
@@ -231,8 +235,8 @@ mod tests {
         }
 
         let mut registry = DeviceRegistry::new();
-        let device_type = registry.register_misc_chrdev(TestDevice).unwrap();
-        assert_eq!(device_type.major(), MISC_MAJOR);
+        let device_type = registry.register_dyn_chrdev(TestDevice).unwrap();
+        assert_eq!(device_type.major(), DYN_MAJOR);
 
         let node = FsNode::new_root(PanickingFsNode);
         let _ = registry

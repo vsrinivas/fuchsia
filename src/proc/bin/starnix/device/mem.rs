@@ -186,3 +186,19 @@ impl DeviceOps for MemDevice {
         })
     }
 }
+
+pub struct MiscDevice;
+impl DeviceOps for MiscDevice {
+    fn open(
+        &self,
+        _current_task: &CurrentTask,
+        id: DeviceType,
+        _node: &FsNode,
+        _flags: OpenFlags,
+    ) -> Result<Box<dyn FileOps>, Errno> {
+        Ok(match id.minor() {
+            183 => Box::new(DevRandom),
+            _ => return error!(ENODEV),
+        })
+    }
+}
