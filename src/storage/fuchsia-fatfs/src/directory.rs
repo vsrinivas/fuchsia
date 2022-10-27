@@ -480,11 +480,24 @@ impl FatDirectory {
             return Ok(());
         }
 
+        // It's not legal to move a directory into itself or any child of itself.
         if let Some(src_node) = src_dir.cache_get(src_name) {
-            // We can't move a directory into itself.
-            if let FatNode::Dir(ref dir) = src_node {
+            if let FatNode::Dir(dir) = &src_node {
                 if Arc::ptr_eq(&dir, self) {
                     return Err(Status::INVALID_ARGS);
+                }
+                // Walk the parents of the destination and make sure it doesn't match the source.
+                let mut dest = self.clone();
+                loop {
+                    let next_dir = if let Some(parent) = &dest.data.read().unwrap().parent {
+                        if Arc::ptr_eq(&dir, parent) {
+                            return Err(Status::INVALID_ARGS);
+                        }
+                        parent.clone()
+                    } else {
+                        break;
+                    };
+                    dest = next_dir;
                 }
             }
             src_node.flush_dir_entry(filesystem)?;

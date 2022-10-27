@@ -391,6 +391,19 @@ TEST_P(RenameTest, RenameDirIntoRootSuceeds) {
   EXPECT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("bravo").c_str()), 0);
 }
 
+TEST_P(RenameTest, RenameDirectoryToChildIsForbidden) {
+  // This test ensures renaming a directory to a child is forbidden.  The basic tests above test a
+  // variant of this, but this case is to specifically catch the issue described in fxbug.dev/95970.
+  ASSERT_EQ(mkdir(GetPath("alpha").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie").c_str(), 0755), 0);
+  ASSERT_EQ(mkdir(GetPath("alpha/bravo/charlie/delta").c_str(), 0755), 0);
+  EXPECT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("alpha/bravo/charlie/delta").c_str()),
+            -1);
+  EXPECT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("alpha/bravo/charlie").c_str()), -1);
+  EXPECT_EQ(rename(GetPath("alpha/bravo").c_str(), GetPath("alpha/bravo").c_str()), 0);
+}
+
 INSTANTIATE_TEST_SUITE_P(/*no prefix*/, RenameTest, testing::ValuesIn(AllTestFilesystems()),
                          testing::PrintToStringParamName());
 

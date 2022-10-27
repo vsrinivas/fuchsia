@@ -198,7 +198,7 @@ impl FxDirectory {
                     }
                     current_node = self
                         .volume()
-                        .get_or_load_node(object_id, object_descriptor, Some(self.clone()))
+                        .get_or_load_node(object_id, object_descriptor, Some(current_dir))
                         .await?;
                     if last_segment {
                         // We must make sure to take an open-count whilst we are holding a read
