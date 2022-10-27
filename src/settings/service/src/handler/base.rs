@@ -92,9 +92,6 @@ generate_inspect! {
         // Accessibility requests.
         SetAccessibilityInfo(AccessibilityInfo),
 
-        // Account requests
-        ScheduleClearAccounts,
-
         // Audio requests.
         SetVolume(Vec<SetAudioStream>, ftrace::Id),
 
@@ -121,7 +118,6 @@ generate_inspect! {
 
         // Night mode requests.
         SetNightModeInfo(NightModeInfo),
-
 
         // Restores settings to outside dependencies.
         Restore,
