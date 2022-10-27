@@ -69,15 +69,14 @@ zx_status_t Pinecrest::I2cInit() {
   };
 
   constexpr i2c_channel_t i2c_channels[] = {
-      // TODO(fxbug.dev/107645): Update this entry with the new codec I2C address.
       // For audio out
-      // {
-      //     .bus_id = 0,
-      //     .address = 0x31,
-      //     .vid = 0,
-      //     .pid = 0,
-      //     .did = 0,
-      // },
+      {
+          .bus_id = 1,
+          .address = 0x4c,
+          .vid = 0,
+          .pid = 0,
+          .did = 0,
+      },
       // TI LP5018 LED driver
       {
           .bus_id = 1,
