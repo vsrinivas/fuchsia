@@ -5,6 +5,8 @@
 #ifndef SRC_FIRMWARE_GIGABOOT_CPP_BACKENDS_H_
 #define SRC_FIRMWARE_GIGABOOT_CPP_BACKENDS_H_
 
+#include <lib/stdcompat/span.h>
+
 namespace gigaboot {
 
 enum class RebootMode {
@@ -20,6 +22,9 @@ bool SetRebootMode(RebootMode mode);
 RebootMode GetRebootMode();
 
 // Adds verified boot backends.
+
+const cpp20::span<const uint8_t> GetPermanentAttributes();
+const cpp20::span<const uint8_t> GetPermanentAttributesHash();
 
 }  // namespace gigaboot
 

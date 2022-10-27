@@ -6,4 +6,15 @@ declare_args() {
   # Specifies the gn target that implements the required backends defined in
   # `gigaboot/cpp/backends.h`
   gigaboot_backends = "//src/firmware/gigaboot/cpp:backends_nuc"
+
+  # Permanent attributes file for eng gigaboot
+  gigaboot_eng_permanent_attributes = "//third_party/android/platform/external/avb/test/data/atx_permanent_attributes.bin"
+
+  # Permanent attributes file for userdebug gigaboot. Setting this enables target
+  # //src/firmware/gigaboot/cpp:userdebug-esp
+  gigaboot_userdebug_permanent_attributes = ""
+
+  # Permanent attributes file for prod-signed gigaboot. Setting this enables
+  # target //src/firmware/gigaboot/cpp:user-esp
+  gigaboot_user_permanent_attributes = ""
 }

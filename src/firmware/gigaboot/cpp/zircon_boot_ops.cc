@@ -7,6 +7,7 @@
 
 #include <phys/boot-zbi.h>
 
+#include "backends.h"
 #include "boot_zbi_items.h"
 #include "gpt.h"
 
@@ -101,6 +102,24 @@ bool AddZbiItems(ZirconBootOps* ops, zbi_header_t* image, size_t capacity, AbrSl
   return AddGigabootZbiItems(image, capacity, slot);
 }
 
+bool ReadPermanentAttributes(ZirconBootOps* ops, AvbAtxPermanentAttributes* attribute) {
+  ZX_ASSERT(attribute);
+  const cpp20::span<const uint8_t> perm_attr = GetPermanentAttributes();
+  if (perm_attr.size() != sizeof(AvbAtxPermanentAttributes)) {
+    return false;
+  }
+
+  memcpy(attribute, perm_attr.data(), perm_attr.size());
+  return true;
+}
+
+bool ReadPermanentAttributesHash(ZirconBootOps* ops, uint8_t* hash) {
+  ZX_ASSERT(hash);
+  const cpp20::span<const uint8_t> perm_attr_hash = GetPermanentAttributesHash();
+  memcpy(hash, perm_attr_hash.data(), perm_attr_hash.size());
+  return true;
+}
+
 }  // namespace
 
 ZirconBootOps GetZirconBootOps() {
@@ -119,8 +138,8 @@ ZirconBootOps GetZirconBootOps() {
   zircon_boot_ops.verified_boot_read_rollback_index = nullptr;
   zircon_boot_ops.verified_boot_write_rollback_index = nullptr;
   zircon_boot_ops.verified_boot_read_is_device_locked = nullptr;
-  zircon_boot_ops.verified_boot_read_permanent_attributes = nullptr;
-  zircon_boot_ops.verified_boot_read_permanent_attributes_hash = nullptr;
+  zircon_boot_ops.verified_boot_read_permanent_attributes = ReadPermanentAttributes;
+  zircon_boot_ops.verified_boot_read_permanent_attributes_hash = ReadPermanentAttributesHash;
   return zircon_boot_ops;
 }
 

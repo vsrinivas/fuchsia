@@ -6,38 +6,19 @@
 #include <zircon/assert.h>
 
 #include "backends.h"
-#include "gigaboot/src/bootbyte.h"
 
 namespace gigaboot {
 
 bool SetRebootMode(RebootMode mode) {
-  switch (mode) {
-    case RebootMode::kNormal:
-      bootbyte_set_normal();
-      return true;
-    case RebootMode::kBootloader:
-      bootbyte_set_bootloader();
-      return true;
-    case RebootMode::kRecovery:
-      bootbyte_set_recovery();
-      return true;
-  }
-
-  ZX_ASSERT(false);
+  // TODO(b/238334864): Implement reboot mode configuration using the same
+  // EFI variable approach in legacy gigaboot.
+  return true;
 }
 
 RebootMode GetRebootMode() {
-  unsigned char bootbyte = bootbyte_read() & ~RTC_BOOT_COUNT_MASK;
-  if (bootbyte == RTC_BOOT_NORMAL || bootbyte == RTC_BOOT_DEFAULT) {
-    return RebootMode::kNormal;
-  } else if (bootbyte == RTC_BOOT_BOOTLOADER) {
-    return RebootMode::kBootloader;
-  } else if (bootbyte == RTC_BOOT_RECOVERY) {
-    return RebootMode::kRecovery;
-  } else {
-    printf("Unknown bootmode: 0x%x. Doing normal boot\n", bootbyte);
-    return RebootMode::kNormal;
-  }
+  // TODO(b/238334864): Implement reboot mode configuration using the same
+  // EFI variable approach in legacy gigaboot.
+  return RebootMode::kNormal;
 }
 
 }  // namespace gigaboot

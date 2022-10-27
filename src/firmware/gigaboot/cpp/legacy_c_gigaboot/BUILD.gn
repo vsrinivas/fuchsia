@@ -34,6 +34,7 @@ source_set("legacy_c_gigaboot") {
     "$dir_gigaboot/src/abr.c",
     "$dir_gigaboot/src/acpi.c",
     "$dir_gigaboot/src/avb.c",
+    "$dir_gigaboot/src/bootbyte.c",
     "$dir_gigaboot/src/bootimg.c",
     "$dir_gigaboot/src/cmdline.c",
     "$dir_gigaboot/src/device_id.c",
