@@ -8,32 +8,20 @@
 #include <lib/sys/component/cpp/testing/realm_builder.h>
 #include <threads.h>
 
-#include <cstdint>
-#include <memory>
-#include <numeric>
-
 #include <virtio/balloon.h>
-#include <virtio/virtio_ring.h>
 
 #include "src/virtualization/bin/vmm/device/tests/test_with_device.h"
 #include "src/virtualization/bin/vmm/device/tests/virtio_queue_fake.h"
 
-static constexpr uint16_t kNumQueues = 4;
+static constexpr uint16_t kNumQueues = 3;
 static constexpr uint16_t kQueueSize = 16;
-static constexpr size_t kDataSizes[kNumQueues] = {PAGE_SIZE, PAGE_SIZE, PAGE_SIZE,
-                                                  PAGE_SIZE * 1024};
-
-zx_gpaddr_t PageAlign(zx_gpaddr_t addr) { return addr + (PAGE_SIZE - addr % PAGE_SIZE); }
 
 class VirtioBalloonTest : public TestWithDevice {
  protected:
   VirtioBalloonTest()
       : inflate_queue_(phys_mem_, PAGE_SIZE * kNumQueues, kQueueSize),
         deflate_queue_(phys_mem_, inflate_queue_.end(), kQueueSize),
-        stats_queue_(phys_mem_, deflate_queue_.end(), 1),
-        free_page_reporting_queue_(phys_mem_, stats_queue_.end(), kQueueSize),
-        queues_mem_size_((free_page_reporting_queue_.end() - inflate_queue_.desc()) / PAGE_SIZE),
-        data_mem_size_(std::accumulate(kDataSizes, kDataSizes + kNumQueues, 0)) {}
+        stats_queue_(phys_mem_, deflate_queue_.end(), 1) {}
 
   void SetUp() override {
     using component_testing::ChildRef;
@@ -45,6 +33,10 @@ class VirtioBalloonTest : public TestWithDevice {
 
     constexpr auto kComponentName = "virtio_balloon";
     constexpr auto kVirtioBalloonUrl = "#meta/virtio_balloon.cm";
+    // Add extra memory pages which we will be zero'ing inside of the inflate test
+    // Not having extra memory will result in inflate test zero op stomping on its own inflate
+    // queue while queue is being processed
+    constexpr auto kNumExtraTestMemoryPages = 10;
 
     auto realm_builder = RealmBuilder::Create();
     realm_builder.AddChild(kComponentName, kVirtioBalloonUrl);
@@ -68,49 +60,25 @@ class VirtioBalloonTest : public TestWithDevice {
     balloon_ = realm_->ConnectSync<fuchsia::virtualization::hardware::VirtioBalloon>();
 
     fuchsia::virtualization::hardware::StartInfo start_info;
-
     zx_status_t status =
-        MakeStartInfo(PageAlign(free_page_reporting_queue_.end()) + data_mem_size_, &start_info);
+        MakeStartInfo(stats_queue_.end() + kNumExtraTestMemoryPages * PAGE_SIZE, &start_info);
     ASSERT_EQ(ZX_OK, status);
 
     status = balloon_->Start(std::move(start_info));
     ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
-    VirtioQueueFake* queues[kNumQueues] = {&inflate_queue_, &deflate_queue_, &stats_queue_,
-                                           &free_page_reporting_queue_};
+    VirtioQueueFake* queues[kNumQueues] = {&inflate_queue_, &deflate_queue_, &stats_queue_};
     for (uint16_t i = 0; i < kNumQueues; i++) {
       auto q = queues[i];
-      q->Configure(PageAlign(free_page_reporting_queue_.end()) +
-                       std::accumulate(kDataSizes, kDataSizes + i, 0),
-                   kDataSizes[i]);
+      q->Configure(PAGE_SIZE * i, PAGE_SIZE);
       status = balloon_->ConfigureQueue(i, q->size(), q->desc(), q->avail(), q->used());
       ASSERT_EQ(ZX_OK, status);
     }
 
-    status = balloon_->Ready(VIRTIO_BALLOON_F_STATS_VQ | VIRTIO_BALLOON_F_PAGE_POISON |
-                             VIRTIO_BALLOON_F_PAGE_REPORTING | (1 << VIRTIO_RING_F_INDIRECT_DESC));
+    status = balloon_->Ready(VIRTIO_BALLOON_F_STATS_VQ);
     ASSERT_EQ(ZX_OK, status);
   }
-
-  void ValidateInflatePFNs(uint32_t* begin, uint32_t* end) {
-    // Driver memory layout is multiple device queues followed by a data block
-    // which is shared by all queues. We don't want to inflate ( zero ) pages
-    // which contain device queues because it means inflate might stomp on its
-    // own queue.
-    for (uint32_t* pfn = begin; pfn < end; pfn++) {
-      ASSERT_GT(*pfn, queues_mem_size_ / PAGE_SIZE);
-      ASSERT_LT(*pfn, (queues_mem_size_ + data_mem_size_) / PAGE_SIZE);
-    }
-  }
-
-  constexpr static uint16_t INFLATEQ = 0;
-  constexpr static uint16_t DEFLATEQ = 1;
-  constexpr static uint16_t STATSQ = 2;
-  // See src/virtualization/bin/vmm/device/virtio_balloon/src/wire.rs comment for
-  // the REPORTINGVQ to understand why we are not using virtio spec queue index
-  // here
-  constexpr static uint16_t REPORTINGVQ = 3;
 
  public:
   // Note: use of sync can be problematic here if the test environment needs to handle
@@ -119,33 +87,29 @@ class VirtioBalloonTest : public TestWithDevice {
   VirtioQueueFake inflate_queue_;
   VirtioQueueFake deflate_queue_;
   VirtioQueueFake stats_queue_;
-  VirtioQueueFake free_page_reporting_queue_;
   using TestWithDevice::WaitOnInterrupt;
   std::unique_ptr<component_testing::RealmRoot> realm_;
-  size_t queues_mem_size_;
-  size_t data_mem_size_;
 };
 
+// Do not inflate pages which contain device queue to avoid zeroing out queue while it's being
+// processed
 TEST_F(VirtioBalloonTest, Inflate) {
-  uint32_t pfns[] = {15, 16, 17, 22, 19};
-  ValidateInflatePFNs(pfns, pfns + sizeof(pfns) / sizeof(*pfns));
-
+  uint32_t pfns[] = {5, 6, 7, 22, 9};
   zx_status_t status =
       DescriptorChainBuilder(inflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
   ASSERT_EQ(ZX_OK, status);
 
-  status = balloon_->NotifyQueue(INFLATEQ);
+  status = balloon_->NotifyQueue(0);
   ASSERT_EQ(ZX_OK, status);
   status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
 
-  uint32_t pfns2[] = {18, 31, 19};
-  ValidateInflatePFNs(pfns2, pfns2 + sizeof(pfns2) / sizeof(*pfns2));
+  uint32_t pfns2[] = {8, 10, 9};
   status =
       DescriptorChainBuilder(inflate_queue_).AppendReadableDescriptor(pfns2, sizeof(pfns2)).Build();
   ASSERT_EQ(ZX_OK, status);
 
-  status = balloon_->NotifyQueue(INFLATEQ);
+  status = balloon_->NotifyQueue(0);
   ASSERT_EQ(ZX_OK, status);
   status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
@@ -157,132 +121,10 @@ TEST_F(VirtioBalloonTest, Deflate) {
       DescriptorChainBuilder(deflate_queue_).AppendReadableDescriptor(pfns, sizeof(pfns)).Build();
   ASSERT_EQ(ZX_OK, status);
 
-  status = balloon_->NotifyQueue(DEFLATEQ);
+  status = balloon_->NotifyQueue(1);
   ASSERT_EQ(ZX_OK, status);
   status = WaitOnInterrupt();
   ASSERT_EQ(ZX_OK, status);
-}
-
-bool IsPtrInRange(uint8_t* ptr, uint8_t* begin, uint8_t* end) { return ptr >= begin && ptr < end; }
-
-TEST_F(VirtioBalloonTest, FreePageReporting_DirectDesc) {
-  uint8_t* free_page_ptr = nullptr;
-  // Use 2MiB which is the minimal size free page report I've seen on Linux in a
-  // direct free page report descriptor
-  const size_t free_page_len = PAGE_SIZE * 512;
-
-  const auto [data_begin, data_end] = free_page_reporting_queue_.data();
-
-  const size_t data_len = data_end - data_begin;
-  uint8_t* data_ptr = reinterpret_cast<uint8_t*>(phys_mem_.ptr(data_begin, data_len));
-  std::fill(data_ptr, data_ptr + data_len, 1);
-
-  zx_info_vmo_t vmo_info = {};
-  ASSERT_EQ(ZX_OK,
-            phys_mem_.vmo().get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr));
-  uint64_t prev_committed_bytes = vmo_info.committed_bytes;
-  ASSERT_EQ(DescriptorChainBuilder(free_page_reporting_queue_)
-                .AppendWritableDescriptor(&free_page_ptr, free_page_len)
-                .Build(),
-            ZX_OK);
-
-  ASSERT_EQ(reinterpret_cast<uint64_t>(free_page_ptr) % PAGE_SIZE, 0u);
-  zx_status_t status = balloon_->NotifyQueue(REPORTINGVQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
-
-  ASSERT_EQ(ZX_OK,
-            phys_mem_.vmo().get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr));
-  uint64_t cur_committed_bytes = vmo_info.committed_bytes;
-
-  ASSERT_EQ(prev_committed_bytes - cur_committed_bytes, free_page_len);
-
-  for (size_t i = 0; i < data_len; i++) {
-    if (IsPtrInRange(data_ptr + i, free_page_ptr, free_page_ptr + free_page_len)) {
-      ASSERT_EQ(0, data_ptr[i]);
-    } else {
-      ASSERT_EQ(1, data_ptr[i]);
-    }
-  }
-}
-
-TEST_F(VirtioBalloonTest, FreePageReporting_MixOfDirectAndIndirectDesc) {
-  // Commit all data block of the free page reporting queue and capture the committed bytes before
-  // running free page reporting
-  const auto [data_begin, data_end] = free_page_reporting_queue_.data();
-  phys_mem_.vmo().op_range(ZX_VMO_OP_COMMIT, data_begin, data_end - data_begin, nullptr, 0);
-  zx_info_vmo_t vmo_info = {};
-  ASSERT_EQ(ZX_OK,
-            phys_mem_.vmo().get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr));
-  const uint64_t prev_committed_bytes = vmo_info.committed_bytes;
-
-  // Allocate 2 indirect memory blocks which we'll refer to in our indirect descriptors
-  constexpr auto NUM_INDIRECT_DESCRIPTORS = 2;
-  // Use 1 MiB and 2 MiB free page reports which is similar to what you normally get on Linux
-  const size_t free_page_len[NUM_INDIRECT_DESCRIPTORS] = {PAGE_SIZE * 256, PAGE_SIZE * 512};
-  uint64_t free_pages[NUM_INDIRECT_DESCRIPTORS] = {
-      reinterpret_cast<uint64_t>(free_page_reporting_queue_.AllocData(free_page_len[0]).driver_mem),
-      reinterpret_cast<uint64_t>(
-          free_page_reporting_queue_.AllocData(free_page_len[1]).driver_mem)};
-
-  // Manually create an indirect descriptor chain
-  // Use page aligned allocation to be able to compare committed memory before and after the free
-  // page report.
-  // Without doing page aligned allocation our DirectDescriptor data block will span
-  // across memory page boundary making committed memory comparison off by one page
-  //
-  // use +1 here to add a broken descriptor in the middle and validate indirect chain walking logic
-  const size_t indirect_chain_length = sizeof(vring_desc) * (NUM_INDIRECT_DESCRIPTORS + 1);
-  vring_desc* indirect_chain = reinterpret_cast<vring_desc*>(
-      free_page_reporting_queue_.AllocData(PageAlign(indirect_chain_length)).device_mem);
-  // first descriptor in the indirect chain
-  indirect_chain[0].addr = free_pages[0];
-  ASSERT_EQ(indirect_chain[0].addr % PAGE_SIZE, 0u);
-  indirect_chain[0].len = free_page_len[0];
-  indirect_chain[0].flags = VRING_DESC_F_NEXT | VRING_DESC_F_WRITE;
-  indirect_chain[0].next = 2;
-  // broken descriptor which parsing logic is expected to skip
-  indirect_chain[1].addr = 0;
-  indirect_chain[1].len = PAGE_SIZE;
-  indirect_chain[1].flags = VRING_DESC_F_WRITE;
-  indirect_chain[1].next = 0;
-  // another normal descriptor
-  // walking is expected to get there after descriptor 0
-  indirect_chain[2].addr = free_pages[1];
-  ASSERT_EQ(indirect_chain[2].addr % PAGE_SIZE, 0u);
-  indirect_chain[2].len = free_page_len[1];
-  indirect_chain[2].flags = VRING_DESC_F_WRITE;
-  indirect_chain[2].next = 0;
-
-  const auto direct_free_page_len = PAGE_SIZE * 10;
-  void* direct_free_page_ptr;
-  // Linux virtio balloon driver sets VRING_DESC_F_WRITE along with VRING_DESC_F_INDIRECT flag
-  // Lets do the same to make sure indirect processing logic follows the spec and ignores the write
-  // flag if indirect flag is set
-  //
-  // 2.7.5.3.2 Device Requirements: Indirect Descriptors
-  // The device MUST ignore the write-only flag (flags&VIRTQ_DESC_F_WRITE) in the descriptor that
-  // refers to an indirect table.
-  ASSERT_EQ(DescriptorChainBuilder(free_page_reporting_queue_)
-                .AppendWritableDescriptor(&direct_free_page_ptr, direct_free_page_len)
-                .AppendDescriptor(reinterpret_cast<void**>(&indirect_chain), indirect_chain_length,
-                                  VRING_DESC_F_INDIRECT | VRING_DESC_F_WRITE)
-                .Build(),
-            ZX_OK);
-
-  ASSERT_EQ(reinterpret_cast<uint64_t>(direct_free_page_ptr) % PAGE_SIZE, 0u);
-  zx_status_t status = balloon_->NotifyQueue(REPORTINGVQ);
-  ASSERT_EQ(ZX_OK, status);
-  status = WaitOnInterrupt();
-  ASSERT_EQ(ZX_OK, status);
-
-  ASSERT_EQ(ZX_OK,
-            phys_mem_.vmo().get_info(ZX_INFO_VMO, &vmo_info, sizeof(vmo_info), nullptr, nullptr));
-  const uint64_t cur_committed_bytes = vmo_info.committed_bytes;
-
-  ASSERT_EQ(prev_committed_bytes - cur_committed_bytes,
-            free_page_len[0] + free_page_len[1] + direct_free_page_len);
 }
 
 TEST_F(VirtioBalloonTest, Stats) {
@@ -311,7 +153,7 @@ TEST_F(VirtioBalloonTest, Stats) {
     if (status != ZX_OK) {
       return status;
     }
-    status = arg->test->balloon_->NotifyQueue(STATSQ);
+    status = arg->test->balloon_->NotifyQueue(2);
     if (status != ZX_OK) {
       return status;
     }
@@ -327,7 +169,7 @@ TEST_F(VirtioBalloonTest, Stats) {
     if (status != ZX_OK) {
       return status;
     }
-    return arg->test->balloon_->NotifyQueue(STATSQ);
+    return arg->test->balloon_->NotifyQueue(2);
   };
   thrd_t thread;
   int ret = thrd_create_with_name(&thread, entry, &arg, "balloon-stats");
