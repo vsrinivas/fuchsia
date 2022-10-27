@@ -157,31 +157,12 @@ example of a Fuchsia binary compiled for x64 using the "asan-ubsan" variant:
 
 ### Replicating ASan failures
 
-Our commit queue runs tests in an ASan-enabled configuration. To replicate the
-build in this configuration, use the following `args.gn` file:
+Our infrastructure runs tests in an ASan-enabled configuration. To replicate an
+ASan-enabled infrastructure build, use `fx repro <build_id>` and run the
+commands it emits.
 
-```sh
-import("//boards/<x64-or-arm64>.gni")
-import("//products/core.gni")
-
-base_package_labels+=[ "//bundles/buildbot:core" ]
-goma_dir="<path-to-goma-dir>"
-is_debug=true
-select_variant=["asan","host_asan"]
-target_cpu="<x64-or-arm64>"
-use_goma=true
-```
-
-Replace `x64-or-arm64` with your desired target architecture, and replace
-`<path-to-goma-dir>` with the path to your goma dir (for those who use goma). This
-can also be generated from the command line with:
-
-```sh
-fx set core.x64 --with-base //bundles/buildbot:core --variant host_asan --variant asan --goma
-```
-
-Note that this will build all of the tests that are run by the commit queue and
-install them in the system image. This may be undesirable for two reasons:
+Note that this will build all of the tests that are run by the infrastructure
+and install them in the system image. This may be undesirable for two reasons:
 
  * Building all of the tests is typically slow and unnecessary. Developers may
    find it more effective to limit the package labels to the tests they need.
