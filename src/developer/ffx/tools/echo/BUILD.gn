@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
@@ -54,10 +55,21 @@ install_host_tools("host") {
   outputs = [ "ffx-echo" ]
 }
 
+compiled_action("metadata") {
+  tool = ":ffx_echo_tool"
+  tool_output_name = "ffx-echo"
+  outputs = [ "${host_tools_dir}/ffx-echo.json" ]
+  args = [
+    "metadata",
+    rebase_path("${host_tools_dir}/ffx-echo.json", root_build_dir),
+  ]
+}
+
 group("echo") {
   deps = [
     ":ffx_echo_tool",
     ":host",
+    ":metadata",
   ]
 }
 

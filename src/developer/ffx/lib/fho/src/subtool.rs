@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context, Result};
-use argh::{FromArgs, SubCommand, SubCommands};
+use std::{fs::File, path::PathBuf};
+
+use anyhow::Result;
+use argh::{CommandInfo, FromArgs, SubCommand, SubCommands};
 use async_trait::async_trait;
 use errors::{ffx_error, ResultExt};
 use ffx_command::{DaemonVersionCheck, Ffx, FfxCommandLine, ToolRunner, ToolSuite};
@@ -14,19 +16,30 @@ use fidl_fuchsia_developer_ffx as ffx_fidl;
 use selectors::{self, VerboseError};
 use std::time::Duration;
 
+use crate::FhoToolMetadata;
+
 #[derive(FromArgs)]
 #[argh(subcommand)]
-enum FhoVersion<M: FfxMain> {
+enum FhoHandler<M: FfxMain> {
     //FhoVersion1(M),
     /// Run the tool as if under ffx
     Standalone(M::Command),
+    /// Print out the subtool's metadata json
+    Metadata(MetadataCmd),
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "metadata", description = "Print out this subtool's FHO metadata json")]
+struct MetadataCmd {
+    #[argh(positional)]
+    output_path: Option<PathBuf>,
 }
 
 #[derive(FromArgs)]
 /// Fuchsia Host Objects Runner
 struct ToolCommand<M: FfxMain> {
     #[argh(subcommand)]
-    subcommand: FhoVersion<M>,
+    subcommand: FhoHandler<M>,
 }
 
 struct FhoSuite<M> {
@@ -43,13 +56,24 @@ impl<M> Clone for FhoSuite<M> {
 
 struct FhoTool<M: FfxMain> {
     suite: FhoSuite<M>,
-    command: Option<ToolCommand<M>>,
+    command: ToolCommand<M>,
 }
 
 pub struct FhoEnvironment<'a> {
     pub ffx: &'a Ffx,
     pub context: &'a EnvironmentContext,
     pub injector: &'a dyn Injector,
+}
+
+impl MetadataCmd {
+    fn print(&self, info: &CommandInfo) -> Result<()> {
+        let meta = FhoToolMetadata::new(info.name, info.description);
+        match &self.output_path {
+            Some(path) => serde_json::to_writer_pretty(&File::create(path)?, &meta)?,
+            None => serde_json::to_writer_pretty(&std::io::stdout(), &meta)?,
+        };
+        Ok(())
+    }
 }
 
 #[async_trait(?Send)]
@@ -59,28 +83,31 @@ impl<M: FfxMain> ToolRunner for FhoTool<M> {
     }
 
     async fn run(self: Box<Self>) -> Result<(), anyhow::Error> {
-        let cache_path = self.suite.context.get_cache_path()?;
-        std::fs::create_dir_all(&cache_path)?;
-        let hoist_cache_dir = tempfile::tempdir_in(&cache_path)?;
-        let build_info = self.suite.context.build_info();
-        let injector = self
-            .suite
-            .ffx
-            .initialize_overnet(
-                hoist_cache_dir.path(),
-                None,
-                DaemonVersionCheck::SameVersionInfo(build_info),
-            )
-            .await?;
-        let env = FhoEnvironment {
-            ffx: &self.suite.ffx,
-            context: &self.suite.context,
-            injector: &injector,
-        };
-        let mut main = match self.command.context("Tried to invoke command twice")?.subcommand {
-            FhoVersion::Standalone(tool) => M::from_env(env, tool).await?,
-        };
-        main.main().await
+        match self.command.subcommand {
+            FhoHandler::Metadata(metadata) => metadata.print(M::Command::COMMAND),
+            FhoHandler::Standalone(tool) => {
+                let cache_path = self.suite.context.get_cache_path()?;
+                std::fs::create_dir_all(&cache_path)?;
+                let hoist_cache_dir = tempfile::tempdir_in(&cache_path)?;
+                let build_info = self.suite.context.build_info();
+                let injector = self
+                    .suite
+                    .ffx
+                    .initialize_overnet(
+                        hoist_cache_dir.path(),
+                        None,
+                        DaemonVersionCheck::SameVersionInfo(build_info),
+                    )
+                    .await?;
+                let env = FhoEnvironment {
+                    ffx: &self.suite.ffx,
+                    context: &self.suite.context,
+                    injector: &injector,
+                };
+                let mut main = M::from_env(env, tool).await?;
+                main.main().await
+            }
+        }
     }
 }
 
@@ -92,7 +119,7 @@ impl<M: FfxMain> ToolSuite for FhoSuite<M> {
     }
 
     fn global_command_list() -> &'static [&'static argh::CommandInfo] {
-        FhoVersion::<M>::COMMANDS
+        FhoHandler::<M>::COMMANDS
     }
 
     fn try_from_args(
@@ -102,7 +129,7 @@ impl<M: FfxMain> ToolSuite for FhoSuite<M> {
     ) -> Result<Option<Box<dyn ToolRunner>>, argh::EarlyExit> {
         let found = FhoTool {
             suite: self.clone(),
-            command: Some(ToolCommand::<M>::from_args(&Vec::from_iter(cmd.cmd_iter()), args)?),
+            command: ToolCommand::<M>::from_args(&Vec::from_iter(cmd.cmd_iter()), args)?,
         };
         Ok(Some(Box::new(found)))
     }
@@ -319,7 +346,7 @@ mod tests {
     use super::*;
     // This keeps the macros from having compiler errors.
     use crate as fho;
-    use crate::testing;
+    use crate::{testing, FhoVersion};
     use argh::FromArgs;
     use async_trait::async_trait;
     use fho_macro::FfxTool;
@@ -381,8 +408,38 @@ mod tests {
         .unwrap();
         let fho_env = FhoEnvironment { ffx: &ffx, context: &context, injector: &injector };
         let mut fake_tool = match tool_cmd.subcommand {
-            FhoVersion::Standalone(t) => FakeTool::from_env(fho_env, t).await.unwrap(),
+            FhoHandler::Standalone(t) => FakeTool::from_env(fho_env, t).await.unwrap(),
+            FhoHandler::Metadata(_) => panic!("Not testing metadata generation"),
         };
         fake_tool.main().await.unwrap();
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn present_metadata() {
+        let tmpdir = tempfile::tempdir().expect("tempdir");
+
+        let ffx = Ffx::from_args(&["ffx"], &[]).expect("ffx command line to parse");
+        let context = EnvironmentContext::default();
+        let suite: FhoSuite<FakeTool> = FhoSuite { ffx, context, _p: Default::default() };
+        let output_path = tmpdir.path().join("metadata.json");
+        let subcommand =
+            FhoHandler::Metadata(MetadataCmd { output_path: Some(output_path.clone()) });
+        let command = ToolCommand { subcommand };
+        let tool = Box::new(FhoTool { suite, command });
+
+        tool.run().await.expect("running metadata command");
+
+        let read_metadata: FhoToolMetadata =
+            serde_json::from_reader(File::open(output_path).expect("opening metadata"))
+                .expect("parsing metadata");
+        assert_eq!(
+            read_metadata,
+            FhoToolMetadata {
+                name: "fake".to_owned(),
+                description: "fake command".to_owned(),
+                requires_fho: 0,
+                fho_details: FhoVersion::FhoVersion0 {},
+            }
+        );
     }
 }

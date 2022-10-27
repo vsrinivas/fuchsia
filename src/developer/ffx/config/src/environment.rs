@@ -174,10 +174,22 @@ impl EnvironmentContext {
         }
     }
 
+    /// Returns the path to the currently active build output directory
     pub fn build_dir(&self) -> Option<&Path> {
         match &self.kind {
             EnvironmentKind::InTree { build_dir, .. } => build_dir.as_deref(),
             _ => None,
+        }
+    }
+
+    /// Returns paths to locations to search for external subtools other than
+    /// the active sdk.
+    pub fn subtool_paths(&self) -> Vec<PathBuf> {
+        match &self.kind {
+            EnvironmentKind::InTree { build_dir: Some(build_dir), .. } => {
+                vec![build_dir.join("host-tools")]
+            }
+            _ => vec![],
         }
     }
 
@@ -208,15 +220,26 @@ impl EnvironmentContext {
         }
     }
 
+    pub const FFX_BIN_ENV: &str = "FFX_BIN";
+    /// Gets the path to the top level binary for used when re-running ffx, either from the environment
+    /// variable in [`Self::FFX_BIN_ENV`], which should be set by a top level ffx invocation,
+    /// or from the current exe if not set.
+    pub fn rerun_bin(&self) -> Result<PathBuf, anyhow::Error> {
+        Ok(self
+            .env_var(Self::FFX_BIN_ENV)
+            .map(PathBuf::from)
+            .or_else(|_| std::env::current_exe())?)
+    }
+
     /// Creates a command builder that starts with everything necessary to re-run ffx within the same context,
     /// without any subcommands.
     pub fn rerun_prefix(&self) -> Result<Command, anyhow::Error> {
         // we may have been run by a wrapper script, so we want to make sure we're using the 'real' executable.
-        let mut ffx_path = std::env::current_exe()?;
+        let mut ffx_path = self.rerun_bin()?;
         // if we daemonize, our path will change to /, so get the canonical path before that occurs.
         ffx_path = std::fs::canonicalize(ffx_path)?;
 
-        let mut cmd = Command::new(ffx_path);
+        let mut cmd = Command::new(&ffx_path);
         match &self.kind {
             EnvironmentKind::InTree { .. } | EnvironmentKind::NoContext => {}
             EnvironmentKind::Isolated { isolate_root } => {
@@ -235,6 +258,7 @@ impl EnvironmentContext {
                 }
             }
         }
+        cmd.env(Self::FFX_BIN_ENV, &ffx_path);
         cmd.arg("--config").arg(serde_json::to_string(&self.runtime_args)?);
         if let Some(e) = self.env_file_path.as_ref() {
             cmd.arg("--env").arg(e);

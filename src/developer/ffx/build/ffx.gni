@@ -69,6 +69,7 @@ template("ffx") {
              "//src/developer/ffx/command:lib",
              "//src/developer/ffx/config:lib",
              "//src/developer/ffx/lib/errors:lib",
+             "//src/developer/ffx/lib/fho:lib",
              "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_args",
              "//src/developer/ffx/plugins/daemon:ffx_daemon_plugin_sub_command",
              "//src/lib/fuchsia-async",

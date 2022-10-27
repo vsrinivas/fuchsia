@@ -65,11 +65,9 @@ impl FfxCommandLine {
     pub fn try_parse<T: ToolSuite>(&self) -> Result<Ffx, EarlyExit> {
         Ffx::from_args(&Vec::from_iter(self.cmd_iter()), &Vec::from_iter(self.args_iter())).map_err(
             |early_exit| {
-                // Note: later, as we add actual implementations of dynamic commands, add a note in here like:
-                // `There may be more commands available, use `{cmd} commands` for a complete list.\n`
                 let output = early_exit.output
                     + &format!(
-                        "\nGlobal Commands:{subcommands}\n\nSee '{cmd} <command> help' for more information on a specific command.",
+                        "\nBuilt-in Commands:{subcommands}\n\nNote: There may be more commands available, use `{cmd} commands` for a complete list.\nSee '{cmd} <command> help' for more information on a specific command.",
                         subcommands = argh::print_subcommands(T::global_command_list().iter().copied()),
                         cmd = self.command.join(" "),
                     );

@@ -5,10 +5,11 @@
 use anyhow::Result;
 use argh::{FromArgs, SubCommands};
 use errors::{ffx_error, ResultExt};
-use ffx_command::{DaemonVersionCheck, Ffx, FfxCommandLine, ToolRunner, ToolSuite};
+use ffx_command::{DaemonVersionCheck, Ffx, FfxCommandLine, FfxToolInfo, ToolRunner, ToolSuite};
 use ffx_config::EnvironmentContext;
 use ffx_lib_args::FfxBuiltIn;
 use ffx_lib_sub_command::SubCommand;
+use fho::ExternalSubToolSuite;
 
 /// The command to be invoked and everything it needs to invoke
 struct FfxSubCommand {
@@ -21,6 +22,7 @@ struct FfxSubCommand {
 struct FfxSuite {
     app: Ffx,
     context: EnvironmentContext,
+    external_commands: ExternalSubToolSuite,
 }
 
 const CIRCUIT_REFRESH_RATE: std::time::Duration = std::time::Duration::from_millis(500);
@@ -29,11 +31,20 @@ impl ToolSuite for FfxSuite {
     fn from_env(app: &Ffx, env: &EnvironmentContext) -> Result<Self> {
         let app = app.clone();
         let context = env.clone();
-        Ok(Self { app, context })
+
+        let external_commands = ExternalSubToolSuite::from_env(&app, env)?;
+
+        Ok(Self { app, context, external_commands })
     }
 
     fn global_command_list() -> &'static [&'static argh::CommandInfo] {
         SubCommand::COMMANDS
+    }
+
+    fn command_list(&self) -> Vec<FfxToolInfo> {
+        let builtin_commands = SubCommand::COMMANDS.iter().copied().map(FfxToolInfo::from);
+
+        builtin_commands.chain(self.external_commands.command_list().into_iter()).collect()
     }
 
     fn try_from_args(
@@ -41,10 +52,38 @@ impl ToolSuite for FfxSuite {
         ffx_cmd: &FfxCommandLine,
         args: &[&str],
     ) -> Result<Option<Box<(dyn ToolRunner + 'static)>>, argh::EarlyExit> {
-        let cmd = FfxBuiltIn::from_args(&Vec::from_iter(ffx_cmd.cmd_iter()), args)?;
         let context = self.context.clone();
         let app = self.app.clone();
-        Ok(Some(Box::new(FfxSubCommand { cmd, context, app })))
+        match args.first().copied() {
+            Some("commands") => {
+                let mut output = String::new();
+                self.print_command_list(&mut output).ok();
+                let status = Ok(());
+                Err(argh::EarlyExit { output, status })
+            }
+            Some(name) if SubCommand::COMMANDS.iter().any(|c| c.name == name) => {
+                let cmd = FfxBuiltIn::from_args(&Vec::from_iter(ffx_cmd.cmd_iter()), args)?;
+                Ok(Some(Box::new(FfxSubCommand { cmd, context, app })))
+            }
+            Some(name) => match self.external_commands.try_from_args(ffx_cmd, args)? {
+                Some(tool) => Ok(Some(tool)),
+                _ => {
+                    let mut output = format!(
+                        "Unknown ffx tool `{name}`. Did you mean one of the following?\n\n"
+                    );
+                    self.print_command_list(&mut output).ok();
+                    let status = Err(());
+                    return Err(argh::EarlyExit { output, status });
+                }
+            },
+            None => {
+                let help_res = Ffx::from_args(&Vec::from_iter(ffx_cmd.cmd_iter()), &["help"]);
+                help_res.map(|_| None).map_err(|mut help_err| {
+                    self.print_command_list(&mut help_err.output).ok();
+                    help_err
+                })
+            }
+        }
     }
 }
 

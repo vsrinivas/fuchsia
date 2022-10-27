@@ -13,6 +13,7 @@ use std::io::Write;
 use std::str::FromStr;
 use std::time::{Duration, Instant};
 
+mod describe;
 mod ffx;
 mod tools;
 
