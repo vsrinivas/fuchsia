@@ -96,7 +96,7 @@ again:  // label here to catch filename=/path/to/new/directory/
       }
       strcat(netcp.filename, TMP_SUFFIX);
       netcp.needs_rename = true;
-      netcp.fd = open(netcp.filename, O_WRONLY | O_CREAT | O_TRUNC);
+      netcp.fd = open(netcp.filename, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR);
       netcp.filename[len] = '\0';
       if (netcp.fd < 0 && errno == ENOENT) {
         if (netcp_mkdir(filename) == 0) {

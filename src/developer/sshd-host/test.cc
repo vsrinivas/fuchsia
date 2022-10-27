@@ -99,7 +99,7 @@ static void write_authorized_keys(const char *payload, ssize_t len) {
   if (mkdir(kSshDirectory, 0700), 0) {
     ASSERT_EQ(errno, EEXIST);
   }
-  fbl::unique_fd kfd(open(kAuthorizedKeysPath, O_CREAT | O_TRUNC | O_WRONLY));
+  fbl::unique_fd kfd(open(kAuthorizedKeysPath, O_CREAT | O_TRUNC | O_WRONLY, S_IRUSR | S_IWUSR));
   ASSERT_TRUE(kfd.is_valid());
   ASSERT_EQ(write(kfd.get(), payload, len), len);
   fsync(kfd.get());

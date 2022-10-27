@@ -96,7 +96,7 @@ zx_status_t provision_authorized_keys_from_bootloader_file(
     return ZX_ERR_IO;
   }
 
-  fbl::unique_fd kfd(open(kAuthorizedKeysPath, O_CREAT | O_EXCL | O_WRONLY));
+  fbl::unique_fd kfd(open(kAuthorizedKeysPath, O_CREAT | O_EXCL | O_WRONLY, S_IRUSR | S_IWUSR));
   if (!kfd) {
     FX_LOGS(ERROR) << "Provisioning keys from boot item: open failed: " << kAuthorizedKeysPath
                    << " error: " << strerror(errno);
