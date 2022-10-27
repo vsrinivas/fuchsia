@@ -349,6 +349,16 @@ executable("firmware_config_test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
+executable("reassoc_test") {
+  output_name = "reassoc_test"
+  testonly = true
+  sources = [ "reassoc_test.cc" ]
+  deps = [
+    ":sim_test",
+    "//src/connectivity/wlan/lib/common/cpp:common",
+  ]
+}
+
 executable("wmm_status_test") {
   output_name = "wmm_status_test"
   testonly = true
@@ -638,6 +648,7 @@ _tests = [
   "passive_scan_test",
   "phy_ps_mode_test",
   "phy_mac_roles_test",
+  "reassoc_test",
   "scan_dwell_time_test",
   "scan_while_scanning_test",
   "set_keys_test",

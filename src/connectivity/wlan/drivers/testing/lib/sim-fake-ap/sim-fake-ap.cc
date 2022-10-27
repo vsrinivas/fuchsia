@@ -177,6 +177,12 @@ void FakeAp::ScheduleAssocResp(wlan_ieee80211::StatusCode status, const common::
       std::bind(&FakeAp::HandleAssocRespNotification, this, status, dst), assoc_resp_interval_);
 }
 
+void FakeAp::ScheduleReassocResp(::fuchsia::wlan::ieee80211::StatusCode status,
+                                 const common::MacAddr& dst) {
+  environment_->ScheduleNotification(
+      [this, status, dst] { HandleReassocRespNotification(status, dst); }, reassoc_resp_interval_);
+}
+
 void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
   environment_->ScheduleNotification(std::bind(&FakeAp::HandleProbeRespNotification, this, dst),
                                      probe_resp_interval_);
@@ -423,6 +429,42 @@ void FakeAp::RxMgmtFrame(std::shared_ptr<const SimManagementFrame> mgmt_frame) {
       break;
     }
 
+    case SimManagementFrame::FRAME_TYPE_REASSOC_REQ: {
+      auto reassoc_req_frame = std::static_pointer_cast<const SimReassocReqFrame>(mgmt_frame);
+      // Ignore requests that are not for us
+      if (reassoc_req_frame->bssid_ != bssid_) {
+        return;
+      }
+
+      // Use same handling modes as assoc, until (if) we need something fancier.
+      if (assoc_handling_mode_ == ASSOC_IGNORED) {
+        return;
+      }
+
+      if (assoc_handling_mode_ == ASSOC_REFUSED_TEMPORARILY) {
+        ScheduleReassocResp(StatusCode::REFUSED_TEMPORARILY, reassoc_req_frame->src_addr_);
+        return;
+      }
+
+      if (assoc_handling_mode_ == ASSOC_REFUSED) {
+        ScheduleReassocResp(StatusCode::REFUSED_REASON_UNSPECIFIED, reassoc_req_frame->src_addr_);
+        return;
+      }
+
+      auto client = FindClient(reassoc_req_frame->src_addr_);
+      if (!client) {
+        client = AddClient(reassoc_req_frame->src_addr_);
+        // Add the client in initial state.
+        client->status_ = Client::NOT_AUTHENTICATED;
+      }
+      // We only test the happy reassociation path now, so skip right to ASSOCIATED.
+      // When we test the other reassociation paths, this is where we might differentiate which
+      // state the STA lands in.
+      client->status_ = Client::ASSOCIATED;
+      ScheduleReassocResp(StatusCode::SUCCESS, reassoc_req_frame->src_addr_);
+      break;
+    }
+
     default:
       break;
   }
@@ -513,6 +555,13 @@ void FakeAp::HandleAssocRespNotification(wlan_ieee80211::StatusCode status, comm
   SimAssocRespFrame assoc_resp_frame(bssid_, dst, status);
   assoc_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
   environment_->Tx(assoc_resp_frame, tx_info_, this);
+}
+
+void FakeAp::HandleReassocRespNotification(::fuchsia::wlan::ieee80211::StatusCode status,
+                                           common::MacAddr dst) {
+  SimReassocRespFrame reassoc_resp_frame(bssid_, dst, status);
+  reassoc_resp_frame.capability_info_.set_val(beacon_state_.beacon_frame_.capability_info_.val());
+  environment_->Tx(reassoc_resp_frame, tx_info_, this);
 }
 
 void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {

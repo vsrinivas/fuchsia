@@ -250,6 +250,33 @@ SimManagementFrame::SimMgmtFrameType SimDeauthFrame::MgmtFrameType() const {
 
 SimFrame* SimDeauthFrame::CopyFrame() const { return new SimDeauthFrame(*this); }
 
+/* SimReassocReqFrame function implementations.*/
+SimReassocReqFrame::SimReassocReqFrame(const SimReassocReqFrame& reassoc_req)
+    : SimManagementFrame(reassoc_req) {
+  bssid_ = reassoc_req.bssid_;
+}
+
+SimReassocReqFrame::~SimReassocReqFrame() = default;
+SimManagementFrame::SimMgmtFrameType SimReassocReqFrame::MgmtFrameType() const {
+  return FRAME_TYPE_REASSOC_REQ;
+}
+
+SimFrame* SimReassocReqFrame::CopyFrame() const { return new SimReassocReqFrame(*this); }
+
+/* SimReassocRespFrame function implementations.*/
+SimReassocRespFrame::SimReassocRespFrame(const SimReassocRespFrame& reassoc_resp)
+    : SimManagementFrame(reassoc_resp) {
+  status_ = reassoc_resp.status_;
+  capability_info_ = reassoc_resp.capability_info_;
+}
+
+SimReassocRespFrame::~SimReassocRespFrame() = default;
+SimManagementFrame::SimMgmtFrameType SimReassocRespFrame::MgmtFrameType() const {
+  return FRAME_TYPE_REASSOC_RESP;
+}
+
+SimFrame* SimReassocRespFrame::CopyFrame() const { return new SimReassocRespFrame(*this); }
+
 /* SimDataFrame function implementations.*/
 SimDataFrame::SimDataFrame(const SimDataFrame& data_frame) {
   toDS_ = data_frame.toDS_;

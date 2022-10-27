@@ -33,6 +33,7 @@
 #include <third_party/bcmdhd/crossdriver/wlioctl.h>
 #include <wlan/common/mac_frame.h>
 
+#include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-frame.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/bits.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
@@ -42,6 +43,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "third_party/bcmdhd/crossdriver/include/proto/802.11.h"
 #include "zircon/errors.h"
+#include "zircon/types.h"
 
 namespace wlan::brcmfmac {
 
@@ -1028,6 +1030,7 @@ void SimFirmware::AssocClearContext() {
   AuthClearContext();
   SetAssocState(AssocState::NOT_ASSOCIATED);
   assoc_state_.opts = nullptr;
+  assoc_state_.reassoc_opts = nullptr;
   assoc_state_.scan_results.clear();
   // Clear out the channel setting
   iface_tbl_[kClientIfidx].chanspec = 0;
@@ -1535,6 +1538,46 @@ void SimFirmware::RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReq
   BRCMF_DBG(SIM, "Client not found in List");
 }
 
+// AssocResp and ReassocResp frame types contain capability info, which indicates BSS type.
+static zx_status_t GetBssType(std::shared_ptr<const simulation::SimManagementFrame> frame,
+                              bss_type_t* bss_type) {
+  // IEEE Std 802.11-2016, 9.4.1.4 to determine bss type
+  bool capIbss;
+  bool capEss;
+  switch (frame->MgmtFrameType()) {
+    case simulation::SimManagementFrame::FRAME_TYPE_ASSOC_RESP: {
+      auto assoc_resp = std::static_pointer_cast<const simulation::SimAssocRespFrame>(frame);
+      capIbss = assoc_resp->capability_info_.ibss();
+      capEss = assoc_resp->capability_info_.ess();
+      break;
+    }
+    case simulation::SimManagementFrame::FRAME_TYPE_REASSOC_RESP: {
+      auto reassoc_resp = std::static_pointer_cast<const simulation::SimReassocRespFrame>(frame);
+      capIbss = reassoc_resp->capability_info_.ibss();
+      capEss = reassoc_resp->capability_info_.ess();
+      break;
+    }
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (capIbss && !capEss) {
+    BRCMF_WARN("Non-infrastructure types not currently supported by sim-fw\n");
+    *bss_type = BSS_TYPE_INDEPENDENT;
+    return ZX_ERR_NOT_SUPPORTED;
+  } else if (!capIbss && capEss) {
+    *bss_type = BSS_TYPE_INFRASTRUCTURE;
+  } else if (capIbss && capEss) {
+    BRCMF_WARN("Non-infrastructure types not currently supported by sim-fw\n");
+    *bss_type = BSS_TYPE_MESH;
+    return ZX_ERR_NOT_SUPPORTED;
+  } else {
+    BRCMF_WARN("Station with impossible capability not being an ess or ibss found\n");
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
 void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFrame> frame) {
   // Ignore if we are not trying to associate
   if (assoc_state_.state != AssocState::ASSOCIATING) {
@@ -1553,21 +1596,11 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
   // Response received, cancel timer
   hw_.CancelCallback(assoc_state_.assoc_timer_id);
   if (frame->status_ == wlan_ieee80211::StatusCode::SUCCESS) {
-    // IEEE Std 802.11-2016, 9.4.1.4 to determine bss type
-    bool capIbss = frame->capability_info_.ibss();
-    bool capEss = frame->capability_info_.ess();
-
-    if (capIbss && !capEss) {
-      ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
-      assoc_state_.opts->bss_type = BSS_TYPE_INDEPENDENT;
-    } else if (!capIbss && capEss) {
-      assoc_state_.opts->bss_type = BSS_TYPE_INFRASTRUCTURE;
-    } else if (capIbss && capEss) {
-      ZX_ASSERT_MSG(false, "Non-infrastructure types not currently supported by sim-fw\n");
-      assoc_state_.opts->bss_type = BSS_TYPE_MESH;
-    } else {
-      BRCMF_WARN("Station with impossible capability not being an ess or ibss found\n");
+    bss_type_t bss_type;
+    if (GetBssType(frame, &bss_type) != ZX_OK) {
+      ZX_ASSERT_MSG(false, "Sim firmware does not support BSS type\n");
     }
+    assoc_state_.opts->bss_type = bss_type;
 
     // Set values that are returned for iovar "assoc_resp_ies"
     ZX_ASSERT_MSG(frame->raw_ies_.size() <= ASSOC_IES_MAX_LEN,
@@ -1598,6 +1631,84 @@ void SimFirmware::RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFram
   } else {
     BRCMF_DBG(SIM, "Assoc refused, Handle failure");
     AssocHandleFailure(frame->status_);
+  }
+}
+
+zx_status_t SimFirmware::ReassocToCurrentAp(
+    std::shared_ptr<const simulation::SimReassocRespFrame> frame) {
+  BRCMF_ERR("Reassociation to current AP is not supported in sim firmware");
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t SimFirmware::ReassocToDifferentAp(
+    std::shared_ptr<const simulation::SimReassocRespFrame> frame) {
+  BRCMF_INFO("Reassociation to different AP");
+  bss_type_t bss_type;
+  if (GetBssType(frame, &bss_type) != ZX_OK) {
+    ZX_ASSERT_MSG(false, "Sim firmware does not support BSS type\n");
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  if (frame->status_ != wlan_ieee80211::StatusCode::SUCCESS) {
+    return ZX_ERR_CONNECTION_REFUSED;
+  }
+
+  BRCMF_DBG(SIM, "Reassoc success, send events with a delay");
+  assoc_state_.opts->bssid = assoc_state_.reassoc_opts->bssid;
+  assoc_state_.opts->bss_type = bss_type;
+  assoc_state_.reassoc_opts.reset();
+
+  // Reassoc success implies auth success, and real firmware sends the AUTH event here.
+  SendEventToDriver(0, nullptr, BRCMF_E_AUTH, BRCMF_E_STATUS_SUCCESS, kClientIfidx);
+  // Send the REASSOC event with a delay.
+  SendEventToDriver(0, nullptr, BRCMF_E_REASSOC, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
+                    0, assoc_state_.opts->bssid, kReassocEventDelay);
+  // Send the LINK event with a delay.
+  SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr,
+                    BRCMF_EVENT_MSG_LINK, 0, assoc_state_.opts->bssid, kLinkEventDelay);
+  // Send the ROAM event with a delay.
+  SendEventToDriver(0, nullptr, BRCMF_E_ROAM, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0, 0,
+                    {}, kRoamEventDelay);
+  // Set the Assoc state only after REASSOC event is sent to the driver.
+  hw_.RequestCallback([this] { SetAssocState(AssocState::ASSOCIATED); }, kReassocEventDelay);
+  if (softap_ifidx_ != std::nullopt) {
+    // Send the AP_STARTED event to the SoftAp IF after a delay. This event is sent to the
+    // SoftAP IF in case its channel changed (to sync up to the client's channel).
+    SendEventToDriver(0, nullptr, BRCMF_E_AP_STARTED, BRCMF_E_STATUS_SUCCESS, softap_ifidx_.value(),
+                      nullptr, 0, 0, kZeroMac, kApStartedEventDelay);
+  }
+  return ZX_OK;
+}
+
+void SimFirmware::RxReassocResp(std::shared_ptr<const simulation::SimReassocRespFrame> frame) {
+  // Ignore if STA is not trying to reassociate
+  if (assoc_state_.state != AssocState::REASSOCIATING || assoc_state_.reassoc_opts == nullptr) {
+    BRCMF_INFO("Received reassoc response, but STA is not reassociating");
+    return;
+  }
+
+  // Ignore if frame is not intended for this STA
+  if (GetIfidxByMac(frame->dst_addr_) == -1) {
+    BRCMF_INFO("Received reassoc response, but response is not for this STA");
+    return;
+  }
+
+  // Ignore if this is not from the bssid with which STA is trying to reassociate
+  if (frame->src_addr_ != assoc_state_.reassoc_opts->bssid) {
+    BRCMF_INFO("Received reassoc response, but not from target BSS");
+    return;
+  }
+  // Response received, cancel timer
+  hw_.CancelCallback(assoc_state_.reassoc_timer_id);
+
+  zx_status_t reassoc_status;
+  if (assoc_state_.opts->bssid == assoc_state_.reassoc_opts->bssid) {
+    reassoc_status = ReassocToCurrentAp(frame);
+  } else {
+    reassoc_status = ReassocToDifferentAp(frame);
+  }
+  if (reassoc_status != ZX_OK) {
+    BRCMF_DBG(SIM, "Reassoc refused, handle failure");
+    ReassocHandleFailure(frame->status_);
   }
 }
 
@@ -1675,6 +1786,57 @@ void SimFirmware::SetStateToDisassociated(wlan_ieee80211::ReasonCode reason,
                     assoc_state_.opts->bssid, kDisassocEventDelay);
   SendEventToDriver(0, nullptr, BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, kClientIfidx, nullptr, 0,
                     static_cast<uint32_t>(reason), assoc_state_.opts->bssid, kLinkEventDelay);
+}
+
+void SimFirmware::ReassocInit(std::unique_ptr<ReassocOpts> reassoc_opts, wlan_channel_t& channel) {
+  if (assoc_state_.state != AssocState::ASSOCIATED) {
+    BRCMF_WARN("Cannot reassociate because STA is not associated");
+    return;
+  }
+  SetAssocState(AssocState::REASSOCIATING);
+  assoc_state_.reassoc_opts = std::move(reassoc_opts);
+
+  const uint16_t chanspec = channel_to_chanspec(&d11_inf_, &channel);
+  SetIFChanspec(kClientIfidx, chanspec);
+  hw_.SetChannel(channel);
+  SendEventToDriver(0, nullptr, BRCMF_E_REASSOC, BRCMF_E_STATUS_ATTEMPT, kClientIfidx);
+  SendEventToDriver(0, nullptr, BRCMF_E_ROAM_PREP, BRCMF_E_STATUS_SUCCESS, kClientIfidx);
+}
+
+void SimFirmware::ReassocStart() {
+  BRCMF_DBG(SIM, "Reassoc Start");
+  const common::MacAddr srcAddr(GetMacAddr(kClientIfidx));
+
+  if (assoc_state_.state != AssocState::REASSOCIATING) {
+    BRCMF_WARN("Cannot reassociate because STA left reassociating state");
+    assoc_state_.reassoc_opts.reset();
+    return;
+  }
+
+  hw_.RequestCallback(
+      [this] {
+        SimFirmware::ReassocHandleFailure(wlan_ieee80211::StatusCode::REFUSED_REASON_UNSPECIFIED);
+      },
+      kReassocTimeout, &assoc_state_.reassoc_timer_id);
+
+  // We can't use reassoc_opts->bssid directly because it may get free'd during Tx
+  // handling if a response is sent.
+  const common::MacAddr bssid(assoc_state_.reassoc_opts->bssid);
+  const simulation::SimReassocReqFrame reassoc_req_frame(srcAddr, bssid);
+  hw_.Tx(reassoc_req_frame);
+}
+
+void SimFirmware::ReassocHandleFailure(::fuchsia::wlan::ieee80211::StatusCode status) {
+  assoc_state_.reassoc_opts.reset();
+  if (assoc_state_.state == AssocState::NOT_ASSOCIATED) {
+    BRCMF_WARN("Reassoc failed, STA is not associated");
+    return;
+  }
+  // TODO(fxbug.dev/111760) If real firmware retries reassoc, then retry here.
+  BRCMF_DBG(SIM, "Reassoc failed.");
+  SendEventToDriver(0, nullptr, BRCMF_E_REASSOC, BRCMF_E_STATUS_FAIL, kClientIfidx, nullptr, 0,
+                    static_cast<uint32_t>(status), assoc_state_.reassoc_opts->bssid);
+  AssocClearContext();
 }
 
 // Assoc Request from Client for the SoftAP IF
@@ -2631,6 +2793,13 @@ void SimFirmware::RxMgmtFrame(std::shared_ptr<const simulation::SimManagementFra
     case simulation::SimManagementFrame::FRAME_TYPE_DEAUTH: {
       auto deauth_req = std::static_pointer_cast<const simulation::SimDeauthFrame>(mgmt_frame);
       RxDeauthReq(deauth_req);
+      break;
+    }
+
+    case simulation::SimManagementFrame::FRAME_TYPE_REASSOC_RESP: {
+      auto reassoc_resp =
+          std::static_pointer_cast<const simulation::SimReassocRespFrame>(mgmt_frame);
+      RxReassocResp(reassoc_resp);
       break;
     }
 

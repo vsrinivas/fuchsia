@@ -127,6 +127,8 @@ class FakeAp final : public StationIfc {
 
   void ScheduleNextBeacon();
   void ScheduleAssocResp(::fuchsia::wlan::ieee80211::StatusCode status, const common::MacAddr& dst);
+  void ScheduleReassocResp(::fuchsia::wlan::ieee80211::StatusCode status,
+                           const common::MacAddr& dst);
   void ScheduleProbeResp(const common::MacAddr& dst);
   void ScheduleAuthResp(std::shared_ptr<const SimAuthFrame> auth_frame_in,
                         ::fuchsia::wlan::ieee80211::StatusCode status);
@@ -139,6 +141,8 @@ class FakeAp final : public StationIfc {
   void HandleStopCsaBeaconNotification();
   void HandleAssocRespNotification(::fuchsia::wlan::ieee80211::StatusCode status,
                                    common::MacAddr dst);
+  void HandleReassocRespNotification(::fuchsia::wlan::ieee80211::StatusCode status,
+                                     common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
   void HandleAuthRespNotification(SimAuthFrame auth_resp_frame);
   void HandleQosDataNotification(bool toDS, bool fromDS, const common::MacAddr& addr1,
@@ -183,6 +187,8 @@ class FakeAp final : public StationIfc {
   zx::duration csa_beacon_interval_ = zx::msec(150);
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);
+  // Delay between a reassociation request and a reassociation response
+  zx::duration reassoc_resp_interval_ = zx::msec(1);
   // Delay between an Disassociation request and an Disassociation response
   zx::duration disassoc_resp_interval_ = zx::msec(1);
   // Delay between an probe request and an probe response

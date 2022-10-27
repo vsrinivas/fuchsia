@@ -51,6 +51,8 @@ const common::MacAddr kZeroMac({0x0, 0x0, 0x0, 0x0, 0x0, 0x0});
 constexpr zx::duration kAssocTimeout = zx::sec(1);
 // The amount of time we will wait for an authentication response after an authentication request
 constexpr zx::duration kAuthTimeout = zx::sec(1);
+// The amount of time we will wait for a reassociation response after a reassociation request
+constexpr zx::duration kReassocTimeout = zx::sec(1);
 // The amount of time we will wait for a beacon from an associated device before disassociating
 // Timing based off broadcom firmware default value
 constexpr uint32_t kBeaconTimeoutSeconds = 8;
@@ -58,6 +60,10 @@ constexpr uint32_t kBeaconTimeoutSeconds = 8;
 constexpr zx::duration kStartAPLinkEventDelay = zx::msec(10);
 // Delay before sending ASSOC event after client association
 constexpr zx::duration kAssocEventDelay = zx::msec(10);
+// Delay before sending REASSOC event after client reassociation
+constexpr zx::duration kReassocEventDelay = zx::msec(10);
+// Delay before sending ROAM event after client reassociation
+constexpr zx::duration kRoamEventDelay = zx::msec(10);
 // Delay between events E_LINK and E_SSID.
 constexpr zx::duration kSsidEventDelay = zx::msec(100);
 // Delay in sending E_LINK event during assoc & disassoc.
@@ -134,6 +140,11 @@ class SimFirmware {
     bss_type_t bss_type;
   };
 
+  // During a reassociation attempt, this is where reassoc params are stored.
+  struct ReassocOpts {
+    common::MacAddr bssid;
+  };
+
  public:
   struct ScanState {
     // HOME means listening to home channel between scan channels
@@ -154,13 +165,18 @@ class SimFirmware {
       AUTHENTICATION_CHALLENGE_FAILURE,
       ASSOCIATING,
       ASSOCIATED,
+      REASSOCIATING,
     } state = NOT_ASSOCIATED;
 
     std::unique_ptr<AssocOpts> opts;
+    // Holds data for an in-progress reassociation (if any).
+    std::unique_ptr<ReassocOpts> reassoc_opts;
     // Results seen during pre-assoc scan
     std::list<ScanResult> scan_results;
     // Unique id of timer event used to timeout an association request
     uint64_t assoc_timer_id;
+    // Unique id of timer event used to timeout a reassociation request
+    uint64_t reassoc_timer_id;
     // Association attempt number
     uint8_t num_attempts;
     bool is_beacon_watchdog_active = false;
@@ -380,6 +396,7 @@ class SimFirmware {
                                    ::fuchsia::wlan::ieee80211::ReasonCode reason);
   void HandleAuthReq(std::shared_ptr<const simulation::SimAuthFrame> frame);
   void HandleAuthResp(std::shared_ptr<const simulation::SimAuthFrame> frame);
+  void HandleReassocResp(std::shared_ptr<const simulation::SimReassocReqFrame> frame);
 
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
@@ -406,6 +423,12 @@ class SimFirmware {
   void DisassocLocalClient(::fuchsia::wlan::ieee80211::ReasonCode reason);
   void SetStateToDisassociated(::fuchsia::wlan::ieee80211::ReasonCode reason,
                                bool locally_initiated);
+  void ReassocInit(std::unique_ptr<ReassocOpts> reassoc_opts, wlan_channel_t& channel);
+  void ReassocStart();
+  void ReassocHandleFailure(::fuchsia::wlan::ieee80211::StatusCode status);
+  zx_status_t ReassocToCurrentAp(std::shared_ptr<const simulation::SimReassocRespFrame> frame);
+  zx_status_t ReassocToDifferentAp(std::shared_ptr<const simulation::SimReassocRespFrame> frame);
+
   void RestartBeaconWatchdog();
   void DisableBeaconWatchdog();
   void HandleBeaconTimeout();
@@ -428,6 +451,7 @@ class SimFirmware {
   void RxAssocResp(std::shared_ptr<const simulation::SimAssocRespFrame> frame);
   void RxDisassocReq(std::shared_ptr<const simulation::SimDisassocReqFrame> frame);
   void RxAssocReq(std::shared_ptr<const simulation::SimAssocReqFrame> frame);
+  void RxReassocResp(std::shared_ptr<const simulation::SimReassocRespFrame> frame);
   void RxProbeResp(const wlan_channel_t& channel,
                    std::shared_ptr<const simulation::SimProbeRespFrame> frame,
                    double signal_strength);

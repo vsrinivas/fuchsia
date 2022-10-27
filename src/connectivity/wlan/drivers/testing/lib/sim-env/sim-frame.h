@@ -118,6 +118,8 @@ class SimManagementFrame : public SimFrame {
     FRAME_TYPE_DISASSOC_REQ,
     FRAME_TYPE_AUTH,
     FRAME_TYPE_DEAUTH,
+    FRAME_TYPE_REASSOC_REQ,
+    FRAME_TYPE_REASSOC_RESP,
   };
 
   SimManagementFrame() = default;
@@ -223,7 +225,9 @@ class SimAssocRespFrame : public SimManagementFrame {
   SimAssocRespFrame() = default;
   explicit SimAssocRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
                              ::fuchsia::wlan::ieee80211::StatusCode status)
-      : SimManagementFrame(src, dst), status_(status) {}
+      : SimManagementFrame(src, dst), status_(status) {
+    capability_info_.set_ess(1);
+  }
 
   SimAssocRespFrame(const SimAssocRespFrame& assoc_resp);
 
@@ -296,6 +300,46 @@ class SimDeauthFrame : public SimManagementFrame {
   SimFrame* CopyFrame() const override;
 
   ::fuchsia::wlan::ieee80211::ReasonCode reason_;
+};
+
+// IEEE 802.11-2020 9.3.3.7
+class SimReassocReqFrame : public SimManagementFrame {
+ public:
+  SimReassocReqFrame() = default;
+  explicit SimReassocReqFrame(const common::MacAddr& src, const common::MacAddr bssid)
+      : SimManagementFrame(src, {}), bssid_(bssid) {}
+
+  SimReassocReqFrame(const SimReassocReqFrame& reassoc_req);
+
+  ~SimReassocReqFrame() override;
+
+  SimMgmtFrameType MgmtFrameType() const override;
+
+  SimFrame* CopyFrame() const override;
+
+  common::MacAddr bssid_;
+};
+
+// IEEE 802.11-2020 9.3.3.8
+class SimReassocRespFrame : public SimManagementFrame {
+ public:
+  SimReassocRespFrame() = default;
+  explicit SimReassocRespFrame(const common::MacAddr& src, const common::MacAddr& dst,
+                               ::fuchsia::wlan::ieee80211::StatusCode status)
+      : SimManagementFrame(src, dst), status_(status) {
+    capability_info_.set_ess(1);
+  }
+
+  SimReassocRespFrame(const SimReassocRespFrame& reassoc_resp);
+
+  ~SimReassocRespFrame() override;
+
+  SimMgmtFrameType MgmtFrameType() const override;
+
+  SimFrame* CopyFrame() const override;
+
+  ::fuchsia::wlan::ieee80211::StatusCode status_;
+  wlan::CapabilityInfo capability_info_;
 };
 
 // No support for contention-free data frames, aggregation or fragmentation for now
