@@ -1,0 +1,92 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/components.gni")
+import("//build/dist/resource.gni")
+
+# Defines a fuchsia_test_package that carries a set of expectations to apply to
+# the results of tests in the package.
+#
+# Parameters
+#   test_components (required)
+#     `fuchsia_component()` targets to include in the package and also register
+#     as entry points for tests.
+#     Additional non-test components can be included via `deps`.
+#     Each target must `include` the `expectation_comparer` client shard
+#     (meta/client.shard.cml).
+#     Type: list(labels)
+#
+#   expectations (required)
+#     Path to a JSON5 test expectations file. See
+#     //src/connectivity/network/testing/expectation/example_expectations.json5
+#     for an example of the format.
+#     Type: path
+#
+#   test_specs (optional)
+#     Additional test specifications to apply to tests defined above.
+#     See `test_spec.gni`.
+#     Type: scope
+#
+#   package_name (optional)
+#     The name of the package.
+#     Type: string
+#     Default: target_name
+#
+#   data_deps
+#   deps
+#   visibility
+template("fuchsia_test_with_expectations_package") {
+  _base_target_name = target_name
+
+  _preprocessed_target_name = "${_base_target_name}-expectations-preprocessed"
+  compiled_action(_preprocessed_target_name) {
+    tool = "//src/connectivity/network/testing/expectation/preprocess:bin"
+    tool_output_name = "expectation_file_preprocessor"
+    _preprocessed_expectations =
+        "${target_gen_dir}/${_base_target_name}-expectations-preprocessed.json5"
+    depfile = "$target_out_dir/${_preprocessed_target_name}.d"
+    args = [
+      "--root-expectations-file",
+      rebase_path(invoker.expectations, root_build_dir),
+      "--preprocessed-expectations-file",
+      rebase_path(_preprocessed_expectations, root_build_dir),
+      "--depfile",
+      rebase_path(depfile, root_build_dir),
+    ]
+
+    outputs = [ _preprocessed_expectations ]
+    sources = [ invoker.expectations ]
+
+    visibility = [ ":*" ]
+  }
+
+  _expectations_target_name = "${_base_target_name}-expectations"
+  resource(_expectations_target_name) {
+    sources = get_target_outputs(":${_preprocessed_target_name}")
+    outputs = [ "expectations.json5" ]
+    deps = [ ":${_preprocessed_target_name}" ]
+
+    visibility = [ ":*" ]
+  }
+
+  fuchsia_test_package(_base_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "test_components",
+                             "test_specs",
+                             "package_name",
+                             "data_deps",
+                             "visibility",
+                           ])
+    deps = []
+    if (defined(invoker.deps)) {
+      deps += invoker.deps
+    }
+    deps += [
+      ":${_expectations_target_name}",
+      "//src/connectivity/network/testing/expectation:expectation_comparer",
+    ]
+  }
+}

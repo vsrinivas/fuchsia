@@ -1,0 +1,39 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    actions: [
+        // Expectations are processed from top to bottom, such that the _last_ matching expectation
+        // is the one that wins out. So you can read this expectation as: if no other expectations
+        // match, expect that the test failed.
+        {
+            type: "expect_failure",
+            matchers: [
+                "*",
+            ],
+        },
+        // Expectation files can be included using relative paths,
+        {
+            include: "included_expectations.json5",
+        },
+        // or using absolute ones. Note that including the same expectation file multiple times is
+        // allowed. There's not much reason to do that directly as is done here, but it's more
+        // convenient in deeper expectation include trees.
+        {
+            include: "//src/connectivity/network/testing/expectation/included_expectations.json5",
+        },
+        // Expectation matchers are globs in the Unix file sense.
+        {
+            type: "expect_failure",
+            matchers: [
+                "*fail*",
+            ],
+        },
+        {
+            type: "skip",
+            matchers: [
+                "*skip*",
+            ],
+        },
+    ],
+}

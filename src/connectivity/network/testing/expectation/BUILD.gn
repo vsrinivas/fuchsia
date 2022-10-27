@@ -1,0 +1,52 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_binary.gni")
+import(
+    "//src/connectivity/network/testing/expectation/fuchsia_test_with_expectations_package.gni")
+
+rustc_binary("bin") {
+  edition = "2021"
+  name = "expectation_comparer"
+  with_unit_tests = true
+  deps = [
+    "ser",
+    "//sdk/fidl/fuchsia.test:fuchsia.test_rust",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia",
+    "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:serde",
+    "//third_party/rust_crates:serde_json5",
+    "//third_party/rust_crates:tracing",
+  ]
+  sources = [ "src/main.rs" ]
+  configs -= [ "//build/config/rust/lints:allow_unused_results" ]
+}
+
+fuchsia_component("expectation_comparer") {
+  manifest = "meta/expectation_comparer.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_unittest_component("expectation-unittests") {
+  deps = [ ":bin_test" ]
+  manifest = "meta/test_root.cml"
+}
+
+fuchsia_test_with_expectations_package("expectation-example-package") {
+  test_components = [ ":expectation-unittests" ]
+  expectations = "example_expectations.json5"
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":expectation-example-package",
+    "preprocess:tests",
+  ]
+}

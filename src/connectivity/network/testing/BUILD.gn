@@ -6,6 +6,7 @@ group("tests") {
   testonly = true
   deps = [
     "conformance:tests",
+    "expectation:tests",
     "netemul:tests",
     "network-test-realm:tests",
   ]
