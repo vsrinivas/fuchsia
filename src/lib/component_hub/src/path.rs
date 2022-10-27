@@ -73,18 +73,10 @@ pub async fn finalize_destination_to_filepath(
             match (&remote_destination_entry, &destination_file) {
                 (Some(remote_destination), _) => {
                     match remote_destination.kind {
+                        DirentKind::File => {}
                         DirentKind::Directory => {
                             destination_path.push(&source_file_str);
                         }
-
-                        DirentKind::File => {
-                            return Err(anyhow!(
-                                "File {} already exists in the directory {}",
-                                &source_file_str,
-                                destination_path.display().to_string()
-                            ));
-                        }
-
                         _ => {
                             return Err(anyhow!(
                                 "Invalid entry type for file {}",

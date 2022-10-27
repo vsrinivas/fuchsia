@@ -229,6 +229,22 @@ mod test {
     }
 
     #[fuchsia::test]
+    async fn test_copy_host_to_device_overwrite_file() -> Result<()> {
+        let dir = tempdir().unwrap();
+        let mut seed_files = HashMap::new();
+        seed_files.insert("from_host", "Lorem Ipsum");
+        let storage_admin = setup_fake_storage_admin_with_tmp("123456", seed_files);
+        let from_host_filepath = dir.path().join("from_host");
+        write(&from_host_filepath, &EXPECTED_DATA).unwrap();
+        copy(
+            storage_admin,
+            from_host_filepath.display().to_string(),
+            "123456::from_host".to_string(),
+        )
+        .await
+    }
+
+    #[fuchsia::test]
     async fn test_copy_host_to_device_populated_directory() -> Result<()> {
         let dir = tempdir().unwrap();
         let mut seed_files = HashMap::new();
