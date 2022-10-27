@@ -124,14 +124,16 @@ Add a `BUILD.gn` file with the following contents to declare the library target:
 
 Add the library target to the build configuration:
 
+<!-- TODO(fxbug.dev/108355): Update this when fidl_toolchain is removed. -->
+
 ```posix-terminal
-fx set workstation_eng.qemu-x64 --with //vendor/fuchsia-codelab/echo-fidl:echo
+fx set workstation_eng.qemu-x64 --with //vendor/fuchsia-codelab/echo-fidl:echo(//build/fidl:fidling)
 ```
 
 Run `fx build` to compile the FIDL interface:
 
 ```posix-terminal
-fx build vendor/fuchsia-codelab/echo-fidl:echo
+fx build
 ```
 
 ### Examine the FIDL bindings
@@ -151,7 +153,7 @@ Compile the `fidl.examples.routing.echo` bindings:
 * {C++}
 
   ```posix-terminal
-  fx build vendor/fuchsia-codelab/echo-fidl:echo
+  fx build vendor/fuchsia-codelab/echo-fidl:echo_hlcpp
   ```
 
 Use GN to locate the generated source files for the target and open them in an
