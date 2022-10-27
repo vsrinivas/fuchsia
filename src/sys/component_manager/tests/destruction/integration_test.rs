@@ -32,6 +32,7 @@ async fn destroy() {
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
         instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
+    proxy.wait_for_ready().await.unwrap();
 
     let event_stream = EventStream::new_v2(proxy);
 
@@ -44,22 +45,19 @@ async fn destroy() {
                 EventMatcher::ok()
                     .r#type(Stopped::TYPE)
                     .moniker("./collection_realm/coll:parent/trigger_b"),
-            ],
-            Ordering::Unordered,
-        )
-        .then(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./collection_realm/coll:parent"))
-        .has_subset(
-            vec![
+                EventMatcher::ok().r#type(Stopped::TYPE).moniker("./collection_realm/coll:parent"),
                 EventMatcher::ok()
                     .r#type(Destroyed::TYPE)
                     .moniker("./collection_realm/coll:parent/trigger_a"),
                 EventMatcher::ok()
                     .r#type(Destroyed::TYPE)
                     .moniker("./collection_realm/coll:parent/trigger_b"),
+                EventMatcher::ok()
+                    .r#type(Destroyed::TYPE)
+                    .moniker("./collection_realm/coll:parent"),
             ],
             Ordering::Unordered,
         )
-        .then(EventMatcher::ok().r#type(Destroyed::TYPE).moniker("./collection_realm/coll:parent"))
         .expect(event_stream);
     instance.start_component_tree().await.unwrap();
 
@@ -90,14 +88,10 @@ async fn destroy_and_recreate() {
     let instance =
         builder.build_in_nested_component_manager("#meta/component_manager.cm").await.unwrap();
     let proxy =
-        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventSourceMarker>().unwrap();
+        instance.root.connect_to_protocol_at_exposed_dir::<fsys::EventStream2Marker>().unwrap();
+    proxy.wait_for_ready().await.unwrap();
 
-    let event_source = EventSource::from_proxy(proxy);
-
-    let event_stream = event_source
-        .subscribe(vec![EventSubscription::new(vec![Started::NAME, Destroyed::NAME])])
-        .await
-        .unwrap();
+    let event_stream = EventStream::new_v2(proxy);
 
     instance.start_component_tree().await.unwrap();
 
