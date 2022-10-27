@@ -15,9 +15,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_NXP_NXPFMAC_SCANNER_H_
 
 #include <fuchsia/hardware/wlan/fullmac/cpp/banjo.h>
-#include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 #include <zircon/compiler.h>
-#include <zircon/types.h>
 
 #include <mutex>
 
@@ -31,18 +30,32 @@ struct DeviceContext;
 
 class Scanner {
  public:
-  Scanner(ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc, DeviceContext* context,
-          uint32_t bss_index);
+  using OnScanResult = fit::function<void(const wlan_fullmac_scan_result_t& /*result*/)>;
+  using OnScanEnd = fit::callback<void(uint64_t /*txn_id*/, wlan_scan_result_t /*result*/)>;
+  Scanner(DeviceContext* context, uint32_t bss_index);
   // Destroying the scanner will stop any ongoing scans and wait for all all calls to the fullmac
   // ifc client to complete.
   ~Scanner();
 
   // Start a scan. Returns ZX_ERR_ALREADY_EXISTS if a scan is already in progress. The scan will
-  // time out after the given timeout has elapsed.
-  zx_status_t Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t timeout) __TA_EXCLUDES(mutex_);
+  // time out after the given timeout has elapsed. Scan results are reported one at a time through
+  // the `on_scan_result` callback and `on_scan_end` will be called when the scan ends.
+  zx_status_t Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t timeout,
+                   OnScanResult&& on_scan_result, OnScanEnd&& on_scan_end) __TA_EXCLUDES(mutex_);
+
+  // Perform a connect scan. This is a quick scan that only scans for the given SSID and only on the
+  // given channel. Note that this is a synchronous scan and it's only intended to populate the
+  // internal scan result list to allow for a connection to the given BSS. Once this call returns
+  // successfully the scan table is populated, other scans might clear it again. Otherwise connect
+  // scans behave the same way as a regular scan. They will be blocked if another scan is in
+  // progress and they will prevent other scans from starting.
+  zx_status_t ConnectScan(const uint8_t* ssid, size_t ssid_len, uint8_t channel,
+                          zx_duration_t timeout) __TA_EXCLUDES(mutex_);
+
   // Stop an ongoing scan. Returns ZX_ERR_NOT_FOUND if no scan is in progress. Stopping an ongoing
-  // scan will asynchronously call on_scan_end on the fullmac ifc client. This call will not wait
-  // for that on_scan_end call to complete.
+  // scan will asynchronously call the on_scan_end callback provided in the Scan call. This is a
+  // synchronous call. When the call returns on_scan_end will have already been called and the
+  // Scanner is immediately ready to perform a new scan.
   zx_status_t StopScan() __TA_EXCLUDES(mutex_);
 
  private:
@@ -65,7 +78,8 @@ class Scanner {
   const uint32_t bss_index_;
   std::mutex mutex_;
 
-  ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc_;
+  OnScanResult on_scan_result_;
+  OnScanEnd on_scan_end_;
   EventRegistration on_scan_report_event_;
 };
 

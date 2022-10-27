@@ -14,6 +14,7 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/scanner.h"
 
 #include <lib/fit/defer.h>
+#include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
 #include <netinet/if_ether.h>
 
@@ -23,7 +24,6 @@
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/device_context.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/event_handler.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/ioctl_adapter.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/utils.h"
 
 namespace {
@@ -34,24 +34,16 @@ constexpr uint32_t kBeaconFixedSize = 12u;
 
 namespace wlan::nxpfmac {
 
-Scanner::Scanner(ddk::WlanFullmacImplIfcProtocolClient* fullmac_ifc, DeviceContext* context,
-                 uint32_t bss_index)
-    : context_(context), bss_index_(bss_index), fullmac_ifc_(fullmac_ifc) {
+Scanner::Scanner(DeviceContext* context, uint32_t bss_index)
+    : context_(context), bss_index_(bss_index) {
   on_scan_report_event_ = context_->event_handler_->RegisterForInterfaceEvent(
       MLAN_EVENT_ID_DRV_SCAN_REPORT, bss_index, [this](pmlan_event event) { OnScanReport(event); });
 }
 
-Scanner::~Scanner() {
-  StopScan();
-  // Wait for scan_in_progress_ and ioctl_in_progress_ to become false before completing
-  // destruction. This ensures that there are no pending ioctls or scan reports that would call into
-  // a destructed object.
-  std::unique_lock lock(mutex_);
-  scan_in_progress_.Wait(lock, false);
-  ioctl_in_progress_.Wait(lock, false);
-}
+Scanner::~Scanner() { StopScan(); }
 
-zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t timeout) {
+zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t timeout,
+                          OnScanResult&& on_scan_result, OnScanEnd&& on_scan_end) {
   const std::lock_guard lock(mutex_);
   if (scan_in_progress_) {
     return ZX_ERR_ALREADY_EXISTS;
@@ -62,16 +54,15 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
     return status;
   }
 
+  on_scan_end_ = std::move(on_scan_end);
+  on_scan_result_ = std::move(on_scan_result);
+
   // Callback for when the scan completes.
   auto on_ioctl_complete = [this](mlan_ioctl_req* req, IoctlStatus io_status) {
     const std::lock_guard lock(mutex_);
 
-    // The ioctl_in_progress_ flag must be cleared whenever this callback exits. The lock on mutex_
-    // has to be constructed before this line to ensure that it is held when we set the flag.
-    // Unfortunately thread analysis is not clever enough to recognize this so we have to mark the
-    // lambda with the no thread analysis annotation.
-    fit::deferred_callback clear_awaiting_scan_ioctl(
-        [this]() __TA_NO_THREAD_SAFETY_ANALYSIS { ioctl_in_progress_ = false; });
+    // The ioctl_in_progress_ flag must be cleared whenever this callback exits.
+    fit::deferred_callback clear_awaiting_scan_ioctl([this]() { ioctl_in_progress_ = false; });
 
     wlan_scan_result_t result;
     switch (io_status) {
@@ -109,6 +100,8 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
     // IoctlStatus::Success is an error.
     NXPF_ERR("Scan ioctl failed: %d", io_status);
     ioctl_in_progress_ = false;
+    on_scan_end_ = nullptr;
+    on_scan_result_ = nullptr;
     return ZX_ERR_INTERNAL;
   }
 
@@ -118,19 +111,80 @@ zx_status_t Scanner::Scan(const wlan_fullmac_scan_req_t* req, zx_duration_t time
   return ZX_OK;
 }
 
-zx_status_t Scanner::StopScan() {
-  std::lock_guard lock(mutex_);
+zx_status_t Scanner::ConnectScan(const uint8_t* ssid, size_t ssid_len, uint8_t channel,
+                                 zx_duration_t timeout) {
+  cssid ssid_data = {.len = static_cast<uint8_t>(ssid_len)};
+  if (ssid_len > sizeof(ssid_data.data)) {
+    NXPF_ERR("SSID length %zu exceeds maximum length %zu", ssid_len, sizeof(ssid_data.data));
+    return ZX_ERR_INVALID_ARGS;
+  }
+  memcpy(ssid_data.data, ssid, ssid_len);
+
+  wlan_fullmac_scan_req request{.scan_type = WLAN_SCAN_TYPE_ACTIVE,
+                                .channels_list = &channel,
+                                .channels_count = 1,
+                                .ssids_list = &ssid_data,
+                                .ssids_count = 1};
+
+  sync_completion_t scan_complete;
+  wlan_scan_result_t scan_result = WLAN_SCAN_RESULT_INTERNAL_ERROR;
+  auto on_scan_end = [&](uint64_t, wlan_scan_result_t result) {
+    scan_result = result;
+    sync_completion_signal(&scan_complete);
+  };
+
+  zx_status_t status = Scan(&request, timeout, nullptr, std::move(on_scan_end));
+  if (status != ZX_OK) {
+    NXPF_ERR("Connect scan failed: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  status = sync_completion_wait(&scan_complete, ZX_TIME_INFINITE);
+  if (status != ZX_OK) {
+    NXPF_ERR("Failed to wait for connect scan to complete: %s", zx_status_get_string(status));
+    return status;
+  }
+
+  if (scan_result != WLAN_SCAN_RESULT_SUCCESS) {
+    NXPF_ERR("Connect scan failed: %u", scan_result);
+    if (scan_result == WLAN_SCAN_RESULT_CANCELED_BY_DRIVER_OR_FIRMWARE) {
+      return ZX_ERR_CANCELED;
+    }
+    return ZX_ERR_INTERNAL;
+  }
+
+  return ZX_OK;
+}
+
+// Unfortunately std::unique_lock is not annotated for thread analysis but it's needed for the
+// waitable state. Disable thread safety analysis to work around this.
+zx_status_t Scanner::StopScan() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  std::unique_lock lock(mutex_);
+
+  // These two checks ensure that both scan_in_progress_ and ioctl_in_progress_ are false by the
+  // time this method returns and that we don't attempt to stop anything if either scanning or the
+  // ioctl is complete. If one is done then the other is also done or will be done shortly. This
+  // ensures that when this method returns the Scanner is safe to shut down or reuse without any
+  // unexpected callbacks happening.
   if (!scan_in_progress_) {
+    ioctl_in_progress_.Wait(lock, false);
+    return ZX_ERR_NOT_FOUND;
+  }
+  if (!ioctl_in_progress_) {
+    scan_in_progress_.Wait(lock, false);
     return ZX_ERR_NOT_FOUND;
   }
 
-  // Canceling the ioctl will trigger the scan ioctl complete callback with a canceled status,
-  // don't end the scan until it completes.
-  zx_status_t status = CancelScanIoctl();
-  if (status != ZX_OK) {
-    NXPF_ERR("Failed to cancel scan ioctl: %s", zx_status_get_string(status));
-    return status;
+  IoctlRequest<mlan_ds_scan> cancel_request(MLAN_IOCTL_SCAN, MLAN_ACT_SET, bss_index_,
+                                            mlan_ds_scan{.sub_command = MLAN_OID_SCAN_CANCEL});
+  IoctlStatus io_status = context_->ioctl_adapter_->IssueIoctlSync(&cancel_request);
+  if (io_status != IoctlStatus::Success) {
+    NXPF_ERR("Failed to cancel scan: %u", io_status);
+    return ZX_ERR_IO;
   }
+
+  scan_in_progress_.Wait(lock, false);
+
   return ZX_OK;
 }
 
@@ -278,8 +332,8 @@ void Scanner::ProcessScanResults(wlan_scan_result_t result) {
         }};
     memcpy(scan_result.bss.bssid, results[i].mac_address, ETH_ALEN);
 
-    if (fullmac_ifc_->is_valid()) {
-      fullmac_ifc_->OnScanResult(&scan_result);
+    if (on_scan_result_) {
+      on_scan_result_(scan_result);
     }
   }
 
@@ -295,9 +349,12 @@ zx_status_t Scanner::CancelScanIoctl() {
 }
 
 void Scanner::EndScan(uint64_t txn_id, wlan_scan_result_t result) {
-  if (fullmac_ifc_->is_valid()) {
-    const wlan_fullmac_scan_end_t end{.txn_id = txn_id, .code = result};
-    fullmac_ifc_->OnScanEnd(&end);
+  if (on_scan_end_) {
+    on_scan_end_(txn_id, result);
+    // Reset these callbacks here, they will not be used anymore for the scan that's ending. This
+    // ensures that any resources held on to by these callbacks are released.
+    on_scan_end_ = nullptr;
+    on_scan_result_ = nullptr;
   }
   scan_in_progress_ = false;
 }

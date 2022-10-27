@@ -13,8 +13,11 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/client_connection.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/sync/completion.h>
 #include <netinet/ether.h>
+
+#include <memory>
 
 #include <zxtest/zxtest.h>
 
@@ -86,6 +89,8 @@ class TestClientConnectionIfc : public ClientConnectionIfc {
 
 struct ClientConnectionTest : public zxtest::Test {
   void SetUp() override {
+    event_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
+    event_loop_->StartThread();
     auto ioctl_adapter = wlan::nxpfmac::IoctlAdapter::Create(mocks_.GetAdapter(), &mock_bus_);
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
@@ -102,8 +107,46 @@ struct ClientConnectionTest : public zxtest::Test {
   void TearDown() override {
     delete context_.device_;
     context_.device_ = nullptr;
+    event_loop_->Shutdown();
   }
 
+  mlan_status HandleOtherIoctls(pmlan_ioctl_req req) {
+    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
+        req->req_id == MLAN_IOCTL_GET_INFO) {
+      // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (req->req_id == MLAN_IOCTL_SCAN) {
+      // For scans we must send a scan report to continue the scanning process.
+      zxlogf(INFO, "Posting event");
+      async::PostTask(event_loop_->dispatcher(), [this]() {
+        zxlogf(INFO, "Sending event");
+        mlan_event event{.event_id = MLAN_EVENT_ID_DRV_SCAN_REPORT};
+        event_handler_.OnEvent(&event);
+      });
+      return MLAN_STATUS_SUCCESS;
+    }
+    if (req->req_id == MLAN_IOCTL_BSS) {
+      auto request = reinterpret_cast<wlan::nxpfmac::IoctlRequest<mlan_ds_bss> *>(req);
+      if (request->UserReq().sub_command == MLAN_OID_BSS_CHANNEL_LIST) {
+        constexpr uint8_t kChannels[] = {1,   2,   3,   4,   5,   6,   7,   8,   9,
+                                         10,  11,  36,  40,  44,  48,  52,  56,  60,
+                                         64,  100, 104, 108, 112, 116, 120, 124, 128,
+                                         132, 136, 140, 144, 149, 153, 157, 161, 165};
+        for (size_t i = 0; i < std::size(kChannels); ++i) {
+          request->UserReq().param.chanlist.cf[i].channel = kChannels[i];
+        }
+        request->UserReq().param.chanlist.num_of_chan = std::size(kChannels);
+
+        return MLAN_STATUS_SUCCESS;
+      }
+    }
+    // Unexpected
+    ADD_FAILURE("Should not reach this point, unexpected ioctl 0x%x", req->req_id);
+    return MLAN_STATUS_FAILURE;
+  }
+
+  std::unique_ptr<async::Loop> event_loop_;
   wlan::simulation::Environment env_ = {};
   TestDevice *test_device_ = nullptr;
   wlan::nxpfmac::MlanMockAdapter mocks_;
@@ -187,8 +230,7 @@ TEST_F(ClientConnectionTest, Connect) {
         return MLAN_STATUS_PENDING;
       }
     }
-    // Other ioctl can just complete immediately.
-    return MLAN_STATUS_SUCCESS;
+    return HandleOtherIoctls(req);
   };
 
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
@@ -243,7 +285,7 @@ TEST_F(ClientConnectionTest, CancelConnect) {
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Failure);
       return MLAN_STATUS_SUCCESS;
     }
-    return MLAN_STATUS_SUCCESS;
+    return HandleOtherIoctls(req);
   };
 
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
@@ -289,15 +331,7 @@ TEST_F(ClientConnectionTest, Disconnect) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
-        req->req_id == MLAN_IOCTL_GET_INFO) {
-      // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
-      return MLAN_STATUS_SUCCESS;
-    }
-
-    // Unexpected
-    ADD_FAILURE("Should not reach this point, unexpected ioctl");
-    return MLAN_STATUS_FAILURE;
+    return HandleOtherIoctls(req);
   };
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 
@@ -361,14 +395,7 @@ TEST_F(ClientConnectionTest, DisconnectOnDestruct) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG) {
-      // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
-      return MLAN_STATUS_SUCCESS;
-    }
-
-    // Unexpected
-    ADD_FAILURE("Should not reach this point, unexpected ioctl");
-    return MLAN_STATUS_FAILURE;
+    return HandleOtherIoctls(req);
   };
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 
@@ -411,15 +438,7 @@ TEST_F(ClientConnectionTest, DisconnectAsyncFailure) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
-        req->req_id == MLAN_IOCTL_GET_INFO) {
-      // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
-      return MLAN_STATUS_SUCCESS;
-    }
-
-    // Unexpected
-    ADD_FAILURE("Should not reach this point, unexpected ioctl");
-    return MLAN_STATUS_FAILURE;
+    return HandleOtherIoctls(req);
   };
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 
@@ -464,15 +483,7 @@ TEST_F(ClientConnectionTest, DisconnectWhileDisconnectInProgress) {
         return MLAN_STATUS_PENDING;
       }
     }
-    if (req->req_id == MLAN_IOCTL_SEC_CFG || req->req_id == MLAN_IOCTL_MISC_CFG ||
-        req->req_id == MLAN_IOCTL_GET_INFO) {
-      // Connecting performs security and IE (MISC ioctl) configuration, make sure it succeeds.
-      return MLAN_STATUS_SUCCESS;
-    }
-
-    // Unexpected
-    ADD_FAILURE("Should not reach this point, unexpected ioctl");
-    return MLAN_STATUS_FAILURE;
+    return HandleOtherIoctls(req);
   };
   mocks_.SetOnMlanIoctl(std::move(on_ioctl));
 

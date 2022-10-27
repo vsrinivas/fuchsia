@@ -13,6 +13,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/wlan_interface.h"
 
+#include <lib/async/cpp/task.h>
 #include <stdlib.h>
 
 #include <zxtest/zxtest.h>
@@ -110,8 +111,8 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
     auto ioctl_adapter = wlan::nxpfmac::IoctlAdapter::Create(mlan_mocks_.GetAdapter(), &mock_bus_);
     ASSERT_OK(ioctl_adapter.status_value());
     ioctl_adapter_ = std::move(ioctl_adapter.value());
-    // dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
-    // ASSERT_OK(dispatcher_loop_->StartThread("test-timer-worker", nullptr));
+    dispatcher_loop_ = std::make_unique<::async::Loop>(&kAsyncLoopConfigNeverAttachToThread);
+    ASSERT_OK(dispatcher_loop_->StartThread());
     ASSERT_OK(TestDevice::Create(parent_.get(), env_.GetDispatcher(), &device_destructed_,
                                  &test_device_));
     context_.event_handler_ = &event_handler_;
@@ -163,6 +164,21 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
     }
   }
 
+  mlan_status HandleConnectScan(pmlan_ioctl_req req) {
+    auto scan = reinterpret_cast<mlan_ds_scan*>(req->pbuf);
+    if (scan->sub_command != MLAN_OID_SCAN_USER_CONFIG) {
+      // This wasn't a scan request, fail it so the tests can be updated to handle it. If the event
+      // is triggered syncrhonously the tests will deadlock.
+      return MLAN_STATUS_FAILURE;
+    }
+    // Asynchronously post an event about scan results.
+    async::PostTask(dispatcher_loop_->dispatcher(), [this]() {
+      mlan_event event{.event_id = MLAN_EVENT_ID_DRV_SCAN_REPORT};
+      event_handler_.OnEvent(&event);
+    });
+    return MLAN_STATUS_SUCCESS;
+  }
+
   // DataPlaneIfc implementation
   void OnEapolTransmitted(wlan::drivers::components::Frame&& frame, zx_status_t status) override {
     sync_completion_signal(&on_eapol_transmitted_called_);
@@ -182,7 +198,7 @@ struct WlanInterfaceTest : public zxtest::Test, public wlan::nxpfmac::DataPlaneI
   sync_completion_t on_eapol_received_called_;
 
   wlan::simulation::Environment env_;
-  // std::unique_ptr<async::Loop> dispatcher_loop_ = {};
+  std::unique_ptr<async::Loop> dispatcher_loop_ = {};
   TestDevice* test_device_ = nullptr;
   sync_completion_t device_destructed_;
   wlan::nxpfmac::EventHandler event_handler_;
@@ -392,7 +408,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectDisconnectReq) {
       // Connect request, must complete asynchronously.
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
       return MLAN_STATUS_PENDING;
-    } else if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
+    }
+    if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
       auto signal_info = reinterpret_cast<mlan_ds_get_info*>(req->pbuf);
       if (signal_info->sub_command == MLAN_OID_GET_SIGNAL) {
         // Get signal request, must return asynchronously.
@@ -401,6 +418,10 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectDisconnectReq) {
         ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
         return MLAN_STATUS_PENDING;
       }
+    }
+    if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_SCAN) {
+      // As part of connecting WlanInterface will perform a connect scan, make it succeed.
+      return HandleConnectScan(req);
     }
     // Return success for everything else.
     return MLAN_STATUS_SUCCESS;
@@ -487,7 +508,8 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectRemoteDisconnectReq) {
       // Connect request, must complete asynchronously.
       ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
       return MLAN_STATUS_PENDING;
-    } else if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
+    }
+    if (req->action == MLAN_ACT_GET && req->req_id == MLAN_IOCTL_GET_INFO) {
       auto signal_info = reinterpret_cast<mlan_ds_get_info*>(req->pbuf);
       if (signal_info->sub_command == MLAN_OID_GET_SIGNAL) {
         // Get signal request, must return asynchronously.
@@ -496,6 +518,10 @@ TEST_F(WlanInterfaceTest, WlanFullmacImplConnectRemoteDisconnectReq) {
         ioctl_adapter_->OnIoctlComplete(req, wlan::nxpfmac::IoctlStatus::Success);
         return MLAN_STATUS_PENDING;
       }
+    }
+    if (req->action == MLAN_ACT_SET && req->req_id == MLAN_IOCTL_SCAN) {
+      // As part of connecting WlanInterface will perform a connect scan, make it succeed.
+      return HandleConnectScan(req);
     }
     // Return success for everything else.
     return MLAN_STATUS_SUCCESS;

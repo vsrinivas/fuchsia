@@ -26,7 +26,6 @@
 
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/client_connection.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/key_ring.h"
-#include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/mlan.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/scanner.h"
 #include "src/connectivity/wlan/drivers/third_party/nxp/nxpfmac/softap.h"
 
@@ -118,8 +117,10 @@ class WlanInterface : public WlanInterfaceDeviceType,
                          zx::channel&& mlme_channel);
 
   zx_status_t SetMacAddressInFw();
-  void ConfirmDeauth() __TA_REQUIRES(mutex_);
-  void ConfirmDisassoc(zx_status_t status) __TA_REQUIRES(mutex_);
+  void ConfirmDeauth() __TA_EXCLUDES(fullmac_ifc_mutex_);
+  void ConfirmDisassoc(zx_status_t status) __TA_EXCLUDES(fullmac_ifc_mutex_);
+  void ConfirmConnectReq(ClientConnection::StatusCode status, const uint8_t* ies = nullptr,
+                         size_t ies_len = 0) __TA_EXCLUDES(fullmac_ifc_mutex_);
 
   wlan_mac_role_t role_;
   uint32_t iface_index_;
@@ -134,7 +135,8 @@ class WlanInterface : public WlanInterfaceDeviceType,
   SoftAp soft_ap_ __TA_GUARDED(mutex_);
   DeviceContext* context_ = nullptr;
 
-  ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_ __TA_GUARDED(mutex_);
+  ::ddk::WlanFullmacImplIfcProtocolClient fullmac_ifc_ __TA_GUARDED(fullmac_ifc_mutex_);
+  std::mutex fullmac_ifc_mutex_;
 
   uint8_t mac_address_[ETH_ALEN] = {};
 
