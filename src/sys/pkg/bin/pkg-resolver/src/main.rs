@@ -1,6 +1,12 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::too_many_arguments)]
+#![allow(clippy::enum_variant_names)]
+
 use {
     anyhow::{anyhow, Context as _, Error},
     async_lock::RwLock as AsyncRwLock,
@@ -247,7 +253,7 @@ async fn main_inner_async(startup_time: Instant, args: Args) -> Result<(), Error
             package_resolver.clone(),
             pkg_cache.clone(),
             data_proxy,
-            &*system_cache_list,
+            &system_cache_list,
             cobalt_sender.clone(),
         )
         .await
@@ -467,7 +473,9 @@ async fn load_rewrite_manager(
     // If we have a channel in vbmeta, we don't want to load the dynamic configs. Instead, we'll
     // construct a unique rule for that channel.
     match crate::ota_channel::create_rewrite_rule_for_ota_channel(
-        &channel_inspect_state,
+        channel_inspect_state,
+        #[allow(clippy::deref_addrof)]
+        #[allow(clippy::borrow_deref_ref)]
         &*&repo_manager.read().await,
         cobalt_sender.clone(),
     )

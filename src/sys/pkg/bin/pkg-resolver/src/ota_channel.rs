@@ -92,7 +92,7 @@ where
     match vbmeta_fn().await {
         Ok(tuf_config_name) => create_rewrite_rule_for_tuf_config_name(
             repo_manager,
-            &channel_inspect_state,
+            channel_inspect_state,
             &tuf_config_name,
             ChannelSource::VbMeta,
         ),
@@ -121,7 +121,7 @@ fn create_rewrite_rule_for_tuf_config_name(
         })?;
 
     let rule = Rule::new("fuchsia.com", repo.repo_url().host(), "/", "/")?;
-    channel_inspect_state.tuf_config_name.set(&tuf_config_name);
+    channel_inspect_state.tuf_config_name.set(tuf_config_name);
     channel_inspect_state.source.set(&format!("{:?}", Some(source)));
 
     Ok(Some(rule))

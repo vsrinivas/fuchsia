@@ -60,7 +60,7 @@ impl State {
         } else {
             self.state.remove(&experiment);
         }
-        let inspect_value = if state { 1 } else { 0 };
+        let inspect_value = i64::from(state);
         match self.inspect_states.entry(experiment) {
             hash_map::Entry::Occupied(entry) => entry.get().set(inspect_value),
             hash_map::Entry::Vacant(entry) => {
@@ -101,7 +101,7 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("experiments");
         let state = State::new(node);
-        assert_eq!(state.get_state(Experiment::Lightbulb), false);
+        assert!(!state.get_state(Experiment::Lightbulb));
         assert_data_tree!(
             inspector,
             root: {
@@ -116,7 +116,7 @@ mod tests {
         let node = inspector.root().create_child("experiments");
         let mut state = State::new(node);
         state.set_state(Experiment::Lightbulb, true);
-        assert_eq!(state.get_state(Experiment::Lightbulb), true);
+        assert!(state.get_state(Experiment::Lightbulb));
         assert_data_tree!(
             inspector,
             root: {
@@ -134,7 +134,7 @@ mod tests {
         let mut state = State::new(node);
         state.set_state(Experiment::Lightbulb, true);
         state.set_state(Experiment::Lightbulb, false);
-        assert_eq!(state.get_state(Experiment::Lightbulb), false);
+        assert!(!state.get_state(Experiment::Lightbulb));
         assert_data_tree!(
             inspector,
             root: {

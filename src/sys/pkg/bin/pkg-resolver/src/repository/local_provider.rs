@@ -58,7 +58,9 @@ impl RepositoryProvider<Pouf1> for LocalMirrorRepositoryProvider {
             let event = if let Some(event) = stream.next().await {
                 event
             } else {
-                return Err(tuf::Error::Opaque(format!("Expected OnOpen, but did not get one.")));
+                return Err(tuf::Error::Opaque(
+                    "Expected OnOpen, but did not get one.".to_string(),
+                ));
             };
             let status = match event {
                 Ok(fio::FileEvent::OnOpen_ { s, .. }) => Status::ok(s),

@@ -85,7 +85,7 @@ where
             if !parent.as_os_str().is_empty() {
                 let _sub_dir = fuchsia_fs::directory::create_directory_recursive(
                     &self.repo_proxy,
-                    parent.to_str().ok_or(make_opaque_error(anyhow!("Invalid path")))?,
+                    parent.to_str().ok_or_else(|| make_opaque_error(anyhow!("Invalid path")))?,
                     fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
                 )
                 .await

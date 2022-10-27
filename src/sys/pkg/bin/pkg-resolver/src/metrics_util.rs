@@ -117,9 +117,7 @@ impl ConnectedProtocol for CobaltConnectedService {
     type Message = MetricEvent;
     type SendError = Error;
 
-    fn get_protocol<'a>(
-        &'a mut self,
-    ) -> future::BoxFuture<'a, Result<MetricEventLoggerProxy, Error>> {
+    fn get_protocol(&mut self) -> future::BoxFuture<'_, Result<MetricEventLoggerProxy, Error>> {
         async {
             let (logger_proxy, server_end) =
                 fidl::endpoints::create_proxy().context("failed to create proxy endpoints")?;

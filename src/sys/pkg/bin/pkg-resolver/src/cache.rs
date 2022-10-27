@@ -79,7 +79,7 @@ impl BlobFetchParamsBuilderNeedsDownloadResumptionAttemptsLimit {
         BlobFetchParams {
             header_network_timeout: self.header_network_timeout,
             body_network_timeout: self.body_network_timeout,
-            download_resumption_attempts_limit: download_resumption_attempts_limit,
+            download_resumption_attempts_limit,
         }
     }
 }
@@ -156,6 +156,9 @@ pub async fn cache_package<'a>(
         let mut fetches = FuturesUnordered::new();
         let mut missing_blobs = get.get_missing_blobs();
         while let Some(chunk) = missing_blobs.try_next().await? {
+            #[allow(clippy::needless_collect)]
+            // Not sure if this collect is significant -- without it, the
+            // compiler believes we are double-borrowing |get|.
             let chunk = chunk
                 .into_iter()
                 .map(|need| {
@@ -447,9 +450,9 @@ impl From<&MerkleForError> for metrics::MerkleForUrlMigratedMetricDimensionResul
     }
 }
 
-pub async fn merkle_for_url<'a>(
+pub async fn merkle_for_url(
     repo: Arc<AsyncMutex<Repository>>,
-    url: &'a AbsolutePackageUrl,
+    url: &AbsolutePackageUrl,
     mut cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<(BlobId, u64), MerkleForError> {
     let target_path = TargetPath::new(format!(
@@ -655,7 +658,7 @@ async fn fetch_blob(
         }
         (true, false, _) => {
             let guard = ftrace::async_enter!(
-                trace_id.into(),
+                trace_id,
                 "app",
                 "fetch_blob_http",
                 // Async tracing does not support multiple concurrent child durations, so we create
@@ -722,7 +725,7 @@ async fn fetch_blob_http(
         return Err(FetchError::NoMirrors);
     };
     let mirror_stats = stats.lock().for_mirror(blob_mirror_url.to_string());
-    let blob_url = make_blob_url(blob_mirror_url, &merkle).map_err(|e| FetchError::BlobUrl(e))?;
+    let blob_url = make_blob_url(blob_mirror_url, &merkle).map_err(FetchError::BlobUrl)?;
     let inspect = inspect.mirror(&blob_url.to_string());
     let flaked = Arc::new(AtomicBool::new(false));
 
@@ -744,7 +747,7 @@ async fn fetch_blob_http(
                 {
                     inspect.state(inspect::Http::DownloadBlob);
                     let guard = ftrace::async_enter!(
-                        trace_id.into(),
+                        trace_id,
                         "app",
                         "download_blob",
                         "hash" => merkle.to_string().as_str()
@@ -752,7 +755,7 @@ async fn fetch_blob_http(
                     let res = download_blob(
                         &inspect,
                         client,
-                        &blob_url,
+                        blob_url,
                         expected_len,
                         blob,
                         blob_fetch_params,
@@ -853,10 +856,14 @@ async fn read_local_blob(
     Status::ok(status).map_err(FetchError::IoError)?;
 
     if let Some(ref val) = expected_len {
-        if val > &info.content_size {
-            return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
-        } else if val < &info.content_size {
-            return Err(FetchError::BlobTooLarge { uri: merkle.to_string() });
+        match val.cmp(&info.content_size) {
+            std::cmp::Ordering::Greater => {
+                return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
+            }
+            std::cmp::Ordering::Less => {
+                return Err(FetchError::BlobTooLarge { uri: merkle.to_string() });
+            }
+            _ => {}
         }
     }
 
@@ -871,7 +878,7 @@ async fn read_local_blob(
             .map_err(FetchError::FidlError)?
             .map_err(Status::from_raw)
             .map_err(FetchError::IoError)?;
-        if data.len() == 0 {
+        if data.is_empty() {
             return Err(FetchError::BlobTooSmall { uri: merkle.to_string() });
         }
         inspect.state(inspect::LocalMirror::WriteBlob);
@@ -905,7 +912,7 @@ async fn download_blob(
     inspect.state(inspect::Http::HttpGet);
     let (expected_len, content) =
         resume::resuming_get(client, uri, expected_len, blob_fetch_params, fetch_stats).await?;
-    ftrace::async_instant!(trace_id.into(), "app", "header_received");
+    ftrace::async_instant!(trace_id, "app", "header_received");
 
     inspect.expected_size_bytes(expected_len);
 
@@ -921,7 +928,7 @@ async fn download_blob(
             return Err(FetchError::BlobTooLarge { uri: uri.to_string() });
         }
         ftrace::async_instant!(
-            trace_id.into(),
+            trace_id,
             "app",
             "read_chunk_from_hyper",
             "size" => chunk.len() as u64
@@ -933,7 +940,7 @@ async fn download_blob(
                 &chunk,
                 |size: u64| {
                     ftrace::async_begin(
-                        trace_id.into(),
+                        trace_id,
                         ftrace::cstr!("app"),
                         ftrace::cstr!("waiting_for_pkg_cache_to_ack_write"),
                         &[ftrace::ArgValue::of("size", size)],
@@ -941,7 +948,7 @@ async fn download_blob(
                 },
                 || {
                     ftrace::async_end(
-                        trace_id.into(),
+                        trace_id,
                         ftrace::cstr!("app"),
                         ftrace::cstr!("waiting_for_pkg_cache_to_ack_write"),
                         &[],
@@ -1209,10 +1216,7 @@ impl FetchError {
     }
 
     fn is_unexpected_pkg_cache_closed(&self) -> bool {
-        match self.to_pkg_cache_fidl_error() {
-            Some(fidl::Error::ClientChannelClosed { .. }) => true,
-            _ => false,
-        }
+        matches!(self.to_pkg_cache_fidl_error(), Some(fidl::Error::ClientChannelClosed { .. }))
     }
 }
 

@@ -73,7 +73,7 @@ pub(super) async fn resuming_get<'a>(
                     .await
                 {
                     Ok(Some(chunk)) => {
-                        if chunk.len() > 0 {
+                        if !chunk.is_empty() {
                             progress_this_attempt = true;
                             bytes_downloaded += chunk.len() as u64;
                             co.yield_(chunk).await;
@@ -257,9 +257,9 @@ impl FromStr for HttpContentRange {
                     _ => return Err(ContentRangeParseError::MalformedHeader),
                 };
 
-                return Ok(HttpContentRange { range, len });
+                Ok(HttpContentRange { range, len })
             }
-            _ => return Err(ContentRangeParseError::UnsupportedRangeUnit),
+            _ => Err(ContentRangeParseError::UnsupportedRangeUnit),
         }
     }
 }

@@ -185,7 +185,7 @@ impl Repository {
         }
 
         let description =
-            updating_client.fetch_target_description(&target_path).await.map_err(|e| match e {
+            updating_client.fetch_target_description(target_path).await.map_err(|e| match e {
                 TufError::MetadataNotFound { path, version } => {
                     MerkleForError::MetadataNotFound { path, version }
                 }
@@ -419,7 +419,7 @@ mod tests {
             .unwrap();
             Repository::new(
                 Some(proxy),
-                self.persisted_repos_dir.as_ref().map(|s| s.as_str()),
+                self.persisted_repos_dir.as_deref(),
                 config,
                 cobalt_sender,
                 inspect::Inspector::new().root().create_child("inner-node"),

@@ -59,7 +59,7 @@ impl RewriteManager {
     /// produce invalid [AbsolutePackageUrl]s, return the original, unmodified [AbsolutePackageUrl].
     pub fn rewrite(&self, url: &AbsolutePackageUrl) -> AbsolutePackageUrl {
         for rule in self.list() {
-            match rule.apply(&url) {
+            match rule.apply(url) {
                 Some(Ok(res)) => {
                     return res;
                 }
@@ -81,13 +81,13 @@ impl RewriteManager {
         data_proxy: &fio::DirectoryProxy,
         dynamic_rules_path: &str,
     ) -> Result<(), anyhow::Error> {
-        let config = RuleConfig::Version1(std::mem::replace(dynamic_rules, vec![]));
+        let config = RuleConfig::Version1(std::mem::take(dynamic_rules));
 
         let result = async {
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
             let data_proxy = fuchsia_fs::directory::open_directory(
-                &data_proxy,
+                data_proxy,
                 ".",
                 fio::OpenFlags::RIGHT_WRITABLE,
             )
@@ -101,7 +101,7 @@ impl RewriteManager {
             crate::util::do_with_atomic_file(
                 &data_proxy,
                 temp_filename,
-                &dynamic_rules_path,
+                dynamic_rules_path,
                 |proxy| async move {
                     fuchsia_fs::file::write(&proxy, &data)
                         .await
@@ -140,7 +140,7 @@ impl RewriteManager {
         } else {
             self.dynamic_rules = transaction.dynamic_rules.into();
             self.generation += 1;
-            if let (Some(ref data_proxy), Some(ref dynamic_rules_path)) =
+            if let (Some(data_proxy), Some(dynamic_rules_path)) =
                 (self.data_proxy.as_ref(), self.dynamic_rules_path.as_ref())
             {
                 if let Err(err) =
@@ -200,13 +200,12 @@ pub struct RuleInspectState {
 
 fn create_rule_inspect_state(rule: &Rule, node: inspect::Node) -> RuleInspectState {
     RuleInspectState {
-        _host_match_property: node.create_string("host_match", &rule.host_match()),
-        _host_replacement_property: node
-            .create_string("host_replacement", &rule.host_replacement()),
+        _host_match_property: node.create_string("host_match", rule.host_match()),
+        _host_replacement_property: node.create_string("host_replacement", rule.host_replacement()),
         _path_prefix_match_property: node
-            .create_string("path_prefix_match", &rule.path_prefix_match()),
+            .create_string("path_prefix_match", rule.path_prefix_match()),
         _path_prefix_replacement_property: node
-            .create_string("path_prefix_replacement", &rule.path_prefix_replacement()),
+            .create_string("path_prefix_replacement", rule.path_prefix_replacement()),
         _node: node,
     }
 }
@@ -340,7 +339,7 @@ impl<N> RewriteManagerBuilder<N> {
             .as_ref()
             .ok_or_else(|| LoadRulesError::DirOpen(anyhow!("failed to open config directory")))?;
         let file_proxy =
-            fuchsia_fs::directory::open_file(&dir_proxy, &path, fio::OpenFlags::RIGHT_READABLE)
+            fuchsia_fs::directory::open_file(dir_proxy, path, fio::OpenFlags::RIGHT_READABLE)
                 .await?;
         let contents =
             fuchsia_fs::read_file(&file_proxy).await.map_err(LoadRulesError::ReadFile)?;

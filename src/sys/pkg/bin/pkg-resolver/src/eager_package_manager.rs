@@ -74,12 +74,12 @@ impl EagerPackage {
                 let response = parse_omaha_response_from_cup(&cup)?;
                 let (app, pinned_url) = find_app_with_matching_url(&response, url)
                     .ok_or_else(|| LoadError::CupResponseURLNotFound(url.clone()))?;
-                pinned_url_in_cup = pinned_url.clone();
+                pinned_url_in_cup = pinned_url;
 
-                if app_version_too_old(&app, &self.minimum_required_version)? {
+                if app_version_too_old(app, &self.minimum_required_version)? {
                     (
                         cache_packages
-                            .find_unpinned_url(&url)
+                            .find_unpinned_url(url)
                             .ok_or(LoadError::RequestedVersionTooLow)?,
                         PackageSource::CachePackages,
                     )
@@ -140,7 +140,7 @@ fn find_app_with_matching_url<'a>(
             for u in uc.get_all_full_urls() {
                 if let Ok(u) = PinnedAbsolutePackageUrl::parse(&u) {
                     if u.path() == url.path() {
-                        return Some((&app, u));
+                        return Some((app, u));
                     }
                 }
             }
@@ -164,7 +164,7 @@ fn app_version_too_old(
     let manifest_version: Version = Version::from_str(
         app.get_manifest_version().ok_or(VersionTooOldError::ManifestVersionAbsent)?.as_str(),
     )
-    .map_err(|e| VersionTooOldError::ManifestVersionParseError(e))?;
+    .map_err(VersionTooOldError::ManifestVersionParseError)?;
     Ok(manifest_version < *minimum_required_version)
 }
 
@@ -205,15 +205,13 @@ impl<T: Resolver> EagerPackageManager<T> {
         mut cobalt_sender: ProtocolSender<MetricEvent>,
     ) -> Self {
         let (mut persistent_cup, storage_error) = match &data_proxy {
-            Some(data_proxy) => {
-                match Self::load_persistent_eager_packages_fidl(&data_proxy).await {
-                    Ok(persistent_cup) => (persistent_cup, false),
-                    Err(e) => {
-                        error!("failed to load persistent eager packages fidl: {:#}", anyhow!(e));
-                        (HashMap::new(), true)
-                    }
+            Some(data_proxy) => match Self::load_persistent_eager_packages_fidl(data_proxy).await {
+                Ok(persistent_cup) => (persistent_cup, false),
+                Err(e) => {
+                    error!("failed to load persistent eager packages fidl: {:#}", anyhow!(e));
+                    (HashMap::new(), true)
                 }
-            }
+            },
             None => (HashMap::new(), true),
         };
         let mut packages = BTreeMap::new();
@@ -365,7 +363,7 @@ impl<T: Resolver> EagerPackageManager<T> {
 
         let temp_path = &format!("{EAGER_PACKAGE_PERSISTENT_FIDL_NAME}.new");
         crate::util::do_with_atomic_file(
-            &data_proxy,
+            data_proxy,
             temp_path,
             EAGER_PACKAGE_PERSISTENT_FIDL_NAME,
             |proxy| async move {
@@ -407,7 +405,7 @@ impl<T: Resolver> EagerPackageManager<T> {
             .map(|(_url, package)| package)
             .ok_or_else(|| CupWriteError::UnknownURL(pinned_url.as_unpinned().clone()))?;
 
-        if app_version_too_old(&app, &package.minimum_required_version)? {
+        if app_version_too_old(app, &package.minimum_required_version)? {
             return Err(CupWriteError::RequestedVersionTooLow);
         }
 
@@ -439,7 +437,7 @@ impl<T: Resolver> EagerPackageManager<T> {
 
         let (version, channel) = match package.cup.as_ref() {
             Some(cup) => {
-                let response = parse_omaha_response_from_cup(&cup)?;
+                let response = parse_omaha_response_from_cup(cup)?;
                 let (app, _) = find_app_with_matching_url(&response, &pkg_url)
                     .ok_or(CupGetInfoError::CupResponseURLNotFound)?;
                 (
@@ -830,7 +828,7 @@ mod tests {
         let request_metadata = cup_handler.decorate_request(&mut intermediate).unwrap();
         let request_body = intermediate.serialize_body().unwrap();
         let expected_signature: Vec<u8> =
-            make_expected_signature_for_test(&priv_key, &request_metadata, &cup_response);
+            make_expected_signature_for_test(&priv_key, &request_metadata, cup_response);
         CupData::builder()
             .key_id(public_key_id)
             .nonce(request_metadata.nonce)

@@ -16,8 +16,8 @@ where
     F: Future<Output = Result<(), anyhow::Error>>,
 {
     let file = fuchsia_fs::directory::open_file(
-        &dir_proxy,
-        &temp_filename,
+        dir_proxy,
+        temp_filename,
         fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::CREATE | fio::OpenFlags::TRUNCATE,
     )
     .await
@@ -32,7 +32,7 @@ where
         .map_err(zx::Status::from_raw)
         .with_context(|| format!("syncing file: {}", temp_filename))?;
     fuchsia_fs::file::close(file).await.context("closing temp file")?;
-    fuchsia_fs::directory::rename(&dir_proxy, &temp_filename, &permanent_filename)
+    fuchsia_fs::directory::rename(dir_proxy, temp_filename, permanent_filename)
         .await
         .context("renaming temp file to permanent file")?;
     let () = dir_proxy

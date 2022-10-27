@@ -128,7 +128,7 @@ impl RepositoryManager {
         self.dynamic_configs
             .get(repo_url)
             .or_else(|| self.static_configs.get(repo_url))
-            .map(|a| Deref::deref(a))
+            .map(Deref::deref)
     }
 
     /// Returns a handle to this repo manager's inspect statistics.
@@ -200,7 +200,7 @@ impl RepositoryManager {
                 info!("closing {}", config.repo_url());
             }
 
-            Self::save(&self.data_proxy, &dynamic_configs_path, &mut self.dynamic_configs).await;
+            Self::save(&self.data_proxy, dynamic_configs_path, &mut self.dynamic_configs).await;
             return Ok(Some(Arc::clone(&*config)));
         }
         if self.static_configs.get(repo_url).is_some() {
@@ -245,7 +245,7 @@ impl RepositoryManager {
             // TODO(fxbug.dev/83342): We need to reopen because `resolve_succeeds_with_broken_minfs`
             // expects it, this should be removed once the test is fixed.
             let data_proxy = fuchsia_fs::directory::open_directory(
-                &data_proxy,
+                data_proxy,
                 ".",
                 fio::OpenFlags::RIGHT_WRITABLE,
             )
@@ -256,7 +256,7 @@ impl RepositoryManager {
             crate::util::do_with_atomic_file(
                 &data_proxy,
                 temp_path,
-                &dynamic_configs_path,
+                dynamic_configs_path,
                 |proxy| async move {
                     fuchsia_fs::file::write(&proxy, &data)
                         .await
@@ -359,6 +359,7 @@ impl RepositoryManager {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 async fn open_cached_or_new_repository(
     data_proxy: Option<fio::DirectoryProxy>,
     persisted_repos_dir: Arc<Option<String>>,
@@ -374,7 +375,7 @@ async fn open_cached_or_new_repository(
         return Ok(conn.clone());
     }
 
-    let persisted_repos_dir = (*persisted_repos_dir).as_ref().map(|p| p.as_str());
+    let persisted_repos_dir = (*persisted_repos_dir).as_deref();
 
     // Create the rust tuf client. In order to minimize our time with the lock held, we'll
     // create the client first, even if it proves to be redundant because we lost the race with
@@ -484,7 +485,7 @@ impl RepositoryManagerBuilder<UnsetCobaltSender, UnsetInspectNode> {
 
         let (dynamic_configs, err) = match (data_proxy.as_ref(), dynamic_configs_path.as_ref()) {
             (Some(data_proxy), Some(dynamic_configs_path)) => {
-                match load_configs_file_from_proxy(&data_proxy, &dynamic_configs_path).await {
+                match load_configs_file_from_proxy(data_proxy, dynamic_configs_path).await {
                     Ok(dynamic_configs) => (dynamic_configs, None),
                     Err(err) => (vec![], Some(err)),
                 }
@@ -748,7 +749,7 @@ fn load_configs_dir<T: AsRef<Path>>(
 
 fn load_configs_file<T: AsRef<Path>>(path: T) -> Result<Vec<RepositoryConfig>, LoadError> {
     let path = path.as_ref();
-    match fs::File::open(&path) {
+    match fs::File::open(path) {
         Ok(f) => match serde_json::from_reader(io::BufReader::new(f)) {
             Ok(RepositoryConfigs::Version1(configs)) => Ok(configs),
             Err(err) => Err(LoadError::Parse { path: path.into(), error: err }),
@@ -964,7 +965,7 @@ mod tests {
         }
 
         fn add_static_configs(mut self, name: &str, configs: RepositoryConfigs) -> Self {
-            self.static_configs.get_or_insert_with(|| vec![]).push((name.into(), configs));
+            self.static_configs.get_or_insert_with(Vec::new).push((name.into(), configs));
             self
         }
 

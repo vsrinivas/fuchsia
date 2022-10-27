@@ -197,7 +197,7 @@ impl QueuedResolver {
                 let repo_manager = Arc::clone(&repo_manager);
                 let blob_fetcher = blob_fetcher.clone();
                 async move {
-                    Ok(package_from_repo(
+                    package_from_repo(
                         &repo_manager,
                         &rewritten_url,
                         cache,
@@ -205,7 +205,7 @@ impl QueuedResolver {
                         context.trace_id,
                     )
                     .await
-                    .map_err(Arc::new)?)
+                    .map_err(Arc::new)
                 }
             },
         );
@@ -229,7 +229,7 @@ impl QueuedResolver {
                 error
             })?;
             info!("resolved {} to {} with base pin", pkg_url, blob);
-            return Ok(PackageWithSourceAndBlobId::base(dir, blob.into()));
+            return Ok(PackageWithSourceAndBlobId::base(dir, blob));
         }
 
         // Rewrite the url.
@@ -262,7 +262,7 @@ impl QueuedResolver {
                 Ok(PackageWithSourceAndBlobId::tuf(dir, hash))
             }
             Err(tuf_err) => {
-                match self.handle_cache_fallbacks(&*tuf_err, &pkg_url, &rewritten_url).await {
+                match self.handle_cache_fallbacks(&tuf_err, &pkg_url, &rewritten_url).await {
                     Ok(Some((hash, pkg))) => {
                         info!(
                             "resolved {} as {} to {} with cache_packages due to {:#}",
@@ -316,7 +316,7 @@ impl QueuedResolver {
                 // behavior.
                 // TODO(fxbug.dev/50764): remove this behavior.
                 match missing_cache_package_disk_fallback(
-                    &rewritten_url,
+                    rewritten_url,
                     pkg_url,
                     &self.system_cache_list,
                     &self.inspect,
@@ -337,7 +337,7 @@ impl QueuedResolver {
                 // If we couldn't get TUF metadata, we might not have networking. Check the
                 // cache packages manifest obtained from pkg-cache.
                 // The manifest pkg URLs are for fuchsia.com, so do not use the rewritten URL.
-                match hash_from_cache_packages_manifest(&pkg_url, &self.system_cache_list) {
+                match hash_from_cache_packages_manifest(pkg_url, &self.system_cache_list) {
                     Some(hash) => self.cache.open(hash).await.map(|pkg| Some((hash, pkg))),
                     None => Ok(None),
                 }
@@ -507,7 +507,7 @@ async fn resolve_unparsed_absolute_url_and_send_cobalt_metrics(
     eager_package_manager: Option<&AsyncRwLock<EagerPackageManager<QueuedResolver>>>,
     cobalt_sender: ProtocolSender<MetricEvent>,
 ) -> Result<fpkg::ResolutionContext, pkg::ResolveError> {
-    let url = AbsolutePackageUrl::parse(&url).map_err(|e| handle_bad_package_url_error(e, &url))?;
+    let url = AbsolutePackageUrl::parse(url).map_err(|e| handle_bad_package_url_error(e, url))?;
     resolve_absolute_url_and_send_cobalt_metrics(
         url,
         dir,
@@ -560,7 +560,7 @@ fn missing_cache_package_disk_fallback(
     system_cache_list: &CachePackages,
     inspect: &ResolverServiceInspectState,
 ) -> Option<BlobId> {
-    let possible_fallback = hash_from_cache_packages_manifest(&pkg_url, system_cache_list);
+    let possible_fallback = hash_from_cache_packages_manifest(pkg_url, system_cache_list);
     if possible_fallback.is_some() {
         warn!(
             "Did not find {} at URL {}, but did find a matching package name in the \
@@ -653,7 +653,7 @@ async fn hash_from_repo_or_cache(
     // The RwLock created by `.read()` must not exist across the `.await` (to e.g. prevent
     // deadlock). Rust temporaries are kept alive for the duration of the innermost enclosing
     // statement, so the following two lines should not be combined.
-    let fut = repo_manager.read().await.get_package_hash(&rewritten_url);
+    let fut = repo_manager.read().await.get_package_hash(rewritten_url);
     match fut.await {
         Ok(b) => Ok(HashSource::Tuf(b)),
         Err(e @ GetPackageHashError::MerkleFor(MerkleForError::TargetNotFound(_))) => {
@@ -661,7 +661,7 @@ async fn hash_from_repo_or_cache(
             // it shouldn't be in the cache, BUT some SDK customers currently rely on this behavior.
             // TODO(fxbug.dev/50764): remove this behavior.
             match missing_cache_package_disk_fallback(
-                &rewritten_url,
+                rewritten_url,
                 pkg_url,
                 system_cache_list,
                 inspect_state,
@@ -675,7 +675,7 @@ async fn hash_from_repo_or_cache(
             // the cache packages manifest (not to be confused with pkg-cache). The
             // cache packages manifest pkg URLs are for fuchsia.com, so do not use the
             // rewritten URL.
-            match hash_from_cache_packages_manifest(&pkg_url, system_cache_list) {
+            match hash_from_cache_packages_manifest(pkg_url, system_cache_list) {
                 Some(blob) => Ok(HashSource::SystemImageCachePackages(blob, e)),
                 None => Err(e),
             }
@@ -696,16 +696,15 @@ async fn package_from_repo(
     // Rust temporaries are kept alive for the duration of the innermost enclosing statement, and
     // we don't want to hold the repo_manager lock while we fetch the package, so the following two
     // lines should not be combined.
-    let fut =
-        repo_manager.read().await.get_package(&rewritten_url, &cache, &blob_fetcher, trace_id);
+    let fut = repo_manager.read().await.get_package(rewritten_url, &cache, &blob_fetcher, trace_id);
     fut.await
 }
 
 // Attempts to lookup the hash of a package from `system_cache_list`, which is populated from the
 // cache_packages manifest of the system_image package.
-fn hash_from_cache_packages_manifest<'a>(
+fn hash_from_cache_packages_manifest(
     url: &AbsolutePackageUrl,
-    system_cache_list: &'a CachePackages,
+    system_cache_list: &CachePackages,
 ) -> Option<BlobId> {
     // We are in the process of removing the concept of package variant
     // (generalizing fuchsia-pkg URL paths to be `(first-segment)(/more-segments)*`
@@ -745,10 +744,10 @@ async fn get_hash(
 
     ftrace::duration_begin!("app", "get-hash", "url" => pkg_url.to_string().as_str());
     let hash_or_status = hash_from_base_or_repo_or_cache(
-        &repo_manager,
-        &rewriter,
-        &base_package_index,
-        &system_cache_list,
+        repo_manager,
+        rewriter,
+        base_package_index,
+        system_cache_list,
         &pkg_url,
         inspect_state,
         eager_package_manager,

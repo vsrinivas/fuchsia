@@ -269,7 +269,7 @@ impl UpdatingTufClient {
             MetricEvent::builder(metrics::UPDATE_TUF_CLIENT_MIGRATED_METRIC_ID)
                 .with_event_codes(match &res {
                     Ok(_) => metrics::UpdateTufClientMigratedMetricDimensionResult::Success,
-                    Err(e) => tuf_error_as_update_tuf_client_event_code(&e),
+                    Err(e) => tuf_error_as_update_tuf_client_event_code(e),
                 })
                 .as_occurrence(1),
         );
