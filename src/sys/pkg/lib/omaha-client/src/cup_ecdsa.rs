@@ -96,11 +96,13 @@ impl From<[u8; 32]> for Nonce {
 }
 impl From<&[u8; 32]> for Nonce {
     fn from(array: &[u8; 32]) -> Self {
-        Nonce(array.clone())
+        Nonce(*array)
     }
 }
+
+#[allow(clippy::from_over_into)]
 impl Into<[u8; 32]> for Nonce {
-    fn into(self: Self) -> [u8; 32] {
+    fn into(self) -> [u8; 32] {
         self.0
     }
 }
@@ -298,8 +300,8 @@ pub fn make_transaction_hash(
     let cup2_urlparam = format!("{}:{}", public_key_id, nonce);
 
     let mut hasher = Sha256::new();
-    hasher.update(&request_hash);
-    hasher.update(&response_hash);
+    hasher.update(request_hash);
+    hasher.update(response_hash);
     hasher.update(&cup2_urlparam);
     hasher.finalize()
 }

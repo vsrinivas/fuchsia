@@ -229,6 +229,7 @@ where
     ST: Storage + 'static,
     SM: StateMachineController,
 {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         state_machine_control: SM,
         storage_ref: Rc<Mutex<ST>>,
@@ -316,6 +317,7 @@ where
     }
 
     /// Handle fuchsia.update.Manager requests.
+    #[allow(clippy::await_holding_refcell_ref)]
     async fn handle_manager_request(
         server: Rc<RefCell<Self>>,
         request: ManagerRequest,
@@ -520,6 +522,7 @@ where
         Ok(())
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     async fn handle_set_target(server: Rc<RefCell<Self>>, channel: String) {
         // TODO: Verify that channel is valid.
         let app_set = Rc::clone(&server.borrow().app_set);
@@ -585,6 +588,7 @@ where
     }
 
     /// The state change callback from StateMachine.
+    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn on_state_change(server: Rc<RefCell<Self>>, state: state_machine::State) {
         server.borrow_mut().state.manager_state = state;
 
@@ -650,6 +654,7 @@ where
         }
     }
 
+    #[allow(clippy::await_holding_refcell_ref)]
     async fn send_state_to_queue(server: Rc<RefCell<Self>>) {
         // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
         // If this is the case, it is an error. See fxbug.dev/87757 for more details

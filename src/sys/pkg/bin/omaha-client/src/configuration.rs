@@ -133,7 +133,7 @@ impl ClientConfiguration {
             })
             .extra_fields(HashMap::from_iter(extra_fields.into_iter()))
             .build();
-        let mut app_set = FuchsiaAppSet::new(app, AppMetadata { appid_source: appid_source });
+        let mut app_set = FuchsiaAppSet::new(app, AppMetadata { appid_source });
 
         let eager_package_configs = EagerPackageConfigs::from_namespace();
         let platform_config = get_config(version, eager_package_configs.as_ref().ok(), service_url);

@@ -51,13 +51,13 @@ impl Cohort {
         // From Omaha spec:
         // If this attribute is transmitted in the response (even if the value is empty-string),
         // the client should overwrite the current cohort of this app with the sent value.
-        if omaha_cohort.id != None {
+        if omaha_cohort.id.is_some() {
             self.id = omaha_cohort.id;
         }
-        if omaha_cohort.hint != None {
+        if omaha_cohort.hint.is_some() {
             self.hint = omaha_cohort.hint;
         }
-        if omaha_cohort.name != None {
+        if omaha_cohort.name.is_some() {
             self.name = omaha_cohort.name;
         }
     }

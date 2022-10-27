@@ -98,13 +98,13 @@ impl App {
             match serde_json::from_str::<PersistedApp>(&app_json) {
                 Ok(persisted_app) => {
                     // Do not overwrite existing fields in app.
-                    if self.cohort.id == None {
+                    if self.cohort.id.is_none() {
                         self.cohort.id = persisted_app.cohort.id;
                     }
-                    if self.cohort.hint == None {
+                    if self.cohort.hint.is_none() {
                         self.cohort.hint = persisted_app.cohort.hint;
                     }
-                    if self.cohort.name == None {
+                    if self.cohort.name.is_none() {
                         self.cohort.name = persisted_app.cohort.name;
                     }
                     if self.user_counting == UserCounting::ClientRegulatedByDate(None) {

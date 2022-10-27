@@ -39,6 +39,7 @@ pub trait Installer {
     /// indication via the Future.
     /// The returned Vec of AppInstallResult must only include apps that have an update available
     /// and must be kept in the same order as it appears in the omaha response.
+    #[allow(clippy::type_complexity)]
     fn perform_install<'a>(
         &'a mut self,
         install_plan: &'a Self::InstallPlan,
