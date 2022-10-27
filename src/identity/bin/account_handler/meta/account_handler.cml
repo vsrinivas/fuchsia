@@ -9,6 +9,10 @@
     program: {
         runner: "elf",
         binary: "bin/account_handler",
+
+        // Subscribe to component lifecycle events so we can gracefully stop
+        // persistent resources we supervise
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {
@@ -20,11 +24,18 @@
             protocol: [
                 "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
                 "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
+                "fuchsia.process.Launcher",
             ],
         },
         {
             storage: "data",
             path: "/data",
+        },
+        {
+            directory: "dev-topological",
+            from: "parent",
+            rights: [ "rw*" ],
+            path: "/dev",
         },
     ],
     expose: [

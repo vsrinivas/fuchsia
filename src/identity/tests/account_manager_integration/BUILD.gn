@@ -18,13 +18,18 @@ rustc_test("test") {
   source_root = "tests/lib.rs"
 
   deps = [
+    "//sdk/fidl/fuchsia.driver.test:fuchsia.driver.test_rust",
+    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_rust",
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_rust",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2_rust",
     "//sdk/fidl/fuchsia.tracing.provider:fuchsia.tracing.provider_rust",
+    "//sdk/lib/driver_test_realm/realm_builder/rust",
+    "//src/identity/tests/ramdisk_common",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component-test",
+    "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:futures",
@@ -34,20 +39,38 @@ rustc_test("test") {
     "tests/account.rs",
     "tests/lib.rs",
   ]
+
+  # For fvm_init()
+  non_rust_deps = [ "//src/lib/storage/fs_management/c" ]
 }
 
 fuchsia_test_component("account_manager_integration_test_component") {
-  deps = [ ":test" ]
+  testonly = true
   manifest = "meta/account_manager_integration_test.cml"
+  deps = [
+    ":test",
+    "//src/devices/bus/drivers/platform",
+    "//src/storage/testing:storage_drivers",
+  ]
 }
 
 fuchsia_test_package("account_manager_integration_test") {
+  # isolated devmgr sometimes logs at error level when its processes are torn
+  # down in unlucky orders, and there's no way to tear them down
+  # deterministically, so I guess we tolerate ERROR level log messages
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+
   deps = [
     "//src/identity/bin/account_handler:account_handler_cmp",
     "//src/identity/bin/account_handler:account_handler_ephemeral",
     "//src/identity/bin/account_manager:account_manager_component",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_fail_authentication",
     "//src/identity/bin/dev_authenticator:dev_authenticator_always_succeed",
+    "//src/storage/bin/minfs",
   ]
   test_components = [ ":account_manager_integration_test_component" ]
 }

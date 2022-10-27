@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 {
     include: [
+        "//sdk/lib/driver_test_realm/meta/realm_builder.shard.cml",
         "//src/sys/test_runners/rust/default.shard.cml",
+        "//src/sys/test_runners/tmp_storage.shard.cml",
         "sys/component/realm_builder.shard.cml",
         "syslog/client.shard.cml",
     ],
@@ -15,10 +17,17 @@
             protocol: "fuchsia.sys2.LifecycleController",
             from: "framework",
         },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "framework",
+        },
     ],
     offer: [
         {
-            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            protocol: [
+                "fuchsia.process.Launcher",
+                "fuchsia.tracing.provider.Registry",
+            ],
             from: "parent",
             to: [ "#realm_builder" ],
         },

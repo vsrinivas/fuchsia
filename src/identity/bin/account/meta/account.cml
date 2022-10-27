@@ -20,7 +20,10 @@
         {
             directory: "dev-topological",
             from: "parent",
-            to: "#password_authenticator",
+            to: [
+                "#account_manager",
+                "#password_authenticator",
+            ],
         },
         {
             protocol: [ "fuchsia.logger.LogSink" ],
@@ -34,7 +37,10 @@
         {
             protocol: [ "fuchsia.process.Launcher" ],
             from: "parent",
-            to: "#password_authenticator",
+            to: [
+                "#account_manager",
+                "#password_authenticator",
+            ],
         },
         {
             protocol: [ "fuchsia.tracing.provider.Registry" ],

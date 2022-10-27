@@ -5,6 +5,7 @@
 use {
     anyhow::{anyhow, format_err, Error},
     fidl::endpoints::{create_endpoints, ServerEnd},
+    fidl_fuchsia_hardware_block_partition::Guid,
     fidl_fuchsia_identity_account::{
         AccountManagerGetAccountRequest, AccountManagerMarker,
         AccountManagerProvisionNewAccountRequest, AccountManagerProxy, AccountMarker,
@@ -15,8 +16,11 @@ use {
     fidl_fuchsia_tracing_provider::RegistryMarker,
     fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component_test::{Capability, ChildOptions, RealmBuilder, RealmInstance, Ref, Route},
+    fuchsia_driver_test::{DriverTestRealmBuilder, DriverTestRealmInstance},
     fuchsia_zircon as zx,
     futures::prelude::*,
+    ramdevice_client::RamdiskClient,
+    ramdisk_common::{format_zxcrypt, setup_ramdisk},
     std::ops::Deref,
 };
 
@@ -34,6 +38,14 @@ const ACCOUNT_MANAGER_COMPONENT_NAME: &str = "account_manager";
 
 /// Maximum time between a lock request and when the account is locked
 const LOCK_REQUEST_DURATION: zx::Duration = zx::Duration::from_seconds(5);
+
+// Canonically defined in //zircon/system/public/zircon/hw/gpt.h
+const FUCHSIA_DATA_GUID_VALUE: [u8; 16] = [
+    // 08185F0C-892D-428A-A789-DBEEC8F55E6A
+    0x0c, 0x5f, 0x18, 0x08, 0x2d, 0x89, 0x8a, 0x42, 0xa7, 0x89, 0xdb, 0xee, 0xc8, 0xf5, 0x5e, 0x6a,
+];
+const FUCHSIA_DATA_GUID: Guid = Guid { value: FUCHSIA_DATA_GUID_VALUE };
+const ACCOUNT_LABEL: &str = "account";
 
 /// Convenience function to create an account metadata table
 /// with the supplied name.
@@ -108,7 +120,11 @@ struct NestedAccountManagerProxy {
 
     /// The realm instance which the account manager is running in.
     /// Needs to be kept in scope to keep the realm alive.
-    _realm_instance: RealmInstance,
+    pub realm_instance: RealmInstance,
+
+    /// The ramdisk with underlying minfs storage to provision.
+    /// Needs to be kept in scope to keep the disk alive.
+    _ramdisk: RamdiskClient,
 }
 
 impl Deref for NestedAccountManagerProxy {
@@ -123,11 +139,12 @@ impl NestedAccountManagerProxy {
     /// Stop and start the account_manager component and re-initialize
     /// the nested account_manager_proxy.
     pub async fn restart(&mut self) -> Result<(), Error> {
-        stop_component(&self._realm_instance, ACCOUNT_MANAGER_COMPONENT_NAME).await;
-        start_component(&self._realm_instance, ACCOUNT_MANAGER_COMPONENT_NAME).await;
+        // TODO(jbuckland) must lock here.
+        stop_component(&self.realm_instance, ACCOUNT_MANAGER_COMPONENT_NAME).await;
+        start_component(&self.realm_instance, ACCOUNT_MANAGER_COMPONENT_NAME).await;
 
         self.account_manager_proxy = self
-            ._realm_instance
+            .realm_instance
             .root
             .connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()?;
         Ok(())
@@ -137,6 +154,7 @@ impl NestedAccountManagerProxy {
 /// Start account manager in an isolated environment and return a proxy to it.
 async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
     let builder = RealmBuilder::new().await?;
+    builder.driver_test_realm_setup().await.unwrap();
     let account_manager =
         builder.add_child("account_manager", ACCOUNT_MANAGER_URL, ChildOptions::new()).await?;
     let dev_authenticator_always_succeed = builder
@@ -215,12 +233,52 @@ async fn create_account_manager() -> Result<NestedAccountManagerProxy, Error> {
                 .to(Ref::parent()),
         )
         .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol_by_name("fuchsia.process.Launcher"))
+                .from(Ref::parent())
+                .to(&account_manager),
+        )
+        .await
+        .unwrap();
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::directory("dev-topological"))
+                .from(Ref::child("driver_test_realm"))
+                .to(&account_manager),
+        )
+        .await?;
+    builder
+        .add_route(
+            Route::new()
+                .capability(Capability::protocol::<fsys2::LifecycleControllerMarker>())
+                .from(Ref::framework())
+                .to(Ref::child("driver_test_realm")),
+        )
+        .await
+        .unwrap();
 
     let instance = builder.build().await?;
 
+    let args = fidl_fuchsia_driver_test::RealmArgs {
+        root_driver: Some("fuchsia-boot:///#driver/platform-bus.so".to_string()),
+        ..fidl_fuchsia_driver_test::RealmArgs::EMPTY
+    };
+    instance.driver_test_realm_start(args).await?;
+
+    let ramdisk = setup_ramdisk(&instance, FUCHSIA_DATA_GUID, ACCOUNT_LABEL).await;
+    format_zxcrypt(&instance, &ramdisk, ACCOUNT_LABEL).await;
+
     let account_manager_proxy =
         instance.root.connect_to_protocol_at_exposed_dir::<AccountManagerMarker>()?;
-    Ok(NestedAccountManagerProxy { account_manager_proxy, _realm_instance: instance })
+
+    Ok(NestedAccountManagerProxy {
+        account_manager_proxy,
+        realm_instance: instance,
+        _ramdisk: ramdisk,
+    })
 }
 
 /// Locks an account and waits for the channel to close.
@@ -239,7 +297,35 @@ async fn lock_and_check(account: &AccountProxy) -> Result<(), Error> {
 // are currently creating a new environment for account manager to run in, but the tests
 // themselves run in a single environment.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_provision_new_account() -> Result<(), Error> {
+async fn test_provision_one_new_account() -> Result<(), Error> {
+    let account_manager = create_account_manager().await?;
+
+    // Verify we initially have no accounts.
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
+
+    // Provision a new account.
+    let account_1 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
+    assert_eq!(account_manager.get_account_ids().await?, vec![account_1]);
+
+    let account_ids = account_manager.get_account_ids().await?;
+    assert_eq!(account_ids.len(), 1);
+    assert!(account_ids.contains(&account_1));
+
+    Ok(())
+}
+
+// Since we only have one zxcrypt-backed partition, provisioning a second
+// account will fail (since the disk is already formatted). When we switch to a
+// fxfs-backed AccountManager, we can reenable this test.
+#[ignore]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_provision_many_new_accounts() -> Result<(), Error> {
     let account_manager = create_account_manager().await?;
 
     // Verify we initially have no accounts.
@@ -323,12 +409,13 @@ async fn test_unlock_account() -> Result<(), Error> {
     )
     .await?;
 
-    // Restart the account manager, now the account should be locked
     account_manager.restart().await?;
 
     // Unlock the account and acquire a channel to it
     let (account_client_end, account_server_end) = create_endpoints()?;
+
     assert_eq!(get_account(&account_manager, account_id, account_server_end).await?, Ok(()));
+
     let account_proxy = account_client_end.into_proxy()?;
     assert_eq!(account_proxy.get_lifetime().await.unwrap(), Lifetime::Persistent);
     Ok(())
@@ -429,7 +516,7 @@ async fn test_get_ephemeral_account_and_persona() -> Result<(), Error> {
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_account_deletion() -> Result<(), Error> {
+async fn test_one_account_deletion() -> Result<(), Error> {
     let account_manager = create_account_manager().await?;
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
@@ -441,6 +528,42 @@ async fn test_account_deletion() -> Result<(), Error> {
         create_account_metadata("test1"),
     )
     .await?;
+
+    let existing_accounts = account_manager.get_account_ids().await?;
+    assert!(existing_accounts.contains(&account_1));
+    assert_eq!(existing_accounts.len(), 1);
+
+    // Delete an account and verify it is removed.
+    assert_eq!(account_manager.remove_account(account_1).await?, Ok(()));
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
+
+    // Connecting to the deleted account should fail.
+    let (_account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        get_account(&account_manager, account_1, account_server_end).await?,
+        Err(ApiError::NotFound)
+    );
+    Ok(())
+}
+
+// Since we only have one zxcrypt-backed partition, provisioning a second
+// account will fail (since the disk is already formatted). When we switch to a
+// fxfs-backed AccountManager, we can reenable this test.
+#[ignore]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_many_account_deletions() -> Result<(), Error> {
+    let account_manager = create_account_manager().await?;
+
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
+
+    let account_1 = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
+
     let account_2 = provision_new_account(
         &account_manager,
         Lifetime::Persistent,
@@ -470,7 +593,77 @@ async fn test_account_deletion() -> Result<(), Error> {
 /// previous instances that ran in that environment. Also check that some basic operations work on
 /// accounts created in that previous lifetime.
 #[fuchsia_async::run_singlethreaded(test)]
-async fn test_lifecycle() -> Result<(), Error> {
+async fn test_one_lifecycle_persistent() -> Result<(), Error> {
+    let mut account_manager = create_account_manager().await?;
+
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
+
+    let account = provision_new_account(
+        &account_manager,
+        Lifetime::Persistent,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
+
+    let existing_accounts = account_manager.get_account_ids().await?;
+    assert_eq!(existing_accounts.len(), 1);
+
+    // Restart account manager
+    account_manager.restart().await?;
+
+    let existing_accounts = account_manager.get_account_ids().await?;
+    assert_eq!(existing_accounts.len(), 1); // The persistent account was kept.
+
+    // Retrieve a persistent account that was created in the earlier lifetime
+    let (_account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(get_account(&account_manager, account, account_server_end).await?, Ok(()));
+
+    // Delete an account and verify it is removed.
+    assert_eq!(account_manager.remove_account(account).await?, Ok(()));
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_one_lifecycle_ephemeral() -> Result<(), Error> {
+    let mut account_manager = create_account_manager().await?;
+
+    assert_eq!(account_manager.get_account_ids().await?, vec![]);
+
+    let account = provision_new_account(
+        &account_manager,
+        Lifetime::Ephemeral,
+        None,
+        create_account_metadata("test1"),
+    )
+    .await?;
+
+    let existing_accounts = account_manager.get_account_ids().await?;
+    assert_eq!(existing_accounts.len(), 1);
+
+    // Restart account manager
+    account_manager.restart().await?;
+
+    let existing_accounts = account_manager.get_account_ids().await?;
+    assert_eq!(existing_accounts.len(), 0); // The ephemeral account was dropped
+
+    // Make sure we can't retrieve the ephemeral account
+    let (_account_client_end, account_server_end) = create_endpoints()?;
+    assert_eq!(
+        get_account(&account_manager, account, account_server_end).await?,
+        Err(ApiError::NotFound)
+    );
+
+    Ok(())
+}
+
+// Since we only have one zxcrypt-backed partition, provisioning a second
+// account will fail (since the disk is already formatted). When we switch to a
+// fxfs-backed AccountManager, we can reenable this test.
+#[ignore]
+#[fuchsia_async::run_singlethreaded(test)]
+async fn test_many_lifecycles() -> Result<(), Error> {
     let mut account_manager = create_account_manager().await?;
 
     assert_eq!(account_manager.get_account_ids().await?, vec![]);
@@ -482,6 +675,7 @@ async fn test_lifecycle() -> Result<(), Error> {
         create_account_metadata("test1"),
     )
     .await?;
+
     let account_2 = provision_new_account(
         &account_manager,
         Lifetime::Persistent,

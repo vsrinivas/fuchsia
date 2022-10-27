@@ -10,6 +10,10 @@
         runner: "elf",
         binary: "bin/account_handler",
         args: [ "--ephemeral" ],
+
+        // Subscribe to component lifecycle events so we can gracefully stop
+        // minfs instances we supervise
+        lifecycle: { stop_event: "notify" },
     },
     capabilities: [
         {
@@ -21,7 +25,14 @@
             protocol: [
                 "fuchsia.identity.authentication.AlwaysFailStorageUnlockMechanism",
                 "fuchsia.identity.authentication.AlwaysSucceedStorageUnlockMechanism",
+                "fuchsia.process.Launcher",
             ],
+        },
+        {
+            directory: "dev-topological",
+            from: "parent",
+            rights: [ "rw*" ],
+            path: "/dev",
         },
     ],
     expose: [

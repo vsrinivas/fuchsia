@@ -24,11 +24,20 @@ use {
     crate::{account_handler::AccountHandler, common::AccountLifetime},
     account_common::AccountId,
     anyhow::{Context as _, Error},
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_io as fio,
+    fidl_fuchsia_process_lifecycle::LifecycleRequestStream,
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_fs::directory::open_in_namespace,
     fuchsia_inspect::Inspector,
+    fuchsia_runtime::{self as fruntime, HandleInfo, HandleType},
     futures::StreamExt,
     std::sync::Arc,
+    storage_manager::{
+        minfs::{disk::DevDiskManager, StorageManager as MinfsStorageManager},
+        StorageManager,
+    },
     tracing::{error, info},
 };
 
@@ -37,7 +46,22 @@ const DATA_DIR: &str = "/data";
 /// This command line flag (prefixed with `--`) results in an in-memory ephemeral account.
 const EPHEMERAL_FLAG: &str = "ephemeral";
 
-// TODO(dnordstrom): Remove all panics.
+fn set_up_lifecycle_watcher<SM>(account_handler: Arc<AccountHandler<SM>>) -> fasync::Task<()>
+where
+    SM: StorageManager<Key = [u8; 32]> + Send + Sync + 'static,
+{
+    let handle_info = HandleInfo::new(HandleType::Lifecycle, 0);
+    let handle = fruntime::take_startup_handle(handle_info)
+        .expect("must have been provided a lifecycle channel in procargs");
+    let async_chan =
+        fasync::Channel::from_channel(handle.into()).expect("Async channel conversion failed.");
+    let req_stream = LifecycleRequestStream::from_channel(async_chan);
+
+    fasync::Task::spawn(
+        async move { account_handler.handle_requests_for_lifecycle(req_stream).await },
+    )
+}
+
 fn main() -> Result<(), Error> {
     let mut opts = getopts::Options::new();
     opts.optflag("", EPHEMERAL_FLAG, "this account is an in-memory ephemeral account");
@@ -64,7 +88,23 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     inspect_runtime::serve(&inspector, &mut fs)?;
 
-    let account_handler = Arc::new(AccountHandler::new(account_id, lifetime, &inspector));
+    let account_handler = Arc::new(AccountHandler::new(
+        account_id,
+        lifetime,
+        &inspector,
+        /*storage_manager_factory=*/
+        MinfsStorageManager::new(DevDiskManager::new(
+            open_in_namespace(
+                "/dev",
+                fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
+            )
+            .expect("open /dev root for disk manager"),
+        )),
+    ));
+
+    let _lifecycle_task: fuchsia_async::Task<()> =
+        set_up_lifecycle_watcher(Arc::clone(&account_handler));
+
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::Task::spawn(async move {

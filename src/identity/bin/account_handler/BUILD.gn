@@ -14,14 +14,19 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.identity.account:fuchsia.identity.account_rust",
     "//sdk/fidl/fuchsia.identity.authentication:fuchsia.identity.authentication_rust",
     "//sdk/fidl/fuchsia.identity.internal:fuchsia.identity.internal_rust",
+    "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
+    "//sdk/fidl/fuchsia.process.lifecycle:fuchsia.process.lifecycle_rust",
     "//src/identity/lib/account_common",
     "//src/identity/lib/identity_common",
+    "//src/identity/lib/storage_manager",
     "//src/lib/diagnostics/inspect/runtime/rust",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/diagnostics/log/rust",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/fuchsia-fs",
+    "//src/lib/fuchsia-runtime",
     "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:bincode",
     "//third_party/rust_crates:futures",
@@ -35,6 +40,7 @@ rustc_binary("bin") {
   ]
 
   test_deps = [
+    "//src/identity/lib/identity_testutil",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:typed-builder",

@@ -22,6 +22,7 @@ use {
         AccountHandlerControlCreateAccountRequest, AccountHandlerControlRequest,
         AccountHandlerControlRequestStream,
     },
+    fidl_fuchsia_process_lifecycle::{LifecycleRequest, LifecycleRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::client,
     fuchsia_inspect::{Inspector, Property},
@@ -29,6 +30,7 @@ use {
     identity_common::TaskGroupError,
     lazy_static::lazy_static,
     std::{collections::HashMap, convert::TryInto, fmt, sync::Arc},
+    storage_manager::StorageManager,
     tracing::{error, info, warn},
 };
 
@@ -37,7 +39,7 @@ lazy_static! {
     /// attempt, for manual and automatic tests. This constant is specifically
     /// for the developer authenticator implementations
     /// (see src/identity/bin/dev_authenticator) and needs to stay in sync.
-    static ref MAGIC_PREKEY: Vec<u8>  = vec![77; 32];
+    static ref MAGIC_PREKEY: [u8; 32] = [77; 32];
 
     static ref DEV_AUTHENTICATION_MECHANISM_PATHS: HashMap<&'static str, &'static str> = HashMap::from(
         [
@@ -73,7 +75,7 @@ enum Lifecycle {
 impl fmt::Debug for Lifecycle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let name = match self {
-            &Lifecycle::Uninitialized => "Uninitialized",
+            &Lifecycle::Uninitialized { .. } => "Uninitialized",
             &Lifecycle::Locked { .. } => "Locked",
             &Lifecycle::Initialized { .. } => "Initialized",
             &Lifecycle::Finished => "Finished",
@@ -84,7 +86,10 @@ impl fmt::Debug for Lifecycle {
 
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
 /// the execution context.
-pub struct AccountHandler {
+pub struct AccountHandler<SM>
+where
+    SM: StorageManager,
+{
     /// The current state of the AccountHandler state machine, optionally containing
     /// a reference to the `Account` and its pre-authentication data, depending on the
     /// state. The methods of the AccountHandler drives changes to the state.
@@ -95,18 +100,30 @@ pub struct AccountHandler {
 
     /// Helper for outputting account handler information via fuchsia_inspect.
     inspect: Arc<inspect::AccountHandler>,
+
+    /// The storage manager for this account.
+    storage_manager: Arc<Mutex<SM>>,
 }
 
-impl AccountHandler {
+impl<SM> AccountHandler<SM>
+where
+    SM: StorageManager<Key = [u8; 32]> + Send + Sync + 'static,
+{
     /// Constructs a new AccountHandler and puts it in the Uninitialized state.
     pub fn new(
         account_id: AccountId,
         lifetime: AccountLifetime,
         inspector: &Inspector,
-    ) -> AccountHandler {
+        storage_manager: SM,
+    ) -> AccountHandler<SM> {
         let inspect =
             Arc::new(inspect::AccountHandler::new(inspector.root(), &account_id, "uninitialized"));
-        Self { state: Arc::new(Mutex::new(Lifecycle::Uninitialized)), lifetime, inspect }
+        Self {
+            state: Arc::new(Mutex::new(Lifecycle::Uninitialized)),
+            lifetime,
+            inspect,
+            storage_manager: Arc::new(Mutex::new(storage_manager)),
+        }
     }
 
     /// Asynchronously handles the supplied stream of `AccountHandlerControlRequest` messages.
@@ -199,7 +216,7 @@ impl AccountHandler {
             .into();
 
         let mut state_lock = self.state.lock().await;
-        match *state_lock {
+        match &*state_lock {
             Lifecycle::Uninitialized => {
                 let enrollment_state = match (&self.lifetime, maybe_auth_mechanism_id) {
                     (AccountLifetime::Persistent { .. }, Some(auth_mechanism_id)) => {
@@ -249,6 +266,14 @@ impl AccountHandler {
                     Account::create(self.lifetime.clone(), sender, self.inspect.get_node())
                         .await
                         .map_err(|err| err.api_error)?;
+
+                let () = self.storage_manager.lock().await.provision(&MAGIC_PREKEY).await.map_err(
+                    |err| {
+                        warn!("CreateAccount failed to provision StorageManager: {:?}", err);
+                        ApiError::Resource
+                    },
+                )?;
+
                 let pre_auth_state_bytes: Vec<u8> = (&pre_auth_state).try_into()?;
                 *state_lock = Lifecycle::Initialized { account: Arc::new(account), pre_auth_state };
                 self.inspect.lifecycle.set("initialized");
@@ -269,10 +294,12 @@ impl AccountHandler {
             return Err(ApiError::InvalidRequest);
         }
         let mut state_lock = self.state.lock().await;
-        match *state_lock {
+        match &*state_lock {
             Lifecycle::Uninitialized => {
                 let pre_auth_state = PreAuthState::try_from(pre_auth_state_bytes)?;
+
                 *state_lock = Lifecycle::Locked { pre_auth_state };
+
                 self.inspect.lifecycle.set("locked");
                 Ok(())
             }
@@ -324,6 +351,15 @@ impl AccountHandler {
                 let account = Account::load(self.lifetime.clone(), sender, self.inspect.get_node())
                     .await
                     .map_err(|err| err.api_error)?;
+
+                let () =
+                    self.storage_manager.lock().await.unlock_storage(&MAGIC_PREKEY).await.map_err(
+                        |err| {
+                            warn!("UnlockAccount failed to unlock StorageManager: {:?}", err);
+                            ApiError::Resource
+                        },
+                    )?;
+
                 let mut pre_auth_state = pre_auth_state_ref.clone();
                 let pre_auth_state_bytes = maybe_updated_enrollment_state
                     .map(|updated_enrollment_state| {
@@ -347,7 +383,13 @@ impl AccountHandler {
     ///
     /// Optionally returns a serialized PreAuthState if it has changed.
     async fn lock_account(&self) -> Result<Option<Vec<u8>>, ApiError> {
-        Self::lock_now(Arc::clone(&self.state), Arc::clone(&self.inspect)).await.map_err(|err| {
+        Self::lock_now(
+            Arc::clone(&self.state),
+            Arc::clone(&self.storage_manager),
+            Arc::clone(&self.inspect),
+        )
+        .await
+        .map_err(|err| {
             warn!("LockAccount call failed: {:?}", err);
             err.api_error
         })
@@ -359,18 +401,26 @@ impl AccountHandler {
             let mut state_lock = self.state.lock().await;
             std::mem::replace(&mut *state_lock, Lifecycle::Finished)
         };
+
         self.inspect.lifecycle.set("finished");
         let account_arc = match old_lifecycle {
             Lifecycle::Locked { .. } => {
                 warn!("Removing a locked account is not yet implemented");
                 return Err(ApiError::UnsupportedOperation);
             }
-            Lifecycle::Initialized { account, .. } => account,
+            Lifecycle::Initialized { account, .. } => {
+                self.storage_manager.lock().await.destroy().await.map_err(|err| {
+                    warn!("remove_account failed to destroy StorageManager: {:?}", err);
+                    ApiError::Resource
+                })?;
+                account
+            }
             _ => {
                 warn!("No account is initialized");
                 return Err(ApiError::FailedPrecondition);
             }
         };
+
         // TODO(fxbug.dev/555): After this point, error recovery might include putting the account back
         // in the lock.
         if let Err(TaskGroupError::AlreadyCancelled) = account_arc.task_group().cancel().await {
@@ -508,15 +558,18 @@ impl AccountHandler {
         }
         // Use weak pointers in order to not interfere with destruction of AccountHandler
         let state_weak = Arc::downgrade(&self.state);
+        let storage_manager_weak = Arc::downgrade(&self.storage_manager);
         let inspect_weak = Arc::downgrade(&self.inspect);
         let (sender, receiver) = lock_request::channel();
         fasync::Task::spawn(async move {
             match receiver.await {
                 Ok(()) => {
-                    if let (Some(state), Some(inspect)) =
-                        (state_weak.upgrade(), inspect_weak.upgrade())
-                    {
-                        if let Err(err) = Self::lock_now(state, inspect).await {
+                    if let (Some(state), Some(storage_manager), Some(inspect)) = (
+                        state_weak.upgrade(),
+                        storage_manager_weak.upgrade(),
+                        inspect_weak.upgrade(),
+                    ) {
+                        if let Err(err) = Self::lock_now(state, storage_manager, inspect).await {
                             warn!("Lock request failure: {:?}", err);
                         }
                     }
@@ -536,6 +589,7 @@ impl AccountHandler {
     /// Returns a serialized PreAuthState if it's changed.
     async fn lock_now(
         state: Arc<Mutex<Lifecycle>>,
+        storage_manager: Arc<Mutex<SM>>,
         inspect: Arc<inspect::AccountHandler>,
     ) -> Result<Option<Vec<u8>>, AccountManagerError> {
         let mut state_lock = state.lock().await;
@@ -545,6 +599,10 @@ impl AccountHandler {
                 Ok(None)
             }
             Lifecycle::Initialized { account, pre_auth_state } => {
+                let () = storage_manager.lock().await.lock_storage().await.map_err(|err| {
+                    warn!("LockAccount failed to lock StorageManager: {:?}", err);
+                    AccountManagerError::new(ApiError::Internal).with_cause(err)
+                })?;
                 let _ = account.task_group().cancel().await; // Ignore AlreadyCancelled error
 
                 // TODO(apsbhatia): Explore better alternatives to avoid cloning here.
@@ -558,6 +616,39 @@ impl AccountHandler {
                     "A lock operation was attempted in the {:?} state",
                     invalid_state
                 ))),
+        }
+    }
+
+    /// Serially process a stream of incoming LifecycleRequest FIDL requests.
+    pub async fn handle_requests_for_lifecycle(&self, mut request_stream: LifecycleRequestStream) {
+        info!("Watching for lifecycle events from startup handle");
+        while let Some(request) = request_stream.try_next().await.expect("read lifecycle request") {
+            match request {
+                LifecycleRequest::Stop { control_handle } => {
+                    // `account_handler` supervises a filesystem process, which expects to
+                    // receive advance notice when shutdown is imminent so that it can flush any
+                    // cached writes to disk.  To uphold our end of that contract, we implement a
+                    // lifecycle listener which responds to a stop request by locking all unlocked
+                    // accounts, which in turn has the effect of gracefully stopping the filesystem
+                    // and locking storage.
+                    info!("Received lifecycle stop request; attempting graceful teardown");
+
+                    match self.lock_account().await {
+                        Ok(_) => {
+                            info!("Shutdown complete");
+                        }
+                        Err(e) => {
+                            error!(
+                                "error shutting down for lifecycle request; data may not be fully \
+                                    flushed {:?}",
+                                e
+                            );
+                        }
+                    }
+
+                    control_handle.shutdown();
+                }
+            }
         }
     }
 }
@@ -577,8 +668,10 @@ mod tests {
     use fuchsia_inspect::{assert_data_tree, Inspector};
     use fuchsia_zircon as zx;
     use futures::future::join;
+    use identity_testutil::{make_formatted_account_partition_any_key, MockDiskManager};
     use lazy_static::lazy_static;
     use std::sync::Arc;
+    use storage_manager::minfs::StorageManager as MinfsStorageManager;
     use typed_builder::TypedBuilder;
 
     const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
@@ -639,11 +732,23 @@ mod tests {
 
     type TestResult = Result<(), AccountHandlerTestError>;
 
+    fn make_storage_manager(disk_manager: MockDiskManager) -> MinfsStorageManager<MockDiskManager> {
+        MinfsStorageManager::new(disk_manager)
+    }
+
     fn create_account_handler(
         lifetime: AccountLifetime,
         inspector: Arc<Inspector>,
     ) -> (AccountHandlerControlProxy, impl Future<Output = ()>) {
-        let test_object = AccountHandler::new(TEST_ACCOUNT_ID.clone().into(), lifetime, &inspector);
+        let test_object = AccountHandler::new(
+            TEST_ACCOUNT_ID.clone().into(),
+            lifetime,
+            &inspector,
+            /*storage_manager=*/
+            make_storage_manager(
+                MockDiskManager::new().with_partition(make_formatted_account_partition_any_key()),
+            ),
+        );
         let (proxy, request_stream) = create_proxy_and_stream::<AccountHandlerControlMarker>()
             .expect("Failed to create proxy and stream");
 
