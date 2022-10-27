@@ -5,6 +5,6 @@
     include: [ "//src/proc/tests/android/gvisor/meta/gvisor.shard.cml" ],
     program: {
         binary: "data/tests/socket_domain_test",
-        args: [ "--gunit_filter=-*.RecvTimeoutReadSucceeds/*:*.RecvTimeoutNegSecRead/*:*.SetSocketRecvBufForceAboveMax/*:*.SetGetSendTimeoutLargerArg/*:*.SetGetRecvTimeoutLargerArg/*:*.RecvTimeoutUsecTooLarge/*:*.SendTimeoutUsecTooLarge/*:*.RecvTimeoutUsecNeg/*:SendTimeoutUsecNeg/*:*.SendTimeoutUsecNeg/*:*.GetSockoptProtocol/*:*.GetSocketOutOfBandInlineOption/*:*.GetSetSocketRcvlowatOption/*" ],
+        args: [ "--gunit_filter=-*.RecvTimeoutReadSucceeds/*:*.RecvTimeoutNegSecRead/*:*.SetSocketRecvBufForceAboveMax/*:*.SetGetSendTimeoutLargerArg/*:*.SetGetRecvTimeoutLargerArg/*:*.RecvTimeoutUsecTooLarge/*:*.SendTimeoutUsecTooLarge/*:*.RecvTimeoutUsecNeg/*:SendTimeoutUsecNeg/*:*.SendTimeoutUsecNeg/*:*.GetSockoptProtocol/*:*.GetSocketOutOfBandInlineOption/*:*.GetSetSocketRcvlowatOption/*:*.GetSockoptDomain/*" ],
     },
 }
