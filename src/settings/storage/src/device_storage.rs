@@ -406,7 +406,7 @@ impl DeviceStorage {
         let typed_storage = self
             .typed_storage_map
             .get(key)
-            // TODO(fxbug.dev/67371) Replace this with an error result.
+            // TODO(fxbug.dev/113292) Replace this with an error result.
             .unwrap_or_else(|| panic!("Invalid data keyed by {}", key));
         let cached_storage = typed_storage.cached_storage.lock().await;
         let new = if cached_storage.current_data.is_none() || !self.caching_enabled {
