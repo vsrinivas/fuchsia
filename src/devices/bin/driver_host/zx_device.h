@@ -38,6 +38,7 @@
 #include "driver.h"
 #include "inspect.h"
 #include "sdk/lib/driver_compat/symbols.h"
+#include "src/devices/bin/driver_host/devfs_vnode.h"
 
 class CompositeDevice;
 class ProxyDevice;
@@ -462,8 +463,7 @@ struct zx_device
   fbl::Mutex controller_lock;
   std::optional<fidl::ServerBindingRef<fuchsia_device_manager::DeviceController>> controller_binding
       TA_GUARDED(controller_lock);
-  // Actual type is DevfsVnode.  Needs to be fs::Vnode to break header cycle
-  fbl::RefPtr<fs::Vnode> vnode;
+  fbl::RefPtr<DevfsVnode> vnode;
 
   fbl::Mutex proxy_ios_lock;
   ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;

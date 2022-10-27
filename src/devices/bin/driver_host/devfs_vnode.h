@@ -14,7 +14,8 @@
 #include <ddktl/fidl.h>
 
 #include "src/lib/storage/vfs/cpp/vnode.h"
-#include "zx_device.h"
+
+struct zx_device;
 
 class DevfsVnode : public fs::Vnode, public fidl::WireServer<fuchsia_device::Controller> {
  public:
