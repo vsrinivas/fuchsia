@@ -103,7 +103,8 @@ impl UpdateService {
         let proxy = attempts_monitor.into_proxy().context("MonitorAllUpdates into proxy")?;
         let callback =
             Box::new(move |control_handle| RealAttemptNotifier { proxy, control_handle });
-        Ok(self.update_manager.handle_all_these_updates(callback).await)
+        self.update_manager.handle_all_these_updates(callback).await;
+        Ok(())
     }
 }
 

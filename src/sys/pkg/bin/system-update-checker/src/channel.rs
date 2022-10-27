@@ -24,7 +24,7 @@ use std::time::Duration;
 use thiserror::Error;
 use tracing::{error, info, warn};
 
-static CHANNEL_PACKAGE_MAP: &'static str = "channel_package_map.json";
+static CHANNEL_PACKAGE_MAP: &str = "channel_package_map.json";
 
 pub async fn build_current_channel_manager_and_notifier<S: ServiceConnect>(
     service_connector: S,

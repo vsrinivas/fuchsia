@@ -19,7 +19,7 @@ where
     N: StateNotifier,
     A: AttemptNotifier,
 {
-    let timer = config.poll_frequency().map(|duration| fasync::Interval::new(duration.into()));
+    let timer = config.poll_frequency().map(fasync::Interval::new);
 
     async move {
         let mut timer = match timer {

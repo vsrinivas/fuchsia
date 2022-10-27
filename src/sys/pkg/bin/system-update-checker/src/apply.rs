@@ -19,10 +19,10 @@ use futures::{future::BoxFuture, prelude::*, stream::BoxStream};
 use tracing::info;
 
 // On success, system will reboot before this function returns
-pub async fn apply_system_update<'a>(
+pub async fn apply_system_update(
     initiator: Initiator,
-    target_channel_updater: &'a dyn TargetChannelUpdater,
-) -> Result<BoxStream<'a, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error> {
+    target_channel_updater: &dyn TargetChannelUpdater,
+) -> Result<BoxStream<'_, Result<ApplyState, (ApplyProgress, anyhow::Error)>>, anyhow::Error> {
     let installer_proxy =
         connect_to_protocol::<InstallerMarker>().context("connecting to component Installer")?;
     let mut update_installer = RealUpdateInstaller { installer_proxy };
@@ -116,7 +116,7 @@ async fn apply_system_update_impl(
     let update_url = AbsolutePackageUrl::parse(
         &target_channel_updater
             .get_target_channel_update_url()
-            .unwrap_or(default_update_url.to_owned()),
+            .unwrap_or_else(|| default_update_url.to_owned()),
     )?;
     let (reboot_controller, reboot_controller_server_end) =
         fidl::endpoints::create_proxy::<RebootControllerMarker>()
@@ -161,7 +161,7 @@ async fn monitor_update_progress(
 
             reboot_controller
                 .unblock()
-                .map_err(|e| Error::RebootFailed(e))
+                .map_err(Error::RebootFailed)
                 .context("notify installer it can reboot when ready")
                 .map_err(|e| (apply_progress, e))?;
             // On success, wait for reboot to happen.

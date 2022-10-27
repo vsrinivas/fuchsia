@@ -360,7 +360,7 @@ where
                     Op::Request(UpdateManagerRequest::GetLastKnownUpdatePackageHash {
                         responder,
                     }) => {
-                        let _ = responder.send(last_known_update_package.clone());
+                        let _ = responder.send(last_known_update_package);
                     }
                     Op::Status(StatusEvent::State(state)) => {
                         current_state = Some(state.clone());

@@ -136,11 +136,11 @@ async fn check_for_system_update_impl(
 }
 
 fn current_system_image_merkle(file_system: &impl FileSystem) -> Result<Hash, Error> {
-    Ok(file_system
+    file_system
         .read_to_string("/pkgfs/system/meta")
         .map_err(Error::ReadSystemMeta)?
         .parse::<Hash>()
-        .map_err(Error::ParseSystemMeta)?)
+        .map_err(Error::ParseSystemMeta)
 }
 
 async fn gc(space_manager: &fidl_space::ManagerProxy) -> Result<(), anyhow::Error> {
@@ -189,8 +189,9 @@ async fn latest_update_package_attempt(
 ) -> Result<UpdatePackage, errors::UpdatePackage> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(errors::UpdatePackage::CreateDirectoryProxy)?;
-    let update_package =
-        channel_manager.get_target_channel_update_url().unwrap_or(default_update_url.to_owned());
+    let update_package = channel_manager
+        .get_target_channel_update_url()
+        .unwrap_or_else(|| default_update_url.to_owned());
     let fut = package_resolver.resolve(&update_package, dir_server_end);
     let _: fpkg::ResolutionContext = fut
         .await
@@ -226,9 +227,9 @@ async fn is_image_up_to_date(
     let (boot_manager, server_end) = fidl::endpoints::create_proxy::<BootManagerMarker>()?;
     let () = paver.find_boot_manager(server_end).context("connect to fuchsia.paver.BootManager")?;
     let configuration = match boot_manager.query_current_configuration().await {
-        Ok(response) => response
-            .map_err(|status| zx::Status::from_raw(status))
-            .context("querying current configuration")?,
+        Ok(response) => {
+            response.map_err(zx::Status::from_raw).context("querying current configuration")?
+        }
         Err(fidl::Error::ClientChannelClosed { status: zx::Status::NOT_SUPPORTED, .. }) => {
             warn!("device does not support ABR. Checking image in slot A");
             Configuration::A
