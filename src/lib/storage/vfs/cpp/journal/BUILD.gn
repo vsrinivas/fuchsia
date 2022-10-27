@@ -79,7 +79,6 @@ static_library("journal") {
       "//zircon/system/ulib/storage/buffer",
       "//zircon/system/ulib/storage/operation",
       "//zircon/system/ulib/sync",
-      "//zircon/system/ulib/zx",
       "//zircon/system/ulib/zxc",
       "//zircon/third_party/ulib/safemath",
     ]

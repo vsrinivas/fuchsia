@@ -14,10 +14,6 @@ Writer::~Writer() {
   sync_completion_t completion;
   ScheduleSubmitPages(&completion);
   ZX_ASSERT(sync_completion_wait(&completion, ZX_TIME_INFINITE) == ZX_OK);
-#ifdef __Fuchsia__
-  executor_.Terminate();
-  writeback_executor_.Terminate();
-#endif
 }
 
 zx::status<> Writer::EnqueuePage(LockedPage &page, block_t blk_addr, PageType type) {
