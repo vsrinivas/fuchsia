@@ -29,6 +29,7 @@
             name: "fshost",
             url: "fuchsia-boot:///#meta/fshost.cm",
             environment: "#fshost-env",
+            on_terminate: "reboot",
         },
         {
             name: "console",

@@ -41,7 +41,6 @@
             main_process_critical: [
                 "/bootstrap/archivist",
                 "/bootstrap/driver_manager",
-                "/bootstrap/fshost",
                 "/bootstrap/power_manager",
                 "/bootstrap/shutdown_shim",
             ],
@@ -718,6 +717,7 @@
         child_policy: {
             reboot_on_terminate: [
                 "/bootstrap/driver_index",
+                "/bootstrap/fshost",
                 "/core",
                 "/core/appmgr",
                 "/core/audio_core",
