@@ -35,10 +35,10 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
   // Get the thermal policy metadata.
   size_t actual;
-  fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config;
+  fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config;
   status = device_get_metadata(device, DEVICE_METADATA_THERMAL_CONFIG, &thermal_config,
-                               sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo), &actual);
-  if (status != ZX_OK || actual != sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo)) {
+                               sizeof(fuchsia_hardware_thermal::wire::ThermalDeviceInfo), &actual);
+  if (status != ZX_OK || actual != sizeof(fuchsia_hardware_thermal::wire::ThermalDeviceInfo)) {
     zxlogf(ERROR, "aml-thermal: Could not get thermal config metadata %d", status);
     return status;
   }
@@ -83,61 +83,53 @@ zx_status_t AmlThermal::Create(void* ctx, zx_device_t* device) {
 
 zx_status_t AmlThermal::StartConnectDispatchThread() { return loop_.StartThread(); }
 
-void AmlThermal::DdkMessage(fidl::IncomingHeaderAndMessage&& msg, DdkTransaction& txn) {
-  fidl_incoming_msg_t message = std::move(msg).ReleaseToEncodedCMessage();
-  txn.set_status(
-      fuchsia_hardware_thermal_Device_dispatch(this, txn.fidl_txn(), &message, &fidl_ops));
+void AmlThermal::GetInfo(GetInfoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-zx_status_t AmlThermal::GetInfo(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+void AmlThermal::GetDeviceInfo(GetDeviceInfoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-zx_status_t AmlThermal::GetDeviceInfo(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetDeviceInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+void AmlThermal::GetTemperatureCelsius(GetTemperatureCelsiusCompleter::Sync& completer) {
+  completer.Reply(ZX_OK, tsensor_->ReadTemperatureCelsius());
 }
 
-zx_status_t AmlThermal::GetDvfsInfo(fuchsia_hardware_thermal_PowerDomain power_domain,
-                                    fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetDvfsInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+void AmlThermal::GetDvfsInfo(GetDvfsInfoRequestView request,
+                             GetDvfsInfoCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
 
-zx_status_t AmlThermal::GetTemperatureCelsius(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetTemperatureCelsius_reply(
-      txn, ZX_OK, tsensor_->ReadTemperatureCelsius());
+void AmlThermal::GetStateChangeEvent(GetStateChangeEventCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::event());
 }
 
-zx_status_t AmlThermal::GetStateChangeEvent(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetStateChangeEvent_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                                  ZX_HANDLE_INVALID);
+void AmlThermal::GetStateChangePort(GetStateChangePortCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, zx::port());
 }
 
-zx_status_t AmlThermal::GetStateChangePort(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetStateChangePort_reply(txn, ZX_ERR_NOT_SUPPORTED,
-                                                                 ZX_HANDLE_INVALID);
+void AmlThermal::SetTripCelsius(SetTripCelsiusRequestView request,
+                                SetTripCelsiusCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t AmlThermal::SetTripCelsius(uint32_t id, float temp, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceSetTripCelsius_reply(txn, ZX_ERR_NOT_SUPPORTED);
+void AmlThermal::GetDvfsOperatingPoint(GetDvfsOperatingPointRequestView request,
+                                       GetDvfsOperatingPointCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-zx_status_t AmlThermal::GetDvfsOperatingPoint(fuchsia_hardware_thermal_PowerDomain power_domain,
-                                              fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
+void AmlThermal::SetDvfsOperatingPoint(SetDvfsOperatingPointRequestView request,
+                                       SetDvfsOperatingPointCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
-zx_status_t AmlThermal::SetDvfsOperatingPoint(uint16_t op_idx,
-                                              fuchsia_hardware_thermal_PowerDomain power_domain,
-                                              fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceSetDvfsOperatingPoint_reply(txn, ZX_ERR_NOT_SUPPORTED);
+void AmlThermal::GetFanLevel(GetFanLevelCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED, 0);
 }
 
-zx_status_t AmlThermal::GetFanLevel(fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceGetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED, 0);
-}
-
-zx_status_t AmlThermal::SetFanLevel(uint32_t fan_level, fidl_txn_t* txn) {
-  return fuchsia_hardware_thermal_DeviceSetFanLevel_reply(txn, ZX_ERR_NOT_SUPPORTED);
+void AmlThermal::SetFanLevel(SetFanLevelRequestView request,
+                             SetFanLevelCompleter::Sync& completer) {
+  completer.Reply(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t AmlThermal::ThermalConnect(zx::channel ch) { return ZX_ERR_NOT_SUPPORTED; }

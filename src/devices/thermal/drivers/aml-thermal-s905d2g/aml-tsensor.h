@@ -5,8 +5,8 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_AML_TSENSOR_H_
 
+#include <fidl/fuchsia.hardware.thermal/cpp/wire.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
-#include <fuchsia/hardware/thermal/c/fidl.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
@@ -33,8 +33,8 @@ class AmlTSensor {
         hiu_mmio_(std::move(hiu_mmio)) {}
   float ReadTemperatureCelsius();
   zx_status_t Create(zx_device_t* parent,
-                     fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config);
-  zx_status_t InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config,
+                     fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config);
+  zx_status_t InitSensor(fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config,
                          uint32_t version);
   zx_status_t GetStateChangePort(zx_handle_t* port);
   ~AmlTSensor();
@@ -57,7 +57,7 @@ class AmlTSensor {
   thrd_t irq_thread_;
   std::atomic<bool> running_;
   zx_handle_t port_;
-  fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config_;
+  fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config_;
   uint32_t current_trip_idx_ = 0;
 };
 }  // namespace thermal

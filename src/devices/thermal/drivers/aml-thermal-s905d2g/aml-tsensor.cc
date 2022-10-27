@@ -351,7 +351,7 @@ zx_status_t AmlTSensor::GetStateChangePort(zx_handle_t* port) {
 }
 
 zx_status_t AmlTSensor::Create(zx_device_t* parent,
-                               fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config) {
+                               fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config) {
   // InitPdev
   zx_status_t status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
@@ -397,10 +397,9 @@ zx_status_t AmlTSensor::Create(zx_device_t* parent,
   return InitSensor(thermal_config, device_info.pid);
 }
 
-zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal_ThermalDeviceInfo thermal_config,
+zx_status_t AmlTSensor::InitSensor(fuchsia_hardware_thermal::wire::ThermalDeviceInfo thermal_config,
                                    uint32_t version) {
-  // Copy the thermal_config
-  memcpy(&thermal_config_, &thermal_config, sizeof(fuchsia_hardware_thermal_ThermalDeviceInfo));
+  thermal_config_ = thermal_config;
 
   switch (version) {
     case PDEV_PID_AMLOGIC_S905D2:

@@ -136,8 +136,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/devices/thermal/bin/thermal-cli",
     "//src/devices/thermal/bin/thermal-cli:common",
     "//src/devices/thermal/bin/thermal-cli:thermal-cli-test-bin",
-    "//src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-driver",
-    "//src/devices/thermal/drivers/aml-thermal-s905d2g:aml-thermal-s905d2g-test-bin",
     "//src/devices/thermal/drivers/aml-thermal-s905d2g-legacy:aml-thermal-s905d2g-legacy-driver",
     "//src/devices/thermal/drivers/aml-thermal-s905d2g-legacy:aml-thermal-s905d2g-legacy-test-bin",
     "//src/devices/usb/bin/usb-fwloader",
