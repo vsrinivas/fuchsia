@@ -9,11 +9,9 @@ use fidl_fuchsia_process as fprocess;
 use fidl_fuchsia_starnix_developer as fstardev;
 use fuchsia_runtime::{HandleInfo, HandleType};
 use fuchsia_zircon::{self as zx, sys::ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET};
-#[cfg(not(feature = "restricted_mode"))]
 use process_builder::elf_parse;
 use std::convert::TryFrom;
 use std::sync::Arc;
-#[cfg(not(feature = "restricted_mode"))]
 use zerocopy::AsBytes;
 
 use crate::fs::ext4::ExtFilesystem;
@@ -21,7 +19,6 @@ use crate::fs::fuchsia::{create_file_from_handle, RemoteFs, SyslogFile};
 use crate::fs::*;
 use crate::logging::strace;
 use crate::mm::MemoryManager;
-#[cfg(not(feature = "restricted_mode"))]
 use crate::mm::{DesiredAddress, MappingOptions, PAGE_SIZE};
 use crate::signals::dequeue_signal;
 use crate::syscalls::{
@@ -30,7 +27,6 @@ use crate::syscalls::{
 };
 use crate::task::*;
 use crate::types::*;
-#[cfg(not(feature = "restricted_mode"))]
 use crate::vmex_resource::VMEX_RESOURCE;
 
 /// Contains context to track the most recently failing system call.
@@ -133,7 +129,6 @@ pub fn process_completed_syscall(
     // Handle the debug address after the thread is set up to continue, because
     // `set_process_debug_addr` expects the register state to be in a post-syscall state (most
     // importantly the instruction pointer needs to be "correct").
-    #[cfg(not(feature = "restricted_mode"))]
     set_process_debug_addr(current_task)?;
 
     Ok(None)
@@ -153,7 +148,6 @@ pub fn process_completed_syscall(
 /// - `current_task`: The task to set the property for. The register's of this task, the instruction
 ///                   pointer specifically, needs to be set to the value with which the task is
 ///                   expected to resume.
-#[cfg(not(feature = "restricted_mode"))]
 pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errno> {
     let dt_debug_address = match current_task.dt_debug_address {
         Some(dt_debug_address) => dt_debug_address,
@@ -174,13 +168,18 @@ pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errn
         .process
         .get_debug_addr()
         .map_err(|err| from_status_like_fdio!(err))?;
+    let debug_addr = current_task
+        .kernel()
+        .starnix_process
+        .get_debug_addr()
+        .map_err(|status| from_status_like_fdio!(status))?;
 
     // If existing_debug_addr != ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET then there is no reason to
     // insert the interrupt.
     if existing_debug_addr != ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET as u64 {
         // Still set the debug address, and clear the debug address from `current_task` to avoid
         // entering this function again.
-        match current_task.thread_group.process.set_debug_addr(&debug_address.value) {
+        match current_task.thread_group.process.set_debug_addr(&debug_addr) {
             Err(zx::Status::ACCESS_DENIED) => {}
             status => status.map_err(|err| from_status_like_fdio!(err))?,
         };
@@ -221,7 +220,7 @@ pub fn set_process_debug_addr(current_task: &mut CurrentTask) -> Result<(), Errn
     current_task
         .thread_group
         .process
-        .set_debug_addr(&debug_address.value)
+        .set_debug_addr(&debug_addr)
         .map_err(|err| from_status_like_fdio!(err))?;
     current_task.dt_debug_address = None;
 
