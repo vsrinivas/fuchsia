@@ -1029,7 +1029,13 @@ pub fn sys_ioctl(
     user_addr: UserAddress,
 ) -> Result<SyscallResult, Errno> {
     let file = current_task.files.get(fd)?;
-    file.ioctl(current_task, request, user_addr)
+    match request {
+        FIONBIO => {
+            file.update_file_flags(OpenFlags::NONBLOCK, OpenFlags::NONBLOCK);
+            Ok(SUCCESS)
+        }
+        _ => file.ioctl(current_task, request, user_addr),
+    }
 }
 
 pub fn sys_symlinkat(
