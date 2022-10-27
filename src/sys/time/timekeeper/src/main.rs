@@ -22,7 +22,7 @@ use {
         },
         enums::{InitialClockState, InitializeRtcOutcome, Role, StartClockSource, Track},
         rtc::{Rtc, RtcCreationError, RtcImpl},
-        time_source::{PushTimeSource, TimeSource},
+        time_source::{TimeSource, TimeSourceLauncher},
         time_source_manager::TimeSourceManager,
     },
     anyhow::{Context as _, Error},
@@ -89,14 +89,14 @@ struct TimeSourceUrls {
 const COBALT_EXPERIMENT: TimeMetricDimensionExperiment = TimeMetricDimensionExperiment::None;
 
 /// The information required to maintain UTC for the primary track.
-struct PrimaryTrack<T: TimeSource> {
-    time_source: T,
+struct PrimaryTrack {
+    time_source: TimeSource,
     clock: Arc<zx::Clock>,
 }
 
 /// The information required to maintain UTC for the monitor track.
-struct MonitorTrack<T: TimeSource> {
-    time_source: T,
+struct MonitorTrack {
+    time_source: TimeSource,
     clock: Arc<zx::Clock>,
 }
 
@@ -120,11 +120,13 @@ async fn main() -> Result<(), Error> {
 
     info!("constructing time sources");
     let primary_track = PrimaryTrack {
-        time_source: PushTimeSource::new(time_source_urls.primary.to_string()),
+        time_source: TimeSource::Push(
+            TimeSourceLauncher::new(time_source_urls.primary.to_string()).into(),
+        ),
         clock: Arc::new(utc_clock),
     };
     let monitor_track = time_source_urls.monitor.map(|url| MonitorTrack {
-        time_source: PushTimeSource::new(url.to_string()),
+        time_source: TimeSource::Push(TimeSourceLauncher::new(url.to_string()).into()),
         clock: Arc::new(create_monitor_clock(&primary_track.clock)),
     });
 
@@ -234,15 +236,14 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
 /// The top-level control loop for time synchronization.
 ///
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
-async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
-    mut primary: PrimaryTrack<T>,
-    optional_monitor: Option<MonitorTrack<T>>,
+async fn maintain_utc<R: 'static, D: 'static>(
+    mut primary: PrimaryTrack,
+    optional_monitor: Option<MonitorTrack>,
     optional_rtc: Option<R>,
     diagnostics: Arc<D>,
     config: Arc<Config>,
 ) where
     R: Rtc,
-    T: TimeSource,
     D: Diagnostics,
 {
     info!("record the state at initialization.");
@@ -288,7 +289,7 @@ async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
     );
     let fut2: OptionFuture<_> = monitor_source_manager_and_clock
         .map(|(source_manager, clock)| {
-            ClockManager::<T, R, D>::execute(
+            ClockManager::<R, D>::execute(
                 clock,
                 source_manager,
                 None,
@@ -309,7 +310,7 @@ mod tests {
             diagnostics::FakeDiagnostics,
             enums::{InitialClockState, InitializeRtcOutcome, WriteRtcOutcome},
             rtc::FakeRtc,
-            time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
+            time_source::{Event as TimeSourceEvent, FakePushTimeSource, Sample},
         },
         fidl_fuchsia_time_external as ftexternal, fuchsia_zircon as zx,
         futures::FutureExt,
@@ -362,18 +363,19 @@ mod tests {
         let mut fut = maintain_utc(
             PrimaryTrack {
                 clock: Arc::clone(&primary_clock),
-                time_source: FakeTimeSource::events(vec![
+                time_source: FakePushTimeSource::events(vec![
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
                     TimeSourceEvent::from(Sample::new(
                         monotonic_ref + OFFSET,
                         monotonic_ref,
                         STD_DEV,
                     )),
-                ]),
+                ])
+                .into(),
             },
             Some(MonitorTrack {
                 clock: Arc::clone(&monitor_clock),
-                time_source: FakeTimeSource::events(vec![
+                time_source: FakePushTimeSource::events(vec![
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Network },
                     TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok },
                     TimeSourceEvent::from(Sample::new(
@@ -381,7 +383,8 @@ mod tests {
                         monotonic_ref,
                         STD_DEV,
                     )),
-                ]),
+                ])
+                .into(),
             }),
             Some(rtc.clone()),
             Arc::clone(&diagnostics),
@@ -437,9 +440,10 @@ mod tests {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let config = make_test_config();
 
-        let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
+        let time_source = FakePushTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
-        }]);
+        }])
+        .into();
 
         // Maintain UTC until no more work remains
         let mut fut = maintain_utc(
@@ -475,9 +479,10 @@ mod tests {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let config = make_test_config();
 
-        let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
+        let time_source = FakePushTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
-        }]);
+        }])
+        .into();
 
         // Maintain UTC until no more work remains
         let mut fut = maintain_utc(
@@ -524,9 +529,10 @@ mod tests {
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let config = make_test_config();
 
-        let time_source = FakeTimeSource::events(vec![TimeSourceEvent::StatusChange {
+        let time_source = FakePushTimeSource::events(vec![TimeSourceEvent::StatusChange {
             status: ftexternal::Status::Network,
-        }]);
+        }])
+        .into();
 
         // Maintain UTC until no more work remains
         let mut fut = maintain_utc(

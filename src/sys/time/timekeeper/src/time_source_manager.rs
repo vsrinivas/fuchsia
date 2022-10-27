@@ -5,7 +5,9 @@
 use {
     crate::diagnostics::{Diagnostics, Event},
     crate::enums::{Role, SampleValidationError, TimeSourceError},
-    crate::time_source::{Event as TimeSourceEvent, Sample, TimeSource},
+    crate::time_source::{
+        BoxedPushSource, BoxedPushSourceEventStream, Event as TimeSourceEvent, Sample, TimeSource,
+    },
     fidl_fuchsia_time_external::Status,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon as zx,
@@ -42,81 +44,56 @@ impl MonotonicProvider for KernelMonotonicProvider {
     }
 }
 
-/// A wrapper that launches a time source, validates time updates from the source, and handles
-/// relaunching the source in the case of failures.
+/// A wrapper that provide common interface for other time source managers.
 ///
 /// In the future `TimeSourceManager` will also handle multiple time sources and the selection
 /// between them. Meaning it will manage up to three sources.
-pub struct TimeSourceManager<T: TimeSource, D: Diagnostics, M: MonotonicProvider> {
+pub struct TimeSourceManager<D: Diagnostics, M: MonotonicProvider> {
+    /// Manager for the time source.
+    manager: TimeManager<D, M>,
+}
+
+/// TODO(fxb/110804): Add PullSourceManager.
+#[allow(dead_code)]
+enum TimeManager<D: Diagnostics, M: MonotonicProvider> {
+    Push(PushSourceManager<D, M>),
+    Pull(),
+}
+
+/// A wrapper that launches a time source component, uses PushSource to obtain time samples,
+/// validates them from the source, and handles relaunching the source in the case of failures.
+struct PushSourceManager<D: Diagnostics, M: MonotonicProvider> {
+    /// The role of the time source being managed.
+    role: Role,
     /// The backstop time that samples must not come before.
     backstop: zx::Time,
     /// Whether the time source restart delay and minimum update delay should be enabled.
     delays_enabled: bool,
     /// A source of monotonic time.
     monotonic: M,
-    /// The role of the time source being managed.
-    role: Role,
     /// The time source to be managed.
-    time_source: T,
+    time_source: BoxedPushSource,
+
     /// A diagnostics implementation for recording events of note.
     diagnostics: Arc<D>,
 
     /// The active event stream, present when the source is currently running.
-    event_stream: Option<T::EventStream>,
+    event_stream: Option<BoxedPushSourceEventStream>,
     /// The most recent status received from the time source in its current execution.
     last_status: Option<Status>,
     /// The monotonic time at which the most recently accepted Sample arrived.
     last_accepted_sample_arrival: Option<zx::Time>,
 }
 
-impl<T: TimeSource, D: Diagnostics> TimeSourceManager<T, D, KernelMonotonicProvider> {
-    /// Constructs a new `TimeSourceManager` that reads monotonic times from the kernel.
-    pub fn new(backstop: zx::Time, role: Role, time_source: T, diagnostics: Arc<D>) -> Self {
-        TimeSourceManager {
-            backstop,
-            delays_enabled: true,
-            monotonic: KernelMonotonicProvider(),
-            role,
-            time_source,
-            diagnostics,
-            event_stream: None,
-            last_status: None,
-            last_accepted_sample_arrival: None,
-        }
-    }
-
-    /// Constructs a new `TimeSourceManager` that reads monotonic times from the kernel and has
-    /// the restart delay and minimum update delay set to zero. This makes the behavior more
-    /// amenable to use in tests.
-    pub fn new_with_delays_disabled(
-        backstop: zx::Time,
-        role: Role,
-        time_source: T,
-        diagnostics: Arc<D>,
-    ) -> Self {
-        let mut manager = Self::new(backstop, role, time_source, diagnostics);
-        manager.delays_enabled = false;
-        manager
-    }
-}
-
-impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D, M> {
-    /// Returns the `Role` of the time source being managed.
-    ///
-    /// Note: This method is viable while the `TimeSourceManager` is managing a single time source.
-    ///       Once fallback and gating sources are added role will be moved to a property of each
-    ///       time sample and this method will be removed.
-    pub fn role(&self) -> Role {
-        self.role
-    }
-
-    /// Returns the next valid sample from the time source.
-    pub async fn next_sample(&mut self) -> Sample {
+impl<D: Diagnostics, M: MonotonicProvider> PushSourceManager<D, M> {
+    /// Returns the next valid sample from the Push timesource.
+    async fn next_sample_from_push(&mut self) -> Sample {
         loop {
             // Extract the event stream from self if one exists and attempt to start one if not.
             let mut event_stream = match self.event_stream.take() {
                 Some(event_stream) => event_stream,
-                None => match self.time_source.launch().await {
+                None => match self.time_source.watch().await {
+                    Ok(event_stream) => event_stream,
                     Err(err) => {
                         error!("Error launching {:?} time source: {:?}", self.role, err);
                         self.record_time_source_failure(TimeSourceError::LaunchFailed);
@@ -125,7 +102,6 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
                         }
                         continue;
                     }
-                    Ok(event_stream) => event_stream,
                 },
             };
 
@@ -147,12 +123,17 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
         }
     }
 
+    /// Record a time source failure via diagnostics.
+    fn record_time_source_failure(&self, error: TimeSourceError) {
+        self.diagnostics.record(Event::TimeSourceFailed { role: self.role, error });
+    }
+
     /// Returns the next valid sample from the supplied stream, or an error if the stream
     /// encounters a terminal error. The monotonic provider will be queried exactly once to
     /// validate every `TimeSourceEvent::Sample` received.
     async fn next_sample_from_stream(
         &mut self,
-        event_stream: &mut T::EventStream,
+        event_stream: &mut BoxedPushSourceEventStream,
     ) -> Result<Sample, TimeSourceError> {
         loop {
             // Time sources whose current status is OK must send new samples (or state
@@ -234,10 +215,70 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
             Ok(current_monotonic)
         }
     }
+}
 
-    /// Record a time source failure via diagnostics.
-    fn record_time_source_failure(&self, error: TimeSourceError) {
-        self.diagnostics.record(Event::TimeSourceFailed { role: self.role, error });
+impl<D: Diagnostics> TimeSourceManager<D, KernelMonotonicProvider> {
+    /// Constructs a new `TimeSourceManager` that reads monotonic times from the kernel.
+    pub fn new(
+        backstop: zx::Time,
+        role: Role,
+        time_source: TimeSource,
+        diagnostics: Arc<D>,
+    ) -> Self {
+        let manager = match time_source {
+            TimeSource::Push(time_source) => TimeManager::Push(PushSourceManager {
+                backstop,
+                delays_enabled: true,
+                role,
+                time_source,
+                diagnostics,
+                monotonic: KernelMonotonicProvider(),
+                event_stream: None,
+                last_status: None,
+                last_accepted_sample_arrival: None,
+            }),
+            TimeSource::Pull(_) => unimplemented!(),
+        };
+        TimeSourceManager { manager }
+    }
+
+    /// Constructs a new `TimeSourceManager` that reads monotonic times from the kernel and has
+    /// the restart delay and minimum update delay set to zero. This makes the behavior more
+    /// amenable to use in tests.
+    pub fn new_with_delays_disabled(
+        backstop: zx::Time,
+        role: Role,
+        time_source: TimeSource,
+        diagnostics: Arc<D>,
+    ) -> Self {
+        let mut manager = Self::new(backstop, role, time_source, diagnostics);
+        match &mut manager.manager {
+            TimeManager::Push(m) => m.delays_enabled = false,
+            TimeManager::Pull() => unimplemented!(),
+        }
+        manager
+    }
+}
+
+impl<D: Diagnostics, M: MonotonicProvider> TimeSourceManager<D, M> {
+    /// Returns the `Role` of the time source being managed.
+    ///
+    /// Note: This method is viable while the `TimeSourceManager` is managing a single time source.
+    ///       Once fallback and gating sources are added role will be moved to a property of each
+    ///       time sample and this method will be removed.
+    pub fn role(&self) -> Role {
+        match &self.manager {
+            TimeManager::Push(m) => m.role,
+            TimeManager::Pull() => unimplemented!(),
+        }
+    }
+
+    /// Returns the next valid sample from the time source.
+    pub async fn next_sample(&mut self) -> Sample {
+        match &mut self.manager {
+            TimeManager::Push(m) => m.next_sample_from_push().await,
+            TimeManager::Pull() => unimplemented!(),
+        }
     }
 }
 
@@ -247,13 +288,23 @@ mod test {
         super::*,
         crate::diagnostics::FakeDiagnostics,
         crate::enums::{SampleValidationError as SVE, TimeSourceError as TSE},
-        crate::time_source::FakeTimeSource,
+        crate::time_source::FakePushTimeSource,
         anyhow::anyhow,
     };
 
     const BACKSTOP_FACTOR: i64 = 100;
     const TEST_ROLE: Role = Role::Monitor;
     const STD_DEV: zx::Duration = zx::Duration::from_millis(22);
+
+    macro_rules! assert_push_manager {
+        ($manager:expr) => {{
+            if let TimeManager::Push(m) = $manager.manager {
+                m
+            } else {
+                panic!("Expected TimeManager::Push.")
+            }
+        }};
+    }
 
     /// A provider of artificial monotonic times that increment by a fixed duration each call.
     struct FakeMonotonicProvider {
@@ -279,40 +330,42 @@ mod test {
     /// that increments by `MIN_UPDATE_DELAY` per sample, and the supplied time source and
     /// diagnostics.
     fn create_manager(
-        time_source: FakeTimeSource,
+        time_source: FakePushTimeSource,
         diagnostics: Arc<FakeDiagnostics>,
-    ) -> TimeSourceManager<FakeTimeSource, FakeDiagnostics, FakeMonotonicProvider> {
-        TimeSourceManager {
+    ) -> TimeSourceManager<FakeDiagnostics, FakeMonotonicProvider> {
+        let manager = TimeManager::Push(PushSourceManager {
             backstop: zx::Time::ZERO + (MIN_UPDATE_DELAY * BACKSTOP_FACTOR),
             delays_enabled: true,
             monotonic: FakeMonotonicProvider::new(MIN_UPDATE_DELAY),
             role: TEST_ROLE,
-            time_source,
+            time_source: Box::new(time_source),
             diagnostics,
             event_stream: None,
             last_status: None,
             last_accepted_sample_arrival: None,
-        }
+        });
+        TimeSourceManager { manager }
     }
 
     /// Create a new `TimeSourceManager` using the standard backstop time and role, a monotonic time
     /// that increments by `MIN_UPDATE_DELAY` per sample, and the supplied time source and
     /// diagnostics. Restart and min update delays are disabled.
     fn create_manager_delays_disabled(
-        time_source: FakeTimeSource,
+        time_source: FakePushTimeSource,
         diagnostics: Arc<FakeDiagnostics>,
-    ) -> TimeSourceManager<FakeTimeSource, FakeDiagnostics, FakeMonotonicProvider> {
-        TimeSourceManager {
+    ) -> TimeSourceManager<FakeDiagnostics, FakeMonotonicProvider> {
+        let manager = TimeManager::Push(PushSourceManager {
             backstop: zx::Time::ZERO + (MIN_UPDATE_DELAY * BACKSTOP_FACTOR),
             delays_enabled: false,
             monotonic: FakeMonotonicProvider::new(MIN_UPDATE_DELAY),
             role: TEST_ROLE,
-            time_source,
+            time_source: Box::new(time_source),
             diagnostics,
             event_stream: None,
             last_status: None,
             last_accepted_sample_arrival: None,
-        }
+        });
+        TimeSourceManager { manager }
     }
 
     /// Creates a new time sample from the supplied times. Both UTC and Monotonic are supplied as
@@ -328,7 +381,7 @@ mod test {
 
     #[fuchsia::test]
     fn role_accessor() {
-        let time_source = FakeTimeSource::failing();
+        let time_source = FakePushTimeSource::failing();
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let manager = create_manager(time_source, diagnostics);
         assert_eq!(manager.role(), TEST_ROLE);
@@ -336,7 +389,7 @@ mod test {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn event_in_future() {
-        let time_source = FakeTimeSource::events(vec![
+        let time_source = FakePushTimeSource::events(vec![
             TimeSourceEvent::StatusChange { status: Status::Ok },
             TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 1, 1)),
             // Should be ignored since monotonic is in the future
@@ -348,8 +401,11 @@ mod test {
 
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 1, 1));
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 3, 3));
+
+        let push_manager = assert_push_manager!(manager);
+
         assert_eq!(
-            manager.last_accepted_sample_arrival,
+            push_manager.last_accepted_sample_arrival,
             Some(zx::Time::ZERO + MIN_UPDATE_DELAY * 3)
         );
 
@@ -361,7 +417,7 @@ mod test {
 
     #[fuchsia::test(allow_stalls = false)]
     async fn sample_implies_ok() {
-        let time_source = FakeTimeSource::events(vec![
+        let time_source = FakePushTimeSource::events(vec![
             // Should be accepted even though time source is not currently OK.
             TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 1, 1)),
             // Should not be recorded since we moved the source to OK on receiving the sample.
@@ -375,7 +431,9 @@ mod test {
 
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 1, 1));
         assert_eq!(manager.next_sample().await, create_sample(BACKSTOP_FACTOR + 2, 2));
-        assert_eq!(manager.last_status, Some(Status::Ok));
+
+        let push_manager = assert_push_manager!(manager);
+        assert_eq!(push_manager.last_status, Some(Status::Ok));
 
         diagnostics.assert_events(&[
             Event::TimeSourceStatus { role: TEST_ROLE, status: Status::Ok },
@@ -386,7 +444,7 @@ mod test {
 
     #[fuchsia::test]
     async fn restart_on_watch_error() {
-        let time_source = FakeTimeSource::result_collections(vec![
+        let time_source = FakePushTimeSource::result_collections(vec![
             vec![
                 Ok(TimeSourceEvent::StatusChange { status: Status::Ok }),
                 Ok(TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 1, 1))),
@@ -416,7 +474,7 @@ mod test {
 
     #[fuchsia::test]
     async fn restart_on_channel_close() {
-        let time_source = FakeTimeSource::event_collections(vec![
+        let time_source = FakePushTimeSource::event_collections(vec![
             vec![
                 TimeSourceEvent::StatusChange { status: Status::Ok },
                 TimeSourceEvent::from(create_sample(BACKSTOP_FACTOR + 1, 1)),
@@ -441,7 +499,7 @@ mod test {
 
     #[fuchsia::test]
     async fn restart_on_launch_failure() {
-        let time_source = FakeTimeSource::failing();
+        let time_source = FakePushTimeSource::failing().into();
         let diagnostics = Arc::new(FakeDiagnostics::new());
         let mut manager = TimeSourceManager::new(
             zx::Time::ZERO,
@@ -470,42 +528,43 @@ mod test {
 
     #[fuchsia::test]
     fn validate_sample_failures() {
-        let mut manager =
-            create_manager(FakeTimeSource::failing(), Arc::new(FakeDiagnostics::new()));
-        manager.last_status = Some(Status::Ok);
+        let manager =
+            create_manager(FakePushTimeSource::failing(), Arc::new(FakeDiagnostics::new()));
+        let mut push_manager = assert_push_manager!(manager);
+        push_manager.last_status = Some(Status::Ok);
 
         // The monotonic our manager sees will start at a factor of 1 and increment by 1 each time
         // we try to validate a sample.
         assert_eq!(
-            manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 1)),
+            push_manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 1)),
             Ok(zx::Time::ZERO + MIN_UPDATE_DELAY)
         );
         assert_eq!(
-            manager.validate_sample(&create_sample(BACKSTOP_FACTOR - 1, 2)),
+            push_manager.validate_sample(&create_sample(BACKSTOP_FACTOR - 1, 2)),
             Err(SVE::BeforeBackstop)
         );
         assert_eq!(
-            manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 0)),
+            push_manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 0)),
             Err(SVE::MonotonicTooOld)
         );
         assert_eq!(
-            manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 100)),
+            push_manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 100)),
             Err(SVE::MonotonicInFuture)
         );
         // On the next call the monontonic should be a factor of 5, trick the manager into thinking
         // it already accepted an update at 4.5
-        manager.last_accepted_sample_arrival =
+        push_manager.last_accepted_sample_arrival =
             Some(zx::Time::from_nanos(MIN_UPDATE_DELAY.into_nanos() / 2 * 9));
         assert_eq!(
-            manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 5)),
+            push_manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 5)),
             Err(SVE::TooCloseToPrevious)
         );
         // But if we disable delays an accepted update of 5.5 at a monotonic of 6 is accepted.
-        manager.delays_enabled = false;
-        manager.last_accepted_sample_arrival =
+        push_manager.delays_enabled = false;
+        push_manager.last_accepted_sample_arrival =
             Some(zx::Time::from_nanos(MIN_UPDATE_DELAY.into_nanos() / 2 * 11));
         assert_eq!(
-            manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 6)),
+            push_manager.validate_sample(&create_sample(BACKSTOP_FACTOR, 6)),
             Ok(zx::Time::ZERO + MIN_UPDATE_DELAY * 6)
         );
     }

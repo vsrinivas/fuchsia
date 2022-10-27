@@ -10,7 +10,6 @@ use {
         },
         estimator::Estimator,
         rtc::Rtc,
-        time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
         Config,
     },
@@ -265,11 +264,11 @@ impl Debug for Slew {
 /// Generates and applies all updates needed to maintain a userspace clock object (and optionally
 /// also a real time clock) with accurate UTC time. New time samples are received from a
 /// `TimeSourceManager` and a UTC estimate is produced based on these samples by an `Estimator`.
-pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
+pub struct ClockManager<R: Rtc, D: Diagnostics> {
     /// The userspace clock to be maintained.
     clock: Arc<zx::Clock>,
     /// The `TimeSourceManager` that supplies validated samples from a time source.
-    time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
+    time_source_manager: TimeSourceManager<D, KernelMonotonicProvider>,
     /// The `Estimator` that maintains an estimate of the UTC and frequency, populated after the
     /// first sample has been received.
     estimator: Option<Estimator<D>>,
@@ -286,12 +285,12 @@ pub struct ClockManager<T: TimeSource, R: Rtc, D: Diagnostics> {
     config: Arc<Config>,
 }
 
-impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
+impl<R: Rtc, D: 'static + Diagnostics> ClockManager<R, D> {
     /// Construct a new `ClockManager` and start synchronizing the clock. The returned future
     /// will never complete.
     pub async fn execute(
         clock: Arc<zx::Clock>,
-        time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
+        time_source_manager: TimeSourceManager<D, KernelMonotonicProvider>,
         rtc: Option<R>,
         diagnostics: Arc<D>,
         track: Track,
@@ -310,7 +309,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
     /// Construct a new `ClockManager`.
     fn new(
         clock: Arc<zx::Clock>,
-        time_source_manager: TimeSourceManager<T, D, KernelMonotonicProvider>,
+        time_source_manager: TimeSourceManager<D, KernelMonotonicProvider>,
         rtc: Option<R>,
         diagnostics: Arc<D>,
         track: Track,
@@ -529,7 +528,7 @@ mod tests {
             diagnostics::{FakeDiagnostics, ANY_DURATION},
             enums::{FrequencyDiscardReason, Role, WriteRtcOutcome},
             rtc::FakeRtc,
-            time_source::{Event as TimeSourceEvent, FakeTimeSource, Sample},
+            time_source::{Event as TimeSourceEvent, FakePushTimeSource, Sample},
         },
         fidl_fuchsia_time_external::{self as ftexternal, Status},
         fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -573,14 +572,14 @@ mod tests {
         rtc: Option<FakeRtc>,
         diagnostics: Arc<FakeDiagnostics>,
         config: Arc<Config>,
-    ) -> ClockManager<FakeTimeSource, FakeRtc, FakeDiagnostics> {
+    ) -> ClockManager<FakeRtc, FakeDiagnostics> {
         let mut events: Vec<TimeSourceEvent> =
             samples.into_iter().map(|sample| TimeSourceEvent::from(sample)).collect();
         events.insert(0, TimeSourceEvent::StatusChange { status: ftexternal::Status::Ok });
         if let Some(status) = final_time_source_status {
             events.push(TimeSourceEvent::StatusChange { status });
         }
-        let time_source = FakeTimeSource::events(events);
+        let time_source = FakePushTimeSource::events(events).into();
         let time_source_manager = TimeSourceManager::new_with_delays_disabled(
             BACKSTOP_TIME,
             TEST_ROLE,

@@ -8,7 +8,7 @@ use {
         enums::{
             ClockCorrectionStrategy, ClockUpdateReason, InitialClockState, StartClockSource, Track,
         },
-        MonitorTrack, PrimaryTrack, TimeSource,
+        MonitorTrack, PrimaryTrack,
     },
     anyhow::{format_err, Context as _, Error},
     cobalt_client::traits::AsEventCodes,
@@ -107,11 +107,11 @@ pub struct CobaltDiagnostics {
 }
 
 impl CobaltDiagnostics {
-    /// Contructs a new `CobaltDiagnostics` instance.
-    pub(crate) fn new<T: TimeSource>(
+    /// Constructs a new `CobaltDiagnostics` instance.
+    pub(crate) fn new(
         experiment: Experiment,
-        primary: &PrimaryTrack<T>,
-        optional_monitor: &Option<MonitorTrack<T>>,
+        primary: &PrimaryTrack,
+        optional_monitor: &Option<MonitorTrack>,
     ) -> Self {
         let (sender, fut) = ProtocolConnector::new(CobaltConnectedService).serve_and_log_errors();
         fasync::Task::spawn(fut).detach();

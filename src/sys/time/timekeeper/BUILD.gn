@@ -10,6 +10,7 @@ timekeeper_deps = [
   "//sdk/fidl/fuchsia.component:fuchsia.component_rust",
   "//sdk/fidl/fuchsia.component.decl:fuchsia.component.decl_rust",
   "//sdk/fidl/fuchsia.hardware.rtc:fuchsia.hardware.rtc_rust",
+  "//sdk/fidl/fuchsia.io:fuchsia.io_rust",
   "//sdk/fidl/fuchsia.metrics:fuchsia.metrics_rust",
   "//sdk/fidl/fuchsia.time:fuchsia.time_rust",
   "//sdk/fidl/fuchsia.time.external:fuchsia.time.external_rust",

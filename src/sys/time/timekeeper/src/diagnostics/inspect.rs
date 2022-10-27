@@ -202,7 +202,7 @@ struct TimeSourceNode {
 
 impl TimeSourceNode {
     /// Constructs a new `TimeSourceNode`, recording the initial state.
-    pub fn new<T: TimeSource>(node: Node, time_source: &T) -> Self {
+    pub fn new(node: Node, time_source: &TimeSource) -> Self {
         node.record_string("component", format!("{:?}", time_source));
         TimeSourceNode {
             status: node.create_string("status", "Launched"),
@@ -399,10 +399,10 @@ pub struct InspectDiagnostics {
 impl InspectDiagnostics {
     /// Construct a new `InspectDiagnostics` exporting at the supplied `Node` using data from
     /// the supplied clock.
-    pub(crate) fn new<T: TimeSource>(
+    pub(crate) fn new(
         node: &Node,
-        primary: &PrimaryTrack<T>,
-        optional_monitor: &Option<MonitorTrack<T>>,
+        primary: &PrimaryTrack,
+        optional_monitor: &Option<MonitorTrack>,
     ) -> Self {
         // Record fixed data directly into the node without retaining any references.
         node.record_child("initialization", |child| TimeSet::now(&primary.clock).record(child));
@@ -523,7 +523,7 @@ mod tests {
                 FrequencyDiscardReason as FDR, SampleValidationError as SVE, StartClockSource,
                 TimeSourceError as TSE,
             },
-            time_source::FakeTimeSource,
+            time_source::FakePushTimeSource,
         },
         fuchsia_inspect::{assert_data_tree, testing::AnyProperty},
         lazy_static::lazy_static,
@@ -579,12 +579,15 @@ mod tests {
         inspector: &Inspector,
         include_monitor: bool,
     ) -> (InspectDiagnostics, Arc<zx::Clock>) {
-        let primary =
-            PrimaryTrack { time_source: FakeTimeSource::failing(), clock: create_clock() };
+        let primary = PrimaryTrack {
+            time_source: FakePushTimeSource::failing().into(),
+            clock: create_clock(),
+        };
         let monitor = match include_monitor {
-            true => {
-                Some(MonitorTrack { time_source: FakeTimeSource::failing(), clock: create_clock() })
-            }
+            true => Some(MonitorTrack {
+                time_source: FakePushTimeSource::failing().into(),
+                clock: create_clock(),
+            }),
             false => None,
         };
 
@@ -631,7 +634,7 @@ mod tests {
                     clock_utc: AnyProperty,
                 },
                 primary_time_source: contains {
-                    component: "FakeTimeSource",
+                    component: "Push(FakeTimeSource)",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
                 },
@@ -751,12 +754,12 @@ mod tests {
             inspector,
             root: contains {
                 primary_time_source: contains {
-                    component: "FakeTimeSource",
+                    component: "Push(FakeTimeSource)",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
                 },
                 monitor_time_source: contains {
-                    component: "FakeTimeSource",
+                    component: "Push(FakeTimeSource)",
                     status: "Launched",
                     status_change_monotonic: AnyProperty,
                 }
@@ -774,7 +777,7 @@ mod tests {
             inspector,
             root: contains {
                 primary_time_source: contains {
-                    component: "FakeTimeSource",
+                    component: "Push(FakeTimeSource)",
                     status: "Failed(CallFailed)",
                     status_change_monotonic: AnyProperty,
                     failure_count_LaunchFailed: 1u64,
@@ -782,7 +785,7 @@ mod tests {
                     rejection_count_BeforeBackstop: 1u64,
                 },
                 monitor_time_source: contains {
-                    component: "FakeTimeSource",
+                    component: "Push(FakeTimeSource)",
                     status: "Network",
                     status_change_monotonic: AnyProperty,
                 }
