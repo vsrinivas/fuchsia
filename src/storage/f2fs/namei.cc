@@ -568,7 +568,7 @@ zx_status_t Dir::Unlink(std::string_view name, bool must_be_dir) {
       return status;
     }
 
-    VnodeF2fs *vnode = (VnodeF2fs *)vn.get();
+    VnodeF2fs *vnode = static_cast<VnodeF2fs *>(vn.get());
     if (vnode->IsDir()) {
       ret = Rmdir(static_cast<Dir *>(vnode), name);
     } else {

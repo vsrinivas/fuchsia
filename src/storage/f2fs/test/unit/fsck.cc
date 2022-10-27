@@ -76,7 +76,9 @@ TEST(FsckTest, InvalidCheckpointCrc) {
   // This time pollute the checkpoint pack footer and see validation fails.
   uint32_t second_checkpoint_footer_addr =
       second_checkpoint_header_addr +
-      LeToCpu(((Checkpoint *)second_checkpoint_block.get())->cp_pack_total_block_count) - 1;
+      LeToCpu((reinterpret_cast<Checkpoint *>(second_checkpoint_block.get()))
+                  ->cp_pack_total_block_count) -
+      1;
   ASSERT_EQ(fsck.ReadBlock(*second_checkpoint_block.get(), second_checkpoint_footer_addr), ZX_OK);
   checkpoint_ptr = reinterpret_cast<Checkpoint *>(second_checkpoint_block.get());
   checkpoint_ptr->next_free_nid = 0xdeadbeef;
@@ -445,7 +447,8 @@ TEST(FsckTest, InconsistentCheckpointNodeCount) {
                                  LeToCpu(checkpoint_ptr->checksum_offset))) = crc;
 
   // Write the 1st checkpoint pack, header and footer both.
-  uint32_t cp_pack_block_count = LeToCpu(((Checkpoint *)fs_block.get())->cp_pack_total_block_count);
+  uint32_t cp_pack_block_count =
+      LeToCpu((reinterpret_cast<Checkpoint *>(fs_block.get()))->cp_pack_total_block_count);
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(),
                             LeToCpu(superblock_pointer->cp_blkaddr) + cp_pack_block_count - 1),
@@ -626,7 +629,8 @@ TEST(FsckTest, InvalidNextOffsetInCurseg) {
                                  LeToCpu(checkpoint_ptr->checksum_offset))) = crc;
 
   // Write the 1st checkpoint pack, header and footer both.
-  uint32_t cp_pack_block_count = LeToCpu(((Checkpoint *)fs_block.get())->cp_pack_total_block_count);
+  uint32_t cp_pack_block_count =
+      LeToCpu((reinterpret_cast<Checkpoint *>(fs_block.get()))->cp_pack_total_block_count);
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(), LeToCpu(superblock_pointer->cp_blkaddr)), ZX_OK);
   ASSERT_EQ(fsck.WriteBlock(*fs_block.get(),
                             LeToCpu(superblock_pointer->cp_blkaddr) + cp_pack_block_count - 1),

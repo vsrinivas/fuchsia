@@ -24,7 +24,7 @@ inline uint32_t F2fsCalCrc32(uint32_t crc, void *buff, uint32_t len) {
 }
 
 inline uint32_t F2fsCrc32(void *buff, uint32_t len) {
-  return F2fsCalCrc32(kF2fsSuperMagic, (unsigned char *)buff, len);
+  return F2fsCalCrc32(kF2fsSuperMagic, static_cast<unsigned char *>(buff), len);
 }
 
 inline bool F2fsCrcValid(uint32_t blk_crc, void *buff, uint32_t buff_size) {

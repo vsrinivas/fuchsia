@@ -82,7 +82,8 @@ static inline uint64_t BlkoffFromMain(SegmentManager &manager, uint64_t block_ad
 
 static inline uint32_t OffsetInSegment(SuperblockInfo &sbi, SegmentManager &manager,
                                        uint64_t block_address) {
-  return (uint32_t)(BlkoffFromMain(manager, block_address) % (1 << sbi.GetLogBlocksPerSeg()));
+  return static_cast<uint32_t>(BlkoffFromMain(manager, block_address) %
+                               (1 << sbi.GetLogBlocksPerSeg()));
 }
 
 static inline uint16_t AddrsPerInode(const Inode *i) {
@@ -867,9 +868,9 @@ zx_status_t FsckWorker::Verify() {
 
   printf("[FSCK] valid_block_count matching with CP            ");
   if (superblock_info_.GetTotalValidBlockCount() == fsck_.result.valid_block_count) {
-    printf(" [Ok..] [0x%x]\n", (uint32_t)fsck_.result.valid_block_count);
+    printf(" [Ok..] [0x%x]\n", static_cast<uint32_t>(fsck_.result.valid_block_count));
   } else {
-    printf(" [Fail] [0x%x]\n", (uint32_t)fsck_.result.valid_block_count);
+    printf(" [Fail] [0x%x]\n", static_cast<uint32_t>(fsck_.result.valid_block_count));
     status = ZX_ERR_INTERNAL;
   }
 
@@ -1283,7 +1284,7 @@ void FsckWorker::PrintNodeInfo(Node &node_block) {
     FX_LOGS(INFO) << "Node ID [0x" << std::hex << nid << ":" << nid << "] is inode";
     PrintInodeInfo(node_block.i);
   } else {
-    uint32_t *dump_blk = (uint32_t *)&node_block;
+    uint32_t *dump_blk = reinterpret_cast<uint32_t *>(&node_block);
     FX_LOGS(INFO) << "Node ID [0x" << std::hex << nid << ":" << nid
                   << "] is direct node or indirect node";
     for (int i = 0; i <= 10; ++i) {  // MSG (0)
@@ -1479,13 +1480,13 @@ zx::result<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCh
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  cp_block = (Checkpoint *)cp_page_1.get();
+  cp_block = reinterpret_cast<Checkpoint *>(cp_page_1.get());
   crc_offset = LeToCpu(cp_block->checksum_offset);
   if (crc_offset >= blk_size) {
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  crc = *(uint32_t *)((uint8_t *)cp_block + crc_offset);
+  crc = *reinterpret_cast<uint32_t *>(reinterpret_cast<uintptr_t>(cp_block) + crc_offset);
   if (!F2fsCrcValid(crc, cp_block, crc_offset)) {
     return zx::error(ZX_ERR_INTERNAL);
   }
@@ -1498,13 +1499,13 @@ zx::result<std::pair<std::unique_ptr<FsBlock>, uint64_t>> FsckWorker::ValidateCh
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  cp_block = (Checkpoint *)cp_page_2.get();
+  cp_block = reinterpret_cast<Checkpoint *>(cp_page_2.get());
   crc_offset = LeToCpu(cp_block->checksum_offset);
   if (crc_offset >= blk_size) {
     return zx::error(ZX_ERR_INTERNAL);
   }
 
-  crc = *(uint32_t *)((uint8_t *)cp_block + crc_offset);
+  crc = *reinterpret_cast<uint32_t *>(reinterpret_cast<uintptr_t>(cp_block) + crc_offset);
   if (!F2fsCrcValid(crc, cp_block, crc_offset)) {
     return zx::error(ZX_ERR_INTERNAL);
   }
@@ -1710,7 +1711,7 @@ zx_status_t FsckWorker::ReadCompactedSummaries() {
     for (uint32_t j = 0; j < blk_off; ++j) {
       Summary *s;
 #ifdef __Fuchsia__
-      s = (Summary *)(fs_block->GetData().data() + offset);
+      s = reinterpret_cast<Summary *>(fs_block->GetData().data() + offset);
 #else   // __Fuchsia__
       s = (Summary *)(fs_block->GetData() + offset);
 #endif  // __Fuchsia__
@@ -1943,8 +1944,8 @@ std::pair<std::unique_ptr<FsBlock>, SegType> FsckWorker::GetSumBlockInfo(uint32_
 }
 
 uint32_t FsckWorker::GetSegmentNumber(uint32_t block_address) {
-  return (uint32_t)(BlkoffFromMain(*segment_manager_, block_address) >>
-                    superblock_info_.GetLogBlocksPerSeg());
+  return static_cast<uint32_t>(BlkoffFromMain(*segment_manager_, block_address) >>
+                               superblock_info_.GetLogBlocksPerSeg());
 }
 
 std::pair<SegType, Summary> FsckWorker::GetSummaryEntry(uint32_t block_address) {
