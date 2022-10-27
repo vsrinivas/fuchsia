@@ -1,0 +1,52 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fs_stressor",
+        args: [
+            // Ramdisk disconnection every 10 minutes
+            "--disconnect-secs",
+            "600",
+
+            // 6 hour time limit
+            "--time-limit-secs",
+            "21600",
+            "--target-filesystem",
+            "f2fs",
+        ],
+    },
+    children: [
+        {
+            name: "driver-test-realm",
+            url: "#meta/storage_driver_test_realm.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            directory: "dev",
+            from: "#driver-test-realm",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+
+        // Used to start filesystem processes
+        { protocol: "fuchsia.process.Launcher" },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [ "#driver-test-realm" ],
+        },
+    ],
+}

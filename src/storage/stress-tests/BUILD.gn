@@ -38,6 +38,18 @@ fuchsia_component("fxfs-no-crash") {
   ]
 }
 
+fuchsia_component("f2fs-crash") {
+  testonly = true
+  manifest = "f2fs/meta/crash.cml"
+  deps = [ "genericfs:stressor-bin" ]
+}
+
+fuchsia_component("f2fs-no-crash") {
+  testonly = true
+  manifest = "f2fs/meta/no-crash.cml"
+  deps = [ "genericfs:stressor-bin" ]
+}
+
 fuchsia_component("blobfs-crash") {
   testonly = true
   manifest = "blobfs/meta/crash.cml"
@@ -90,6 +102,12 @@ fuchsia_component("fxfs-short") {
   ]
 }
 
+fuchsia_component("f2fs-short") {
+  testonly = true
+  manifest = "f2fs/meta/short.cml"
+  deps = [ "genericfs:stressor-bin" ]
+}
+
 # This test package is designed to run on `core.qemu-x64-stress`.
 # These bots have a time limit of 23 hours. There are 6 tests
 # in this package, each running for exactly 22 hours.
@@ -103,9 +121,12 @@ fuchsia_test_package("storage-stress-tests") {
     ":minfs-no-crash",
     ":fxfs-crash",
     ":fxfs-no-crash",
+    ":f2fs-crash",
+    ":f2fs-no-crash",
   ]
   deps = [
     "//src/storage/bin/blobfs",
+    "//src/storage/bin/f2fs",
     "//src/storage/bin/minfs",
     "//src/storage/fxfs",
     "//src/storage/testing:storage_driver_test_realm",
@@ -133,9 +154,11 @@ fuchsia_test_package("storage-stress-tests-short") {
     ":blobfs-short",
     ":minfs-short",
     ":fxfs-short",
+    ":f2fs-short",
   ]
   deps = [
     "//src/storage/bin/blobfs",
+    "//src/storage/bin/f2fs",
     "//src/storage/bin/minfs",
     "//src/storage/fxfs",
     "//src/storage/testing:storage_driver_test_realm",

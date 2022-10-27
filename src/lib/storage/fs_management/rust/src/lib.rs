@@ -274,6 +274,46 @@ impl FSConfig for Fxfs {
     }
 }
 
+/// F2fs Filesystem Configuration
+/// If fields are None or false, they will not be set in arguments.
+#[derive(Clone, Default)]
+pub struct F2fs {
+    pub verbose: bool,
+    pub readonly: bool,
+}
+
+impl F2fs {
+    /// Manages a block device at a given path using
+    /// the default configuration.
+    pub fn new(path: &str) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_path(path, Self::default())
+    }
+
+    /// Manages a block device at a given channel using
+    /// the default configuration.
+    pub fn from_channel(channel: zx::Channel) -> Result<filesystem::Filesystem<Self>, Error> {
+        filesystem::Filesystem::from_channel(channel, Self::default())
+    }
+}
+
+impl FSConfig for F2fs {
+    // TODO(fxbug.dev/111606): Need to be modified to run as a component.
+    fn mode(&self) -> Mode<'_> {
+        Mode::Legacy(LegacyConfig {
+            binary_path: cstr!("/pkg/bin/f2fs"),
+            generic_args: {
+                let args = vec![];
+                args
+            },
+            mount_args: {
+                let args = vec![];
+                args
+            },
+            ..Default::default()
+        })
+    }
+}
+
 /// Factoryfs Filesystem Configuration
 /// If fields are None or false, they will not be set in arguments.
 #[derive(Clone, Default)]

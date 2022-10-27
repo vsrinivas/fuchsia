@@ -12,7 +12,7 @@ use {
     environment::FsEnvironment,
     fidl::endpoints::Proxy,
     fidl_fuchsia_fxfs::{CryptManagementMarker, CryptMarker, KeyPurpose},
-    fs_management::{Fxfs, Minfs},
+    fs_management::{F2fs, Fxfs, Minfs},
     fuchsia_async as fasync,
     fuchsia_component::client::connect_to_protocol,
     fuchsia_zircon as zx,
@@ -119,6 +119,10 @@ async fn test() {
         }
         "minfs" => {
             let env = FsEnvironment::new(Minfs::default(), args).await;
+            run_test(env).await;
+        }
+        "f2fs" => {
+            let env = FsEnvironment::new(F2fs::default(), args).await;
             run_test(env).await;
         }
         _ => panic!("Unsupported filesystem {}", args.target_filesystem),

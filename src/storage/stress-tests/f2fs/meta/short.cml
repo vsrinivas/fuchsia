@@ -1,0 +1,57 @@
+// Copyright 2022 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "//src/sys/test_runners/rust/default.shard.cml",
+        "sys/component/realm_builder.shard.cml",
+        "syslog/client.shard.cml",
+    ],
+    program: {
+        binary: "bin/fs_stressor",
+        args: [
+            // Run a 100 operations. This should fit in the CQ/CI time limits.
+            "--num-operations",
+            "100",
+
+            // Use a smaller ramdisk for short tests
+            // f2fs requires a minimum of 100mb volume
+            "--ramdisk-block-count",
+            "204800",
+
+            // Enable debug logging for this variant
+            "-l",
+            "debug",
+            "--target-filesystem",
+            "f2fs",
+        ],
+    },
+    children: [
+        {
+            name: "driver-test-realm",
+            url: "#meta/storage_driver_test_realm.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            directory: "dev",
+            from: "#driver-test-realm",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+
+        // Used to start filesystem processes
+        { protocol: "fuchsia.process.Launcher" },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+            ],
+            from: "parent",
+            to: [ "#driver-test-realm" ],
+        },
+    ],
+}

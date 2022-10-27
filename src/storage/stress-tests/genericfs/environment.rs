@@ -188,6 +188,9 @@ impl<FSC: Clone + FSConfig> FsEnvironment<FSC> {
             )
             .await
             .unwrap();
+        // Home directory must be recovered because SPO occurs in a crash test.
+        // Syncronize the home directory to ensure consistency.
+        open_dir_at_root("home1").sync_directory().await.unwrap();
 
         let file_actor = {
             let rng = SmallRng::from_seed(rng.gen());

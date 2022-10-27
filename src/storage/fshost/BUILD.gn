@@ -144,6 +144,7 @@ source_set("block-watcher") {
     "//src/security/fcrypto",
     "//src/security/kms-stateless",
     "//src/security/zxcrypt:zxcrypt-client",
+    "//src/storage/f2fs",
     "//src/storage/gpt",
     "//src/storage/minfs",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_cpp_wire",

@@ -110,6 +110,20 @@ impl Directory {
         }
     }
 
+    // Sync a directory
+    pub async fn sync_directory(&self) -> Result<(), Status> {
+        match self.proxy.sync().await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during sync: {}", e);
+                }
+            }
+        }
+    }
+
     // Delete a file from the directory
     pub async fn remove(&self, filename: &str) -> Result<(), Status> {
         match self.proxy.unlink(filename, fio::UnlinkOptions::EMPTY).await {
