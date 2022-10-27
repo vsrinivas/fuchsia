@@ -317,7 +317,6 @@ where
     }
 
     /// Handle fuchsia.update.Manager requests.
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn handle_manager_request(
         server: Rc<RefCell<Self>>,
         request: ManagerRequest,
@@ -342,14 +341,11 @@ where
                 //
                 // TODO(fxbug.dev/65571): remove previous_out_of_space_failure and this
                 // rebooting behavior when pkg-cache can clear previous OTA packages on its own
-                // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-                // If this is the case, it is an error. See fxbug.dev/87757 for more details
-                let server_ref = server.borrow();
-                let state_machine_state = server_ref.state.manager_state;
-                let previous_out_of_space_failure = server_ref.previous_out_of_space_failure;
 
-                // Drop to prevent holding the borrowed ref across an await.
-                drop(server_ref);
+                let (state_machine_state, previous_out_of_space_failure) = {
+                    let server_ref = server.borrow();
+                    (server_ref.state.manager_state, server_ref.previous_out_of_space_failure)
+                };
 
                 info!("Received PerformPendingRebootRequest");
                 if previous_out_of_space_failure {
@@ -522,7 +518,6 @@ where
         Ok(())
     }
 
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn handle_set_target(server: Rc<RefCell<Self>>, channel: String) {
         // TODO: Verify that channel is valid.
         let app_set = Rc::clone(&server.borrow().app_set);
@@ -552,24 +547,24 @@ where
             if channel == target_channel {
                 return;
             }
-            // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-            // If this is the case, it is an error. See fxbug.dev/87757 for more details
-            let server = server.borrow();
-            let channel_cfg = match &server.channel_configs {
-                Some(cfgs) => cfgs.get_channel(&channel),
-                None => None,
-            };
-            if channel_cfg.is_none() {
-                warn!("Channel {} not found in known channels", &channel);
-            }
-            let appid = match channel_cfg {
-                Some(cfg) => cfg.appid.clone(),
-                None => None,
+
+            let (appid, storage_ref) = {
+                let server = server.borrow();
+                let channel_cfg = match &server.channel_configs {
+                    Some(cfgs) => cfgs.get_channel(&channel),
+                    None => None,
+                };
+                if channel_cfg.is_none() {
+                    warn!("Channel {} not found in known channels", &channel);
+                }
+                let appid = match channel_cfg {
+                    Some(ref cfg) => cfg.appid.clone(),
+                    None => None,
+                };
+                let storage_ref = Rc::clone(&server.storage_ref);
+                (appid, storage_ref)
             };
 
-            let storage_ref = Rc::clone(&server.storage_ref);
-            // Don't borrow server across await.
-            drop(server);
             let mut storage = storage_ref.lock().await;
             {
                 let mut app_set = app_set.lock().await;
@@ -584,11 +579,12 @@ where
             }
             storage.commit_or_log().await;
         }
-        server.borrow().apps_node.set(&*app_set.lock().await);
+
+        let app_set = app_set.lock().await;
+        server.borrow().apps_node.set(&app_set);
     }
 
     /// The state change callback from StateMachine.
-    #[allow(clippy::await_holding_refcell_ref)]
     pub async fn on_state_change(server: Rc<RefCell<Self>>, state: state_machine::State) {
         server.borrow_mut().state.manager_state = state;
 
@@ -604,16 +600,13 @@ where
 
         Self::send_state_to_queue(Rc::clone(&server)).await;
 
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let s = server.borrow();
-        s.state_node.set(&s.state);
-
         match state {
             state_machine::State::Idle | state_machine::State::WaitingForReboot => {
-                let mut single_monitor_queue = s.single_monitor_queue.clone();
-                let app_set = Rc::clone(&s.app_set);
-                drop(s);
+                let (mut single_monitor_queue, app_set) = {
+                    let s = server.borrow();
+                    s.state_node.set(&s.state);
+                    (s.single_monitor_queue.clone(), Rc::clone(&s.app_set))
+                };
 
                 // Try to flush the states before starting to reboot.
                 if state == state_machine::State::WaitingForReboot {
@@ -635,7 +628,8 @@ where
 
                 // The state machine might make changes to apps only at the end of an update,
                 // update the apps node in inspect.
-                server.borrow().apps_node.set(&*app_set.lock().await);
+                let app_set = app_set.lock().await;
+                server.borrow().apps_node.set(&app_set);
             }
             state_machine::State::CheckingForUpdates(install_source) => {
                 let attempt_options = match install_source {
@@ -644,24 +638,27 @@ where
                         AttemptOptions { initiator: Initiator::Service.into() }
                     }
                 };
-                let mut attempt_monitor_queue = s.attempt_monitor_queue.clone();
-                drop(s);
+                let mut attempt_monitor_queue = {
+                    let s = server.borrow();
+                    s.state_node.set(&s.state);
+                    s.attempt_monitor_queue.clone()
+                };
                 if let Err(e) = attempt_monitor_queue.queue_event(attempt_options).await {
                     warn!("error sending update to attempt queue: {:#}", anyhow!(e))
                 }
             }
-            _ => {}
+            _ => {
+                let s = server.borrow();
+                s.state_node.set(&s.state);
+            }
         }
     }
 
-    #[allow(clippy::await_holding_refcell_ref)]
     async fn send_state_to_queue(server: Rc<RefCell<Self>>) {
-        // TODO: this variable triggered the `must_not_suspend` lint and may be held across an await
-        // If this is the case, it is an error. See fxbug.dev/87757 for more details
-        let server = server.borrow();
-        let mut single_monitor_queue = server.single_monitor_queue.clone();
-        let state = server.state.clone();
-        drop(server);
+        let (mut single_monitor_queue, state) = {
+            let server = server.borrow();
+            (server.single_monitor_queue.clone(), server.state.clone())
+        };
         if let Err(e) = single_monitor_queue.queue_event(state).await {
             warn!("error sending state to single_monitor_queue: {:?}", e)
         }
