@@ -15,7 +15,6 @@ if (is_linux) {
       "//third_party/golibs:go.uber.org/multierr",
       "//third_party/golibs:golang.org/x/crypto",
       "//tools/emulator",
-      "//tools/lib/ffxutil",
     ]
     non_go_deps = [ ":zbi_bin" ]
     testonly = true
@@ -23,7 +22,10 @@ if (is_linux) {
 
   go_test("conformance_emulator_test") {
     gopackages = [ "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/emulator" ]
-    deps = [ ":emulator" ]
+    deps = [
+      ":emulator",
+      "//src/connectivity/network/testing/conformance/ffx",
+    ]
     non_go_deps = [
       ":ffx_bin",
       "//build/images/network-conformance:network-conformance-base-test-data",

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"path/filepath"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/util"
 	"go.fuchsia.dev/fuchsia/tools/emulator"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
 	"go.uber.org/multierr"
@@ -28,9 +29,6 @@ type QemuInstanceArgs struct {
 	Initrd string
 	// The root_out_dir for the host toolchain, e.g. /.../out/default/host_x64
 	HostX64Path string
-	// The filepath of the authorized_keys file that should be provisioned with the QEMU
-	// instance.
-	HostPathAuthorizedKeys string
 	// The network devices that should be added to the QEMU instance, i.e. any tap interfaces
 	// that it should be using.
 	NetworkDevices []*fvdpb.Netdev
@@ -79,11 +77,15 @@ func NewQemuInstance(
 		SourceRootRelativeDir,
 	)
 
+	authorizedKeysPath, err := util.DutAuthorizedKeysPath()
+	if err != nil {
+		return nil, fmt.Errorf("couldn't generate dut authorized keys path: %w", err)
+	}
 	i, err := distro.CreateContextWithAuthorizedKeys(
 		ctx,
 		device,
 		filepath.Join(hostTestDataDir, "zbi"),
-		args.HostPathAuthorizedKeys,
+		authorizedKeysPath,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("couldn't create emulator instance: %w", err)

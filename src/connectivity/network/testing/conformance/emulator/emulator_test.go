@@ -6,11 +6,7 @@ package emulator
 
 import (
 	"bytes"
-	"crypto/rand"
-	"crypto/rsa"
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
 	"io"
 	"io/fs"
 	"os"
@@ -18,9 +14,8 @@ import (
 	"sync"
 	"testing"
 
-	"go.fuchsia.dev/fuchsia/tools/lib/ffxutil"
+	ffxlib "go.fuchsia.dev/fuchsia/src/connectivity/network/testing/conformance/ffx"
 	fvdpb "go.fuchsia.dev/fuchsia/tools/virtual_device/proto"
-	"golang.org/x/crypto/ssh"
 	"golang.org/x/net/context"
 )
 
@@ -69,45 +64,14 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		},
 	}}
 
-	privKey, err := rsa.GenerateKey(rand.Reader, RSA_KEY_NUM_BITS)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pemdata := pem.EncodeToMemory(
-		&pem.Block{
-			Type:  "RSA PRIVATE KEY",
-			Bytes: x509.MarshalPKCS1PrivateKey(privKey),
-		},
-	)
-
-	tempDir := t.TempDir()
-
-	privKeyFilepath := filepath.Join(tempDir, "pkey")
-	if err := os.WriteFile(privKeyFilepath, pemdata, PRIVATE_KEY_PERMISSIONS); err != nil {
-		t.Fatal(err)
-	}
-
-	pubKey, err := ssh.NewPublicKey(privKey.Public())
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	pubKeyData := ssh.MarshalAuthorizedKey(pubKey)
-	pubKeyFilepath := filepath.Join(tempDir, "authorized_keys")
-	if err := os.WriteFile(pubKeyFilepath, pubKeyData, PUBLIC_KEY_PERMISSIONS); err != nil {
-		t.Fatal(err)
-	}
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	i, err := NewQemuInstance(ctx, QemuInstanceArgs{
-		Nodename:               nodename,
-		Initrd:                 initrd,
-		HostX64Path:            hostOutDir,
-		HostPathAuthorizedKeys: pubKeyFilepath,
-		NetworkDevices:         netdevs,
+		Nodename:       nodename,
+		Initrd:         initrd,
+		HostX64Path:    hostOutDir,
+		NetworkDevices: netdevs,
 	})
 
 	if err != nil {
@@ -143,15 +107,15 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 		"emulator",
 	)
 
+	tempDir := t.TempDir()
 	ffxPath := filepath.Join(sourceRootRelativeDir, "ffx")
-	ffx, err := ffxutil.NewFFXInstance(
+	ffx, err := ffxlib.NewFfxInstance(
 		ctx,
-		ffxPath,
-		"",
-		os.Environ(),
-		nodename,
-		privKeyFilepath,
-		tempDir,
+		ffxlib.FfxInstanceOptions{
+			Target:        nodename,
+			TestOutputDir: tempDir,
+			FfxBinPath:    ffxPath,
+		},
 	)
 	if err != nil {
 		t.Fatal(err)
@@ -164,10 +128,6 @@ func TestEmulatorWorksWithFfx(t *testing.T) {
 			t.Logf("ffx.Stop() = %s", err)
 		}
 	}()
-
-	if err := ffx.SetLogLevel(ctx, ffxutil.Warn); err != nil {
-		t.Fatal(err)
-	}
 
 	netTestRealmExperimentalFlagPointer := "net.test.realm"
 	if err := ffx.ConfigSet(ctx, netTestRealmExperimentalFlagPointer, "true"); err != nil {
