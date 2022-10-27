@@ -83,7 +83,7 @@ class FileTester {
 
 class MapTester {
  public:
-  static void CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level);
+  static void CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, uint32_t level);
   static void CheckNidsFree(F2fs *fs, std::unordered_set<nid_t> &nids);
   static void CheckNidsInuse(F2fs *fs, std::unordered_set<nid_t> &nids);
   static void CheckBlkaddrsFree(F2fs *fs, std::unordered_set<block_t> &blkaddrs);

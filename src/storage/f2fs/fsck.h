@@ -126,7 +126,7 @@ class FsckWorker {
                              uint16_t index_in_node, uint8_t ver);
   zx_status_t CheckDentries(uint32_t &child_count, uint32_t &child_files, int last_block,
                             const uint8_t *dentry_bitmap, const DirEntry *dentries,
-                            const uint8_t (*filename)[kNameLen], int max_entries);
+                            const uint8_t (*filename)[kNameLen], uint32_t max_entries);
   zx_status_t CheckDentryBlock(uint32_t block_address, uint32_t &child_count, uint32_t &child_files,
                                int last_block);
 
@@ -135,7 +135,8 @@ class FsckWorker {
   void PrintNodeInfo(Node &node_block);
   void PrintInodeInfo(Inode &inode);
   void PrintDentry(uint32_t depth, std::string_view name, const uint8_t *dentry_bitmap,
-                   const DirEntry &dentry, int index, int last_block, int max_entries);
+                   const DirEntry &dentry, uint32_t index, uint32_t last_block,
+                   uint32_t max_entries);
 
   // Fsck checks f2fs consistency as below.
   // 1. It loads a valid superblock, and it obtains valid node/inode/block count information.

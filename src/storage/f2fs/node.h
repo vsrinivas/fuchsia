@@ -175,7 +175,7 @@ class NodeManager {
   nid_t GetNextScanNid() const { return next_scan_nid_; }
   nid_t GetNatCount() const { return nat_entries_count_; }
   nid_t GetFreeNidCount() const { return free_nid_count_; }
-  zx_status_t AllocNatBitmap(const int size) {
+  zx_status_t AllocNatBitmap(const uint32_t size) {
     nat_bitmap_size_ = size;
     nat_bitmap_ = std::make_unique<uint8_t[]>(nat_bitmap_size_);
     memset(nat_bitmap_.get(), 0, nat_bitmap_size_);
@@ -256,7 +256,7 @@ class NodeManager {
 
   std::unique_ptr<uint8_t[]> nat_bitmap_ = nullptr;       // NAT bitmap pointer
   std::unique_ptr<uint8_t[]> nat_prev_bitmap_ = nullptr;  // NAT previous checkpoint bitmap pointer
-  int nat_bitmap_size_ = 0;                               // NAT bitmap size
+  uint32_t nat_bitmap_size_ = 0;                          // NAT bitmap size
 };
 
 }  // namespace f2fs

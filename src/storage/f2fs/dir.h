@@ -65,8 +65,9 @@ class Dir : public VnodeF2fs, public fbl::Recyclable<Dir> {
   zx_status_t MakeEmpty(VnodeF2fs *vnode) __TA_REQUIRES(dir_mutex_);
   zx_status_t MakeEmptyInlineDir(VnodeF2fs *vnode) __TA_REQUIRES(dir_mutex_);
   void InitDentInode(VnodeF2fs *vnode, NodePage &page) __TA_REQUIRES(dir_mutex_);
-  unsigned int RoomInInlineDir(Page *ipage, int slots) __TA_REQUIRES_SHARED(dir_mutex_);
-  int RoomForFilename(DentryBlock *dentry_blk, int slots) __TA_REQUIRES_SHARED(dir_mutex_);
+  uint32_t RoomInInlineDir(Page *ipage, uint32_t slots) __TA_REQUIRES_SHARED(dir_mutex_);
+  uint32_t RoomForFilename(DentryBlock *dentry_blk, uint32_t slots)
+      __TA_REQUIRES_SHARED(dir_mutex_);
 
   // delete
   zx_status_t Unlink(std::string_view name, bool must_be_dir) final __TA_EXCLUDES(dir_mutex_);

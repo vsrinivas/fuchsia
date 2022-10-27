@@ -118,21 +118,21 @@ zx_status_t Dir::MakeEmptyInlineDir(VnodeF2fs *vnode) {
   return ZX_OK;
 }
 
-unsigned int Dir::RoomInInlineDir(Page *ipage, int slots) {
-  int bit_start = 0;
+unsigned int Dir::RoomInInlineDir(Page *ipage, uint32_t slots) {
+  uint32_t bit_start = 0;
 
   while (true) {
-    int zero_start = FindNextZeroBit(InlineDentryBitmap(ipage), MaxInlineDentry(), bit_start);
-    if (zero_start >= static_cast<int>(MaxInlineDentry()))
+    uint32_t zero_start = FindNextZeroBit(InlineDentryBitmap(ipage), MaxInlineDentry(), bit_start);
+    if (zero_start >= MaxInlineDentry())
       return MaxInlineDentry();
 
-    int zero_end = FindNextBit(InlineDentryBitmap(ipage), MaxInlineDentry(), zero_start);
+    uint32_t zero_end = FindNextBit(InlineDentryBitmap(ipage), MaxInlineDentry(), zero_start);
     if (zero_end - zero_start >= slots)
       return zero_start;
 
     bit_start = zero_end + 1;
 
-    if (zero_end + 1 >= static_cast<int>(MaxInlineDentry())) {
+    if (zero_end + 1 >= MaxInlineDentry()) {
       return MaxInlineDentry();
     }
   }
@@ -206,8 +206,8 @@ zx::result<bool> Dir::AddInlineEntry(std::string_view name, VnodeF2fs *vnode) {
     }
 
     f2fs_hash_t name_hash = DentryHash(name);
-    int slots = GetDentrySlots(static_cast<uint16_t>(name.length()));
-    unsigned int bit_pos = RoomInInlineDir(ipage.get(), slots);
+    uint16_t slots = GetDentrySlots(safemath::checked_cast<uint16_t>(name.length()));
+    uint32_t bit_pos = RoomInInlineDir(ipage.get(), slots);
     if (bit_pos < MaxInlineDentry()) {
       ipage->WaitOnWriteback();
 

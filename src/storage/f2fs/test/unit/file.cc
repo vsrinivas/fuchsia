@@ -6,6 +6,7 @@
 
 #include <gtest/gtest.h>
 
+#include "safemath/safe_conversions.h"
 #include "src/lib/storage/block_client/cpp/fake_block_device.h"
 #include "src/storage/f2fs/f2fs.h"
 #include "unit_lib.h"
@@ -31,7 +32,7 @@ TEST_F(FileTest, BlkAddrLevel) {
   File *test_file_ptr = static_cast<File *>(test_file_vn.get());
 
   char buf[kPageSize];
-  unsigned int level = 0;
+  uint32_t level = 0;
 
   for (size_t i = 0; i < kPageSize; ++i) {
     buf[i] = static_cast<char>(rand());
@@ -104,7 +105,7 @@ TEST_F(FileTest, NidAndBlkaddrAllocFree) {
     FileTester::AppendToFile(test_file_ptr, buf, kPageSize);
   }
 
-  test_file_ptr->SyncFile(0, test_file_ptr->GetSize(), false);
+  test_file_ptr->SyncFile(0, safemath::checked_cast<loff_t>(test_file_ptr->GetSize()), false);
 
   MapTester::CheckNodeLevel(fs_.get(), test_file_ptr, level);
 

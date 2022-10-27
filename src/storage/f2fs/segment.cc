@@ -26,7 +26,7 @@ SectionEntry *SegmentManager::GetSectionEntry(uint32_t segno) {
   return &sit_info_->sec_entries[GetSecNo(segno)];
 }
 
-uint32_t SegmentManager::GetValidBlocks(uint32_t segno, int section) {
+uint32_t SegmentManager::GetValidBlocks(uint32_t segno, uint32_t section) {
   // In order to get # of valid blocks in a section instantly from many
   // segments, f2fs manages two counting structures separately.
   if (section > 1) {
@@ -223,7 +223,7 @@ void SegmentManager::VerifyBlockAddr(block_t blk_addr) {
 #endif
 
 // Summary block is always treated as invalid block
-void SegmentManager::CheckBlockCount(int segno, SitEntry &raw_sit) {
+void SegmentManager::CheckBlockCount(uint32_t segno, SitEntry &raw_sit) {
   uint32_t end_segno = segment_count_ - 1;
   int valid_blocks = 0;
 
@@ -231,7 +231,7 @@ void SegmentManager::CheckBlockCount(int segno, SitEntry &raw_sit) {
   ZX_ASSERT(!(GetSitVblocks(raw_sit) > superblock_info_->GetBlocksPerSeg()));
 
   // check boundary of a given segment number
-  ZX_ASSERT(!(segno > (int)end_segno));
+  ZX_ASSERT(!(segno > end_segno));
 
   // check bitmap with valid block count
   for (uint32_t i = 0; i < superblock_info_->GetBlocksPerSeg(); ++i) {
@@ -1286,7 +1286,8 @@ void SegmentManager::FlushSitEntries() {
 
     while ((segno = FindNextBit(bitmap, nsegs, segno + 1)) < nsegs) {
       SegmentEntry &segment_entry = GetSegmentEntry(segno);
-      int sit_offset, offset = -1;
+      uint32_t sit_offset;
+      int offset = -1;
 
       sit_offset = SitEntryOffset(segno);
 

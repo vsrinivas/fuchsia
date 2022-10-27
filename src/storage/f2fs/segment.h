@@ -172,7 +172,7 @@ class SegmentManager {
 
   SegmentEntry &GetSegmentEntry(uint32_t segno);
   SectionEntry *GetSectionEntry(uint32_t segno);
-  uint32_t GetValidBlocks(uint32_t segno, int section);
+  uint32_t GetValidBlocks(uint32_t segno, uint32_t section);
   void SegInfoFromRawSit(SegmentEntry &segment_entry, SitEntry &raw_sit);
   void SegInfoToRawSit(SegmentEntry &segment_entry, SitEntry &raw_sit);
   uint32_t FindNextInuse(uint32_t max, uint32_t segno);
@@ -197,7 +197,7 @@ class SegmentManager {
   uint8_t CursegAllocType(int type);
   uint16_t CursegBlkoff(int type);
   void CheckSegRange(uint32_t segno) const;
-  void CheckBlockCount(int segno, SitEntry &raw_sit);
+  void CheckBlockCount(uint32_t segno, SitEntry &raw_sit);
   pgoff_t CurrentSitAddr(uint32_t start);
   pgoff_t NextSitAddr(pgoff_t block_addr);
   void SetToNextSit(uint32_t start);

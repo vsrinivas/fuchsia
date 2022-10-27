@@ -365,11 +365,11 @@ void Dir::UpdateParentMetadata(VnodeF2fs *vnode, unsigned int current_depth) {
   vnode->ClearFlag(InodeInfoFlag::kIncLink);
 }
 
-int Dir::RoomForFilename(DentryBlock *dentry_blk, int slots) {
-  int bit_start = 0;
-  int zero_start, zero_end;
+uint32_t Dir::RoomForFilename(DentryBlock *dentry_blk, uint32_t slots) {
+  uint32_t bit_start = 0;
 
   while (true) {
+    uint32_t zero_start, zero_end;
     zero_start = FindNextZeroBit(dentry_blk->dentry_bitmap, kNrDentryInBlock, bit_start);
     if (zero_start >= kNrDentryInBlock)
       return kNrDentryInBlock;

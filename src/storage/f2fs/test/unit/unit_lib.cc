@@ -311,12 +311,12 @@ void FileTester::ReadFromFile(File *file, void *data, size_t len, size_t off) {
   ASSERT_EQ(ret, len);
 }
 
-void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, int level) {
+void MapTester::CheckNodeLevel(F2fs *fs, VnodeF2fs *vn, uint32_t level) {
   LockedPage ipage;
   ASSERT_EQ(fs->GetNodeManager().GetNodePage(vn->Ino(), &ipage), ZX_OK);
   Inode *inode = &(ipage->GetAddress<Node>()->i);
 
-  int i;
+  uint32_t i;
   for (i = 0; i < level; ++i)
     ASSERT_NE(inode->i_nid[i], 0U);
 

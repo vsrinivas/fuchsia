@@ -438,11 +438,13 @@ zx_status_t VnodeF2fs::SetAttributes(fs::VnodeAttributesUpdate attr) {
   {
     std::lock_guard wlock(mutex_);
     if (attr.has_creation_time()) {
-      SetCTime(zx_timespec_from_duration(attr.take_creation_time()));
+      SetCTime(zx_timespec_from_duration(
+          safemath::checked_cast<zx_duration_t>(attr.take_creation_time())));
       need_inode_sync = true;
     }
     if (attr.has_modification_time()) {
-      SetMTime(zx_timespec_from_duration(attr.take_modification_time()));
+      SetMTime(zx_timespec_from_duration(
+          safemath::checked_cast<zx_duration_t>(attr.take_modification_time())));
       need_inode_sync = true;
     }
   }
@@ -709,7 +711,7 @@ void VnodeF2fs::TruncatePartialDataPage(uint64_t from) {
 zx_status_t VnodeF2fs::TruncateBlocks(uint64_t from) {
   SuperblockInfo &superblock_info = fs()->GetSuperblockInfo();
   uint32_t blocksize = superblock_info.GetBlocksize();
-  int count = 0;
+  uint32_t count = 0;
   zx_status_t err;
 
   if (from > GetSize())

@@ -421,7 +421,7 @@ inline uint16_t GetDentrySlots(uint16_t namelen) {
 }
 
 // the number of dentry in a block
-constexpr int kNrDentryInBlock = 214;
+constexpr uint32_t kNrDentryInBlock = 214;
 
 // MAX level for dir lookup
 constexpr uint32_t kMaxDirHashDepth = 63;

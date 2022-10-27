@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <safemath/checked_math.h>
+
 #include "src/storage/f2fs/f2fs.h"
 
 namespace f2fs {
@@ -391,7 +393,8 @@ zx::result<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
       noffset[n] = 3;
       offset[n++] = static_cast<int>(block / direct_blks);
       noffset[n] = 4 + offset[n - 1];
-      offset[n++] = block % direct_blks;
+      offset[n++] = safemath::checked_cast<int32_t>(
+          safemath::CheckMod<pgoff_t>(block, direct_blks).ValueOrDie());
       level = 2;
       break;
     }
@@ -399,9 +402,10 @@ zx::result<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
     if (block < indirect_blks) {
       offset[n++] = kNodeInd2Block;
       noffset[n] = 4 + dptrs_per_blk;
-      offset[n++] = static_cast<int>(block / direct_blks);
+      offset[n++] = safemath::checked_cast<int32_t>(block / direct_blks);
       noffset[n] = 5 + dptrs_per_blk + offset[n - 1];
-      offset[n++] = block % direct_blks;
+      offset[n++] = safemath::checked_cast<int32_t>(
+          safemath::CheckMod<pgoff_t>(block, direct_blks).ValueOrDie());
       level = 2;
       break;
     }
@@ -411,9 +415,10 @@ zx::result<int32_t> NodeManager::GetNodePath(VnodeF2fs &vnode, pgoff_t block, in
       noffset[n] = 5 + (dptrs_per_blk * 2);
       offset[n++] = static_cast<int>(block / indirect_blks);
       noffset[n] = 6 + (dptrs_per_blk * 2) + offset[n - 1] * (dptrs_per_blk + 1);
-      offset[n++] = (block / direct_blks) % dptrs_per_blk;
+      offset[n++] = safemath::checked_cast<int32_t>((block / direct_blks) % dptrs_per_blk);
       noffset[n] = 7 + (dptrs_per_blk * 2) + offset[n - 2] * (dptrs_per_blk + 1) + offset[n - 1];
-      offset[n++] = block % direct_blks;
+      offset[n++] = safemath::checked_cast<int32_t>(
+          safemath::CheckMod<pgoff_t>(block, direct_blks).ValueOrDie());
       level = 3;
       break;
     } else {
@@ -1260,11 +1265,11 @@ zx_status_t NodeManager::RecoverInodePage(NodePage &page) {
 }
 
 zx_status_t NodeManager::RestoreNodeSummary(uint32_t segno, SummaryBlock &sum) {
-  int last_offset = GetSuperblockInfo().GetBlocksPerSeg();
+  uint32_t last_offset = GetSuperblockInfo().GetBlocksPerSeg();
   block_t addr = fs_->GetSegmentManager().StartBlock(segno);
   Summary *sum_entry = &sum.entries[0];
 
-  for (int i = 0; i < last_offset; ++i, ++sum_entry, ++addr) {
+  for (uint32_t i = 0; i < last_offset; ++i, ++sum_entry, ++addr) {
     LockedPage page;
     if (zx_status_t ret = fs_->GetMetaPage(addr, &page); ret != ZX_OK) {
       return ret;
@@ -1414,7 +1419,8 @@ void NodeManager::FlushNatEntries() {
   }
 
   // 2) shrink nat caches if necessary
-  TryToFreeNats(nat_entries_count_ - kNmWoutThreshold);
+  TryToFreeNats(safemath::checked_cast<int>(nat_entries_count_) -
+                safemath::checked_cast<int>(kNmWoutThreshold));
 }
 
 zx_status_t NodeManager::InitNodeManager() {

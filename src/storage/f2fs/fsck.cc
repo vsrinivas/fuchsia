@@ -556,12 +556,13 @@ zx::result<TraverseResult> FsckWorker::TraverseDoubleIndirectNodeBlock(const Ino
 }
 
 void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
-                             const uint8_t *dentry_bitmap, const DirEntry &dentry, const int index,
-                             const int last_block, const int max_entries) {
-  int last_de = 0;
-  int next_idx = 0;
-  int name_len;
-  int bit_offset;
+                             const uint8_t *dentry_bitmap, const DirEntry &dentry,
+                             const uint32_t index, const uint32_t last_block,
+                             const uint32_t max_entries) {
+  uint32_t last_de = 0;
+  uint32_t next_idx = 0;
+  uint32_t name_len;
+  uint32_t bit_offset;
 
   name_len = LeToCpu(dentry.name_len);
   next_idx = index + (name_len + kDentrySlotLen - 1) / kDentrySlotLen;
@@ -593,13 +594,13 @@ void FsckWorker::PrintDentry(const uint32_t depth, std::string_view name,
 zx_status_t FsckWorker::CheckDentries(uint32_t &child_count, uint32_t &child_files,
                                       const int last_block, const uint8_t *dentry_bitmap,
                                       const DirEntry *dentries, const uint8_t (*filename)[kNameLen],
-                                      const int max_entries) {
+                                      const uint32_t max_entries) {
   uint32_t hash_code;
   FileType ftype;
 
   ++fsck_.dentry_depth;
 
-  for (int i = 0; i < max_entries;) {
+  for (uint32_t i = 0; i < max_entries;) {
     if (TestBit(i, dentry_bitmap) == 0x0) {
       ++i;
       continue;
@@ -959,7 +960,7 @@ zx_status_t FsckWorker::RepairNat() {
 
       // If not found, go for the NAT.
       block_t block_off = nid / kNatEntryPerBlock;
-      int entry_off = nid % kNatEntryPerBlock;
+      uint32_t entry_off = nid % kNatEntryPerBlock;
       block_t seg_off = block_off >> superblock_info_.GetLogBlocksPerSeg();
       block_t block_addr = (node_manager_->GetNatAddress() +
                             (seg_off << superblock_info_.GetLogBlocksPerSeg() << 1) +
@@ -1225,7 +1226,7 @@ zx_status_t FsckWorker::Repair() {
 }
 
 void FsckWorker::PrintInodeInfo(Inode &inode) {
-  int namelen = LeToCpu(inode.i_namelen);
+  uint32_t namelen = LeToCpu(inode.i_namelen);
 
   DisplayMember(sizeof(uint32_t), inode.i_mode, "i_mode");
   DisplayMember(sizeof(uint32_t), inode.i_uid, "i_uid");
@@ -1972,7 +1973,7 @@ zx::result<RawNatEntry> FsckWorker::GetNatEntry(nid_t nid) {
   block_t block_off;
   block_t block_addr;
   block_t seg_off;
-  int entry_off;
+  block_t entry_off;
 
   if ((nid / kNatEntryPerBlock) > fsck_.nr_nat_entries) {
     FX_LOGS(WARNING) << "nid is over max nid";
