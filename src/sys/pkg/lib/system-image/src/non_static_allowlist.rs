@@ -22,11 +22,11 @@ impl NonStaticAllowList {
     /// Ignores empty lines and lines beginning with '#'.
     pub fn parse(source: &[u8]) -> Result<Self, AllowListError> {
         let contents = std::str::from_utf8(source)?
-            .split("\n")
-            .filter(|line| !(line.is_empty() || line.starts_with("#")))
+            .split('\n')
+            .filter(|line| !(line.is_empty() || line.starts_with('#')))
             .map(PackageName::from_str)
             .collect::<Result<HashSet<_>, _>>()?;
-        return Ok(Self { contents });
+        Ok(Self { contents })
     }
 
     /// Create an empty allow _list.

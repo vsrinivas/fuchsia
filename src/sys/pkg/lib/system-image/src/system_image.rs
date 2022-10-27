@@ -52,7 +52,7 @@ impl SystemImage {
 
     /// The hash of the `system_image` package.
     pub fn hash(&self) -> &Hash {
-        &self.root_dir.hash()
+        self.root_dir.hash()
     }
 
     /// Load `data/cache_packages.json`.

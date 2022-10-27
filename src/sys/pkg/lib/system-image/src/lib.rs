@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 mod cache_packages;
 mod errors;
 mod non_static_allowlist;
@@ -18,8 +20,8 @@ pub use crate::{
     system_image::{ExecutabilityRestrictions, SystemImage},
 };
 
-static PKGFS_BOOT_ARG_KEY: &'static str = "zircon.system.pkgfs.cmd";
-static PKGFS_BOOT_ARG_VALUE_PREFIX: &'static str = "bin/pkgsvr+";
+static PKGFS_BOOT_ARG_KEY: &str = "zircon.system.pkgfs.cmd";
+static PKGFS_BOOT_ARG_VALUE_PREFIX: &str = "bin/pkgsvr+";
 
 pub async fn get_system_image_hash(
     args: &fidl_fuchsia_boot::ArgumentsProxy,

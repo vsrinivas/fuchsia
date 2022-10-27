@@ -84,7 +84,7 @@ struct Packages {
 }
 
 fn parse_json(contents: &[u8]) -> Result<Vec<PinnedAbsolutePackageUrl>, CachePackagesInitError> {
-    match serde_json::from_slice(&contents).map_err(CachePackagesInitError::JsonError)? {
+    match serde_json::from_slice(contents).map_err(CachePackagesInitError::JsonError)? {
         Packages { ref version, content } if version == "1" => Ok(content),
         Packages { version, .. } => Err(CachePackagesInitError::VersionNotSupported(version)),
     }
