@@ -3,28 +3,34 @@
 # found in the LICENSE file.
 
 load("@legacy_ninja_build_outputs//:build_args.bzl", "use_vbmeta")
-load("@rules_fuchsia//fuchsia:assembly.bzl", "fuchsia_image_configuration")
+load("@rules_fuchsia//fuchsia:assembly.bzl", "fuchsia_images_configuration")
 
 package(default_visibility = ["//build/bazel/assembly:__pkg__"])
 
-fuchsia_image_configuration(
-    name = "fuchsia",
-    # NOTE: files here are not used in template substitution, instead they are
-    # only used to propagate inputs.
-    files = {
-        "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/key.pem": "NOT_USED_IN_TEMPLATE",
-        "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/key_metadata.bin": "NOT_USED_IN_TEMPLATE",
-    } if use_vbmeta else {},
-    template = "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/images_config.json",
+filegroup(
+    name = "fuchsia_key_and_metadata",
+    srcs = [
+        "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/key.pem",
+        "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/key_metadata.bin",
+    ] if use_vbmeta else [],
 )
 
-fuchsia_image_configuration(
+fuchsia_images_configuration(
+    name = "fuchsia",
+    images_config = "@legacy_ninja_build_outputs//:fuchsia.bazel_images_config_inputs/images_config.json",
+    images_config_extra_files = ":fuchsia_key_and_metadata",
+)
+
+filegroup(
+    name = "bringup_key_and_metadata",
+    srcs = [
+        "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/key.pem",
+        "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/key_metadata.bin",
+    ] if use_vbmeta else [],
+)
+
+fuchsia_images_configuration(
     name = "bringup",
-    # NOTE: files here are not used in template substitution, instead they are
-    # only used to propagate inputs.
-    files = {
-        "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/key.pem": "NOT_USED_IN_TEMPLATE",
-        "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/key_metadata.bin": "NOT_USED_IN_TEMPLATE",
-    } if use_vbmeta else {},
-    template = "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/images_config.json",
+    images_config = "@legacy_ninja_build_outputs//:bringup.bazel_images_config_inputs/images_config.json",
+    images_config_extra_files = ":bringup_key_and_metadata",
 )
