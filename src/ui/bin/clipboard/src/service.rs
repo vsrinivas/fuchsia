@@ -68,21 +68,35 @@ pub(crate) trait ServiceDependencies: std::fmt::Debug + 'static {
     type Clock: Clock;
 }
 
+/// The current contents of the clipboard.
+#[derive(Debug)]
+struct ClipboardContents {
+    last_modified: zx::Time,
+    clipboard_item: Option<ClipboardItem>,
+}
+
+impl ClipboardContents {
+    fn new(now: zx::Time) -> Self {
+        Self { last_modified: now, clipboard_item: None }
+    }
+}
+
 /// Represents the Clipboard service.
 ///
-/// Must be wrapped in `Rc`. Instantiate using [`Self::new`].
+/// Instantiate using [`Self::new`].
 #[derive(Debug)]
 pub(crate) struct Service<T: ServiceDependencies> {
+    clock: T::Clock,
     // Each of these fields can be mutated independently on different channels, hence the separate
     // mutable containers.
     /// Tracks the focused leaf view.
     focused_view_ref_koid: RefCell<Option<zx::Koid>>,
     /// The current contents of the clipboard.
-    clipboard_item: RefCell<Option<ClipboardItem>>,
+    contents: RefCell<ClipboardContents>,
     /// Keeps track of the registration state for each `ViewRef`'s koid.
     view_ref_koid_to_view_ref_state: RefCell<HashMap<zx::Koid, ViewRefState>>,
 
-    inspect_data: ServiceInspectData<T>,
+    inspect_data: ServiceInspectData,
 
     /// Retains the pending `Task` in which the clipboard service listens for focus chain updates.
     focus_watcher_task: OnceCell<Task<()>>,
@@ -101,10 +115,12 @@ impl<T: ServiceDependencies> Service<T> {
         focus_provider_proxy: focus::FocusChainProviderProxy,
         inspect_root: &finspect::Node,
     ) -> Rc<Self> {
-        let inspect_data = ServiceInspectData::new(inspect_root, clock.clone());
+        let now = clock.now();
+        let inspect_data = ServiceInspectData::new(inspect_root, now);
         let svc = Rc::new(Self {
+            clock,
             focused_view_ref_koid: RefCell::new(None),
-            clipboard_item: RefCell::new(None),
+            contents: RefCell::new(ClipboardContents::new(now)),
             view_ref_koid_to_view_ref_state: RefCell::new(HashMap::new()),
             inspect_data,
             focus_watcher_task: OnceCell::new(),
@@ -153,7 +169,8 @@ impl<T: ServiceDependencies> Service<T> {
                     let old_view_ref_koid =
                         this.focused_view_ref_koid.replace(focused_view_ref_koid);
                     if old_view_ref_koid != focused_view_ref_koid {
-                        this.inspect_data.record_event(inspect::EventType::FocusUpdated);
+                        this.inspect_data
+                            .record_event(inspect::EventType::FocusUpdated, this.clock.now());
                         debug!(
                             "Focus changed from {old_view_ref_koid:?} to {focused_view_ref_koid:?}"
                         );
@@ -327,23 +344,31 @@ impl<T: ServiceDependencies> Service<T> {
         view_ref_koid: zx::Koid,
     ) -> Result<(), ClipboardError> {
         debug!("handle_set_item for ViewRef {view_ref_koid:?}");
-        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::WriteAccessDenied)?;
+        let now = self.clock.now();
+        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::WriteAccessDenied, now)?;
         let item = fidl_item.try_into().map_err(|e| {
-            self.inspect_data.record_event(inspect::EventType::WriteError);
+            self.inspect_data.record_event(inspect::EventType::WriteError, now);
             e
         })?;
-        self.inspect_data.record_item(&item, true);
-        self.clipboard_item.replace(Some(item));
-        self.inspect_data.record_event(inspect::EventType::Write);
+        self.inspect_data.record_item(&item, true, now);
+        let mut contents = self.contents.borrow_mut();
+        contents.clipboard_item.replace(item);
+        contents.last_modified = now;
+        self.inspect_data.record_event(inspect::EventType::Write, now);
         Ok(())
     }
 
     fn handle_clear(self: &Rc<Self>, view_ref_koid: zx::Koid) -> Result<(), ClipboardError> {
         debug!("handle_clear for ViewRef {view_ref_koid:?}");
-        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::WriteAccessDenied)?;
-        self.clipboard_item.take();
-        self.inspect_data.clear_items();
-        self.inspect_data.record_event(inspect::EventType::Clear);
+        let now = self.clock.now();
+        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::WriteAccessDenied, now)?;
+
+        let mut contents = self.contents.borrow_mut();
+        let _ = contents.clipboard_item.take();
+        contents.last_modified = now;
+
+        self.inspect_data.clear_items(now);
+        self.inspect_data.record_event(inspect::EventType::Clear, now);
         Ok(())
     }
 
@@ -484,9 +509,10 @@ impl<T: ServiceDependencies> Service<T> {
         view_ref_koid: zx::Koid,
     ) -> Result<fclip::ClipboardItem, ClipboardError> {
         debug!("get_item for ViewRef {view_ref_koid:?}");
-        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::ReadAccessDenied)?;
-        self.inspect_data.record_event(inspect::EventType::Read);
-        let item = self.clipboard_item.borrow().as_ref().map(Into::into);
+        let now = self.clock.now();
+        self.ensure_view_is_focused(view_ref_koid, inspect::EventType::ReadAccessDenied, now)?;
+        self.inspect_data.record_event(inspect::EventType::Read, now);
+        let item = self.contents.borrow().clipboard_item.as_ref().map(Into::into);
         match item {
             None => Err(ClipboardError::Empty),
             Some(item) => Ok(item),
@@ -542,13 +568,14 @@ impl<T: ServiceDependencies> Service<T> {
         self: &Rc<Self>,
         view_ref_koid: zx::Koid,
         error_event_type: inspect::EventType,
+        now: zx::Time,
     ) -> Result<(), ClipboardError> {
         match self.focused_view_ref_koid.borrow().as_ref() {
             None => {
                 warn!(
                     "Asserted ViewRef {view_ref_koid:?} was focused before a focus chain was set",
                 );
-                self.inspect_data.record_event(error_event_type);
+                self.inspect_data.record_event(error_event_type, now);
                 Err(ClipboardError::internal_from_status(zx::Status::UNAVAILABLE))
             }
             Some(focused_view_ref_koid) => {
@@ -556,7 +583,7 @@ impl<T: ServiceDependencies> Service<T> {
                     Ok(())
                 } else {
                     info!("ViewRef {view_ref_koid:?} is not focused");
-                    self.inspect_data.record_event(error_event_type);
+                    self.inspect_data.record_event(error_event_type, now);
                     Err(ClipboardError::Unauthorized)
                 }
             }

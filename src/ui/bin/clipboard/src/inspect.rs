@@ -3,12 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        items::ClipboardItem,
-        service::{Clock, ServiceDependencies},
-    },
+    crate::items::ClipboardItem,
     derivative::Derivative,
     fuchsia_inspect::{self as finspect, health::Reporter, NumericProperty, Property},
+    fuchsia_zircon as zx,
     std::convert::TryInto,
     std::{
         cell::RefCell,
@@ -50,18 +48,16 @@ impl std::fmt::Display for EventType {
 
 /// Holds inspect data for [`crate::service::Service`].
 #[derive(Debug)]
-pub(crate) struct ServiceInspectData<T: ServiceDependencies> {
-    inner: Rc<Inner<T>>,
+pub(crate) struct ServiceInspectData {
+    inner: Rc<Inner>,
 }
 
 #[derive(Derivative)]
 #[derivative(Debug)]
-struct Inner<T: ServiceDependencies> {
+struct Inner {
     _node: finspect::Node,
     #[derivative(Debug = "ignore")]
     health: RefCell<finspect::health::Node>,
-    /// Time source
-    clock: T::Clock,
     events_node: finspect::Node,
     events_by_type: RefCell<BTreeMap<EventType, EventCounter>>,
     /// Number of currently connected `FocusedReaderRegistry` clients
@@ -80,11 +76,12 @@ struct Inner<T: ServiceDependencies> {
     last_modified_ns: finspect::IntProperty,
 }
 
-impl<T: ServiceDependencies> ServiceInspectData<T> {
+impl ServiceInspectData {
     /// # Arguments
-    /// -    `root`: Value of `inspector().root()`. Overridable for testing.
-    /// -    `clock`: Returns the current time. Overridable for testing.
-    pub fn new(root: &finspect::Node, clock: T::Clock) -> Self {
+    /// -   `root`: Value of `inspector().root()`. Overridable for testing.
+    /// -   `now`: Timestamp at which the inspect data (and the whole clipboard service) was
+    ///     instantiated.
+    pub fn new(root: &finspect::Node, now: zx::Time) -> Self {
         let node = root.create_child("clipboard");
         let health = RefCell::new(finspect::health::Node::new(root));
         let events_node = node.create_child("events");
@@ -95,12 +92,11 @@ impl<T: ServiceDependencies> ServiceInspectData<T> {
         let writer_count = node.create_uint("writer_count", 0);
         let items_node = node.create_child("items");
         let items = RefCell::new(BTreeMap::new());
-        let last_modified_ns = node.create_int("last_modified_ns", 0);
+        let last_modified_ns = node.create_int("last_modified_ns", now.into_nanos());
         Self {
             inner: Rc::new(Inner {
                 _node: node,
                 health,
-                clock,
                 events_node,
                 events_by_type,
                 reader_registry_client_count,
@@ -125,42 +121,40 @@ impl<T: ServiceDependencies> ServiceInspectData<T> {
     }
 
     /// Records an occurrence of one of the supported event types.
-    pub fn record_event(&self, event_type: EventType) {
+    pub fn record_event(&self, event_type: EventType, now: zx::Time) {
         let mut events_by_type = self.inner.events_by_type.borrow_mut();
         let event_counter = events_by_type
             .entry(event_type)
             .or_insert_with(|| EventCounter::new(&self.inner.events_node, event_type));
         event_counter.event_count.add(1);
-        let now = self.inner.as_ref().clock.now();
-        let now_ns = now.into_nanos();
-        event_counter.last_seen_ns.set(now_ns);
+        event_counter.last_seen_ns.set(now.into_nanos());
     }
 
     /// Increases the count of reader registry clients by 1. It will decrease by 1 when the
     /// returned `InstanceCounter` is dropped.
     #[must_use]
-    pub fn scoped_increment_reader_registry_client_count(&self) -> InstanceCounter<T> {
+    pub fn scoped_increment_reader_registry_client_count(&self) -> InstanceCounter {
         InstanceCounter::new(self, |d| &d.reader_registry_client_count)
     }
 
     /// Increases the count of writer registry clients by 1. It will decrease by 1 when the
     /// returned `InstanceCounter` is dropped.
     #[must_use]
-    pub fn scoped_increment_writer_registry_client_count(&self) -> InstanceCounter<T> {
+    pub fn scoped_increment_writer_registry_client_count(&self) -> InstanceCounter {
         InstanceCounter::new(self, |d| &d.writer_registry_client_count)
     }
 
     /// Increases the count of readers by 1. It will decrease by 1 when the returned
     /// `InstanceCounter` is dropped.
     #[must_use]
-    pub fn scoped_increment_reader_count(&self) -> InstanceCounter<T> {
+    pub fn scoped_increment_reader_count(&self) -> InstanceCounter {
         InstanceCounter::new(self, |d| &d.reader_count)
     }
 
     /// Increases the count of writers by 1. It will decrease by 1 when the returned
     /// `InstanceCounter` is dropped.
     #[must_use]
-    pub fn scoped_increment_writer_count(&self) -> InstanceCounter<T> {
+    pub fn scoped_increment_writer_count(&self) -> InstanceCounter {
         InstanceCounter::new(self, |d| &d.writer_count)
     }
 
@@ -168,7 +162,7 @@ impl<T: ServiceDependencies> ServiceInspectData<T> {
     /// existing items with the new one.
     ///
     /// This method updates [`last_modified_ns`].
-    pub fn record_item(&self, item: &ClipboardItem, replace_all: bool) {
+    pub fn record_item(&self, item: &ClipboardItem, replace_all: bool, now: zx::Time) {
         if let Ok(mut items) = self.inner.items.try_borrow_mut() {
             if replace_all {
                 items.clear();
@@ -176,7 +170,7 @@ impl<T: ServiceDependencies> ServiceInspectData<T> {
             let item_data = ItemInspectData::new(&self.inner.items_node, item);
             let mime_type = item.mime_type_hint().to_string();
             items.insert(mime_type, item_data);
-            self.update_last_modified();
+            self.update_last_modified(now);
         } else {
             warn!("Items map was borrowed, couldn't update inspect tree");
         }
@@ -185,18 +179,17 @@ impl<T: ServiceDependencies> ServiceInspectData<T> {
     /// Records that the clipboard's items have been cleared.
     ///
     /// This method updates [`last_modified_ns`].
-    pub fn clear_items(&self) {
+    pub fn clear_items(&self, now: zx::Time) {
         if let Ok(mut items) = self.inner.items.try_borrow_mut() {
             items.clear();
-            self.update_last_modified();
+            self.update_last_modified(now);
         } else {
             warn!("Items map was borrowed, couldn't update inspect tree");
         }
     }
 
-    fn update_last_modified(&self) {
-        let timestamp = self.inner.clock.now();
-        self.inner.last_modified_ns.set(timestamp.into_nanos());
+    fn update_last_modified(&self, now: zx::Time) {
+        self.inner.last_modified_ns.set(now.into_nanos());
     }
 }
 
@@ -237,22 +230,22 @@ impl EventCounter {
     }
 }
 
-type UintPropertyAccessor<T> = fn(&Inner<T>) -> &finspect::UintProperty;
+type UintPropertyAccessor = fn(&Inner) -> &finspect::UintProperty;
 
 /// Adds 1 to the given property when instantiated, subtracts 1 when dropped.
-pub(crate) struct InstanceCounter<T: ServiceDependencies> {
-    parent_inner: Weak<Inner<T>>,
-    property_accessor: UintPropertyAccessor<T>,
+pub(crate) struct InstanceCounter {
+    parent_inner: Weak<Inner>,
+    property_accessor: UintPropertyAccessor,
 }
 
-impl<T: ServiceDependencies> InstanceCounter<T> {
-    fn new(parent: &ServiceInspectData<T>, property_accessor: UintPropertyAccessor<T>) -> Self {
+impl InstanceCounter {
+    fn new(parent: &ServiceInspectData, property_accessor: UintPropertyAccessor) -> Self {
         property_accessor(&parent.inner).add(1);
         Self { parent_inner: Rc::downgrade(&parent.inner), property_accessor }
     }
 }
 
-impl<T: ServiceDependencies> Drop for InstanceCounter<T> {
+impl Drop for InstanceCounter {
     fn drop(&mut self) {
         if let Some(parent_inner) = self.parent_inner.upgrade() {
             (self.property_accessor)(&*parent_inner).subtract(1);
@@ -266,51 +259,21 @@ mod tests {
 
     use {
         super::*,
-        crate::service::Clock,
         fuchsia_inspect::{assert_data_tree, Inspector},
         fuchsia_zircon as zx,
-        std::{cell::Cell, rc::Rc},
     };
 
-    #[derive(Debug)]
-    enum TestServiceDependencies {/* not instantiable */}
-    impl ServiceDependencies for TestServiceDependencies {
-        type Clock = FakeClock;
-    }
-
-    #[derive(Debug, Clone)]
-    struct FakeClock {
-        now: Rc<Cell<zx::Time>>,
-    }
-
-    #[allow(dead_code)]
-    impl FakeClock {
-        fn new(now: zx::Time) -> Self {
-            Self { now: Rc::new(Cell::new(now)) }
-        }
-
-        fn set_time_ns(&self, nanos: i64) {
-            self.now.set(zx::Time::from_nanos(nanos))
-        }
-    }
-
-    impl Clock for FakeClock {
-        fn now(&self) -> zx::Time {
-            self.now.get()
-        }
-    }
-
-    fn make_handles() -> (ServiceInspectData<TestServiceDependencies>, FakeClock, Inspector) {
+    /// # Arguments
+    /// -   `now`: Initialization timestamp.
+    fn make_handles(now: zx::Time) -> (ServiceInspectData, Inspector) {
         let inspector = Inspector::new();
-        let clock = FakeClock::new(zx::Time::from_nanos(0));
-        let inspect_data =
-            ServiceInspectData::<TestServiceDependencies>::new(inspector.root(), clock.clone());
-        (inspect_data, clock, inspector)
+        let inspect_data = ServiceInspectData::new(inspector.root(), now);
+        (inspect_data, inspector)
     }
 
     #[test]
     fn test_health() {
-        let (inspect_data, _clock, inspector) = make_handles();
+        let (inspect_data, inspector) = make_handles(zx::Time::from_nanos(1));
 
         assert_data_tree!(inspector, root: contains {
             "fuchsia.inspect.Health": contains {
@@ -336,12 +299,10 @@ mod tests {
 
     #[test]
     fn test_record_event() {
-        let (inspect_data, clock, inspector) = make_handles();
+        let (inspect_data, inspector) = make_handles(zx::Time::from_nanos(1));
 
-        clock.set_time_ns(17);
-        inspect_data.record_event(EventType::Write);
-        clock.set_time_ns(34);
-        inspect_data.record_event(EventType::Write);
+        inspect_data.record_event(EventType::Write, zx::Time::from_nanos(17));
+        inspect_data.record_event(EventType::Write, zx::Time::from_nanos(34));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -352,14 +313,14 @@ mod tests {
                     }
                 },
                 // Should not be updated by `record_event()`.
-                last_modified_ns: 0i64,
+                last_modified_ns: 1i64,
             }
         });
     }
 
     #[test]
     fn test_counters() {
-        let (inspect_data, _clock, inspector) = make_handles();
+        let (inspect_data, inspector) = make_handles(zx::Time::from_nanos(1));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -367,7 +328,7 @@ mod tests {
                 writer_registry_client_count: 0u64,
                 reader_count: 0u64,
                 writer_count: 0u64,
-                last_modified_ns: 0i64,
+                last_modified_ns: 1i64,
             }
         });
 
@@ -385,7 +346,7 @@ mod tests {
                     writer_registry_client_count: 1u64,
                     reader_count: 1u64,
                     writer_count: 2u64,
-                    last_modified_ns: 0i64,
+                    last_modified_ns: 1i64,
                 }
             });
         }
@@ -396,18 +357,17 @@ mod tests {
                 writer_registry_client_count: 1u64,
                 reader_count: 0u64,
                 writer_count: 0u64,
-                last_modified_ns: 0i64,
+                last_modified_ns: 1i64,
             }
         });
     }
 
     #[test]
     fn test_record_item() {
-        let (inspect_data, clock, inspector) = make_handles();
+        let (inspect_data, inspector) = make_handles(zx::Time::from_nanos(1));
 
-        clock.set_time_ns(17);
         let item1 = ClipboardItem::new_text_item("🐕🐈", "foo/bar");
-        inspect_data.record_item(&item1, false);
+        inspect_data.record_item(&item1, false, zx::Time::from_nanos(17));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -420,9 +380,8 @@ mod tests {
             }
         });
 
-        clock.set_time_ns(34);
         let item2 = ClipboardItem::new_text_item("cat dog", "another/mime");
-        inspect_data.record_item(&item2, false);
+        inspect_data.record_item(&item2, false, zx::Time::from_nanos(34));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -438,9 +397,8 @@ mod tests {
             }
         });
 
-        clock.set_time_ns(51);
         let item3 = ClipboardItem::new_text_item("#", "foo/bar");
-        inspect_data.record_item(&item3, false);
+        inspect_data.record_item(&item3, false, zx::Time::from_nanos(51));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -456,9 +414,8 @@ mod tests {
             }
         });
 
-        clock.set_time_ns(68);
         let item3 = ClipboardItem::new_text_item("abcd", "foo/bar");
-        inspect_data.record_item(&item3, true);
+        inspect_data.record_item(&item3, true, zx::Time::from_nanos(68));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -474,11 +431,10 @@ mod tests {
 
     #[test]
     fn test_clear_items() {
-        let (inspect_data, clock, inspector) = make_handles();
+        let (inspect_data, inspector) = make_handles(zx::Time::from_nanos(1));
 
-        clock.set_time_ns(17);
         let item1 = ClipboardItem::new_text_item("🐕🐈", "foo/bar");
-        inspect_data.record_item(&item1, false);
+        inspect_data.record_item(&item1, false, zx::Time::from_nanos(17));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
@@ -491,8 +447,7 @@ mod tests {
             }
         });
 
-        clock.set_time_ns(34);
-        inspect_data.clear_items();
+        inspect_data.clear_items(zx::Time::from_nanos(34));
 
         assert_data_tree!(inspector, root: contains {
             clipboard: contains {
