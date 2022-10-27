@@ -3,6 +3,7 @@
 
 #include "src/media/audio/audio_core/reporter.h"
 
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <lib/sys/component/cpp/service_client.h>
 #include <lib/syslog/cpp/macros.h>
 
@@ -12,7 +13,6 @@
 
 #include "fidl/fuchsia.io/cpp/markers.h"
 #include "fidl/fuchsia.metrics/cpp/natural_types.h"
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
 #include "src/media/audio/audio_core/metrics/metrics_impl.h"

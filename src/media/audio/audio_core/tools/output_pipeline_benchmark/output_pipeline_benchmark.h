@@ -5,12 +5,13 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_TOOLS_OUTPUT_PIPELINE_BENCHMARK_OUTPUT_PIPELINE_BENCHMARK_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_TOOLS_OUTPUT_PIPELINE_BENCHMARK_OUTPUT_PIPELINE_BENCHMARK_H_
 
+#include <lib/syslog/cpp/macros.h>
+
 #include <optional>
 
 #include <perftest/results.h>
 
 #include "gperftools/profiler.h"
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/clock.h"
 #include "src/media/audio/audio_core/output_pipeline.h"
 #include "src/media/audio/audio_core/process_config.h"

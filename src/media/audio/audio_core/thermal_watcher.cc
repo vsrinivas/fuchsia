@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/thermal_watcher.h"
 
+#include <lib/async/dispatcher.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <memory>
@@ -11,7 +12,6 @@
 #include <rapidjson/document.h>
 
 #include "fuchsia/thermal/cpp/fidl.h"
-#include "lib/async/dispatcher.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/reporter.h"
 #include "src/media/audio/audio_core/thermal_config.h"

@@ -4,13 +4,13 @@
 
 #include "src/media/audio/lib/processing/sampler.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/time.h>
 
 #include <cstdint>
 #include <limits>
 
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"
 #include "src/media/audio/lib/processing/point_sampler.h"

@@ -6,13 +6,13 @@
 
 #include <lib/async/cpp/time.h>
 #include <lib/fit/defer.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/zx/clock.h>
 
 #include <algorithm>
 #include <iomanip>
 
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/idle_policy.h"
 #include "src/media/audio/audio_core/logging_flags.h"

@@ -5,6 +5,9 @@
 #include "src/media/audio/services/mixer/fidl/gain_control_server.h"
 
 #include <fidl/fuchsia.audio/cpp/wire_types.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/object_view.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 
 #include <functional>
 #include <memory>
@@ -15,9 +18,6 @@
 
 #include "fidl/fuchsia.audio/cpp/common_types.h"
 #include "fidl/fuchsia.audio/cpp/natural_types.h"
-#include "lib/fidl/cpp/wire/arena.h"
-#include "lib/fidl/cpp/wire/object_view.h"
-#include "lib/fidl/cpp/wire/wire_types.h"
 #include "src/media/audio/lib/processing/gain.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
 #include "src/media/audio/services/mixer/common/basic_types.h"

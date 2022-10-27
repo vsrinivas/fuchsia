@@ -6,8 +6,8 @@
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_THERMAL_WATCHER_H_
 
 #include <fuchsia/thermal/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 
-#include "lib/async/dispatcher.h"
 #include "src/media/audio/audio_core/thermal_config.h"
 
 namespace media::audio {

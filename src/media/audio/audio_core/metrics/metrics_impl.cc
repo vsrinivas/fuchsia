@@ -5,12 +5,11 @@
 #include "src/media/audio/audio_core/metrics/metrics_impl.h"
 
 #include <lib/fidl/cpp/wire/channel.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
 #include <lib/sys/component/cpp/service_client.h>
 
 #include <utility>
 #include <vector>
-
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
 
 namespace media::audio {
 

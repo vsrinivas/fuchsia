@@ -3,10 +3,11 @@
 
 #include "src/media/audio/tools/audio_listener/audio_listener.h"
 
+#include <lib/fidl/cpp/enum.h>
+
 #include <optional>
 
 #include "fuchsia/media/cpp/fidl.h"
-#include "lib/fidl/cpp/enum.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
 

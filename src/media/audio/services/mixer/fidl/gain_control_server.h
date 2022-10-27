@@ -6,6 +6,8 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_GAIN_CONTROL_SERVER_H_
 
 #include <fidl/fuchsia.audio/cpp/wire.h>
+#include <lib/fidl/cpp/wire/internal/transport_channel.h>
+#include <lib/fidl/cpp/wire/wire_messaging_declarations.h>
 #include <lib/zx/time.h>
 
 #include <memory>
@@ -13,8 +15,6 @@
 #include <string_view>
 #include <unordered_set>
 
-#include "lib/fidl/cpp/wire/internal/transport_channel.h"
-#include "lib/fidl/cpp/wire/wire_messaging_declarations.h"
 #include "src/media/audio/lib/clock/clock.h"
 #include "src/media/audio/services/common/base_fidl_server.h"
 #include "src/media/audio/services/common/fidl_thread.h"

@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_LIB_ANALYSIS_DROPOUT_H_
 #define SRC_MEDIA_AUDIO_LIB_ANALYSIS_DROPOUT_H_
 
+#include <lib/syslog/cpp/macros.h>
 #include <zircon/types.h>
 
 #include <cmath>
@@ -12,7 +13,6 @@
 #include <limits>
 #include <optional>
 
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/format/audio_buffer.h"
 
 namespace media::audio {

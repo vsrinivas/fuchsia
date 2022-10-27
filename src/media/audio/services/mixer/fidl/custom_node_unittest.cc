@@ -5,6 +5,8 @@
 #include "src/media/audio/services/mixer/fidl/custom_node.h"
 
 #include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/object_view.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
 #include <lib/zx/vmo.h>
 
 #include <gmock/gmock.h>
@@ -15,8 +17,6 @@
 #include "fidl/fuchsia.audio/cpp/common_types.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "fidl/fuchsia.mem/cpp/wire_types.h"
-#include "lib/fidl/cpp/wire/object_view.h"
-#include "lib/fidl/cpp/wire/vector_view.h"
 #include "src/media/audio/services/mixer/common/global_task_queue.h"
 #include "src/media/audio/services/mixer/fidl/testing/fake_graph.h"
 #include "src/media/audio/services/mixer/mix/testing/defaults.h"

@@ -4,9 +4,9 @@
 
 #include "src/media/audio/audio_core/usage_settings.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/audio_core/mixer/gain.h"
 #include "src/media/audio/lib/processing/gain.h"
 

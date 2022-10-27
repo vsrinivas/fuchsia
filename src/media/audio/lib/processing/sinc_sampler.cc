@@ -4,6 +4,7 @@
 
 #include "src/media/audio/lib/processing/sinc_sampler.h"
 
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 
 #include <algorithm>
@@ -13,7 +14,6 @@
 #include <ffl/string.h>
 
 #include "fidl/fuchsia.audio/cpp/wire_types.h"
-#include "lib/syslog/cpp/macros.h"
 #include "src/media/audio/lib/format2/channel_mapper.h"
 #include "src/media/audio/lib/format2/fixed.h"
 #include "src/media/audio/lib/format2/format.h"

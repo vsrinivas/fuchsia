@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/scheduler/cpp/fidl.h>
+#include <lib/syslog/cpp/log_settings.h>
 
 #include <vector>
 
 #include "gperftools/profiler.h"
-#include "lib/syslog/cpp/log_settings.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/split_string.h"

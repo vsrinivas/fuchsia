@@ -5,6 +5,9 @@
 #include "src/media/audio/services/mixer/fidl/graph_server.h"
 
 #include <fidl/fuchsia.audio.mixer/cpp/natural_ostream.h>
+#include <lib/fidl/cpp/wire/arena.h>
+#include <lib/fidl/cpp/wire/vector_view.h>
+#include <lib/fidl/cpp/wire/wire_types.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <functional>
@@ -24,9 +27,6 @@
 #include "fidl/fuchsia.audio/cpp/markers.h"
 #include "fidl/fuchsia.mediastreams/cpp/wire_types.h"
 #include "fidl/fuchsia.mem/cpp/wire_types.h"
-#include "lib/fidl/cpp/wire/arena.h"
-#include "lib/fidl/cpp/wire/vector_view.h"
-#include "lib/fidl/cpp/wire/wire_types.h"
 #include "src/media/audio/lib/clock/testing/clock_test.h"
 #include "src/media/audio/services/common/logging.h"
 #include "src/media/audio/services/common/testing/test_server_and_client.h"
