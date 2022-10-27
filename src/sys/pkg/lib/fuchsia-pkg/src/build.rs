@@ -39,7 +39,7 @@ struct ActualFileSystem;
 impl FileSystem<'_> for ActualFileSystem {
     type File = std::fs::File;
     fn open(&self, path: &str) -> Result<Self::File, io::Error> {
-        Ok(fs::File::open(path)?)
+        fs::File::open(path)
     }
     fn len(&self, path: &str) -> Result<u64, io::Error> {
         Ok(fs::metadata(path)?.len())
@@ -195,7 +195,7 @@ mod test_build_with_file_system {
             for (resource_path, host_path) in
                 creation_manifest.far_contents().iter().chain(creation_manifest.external_contents())
             {
-                if resource_path.to_string() == "meta/package".to_string() {
+                if *resource_path == *"meta/package" {
                     let mut v = vec![];
                     let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
                     meta_package.serialize(&mut v).unwrap();
@@ -263,7 +263,7 @@ mod test_build_with_file_system {
             fuchsia_archive::Utf8Reader::new(File::open(&meta_far_path).unwrap()).unwrap();
         let actual_meta_package_bytes = reader.read_file("meta/package").unwrap();
         let expected_meta_package_bytes = v.as_slice();
-        assert_eq!(actual_meta_package_bytes.as_slice(), &expected_meta_package_bytes[..]);
+        assert_eq!(actual_meta_package_bytes.as_slice(), expected_meta_package_bytes);
         let actual_meta_contents_bytes = reader.read_file("meta/contents").unwrap();
         let expected_meta_contents_bytes =
             b"lib/mylib.so=4a886105646222c10428e5793868b13f536752d4b87e6497cdf9caed37e67410\n";
@@ -305,7 +305,7 @@ mod test_build_with_file_system {
             result,
             Err(BuildError::ConflictingResource {
                 conflicting_resource_path: path
-            }) if path == "meta/contents".to_string()
+            }) if path == *"meta/contents"
         );
     }
     proptest! {
@@ -455,7 +455,7 @@ mod test_build {
                 let new_host_path = PathBuf::from(path_prefix.join(host_path).to_str().unwrap());
                 fs::create_dir_all(new_host_path.parent().unwrap()).unwrap();
                 let mut f = fs::File::create(&new_host_path).unwrap();
-                if resource_path.to_string() == "meta/package".to_string() {
+                if *resource_path == *"meta/package" {
                     let meta_package = MetaPackage::from_name("my-package-name".parse().unwrap());
                     meta_package.serialize(f).unwrap();
                 } else {

@@ -17,6 +17,7 @@ pub struct PackageManifestList(Vec<Utf8PathBuf>);
 
 impl PackageManifestList {
     /// Construct a new [PackageManifestList].
+    #[allow(clippy::new_without_default)]
     pub fn new() -> Self {
         Self(vec![])
     }
@@ -27,7 +28,7 @@ impl PackageManifestList {
     }
 
     /// Returns an iterator over the package manifest path entries.
-    pub fn iter<'a>(&'a self) -> Iter<'a> {
+    pub fn iter(&self) -> Iter<'_> {
         Iter(self.0.iter())
     }
 

@@ -342,7 +342,7 @@ pub mod host {
                 let versioned = match versioned {
                     VersionedPackageManifest::Version1(manifest) => {
                         VersionedPackageManifest::Version1(
-                            manifest.resolve_blob_source_paths(&manifest_path)?,
+                            manifest.resolve_blob_source_paths(manifest_path)?,
                         )
                     }
                 };
@@ -386,7 +386,7 @@ pub mod host {
                     let blobs = this
                         .blobs
                         .into_iter()
-                        .map(|blob| relativize_blob_source_path(blob, &manifest_path))
+                        .map(|blob| relativize_blob_source_path(blob, manifest_path))
                         .collect::<anyhow::Result<_>>()?;
                     PackageManifestV1 { blobs, blob_sources_relative: RelativeTo::File, ..this }
                 } else {
@@ -903,8 +903,7 @@ mod host_tests {
             blob_sources_relative: RelativeTo::WorkingDir,
         }));
 
-        let result_manifest =
-            manifest.clone().write_with_relative_blob_paths(&manifest_path).unwrap();
+        let result_manifest = manifest.write_with_relative_blob_paths(&manifest_path).unwrap();
         let blob = result_manifest.blobs().first().unwrap();
         assert_eq!(blob.source_path, "../data_source/p2");
 

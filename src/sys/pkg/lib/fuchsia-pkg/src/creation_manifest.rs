@@ -59,19 +59,19 @@ impl CreationManifest {
         far_contents: BTreeMap<String, String>,
     ) -> Result<Self, CreationManifestError> {
         for (resource_path, _) in external_contents.iter().chain(far_contents.iter()) {
-            validate_resource_path(&resource_path).map_err(|e| {
+            validate_resource_path(resource_path).map_err(|e| {
                 CreationManifestError::ResourcePath { cause: e, path: resource_path.to_string() }
             })?;
         }
         let external_paths =
-            external_contents.iter().map(|(path, _)| path.as_str()).collect::<HashSet<_>>();
+            external_contents.keys().map(|path| path.as_str()).collect::<HashSet<_>>();
         for resource_path in &external_paths {
             if resource_path.starts_with("meta/") || resource_path.eq(&"meta") {
                 return Err(CreationManifestError::ExternalContentInMetaDirectory {
                     path: resource_path.to_string(),
                 });
             }
-            for (i, _) in resource_path.match_indices("/") {
+            for (i, _) in resource_path.match_indices('/') {
                 if external_paths.contains(&resource_path[..i]) {
                     return Err(CreationManifestError::FileDirectoryCollision {
                         path: resource_path[..i].to_string(),
@@ -145,9 +145,8 @@ impl CreationManifest {
             let relative_path = path
                 .strip_prefix(root)?
                 .to_str()
-                .ok_or_else(|| CreationManifestError::EmptyResourcePath)?;
-            let path =
-                path.to_str().ok_or_else(|| CreationManifestError::EmptyResourcePath)?.to_owned();
+                .ok_or(CreationManifestError::EmptyResourcePath)?;
+            let path = path.to_str().ok_or(CreationManifestError::EmptyResourcePath)?.to_owned();
             if relative_path.starts_with("meta") {
                 far_contents.insert(relative_path.to_owned(), path);
             } else {
@@ -650,7 +649,7 @@ mod tests {
             };
             let far_resource_path = format!("meta/{}", far_resource_path);
             let far_contents = btreemap! {
-                far_resource_path.to_string() => far_host_path.to_string()
+                far_resource_path => far_host_path.to_string()
             };
 
             let creation_manifest = CreationManifest::from_external_and_far_contents(

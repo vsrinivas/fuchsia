@@ -80,8 +80,8 @@ impl PackageBuilder {
         // Read the package name from `meta/package`, or error out if it's missing.
         let meta_package = if let Some(path) = manifest.far_contents().get("meta/package") {
             let f = File::open(path).with_context(|| format!("opening {}", path))?;
-            let meta_package = MetaPackage::deserialize(BufReader::new(f))?;
-            meta_package
+
+            MetaPackage::deserialize(BufReader::new(f))?
         } else {
             return Err(anyhow!("package missing meta/package entry"));
         };
@@ -92,7 +92,7 @@ impl PackageBuilder {
 
         // Read the abi revision from `meta/fuchsia.abi/abi-revision`, or error out if it's missing.
         if let Some(path) = manifest.far_contents().get("meta/fuchsia.abi/abi-revision") {
-            let abi_revision = std::fs::read(&path).with_context(|| format!("reading {}", path))?;
+            let abi_revision = std::fs::read(path).with_context(|| format!("reading {}", path))?;
             builder.abi_revision(AbiRevision::try_from(abi_revision.as_slice())?.into());
         }
 
@@ -162,7 +162,7 @@ impl PackageBuilder {
 
         for (path, contents) in meta_blobs {
             builder
-                .add_contents_to_far(&path, contents, &outdir)
+                .add_contents_to_far(&path, contents, outdir)
                 .with_context(|| format!("adding {} to far", path))?;
         }
 
@@ -449,7 +449,7 @@ impl PackageBuilder {
 
         let creation_manifest =
             CreationManifest::from_external_and_far_contents(blobs, far_contents)
-                .with_context(|| format!("creating creation manifest"))?;
+                .with_context(|| "creating creation manifest".to_string())?;
 
         let package_manifest = crate::build::build(
             &creation_manifest,
@@ -762,7 +762,7 @@ mod tests {
                     );
 
                     for far_path in paths_in_far {
-                        let far_bytes = far_reader.read_file(&*far_path).unwrap();
+                        let far_bytes = far_reader.read_file(&far_path).unwrap();
                         match &*far_path {
                             META_CONTENTS_PATH => (), // separate tests check this matches blobs
                             META_PACKAGE_PATH => {
@@ -952,8 +952,8 @@ mod tests {
         let pkg2_url = "pkg2".parse::<RelativePackageUrl>().unwrap();
         let pkg2_hash = Hash::from([1; fuchsia_hash::HASH_SIZE]);
 
-        builder.add_subpackage(pkg1_url.clone(), pkg1_hash.clone()).unwrap();
-        builder.add_subpackage(pkg2_url.clone(), pkg2_hash.clone()).unwrap();
+        builder.add_subpackage(pkg1_url.clone(), pkg1_hash).unwrap();
+        builder.add_subpackage(pkg2_url.clone(), pkg2_hash).unwrap();
 
         // Build the package.
         builder.build(&outdir, &metafar_path).unwrap();

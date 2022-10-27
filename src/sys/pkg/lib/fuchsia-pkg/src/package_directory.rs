@@ -134,13 +134,13 @@ impl PackageDirectory {
     /// a UTF-8 decoded string.
     async fn read_file_to_string(&self, path: &str) -> Result<String, ReadError> {
         let f = self.open_file(path, OpenRights::Read).await?;
-        Ok(fuchsia_fs::file::read_to_string(&f).await?)
+        fuchsia_fs::file::read_to_string(&f).await
     }
 
     /// Reads the merkle root of the package.
     pub async fn merkle_root(&self) -> Result<Hash, ReadHashError> {
         let merkle = self.read_file_to_string("meta").await.map_err(ReadHashError::Read)?;
-        Ok(merkle.parse().map_err(ReadHashError::Parse)?)
+        merkle.parse().map_err(ReadHashError::Parse)
     }
 
     /// Reads and parses the package's meta/contents file.

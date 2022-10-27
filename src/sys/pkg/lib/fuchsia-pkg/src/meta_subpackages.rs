@@ -4,7 +4,6 @@
 
 use {
     crate::errors::MetaSubpackagesError,
-    anyhow,
     fuchsia_merkle::Hash,
     fuchsia_url::RelativePackageUrl,
     serde::{ser::Serializer, Deserialize, Serialize},
@@ -46,7 +45,7 @@ impl MetaSubpackages {
     /// Take the Merkle Tree root hashes in an iterator. The returned iterator may include
     /// duplicates.
     pub fn into_hashes_undeduplicated(self) -> impl Iterator<Item = Hash> {
-        self.into_subpackages().into_iter().map(|(_, hash)| hash)
+        self.into_subpackages().into_values()
     }
 
     pub fn deserialize(reader: impl io::BufRead) -> Result<Self, MetaSubpackagesError> {
@@ -131,7 +130,7 @@ pub mod transitional {
 
     /// The inverse of `context_bytes_from_subpackages_map()`.
     pub fn subpackages_map_from_context_bytes(
-        context_bytes: &Vec<u8>,
+        context_bytes: &[u8],
     ) -> Result<HashMap<RelativePackageUrl, Hash>, anyhow::Error> {
         let json_value = serde_json::from_slice(context_bytes)?;
         Ok(serde_json::from_value::<HashMap<RelativePackageUrl, Hash>>(json_value)?)
@@ -187,8 +186,8 @@ mod tests {
         {
             prop_assume!(path0 != path1);
             let map = hashmap! {
-                path0.clone() => hex0.clone(),
-                path1.clone() => hex1.clone(),
+                path0.clone() => *hex0,
+                path1.clone() => *hex1,
             };
             let meta_subpackages = MetaSubpackages::from_iter(map);
 

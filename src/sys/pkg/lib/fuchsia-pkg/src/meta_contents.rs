@@ -47,15 +47,15 @@ impl MetaContents {
     /// let meta_contents = MetaContents::from_map(map).unwrap();
     pub fn from_map(map: HashMap<String, Hash>) -> Result<Self, MetaContentsError> {
         for resource_path in map.keys() {
-            validate_resource_path(&resource_path).map_err(|e| {
+            validate_resource_path(resource_path).map_err(|e| {
                 MetaContentsError::InvalidResourcePath { cause: e, path: resource_path.to_string() }
             })?;
-            if resource_path.starts_with("meta/") || resource_path == &"meta" {
+            if resource_path.starts_with("meta/") || resource_path == "meta" {
                 return Err(MetaContentsError::ExternalContentInMetaDirectory {
                     path: resource_path.to_string(),
                 });
             }
-            for (i, _) in resource_path.match_indices("/") {
+            for (i, _) in resource_path.match_indices('/') {
                 if map.contains_key(&resource_path[..i]) {
                     return Err(MetaContentsError::FileDirectoryCollision {
                         path: resource_path[..i].to_string(),
@@ -166,7 +166,7 @@ impl MetaContents {
     /// Take the Merkle Tree root hashes in a iterator. The returned iterator may include
     /// duplicates.
     pub fn into_hashes_undeduplicated(self) -> impl Iterator<Item = Hash> {
-        self.contents.into_iter().map(|(_, hash)| hash)
+        self.contents.into_values()
     }
 }
 
