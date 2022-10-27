@@ -66,24 +66,17 @@ go_library("main") {
 }
 
 go_binary("testrunner") {
-  gopackage = "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd"
-  deps = [ ":main" ]
+  library = ":main"
 }
 
 go_test("testrunner_main_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner/cmd" ]
-  deps = [
-    ":main",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":main"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 go_test("testrunner_lib_tests") {
-  gopackages = [ "go.fuchsia.dev/fuchsia/tools/testing/testrunner" ]
-  deps = [
-    ":lib",
-    "//third_party/golibs:github.com/google/go-cmp",
-  ]
+  library = ":lib"
+  deps = [ "//third_party/golibs:github.com/google/go-cmp" ]
 }
 
 group("tests") {

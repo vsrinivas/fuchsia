@@ -6,36 +6,22 @@ import("//build/go/go_build.gni")
 
 # A template for an action that creates a Fuchsia Go binary.
 #
-# Parameters
+# Parameters: same as go_build, along with
 #
-#   gopackage (required)
+#   gopackage (optional)
 #     The go package containing the main function.
 #
-#   use_prebuilt_go (optional)
-#     If true, use a prebuilt go toolchain, rather than building the toolchain.
-#     If not set, defaults to false when targeting Fuchsia and true otherwise.
+#   library (optional)
+#     The GN label for the go_library containing the main function. Alternative
+#     to gopackage.
 #
-#   sdk_category (optional)
-#     Publication level of the library in SDKs.
-#     See //build/sdk/sdk_atom.gni.
-#
-#   sdk_name (optional)
-#     Name of the library in the SDK.
-#
-#   sdk_deps (optional)
-#     List of labels representing elements that should be added to SDKs
-#     alongside the present binary.
-#     Labels in the list must represent SDK-ready targets.
-#
-#   check_sources (optional)
-#     Boolean indicating whether or not the source list should be verified against
-#     the generated dep file.
-
 template("go_binary") {
   go_build(target_name) {
-    assert(defined(invoker.gopackage),
-           "gopackage must be defined for $target_name")
-    gopackages = [ invoker.gopackage ]
+    # TODO(fxbug.dev/58755): Deprecate `gopackage` in favor of `library`.
+    if (defined(invoker.gopackage)) {
+      gopackages = [ invoker.gopackage ]
+    }
+
     forward_variables_from(invoker, "*")
   }
 }

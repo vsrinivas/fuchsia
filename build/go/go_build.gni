@@ -32,8 +32,13 @@ declare_args() {
 #
 # Parameters
 #
-#   gopackages (required)
-#     List of packages to build.
+#   gopackages (optional)
+#     List of packages to build. Exactly one of gopackages or library must be
+#     set.
+#
+#   library (optional)
+#     Alternative to gopackages, a library GN label corresponding to the
+#     package to build.
 #
 #   use_prebuilt_go (optional)
 #     If true, use a prebuilt go toolchain, rather than building the toolchain.
@@ -92,13 +97,6 @@ declare_args() {
 #     See: `gn help output_dir`
 #
 template("go_build") {
-  assert(defined(invoker.gopackages),
-         "gopackages must be defined for $target_name")
-  gopackages = invoker.gopackages
-  assert(
-      gopackages == [ gopackages[0] ],
-      "gopackages currently only supports one package because of http://crbug.com/fuchsia/8088")
-
   main_target_name = target_name
   is_test = defined(invoker.test) && invoker.test
   carchive = defined(invoker.carchive) && invoker.carchive
@@ -145,10 +143,23 @@ template("go_build") {
     goroot_deps = [ "//third_party/go:go_runtime" ]
   }
 
+  go_deps = []
   if (defined(invoker.deps)) {
+    go_deps += invoker.deps
+  }
+  if (defined(invoker.library)) {
+    # It's redundant to include the `library` label in `deps` because we'll add
+    # it implicitly.
+    assert(go_deps + [ invoker.library ] - [ invoker.library ] == go_deps,
+           "library should not be listed in deps")
+
+    go_deps += [ invoker.library ]
+  }
+
+  if (go_deps != []) {
     go_deps_paths = []
     go_deps_inputs = []
-    foreach(dep, invoker.deps) {
+    foreach(dep, go_deps) {
       gen_dir = get_label_info(dep, "target_gen_dir")
       name = get_label_info(dep, "name")
       path = "${gen_dir}/${name}.go_deps"
@@ -175,8 +186,8 @@ template("go_build") {
     ]
 
     deps = goroot_deps
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
+    if (go_deps != []) {
+      deps += go_deps
       args += [ "--go-dep-files" ]
       args += go_deps_paths
       inputs = go_deps_inputs
@@ -282,7 +293,7 @@ template("go_build") {
             get_label_info(":anything($shlib_toolchain)", "root_out_dir"),
             root_build_dir) ]
 
-    if (!(defined(invoker.cgo) && !invoker.cgo)) {
+    if (!defined(invoker.cgo) || invoker.cgo) {
       args += [ "--cgo" ]
 
       if (is_fuchsia) {
@@ -423,17 +434,35 @@ template("go_build") {
       args += [ "--is-test=true" ]
     }
 
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
+    if (go_deps != []) {
+      deps += go_deps
       args += [ "--go-dep-files" ]
       args += go_deps_paths
       inputs += go_deps_inputs
     }
 
-    foreach(gopackage, invoker.gopackages) {
+    # TODO(fxbug.dev/58755): Delete `gopackages` in favor of `library`.
+    if (defined(invoker.gopackages) == defined(invoker.library)) {
+      assert(false, "Exactly one of gopackages or library must be set")
+    } else if (defined(invoker.gopackages)) {
+      gopackages = invoker.gopackages
+
+      # Multi-package support was never implemented and is no longer planned as
+      # `gopackages` is slated for deletion as part of https://fxbug.dev/58755.
+      assert(gopackages == [ gopackages[0] ],
+             "gopackages only supports one package")
+      foreach(gopackage, gopackages) {
+        args += [
+          "--package",
+          gopackage,
+        ]
+      }
+    } else if (defined(invoker.library)) {
+      _gen_dir = get_label_info(invoker.library, "target_gen_dir")
+      _name = get_label_info(invoker.library, "name")
       args += [
-        "--package",
-        gopackage,
+        "--library-metadata",
+        rebase_path("${_gen_dir}/${_name}.go_deps", root_build_dir),
       ]
     }
 

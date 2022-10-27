@@ -35,7 +35,7 @@ def get_sources(dep_files, extra_sources=None):
         sources.update(extra_sources)
     for dep in dep_files:
         with open(dep, 'r') as dep_file:
-            for name, path in json.load(dep_file).items():
+            for name, path in json.load(dep_file)['sources'].items():
                 sources.add(Source(name, path, dep))
 
     # Verify duplicates.
@@ -140,7 +140,10 @@ def main():
         current_sources.append(Source(name, args.source_dir, args.output))
     result = get_sources(args.deps, extra_sources=current_sources)
     with open(args.output, 'w') as output_file:
-        json.dump(result, output_file, indent=2, sort_keys=True)
+        json.dump({
+            'package': name,
+            'sources': result,
+        }, output_file, indent=2, sort_keys=True)
 
 
 if __name__ == '__main__':
