@@ -83,6 +83,7 @@ zx_status_t As370AudioStreamOut::InitPdev() {
     return status;
   }
 
+  // TODO(113005): Remove all codec controlling from this driver by converting it into a DAI driver.
   status = codec_.SetProtocol(ddk::CodecProtocolClient(parent(), "codec"));
   if (status != ZX_OK) {
     zxlogf(ERROR, "could set codec protocol %d", status);
@@ -94,6 +95,15 @@ zx_status_t As370AudioStreamOut::InitPdev() {
   if (status != ZX_OK) {
     return status;
   }
+
+  status = codec_.Start();
+  if (status != ZX_OK) {
+    return status;
+  }
+  GainState state = {};
+  state.gain = 0.0f;
+  state.muted = false;
+  codec_.SetGainState(state);
 
   status = codec_.SetBridgedMode(false);
   if (status != ZX_OK) {
