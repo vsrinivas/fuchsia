@@ -119,7 +119,7 @@ of Fuchsia logs, see [Diagnostics schema][diagnostics-schema].
   For more information on adding tags to logs,
   [Logging in Rust][add-tags-logging].
 * **Severity**: This lets you filter all log messages with certain severities
-  including based on a severity of at least a specified level. 
+  including based on a severity of at least a specified level.
   For example, `severity:WARN` or `severity>=WARN` would include all logs with
   severity levels `WARN`, `ERROR`, and `FATAL`. `severity=WARN` would only
   include logs with a `WARN` level. You can use severities to filter based on
@@ -165,8 +165,8 @@ Where:
     - a number
     - a boolean (true, false)
 
-Additionally, sub-filters may be joined with OR (inside parentheses). For
-example:
+Additionally, sub-filters may be joined with OR. Any logical expression can be expressed.
+For example:
 
 ```
 this-filter-is-always-here (first-alternative-filter OR second-alternative-filter)
@@ -237,13 +237,26 @@ The filtering supports the following operators:
 #### Logical operators {#logical-operators}
 
 * `or` or `|`: This lets you use an `or` qualifier in your query or to chain
-  multiple queries. `or`s aren't support at the top level of the query, so you
-  must group them with parentheses. For example
-  `(moniker:core/test | core/network)`.
+  multiple queries.
 * `not` or `!`: This lets you use a `not` logical operator in your query or
   to chain multiple queries.
 * `and` or `&`: This lets you use an `and` logical operator in your
   query or to chain multiple queries.
+
+The operator `and` takes precedence over `or`. So, the following two statements are equivalent:
+
+```
+moniker:foo severity:info or moniker:bar
+(moniker:foo and severity:info) or moniker:bar
+```
+
+`not` always applies to the filter/expression next to it. So the following statements are
+equivalent:
+
+```
+not severity:info moniker:bar not (tag:baz id=3)
+(not severity:info) moniker:bar !(tag:baz and id=3)
+```
 
 #### Regular expressions {#regexes}
 
