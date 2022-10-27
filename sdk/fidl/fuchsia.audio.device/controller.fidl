@@ -98,19 +98,22 @@ type ControllerCreateError = flexible enum {
     /// used, or the device with this token `id` has been removed.
     DEVICE_NOT_FOUND = 2;
 
+    /// The device with token `id` has become unhealthy and cannot be observed.
+    DEVICE_UNHEALTHY = 3;
+
     /// A `Control` associated with `id` already exists. This device is already
     /// being actively controlled.
-    DEVICE_ALREADY_ALLOCATED = 3;
+    DEVICE_ALREADY_ALLOCATED = 4;
 
-    /// The required `control_server` is missing or invalid.
-    INVALID_CONTROL = 4;
+    /// The required `control_server` is missing.
+    INVALID_CONTROL = 5;
 };
 
 /// A `Control` instance is used to change the settings or state of an audio
 /// device. It also creates the ring buffer used to pass audio data between
 /// client and device. Each `Control` is associated with an initialized audio
 /// device; conversely each device is associated with either zero or one
-/// `Control` at any time. 
+/// `Control` at any time.
 protocol Control {
     /// Change the processing topology (via `SetTopology`) or the state of a
     /// single processing node (via `SetElementState`).

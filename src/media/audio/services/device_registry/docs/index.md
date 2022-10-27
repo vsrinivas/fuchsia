@@ -235,40 +235,18 @@ process.
 
 ### Eager service startup
 
-Front-loading device detection and configuration would move that activity off of
-the critical path of the first streaming client. If `AudioDeviceRegistry` were
-marked for `eager startup`, device configuration could be completed before we
-accept the first FIDL request. Preliminary experiments suggest that for an early
-client trying to stream audio as soon as possible, this might significantly
-reduce the latency for the first stream (by 400-500 msec if rendering, by ~100
-msec if capturing).
+The audio device registry service could be marked as `eager startup` if early
+device detection is desired. Component Framework documents
+(https://fuchsia.dev/fuchsia-src/development/components/v2/migration/common?hl=en#start-on-boot,
+https://fuchsia.dev/fuchsia-src/development/components/connect#eager) detail the
+implications of being 'eager', but further detail is out of scope for this
+design doc.
 
-That said, on balance this optimization is inadvisable. The first audio stream
-is often a system startup sound, so latency is masked by other activity. This
-would shift when the startup sound occurred during the bootup interval, but it
-would *not* decrease the bootup period itself.
+Note: whether this service is started eagerly is *orthogonal* to any guarantee
+(or lack thereof) that the service makes about the devices listed in the
+response to the first `WatchDevicesAdded` call.
 
-Marking the audio device registry service as `eager startup` would require
-**audio policy** to start at this time as well. Otherwise, device configuration
-(which often takes 300 msec for output devices) would remain in the critical
-path, defeating the purpose of this optimization.
-
-`Early startup` services must bear certain costs. Both would need to move from
-the `universe` package set to `base`, making servicing these binaries slightly
-more cumbersome. Anything else that these services depend upon would need to be
-`base` and `eager` as well. Also, `eager startup` occurs early in the system
-boot sequence, so some OS services may not yet be available; although this
-wouldn't be a problem for `AudioDeviceRegistry`, audio policy might need to
-defer certain work.
-
-Unnecessarily marking services `eager startup` is also suboptimal for the
-overall product. It adds to *early* startup time, marginally degrading the
-system's apparent responsiveness. Adding audio services to `base` may be
-particularly unwanted on devices where audio is less important. If our goal is
-to remove latency from the first-stream critical path, `eager startup` is not
-the only way to achieve this.
-
-### Indicating when a device has started
+### Indicating device-ready (or other states)
 
 A client might be interested in when a particular device is ready. Although we
 expect this type of signal to be provided instead by audio policy, nonetheless
@@ -293,10 +271,10 @@ would be ***easily added*** if needed.
 
 Once an audio driver/device enters a bad state, we would ideally restart and
 recover it. A method such as `RedetectDevices` (perhaps on a top-level parent
-`Service` or `Manager` interface) would redetect and requery devices that were
-previously marked as not properly operational. Specifically it would stop and
-restart the long-running device watchers, which would skip any detected devices
-that are already operational.
+`AudioDeviceRegistry` or `DeviceManager` interface) could redetect and requery
+devices that were previously marked as not properly operational. Specifically it
+would stop and restart the long-running device watchers, which would know to
+skip any detected devices that are already operational.
 
 There are two possible underlying causes for device that is malfunctional or
 unresponsive: (1) hardware is in a bad state; (2) driver is in a bad state. To

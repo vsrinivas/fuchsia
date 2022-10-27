@@ -135,7 +135,7 @@ type PcmFormatSet = table {
     1: channel_sets vector<ChannelSet>:MAX_COUNT_CHANNEL_SETS;
 
     /// The number of sample formats that the device supports. This must
-    /// must contain least one `AudioSampleFormat` entry.
+    /// contain least one `AudioSampleFormat` entry.
     ///
     /// Required.
     2: sample_formats vector<fuchsia.mediastreams.AudioSampleFormat>:MAX_COUNT_SAMPLE_FORMATS;
@@ -262,7 +262,7 @@ protocol Registry {
     /// Because the method only notifies of one removal, upon completion it
     /// should immediately be re-called, in case other removals have occurred.
     WatchDeviceRemoved() -> (table {
-        /// The token of the device least-recently removed. 
+        /// The token of the device least-recently removed.
         1: id token_id;
     }) error RegistrWatchDeviceRemovedyError;
 
@@ -301,8 +301,11 @@ type RegistryCreateObserverError = flexible enum {
     /// used, or the device with this token `id` has been removed.
     DEVICE_NOT_FOUND = 2;
 
-    /// The required `observer_server` is missing or invalid.
+    /// The required `observer_server` is missing.
     INVALID_OBSERVER = 3;
+
+    /// The device with token `id` has become unhealthy and cannot be observed.
+    DEVICE_UNHEALTHY = 4;
 };
 
 /// `Observer` instances are used to learn the capabilities and state of an
@@ -354,16 +357,28 @@ protocol Observer {
 //
 // TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
 // conditions have been identified and no error codes have been added.
-type ObserverWatchGainStateError = flexible enum {};
+type ObserverWatchGainStateError = flexible enum {
+    /// This device has become unhealthy and can no longer be observed.
+    DEVICE_UNHEALTHY = 1;
+};
 
 /// Errors returned by `Observer/WatchPlugState`.
 //
 // TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
 // conditions have been identified and no error codes have been added.
-type ObserverWatchPlugStateError = flexible enum {};
+type ObserverWatchPlugStateError = flexible enum {
+    /// This device has become unhealthy and can no longer be observed.
+    DEVICE_UNHEALTHY = 1;
+};
 
 /// Errors returned by `Observer/GetReferenceClock`.
 //
 // TODO(fxbug.dev/102626): Remove this enum after implementation, if no error
 // conditions have been identified and no error codes have been added.
-type ObserverGetReferenceClockError = flexible enum {};
+type ObserverGetReferenceClockError = flexible enum {
+    /// The device's reference clock could not be returned.
+    DEVICE_CLOCK_UNAVAILABLE = 1;
+
+    /// This device has become unhealthy and can no longer be observed.
+    DEVICE_UNHEALTHY = 2;
+};
