@@ -51,8 +51,9 @@ mod repo_info;
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum AuthFlowChoice {
     Default,
-    Oob,
     Device,
+    Oob,
+    Pkce,
 }
 
 /// Convert common cli switches to AuthFlowChoice.
@@ -71,10 +72,14 @@ impl FromStr for AuthFlowChoice {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s.to_lowercase().as_ref() {
-            "oob" => Ok(AuthFlowChoice::Oob),
-            "device" => Ok(AuthFlowChoice::Device),
             "default" => Ok(AuthFlowChoice::Default),
-            _ => Err("Unknown auth flow choice. Use one of oob, device, or default.".to_string()),
+            "device" => Ok(AuthFlowChoice::Device),
+            "oob" => Ok(AuthFlowChoice::Oob),
+            "pkce" => Ok(AuthFlowChoice::Pkce),
+            _ => {
+                Err("Unknown auth flow choice. Use one of oob, device, pkce, or default."
+                    .to_string())
+            }
         }
     }
 }

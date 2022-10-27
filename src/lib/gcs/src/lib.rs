@@ -31,8 +31,8 @@
 //! }
 //! ```
 
+pub mod auth;
 pub mod client;
 pub mod error;
 pub mod gs_url;
-pub mod oauth2;
 pub mod token_store;

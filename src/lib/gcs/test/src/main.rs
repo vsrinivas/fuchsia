@@ -7,7 +7,7 @@
 use {
     anyhow::{Context, Result},
     fuchsia_hyper::new_https_client,
-    gcs::{client::ClientFactory, oauth2::new_refresh_token, token_store::TokenStore},
+    gcs::{auth::pkce::new_refresh_token, client::ClientFactory, token_store::TokenStore},
 };
 
 /// A simple test to be sure the base libs haven't changed in an incompatible

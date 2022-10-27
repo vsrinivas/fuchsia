@@ -5,7 +5,7 @@
 //! Provide Google Cloud Storage (GCS) access.
 
 use {
-    crate::{error::GcsError, oauth2::new_access_token},
+    crate::{auth::pkce::new_access_token, error::GcsError},
     anyhow::{bail, Context, Result},
     async_lock::Mutex,
     fuchsia_hyper::HttpsClient,

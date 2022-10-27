@@ -9,10 +9,10 @@ use {
     anyhow::{anyhow, bail, Context, Result},
     errors::ffx_bail,
     gcs::{
+        auth,
         client::{Client, ClientFactory, ProgressResult, ProgressState},
         error::GcsError,
         gs_url::split_gs_url,
-        oauth2::{new_refresh_token, oob_new_refresh_token},
         token_store::{read_boto_refresh_token, write_boto_refresh_token, TokenStore},
     },
     std::path::{Path, PathBuf},
@@ -216,9 +216,15 @@ where
     tracing::debug!("update_refresh_token {:?}", boto_path);
     println!("\nThe refresh token in the {:?} file needs to be updated.", boto_path);
     let refresh_token = match auth_flow {
-        AuthFlowChoice::Default => new_refresh_token(ui).await.context("get refresh token")?,
-        AuthFlowChoice::Oob => oob_new_refresh_token().await.context("get oob refresh token")?,
-        AuthFlowChoice::Device => unimplemented!(),
+        AuthFlowChoice::Default | AuthFlowChoice::Pkce => {
+            auth::pkce::new_refresh_token(ui).await.context("get refresh token")?
+        }
+        AuthFlowChoice::Oob => {
+            auth::oob::new_refresh_token().await.context("get oob refresh token")?
+        }
+        AuthFlowChoice::Device => {
+            auth::device::new_refresh_token(ui).await.context("get device refresh token")?
+        }
     };
     tracing::debug!("Writing boto file {:?}", boto_path);
     write_boto_refresh_token(boto_path, &refresh_token)?;

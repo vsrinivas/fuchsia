@@ -35,11 +35,15 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/auth/device.rs",
+    "src/auth/info.rs",
+    "src/auth/mod.rs",
+    "src/auth/oob.rs",
+    "src/auth/pkce.rs",
     "src/client.rs",
     "src/error.rs",
     "src/gs_url.rs",
     "src/lib.rs",
-    "src/oauth2.rs",
     "src/token_store.rs",
   ]
 }

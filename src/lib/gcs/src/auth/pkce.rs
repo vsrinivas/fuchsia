@@ -2,28 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Provide OAuth2 support for Google Cloud Storage (GCS) access.
+//! Automatically launch the browser and retrieve the refresh token. This is in
+//! contrast to the OOB auth where the user opens the browser and copies the
+//! refresh token by hand.
 //!
-//! There are two main APIs here:
-//! - new_refresh_token() gets a long-lived, storable (to disk) token than can
-//!                       be used to create new access tokens.
-//! - new_access_token() accepts a refresh token and returns a reusable though
-//!                      short-lived token that can be used to access data.
-//!
-//! Caution: Some data handled here are security access keys (tokens) and must
-//!          not be logged (or traced) or otherwise put someplace where the
-//!          secrecy could be compromised. I.e. watch out when adding/reviewing
-//!          log::*, tracing::*, or `impl` of Display or Debug.
+//! For this to function, the user must have an available GUI, thus the name.
 
 use {
-    crate::error::GcsError,
+    crate::{
+        auth::info::{CLIENT_ID, CLIENT_SECRET},
+        error::GcsError,
+    },
     anyhow::{bail, Context, Result},
     hyper::{Body, Method, Request},
     serde::{Deserialize, Serialize},
     serde_json,
     sha2::{Digest, Sha256},
     std::{
-        io::{self, BufRead, BufReader, Read, Write},
+        io::{Read, Write},
         net::{Ipv4Addr, SocketAddr, TcpListener, TcpStream},
         string::String,
     },
@@ -35,29 +31,6 @@ use {
 ///
 /// See RefreshTokenRequest, OauthTokenResponse.
 const OAUTH_REFRESH_TOKEN_ENDPOINT: &str = "https://www.googleapis.com/oauth2/v3/token";
-
-/// For a web site, a client secret is kept locked away in a secure server. This
-/// is not a web site and the value is needed, so a non-secret "secret" is used.
-///
-/// These values (and the quote following) are taken form
-/// https://chromium.googlesource.com/chromium/tools/depot_tools.git/+/c6a2ee693093926868170f678d8d290bf0de0c15/third_party/gsutil/oauth2_plugin/oauth2_helper.py
-/// and
-/// https://chromium.googlesource.com/catapult/+/2c541cdf008959bc9813c641cc4ecd0194979486/third_party/gsutil/gslib/utils/system_util.py#177
-///
-/// "Google OAuth2 clients always have a secret, even if the client is an
-/// installed application/utility such as gsutil.  Of course, in such cases the
-/// "secret" is actually publicly known; security depends entirely on the
-/// secrecy of refresh tokens, which effectively become bearer tokens."
-const GSUTIL_CLIENT_ID: &str = "909320924072.apps.googleusercontent.com";
-const GSUTIL_CLIENT_SECRET: &str = "p3RlpR10xMFh9ZXBS/ZNLYUu";
-
-const OOB_APPROVE_AUTH_CODE_URL: &str = "\
-        https://accounts.google.com/o/oauth2/auth?\
-scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
-&redirect_uri=urn%3Aietf%3Awg%3Aoauth%3A2.0%3Aoob\
-&response_type=code\
-&access_type=offline\
-&client_id=";
 
 const AUTHORIZATION_ENDPOINT: &str = "https://accounts.google.com/o/oauth2/v2/auth";
 
@@ -146,8 +119,8 @@ where
 pub async fn new_access_token(refresh_token: &str) -> Result<String, GcsError> {
     tracing::trace!("new_access_token");
     let req_body = RefreshTokenRequest {
-        client_id: GSUTIL_CLIENT_ID,
-        client_secret: GSUTIL_CLIENT_SECRET,
+        client_id: CLIENT_ID,
+        client_secret: CLIENT_SECRET,
         refresh_token: refresh_token,
         grant_type: "refresh_token",
     };
@@ -172,9 +145,9 @@ pub async fn new_access_token(refresh_token: &str) -> Result<String, GcsError> {
     }
 }
 
-struct AuthCode(String);
-struct CodeVerifier(String);
-struct EncodedRedirect(String);
+pub(crate) struct AuthCode(pub String);
+pub(crate) struct CodeVerifier(pub String);
+pub(crate) struct EncodedRedirect(pub String);
 
 /// Ask the user to approve auth.
 ///
@@ -202,7 +175,7 @@ async fn get_auth_code() -> Result<(AuthCode, CodeVerifier, EncodedRedirect)> {
         &scope=https%3A%2F%2Fwww.googleapis.com%2Fauth%2Fcloud-platform\
         &redirect_uri={}&client_id={}&state={}&code_challenge={}\
         &code_challenge_method=S256",
-        AUTHORIZATION_ENDPOINT, encoded_redirect, GSUTIL_CLIENT_ID, state, code_challenge,
+        AUTHORIZATION_ENDPOINT, encoded_redirect, CLIENT_ID, state, code_challenge,
     );
 
     // Simple background listener.
@@ -351,7 +324,7 @@ fn browser_open(url: &str) -> Result<()> {
 ///
 /// The `auth_code` must not be an empty string (this will generate an Err
 /// Result.
-async fn auth_code_to_refresh(
+pub(crate) async fn auth_code_to_refresh(
     auth_code: &AuthCode,
     code_verifier: &CodeVerifier,
     redirect_uri: &EncodedRedirect,
@@ -365,8 +338,8 @@ async fn auth_code_to_refresh(
         .append_pair("code", &auth_code.0)
         .append_pair("code_verifier", &code_verifier.0)
         .append_pair("redirect_uri", &redirect_uri.0)
-        .append_pair("client_id", GSUTIL_CLIENT_ID)
-        .append_pair("client_secret", GSUTIL_CLIENT_SECRET)
+        .append_pair("client_id", CLIENT_ID)
+        .append_pair("client_secret", CLIENT_SECRET)
         .append_pair("scope", "")
         .append_pair("grant_type", "authorization_code")
         .finish();
@@ -411,70 +384,9 @@ fn base64_url(buf: &[u8]) -> String {
     base64::encode_config(buf, base64::URL_SAFE_NO_PAD)
 }
 
-/// Performs steps to get a refresh token from scratch.
-///
-/// This may involve user interaction such as opening a browser window..
-pub async fn oob_new_refresh_token() -> Result<String> {
-    tracing::trace!("oob_new_refresh_token");
-    let auth_code = AuthCode(oob_get_auth_code().context("getting auth code")?);
-    let verifier = CodeVerifier("".to_string());
-    let redirect = EncodedRedirect("urn:ietf:wg:oauth:2.0:oob".to_string());
-    let (refresh_token, _) = auth_code_to_refresh(&auth_code, &verifier, &redirect)
-        .await
-        .context("get refresh token")?;
-    Ok(refresh_token)
-}
-
-/// Ask the user to visit a URL and copy-paste the auth code provided.
-///
-/// A helper wrapper around get_auth_code_with() using stdin/stdout.
-fn oob_get_auth_code() -> Result<String> {
-    tracing::trace!("oob_get_auth_code");
-    let stdout = io::stdout();
-    let mut output = stdout.lock();
-    let stdin = io::stdin();
-    let mut input = stdin.lock();
-    oob_get_auth_code_with(&mut output, &mut input)
-}
-
-/// Ask the user to visit a URL and copy-paste the authorization code provided.
-/// Consider using `oob_get_auth_code()` for operation with stdin/stdout.
-///
-/// For a GUI, consider creating a separate (custom) function to ask the user to
-/// follow the web flow to get a authorization code (tip: use `auth_code_url()`
-/// to get the URL).
-fn oob_get_auth_code_with<W, R>(writer: &mut W, reader: &mut R) -> Result<String>
-where
-    W: Write,
-    R: Read,
-{
-    tracing::trace!("oob_get_auth_code_with");
-    writeln!(
-        writer,
-        "Please visit this site. Proceed through the web flow to allow access \
-        and copy the authentication code:\
-        \n\n{}{}\n\nPaste the code (from the web page) here\
-        \nand press return: ",
-        OOB_APPROVE_AUTH_CODE_URL, GSUTIL_CLIENT_ID,
-    )?;
-    writer.flush().expect("flush auth code prompt");
-    let mut auth_code = String::new();
-    let mut buf_reader = BufReader::new(reader);
-    buf_reader.read_line(&mut auth_code).expect("Need an auth_code.");
-    Ok(auth_code.trim().to_string())
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_oob_get_auth_code_with() {
-        let mut output: Vec<u8> = Vec::new();
-        let mut input = "fake_auth_code".as_bytes();
-        let auth_code = oob_get_auth_code_with(&mut output, &mut input).expect("auth code");
-        assert_eq!(auth_code, "fake_auth_code");
-    }
 
     #[test]
     fn test_random_base64_url_encoded() {
