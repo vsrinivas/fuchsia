@@ -522,17 +522,59 @@ terminate the communication.
       * For open protocols, bindings must raise this unknown interaction to the
         application (details below).
     * Details about raising an unknown interaction:
+      * If the interaction is two way, bindings must respond to the request by
+        sending a result union with the third variant selected, and a
+        `fidl.TransportErr` of `UNKNOWN_METHOD`. This must happen before the
+        unknown interaction is raised to user code.
       * Bindings should raise the unknown interaction to the application,
         possibly by invoking a previously registered handler (or similar).
       * It is recommended for bindings to require the registration of an unknown
         interaction handler to avoid building in "default behavior" that could
         be misunderstood. Bindings can offer a "no-op handler" or similar, but
         it is recommended for its use to be explicit.
-      * If the interaction is two way, bindings must respond to the request by
-        sending a result union with the third variant selected, and a
-        `fidl.TransportErr` of `UNKNOWN_METHOD`.
       * Bindings MAY choose to offer the option to the application to close the
         channel when handling unknown interactions.
+
+When an unknown message contains handles, the server must close the handles in
+the incoming message. The server must close all handles in the incoming message
+before:
+
+* closing the channel, in the case of a strict method, a flexible method on a
+  closed protocol, or a flexible two-way method on an ajar protocol
+* replying to the message, in the case of a flexible two-way method on an open
+  protocol
+* notifying user code of the unknown method call, in the case of a flexible
+  one-way method on an open or ajar protocol.
+
+Likewise, when a client receives an unknown event which contains handles, the
+client must close the handles in the incoming message. The client must close all
+handles in the incoming message before:
+
+* closing the channel, in the case of a strict event or a flexible event on a
+  closed protocol.
+* notifying user code of the unknown event, in the case of a flexible event on
+  an open or ajar protocol.
+
+In general, when an unknown interaction is handled, the order of operations is
+as follows.
+
+1.  Close handles in the incoming message.
+2.  If applicable, close the channel or send the `UNKNOWN_METHOD` reply.
+3.  Raise the unknown interaction to the unknown interaction handler or report
+    an error.
+
+In asynchronous environments where multiple threads may be simultaneously
+attempting to send/receive messages on the channel, it may not be possible or
+practical to guarantee the channel is closed before reporting the unknown method
+error. Therefore it is not required to close the channel before reporting an
+error for an unknown method or event when that interaction is fatal. However,
+for recoverable unknown interactions as specified in this RFC, it is required to
+close handles and reply (if applicable) before dispatching the unknown
+interaction handler.
+
+Previous versions of this RFC did not specify ordering between closing handles
+in incoming messages, responding to unknown two-way methods, and raising unknown
+interactions to the user.
 
 ### Compatibility implications
 
