@@ -9,6 +9,9 @@ fidl("fuchsia.cobalt") {
   api = "fuchsia.cobalt.api"
   fuzzers = [
     {
+      protocol = "fuchsia.cobalt.AggregateAndUpload"
+    },
+    {
       protocol = "fuchsia.cobalt.SystemDataUpdater"
     },
   ]

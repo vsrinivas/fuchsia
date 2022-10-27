@@ -33,7 +33,6 @@ type Status = strict enum : int32 {
 };
 
 /////////////////////////////////////////////////////////////////////
-
 // SystemProfileUpdater Interface
 /////////////////////////////////////////////////////////////////////
 
@@ -63,4 +62,24 @@ protocol SystemDataUpdater {
     }) -> (struct {
         status Status;
     });
+};
+
+/////////////////////////////////////////////////////////////////////
+// AggregateAndUpload Interface
+/////////////////////////////////////////////////////////////////////
+
+/// Locally aggregates all collected metrics and uploads generated
+/// observations immediately. This is only to be used for Recovery, and
+/// should only be called once per Recovery attempt.
+///
+/// If AggregateAndUpload completes, then the collected metrics were uploaded
+/// to Cobalt successfully. Otherwise, AggregateAndUpload may continue to run
+/// until the calling service cancels the process when long running operation
+/// exceeds the specified timeout. The reason this may occur, is that
+/// AggregateAndUpload has a retry policy, and will retry any failures until
+/// the operation succeeds or is cancelled due to exceeding a specified
+/// timeout.
+@discoverable
+protocol AggregateAndUpload {
+    AggregateAndUploadMetricEvents() -> ();
 };
