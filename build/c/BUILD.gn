@@ -226,7 +226,6 @@ config("fidl-deprecated-c-bindings") {
     "//src/storage/lib/paver:paver-core",
     "//src/storage/minfs",
     "//src/storage/minfs/allocator/test:minfs-allocator-unit",
-    "//src/storage/testing:storage_driver_test_support",
     "//src/storage/tools/blobfs-compression/test:cli-option-validation-test",
     "//src/storage/tools/blobfs-corrupt",
     "//src/storage/tools/blobfs-corrupt:blobfs-corrupt-test",
