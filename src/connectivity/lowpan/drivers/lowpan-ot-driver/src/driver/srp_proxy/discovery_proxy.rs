@@ -121,7 +121,7 @@ fn ipv6addr_is_unicast_link_local(addr: &std::net::Ipv6Addr) -> bool {
 
 /// Returns `true` if the address should be proxied to the thread network.
 fn should_proxy_address(addr: &std::net::Ipv6Addr) -> bool {
-    !ipv6addr_is_unicast_link_local(addr) && !addr.is_loopback()
+    !ipv6addr_is_unicast_link_local(addr) && !addr.is_loopback() && !addr.is_unspecified()
 }
 
 impl DiscoveryProxy {
@@ -485,8 +485,7 @@ impl DiscoveryProxy {
 
             let service_name_srp = CString::new(format!("{}{}", service_name, srp_domain))?;
 
-            let host_name_srp =
-                CString::new(replace_domain(&host_name, LOCAL_DOMAIN, srp_domain)?)?;
+            let host_name_srp = CString::new(format!("{}.{}", host_name, srp_domain))?;
 
             let (addresses, port) = process_addresses_from_socket_addresses(addresses);
 
@@ -640,5 +639,6 @@ mod test {
         assert!(!should_proxy_address(&Ipv6Addr::new(0xfe80, 0xdb8, 0, 0, 0, 0, 0, 1)));
         assert!(!should_proxy_address(&Ipv6Addr::new(0xfe81, 0xdb8, 0, 0, 0, 0, 0, 1)));
         assert!(!should_proxy_address(&Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)));
+        assert!(!should_proxy_address(&Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0)));
     }
 }
