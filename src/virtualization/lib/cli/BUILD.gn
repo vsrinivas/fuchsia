@@ -1,0 +1,38 @@
+# Copyright 2022 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/components.gni")
+import("//build/rust/rustc_library.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":guest_cli_tests" ]
+}
+
+rustc_library("guest_cli") {
+  edition = "2021"
+  with_unit_tests = true
+  deps = [
+    "//sdk/fidl/fuchsia.virtualization:fuchsia.virtualization_rust",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/virtualization/lib/cli/args:guest_cli_args",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:prettytable-rs",
+  ]
+
+  test_deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:futures",
+  ]
+
+  sources = [
+    "src/lib.rs",
+    "src/list.rs",
+  ]
+}
+
+fuchsia_unittest_package("guest_cli_tests") {
+  deps = [ ":guest_cli_test" ]
+}
