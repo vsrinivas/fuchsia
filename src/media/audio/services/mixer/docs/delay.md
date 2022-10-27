@@ -55,53 +55,139 @@ computes the least-common multiple, but this requires carefully synchronizing
 all pipeline stages and is useful only when each `block_size[i]` is a divisor of
 `max(block_size[i])`.
 
+### Downstream vs upstream delays
+
+In a mix graph, every edge has a delay which represents the buffering and
+processing performed by the edge's destination node. At any node, we can compute
+delay in two directions: *downstream* delay is the maximum delay on any path
+through the node's outgoing edges, while *upstream* delay is the maximum delay
+on any path through the node's incoming edges. Note that a node's *upstream*
+delay includes the delay introduced by that node (via the delay on incoming
+edges), while *downstream* delay does not.
+
 ### Output pipelines
 
-In output pipelines, a.k.a. render pipelines, each producer stage has a *lead
-time* which is maximum of the total delays for all paths from the producer to
-all output-mode consumers (typically analog speakers). For example, if a
-producer feeds into both a USB speaker and a BT speaker, the producer's lead
-time is the maximum of the path-to-USB delay and the path-to-BT delay. Clients
-must submit audio frame X ahead of X's presentation time by at least the *lead
-time*, otherwise frame X may underflow.
+In output pipelines, a.k.a. render pipelines, the most important delay is the
+*downstream* delay, which is the maximum the delay over all paths leading to an
+output device (typically a speaker) or a loopback interface. This delay is also
+known as the renderer's *lead time*. If a client wants to play a frame at time
+T, and the lead time is 20ms, the client must submit that frame to the renderer
+by time T-20ms.
 
 ### Input pipelines
 
-In input pipelines, a.k.a. capture pipelines, every input-mode consumer has a
-delay which is the maximum delay on any path from an input-mode producer
-(typically an analog microphone) to the consumer. For example, if the client is
-reading from a consumer that is fed by two producers (perhaps a microphone and a
-loopback interface), the consumer's total delay is the maximum of the
-delay-from-microphone and the delay-from-loopback.
+In input pipelines, a.k.a. capture pipelines, the most important delay is the
+*upstream* delay, which is the maximum delay over all paths originating from an
+input device (typically a microphone). This delay controls the earliest time a
+client can read a frame: if a capturer's upstream delay is 20ms, then a frame
+which reaches a microphone at time T cannot be read by a client until time
+T+20ms.
 
-This delay represents the earliest time a client can read a frame. For example,
-if a consumer's total delay is 20ms, then a frame which reaches a microphone at
-time T cannot be read by a client until time T+20ms.
+### Loopback pipelines
 
-### Delay in mixed pipelines
+An output pipeline might feed into an input pipeline through a loopback
+interface. Loopback interfaces have zero delay: if a frame is presented at time
+T, it must arrive at the loopback interface by T, making it immediately
+available to the input pipeline at T.
 
-An output pipeline might feed an input pipeline through a loopback interface.
-When this happens, the loopback interface must appear somewhere before the
-output pipeline's final consumers, which implies that the pipeline must write
-frame X to the loopback interface well before frame X must be presented at a
-speaker. Hence, the *delay* at the loopback interface is zero.
+### Illegal pipelines
 
-It can be useful to feed an input pipeline into an output pipeline. For example,
-an application might add effects to live music in real time, where the music is
-captured by a microphone then music plus effects are rendered to a speaker.
-However, it is illegal to do make this connection within a MixerService DAG.
-Suppose we tried to feed an input pipeline into an output pipeline, where the
-input pipeline has delay D. If frame X is presented at a microphone at
-presentation time T, X cannot be read until time T+D, at which point it is
-inserted into the output pipeline. This frame has presentation time T, so by
-definition it arrives late in the output pipeline. Any connection from an input
-pipeline to an output pipeline must occur in an external client, which must
-re-timestamp captured audio frames before they are fed into an output pipeline.
-For example, if the input pipeline has delay D1, the output pipeline has delay
-D2, and the client's internal processing has delay D3, then frame X should be
-re-timestamped to T+D1+D2+D3.
+It might be useful to feed an input pipeline into an output pipeline, but we do
+not allow it.
 
-### Reporting changes in lead time
+For example, an application might capture live music from a microphone, add
+effects in real time, then render the music plus effects to a speaker. However,
+we forbid connections of this type. Suppose we tried to feed an input pipeline
+into an output pipeline, where the input pipeline has delay D. If frame X is
+presented at a microphone at time T, X cannot be read until time T+D, at which
+point it is inserted into the output pipeline. This frame has presentation time
+T, so by definition it arrives late in the output pipeline, hence the frame will
+not be rendered. Scenarioes like this must route the input pipeline to an
+external client, which must re-timestamp captured audio frames before they are
+fed into an output pipeline. For example, if the input pipeline has delay D1,
+the output pipeline has delay D2, and the client's internal processing has delay
+D3, then frame X should be re-timestamped to T+D1+D2+D3.
+
+## Methods on Node
+
+The [Node class](../fidl/node.h) defines the following methods:
+
+*   `max_downstream_output_pipeline_delay()`
+*   `max_downstream_input_pipeline_delay()`
+*   `max_upstream_input_pipeline_delay()`
+
+We do not bother to define `max_upstream_output_pipeline_delay()` because (so
+far) that is not useful. The above delays measure *downstream* or *upstream*
+delay, filtered by output or input pipelines, as illustrated by the following
+diagram:
+
+```
+ +  producer                        + microphone
+ |     |                            |     |
+ |     V                            |     V
+ |    ...                           |  producer
+ |     |                            |     |
+ |     V                           (c)    V
+ |  loopback -> ... -> consumer     |    ...
+ |     +--------(b)-------+         |     |
+(a)    |                            |     V
+ |     V                            +  consumer
+ |  consumer
+ |     |
+ |     V
+ +  speaker
+```
+
+*   The delay on path (a) is `producer.max_downstream_output_pipeline_delay()`
+*   The delay on path (b) is both
+    `producer.max_downstream_input_pipeline_delay()` and
+    `loopback.max_downstream_input_pipeline_delay()`
+*   The delay on path (c) is `consumer.max_upstream_input_pipeline_delay()`
+
+These delays are used as described in the following sections.
+
+### ProducerNode
+
+In output pipelines, `max_downstream_output_pipeline_delay()` is the producer's
+lead time.
+
+In input pipelines, `max_upstream_input_pipeline_delay()` is the delay
+introduced by the external input device on the other side of the producer node
+(e.g. a microphone device).
+
+### ConsumerNode
+
+In output pipelines, `max_downstream_output_pipeline_delay()` is the delay
+introduced by the external output device on the other side of the consumer node
+(e.g. a speaker device).
+
+In input pipelines, `max_upstream_input_pipeline_delay()` is how long it takes
+for a frame to travel from the external input device (e.g. a microphone) to the
+consumer.
+
+### SplitterNode
+
+A splitter node copies a source stream into an intermediate buffer, which is
+read by multiple destination streams.
+
+When a splitter node appears in an output pipeline, the buffer must be large
+enough to accommodate the splitter's maximum *downstream* delay, which is
+`max_downstream_output_pipeline_delay()`.
+
+When a splitter node appears in an input pipeline, the buffer must be large
+enough to accommodate the splitter's maximum *downstream* delay, which is
+`max_downstream_input_pipeline_delay()`.
+
+When a splitter node acts as a loopback interface, meaning the splitter's source
+is an output pipeline and at least one destination feeds into an input pipeline,
+the intermediate buffer is split into two parts: one for the downstream output
+pipelines (which process frames that will be presented in the future) and
+another for the downstream input pipelines (which read frames that were
+presented in the past). The intermediate buffer must be large enough for
+`max_downstream_output_pipeline_delay() + max_downstream_input_pipeline_delay()`
+frames.
+
+## Reporting changes in lead time
 
 The client must be notified when an output pipeline's *lead time* changes.
 Suppose the lead time is scheduled to change at time T. If the lead time
@@ -119,28 +205,21 @@ TODO(fxbug.dev/87651): design an API for this
 ## Buffer size
 
 When a producer submits audio into a pipeline tree using a packet queue, the
-producer needs to know how long that packet may be held by the mixer service. In
-theory, the packet can be released at time T-LeadTime, where *T* is the
-presentation time of the packet's last frame and *LeadTime* is the producer's
-lead time. If this happened, the producer would not need to buffer more than one
-packet at a time. However, the mixer service would need to immediately copy the
-packet into an internal buffer.
+producer needs to know how long that packet may be held by the mixer service. At
+one extreme, the mixer service might immediately release the packet after coying
+it into an internal cache. At another extreme, a mixer pipeline might have an
+arbitrarily-large look-behind, in which case a packet might be needed for an
+arbitrarily long time.
 
-At the other extreme, the mixer service might hold onto a packet beyond time T:
-it may need a source frame up until that frame is presented, then may need to
-hold onto the source frame a little longer, if, for example, the pipeline
-includes a filter that looks into the past by a non-zero number of frames.
+To simplify, we impose the following rules:
 
-In practice, most pipeline trees use internal caches, so they will release a
-frame well before the frame's presentation time. Computing exactly when this
-happens can be tricky as it depends on the exact semantics of each pipeline
-stage. To avoid this problem, we impose the following simple rules:
+*   In output pipelines, the producer must be prepared to buffer at least
+    `producer.max_downstream_output_pipeline_delay()`, i.e. at least one *lead
+    time* worth of data.
 
-*   Each producer must be prepared to buffer up to one *lead time* worth of
-    data.
+*   In input pipelines, the producer must be prepared to buffer at least
+    `producer.max_downstream_input_pipeline_delay()` worth of data.
 
-*   If a pipeline stage includes a filter that looks into the past, the stage
-    must cache frames in the past -- it cannot require its source to hold onto
-    those frames.
-
-TODO(fxbug.dev/87651): how does this affect ring buffers?
+*   If a pipeline stage includes a filter with look-behind, the stage must cache
+    frames in the past -- it cannot require its source to hold onto those
+    frames.

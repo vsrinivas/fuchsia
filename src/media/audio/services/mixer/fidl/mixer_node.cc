@@ -45,7 +45,7 @@ std::shared_ptr<MixerNode> MixerNode::Create(Args args) {
   return node;
 }
 
-zx::duration MixerNode::GetSelfPresentationDelayForSource(const Node* source) const {
+zx::duration MixerNode::PresentationDelayForSourceEdge(const Node* source) const {
   FX_CHECK(source);
   const auto& dest_format = pipeline_stage()->format();
   const int32_t source_frame_rate =

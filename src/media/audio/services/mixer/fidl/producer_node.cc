@@ -90,7 +90,7 @@ void ProducerNode::Stop(ProducerStage::StopCommand cmd) const {
   }
 }
 
-zx::duration ProducerNode::GetSelfPresentationDelayForSource(const Node* source) const {
+zx::duration ProducerNode::PresentationDelayForSourceEdge(const Node* source) const {
   // Producers do not have internal delay contribution.
   // TODO(fxbug.dev/87651): Add a method to introduce external delay.
   return zx::duration(0);

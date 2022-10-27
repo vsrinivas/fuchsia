@@ -56,7 +56,7 @@ TEST(ReachabilityTest, ComputeDelayOrdinaryNodesOnly) {
 
   // Set delay of 1nsec for node `1`.
   SCOPED_TRACE("add delay to node 1");
-  graph.node(1)->SetOnGetSelfPresentationDelayForSource([](const Node* source) {
+  graph.node(1)->SetOnPresentationDelayForSourceEdge([](const Node* source) {
     FX_CHECK(source == nullptr);
     return zx::nsec(1);
   });
@@ -77,7 +77,7 @@ TEST(ReachabilityTest, ComputeDelayOrdinaryNodesOnly) {
 
   // Set delay of 5nsec for node `5`.
   SCOPED_TRACE("add delay to node 5");
-  graph.node(5)->SetOnGetSelfPresentationDelayForSource([&](const Node* source) {
+  graph.node(5)->SetOnPresentationDelayForSourceEdge([&](const Node* source) {
     FX_CHECK(source == graph.node(4).get());
     return zx::nsec(5);
   });
@@ -97,7 +97,7 @@ TEST(ReachabilityTest, ComputeDelayOrdinaryNodesOnly) {
 
   // Set variable delay of 1nsec or 3nsec for node `4`, depending on source nodes `1` or `3`.
   SCOPED_TRACE("add delay to node 4");
-  graph.node(4)->SetOnGetSelfPresentationDelayForSource([&](const Node* source) {
+  graph.node(4)->SetOnPresentationDelayForSourceEdge([&](const Node* source) {
     FX_CHECK(source == graph.node(1).get() || source == graph.node(3).get());
     return (source == graph.node(1).get()) ? zx::nsec(1) : zx::nsec(3);
   });
@@ -162,7 +162,7 @@ TEST(ReachabilityTest, ComputeDelayWithMetaNodes) {
 
   // Set delay of 1nsec for destination child node `1` of meta node `10`.
   SCOPED_TRACE("add delay to destination child node 1");
-  graph.node(1)->SetOnGetSelfPresentationDelayForSource([](const Node* source) {
+  graph.node(1)->SetOnPresentationDelayForSourceEdge([](const Node* source) {
     FX_CHECK(source == nullptr);
     return zx::nsec(1);
   });
@@ -183,7 +183,7 @@ TEST(ReachabilityTest, ComputeDelayWithMetaNodes) {
   // Set variable delay of 4nsec or 2nsec for source child node `5` of meta node `30` depending on
   // the connected destination child nodes `2` and `4`.
   SCOPED_TRACE("add delay to source child node 5");
-  graph.node(5)->SetOnGetSelfPresentationDelayForSource([&](const Node* source) {
+  graph.node(5)->SetOnPresentationDelayForSourceEdge([&](const Node* source) {
     FX_CHECK(source == graph.node(2).get() || source == graph.node(4).get());
     return (source == graph.node(2).get()) ? zx::nsec(2) : zx::nsec(4);
   });

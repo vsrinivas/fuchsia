@@ -41,7 +41,7 @@ class MixerNode : public Node {
   static std::shared_ptr<MixerNode> Create(Args args);
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
+  zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
  private:
   MixerNode(std::string_view name, std::shared_ptr<Clock> reference_clock,

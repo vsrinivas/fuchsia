@@ -71,7 +71,7 @@ void ConsumerNode::Stop(ConsumerStage::StopCommand cmd) const {
   }
 }
 
-zx::duration ConsumerNode::GetSelfPresentationDelayForSource(const Node* source) const {
+zx::duration ConsumerNode::PresentationDelayForSourceEdge(const Node* source) const {
   // TODO(fxbug.dev/87651): Implement this.
   return zx::duration(0);
 }

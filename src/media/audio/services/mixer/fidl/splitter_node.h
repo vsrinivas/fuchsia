@@ -67,8 +67,8 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
   static std::shared_ptr<SplitterNode> Create(Args args);
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final {
-    UNREACHABLE << "GetSelfPresentationDelayForSource should not be called on meta nodes";
+  zx::duration PresentationDelayForSourceEdge(const Node* source) const final {
+    UNREACHABLE << "PresentationDelayForSourceEdge should not be called on meta nodes";
   }
 
  private:
@@ -83,7 +83,7 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
     explicit ChildConsumerNode(Args args);
 
     // Implements `Node`.
-    zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
+    zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
     // Overrides `Node::pipeline_stage` with a more specific type.
     [[nodiscard]] std::shared_ptr<SplitterConsumerStage> pipeline_stage() const {
@@ -115,7 +115,7 @@ class SplitterNode : public Node, public std::enable_shared_from_this<SplitterNo
     explicit ChildProducerNode(Args args);
 
     // Implements `Node`.
-    zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
+    zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
     // Overrides `Node::pipeline_stage` with a more specific type.
     [[nodiscard]] std::shared_ptr<SplitterProducerStage> pipeline_stage() const {

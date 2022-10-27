@@ -114,7 +114,7 @@ zx::duration ComputeDownstreamDelay(const Node& node, const Node* source) {
   FX_CHECK(node.type() != Node::Type::kMeta);
   FX_CHECK(!source || source->type() != Node::Type::kMeta);
 
-  const auto self_delay = node.GetSelfPresentationDelayForSource(source);
+  const auto self_delay = node.PresentationDelayForSourceEdge(source);
   auto max_downstream_delay = zx::nsec(0);
 
   ForEachDownstreamEdge(node, [&max_downstream_delay, &node](const Node& dest) {
@@ -136,7 +136,7 @@ zx::duration ComputeUpstreamDelay(const Node& node) {
     num_sources++;
     // Pass in `source` to compute self delay contribution iff it is part of `node.sources()`.
     const auto self_delay =
-        node.GetSelfPresentationDelayForSource(!node.sources().empty() ? &source : nullptr);
+        node.PresentationDelayForSourceEdge(!node.sources().empty() ? &source : nullptr);
     max_upstream_delay = std::max(max_upstream_delay, self_delay + ComputeUpstreamDelay(source));
   });
 
@@ -144,7 +144,7 @@ zx::duration ComputeUpstreamDelay(const Node& node) {
     return max_upstream_delay;
   }
 
-  return node.GetSelfPresentationDelayForSource(nullptr);
+  return node.PresentationDelayForSourceEdge(nullptr);
 }
 
 bool ExistsPath(const Node& source, const Node& dest) {

@@ -95,7 +95,7 @@ SplitterNode::ChildConsumerNode::ChildConsumerNode(Args args)
     : Node(Type::kConsumer, args.name, args.parent->reference_clock(),
            args.parent->pipeline_direction(), args.pipeline_stage, args.parent) {}
 
-zx::duration SplitterNode::ChildConsumerNode::GetSelfPresentationDelayForSource(
+zx::duration SplitterNode::ChildConsumerNode::PresentationDelayForSourceEdge(
     const Node* source) const {
   // TODO(fxbug.dev/87651): implement
   return zx::nsec(0);
@@ -105,7 +105,7 @@ SplitterNode::ChildProducerNode::ChildProducerNode(Args args)
     : Node(Type::kProducer, args.name, args.parent->reference_clock(),
            args.parent->pipeline_direction(), args.pipeline_stage, args.parent) {}
 
-zx::duration SplitterNode::ChildProducerNode::GetSelfPresentationDelayForSource(
+zx::duration SplitterNode::ChildProducerNode::PresentationDelayForSourceEdge(
     const Node* source) const {
   // TODO(fxbug.dev/87651): implement
   return zx::nsec(0);

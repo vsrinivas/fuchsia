@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_SERVICES_MIXER_FIDL_NODE_H_
 
 #include <fidl/fuchsia.audio.mixer/cpp/wire.h>
+#include <lib/fit/function.h>
 #include <lib/fpromise/result.h>
 #include <lib/zx/time.h>
 #include <zircon/types.h>
@@ -208,13 +209,83 @@ class Node {
   // REQUIRED: type() != Type::kMeta
   void set_thread(std::shared_ptr<GraphThread> t);
 
-  // Returns total "self" presentation delay contribution for this node if reached through `source`.
-  // This typically consists of the internal processing delay contribution of this node with respect
-  // to `source` edge.
+  // Reports the maximum presentation delay of all output pipelines downstream of this node. This is
+  // the maximum delay over all longest paths `this -> ... -> X`, where all nodes from `this` to `X`
+  // have `pipeline_direction() == kOutput` and the path hops over meta nodes using implicit edges
+  // from each child_source to each child_dest.
+  //
+  // If `this` is a leaf consumer node at the bottom of the graph, we return the "external" delay
+  // between this consumer and the physical speaker at the end of the output pipeline.
+  //
+  // See ../docs/delay.md.
+  //
+  // REQUIRED: type() != Type::kMeta && pipeline_direction() == PipelineDirection::kOutput
+  [[nodiscard]] zx::duration max_downstream_output_pipeline_delay() const;
+
+  // Reports the maximum presentation delay of all input pipelines downstream of this node. This can
+  // be called in two cases:
+  //
+  // *  When this node has `pipeline_direction() == kInput`, in which case this returns the
+  //    downstream delay of that input pipeline. This is the maximum delay over all longest paths
+  //    `this -> ... -> X`, where all nodes have `pipeline_direction() == kInput`.
+  //
+  // *  When this node has `pipeline_direction() == kOutput`, in which case this returns the
+  //    largest delay of any downstream input pipeline, which must start after a loopback interface.
+  //    More formally, this is the maximum delay over all longest paths `L -> ... -> X`, where there
+  //    exists a path `this -> ... -> L` such that:
+  //
+  //    *  all nodes before `L` have `pipeline_direction() == kOutput`, and
+  //    *  all nodes from `L` onwards have `pipeline_direction() == kInput`
+  //
+  // These paths hop over meta nodes using implicit edges from each child_source to each child_dest.
+  //
+  // See ../docs/delay.md.
   //
   // REQUIRED: type() != Type::kMeta
-  // REQUIRED: source == nullptr or source in `sources()`
-  virtual zx::duration GetSelfPresentationDelayForSource(const Node* source) const = 0;
+  [[nodiscard]] zx::duration max_downstream_input_pipeline_delay() const;
+
+  // Reports the maximum presentation delay of all input pipelines upstream of this node. This is
+  // the maximum delay over all paths `X -> ... -> this`, where all nodes from `X` to `this` have
+  // `pipeline_direction() == kInput` and the path hops over meta nodes using implicit edges from
+  // each child_source to each child_dest.
+  //
+  // If `this` is a leaf producer node at the top of the graph, we return the "external" delay
+  // between the physical microphone (at the start of the input pipeline) and this producer node.
+  //
+  // See ../docs/delay.md.
+  //
+  // REQUIRED: type() != Type::kMeta && pipeline_direction() == PipelineDirection::kInput
+  [[nodiscard]] zx::duration max_upstream_input_pipeline_delay() const;
+
+  // Sets the above three delays. The initial values are zero. These methods are virtual so that
+  // subclasses can be notified when the value changes. It is not necessary to override the default
+  // implementations.
+  //
+  // Sometimes, changes to delay must be copied to the mix threads. This is supported with the
+  // return value: an optional pair `(T, F)` contains a function (F) that must execute on the
+  // corresponding thread (T).
+  //
+  // REQUIRED: same as the corresponding getter
+  virtual std::optional<std::pair<ThreadId, fit::closure>> set_max_downstream_output_pipeline_delay(
+      zx::duration delay);
+  virtual std::optional<std::pair<ThreadId, fit::closure>> set_max_downstream_input_pipeline_delay(
+      zx::duration delay);
+  virtual std::optional<std::pair<ThreadId, fit::closure>> set_max_upstream_input_pipeline_delay(
+      zx::duration delay);
+
+  // Returns total presentation delay of a source edge.
+  //
+  // If `source != nullptr`, we return the delay of the edge `source -> this`. This typically
+  // consists of processing delays and buffering delays, as disussed in ../docs/delay.md.
+  //
+  // If `source == nullptr`, then this node must be a child_dest of a parent meta node. At meta
+  // nodes, data typically flows into the child_source nodes, then into an intermediate buffer, then
+  // into the child_dest nodes. In this case, PresentationDelayForSourceEdge returns the delay
+  // introduced by the child_dest node processing and reading data from the intermediate buffer.
+  //
+  // REQUIRED: type() != Type::kMeta
+  // REQUIRED: (source == nullptr and source in parent->child_dests()) or source in sources()
+  virtual zx::duration PresentationDelayForSourceEdge(const Node* source) const = 0;
 
  protected:
   Node(Type type, std::string_view name, std::shared_ptr<Clock> reference_clock,
@@ -335,6 +406,9 @@ class Node {
   std::vector<NodePtr> sources_;
   NodePtr dest_;
   std::shared_ptr<GraphThread> thread_;
+  zx::duration max_downstream_output_pipeline_delay_;
+  zx::duration max_downstream_input_pipeline_delay_;
+  zx::duration max_upstream_input_pipeline_delay_;
 
   // If `type_ == Type::kMixer`.
   // Each `NodePtr` in this map is either a source (in `sources_`) or a destination (`dest_`) edge.

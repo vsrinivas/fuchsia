@@ -271,8 +271,7 @@ CustomNode::ChildSourceNode::ChildSourceNode(std::string_view name,
   set_thread(std::move(detached_thread));
 }
 
-zx::duration CustomNode::ChildSourceNode::GetSelfPresentationDelayForSource(
-    const Node* source) const {
+zx::duration CustomNode::ChildSourceNode::PresentationDelayForSourceEdge(const Node* source) const {
   // Report the underlying `CustomStage` delay.
   return presentation_delay_;
 }
@@ -294,8 +293,7 @@ CustomNode::ChildDestNode::ChildDestNode(std::string_view name,
   set_thread(std::move(detached_thread));
 }
 
-zx::duration CustomNode::ChildDestNode::GetSelfPresentationDelayForSource(
-    const Node* source) const {
+zx::duration CustomNode::ChildDestNode::PresentationDelayForSourceEdge(const Node* source) const {
   // Child destination node does not contribute in any presentation delay, since the underlying
   // `CustomStage` delay is already incorparated by the corresponding `ChildSourceNode`.
   return zx::nsec(0);

@@ -115,7 +115,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   const auto& child_source_node = custom_node->child_sources().front();
   EXPECT_EQ(child_source_node->type(), Node::Type::kCustom);
   // Presentation delay of child source should be set to `10 + 6 - 1 = 15` frames at `kFrameRate`.
-  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
+  EXPECT_EQ(child_source_node->PresentationDelayForSourceEdge(/*source=*/nullptr),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
   EXPECT_EQ(child_source_node->dest(), nullptr);
@@ -127,7 +127,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
   const auto& child_dest_node = custom_node->child_dests().front();
   EXPECT_EQ(child_dest_node->type(), Node::Type::kCustom);
   // Presentation delay of child destination should be set to zero.
-  EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
+  EXPECT_EQ(child_dest_node->PresentationDelayForSourceEdge(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), nullptr);
   EXPECT_EQ(child_dest_node->reference_clock(), DefaultClock());
@@ -137,7 +137,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Connect graph node `1` to `child_source_node`.
   ASSERT_TRUE(Node::CreateEdge(ctx, graph.node(1), child_source_node, /*options=*/{}).is_ok());
-  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(graph.node(1).get()),
+  EXPECT_EQ(child_source_node->PresentationDelayForSourceEdge(graph.node(1).get()),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre(graph.node(1)));
   EXPECT_EQ(child_source_node->dest(), nullptr);
@@ -159,7 +159,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Connect `child_dest_node` to graph node `3`.
   ASSERT_TRUE(Node::CreateEdge(ctx, child_dest_node, graph.node(3), /*options=*/{}).is_ok());
-  EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
+  EXPECT_EQ(child_dest_node->PresentationDelayForSourceEdge(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), graph.node(3));
   EXPECT_EQ(child_dest_node->thread(), ctx.detached_thread);
@@ -181,7 +181,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Disconnect graph node `1` from `child_source_node`.
   ASSERT_TRUE(Node::DeleteEdge(ctx, graph.node(1), child_source_node).is_ok());
-  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
+  EXPECT_EQ(child_source_node->PresentationDelayForSourceEdge(/*source=*/nullptr),
             zx::nsec(1'500'000'000));
   EXPECT_THAT(child_source_node->sources(), ElementsAre());
   EXPECT_EQ(child_source_node->dest(), nullptr);
@@ -195,7 +195,7 @@ TEST_F(CustomNodeTest, CreateDeleteEdge) {
 
   // Disconnect `child_dest_node` from graph node `3`.
   ASSERT_TRUE(Node::DeleteEdge(ctx, child_dest_node, graph.node(3)).is_ok());
-  EXPECT_EQ(child_dest_node->GetSelfPresentationDelayForSource(/*source=*/nullptr), zx::nsec(0));
+  EXPECT_EQ(child_dest_node->PresentationDelayForSourceEdge(/*source=*/nullptr), zx::nsec(0));
   EXPECT_THAT(child_dest_node->sources(), ElementsAre());
   EXPECT_EQ(child_dest_node->dest(), nullptr);
   EXPECT_EQ(child_dest_node->thread(), ctx.detached_thread);
@@ -234,7 +234,7 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
 
   const auto& child_source_node = custom_node->child_sources().front();
   // Presentation delay of child source should be set to `5 + 1 - 1 = 5` frames at `kFrameRate`.
-  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
+  EXPECT_EQ(child_source_node->PresentationDelayForSourceEdge(/*source=*/nullptr),
             zx::nsec(500'000'000));
   EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
   EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());
@@ -249,7 +249,7 @@ TEST_F(CustomNodeTest, CreateEdgeCannotAcceptSourceFormat) {
                                  /*options=*/{});
   ASSERT_FALSE(result.is_ok());
   EXPECT_EQ(result.error(), fuchsia_audio_mixer::CreateEdgeError::kIncompatibleFormats);
-  EXPECT_EQ(child_source_node->GetSelfPresentationDelayForSource(/*source=*/nullptr),
+  EXPECT_EQ(child_source_node->PresentationDelayForSourceEdge(/*source=*/nullptr),
             zx::nsec(500'000'000));
   EXPECT_EQ(child_source_node->thread(), ctx.detached_thread);
   EXPECT_EQ(child_source_node->pipeline_stage()->thread(), ctx.detached_thread->pipeline_thread());

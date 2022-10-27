@@ -432,6 +432,46 @@ void Node::set_thread(std::shared_ptr<GraphThread> t) {
   thread_ = std::move(t);
 }
 
+zx::duration Node::max_downstream_output_pipeline_delay() const {
+  FX_CHECK(type_ != Type::kMeta);
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput);
+  return max_downstream_output_pipeline_delay_;
+}
+
+zx::duration Node::max_downstream_input_pipeline_delay() const {
+  FX_CHECK(type_ != Type::kMeta);
+  return max_downstream_input_pipeline_delay_;
+}
+
+zx::duration Node::max_upstream_input_pipeline_delay() const {
+  FX_CHECK(type_ != Type::kMeta);
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
+  return max_upstream_input_pipeline_delay_;
+}
+
+std::optional<std::pair<ThreadId, fit::closure>> Node::set_max_downstream_output_pipeline_delay(
+    zx::duration delay) {
+  FX_CHECK(type_ != Type::kMeta);
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kOutput);
+  max_downstream_output_pipeline_delay_ = delay;
+  return std::nullopt;
+}
+
+std::optional<std::pair<ThreadId, fit::closure>> Node::set_max_downstream_input_pipeline_delay(
+    zx::duration delay) {
+  FX_CHECK(type_ != Type::kMeta);
+  max_downstream_input_pipeline_delay_ = delay;
+  return std::nullopt;
+}
+
+std::optional<std::pair<ThreadId, fit::closure>> Node::set_max_upstream_input_pipeline_delay(
+    zx::duration delay) {
+  FX_CHECK(type_ != Type::kMeta);
+  FX_CHECK(pipeline_direction_ == PipelineDirection::kInput);
+  max_upstream_input_pipeline_delay_ = delay;
+  return std::nullopt;
+}
+
 void Node::SetBuiltInChildren(std::vector<NodePtr> child_sources,
                               std::vector<NodePtr> child_dests) {
   FX_CHECK(type_ == Type::kMeta);

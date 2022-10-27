@@ -58,7 +58,7 @@ class ProducerNode : public Node {
   void Stop(ProducerStage::StopCommand cmd) const;
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
+  zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
  private:
   using PendingStartStopCommand = ProducerStage::PendingStartStopCommand;

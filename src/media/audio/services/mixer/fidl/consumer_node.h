@@ -49,7 +49,7 @@ class ConsumerNode : public Node {
   void Stop(ConsumerStage::StopCommand cmd) const;
 
   // Implements `Node`.
-  zx::duration GetSelfPresentationDelayForSource(const Node* source) const final;
+  zx::duration PresentationDelayForSourceEdge(const Node* source) const final;
 
  private:
   using PendingStartStopCommand = ConsumerStage::PendingStartStopCommand;
