@@ -15,9 +15,8 @@
 
 #include <optional>
 
-#include "src/devices/bin/driver_host/device_controller_connection.h"
 #include "src/devices/bin/driver_host/driver_host.h"
-#include "src/devices/bin/driver_host/log.h"
+#include "src/devices/lib/log/log.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

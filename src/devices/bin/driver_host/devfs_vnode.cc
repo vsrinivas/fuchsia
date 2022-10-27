@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "devfs_vnode.h"
+#include "src/devices/bin/driver_host/devfs_vnode.h"
 
 #include <lib/async/default.h>
 #include <lib/ddk/device.h>
@@ -11,9 +11,10 @@
 
 #include <fbl/string_buffer.h>
 
-#include "driver_host.h"
-#include "log.h"
+#include "src/devices/bin/driver_host/driver_host_context.h"
 #include "src/devices/bin/driver_host/simple_binding.h"
+#include "src/devices/bin/driver_host/zx_device.h"
+#include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
 namespace {

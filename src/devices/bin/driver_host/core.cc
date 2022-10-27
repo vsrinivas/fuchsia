@@ -27,10 +27,9 @@
 #include <ddktl/resume-txn.h>
 #include <fbl/auto_lock.h>
 
-#include "composite_device.h"
-#include "driver_host.h"
-#include "log.h"
-#include "proxy_device.h"
+#include "src/devices/bin/driver_host/driver_host.h"
+#include "src/devices/bin/driver_host/log.h"
+#include "src/devices/lib/log/log.h"
 
 namespace fio = fuchsia_io;
 

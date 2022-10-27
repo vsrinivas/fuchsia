@@ -16,13 +16,13 @@
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 
-#include "driver.h"
-#include "inspect.h"
-#include "lock.h"
+#include "src/devices/bin/driver_host/driver.h"
+#include "src/devices/bin/driver_host/inspect.h"
+#include "src/devices/bin/driver_host/lock.h"
+#include "src/devices/bin/driver_host/zx_device.h"
+#include "src/devices/bin/driver_host/zx_driver.h"
 #include "src/devices/bin/driver_host2/driver.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
-#include "zx_device.h"
-#include "zx_driver.h"
 
 class DriverHostContext {
  public:

@@ -44,18 +44,18 @@
 #include <fbl/auto_lock.h>
 #include <fbl/string_printf.h>
 
-#include "async_loop_owned_rpc_handler.h"
-#include "composite_device.h"
-#include "device_controller_connection.h"
-#include "driver.h"
-#include "env.h"
-#include "log.h"
-#include "main.h"
-#include "proxy_device.h"
-#include "proxy_iostate.h"
-#include "scheduler_profile.h"
+#include "src/devices/bin/driver_host/composite_device.h"
+#include "src/devices/bin/driver_host/device_controller_connection.h"
 #include "src/devices/bin/driver_host/device_group_desc_util.h"
-#include "tracing.h"
+#include "src/devices/bin/driver_host/driver.h"
+#include "src/devices/bin/driver_host/env.h"
+#include "src/devices/bin/driver_host/log.h"
+#include "src/devices/bin/driver_host/main.h"
+#include "src/devices/bin/driver_host/proxy_device.h"
+#include "src/devices/bin/driver_host/proxy_iostate.h"
+#include "src/devices/bin/driver_host/scheduler_profile.h"
+#include "src/devices/bin/driver_host/tracing.h"
+#include "src/devices/lib/log/log.h"
 
 namespace fdf {
 using namespace fuchsia_driver_framework;

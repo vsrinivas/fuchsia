@@ -28,9 +28,7 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 
-#include "defaults.h"
 #include "driver_host_context.h"
-#include "lock.h"
 #include "zx_device.h"
 
 // Nothing outside of devmgr/{devmgr,driver_host,rpc-device}.c

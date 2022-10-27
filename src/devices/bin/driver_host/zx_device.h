@@ -117,7 +117,7 @@ struct zx_device
   using DeferListTag = internal::ZxDeviceDeferListTag;
   using LocalIdMapTag = internal::ZxDeviceLocalIdMapTag;
 
-  ~zx_device() = default;
+  ~zx_device();
 
   zx_device(const zx_device&) = delete;
   zx_device& operator=(const zx_device&) = delete;

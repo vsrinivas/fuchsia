@@ -9,7 +9,7 @@
 
 #include "lib/fdio/directory.h"
 #include "lib/zx/result.h"
-#include "src/devices/bin/driver_host/driver_host.h"
+#include "src/devices/bin/driver_host/driver_host_context.h"
 
 namespace {
 

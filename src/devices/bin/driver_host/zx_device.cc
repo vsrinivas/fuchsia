@@ -2,18 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "zx_device.h"
+#include "src/devices/bin/driver_host/zx_device.h"
 
 #include <stdio.h>
 
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 
-#include "composite_device.h"
-#include "devfs_vnode.h"
-#include "driver_host.h"
-#include "log.h"
-#include "proxy_device.h"
+#include "src/devices/bin/driver_host/composite_device.h"
+#include "src/devices/bin/driver_host/devfs_vnode.h"
+#include "src/devices/bin/driver_host/driver_host.h"
+#include "src/devices/bin/driver_host/log.h"
+#include "src/devices/bin/driver_host/proxy_device.h"
+#include "src/devices/lib/log/log.h"
 
 zx_device::zx_device(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> drv)
     : driver(drv), driver_ref_(drv.get()), driver_host_context_(ctx) {
@@ -31,6 +32,8 @@ zx_device::zx_device(DriverHostContext* ctx, std::string name, fbl::RefPtr<Drive
 
   inspect_.emplace(driver->zx_driver()->inspect().devices(), name_);
 }
+
+zx_device::~zx_device() = default;
 
 zx_status_t zx_device::Create(DriverHostContext* ctx, std::string name, fbl::RefPtr<Driver> driver,
                               fbl::RefPtr<zx_device>* out_dev) {
