@@ -6,6 +6,7 @@
 // We could have refactored the tests to not hit the limit. Instead, we choose to optimize
 // for test readability and increase the recursion limit.
 #![recursion_limit = "512"]
+#![warn(clippy::all)]
 
 use {
     fidl::endpoints::ServerEnd,
