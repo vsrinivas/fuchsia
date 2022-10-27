@@ -51,11 +51,10 @@ constexpr char kTime1Str[] = "1970-01-01 00:00:00 GMT";
 constexpr char kTime2Str[] = "1970-01-01 07:14:52 GMT";
 constexpr char kTime3Str[] = "1970-01-04 15:33:17 GMT";
 
-constexpr CrashServerConfig::UploadPolicy kConfigDisabled =
-    CrashServerConfig::UploadPolicy::DISABLED;
-constexpr CrashServerConfig::UploadPolicy kConfigEnabled = CrashServerConfig::UploadPolicy::ENABLED;
-constexpr CrashServerConfig::UploadPolicy kConfigReadFromPrivacySettings =
-    CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+constexpr Config::UploadPolicy kConfigDisabled = Config::UploadPolicy::kDisabled;
+constexpr Config::UploadPolicy kConfigEnabled = Config::UploadPolicy::kEnabled;
+constexpr Config::UploadPolicy kConfigReadFromPrivacySettings =
+    Config::UploadPolicy::kReadFromPrivacySettings;
 
 class InspectManagerTest : public UnitTestFixture {
  public:
@@ -303,12 +302,11 @@ TEST_F(InspectManagerTest, Fail_MarkReportAsGarbageCollected_UnknownReport) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
-  inspect_manager_->ExposeConfig(Config{/*crash_server=*/
-                                        {
-                                            /*upload_policy=*/kConfigEnabled,
-                                        },
-                                        /*daily_per_product_quota=*/100u,
-                                        /*hourly_snapshot=*/true});
+  inspect_manager_->ExposeConfig(Config{
+      /*crash_report_upload_policy=*/kConfigEnabled,
+      /*daily_per_product_quota=*/100u,
+      /*hourly_snapshot=*/true,
+  });
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("config")),
@@ -320,12 +318,11 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadEnabled) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
-  inspect_manager_->ExposeConfig(Config{/*crash_server=*/
-                                        {
-                                            /*upload_policy=*/kConfigDisabled,
-                                        },
-                                        /*per_product_config=*/100,
-                                        /*hourly_snapshot=*/true});
+  inspect_manager_->ExposeConfig(Config{
+      /*crash_report_upload_policy=*/kConfigDisabled,
+      /*per_product_config=*/100,
+      /*hourly_snapshot=*/true,
+  });
   EXPECT_THAT(InspectTree(),
               ChildrenMatch(Contains(
                   AllOf(NodeMatches(NameMatches("config")),
@@ -336,12 +333,11 @@ TEST_F(InspectManagerTest, ExposeConfig_UploadDisabled) {
 }
 
 TEST_F(InspectManagerTest, ExposeConfig_UploadReadFromPrivacySettings) {
-  inspect_manager_->ExposeConfig(Config{/*crash_server=*/
-                                        {
-                                            /*upload_policy=*/kConfigReadFromPrivacySettings,
-                                        },
-                                        /*per_product_config=*/100u,
-                                        /*hourly_snapshot=*/true});
+  inspect_manager_->ExposeConfig(Config{
+      /*crash_report_upload_policy=*/kConfigReadFromPrivacySettings,
+      /*per_product_config=*/100u,
+      /*hourly_snapshot=*/true,
+  });
   EXPECT_THAT(
       InspectTree(),
       ChildrenMatch(Contains(AllOf(

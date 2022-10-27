@@ -62,14 +62,14 @@ ReportId SeedReportId() {
 std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     const Config& config) {
-  switch (config.crash_server.upload_policy) {
-    case CrashServerConfig::UploadPolicy::ENABLED:
-      // Uploads being enabled in |config| is explcit consent to upload all reports.
+  switch (config.crash_report_upload_policy) {
+    case Config::UploadPolicy::kEnabled:
+      // Uploads being enabled in |config| is explicit consent to upload all reports.
       return std::make_unique<StaticReportingPolicyWatcher<ReportingPolicy::kUpload>>();
-    case CrashServerConfig::UploadPolicy::DISABLED:
+    case Config::UploadPolicy::kDisabled:
       // Uploads being disabled in |config| means that reports should be archived.
       return std::make_unique<StaticReportingPolicyWatcher<ReportingPolicy::kArchive>>();
-    case CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS:
+    case Config::UploadPolicy::kReadFromPrivacySettings:
       return std::make_unique<UserReportingPolicyWatcher>(dispatcher, std::move(services));
   }
 }

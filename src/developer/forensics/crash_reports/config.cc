@@ -113,11 +113,11 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
   if (const std::string upload_policy =
           doc[kCrashServerKey][kCrashServerUploadPolicyKey].GetString();
       upload_policy == "disabled") {
-    config.crash_server.upload_policy = CrashServerConfig::UploadPolicy::DISABLED;
+    config.crash_report_upload_policy = Config::UploadPolicy::kDisabled;
   } else if (upload_policy == "enabled") {
-    config.crash_server.upload_policy = CrashServerConfig::UploadPolicy::ENABLED;
+    config.crash_report_upload_policy = Config::UploadPolicy::kEnabled;
   } else if (upload_policy == "read_from_privacy_settings") {
-    config.crash_server.upload_policy = CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+    config.crash_report_upload_policy = Config::UploadPolicy::kReadFromPrivacySettings;
   } else {
     FX_LOGS(FATAL) << "Upload policy '" << upload_policy << "' not permitted by schema";
   }
@@ -133,7 +133,7 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
   config.hourly_snapshot = doc[kHourlySnapshot].GetBool();
 
   // If crash reports won't be uploaded, there shouldn't be a quota in the config.
-  if (config.crash_server.upload_policy == CrashServerConfig::UploadPolicy::DISABLED) {
+  if (config.crash_report_upload_policy == Config::UploadPolicy::kDisabled) {
     FX_CHECK(config.daily_per_product_quota == std::nullopt)
         << "quota is " << *config.daily_per_product_quota;
   }
@@ -141,13 +141,13 @@ std::optional<Config> ParseConfig(const std::string& filepath) {
   return config;
 }
 
-std::string ToString(const CrashServerConfig::UploadPolicy upload_policy) {
+std::string ToString(const Config::UploadPolicy upload_policy) {
   switch (upload_policy) {
-    case CrashServerConfig::UploadPolicy::DISABLED:
+    case Config::UploadPolicy::kDisabled:
       return "DISABLED";
-    case CrashServerConfig::UploadPolicy::ENABLED:
+    case Config::UploadPolicy::kEnabled:
       return "ENABLED";
-    case CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS:
+    case Config::UploadPolicy::kReadFromPrivacySettings:
       return "READ_FROM_PRIVACY_SETTINGS";
   }
 }

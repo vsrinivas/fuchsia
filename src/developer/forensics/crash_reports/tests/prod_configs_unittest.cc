@@ -13,10 +13,9 @@
 namespace forensics::crash_reports {
 namespace {
 
-constexpr auto kDisabled = CrashServerConfig::UploadPolicy::DISABLED;
-constexpr auto kEnabled = CrashServerConfig::UploadPolicy::ENABLED;
-constexpr auto kReadFromPrivacySettings =
-    CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+constexpr auto kDisabled = Config::UploadPolicy::kDisabled;
+constexpr auto kEnabled = Config::UploadPolicy::kEnabled;
+constexpr auto kReadFromPrivacySettings = Config::UploadPolicy::kReadFromPrivacySettings;
 
 class ProdConfigTest : public testing::Test {
  public:
@@ -29,7 +28,7 @@ TEST_F(ProdConfigTest, Default) {
   const std::optional<Config> config = GetConfig("default.json");
   ASSERT_TRUE(config.has_value());
 
-  EXPECT_EQ(config->crash_server.upload_policy, kDisabled);
+  EXPECT_EQ(config->crash_report_upload_policy, kDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
   EXPECT_EQ(config->hourly_snapshot, false);
 }
@@ -38,7 +37,7 @@ TEST_F(ProdConfigTest, UploadToProdServer) {
   const std::optional<Config> config = GetConfig("upload_to_prod_server.json");
   ASSERT_TRUE(config.has_value());
 
-  EXPECT_EQ(config->crash_server.upload_policy, kEnabled);
+  EXPECT_EQ(config->crash_report_upload_policy, kEnabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
   EXPECT_EQ(config->hourly_snapshot, false);
 }
@@ -47,7 +46,7 @@ TEST_F(ProdConfigTest, User) {
   const std::optional<Config> config = GetConfig("user.json");
   ASSERT_TRUE(config.has_value());
 
-  EXPECT_EQ(config->crash_server.upload_policy, kReadFromPrivacySettings);
+  EXPECT_EQ(config->crash_report_upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(config->daily_per_product_quota, 100);
   EXPECT_EQ(config->hourly_snapshot, false);
 }
@@ -56,7 +55,7 @@ TEST_F(ProdConfigTest, Userdebug) {
   const std::optional<Config> config = GetConfig("userdebug.json");
   ASSERT_TRUE(config.has_value());
 
-  EXPECT_EQ(config->crash_server.upload_policy, kReadFromPrivacySettings);
+  EXPECT_EQ(config->crash_report_upload_policy, kReadFromPrivacySettings);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
   EXPECT_EQ(config->hourly_snapshot, true);
 }

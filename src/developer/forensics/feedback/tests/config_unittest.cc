@@ -12,8 +12,8 @@
 namespace forensics::feedback {
 namespace {
 
-constexpr auto kUploadDisabled = crash_reports::CrashServerConfig::UploadPolicy::DISABLED;
-constexpr auto kUploadEnabled = crash_reports::CrashServerConfig::UploadPolicy::ENABLED;
+constexpr auto kUploadDisabled = crash_reports::Config::UploadPolicy::kDisabled;
+constexpr auto kUploadEnabled = crash_reports::Config::UploadPolicy::kEnabled;
 
 TEST(ConfigTest, GetCrashReportsConfig) {
   files::ScopedTempDir temp_dir;
@@ -51,26 +51,26 @@ TEST(ConfigTest, GetCrashReportsConfig) {
   // The override config should be read regardless of the default config being valid.
   auto config = GetCrashReportsConfig("/bad/path", override_config_path);
   ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_server.upload_policy, kUploadEnabled);
+  EXPECT_EQ(config->crash_report_upload_policy, kUploadEnabled);
   EXPECT_EQ(config->daily_per_product_quota, 100u);
   EXPECT_EQ(config->hourly_snapshot, true);
 
   config = GetCrashReportsConfig(invalid_config_path, override_config_path);
   ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_server.upload_policy, kUploadEnabled);
+  EXPECT_EQ(config->crash_report_upload_policy, kUploadEnabled);
   EXPECT_EQ(config->daily_per_product_quota, 100u);
   EXPECT_EQ(config->hourly_snapshot, true);
 
   // The default config should be read if there's an issue using the override config.
   config = GetCrashReportsConfig(default_config_path, "/bad/path");
   ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_server.upload_policy, kUploadDisabled);
+  EXPECT_EQ(config->crash_report_upload_policy, kUploadDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
   EXPECT_EQ(config->hourly_snapshot, false);
 
   config = GetCrashReportsConfig(default_config_path, invalid_config_path);
   ASSERT_TRUE(config);
-  EXPECT_EQ(config->crash_server.upload_policy, kUploadDisabled);
+  EXPECT_EQ(config->crash_report_upload_policy, kUploadDisabled);
   EXPECT_EQ(config->daily_per_product_quota, std::nullopt);
   EXPECT_EQ(config->hourly_snapshot, false);
 

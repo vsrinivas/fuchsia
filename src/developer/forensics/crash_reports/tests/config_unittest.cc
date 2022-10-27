@@ -15,10 +15,10 @@ namespace forensics {
 namespace crash_reports {
 namespace {
 
-constexpr CrashServerConfig::UploadPolicy kDisabled = CrashServerConfig::UploadPolicy::DISABLED;
-constexpr CrashServerConfig::UploadPolicy kEnabled = CrashServerConfig::UploadPolicy::ENABLED;
-constexpr CrashServerConfig::UploadPolicy kReadFromPrivacySettings =
-    CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS;
+constexpr Config::UploadPolicy kDisabled = Config::UploadPolicy::kDisabled;
+constexpr Config::UploadPolicy kEnabled = Config::UploadPolicy::kEnabled;
+constexpr Config::UploadPolicy kReadFromPrivacySettings =
+    Config::UploadPolicy::kReadFromPrivacySettings;
 
 class ConfigTest : public testing::Test {
  protected:
@@ -178,7 +178,7 @@ TEST_F(ConfigTest, UploadDisabled) {
     },
     "hourly_snapshot": false
 })");
-  EXPECT_EQ(config.crash_server.upload_policy, kDisabled);
+  EXPECT_EQ(config.crash_report_upload_policy, kDisabled);
 }
 
 TEST_F(ConfigTest, UploadEnabled) {
@@ -191,7 +191,7 @@ TEST_F(ConfigTest, UploadEnabled) {
     },
     "hourly_snapshot": false
 })");
-  EXPECT_EQ(config.crash_server.upload_policy, kEnabled);
+  EXPECT_EQ(config.crash_report_upload_policy, kEnabled);
 }
 
 TEST_F(ConfigTest, UploadReadFromPrivacySettings) {
@@ -204,7 +204,7 @@ TEST_F(ConfigTest, UploadReadFromPrivacySettings) {
     },
     "hourly_snapshot": false
 })");
-  EXPECT_EQ(config.crash_server.upload_policy, kReadFromPrivacySettings);
+  EXPECT_EQ(config.crash_report_upload_policy, kReadFromPrivacySettings);
 }
 
 TEST_F(ConfigTest, PositiveDailyPerProductQuota) {
@@ -277,9 +277,9 @@ TEST_F(ConfigTest, HourlySnapshotFalse) {
 
 }  // namespace
 
-// Pretty-prints CrashServerConfig::UploadPolicy in gTest matchers instead of the default byte
+// Pretty-prints Config::UploadPolicy in gTest matchers instead of the default byte
 // string in case of failed expectations.
-void PrintTo(const CrashServerConfig::UploadPolicy& upload_policy, std::ostream* os) {
+void PrintTo(const Config::UploadPolicy& upload_policy, std::ostream* os) {
   *os << ToString(upload_policy);
 }
 

@@ -194,14 +194,12 @@ class CrashReporterTest : public UnitTestFixture {
   // Sets up the underlying crash reporter using a default config.
   void SetUpCrashReporterDefaultConfig(
       const std::vector<CrashServer::UploadStatus>& upload_attempt_results = {}) {
-    SetUpCrashReporter(
-        Config{/*crash_server=*/
-               {
-                   /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-               },
-               /*daily_per_product_quota=*/kDailyPerProductQuota,
-               /*houry_snapshot=*/true},
-        upload_attempt_results);
+    SetUpCrashReporter(Config{
+                           /*crash_report_upload_policy=*/Config::UploadPolicy::kEnabled,
+                           /*daily_per_product_quota=*/kDailyPerProductQuota,
+                           /*houry_snapshot=*/true,
+                       },
+                       upload_attempt_results);
   }
 
   void SetUpDataProviderServer(std::unique_ptr<stubs::DataProviderBase> server) {
@@ -481,15 +479,13 @@ TEST_F(CrashReporterTest, ResetsQuota) {
 TEST_F(CrashReporterTest, NoQuota) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
-  SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-             },
-             /*daily_per_product_quota=*/std::nullopt,
-             /*houry_snapshot=*/true},
-      std::vector<CrashServer::UploadStatus>(kDailyPerProductQuota + 1 /*first hourly snapshot*/,
-                                             kUploadSuccessful));
+  SetUpCrashReporter(Config{
+                         /*crash_report_upload_policy=*/Config::UploadPolicy::kEnabled,
+                         /*daily_per_product_quota=*/std::nullopt,
+                         /*houry_snapshot=*/true,
+                     },
+                     std::vector<CrashServer::UploadStatus>(
+                         kDailyPerProductQuota + 1 /*first hourly snapshot*/, kUploadSuccessful));
 
   for (size_t i = 0; i < kDailyPerProductQuota; ++i) {
     ASSERT_TRUE(FileOneCrashReport().is_ok());
@@ -701,12 +697,11 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-             },
-             /*daily_per_product_quota=*/kDailyPerProductQuota,
-             /*houry_snapshot=*/true},
+      Config{
+          /*crash_report_upload_policy=*/Config::UploadPolicy::kReadFromPrivacySettings,
+          /*daily_per_product_quota=*/kDailyPerProductQuota,
+          /*houry_snapshot=*/true,
+      },
       std::vector({kUploadSuccessful}));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptInDataSharing);
@@ -719,12 +714,10 @@ TEST_F(CrashReporterTest, Upload_OnUserAlreadyOptedInDataSharing) {
 TEST_F(CrashReporterTest, Archive_OnUserAlreadyOptedOutDataSharing) {
   SetUpDataProviderServer(std::make_unique<stubs::DataProviderTracksNumCalls>(0u));
   SetUpCrashReporter(Config{
-      /*crash_server=*/
-      {
-          /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-      },
+      /*crash_report_upload_policy=*/Config::UploadPolicy::kReadFromPrivacySettings,
       /*daily_per_product_quota=*/kDailyPerProductQuota,
-      /*houry_snapshot=*/true});
+      /*houry_snapshot=*/true,
+  });
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
   RunLoopUntilIdle();
@@ -736,12 +729,11 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-             },
-             /*daily_per_product_quota=*/kDailyPerProductQuota,
-             /*hourly_snapshot=*/true},
+      Config{
+          /*crash_report_upload_policy=*/Config::UploadPolicy::kReadFromPrivacySettings,
+          /*daily_per_product_quota=*/kDailyPerProductQuota,
+          /*hourly_snapshot=*/true,
+      },
       std::vector({kUploadSuccessful}));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
 
@@ -758,14 +750,12 @@ TEST_F(CrashReporterTest, Upload_OnceUserOptInDataSharing) {
 TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
-  SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-             },
-             /*daily_per_product_quota=*/kDailyPerProductQuota,
-             /*hourly_snapshot=*/true},
-      std::vector({kUploadFailed}));
+  SetUpCrashReporter(Config{
+                         /*crash_report_upload_policy=*/Config::UploadPolicy::kEnabled,
+                         /*daily_per_product_quota=*/kDailyPerProductQuota,
+                         /*hourly_snapshot=*/true,
+                     },
+                     std::vector({kUploadFailed}));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -773,14 +763,12 @@ TEST_F(CrashReporterTest, Succeed_OnFailedUpload) {
 TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
-  SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-             },
-             /*daily_per_product_quota=*/kDailyPerProductQuota,
-             /*hourly_snapshot=*/true},
-      std::vector({kUploadThrottled}));
+  SetUpCrashReporter(Config{
+                         /*crash_report_upload_policy=*/Config::UploadPolicy::kEnabled,
+                         /*daily_per_product_quota=*/kDailyPerProductQuota,
+                         /*hourly_snapshot=*/true,
+                     },
+                     std::vector({kUploadThrottled}));
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -788,12 +776,11 @@ TEST_F(CrashReporterTest, Succeed_OnThrottledUpload) {
 TEST_F(CrashReporterTest, Succeed_OnDisabledUpload) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
-  SetUpCrashReporter(Config{/*crash_server=*/
-                            {
-                                /*upload_policy=*/CrashServerConfig::UploadPolicy::DISABLED,
-                            },
-                            /*daily_per_product_quota=*/kDailyPerProductQuota,
-                            /*hourly_snapshot=*/true});
+  SetUpCrashReporter(Config{
+      /*crash_report_upload_policy=*/Config::UploadPolicy::kDisabled,
+      /*daily_per_product_quota=*/kDailyPerProductQuota,
+      /*hourly_snapshot=*/true,
+  });
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
 }
@@ -859,12 +846,11 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfNegativeConsent) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kDefaultAttachmentBundleKey));
   SetUpCrashReporter(
-      Config{/*crash_server=*/
-             {
-                 /*upload_policy=*/CrashServerConfig::UploadPolicy::READ_FROM_PRIVACY_SETTINGS,
-             },
-             /*daily_per_product_quota=*/kDailyPerProductQuota,
-             /*houry_snapshot=*/true},
+      Config{
+          /*crash_report_upload_policy=*/Config::UploadPolicy::kReadFromPrivacySettings,
+          /*daily_per_product_quota=*/kDailyPerProductQuota,
+          /*houry_snapshot=*/true,
+      },
       std::vector<CrashServer::UploadStatus>({}));
   SetUpPrivacySettingsServer(std::make_unique<fakes::PrivacySettings>());
   SetPrivacySettings(kUserOptOutDataSharing);
@@ -891,12 +877,11 @@ TEST_F(CrashReporterTest, Check_CobaltAfterSuccessfulUpload) {
 TEST_F(CrashReporterTest, Check_CobaltAfterQuotaReached) {
   SetUpDataProviderServer(
       std::make_unique<stubs::DataProvider>(kFeedbackAnnotations, kEmptyAttachmentBundleKey));
-  SetUpCrashReporter(Config{/*crash_server=*/
-                            {
-                                /*upload_policy=*/CrashServerConfig::UploadPolicy::ENABLED,
-                            },
-                            /*daily_per_product_quota=*/0u,
-                            /*hourly_snapshot=*/true});
+  SetUpCrashReporter(Config{
+      /*crash_report_upload_policy=*/Config::UploadPolicy::kEnabled,
+      /*daily_per_product_quota=*/0u,
+      /*hourly_snapshot=*/true,
+  });
 
   EXPECT_TRUE(FileOneCrashReport().is_ok());
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({

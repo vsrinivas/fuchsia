@@ -125,7 +125,7 @@ void InspectManager::ExposeConfig(const crash_reports::Config& config) {
   inspect::Node& server = node_manager_.Get("/config/crash_server");
 
   crash_server->upload_policy =
-      server.CreateString(kCrashServerUploadPolicyKey, ToString(config.crash_server.upload_policy));
+      server.CreateString(kCrashServerUploadPolicyKey, ToString(config.crash_report_upload_policy));
 }
 
 void InspectManager::ExposeReportingPolicy(ReportingPolicyWatcher* watcher) {
