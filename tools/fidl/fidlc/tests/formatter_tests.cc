@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include <zxtest/zxtest.h>
 
+#include "tools/fidl/fidlc/include/fidl/experimental_flags.h"
 #include "tools/fidl/fidlc/include/fidl/formatter.h"
 #include "tools/fidl/fidlc/include/fidl/utils.h"
 #include "tools/fidl/fidlc/tests/test_library.h"
@@ -14,7 +15,9 @@ std::string Format(const std::string& source, bool reformat_and_compare = true) 
   // We use a column width of 40, rather than the "real world" 100, to make tests easier to read
   // and write.
   auto formatter = fidl::fmt::NewFormatter(40, lib.reporter());
-  auto result = formatter.Format(lib.source_file(), fidl::ExperimentalFlags());
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.EnableFlag(fidl::ExperimentalFlags::Flag::kUnknownInteractions);
+  auto result = formatter.Format(lib.source_file(), experimental_flags);
 
   // If we're still going to reformat, then this is the first pass.  Otherwise, we're on the second
   // pass.
@@ -5428,4 +5431,163 @@ type MyStruct = resource struct {
   ASSERT_TRUE(fidl::utils::OnlyWhitespaceChanged(formatted, Format(unformatted)));
 }
 
+TEST(NewFormatterTests, ProtocolModifierDoesntWrap) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+open protocol FooBarBazQuixLongNameSomething {
+};
+
+ajar protocol FooBarBazQuixLongNameSomething {
+};
+
+closed protocol FooBarBazQuixLongNameSomething {
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+open protocol FooBarBazQuixLongNameSomething {};
+
+ajar protocol FooBarBazQuixLongNameSomething {};
+
+closed protocol FooBarBazQuixLongNameSomething {};
+)FIDL";
+
+  ASSERT_STREQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, ProtocolModifierDoesntPreventContentsWrapping) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+open protocol FooBarBazQuixLongNameSomething { Test(); };
+
+ajar protocol FooBarBazQuixLongNameSomething { Test(); };
+
+closed protocol FooBarBazQuixLongNameSomething { Test(); };
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+open protocol FooBarBazQuixLongNameSomething {
+    Test();
+};
+
+ajar protocol FooBarBazQuixLongNameSomething {
+    Test();
+};
+
+closed protocol FooBarBazQuixLongNameSomething {
+    Test();
+};
+)FIDL";
+
+  ASSERT_STREQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, MethodModifierDoesntWrap) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+open protocol Test {
+    strict FooBarBazQuixLongNameSomething();
+    flexible BazFooQuixBarLongNameSomething();
+    strict LongNameSomethingFooBarBazQuix() -> ();
+    flexible LongNameSomethingBazFooQuixBar() -> ();
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+open protocol Test {
+    strict FooBarBazQuixLongNameSomething();
+    flexible BazFooQuixBarLongNameSomething();
+    strict LongNameSomethingFooBarBazQuix() -> ();
+    flexible LongNameSomethingBazFooQuixBar() -> ();
+};
+)FIDL";
+
+  ASSERT_STREQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, MethodModifierDoesntPreventContentsWrapping) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+open protocol Test {
+    strict FooBarBazQuixLongNameSomething(struct { x int32; });
+    flexible BazFooQuixBarLongNameSomething(struct { x int32; });
+    strict LongNameSomethingFooBarBazQuix(struct { x int32; }) -> (struct { a int32; b int64; c int32; d int64; });
+    flexible LongNameSomethingBazFooQuixBar(struct { x int32; }) -> (struct { a int32; b int64; c int32; d int64; });
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+open protocol Test {
+    strict FooBarBazQuixLongNameSomething(struct {
+        x int32;
+    });
+    flexible BazFooQuixBarLongNameSomething(struct {
+        x int32;
+    });
+    strict LongNameSomethingFooBarBazQuix(struct {
+        x int32;
+    }) -> (struct {
+        a int32;
+        b int64;
+        c int32;
+        d int64;
+    });
+    flexible LongNameSomethingBazFooQuixBar(struct {
+        x int32;
+    }) -> (struct {
+        a int32;
+        b int64;
+        c int32;
+        d int64;
+    });
+};
+)FIDL";
+
+  ASSERT_STREQ(formatted, Format(unformatted));
+}
+
+TEST(NewFormatterTests, MethodModifierDoesntPreventProtocolWrapping) {
+  // ---------------40---------------- |
+  std::string unformatted = R"FIDL(
+library foo.bar;
+
+open protocol Test {
+    strict FooBarBazQuixLongNameSomething(); flexible BazFooQuixBarLongNameSomething(); strict LongNameSomethingFooBarBazQuix() -> (); flexible LongNameSomethingBazFooQuixBar() -> ();
+};
+)FIDL";
+
+  // ---------------40---------------- |
+  std::string formatted = R"FIDL(
+library foo.bar;
+
+open protocol Test {
+    strict FooBarBazQuixLongNameSomething();
+    flexible BazFooQuixBarLongNameSomething();
+    strict LongNameSomethingFooBarBazQuix() -> ();
+    flexible LongNameSomethingBazFooQuixBar() -> ();
+};
+)FIDL";
+
+  ASSERT_STREQ(formatted, Format(unformatted));
+}
 }  // namespace
