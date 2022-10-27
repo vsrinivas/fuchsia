@@ -6,10 +6,14 @@ mod defaults;
 mod errors;
 mod inspect;
 mod items;
+mod metadata;
 mod service;
 #[cfg(test)]
 mod service_tests;
 mod tasks;
+mod watch;
+#[cfg(test)]
+mod watch_tests;
 
 use {
     anyhow::{Context, Error},

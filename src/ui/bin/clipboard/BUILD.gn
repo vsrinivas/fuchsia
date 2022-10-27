@@ -65,9 +65,12 @@ rustc_binary("bin") {
     "src/inspect.rs",
     "src/items.rs",
     "src/main.rs",
+    "src/metadata.rs",
     "src/service.rs",
     "src/service_tests.rs",
     "src/tasks.rs",
+    "src/watch.rs",
+    "src/watch_tests.rs",
   ]
 }
 
