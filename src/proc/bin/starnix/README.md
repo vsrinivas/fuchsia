@@ -222,3 +222,9 @@ To view the thread groups currently running, run:
 ```
 ffx inspect show core/starnix_manager/starbionic:root/galaxy/kernel/thread_groups
 ```
+
+You can also view the number of syscalls that have been executed:
+
+```
+ffx inspect show core/starnix_manager/starbionic:root:syscall_stats
+```

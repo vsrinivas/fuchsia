@@ -4,6 +4,8 @@
 
 #![allow(non_upper_case_globals)]
 
+use fuchsia_inspect as inspect;
+use lazy_static::lazy_static;
 use paste::paste;
 
 use crate::types::*;
@@ -422,6 +424,30 @@ macro_rules! syscall_decl {
 // Produce each syscall declaration.
 for_each_syscall! {syscall_decl}
 
+/// A macro for declaring a SyscallDecl stats property.
+macro_rules! syscall_stats_property {
+    ($($name:ident,)*) => {
+        paste!{
+            $(
+                lazy_static!{
+                static ref [<SYSCALL_ $name:upper _STATS>]: inspect::UintProperty =
+                    SYSCALL_STATS_NODE.create_uint(stringify!($name), 0);
+                }
+            )*
+        }
+    }
+}
+
+lazy_static! {
+    static ref SYSCALL_STATS_NODE: inspect::Node =
+        inspect::component::inspector().root().create_child("syscall_stats");
+    static ref SYSCALL_UNKNOWN_STATS: inspect::UintProperty =
+        SYSCALL_STATS_NODE.create_uint("<unknown>", 0);
+}
+
+// Produce each syscall stats property.
+for_each_syscall! {syscall_stats_property}
+
 /// A declaration for an unknown syscall.
 ///
 /// Useful so that functions that return a SyscallDecl have a sentinel
@@ -443,11 +469,26 @@ macro_rules! syscall_match {
     }
 }
 
+macro_rules! syscall_match_stats {
+    {$number:ident; $($name:ident,)*} => {
+        paste! {
+            match $number as u32 {
+                $([<__NR_ $name>] => &[<SYSCALL_ $name:upper _STATS>],)*
+                _ => &SYSCALL_UNKNOWN_STATS,
+            }
+        }
+    }
+}
+
 impl SyscallDecl {
     /// The SyscallDecl for the given syscall number.
     ///
     /// Returns &DECL_UNKNOWN if the given syscall number is not known.
     pub fn from_number(number: u64) -> &'static SyscallDecl {
         for_each_syscall! { syscall_match, number }
+    }
+
+    pub fn stats_property(number: u64) -> &'static inspect::UintProperty {
+        for_each_syscall! { syscall_match_stats, number }
     }
 }
