@@ -125,6 +125,7 @@ impl ServedRepositoryBuilder {
             .map_ok(|(conn, _addr)| fuchsia_hyper::TcpStream { stream: conn });
 
         let connection_attempts = Arc::new(AtomicU64::new(0));
+        #[allow(clippy::type_complexity)]
         let connections: Pin<
             Box<dyn Stream<Item = Result<Pin<Box<dyn AsyncReadWrite>>, Error>> + Send>,
         > = if let Some(ref https_domain) = self.https_domain {
@@ -217,9 +218,7 @@ impl ServedRepositoryBuilder {
         let server = Server::builder(from_stream(connections))
             .executor(fuchsia_hyper::Executor)
             .serve(make_svc)
-            .with_graceful_shutdown(
-                rx_stop.map(|res| res.unwrap_or_else(|futures::channel::oneshot::Canceled| ())),
-            )
+            .with_graceful_shutdown(rx_stop.map(|res| res.unwrap_or(())))
             .unwrap_or_else(|e| panic!("error serving repo over http: {}", e));
 
         let server = Task::spawn(server);
@@ -335,10 +334,14 @@ impl ServedRepository {
     pub async fn wait_for_n_connected_auto_clients(&self, n: usize) {
         loop {
             let connected = self.auto_event_sender.client_count().await;
-            if connected == n {
-                break;
-            } else if connected > n {
-                panic!("ServedRepository too many auto clients connected.");
+            match connected.cmp(&n) {
+                std::cmp::Ordering::Equal => {
+                    break;
+                }
+                std::cmp::Ordering::Greater => {
+                    panic!("ServedRepository too many auto clients connected.");
+                }
+                _ => {}
             }
             fasync::Timer::new(Duration::from_millis(10)).await;
         }
@@ -493,7 +496,8 @@ impl TryFrom<&http::HeaderValue> for HttpRange {
         } else {
             bail!("range header should start with 'bytes='");
         };
-        let dash = range.find('-').ok_or(anyhow::anyhow!("range header should have dash"))?;
+        let dash =
+            range.find('-').ok_or_else(|| anyhow::anyhow!("range header should have dash"))?;
         let (first, last) = range.split_at(dash);
         if last.len() < 2 {
             bail!("range header last_byte_pos empty");

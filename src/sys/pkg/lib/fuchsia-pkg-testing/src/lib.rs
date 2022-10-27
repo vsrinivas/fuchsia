@@ -4,6 +4,8 @@
 
 //! Test tools for building Fuchsia packages and TUF repositories.
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 #![deny(missing_docs)]
 
 mod package;

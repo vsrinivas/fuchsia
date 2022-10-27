@@ -47,10 +47,7 @@ enum PackageEntry {
 
 impl PackageEntry {
     fn is_dir(&self) -> bool {
-        match self {
-            PackageEntry::Directory => true,
-            _ => false,
-        }
+        matches!(self, PackageEntry::Directory)
     }
 }
 pub struct BlobFile {
@@ -108,13 +105,13 @@ impl Package {
         let mut pkg = PackageBuilder::new(meta_package.name().as_ref()).abi_revision(abi_revision);
 
         fn is_generated_file(path: &Path) -> bool {
-            match path.to_str() {
-                Some("meta/contents") => true,
-                Some("meta/package") => true,
-                Some(AbiRevision::PATH) => true,
-                Some(MetaSubpackages::PATH) => true,
-                _ => false,
-            }
+            matches!(
+                path.to_str(),
+                Some("meta/contents")
+                    | Some("meta/package")
+                    | Some(AbiRevision::PATH)
+                    | Some(MetaSubpackages::PATH)
+            )
         }
 
         // Add all non-generated files from this package into `pkg`.
@@ -137,7 +134,7 @@ impl Package {
             }
         }
 
-        Ok(pkg.build().await?)
+        pkg.build().await
     }
 
     /// Returns the parsed contents of the meta/contents file.
@@ -181,6 +178,7 @@ impl Package {
             merkle: fuchsia_merkle::Hash,
             path: PathBuf,
         }
+        #[allow(clippy::needless_collect)]
         let blobs = manifest
             .into_blobs()
             .into_iter()
@@ -265,7 +263,7 @@ impl Package {
             file.write_all(&bytes).unwrap();
         }
 
-        write_blob(dir, &self.meta_far_merkle_root(), self.meta_far().unwrap());
+        write_blob(dir, self.meta_far_merkle_root(), self.meta_far().unwrap());
         for blob in self.content_blob_files() {
             write_blob(dir, &blob.merkle, blob.file);
         }
@@ -301,7 +299,7 @@ impl Package {
         }
 
         // Verify no other entries exist in the served directory.
-        let mut stream = fuchsia_fs::directory::readdir_recursive(&dir, /*timeout=*/ None);
+        let mut stream = fuchsia_fs::directory::readdir_recursive(dir, /*timeout=*/ None);
         while let Some(entry) = stream.try_next().await? {
             let path = entry.name;
             if !expected_paths.contains(path.as_str()) {
@@ -553,9 +551,9 @@ impl PackageBuilder {
     ) -> Self {
         let path = path.into();
         let () = fuchsia_url::validate_resource_path(
-            path.to_str().expect(&format!("path must be utf8: {:?}", path)),
+            path.to_str().unwrap_or_else(|| panic!("path must be utf8: {:?}", path)),
         )
-        .expect(&format!("path must be an object relative path expression: {:?}", path));
+        .unwrap_or_else(|_| panic!("path must be an object relative path expression: {:?}", path));
         let mut data = vec![];
         contents.read_to_end(&mut data).unwrap();
 
@@ -577,9 +575,9 @@ impl PackageBuilder {
     ) -> Self {
         let path = path.into();
         let () = fuchsia_url::validate_resource_path(
-            path.to_str().expect(&format!("path must be utf8: {:?}", path)),
+            path.to_str().unwrap_or_else(|| panic!("path must be utf8: {:?}", path)),
         )
-        .expect(&format!("path must be an object relative path expression: {:?}", path));
+        .unwrap_or_else(|_| panic!("path must be an object relative path expression: {:?}", path));
         let mut data = vec![];
         contents.read_to_end(&mut data).unwrap();
 
@@ -619,7 +617,7 @@ impl PackageBuilder {
         subpackage: &Package,
     ) -> Self {
         let name = name.try_into().map_err(|_| ()).expect("valid RelativePackageUrl");
-        if let Some(_) = self.subpackages.insert(name.clone(), *subpackage.meta_far_merkle_root()) {
+        if self.subpackages.insert(name.clone(), *subpackage.meta_far_merkle_root()).is_some() {
             panic!("PackageBuilder already has subpackage with name {name}");
         }
 
@@ -652,7 +650,7 @@ impl PackageBuilder {
         hash: Hash,
     ) -> Self {
         let name = name.try_into().map_err(|_| ()).expect("valid RelativePackageUrl");
-        if let Some(_) = self.subpackages.insert(name.clone(), hash) {
+        if self.subpackages.insert(name.clone(), hash).is_some() {
             panic!("PackageBuilder already has subpackage with name {name}");
         }
         self.subpackage_blobs = None;
@@ -825,47 +823,47 @@ mod tests {
     #[test]
     #[should_panic(expected = r#""data" is not a directory"#)]
     fn test_panics_file_with_existing_parent_as_file() {
-        let _ = (|| -> Result<(), Error> {
+        let _: Result<(), Error> = {
             PackageBuilder::new("test")
                 .add_resource_at("data", "data contents".as_bytes())
                 .add_resource_at("data/foo", "data/foo contents".as_bytes());
             Ok(())
-        })();
+        };
     }
 
     #[test]
     #[should_panic(expected = r#""data" is not a directory"#)]
     fn test_panics_dir_with_existing_file() {
-        let _ = (|| -> Result<(), Error> {
+        let _: Result<(), Error> = {
             PackageBuilder::new("test")
                 .add_resource_at("data", "data contents".as_bytes())
                 .dir("data");
             Ok(())
-        })();
+        };
     }
 
     #[test]
     #[should_panic(expected = r#""data" is not a directory"#)]
     fn test_panics_nested_dir_with_existing_file() {
-        let _ = (|| -> Result<(), Error> {
+        let _: Result<(), Error> = {
             PackageBuilder::new("test")
                 .add_resource_at("data", "data contents".as_bytes())
                 .dir("data/foo");
             Ok(())
-        })();
+        };
     }
 
     #[test]
     #[should_panic(expected = r#"already contains an entry at "data""#)]
     fn test_panics_file_with_existing_dir() {
-        let _ = (|| -> Result<(), Error> {
+        let _: Result<(), Error> = {
             PackageBuilder::new("test")
                 .dir("data")
                 .add_resource_at("foo", "data/foo contents".as_bytes())
                 .finish()
                 .add_resource_at("data", "data contents".as_bytes());
             Ok(())
-        })();
+        };
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -980,7 +978,7 @@ mod tests {
             fs::create_dir(dir.path().join("meta/fuchsia.abi")).unwrap();
             fs::write(
                 dir.path().join("meta/fuchsia.abi/abi-revision"),
-                &abi_revision.0.to_le_bytes(),
+                abi_revision.0.to_le_bytes(),
             )
             .unwrap();
 

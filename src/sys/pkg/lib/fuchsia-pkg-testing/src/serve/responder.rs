@@ -446,6 +446,7 @@ impl HttpResponder for BlockResponseHeaders {
 
 /// Responder that blocks sending response bodies until unblocked by a test.
 pub struct BlockResponseBodyOnce {
+    #[allow(clippy::type_complexity)]
     notify: Mutex<Option<oneshot::Sender<Box<dyn FnOnce() + Send>>>>,
 }
 
@@ -719,7 +720,7 @@ pub struct History(Arc<Mutex<Vec<HistoryEntry>>>);
 impl History {
     /// Take the recorded history, clearing it from the Record.
     pub fn take(&self) -> Vec<HistoryEntry> {
-        std::mem::replace(&mut self.0.lock(), vec![])
+        std::mem::take(&mut self.0.lock())
     }
 }
 

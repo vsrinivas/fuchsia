@@ -108,7 +108,7 @@ impl<'a> SystemImageBuilder<'a> {
         let mut builder = PackageBuilder::new("system_image");
         let mut bytes = vec![];
 
-        StaticPackages::from_entries(self.static_packages.clone().unwrap_or_else(Vec::new))
+        StaticPackages::from_entries(self.static_packages.clone().unwrap_or_default())
             .serialize(&mut bytes)
             .unwrap();
         builder = builder.add_resource_at("data/static_packages", bytes.as_slice());

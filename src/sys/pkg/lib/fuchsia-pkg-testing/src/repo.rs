@@ -317,7 +317,7 @@ impl Repository {
         .unwrap();
 
         let version = open_file(
-            &dst,
+            dst,
             "FORMAT_VERSION",
             fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
         )
@@ -328,7 +328,7 @@ impl Repository {
         // Copy the blobs. Blobs are named after their hashes and (in the target layout) partitioned
         // into subdirectories named after the first two hex characters of their hashes.
         let blobs =
-            open_directory(&dst, "blobs", fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
+            open_directory(dst, "blobs", fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE)
                 .await
                 .unwrap();
         let src_blobs =
@@ -349,7 +349,7 @@ impl Repository {
                 open_file(&src_blobs, &dirent.name, fio::OpenFlags::RIGHT_READABLE).await.unwrap();
             let contents = read(&src_blob).await.unwrap();
             let blob = open_file(
-                &sub_dir,
+                sub_dir,
                 &dirent.name[2..],
                 fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
             )
@@ -362,7 +362,7 @@ impl Repository {
         let src_metadata =
             open_directory(&src, "repository", fio::OpenFlags::RIGHT_READABLE).await.unwrap();
         let repository_metadata = open_directory(
-            &dst,
+            dst,
             "repository_metadata",
             fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE,
         )
