@@ -7,6 +7,7 @@ package util
 import (
 	"bytes"
 	"fmt"
+	"strings"
 	"testing"
 )
 
@@ -92,5 +93,20 @@ func TestParsePackagesJSON(t *testing.T) {
 				}
 			}
 		}
+	}
+}
+
+func TestRehostPackagesJSON(t *testing.T) {
+	json := []byte(fmt.Sprintf(`{"version":1,"content":["%s","%s"]}`, pkgURL("pkg/0", "abc"), pkgURL("another/0", "def")))
+	r := bytes.NewBuffer(json)
+	var b bytes.Buffer
+	err := RehostPackagesJSON(r, &b, "new")
+	if err != nil {
+		t.Errorf("RehostPackagesJSON failed: %v", err)
+	}
+	expected := `{"version":1,"content":["fuchsia-pkg://new/pkg/0?hash=abc","fuchsia-pkg://new/another/0?hash=def"]}`
+	actual := strings.TrimSpace(b.String())
+	if actual != expected {
+		t.Errorf("packages.json does not match, expected '%s', got '%s'", expected, actual)
 	}
 }

@@ -109,13 +109,8 @@ type PackageJSON struct {
 	Content []string    `json:"content"`
 }
 
-// ParsePackagesJSON parses an update package's packages.json file for the
-// express purpose of returning a map of package names and variant keys
-// to the package's Merkle root as a value. This mimics the behavior of the
-// function that parsed the legacy "packages" file format.
-func ParsePackagesJSON(rd io.Reader) (map[string]string, error) {
+func DecodePackagesJSON(rd io.Reader) (*PackageJSON, error) {
 	var p PackageJSON
-	packages := make(map[string]string)
 
 	if err := json.NewDecoder(rd).Decode(&p); err != nil {
 		return nil, err
@@ -129,6 +124,20 @@ func ParsePackagesJSON(rd io.Reader) (map[string]string, error) {
 		return nil, fmt.Errorf("packages.json version 1 is supported; found version %s", p.Version)
 	}
 
+	return &p, nil
+}
+
+// ParsePackagesJSON parses an update package's packages.json file for the
+// express purpose of returning a map of package names and variant keys
+// to the package's Merkle root as a value. This mimics the behavior of the
+// function that parsed the legacy "packages" file format.
+func ParsePackagesJSON(rd io.Reader) (map[string]string, error) {
+	p, err := DecodePackagesJSON(rd)
+	if err != nil {
+		return nil, err
+	}
+
+	packages := make(map[string]string)
 	for _, pkgURL := range p.Content {
 		u, err := url.Parse(pkgURL)
 		if err != nil {
@@ -153,6 +162,27 @@ func ParsePackagesJSON(rd io.Reader) (map[string]string, error) {
 	}
 
 	return packages, nil
+}
+
+// Replace the host of all package URLs in an update package's packages.json file.
+func RehostPackagesJSON(rd io.Reader, w io.Writer, newHostname string) error {
+	p, err := DecodePackagesJSON(rd)
+	if err != nil {
+		return err
+	}
+
+	for i, pkgURL := range p.Content {
+		u, err := url.Parse(pkgURL)
+		if err != nil {
+			return err
+		}
+
+		u.Host = newHostname
+
+		p.Content[i] = u.String()
+	}
+
+	return json.NewEncoder(w).Encode(p)
 }
 
 func AtomicallyWriteFile(path string, mode os.FileMode, writeFileFunc func(*os.File) error) error {

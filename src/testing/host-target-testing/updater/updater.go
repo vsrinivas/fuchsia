@@ -5,6 +5,7 @@
 package updater
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"fmt"
@@ -53,6 +54,10 @@ func NewSystemUpdateChecker(repo *packages.Repository) *SystemUpdateChecker {
 }
 
 func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
+	return updateCheckNow(ctx, c, u.repo, true)
+}
+
+func updateCheckNow(ctx context.Context, c client, repo *packages.Repository, createRewriteRule bool) error {
 	logger.Infof(ctx, "Triggering OTA")
 
 	startTime := time.Now()
@@ -77,7 +82,7 @@ func (u *SystemUpdateChecker) Update(ctx context.Context, c client) error {
 
 		// We pass createRewriteRule=true for versions of system-update-checker prior to
 		// fxrev.dev/504000. Newer versions need to have `update channel set` called below.
-		server, err := c.ServePackageRepository(ctx, u.repo, "trigger-ota", true)
+		server, err := c.ServePackageRepository(ctx, repo, "trigger-ota", createRewriteRule)
 		if err != nil {
 			return fmt.Errorf("error setting up server: %w", err)
 		}
@@ -268,6 +273,25 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 
 	logger.Infof(ctx, "Omaha Server URL set in vbmeta to %q", u.omahaTool.URL())
 
+	// Update packages.json in this package.
+	packagesJsonPath := filepath.Join(tempDir, "packages.json")
+	err = util.AtomicallyWriteFile(packagesJsonPath, 0600, func(f *os.File) error {
+		src, err := os.Open(packagesJsonPath)
+		if err != nil {
+			return fmt.Errorf("Failed to open packages.json %q: %w", packagesJsonPath, err)
+		}
+		if err := util.RehostPackagesJSON(bufio.NewReader(src), bufio.NewWriter(f), "trigger-ota"); err != nil {
+			return fmt.Errorf("Failed to rehost packages.json: %w", err)
+		}
+
+		return nil
+	})
+	if err != nil {
+		return fmt.Errorf("Failed to atomically overwrite %q: %w", packagesJsonPath, err)
+	}
+
+	logger.Infof(ctx, "host names in packages.json set to trigger-ota")
+
 	pkgBuilder, err := packages.NewPackageBuilderFromDir(tempDir, "update_omaha", "0", "testrepository.com")
 	if err != nil {
 		return fmt.Errorf("Failed to parse package from %q: %w", tempDir, err)
@@ -281,7 +305,7 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 
 	logger.Infof(ctx, "published %q as %q to %q", pkgPath, pkgMerkle, u.repo)
 
-	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://fuchsia.com/%s?hash=%s", pkgPath, pkgMerkle)
+	omahaPackageURL := fmt.Sprintf("fuchsia-pkg://trigger-ota/%s?hash=%s", pkgPath, pkgMerkle)
 
 	// Configure the Omaha server with the new omaha package URL.
 	if err := u.omahaTool.SetPkgURL(ctx, omahaPackageURL); err != nil {
@@ -289,7 +313,5 @@ func (u *OmahaUpdater) Update(ctx context.Context, c client) error {
 	}
 
 	// Trigger an update
-	updateChecker := NewSystemUpdateChecker(u.repo)
-
-	return updateChecker.Update(ctx, c)
+	return updateCheckNow(ctx, c, u.repo, false)
 }
