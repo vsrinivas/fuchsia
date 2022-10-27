@@ -98,7 +98,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
         account_id: &'a AccountId,
     ) -> Result<&'a AccountMetadata, AccountManagerError> {
         match self.accounts.get(account_id) {
-            None => return Err(AccountManagerError::new(ApiError::NotFound)),
+            None => Err(AccountManagerError::new(ApiError::NotFound)),
             _ => self.stored_account_list.get_metadata(account_id),
         }
     }
@@ -120,7 +120,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     // TODO(dnordstrom): In the future, more complex iterators or filters may
     // supercede this method.
     pub fn get_account_ids(&self) -> Vec<AccountId> {
-        self.accounts.keys().map(|id| id.clone().into()).collect()
+        self.accounts.keys().cloned().collect()
     }
 
     /// Add an account and its handler to the map.
@@ -128,8 +128,8 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     ///
     /// Returns: `FailedPrecondition` error if an account with the provided id
     /// already exists.
-    pub async fn add_account<'a>(
-        &'a mut self,
+    pub async fn add_account(
+        &'_ mut self,
         handler: Arc<AHC>,
         pre_auth_state: Vec<u8>,
         metadata: AccountMetadata,
@@ -208,7 +208,7 @@ impl<AHC: AccountHandlerConnection> AccountMap<AHC> {
     }
 
     /// Update the inspect values.
-    fn refresh_inspect<'a>(&'a self) {
+    fn refresh_inspect(&self) {
         self.inspect.total.set(self.accounts.len() as u64);
         let active_count = self.accounts.values().filter(|v| v.is_some()).count();
         self.inspect.active.set(active_count as u64);
@@ -242,8 +242,8 @@ mod tests {
         fn new(accounts: InnerMap<AHC>, data_dir: PathBuf, inspect_parent: &Node) -> Self {
             let inspect = inspect::Accounts::new(inspect_parent);
             let stored_accounts = accounts
-                .iter()
-                .map(|(id, _)| {
+                .keys()
+                .map(|id| {
                     StoredAccount::new(
                         id.clone(),
                         ACCOUNT_PRE_AUTH_STATE.to_vec(),
@@ -263,7 +263,7 @@ mod tests {
             account_id: &'a AccountId,
         ) -> Result<&'a Vec<u8>, AccountManagerError> {
             match self.accounts.get(account_id) {
-                None => return Err(AccountManagerError::new(ApiError::NotFound)),
+                None => Err(AccountManagerError::new(ApiError::NotFound)),
                 _ => self.stored_account_list.get_account_pre_auth_state(account_id),
             }
         }

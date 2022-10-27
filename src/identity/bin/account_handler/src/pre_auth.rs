@@ -7,7 +7,6 @@
 
 use {
     account_common::AccountId,
-    bincode,
     fidl_fuchsia_identity_account::Error as ApiError,
     serde::{Deserialize, Serialize},
     tracing::warn,

@@ -100,7 +100,7 @@ async fn get_sync_state<PW: PinWeaverProtocol>(
     pinweaver: &PW,
 ) -> Result<HashTreeSyncState, ServiceError> {
     let stored_root_hash = hash_tree.get_root_hash()?;
-    let pinweaver_log = pinweaver.get_log(&stored_root_hash).await?;
+    let pinweaver_log = pinweaver.get_log(stored_root_hash).await?;
     Ok(match &pinweaver_log[..] {
         // We are caught up to pinweaver so we only get one entry.
         [current_log] => {
@@ -236,7 +236,7 @@ async fn replay_state<LT: LookupTable, PW: PinWeaverProtocol>(
         );
         Err(ServiceError::Provision(ProvisionError::ReplayHashMismatch {
             root_hash,
-            local_root_hash: local_root_hash.clone(),
+            local_root_hash: *local_root_hash,
         }))
     }
 }
@@ -257,7 +257,7 @@ mod test {
         let mut lookup_table = MockLookupTable::new();
         let mut storage = MockHashTreeStorage::new();
         pinweaver.expect_get_log().times(1).returning(|&hash| {
-            Ok(vec![fcr50::LogEntry { root_hash: Some(hash.clone()), ..fcr50::LogEntry::EMPTY }])
+            Ok(vec![fcr50::LogEntry { root_hash: Some(hash), ..fcr50::LogEntry::EMPTY }])
         });
         storage.expect_load().times(1).returning(|| {
             Ok(HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree"))
@@ -286,8 +286,8 @@ mod test {
         let mut storage = MockHashTreeStorage::new();
         pinweaver.expect_get_log().times(1).returning(|&_| {
             Ok(vec![
-                fcr50::LogEntry { root_hash: Some([1; 32].clone()), ..fcr50::LogEntry::EMPTY },
-                fcr50::LogEntry { root_hash: Some([2; 32].clone()), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry { root_hash: Some([1; 32]), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry { root_hash: Some([2; 32]), ..fcr50::LogEntry::EMPTY },
             ])
         });
         storage.expect_load().times(1).returning(|| {
@@ -327,7 +327,7 @@ mod test {
         let mut lookup_table = MockLookupTable::new();
         let mut storage = MockHashTreeStorage::new();
         pinweaver.expect_get_log().times(1).returning(|&_| {
-            Ok(vec![fcr50::LogEntry { root_hash: Some([1; 32].clone()), ..fcr50::LogEntry::EMPTY }])
+            Ok(vec![fcr50::LogEntry { root_hash: Some([1; 32]), ..fcr50::LogEntry::EMPTY }])
         });
         storage.expect_load().times(1).returning(|| {
             let mut hash_tree =
@@ -351,12 +351,12 @@ mod test {
         let mut storage = MockHashTreeStorage::new();
         let hash_tree =
             HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
-        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        let root_hash = *hash_tree.get_root_hash().unwrap();
         pinweaver.expect_get_log().times(1).returning(move |&_| {
             Ok(vec![
-                fcr50::LogEntry { root_hash: Some(root_hash.clone()), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry { root_hash: Some(root_hash), ..fcr50::LogEntry::EMPTY },
                 fcr50::LogEntry {
-                    root_hash: Some(root_hash.clone()),
+                    root_hash: Some(root_hash),
                     message_type: Some(fcr50::MessageType::ResetTree),
                     ..fcr50::LogEntry::EMPTY
                 },
@@ -375,7 +375,7 @@ mod test {
         let mut storage = MockHashTreeStorage::new();
         let hash_tree =
             HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
-        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        let root_hash = *hash_tree.get_root_hash().unwrap();
 
         // Replay the expected disk operations that were missed in this recovery flow.
         let mut expected_hash_tree =
@@ -385,7 +385,7 @@ mod test {
         expected_hash_tree
             .update_leaf_hash(&expected_label, expected_leaf_hmac)
             .expect("failed to insert leaf node");
-        let expected_root_hash = expected_hash_tree.get_root_hash().unwrap().clone();
+        let expected_root_hash = *expected_hash_tree.get_root_hash().unwrap();
 
         pinweaver.expect_get_log().times(1).returning(move |&_| {
             Ok(vec![
@@ -423,7 +423,7 @@ mod test {
         hash_tree
             .update_leaf_hash(&expected_label, expected_leaf_hmac)
             .expect("failed to insert leaf node");
-        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        let root_hash = *hash_tree.get_root_hash().unwrap();
 
         // The expected hash tree state should have deleted the leaf.
         let mut expected_hash_tree =
@@ -432,7 +432,7 @@ mod test {
             .update_leaf_hash(&expected_label, expected_leaf_hmac)
             .expect("failed to insert leaf node");
         expected_hash_tree.delete_leaf(&expected_label).expect("failed to delete leaf node");
-        let expected_root_hash = expected_hash_tree.get_root_hash().unwrap().clone();
+        let expected_root_hash = *expected_hash_tree.get_root_hash().unwrap();
 
         pinweaver.expect_get_log().times(1).returning(move |&_| {
             Ok(vec![
@@ -469,7 +469,7 @@ mod test {
         hash_tree
             .update_leaf_hash(&expected_label, expected_leaf_hmac)
             .expect("failed to insert leaf node");
-        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        let root_hash = *hash_tree.get_root_hash().unwrap();
 
         // Updating the expected hash tree twice simulates updating the credential after a TryAuth
         // operation.
@@ -481,7 +481,7 @@ mod test {
         expected_hash_tree
             .update_leaf_hash(&expected_label, expected_leaf_hmac_after_auth)
             .expect("failed to insert leaf node");
-        let expected_root_hash = expected_hash_tree.get_root_hash().unwrap().clone();
+        let expected_root_hash = *expected_hash_tree.get_root_hash().unwrap();
 
         lookup_table
             .expect_read()
@@ -493,7 +493,7 @@ mod test {
             assert_eq!(metadata, fake_metadata_clone);
             Ok(fcr50::LogReplayResponse {
                 cred_metadata: Some(vec![1; 32]),
-                leaf_hash: Some(expected_leaf_hmac_after_auth.clone()),
+                leaf_hash: Some(expected_leaf_hmac_after_auth),
                 ..fcr50::LogReplayResponse::EMPTY
             })
         });
@@ -501,7 +501,7 @@ mod test {
             Ok(vec![
                 fcr50::LogEntry { root_hash: Some(root_hash), ..fcr50::LogEntry::EMPTY },
                 fcr50::LogEntry {
-                    root_hash: Some(expected_root_hash.clone()),
+                    root_hash: Some(expected_root_hash),
                     message_type: Some(fcr50::MessageType::TryAuth),
                     label: Some(expected_label.value()),
                     ..fcr50::LogEntry::EMPTY
@@ -522,10 +522,10 @@ mod test {
         let mut storage = MockHashTreeStorage::new();
         let hash_tree =
             HashTree::new(TREE_HEIGHT, CHILDREN_PER_NODE).expect("unable to create hash tree");
-        let root_hash = hash_tree.get_root_hash().unwrap().clone();
+        let root_hash = *hash_tree.get_root_hash().unwrap();
         pinweaver.expect_get_log().times(1).returning(move |&_| {
             Ok(vec![
-                fcr50::LogEntry { root_hash: Some(root_hash.clone()), ..fcr50::LogEntry::EMPTY },
+                fcr50::LogEntry { root_hash: Some(root_hash), ..fcr50::LogEntry::EMPTY },
                 fcr50::LogEntry {
                     root_hash: Some([1; 32]),
                     message_type: Some(fcr50::MessageType::ResetTree),

@@ -100,7 +100,7 @@ mod tests {
     #[test]
     fn load_error() {
         let tmp_dir = TempDir::new().unwrap();
-        let err = StoredAccount::load(&tmp_dir.path()).err().expect("load unexpectedly succeeded");
+        let err = StoredAccount::load(tmp_dir.path()).err().expect("load unexpectedly succeeded");
         assert_eq!(err.api_error, ApiError::NotFound);
     }
 
@@ -108,8 +108,8 @@ mod tests {
     fn invalid_json() {
         let tmp_dir = TempDir::new().unwrap();
         let data = "<INVALID_JSON>";
-        fs::write(StoredAccount::path(&tmp_dir.path()), data).expect("failed writing test data");
-        let err = StoredAccount::load(&tmp_dir.path()).err().expect("load unexpectedly succeeded");
+        fs::write(StoredAccount::path(tmp_dir.path()), data).expect("failed writing test data");
+        let err = StoredAccount::load(tmp_dir.path()).err().expect("load unexpectedly succeeded");
         assert_eq!(err.api_error, ApiError::Internal);
     }
 
@@ -117,10 +117,10 @@ mod tests {
     fn save_and_load() {
         let tmp_dir = TempDir::new().unwrap();
         let stored = StoredAccount::new(PersonaId::new(6));
-        assert!(stored.save(&tmp_dir.path()).is_ok());
-        let stored = StoredAccount::load(&tmp_dir.path()).expect("failed loading stored account");
+        assert!(stored.save(tmp_dir.path()).is_ok());
+        let stored = StoredAccount::load(tmp_dir.path()).expect("failed loading stored account");
         assert_eq!(stored.get_default_persona_id(), &PersonaId::new(6));
-        assert!(stored.save(&tmp_dir.path()).is_ok()); // Checking that save works a second time
+        assert!(stored.save(tmp_dir.path()).is_ok()); // Checking that save works a second time
     }
 
     #[test]
@@ -128,7 +128,7 @@ mod tests {
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("santa");
         let stored = StoredAccount::new(PersonaId::new(4));
-        let err = stored.save(&path).err().expect("save unexpectedly succeeded");
+        let err = stored.save(&path).expect_err("save unexpectedly succeeded");
         assert_eq!(err.api_error, ApiError::Resource);
     }
 }

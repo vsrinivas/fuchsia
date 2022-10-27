@@ -19,7 +19,6 @@ use {
     fuchsia_inspect::{Node, NumericProperty},
     futures::prelude::*,
     identity_common::{cancel_or, TaskGroup, TaskGroupCancel},
-    scopeguard,
     std::{fs, sync::Arc},
     tracing::{error, info, warn},
 };
@@ -330,7 +329,7 @@ mod tests {
             Account::create(
                 AccountLifetime::Persistent { account_dir },
                 lock_request::Sender::NotSupported,
-                &inspector.root(),
+                inspector.root(),
             )
             .await
         }
@@ -340,7 +339,7 @@ mod tests {
             Account::create(
                 AccountLifetime::Ephemeral,
                 lock_request::Sender::NotSupported,
-                &inspector.root(),
+                inspector.root(),
             )
             .await
         }
@@ -350,7 +349,7 @@ mod tests {
             Account::load(
                 AccountLifetime::Persistent { account_dir: self.location.path.clone() },
                 lock_request::Sender::NotSupported,
-                &inspector.root(),
+                inspector.root(),
             )
             .await
         }
@@ -364,7 +363,7 @@ mod tests {
             let account = Account::create(
                 AccountLifetime::Persistent { account_dir },
                 sender,
-                &inspector.root(),
+                inspector.root(),
             )
             .await?;
             Ok((account, receiver))
@@ -453,7 +452,7 @@ mod tests {
         assert!(Account::load(
             AccountLifetime::Ephemeral,
             lock_request::Sender::NotSupported,
-            &inspector.root(),
+            inspector.root(),
         )
         .await
         .is_err());

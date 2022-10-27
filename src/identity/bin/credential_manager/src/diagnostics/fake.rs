@@ -39,7 +39,7 @@ impl FakeDiagnostics {
 
     /// Panics if the supplied slice does not match the received events.
     pub fn assert_events(&self, expected: &[Event]) {
-        let actual: &[Event] = &*self.events.lock();
+        let actual: &[Event] = &self.events.lock();
         assert_eq!(actual, expected);
     }
 }

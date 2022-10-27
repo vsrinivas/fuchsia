@@ -200,7 +200,7 @@ impl DataDirAccountMetadataStore {
 
     pub async fn cleanup_stale_files(&mut self) -> Result<(), Vec<AccountMetadataStoreError>> {
         StagedFile::cleanup_stale_files(&self.accounts_dir, "temp-").await.map_err(|errors| {
-            errors.into_iter().map(|err| AccountMetadataStoreError::StagedFileError(err)).collect()
+            errors.into_iter().map(AccountMetadataStoreError::StagedFileError).collect()
         })
     }
 }
@@ -244,15 +244,15 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         account_id: &AccountId,
         metadata: &AccountMetadata,
     ) -> Result<(), AccountMetadataStoreError> {
-        let metadata_filename = format_account_id(&account_id);
+        let metadata_filename = format_account_id(account_id);
 
         // Tempfiles will have the prefix "temp-{accountid}"
-        let id = format_account_id(&account_id);
+        let id = format_account_id(account_id);
         let tempfile_prefix = format!("temp-{}", id);
 
         let mut staged_file = StagedFile::new(&self.accounts_dir, &tempfile_prefix).await?;
-        let serialized = serde_json::to_vec(&metadata)
-            .map_err(|err| AccountMetadataStoreError::SerdeWriteError(err))?;
+        let serialized =
+            serde_json::to_vec(&metadata).map_err(AccountMetadataStoreError::SerdeWriteError)?;
         staged_file.write(&serialized).await?;
         staged_file.commit(&metadata_filename).await?;
         Ok(())
@@ -262,7 +262,7 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
         &self,
         account_id: &AccountId,
     ) -> Result<Option<AccountMetadata>, AccountMetadataStoreError> {
-        let metadata_filename = format_account_id(&account_id);
+        let metadata_filename = format_account_id(account_id);
         let flags = fio::OpenFlags::RIGHT_READABLE;
 
         let maybe_file =
@@ -276,13 +276,13 @@ impl AccountMetadataStore for DataDirAccountMetadataStore {
 
         let serialized = fuchsia_fs::file::read(&file).await?;
         let deserialized = serde_json::from_slice::<AccountMetadata>(&serialized)
-            .map_err(|err| AccountMetadataStoreError::SerdeReadError(err))?;
+            .map_err(AccountMetadataStoreError::SerdeReadError)?;
 
         Ok(Some(deserialized))
     }
 
     async fn remove(&mut self, account_id: &AccountId) -> Result<(), AccountMetadataStoreError> {
-        let metadata_filename = format_account_id(&account_id);
+        let metadata_filename = format_account_id(account_id);
         let res = self.accounts_dir.unlink(&metadata_filename, fio::UnlinkOptions::EMPTY).await?;
         match res {
             Ok(_) => Ok(()),
@@ -375,7 +375,7 @@ pub mod test {
         data: &[u8],
     ) {
         let file = fuchsia_fs::open_file(
-            &dir,
+            dir,
             path,
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
@@ -430,7 +430,7 @@ pub mod test {
         for case in cases.iter() {
             let s = case.0;
             let expected_parse_result = case.1;
-            let parsed = parse_account_id(&s);
+            let parsed = parse_account_id(s);
             assert_eq!(parsed, expected_parse_result);
         }
     }
@@ -440,10 +440,10 @@ pub mod test {
         const SCRYPT_ONLY_CONFIG: Config = Config { allow_scrypt: true, allow_pinweaver: false };
         const PINWEAVER_ONLY_CONFIG: Config = Config { allow_scrypt: false, allow_pinweaver: true };
 
-        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_config(&SCRYPT_ONLY_CONFIG), true);
-        assert_eq!(TEST_SCRYPT_METADATA.allowed_by_config(&PINWEAVER_ONLY_CONFIG), false);
-        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_config(&SCRYPT_ONLY_CONFIG), false);
-        assert_eq!(TEST_PINWEAVER_METADATA.allowed_by_config(&PINWEAVER_ONLY_CONFIG), true);
+        assert!(TEST_SCRYPT_METADATA.allowed_by_config(&SCRYPT_ONLY_CONFIG));
+        assert!(!TEST_SCRYPT_METADATA.allowed_by_config(&PINWEAVER_ONLY_CONFIG));
+        assert!(!TEST_PINWEAVER_METADATA.allowed_by_config(&SCRYPT_ONLY_CONFIG));
+        assert!(TEST_PINWEAVER_METADATA.allowed_by_config(&PINWEAVER_ONLY_CONFIG));
     }
 
     #[fuchsia::test]

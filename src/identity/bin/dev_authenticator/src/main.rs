@@ -5,6 +5,8 @@
 //! Dev authenticator is a test-only authenticator that produces fake authentication
 //! events to be consumed by identity components during tests.
 
+#![warn(clippy::all)]
+
 mod storage_unlock;
 
 use {

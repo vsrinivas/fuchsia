@@ -63,7 +63,7 @@ impl AccountHandlerConnection for FakeAccountHandlerConnection {
         }
         let generate_unknown_err = account_id == *UNKNOWN_ERROR_ACCOUNT_ID;
         let (proxy, mut stream) = create_proxy_and_stream::<AccountHandlerControlMarker>()?;
-        let lifetime_clone = lifetime.clone();
+        let lifetime_clone = lifetime;
         fasync::Task::spawn(async move {
             while let Some(req) = stream.try_next().await.unwrap() {
                 match req {

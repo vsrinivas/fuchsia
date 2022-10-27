@@ -429,13 +429,13 @@ mod tests {
                 assert_eq!(proxy.get_account_ids().await?.len(), 0);
                 assert_data_tree!(inspector, root: contains {
                     accounts: {
-                        active: 0 as u64,
-                        total: 0 as u64,
+                        active: 0_u64,
+                        total: 0_u64,
                     },
                     listeners: {
-                        active: 0 as u64,
-                        events: 0 as u64,
-                        total_opened: 0 as u64,
+                        active: 0_u64,
+                        events: 0_u64,
+                        total_opened: 0_u64,
                     },
                 });
                 Ok(())
@@ -466,8 +466,8 @@ mod tests {
                 );
                 assert_data_tree!(inspector, root: contains {
                     accounts: {
-                        total: 1 as u64,
-                        active: 0 as u64,
+                        total: 1_u64,
+                        active: 0_u64,
                     },
                 });
                 Ok(())
@@ -510,7 +510,7 @@ mod tests {
                         } else {
                             panic!("Unexpected message received");
                         };
-                        if let Some(_) = stream.try_next().await.expect("stream error") {
+                        if stream.try_next().await.expect("stream error").is_some() {
                             panic!("Unexpected message, channel should be closed");
                         }
                     };

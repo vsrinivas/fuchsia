@@ -26,8 +26,8 @@ impl AccountHandler {
     /// Creates a new AccountHandler as a child of the supplied node.
     pub fn new<'a>(parent: &'a Node, account_id: &'a AccountId, lifecycle: &'a str) -> Self {
         let node = parent.create_child("account_handler");
-        let account_id = (&node).create_uint("account_id", account_id.clone().into());
-        let lifecycle = (&node).create_string("lifecycle", lifecycle.to_string());
+        let account_id = node.create_uint("account_id", account_id.clone().into());
+        let lifecycle = node.create_string("lifecycle", lifecycle);
         Self { node, account_id, lifecycle }
     }
 
@@ -49,7 +49,7 @@ impl Account {
     /// Creates a new Account as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("account");
-        let open_client_channels = (&node).create_uint("open_client_channels", 0);
+        let open_client_channels = node.create_uint("open_client_channels", 0);
         Self { _node: node, open_client_channels }
     }
 }
@@ -68,8 +68,8 @@ impl Persona {
     /// Creates a new Persona as a child of the supplied node.
     pub fn new(parent: &Node, persona_id: &PersonaId) -> Self {
         let node = parent.create_child("default_persona");
-        let persona_id = (&node).create_uint("persona_id", persona_id.clone().into());
-        let open_client_channels = (&node).create_uint("open_client_channels", 0);
+        let persona_id = node.create_uint("persona_id", persona_id.clone().into());
+        let open_client_channels = node.create_uint("open_client_channels", 0);
         Self { _node: node, persona_id, open_client_channels }
     }
 }

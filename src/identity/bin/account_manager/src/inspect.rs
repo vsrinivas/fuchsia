@@ -25,8 +25,8 @@ impl Accounts {
     /// Creates a new Accounts as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("accounts");
-        let total = (&node).create_uint("total", 0);
-        let active = (&node).create_uint("active", 0);
+        let total = node.create_uint("total", 0);
+        let active = node.create_uint("active", 0);
         Accounts { _node: node, total, active }
     }
 }
@@ -51,9 +51,9 @@ impl Listeners {
     /// Creates a new Listeners as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("listeners");
-        let active = (&node).create_uint("active", 0);
-        let total_opened = (&node).create_uint("total_opened", 0);
-        let events = (&node).create_uint("events", 0);
+        let active = node.create_uint("active", 0);
+        let total_opened = node.create_uint("total_opened", 0);
+        let events = node.create_uint("events", 0);
         Listeners { _node: node, active, total_opened, events }
     }
 }
@@ -72,7 +72,7 @@ impl AuthProviders {
     /// Creates a new AuthProviders as a child of the supplied node.
     pub fn new(parent: &Node) -> Self {
         let node = parent.create_child("auth_providers");
-        let types = (&node).create_string("types", "");
+        let types = node.create_string("types", "");
         AuthProviders { _node: node, types }
     }
 }

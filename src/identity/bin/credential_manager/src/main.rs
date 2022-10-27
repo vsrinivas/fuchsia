@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::enum_variant_names)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::await_holding_refcell_ref)]
+
 mod credential_manager;
 mod diagnostics;
 mod error;

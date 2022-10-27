@@ -29,7 +29,7 @@ impl Label {
     }
 
     /// Returns a String that represents this Label as a directory name.
-    pub fn into_dir_name(&self) -> String {
+    pub fn as_dir_name(&self) -> String {
         // TODO(arkay): Double check if a particular format is required.
         format!("{}_{}", self.value, self.length)
     }
@@ -302,6 +302,6 @@ mod test {
     #[test]
     fn into_dir_name() {
         let label = Label { value: 4, length: 10 };
-        assert_eq!(label.into_dir_name(), "4_10");
+        assert_eq!(label.as_dir_name(), "4_10");
     }
 }

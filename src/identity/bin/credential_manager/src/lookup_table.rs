@@ -108,16 +108,16 @@ impl PersistentLookupTable {
         // Try to open the label's subdirectory, if it exists.
         match fuchsia_fs::directory::open_directory(
             &self.dir_proxy,
-            &label.into_dir_name(),
+            &label.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE | fio::OpenFlags::RIGHT_WRITABLE,
         )
         .await
         {
-            Ok(child_dir) => StagedFile::cleanup_stale_files(&child_dir, STAGEDFILE_PREFIX)
-                .await
-                .map_err(|errors| {
-                    errors.into_iter().map(|err| LookupTableError::StagedFileError(err)).collect()
-                }),
+            Ok(child_dir) => {
+                StagedFile::cleanup_stale_files(&child_dir, STAGEDFILE_PREFIX).await.map_err(
+                    |errors| errors.into_iter().map(LookupTableError::StagedFileError).collect(),
+                )
+            }
             Err(err) => {
                 info!(?label, %err, "Could not open label subdirectory for cleanup");
                 Ok(())
@@ -192,7 +192,7 @@ impl LookupTable for PersistentLookupTable {
         // Create the directory if it doesn't already exist.
         let child_dir = fuchsia_fs::directory::create_directory(
             &self.dir_proxy,
-            &label.into_dir_name(),
+            &label.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
                 | fio::OpenFlags::CREATE,
@@ -216,7 +216,7 @@ impl LookupTable for PersistentLookupTable {
         // Try to open the label's subdirectory.
         let child_dir = fuchsia_fs::directory::open_directory(
             &self.dir_proxy,
-            &label.into_dir_name(),
+            &label.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await
@@ -247,13 +247,13 @@ impl LookupTable for PersistentLookupTable {
         // directory to determine if it exists.
         fuchsia_fs::directory::open_directory(
             &self.dir_proxy,
-            &label.into_dir_name(),
+            &label.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE,
         )
         .await
         .map_err(|_| LookupTableError::NotFound)?;
 
-        fuchsia_fs::directory::remove_dir_recursive(&self.dir_proxy, &label.into_dir_name())
+        fuchsia_fs::directory::remove_dir_recursive(&self.dir_proxy, &label.as_dir_name())
             .await
             .map_err(|e| match e {
                 fuchsia_fs::directory::Error::Fidl(_, fidl_err) => {
@@ -269,9 +269,7 @@ impl LookupTable for PersistentLookupTable {
     async fn reset(&mut self) -> Result<(), LookupTableError> {
         let dir_result = fuchsia_fs::directory::readdir(&self.dir_proxy).await;
         let dir_entries = dir_result.map_err(|err| {
-            LookupTableError::ResetTableError(
-                vec![LookupTableError::ReaddirError(err.into())].into(),
-            )
+            LookupTableError::ResetTableError(vec![LookupTableError::ReaddirError(err)].into())
         })?;
         let mut failures = Vec::new();
         for entry in dir_entries.iter() {
@@ -340,7 +338,7 @@ mod test {
         .expect("could not open temp dir");
         let child_dir = fuchsia_fs::directory::create_directory(
             &dir_2,
-            &TEST_LABEL.into_dir_name(),
+            &TEST_LABEL.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
                 | fio::OpenFlags::CREATE,
@@ -432,7 +430,7 @@ mod test {
         // Write a bad entry to the expected directory.
         let child_dir = fuchsia_fs::directory::create_directory(
             &dir,
-            &TEST_LABEL.into_dir_name(),
+            &TEST_LABEL.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
                 | fio::OpenFlags::CREATE,
@@ -441,19 +439,14 @@ mod test {
         .unwrap();
         let bad_file = fuchsia_fs::directory::open_file(
             &child_dir,
-            &"bad file name",
+            "bad file name",
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
                 | fio::OpenFlags::CREATE,
         )
         .await
         .unwrap();
-        bad_file
-            .write(&b"foo bar 2".to_vec())
-            .await
-            .unwrap()
-            .map_err(zx::Status::from_raw)
-            .unwrap();
+        bad_file.write(b"foo bar 2".as_ref()).await.unwrap().map_err(zx::Status::from_raw).unwrap();
         bad_file.close().await.unwrap().map_err(zx::Status::from_raw).unwrap();
 
         let mut plt = PersistentLookupTable::new(dir);
@@ -498,7 +491,7 @@ mod test {
         // Write a staged file to the label's directory.
         let child_dir = fuchsia_fs::directory::create_directory(
             &dir,
-            &TEST_LABEL.into_dir_name(),
+            &TEST_LABEL.as_dir_name(),
             fio::OpenFlags::RIGHT_READABLE
                 | fio::OpenFlags::RIGHT_WRITABLE
                 | fio::OpenFlags::CREATE,
@@ -515,7 +508,7 @@ mod test {
         .await
         .unwrap();
         stale_file
-            .write(&b"stale_file_content".to_vec())
+            .write(b"stale_file_content".as_ref())
             .await
             .unwrap()
             .map_err(zx::Status::from_raw)

@@ -327,7 +327,7 @@ mod test {
 
         async fn seal(&self) -> Result<(), DiskError> {
             self.seal_call_counter.increment();
-            self.seal_behavior.clone().map_err(|err_factory| err_factory())
+            self.seal_behavior.map_err(|err_factory| err_factory())
         }
 
         async fn shred(&self) -> Result<(), DiskError> {

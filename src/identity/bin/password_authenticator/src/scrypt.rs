@@ -48,7 +48,7 @@ impl ScryptParams {
             ScryptError::InvalidParams(err)
         })?;
         let mut output = [0u8; KEY_LEN];
-        scrypt::scrypt(&bytes, &self.salt, &params, &mut output).map_err(|err| {
+        scrypt::scrypt(bytes, &self.salt, &params, &mut output).map_err(|err| {
             error!("scrypt output buffer too small: {}", err);
             ScryptError::BufferTooSmall(err)
         })?;
@@ -82,7 +82,7 @@ impl KeyEnrollment<ScryptParams> for ScryptKeySource {
             .scrypt_params
             .scrypt(password.as_bytes())
             .map_err(|_| KeyEnrollmentError::ParamsError)?;
-        Ok(EnrolledKey { key: output, enrollment_data: self.scrypt_params.clone() })
+        Ok(EnrolledKey { key: output, enrollment_data: self.scrypt_params })
     }
 
     async fn remove_key(

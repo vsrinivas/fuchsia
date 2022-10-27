@@ -121,14 +121,13 @@ where
         cred_manager_provider: CMP,
         storage_manager_factory: SMF,
     ) -> Self {
-        let account_manager = Self {
+        Self {
             config,
             account_metadata_store: Mutex::new(account_metadata_store),
             cred_manager_provider,
             storage_manager_factory: Arc::new(Mutex::new(storage_manager_factory)),
             accounts: Mutex::new(HashMap::new()),
-        };
-        account_manager
+        }
     }
 
     /// Serially process a stream of incoming LifecycleRequest FIDL requests.
@@ -170,7 +169,7 @@ where
         let mut accounts_locked = self.accounts.lock().await;
 
         // For each account, ensure the account is locked.
-        let known_account_ids: Vec<u64> = accounts_locked.keys().map(|x| x.clone()).collect();
+        let known_account_ids: Vec<u64> = accounts_locked.keys().copied().collect();
         for account_id in known_account_ids.iter() {
             // This structure is a little funky -- we need to take ownership of any Account in
             // AccountState::Provisioned so we can call lock() on them, which requires ownership
@@ -314,9 +313,9 @@ where
     ) -> Result<Key, KeyRetrievalError> {
         match meta.authenticator_metadata() {
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
-                let key_source = ScryptKeySource::from(ScryptParams::from(s_meta.clone()));
+                let key_source = ScryptKeySource::from(ScryptParams::from(*s_meta));
                 info!("retrieve_user_key: retrieving an scrypt key");
-                key_source.retrieve_key(&password).await
+                key_source.retrieve_key(password).await
             }
             AuthenticatorMetadata::Pinweaver(p_meta) => {
                 let cred_manager =
@@ -325,9 +324,9 @@ where
                         KeyRetrievalError::CredentialManagerConnectionError(err)
                     })?;
                 let key_source =
-                    PinweaverKeyRetriever::new(PinweaverParams::from(p_meta.clone()), cred_manager);
+                    PinweaverKeyRetriever::new(PinweaverParams::from(*p_meta), cred_manager);
                 info!("retrieve_user_key: retrieving a pinweaver key");
-                key_source.retrieve_key(&password).await
+                key_source.retrieve_key(password).await
             }
         }
     }
@@ -343,7 +342,7 @@ where
         match meta.authenticator_metadata() {
             AuthenticatorMetadata::ScryptOnly(s_meta) => {
                 let mut key_source = ScryptKeySource::from(s_meta.scrypt_params);
-                key_source.remove_key(s_meta.clone().into()).await
+                key_source.remove_key((*s_meta).into()).await
             }
             AuthenticatorMetadata::Pinweaver(p_meta) => {
                 let cred_manager =
@@ -355,7 +354,7 @@ where
                         KeyEnrollmentError::CredentialManagerConnectionError(err)
                     })?;
                 let mut key_source = PinweaverKeyEnroller::new(cred_manager);
-                key_source.remove_key(p_meta.clone().into()).await
+                key_source.remove_key((*p_meta).into()).await
             }
         }
     }
@@ -411,7 +410,7 @@ where
 
         // If account metadata present, retrieve key (using the appropriate scheme for the
         // AccountMetadata instance).
-        let key = self.retrieve_user_key(&account_metadata, &password).await.map_err(|err| {
+        let key = self.retrieve_user_key(&account_metadata, password).await.map_err(|err| {
             warn!("get_account: retrieve_user_key failed: {:?}", err);
             err
         })?;
@@ -489,7 +488,7 @@ where
             warn!("unseal_account: couldn't list account IDs: {}", err);
             faccount::Error::NotFound
         })?;
-        if account_ids.into_iter().find(|i| *i == id).is_none() {
+        if !account_ids.into_iter().any(|i| i == id) {
             return Err(faccount::Error::NotFound);
         }
 
@@ -514,7 +513,7 @@ where
                     })
                     .await?;
                 info!("unseal_account: unsealed global account");
-                Ok(Arc::new(Account::new(key.clone(), storage_manager)))
+                Ok(Arc::new(Account::new(*key, storage_manager)))
             }
             Some(AccountState::Provisioning(_)) => Err(faccount::Error::Resource),
         }
@@ -591,7 +590,7 @@ where
             EnrollmentScheme::Scrypt => {
                 let mut key_source = ScryptKeySource::new();
                 key_source
-                    .enroll_key(&password)
+                    .enroll_key(password)
                     .await
                     .map(|enrolled_key| (enrolled_key.key, enrolled_key.enrollment_data.into()))
             }
@@ -606,7 +605,7 @@ where
                     })?;
                 let mut key_source = PinweaverKeyEnroller::new(cred_manager);
                 key_source
-                    .enroll_key(&password)
+                    .enroll_key(password)
                     .await
                     .map(|enrolled_key| (enrolled_key.key, enrolled_key.enrollment_data.into()))
             }
@@ -860,7 +859,7 @@ mod test {
     #[async_trait]
     impl AccountMetadataStore for MemoryAccountMetadataStore {
         async fn account_ids(&self) -> Result<Vec<AccountId>, AccountMetadataStoreError> {
-            Ok(self.accounts.keys().map(|id| *id).collect())
+            Ok(self.accounts.keys().copied().collect())
         }
 
         async fn save(
@@ -876,7 +875,7 @@ mod test {
             &self,
             account_id: &AccountId,
         ) -> Result<Option<AccountMetadata>, AccountMetadataStoreError> {
-            Ok(self.accounts.get(account_id).map(|meta| meta.clone()))
+            Ok(self.accounts.get(account_id).cloned())
         }
 
         async fn remove(

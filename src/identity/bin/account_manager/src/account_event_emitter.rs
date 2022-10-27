@@ -99,7 +99,7 @@ impl Client {
         &'a self,
         event: &'a AccountEvent,
     ) -> impl Future<Output = Result<(), fidl::Error>> {
-        if self.should_send(&event) {
+        if self.should_send(event) {
             FutureObj::new(Box::pin(self.send(event)))
         } else {
             FutureObj::new(Box::pin(ok(())))
@@ -129,8 +129,8 @@ impl AccountEventEmitter {
         let mut clients_lock = self.clients.lock().await;
         clients_lock.retain(|client| !client.listener.is_closed());
         self.inspect.active.set(clients_lock.len() as u64);
-        let futures = (&*clients_lock)
-            .into_iter()
+        let futures = (*clients_lock)
+            .iter()
             .map(|client| client.possibly_send(event))
             .map(|fut| Pin::<Box<_>>::from(Box::new(fut)));
         let all_futures = join_all(futures);
@@ -144,7 +144,7 @@ impl AccountEventEmitter {
         &'a self,
         listener: AccountListenerProxy,
         options: Options,
-        initial_account_ids: &'a Vec<AccountId>,
+        initial_account_ids: &'a [AccountId],
     ) -> Result<(), fidl::Error> {
         let mut clients_lock = self.clients.lock().await;
         let future = if options.initial_state {
@@ -160,7 +160,7 @@ impl AccountEventEmitter {
             FutureObj::new(Box::pin(ok(())))
         };
         clients_lock.push(Client::new(listener, options));
-        self.inspect.total_opened.add(1 as u64);
+        self.inspect.total_opened.add(1_u64);
         self.inspect.active.set(clients_lock.len() as u64);
         std::mem::drop(clients_lock);
         future.await
@@ -191,8 +191,8 @@ mod tests {
         let options = Options { initial_state: true, add_account: true, remove_account: true };
         let (listener, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(listener, options);
-        assert_eq!(client.should_send(&EVENT_ADDED), true);
-        assert_eq!(client.should_send(&EVENT_REMOVED), true);
+        assert!(client.should_send(&EVENT_ADDED));
+        assert!(client.should_send(&EVENT_REMOVED));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -200,8 +200,8 @@ mod tests {
         let options = Options { initial_state: false, add_account: false, remove_account: false };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
-        assert_eq!(client.should_send(&EVENT_ADDED), false);
-        assert_eq!(client.should_send(&EVENT_REMOVED), false);
+        assert!(!client.should_send(&EVENT_ADDED));
+        assert!(!client.should_send(&EVENT_REMOVED));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -209,8 +209,8 @@ mod tests {
         let options = Options { initial_state: true, add_account: false, remove_account: true };
         let (proxy, _) = create_proxy::<AccountListenerMarker>().unwrap();
         let client = Client::new(proxy, options);
-        assert_eq!(client.should_send(&EVENT_ADDED), false);
-        assert_eq!(client.should_send(&EVENT_REMOVED), true);
+        assert!(!client.should_send(&EVENT_ADDED));
+        assert!(client.should_send(&EVENT_REMOVED));
     }
 
     #[fuchsia_async::run_until_stalled(test)]
@@ -230,7 +230,7 @@ mod tests {
             } else {
                 panic!("Unexpected message received");
             };
-            if let Some(_) = stream.try_next().await.unwrap() {
+            if stream.try_next().await.unwrap().is_some() {
                 panic!("Unexpected message, channel should be closed");
             }
         };
@@ -266,7 +266,7 @@ mod tests {
             } else {
                 panic!("Unexpected message received");
             };
-            if let Some(_) = stream_1.try_next().await.unwrap() {
+            if stream_1.try_next().await.unwrap().is_some() {
                 panic!("Unexpected message, channel should be closed");
             }
         };
@@ -296,38 +296,38 @@ mod tests {
             } else {
                 panic!("Unexpected message received");
             };
-            if let Some(_) = stream_2.try_next().await.unwrap() {
+            if stream_2.try_next().await.unwrap().is_some() {
                 panic!("Unexpected message, channel should be closed");
             }
         };
 
         let request_fut = async move {
             assert_data_tree!(inspector, root : { listeners: contains {
-                active: 0 as u64,
-                total_opened: 0 as u64,
+                active: 0_u64,
+                total_opened: 0_u64,
             }});
             assert!(account_event_emitter
                 .add_listener(listener_1, options_1, &TEST_ACCOUNT_IDS)
                 .await
                 .is_ok());
             assert_data_tree!(inspector, root : { listeners: contains {
-                active: 1 as u64,
-                total_opened: 1 as u64,
+                active: 1_u64,
+                total_opened: 1_u64,
             }});
             assert!(account_event_emitter
                 .add_listener(listener_2, options_2, &TEST_ACCOUNT_IDS)
                 .await
                 .is_ok());
             assert_data_tree!(inspector, root : { listeners: {
-                active: 2 as u64,
-                total_opened: 2 as u64,
-                events: 0 as u64,
+                active: 2_u64,
+                total_opened: 2_u64,
+                events: 0_u64,
             }});
 
             account_event_emitter.publish(&EVENT_ADDED).await;
-            assert_data_tree!(inspector, root : { listeners: contains { events: 1 as u64 }});
+            assert_data_tree!(inspector, root : { listeners: contains { events: 1_u64 }});
             account_event_emitter.publish(&EVENT_REMOVED).await;
-            assert_data_tree!(inspector, root : { listeners: contains { events: 2 as u64 }});
+            assert_data_tree!(inspector, root : { listeners: contains { events: 2_u64 }});
         };
         join3(serve_fut_1, serve_fut_2, request_fut).await;
     }
@@ -360,9 +360,9 @@ mod tests {
         let request_fut = async move {
             account_event_emitter.publish(&EVENT_ADDED).await; // Normal event
             assert_data_tree!(inspector, root : { listeners: {
-                active: 1 as u64, // Listener remains
-                total_opened: 1 as u64,
-                events: 1 as u64,
+                active: 1_u64, // Listener remains
+                total_opened: 1_u64,
+                events: 1_u64,
             }});
             (account_event_emitter, inspector)
         };
@@ -371,9 +371,9 @@ mod tests {
         // Now the server is dropped, so the new publish should trigger a drop of the client
         account_event_emitter.publish(&EVENT_REMOVED).await;
         assert_data_tree!(inspector, root : { listeners: {
-            active: 0 as u64, // Listener dropped
-            total_opened: 1 as u64,
-            events: 2 as u64,
+            active: 0_u64, // Listener dropped
+            total_opened: 1_u64,
+            events: 2_u64,
         }});
     }
 }

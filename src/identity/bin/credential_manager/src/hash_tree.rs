@@ -8,7 +8,6 @@ use {
         label::{BitstringLabelGenerator, Label},
     },
     serde::{Deserialize, Serialize},
-    serde_cbor,
     sha2::{Digest, Sha256},
     std::{collections::VecDeque, fs::File, sync::Arc},
     thiserror::Error,
@@ -94,8 +93,8 @@ impl HashTree {
 
     /// Returns the root hash of the tree.
     #[allow(dead_code)]
-    pub fn get_root_hash<'a>(&'a self) -> Result<&'a Hash, HashTreeError> {
-        Ok(&self.root.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH))
+    pub fn get_root_hash(&self) -> Result<&'_ Hash, HashTreeError> {
+        Ok(self.root.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH))
     }
 
     /// Attempts to find an unused leaf node.
@@ -133,7 +132,7 @@ impl HashTree {
         &self,
         label: &Label,
     ) -> Result<Vec<Hash>, HashTreeError> {
-        Ok(self.get_auxiliary_hashes(label)?.into_iter().flatten().filter_map(|e| e).collect())
+        Ok(self.get_auxiliary_hashes(label)?.into_iter().flatten().flatten().collect())
     }
 
     /// Returns the metadata hash associated with this label, or returns an
@@ -216,17 +215,17 @@ impl HashTree {
         let mut dfs_stack: VecDeque<&Node> = VecDeque::new();
         // Reversed so we preserve ordering left to right.
         for child in self.root.children.iter().rev() {
-            dfs_stack.push_front(&child);
+            dfs_stack.push_front(child);
         }
         while let Some(node) = dfs_stack.pop_front() {
             if node.is_leaf() {
                 // Only process leaf nodes if they have a hash value.
                 if node.hash.is_some() {
-                    function(&node);
+                    function(node);
                 }
             } else {
                 for child in node.children.iter().rev() {
-                    dfs_stack.push_front(&child);
+                    dfs_stack.push_front(child);
                 }
             }
         }
@@ -358,7 +357,7 @@ impl Node {
         layers: u8,
         label_gen: &BitstringLabelGenerator,
     ) -> Result<Self, HashTreeError> {
-        let mut node = Self { label: label, hash: None, children: Vec::new() };
+        let mut node = Self { label, hash: None, children: Vec::new() };
         if layers == 0 {
             return Ok(node);
         }
@@ -373,7 +372,7 @@ impl Node {
                 layers - 1,
                 label_gen,
             )?;
-            hasher.update(&child.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH));
+            hasher.update(child.hash.as_ref().unwrap_or(DEFAULT_EMPTY_HASH));
             node.children.push(child);
         }
         node.hash = Some(hasher.finalize().into());
@@ -494,10 +493,8 @@ impl Node {
             // Clone all the sibling hashes now that we know we need to provide
             // them as aux hashes.
             // FIXME: This is definitely wrong.
-            let cloned_hashes = sibling_hashes
-                .into_iter()
-                .map(|sibling_hash| (sibling_hash).map(|hash| hash.clone()))
-                .collect();
+            let cloned_hashes =
+                sibling_hashes.into_iter().map(|sibling_hash| (sibling_hash).copied()).collect();
             auxiliary_hashes.push(cloned_hashes);
             FindSiblingsOutcome::LeafFound(auxiliary_hashes)
         } else {
@@ -508,7 +505,7 @@ impl Node {
     fn write_leaf(&mut self, label: &Label, value: &Option<Hash>) -> WriteLeafOutcome {
         if self.label == *label {
             if self.is_leaf() {
-                self.hash = value.clone();
+                self.hash = *value;
                 return WriteLeafOutcome::LeafUpdated;
             } else {
                 // Node labels should be unique so if we found a non-leaf node
@@ -566,9 +563,7 @@ impl Node {
             return Err(self.label);
         }
         for child in self.children.iter() {
-            if let Err(label) = child.verify() {
-                return Err(label);
-            }
+            let () = child.verify()?;
         }
         Ok(())
     }
@@ -819,7 +814,7 @@ mod test {
                     hasher.update(hash);
                 } else {
                     // Found the index that should use the calculated hash.
-                    hasher.update(&next_hash);
+                    hasher.update(next_hash);
                 }
             }
             next_hash = hasher.finalize().into();
@@ -874,7 +869,7 @@ mod test {
             let node_label = tree.get_free_leaf_label().unwrap();
             println!("{}", node_label.value());
             tree.update_leaf_hash(&node_label, [i as u8; 32]).unwrap();
-            expected.push((node_label.clone(), [i as u8; 32]));
+            expected.push((node_label, [i as u8; 32]));
         }
         assert_eq!(tree.sparse_leaf_nodes(), expected);
     }
@@ -884,7 +879,7 @@ mod test {
         let (mut tree, _) = create_tree(3, 3);
         let node_label = tree.get_free_leaf_label().unwrap();
         let hash = [1; 32];
-        tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
+        tree.update_leaf_hash(&node_label, hash).unwrap();
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("hash_tree");
         let diag = Arc::new(FakeDiagnostics::new());
@@ -910,7 +905,7 @@ mod test {
         assert!(tree.verify_tree().is_ok());
         let node_label = tree.get_free_leaf_label().unwrap();
         let hash = [1; 32];
-        tree.update_leaf_hash(&node_label, hash.clone()).unwrap();
+        tree.update_leaf_hash(&node_label, hash).unwrap();
         let tmp_dir = TempDir::new().unwrap();
         let path = tmp_dir.path().join("hash_tree");
         let diag = Arc::new(FakeDiagnostics::new());

@@ -94,7 +94,7 @@ pub trait PinWeaverProtocol {
     /// HeSecret is returned otherwise an appropriate error is returned.
     async fn try_auth(
         &self,
-        le_secret: &Vec<u8>,
+        le_secret: &'_ [u8],
         h_aux: Vec<Hash>,
         cred_metadata: CredentialMetadata,
     ) -> Result<fcr50::TryAuthResponse, PinWeaverProtocolError>;
@@ -206,12 +206,12 @@ impl<D: Diagnostics> PinWeaverProtocol for PinWeaver<D> {
     /// and returns the resulting |TryAuthResponse|.
     async fn try_auth(
         &self,
-        le_secret: &Vec<u8>,
+        le_secret: &'_ [u8],
         h_aux: Vec<Hash>,
         cred_metadata: CredentialMetadata,
     ) -> Result<fcr50::TryAuthResponse, PinWeaverProtocolError> {
         let try_auth_params = fcr50::TryAuthParams {
-            le_secret: Some(le_secret.clone()),
+            le_secret: Some(le_secret.to_vec()),
             h_aux: Some(h_aux),
             cred_metadata: Some(cred_metadata),
             ..fcr50::TryAuthParams::EMPTY
@@ -268,7 +268,7 @@ fn convert_delay_schedule(
     Ok(delay_schedule
         .as_ref()
         .ok_or(PinWeaverProtocolError::InvalidDelaySchedule)?
-        .into_iter()
+        .iter()
         .map(|e| fcr50::DelayScheduleEntry {
             attempt_count: e.attempt_count,
             time_delay: e.time_delay,

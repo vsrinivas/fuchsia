@@ -74,11 +74,11 @@ enum Lifecycle {
 
 impl fmt::Debug for Lifecycle {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let name = match self {
-            &Lifecycle::Uninitialized { .. } => "Uninitialized",
-            &Lifecycle::Locked { .. } => "Locked",
-            &Lifecycle::Initialized { .. } => "Initialized",
-            &Lifecycle::Finished => "Finished",
+        let name = match *self {
+            Lifecycle::Uninitialized { .. } => "Uninitialized",
+            Lifecycle::Locked { .. } => "Locked",
+            Lifecycle::Initialized { .. } => "Initialized",
+            Lifecycle::Finished => "Finished",
         };
         write!(f, "{}", name)
     }
@@ -177,8 +177,8 @@ where
     }
 
     /// Connects to a specified authentication mechanism and return a proxy to it.
-    async fn get_auth_mechanism_connection<'a>(
-        auth_mechanism_id: &'a str,
+    async fn get_auth_mechanism_connection(
+        auth_mechanism_id: &'_ str,
     ) -> Result<StorageUnlockMechanismProxy, ApiError> {
         if !DEV_AUTHENTICATION_MECHANISM_PATHS.contains_key(auth_mechanism_id) {
             warn!("Invalid auth mechanism id: {}", auth_mechanism_id);
@@ -252,8 +252,7 @@ where
                     }
                     (_, None) => pre_auth::EnrollmentState::NoEnrollments,
                 };
-                let pre_auth_state =
-                    PreAuthState::new(AccountId::from(account_id), enrollment_state);
+                let pre_auth_state = PreAuthState::new(account_id, enrollment_state);
 
                 let sender = self
                     .create_lock_request_sender(&pre_auth_state.enrollment_state)
@@ -279,7 +278,7 @@ where
                 self.inspect.lifecycle.set("initialized");
                 Ok(pre_auth_state_bytes)
             }
-            ref invalid_state @ _ => {
+            ref invalid_state => {
                 warn!("CreateAccount was called in the {:?} state", invalid_state);
                 Err(ApiError::FailedPrecondition)
             }
@@ -303,7 +302,7 @@ where
                 self.inspect.lifecycle.set("locked");
                 Ok(())
             }
-            ref invalid_state @ _ => {
+            ref invalid_state => {
                 warn!("Preload was called in the {:?} state", invalid_state);
                 Err(ApiError::FailedPrecondition)
             }
@@ -324,7 +323,7 @@ where
         match &*state_lock {
             Lifecycle::Initialized { .. } => {
                 info!("UnlockAccount was called in the Initialized state, quietly succeeding.");
-                return Ok(None);
+                Ok(None)
             }
             Lifecycle::Locked { pre_auth_state: pre_auth_state_ref } => {
                 let (maybe_prekey_material, maybe_updated_enrollment_state) =
@@ -371,7 +370,7 @@ where
                 self.inspect.lifecycle.set("initialized");
                 Ok(pre_auth_state_bytes)
             }
-            ref invalid_state @ _ => {
+            ref invalid_state => {
                 warn!("UnlockAccount was called in the {:?} state", invalid_state);
                 Err(ApiError::FailedPrecondition)
             }
@@ -532,7 +531,7 @@ where
             let updated_pre_auth_state = auth_attempt.updated_enrollment_data.map(|data| {
                 pre_auth::EnrollmentState::SingleEnrollment {
                     auth_mechanism_id: auth_mechanism_id.to_string(),
-                    data: data,
+                    data,
                 }
             });
             Ok((auth_attempt.prekey_material, updated_pre_auth_state))
@@ -611,7 +610,7 @@ where
                 inspect.lifecycle.set("locked");
                 Ok(None) // Pre-auth state remains the same so don't return it.
             }
-            ref invalid_state @ _ => Err(AccountManagerError::new(ApiError::FailedPrecondition)
+            ref invalid_state => Err(AccountManagerError::new(ApiError::FailedPrecondition)
                 .with_cause(format_err!(
                     "A lock operation was attempted in the {:?} state",
                     invalid_state
@@ -741,7 +740,7 @@ mod tests {
         inspector: Arc<Inspector>,
     ) -> (AccountHandlerControlProxy, impl Future<Output = ()>) {
         let test_object = AccountHandler::new(
-            TEST_ACCOUNT_ID.clone().into(),
+            TEST_ACCOUNT_ID.clone(),
             lifetime,
             &inspector,
             /*storage_manager=*/
@@ -1233,7 +1232,7 @@ mod tests {
                     assert_eq!(account_proxy.lock().await?, Err(ApiError::FailedPrecondition));
 
                     // Wait for a potentitially faulty lock request to propagate
-                    fasync::Timer::new(LOCK_REQUEST_DURATION.clone().after_now()).await;
+                    fasync::Timer::new(LOCK_REQUEST_DURATION.after_now()).await;
 
                     // The channel is still usable
                     assert!(account_proxy.get_persona_ids().await.is_ok());

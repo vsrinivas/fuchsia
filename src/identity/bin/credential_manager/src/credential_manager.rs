@@ -260,10 +260,10 @@ where
     async fn attempt_commit(&self, commit_operation: &CommitOperation) -> Result<(), ServiceError> {
         match commit_operation {
             CommitOperation::DeleteMetadata { label } => {
-                self.lookup_table().delete(&label).await?;
+                self.lookup_table().delete(label).await?;
             }
             CommitOperation::WriteMetadata { label, cred_metadata } => {
-                self.lookup_table().write(&label, cred_metadata.clone()).await?
+                self.lookup_table().write(label, cred_metadata.clone()).await?
             }
             CommitOperation::WriteHashTree => {
                 self.hash_tree_storage.store(&self.hash_tree.borrow())?;
@@ -336,9 +336,9 @@ where
         let mut pending_commits = self.drain_pending_commits().await;
         let label = Label::leaf_label(label, LABEL_LENGTH);
         let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
-        let mac = self.hash_tree().get_leaf_hash(&label)?.clone();
+        let mac = *self.hash_tree().get_leaf_hash(&label)?;
         pinweaver.remove_leaf(&label, mac, h_aux).await?;
-        pending_commits.push_back(CommitOperation::DeleteMetadata { label: label.clone() });
+        pending_commits.push_back(CommitOperation::DeleteMetadata { label });
         self.hash_tree().delete_leaf(&label)?;
         pending_commits.push_back(CommitOperation::WriteHashTree);
         // Note: For consistency with `add_credential` we record the new credential count after the
@@ -380,8 +380,8 @@ where
         &self,
         label: &Label,
     ) -> Result<(Vec<Hash>, CredentialMetadata), ServiceError> {
-        let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(&label)?;
-        let stored_cred_metadata = self.lookup_table().read(&label).await?.bytes;
+        let h_aux = self.hash_tree().get_auxiliary_hashes_flattened(label)?;
+        let stored_cred_metadata = self.lookup_table().read(label).await?.bytes;
         Ok((h_aux, stored_cred_metadata))
     }
 
@@ -395,9 +395,8 @@ where
         cred_metadata: CredentialMetadata,
         mut pending_commits: MutexGuard<'_, VecDeque<CommitOperation>>,
     ) -> Result<(), ServiceError> {
-        self.hash_tree().update_leaf_hash(&label, mac)?;
-        pending_commits
-            .push_back(CommitOperation::WriteMetadata { label: label.clone(), cred_metadata });
+        self.hash_tree().update_leaf_hash(label, mac)?;
+        pending_commits.push_back(CommitOperation::WriteMetadata { label: *label, cred_metadata });
         pending_commits.push_back(CommitOperation::WriteHashTree);
         Ok(())
     }

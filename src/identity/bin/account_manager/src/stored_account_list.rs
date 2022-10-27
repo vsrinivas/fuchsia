@@ -333,7 +333,7 @@ mod tests {
         let data = "<INVALID_JSON>";
         fs::write(StoredAccountList::path(tmp_dir.path()), data).expect("failed writing test data");
         let err =
-            StoredAccountList::load(&tmp_dir.path()).err().expect("load unexpectedly succeeded");
+            StoredAccountList::load(tmp_dir.path()).err().expect("load unexpectedly succeeded");
         assert_eq!(err.api_error, ApiError::Internal);
     }
 
@@ -341,11 +341,11 @@ mod tests {
     fn save_then_load_then_save() -> Result<(), AccountManagerError> {
         let tmp_dir = TempDir::new().unwrap();
         let to_save = StoredAccountList::new(
-            &tmp_dir.path(),
+            tmp_dir.path(),
             vec![STORED_ACCOUNT_1.clone(), STORED_ACCOUNT_2.clone()],
         );
         to_save.save()?;
-        let loaded = StoredAccountList::load(&tmp_dir.path())?;
+        let loaded = StoredAccountList::load(tmp_dir.path())?;
         let mut accounts = loaded.into_iter();
         let account1 = accounts.next().unwrap();
         let account2 = accounts.next().unwrap();
@@ -363,7 +363,7 @@ mod tests {
     fn add_update_remove() -> Result<(), AccountManagerError> {
         let tmp_dir = TempDir::new().unwrap();
         let mut stored_account_list = StoredAccountList::new(
-            &tmp_dir.path(),
+            tmp_dir.path(),
             vec![STORED_ACCOUNT_1.clone(), STORED_ACCOUNT_2.clone()],
         );
         {
@@ -380,7 +380,7 @@ mod tests {
             assert_eq!(None, accounts.next());
         }
 
-        stored_account_list.remove_account(&*ACCOUNT_ID_2)?;
+        stored_account_list.remove_account(&ACCOUNT_ID_2)?;
         {
             let mut accounts = stored_account_list.into_iter();
             let account1 = accounts.next().unwrap();
@@ -391,7 +391,7 @@ mod tests {
             assert_eq!(None, accounts.next());
         }
 
-        stored_account_list.update_account(&*ACCOUNT_ID_1, ACCOUNT_PRE_AUTH_STATE_2.to_vec())?;
+        stored_account_list.update_account(&ACCOUNT_ID_1, ACCOUNT_PRE_AUTH_STATE_2.to_vec())?;
         {
             let mut accounts = stored_account_list.into_iter();
             let account1 = accounts.next().unwrap();
@@ -404,7 +404,7 @@ mod tests {
         // Cannot update non-existent account.
         assert_eq!(
             stored_account_list
-                .update_account(&*ACCOUNT_ID_2, ACCOUNT_PRE_AUTH_STATE_2.to_vec())
+                .update_account(&ACCOUNT_ID_2, ACCOUNT_PRE_AUTH_STATE_2.to_vec())
                 .unwrap_err()
                 .api_error,
             ApiError::Internal
@@ -412,7 +412,7 @@ mod tests {
 
         // Cannot remove non-existent account.
         assert_eq!(
-            stored_account_list.remove_account(&*ACCOUNT_ID_2).unwrap_err().api_error,
+            stored_account_list.remove_account(&ACCOUNT_ID_2).unwrap_err().api_error,
             ApiError::Internal
         );
 
@@ -423,7 +423,7 @@ mod tests {
     fn serialize_to_string() {
         let tmp_dir = TempDir::new().unwrap();
         let account_list = StoredAccountList::new(
-            &tmp_dir.path(),
+            tmp_dir.path(),
             vec![STORED_ACCOUNT_1.clone(), STORED_ACCOUNT_2.clone()],
         );
         assert_eq!(serde_json::to_string(&account_list).unwrap(), *STORED_ACCOUNTS_SERIALIZED_STR);

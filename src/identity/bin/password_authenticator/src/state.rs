@@ -97,7 +97,7 @@ impl State {
                     return Ok(());
                 }
                 *self = State::Error { error_type: PasswordError::MustWait };
-                return Err(StateTransitionError::WaitTimeNotExpired);
+                Err(StateTransitionError::WaitTimeNotExpired)
             }
             State::WaitingForPassword => Ok(()),
             ref s @ State::Error { .. } => Err(StateTransitionError::WrongPrecondition(s.into())),

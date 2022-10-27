@@ -289,8 +289,8 @@ where
         Ok(EnrolledKey::<PinweaverParams> {
             key: account_key,
             enrollment_data: PinweaverParams {
-                scrypt_params: (&self.scrypt_params).clone(),
-                credential_label: label.clone(),
+                scrypt_params: self.scrypt_params,
+                credential_label: label,
             },
         })
     }
@@ -399,7 +399,7 @@ pub mod test {
         fn new_expect_le_secret(le_secret: &Key) -> MockCredManager {
             MockCredManager {
                 creds: Arc::new(Mutex::new(HashMap::new())),
-                enroll_behavior: EnrollBehavior::ExpectLeSecret(le_secret.clone()),
+                enroll_behavior: EnrollBehavior::ExpectLeSecret(*le_secret),
                 retrieve_behavior: RetrieveBehavior::AsExpected,
             }
         }
@@ -431,7 +431,7 @@ pub mod test {
             while creds.contains_key(&label) {
                 label += 1;
             }
-            let prev_value = creds.insert(label, (le_secret.clone(), he_secret.clone()));
+            let prev_value = creds.insert(label, (le_secret, he_secret));
             (label, prev_value)
         }
     }
@@ -445,14 +445,12 @@ pub mod test {
         ) -> Result<Label, KeyEnrollmentError> {
             match &self.enroll_behavior {
                 EnrollBehavior::AsExpected => {
-                    let (label, _) =
-                        self.insert_with_next_free_label(le_secret.clone(), he_secret.clone());
+                    let (label, _) = self.insert_with_next_free_label(*le_secret, *he_secret);
                     Ok(label)
                 }
                 EnrollBehavior::ExpectLeSecret(key) => {
                     assert_eq!(key, le_secret);
-                    let (label, _) =
-                        self.insert_with_next_free_label(le_secret.clone(), he_secret.clone());
+                    let (label, _) = self.insert_with_next_free_label(*le_secret, *he_secret);
                     Ok(label)
                 }
                 EnrollBehavior::ForceFailWithEnrollmentError => Err(
@@ -472,7 +470,7 @@ pub mod test {
                     match creds.get(&cred_label) {
                         Some((low_entropy_secret, high_entropy_secret)) => {
                             if le_secret == low_entropy_secret {
-                                Ok(high_entropy_secret.clone())
+                                Ok(*high_entropy_secret)
                             } else {
                                 Err(KeyRetrievalError::CredentialManagerError(
                                     fcred::CredentialError::InvalidSecret,
