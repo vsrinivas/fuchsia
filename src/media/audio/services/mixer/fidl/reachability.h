@@ -7,27 +7,41 @@
 
 #include <lib/zx/time.h>
 
-#include <unordered_map>
+#include <map>
 #include <unordered_set>
+#include <vector>
 
 #include "src/media/audio/services/mixer/fidl/node.h"
 #include "src/media/audio/services/mixer/fidl/ptr_decls.h"
 
 namespace media_audio {
 
-// Computes the total downstream delay starting from the edge `source` -> `node`. If `source` is
-// nullptr, this typically implies that `node` is a producer node where the downstream delay does
-// not depend on an incoming source node.
+// Recomputes delays at `node`. These are recomputed incrementally:
 //
-// REQUIRED: node.type() != Node::Type::kMeta
-// REQUIRED: if source != nullptr, then source is in node->sources()
-zx::duration ComputeDownstreamDelay(const Node& node, const Node* source);
+// * For downstream delays, we assume the delays are already correct for all of `node`'s outgoing
+//   edges. If a downstream delay has changed at `node`, we recurse on `node`'s incoming edges.
+//
+// * For upstream delays, we assume the delays are already correct for all of `node`'s incoming
+//   edges. If an upstream delay has changed at `node`, we recurse on `node`'s outgoing edges.
+//
+// If any delays change, the `closures` mapping is updated with a set of (ThreadId, closure) pairs,
+// where `closure` should be run on `ThreadId`. These closures copy the delay changes into state on
+// mix threads, such as state in ConsumerStage. This is a `map` instead of an `unordered_map` so the
+// caller can process the ThreadIds in a deterministic order (which is helpful in tests).
+//
+// REQUIRED: the property to compute is defined at `node`
+void RecomputeMaxDownstreamOutputPipelineDelay(
+    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures);
 
-// Computes the total upstream delay starting from a given `node` in a mix graph. This includes the
-// delay added by `node`, plus the delay from all incoming paths.
-//
-// REQUIRED: node.type() != Node::Type::kMeta
-zx::duration ComputeUpstreamDelay(const Node& node);
+void RecomputeMaxDownstreamInputPipelineDelay(
+    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures);
+
+void RecomputeMaxUpstreamInputPipelineDelay(
+    Node& node, std::map<ThreadId, std::vector<fit::closure>>& closures);
+
+// Call the above functions assuming that the edge `source -> dest` was just created or deleted.
+void RecomputeDelays(Node& source, Node& dest,
+                     std::map<ThreadId, std::vector<fit::closure>>& closures);
 
 // Reports whether there exists a path from `source` to `dest`. The nodes may be ordinary nodes
 // and/or meta nodes. For any given meta node M, there are implicit paths from M's child source
