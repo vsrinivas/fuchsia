@@ -42,127 +42,55 @@ class ConfigTest : public testing::Test {
 #define ASSERT_IS_BAD_CONFIG(config_str) \
   ASSERT_FALSE(ParseConfig(WriteConfig(config_str)).has_value());
 
-TEST_F(ConfigTest, MissingCrashReporterFields) {
+TEST_F(ConfigTest, MissingDailyPerProductQuota) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-    },
-    "crash_server" : {
-        "upload_policy": "disabled"
-    },
+    "crash_report_upload_policy": "disabled",
     "hourly_snapshot": false
 })");
 }
 
-TEST_F(ConfigTest, BadCrashReporterFields) {
+TEST_F(ConfigTest, BadDailyPerProductQuotaValue) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": ""
-    },
-    "crash_server" : {
-        "upload_policy": "disabled"
-    },
+    "daily_per_product_quota": "",
+    "crash_report_upload_policy": "disabled",
     "hourly_snapshot": false
 })");
 }
 
-TEST_F(ConfigTest, SpruiousCrashReporterFields) {
+TEST_F(ConfigTest, MissingCrashReportUploadPolicy) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1,
-        "spurious": ""
-    },
-    "crash_server" : {
-        "upload_policy": "disabled"
-    },
+    "daily_per_product_quota": -1,
     "hourly_snapshot": false
 })");
 }
 
-TEST_F(ConfigTest, MissingCrashReporter) {
+TEST_F(ConfigTest, BadCrashReportUploadPolicy) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_server" : {
-        "upload_policy": "disabled"
-    },
-    "hourly_snapshot": false
-})");
-}
-
-TEST_F(ConfigTest, MissingCrashServerFields) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-    },
-    "hourly_snapshot": false
-})");
-}
-
-TEST_F(ConfigTest, BadCrashServerFields) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "other"
-    },
-    "hourly_snapshot": false
-})");
-}
-
-TEST_F(ConfigTest, SpruiousCrashServerFields) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "disabled",
-        "spurious": ""
-    },
-    "hourly_snapshot": false
-})");
-}
-
-TEST_F(ConfigTest, MissingCrashServer) {
-  ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "other",
     "hourly_snapshot": false
 })");
 }
 
 TEST_F(ConfigTest, BadHourlySnapshotField) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "other"
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "disabled",
     "hourly_snapshot": ""
 })");
 }
 
 TEST_F(ConfigTest, MissingHourlySnapshot) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "other"
-    }
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "disabled"
 })");
 }
 
 TEST_F(ConfigTest, SpruiousFields) {
   ASSERT_IS_BAD_CONFIG(R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "disabled",
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "disabled",
     "hourly_snapshot": false,
     "spurious": ""
 })");
@@ -170,12 +98,8 @@ TEST_F(ConfigTest, SpruiousFields) {
 
 TEST_F(ConfigTest, UploadDisabled) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "disabled"
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "disabled",
     "hourly_snapshot": false
 })");
   EXPECT_EQ(config.crash_report_upload_policy, kDisabled);
@@ -183,12 +107,8 @@ TEST_F(ConfigTest, UploadDisabled) {
 
 TEST_F(ConfigTest, UploadEnabled) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "enabled"
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "enabled",
     "hourly_snapshot": false
 })");
   EXPECT_EQ(config.crash_report_upload_policy, kEnabled);
@@ -196,12 +116,8 @@ TEST_F(ConfigTest, UploadEnabled) {
 
 TEST_F(ConfigTest, UploadReadFromPrivacySettings) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter" : {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "read_from_privacy_settings"
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "read_from_privacy_settings",
     "hourly_snapshot": false
 })");
   EXPECT_EQ(config.crash_report_upload_policy, kReadFromPrivacySettings);
@@ -209,12 +125,8 @@ TEST_F(ConfigTest, UploadReadFromPrivacySettings) {
 
 TEST_F(ConfigTest, PositiveDailyPerProductQuota) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter": {
-        "daily_per_product_quota": 100
-    },
-    "crash_server" : {
-        "upload_policy": "enabled"
-    },
+    "daily_per_product_quota": 100,
+    "crash_report_upload_policy": "enabled",
     "hourly_snapshot": false
 })");
   ASSERT_TRUE(config.daily_per_product_quota.has_value());
@@ -223,12 +135,8 @@ TEST_F(ConfigTest, PositiveDailyPerProductQuota) {
 
 TEST_F(ConfigTest, ZeroDailyPerProductQuota) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter": {
-        "daily_per_product_quota": 0
-    },
-    "crash_server" : {
-        "upload_policy": "enabled"
-    },
+    "daily_per_product_quota": 0,
+    "crash_report_upload_policy": "enabled",
     "hourly_snapshot": false
 })");
   ASSERT_FALSE(config.daily_per_product_quota.has_value());
@@ -236,12 +144,8 @@ TEST_F(ConfigTest, ZeroDailyPerProductQuota) {
 
 TEST_F(ConfigTest, NegativeDailyPerProductQuota) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter": {
-        "daily_per_product_quota": -1
-    },
-    "crash_server" : {
-        "upload_policy": "enabled"
-    },
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "enabled",
     "hourly_snapshot": false
 })");
   ASSERT_FALSE(config.daily_per_product_quota.has_value());
@@ -251,26 +155,18 @@ TEST_F(ConfigTest, MissingConfig) { ASSERT_FALSE(ParseConfig("undefined file").h
 
 TEST_F(ConfigTest, HourlySnapshotTrue) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter": {
-        "daily_per_product_quota": -1
-    },
-       "crash_server" : {
-           "upload_policy": "enabled"
-       },
-       "hourly_snapshot": true
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "enabled",
+    "hourly_snapshot": true
    })");
   EXPECT_TRUE(config.hourly_snapshot);
 }
 
 TEST_F(ConfigTest, HourlySnapshotFalse) {
   PARSE_OR_ASSERT(config, R"({
-    "crash_reporter": {
-        "daily_per_product_quota": -1
-    },
-       "crash_server" : {
-           "upload_policy": "enabled"
-       },
-       "hourly_snapshot": false
+    "daily_per_product_quota": -1,
+    "crash_report_upload_policy": "enabled",
+    "hourly_snapshot": false
    })");
   EXPECT_FALSE(config.hourly_snapshot);
 }
