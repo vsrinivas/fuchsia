@@ -168,7 +168,7 @@ TEST_F(ConsumerNodeTest, CreateEdgeSuccess) {
   h.consumer_node->Start({
       .start_time =
           StartStopControl::RealTime{
-              .clock = StartStopControl::WhichClock::Reference,
+              .clock = StartStopControl::WhichClock::kReference,
               .time = zx::time(0),
           },
       .start_position = Fixed(0),

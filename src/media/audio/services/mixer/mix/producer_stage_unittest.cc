@@ -70,7 +70,7 @@ class ProducerStageTestWithPacketQueue : public ::testing::Test {
 
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
-        .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
+        .start_time = RealTime{.clock = WhichClock::kReference, .time = start_presentation_time},
         .start_position = start_frame,
     });
   }
@@ -492,7 +492,7 @@ class ProducerStageTestWithRingBuffer : public ::testing::Test {
 
   void SendStartCommand(zx::time start_presentation_time, Fixed start_frame) {
     pending_start_stop_command_->set_must_be_empty(ProducerStage::StartCommand{
-        .start_time = RealTime{.clock = WhichClock::Reference, .time = start_presentation_time},
+        .start_time = RealTime{.clock = WhichClock::kReference, .time = start_presentation_time},
         .start_position = start_frame,
     });
   }

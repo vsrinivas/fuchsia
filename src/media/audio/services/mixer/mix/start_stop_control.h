@@ -29,8 +29,8 @@ class StartStopControl {
                    UnreadableClock reference_clock);
 
   enum class WhichClock {
-    SystemMonotonic,
-    Reference,
+    kSystemMonotonic,
+    kReference,
   };
 
   // A timestamp relative to either the system monotonic clock or to this control's reference clock.
@@ -62,13 +62,13 @@ class StartStopControl {
 
   // An error returned by Start.
   enum class StartError {
-    Canceled,
+    kCanceled,
   };
 
   // An error returned by Stop.
   enum class StopError {
-    Canceled,
-    AlreadyStopped,
+    kCanceled,
+    kAlreadyStopped,
   };
 
   // At `start_time`, start producing or consuming at frame `start_frame`. Put differently,
@@ -109,7 +109,7 @@ class StartStopControl {
   // if it was preceded instantaneously by a Stop.
   //
   // If a Stop command arrives while the control is already stopped, the Stop command fails with
-  // error code AlreadyStopped.
+  // error code kAlreadyStopped.
   void Start(StartCommand cmd);
   void Stop(StopCommand cmd);
 

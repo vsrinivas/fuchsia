@@ -179,22 +179,22 @@ TEST_F(StartStopControlTest, ScheduleStartInFutureOrPast) {
   std::vector<TestCase> test_cases = {
       {
           .name = "schedule with SystemMonotonic time and frame position",
-          .start_time = {.clock = WhichClock::SystemMonotonic, .time = kMonoT0},
+          .start_time = {.clock = WhichClock::kSystemMonotonic, .time = kMonoT0},
           .start_position = expected_when.frame,
       },
       {
           .name = "schedule with Reference time and frame position",
-          .start_time = {.clock = WhichClock::Reference, .time = kRefT0},
+          .start_time = {.clock = WhichClock::kReference, .time = kRefT0},
           .start_position = expected_when.frame,
       },
       {
           .name = "schedule with Reference time and media_time position",
-          .start_time = {.clock = WhichClock::Reference, .time = kRefT0},
+          .start_time = {.clock = WhichClock::kReference, .time = kRefT0},
           .start_position = expected_when.media_time,
       },
       {
           .name = "schedule with Reference time and media_ticks position",
-          .start_time = {.clock = WhichClock::Reference, .time = kRefT0},
+          .start_time = {.clock = WhichClock::kReference, .time = kRefT0},
           .start_position = MediaTicks{expected_when.media_ticks},
       },
   };
@@ -274,7 +274,7 @@ TEST_F(StartStopControlTest, MultipleStartCommands) {
 
   ASSERT_TRUE(result1.has_value());
   ASSERT_TRUE(result1->is_error());
-  EXPECT_EQ(result1->error(), StartError::Canceled);
+  EXPECT_EQ(result1->error(), StartError::kCanceled);
 
   // Now apply the second command.
   {
@@ -316,7 +316,7 @@ TEST_F(StartStopControlTest, ScheduleStopImmediately) {
 
   // Initially started.
   control.Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -355,12 +355,12 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
   };
   std::vector<TestCase> test_cases = {
       {
-          .name = "schedule with SystemMonotonic time",
-          .when = RealTime{.clock = WhichClock::SystemMonotonic, .time = kMonoT0},
+          .name = "schedule with kSystemMonotonic time",
+          .when = RealTime{.clock = WhichClock::kSystemMonotonic, .time = kMonoT0},
       },
       {
           .name = "schedule with Reference time",
-          .when = RealTime{.clock = WhichClock::Reference, .time = kRefT0},
+          .when = RealTime{.clock = WhichClock::kReference, .time = kRefT0},
       },
       {
           .name = "schedule with frame position",
@@ -386,7 +386,7 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
 
       // Initially started.
       control.Start({
-          .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+          .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
           .start_position = Fixed(0),
       });
       control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -420,7 +420,7 @@ TEST_F(StartStopControlTest, ScheduleStopInFutureOrPast) {
 
       // Initially started.
       control.Start({
-          .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+          .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
           .start_position = Fixed(0),
       });
       control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -450,7 +450,7 @@ TEST_F(StartStopControlTest, MultipleStopCommands) {
 
   // Initially started.
   control.Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -473,7 +473,7 @@ TEST_F(StartStopControlTest, MultipleStopCommands) {
 
   ASSERT_TRUE(result1.has_value());
   ASSERT_TRUE(result1->is_error());
-  EXPECT_EQ(result1->error(), StopError::Canceled);
+  EXPECT_EQ(result1->error(), StopError::kCanceled);
 
   // Now apply the second command.
   control.AdvanceTo(clock_snapshots_, zx::time(1));
@@ -490,7 +490,7 @@ TEST_F(StartStopControlTest, MultipleStopCommands) {
 
   ASSERT_TRUE(result3.has_value());
   ASSERT_TRUE(result3->is_error());
-  EXPECT_EQ(result3->error(), StopError::AlreadyStopped);
+  EXPECT_EQ(result3->error(), StopError::kAlreadyStopped);
 }
 
 TEST_F(StartStopControlTest, StopCancelsStart) {
@@ -498,7 +498,7 @@ TEST_F(StartStopControlTest, StopCancelsStart) {
 
   // Initially started.
   control.Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -524,7 +524,7 @@ TEST_F(StartStopControlTest, StopCancelsStart) {
 
   ASSERT_TRUE(result1.has_value());
   ASSERT_TRUE(result1->is_error());
-  EXPECT_EQ(result1->error(), StartError::Canceled);
+  EXPECT_EQ(result1->error(), StartError::kCanceled);
 
   ASSERT_TRUE(result2.has_value());
   ASSERT_TRUE(result2->is_ok());
@@ -535,7 +535,7 @@ TEST_F(StartStopControlTest, StartCancelsStop) {
 
   // Initially started.
   control.Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -561,7 +561,7 @@ TEST_F(StartStopControlTest, StartCancelsStop) {
 
   ASSERT_TRUE(result1.has_value());
   ASSERT_TRUE(result1->is_error());
-  EXPECT_EQ(result1->error(), StopError::Canceled);
+  EXPECT_EQ(result1->error(), StopError::kCanceled);
 
   ASSERT_TRUE(result2.has_value());
   ASSERT_TRUE(result2->is_ok());
@@ -600,7 +600,7 @@ TEST_F(StartStopControlTest, PendingStartCommand) {
   StartStopControl control(kFormat, kMediaTicksPerNs, UnreadableClock(clock_));
 
   control.Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = kRefT0},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = kRefT0},
       .start_position = Fixed(1),
   });
 
@@ -619,7 +619,7 @@ TEST_F(StartStopControlTest, PendingStopCommand) {
 
   // Initially started.
   control.Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
   control.AdvanceTo(clock_snapshots_, zx::time(0));
@@ -627,7 +627,7 @@ TEST_F(StartStopControlTest, PendingStopCommand) {
 
   // Pending Stop.
   control.Stop({
-      .when = RealTime{.clock = WhichClock::Reference, .time = kRefT0},
+      .when = RealTime{.clock = WhichClock::kReference, .time = kRefT0},
   });
   control.AdvanceTo(clock_snapshots_, zx::time(1));
 

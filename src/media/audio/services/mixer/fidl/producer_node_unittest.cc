@@ -111,7 +111,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithStreamSink) {
 
   // Start the producer's internal frame timeline.
   producer->Start(ProducerStage::StartCommand{
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
 
@@ -202,7 +202,7 @@ TEST(ProducerNodeTest, CreateEdgeSuccessWithRingBuffer) {
 
   // Start the producer's internal frame timeline.
   producer->Start({
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
 
@@ -260,12 +260,12 @@ TEST(ProducerNodeTest, StopCancelsStart) {
   // Start then stop immediately -- the stop should cancel the start.
   bool canceled = false;
   producer->Start(ProducerStage::StartCommand{
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
       .callback =
           [&canceled](auto result) {
             ASSERT_TRUE(result.is_error());
-            EXPECT_EQ(result.error(), StartStopControl::StartError::Canceled);
+            EXPECT_EQ(result.error(), StartStopControl::StartError::kCanceled);
             canceled = true;
           },
   });
@@ -297,7 +297,7 @@ TEST(ProducerNodeTest, StartCancelsStop) {
 
   // Start the producer's internal frame timeline.
   producer->Start(ProducerStage::StartCommand{
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0)},
       .start_position = Fixed(0),
   });
 
@@ -315,12 +315,12 @@ TEST(ProducerNodeTest, StartCancelsStop) {
       .callback =
           [&canceled](auto result) {
             ASSERT_TRUE(result.is_error());
-            EXPECT_EQ(result.error(), StartStopControl::StopError::Canceled);
+            EXPECT_EQ(result.error(), StartStopControl::StopError::kCanceled);
             canceled = true;
           },
   });
   producer->Start(ProducerStage::StartCommand{
-      .start_time = RealTime{.clock = WhichClock::Reference, .time = zx::time(0) + zx::msec(100)},
+      .start_time = RealTime{.clock = WhichClock::kReference, .time = zx::time(0) + zx::msec(100)},
       .start_position = Fixed(1000),
   });
 

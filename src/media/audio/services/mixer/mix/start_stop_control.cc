@@ -27,11 +27,11 @@ StartStopControl::StartStopControl(const Format& format, TimelineRate media_tick
 void StartStopControl::CancelCommand(Command& command) {
   if (std::holds_alternative<StartCommand>(command)) {
     if (auto& cmd = std::get<StartCommand>(command); cmd.callback) {
-      cmd.callback(fpromise::error(StartError::Canceled));
+      cmd.callback(fpromise::error(StartError::kCanceled));
     }
   } else {
     if (auto& cmd = std::get<StopCommand>(command); cmd.callback) {
-      cmd.callback(fpromise::error(StopError::Canceled));
+      cmd.callback(fpromise::error(StopError::kCanceled));
     }
   }
 }
@@ -45,7 +45,7 @@ void StartStopControl::Stop(StopCommand cmd) {
   CancelPendingCommand();
   if (!is_started()) {
     if (cmd.callback) {
-      cmd.callback(fpromise::error(StopError::AlreadyStopped));
+      cmd.callback(fpromise::error(StopError::kAlreadyStopped));
     }
     return;
   }
@@ -142,11 +142,11 @@ When StartStopControl::PendingStartCommand(const ClockSnapshot& ref_clock, const
   }
 
   switch (cmd.start_time->clock) {
-    case WhichClock::SystemMonotonic:
+    case WhichClock::kSystemMonotonic:
       when.mono_time = cmd.start_time->time;
       when.reference_time = ref_clock.ReferenceTimeFromMonotonicTime(when.mono_time);
       break;
-    case WhichClock::Reference:
+    case WhichClock::kReference:
       when.reference_time = cmd.start_time->time;
       when.mono_time = ref_clock.MonotonicTimeFromReferenceTime(when.reference_time);
       break;
@@ -184,11 +184,11 @@ When StartStopControl::PendingStopCommand(const ClockSnapshot& ref_clock, const 
   } else {
     auto& real_time = std::get<RealTime>(*cmd.when);
     switch (real_time.clock) {
-      case WhichClock::SystemMonotonic:
+      case WhichClock::kSystemMonotonic:
         when.mono_time = real_time.time;
         when.reference_time = ref_clock.ReferenceTimeFromMonotonicTime(when.mono_time);
         break;
-      case WhichClock::Reference:
+      case WhichClock::kReference:
         when.reference_time = real_time.time;
         when.mono_time = ref_clock.MonotonicTimeFromReferenceTime(when.reference_time);
         break;
