@@ -9,35 +9,37 @@
 //!
 //! For each native multi-byte integer type - `u16`, `i16`, `u32`, etc - and
 //! floating point type - `f32` and `f64` - an equivalent type is defined by
-//! this module - [`U16`], [`I16`], [`U32`], [`F64`], etc.
-//! Unlike their native counterparts, these types have alignment 1, and take a
-//! type parameter specifying the byte order in which the bytes are stored in
-//! memory. Each type implements the [`FromBytes`], [`AsBytes`], and
-//! [`Unaligned`] traits.
+//! this module - [`U16`], [`I16`], [`U32`], [`F64`], etc. Unlike their native
+//! counterparts, these types have alignment 1, and take a type parameter
+//! specifying the byte order in which the bytes are stored in memory. Each type
+//! implements the [`FromBytes`], [`AsBytes`], and [`Unaligned`] traits.
 //!
-//! These two properties, taken together, make these types very useful for
-//! defining data structures whose memory layout matches a wire format such as
-//! that of a network protocol or a file format. Such formats often have
-//! multi-byte values at offsets that do not respect the alignment requirements
-//! of the equivalent native types, and stored in a byte order not necessarily
-//! the same as that of the target platform.
+//! These two properties, taken together, make these types useful for defining
+//! data structures whose memory layout matches a wire format such as that of a
+//! network protocol or a file format. Such formats often have multi-byte values
+//! at offsets that do not respect the alignment requirements of the equivalent
+//! native types, and stored in a byte order not necessarily the same as that of
+//! the target platform.
+//!
+//! Type aliases are provided for common byte orders in the [`big_endian`],
+//! [`little_endian`], [`network_endian`], and [`native_endian`] submodules.
 //!
 //! # Example
 //!
 //! One use of these types is for representing network packet formats, such as
 //! UDP:
 //!
-//! ```edition2018
-//! # use zerocopy::*;
-//! use ::byteorder::NetworkEndian;
+//! ```edition2021
+//! use zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned};
+//! use zerocopy::byteorder::network_endian::U16;
 //!
 //! #[derive(FromBytes, AsBytes, Unaligned)]
 //! #[repr(C)]
 //! struct UdpHeader {
-//!     src_port: U16<NetworkEndian>,
-//!     dst_port: U16<NetworkEndian>,
-//!     length: U16<NetworkEndian>,
-//!     checksum: U16<NetworkEndian>,
+//!     src_port: U16,
+//!     dst_port: U16,
+//!     length: U16,
+//!     checksum: U16,
 //! }
 //!
 //! struct UdpPacket<B: ByteSlice> {
@@ -190,6 +192,9 @@ example of how it can be used for parsing UDP packets.
 
         // TODO(#10): Replace this with `#[derive(AsBytes)]` once that derive
         // supports type parameters.
+        //
+        // TODO(#61): Add a "SAFETY" comment and remove this `allow`.
+        #[allow(clippy::undocumented_unsafe_blocks)]
         unsafe impl<O: ByteOrder> AsBytes for $name<O> {
             fn only_derive_is_allowed_to_implement_this_trait()
             where
@@ -442,6 +447,41 @@ define_type!(
 );
 define_type!(An, F64, f64, 64, 8, read_f64, write_f64, "floating point number", [], [], [], []);
 
+macro_rules! module {
+    ($name:ident, $trait:ident, $endianness_str:expr) => {
+        /// Numeric primitives stored in
+        #[doc = $endianness_str]
+        /// byte order.
+        pub mod $name {
+            use byteorder::$trait;
+
+            module!(@ty U16,  $trait, "16-bit unsigned integer", $endianness_str);
+            module!(@ty U32,  $trait, "32-bit unsigned integer", $endianness_str);
+            module!(@ty U64,  $trait, "64-bit unsigned integer", $endianness_str);
+            module!(@ty U128, $trait, "128-bit unsigned integer", $endianness_str);
+            module!(@ty I16,  $trait, "16-bit signed integer", $endianness_str);
+            module!(@ty I32,  $trait, "32-bit signed integer", $endianness_str);
+            module!(@ty I64,  $trait, "64-bit signed integer", $endianness_str);
+            module!(@ty I128, $trait, "128-bit signed integer", $endianness_str);
+            module!(@ty F32,  $trait, "32-bit floating point number", $endianness_str);
+            module!(@ty F64,  $trait, "64-bit floating point number", $endianness_str);
+        }
+    };
+    (@ty $ty:ident, $trait:ident, $desc_str:expr, $endianness_str:expr) => {
+        /// A
+        #[doc = $desc_str]
+        /// stored in
+        #[doc = $endianness_str]
+        /// byte order.
+        pub type $ty = crate::byteorder::$ty<$trait>;
+    };
+}
+
+module!(big_endian, BigEndian, "big-endian");
+module!(little_endian, LittleEndian, "little-endian");
+module!(network_endian, NetworkEndian, "network-endian");
+module!(native_endian, NativeEndian, "native-endian");
+
 #[cfg(test)]
 mod tests {
     use byteorder::NativeEndian;
@@ -511,8 +551,13 @@ mod tests {
     macro_rules! impl_traits {
         ($name:ident, $native:ident, $bytes:expr, $sign:ident) => {
             impl Native for $native {
+                // For some types, `0 as _` is required (for example, when
+                // `$native` is a floating-point type; `0` is an integer), but
+                // for other types, it's a trivial cast. In all cases, Clippy
+                // thinks it's dangerous.
+                #[allow(trivial_numeric_casts, clippy::as_conversions)]
                 const ZERO: $native = 0 as _;
-                const MAX_VALUE: $native = ::core::$native::MAX;
+                const MAX_VALUE: $native = $native::MAX;
 
                 fn rand() -> $native {
                     rand::random()
@@ -586,9 +631,9 @@ mod tests {
     }
 
     #[cfg(target_endian = "big")]
-    type NonNativeEndian = byteorder::LittleEndian;
+    type NonNativeEndian = LittleEndian;
     #[cfg(target_endian = "little")]
-    type NonNativeEndian = byteorder::BigEndian;
+    type NonNativeEndian = BigEndian;
 
     #[test]
     fn test_zero() {
