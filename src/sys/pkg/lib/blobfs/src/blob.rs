@@ -14,7 +14,7 @@ pub(crate) async fn create(
         fio::OpenFlags::CREATE | fio::OpenFlags::RIGHT_WRITABLE | fio::OpenFlags::RIGHT_READABLE;
 
     let proxy =
-        fuchsia_fs::directory::open_file(&blobfs, &hash.to_string(), flags).await.map_err(|e| {
+        fuchsia_fs::directory::open_file(blobfs, &hash.to_string(), flags).await.map_err(|e| {
             match e {
                 fuchsia_fs::node::OpenError::OpenError(Status::ACCESS_DENIED) => {
                     CreateError::AlreadyExists

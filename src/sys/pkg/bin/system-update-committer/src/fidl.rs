@@ -77,8 +77,7 @@ impl FidlServer {
                 server
                     .p_external
                     .duplicate_handle(zx::Rights::BASIC)
-                    .context("while duplicating p_external")?
-                    .into(),
+                    .context("while duplicating p_external")?,
             )
             .context("while sending IsCurrentSystemCommitted response")
     }

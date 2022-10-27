@@ -5,6 +5,8 @@
 //! `fidl_fuchsia_update_ext` contains wrapper types around the auto-generated
 //! `fidl_fuchsia_update` bindings.
 
+#![warn(clippy::all)]
+
 #[cfg(target_os = "fuchsia")]
 mod commit;
 mod types;

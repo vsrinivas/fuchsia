@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+
 use {
     crate::{fidl::FidlServer, metadata::put_metadata_in_happy_state, reboot::wait_and_reboot},
     anyhow::{anyhow, Context, Error},

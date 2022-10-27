@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
+#![allow(clippy::type_complexity)]
 
 //! Concurrent work queue helpers
 

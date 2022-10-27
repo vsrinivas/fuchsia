@@ -70,7 +70,7 @@ async fn handle_wait_for_commit_impl(
 ) -> Result<(), Error> {
     let () = observer.on_event(CommitEvent::Begin);
 
-    let commit_fut = wait_for_commit(&proxy).fuse();
+    let commit_fut = wait_for_commit(proxy).fuse();
     futures::pin_mut!(commit_fut);
     let mut timer_fut = fasync::Timer::new(WARNING_DURATION).fuse();
 

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
 
 //! This is a crate for broadcasting events to multiple clients and waiting for each client to
 //! receive it before sending another event to that client. If an event was failed to send, or if
@@ -191,6 +193,7 @@ where
 {
     /// Create a new `EventQueue` and returns a future for the event queue and a control handle
     /// to control the event queue.
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> (impl Future<Output = ()>, ControlHandle<N>) {
         Self::with_limit(DEFAULT_EVENTS_LIMIT)
     }
@@ -333,7 +336,7 @@ where
     /// Returns the count of in-flight and queued events.
     fn pending_event_count(&self) -> usize {
         let queued_events = self.commands.iter().filter_map(ClientCommand::event).count();
-        let pending_event = if self.pending_event.is_some() { 1 } else { 0 };
+        let pending_event = usize::from(self.pending_event.is_some());
 
         queued_events + pending_event
     }

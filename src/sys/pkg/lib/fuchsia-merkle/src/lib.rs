@@ -5,6 +5,7 @@
 //! `fuchsia_merkle` contains types and methods for building and working with merkle trees.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
 
 use {
     futures::{AsyncRead, AsyncReadExt as _},
@@ -30,7 +31,7 @@ pub use crate::writer::MerkleTreeWriter;
 /// Compute a merkle tree from a `&[u8]`.
 pub fn from_slice(slice: &[u8]) -> MerkleTree {
     let mut builder = MerkleTreeBuilder::new();
-    builder.write(&slice);
+    builder.write(slice);
     builder.finish()
 }
 

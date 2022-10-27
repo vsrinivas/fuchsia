@@ -30,7 +30,7 @@ impl HttpRequest for FuchsiaHyperHttpRequest {
 
 // Helper to clarify the types of the futures involved
 async fn collect_from_future(response_future: ResponseFuture) -> Result<Response<Vec<u8>>, Error> {
-    let response = response_future.await.map_err(|e| Error::from(e))?;
+    let response = response_future.await.map_err(Error::from)?;
     let (parts, body) = response.into_parts();
     let bytes = hyper::body::to_bytes(body).await?;
     Ok(Response::from_parts(parts, bytes.to_vec()))

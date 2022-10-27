@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+
 use {
     fidl::endpoints::{ClientEnd, Proxy, ServerEnd},
     fidl_fuchsia_io as fio,
@@ -40,6 +43,7 @@ pub struct OmahaConfig {
 /// Installs all packages and writes the Fuchsia ZBI from the latest build on the given channel. Has
 /// the same arguments as `download_and_apply_update`, but allows passing in pre-configured
 /// components for testing.
+#[allow(clippy::too_many_arguments)]
 pub async fn download_and_apply_update_with_pre_configured_components(
     blobfs_proxy: DirectoryProxy,
     paver_connector: ClientEnd<fio::DirectoryMarker>,
@@ -67,7 +71,7 @@ pub async fn download_and_apply_update_with_pre_configured_components(
         .map_err(UpdateError::InstallError)?;
     } else {
         let mut updater =
-            Updater::launch(blobfs_clone, paver_connector, resolver, cache, &board_name)
+            Updater::launch(blobfs_clone, paver_connector, resolver, cache, board_name)
                 .await
                 .map_err(UpdateError::InstallError)?;
 

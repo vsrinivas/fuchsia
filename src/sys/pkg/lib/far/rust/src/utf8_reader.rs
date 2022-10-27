@@ -21,7 +21,7 @@ where
     /// Create a new Utf8Reader for the provided source.
     pub fn new(source: T) -> Result<Self, Error> {
         let ret = Self { reader: crate::read::Reader::new(source)? };
-        let () = ret.try_list().map(|r| r.map(|_| ())).collect::<Result<(), _>>()?;
+        let () = ret.try_list().try_for_each(|r| r.map(|_| ()))?;
         Ok(ret)
     }
 

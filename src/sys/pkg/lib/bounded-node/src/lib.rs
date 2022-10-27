@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use {
     fuchsia_inspect::{Node, NumericProperty as _, Property as _, UintProperty},
     fuchsia_inspect_contrib::inspectable::InspectableU64,

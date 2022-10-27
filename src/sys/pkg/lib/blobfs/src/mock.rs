@@ -100,7 +100,7 @@ impl Mock {
         }
 
         impl Dirent {
-            fn as_bytes<'a>(&'a self) -> &'a [u8] {
+            fn as_bytes(&self) -> &'_ [u8] {
                 let start = self as *const Self as *const u8;
                 // Safe because the FIDL wire format for directory entries is
                 // defined to be the C packed struct representation used here.
@@ -338,7 +338,7 @@ impl Blob {
             Some(Ok(fio::FileRequest::Read { count, responder })) => {
                 let count = min(count.try_into().unwrap(), data.len());
                 responder.send(&mut Ok(data[..count].to_vec())).unwrap();
-                return count;
+                count
             }
             other => panic!("unexpected request: {:?}", other),
         }

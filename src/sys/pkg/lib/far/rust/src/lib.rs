@@ -45,6 +45,9 @@
 //! assert_eq!(entries, ["a", "b", "dir/c"]);
 //! ```
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+
 use zerocopy::{byteorder::LittleEndian, U16, U32, U64};
 
 mod error;
@@ -166,7 +169,7 @@ fn validate_directory_entries_and_paths(
     let mut previous_name: Option<&[u8]> = None;
     let mut previous_entry: Option<&DirectoryEntry> = None;
     for (i, entry) in directory_entries.iter().enumerate() {
-        let name = validate_name_for_entry(entry, i, &path_data, previous_name)?;
+        let name = validate_name_for_entry(entry, i, path_data, previous_name)?;
         let () = validate_content_chunk(
             entry,
             previous_entry,

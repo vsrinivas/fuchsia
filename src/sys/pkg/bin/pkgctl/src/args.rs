@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::Error, argh, argh::FromArgs, fidl_fuchsia_pkg::ExperimentToggle as Experiment,
-    fidl_fuchsia_pkg_ext::BlobId, fidl_fuchsia_pkg_rewrite_ext::RuleConfig, serde_json,
-    std::path::PathBuf,
+    crate::error::Error, argh::FromArgs, fidl_fuchsia_pkg::ExperimentToggle as Experiment,
+    fidl_fuchsia_pkg_ext::BlobId, fidl_fuchsia_pkg_rewrite_ext::RuleConfig, std::path::PathBuf,
 };
 
 #[derive(FromArgs, Debug, PartialEq)]
@@ -302,7 +301,7 @@ fn parse_experiment_id(experiment: &str) -> Result<Experiment, String> {
 }
 
 fn parse_rule_config(config: &str) -> Result<RuleConfig, String> {
-    serde_json::from_str(&config).map_err(|e| e.to_string())
+    serde_json::from_str(config).map_err(|e| e.to_string())
 }
 
 fn repo_config_format(value: &str) -> Result<RepoConfigFormat, String> {

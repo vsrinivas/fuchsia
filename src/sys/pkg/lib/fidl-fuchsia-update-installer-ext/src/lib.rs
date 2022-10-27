@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
 
 //! `fidl_fuchsia_update_installer_ext` contains wrapper types around the auto-generated
 //! `fidl_fuchsia_update_installer` bindings.

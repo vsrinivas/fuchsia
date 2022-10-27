@@ -51,7 +51,7 @@ impl IsolatedInstaller {
             cache,
             resolver,
             board_name,
-            updater_url: updater_url,
+            updater_url,
         }
     }
 }
@@ -202,7 +202,7 @@ fn try_create_install_plan(
     let full_url = url.to_owned() + &package.name;
 
     match PinnedAbsolutePackageUrl::parse(&full_url) {
-        Ok(url) => Ok(FuchsiaInstallPlan { url, install_source: request_params.source.clone() }),
+        Ok(url) => Ok(FuchsiaInstallPlan { url, install_source: request_params.source }),
         Err(err) => Err(IsolatedInstallError::InstallPlan(anyhow!(
             "Failed to parse {} to PinnedAbsolutePackageUrl: {:#}",
             full_url,

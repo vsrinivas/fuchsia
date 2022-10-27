@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+
 use {
     crate::args::{
         Args, Command, ExperimentCommand, ExperimentDisableCommand, ExperimentEnableCommand,
@@ -123,10 +126,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
                           );
                 }
             };
-            println!(
-                "Package on disk: yes (path={})",
-                format!("/pkgfs/versions/{}", BlobId::from(blob_id))
-            );
+            println!("Package on disk: yes (path=/pkgfs/versions/{})", BlobId::from(blob_id));
             Ok(0)
         }
         Command::Open(OpenCommand { meta_far_blob_id }) => {
@@ -400,9 +400,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             space_manager
                 .gc()
                 .await?
-                .map_err(|err| {
-                    format_err!("Garbage collection failed with error: {:?}", err).into()
-                })
+                .map_err(|err| format_err!("Garbage collection failed with error: {:?}", err))
                 .map(|_| 0i32)
         }
     }
@@ -425,7 +423,7 @@ async fn fetch_repos(
 
     repos
         .into_iter()
-        .map(|repo| RepositoryConfig::try_from(repo).map_err(|e| anyhow::Error::from(e)))
+        .map(|repo| RepositoryConfig::try_from(repo).map_err(anyhow::Error::from))
         .collect()
 }
 

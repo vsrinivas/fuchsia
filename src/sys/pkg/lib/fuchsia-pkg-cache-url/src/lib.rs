@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use {
     fuchsia_pkg::{PackageName, PackagePath, PackageVariant},
     once_cell::sync::Lazy,
@@ -19,12 +21,12 @@ static PKG_CACHE_PACKAGE_NAME_AND_VARIANT: Lazy<(PackageName, PackageVariant)> =
 
 /// The package URL for the `pkg-cache` package `fuchsia-pkg-cache` scheme.
 pub fn fuchsia_pkg_cache_package_url() -> &'static Url {
-    &*PKG_CACHE_PACKAGE_URL
+    &PKG_CACHE_PACKAGE_URL
 }
 
 /// The component URL for the `pkg-cache` component under the `fuchsia-pkg-cache` scheme.
 pub fn fuchsia_pkg_cache_component_url() -> &'static Url {
-    &*PKG_CACHE_COMPONENT_URL
+    &PKG_CACHE_COMPONENT_URL
 }
 
 /// The component manifest path for the `pkg-cache` component manifest under the `fuchsia-pkg-cache`
@@ -37,14 +39,14 @@ pub fn fuchsia_pkg_cache_manifest_path_str() -> &'static str {
 /// the `fuchsia-pkg` scheme in, for example, an update package, or via the `fuchsia-pkg-cache`
 /// scheme in, for example a system bootstrap realm.
 pub fn pkg_cache_package_path() -> &'static PackagePath {
-    &*PKG_CACHE_PATH
+    &PKG_CACHE_PATH
 }
 
 /// The package name and variant that designates `pkg-cache`, which may be referred to via
 /// the `fuchsia-pkg` scheme in, for example, an update package, or via the `fuchsia-pkg-cache`
 /// scheme in, for example a system bootstrap realm.
 pub fn pkg_cache_package_name_and_variant() -> &'static (PackageName, PackageVariant) {
-    &*PKG_CACHE_PACKAGE_NAME_AND_VARIANT
+    &PKG_CACHE_PACKAGE_NAME_AND_VARIANT
 }
 
 #[cfg(test)]

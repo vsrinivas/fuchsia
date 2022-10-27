@@ -56,10 +56,12 @@ impl EagerPackageConfigs {
             );
         }
         let eager_package_configs =
-            eager_package_configs_json.eager_package_configs.into_iter().next().ok_or(
-                anyhow::anyhow!(
-                    "Eager package config JSON did not contain any server-and-package configs."
-                ),
+            eager_package_configs_json.eager_package_configs.into_iter().next().ok_or_else(
+                || {
+                    anyhow::anyhow!(
+                        "Eager package config JSON did not contain any server-and-package configs."
+                    )
+                },
             )?;
         for package in &eager_package_configs.packages {
             package.channel_config.validate().context("validating eager package channel config")?;

@@ -65,7 +65,7 @@ pub struct UpdateInfo {
 pub struct Progress {
     /// Within the range of [0.0, 1.0]
     #[proptest(strategy = "0.0f32 ..= 1.0")]
-    #[builder(setter(transform = |x: f32| x.max(0.0).min(1.0)))]
+    #[builder(setter(transform = |x: f32| x.clamp(0.0, 1.0)))]
     fraction_completed: f32,
 
     bytes_downloaded: u64,
@@ -157,18 +157,12 @@ impl State {
 
     /// Determines if this state is terminal and represents a successful attempt.
     pub fn is_success(&self) -> bool {
-        match self.id() {
-            StateId::Reboot | StateId::DeferReboot | StateId::Complete => true,
-            _ => false,
-        }
+        matches!(self.id(), StateId::Reboot | StateId::DeferReboot | StateId::Complete)
     }
 
     /// Determines if this state is terminal and represents a failure.
     pub fn is_failure(&self) -> bool {
-        match self.id() {
-            StateId::FailPrepare | StateId::FailFetch | StateId::FailStage => true,
-            _ => false,
-        }
+        matches!(self.id(), StateId::FailPrepare | StateId::FailFetch | StateId::FailStage)
     }
 
     /// Determines if this state is terminal (terminal states are final, no futher state
@@ -862,7 +856,7 @@ impl TryFrom<fidl::InstallationProgress> for Progress {
                 let n = progress.fraction_completed.ok_or(DecodeProgressError::MissingField(
                     RequiredProgressField::FractionCompleted,
                 ))?;
-                if n < 0.0 || n > 1.0 {
+                if !(0.0..=1.0).contains(&n) {
                     return Err(DecodeProgressError::FractionCompletedOutOfRange);
                 }
                 n

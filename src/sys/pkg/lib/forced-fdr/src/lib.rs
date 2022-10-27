@@ -5,6 +5,8 @@
 //! Triggers a forced fdr by comparing the configured
 //! index against the stored index
 
+#![warn(clippy::all)]
+
 use {
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_recovery::{FactoryResetMarker, FactoryResetProxy},
@@ -50,8 +52,8 @@ impl ForcedFDR {
         Ok(ForcedFDR {
             data_dir: "/data".into(),
             config_data_dir: "/config/data".into(),
-            info_proxy: info_proxy,
-            factory_reset_proxy: factory_reset_proxy,
+            info_proxy,
+            factory_reset_proxy,
         })
     }
 
@@ -115,7 +117,7 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
     }
 
     let channel_index = get_channel_index(&channel_indices, &current_channel)
-        .ok_or(format_err!("Not in forced FDR allowlist."))?;
+        .ok_or_else(|| format_err!("Not in forced FDR allowlist."))?;
 
     let device_index = match get_stored_index(&fdr, &current_channel) {
         Ok(index) => index,
@@ -125,8 +127,8 @@ async fn run(fdr: ForcedFDR) -> Result<(), Error> {
             // written in preparation for the next FDR ota.
             // The index will always be missing right after
             // an FDR.
-            return Ok(write_stored_index(&fdr, &current_channel, channel_index)
-                .context("Failed to write device index")?);
+            return write_stored_index(&fdr, &current_channel, channel_index)
+                .context("Failed to write device index");
         }
     };
 
@@ -159,7 +161,7 @@ fn is_channel_in_allowlist(allowlist: &HashMap<String, i32>, channel: &String) -
 }
 
 fn get_channel_index(channel_indices: &HashMap<String, i32>, channel: &String) -> Option<i32> {
-    channel_indices.get(channel).map(|i| *i)
+    channel_indices.get(channel).copied()
 }
 
 async fn trigger_fdr(fdr: &ForcedFDR) -> Result<i32, Error> {
@@ -189,7 +191,7 @@ fn open_stored_index_file(fdr: &ForcedFDR) -> Result<File, Error> {
 
 fn write_stored_index(fdr: &ForcedFDR, channel: &String, index: i32) -> Result<(), Error> {
     fx_log_info!("Writing index {} for channel {}\n", index, channel);
-    let stored_index = StoredIndex::Version1 { channel: channel.to_string(), index: index };
+    let stored_index = StoredIndex::Version1 { channel: channel.to_string(), index };
     let contents = serde_json::to_string(&stored_index)?;
     fs::write(fdr.data_dir.join(DEVICE_INDEX_FILE), contents)?;
     Ok(())

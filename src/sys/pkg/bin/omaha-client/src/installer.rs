@@ -223,10 +223,10 @@ where
         Err(FuchsiaInstallError::InstallationEndedUnexpectedly)
     }
 
-    async fn perform_install_eager_package<'a>(
-        &'a mut self,
-        url: &'a PinnedAbsolutePackageUrl,
-        install_plan: &'a FuchsiaInstallPlan,
+    async fn perform_install_eager_package(
+        &mut self,
+        url: &PinnedAbsolutePackageUrl,
+        install_plan: &FuchsiaInstallPlan,
     ) -> Result<(), FuchsiaInstallError> {
         let proxy = self.cup_connector.connect().map_err(FuchsiaInstallError::Connect)?;
         let mut url = fpkg::PackageUrl { url: url.to_string() };

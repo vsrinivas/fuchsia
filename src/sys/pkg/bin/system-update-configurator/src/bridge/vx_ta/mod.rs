@@ -108,7 +108,7 @@ fn create_operation(param_type: u32, params: [TeecParameter; 4]) -> TeecOperatio
 
 /// This is the same macro definition as TEEC_PARAM_TYPES in tee-client-types.h
 fn teec_param_types(param0_type: u32, param1_type: u32, param2_type: u32, param3_type: u32) -> u32 {
-    ((param0_type & 0xF) << 0)
+    (param0_type & 0xF)
         | ((param1_type & 0xF) << 4)
         | ((param2_type & 0xF) << 8)
         | ((param3_type & 0xF) << 12)

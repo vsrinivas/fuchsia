@@ -55,7 +55,7 @@ impl Options {
     /// Serializes Options to a Fuchsia Inspect node.
     pub fn write_to_inspect(&self, node: &inspect::Node) {
         let Options { initiator, allow_attach_to_existing_attempt, should_write_recovery } = self;
-        node.record_string("initiator", initiator.name().to_string());
+        node.record_string("initiator", initiator.name());
         node.record_bool("allow_attach_to_existing_attempt", *allow_attach_to_existing_attempt);
         node.record_bool("should_write_recovery", *should_write_recovery);
     }
@@ -90,8 +90,8 @@ impl From<&Options> for fidl_fuchsia_update_installer::Options {
     fn from(options: &Options) -> Self {
         Self {
             initiator: Some(options.initiator.into()),
-            allow_attach_to_existing_attempt: Some(options.allow_attach_to_existing_attempt.into()),
-            should_write_recovery: Some(options.should_write_recovery.into()),
+            allow_attach_to_existing_attempt: Some(options.allow_attach_to_existing_attempt),
+            should_write_recovery: Some(options.should_write_recovery),
             ..Self::EMPTY
         }
     }

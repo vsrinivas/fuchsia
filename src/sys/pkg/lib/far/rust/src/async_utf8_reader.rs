@@ -24,7 +24,7 @@ where
     /// Create a new AsyncUtf8Reader for the provided source.
     pub async fn new(source: T) -> Result<Self, Error> {
         let ret = Self { reader: crate::async_read::AsyncReader::new(source).await? };
-        let () = ret.try_list().map(|r| r.map(|_| ())).collect::<Result<(), _>>()?;
+        let () = ret.try_list().try_for_each(|r| r.map(|_| ()))?;
         Ok(ret)
     }
 

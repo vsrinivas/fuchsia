@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_pkg_ext::BlobIdParseError;
-use serde_json;
 use thiserror::Error;
 
 #[derive(Debug, Error)]

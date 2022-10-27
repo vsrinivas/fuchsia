@@ -55,7 +55,7 @@ pub struct SourceConfig {
 
 impl SourceConfig {
     pub fn get_id(&self) -> String {
-        return self.ID.to_string();
+        self.ID.to_string()
     }
     pub fn set_id(&mut self, id: &str) {
         self.ID = id.to_string();
@@ -107,14 +107,14 @@ fn default_repo_storage_type() -> RepositoryStorageType {
     RepositoryStorageType::Ephemeral
 }
 
-fn format_repo_url<'a>(url: &'a str) -> String {
+fn format_repo_url(url: &str) -> String {
     // If the canonical prefix was already part of the command line argument provided,
     // don't sanitize this prefix part of the string.
     let id = if let Some(u) = url.strip_prefix("fuchsia-pkg://") { u } else { url };
-    return format!("fuchsia-pkg://{}", sanitize_id(id));
+    format!("fuchsia-pkg://{}", sanitize_id(id))
 }
 
-fn sanitize_id<'a>(id: &'a str) -> Cow<'a, str> {
+fn sanitize_id(id: &str) -> Cow<'_, str> {
     // The sanitized ID is used for the hostname part which can only contain lowercase letters,
     // digits and hyphens: https://fuchsia.dev/fuchsia-src/concepts/packages/package_url
     return id
@@ -137,7 +137,7 @@ pub fn validate_host(host: &str) -> Result<(), anyhow::Error> {
 }
 
 mod hex_serde {
-    use {hex, serde::Deserialize};
+    use serde::Deserialize;
 
     pub fn serialize<S>(bytes: &[u8], serializer: S) -> Result<S::Ok, S::Error>
     where

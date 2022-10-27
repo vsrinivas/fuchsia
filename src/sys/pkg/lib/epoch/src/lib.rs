@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
 
 //! Wrapper around (de)serializing an epoch.json file. Although the underlying implementation is
 //! fairly straightforward, we extract this into a library so that the library serves as the "source

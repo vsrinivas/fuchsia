@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![warn(clippy::all)]
+
 use omaha_client::protocol::Cohort;
 use serde::{Deserialize, Serialize};
 use std::io;
@@ -32,14 +34,11 @@ impl ChannelConfigs {
     }
 
     pub fn get_default_channel(&self) -> Option<ChannelConfig> {
-        self.default_channel.as_ref().and_then(|default| self.get_channel(&default))
+        self.default_channel.as_ref().and_then(|default| self.get_channel(default))
     }
 
     pub fn get_channel(&self, name: &str) -> Option<ChannelConfig> {
-        self.known_channels
-            .iter()
-            .find(|channel_config| channel_config.name == name)
-            .map(|c| c.clone())
+        self.known_channels.iter().find(|channel_config| channel_config.name == name).cloned()
     }
 }
 

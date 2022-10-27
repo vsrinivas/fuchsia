@@ -45,7 +45,7 @@ async fn handle_force_install_impl(
             .context("creating reboot controller")?;
 
     let mut update_attempt =
-        start_update(&pkg_url, options, &installer, Some(reboot_controller_server_end))
+        start_update(&pkg_url, options, installer, Some(reboot_controller_server_end))
             .await
             .context("starting update")?;
 

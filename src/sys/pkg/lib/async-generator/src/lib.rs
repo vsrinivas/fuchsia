@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
 
 //! Asynchronous generator-like functionality in stable Rust.
 
@@ -122,15 +123,13 @@ where
     F: Future<Output = R>,
 {
     /// Discards all intermediate values produced by this generator, producing just the final result.
-    pub fn into_complete(self) -> impl Future<Output = R> {
-        async move {
-            let s = self.filter_map(|state| future::ready(state.into_complete()));
-            futures::pin_mut!(s);
+    pub async fn into_complete(self) -> R {
+        let s = self.filter_map(|state| future::ready(state.into_complete()));
+        futures::pin_mut!(s);
 
-            // Generators always yield a complete item as the final element once the task
-            // completes.
-            s.next().await.unwrap()
-        }
+        // Generators always yield a complete item as the final element once the task
+        // completes.
+        s.next().await.unwrap()
     }
 }
 

@@ -56,7 +56,7 @@ impl Cache {
             _space_manager_proxy: fuchsia_component::client::connect_to_protocol::<
                 fidl_fuchsia_space::ManagerMarker,
             >()?,
-            svc_dir_proxy: svc_dir_proxy,
+            svc_dir_proxy,
         })
     }
 

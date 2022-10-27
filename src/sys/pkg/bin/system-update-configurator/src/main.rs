@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #![deny(missing_docs)]
+#![warn(clippy::all)]
+#![allow(clippy::let_unit_value)]
+#![allow(clippy::type_complexity)]
 
 //! Component that implements the fuchsia.update.config.OptOut and
 //! fuchsia.update.config.OptOutAdmin protocols.
@@ -41,5 +44,7 @@ async fn run() -> Result<(), Error> {
 
     let mut storage = health_status.wrap_bridge(storage);
 
-    Ok(service::serve(fs, &mut storage).await)
+    service::serve(fs, &mut storage).await;
+
+    Ok(())
 }

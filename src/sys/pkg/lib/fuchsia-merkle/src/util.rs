@@ -81,7 +81,7 @@ pub(crate) fn hash_hashes(hashes: &[Hash], level: usize, offset: usize) -> Hash 
 
     let mut hasher = Sha256::default();
     hasher.update(&make_identity(BLOCK_SIZE, level, offset));
-    for ref hash in hashes.iter() {
+    for hash in hashes.iter() {
         hasher.update(hash.as_bytes());
     }
     for _ in 0..(HASHES_PER_BLOCK - hashes.len()) {
