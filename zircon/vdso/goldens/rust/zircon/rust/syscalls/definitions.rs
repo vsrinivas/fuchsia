@@ -38,6 +38,24 @@ extern {
         options: u32
         ) -> zx_status_t;
 
+    pub fn zx_channel_call(
+        handle: zx_handle_t,
+        options: u32,
+        deadline: zx_time_t,
+        args: *const zx_channel_call_args_t,
+        actual_bytes: *mut u32,
+        actual_handles: *mut u32
+        ) -> zx_status_t;
+
+    pub fn zx_channel_call_etc(
+        handle: zx_handle_t,
+        options: u32,
+        deadline: zx_time_t,
+        args: *mut zx_channel_call_etc_args_t,
+        actual_bytes: *mut u32,
+        actual_handles: *mut u32
+        ) -> zx_status_t;
+
     pub fn zx_channel_create(
         options: u32,
         out0: *mut zx_handle_t,
@@ -84,36 +102,10 @@ extern {
         num_handles: u32
         ) -> zx_status_t;
 
-    pub fn zx_channel_call(
-        handle: zx_handle_t,
-        options: u32,
-        deadline: zx_time_t,
-        args: *const zx_channel_call_args_t,
-        actual_bytes: *mut u32,
-        actual_handles: *mut u32
-        ) -> zx_status_t;
-
-    pub fn zx_channel_call_etc(
-        handle: zx_handle_t,
-        options: u32,
-        deadline: zx_time_t,
-        args: *mut zx_channel_call_etc_args_t,
-        actual_bytes: *mut u32,
-        actual_handles: *mut u32
-        ) -> zx_status_t;
-
-    pub fn zx_clock_get_monotonic(
-        ) -> zx_time_t;
-
     pub fn zx_clock_create(
         options: u64,
         args: *const u8,
         out: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_clock_read(
-        handle: zx_handle_t,
-        now: *mut zx_time_t
         ) -> zx_status_t;
 
     pub fn zx_clock_get_details(
@@ -122,10 +114,23 @@ extern {
         details: *mut u8
         ) -> zx_status_t;
 
+    pub fn zx_clock_get_monotonic(
+        ) -> zx_time_t;
+
+    pub fn zx_clock_read(
+        handle: zx_handle_t,
+        now: *mut zx_time_t
+        ) -> zx_status_t;
+
     pub fn zx_clock_update(
         handle: zx_handle_t,
         options: u64,
         args: *const u8
+        ) -> zx_status_t;
+
+    pub fn zx_cprng_add_entropy(
+        buffer: *const u8,
+        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_cprng_draw(
@@ -133,10 +138,9 @@ extern {
         buffer_size: usize
         );
 
-    pub fn zx_cprng_add_entropy(
-        buffer: *const u8,
-        buffer_size: usize
-        ) -> zx_status_t;
+    pub fn zx_deadline_after(
+        nanoseconds: zx_duration_t
+        ) -> zx_time_t;
 
     pub fn zx_debug_read(
         handle: zx_handle_t,
@@ -145,13 +149,13 @@ extern {
         actual: *mut usize
         ) -> zx_status_t;
 
-    pub fn zx_debug_write(
+    pub fn zx_debug_send_command(
+        resource: zx_handle_t,
         buffer: *const u8,
         buffer_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_debug_send_command(
-        resource: zx_handle_t,
+    pub fn zx_debug_write(
         buffer: *const u8,
         buffer_size: usize
         ) -> zx_status_t;
@@ -162,17 +166,17 @@ extern {
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_debuglog_write(
-        handle: zx_handle_t,
-        options: u32,
-        buffer: *const u8,
-        buffer_size: usize
-        ) -> zx_status_t;
-
     pub fn zx_debuglog_read(
         handle: zx_handle_t,
         options: u32,
         buffer: *mut u8,
+        buffer_size: usize
+        ) -> zx_status_t;
+
+    pub fn zx_debuglog_write(
+        handle: zx_handle_t,
+        options: u32,
+        buffer: *const u8,
         buffer_size: usize
         ) -> zx_status_t;
 
@@ -187,12 +191,12 @@ extern {
         out1: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_exception_get_thread(
+    pub fn zx_exception_get_process(
         handle: zx_handle_t,
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_exception_get_process(
+    pub fn zx_exception_get_thread(
         handle: zx_handle_t,
         out: *mut zx_handle_t
         ) -> zx_status_t;
@@ -239,6 +243,28 @@ extern {
         stride: u32
         ) -> zx_status_t;
 
+    pub fn zx_futex_get_owner(
+        value_ptr: *const zx_futex_t,
+        koid: *mut zx_koid_t
+        ) -> zx_status_t;
+
+    pub fn zx_futex_requeue(
+        value_ptr: *const zx_futex_t,
+        wake_count: u32,
+        current_value: zx_futex_t,
+        requeue_ptr: *const zx_futex_t,
+        requeue_count: u32,
+        new_requeue_owner: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_futex_requeue_single_owner(
+        value_ptr: *const zx_futex_t,
+        current_value: zx_futex_t,
+        requeue_ptr: *const zx_futex_t,
+        requeue_count: u32,
+        new_requeue_owner: zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_futex_wait(
         value_ptr: *const zx_futex_t,
         current_value: zx_futex_t,
@@ -251,30 +277,15 @@ extern {
         wake_count: u32
         ) -> zx_status_t;
 
-    pub fn zx_futex_requeue(
+    pub fn zx_futex_wake_handle_close_thread_exit(
         value_ptr: *const zx_futex_t,
         wake_count: u32,
-        current_value: zx_futex_t,
-        requeue_ptr: *const zx_futex_t,
-        requeue_count: u32,
-        new_requeue_owner: zx_handle_t
-        ) -> zx_status_t;
+        new_value: i32,
+        close_handle: zx_handle_t
+        );
 
     pub fn zx_futex_wake_single_owner(
         value_ptr: *const zx_futex_t
-        ) -> zx_status_t;
-
-    pub fn zx_futex_requeue_single_owner(
-        value_ptr: *const zx_futex_t,
-        current_value: zx_futex_t,
-        requeue_ptr: *const zx_futex_t,
-        requeue_count: u32,
-        new_requeue_owner: zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_futex_get_owner(
-        value_ptr: *const zx_futex_t,
-        koid: *mut zx_koid_t
         ) -> zx_status_t;
 
     pub fn zx_guest_create(
@@ -314,11 +325,8 @@ extern {
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_interrupt_create(
-        src_obj: zx_handle_t,
-        src_num: u32,
-        options: u32,
-        out_handle: *mut zx_handle_t
+    pub fn zx_interrupt_ack(
+        handle: zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_interrupt_bind(
@@ -328,16 +336,14 @@ extern {
         options: u32
         ) -> zx_status_t;
 
-    pub fn zx_interrupt_wait(
-        handle: zx_handle_t,
-        out_timestamp: *mut zx_time_t
+    pub fn zx_interrupt_create(
+        src_obj: zx_handle_t,
+        src_num: u32,
+        options: u32,
+        out_handle: *mut zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_interrupt_destroy(
-        handle: zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_interrupt_ack(
         handle: zx_handle_t
         ) -> zx_status_t;
 
@@ -345,6 +351,11 @@ extern {
         handle: zx_handle_t,
         options: u32,
         timestamp: zx_time_t
+        ) -> zx_status_t;
+
+    pub fn zx_interrupt_wait(
+        handle: zx_handle_t,
+        out_timestamp: *mut zx_time_t
         ) -> zx_status_t;
 
     pub fn zx_iommu_create(
@@ -355,13 +366,13 @@ extern {
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_ioports_request(
+    pub fn zx_ioports_release(
         resource: zx_handle_t,
         io_addr: u16,
         len: u32
         ) -> zx_status_t;
 
-    pub fn zx_ioports_release(
+    pub fn zx_ioports_request(
         resource: zx_handle_t,
         io_addr: u16,
         len: u32
@@ -373,6 +384,12 @@ extern {
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
+    pub fn zx_job_set_critical(
+        job: zx_handle_t,
+        options: u32,
+        process: zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_job_set_policy(
         handle: zx_handle_t,
         options: u32,
@@ -381,10 +398,11 @@ extern {
         policy_size: u32
         ) -> zx_status_t;
 
-    pub fn zx_job_set_critical(
-        job: zx_handle_t,
+    pub fn zx_ktrace_control(
+        handle: zx_handle_t,
+        action: u32,
         options: u32,
-        process: zx_handle_t
+        ptr: *mut u8
         ) -> zx_status_t;
 
     pub fn zx_ktrace_read(
@@ -395,47 +413,12 @@ extern {
         actual: *mut usize
         ) -> zx_status_t;
 
-    pub fn zx_ktrace_control(
-        handle: zx_handle_t,
-        action: u32,
-        options: u32,
-        ptr: *mut u8
-        ) -> zx_status_t;
-
     pub fn zx_ktrace_write(
         handle: zx_handle_t,
         id: u32,
         arg0: u32,
         arg1: u32
         ) -> zx_status_t;
-
-    pub fn zx_nanosleep(
-        deadline: zx_time_t
-        ) -> zx_status_t;
-
-    pub fn zx_ticks_get(
-        ) -> zx_ticks_t;
-
-    pub fn zx_ticks_per_second(
-        ) -> zx_ticks_t;
-
-    pub fn zx_deadline_after(
-        nanoseconds: zx_duration_t
-        ) -> zx_time_t;
-
-    pub fn zx_vmar_unmap_handle_close_thread_exit(
-        vmar_handle: zx_handle_t,
-        addr: zx_vaddr_t,
-        size: usize,
-        close_handle: zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_futex_wake_handle_close_thread_exit(
-        value_ptr: *const zx_futex_t,
-        wake_count: u32,
-        new_value: i32,
-        close_handle: zx_handle_t
-        );
 
     pub fn zx_msi_allocate(
         handle: zx_handle_t,
@@ -461,25 +444,44 @@ extern {
         ptr_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_object_wait_one(
-        handle: zx_handle_t,
-        signals: zx_signals_t,
-        deadline: zx_time_t,
-        observed: *mut zx_signals_t
-        ) -> zx_status_t;
-
-    pub fn zx_object_wait_many(
-        items: *mut zx_wait_item_t,
-        num_items: usize,
+    pub fn zx_nanosleep(
         deadline: zx_time_t
         ) -> zx_status_t;
 
-    pub fn zx_object_wait_async(
+    pub fn zx_object_get_child(
         handle: zx_handle_t,
-        port: zx_handle_t,
-        key: u64,
-        signals: zx_signals_t,
+        koid: u64,
+        rights: zx_rights_t,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_object_get_info(
+        handle: zx_handle_t,
+        topic: u32,
+        buffer: *mut u8,
+        buffer_size: usize,
+        actual: *mut usize,
+        avail: *mut usize
+        ) -> zx_status_t;
+
+    pub fn zx_object_get_property(
+        handle: zx_handle_t,
+        property: u32,
+        value: *mut u8,
+        value_size: usize
+        ) -> zx_status_t;
+
+    pub fn zx_object_set_profile(
+        handle: zx_handle_t,
+        profile: zx_handle_t,
         options: u32
+        ) -> zx_status_t;
+
+    pub fn zx_object_set_property(
+        handle: zx_handle_t,
+        property: u32,
+        value: *const u8,
+        value_size: usize
         ) -> zx_status_t;
 
     pub fn zx_object_signal(
@@ -494,40 +496,25 @@ extern {
         set_mask: u32
         ) -> zx_status_t;
 
-    pub fn zx_object_get_property(
+    pub fn zx_object_wait_async(
         handle: zx_handle_t,
-        property: u32,
-        value: *mut u8,
-        value_size: usize
-        ) -> zx_status_t;
-
-    pub fn zx_object_set_property(
-        handle: zx_handle_t,
-        property: u32,
-        value: *const u8,
-        value_size: usize
-        ) -> zx_status_t;
-
-    pub fn zx_object_get_info(
-        handle: zx_handle_t,
-        topic: u32,
-        buffer: *mut u8,
-        buffer_size: usize,
-        actual: *mut usize,
-        avail: *mut usize
-        ) -> zx_status_t;
-
-    pub fn zx_object_get_child(
-        handle: zx_handle_t,
-        koid: u64,
-        rights: zx_rights_t,
-        out: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_object_set_profile(
-        handle: zx_handle_t,
-        profile: zx_handle_t,
+        port: zx_handle_t,
+        key: u64,
+        signals: zx_signals_t,
         options: u32
+        ) -> zx_status_t;
+
+    pub fn zx_object_wait_many(
+        items: *mut zx_wait_item_t,
+        num_items: usize,
+        deadline: zx_time_t
+        ) -> zx_status_t;
+
+    pub fn zx_object_wait_one(
+        handle: zx_handle_t,
+        signals: zx_signals_t,
+        deadline: zx_time_t,
+        observed: *mut zx_signals_t
         ) -> zx_status_t;
 
     pub fn zx_pager_create(
@@ -547,15 +534,6 @@ extern {
     pub fn zx_pager_detach_vmo(
         pager: zx_handle_t,
         vmo: zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_pager_supply_pages(
-        pager: zx_handle_t,
-        pager_vmo: zx_handle_t,
-        offset: u64,
-        length: u64,
-        aux_vmo: zx_handle_t,
-        aux_offset: u64
         ) -> zx_status_t;
 
     pub fn zx_pager_op_range(
@@ -586,26 +564,38 @@ extern {
         buffer_size: usize
         ) -> zx_status_t;
 
+    pub fn zx_pager_supply_pages(
+        pager: zx_handle_t,
+        pager_vmo: zx_handle_t,
+        offset: u64,
+        length: u64,
+        aux_vmo: zx_handle_t,
+        aux_offset: u64
+        ) -> zx_status_t;
+
     pub fn zx_pc_firmware_tables(
         handle: zx_handle_t,
         acpi_rsdp: *mut zx_paddr_t,
         smbios: *mut zx_paddr_t
         ) -> zx_status_t;
 
-    pub fn zx_pci_get_nth_device(
+    pub fn zx_pci_add_subtract_io_range(
         handle: zx_handle_t,
-        index: u32,
-        out_info: *mut zx_pcie_device_info_t,
-        out_handle: *mut zx_handle_t
+        mmio: u32,
+        base: u64,
+        len: u64,
+        add: u32
         ) -> zx_status_t;
 
-    pub fn zx_pci_enable_bus_master(
+    pub fn zx_pci_cfg_pio_rw(
         handle: zx_handle_t,
-        enable: u32
-        ) -> zx_status_t;
-
-    pub fn zx_pci_reset_device(
-        handle: zx_handle_t
+        bus: u8,
+        dev: u8,
+        func: u8,
+        offset: u8,
+        val: *mut u32,
+        width: usize,
+        write: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_config_read(
@@ -622,15 +612,9 @@ extern {
         val: u32
         ) -> zx_status_t;
 
-    pub fn zx_pci_cfg_pio_rw(
+    pub fn zx_pci_enable_bus_master(
         handle: zx_handle_t,
-        bus: u8,
-        dev: u8,
-        func: u8,
-        offset: u8,
-        val: *mut u32,
-        width: usize,
-        write: u32
+        enable: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_get_bar(
@@ -638,6 +622,19 @@ extern {
         bar_num: u32,
         out_bar: *mut zx_pci_bar_t,
         out_handle: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_pci_get_nth_device(
+        handle: zx_handle_t,
+        index: u32,
+        out_info: *mut zx_pcie_device_info_t,
+        out_handle: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_pci_init(
+        handle: zx_handle_t,
+        init_buf: *const zx_pci_init_arg_t,
+        len: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_map_interrupt(
@@ -652,28 +649,24 @@ extern {
         out_max_irqs: *mut u32
         ) -> zx_status_t;
 
+    pub fn zx_pci_reset_device(
+        handle: zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_pci_set_irq_mode(
         handle: zx_handle_t,
         mode: u32,
         requested_irq_count: u32
         ) -> zx_status_t;
 
-    pub fn zx_pci_init(
-        handle: zx_handle_t,
-        init_buf: *const zx_pci_init_arg_t,
-        len: u32
-        ) -> zx_status_t;
-
-    pub fn zx_pci_add_subtract_io_range(
-        handle: zx_handle_t,
-        mmio: u32,
-        base: u64,
-        len: u64,
-        add: u32
-        ) -> zx_status_t;
-
     pub fn zx_pmt_unpin(
         handle: zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_port_cancel(
+        handle: zx_handle_t,
+        source: zx_handle_t,
+        key: u64
         ) -> zx_status_t;
 
     pub fn zx_port_create(
@@ -691,16 +684,6 @@ extern {
         deadline: zx_time_t,
         packet: *mut zx_port_packet_t
         ) -> zx_status_t;
-
-    pub fn zx_port_cancel(
-        handle: zx_handle_t,
-        source: zx_handle_t,
-        key: u64
-        ) -> zx_status_t;
-
-    pub fn zx_process_exit(
-        retcode: i64
-        );
 
     pub fn zx_process_create(
         job: zx_handle_t,
@@ -720,14 +703,9 @@ extern {
         restricted_vmar_handle: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_process_start(
-        handle: zx_handle_t,
-        thread: zx_handle_t,
-        entry: zx_vaddr_t,
-        stack: zx_vaddr_t,
-        arg1: zx_handle_t,
-        arg2: usize
-        ) -> zx_status_t;
+    pub fn zx_process_exit(
+        retcode: i64
+        );
 
     pub fn zx_process_read_memory(
         handle: zx_handle_t,
@@ -735,6 +713,15 @@ extern {
         buffer: *mut u8,
         buffer_size: usize,
         actual: *mut usize
+        ) -> zx_status_t;
+
+    pub fn zx_process_start(
+        handle: zx_handle_t,
+        thread: zx_handle_t,
+        entry: zx_vaddr_t,
+        stack: zx_vaddr_t,
+        arg1: zx_handle_t,
+        arg2: usize
         ) -> zx_status_t;
 
     pub fn zx_process_write_memory(
@@ -768,13 +755,13 @@ extern {
         context: usize
         ) -> zx_status_t;
 
-    pub fn zx_restricted_write_state(
-        buffer: *const u8,
+    pub fn zx_restricted_read_state(
+        buffer: *mut u8,
         buffer_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_restricted_read_state(
-        buffer: *mut u8,
+    pub fn zx_restricted_write_state(
+        buffer: *const u8,
         buffer_size: usize
         ) -> zx_status_t;
 
@@ -788,14 +775,6 @@ extern {
         options: u32,
         out0: *mut zx_handle_t,
         out1: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_socket_write(
-        handle: zx_handle_t,
-        options: u32,
-        buffer: *const u8,
-        buffer_size: usize,
-        actual: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_socket_read(
@@ -812,28 +791,19 @@ extern {
         disposition_peer: u32
         ) -> zx_status_t;
 
+    pub fn zx_socket_write(
+        handle: zx_handle_t,
+        options: u32,
+        buffer: *const u8,
+        buffer_size: usize,
+        actual: *mut usize
+        ) -> zx_status_t;
+
     pub fn zx_stream_create(
         options: u32,
         vmo: zx_handle_t,
         seek: zx_off_t,
         out_stream: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_stream_writev(
-        handle: zx_handle_t,
-        options: u32,
-        vector: *const zx_iovec_t,
-        num_vector: usize,
-        actual: *mut usize
-        ) -> zx_status_t;
-
-    pub fn zx_stream_writev_at(
-        handle: zx_handle_t,
-        options: u32,
-        offset: zx_off_t,
-        vector: *const zx_iovec_t,
-        num_vector: usize,
-        actual: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_stream_readv(
@@ -858,6 +828,27 @@ extern {
         whence: zx_stream_seek_origin_t,
         offset: i64,
         out_seek: *mut zx_off_t
+        ) -> zx_status_t;
+
+    pub fn zx_stream_writev(
+        handle: zx_handle_t,
+        options: u32,
+        vector: *const zx_iovec_t,
+        num_vector: usize,
+        actual: *mut usize
+        ) -> zx_status_t;
+
+    pub fn zx_stream_writev_at(
+        handle: zx_handle_t,
+        options: u32,
+        offset: zx_off_t,
+        vector: *const zx_iovec_t,
+        num_vector: usize,
+        actual: *mut usize
+        ) -> zx_status_t;
+
+    pub fn zx_syscall_next_1(
+        arg: i32
         ) -> zx_status_t;
 
     pub fn zx_syscall_test_0(
@@ -923,27 +914,10 @@ extern {
         h: i32
         ) -> zx_status_t;
 
-    pub fn zx_syscall_next_1(
-        arg: i32
-        ) -> zx_status_t;
-
-    pub fn zx_syscall_test_wrapper(
-        a: i32,
-        b: i32,
-        c: i32
-        ) -> zx_status_t;
-
     pub fn zx_syscall_test_handle_create(
         return_value: zx_status_t,
         out: *mut zx_handle_t
         ) -> zx_status_t;
-
-    pub fn zx_syscall_test_widening_unsigned_narrow(
-        a: u64,
-        b: u32,
-        c: u16,
-        d: u8
-        ) -> u64;
 
     pub fn zx_syscall_test_widening_signed_narrow(
         a: i64,
@@ -952,13 +926,6 @@ extern {
         d: i8
         ) -> i64;
 
-    pub fn zx_syscall_test_widening_unsigned_wide(
-        a: u64,
-        b: u32,
-        c: u16,
-        d: u8
-        ) -> u64;
-
     pub fn zx_syscall_test_widening_signed_wide(
         a: i64,
         b: i32,
@@ -966,25 +933,28 @@ extern {
         d: i8
         ) -> i64;
 
-    pub fn zx_system_get_dcache_line_size(
-        ) -> u32;
-
-    pub fn zx_system_get_num_cpus(
-        ) -> u32;
-
-    pub fn zx_system_get_version_string(
-        ) -> zx_string_view_t;
-
-    pub fn zx_system_get_page_size(
-        ) -> u32;
-
-    pub fn zx_system_get_physmem(
+    pub fn zx_syscall_test_widening_unsigned_narrow(
+        a: u64,
+        b: u32,
+        c: u16,
+        d: u8
         ) -> u64;
 
-    pub fn zx_system_get_features(
-        kind: u32,
-        features: *mut u32
+    pub fn zx_syscall_test_widening_unsigned_wide(
+        a: u64,
+        b: u32,
+        c: u16,
+        d: u8
+        ) -> u64;
+
+    pub fn zx_syscall_test_wrapper(
+        a: i32,
+        b: i32,
+        c: i32
         ) -> zx_status_t;
+
+    pub fn zx_system_get_dcache_line_size(
+        ) -> u32;
 
     pub fn zx_system_get_event(
         root_job: zx_handle_t,
@@ -992,12 +962,16 @@ extern {
         event: *mut zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_system_set_performance_info(
-        resource: zx_handle_t,
-        topic: u32,
-        info: *const u8,
-        count: usize
+    pub fn zx_system_get_features(
+        kind: u32,
+        features: *mut u32
         ) -> zx_status_t;
+
+    pub fn zx_system_get_num_cpus(
+        ) -> u32;
+
+    pub fn zx_system_get_page_size(
+        ) -> u32;
 
     pub fn zx_system_get_performance_info(
         resource: zx_handle_t,
@@ -1006,6 +980,12 @@ extern {
         info: *mut u8,
         output_count: *mut usize
         ) -> zx_status_t;
+
+    pub fn zx_system_get_physmem(
+        ) -> u64;
+
+    pub fn zx_system_get_version_string(
+        ) -> zx_string_view_t;
 
     pub fn zx_system_mexec(
         resource: zx_handle_t,
@@ -1025,14 +1005,11 @@ extern {
         arg: *const zx_system_powerctl_arg_t
         ) -> zx_status_t;
 
-    pub fn zx_task_suspend(
-        handle: zx_handle_t,
-        token: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_task_suspend_token(
-        handle: zx_handle_t,
-        token: *mut zx_handle_t
+    pub fn zx_system_set_performance_info(
+        resource: zx_handle_t,
+        topic: u32,
+        info: *const u8,
+        count: usize
         ) -> zx_status_t;
 
     pub fn zx_task_create_exception_channel(
@@ -1045,8 +1022,15 @@ extern {
         handle: zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_thread_exit(
-        );
+    pub fn zx_task_suspend(
+        handle: zx_handle_t,
+        token: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_task_suspend_token(
+        handle: zx_handle_t,
+        token: *mut zx_handle_t
+        ) -> zx_status_t;
 
     pub fn zx_thread_create(
         process: zx_handle_t,
@@ -1054,6 +1038,20 @@ extern {
         name_size: usize,
         options: u32,
         out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_thread_exit(
+        );
+
+    pub fn zx_thread_legacy_yield(
+        options: u32
+        ) -> zx_status_t;
+
+    pub fn zx_thread_read_state(
+        handle: zx_handle_t,
+        kind: u32,
+        buffer: *mut u8,
+        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_thread_start(
@@ -1064,13 +1062,6 @@ extern {
         arg2: usize
         ) -> zx_status_t;
 
-    pub fn zx_thread_read_state(
-        handle: zx_handle_t,
-        kind: u32,
-        buffer: *mut u8,
-        buffer_size: usize
-        ) -> zx_status_t;
-
     pub fn zx_thread_write_state(
         handle: zx_handle_t,
         kind: u32,
@@ -1078,8 +1069,14 @@ extern {
         buffer_size: usize
         ) -> zx_status_t;
 
-    pub fn zx_thread_legacy_yield(
-        options: u32
+    pub fn zx_ticks_get(
+        ) -> zx_ticks_t;
+
+    pub fn zx_ticks_per_second(
+        ) -> zx_ticks_t;
+
+    pub fn zx_timer_cancel(
+        handle: zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_timer_create(
@@ -1094,10 +1091,6 @@ extern {
         slack: zx_duration_t
         ) -> zx_status_t;
 
-    pub fn zx_timer_cancel(
-        handle: zx_handle_t
-        ) -> zx_status_t;
-
     pub fn zx_vcpu_create(
         guest: zx_handle_t,
         options: u32,
@@ -1110,13 +1103,13 @@ extern {
         packet: *mut zx_port_packet_t
         ) -> zx_status_t;
 
-    pub fn zx_vcpu_kick(
-        handle: zx_handle_t
-        ) -> zx_status_t;
-
     pub fn zx_vcpu_interrupt(
         handle: zx_handle_t,
         vector: u32
+        ) -> zx_status_t;
+
+    pub fn zx_vcpu_kick(
+        handle: zx_handle_t
         ) -> zx_status_t;
 
     pub fn zx_vcpu_read_state(
@@ -1156,19 +1149,6 @@ extern {
         mapped_addr: *mut zx_vaddr_t
         ) -> zx_status_t;
 
-    pub fn zx_vmar_unmap(
-        handle: zx_handle_t,
-        addr: zx_vaddr_t,
-        len: usize
-        ) -> zx_status_t;
-
-    pub fn zx_vmar_protect(
-        handle: zx_handle_t,
-        options: zx_vm_option_t,
-        addr: zx_vaddr_t,
-        len: usize
-        ) -> zx_status_t;
-
     pub fn zx_vmar_op_range(
         handle: zx_handle_t,
         op: u32,
@@ -1178,43 +1158,30 @@ extern {
         buffer_size: usize
         ) -> zx_status_t;
 
+    pub fn zx_vmar_protect(
+        handle: zx_handle_t,
+        options: zx_vm_option_t,
+        addr: zx_vaddr_t,
+        len: usize
+        ) -> zx_status_t;
+
+    pub fn zx_vmar_unmap(
+        handle: zx_handle_t,
+        addr: zx_vaddr_t,
+        len: usize
+        ) -> zx_status_t;
+
+    pub fn zx_vmar_unmap_handle_close_thread_exit(
+        vmar_handle: zx_handle_t,
+        addr: zx_vaddr_t,
+        size: usize,
+        close_handle: zx_handle_t
+        ) -> zx_status_t;
+
     pub fn zx_vmo_create(
         size: u64,
         options: u32,
         out: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_read(
-        handle: zx_handle_t,
-        buffer: *mut u8,
-        offset: u64,
-        buffer_size: usize
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_write(
-        handle: zx_handle_t,
-        buffer: *const u8,
-        offset: u64,
-        buffer_size: usize
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_get_size(
-        handle: zx_handle_t,
-        size: *mut u64
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_set_size(
-        handle: zx_handle_t,
-        size: u64
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_op_range(
-        handle: zx_handle_t,
-        op: u32,
-        offset: u64,
-        size: u64,
-        buffer: *mut u8,
-        buffer_size: usize
         ) -> zx_status_t;
 
     pub fn zx_vmo_create_child(
@@ -1222,17 +1189,6 @@ extern {
         options: u32,
         offset: u64,
         size: u64,
-        out: *mut zx_handle_t
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_set_cache_policy(
-        handle: zx_handle_t,
-        cache_policy: u32
-        ) -> zx_status_t;
-
-    pub fn zx_vmo_replace_as_executable(
-        handle: zx_handle_t,
-        vmex: zx_handle_t,
         out: *mut zx_handle_t
         ) -> zx_status_t;
 
@@ -1248,6 +1204,50 @@ extern {
         paddr: zx_paddr_t,
         size: usize,
         out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_get_size(
+        handle: zx_handle_t,
+        size: *mut u64
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_op_range(
+        handle: zx_handle_t,
+        op: u32,
+        offset: u64,
+        size: u64,
+        buffer: *mut u8,
+        buffer_size: usize
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_read(
+        handle: zx_handle_t,
+        buffer: *mut u8,
+        offset: u64,
+        buffer_size: usize
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_replace_as_executable(
+        handle: zx_handle_t,
+        vmex: zx_handle_t,
+        out: *mut zx_handle_t
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_set_cache_policy(
+        handle: zx_handle_t,
+        cache_policy: u32
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_set_size(
+        handle: zx_handle_t,
+        size: u64
+        ) -> zx_status_t;
+
+    pub fn zx_vmo_write(
+        handle: zx_handle_t,
+        buffer: *const u8,
+        offset: u64,
+        buffer_size: usize
         ) -> zx_status_t;
 
 }

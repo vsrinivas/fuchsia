@@ -33,14 +33,14 @@ _ZX_SYSCALL_DECL(restricted_enter, zx_status_t, /* no attributes */, 3,
     uintptr_t vector_table_ptr,
     uintptr_t context))
 
-_ZX_SYSCALL_DECL(restricted_write_state, zx_status_t, /* no attributes */, 2,
-    (buffer, buffer_size), (
-    const void* buffer,
-    size_t buffer_size))
-
 _ZX_SYSCALL_DECL(restricted_read_state, zx_status_t, /* no attributes */, 2,
     (buffer, buffer_size), (
     void* buffer,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(restricted_write_state, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    const void* buffer,
     size_t buffer_size))
 
 _ZX_SYSCALL_DECL(syscall_next_1, zx_status_t, /* no attributes */, 1,

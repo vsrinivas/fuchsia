@@ -108,6 +108,156 @@ TEXT runtime·vdsoCall_zx_cache_flush(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_channel_call(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ args+16(FP), CX
+	MOVQ actual_bytes+24(FP), R8
+	MOVQ actual_handles+32(FP), R9
+	MOVQ vdso_zx_channel_call(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_etc(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ args+16(FP), CX
+	MOVQ actual_bytes+24(FP), R8
+	MOVQ actual_handles+32(FP), R9
+	MOVQ vdso_zx_channel_call_etc(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_etc_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ deadline+0(FP), DI
+	MOVQ args+8(FP), SI
+	MOVQ actual_bytes+16(FP), DX
+	MOVQ actual_handles+24(FP), CX
+	MOVQ vdso_zx_channel_call_etc_finish(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_etc_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ args+16(FP), CX
+	MOVQ actual_bytes+24(FP), R8
+	MOVQ actual_handles+32(FP), R9
+	MOVQ vdso_zx_channel_call_etc_noretry(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_finish(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ deadline+0(FP), DI
+	MOVQ args+8(FP), SI
+	MOVQ actual_bytes+16(FP), DX
+	MOVQ actual_handles+24(FP), CX
+	MOVQ vdso_zx_channel_call_finish(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_channel_call_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_channel_call_noretry(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ args+16(FP), CX
+	MOVQ actual_bytes+24(FP), R8
+	MOVQ actual_handles+32(FP), R9
+	MOVQ vdso_zx_channel_call_noretry(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_channel_create(options uint32, out0 unsafe.Pointer, out1 unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_channel_create(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -248,8 +398,8 @@ TEXT runtime·vdsoCall_zx_channel_write_etc(SB),NOSPLIT,$8-44
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_channel_call_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_channel_call_noretry(SB),NOSPLIT,$8-44
+// func vdsoCall_zx_clock_create(options uint64, args unsafe.Pointer, out unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_clock_create(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -260,71 +410,18 @@ TEXT runtime·vdsoCall_zx_channel_call_noretry(SB),NOSPLIT,$8-44
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ deadline+8(FP), DX
-	MOVQ args+16(FP), CX
-	MOVQ actual_bytes+24(FP), R8
-	MOVQ actual_handles+32(FP), R9
-	MOVQ vdso_zx_channel_call_noretry(SB), AX
-	CALL AX
-	MOVL AX, ret+40(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_channel_call_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_channel_call_finish(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ deadline+0(FP), DI
+	MOVQ options+0(FP), DI
 	MOVQ args+8(FP), SI
-	MOVQ actual_bytes+16(FP), DX
-	MOVQ actual_handles+24(FP), CX
-	MOVQ vdso_zx_channel_call_finish(SB), AX
+	MOVQ out+16(FP), DX
+	MOVQ vdso_zx_clock_create(SB), AX
 	CALL AX
-	MOVL AX, ret+32(FP)
+	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_channel_call(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_channel_call(SB),NOSPLIT,$8-44
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ deadline+8(FP), DX
-	MOVQ args+16(FP), CX
-	MOVQ actual_bytes+24(FP), R8
-	MOVQ actual_handles+32(FP), R9
-	MOVQ vdso_zx_channel_call(SB), AX
-	CALL AX
-	MOVL AX, ret+40(FP)
-	CALL runtime·exitsyscall(SB)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_channel_call_etc_noretry(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$8-44
+// func vdsoCall_zx_clock_get_details(handle uint32, options uint64, details unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_clock_get_details(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -336,64 +433,11 @@ TEXT runtime·vdsoCall_zx_channel_call_etc_noretry(SB),NOSPLIT,$8-44
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ deadline+8(FP), DX
-	MOVQ args+16(FP), CX
-	MOVQ actual_bytes+24(FP), R8
-	MOVQ actual_handles+32(FP), R9
-	MOVQ vdso_zx_channel_call_etc_noretry(SB), AX
+	MOVQ options+8(FP), SI
+	MOVQ details+16(FP), DX
+	MOVQ vdso_zx_clock_get_details(SB), AX
 	CALL AX
-	MOVL AX, ret+40(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_channel_call_etc_finish(deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_channel_call_etc_finish(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ deadline+0(FP), DI
-	MOVQ args+8(FP), SI
-	MOVQ actual_bytes+16(FP), DX
-	MOVQ actual_handles+24(FP), CX
-	MOVQ vdso_zx_channel_call_etc_finish(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_channel_call_etc(handle uint32, options uint32, deadline int64, args unsafe.Pointer, actual_bytes unsafe.Pointer, actual_handles unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_channel_call_etc(SB),NOSPLIT,$8-44
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ deadline+8(FP), DX
-	MOVQ args+16(FP), CX
-	MOVQ actual_bytes+24(FP), R8
-	MOVQ actual_handles+32(FP), R9
-	MOVQ vdso_zx_channel_call_etc(SB), AX
-	CALL AX
-	MOVL AX, ret+40(FP)
-	CALL runtime·exitsyscall(SB)
+	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -436,28 +480,6 @@ TEXT runtime·vdsoCall_zx_clock_get_monotonic_via_kernel(SB),NOSPLIT,$8-8
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_clock_create(options uint64, args unsafe.Pointer, out unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_clock_create(SB),NOSPLIT,$8-28
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ options+0(FP), DI
-	MOVQ args+8(FP), SI
-	MOVQ out+16(FP), DX
-	MOVQ vdso_zx_clock_create(SB), AX
-	CALL AX
-	MOVL AX, ret+24(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_clock_read(handle uint32, now unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_clock_read(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -475,28 +497,6 @@ TEXT runtime·vdsoCall_zx_clock_read(SB),NOSPLIT,$8-20
 	MOVQ vdso_zx_clock_read(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_clock_get_details(handle uint32, options uint64, details unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_clock_get_details(SB),NOSPLIT,$8-28
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ options+8(FP), SI
-	MOVQ details+16(FP), DX
-	MOVQ vdso_zx_clock_get_details(SB), AX
-	CALL AX
-	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -523,8 +523,8 @@ TEXT runtime·vdsoCall_zx_clock_update(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_cprng_draw_once(buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_cprng_draw_once(SB),NOSPLIT,$8-20
+// func vdsoCall_zx_cprng_add_entropy(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_cprng_add_entropy(SB),NOSPLIT,$8-20
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -537,7 +537,7 @@ TEXT runtime·vdsoCall_zx_cprng_draw_once(SB),NOSPLIT,$8-20
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
-	MOVQ vdso_zx_cprng_draw_once(SB), AX
+	MOVQ vdso_zx_cprng_add_entropy(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
 	POPQ R14
@@ -564,8 +564,8 @@ TEXT runtime·vdsoCall_zx_cprng_draw(SB),NOSPLIT,$8-16
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_cprng_add_entropy(buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_cprng_add_entropy(SB),NOSPLIT,$8-20
+// func vdsoCall_zx_cprng_draw_once(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_cprng_draw_once(SB),NOSPLIT,$8-20
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -578,9 +578,29 @@ TEXT runtime·vdsoCall_zx_cprng_add_entropy(SB),NOSPLIT,$8-20
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
-	MOVQ vdso_zx_cprng_add_entropy(SB), AX
+	MOVQ vdso_zx_cprng_draw_once(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_deadline_after(nanoseconds int64) int64
+TEXT runtime·vdsoCall_zx_deadline_after(SB),NOSPLIT,$8-16
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ nanoseconds+0(FP), DI
+	MOVQ vdso_zx_deadline_after(SB), AX
+	CALL AX
+	MOVQ AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -608,27 +628,6 @@ TEXT runtime·vdsoCall_zx_debug_read(SB),NOSPLIT,$8-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_debug_write(buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_debug_write(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ buffer+0(FP), DI
-	MOVQ buffer_size+8(FP), SI
-	MOVQ vdso_zx_debug_write(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_debug_send_command(resource uint32, buffer unsafe.Pointer, buffer_size uint) int32
 TEXT runtime·vdsoCall_zx_debug_send_command(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -647,6 +646,27 @@ TEXT runtime·vdsoCall_zx_debug_send_command(SB),NOSPLIT,$8-28
 	MOVQ vdso_zx_debug_send_command(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_debug_write(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_debug_write(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ buffer+0(FP), DI
+	MOVQ buffer_size+8(FP), SI
+	MOVQ vdso_zx_debug_write(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -673,29 +693,6 @@ TEXT runtime·vdsoCall_zx_debuglog_create(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_debuglog_write(handle uint32, options uint32, buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_debuglog_write(SB),NOSPLIT,$8-28
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ buffer+8(FP), DX
-	MOVQ buffer_size+16(FP), CX
-	MOVQ vdso_zx_debuglog_write(SB), AX
-	CALL AX
-	MOVL AX, ret+24(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_debuglog_read(handle uint32, options uint32, buffer unsafe.Pointer, buffer_size uint) int32
 TEXT runtime·vdsoCall_zx_debuglog_read(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -713,6 +710,29 @@ TEXT runtime·vdsoCall_zx_debuglog_read(SB),NOSPLIT,$8-28
 	MOVQ buffer+8(FP), DX
 	MOVQ buffer_size+16(FP), CX
 	MOVQ vdso_zx_debuglog_read(SB), AX
+	CALL AX
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_debuglog_write(handle uint32, options uint32, buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_debuglog_write(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ buffer+8(FP), DX
+	MOVQ buffer_size+16(FP), CX
+	MOVQ vdso_zx_debuglog_write(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
 	POPQ R14
@@ -762,27 +782,6 @@ TEXT runtime·vdsoCall_zx_eventpair_create(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_exception_get_thread(handle uint32, out unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_exception_get_thread(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ out+8(FP), SI
-	MOVQ vdso_zx_exception_get_thread(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_exception_get_process(handle uint32, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_exception_get_process(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -798,6 +797,27 @@ TEXT runtime·vdsoCall_zx_exception_get_process(SB),NOSPLIT,$8-20
 	MOVL handle+0(FP), DI
 	MOVQ out+8(FP), SI
 	MOVQ vdso_zx_exception_get_process(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_exception_get_thread(handle uint32, out unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_exception_get_thread(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ out+8(FP), SI
+	MOVQ vdso_zx_exception_get_thread(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
 	POPQ R14
@@ -931,6 +951,76 @@ TEXT runtime·vdsoCall_zx_framebuffer_set_range(SB),NOSPLIT,$32-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_futex_get_owner(value_ptr unsafe.Pointer, koid unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_futex_get_owner(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ value_ptr+0(FP), DI
+	MOVQ koid+8(FP), SI
+	MOVQ vdso_zx_futex_get_owner(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_futex_requeue(value_ptr unsafe.Pointer, wake_count uint32, current_value int32, requeue_ptr unsafe.Pointer, requeue_count uint32, new_requeue_owner uint32) int32
+TEXT runtime·vdsoCall_zx_futex_requeue(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ value_ptr+0(FP), DI
+	MOVL wake_count+8(FP), SI
+	MOVL current_value+12(FP), DX
+	MOVQ requeue_ptr+16(FP), CX
+	MOVL requeue_count+24(FP), R8
+	MOVL new_requeue_owner+28(FP), R9
+	MOVQ vdso_zx_futex_requeue(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_futex_requeue_single_owner(value_ptr unsafe.Pointer, current_value int32, requeue_ptr unsafe.Pointer, requeue_count uint32, new_requeue_owner uint32) int32
+TEXT runtime·vdsoCall_zx_futex_requeue_single_owner(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ value_ptr+0(FP), DI
+	MOVL current_value+8(FP), SI
+	MOVQ requeue_ptr+16(FP), DX
+	MOVL requeue_count+24(FP), CX
+	MOVL new_requeue_owner+28(FP), R8
+	MOVQ vdso_zx_futex_requeue_single_owner(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_futex_wait(value_ptr unsafe.Pointer, current_value int32, new_futex_owner uint32, deadline int64) int32
 TEXT runtime·vdsoCall_zx_futex_wait(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -975,8 +1065,8 @@ TEXT runtime·vdsoCall_zx_futex_wake(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_futex_requeue(value_ptr unsafe.Pointer, wake_count uint32, current_value int32, requeue_ptr unsafe.Pointer, requeue_count uint32, new_requeue_owner uint32) int32
-TEXT runtime·vdsoCall_zx_futex_requeue(SB),NOSPLIT,$8-36
+// func vdsoCall_zx_futex_wake_handle_close_thread_exit(value_ptr unsafe.Pointer, wake_count uint32, new_value int32, close_handle uint32)
+TEXT runtime·vdsoCall_zx_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$8-24
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -989,13 +1079,10 @@ TEXT runtime·vdsoCall_zx_futex_requeue(SB),NOSPLIT,$8-36
 	MOVQ DX, m_vdsoSP(R14)
 	MOVQ value_ptr+0(FP), DI
 	MOVL wake_count+8(FP), SI
-	MOVL current_value+12(FP), DX
-	MOVQ requeue_ptr+16(FP), CX
-	MOVL requeue_count+24(FP), R8
-	MOVL new_requeue_owner+28(FP), R9
-	MOVQ vdso_zx_futex_requeue(SB), AX
+	MOVL new_value+12(FP), DX
+	MOVL close_handle+16(FP), CX
+	MOVQ vdso_zx_futex_wake_handle_close_thread_exit(SB), AX
 	CALL AX
-	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1016,51 +1103,6 @@ TEXT runtime·vdsoCall_zx_futex_wake_single_owner(SB),NOSPLIT,$8-12
 	MOVQ vdso_zx_futex_wake_single_owner(SB), AX
 	CALL AX
 	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_futex_requeue_single_owner(value_ptr unsafe.Pointer, current_value int32, requeue_ptr unsafe.Pointer, requeue_count uint32, new_requeue_owner uint32) int32
-TEXT runtime·vdsoCall_zx_futex_requeue_single_owner(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ value_ptr+0(FP), DI
-	MOVL current_value+8(FP), SI
-	MOVQ requeue_ptr+16(FP), DX
-	MOVL requeue_count+24(FP), CX
-	MOVL new_requeue_owner+28(FP), R8
-	MOVQ vdso_zx_futex_requeue_single_owner(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_futex_get_owner(value_ptr unsafe.Pointer, koid unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_futex_get_owner(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ value_ptr+0(FP), DI
-	MOVQ koid+8(FP), SI
-	MOVQ vdso_zx_futex_get_owner(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1198,8 +1240,8 @@ TEXT runtime·vdsoCall_zx_handle_replace(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_interrupt_create(src_obj uint32, src_num uint32, options uint32, out_handle unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_interrupt_create(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_interrupt_ack(handle uint32) int32
+TEXT runtime·vdsoCall_zx_interrupt_ack(SB),NOSPLIT,$8-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1210,13 +1252,10 @@ TEXT runtime·vdsoCall_zx_interrupt_create(SB),NOSPLIT,$8-28
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL src_obj+0(FP), DI
-	MOVL src_num+4(FP), SI
-	MOVL options+8(FP), DX
-	MOVQ out_handle+16(FP), CX
-	MOVQ vdso_zx_interrupt_create(SB), AX
+	MOVL handle+0(FP), DI
+	MOVQ vdso_zx_interrupt_ack(SB), AX
 	CALL AX
-	MOVL AX, ret+24(FP)
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1244,8 +1283,8 @@ TEXT runtime·vdsoCall_zx_interrupt_bind(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_interrupt_wait(handle uint32, out_timestamp unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_interrupt_wait(SB),NOSPLIT,$8-20
+// func vdsoCall_zx_interrupt_create(src_obj uint32, src_num uint32, options uint32, out_handle unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_interrupt_create(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1256,13 +1295,13 @@ TEXT runtime·vdsoCall_zx_interrupt_wait(SB),NOSPLIT,$8-20
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVQ out_timestamp+8(FP), SI
-	MOVQ vdso_zx_interrupt_wait(SB), AX
+	MOVL src_obj+0(FP), DI
+	MOVL src_num+4(FP), SI
+	MOVL options+8(FP), DX
+	MOVQ out_handle+16(FP), CX
+	MOVQ vdso_zx_interrupt_create(SB), AX
 	CALL AX
-	MOVL AX, ret+16(FP)
-	CALL runtime·exitsyscall(SB)
+	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1281,26 +1320,6 @@ TEXT runtime·vdsoCall_zx_interrupt_destroy(SB),NOSPLIT,$8-12
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
 	MOVQ vdso_zx_interrupt_destroy(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_interrupt_ack(handle uint32) int32
-TEXT runtime·vdsoCall_zx_interrupt_ack(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ vdso_zx_interrupt_ack(SB), AX
 	CALL AX
 	MOVL AX, ret+8(FP)
 	POPQ R14
@@ -1329,6 +1348,29 @@ TEXT runtime·vdsoCall_zx_interrupt_trigger(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_interrupt_wait(handle uint32, out_timestamp unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_interrupt_wait(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVQ out_timestamp+8(FP), SI
+	MOVQ vdso_zx_interrupt_wait(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_iommu_create(resource uint32, typ uint32, desc unsafe.Pointer, desc_size uint, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_iommu_create(SB),NOSPLIT,$8-36
 	GO_ARGS
@@ -1349,28 +1391,6 @@ TEXT runtime·vdsoCall_zx_iommu_create(SB),NOSPLIT,$8-36
 	MOVQ vdso_zx_iommu_create(SB), AX
 	CALL AX
 	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_ioports_request(resource uint32, io_addr uint16, len uint32) int32
-TEXT runtime·vdsoCall_zx_ioports_request(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL resource+0(FP), DI
-	MOVQ io_addr+4(FP), SI
-	MOVL len+8(FP), DX
-	MOVQ vdso_zx_ioports_request(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1397,6 +1417,28 @@ TEXT runtime·vdsoCall_zx_ioports_release(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_ioports_request(resource uint32, io_addr uint16, len uint32) int32
+TEXT runtime·vdsoCall_zx_ioports_request(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL resource+0(FP), DI
+	MOVQ io_addr+4(FP), SI
+	MOVL len+8(FP), DX
+	MOVQ vdso_zx_ioports_request(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_job_create(parent_job uint32, options uint32, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_job_create(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -1413,6 +1455,28 @@ TEXT runtime·vdsoCall_zx_job_create(SB),NOSPLIT,$8-20
 	MOVL options+4(FP), SI
 	MOVQ out+8(FP), DX
 	MOVQ vdso_zx_job_create(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_job_set_critical(job uint32, options uint32, process uint32) int32
+TEXT runtime·vdsoCall_zx_job_set_critical(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL job+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVL process+8(FP), DX
+	MOVQ vdso_zx_job_set_critical(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
 	POPQ R14
@@ -1443,8 +1507,8 @@ TEXT runtime·vdsoCall_zx_job_set_policy(SB),NOSPLIT,$8-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_job_set_critical(job uint32, options uint32, process uint32) int32
-TEXT runtime·vdsoCall_zx_job_set_critical(SB),NOSPLIT,$8-20
+// func vdsoCall_zx_ktrace_control(handle uint32, action uint32, options uint32, ptr unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_ktrace_control(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1455,12 +1519,13 @@ TEXT runtime·vdsoCall_zx_job_set_critical(SB),NOSPLIT,$8-20
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL job+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVL process+8(FP), DX
-	MOVQ vdso_zx_job_set_critical(SB), AX
+	MOVL handle+0(FP), DI
+	MOVL action+4(FP), SI
+	MOVL options+8(FP), DX
+	MOVQ ptr+16(FP), CX
+	MOVQ vdso_zx_ktrace_control(SB), AX
 	CALL AX
-	MOVL AX, ret+16(FP)
+	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1489,29 +1554,6 @@ TEXT runtime·vdsoCall_zx_ktrace_read(SB),NOSPLIT,$8-44
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_ktrace_control(handle uint32, action uint32, options uint32, ptr unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_ktrace_control(SB),NOSPLIT,$8-28
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL action+4(FP), SI
-	MOVL options+8(FP), DX
-	MOVQ ptr+16(FP), CX
-	MOVQ vdso_zx_ktrace_control(SB), AX
-	CALL AX
-	MOVL AX, ret+24(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_ktrace_write(handle uint32, id uint32, arg0 uint32, arg1 uint32) int32
 TEXT runtime·vdsoCall_zx_ktrace_write(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -1531,148 +1573,6 @@ TEXT runtime·vdsoCall_zx_ktrace_write(SB),NOSPLIT,$8-20
 	MOVQ vdso_zx_ktrace_write(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_nanosleep(deadline int64) int32
-TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ deadline+0(FP), DI
-	MOVQ vdso_zx_nanosleep(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_ticks_get() int64
-TEXT runtime·vdsoCall_zx_ticks_get(SB),NOSPLIT,$8-8
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_ticks_get(SB), AX
-	CALL AX
-	MOVQ AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_ticks_per_second() int64
-TEXT runtime·vdsoCall_zx_ticks_per_second(SB),NOSPLIT,$8-8
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_ticks_per_second(SB), AX
-	CALL AX
-	MOVQ AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_deadline_after(nanoseconds int64) int64
-TEXT runtime·vdsoCall_zx_deadline_after(SB),NOSPLIT,$8-16
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ nanoseconds+0(FP), DI
-	MOVQ vdso_zx_deadline_after(SB), AX
-	CALL AX
-	MOVQ AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmar_unmap_handle_close_thread_exit(vmar_handle uint32, addr uintptr, size uint, close_handle uint32) int32
-TEXT runtime·vdsoCall_zx_vmar_unmap_handle_close_thread_exit(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL vmar_handle+0(FP), DI
-	MOVQ addr+8(FP), SI
-	MOVQ size+16(FP), DX
-	MOVL close_handle+24(FP), CX
-	MOVQ vdso_zx_vmar_unmap_handle_close_thread_exit(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_futex_wake_handle_close_thread_exit(value_ptr unsafe.Pointer, wake_count uint32, new_value int32, close_handle uint32)
-TEXT runtime·vdsoCall_zx_futex_wake_handle_close_thread_exit(SB),NOSPLIT,$8-24
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ value_ptr+0(FP), DI
-	MOVL wake_count+8(FP), SI
-	MOVL new_value+12(FP), DX
-	MOVL close_handle+16(FP), CX
-	MOVQ vdso_zx_futex_wake_handle_close_thread_exit(SB), AX
-	CALL AX
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_ticks_get_via_kernel() int64
-TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$8-8
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_ticks_get_via_kernel(SB), AX
-	CALL AX
-	MOVQ AX, ret+0(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -1749,8 +1649,8 @@ TEXT runtime·vdsoCall_zx_mtrace_control(SB),NOSPLIT,$8-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_object_wait_one(handle uint32, signals uint32, deadline int64, observed unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_object_wait_one(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_nanosleep(deadline int64) int32
+TEXT runtime·vdsoCall_zx_nanosleep(SB),NOSPLIT,$8-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1761,45 +1661,16 @@ TEXT runtime·vdsoCall_zx_object_wait_one(SB),NOSPLIT,$8-28
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVL signals+4(FP), SI
-	MOVQ deadline+8(FP), DX
-	MOVQ observed+16(FP), CX
-	MOVQ vdso_zx_object_wait_one(SB), AX
+	MOVQ deadline+0(FP), DI
+	MOVQ vdso_zx_nanosleep(SB), AX
 	CALL AX
-	MOVL AX, ret+24(FP)
-	CALL runtime·exitsyscall(SB)
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_object_wait_many(items unsafe.Pointer, num_items uint, deadline int64) int32
-TEXT runtime·vdsoCall_zx_object_wait_many(SB),NOSPLIT,$8-28
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVQ items+0(FP), DI
-	MOVQ num_items+8(FP), SI
-	MOVQ deadline+16(FP), DX
-	MOVQ vdso_zx_object_wait_many(SB), AX
-	CALL AX
-	MOVL AX, ret+24(FP)
-	CALL runtime·exitsyscall(SB)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_object_wait_async(handle uint32, port uint32, key uint64, signals uint32, options uint32) int32
-TEXT runtime·vdsoCall_zx_object_wait_async(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_object_get_child(handle uint32, koid uint64, rights uint32, out unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_object_get_child(SB),NOSPLIT,$8-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1811,11 +1682,103 @@ TEXT runtime·vdsoCall_zx_object_wait_async(SB),NOSPLIT,$8-28
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVL port+4(FP), SI
-	MOVQ key+8(FP), DX
-	MOVL signals+16(FP), CX
-	MOVL options+20(FP), R8
-	MOVQ vdso_zx_object_wait_async(SB), AX
+	MOVQ koid+8(FP), SI
+	MOVL rights+16(FP), DX
+	MOVQ out+24(FP), CX
+	MOVQ vdso_zx_object_get_child(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_object_get_info(handle uint32, topic uint32, buffer unsafe.Pointer, buffer_size uint, actual unsafe.Pointer, avail unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_object_get_info(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL topic+4(FP), SI
+	MOVQ buffer+8(FP), DX
+	MOVQ buffer_size+16(FP), CX
+	MOVQ actual+24(FP), R8
+	MOVQ avail+32(FP), R9
+	MOVQ vdso_zx_object_get_info(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_object_get_property(handle uint32, property uint32, value unsafe.Pointer, value_size uint) int32
+TEXT runtime·vdsoCall_zx_object_get_property(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL property+4(FP), SI
+	MOVQ value+8(FP), DX
+	MOVQ value_size+16(FP), CX
+	MOVQ vdso_zx_object_get_property(SB), AX
+	CALL AX
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_object_set_profile(handle uint32, profile uint32, options uint32) int32
+TEXT runtime·vdsoCall_zx_object_set_profile(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL profile+4(FP), SI
+	MOVL options+8(FP), DX
+	MOVQ vdso_zx_object_set_profile(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_object_set_property(handle uint32, property uint32, value unsafe.Pointer, value_size uint) int32
+TEXT runtime·vdsoCall_zx_object_set_property(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL property+4(FP), SI
+	MOVQ value+8(FP), DX
+	MOVQ value_size+16(FP), CX
+	MOVQ vdso_zx_object_set_property(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
 	POPQ R14
@@ -1866,8 +1829,8 @@ TEXT runtime·vdsoCall_zx_object_signal_peer(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_object_get_property(handle uint32, property uint32, value unsafe.Pointer, value_size uint) int32
-TEXT runtime·vdsoCall_zx_object_get_property(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_object_wait_async(handle uint32, port uint32, key uint64, signals uint32, options uint32) int32
+TEXT runtime·vdsoCall_zx_object_wait_async(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1879,18 +1842,19 @@ TEXT runtime·vdsoCall_zx_object_get_property(SB),NOSPLIT,$8-28
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVL property+4(FP), SI
-	MOVQ value+8(FP), DX
-	MOVQ value_size+16(FP), CX
-	MOVQ vdso_zx_object_get_property(SB), AX
+	MOVL port+4(FP), SI
+	MOVQ key+8(FP), DX
+	MOVL signals+16(FP), CX
+	MOVL options+20(FP), R8
+	MOVQ vdso_zx_object_wait_async(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_object_set_property(handle uint32, property uint32, value unsafe.Pointer, value_size uint) int32
-TEXT runtime·vdsoCall_zx_object_set_property(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_object_wait_many(items unsafe.Pointer, num_items uint, deadline int64) int32
+TEXT runtime·vdsoCall_zx_object_wait_many(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1901,19 +1865,20 @@ TEXT runtime·vdsoCall_zx_object_set_property(SB),NOSPLIT,$8-28
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL property+4(FP), SI
-	MOVQ value+8(FP), DX
-	MOVQ value_size+16(FP), CX
-	MOVQ vdso_zx_object_set_property(SB), AX
+	CALL runtime·entersyscall(SB)
+	MOVQ items+0(FP), DI
+	MOVQ num_items+8(FP), SI
+	MOVQ deadline+16(FP), DX
+	MOVQ vdso_zx_object_wait_many(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_object_get_info(handle uint32, topic uint32, buffer unsafe.Pointer, buffer_size uint, actual unsafe.Pointer, avail unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_object_get_info(SB),NOSPLIT,$8-44
+// func vdsoCall_zx_object_wait_one(handle uint32, signals uint32, deadline int64, observed unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_object_wait_one(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -1924,60 +1889,15 @@ TEXT runtime·vdsoCall_zx_object_get_info(SB),NOSPLIT,$8-44
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
 	MOVL handle+0(FP), DI
-	MOVL topic+4(FP), SI
-	MOVQ buffer+8(FP), DX
-	MOVQ buffer_size+16(FP), CX
-	MOVQ actual+24(FP), R8
-	MOVQ avail+32(FP), R9
-	MOVQ vdso_zx_object_get_info(SB), AX
+	MOVL signals+4(FP), SI
+	MOVQ deadline+8(FP), DX
+	MOVQ observed+16(FP), CX
+	MOVQ vdso_zx_object_wait_one(SB), AX
 	CALL AX
-	MOVL AX, ret+40(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_object_get_child(handle uint32, koid uint64, rights uint32, out unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_object_get_child(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ koid+8(FP), SI
-	MOVL rights+16(FP), DX
-	MOVQ out+24(FP), CX
-	MOVQ vdso_zx_object_get_child(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_object_set_profile(handle uint32, profile uint32, options uint32) int32
-TEXT runtime·vdsoCall_zx_object_set_profile(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL profile+4(FP), SI
-	MOVL options+8(FP), DX
-	MOVQ vdso_zx_object_set_profile(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
+	MOVL AX, ret+24(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -2045,31 +1965,6 @@ TEXT runtime·vdsoCall_zx_pager_detach_vmo(SB),NOSPLIT,$8-12
 	MOVQ vdso_zx_pager_detach_vmo(SB), AX
 	CALL AX
 	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_pager_supply_pages(pager uint32, pager_vmo uint32, offset uint64, length uint64, aux_vmo uint32, aux_offset uint64) int32
-TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$8-44
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL pager+0(FP), DI
-	MOVL pager_vmo+4(FP), SI
-	MOVQ offset+8(FP), DX
-	MOVQ length+16(FP), CX
-	MOVL aux_vmo+24(FP), R8
-	MOVQ aux_offset+32(FP), R9
-	MOVQ vdso_zx_pager_supply_pages(SB), AX
-	CALL AX
-	MOVL AX, ret+40(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -2157,6 +2052,31 @@ TEXT runtime·vdsoCall_zx_pager_query_vmo_stats(SB),NOSPLIT,$8-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_pager_supply_pages(pager uint32, pager_vmo uint32, offset uint64, length uint64, aux_vmo uint32, aux_offset uint64) int32
+TEXT runtime·vdsoCall_zx_pager_supply_pages(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL pager+0(FP), DI
+	MOVL pager_vmo+4(FP), SI
+	MOVQ offset+8(FP), DX
+	MOVQ length+16(FP), CX
+	MOVL aux_vmo+24(FP), R8
+	MOVQ aux_offset+32(FP), R9
+	MOVQ vdso_zx_pager_supply_pages(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_pc_firmware_tables(handle uint32, acpi_rsdp unsafe.Pointer, smbios unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_pc_firmware_tables(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -2179,8 +2099,8 @@ TEXT runtime·vdsoCall_zx_pc_firmware_tables(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_get_nth_device(handle uint32, index uint32, out_info unsafe.Pointer, out_handle unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio uint32, base uint64, len uint64, add uint32) int32
+TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$8-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -2192,18 +2112,19 @@ TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$8-28
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVL index+4(FP), SI
-	MOVQ out_info+8(FP), DX
-	MOVQ out_handle+16(FP), CX
-	MOVQ vdso_zx_pci_get_nth_device(SB), AX
+	MOVL mmio+4(FP), SI
+	MOVQ base+8(FP), DX
+	MOVQ len+16(FP), CX
+	MOVL add+24(FP), R8
+	MOVQ vdso_zx_pci_add_subtract_io_range(SB), AX
 	CALL AX
-	MOVL AX, ret+24(FP)
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable uint32) int32
-TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-12
+// func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
+TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -2215,30 +2136,23 @@ TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-12
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVL enable+4(FP), SI
-	MOVQ vdso_zx_pci_enable_bus_master(SB), AX
+	MOVQ bus+4(FP), SI
+	MOVQ dev+5(FP), DX
+	MOVQ funk+6(FP), CX
+	MOVQ offset+7(FP), R8
+	MOVQ val+8(FP), R9
+	MOVQ width+16(FP), R12
+	MOVL write+24(FP), R13
+	MOVQ SP, BP   // BP is preserved across vsdo call by the x86-64 ABI
+	ANDQ $~15, SP // stack alignment for x86-64 ABI
+	PUSHQ R13
+	PUSHQ R12
+	MOVQ vdso_zx_pci_cfg_pio_rw(SB), AX
 	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_pci_reset_device(handle uint32) int32
-TEXT runtime·vdsoCall_zx_pci_reset_device(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ vdso_zx_pci_reset_device(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
+	POPQ R12
+	POPQ R13
+	MOVQ BP, SP
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -2289,8 +2203,8 @@ TEXT runtime·vdsoCall_zx_pci_config_write(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_cfg_pio_rw(handle uint32, bus uint8, dev uint8, funk uint8, offset uint8, val unsafe.Pointer, width uint, write uint32) int32
-TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
+// func vdsoCall_zx_pci_enable_bus_master(handle uint32, enable uint32) int32
+TEXT runtime·vdsoCall_zx_pci_enable_bus_master(SB),NOSPLIT,$8-12
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -2302,23 +2216,10 @@ TEXT runtime·vdsoCall_zx_pci_cfg_pio_rw(SB),NOSPLIT,$40-36
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVQ bus+4(FP), SI
-	MOVQ dev+5(FP), DX
-	MOVQ funk+6(FP), CX
-	MOVQ offset+7(FP), R8
-	MOVQ val+8(FP), R9
-	MOVQ width+16(FP), R12
-	MOVL write+24(FP), R13
-	MOVQ SP, BP   // BP is preserved across vsdo call by the x86-64 ABI
-	ANDQ $~15, SP // stack alignment for x86-64 ABI
-	PUSHQ R13
-	PUSHQ R12
-	MOVQ vdso_zx_pci_cfg_pio_rw(SB), AX
+	MOVL enable+4(FP), SI
+	MOVQ vdso_zx_pci_enable_bus_master(SB), AX
 	CALL AX
-	POPQ R12
-	POPQ R13
-	MOVQ BP, SP
-	MOVL AX, ret+32(FP)
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -2340,6 +2241,51 @@ TEXT runtime·vdsoCall_zx_pci_get_bar(SB),NOSPLIT,$8-28
 	MOVQ out_bar+8(FP), DX
 	MOVQ out_handle+16(FP), CX
 	MOVQ vdso_zx_pci_get_bar(SB), AX
+	CALL AX
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_pci_get_nth_device(handle uint32, index uint32, out_info unsafe.Pointer, out_handle unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_pci_get_nth_device(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL index+4(FP), SI
+	MOVQ out_info+8(FP), DX
+	MOVQ out_handle+16(FP), CX
+	MOVQ vdso_zx_pci_get_nth_device(SB), AX
+	CALL AX
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_pci_init(handle uint32, init_buf unsafe.Pointer, len uint32) int32
+TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$8-28
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ init_buf+8(FP), SI
+	MOVL len+16(FP), DX
+	MOVQ vdso_zx_pci_init(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
 	POPQ R14
@@ -2390,6 +2336,26 @@ TEXT runtime·vdsoCall_zx_pci_query_irq_mode(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_pci_reset_device(handle uint32) int32
+TEXT runtime·vdsoCall_zx_pci_reset_device(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ vdso_zx_pci_reset_device(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_pci_set_irq_mode(handle uint32, mode uint32, requested_irq_count uint32) int32
 TEXT runtime·vdsoCall_zx_pci_set_irq_mode(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -2412,52 +2378,6 @@ TEXT runtime·vdsoCall_zx_pci_set_irq_mode(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_pci_init(handle uint32, init_buf unsafe.Pointer, len uint32) int32
-TEXT runtime·vdsoCall_zx_pci_init(SB),NOSPLIT,$8-28
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ init_buf+8(FP), SI
-	MOVL len+16(FP), DX
-	MOVQ vdso_zx_pci_init(SB), AX
-	CALL AX
-	MOVL AX, ret+24(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_pci_add_subtract_io_range(handle uint32, mmio uint32, base uint64, len uint64, add uint32) int32
-TEXT runtime·vdsoCall_zx_pci_add_subtract_io_range(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL mmio+4(FP), SI
-	MOVQ base+8(FP), DX
-	MOVQ len+16(FP), CX
-	MOVL add+24(FP), R8
-	MOVQ vdso_zx_pci_add_subtract_io_range(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_pmt_unpin(handle uint32) int32
 TEXT runtime·vdsoCall_zx_pmt_unpin(SB),NOSPLIT,$8-12
 	GO_ARGS
@@ -2474,6 +2394,28 @@ TEXT runtime·vdsoCall_zx_pmt_unpin(SB),NOSPLIT,$8-12
 	MOVQ vdso_zx_pmt_unpin(SB), AX
 	CALL AX
 	MOVL AX, ret+8(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_port_cancel(handle uint32, source uint32, key uint64) int32
+TEXT runtime·vdsoCall_zx_port_cancel(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL source+4(FP), SI
+	MOVQ key+8(FP), DX
+	MOVQ vdso_zx_port_cancel(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -2544,47 +2486,6 @@ TEXT runtime·vdsoCall_zx_port_wait(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_port_cancel(handle uint32, source uint32, key uint64) int32
-TEXT runtime·vdsoCall_zx_port_cancel(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL source+4(FP), SI
-	MOVQ key+8(FP), DX
-	MOVQ vdso_zx_port_cancel(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_process_exit(retcode int64)
-TEXT runtime·vdsoCall_zx_process_exit(SB),NOSPLIT,$8-8
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ retcode+0(FP), DI
-	MOVQ vdso_zx_process_exit(SB), AX
-	CALL AX
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_process_create(job uint32, name unsafe.Pointer, name_size uint, options uint32, proc_handle unsafe.Pointer, vmar_handle unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_process_create(SB),NOSPLIT,$8-52
 	GO_ARGS
@@ -2635,8 +2536,8 @@ TEXT runtime·vdsoCall_zx_process_create_shared(SB),NOSPLIT,$8-44
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_process_start(handle uint32, thread uint32, entry uintptr, stack uintptr, arg1 uint32, arg2 uintptr) int32
-TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$8-44
+// func vdsoCall_zx_process_exit(retcode int64)
+TEXT runtime·vdsoCall_zx_process_exit(SB),NOSPLIT,$8-8
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -2647,15 +2548,9 @@ TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$8-44
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL thread+4(FP), SI
-	MOVQ entry+8(FP), DX
-	MOVQ stack+16(FP), CX
-	MOVL arg1+24(FP), R8
-	MOVQ arg2+32(FP), R9
-	MOVQ vdso_zx_process_start(SB), AX
+	MOVQ retcode+0(FP), DI
+	MOVQ vdso_zx_process_exit(SB), AX
 	CALL AX
-	MOVL AX, ret+40(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -2678,6 +2573,31 @@ TEXT runtime·vdsoCall_zx_process_read_memory(SB),NOSPLIT,$8-44
 	MOVQ buffer_size+24(FP), CX
 	MOVQ actual+32(FP), R8
 	MOVQ vdso_zx_process_read_memory(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_process_start(handle uint32, thread uint32, entry uintptr, stack uintptr, arg1 uint32, arg2 uintptr) int32
+TEXT runtime·vdsoCall_zx_process_start(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL thread+4(FP), SI
+	MOVQ entry+8(FP), DX
+	MOVQ stack+16(FP), CX
+	MOVL arg1+24(FP), R8
+	MOVQ arg2+32(FP), R9
+	MOVQ vdso_zx_process_start(SB), AX
 	CALL AX
 	MOVL AX, ret+40(FP)
 	POPQ R14
@@ -2784,27 +2704,6 @@ TEXT runtime·vdsoCall_zx_restricted_enter(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_restricted_write_state(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ buffer+0(FP), DI
-	MOVQ buffer_size+8(FP), SI
-	MOVQ vdso_zx_restricted_write_state(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_restricted_read_state(buffer unsafe.Pointer, buffer_size uint) int32
 TEXT runtime·vdsoCall_zx_restricted_read_state(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -2820,6 +2719,27 @@ TEXT runtime·vdsoCall_zx_restricted_read_state(SB),NOSPLIT,$8-20
 	MOVQ buffer+0(FP), DI
 	MOVQ buffer_size+8(FP), SI
 	MOVQ vdso_zx_restricted_read_state(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_restricted_write_state(buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_restricted_write_state(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ buffer+0(FP), DI
+	MOVQ buffer_size+8(FP), SI
+	MOVQ vdso_zx_restricted_write_state(SB), AX
 	CALL AX
 	MOVL AX, ret+16(FP)
 	POPQ R14
@@ -2870,30 +2790,6 @@ TEXT runtime·vdsoCall_zx_socket_create(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_socket_write(handle uint32, options uint32, buffer unsafe.Pointer, buffer_size uint, actual unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_socket_write(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ buffer+8(FP), DX
-	MOVQ buffer_size+16(FP), CX
-	MOVQ actual+24(FP), R8
-	MOVQ vdso_zx_socket_write(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_socket_read(handle uint32, options uint32, buffer unsafe.Pointer, buffer_size uint, actual unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_socket_read(SB),NOSPLIT,$8-36
 	GO_ARGS
@@ -2940,6 +2836,30 @@ TEXT runtime·vdsoCall_zx_socket_set_disposition(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_socket_write(handle uint32, options uint32, buffer unsafe.Pointer, buffer_size uint, actual unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_socket_write(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ buffer+8(FP), DX
+	MOVQ buffer_size+16(FP), CX
+	MOVQ actual+24(FP), R8
+	MOVQ vdso_zx_socket_write(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_stream_create(options uint32, vmo uint32, seek uint64, out_stream unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_stream_create(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -2959,59 +2879,6 @@ TEXT runtime·vdsoCall_zx_stream_create(SB),NOSPLIT,$8-28
 	MOVQ vdso_zx_stream_create(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_stream_writev(handle uint32, options uint32, vector unsafe.Pointer, num_vector uint, actual unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ vector+8(FP), DX
-	MOVQ num_vector+16(FP), CX
-	MOVQ actual+24(FP), R8
-	MOVQ vdso_zx_stream_writev(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	CALL runtime·exitsyscall(SB)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_stream_writev_at(handle uint32, options uint32, offset uint64, vector unsafe.Pointer, num_vector uint, actual unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$8-44
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVL options+4(FP), SI
-	MOVQ offset+8(FP), DX
-	MOVQ vector+16(FP), CX
-	MOVQ num_vector+24(FP), R8
-	MOVQ actual+32(FP), R9
-	MOVQ vdso_zx_stream_writev_at(SB), AX
-	CALL AX
-	MOVL AX, ret+40(FP)
-	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3088,6 +2955,79 @@ TEXT runtime·vdsoCall_zx_stream_seek(SB),NOSPLIT,$8-28
 	MOVQ vdso_zx_stream_seek(SB), AX
 	CALL AX
 	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_stream_writev(handle uint32, options uint32, vector unsafe.Pointer, num_vector uint, actual unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_stream_writev(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ vector+8(FP), DX
+	MOVQ num_vector+16(FP), CX
+	MOVQ actual+24(FP), R8
+	MOVQ vdso_zx_stream_writev(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_stream_writev_at(handle uint32, options uint32, offset uint64, vector unsafe.Pointer, num_vector uint, actual unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_stream_writev_at(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVL options+4(FP), SI
+	MOVQ offset+8(FP), DX
+	MOVQ vector+16(FP), CX
+	MOVQ num_vector+24(FP), R8
+	MOVQ actual+32(FP), R9
+	MOVQ vdso_zx_stream_writev_at(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_syscall_next_1(arg int32) int32
+TEXT runtime·vdsoCall_zx_syscall_next_1(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL arg+0(FP), DI
+	MOVQ vdso_zx_syscall_next_1(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3311,48 +3251,6 @@ TEXT runtime·vdsoCall_zx_syscall_test_8(SB),NOSPLIT,$40-36
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_syscall_next_1(arg int32) int32
-TEXT runtime·vdsoCall_zx_syscall_next_1(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL arg+0(FP), DI
-	MOVQ vdso_zx_syscall_next_1(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_syscall_test_wrapper(a int32, b int32, c int32) int32
-TEXT runtime·vdsoCall_zx_syscall_test_wrapper(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL a+0(FP), DI
-	MOVL b+4(FP), SI
-	MOVL c+8(FP), DX
-	MOVQ vdso_zx_syscall_test_wrapper(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_syscall_test_handle_create(return_value int32, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_syscall_test_handle_create(SB),NOSPLIT,$8-20
 	GO_ARGS
@@ -3374,29 +3272,6 @@ TEXT runtime·vdsoCall_zx_syscall_test_handle_create(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_syscall_test_widening_unsigned_narrow(a uint64, b uint32, c uint16, d uint8) uint64
-TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_narrow(SB),NOSPLIT,$8-23
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ a+0(FP), DI
-	MOVL b+8(FP), SI
-	MOVQ c+12(FP), DX
-	MOVQ d+14(FP), CX
-	MOVQ vdso_zx_syscall_test_widening_unsigned_narrow(SB), AX
-	CALL AX
-	MOVQ AX, ret+15(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_syscall_test_widening_signed_narrow(a int64, b int32, c int16, d int8) int64
 TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_narrow(SB),NOSPLIT,$8-23
 	GO_ARGS
@@ -3414,29 +3289,6 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_narrow(SB),NOSPLIT,$8-23
 	MOVQ c+12(FP), DX
 	MOVQ d+14(FP), CX
 	MOVQ vdso_zx_syscall_test_widening_signed_narrow(SB), AX
-	CALL AX
-	MOVQ AX, ret+15(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_syscall_test_widening_unsigned_wide(a uint64, b uint32, c uint16, d uint8) uint64
-TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_wide(SB),NOSPLIT,$8-23
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ a+0(FP), DI
-	MOVL b+8(FP), SI
-	MOVQ c+12(FP), DX
-	MOVQ d+14(FP), CX
-	MOVQ vdso_zx_syscall_test_widening_unsigned_wide(SB), AX
 	CALL AX
 	MOVQ AX, ret+15(FP)
 	POPQ R14
@@ -3466,6 +3318,74 @@ TEXT runtime·vdsoCall_zx_syscall_test_widening_signed_wide(SB),NOSPLIT,$8-23
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_syscall_test_widening_unsigned_narrow(a uint64, b uint32, c uint16, d uint8) uint64
+TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_narrow(SB),NOSPLIT,$8-23
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ a+0(FP), DI
+	MOVL b+8(FP), SI
+	MOVQ c+12(FP), DX
+	MOVQ d+14(FP), CX
+	MOVQ vdso_zx_syscall_test_widening_unsigned_narrow(SB), AX
+	CALL AX
+	MOVQ AX, ret+15(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_syscall_test_widening_unsigned_wide(a uint64, b uint32, c uint16, d uint8) uint64
+TEXT runtime·vdsoCall_zx_syscall_test_widening_unsigned_wide(SB),NOSPLIT,$8-23
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ a+0(FP), DI
+	MOVL b+8(FP), SI
+	MOVQ c+12(FP), DX
+	MOVQ d+14(FP), CX
+	MOVQ vdso_zx_syscall_test_widening_unsigned_wide(SB), AX
+	CALL AX
+	MOVQ AX, ret+15(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_syscall_test_wrapper(a int32, b int32, c int32) int32
+TEXT runtime·vdsoCall_zx_syscall_test_wrapper(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL a+0(FP), DI
+	MOVL b+4(FP), SI
+	MOVL c+8(FP), DX
+	MOVQ vdso_zx_syscall_test_wrapper(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_system_get_dcache_line_size() uint32
 TEXT runtime·vdsoCall_zx_system_get_dcache_line_size(SB),NOSPLIT,$8-4
 	GO_ARGS
@@ -3481,103 +3401,6 @@ TEXT runtime·vdsoCall_zx_system_get_dcache_line_size(SB),NOSPLIT,$8-4
 	MOVQ vdso_zx_system_get_dcache_line_size(SB), AX
 	CALL AX
 	MOVL AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_system_get_num_cpus() uint32
-TEXT runtime·vdsoCall_zx_system_get_num_cpus(SB),NOSPLIT,$8-4
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_system_get_num_cpus(SB), AX
-	CALL AX
-	MOVL AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_system_get_version_string() unsafe.Pointer
-TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$8-8
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_system_get_version_string(SB), AX
-	CALL AX
-	MOVQ AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_system_get_page_size() uint32
-TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$8-4
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_system_get_page_size(SB), AX
-	CALL AX
-	MOVL AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_system_get_physmem() uint64
-TEXT runtime·vdsoCall_zx_system_get_physmem(SB),NOSPLIT,$8-8
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_system_get_physmem(SB), AX
-	CALL AX
-	MOVQ AX, ret+0(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_system_get_features(kind uint32, features unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_system_get_features(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL kind+0(FP), DI
-	MOVQ features+8(FP), SI
-	MOVQ vdso_zx_system_get_features(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3604,8 +3427,8 @@ TEXT runtime·vdsoCall_zx_system_get_event(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_system_set_performance_info(resource uint32, topic uint32, info unsafe.Pointer, count uint) int32
-TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_system_get_features(kind uint32, features unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_system_get_features(SB),NOSPLIT,$8-20
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -3616,13 +3439,49 @@ TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$8-28
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL resource+0(FP), DI
-	MOVL topic+4(FP), SI
-	MOVQ info+8(FP), DX
-	MOVQ count+16(FP), CX
-	MOVQ vdso_zx_system_set_performance_info(SB), AX
+	MOVL kind+0(FP), DI
+	MOVQ features+8(FP), SI
+	MOVQ vdso_zx_system_get_features(SB), AX
 	CALL AX
-	MOVL AX, ret+24(FP)
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_get_num_cpus() uint32
+TEXT runtime·vdsoCall_zx_system_get_num_cpus(SB),NOSPLIT,$8-4
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_system_get_num_cpus(SB), AX
+	CALL AX
+	MOVL AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_get_page_size() uint32
+TEXT runtime·vdsoCall_zx_system_get_page_size(SB),NOSPLIT,$8-4
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_system_get_page_size(SB), AX
+	CALL AX
+	MOVL AX, ret+0(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3647,6 +3506,44 @@ TEXT runtime·vdsoCall_zx_system_get_performance_info(SB),NOSPLIT,$8-36
 	MOVQ vdso_zx_system_get_performance_info(SB), AX
 	CALL AX
 	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_get_physmem() uint64
+TEXT runtime·vdsoCall_zx_system_get_physmem(SB),NOSPLIT,$8-8
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_system_get_physmem(SB), AX
+	CALL AX
+	MOVQ AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_system_get_version_string() unsafe.Pointer
+TEXT runtime·vdsoCall_zx_system_get_version_string(SB),NOSPLIT,$8-8
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_system_get_version_string(SB), AX
+	CALL AX
+	MOVQ AX, ret+0(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3717,8 +3614,8 @@ TEXT runtime·vdsoCall_zx_system_powerctl(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_task_suspend(handle uint32, token unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_task_suspend(SB),NOSPLIT,$8-20
+// func vdsoCall_zx_system_set_performance_info(resource uint32, topic uint32, info unsafe.Pointer, count uint) int32
+TEXT runtime·vdsoCall_zx_system_set_performance_info(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -3729,32 +3626,13 @@ TEXT runtime·vdsoCall_zx_task_suspend(SB),NOSPLIT,$8-20
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ token+8(FP), SI
-	MOVQ vdso_zx_task_suspend(SB), AX
+	MOVL resource+0(FP), DI
+	MOVL topic+4(FP), SI
+	MOVQ info+8(FP), DX
+	MOVQ count+16(FP), CX
+	MOVQ vdso_zx_system_set_performance_info(SB), AX
 	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_task_suspend_token(handle uint32, token unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_task_suspend_token(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ token+8(FP), SI
-	MOVQ vdso_zx_task_suspend_token(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
+	MOVL AX, ret+24(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3801,8 +3679,8 @@ TEXT runtime·vdsoCall_zx_task_kill(SB),NOSPLIT,$8-12
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_thread_exit()
-TEXT runtime·vdsoCall_zx_thread_exit(SB),NOSPLIT,$8-0
+// func vdsoCall_zx_task_suspend(handle uint32, token unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_task_suspend(SB),NOSPLIT,$8-20
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -3813,8 +3691,32 @@ TEXT runtime·vdsoCall_zx_thread_exit(SB),NOSPLIT,$8-0
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVQ vdso_zx_thread_exit(SB), AX
+	MOVL handle+0(FP), DI
+	MOVQ token+8(FP), SI
+	MOVQ vdso_zx_task_suspend(SB), AX
 	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_task_suspend_token(handle uint32, token unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_task_suspend_token(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ token+8(FP), SI
+	MOVQ vdso_zx_task_suspend_token(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3843,8 +3745,8 @@ TEXT runtime·vdsoCall_zx_thread_create(SB),NOSPLIT,$8-44
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_thread_start(handle uint32, thread_entry uintptr, stack uintptr, arg1 uintptr, arg2 uintptr) int32
-TEXT runtime·vdsoCall_zx_thread_start(SB),NOSPLIT,$8-44
+// func vdsoCall_zx_thread_exit()
+TEXT runtime·vdsoCall_zx_thread_exit(SB),NOSPLIT,$8-0
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -3855,14 +3757,28 @@ TEXT runtime·vdsoCall_zx_thread_start(SB),NOSPLIT,$8-44
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ thread_entry+8(FP), SI
-	MOVQ stack+16(FP), DX
-	MOVQ arg1+24(FP), CX
-	MOVQ arg2+32(FP), R8
-	MOVQ vdso_zx_thread_start(SB), AX
+	MOVQ vdso_zx_thread_exit(SB), AX
 	CALL AX
-	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_thread_legacy_yield(options uint32) int32
+TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL options+0(FP), DI
+	MOVQ vdso_zx_thread_legacy_yield(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -3890,6 +3806,30 @@ TEXT runtime·vdsoCall_zx_thread_read_state(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
+// func vdsoCall_zx_thread_start(handle uint32, thread_entry uintptr, stack uintptr, arg1 uintptr, arg2 uintptr) int32
+TEXT runtime·vdsoCall_zx_thread_start(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ thread_entry+8(FP), SI
+	MOVQ stack+16(FP), DX
+	MOVQ arg1+24(FP), CX
+	MOVQ arg2+32(FP), R8
+	MOVQ vdso_zx_thread_start(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
 // func vdsoCall_zx_thread_write_state(handle uint32, kind uint32, buffer unsafe.Pointer, buffer_size uint) int32
 TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -3913,8 +3853,8 @@ TEXT runtime·vdsoCall_zx_thread_write_state(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_thread_legacy_yield(options uint32) int32
-TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$8-12
+// func vdsoCall_zx_ticks_get() int64
+TEXT runtime·vdsoCall_zx_ticks_get(SB),NOSPLIT,$8-8
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -3925,8 +3865,65 @@ TEXT runtime·vdsoCall_zx_thread_legacy_yield(SB),NOSPLIT,$8-12
 	MOVQ -8(DX), CX
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
-	MOVL options+0(FP), DI
-	MOVQ vdso_zx_thread_legacy_yield(SB), AX
+	MOVQ vdso_zx_ticks_get(SB), AX
+	CALL AX
+	MOVQ AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_ticks_get_via_kernel() int64
+TEXT runtime·vdsoCall_zx_ticks_get_via_kernel(SB),NOSPLIT,$8-8
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_ticks_get_via_kernel(SB), AX
+	CALL AX
+	MOVQ AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_ticks_per_second() int64
+TEXT runtime·vdsoCall_zx_ticks_per_second(SB),NOSPLIT,$8-8
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVQ vdso_zx_ticks_per_second(SB), AX
+	CALL AX
+	MOVQ AX, ret+0(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_timer_cancel(handle uint32) int32
+TEXT runtime·vdsoCall_zx_timer_cancel(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ vdso_zx_timer_cancel(SB), AX
 	CALL AX
 	MOVL AX, ret+8(FP)
 	POPQ R14
@@ -3977,26 +3974,6 @@ TEXT runtime·vdsoCall_zx_timer_set(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_timer_cancel(handle uint32) int32
-TEXT runtime·vdsoCall_zx_timer_cancel(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ vdso_zx_timer_cancel(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_vcpu_create(guest uint32, options uint32, entry uintptr, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_vcpu_create(SB),NOSPLIT,$8-28
 	GO_ARGS
@@ -4043,26 +4020,6 @@ TEXT runtime·vdsoCall_zx_vcpu_enter(SB),NOSPLIT,$8-20
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_vcpu_kick(handle uint32) int32
-TEXT runtime·vdsoCall_zx_vcpu_kick(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ vdso_zx_vcpu_kick(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_vcpu_interrupt(handle uint32, vector uint32) int32
 TEXT runtime·vdsoCall_zx_vcpu_interrupt(SB),NOSPLIT,$8-12
 	GO_ARGS
@@ -4078,6 +4035,26 @@ TEXT runtime·vdsoCall_zx_vcpu_interrupt(SB),NOSPLIT,$8-12
 	MOVL handle+0(FP), DI
 	MOVL vector+4(FP), SI
 	MOVQ vdso_zx_vcpu_interrupt(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vcpu_kick(handle uint32) int32
+TEXT runtime·vdsoCall_zx_vcpu_kick(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ vdso_zx_vcpu_kick(SB), AX
 	CALL AX
 	MOVL AX, ret+8(FP)
 	POPQ R14
@@ -4206,8 +4183,8 @@ TEXT runtime·vdsoCall_zx_vmar_map(SB),NOSPLIT,$32-52
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_vmar_unmap(handle uint32, addr uintptr, len uint) int32
-TEXT runtime·vdsoCall_zx_vmar_unmap(SB),NOSPLIT,$8-28
+// func vdsoCall_zx_vmar_op_range(handle uint32, op uint32, address uintptr, size uint, buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_vmar_op_range(SB),NOSPLIT,$8-44
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -4219,11 +4196,14 @@ TEXT runtime·vdsoCall_zx_vmar_unmap(SB),NOSPLIT,$8-28
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVQ addr+8(FP), SI
-	MOVQ len+16(FP), DX
-	MOVQ vdso_zx_vmar_unmap(SB), AX
+	MOVL op+4(FP), SI
+	MOVQ address+8(FP), DX
+	MOVQ size+16(FP), CX
+	MOVQ buffer+24(FP), R8
+	MOVQ buffer_size+32(FP), R9
+	MOVQ vdso_zx_vmar_op_range(SB), AX
 	CALL AX
-	MOVL AX, ret+24(FP)
+	MOVL AX, ret+40(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -4251,8 +4231,8 @@ TEXT runtime·vdsoCall_zx_vmar_protect(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_vmar_op_range(handle uint32, op uint32, address uintptr, size uint, buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_vmar_op_range(SB),NOSPLIT,$8-44
+// func vdsoCall_zx_vmar_unmap(handle uint32, addr uintptr, len uint) int32
+TEXT runtime·vdsoCall_zx_vmar_unmap(SB),NOSPLIT,$8-28
 	GO_ARGS
 	NO_LOCAL_POINTERS
 	get_tls(CX)
@@ -4264,14 +4244,34 @@ TEXT runtime·vdsoCall_zx_vmar_op_range(SB),NOSPLIT,$8-44
 	MOVQ CX, m_vdsoPC(R14)
 	MOVQ DX, m_vdsoSP(R14)
 	MOVL handle+0(FP), DI
-	MOVL op+4(FP), SI
-	MOVQ address+8(FP), DX
-	MOVQ size+16(FP), CX
-	MOVQ buffer+24(FP), R8
-	MOVQ buffer_size+32(FP), R9
-	MOVQ vdso_zx_vmar_op_range(SB), AX
+	MOVQ addr+8(FP), SI
+	MOVQ len+16(FP), DX
+	MOVQ vdso_zx_vmar_unmap(SB), AX
 	CALL AX
-	MOVL AX, ret+40(FP)
+	MOVL AX, ret+24(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmar_unmap_handle_close_thread_exit(vmar_handle uint32, addr uintptr, size uint, close_handle uint32) int32
+TEXT runtime·vdsoCall_zx_vmar_unmap_handle_close_thread_exit(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL vmar_handle+0(FP), DI
+	MOVQ addr+8(FP), SI
+	MOVQ size+16(FP), DX
+	MOVL close_handle+24(FP), CX
+	MOVQ vdso_zx_vmar_unmap_handle_close_thread_exit(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -4298,125 +4298,6 @@ TEXT runtime·vdsoCall_zx_vmo_create(SB),NOSPLIT,$8-28
 	MOVQ $0, m_vdsoSP(R14)
 	RET
 
-// func vdsoCall_zx_vmo_read(handle uint32, buffer unsafe.Pointer, offset uint64, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_vmo_read(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVQ buffer+8(FP), SI
-	MOVQ offset+16(FP), DX
-	MOVQ buffer_size+24(FP), CX
-	MOVQ vdso_zx_vmo_read(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	CALL runtime·exitsyscall(SB)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmo_write(handle uint32, buffer unsafe.Pointer, offset uint64, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_vmo_write(SB),NOSPLIT,$8-36
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVQ buffer+8(FP), SI
-	MOVQ offset+16(FP), DX
-	MOVQ buffer_size+24(FP), CX
-	MOVQ vdso_zx_vmo_write(SB), AX
-	CALL AX
-	MOVL AX, ret+32(FP)
-	CALL runtime·exitsyscall(SB)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmo_get_size(handle uint32, size unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_vmo_get_size(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ size+8(FP), SI
-	MOVQ vdso_zx_vmo_get_size(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmo_set_size(handle uint32, size uint64) int32
-TEXT runtime·vdsoCall_zx_vmo_set_size(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVQ size+8(FP), SI
-	MOVQ vdso_zx_vmo_set_size(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmo_op_range(handle uint32, op uint32, offset uint64, size uint64, buffer unsafe.Pointer, buffer_size uint) int32
-TEXT runtime·vdsoCall_zx_vmo_op_range(SB),NOSPLIT,$8-44
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	CALL runtime·entersyscall(SB)
-	MOVL handle+0(FP), DI
-	MOVL op+4(FP), SI
-	MOVQ offset+8(FP), DX
-	MOVQ size+16(FP), CX
-	MOVQ buffer+24(FP), R8
-	MOVQ buffer_size+32(FP), R9
-	MOVQ vdso_zx_vmo_op_range(SB), AX
-	CALL AX
-	MOVL AX, ret+40(FP)
-	CALL runtime·exitsyscall(SB)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
 // func vdsoCall_zx_vmo_create_child(handle uint32, options uint32, offset uint64, size uint64, out unsafe.Pointer) int32
 TEXT runtime·vdsoCall_zx_vmo_create_child(SB),NOSPLIT,$8-36
 	GO_ARGS
@@ -4437,49 +4318,6 @@ TEXT runtime·vdsoCall_zx_vmo_create_child(SB),NOSPLIT,$8-36
 	MOVQ vdso_zx_vmo_create_child(SB), AX
 	CALL AX
 	MOVL AX, ret+32(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmo_set_cache_policy(handle uint32, cache_policy uint32) int32
-TEXT runtime·vdsoCall_zx_vmo_set_cache_policy(SB),NOSPLIT,$8-12
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL cache_policy+4(FP), SI
-	MOVQ vdso_zx_vmo_set_cache_policy(SB), AX
-	CALL AX
-	MOVL AX, ret+8(FP)
-	POPQ R14
-	MOVQ $0, m_vdsoSP(R14)
-	RET
-
-// func vdsoCall_zx_vmo_replace_as_executable(handle uint32, vmex uint32, out unsafe.Pointer) int32
-TEXT runtime·vdsoCall_zx_vmo_replace_as_executable(SB),NOSPLIT,$8-20
-	GO_ARGS
-	NO_LOCAL_POINTERS
-	get_tls(CX)
-	MOVQ g(CX), AX
-	MOVQ g_m(AX), R14
-	PUSHQ R14
-	LEAQ ret+0(FP), DX
-	MOVQ -8(DX), CX
-	MOVQ CX, m_vdsoPC(R14)
-	MOVQ DX, m_vdsoSP(R14)
-	MOVL handle+0(FP), DI
-	MOVL vmex+4(FP), SI
-	MOVQ out+8(FP), DX
-	MOVQ vdso_zx_vmo_replace_as_executable(SB), AX
-	CALL AX
-	MOVL AX, ret+16(FP)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET
@@ -4526,6 +4364,168 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
 	MOVQ vdso_zx_vmo_create_physical(SB), AX
 	CALL AX
 	MOVL AX, ret+32(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_get_size(handle uint32, size unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_vmo_get_size(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ size+8(FP), SI
+	MOVQ vdso_zx_vmo_get_size(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_op_range(handle uint32, op uint32, offset uint64, size uint64, buffer unsafe.Pointer, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_vmo_op_range(SB),NOSPLIT,$8-44
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVL op+4(FP), SI
+	MOVQ offset+8(FP), DX
+	MOVQ size+16(FP), CX
+	MOVQ buffer+24(FP), R8
+	MOVQ buffer_size+32(FP), R9
+	MOVQ vdso_zx_vmo_op_range(SB), AX
+	CALL AX
+	MOVL AX, ret+40(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_read(handle uint32, buffer unsafe.Pointer, offset uint64, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_vmo_read(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVQ buffer+8(FP), SI
+	MOVQ offset+16(FP), DX
+	MOVQ buffer_size+24(FP), CX
+	MOVQ vdso_zx_vmo_read(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	CALL runtime·exitsyscall(SB)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_replace_as_executable(handle uint32, vmex uint32, out unsafe.Pointer) int32
+TEXT runtime·vdsoCall_zx_vmo_replace_as_executable(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL vmex+4(FP), SI
+	MOVQ out+8(FP), DX
+	MOVQ vdso_zx_vmo_replace_as_executable(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_set_cache_policy(handle uint32, cache_policy uint32) int32
+TEXT runtime·vdsoCall_zx_vmo_set_cache_policy(SB),NOSPLIT,$8-12
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVL cache_policy+4(FP), SI
+	MOVQ vdso_zx_vmo_set_cache_policy(SB), AX
+	CALL AX
+	MOVL AX, ret+8(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_set_size(handle uint32, size uint64) int32
+TEXT runtime·vdsoCall_zx_vmo_set_size(SB),NOSPLIT,$8-20
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	MOVL handle+0(FP), DI
+	MOVQ size+8(FP), SI
+	MOVQ vdso_zx_vmo_set_size(SB), AX
+	CALL AX
+	MOVL AX, ret+16(FP)
+	POPQ R14
+	MOVQ $0, m_vdsoSP(R14)
+	RET
+
+// func vdsoCall_zx_vmo_write(handle uint32, buffer unsafe.Pointer, offset uint64, buffer_size uint) int32
+TEXT runtime·vdsoCall_zx_vmo_write(SB),NOSPLIT,$8-36
+	GO_ARGS
+	NO_LOCAL_POINTERS
+	get_tls(CX)
+	MOVQ g(CX), AX
+	MOVQ g_m(AX), R14
+	PUSHQ R14
+	LEAQ ret+0(FP), DX
+	MOVQ -8(DX), CX
+	MOVQ CX, m_vdsoPC(R14)
+	MOVQ DX, m_vdsoSP(R14)
+	CALL runtime·entersyscall(SB)
+	MOVL handle+0(FP), DI
+	MOVQ buffer+8(FP), SI
+	MOVQ offset+16(FP), DX
+	MOVQ buffer_size+24(FP), CX
+	MOVQ vdso_zx_vmo_write(SB), AX
+	CALL AX
+	MOVL AX, ret+32(FP)
+	CALL runtime·exitsyscall(SB)
 	POPQ R14
 	MOVQ $0, m_vdsoSP(R14)
 	RET

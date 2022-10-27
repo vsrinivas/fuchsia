@@ -36,6 +36,24 @@ _ZX_SYSCALL_DECL(cache_flush, zx_status_t, /* no attributes */, 3,
     size_t size,
     uint32_t options))
 
+_ZX_SYSCALL_DECL(channel_call, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    const zx_channel_call_args_t* args,
+    uint32_t* actual_bytes,
+    uint32_t* actual_handles))
+
+_ZX_SYSCALL_DECL(channel_call_etc, zx_status_t, /* no attributes */, 6,
+    (handle, options, deadline, args, actual_bytes, actual_handles), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_time_t deadline,
+    zx_channel_call_etc_args_t* args,
+    uint32_t* actual_bytes,
+    uint32_t* actual_handles))
+
 _ZX_SYSCALL_DECL(channel_create, zx_status_t, /* no attributes */, 3,
     (options, out0, out1), (
     uint32_t options,
@@ -82,37 +100,11 @@ _ZX_SYSCALL_DECL(channel_write_etc, zx_status_t, /* no attributes */, 6,
     zx_handle_disposition_t* handles,
     uint32_t num_handles))
 
-_ZX_SYSCALL_DECL(channel_call, zx_status_t, /* no attributes */, 6,
-    (handle, options, deadline, args, actual_bytes, actual_handles), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t options,
-    zx_time_t deadline,
-    const zx_channel_call_args_t* args,
-    uint32_t* actual_bytes,
-    uint32_t* actual_handles))
-
-_ZX_SYSCALL_DECL(channel_call_etc, zx_status_t, /* no attributes */, 6,
-    (handle, options, deadline, args, actual_bytes, actual_handles), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t options,
-    zx_time_t deadline,
-    zx_channel_call_etc_args_t* args,
-    uint32_t* actual_bytes,
-    uint32_t* actual_handles))
-
-_ZX_SYSCALL_DECL(clock_get_monotonic, zx_time_t, /* no attributes */, 0,
-    (), (void))
-
 _ZX_SYSCALL_DECL(clock_create, zx_status_t, /* no attributes */, 3,
     (options, args, out), (
     uint64_t options,
     const void* args,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
-
-_ZX_SYSCALL_DECL(clock_read, zx_status_t, /* no attributes */, 2,
-    (handle, now), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    zx_time_t* now))
 
 _ZX_SYSCALL_DECL(clock_get_details, zx_status_t, /* no attributes */, 3,
     (handle, options, details), (
@@ -120,21 +112,33 @@ _ZX_SYSCALL_DECL(clock_get_details, zx_status_t, /* no attributes */, 3,
     uint64_t options,
     void* details))
 
+_ZX_SYSCALL_DECL(clock_get_monotonic, zx_time_t, /* no attributes */, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(clock_read, zx_status_t, /* no attributes */, 2,
+    (handle, now), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    zx_time_t* now))
+
 _ZX_SYSCALL_DECL(clock_update, zx_status_t, /* no attributes */, 3,
     (handle, options, args), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint64_t options,
     const void* args))
 
+_ZX_SYSCALL_DECL(cprng_add_entropy, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
+    const void* buffer,
+    size_t buffer_size))
+
 _ZX_SYSCALL_DECL(cprng_draw, void, /* no attributes */, 2,
     (buffer, buffer_size), (
     void* buffer,
     size_t buffer_size))
 
-_ZX_SYSCALL_DECL(cprng_add_entropy, zx_status_t, /* no attributes */, 2,
-    (buffer, buffer_size), (
-    const void* buffer,
-    size_t buffer_size))
+_ZX_SYSCALL_DECL(deadline_after, zx_time_t, /* no attributes */, 1,
+    (nanoseconds), (
+    zx_duration_t nanoseconds))
 
 _ZX_SYSCALL_DECL(debug_read, zx_status_t, /* no attributes */, 4,
     (handle, buffer, buffer_size, actual), (
@@ -143,14 +147,14 @@ _ZX_SYSCALL_DECL(debug_read, zx_status_t, /* no attributes */, 4,
     size_t buffer_size,
     size_t* actual))
 
-_ZX_SYSCALL_DECL(debug_write, zx_status_t, /* no attributes */, 2,
-    (buffer, buffer_size), (
-    const char* buffer,
-    size_t buffer_size))
-
 _ZX_SYSCALL_DECL(debug_send_command, zx_status_t, /* no attributes */, 3,
     (resource, buffer, buffer_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    const char* buffer,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(debug_write, zx_status_t, /* no attributes */, 2,
+    (buffer, buffer_size), (
     const char* buffer,
     size_t buffer_size))
 
@@ -160,18 +164,18 @@ _ZX_SYSCALL_DECL(debuglog_create, zx_status_t, /* no attributes */, 3,
     uint32_t options,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
-_ZX_SYSCALL_DECL(debuglog_write, zx_status_t, /* no attributes */, 4,
-    (handle, options, buffer, buffer_size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t options,
-    const void* buffer,
-    size_t buffer_size))
-
 _ZX_SYSCALL_DECL(debuglog_read, zx_status_t, /* no attributes */, 4,
     (handle, options, buffer, buffer_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t options,
     void* buffer,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(debuglog_write, zx_status_t, /* no attributes */, 4,
+    (handle, options, buffer, buffer_size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    const void* buffer,
     size_t buffer_size))
 
 _ZX_SYSCALL_DECL(event_create, zx_status_t, /* no attributes */, 2,
@@ -185,12 +189,12 @@ _ZX_SYSCALL_DECL(eventpair_create, zx_status_t, /* no attributes */, 3,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out0,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out1))
 
-_ZX_SYSCALL_DECL(exception_get_thread, zx_status_t, /* no attributes */, 2,
+_ZX_SYSCALL_DECL(exception_get_process, zx_status_t, /* no attributes */, 2,
     (handle, out), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
-_ZX_SYSCALL_DECL(exception_get_process, zx_status_t, /* no attributes */, 2,
+_ZX_SYSCALL_DECL(exception_get_thread, zx_status_t, /* no attributes */, 2,
     (handle, out), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
@@ -237,6 +241,28 @@ _ZX_SYSCALL_DECL(framebuffer_set_range, zx_status_t, /* no attributes */, 7,
     uint32_t height,
     uint32_t stride))
 
+_ZX_SYSCALL_DECL(futex_get_owner, zx_status_t, /* no attributes */, 2,
+    (value_ptr, koid), (
+    const zx_futex_t* value_ptr,
+    zx_koid_t* koid))
+
+_ZX_SYSCALL_DECL(futex_requeue, zx_status_t, /* no attributes */, 6,
+    (value_ptr, wake_count, current_value, requeue_ptr, requeue_count, new_requeue_owner), (
+    const zx_futex_t* value_ptr,
+    uint32_t wake_count,
+    zx_futex_t current_value,
+    const zx_futex_t* requeue_ptr,
+    uint32_t requeue_count,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t new_requeue_owner))
+
+_ZX_SYSCALL_DECL(futex_requeue_single_owner, zx_status_t, /* no attributes */, 5,
+    (value_ptr, current_value, requeue_ptr, requeue_count, new_requeue_owner), (
+    const zx_futex_t* value_ptr,
+    zx_futex_t current_value,
+    const zx_futex_t* requeue_ptr,
+    uint32_t requeue_count,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t new_requeue_owner))
+
 _ZX_SYSCALL_DECL(futex_wait, zx_status_t, /* no attributes */, 4,
     (value_ptr, current_value, new_futex_owner, deadline), (
     const zx_futex_t* value_ptr,
@@ -249,31 +275,16 @@ _ZX_SYSCALL_DECL(futex_wake, zx_status_t, /* no attributes */, 2,
     const zx_futex_t* value_ptr,
     uint32_t wake_count))
 
-_ZX_SYSCALL_DECL(futex_requeue, zx_status_t, /* no attributes */, 6,
-    (value_ptr, wake_count, current_value, requeue_ptr, requeue_count, new_requeue_owner), (
+_ZX_SYSCALL_DECL(futex_wake_handle_close_thread_exit, void, __NO_RETURN, 4,
+    (value_ptr, wake_count, new_value, close_handle), (
     const zx_futex_t* value_ptr,
     uint32_t wake_count,
-    zx_futex_t current_value,
-    const zx_futex_t* requeue_ptr,
-    uint32_t requeue_count,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t new_requeue_owner))
+    int32_t new_value,
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t close_handle))
 
 _ZX_SYSCALL_DECL(futex_wake_single_owner, zx_status_t, /* no attributes */, 1,
     (value_ptr), (
     const zx_futex_t* value_ptr))
-
-_ZX_SYSCALL_DECL(futex_requeue_single_owner, zx_status_t, /* no attributes */, 5,
-    (value_ptr, current_value, requeue_ptr, requeue_count, new_requeue_owner), (
-    const zx_futex_t* value_ptr,
-    zx_futex_t current_value,
-    const zx_futex_t* requeue_ptr,
-    uint32_t requeue_count,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t new_requeue_owner))
-
-_ZX_SYSCALL_DECL(futex_get_owner, zx_status_t, /* no attributes */, 2,
-    (value_ptr, koid), (
-    const zx_futex_t* value_ptr,
-    zx_koid_t* koid))
 
 _ZX_SYSCALL_DECL(guest_create, zx_status_t, /* no attributes */, 4,
     (resource, options, guest_handle, vmar_handle), (
@@ -312,12 +323,9 @@ _ZX_SYSCALL_DECL(handle_replace, zx_status_t, /* no attributes */, 3,
     zx_rights_t rights,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
-_ZX_SYSCALL_DECL(interrupt_create, zx_status_t, /* no attributes */, 4,
-    (src_obj, src_num, options, out_handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t src_obj,
-    uint32_t src_num,
-    uint32_t options,
-    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_handle))
+_ZX_SYSCALL_DECL(interrupt_ack, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
 
 _ZX_SYSCALL_DECL(interrupt_bind, zx_status_t, /* no attributes */, 4,
     (handle, port_handle, key, options), (
@@ -326,16 +334,14 @@ _ZX_SYSCALL_DECL(interrupt_bind, zx_status_t, /* no attributes */, 4,
     uint64_t key,
     uint32_t options))
 
-_ZX_SYSCALL_DECL(interrupt_wait, zx_status_t, /* no attributes */, 2,
-    (handle, out_timestamp), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    zx_time_t* out_timestamp))
+_ZX_SYSCALL_DECL(interrupt_create, zx_status_t, /* no attributes */, 4,
+    (src_obj, src_num, options, out_handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t src_obj,
+    uint32_t src_num,
+    uint32_t options,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_handle))
 
 _ZX_SYSCALL_DECL(interrupt_destroy, zx_status_t, /* no attributes */, 1,
-    (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
-
-_ZX_SYSCALL_DECL(interrupt_ack, zx_status_t, /* no attributes */, 1,
     (handle), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
 
@@ -345,6 +351,11 @@ _ZX_SYSCALL_DECL(interrupt_trigger, zx_status_t, /* no attributes */, 3,
     uint32_t options,
     zx_time_t timestamp))
 
+_ZX_SYSCALL_DECL(interrupt_wait, zx_status_t, /* no attributes */, 2,
+    (handle, out_timestamp), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    zx_time_t* out_timestamp))
+
 _ZX_SYSCALL_DECL(iommu_create, zx_status_t, /* no attributes */, 5,
     (resource, type, desc, desc_size, out), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
@@ -353,13 +364,13 @@ _ZX_SYSCALL_DECL(iommu_create, zx_status_t, /* no attributes */, 5,
     size_t desc_size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
-_ZX_SYSCALL_DECL(ioports_request, zx_status_t, /* no attributes */, 3,
+_ZX_SYSCALL_DECL(ioports_release, zx_status_t, /* no attributes */, 3,
     (resource, io_addr, len), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
     uint16_t io_addr,
     uint32_t len))
 
-_ZX_SYSCALL_DECL(ioports_release, zx_status_t, /* no attributes */, 3,
+_ZX_SYSCALL_DECL(ioports_request, zx_status_t, /* no attributes */, 3,
     (resource, io_addr, len), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
     uint16_t io_addr,
@@ -371,6 +382,12 @@ _ZX_SYSCALL_DECL(job_create, zx_status_t, /* no attributes */, 3,
     uint32_t options,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
+_ZX_SYSCALL_DECL(job_set_critical, zx_status_t, /* no attributes */, 3,
+    (job, options, process), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t job,
+    uint32_t options,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t process))
+
 _ZX_SYSCALL_DECL(job_set_policy, zx_status_t, /* no attributes */, 5,
     (handle, options, topic, policy, policy_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -379,11 +396,12 @@ _ZX_SYSCALL_DECL(job_set_policy, zx_status_t, /* no attributes */, 5,
     const void* policy,
     uint32_t policy_size))
 
-_ZX_SYSCALL_DECL(job_set_critical, zx_status_t, /* no attributes */, 3,
-    (job, options, process), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t job,
+_ZX_SYSCALL_DECL(ktrace_control, zx_status_t, /* no attributes */, 4,
+    (handle, action, options, ptr), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t action,
     uint32_t options,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t process))
+    void* ptr))
 
 _ZX_SYSCALL_DECL(ktrace_read, zx_status_t, /* no attributes */, 5,
     (handle, data, offset, data_size, actual), (
@@ -393,47 +411,12 @@ _ZX_SYSCALL_DECL(ktrace_read, zx_status_t, /* no attributes */, 5,
     size_t data_size,
     size_t* actual))
 
-_ZX_SYSCALL_DECL(ktrace_control, zx_status_t, /* no attributes */, 4,
-    (handle, action, options, ptr), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t action,
-    uint32_t options,
-    void* ptr))
-
 _ZX_SYSCALL_DECL(ktrace_write, zx_status_t, /* no attributes */, 4,
     (handle, id, arg0, arg1), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t id,
     uint32_t arg0,
     uint32_t arg1))
-
-_ZX_SYSCALL_DECL(nanosleep, zx_status_t, /* no attributes */, 1,
-    (deadline), (
-    zx_time_t deadline))
-
-_ZX_SYSCALL_DECL(ticks_get, zx_ticks_t, /* no attributes */, 0,
-    (), (void))
-
-_ZX_SYSCALL_DECL(ticks_per_second, zx_ticks_t, __CONST, 0,
-    (), (void))
-
-_ZX_SYSCALL_DECL(deadline_after, zx_time_t, /* no attributes */, 1,
-    (nanoseconds), (
-    zx_duration_t nanoseconds))
-
-_ZX_SYSCALL_DECL(vmar_unmap_handle_close_thread_exit, zx_status_t, /* no attributes */, 4,
-    (vmar_handle, addr, size, close_handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmar_handle,
-    zx_vaddr_t addr,
-    size_t size,
-    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t close_handle))
-
-_ZX_SYSCALL_DECL(futex_wake_handle_close_thread_exit, void, __NO_RETURN, 4,
-    (value_ptr, wake_count, new_value, close_handle), (
-    const zx_futex_t* value_ptr,
-    uint32_t wake_count,
-    int32_t new_value,
-    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t close_handle))
 
 _ZX_SYSCALL_DECL(msi_allocate, zx_status_t, /* no attributes */, 3,
     (handle, count, out_allocation), (
@@ -459,26 +442,45 @@ _ZX_SYSCALL_DECL(mtrace_control, zx_status_t, /* no attributes */, 6,
     void* ptr,
     size_t ptr_size))
 
-_ZX_SYSCALL_DECL(object_wait_one, zx_status_t, /* no attributes */, 4,
-    (handle, signals, deadline, observed), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    zx_signals_t signals,
-    zx_time_t deadline,
-    zx_signals_t* observed))
-
-_ZX_SYSCALL_DECL(object_wait_many, zx_status_t, /* no attributes */, 3,
-    (items, num_items, deadline), (
-    zx_wait_item_t* items,
-    size_t num_items,
+_ZX_SYSCALL_DECL(nanosleep, zx_status_t, /* no attributes */, 1,
+    (deadline), (
     zx_time_t deadline))
 
-_ZX_SYSCALL_DECL(object_wait_async, zx_status_t, /* no attributes */, 5,
-    (handle, port, key, signals, options), (
+_ZX_SYSCALL_DECL(object_get_child, zx_status_t, /* no attributes */, 4,
+    (handle, koid, rights, out), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t port,
-    uint64_t key,
-    zx_signals_t signals,
+    uint64_t koid,
+    zx_rights_t rights,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
+
+_ZX_SYSCALL_DECL(object_get_info, zx_status_t, /* no attributes */, 6,
+    (handle, topic, buffer, buffer_size, actual, avail), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t topic,
+    void* buffer,
+    size_t buffer_size,
+    size_t* actual,
+    size_t* avail))
+
+_ZX_SYSCALL_DECL(object_get_property, zx_status_t, /* no attributes */, 4,
+    (handle, property, value, value_size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t property,
+    void* value,
+    size_t value_size))
+
+_ZX_SYSCALL_DECL(object_set_profile, zx_status_t, /* no attributes */, 3,
+    (handle, profile, options), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t profile,
     uint32_t options))
+
+_ZX_SYSCALL_DECL(object_set_property, zx_status_t, /* no attributes */, 4,
+    (handle, property, value, value_size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t property,
+    const void* value,
+    size_t value_size))
 
 _ZX_SYSCALL_DECL(object_signal, zx_status_t, /* no attributes */, 3,
     (handle, clear_mask, set_mask), (
@@ -492,41 +494,26 @@ _ZX_SYSCALL_DECL(object_signal_peer, zx_status_t, /* no attributes */, 3,
     uint32_t clear_mask,
     uint32_t set_mask))
 
-_ZX_SYSCALL_DECL(object_get_property, zx_status_t, /* no attributes */, 4,
-    (handle, property, value, value_size), (
+_ZX_SYSCALL_DECL(object_wait_async, zx_status_t, /* no attributes */, 5,
+    (handle, port, key, signals, options), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t property,
-    void* value,
-    size_t value_size))
-
-_ZX_SYSCALL_DECL(object_set_property, zx_status_t, /* no attributes */, 4,
-    (handle, property, value, value_size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t property,
-    const void* value,
-    size_t value_size))
-
-_ZX_SYSCALL_DECL(object_get_info, zx_status_t, /* no attributes */, 6,
-    (handle, topic, buffer, buffer_size, actual, avail), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t topic,
-    void* buffer,
-    size_t buffer_size,
-    size_t* actual,
-    size_t* avail))
-
-_ZX_SYSCALL_DECL(object_get_child, zx_status_t, /* no attributes */, 4,
-    (handle, koid, rights, out), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint64_t koid,
-    zx_rights_t rights,
-    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
-
-_ZX_SYSCALL_DECL(object_set_profile, zx_status_t, /* no attributes */, 3,
-    (handle, profile, options), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t profile,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t port,
+    uint64_t key,
+    zx_signals_t signals,
     uint32_t options))
+
+_ZX_SYSCALL_DECL(object_wait_many, zx_status_t, /* no attributes */, 3,
+    (items, num_items, deadline), (
+    zx_wait_item_t* items,
+    size_t num_items,
+    zx_time_t deadline))
+
+_ZX_SYSCALL_DECL(object_wait_one, zx_status_t, /* no attributes */, 4,
+    (handle, signals, deadline, observed), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    zx_signals_t signals,
+    zx_time_t deadline,
+    zx_signals_t* observed))
 
 _ZX_SYSCALL_DECL(pager_create, zx_status_t, /* no attributes */, 2,
     (options, out), (
@@ -547,15 +534,6 @@ _ZX_SYSCALL_DECL(pager_detach_vmo, zx_status_t, /* no attributes */, 2,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmo))
 
-_ZX_SYSCALL_DECL(pager_supply_pages, zx_status_t, /* no attributes */, 6,
-    (pager, pager_vmo, offset, length, aux_vmo, aux_offset), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager_vmo,
-    uint64_t offset,
-    uint64_t length,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t aux_vmo,
-    uint64_t aux_offset))
-
 _ZX_SYSCALL_DECL(pager_op_range, zx_status_t, /* no attributes */, 6,
     (pager, op, pager_vmo, offset, length, data), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
@@ -565,27 +543,39 @@ _ZX_SYSCALL_DECL(pager_op_range, zx_status_t, /* no attributes */, 6,
     uint64_t length,
     uint64_t data))
 
+_ZX_SYSCALL_DECL(pager_supply_pages, zx_status_t, /* no attributes */, 6,
+    (pager, pager_vmo, offset, length, aux_vmo, aux_offset), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t pager_vmo,
+    uint64_t offset,
+    uint64_t length,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t aux_vmo,
+    uint64_t aux_offset))
+
 _ZX_SYSCALL_DECL(pc_firmware_tables, zx_status_t, /* no attributes */, 3,
     (handle, acpi_rsdp, smbios), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     zx_paddr_t* acpi_rsdp,
     zx_paddr_t* smbios))
 
-_ZX_SYSCALL_DECL(pci_get_nth_device, zx_status_t, /* no attributes */, 4,
-    (handle, index, out_info, out_handle), (
+_ZX_SYSCALL_DECL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
+    (handle, mmio, base, len, add), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t index,
-    zx_pcie_device_info_t* out_info,
-    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_handle))
+    uint32_t mmio,
+    uint64_t base,
+    uint64_t len,
+    uint32_t add))
 
-_ZX_SYSCALL_DECL(pci_enable_bus_master, zx_status_t, /* no attributes */, 2,
-    (handle, enable), (
+_ZX_SYSCALL_DECL(pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
+    (handle, bus, dev, func, offset, val, width, write), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t enable))
-
-_ZX_SYSCALL_DECL(pci_reset_device, zx_status_t, /* no attributes */, 1,
-    (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+    uint8_t bus,
+    uint8_t dev,
+    uint8_t func,
+    uint8_t offset,
+    uint32_t* val,
+    size_t width,
+    uint32_t write))
 
 _ZX_SYSCALL_DECL(pci_config_read, zx_status_t, /* no attributes */, 4,
     (handle, offset, width, out_val), (
@@ -601,16 +591,10 @@ _ZX_SYSCALL_DECL(pci_config_write, zx_status_t, /* no attributes */, 4,
     size_t width,
     uint32_t val))
 
-_ZX_SYSCALL_DECL(pci_cfg_pio_rw, zx_status_t, /* no attributes */, 8,
-    (handle, bus, dev, func, offset, val, width, write), (
+_ZX_SYSCALL_DECL(pci_enable_bus_master, zx_status_t, /* no attributes */, 2,
+    (handle, enable), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint8_t bus,
-    uint8_t dev,
-    uint8_t func,
-    uint8_t offset,
-    uint32_t* val,
-    size_t width,
-    uint32_t write))
+    uint32_t enable))
 
 _ZX_SYSCALL_DECL(pci_get_bar, zx_status_t, /* no attributes */, 4,
     (handle, bar_num, out_bar, out_handle), (
@@ -618,6 +602,19 @@ _ZX_SYSCALL_DECL(pci_get_bar, zx_status_t, /* no attributes */, 4,
     uint32_t bar_num,
     zx_pci_bar_t* out_bar,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_handle))
+
+_ZX_SYSCALL_DECL(pci_get_nth_device, zx_status_t, /* no attributes */, 4,
+    (handle, index, out_info, out_handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t index,
+    zx_pcie_device_info_t* out_info,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_handle))
+
+_ZX_SYSCALL_DECL(pci_init, zx_status_t, /* no attributes */, 3,
+    (handle, init_buf, len), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    const zx_pci_init_arg_t* init_buf,
+    uint32_t len))
 
 _ZX_SYSCALL_DECL(pci_map_interrupt, zx_status_t, /* no attributes */, 3,
     (handle, which_irq, out_handle), (
@@ -631,29 +628,25 @@ _ZX_SYSCALL_DECL(pci_query_irq_mode, zx_status_t, /* no attributes */, 3,
     uint32_t mode,
     uint32_t* out_max_irqs))
 
+_ZX_SYSCALL_DECL(pci_reset_device, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
+
 _ZX_SYSCALL_DECL(pci_set_irq_mode, zx_status_t, /* no attributes */, 3,
     (handle, mode, requested_irq_count), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t mode,
     uint32_t requested_irq_count))
 
-_ZX_SYSCALL_DECL(pci_init, zx_status_t, /* no attributes */, 3,
-    (handle, init_buf, len), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    const zx_pci_init_arg_t* init_buf,
-    uint32_t len))
-
-_ZX_SYSCALL_DECL(pci_add_subtract_io_range, zx_status_t, /* no attributes */, 5,
-    (handle, mmio, base, len, add), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t mmio,
-    uint64_t base,
-    uint64_t len,
-    uint32_t add))
-
 _ZX_SYSCALL_DECL(pmt_unpin, zx_status_t, /* no attributes */, 1,
     (handle), (
     _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t handle))
+
+_ZX_SYSCALL_DECL(port_cancel, zx_status_t, /* no attributes */, 3,
+    (handle, source, key), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t source,
+    uint64_t key))
 
 _ZX_SYSCALL_DECL(port_create, zx_status_t, /* no attributes */, 2,
     (options, out), (
@@ -670,16 +663,6 @@ _ZX_SYSCALL_DECL(port_wait, zx_status_t, /* no attributes */, 3,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     zx_time_t deadline,
     zx_port_packet_t* packet))
-
-_ZX_SYSCALL_DECL(port_cancel, zx_status_t, /* no attributes */, 3,
-    (handle, source, key), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t source,
-    uint64_t key))
-
-_ZX_SYSCALL_DECL(process_exit, void, __NO_RETURN, 1,
-    (retcode), (
-    int64_t retcode))
 
 _ZX_SYSCALL_DECL(process_create, zx_status_t, /* no attributes */, 6,
     (job, name, name_size, options, proc_handle, vmar_handle), (
@@ -699,14 +682,9 @@ _ZX_SYSCALL_DECL(process_create_shared, zx_status_t, /* no attributes */, 6,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* proc_handle,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* restricted_vmar_handle))
 
-_ZX_SYSCALL_DECL(process_start, zx_status_t, /* no attributes */, 6,
-    (handle, thread, entry, stack, arg1, arg2), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t thread,
-    zx_vaddr_t entry,
-    zx_vaddr_t stack,
-    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t arg1,
-    uintptr_t arg2))
+_ZX_SYSCALL_DECL(process_exit, void, __NO_RETURN, 1,
+    (retcode), (
+    int64_t retcode))
 
 _ZX_SYSCALL_DECL(process_read_memory, zx_status_t, /* no attributes */, 5,
     (handle, vaddr, buffer, buffer_size, actual), (
@@ -715,6 +693,15 @@ _ZX_SYSCALL_DECL(process_read_memory, zx_status_t, /* no attributes */, 5,
     void* buffer,
     size_t buffer_size,
     size_t* actual))
+
+_ZX_SYSCALL_DECL(process_start, zx_status_t, /* no attributes */, 6,
+    (handle, thread, entry, stack, arg1, arg2), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t thread,
+    zx_vaddr_t entry,
+    zx_vaddr_t stack,
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t arg1,
+    uintptr_t arg2))
 
 _ZX_SYSCALL_DECL(process_write_memory, zx_status_t, /* no attributes */, 5,
     (handle, vaddr, buffer, buffer_size, actual), (
@@ -753,14 +740,6 @@ _ZX_SYSCALL_DECL(socket_create, zx_status_t, /* no attributes */, 3,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out0,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out1))
 
-_ZX_SYSCALL_DECL(socket_write, zx_status_t, /* no attributes */, 5,
-    (handle, options, buffer, buffer_size, actual), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t options,
-    const void* buffer,
-    size_t buffer_size,
-    size_t* actual))
-
 _ZX_SYSCALL_DECL(socket_read, zx_status_t, /* no attributes */, 5,
     (handle, options, buffer, buffer_size, actual), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -775,29 +754,20 @@ _ZX_SYSCALL_DECL(socket_set_disposition, zx_status_t, /* no attributes */, 3,
     uint32_t disposition,
     uint32_t disposition_peer))
 
+_ZX_SYSCALL_DECL(socket_write, zx_status_t, /* no attributes */, 5,
+    (handle, options, buffer, buffer_size, actual), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    const void* buffer,
+    size_t buffer_size,
+    size_t* actual))
+
 _ZX_SYSCALL_DECL(stream_create, zx_status_t, /* no attributes */, 4,
     (options, vmo, seek, out_stream), (
     uint32_t options,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmo,
     zx_off_t seek,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out_stream))
-
-_ZX_SYSCALL_DECL(stream_writev, zx_status_t, /* no attributes */, 5,
-    (handle, options, vector, num_vector, actual), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t options,
-    const zx_iovec_t* vector,
-    size_t num_vector,
-    size_t* actual))
-
-_ZX_SYSCALL_DECL(stream_writev_at, zx_status_t, /* no attributes */, 6,
-    (handle, options, offset, vector, num_vector, actual), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t options,
-    zx_off_t offset,
-    const zx_iovec_t* vector,
-    size_t num_vector,
-    size_t* actual))
 
 _ZX_SYSCALL_DECL(stream_readv, zx_status_t, /* no attributes */, 5,
     (handle, options, vector, num_vector, actual), (
@@ -823,25 +793,25 @@ _ZX_SYSCALL_DECL(stream_seek, zx_status_t, /* no attributes */, 4,
     int64_t offset,
     zx_off_t* out_seek))
 
+_ZX_SYSCALL_DECL(stream_writev, zx_status_t, /* no attributes */, 5,
+    (handle, options, vector, num_vector, actual), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    const zx_iovec_t* vector,
+    size_t num_vector,
+    size_t* actual))
+
+_ZX_SYSCALL_DECL(stream_writev_at, zx_status_t, /* no attributes */, 6,
+    (handle, options, offset, vector, num_vector, actual), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t options,
+    zx_off_t offset,
+    const zx_iovec_t* vector,
+    size_t num_vector,
+    size_t* actual))
+
 _ZX_SYSCALL_DECL(system_get_dcache_line_size, uint32_t, __CONST, 0,
     (), (void))
-
-_ZX_SYSCALL_DECL(system_get_num_cpus, uint32_t, __CONST, 0,
-    (), (void))
-
-_ZX_SYSCALL_DECL(system_get_version_string, zx_string_view_t, __CONST, 0,
-    (), (void))
-
-_ZX_SYSCALL_DECL(system_get_page_size, uint32_t, __CONST, 0,
-    (), (void))
-
-_ZX_SYSCALL_DECL(system_get_physmem, uint64_t, /* no attributes */, 0,
-    (), (void))
-
-_ZX_SYSCALL_DECL(system_get_features, zx_status_t, /* no attributes */, 2,
-    (kind, features), (
-    uint32_t kind,
-    uint32_t* features))
 
 _ZX_SYSCALL_DECL(system_get_event, zx_status_t, /* no attributes */, 3,
     (root_job, kind, event), (
@@ -849,12 +819,16 @@ _ZX_SYSCALL_DECL(system_get_event, zx_status_t, /* no attributes */, 3,
     uint32_t kind,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* event))
 
-_ZX_SYSCALL_DECL(system_set_performance_info, zx_status_t, /* no attributes */, 4,
-    (resource, topic, info, count), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
-    uint32_t topic,
-    const void* info,
-    size_t count))
+_ZX_SYSCALL_DECL(system_get_features, zx_status_t, /* no attributes */, 2,
+    (kind, features), (
+    uint32_t kind,
+    uint32_t* features))
+
+_ZX_SYSCALL_DECL(system_get_num_cpus, uint32_t, __CONST, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(system_get_page_size, uint32_t, __CONST, 0,
+    (), (void))
 
 _ZX_SYSCALL_DECL(system_get_performance_info, zx_status_t, /* no attributes */, 5,
     (resource, topic, count, info, output_count), (
@@ -863,6 +837,12 @@ _ZX_SYSCALL_DECL(system_get_performance_info, zx_status_t, /* no attributes */, 
     size_t count,
     void* info,
     size_t* output_count))
+
+_ZX_SYSCALL_DECL(system_get_physmem, uint64_t, /* no attributes */, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(system_get_version_string, zx_string_view_t, __CONST, 0,
+    (), (void))
 
 _ZX_SYSCALL_DECL(system_mexec, zx_status_t, /* no attributes */, 3,
     (resource, kernel_vmo, bootimage_vmo), (
@@ -882,15 +862,12 @@ _ZX_SYSCALL_DECL(system_powerctl, zx_status_t, /* no attributes */, 3,
     uint32_t cmd,
     const zx_system_powerctl_arg_t* arg))
 
-_ZX_SYSCALL_DECL(task_suspend, zx_status_t, /* no attributes */, 2,
-    (handle, token), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* token))
-
-_ZX_SYSCALL_DECL(task_suspend_token, zx_status_t, /* no attributes */, 2,
-    (handle, token), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* token))
+_ZX_SYSCALL_DECL(system_set_performance_info, zx_status_t, /* no attributes */, 4,
+    (resource, topic, info, count), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t resource,
+    uint32_t topic,
+    const void* info,
+    size_t count))
 
 _ZX_SYSCALL_DECL(task_create_exception_channel, zx_status_t, /* no attributes */, 3,
     (handle, options, out), (
@@ -902,8 +879,15 @@ _ZX_SYSCALL_DECL(task_kill, zx_status_t, /* no attributes */, 1,
     (handle), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
 
-_ZX_SYSCALL_DECL(thread_exit, void, __NO_RETURN, 0,
-    (), (void))
+_ZX_SYSCALL_DECL(task_suspend, zx_status_t, /* no attributes */, 2,
+    (handle, token), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* token))
+
+_ZX_SYSCALL_DECL(task_suspend_token, zx_status_t, /* no attributes */, 2,
+    (handle, token), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* token))
 
 _ZX_SYSCALL_DECL(thread_create, zx_status_t, /* no attributes */, 5,
     (process, name, name_size, options, out), (
@@ -913,13 +897,12 @@ _ZX_SYSCALL_DECL(thread_create, zx_status_t, /* no attributes */, 5,
     uint32_t options,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
-_ZX_SYSCALL_DECL(thread_start, zx_status_t, /* no attributes */, 5,
-    (handle, thread_entry, stack, arg1, arg2), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    zx_vaddr_t thread_entry,
-    zx_vaddr_t stack,
-    uintptr_t arg1,
-    uintptr_t arg2))
+_ZX_SYSCALL_DECL(thread_exit, void, __NO_RETURN, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(thread_legacy_yield, zx_status_t, /* no attributes */, 1,
+    (options), (
+    uint32_t options))
 
 _ZX_SYSCALL_DECL(thread_read_state, zx_status_t, /* no attributes */, 4,
     (handle, kind, buffer, buffer_size), (
@@ -928,6 +911,14 @@ _ZX_SYSCALL_DECL(thread_read_state, zx_status_t, /* no attributes */, 4,
     void* buffer,
     size_t buffer_size))
 
+_ZX_SYSCALL_DECL(thread_start, zx_status_t, /* no attributes */, 5,
+    (handle, thread_entry, stack, arg1, arg2), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    zx_vaddr_t thread_entry,
+    zx_vaddr_t stack,
+    uintptr_t arg1,
+    uintptr_t arg2))
+
 _ZX_SYSCALL_DECL(thread_write_state, zx_status_t, /* no attributes */, 4,
     (handle, kind, buffer, buffer_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -935,9 +926,15 @@ _ZX_SYSCALL_DECL(thread_write_state, zx_status_t, /* no attributes */, 4,
     const void* buffer,
     size_t buffer_size))
 
-_ZX_SYSCALL_DECL(thread_legacy_yield, zx_status_t, /* no attributes */, 1,
-    (options), (
-    uint32_t options))
+_ZX_SYSCALL_DECL(ticks_get, zx_ticks_t, /* no attributes */, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(ticks_per_second, zx_ticks_t, __CONST, 0,
+    (), (void))
+
+_ZX_SYSCALL_DECL(timer_cancel, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
 
 _ZX_SYSCALL_DECL(timer_create, zx_status_t, /* no attributes */, 3,
     (options, clock_id, out), (
@@ -951,10 +948,6 @@ _ZX_SYSCALL_DECL(timer_set, zx_status_t, /* no attributes */, 3,
     zx_time_t deadline,
     zx_duration_t slack))
 
-_ZX_SYSCALL_DECL(timer_cancel, zx_status_t, /* no attributes */, 1,
-    (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
-
 _ZX_SYSCALL_DECL(vcpu_create, zx_status_t, /* no attributes */, 4,
     (guest, options, entry, out), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t guest,
@@ -967,14 +960,14 @@ _ZX_SYSCALL_DECL(vcpu_enter, zx_status_t, /* no attributes */, 2,
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     zx_port_packet_t* packet))
 
-_ZX_SYSCALL_DECL(vcpu_kick, zx_status_t, /* no attributes */, 1,
-    (handle), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
-
 _ZX_SYSCALL_DECL(vcpu_interrupt, zx_status_t, /* no attributes */, 2,
     (handle, vector), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
     uint32_t vector))
+
+_ZX_SYSCALL_DECL(vcpu_kick, zx_status_t, /* no attributes */, 1,
+    (handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle))
 
 _ZX_SYSCALL_DECL(vcpu_read_state, zx_status_t, /* no attributes */, 4,
     (handle, kind, buffer, buffer_size), (
@@ -1013,19 +1006,6 @@ _ZX_SYSCALL_DECL(vmar_map, zx_status_t, /* no attributes */, 7,
     size_t len,
     zx_vaddr_t* mapped_addr))
 
-_ZX_SYSCALL_DECL(vmar_unmap, zx_status_t, /* no attributes */, 3,
-    (handle, addr, len), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    zx_vaddr_t addr,
-    size_t len))
-
-_ZX_SYSCALL_DECL(vmar_protect, zx_status_t, /* no attributes */, 4,
-    (handle, options, addr, len), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    zx_vm_option_t options,
-    zx_vaddr_t addr,
-    size_t len))
-
 _ZX_SYSCALL_DECL(vmar_op_range, zx_status_t, /* no attributes */, 6,
     (handle, op, address, size, buffer, buffer_size), (
     _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
@@ -1035,44 +1015,31 @@ _ZX_SYSCALL_DECL(vmar_op_range, zx_status_t, /* no attributes */, 6,
     void* buffer,
     size_t buffer_size))
 
+_ZX_SYSCALL_DECL(vmar_protect, zx_status_t, /* no attributes */, 4,
+    (handle, options, addr, len), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    zx_vm_option_t options,
+    zx_vaddr_t addr,
+    size_t len))
+
+_ZX_SYSCALL_DECL(vmar_unmap, zx_status_t, /* no attributes */, 3,
+    (handle, addr, len), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    zx_vaddr_t addr,
+    size_t len))
+
+_ZX_SYSCALL_DECL(vmar_unmap_handle_close_thread_exit, zx_status_t, /* no attributes */, 4,
+    (vmar_handle, addr, size, close_handle), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmar_handle,
+    zx_vaddr_t addr,
+    size_t size,
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t close_handle))
+
 _ZX_SYSCALL_DECL(vmo_create, zx_status_t, /* no attributes */, 3,
     (size, options, out), (
     uint64_t size,
     uint32_t options,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
-
-_ZX_SYSCALL_DECL(vmo_read, zx_status_t, /* no attributes */, 4,
-    (handle, buffer, offset, buffer_size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    void* buffer,
-    uint64_t offset,
-    size_t buffer_size))
-
-_ZX_SYSCALL_DECL(vmo_write, zx_status_t, /* no attributes */, 4,
-    (handle, buffer, offset, buffer_size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    const void* buffer,
-    uint64_t offset,
-    size_t buffer_size))
-
-_ZX_SYSCALL_DECL(vmo_get_size, zx_status_t, /* no attributes */, 2,
-    (handle, size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint64_t* size))
-
-_ZX_SYSCALL_DECL(vmo_set_size, zx_status_t, /* no attributes */, 2,
-    (handle, size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint64_t size))
-
-_ZX_SYSCALL_DECL(vmo_op_range, zx_status_t, /* no attributes */, 6,
-    (handle, op, offset, size, buffer, buffer_size), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t op,
-    uint64_t offset,
-    uint64_t size,
-    void* buffer,
-    size_t buffer_size))
 
 _ZX_SYSCALL_DECL(vmo_create_child, zx_status_t, /* no attributes */, 5,
     (handle, options, offset, size, out), (
@@ -1080,17 +1047,6 @@ _ZX_SYSCALL_DECL(vmo_create_child, zx_status_t, /* no attributes */, 5,
     uint32_t options,
     uint64_t offset,
     uint64_t size,
-    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
-
-_ZX_SYSCALL_DECL(vmo_set_cache_policy, zx_status_t, /* no attributes */, 2,
-    (handle, cache_policy), (
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
-    uint32_t cache_policy))
-
-_ZX_SYSCALL_DECL(vmo_replace_as_executable, zx_status_t, /* no attributes */, 3,
-    (handle, vmex, out), (
-    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t handle,
-    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmex,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
 
 _ZX_SYSCALL_DECL(vmo_create_contiguous, zx_status_t, /* no attributes */, 4,
@@ -1106,4 +1062,48 @@ _ZX_SYSCALL_DECL(vmo_create_physical, zx_status_t, /* no attributes */, 4,
     zx_paddr_t paddr,
     size_t size,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
+
+_ZX_SYSCALL_DECL(vmo_get_size, zx_status_t, /* no attributes */, 2,
+    (handle, size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint64_t* size))
+
+_ZX_SYSCALL_DECL(vmo_op_range, zx_status_t, /* no attributes */, 6,
+    (handle, op, offset, size, buffer, buffer_size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t op,
+    uint64_t offset,
+    uint64_t size,
+    void* buffer,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(vmo_read, zx_status_t, /* no attributes */, 4,
+    (handle, buffer, offset, buffer_size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    void* buffer,
+    uint64_t offset,
+    size_t buffer_size))
+
+_ZX_SYSCALL_DECL(vmo_replace_as_executable, zx_status_t, /* no attributes */, 3,
+    (handle, vmex, out), (
+    _ZX_SYSCALL_ANNO(release_handle("Fuchsia")) zx_handle_t handle,
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t vmex,
+    _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
+
+_ZX_SYSCALL_DECL(vmo_set_cache_policy, zx_status_t, /* no attributes */, 2,
+    (handle, cache_policy), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint32_t cache_policy))
+
+_ZX_SYSCALL_DECL(vmo_set_size, zx_status_t, /* no attributes */, 2,
+    (handle, size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    uint64_t size))
+
+_ZX_SYSCALL_DECL(vmo_write, zx_status_t, /* no attributes */, 4,
+    (handle, buffer, offset, buffer_size), (
+    _ZX_SYSCALL_ANNO(use_handle("Fuchsia")) zx_handle_t handle,
+    const void* buffer,
+    uint64_t offset,
+    size_t buffer_size))
 

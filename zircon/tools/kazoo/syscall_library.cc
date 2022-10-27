@@ -455,6 +455,10 @@ void SyscallLibrary::FilterSyscalls(const std::set<std::string>& attributes_to_e
     filtered.push_back(std::move(syscall));
   }
 
+  std::sort(filtered.begin(), filtered.end(),
+            [](const std::unique_ptr<Syscall>& a, const std::unique_ptr<Syscall>& b) -> bool {
+              return a->snake_name() < b->snake_name();
+            });
   syscalls_ = std::move(filtered);
 }
 

@@ -71,23 +71,10 @@ _ZX_SYSCALL_DECL(syscall_test_8, zx_status_t, /* no attributes */, 8,
     int32_t g,
     int32_t h))
 
-_ZX_SYSCALL_DECL(syscall_test_wrapper, zx_status_t, /* no attributes */, 3,
-    (a, b, c), (
-    int32_t a,
-    int32_t b,
-    int32_t c))
-
 _ZX_SYSCALL_DECL(syscall_test_handle_create, zx_status_t, /* no attributes */, 2,
     (return_value, out), (
     zx_status_t return_value,
     _ZX_SYSCALL_ANNO(acquire_handle("Fuchsia")) zx_handle_t* out))
-
-_ZX_SYSCALL_DECL(syscall_test_widening_unsigned_narrow, uint64_t, /* no attributes */, 4,
-    (a, b, c, d), (
-    uint64_t a,
-    uint32_t b,
-    uint16_t c,
-    uint8_t d))
 
 _ZX_SYSCALL_DECL(syscall_test_widening_signed_narrow, int64_t, /* no attributes */, 4,
     (a, b, c, d), (
@@ -96,6 +83,20 @@ _ZX_SYSCALL_DECL(syscall_test_widening_signed_narrow, int64_t, /* no attributes 
     int16_t c,
     int8_t d))
 
+_ZX_SYSCALL_DECL(syscall_test_widening_signed_wide, int64_t, /* no attributes */, 4,
+    (a, b, c, d), (
+    int64_t a,
+    int32_t b,
+    int16_t c,
+    int8_t d))
+
+_ZX_SYSCALL_DECL(syscall_test_widening_unsigned_narrow, uint64_t, /* no attributes */, 4,
+    (a, b, c, d), (
+    uint64_t a,
+    uint32_t b,
+    uint16_t c,
+    uint8_t d))
+
 _ZX_SYSCALL_DECL(syscall_test_widening_unsigned_wide, uint64_t, /* no attributes */, 4,
     (a, b, c, d), (
     uint64_t a,
@@ -103,10 +104,9 @@ _ZX_SYSCALL_DECL(syscall_test_widening_unsigned_wide, uint64_t, /* no attributes
     uint16_t c,
     uint8_t d))
 
-_ZX_SYSCALL_DECL(syscall_test_widening_signed_wide, int64_t, /* no attributes */, 4,
-    (a, b, c, d), (
-    int64_t a,
+_ZX_SYSCALL_DECL(syscall_test_wrapper, zx_status_t, /* no attributes */, 3,
+    (a, b, c), (
+    int32_t a,
     int32_t b,
-    int16_t c,
-    int8_t d))
+    int32_t c))
 

@@ -126,22 +126,6 @@ TEST(KernelWrappersOutput, DebugExcludedInRelease) {
 
 extern "C" {
 
-syscall_result wrapper_kwrap_simple_case(uint64_t pc);
-syscall_result wrapper_kwrap_simple_case(uint64_t pc) {
-    return do_syscall(ZX_SYS_kwrap_simple_case, pc, &VDso::ValidSyscallPC::kwrap_simple_case, [&](ProcessDispatcher* current_process) -> uint64_t {
-        auto result = sys_kwrap_simple_case();
-        return result;
-    });
-}
-
-syscall_result wrapper_kwrap_multiple_in_handles(SafeSyscallArgument<const zx_handle_t*>::RawType handles, SafeSyscallArgument<size_t>::RawType num_handles, uint64_t pc);
-syscall_result wrapper_kwrap_multiple_in_handles(SafeSyscallArgument<const zx_handle_t*>::RawType handles, SafeSyscallArgument<size_t>::RawType num_handles, uint64_t pc) {
-    return do_syscall(ZX_SYS_kwrap_multiple_in_handles, pc, &VDso::ValidSyscallPC::kwrap_multiple_in_handles, [&](ProcessDispatcher* current_process) -> uint64_t {
-        auto result = sys_kwrap_multiple_in_handles(make_user_in_ptr(SafeSyscallArgument<const zx_handle_t*>::Sanitize(handles)), SafeSyscallArgument<size_t>::Sanitize(num_handles));
-        return result;
-    });
-}
-
 syscall_result wrapper_kwrap_ano_ret_func(uint64_t pc);
 syscall_result wrapper_kwrap_ano_ret_func(uint64_t pc) {
     return do_syscall(ZX_SYS_kwrap_ano_ret_func, pc, &VDso::ValidSyscallPC::kwrap_ano_ret_func, [&](ProcessDispatcher* current_process) -> uint64_t {
@@ -159,6 +143,14 @@ syscall_result wrapper_kwrap_inout_args(SafeSyscallArgument<zx_handle_t>::RawTyp
     });
 }
 
+syscall_result wrapper_kwrap_multiple_in_handles(SafeSyscallArgument<const zx_handle_t*>::RawType handles, SafeSyscallArgument<size_t>::RawType num_handles, uint64_t pc);
+syscall_result wrapper_kwrap_multiple_in_handles(SafeSyscallArgument<const zx_handle_t*>::RawType handles, SafeSyscallArgument<size_t>::RawType num_handles, uint64_t pc) {
+    return do_syscall(ZX_SYS_kwrap_multiple_in_handles, pc, &VDso::ValidSyscallPC::kwrap_multiple_in_handles, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_kwrap_multiple_in_handles(make_user_in_ptr(SafeSyscallArgument<const zx_handle_t*>::Sanitize(handles)), SafeSyscallArgument<size_t>::Sanitize(num_handles));
+        return result;
+    });
+}
+
 syscall_result wrapper_kwrap_output_handle(SafeSyscallArgument<zx_handle_t*>::RawType event, uint64_t pc);
 syscall_result wrapper_kwrap_output_handle(SafeSyscallArgument<zx_handle_t*>::RawType event, uint64_t pc) {
     return do_syscall(ZX_SYS_kwrap_output_handle, pc, &VDso::ValidSyscallPC::kwrap_output_handle, [&](ProcessDispatcher* current_process) -> uint64_t {
@@ -170,6 +162,14 @@ syscall_result wrapper_kwrap_output_handle(SafeSyscallArgument<zx_handle_t*>::Ra
         if (result != ZX_OK)
             return result;
         out_handle_event.finish_copyout(current_process);
+        return result;
+    });
+}
+
+syscall_result wrapper_kwrap_simple_case(uint64_t pc);
+syscall_result wrapper_kwrap_simple_case(uint64_t pc) {
+    return do_syscall(ZX_SYS_kwrap_simple_case, pc, &VDso::ValidSyscallPC::kwrap_simple_case, [&](ProcessDispatcher* current_process) -> uint64_t {
+        auto result = sys_kwrap_simple_case();
         return result;
     });
 }
