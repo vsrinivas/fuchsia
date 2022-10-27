@@ -202,7 +202,7 @@ pub fn sys_process_vm_readv(
     let task = current_task.get_task(pid).ok_or_else(|| errno!(ESRCH))?;
     // When this check is loosened to allow reading memory from other processes, the check should
     // be like checking if the current process is allowed to debug the other process.
-    if !Arc::ptr_eq(&task, &current_task.task_arc_clone()) {
+    if !Arc::ptr_eq(&task.thread_group, &current_task.thread_group) {
         return error!(EPERM);
     }
     let local_iov = task.mm.read_iovec(local_iov_addr, local_iov_count)?;
