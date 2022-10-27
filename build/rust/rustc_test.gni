@@ -4,6 +4,8 @@
 
 import("//build/rust/rustc_artifact.gni")
 import("//build/testing/host_test.gni")
+import("//build/toolchain/concurrent_jobs.gni")
+import("//build/toolchain/rbe.gni")
 
 # Internal template supporting rustc_test.
 #
@@ -119,8 +121,35 @@ template("rustc_test_internal") {
                              "visibility",
                            ])
 
+    _use_rbe = rust_rbe_enable
     if (defined(invoker.disable_rbe)) {
-      disable_rbe = invoker.disable_rbe
+      _use_rbe = !invoker.disable_rbe
+    }
+
+    _concurrency = concurrent_jobs.remote
+    if (!_use_rbe) {
+      _any_lto = toolchain_variant.tags + [
+                   "lto",
+                   "thinlto",
+                 ] -
+                 [
+                   "lto",
+                   "thinlto",
+                 ] != toolchain_variant.tags
+
+      if (_any_lto) {
+        # LTO on tests can be memory-intensive, especially for Rust,
+        # so reduce concurrency when running locally.
+        # See http://fxbug.dev/111904 for more context.
+        _concurrency = concurrent_jobs.local
+      }
+    }
+    forward_variables_from(_concurrency, "*")  # sets a pool
+
+    # Allow target to override pool, e.g. "highmem" for exceptionally
+    # large jobs that should run with even less concurrency.
+    if (defined(invoker.pool)) {
+      pool = invoker.pool
     }
 
     deps = []
@@ -247,6 +276,11 @@ template("rustc_test_internal") {
 #   output_dir (optional)
 #     Directory that the resulting test should be placed in.
 #     See: `gn help output_dir`
+#
+#   pool (optional)
+#     Override the default concurrency pool when building the Rust test binary.
+#     e.g. extremely high memory jobs run locally could use
+#     "//build/config:highmem".
 #
 #   disable_rbe (optional)
 #     Set to true to force this target to build locally, overriding the global

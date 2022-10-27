@@ -91,6 +91,11 @@ import("//build/rust/rustc_test.gni")
 #     Directory that the resulting library should be placed in.
 #     See: `gn help output_dir`
 #
+#   pool (optional)
+#     Override the default concurrency pool when building the Rust library.
+#     e.g. extremely high memory jobs run locally could use
+#     "//build/config:highmem".
+#
 #   disable_rbe (optional)
 #     Set to true to force this target to build locally, overriding the global `rust_rbe_enable`.
 #     If with_unit_tests is also true, this setting applies to the unit test as well.
@@ -203,6 +208,7 @@ template("rustc_library") {
                              "enforce_source_listing",
                              "features",
                              "inputs",
+                             "pool",
                              "rustenv",
                              "sources",
                              "testonly",
