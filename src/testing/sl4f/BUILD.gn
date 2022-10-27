@@ -47,7 +47,6 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.media:fuchsia.media_rust",
     "//sdk/fidl/fuchsia.media.sounds:fuchsia.media.sounds_rust",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem_rust",
-    "//sdk/fidl/fuchsia.modular.internal:fuchsia.modular.internal_rust",
     "//sdk/fidl/fuchsia.net:fuchsia.net_rust",
     "//sdk/fidl/fuchsia.net.debug:fuchsia.net.debug_rust",
     "//sdk/fidl/fuchsia.net.interfaces:fuchsia.net.interfaces_rust",
@@ -110,7 +109,6 @@ rustc_library("lib") {
     "//third_party/rust_crates:hex",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:num-derive",
     "//third_party/rust_crates:num-traits",
@@ -128,6 +126,7 @@ rustc_library("lib") {
     "//src/lib/test_util",
     "//src/testing/fidl:placeholders_rust",
     "//third_party/rust_crates:assert_matches",
+    "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:pin-utils",
     "//third_party/rust_crates:tempfile",
   ]

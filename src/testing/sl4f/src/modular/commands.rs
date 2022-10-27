@@ -25,7 +25,7 @@ impl Facade for ModularFacade {
                 Ok(to_value(result)?)
             }
             ModularMethod::IsBasemgrRunning => {
-                let result = self.is_basemgr_running()?;
+                let result = self.is_basemgr_running().await?;
                 Ok(to_value(result)?)
             }
         }

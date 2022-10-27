@@ -4,10 +4,7 @@
 
 use crate::webdriver::types::{EnableDevToolsResult, GetDevToolsPortsResult};
 use anyhow::{format_err, Error};
-use fidl::{
-    endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd},
-    prelude::*,
-};
+use fidl::endpoints::{create_proxy, create_request_stream, ClientEnd, ServerEnd};
 use fidl_fuchsia_web::{
     ContextMarker, ContextProviderMarker, ContextProviderProxy, CreateContextParams, DebugMarker,
     DebugProxy, DevToolsListenerMarker, DevToolsListenerRequest, DevToolsListenerRequestStream,
@@ -19,7 +16,6 @@ use fuchsia_component as app;
 use fuchsia_zircon as zx;
 use futures::channel::mpsc;
 use futures::prelude::*;
-use glob::glob;
 use parking_lot::Mutex;
 use std::collections::HashSet;
 use std::iter::FromIterator;
@@ -153,27 +149,19 @@ impl WebdriverFacadeInternal {
 
     /// Get a client to the WebDriver Debug service published in the Hub.
     async fn get_debug_proxy() -> Result<DebugProxy, Error> {
-        let found_path = Self::get_path_to_debug().await?;
-        let (client, server) = zx::Channel::create()?;
-        fdio::service_connect(found_path.as_ref(), server)?;
-        Ok(DebugProxy::new(fasync::Channel::from_channel(client)?))
-    }
-
-    /// Locate debug service published in the Hub.
-    async fn get_path_to_debug() -> Result<String, Error> {
-        // Find debug service in the Hub.
-        let glob_query = format!("/hub-v2/children/core/children/context_provider/exec/out/debug/{}", DebugMarker::PROTOCOL_NAME);
-        if let Some(found_path) = glob(&glob_query)?.filter_map(|entry| entry.ok()).next() {
-            Ok(found_path.to_string_lossy().to_string())
-        } else {
-            // Fallback to v1.
-            let glob_query = format!("/hub-v2/children/core/children/appmgr/exec/out/hub/r/sys/*/c/context_provider.cmx/*/out/debug/{}", DebugMarker::PROTOCOL_NAME);
-            if let Some(found_path) = glob(&glob_query)?.filter_map(|entry| entry.ok()).next() {
-                Ok(found_path.to_string_lossy().to_string())
-            } else {
-                Err(format_err!("Failed to find debug service."))
-            }
-        }
+        let query = fuchsia_component::client::connect_to_protocol::<
+            fidl_fuchsia_sys2::RealmQueryMarker,
+        >()?;
+        let resolved_dirs = query
+            .get_instance_directories("./core/context_provider")
+            .await?
+            .map_err(|s| format_err!("could not get context_provider directories: {:?}", s))?
+            .ok_or(format_err!("context_provider component is not resolved"))?;
+        let exposed_dir = resolved_dirs.exposed_dir.into_proxy().unwrap();
+        let debug_proxy = fuchsia_component::client::connect_to_protocol_at_dir_root::<DebugMarker>(
+            &exposed_dir,
+        )?;
+        Ok(debug_proxy)
     }
 
     /// Spawn an instance of `DevToolsListener` that forwards port open/close

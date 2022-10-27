@@ -266,11 +266,6 @@
             to: "#sl4f",
         },
         {
-            directory: "hub",
-            from: "parent",
-            to: "#sl4f",
-        },
-        {
             directory: "dev-class",
             from: "parent",
             as: "dev-temperature",

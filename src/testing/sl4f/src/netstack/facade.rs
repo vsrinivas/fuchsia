@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use anyhow::{Context as _, Error};
+use anyhow::{format_err, Context as _, Error};
 use once_cell::sync::OnceCell;
 use serde::Serialize;
 
@@ -118,34 +118,55 @@ pub struct NetstackFacade {
     debug_interfaces: OnceCell<fidl_fuchsia_net_debug::InterfacesProxy>,
 }
 
-// Path to hub-v2 netstack exposed directory.
-const NETSTACK_EXPOSED_DIR: &str =
-    "/hub-v2/children/core/children/network/children/netstack/exec/expose";
+async fn get_netstack_proxy<P: fidl::endpoints::DiscoverableProtocolMarker>(
+) -> Result<P::Proxy, Error> {
+    let query =
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_sys2::RealmQueryMarker>()?;
+    let resolved_dirs = query
+        .get_instance_directories("./core/network/netstack")
+        .await?
+        .map_err(|s| format_err!("could not get netstack directories: {:?}", s))?
+        .ok_or(format_err!("netstack component is not resolved"))?;
+    let exposed_dir = resolved_dirs.exposed_dir.into_proxy().unwrap();
+    fuchsia_component::client::connect_to_protocol_at_dir_root::<P>(&exposed_dir)
+}
 
 impl NetstackFacade {
-    fn get_interfaces_state(&self) -> Result<&fidl_fuchsia_net_interfaces::StateProxy, Error> {
+    async fn get_interfaces_state(
+        &self,
+    ) -> Result<&fidl_fuchsia_net_interfaces::StateProxy, Error> {
         let Self { interfaces_state, debug_interfaces: _ } = self;
-        interfaces_state.get_or_try_init(|| {
-            fuchsia_component::client::connect_to_protocol_at::<
-                fidl_fuchsia_net_interfaces::StateMarker,
-            >(NETSTACK_EXPOSED_DIR)
-        })
+        if let Some(state_proxy) = interfaces_state.get() {
+            Ok(state_proxy)
+        } else {
+            let state_proxy =
+                get_netstack_proxy::<fidl_fuchsia_net_interfaces::StateMarker>().await?;
+            interfaces_state.set(state_proxy).unwrap();
+            let state_proxy = interfaces_state.get().unwrap();
+            Ok(state_proxy)
+        }
     }
 
-    fn get_debug_interfaces(&self) -> Result<&fidl_fuchsia_net_debug::InterfacesProxy, Error> {
+    async fn get_debug_interfaces(
+        &self,
+    ) -> Result<&fidl_fuchsia_net_debug::InterfacesProxy, Error> {
         let Self { interfaces_state: _, debug_interfaces } = self;
-        debug_interfaces.get_or_try_init(|| {
-            fuchsia_component::client::connect_to_protocol_at::<
-                fidl_fuchsia_net_debug::InterfacesMarker,
-            >(NETSTACK_EXPOSED_DIR)
-        })
+        if let Some(interfaces_proxy) = debug_interfaces.get() {
+            Ok(interfaces_proxy)
+        } else {
+            let interfaces_proxy =
+                get_netstack_proxy::<fidl_fuchsia_net_debug::InterfacesMarker>().await?;
+            debug_interfaces.set(interfaces_proxy).unwrap();
+            let interfaces_proxy = debug_interfaces.get().unwrap();
+            Ok(interfaces_proxy)
+        }
     }
 
-    fn get_control(
+    async fn get_control(
         &self,
         id: u64,
     ) -> Result<fidl_fuchsia_net_interfaces_ext::admin::Control, Error> {
-        let debug_interfaces = self.get_debug_interfaces()?;
+        let debug_interfaces = self.get_debug_interfaces().await?;
         let (control, server_end) =
             fidl_fuchsia_net_interfaces_ext::admin::Control::create_endpoints()
                 .context("create admin control endpoints")?;
@@ -154,7 +175,7 @@ impl NetstackFacade {
     }
 
     pub async fn enable_interface(&self, id: u64) -> Result<(), Error> {
-        let control = self.get_control(id)?;
+        let control = self.get_control(id).await?;
         let _did_enable: bool = control
             .enable()
             .await
@@ -169,7 +190,7 @@ impl NetstackFacade {
     }
 
     pub async fn disable_interface(&self, id: u64) -> Result<(), Error> {
-        let control = self.get_control(id)?;
+        let control = self.get_control(id).await?;
         let _did_disable: bool = control
             .disable()
             .await
@@ -184,8 +205,8 @@ impl NetstackFacade {
     }
 
     pub async fn list_interfaces(&self) -> Result<Vec<Properties>, Error> {
-        let interfaces_state = self.get_interfaces_state()?;
-        let debug_interfaces = self.get_debug_interfaces()?;
+        let interfaces_state = self.get_interfaces_state().await?;
+        let debug_interfaces = self.get_debug_interfaces().await?;
         let stream = fidl_fuchsia_net_interfaces_ext::event_stream_from_state(interfaces_state)?;
         let response =
             fidl_fuchsia_net_interfaces_ext::existing(stream, std::collections::HashMap::new())
@@ -213,7 +234,7 @@ impl NetstackFacade {
     ) -> Result<Vec<T>, Error> {
         let mut output = Vec::new();
 
-        let interfaces_state = self.get_interfaces_state()?;
+        let interfaces_state = self.get_interfaces_state().await?;
         let (watcher, server) =
             fidl::endpoints::create_proxy::<fidl_fuchsia_net_interfaces::WatcherMarker>()?;
         let () = interfaces_state

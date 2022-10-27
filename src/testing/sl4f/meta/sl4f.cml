@@ -29,11 +29,6 @@
             path: "/tmp",
         },
         {
-            directory: "hub",
-            rights: [ "rw*" ],
-            path: "/hub-v2",
-        },
-        {
             directory: "dev-temperature",
             rights: [ "r*" ],
             path: "/dev/class/temperature",
