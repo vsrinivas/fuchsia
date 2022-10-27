@@ -37,11 +37,14 @@ rustc_binary("input-pipeline-bin") {
   sources = [ "src/main.rs" ]
 }
 
+# Declare the component manifest separately for shared
+# reference in component and configuration definitions.
 fuchsia_component_manifest("manifest") {
   component_name = "input-pipeline"
   manifest = "meta/input-pipeline.cml"
 }
 
+# TODO(fxbug.dev/113335): Remove -v2 suffix.
 fuchsia_component("component-v2") {
   cm_label = ":manifest"
   deps = [ ":input-pipeline-bin" ]
@@ -50,9 +53,10 @@ fuchsia_component("component-v2") {
 # TODO(fxbug.dev/106573): Remove test-only target when
 # default config values are available.
 group("component-v2-for-test") {
+  testonly = true
   deps = [
     ":component-v2",
-    ":default_config",
+    ":config_for_test",
   ]
 }
 
@@ -64,31 +68,42 @@ fuchsia_unittest_package("input-pipeline-tests") {
   deps = [ ":input-pipeline-bin_test" ]
 }
 
+# Define library used to read runtime configuration
+# values from structured configuration, for inclusion
+# as a dependency in :input-pipeline-bin.
 fuchsia_structured_config_rust_lib("input_config_lib") {
   cm_label = ":manifest"
 }
 
-fuchsia_structured_config_values("default_config") {
+# Define structured configuration values for testing.
+fuchsia_structured_config_values("config_for_test") {
+  testonly = true
   cm_label = ":manifest"
   values = {
     idle_threshold_minutes = 15
   }
 }
 
+# Define an empty config as the default for the
+# light sensor configuration.
 resource("default-input-pipeline-config") {
   outputs = [ "data/config/empty.json" ]
   sources = [ "empty.json" ]
 }
 
-fuchsia_component("component") {
+# A non-executable component that provides configuration files to input-pipeline.
+fuchsia_component("product-config-component") {
   component_name = "input-pipeline-product-config"
   manifest = "meta/input-pipeline-product-config.cml"
 }
 
+# Define a configuration data package which routes the
+# /input-config/ directory to input-pipeline for
+# light sensor configuration.
 fuchsia_package("default-config-pkg") {
   package_name = "input-pipeline-product-config"
   deps = [
-    ":component",
     ":default-input-pipeline-config",
+    ":product-config-component",
   ]
 }
