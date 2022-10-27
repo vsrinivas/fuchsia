@@ -59,6 +59,8 @@ if (target_cpu == "x64" && !is_asan) {
       "//sdk/fidl/fuchsia.ui.composition:fuchsia.ui.composition_rust",
       "//sdk/fidl/fuchsia.ui.views:fuchsia.ui.views_rust",
       "//src/graphics/lib/magma/src/libmagma",
+      "//src/lib/diagnostics/inspect/runtime/rust",
+      "//src/lib/diagnostics/inspect/rust",
       "//src/lib/fdio/rust:fdio",
       "//src/lib/fidl/rust/fidl",
       "//src/lib/fuchsia",

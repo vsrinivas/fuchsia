@@ -212,3 +212,13 @@ for moniker in /core/{starnix_runner,starnix_manager,test_manager/{starnix_test_
   ffx component stop -r $moniker
 done
 ```
+
+### Viewing Inspect for debugging
+
+You can view Inspect data exposed by starnix using `ffx inspect`.
+
+To view the thread groups currently running, run:
+
+```
+ffx inspect show core/starnix_manager/starbionic:root/galaxy/kernel/thread_groups
+```

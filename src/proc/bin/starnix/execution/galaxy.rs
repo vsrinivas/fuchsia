@@ -6,7 +6,9 @@ use anyhow::{anyhow, Context, Error};
 use fidl_fuchsia_io as fio;
 use fuchsia_async as fasync;
 use fuchsia_async::DurationExt;
+use fuchsia_inspect as inspect;
 use fuchsia_zircon as zx;
+use futures::FutureExt;
 use starnix_runner_config::Config;
 use std::collections::BTreeMap;
 use std::ffi::CString;
@@ -25,6 +27,11 @@ lazy_static::lazy_static! {
     /// The configuration for the starnix runner. This is static because reading the configuration
     /// consumes a startup handle, and thus can only be done once per component-run.
     static ref CONFIG: Config = Config::take_from_startup_handle();
+
+    static ref COMMAND: inspect::StringReference<'static> = "command".into();
+    static ref PPID: inspect::StringReference<'static> = "ppid".into();
+    static ref TASKS: inspect::StringReference<'static> = "tasks".into();
+    static ref STOPPED: inspect::StringReference<'static> = "stopped".into();
 }
 
 // Creates a CString from a String. Calling this with an invalid CString will panic.
@@ -41,6 +48,9 @@ pub struct Galaxy {
 
     /// The system task to execute action as the system.
     pub system_task: CurrentTask,
+
+    /// Inspect node holding information about the state of the galaxy.
+    _node: inspect::Node,
 }
 
 impl Galaxy {
@@ -84,6 +94,9 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
 
     let kernel = Arc::new(kernel);
 
+    let node = inspect::component::inspector().root().create_child("galaxy");
+    create_galaxy_inspect(kernel.clone(), &node);
+
     let mut init_task = create_init_task(&kernel)?;
     let fs_context = create_fs_context(&init_task, &CONFIG.features, &pkg_dir_proxy)?;
     init_task.set_fs(fs_context.clone());
@@ -125,7 +138,7 @@ pub async fn create_galaxy() -> Result<Galaxy, Error> {
         wait_for_init_file(&startup_file_path, &system_task).await?;
     };
 
-    Ok(Galaxy { kernel, root_fs, system_task })
+    Ok(Galaxy { kernel, root_fs, system_task, _node: node })
 }
 
 fn create_fs_context(
@@ -238,6 +251,46 @@ async fn wait_for_init_file(
         }
     }
     Ok(())
+}
+
+/// Creates a lazy node that will contain the Kernel thread groups state.
+fn create_galaxy_inspect(kernel: Arc<Kernel>, parent: &inspect::Node) {
+    parent.record_lazy_child("kernel", move || {
+        let inspector = inspect::Inspector::new();
+        let thread_groups = inspector.root().create_child("thread_groups");
+        for thread_group in kernel.pids.read().get_thread_groups() {
+            let tg = thread_group.read();
+
+            let tg_node = thread_groups.create_child(&format!("{}", thread_group.leader));
+            tg_node.record_int(&*PPID, tg.get_ppid() as i64);
+            tg_node.record_bool(&*STOPPED, tg.stopped);
+
+            let tasks_node = tg_node.create_child(&*TASKS);
+            for task in tg.tasks() {
+                if task.id == thread_group.leader {
+                    record_task_command_to_node(&task, &*COMMAND, &tg_node);
+                    continue;
+                }
+                record_task_command_to_node(&task, &format!("{}", task.id), &tasks_node);
+            }
+            tg_node.record(tasks_node);
+            thread_groups.record(tg_node);
+        }
+        inspector.root().record(thread_groups);
+
+        async move { Ok(inspector) }.boxed()
+    });
+}
+
+fn record_task_command_to_node<'a>(
+    task: &Arc<Task>,
+    name: impl Into<inspect::StringReference<'a>>,
+    node: &inspect::Node,
+) {
+    match task.command().to_str() {
+        Ok(command) => node.record_string(name, command),
+        Err(err) => node.record_string(name, &format!("{}", err)),
+    }
 }
 
 #[cfg(test)]
