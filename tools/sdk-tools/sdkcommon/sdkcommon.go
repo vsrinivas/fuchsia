@@ -150,8 +150,12 @@ func getDeviceDataKey(segments []string, isGlobal bool) string {
 }
 
 // DefaultGetUserHomeDir is the default implementation of GetUserHomeDir()
-// to allow mocking of user.Current()
+// to allow mocking of the user home directory
 func DefaultGetUserHomeDir() (string, error) {
+	if homeDir, err := os.UserHomeDir(); err == nil {
+		return homeDir, nil
+	}
+	// Fallback to using mygetpwuid_r and /etc/passwd if $HOME is not available
 	usr, err := user.Current()
 	if err != nil {
 		return "", nil
