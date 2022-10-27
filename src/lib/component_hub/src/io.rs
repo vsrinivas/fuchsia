@@ -7,11 +7,14 @@
 
 use {
     anyhow::{format_err, Error, Result},
+    fidl::endpoints::{create_endpoints, ClientEnd},
     fidl_fuchsia_io as fio,
     fuchsia_fs::directory::readdir,
     fuchsia_fs::directory::DirEntry,
     fuchsia_fs::{
-        directory::{clone_no_describe, open_directory_no_describe, open_file_no_describe},
+        directory::{
+            clone_no_describe, open_directory, open_directory_no_describe, open_file_no_describe,
+        },
         file::{close, read, read_to_string, write},
     },
     fuchsia_zircon_status::Status,
@@ -45,7 +48,7 @@ impl Directory {
         Ok(Self { path, proxy, readdir_mutex: Mutex::new(()) })
     }
 
-    // Return a list of directory entries in the directory
+    // Return a list of directory entries in the directory.
     pub async fn entries(&self) -> Result<Vec<DirEntry>, Error> {
         let _lock = self.readdir_mutex.lock().await;
         match readdir(&self.proxy).await {
@@ -57,7 +60,7 @@ impl Directory {
             )),
         }
     }
-    // Create a Directory object from a proxy
+    // Create a Directory object from a proxy.
     pub fn from_proxy(proxy: fio::DirectoryProxy) -> Self {
         let path = PathBuf::from(".");
         Self { path, proxy, readdir_mutex: Mutex::new(()) }
@@ -85,13 +88,38 @@ impl Directory {
         }
     }
 
-    // Read the contents of a file at the given `relative_path` as a string
+    pub async fn verify_directory_is_read_write<P: AsRef<Path>>(
+        &self,
+        relative_path: P,
+    ) -> Result<()> {
+        let path = self.path.join(relative_path.as_ref());
+        let relative_path = match relative_path.as_ref().to_str() {
+            Some(relative_path) => relative_path,
+            None => return Err(format_err!("relative path is not valid unicode")),
+        };
+
+        let directory = self.clone_proxy()?;
+
+        match open_directory(&directory, relative_path, fio::OpenFlags::RIGHT_WRITABLE).await {
+            Ok(_) => Ok(()),
+            Err(e) => {
+                return Err(format_err!(
+                    "Not read write directory! {}, {}",
+                    path.as_path().display(),
+                    e
+                ))
+            }
+        }
+    }
+
+    // Read the contents of a file at the given `relative_path` as a string.
     pub async fn read_file<P: AsRef<Path>>(&self, relative_path: P) -> Result<String> {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,
             None => return Err(format_err!("relative path is not valid unicode")),
         };
+
         let proxy =
             match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
             {
@@ -115,13 +143,14 @@ impl Directory {
         }
     }
 
-    // Read the contents of a file at the given `relative_path` as bytes
+    // Read the contents of a file at the given `relative_path` as bytes.
     pub async fn read_file_bytes<P: AsRef<Path>>(&self, relative_path: P) -> Result<Vec<u8>> {
         let path = self.path.join(relative_path.as_ref());
         let relative_path = match relative_path.as_ref().to_str() {
             Some(relative_path) => relative_path,
             None => return Err(format_err!("relative path is not valid unicode")),
         };
+
         let proxy =
             match open_file_no_describe(&self.proxy, relative_path, fio::OpenFlags::RIGHT_READABLE)
             {
@@ -277,7 +306,7 @@ impl Directory {
         }
     }
 
-    // Return a list of directory entry names in the directory
+    // Return a list of directory entry names in the directory.
     pub async fn entry_names(&self) -> Result<Vec<String>> {
         match self.entries().await {
             Ok(entries) => Ok(entries.into_iter().map(|e| e.name).collect()),
@@ -286,6 +315,17 @@ impl Directory {
                 self.path.as_path().display(),
                 e
             )),
+        }
+    }
+
+    // Return a clone of the existing proxy of the Directory.
+    pub fn clone_proxy(&self) -> Result<fio::DirectoryProxy> {
+        let (clone, clone_server) = create_endpoints::<fio::NodeMarker>()?;
+        self.proxy.clone(fio::OpenFlags::CLONE_SAME_RIGHTS, clone_server)?;
+
+        match ClientEnd::<fio::DirectoryMarker>::new(clone.into_channel()).into_proxy() {
+            Ok(cloned_proxy) => Ok(cloned_proxy),
+            Err(e) => Err(format_err!("Could not clone proxy. {}", e)),
         }
     }
 

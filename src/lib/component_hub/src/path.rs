@@ -74,7 +74,8 @@ pub async fn finalize_destination_to_filepath(
                 (Some(remote_destination), _) => {
                     match remote_destination.kind {
                         DirentKind::File => {}
-                        DirentKind::Directory => {
+                        // TODO(https://fxrev.dev/745090): Update component_manager vfs to assign proper DirentKinds when installing the directory tree.
+                        DirentKind::Directory | DirentKind::Unknown => {
                             destination_path.push(&source_file_str);
                         }
                         _ => {
