@@ -551,7 +551,7 @@ TEST_F(ApInfraBssTest, ReauthenticateWhileAssociated) {
   ctx.AssertAuthFrame(std::move(*device.wlan_queue.begin()));
 }
 
-TEST_F(ApInfraBssTest, ReassociationFlowWhileAssociated) {
+TEST_F(ApInfraBssTest, AuthenticateAndAssociateWhileAssociated) {
   ctx.StartAp();
   ctx.AuthenticateAndAssociateClient(kAid);
   ctx.EstablishRsna();

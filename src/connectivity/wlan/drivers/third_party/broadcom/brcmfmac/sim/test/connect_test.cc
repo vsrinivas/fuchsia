@@ -200,10 +200,10 @@ class ConnectTest : public SimTest {
   bool start_deauth_ = false;
   // Indicates if deauth is from the AP or from self
   bool deauth_from_ap_ = false;
-  // Indicates reassoc needs to be schedule when disassoc_ind is received.
-  bool start_reassoc_ = false;
-  // Indicates reassoc needs to be issued right when disassoc_ind is received.
-  bool start_reconnect_instant_ = false;
+  // Indicates reconnect (via assoc) needs to be scheduled when disassoc_ind is received.
+  bool start_reconnect_assoc_ = false;
+  // Indicates reconnect (via assoc) needs to be issued right when disassoc_ind is received.
+  bool start_reconnect_assoc_instant_ = false;
 
  private:
   // StationIfc overrides
@@ -383,9 +383,9 @@ void ConnectTest::OnDisassocInd(const wlan_fullmac_disassoc_indication_t* ind) {
     context_.ind_locally_initiated_count++;
   }
   client_ifc_.stats_.disassoc_indications.push_back(*ind);
-  if (start_reconnect_instant_) {
+  if (start_reconnect_assoc_instant_) {
     StartReconnect();
-  } else if (start_reassoc_) {
+  } else if (start_reconnect_assoc_) {
     env_->ScheduleNotification(std::bind(&ConnectTest::StartReconnect, this), zx::sec(3));
   }
 }
@@ -1265,7 +1265,7 @@ TEST_F(ConnectTest, deauth_from_self_then_from_ap) {
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
-TEST_F(ConnectTest, simple_reassoc) {
+TEST_F(ConnectTest, simple_reconnect_via_assoc) {
   // Create our device instance
   Init();
 
@@ -1287,8 +1287,8 @@ TEST_F(ConnectTest, simple_reassoc) {
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
-// Reassoc should pass since the attempt is made after disassoc completes.
-TEST_F(ConnectTest, reassoc_success) {
+// Reconnect via assoc should succeed since the attempt is made after disassoc completes.
+TEST_F(ConnectTest, reconnect_via_assoc_success) {
   // Create our device instance
   Init();
 
@@ -1298,23 +1298,23 @@ TEST_F(ConnectTest, reassoc_success) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  // Schedule reassoc when disassoc notification is received at SME.
-  start_reassoc_ = true;
+  // Schedule reconnect via assoc when disassoc notification is received at SME.
+  start_reconnect_assoc_ = true;
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&ConnectTest::DisassocFromAp, this), zx::sec(2));
 
   env_->Run(kTestDuration);
 
-  // Since reassoc occurs after disassoc is completed it succeeds.
+  // Since reconnect via assoc occurs after disassoc is completed it succeeds.
   EXPECT_EQ(context_.connect_resp_count, 2U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
-// Reassoc should fail since the attempt is made soon after SME is notified but before disassoc
-// completes.
-TEST_F(ConnectTest, reassoc_fails) {
+// Reconnect via assoc should fail since the attempt is made soon after SME is notified but before
+// disassoc completes.
+TEST_F(ConnectTest, reconnect_assoc_fails) {
   // Create our device instance
   Init();
 
@@ -1324,21 +1324,21 @@ TEST_F(ConnectTest, reassoc_fails) {
 
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
   context_.expected_results.push_front(STATUS_CODE_SUCCESS);
-  // Issue reassoc soon after disassoc notification is received at SME.
-  start_reconnect_instant_ = true;
+  // Issue reconnect assoc soon after disassoc notification is received at SME.
+  start_reconnect_assoc_instant_ = true;
 
   env_->ScheduleNotification(std::bind(&ConnectTest::StartConnect, this), zx::msec(10));
   env_->ScheduleNotification(std::bind(&ConnectTest::DisassocFromAp, this), zx::sec(2));
 
   env_->Run(kTestDuration);
 
-  // Although we attempted to reassoc, it fails because disconnect is in progress
+  // Although we attempted to reconnect assoc, it fails because disconnect is in progress
   EXPECT_EQ(context_.connect_resp_count, 1U);
   EXPECT_EQ(context_.disassoc_ind_count, 1U);
   EXPECT_EQ(context_.ind_locally_initiated_count, 0U);
 }
 
-TEST_F(ConnectTest, deauth_during_reassoc) {
+TEST_F(ConnectTest, deauth_during_reconnect_via_assoc) {
   // Create our device instance
   Init();
 

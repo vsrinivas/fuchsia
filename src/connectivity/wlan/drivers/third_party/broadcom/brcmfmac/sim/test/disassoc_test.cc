@@ -70,7 +70,7 @@ TEST_F(SimTest, SmeDeauthFollowedByFwDisassoc) {
   // Schedule a deauth from SME
   env_->ScheduleNotification([&] { client_ifc.DeauthenticateFrom(kApBssid, deauth_reason); },
                              zx::sec(2));
-  // Reassociate
+  // Associate again
   client_ifc.AssociateWith(ap, zx::sec(3));
   // Schedule a disassocaition from firmware
   ::fuchsia::wlan::ieee80211::ReasonCode disassoc_reason =

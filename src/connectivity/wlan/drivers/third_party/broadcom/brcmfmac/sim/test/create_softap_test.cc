@@ -515,7 +515,7 @@ TEST_F(CreateSoftAPTest, AssociateWithSoftAP) {
   env_->Run(kSimulatedClockDuration);
 }
 
-TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
+TEST_F(CreateSoftAPTest, DisassociateThenAssociateWithSoftAP) {
   Init();
   CreateInterface();
   EXPECT_EQ(DeviceCountByProtocolId(ZX_PROTOCOL_WLAN_FULLMAC_IMPL), 1u);
@@ -528,7 +528,7 @@ TEST_F(CreateSoftAPTest, ReassociateWithSoftAP) {
                              zx::msec(10));
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(50));
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::ClearAssocInd, this), zx::msec(75));
-  // Reassoc
+  // Assoc a second time
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::TxAssocReq, this, kFakeMac),
                              zx::msec(100));
   env_->ScheduleNotification(std::bind(&CreateSoftAPTest::VerifyAssoc, this), zx::msec(150));
