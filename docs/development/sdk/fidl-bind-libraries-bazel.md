@@ -1,6 +1,6 @@
 # FIDL-based bind libraries tutorial for Bazel
 
-This tutorial is for driver authors developing out-of-tree using the SDK who want to use FIDL-based
+This tutorial is for driver authors using the SDK who want to use FIDL-based
 auto-generated bind libraries. The tutorial assumes familiarity with the following:
 
  * [FIDL Tutorial - Generated Bind Libraries](/docs/development/drivers/tutorials/fidl-tutorial.md#generated-bind-libraries)
