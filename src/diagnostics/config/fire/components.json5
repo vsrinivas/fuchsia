@@ -341,7 +341,7 @@
     },
     {
         id: 169,
-        label: "Session Manger",
+        label: "Session Manager",
         moniker: "core/session-manager",
     },
     {
