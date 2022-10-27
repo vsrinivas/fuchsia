@@ -72,6 +72,7 @@ if (use_bringup_assembly) {
     "repository/7.root.json",
     "repository/8.root.json",
     "repository/9.root.json",
+    "repository/root.json",
   ]
 
   # The top-level directory for tuf_repo_files entries

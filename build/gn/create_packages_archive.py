@@ -144,28 +144,12 @@ def main():
         content, os.path.join(tuf_repo_dir, 'snapshot.json'),
         snapshot_json_src_path, '', depfile_inputs)
 
-    # Parse the snapshots.json file to grab the versions of root.json and
-    # targets.json. Note that the root.json version is its hash.
-    # Install <hash>.root.json as-is, then as root.json in the archive.
+    # Parse the snapshots.json file to grab the version targets.json.
     # Install <version>.snapshot.json as-is, then as snapshot.json in the
     # archive.
     #
-    # Note that <hash>.root.json is technically not needed, but this makes
-    # it easier to verify that the archive matches the content of
-    # out/default/amber-files/repository/ with a clean build.
-    #
     with open(snapshot_json_src_path) as f:
         snapshot_json = json.load(f)
-
-    root_json_hash = snapshot_json['signed']['meta']['root.json']['hashes'][
-        'sha512']
-    root_json_file = os.path.join(tuf_repo_dir, root_json_hash + '.root.json')
-    root_json_src_path = os.path.join(args.src_dir, root_json_file)
-    add_content_entry(
-        content, root_json_file, root_json_src_path, '', depfile_inputs)
-    add_content_entry(
-        content, os.path.join(tuf_repo_dir, 'root.json'), root_json_src_path,
-        '', depfile_inputs)
 
     targets_json_version = snapshot_json['signed']['meta']['targets.json'][
         'version']
