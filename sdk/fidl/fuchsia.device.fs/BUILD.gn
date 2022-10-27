@@ -7,7 +7,10 @@ import("//build/fidl/fidl.gni")
 fidl("fuchsia.device.fs") {
   sdk_category = "experimental"
 
-  sources = [ "exporter.fidl" ]
+  sources = [
+    "exporter.fidl",
+    "names.fidl",
+  ]
 
   public_deps = [ "//sdk/fidl/fuchsia.io" ]
 }

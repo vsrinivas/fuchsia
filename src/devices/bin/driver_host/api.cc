@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
@@ -101,6 +102,13 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
   }
 
   if ((args->flags & DEVICE_ADD_INSTANCE) && args->ops->init) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // A device is not allowed to have a name that conflicts with
+  // a reserved name.
+  if (args->name == fuchsia_device_fs::wire::kDeviceControllerName ||
+      args->name == fuchsia_device_fs::wire::kDeviceProtocolName) {
     return ZX_ERR_INVALID_ARGS;
   }
 

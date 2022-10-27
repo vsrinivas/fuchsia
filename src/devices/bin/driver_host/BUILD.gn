@@ -74,6 +74,7 @@ source_set("common") {
   deps = [
     ":device_group_desc_util",
     ":simple_binding",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/driver_runtime:driver_runtime_env_cpp",
     "//src/devices/lib/driver:driver_runtime",
@@ -243,6 +244,7 @@ test("driver_host_test") {
   deps = [
     ":common",
     ":fuchsia.device.restarttest_cpp_wire",
+    "//sdk/fidl/fuchsia.device.fs:fuchsia.device.fs_cpp_wire",
     "//sdk/fidl/fuchsia.device.test:fuchsia.device.test_cpp_wire",
     "//sdk/fidl/fuchsia.driver.development:fuchsia.driver.development_hlcpp",
     "//sdk/lib/inspect/testing/cpp:zxtest",

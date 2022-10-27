@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fidl/fuchsia.device.fs/cpp/wire.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 
@@ -88,6 +89,36 @@ TEST(DeviceApiTest, GetSize) {
   dev->vnode.reset();
 
   ASSERT_EQ(device_get_size(dev.get()), 42ul);
+}
+
+TEST(DeviceApiTest, ReservedDeviceNames) {
+  DriverHostContext ctx(&kAsyncLoopConfigNoAttachToCurrentThread);
+  fbl::RefPtr<zx_driver> drv;
+  ASSERT_OK(zx_driver::Create("device-api-test", ctx.inspect().drivers(), &drv));
+
+  auto driver = Driver::Create(drv.get());
+  ASSERT_OK(driver.status_value());
+
+  fbl::RefPtr<zx_device> parent;
+  ASSERT_OK(zx_device::Create(&ctx, "test", *std::move(driver), &parent));
+  parent->set_ctx(&test_ctx);
+  parent->vnode.reset();
+
+  zx_protocol_device_t ops = {};
+  ops.version = DEVICE_OPS_VERSION;
+
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.ops = &ops;
+
+  zx_device_t* child;
+  // Check that fuchsia_device::wire::kDeviceControllerName is reserved.
+  args.name = fuchsia_device_fs::wire::kDeviceControllerName;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_add_from_driver(drv.get(), parent.get(), &args, &child));
+
+  // Check that fuchsia_device::wire::kDeviceProtocolName is reserved.
+  args.name = fuchsia_device_fs::wire::kDeviceProtocolName;
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS, device_add_from_driver(drv.get(), parent.get(), &args, &child));
 }
 
 }  // namespace
