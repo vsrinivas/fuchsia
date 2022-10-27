@@ -29,8 +29,10 @@ type PointerEvent = table {
     /// ID of the pointer that identifies this event.
     3: pointer_id uint32;
     /// Type of this event, e.g. touch, mouse, etc.
+    @deprecated("Use fuchsia.ui.pointer.augment.LocalHit")
     4: type fuchsia.ui.input.PointerEventType;
     /// Phase of this event, e.g. add, down, etc.
+    @deprecated("Use fuchsia.ui.pointer.augment.LocalHit")
     5: phase fuchsia.ui.input.PointerEventPhase;
     /// The coordinate of this pointer event in normalized device coordinates.
     /// Normalized device coordinates have dimensions in the range [-1, 1],

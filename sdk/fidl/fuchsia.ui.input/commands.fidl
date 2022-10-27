@@ -3,40 +3,32 @@
 // found in the LICENSE file.
 library fuchsia.ui.input;
 
+@available(deprecated=10, note="Obsolete: scenic ignores these commands")
 type Command = strict union {
-    /// Commands for conveying input events to a `Session`.
-    /// Structs defined in input_events.fidl.
     1: send_keyboard_input SendKeyboardInputCmd;
     2: send_pointer_input SendPointerInputCmd;
-
-    /// Command to enable/disable delivery of hard keyboard events.
     3: set_hard_keyboard_delivery SetHardKeyboardDeliveryCmd;
-
-    /// Obsolete. This command is a no-op.
     4: set_parallel_dispatch SetParallelDispatchCmd;
 };
 
+@available(deprecated=10, note="Obsolete: scenic ignores these commands")
 type SendKeyboardInputCmd = struct {
     compositor_id uint32;
-    keyboard_event KeyboardEvent; // Defined in input_events.fidl
+    keyboard_event KeyboardEvent;
 };
 
+@available(deprecated=10, note="Obsolete: scenic ignores these commands")
 type SendPointerInputCmd = struct {
     compositor_id uint32;
-    pointer_event PointerEvent; // Defined in input_events.fidl
+    pointer_event PointerEvent;
 };
 
-/// Typically, clients should receive text inputs from an IME.
-///
-/// For cases where no IME mediation is desired (such as a game application),
-/// this command requests Scenic to deliver hard keyboard events to the client.
-///
-/// By default, Scenic will *not* deliver hard keyboard events to a client.
+@available(deprecated=10, note="Obsolete: scenic ignores these commands")
 type SetHardKeyboardDeliveryCmd = struct {
     delivery_request bool;
 };
 
-/// Obsolete. This command is a no-op.
+@available(deprecated=10, note="Obsolete: scenic ignores these commands")
 type SetParallelDispatchCmd = struct {
     parallel_dispatch bool;
 };

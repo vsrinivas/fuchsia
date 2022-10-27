@@ -71,6 +71,7 @@ protocol SessionShellContext {
         request server_end:ComponentContext;
     });
     GetPresentation(resource struct {
+        @available(deprecated=10, note="implementation deleted")
         request server_end:fuchsia.ui.policy.Presentation;
     });
     GetStoryProvider(resource struct {

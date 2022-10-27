@@ -10,6 +10,8 @@ using fuchsia.ui.views;
 type Command = strict resource union {
     1: gfx fuchsia.ui.gfx.Command;
     2: reserved;
+    @available(deprecated=10, note="No implementation")
     3: views fuchsia.ui.views.Command;
+    @available(deprecated=10, note="No implementation")
     4: input fuchsia.ui.input.Command;
 };

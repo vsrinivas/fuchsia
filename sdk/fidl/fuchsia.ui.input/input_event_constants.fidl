@@ -19,13 +19,14 @@ const kModifierLeftSuper uint32 = 128;
 const kModifierRightSuper uint32 = 256;
 const kModifierSuper uint32 = 384; // (kModifierLeftSuper | kModifierRightSuper);
 
-/// Mouse buttons
+// Unused and obsolete. Do not create more references.
+@available(deprecated=10, note="Unused and obsolete.")
 const kMousePrimaryButton uint32 = 1;
+@available(deprecated=10, note="Unused and obsolete.")
 const kMouseSecondaryButton uint32 = 2;
+@available(deprecated=10, note="Unused and obsolete.")
 const kMouseTertiaryButton uint32 = 4;
-
-/// Stylus buttons
+@available(deprecated=10, note="Unused and obsolete.")
 const kStylusPrimaryButton uint32 = 1;
+@available(deprecated=10, note="Unused and obsolete.")
 const kStylusSecondaryButton uint32 = 2;
-
-// end-no-format

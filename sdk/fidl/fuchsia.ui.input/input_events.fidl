@@ -52,6 +52,7 @@ type KeyboardEvent = struct {
     modifiers uint32;
 };
 
+@available(deprecated=10, note="Instead, use fuchsia.ui.pointer")
 type PointerEventType = strict enum {
     /// A touch-based pointer device.
     TOUCH = 0;
@@ -66,6 +67,7 @@ type PointerEventType = strict enum {
     MOUSE = 3;
 };
 
+@available(deprecated=10, note="Instead, use fuchsia.ui.pointer")
 type PointerEventPhase = strict enum {
     /// The device has started tracking the pointer.
     ///
@@ -111,6 +113,7 @@ type PointerEventPhase = strict enum {
 /// ADD (-> HOVER) -> DOWN -> MOVE -> UP (-> HOVER) -> REMOVE
 ///
 /// At any point after the initial ADD, a transition to CANCEL is also possible.
+@available(deprecated=10, note="Instead, use fuchsia.ui.pointer")
 type PointerEvent = struct {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
     /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
@@ -144,6 +147,7 @@ type PointerEvent = struct {
     buttons uint32;
 };
 
+@available(deprecated=10, note="Instead, use fuchsia.ui.views.ViewRefFocused")
 type FocusEvent = struct {
     /// Time the event was delivered. The time is in nanoseconds and corresponds
     /// to the monotonic time as determined by the zx_clock_get_monotonic syscall.
@@ -160,9 +164,10 @@ type MediaButtonsEvent = table {
     4: camera_disable bool;
 };
 
-/// This union does not include MediaButtonsEvent because it's processed differently.
 type InputEvent = strict union {
+    @available(deprecated=10, note="Instead, use fuchsia.ui.pointer")
     1: pointer PointerEvent;
     2: keyboard KeyboardEvent;
+    @available(deprecated=10, note="Instead, use fuchsia.ui.views.ViewRefFocused")
     3: focus FocusEvent;
 };

@@ -4,8 +4,7 @@
 library fuchsia.ui.views;
 
 /// DO NOT USE - Retained for ABI stability in fuchsia.ui.scenic.Command
-///
-/// DO NOT USE
+@available(deprecated=10, note="obsolete")
 type Command = strict union {
     1: empty int32;
 };

@@ -9,6 +9,7 @@ using fuchsia.ui.views;
 /// added to a view tree, leaving any window management concerns up to the
 /// discretion of the presenter implementation.
 @discoverable
+@available(deprecated=10, note="Instead, use fuchsia.element.GraphicalPresenter")
 protocol Presenter {
     /// Request that the View's contents be displayed on the screen as a `Presentation`.
     /// Each call to `PresentView` creates a new `Presentation`. Having more than one simultaneous

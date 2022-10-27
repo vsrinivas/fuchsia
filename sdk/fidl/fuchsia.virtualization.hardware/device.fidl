@@ -142,6 +142,7 @@ protocol PointerListener {
 
     /// Called when a view receives pointer events.
     OnPointerEvent(struct {
+        @deprecated("type deletion planned with fxb/64376")
         event fuchsia.ui.input.PointerEvent;
     });
 };

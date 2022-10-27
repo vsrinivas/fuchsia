@@ -5,21 +5,16 @@ library fuchsia.ui.policy;
 
 using fuchsia.ui.input;
 
-/// `Presentation.CapturePointerEvent` will consume this listener interface and
-/// call `OnEvent` when a pointer event occurs.
+@available(deprecated=10, note="Implementation deleted. Do not use.")
 protocol PointerCaptureListenerHACK {
     OnPointerEvent(struct {
         event fuchsia.ui.input.PointerEvent;
     });
 };
 
-/// Allows clients of Presenter.Present() to control a presentation.
-/// Experimental.
 @discoverable
+@available(deprecated=10, note="Implementation deleted. Do not use.")
 protocol Presentation {
-    /// This call exists so that base shell can capture pointer events.
-    // TODO: Figure out the feasibility of this feature and the best place to put
-    // it. This call will be replaced by gesture disambiguation system in future.
     CapturePointerEventsHACK(resource struct {
         listener client_end:PointerCaptureListenerHACK;
     });
