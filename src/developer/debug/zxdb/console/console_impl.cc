@@ -18,12 +18,14 @@
 
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/system.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/command_parser.h"
+#include "src/developer/debug/zxdb/console/console_suspend_token.h"
 #include "src/developer/debug/zxdb/console/output_buffer.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/join_strings.h"
@@ -127,22 +129,8 @@ fxl::WeakPtr<ConsoleImpl> ConsoleImpl::GetImplWeakPtr() { return impl_weak_facto
 void ConsoleImpl::Init() {
   PreserveStdoutTermios();
 
-  stdio_watch_ =
-      debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead, STDIN_FILENO,
-                                             [this](int fd, bool readable, bool, bool error) {
-                                               if (error)  // EOF
-                                                 Quit();
-
-                                               if (!readable)
-                                                 return;
-
-                                               char ch;
-                                               while (read(STDIN_FILENO, &ch, 1) > 0)
-                                                 line_input_.OnInput(ch);
-                                             });
-
   LoadHistoryFile();
-  line_input_.Show();
+  EnableInput();
 }
 
 void ConsoleImpl::LoadHistoryFile() {
@@ -197,9 +185,14 @@ void ConsoleImpl::Output(const OutputBuffer& output) {
   if (old_bits & O_NONBLOCK)
     fcntl(STDOUT_FILENO, F_SETFL, old_bits & ~O_NONBLOCK);
 
-  line_input_.Hide();
+  // If input is disabled, there will be no prompt and we want to keep it off.
+  if (InputEnabled())
+    line_input_.Hide();
+
   output.WriteToStdout();
-  line_input_.Show();
+
+  if (InputEnabled())
+    line_input_.Show();
 
   if (old_bits & O_NONBLOCK)
     fcntl(STDOUT_FILENO, F_SETFL, old_bits);
@@ -208,6 +201,10 @@ void ConsoleImpl::Output(const OutputBuffer& output) {
 void ConsoleImpl::ModalGetOption(const line_input::ModalPromptOptions& options,
                                  OutputBuffer message, const std::string& prompt,
                                  line_input::ModalLineInput::ModalCompletionCallback cb) {
+  // Input will normally be disabled before executing a command. When that command needs to read
+  // input as part of its operation, we need to explicitly re-enable it.
+  EnableInput();
+
   // Print the message from within the "will show" callback to ensure proper serialization if there
   // are multiple prompts pending.
   //
@@ -224,10 +221,14 @@ void ConsoleImpl::Quit() {
 void ConsoleImpl::Clear() {
   // We write directly instead of using Output because WriteToStdout expects to append '\n' to
   // outputs and won't flush it explicitly otherwise.
-  line_input_.Hide();
+  if (InputEnabled())
+    line_input_.Hide();
+
   const char ff[] = "\033c";  // Form feed.
   write(STDOUT_FILENO, ff, sizeof(ff));
-  line_input_.Show();
+
+  if (InputEnabled())
+    line_input_.Show();
 }
 
 void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context,
@@ -253,6 +254,39 @@ void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
 
   if (Err err = context_.FillOutCommand(&cmd); err.has_error())
     return cmd_context->ReportError(err);
+
+  // Suspend input (if setting is enabled) and register for a callback to re-enable. This will have
+  // the effect of blocking the UI for the duration of the command.
+  auto ui_timeout =
+      context().session()->system().settings().GetInt(ClientSettings::System::kUiTimeoutMs);
+  if (ui_timeout > 0) {
+    auto suspend_token = Console::get()->SuspendInput();
+    cmd_context->SetConsoleCompletionObserver(fit::defer_callback([suspend_token]() {
+      // Console::get()->Output("COMPLETE\n");
+      suspend_token->Enable();
+    }));
+
+    // Some commands will take a long time to execute, re-enable the input if this happens.
+    debug::MessageLoop::Current()->PostTimer(
+        FROM_HERE, ui_timeout, [suspend_token, verb = cmd.verb()]() {
+          if (suspend_token->enabled())
+            return;  // Command already complete and input explicit re-enabled.
+
+          // Otherwise the command is still running after the timeout. Print a message and re-enable
+          // input so the user can get on with things.
+          if (verb == Verb::kNone) {
+            // Running a noun. Normally these won't take very long so we don't bother decoding the
+            // name.
+            Console::get()->Output("Command running in the background...\n");
+          } else {
+            Console::get()->Output(
+                OutputBuffer(Syntax::kComment, "\"" + GetVerbRecord(verb)->aliases[0] +
+                                                   "\" command running in the background...\n"));
+          }
+          suspend_token->Enable();
+        });
+  }
+
   DispatchCommand(cmd, cmd_context);
 
   if (cmd.thread() && cmd.verb() != Verb::kNone) {
@@ -260,5 +294,41 @@ void ConsoleImpl::ProcessInputLine(const std::string& line, fxl::RefPtr<CommandC
     context_.SetSourceAffinityForThread(cmd.thread(), GetVerbRecord(cmd.verb())->source_affinity);
   }
 }
+
+fxl::RefPtr<ConsoleSuspendToken> ConsoleImpl::SuspendInput() {
+  if (stdio_watch_.watching()) {
+    line_input_.Hide();
+    // Stop watching for stdin which will stop feeding input to the LineInput. Today, the LineInput
+    // class doesn't suspend processing while hidden. If we didn't disable this watching, you would
+    // still get commands executed even though you can't see your typing.
+    //
+    // Buffering here needs to be revisited because ideally we would make Control-C work to suspend
+    // the synchronous mode, while also buffering the user typing while hidden.
+    stdio_watch_.StopWatching();
+  }
+  return fxl::RefPtr<ConsoleSuspendToken>(new ConsoleSuspendToken);
+}
+
+void ConsoleImpl::EnableInput() {
+  if (InputEnabled())
+    return;
+
+  stdio_watch_ =
+      debug::MessageLoop::Current()->WatchFD(debug::MessageLoop::WatchMode::kRead, STDIN_FILENO,
+                                             [this](int fd, bool readable, bool, bool error) {
+                                               if (error)  // EOF
+                                                 Quit();
+
+                                               if (!readable)
+                                                 return;
+
+                                               char ch;
+                                               while (read(STDIN_FILENO, &ch, 1) > 0)
+                                                 line_input_.OnInput(ch);
+                                             });
+  line_input_.Show();
+}
+
+bool ConsoleImpl::InputEnabled() const { return stdio_watch_.watching(); }
 
 }  // namespace zxdb

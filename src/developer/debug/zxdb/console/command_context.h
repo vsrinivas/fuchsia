@@ -5,6 +5,7 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_CONTEXT_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CONSOLE_COMMAND_CONTEXT_H_
 
+#include <lib/fit/defer.h>
 #include <lib/fit/function.h>
 
 #include <map>
@@ -23,8 +24,8 @@ class ConsoleContext;
 // This object collects the output and errors from a command and tracks its completion.
 //
 // The command implementation must keep this object alive for as long as the command executes (which
-// could be asynchronously). When the CommandContext is destroyed, the deferred_callback will
-// executed and the command will be considered complete.
+// could be asynchronously). When the CommandContext is destroyed, the callbacks will executed and
+// the command will be considered complete.
 class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
  public:
   // Writes the given buffer to the output.
@@ -54,6 +55,16 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
   // Returns true if this command context has encountered any error.
   bool has_error() const { return has_error_; }
 
+  // Sets the completion observer used by the console to tell when the command is done. This is used
+  // for enabling and disabling input. The callback passed into the constructors of some derived
+  // classes are instead for the creator of the CommandContext (which may not necessarily be the
+  // console).
+  //
+  // Since this is currently used only for console integration, it's called the "Console" completion
+  // observer and there can be only one of them. If we have a need for more than one, we can
+  // generalize this in the future.
+  void SetConsoleCompletionObserver(fit::deferred_callback observer);
+
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CommandContext);
 
@@ -76,6 +87,8 @@ class CommandContext : public fxl::RefCountedThreadSafe<CommandContext> {
   std::map<AsyncOutputBuffer*, fxl::RefPtr<AsyncOutputBuffer>> async_output_;
 
   bool has_error_ = false;
+
+  fit::deferred_callback console_completion_observer_;
 };
 
 // This is the normal implementation that just outputs everything to the console.

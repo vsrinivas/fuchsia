@@ -71,6 +71,11 @@ class MockConsole : public Console {
                       line_input::ModalLineInput::ModalCompletionCallback cb) override;
   void ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context = nullptr,
                         bool add_to_history = true) override;
+  fxl::RefPtr<ConsoleSuspendToken> SuspendInput() override;
+
+ protected:
+  // Console protected implementation.
+  void EnableInput() override;
 
  private:
   Session* session_;

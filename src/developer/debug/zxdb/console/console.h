@@ -16,6 +16,7 @@
 namespace zxdb {
 
 class AsyncOutputBuffer;
+class ConsoleSuspendToken;
 class OutputBuffer;
 class Session;
 
@@ -66,11 +67,25 @@ class Console : debug::LogBackend {
                                 fxl::RefPtr<CommandContext> cmd_context = nullptr,
                                 bool add_to_history = true) = 0;
 
+  // Suspends watching stdio for input. The UI will be blocked for as long as the suspend token is
+  // alive or until ConsoleSuspendToken::Enable() is called.
+  //
+  // Multiple calls to SuspendInput might theoretically happen. If mutltiple commands are fighting,
+  // we'd rather err on enabling input than disabling it, so the first one to re-enable it will
+  // win (i.e. we don't keep track of how many pending suspend tokens there are).
+  virtual fxl::RefPtr<ConsoleSuspendToken> SuspendInput() = 0;
+
   // Implements |LogBackend|.
   void WriteLog(debug::LogSeverity severity, const debug::FileLineFunction& location,
                 std::string log) override;
 
  protected:
+  friend ConsoleSuspendToken;
+
+  // Used by the ConsoleSuspendToken to re-enable input. See SuspendInput(). This can be called more
+  // than once and it will be ignored if input is already enabled.
+  virtual void EnableInput() = 0;
+
   static Console* singleton_;
   ConsoleContext context_;
 

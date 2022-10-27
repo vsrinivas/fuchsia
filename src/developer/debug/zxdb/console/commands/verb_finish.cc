@@ -59,8 +59,8 @@ void RunVerbFinish(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) 
     return cmd_context->ReportError(Err("Internal error, frame not found in current thread."));
   }
 
-  auto controller =
-      std::make_unique<FinishThreadController>(stack, frame_index, &ScheduleAsyncPrintReturnValue);
+  auto controller = std::make_unique<FinishThreadController>(
+      stack, frame_index, &ScheduleAsyncPrintReturnValue, fit::defer_callback([cmd_context]() {}));
   cmd.thread()->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
     if (err.has_error())
       cmd_context->ReportError(err);

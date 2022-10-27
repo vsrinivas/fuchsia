@@ -55,8 +55,9 @@ void RunVerbNext(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
       err.has_error())
     return cmd_context->ReportError(err);
 
-  auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine,
-                                                               &ScheduleAsyncPrintReturnValue);
+  auto controller = std::make_unique<StepOverThreadController>(
+      StepMode::kSourceLine, &ScheduleAsyncPrintReturnValue,
+      fit::defer_callback([cmd_context]() {}));
   cmd.thread()->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
     if (err.has_error())
       cmd_context->ReportError(err);

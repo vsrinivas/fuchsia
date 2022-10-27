@@ -145,6 +145,7 @@ static_library("console") {
     "console_impl.h",
     "console_main.cc",
     "console_main.h",
+    "console_suspend_token.h",
     "format_context.cc",
     "format_context.h",
     "format_exception.cc",

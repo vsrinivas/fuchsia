@@ -87,13 +87,15 @@ void RunVerbStep(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
 
   if (cmd.args().empty()) {
     // Step for a single line.
-    auto controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine,
-                                                                 &ScheduleAsyncPrintReturnValue);
+    auto controller = std::make_unique<StepIntoThreadController>(
+        StepMode::kSourceLine, &ScheduleAsyncPrintReturnValue,
+        fit::defer_callback([cmd_context]() {}));
     cmd.thread()->ContinueWith(std::move(controller), std::move(completion));
   } else if (cmd.args().size() == 1) {
     // Step into a specific named subroutine. This uses the "step over" controller with a special
     // condition.
-    auto controller = std::make_unique<StepOverThreadController>(StepMode::kSourceLine);
+    auto controller = std::make_unique<StepOverThreadController>(
+        StepMode::kSourceLine, FunctionReturnCallback(), fit::defer_callback([cmd_context]() {}));
     controller->set_subframe_should_stop_callback(
         [substr = cmd.args()[0]](const Frame* frame) -> bool {
           const Symbol* symbol = frame->GetLocation().symbol().Get();

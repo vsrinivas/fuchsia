@@ -46,7 +46,9 @@ TEST_F(VerbSteps, Test) {
   ss2.call_dest = kCall2To;
 
   // This should show the menu with the above options.
-  RunVerbStepsWithSubstatements(thread(), substatements);
+  auto cmd_context = fxl::MakeRefCounted<OfflineCommandContext>(
+      &console(), [](OutputBuffer output, std::vector<Err> errors) {});
+  RunVerbStepsWithSubstatements(thread(), substatements, cmd_context);
 
   // We didn't supply any symbols so the destinations aren't symbolized.
   auto event = console().GetOutputEvent();

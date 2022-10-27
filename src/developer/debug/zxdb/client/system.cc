@@ -130,6 +130,12 @@ static const char* kSymbolCacheDescription =
 const char* ClientSettings::System::kEnableAnalytics = "enable-analytics";
 static const char* kEnableAnalyticsDescription = R"(  Whether collection of analytics is enabled.)";
 
+const char* ClientSettings::System::kUiTimeoutMs = "ui-timeout-ms";
+static const char* kUiTimeoutMsDescription =
+    R"(  Time in milliseconds for how long to wait for a command to complete before
+  running it in the background and showing the prompt again. Setting this value
+  to 0 makes all commands run asynchronously without blocking the input.)";
+
 namespace {
 
 fxl::RefPtr<SettingSchema> CreateSchema() {
@@ -176,6 +182,9 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
   // The code that handles opt-in/out will set this explicitly.
   schema->AddBool(ClientSettings::System::kEnableAnalytics, kEnableAnalyticsDescription, false);
+
+  // Setting the UI timeout to 0 disables the synchronous mode. This is currently under development.
+  schema->AddInt(ClientSettings::System::kUiTimeoutMs, kUiTimeoutMsDescription, 0);
 
   return schema;
 }

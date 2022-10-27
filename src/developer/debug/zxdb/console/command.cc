@@ -8,6 +8,7 @@
 
 #include <algorithm>
 
+#include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/nouns.h"

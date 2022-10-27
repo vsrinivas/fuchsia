@@ -59,29 +59,33 @@ Examples
 //
 //  3. CompleteSteps: Actually do the step given the selected item.
 
-Err CompleteSteps(Thread* thread, TargetPointer ip, const std::vector<AddressRange>& ranges,
-                  const std::string& one_based_index_str) {
+void CompleteSteps(Thread* thread, TargetPointer ip, const std::vector<AddressRange>& ranges,
+                   const std::string& one_based_index_str,
+                   fxl::RefPtr<CommandContext> cmd_context) {
   // Validate that the thread hasn't changed since we prompted.
-  if (thread->GetStack().empty() || ip != thread->GetStack()[0]->GetAddress())
-    return Err("Thread continued in the background, giving up on \"steps\" command.");
+  if (thread->GetStack().empty() || ip != thread->GetStack()[0]->GetAddress()) {
+    return cmd_context->ReportError(
+        Err("Thread continued in the background, giving up on \"steps\" command."));
+  }
 
   if (one_based_index_str == "q")
-    return Err();  // Don't do anything for "quit".
+    return;  // Don't do anything for "quit".
 
   size_t chosen_index = 0;  // One-based!
   if (sscanf(one_based_index_str.c_str(), "%zu", &chosen_index) != 1 || chosen_index == 0 ||
       chosen_index > ranges.size()) {
     // The prompt should have validated the input but we double-check.
     FX_NOTREACHED();
-    return Err("Bad selected index.");
+    cmd_context->ReportError(Err("Bad selected index."));
+    return;
   }
 
-  auto controller = std::make_unique<StepIntoSpecificThreadController>(ranges[chosen_index - 1]);
-  thread->ContinueWith(std::move(controller), [](const Err& err) {
+  auto controller = std::make_unique<StepIntoSpecificThreadController>(
+      ranges[chosen_index - 1], fit::defer_callback([cmd_context]() {}));
+  thread->ContinueWith(std::move(controller), [cmd_context](const Err& err) {
     if (err.has_error())
-      Console::get()->Output(err);
+      cmd_context->ReportError(err);
   });
-  return Err();
 }
 
 void RunVerbSteps(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
@@ -98,7 +102,8 @@ void RunVerbSteps(const Command& cmd, fxl::RefPtr<CommandContext> cmd_context) {
                                 } else if (err.has_error()) {
                                   cmd_context->ReportError(err);
                                 } else {
-                                  RunVerbStepsWithSubstatements(weak_thread.get(), calls);
+                                  RunVerbStepsWithSubstatements(weak_thread.get(), calls,
+                                                                cmd_context);
                                 }
                               });
 }
@@ -110,15 +115,19 @@ VerbRecord GetStepsVerbRecord() {
                     CommandGroup::kStep, SourceAffinity::kSource);
 }
 
-void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall> calls) {
-  Console* console = Console::get();
+void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall> calls,
+                                   fxl::RefPtr<CommandContext> cmd_context) {
+  Console* console = cmd_context->console();
+  if (!console)
+    return;  // Console gone, nothing to do.
+
   if (thread->GetStack().empty()) {
-    console->Output("Can't step non-suspended thread.");
+    cmd_context->Output("Can't step non-suspended thread.");
     return;
   }
 
   if (calls.empty()) {
-    console->Output("No function calls from this line.");
+    cmd_context->Output("No function calls from this line.");
     return;
   }
 
@@ -162,7 +171,7 @@ void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall>
 
   if (ranges.empty()) {
     message.Append("Already past all calls on this line.\n");
-    console->Output(message);
+    cmd_context->Output(message);
     return;
   }
 
@@ -177,11 +186,10 @@ void RunVerbStepsWithSubstatements(Thread* thread, std::vector<SubstatementCall>
 
   console->ModalGetOption(
       prompt_opts, std::move(message), "> ",
-      [weak_thread = thread->GetWeakPtr(), ip, ranges](const std::string& input) {
+      [weak_thread = thread->GetWeakPtr(), ip, ranges, cmd_context](const std::string& input) {
         if (!weak_thread)
           return;
-        if (Err err = CompleteSteps(weak_thread.get(), ip, ranges, input); err.has_error())
-          Console::get()->Output(err);
+        CompleteSteps(weak_thread.get(), ip, ranges, input, cmd_context);
       });
 }
 

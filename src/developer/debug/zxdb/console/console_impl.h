@@ -40,6 +40,11 @@ class ConsoleImpl : public Console {
                       line_input::ModalLineInput::ModalCompletionCallback cb) override;
   void ProcessInputLine(const std::string& line, fxl::RefPtr<CommandContext> cmd_context = nullptr,
                         bool add_to_history = true) override;
+  fxl::RefPtr<ConsoleSuspendToken> SuspendInput() override;
+
+ protected:
+  // Console protected implementation.
+  void EnableInput() override;
 
  private:
   FRIEND_TEST(ConsoleImplTest, ControlC);
@@ -49,6 +54,9 @@ class ConsoleImpl : public Console {
   // Searches for history at $HOME/.zxdb_history and loads it if found.
   bool SaveHistoryFile();
   void LoadHistoryFile();
+
+  // Returns true if input handling is enabled. False means input is blocked.
+  bool InputEnabled() const;
 
   debug::MessageLoop::WatchHandle stdio_watch_;
 

@@ -37,6 +37,11 @@ ConsoleContext* CommandContext::GetConsoleContext() const {
   return nullptr;
 }
 
+void CommandContext::SetConsoleCompletionObserver(fit::deferred_callback observer) {
+  FX_DCHECK(!console_completion_observer_);
+  console_completion_observer_ = std::move(observer);
+}
+
 // ConsoleCommandContext ---------------------------------------------------------------------------
 
 ConsoleCommandContext::ConsoleCommandContext(Console* console, CompletionCallback done)

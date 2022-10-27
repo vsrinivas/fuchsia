@@ -49,6 +49,10 @@ struct ClientSettings {
     static const char* kSymbolCache;
 
     static const char* kEnableAnalytics;
+
+    // Console options (having this here in the client is a layering violation but is not
+    // worth creating some complicated system for dynamically injecting these to avoid.
+    static const char* kUiTimeoutMs;
   };
 
   struct Job {};
