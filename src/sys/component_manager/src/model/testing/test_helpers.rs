@@ -384,6 +384,7 @@ impl TestEnvironmentBuilder {
             source_path: None,
         }));
         self.runtime_config.component_id_index_path = self.component_id_index_path;
+        self.runtime_config.enable_introspection = true;
 
         let mock_resolver = Box::new(mock_resolver);
         let builtin_environment = Arc::new(Mutex::new(

@@ -12,7 +12,6 @@
         {
             directory: "boot",
             path: "/boot",
-
             rights: [
                 "r*",
             ],
@@ -35,4 +34,5 @@
         },
     ],
     builtin_boot_resolver: "boot",
+    enable_introspection: true,
 }

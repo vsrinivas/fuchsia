@@ -43,7 +43,7 @@ pub struct RuntimeConfig {
     /// to events before the root component has started.
     pub debug: bool,
 
-    /// Disables Component Manager's introspection APIs (RealmQuery, RealmExplorer,
+    /// Enables Component Manager's introspection APIs (RealmQuery, RealmExplorer,
     /// RouteValidator, LifecycleController, etc.) for use by components.
     pub enable_introspection: bool,
 
@@ -236,8 +236,7 @@ impl Default for RuntimeConfig {
             // configuration is present or it fails to load.
             security_policy: Default::default(),
             debug: false,
-            // TODO(https://fxbug.dev/113126): Flip this default to false once the flag is set correctly everywhere
-            enable_introspection: true,
+            enable_introspection: false,
             use_builtin_process_launcher: false,
             maintain_utc_clock: false,
             num_threads: 1,
