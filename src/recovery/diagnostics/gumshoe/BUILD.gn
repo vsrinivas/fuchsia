@@ -35,6 +35,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:glob",
     "//third_party/rust_crates:handlebars",
     "//third_party/rust_crates:hyper",
     "//third_party/rust_crates:mockall",
@@ -73,6 +74,7 @@ fuchsia_unittest_package("gumshoe-tests") {
   deps = [
     ":bin_test",
     ":static",
+    ":templates",
     ":test_inaccessible",
   ]
 }
