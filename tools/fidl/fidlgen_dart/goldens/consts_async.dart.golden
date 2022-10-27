@@ -59,7 +59,7 @@ const int offset = -33;
 
 const int populationUsa2018 = 0x13ab6680;
 
-const String username = "\"squeenze\"";
+const String username = '"squeenze"';
 
 const int zxConst = lib$zx.channelMaxMsgBytes;
 

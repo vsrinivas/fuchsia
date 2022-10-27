@@ -35,6 +35,24 @@ inline zx_status_t Clone(const ::test::escaping::DocCommentWithQuotes& _value,
 
 using DocCommentWithQuotesPtr = ::std::unique_ptr<DocCommentWithQuotes>;
 
+extern const char* BASIC;
+
+extern const char* NULL_;
+
+extern const char* MAX;
+
+extern const char* SMILE_LITERAL;
+
+extern const char* SMILE_LOWER;
+
+extern const char* SMILE_UPPER;
+
+extern const char* SMILE_LEADING_ZERO;
+
+extern const char* DOLLAR;
+
+extern const char* DOLLAR_BRACE;
+
 }  // namespace escaping
 }  // namespace test
 namespace fidl {

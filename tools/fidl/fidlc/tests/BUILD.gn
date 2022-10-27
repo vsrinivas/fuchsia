@@ -17,7 +17,6 @@ host_test_data("bad_cases") {
     "fidl/bad/fi-0002.test.fidl",
     "fidl/bad/fi-0003.test.fidl",
     "fidl/bad/fi-0004.test.fidl",
-    "fidl/bad/fi-0005.test.fidl",
     "fidl/bad/fi-0006.test.fidl",
     "fidl/bad/fi-0007.test.fidl",
     "fidl/bad/fi-0008.test.fidl",
@@ -148,6 +147,12 @@ host_test_data("bad_cases") {
     "fidl/bad/fi-0162-b.test.fidl",
     "fidl/bad/fi-0167.test.fidl",
     "fidl/bad/fi-0178.test.fidl",
+    "fidl/bad/fi-0184.test.fidl",
+    "fidl/bad/fi-0185.test.fidl",
+    "fidl/bad/fi-0186.test.fidl",
+    "fidl/bad/fi-0187.test.fidl",
+    "fidl/bad/fi-0188.test.fidl",
+    "fidl/bad/fi-0189.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/bad/{{source_file_part}}" ]
 }
@@ -158,7 +163,6 @@ host_test_data("good_cases") {
     "fidl/good/fi-0002.test.fidl",
     "fidl/good/fi-0003.test.fidl",
     "fidl/good/fi-0004.test.fidl",
-    "fidl/good/fi-0005.test.fidl",
     "fidl/good/fi-0006.test.fidl",
     "fidl/good/fi-0007.test.fidl",
     "fidl/good/fi-0008.test.fidl",
@@ -311,6 +315,13 @@ host_test_data("good_cases") {
     "fidl/good/fi-0162.test.fidl",
     "fidl/good/fi-0167.test.fidl",
     "fidl/good/fi-0178.test.fidl",
+    "fidl/good/fi-0184-a.test.fidl",
+    "fidl/good/fi-0184-b.test.fidl",
+    "fidl/good/fi-0185.test.fidl",
+    "fidl/good/fi-0186.test.fidl",
+    "fidl/good/fi-0187.test.fidl",
+    "fidl/good/fi-0188.test.fidl",
+    "fidl/good/fi-0189.test.fidl",
   ]
   outputs = [ "$root_out_dir/fidlc-tests/good/{{source_file_part}}" ]
 }

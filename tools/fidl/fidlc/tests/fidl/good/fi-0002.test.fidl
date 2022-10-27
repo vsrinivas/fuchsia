@@ -3,4 +3,4 @@
 // found in the LICENSE file.
 library test.good.fi0002;
 
-const GOOD_STRING string:11 = "Hello World";
+const GOOD_STRING string:11 = "Hello\nWorld";

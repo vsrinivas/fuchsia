@@ -34,6 +34,24 @@ struct DocCommentWithQuotes {
   uint8_t __reserved = {};
 };
 
+extern const char* kBasic;
+
+extern const char* kNull;
+
+extern const char* kMax;
+
+extern const char* kSmileLiteral;
+
+extern const char* kSmileLower;
+
+extern const char* kSmileUpper;
+
+extern const char* kSmileLeadingZero;
+
+extern const char* kDollar;
+
+extern const char* kDollarBrace;
+
 }  // namespace wire
 }  // namespace test_escaping
 namespace fidl {

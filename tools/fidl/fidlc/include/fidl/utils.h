@@ -222,6 +222,9 @@ std::string to_upper_snake_case(std::string_view str);
 std::string to_lower_camel_case(std::string_view str);
 std::string to_upper_camel_case(std::string_view str);
 
+// Decodes 1 to 6 hex digits like "a" or "123" or "FFFFFF".
+uint32_t decode_unicode_hex(std::string_view str);
+
 // string_literal_length returns the length of the string
 // represented by the provided string literal.
 // String literals start and end with double quotes,

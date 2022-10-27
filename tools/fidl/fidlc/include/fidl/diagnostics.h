@@ -16,7 +16,7 @@ constexpr ErrorDef<1, std::string_view> ErrInvalidCharacter("invalid character '
 constexpr ErrorDef<2> ErrUnexpectedLineBreak("unexpected line-break in string literal");
 constexpr ErrorDef<3, std::string_view> ErrInvalidEscapeSequence("invalid escape sequence '{}'");
 constexpr ErrorDef<4, char> ErrInvalidHexDigit("invalid hex digit '{}'");
-constexpr ErrorDef<5, char> ErrInvalidOctDigit("invalid oct digit '{}'");
+constexpr RetiredDef<5, char> ErrInvalidOctDigit("invalid oct digit '{}'");
 constexpr ErrorDef<6, std::string_view> ErrExpectedDeclaration("invalid declaration type {}");
 constexpr ErrorDef<7> ErrUnexpectedToken("found unexpected token");
 constexpr ErrorDef<8, Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedTokenOfKind(
@@ -435,6 +435,16 @@ constexpr UndocumentedErrorDef<183, const flat::AttributeArg *, std::string_view
     ErrLegacyConflictsWithParent(
         "the argument {}={} conflicts with {}={} at {}; a child element "
         "cannot be added back at LEGACY if its parent is removed");
+constexpr ErrorDef<184, std::string_view> ErrUnexpectedControlCharacter(
+    "unexpected control character in string literal; use the Unicode escape `\\u{{}}` instead");
+constexpr ErrorDef<185> ErrUnicodeEscapeMissingBraces(
+    "Unicode escape must use braces, like `\\u{a}` for U+000A");
+constexpr ErrorDef<186> ErrUnicodeEscapeUnterminated(
+    "Unicode escape is missing a closing brace '}'");
+constexpr ErrorDef<187> ErrUnicodeEscapeEmpty("Unicode escape must have at least 1 hex digit");
+constexpr ErrorDef<188> ErrUnicodeEscapeTooLong("Unicode escape must have at most 6 hex digits");
+constexpr ErrorDef<189, std::string_view> ErrUnicodeEscapeTooLarge(
+    "invalid Unicode code point '{}'; maximum is 10FFFF");
 
 }  // namespace fidl
 

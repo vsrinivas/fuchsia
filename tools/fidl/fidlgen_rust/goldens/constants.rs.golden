@@ -96,7 +96,7 @@ pub const INT64: i64 = 4;
 
 pub const INT8: i8 = 4;
 
-pub const STRING: &str = r###"string"###;
+pub const STRING: &str = "string";
 
 pub const UINT16: u16 = 4;
 

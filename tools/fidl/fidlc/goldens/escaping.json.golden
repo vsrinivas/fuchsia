@@ -6,7 +6,395 @@
   ],
   "library_dependencies": [],
   "bits_declarations": [],
-  "const_declarations": [],
+  "const_declarations": [
+    {
+      "name": "test.escaping/BASIC",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 6,
+        "column": 7,
+        "length": 5
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "'\"\\\n\r\t",
+        "expression": "\"'\\\"\\\\\\n\\r\\t\"",
+        "literal": {
+          "kind": "string",
+          "value": "'\"\\\n\r\t",
+          "expression": "\"'\\\"\\\\\\n\\r\\t\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/DOLLAR",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 16,
+        "column": 7,
+        "length": 6
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "$",
+        "expression": "\"$\"",
+        "literal": {
+          "kind": "string",
+          "value": "$",
+          "expression": "\"$\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/DOLLAR_BRACE",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 17,
+        "column": 7,
+        "length": 12
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "${",
+        "expression": "\"${\"",
+        "literal": {
+          "kind": "string",
+          "value": "${",
+          "expression": "\"${\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/MAX",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 9,
+        "column": 7,
+        "length": 3
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "\udbff\udfff",
+        "expression": "\"\\u{10ffff}\"",
+        "literal": {
+          "kind": "string",
+          "value": "\udbff\udfff",
+          "expression": "\"\\u{10ffff}\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/NULL",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 8,
+        "column": 7,
+        "length": 4
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "\u0000",
+        "expression": "\"\\u{0}\"",
+        "literal": {
+          "kind": "string",
+          "value": "\u0000",
+          "expression": "\"\\u{0}\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/SMILE_LEADING_ZERO",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 13,
+        "column": 7,
+        "length": 18
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "\ud83d\ude00",
+        "expression": "\"\\u{01f600}\"",
+        "literal": {
+          "kind": "string",
+          "value": "\ud83d\ude00",
+          "expression": "\"\\u{01f600}\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/SMILE_LITERAL",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 10,
+        "column": 7,
+        "length": 13
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "😀",
+        "expression": "\"😀\"",
+        "literal": {
+          "kind": "string",
+          "value": "😀",
+          "expression": "\"😀\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/SMILE_LOWER",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 11,
+        "column": 7,
+        "length": 11
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "\ud83d\ude00",
+        "expression": "\"\\u{1f600}\"",
+        "literal": {
+          "kind": "string",
+          "value": "\ud83d\ude00",
+          "expression": "\"\\u{1f600}\""
+        }
+      }
+    },
+    {
+      "name": "test.escaping/SMILE_UPPER",
+      "location": {
+        "filename": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "line": 12,
+        "column": 7,
+        "length": 11
+      },
+      "type": {
+        "kind": "string",
+        "nullable": false,
+        "type_shape_v1": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        },
+        "type_shape_v2": {
+          "inline_size": 16,
+          "alignment": 8,
+          "depth": 1,
+          "max_handles": 0,
+          "max_out_of_line": 4294967295,
+          "has_padding": true,
+          "has_envelope": false,
+          "has_flexible_envelope": false
+        }
+      },
+      "value": {
+        "kind": "literal",
+        "value": "\ud83d\ude00",
+        "expression": "\"\\u{1F600}\"",
+        "literal": {
+          "kind": "string",
+          "value": "\ud83d\ude00",
+          "expression": "\"\\u{1F600}\""
+        }
+      }
+    }
+  ],
   "enum_declarations": [],
   "experimental_resource_declarations": [],
   "protocol_declarations": [],
@@ -86,9 +474,27 @@
   "alias_declarations": [],
   "new_type_declarations": [],
   "declaration_order": [
-    "test.escaping/DocCommentWithQuotes"
+    "test.escaping/SMILE_UPPER",
+    "test.escaping/SMILE_LOWER",
+    "test.escaping/SMILE_LITERAL",
+    "test.escaping/SMILE_LEADING_ZERO",
+    "test.escaping/NULL",
+    "test.escaping/MAX",
+    "test.escaping/DocCommentWithQuotes",
+    "test.escaping/DOLLAR_BRACE",
+    "test.escaping/DOLLAR",
+    "test.escaping/BASIC"
   ],
   "declarations": {
+    "test.escaping/BASIC": "const",
+    "test.escaping/DOLLAR": "const",
+    "test.escaping/DOLLAR_BRACE": "const",
+    "test.escaping/MAX": "const",
+    "test.escaping/NULL": "const",
+    "test.escaping/SMILE_LEADING_ZERO": "const",
+    "test.escaping/SMILE_LITERAL": "const",
+    "test.escaping/SMILE_LOWER": "const",
+    "test.escaping/SMILE_UPPER": "const",
     "test.escaping/DocCommentWithQuotes": "struct"
   }
 }

@@ -3,4 +3,4 @@
 // found in the LICENSE file.
 library test.bad.fi0004;
 
-const BAD_HEX string:1 = "\xOF"; // 'O' (not 0) is an invalid hex digit.
+const SMILE string = "\u{1G600}";

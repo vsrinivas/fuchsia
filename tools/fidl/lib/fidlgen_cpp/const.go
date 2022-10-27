@@ -104,6 +104,7 @@ func (c *compiler) compileConst(val fidlgen.Const) *Const {
 func (c *compiler) compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {
 	switch val.Kind {
 	case fidlgen.StringLiteral:
+		// This works because C++ supports all of Go's escape sequences.
 		return fmt.Sprintf("%q", val.Value)
 	case fidlgen.NumericLiteral:
 		if val.Value == "-9223372036854775808" || val.Value == "0x8000000000000000" {

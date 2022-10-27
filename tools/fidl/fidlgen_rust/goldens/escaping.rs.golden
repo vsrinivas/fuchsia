@@ -28,6 +28,24 @@ use {
     futures::future::{self, MaybeDone, TryFutureExt},
 };
 
+pub const BASIC: &str = "'\"\\\n\r\t";
+
+pub const DOLLAR: &str = "$";
+
+pub const DOLLAR_BRACE: &str = "${";
+
+pub const MAX: &str = "\u{10ffff}";
+
+pub const NULL: &str = "\u{0}";
+
+pub const SMILE_LEADING_ZERO: &str = "😀";
+
+pub const SMILE_LITERAL: &str = "😀";
+
+pub const SMILE_LOWER: &str = "😀";
+
+pub const SMILE_UPPER: &str = "😀";
+
 /// "pleaseescapethisdocommentproperly"
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct DocCommentWithQuotes;

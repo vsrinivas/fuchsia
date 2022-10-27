@@ -172,17 +172,11 @@ literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 The grammar for `STRING-LITERAL` is as follows:
 
 ```
-STRING-LITERAL       = "\"" ( unicode-value | byte-value )* "\"" ;
-unicode-value        = limited-unicode-char | little-u-value |
-                       big-u-value | escaped-char ;
-limited-unicode-char = any unicode character except CR, LF, "\" or "\"" ;
-byte-value           = octal-byte-value | hex-byte-value ;
-octal-byte-value     = "\" octal-digit octal-digit octal-digit ;
-hex-byte-value       = "\x" hex-digit hex-digit ;
-little-u-value       = "\u" hex-digit hex-digit hex-digit hex-digit ;
-big-u-value          = "\U" hex-digit hex-digit hex-digit hex-digit
-                            hex-digit hex-digit hex-digit hex-digit ;
-escaped-char         = "\" ( "a" | "b" | "f" | "n" | "r" | "t" | "v" | "\" | "\"" ) ;
+STRING-LITERAL  = "\"" ( unicode-value )* "\"" ;
+unicode-value   = literal-char | escaped-basic | escaped-unicode ;
+literal-char    = any unicode character except CR, LF, "\" or "\"" ;
+escaped-basic   = "\" ( "\" | "\"" | "n" | "r" | "t"  ) ;
+escaped-unicode = "\u{" ( hex-digit ){1,6} "}" ;
 ```
 
 ----------

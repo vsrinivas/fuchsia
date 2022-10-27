@@ -10,6 +10,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -793,8 +794,32 @@ func (c *compiler) compileConstantIdentifier(val fidlgen.CompoundIdentifier, con
 func (c *compiler) compileLiteral(val fidlgen.Literal) string {
 	switch val.Kind {
 	case fidlgen.StringLiteral:
-		// TODO(abarth): Escape more characters (e.g., newline).
-		return fmt.Sprintf("%q", val.Value)
+		var b strings.Builder
+		b.WriteRune('\'')
+		for _, r := range val.Value {
+			switch r {
+			case '\\':
+				b.WriteString(`\\`)
+			case '\'':
+				b.WriteString(`\'`)
+			case '\n':
+				b.WriteString(`\n`)
+			case '\r':
+				b.WriteString(`\r`)
+			case '\t':
+				b.WriteString(`\t`)
+			case '$':
+				b.WriteString(`\$`)
+			default:
+				if unicode.IsPrint(r) {
+					b.WriteRune(r)
+				} else {
+					b.WriteString(fmt.Sprintf(`\u{%x}`, r))
+				}
+			}
+		}
+		b.WriteRune('\'')
+		return b.String()
 	case fidlgen.NumericLiteral:
 		// TODO(fxbug.dev/7810): Once we expose resolved constants for defaults, e.g.
 		// in structs, we will not need ignore hex and binary values.

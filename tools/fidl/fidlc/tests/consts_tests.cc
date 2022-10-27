@@ -48,18 +48,6 @@ const C_BINARY_L uint32 = 0B101010111100110111101111;
   check_const_eq(library, "C_BINARY_L", 11259375);
 }
 
-TEST(ConstsTests, GoodHexLiteralTest) {
-  TestLibrary library;
-  library.AddFile("good/fi-0004.test.fidl");
-  ASSERT_COMPILED(library);
-}
-
-TEST(ConstsTests, GoodOctLiteralTest) {
-  TestLibrary library;
-  library.AddFile("good/fi-0005.test.fidl");
-  ASSERT_COMPILED(library);
-}
-
 TEST(ConstsTests, GoodConstTestBool) {
   TestLibrary library(R"FIDL(library example;
 

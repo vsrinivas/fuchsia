@@ -37,6 +37,24 @@ zx_status_t DocCommentWithQuotes::Clone(DocCommentWithQuotes* _result) const {
   return ZX_OK;
 }
 
+const char* BASIC = "'\"\\\n\r\t";
+
+const char* NULL_ = "\x00";
+
+const char* MAX = "\U0010ffff";
+
+const char* SMILE_LITERAL = "😀";
+
+const char* SMILE_LOWER = "😀";
+
+const char* SMILE_UPPER = "😀";
+
+const char* SMILE_LEADING_ZERO = "😀";
+
+const char* DOLLAR = "$";
+
+const char* DOLLAR_BRACE = "${";
+
 //
 // Proxies and stubs definitions
 //

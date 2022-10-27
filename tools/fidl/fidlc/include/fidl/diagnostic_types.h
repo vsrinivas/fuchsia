@@ -32,6 +32,7 @@ namespace internal {
 
 constexpr std::string_view kFormatMarker = "{}";
 
+std::string Display(char c);
 std::string Display(const std::string& s);
 std::string Display(std::string_view s);
 std::string Display(const std::set<std::string>& s);

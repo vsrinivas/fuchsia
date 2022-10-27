@@ -6,6 +6,18 @@ import (
 	_bindings "syscall/zx/fidl"
 )
 
+const (
+	Basic            string = "'\"\\\n\r\t"
+	Dollar           string = "$"
+	DollarBrace      string = "${"
+	Max              string = "\U0010ffff"
+	Null             string = "\x00"
+	SmileLeadingZero string = "😀"
+	SmileLiteral     string = "😀"
+	SmileLower       string = "😀"
+	SmileUpper       string = "😀"
+)
+
 // "pleaseescapethisdocommentproperly"
 type DocCommentWithQuotes struct {
 	_ struct{} `fidl:"s" fidl_size_v2:"1" fidl_alignment_v2:"1"`

@@ -73,7 +73,7 @@ pub const OFFSET: i8 = -33;
 
 pub const POPULATION_USA_2018: u32 = 330000000;
 
-pub const USERNAME: &str = r###""squeenze""###;
+pub const USERNAME: &str = "\"squeenze\"";
 
 pub const ZX_CONST: u64 = fidl_zx::CHANNEL_MAX_MSG_BYTES;
 

@@ -363,40 +363,16 @@ type TypeDecl = struct {
   EXPECT_ERR(errors[10], fidl::ErrUnexpectedToken);
 }
 
-TEST(RecoverableParsingTests, InvalidStringLiterals) {
-  std::vector<std::string> invalid_string_literals{
-      R"(
-// error: invalid hex digit 'G'
-const str1 string:1 = "\x0G";
-    )",
-      R"(
-// error: invalid escape sequence 'i'
-const str2 string:1 = "\i";
-    )",
-      R"(
-// error: invalid oct digit '9'
-const str3 string:1 = "\297";
-    )",
-  };
-
-  std::vector<std::string> expected_errors{fidl::ErrInvalidHexDigit.msg.data(),
-                                           fidl::ErrInvalidEscapeSequence.msg.data(),
-                                           fidl::ErrInvalidOctDigit.msg.data()};
-
-  for (size_t i = 0; i < invalid_string_literals.size(); i++) {
-    const auto& invalidStringLiteral = invalid_string_literals[i];
-    TestLibrary library(R"FIDL(library example; )FIDL" + invalidStringLiteral);
-    ASSERT_FALSE(library.Compile());
-    const auto& currErrors = library.errors();
-    ASSERT_EQ(currErrors.size(), 1);
-    ASSERT_EQ(currErrors[0]->def.msg.data(), expected_errors[i]);
-  }
-}
-
 TEST(RecoverableParsingTests, UnexpectedLineBreakInLiteral) {
   TestLibrary library;
   library.AddFile("bad/fi-0002.test.fidl");
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedLineBreak);
+}
+
+TEST(RecoverableParsingTests, UnexpectedControlCharacter) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0184.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnexpectedControlCharacter);
 }
 
 TEST(RecoverableParsingTests, InvalidEscapeSequenceInLiteral) {
@@ -408,7 +384,9 @@ TEST(RecoverableParsingTests, InvalidEscapeSequenceInLiteral) {
   // TODO(fxbug.dev/111982): fidlc should recover from all three failures
   ASSERT_EQ(errors.size(), 2);
   EXPECT_ERR(errors[0], fidl::ErrInvalidEscapeSequence);
+  EXPECT_SUBSTR(errors[0]->msg.c_str(), "'\\ '");
   EXPECT_ERR(errors[1], fidl::ErrInvalidEscapeSequence);
+  EXPECT_SUBSTR(errors[1]->msg.c_str(), "'\\i'");
 }
 
 TEST(RecoverableParsingTests, InvalidHexDigit) {
@@ -417,10 +395,39 @@ TEST(RecoverableParsingTests, InvalidHexDigit) {
   ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidHexDigit);
 }
 
-TEST(RecoverableParsingTests, InvalidOctDigit) {
+TEST(RecoverableParsingTests, UnicodeEscapeMissingBraces) {
   TestLibrary library;
-  library.AddFile("bad/fi-0005.test.fidl");
-  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrInvalidOctDigit);
+  library.AddFile("bad/fi-0185.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnicodeEscapeMissingBraces);
+  EXPECT_EQ(library.errors()[0]->span.data(), "\\u");
+}
+
+TEST(RecoverableParsingTests, UnicodeEscapeUnterminated) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0186.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnicodeEscapeUnterminated);
+  EXPECT_EQ(library.errors()[0]->span.data(), "\\u{1F600");
+}
+
+TEST(RecoverableParsingTests, UnicodeEscapeEmpty) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0187.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnicodeEscapeEmpty);
+  EXPECT_EQ(library.errors()[0]->span.data(), "\\u{}");
+}
+
+TEST(RecoverableParsingTests, UnicodeEscapeTooLong) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0188.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnicodeEscapeTooLong);
+  EXPECT_EQ(library.errors()[0]->span.data(), "001F600");
+}
+
+TEST(RecoverableParsingTests, UnicodeEscapeTooLarge) {
+  TestLibrary library;
+  library.AddFile("bad/fi-0189.test.fidl");
+  ASSERT_ERRORED_DURING_COMPILE(library, fidl::ErrUnicodeEscapeTooLarge);
+  EXPECT_EQ(library.errors()[0]->span.data(), "110000");
 }
 
 TEST(RecoverableParsingTests, ExpectedDeclaration) {

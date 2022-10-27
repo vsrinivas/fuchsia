@@ -299,55 +299,67 @@ bool OnlyWhitespaceChanged(std::string_view unformatted_input, std::string_view 
   return formatted == unformatted;
 }
 
+uint32_t decode_unicode_hex(std::string_view str) {
+  char* endptr;
+  unsigned long codepoint = strtoul(str.begin(), &endptr, 16);
+  ZX_ASSERT(codepoint != ULONG_MAX);
+  ZX_ASSERT(endptr == str.end());
+  return codepoint;
+}
+
+static size_t utf8_size_for_codepoint(uint32_t codepoint) {
+  if (codepoint <= 0x7f) {
+    return 1;
+  }
+  if (codepoint <= 0x7ff) {
+    return 2;
+  }
+  if (codepoint <= 0x10000) {
+    return 3;
+  }
+  ZX_ASSERT(codepoint <= 0x10ffff);
+  return 4;
+}
+
 std::uint32_t string_literal_length(std::string_view str) {
-  // -2 to account for the leading and trailing quotes
-  std::uint32_t cnt = -2;
-  for (auto it = str.begin(), it_end = str.end(); it < it_end; ++it) {
-    ++cnt;
+  std::uint32_t count = 0;
+  auto it = str.begin();
+  ZX_ASSERT(*it == '"');
+  ++it;
+  const auto closing_quote = str.end() - 1;
+  for (; it < closing_quote; ++it) {
+    ++count;
     if (*it == '\\') {
       ++it;
-      ZX_ASSERT_MSG(it < it_end, "invalid string literal");
-      char next = *it;
-      switch (next) {
-        case 'x':
-        case '0':
-        case '1':
-        case '2':
-        case '3':
-        case '4':
-        case '5':
-        case '6':
-        case '7':
-          // Hex \xnn
-          // Oct \nnn
-          it += 2;
-          break;
-        case 'u':
-          // Unicode code point: U+nnnn
-          it += 4;
-          break;
-        case 'U':
-          // Unicode code point: U+nnnnnnnn
-          it += 8;
-          break;
-        case 'a':
-        case 'b':
-        case 'f':
+      ZX_ASSERT(it < closing_quote);
+      switch (*it) {
+        case '\\':
+        case '"':
         case 'n':
         case 'r':
         case 't':
-        case 'v':
-        case '\\':
-        case '"':
-          // no additional skip required
           break;
+        case 'u': {
+          ++it;
+          ZX_ASSERT(*it == '{');
+          ++it;
+          auto codepoint_begin = it;
+          while (*it != '}') {
+            ++it;
+          }
+          auto codepoint =
+              decode_unicode_hex(std::string_view(codepoint_begin, it - codepoint_begin));
+          count += utf8_size_for_codepoint(codepoint) - 1;
+          break;
+        }
         default:
           ZX_PANIC("invalid string literal");
       }
-      ZX_ASSERT_MSG(it < it_end, "invalid string literal");
+      ZX_ASSERT(it < closing_quote);
     }
   }
-  return cnt;
+  ZX_ASSERT(*it == '"');
+  return count;
 }
 
 }  // namespace fidl::utils

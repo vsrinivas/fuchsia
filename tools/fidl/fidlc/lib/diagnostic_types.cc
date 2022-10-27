@@ -14,6 +14,8 @@
 
 namespace fidl::internal {
 
+std::string Display(char c) { return std::string(1, c); }
+
 std::string Display(const std::string& s) { return s; }
 
 std::string Display(std::string_view s) { return std::string(s); }

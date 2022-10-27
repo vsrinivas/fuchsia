@@ -12,7 +12,125 @@
   "using_declarations": [],
   "dependencies": [],
   "dependency_identifiers": [],
-  "consts": [],
+  "consts": [
+    {
+      "identifier": "test.escaping/BASIC",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "BASIC",
+        "start_offset": 110,
+        "end_offset": 115
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/DOLLAR",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "DOLLAR",
+        "start_offset": 455,
+        "end_offset": 461
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/DOLLAR_BRACE",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "DOLLAR_BRACE",
+        "start_offset": 482,
+        "end_offset": 494
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/MAX",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "MAX",
+        "start_offset": 176,
+        "end_offset": 179
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/NULL",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "NULL",
+        "start_offset": 147,
+        "end_offset": 151
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/SMILE_LEADING_ZERO",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "SMILE_LEADING_ZERO",
+        "start_offset": 326,
+        "end_offset": 344
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/SMILE_LITERAL",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "SMILE_LITERAL",
+        "start_offset": 209,
+        "end_offset": 222
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/SMILE_LOWER",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "SMILE_LOWER",
+        "start_offset": 246,
+        "end_offset": 257
+      },
+      "value": {
+        "type": "literal"
+      }
+    },
+    {
+      "identifier": "test.escaping/SMILE_UPPER",
+      "location": {
+        "is_virtual": false,
+        "file": "../../tools/fidl/fidlc/testdata/escaping.test.fidl",
+        "data": "SMILE_UPPER",
+        "start_offset": 286,
+        "end_offset": 297
+      },
+      "value": {
+        "type": "literal"
+      }
+    }
+  ],
   "enums": [],
   "unions": [],
   "tables": [],

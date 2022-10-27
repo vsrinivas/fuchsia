@@ -40,6 +40,24 @@ import 'package:zircon/zircon.dart' as $zircon;
 // ignore_for_file: prefer_interpolation_to_compose_strings
 // ignore_for_file: override_on_non_overriding_member
 
+const String basic = '\'"\\\n\r\t';
+
+const String dollar = '\$';
+
+const String dollarBrace = '\${';
+
+const String max = '\u{10ffff}';
+
+const String null$ = '\u{0}';
+
+const String smileLeadingZero = '😀';
+
+const String smileLiteral = '😀';
+
+const String smileLower = '😀';
+
+const String smileUpper = '😀';
+
 /// "pleaseescapethisdocommentproperly"
 class DocCommentWithQuotes extends $fidl.Struct {
   const DocCommentWithQuotes({

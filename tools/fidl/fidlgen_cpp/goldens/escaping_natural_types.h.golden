@@ -18,6 +18,24 @@ namespace test_escaping {
 
 class DocCommentWithQuotes;
 
+extern const char* kBasic;
+
+extern const char* kNull;
+
+extern const char* kMax;
+
+extern const char* kSmileLiteral;
+
+extern const char* kSmileLower;
+
+extern const char* kSmileUpper;
+
+extern const char* kSmileLeadingZero;
+
+extern const char* kDollar;
+
+extern const char* kDollarBrace;
+
 extern "C" const fidl_type_t test_escaping_DocCommentWithQuotesTable;
 
 /// "pleaseescapethisdocommentproperly"

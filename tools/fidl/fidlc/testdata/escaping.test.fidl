@@ -2,3 +2,16 @@ library test.escaping;
 
 /// "pleaseescapethisdocommentproperly"
 type DocCommentWithQuotes = struct {};
+
+const BASIC string = "'\"\\\n\r\t";
+
+const NULL string = "\u{0}";
+const MAX string = "\u{10ffff}";
+const SMILE_LITERAL string = "😀";
+const SMILE_LOWER string = "\u{1f600}";
+const SMILE_UPPER string = "\u{1F600}";
+const SMILE_LEADING_ZERO string = "\u{01f600}";
+
+// Make sure we escape this properly in languages that use $ for interpolation.
+const DOLLAR string = "$";
+const DOLLAR_BRACE string = "${";

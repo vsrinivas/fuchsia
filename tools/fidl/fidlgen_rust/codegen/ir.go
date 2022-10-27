@@ -11,6 +11,7 @@ import (
 	"sort"
 	"strconv"
 	"strings"
+	"unicode"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -706,7 +707,30 @@ func (c *compiler) compileScreamingSnakeCompoundIdentifier(eci fidlgen.EncodedCo
 func compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {
 	switch val.Kind {
 	case fidlgen.StringLiteral:
-		return fmt.Sprintf("r###\"%s\"###", val.Value)
+		var b strings.Builder
+		b.WriteRune('"')
+		for _, r := range val.Value {
+			switch r {
+			case '\\':
+				b.WriteString(`\\`)
+			case '"':
+				b.WriteString(`\"`)
+			case '\n':
+				b.WriteString(`\n`)
+			case '\r':
+				b.WriteString(`\r`)
+			case '\t':
+				b.WriteString(`\t`)
+			default:
+				if unicode.IsPrint(r) {
+					b.WriteRune(r)
+				} else {
+					b.WriteString(fmt.Sprintf(`\u{%x}`, r))
+				}
+			}
+		}
+		b.WriteRune('"')
+		return b.String()
 	case fidlgen.NumericLiteral:
 		if typ.Kind == fidlgen.PrimitiveType &&
 			(typ.PrimitiveSubtype == fidlgen.Float32 || typ.PrimitiveSubtype == fidlgen.Float64) {

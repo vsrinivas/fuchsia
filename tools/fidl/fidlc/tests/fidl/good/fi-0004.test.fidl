@@ -3,4 +3,4 @@
 // found in the LICENSE file.
 library test.good.fi0004;
 
-const GOOD_HEX string:1 = "\x0F";
+const SMILE string = "\u{1F600}";

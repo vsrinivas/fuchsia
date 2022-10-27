@@ -181,120 +181,118 @@ static bool IsHexDigit(char c) {
 }
 
 Token Lexer::LexStringLiteral() {
-  enum StringLiteralLexingState {
-    kNotEscapeSeq,
-    kStartOfEscapeSeq,
-    kHexSeq,
-    kOctSeq,
-    kLittleUSeq,
-    kBigUSeq,
+  enum State {
+    kNormal,
+    kEscaped,       // saw "\"
+    kUnicode,       // saw "\u"
+    kUnicodeBrace,  // saw "\u{"
   };
-  auto state = kNotEscapeSeq;
-  int chars_left = 0;
+  auto state = kNormal;
+  auto unicode_hex_digits = 0;
 
-  // Lexing a "string literal" to the next matching delimiter.
-  // TODO(fxbug.dev/88490): This doesn't check if it is a valid UTF-8 string.
-  // In particular, it doesn't check whether the Unicode code-points
-  // are valid or not.
+  // We've already consumed the opening '"'. Consume until the closing '"'.
   for (;;) {
     auto curr = Consume();
+    // Check for EOF and invalid characters.
     switch (curr) {
       case 0:
         return LexEndOfStream();
       case '\n':
       case '\r': {
-        // Cannot have line-break in string literal
-        SourceSpan span(std::string_view(current_, 1), source_file_);
+        SourceSpan span(std::string_view(current_ - 1, 1), source_file_);
         Fail(ErrUnexpectedLineBreak, span);
-        chars_left = 0;
-        state = kNotEscapeSeq;
+        state = kNormal;
         break;
       }
+      default:
+        if (curr >= 0 && curr <= 0x1f) {
+          SourceSpan span(std::string_view(current_ - 1, 1), source_file_);
+          char buf[3];
+          snprintf(buf, sizeof buf, "%x", curr);
+          Fail(ErrUnexpectedControlCharacter, span, std::string_view(buf));
+          state = kNormal;
+        }
+        break;
     }
+    // Main state machine.
     switch (state) {
-      case kNotEscapeSeq:
+      case kNormal:
         if (curr == '"')
           return Finish(Token::Kind::kStringLiteral);
         if (curr == '\\')
-          state = kStartOfEscapeSeq;
+          state = kEscaped;
         break;
-      case kStartOfEscapeSeq:
+      case kEscaped:
         switch (curr) {
-          case 'x':
-            // Hex \xnn
-            state = kHexSeq;
-            chars_left = 2;
-            break;
-          case '0':
-          case '1':
-          case '2':
-          case '3':
-          case '4':
-          case '5':
-          case '6':
-          case '7':
-            // Oct \nnn
-            state = kOctSeq;
-            chars_left = 2;
-            break;
           case 'u':
-            // Unicode code point: U+nnnn
-            state = kLittleUSeq;
-            chars_left = 4;
+            state = kUnicode;
             break;
-          case 'U':
-            // Unicode code point: U+nnnnnnnn
-            state = kBigUSeq;
-            chars_left = 8;
-            break;
-          case 'a':
-          case 'b':
-          case 'f':
+          case '\\':
+          case '"':
           case 'n':
           case 'r':
           case 't':
-          case 'v':
-          case '\\':
-          case '"':
-            // Escape sequence ends here
-            state = kNotEscapeSeq;
-            chars_left = 0;
+            state = kNormal;
             break;
           default:
-            SourceSpan span(std::string_view(current_ - 1, 2), source_file_);
+            SourceSpan span(std::string_view(current_ - 2, 2), source_file_);
             Fail(ErrInvalidEscapeSequence, span, span.data());
-            chars_left = 0;
-            state = kNotEscapeSeq;
+            state = kNormal;
         }
         break;
-      case kHexSeq:
-      case kBigUSeq:
-      case kLittleUSeq:
-        if (!IsHexDigit(curr)) {
-          SourceSpan span(std::string_view(current_, 1), source_file_);
+      case kUnicode:
+        if (curr == '{') {
+          // Saw "\u{", now switch to lexing the hex digits.
+          state = kUnicodeBrace;
+          unicode_hex_digits = 0;
+        } else {
+          // Saw something like "\ua" which is invalid.
+          SourceSpan span(std::string_view(current_ - 3, 2), source_file_);
+          Fail(ErrUnicodeEscapeMissingBraces, span);
+          if (curr == '"') {
+            return Finish(Token::Kind::kStringLiteral);
+          }
+          state = kNormal;
+        }
+        break;
+      case kUnicodeBrace:
+        if (IsHexDigit(curr)) {
+          // Saw a hex digit like "\u{a" or "\u{a3".
+          ++unicode_hex_digits;
+        } else if (curr == '"') {
+          // The string literal ended before the closing "}".
+          SourceSpan span(
+              std::string_view(current_ - 4 - unicode_hex_digits, unicode_hex_digits + 3),
+              source_file_);
+          Fail(ErrUnicodeEscapeUnterminated, span);
+          return Finish(Token::Kind::kStringLiteral);
+        } else if (curr == '}') {
+          // Saw "\u{...}", now validate the "..." part.
+          if (unicode_hex_digits == 0) {
+            SourceSpan span(
+                std::string_view(current_ - 4 - unicode_hex_digits, unicode_hex_digits + 4),
+                source_file_);
+            Fail(ErrUnicodeEscapeEmpty, span);
+          } else if (unicode_hex_digits > 6) {
+            SourceSpan span(std::string_view(current_ - 1 - unicode_hex_digits, unicode_hex_digits),
+                            source_file_);
+            Fail(ErrUnicodeEscapeTooLong, span);
+          } else {
+            SourceSpan span(std::string_view(current_ - 1 - unicode_hex_digits, unicode_hex_digits),
+                            source_file_);
+            auto codepoint = utils::decode_unicode_hex(span.data());
+            if (codepoint > 0x10ffff) {
+              Fail(ErrUnicodeEscapeTooLarge, span, span.data());
+            }
+          }
+          state = kNormal;
+        } else {
+          SourceSpan span(std::string_view(current_ - 1, 1), source_file_);
           Fail(ErrInvalidHexDigit, span, curr);
-          chars_left = 0;
-          state = kNotEscapeSeq;
-        } else {
-          --chars_left;
-          if (chars_left == 0)
-            state = kNotEscapeSeq;
-        }
-        break;
-      case kOctSeq:
-        if (curr < '0' || curr > '7') {
-          SourceSpan span(std::string_view(current_, 1), source_file_);
-          Fail(ErrInvalidOctDigit, span, curr);
-          chars_left = 0;
-          state = kNotEscapeSeq;
-        } else {
-          --chars_left;
-          if (chars_left == 0)
-            state = kNotEscapeSeq;
+          state = kNormal;
         }
         break;
     }
-    ZX_ASSERT_MSG(chars_left >= 0, "chars_left in escape sequence must be non-negative");
   }
 }
 

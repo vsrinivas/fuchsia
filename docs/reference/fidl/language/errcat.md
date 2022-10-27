@@ -238,6 +238,18 @@ This document lists all errors emitted by the [FIDL compiler][docs-fidlc],
 
 <<error-catalog/_fi-0178.md>>
 
+<<error-catalog/_fi-0184.md>>
+
+<<error-catalog/_fi-0185.md>>
+
+<<error-catalog/_fi-0186.md>>
+
+<<error-catalog/_fi-0187.md>>
+
+<<error-catalog/_fi-0188.md>>
+
+<<error-catalog/_fi-0189.md>>
+
 <!--
 
 // LINT.ThenChange(/tools/fidl/fidlc/tests/errcat_good_tests.cc)

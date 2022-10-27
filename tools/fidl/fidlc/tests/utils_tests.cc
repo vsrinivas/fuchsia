@@ -737,23 +737,27 @@ TEST(UtilsTests, StringStripping) {
                    "\n Weird\n Offsets\n Slash///\nPlacement ///\n And\n   Spacing   \n");
 }
 
+TEST(UtilsTests, DecodeUnicodeHex) {
+  EXPECT_EQ(decode_unicode_hex("0"), 0x0);
+  EXPECT_EQ(decode_unicode_hex("a"), 0xa);
+  EXPECT_EQ(decode_unicode_hex("12"), 0x12);
+  EXPECT_EQ(decode_unicode_hex("123abc"), 0x123abc);
+  EXPECT_EQ(decode_unicode_hex("ffffff"), 0xffffff);
+}
+
 TEST(UtilsTests, StringLiteralLength) {
-  ASSERT_EQ(string_literal_length(R"("Hello")"), 5);
-  ASSERT_EQ(string_literal_length(R"("\\")"), 1);
-  ASSERT_EQ(string_literal_length(R"("\to")"), 2);
-  ASSERT_EQ(string_literal_length(R"("\n")"), 1);
-  ASSERT_EQ(string_literal_length(R"("\x0a")"), 1);
-  ASSERT_EQ(string_literal_length(R"("\x0aa")"), 2);
-  ASSERT_EQ(string_literal_length(R"("\012")"), 1);
-  ASSERT_EQ(string_literal_length(R"("\0123")"), 2);
-  ASSERT_EQ(string_literal_length(R"("\U0001F600")"), 1);
-  ASSERT_EQ(string_literal_length(R"("\u2713")"), 1);
-  ASSERT_EQ(string_literal_length(R"("")"), 0);
-  ASSERT_EQ(string_literal_length(R"("$")"), 1);
-  ASSERT_EQ(string_literal_length(R"("¢")"), 2);
-  ASSERT_EQ(string_literal_length(R"("€")"), 3);
-  ASSERT_EQ(string_literal_length(R"("𐍈")"), 4);
-  ASSERT_EQ(string_literal_length(R"("😁")"), 4);
+  EXPECT_EQ(string_literal_length(R"("Hello")"), 5);
+  EXPECT_EQ(string_literal_length(R"("\\")"), 1);
+  EXPECT_EQ(string_literal_length(R"("\to")"), 2);
+  EXPECT_EQ(string_literal_length(R"("\n")"), 1);
+  EXPECT_EQ(string_literal_length(R"("\u{01F600}")"), 4);
+  EXPECT_EQ(string_literal_length(R"("\u{2713}")"), 3);
+  EXPECT_EQ(string_literal_length(R"("")"), 0);
+  EXPECT_EQ(string_literal_length(R"("$")"), 1);
+  EXPECT_EQ(string_literal_length(R"("¢")"), 2);
+  EXPECT_EQ(string_literal_length(R"("€")"), 3);
+  EXPECT_EQ(string_literal_length(R"("𐍈")"), 4);
+  EXPECT_EQ(string_literal_length(R"("😁")"), 4);
 }
 
 }  // namespace

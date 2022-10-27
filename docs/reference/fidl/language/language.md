@@ -291,6 +291,8 @@ of the type. In other words, changing the parameter `_N_` is an
 *   Can be optional; absent strings and empty strings are distinct.
 *   Can specify a maximum size, e.g. **`string:40`** for a
     maximum 40 byte string.
+*   String literals support the escape sequences `\\`, `\"`, `\n`, `\r`, `\t`,
+    and `\u{X}` where the `X` is 1 to 6 hex digits for a Unicode code point.
 *   May contain embedded `NUL` bytes, unlike traditional C strings.
 
 #### Use

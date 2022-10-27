@@ -6,10 +6,13 @@
 #define TOOLS_FIDL_FIDLC_INCLUDE_FIDL_JSON_WRITER_H_
 
 #include <lib/fit/function.h>
+#include <zircon/assert.h>
 
 #include <ostream>
 #include <string_view>
 #include <vector>
+
+#include "utils.h"
 
 namespace fidl::utils {
 
@@ -190,7 +193,43 @@ class JsonWriter {
     os_ << "\"";
   }
 
-  void EmitLiteral(std::string_view value) { os_.rdbuf()->sputn(value.data(), value.size()); }
+  void EmitLiteral(std::string_view value) {
+    for (auto it = value.begin(); it != value.end(); ++it) {
+      // Emit all characters in the string literal unchanged (including the
+      // enclosing double quotes and escape sequences like \\, \", \n, \r, \t)
+      // except for Unicode escape sequences, handled below.
+      if (it[0] != '\\' || it[1] != 'u') {
+        os_ << *it;
+        continue;
+      }
+      // We have a Unicode escape \u{X}. First, extract the hex string X.
+      it += 2;
+      ZX_ASSERT(*it == '{');
+      ++it;
+      auto hex_begin = it;
+      while (*it != '}') {
+        ++it;
+      }
+      std::string_view codepoint_hex(hex_begin, it - hex_begin);
+      // Next, decode the code point X as an integer.
+      auto codepoint = utils::decode_unicode_hex(codepoint_hex);
+      if (codepoint <= 0xffff) {
+        // This code point can be represented by a single \uNNNN in JSON.
+        char buf[7];
+        snprintf(buf, sizeof buf, "\\u%04x", codepoint);
+        os_ << buf;
+      } else {
+        // This code point must be represented as a surrogate pair in JSON.
+        // https://www.unicode.org/faq/utf_bom.html#utf16-4
+        auto lead_offset = 0xd800 - (0x10000 >> 10);
+        auto lead = lead_offset + (codepoint >> 10);
+        auto trail = 0xdc00 + (codepoint & 0x3ff);
+        char buf[13];
+        snprintf(buf, sizeof buf, "\\u%04x\\u%04x", lead, trail);
+        os_ << buf;
+      }
+    }
+  }
 
   template <typename ValueType>
   void EmitNumeric(ValueType value, ConstantStyle style = kAsConstant) {

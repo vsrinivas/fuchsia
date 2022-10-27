@@ -17,9 +17,9 @@ namespace {
 
 // LINT.IfChange
 
-TEST(ErrcatTests, Good0003) {
+TEST(ConstsTests, Good0004) {
   TestLibrary library;
-  library.AddFile("good/fi-0003.test.fidl");
+  library.AddFile("good/fi-0004.test.fidl");
   ASSERT_COMPILED(library);
 }
 
@@ -743,6 +743,48 @@ TEST(ErrcatTests, Good0133) {
 TEST(ErrcatTests, Good0162) {
   TestLibrary library;
   library.AddFile("good/fi-0162.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0184a) {
+  TestLibrary library;
+  library.AddFile("good/fi-0184-a.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0184b) {
+  TestLibrary library;
+  library.AddFile("good/fi-0184-b.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0185) {
+  TestLibrary library;
+  library.AddFile("good/fi-0185.test.fidl");
+  ASSERT_COMPILED(library);
+}
+TEST(ErrcatTests, Good0186) {
+  TestLibrary library;
+  library.AddFile("good/fi-0186.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0187) {
+  TestLibrary library;
+  library.AddFile("good/fi-0187.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0188) {
+  TestLibrary library;
+  library.AddFile("good/fi-0188.test.fidl");
+  ASSERT_COMPILED(library);
+}
+
+TEST(ErrcatTests, Good0189) {
+  TestLibrary library;
+  library.AddFile("good/fi-0189.test.fidl");
+  ASSERT_COMPILED(library);
 }
 
 // LINT.ThenChange(/docs/reference/fidl/language/errcat.md)
