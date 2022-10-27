@@ -24,7 +24,9 @@ fuchsia_component("echo_client_component") {
   deps = [ ":echo_client" ]
 }
 
-fuchsia_package("echo_client_package") {
-  package_name = "echo_client_package_rust"
-  deps = [ ":echo_client_component" ]
+# Subpackagable
+fuchsia_package_with_default_component("echo_client_package") {
+  package_name = "echo_client_rust"
+  manifest = "meta/echo_client.cml"
+  deps = [ ":echo_client" ]
 }

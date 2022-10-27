@@ -9,7 +9,7 @@ group("components-routing-example") {
   deps = [
     ":components-routing-example-cpp",
     ":components-routing-example-rust",
-    "with_subpackages",
+    "with_subpackages:subpackaged-echo-realm",
   ]
 }
 

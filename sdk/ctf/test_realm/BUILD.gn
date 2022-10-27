@@ -12,7 +12,7 @@
 # 4. Set enable_ctf_test_realms=true on your ctf_fuchsia_test_package target.
 #
 # After completing these steps your test can access the new test realm at the
-# the component url: '$target_name#meta/$target_name.cm'. Name the
+# the component url: '$target_name#meta/default.cm'. Name the
 # test realm after the FIDL library being tested. For example if you are
 # testing the FIDL library 'fuchsia.io' then your test realm should be named
 # 'fuchsia.io_test_realm'.

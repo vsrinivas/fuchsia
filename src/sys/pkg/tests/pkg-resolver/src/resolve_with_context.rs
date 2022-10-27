@@ -270,7 +270,7 @@ async fn base_superpackage_non_base_subpackage_fails() {
 }
 
 #[fuchsia::test]
-async fn non_base_superpackage_base_subpackage_fails() {
+async fn non_base_superpackage_base_subpackage_succeeds() {
     let subpackage = PackageBuilder::new("subpackage")
         .add_resource_at("subpackage-blob", "subpackage-blob-contents".as_bytes())
         .build()
@@ -303,10 +303,10 @@ async fn non_base_superpackage_base_subpackage_fails() {
         .await
         .expect("package to resolve without error");
 
-    assert_matches!(
-        env.resolve_with_context("my-subpackage", context).await,
-        Err(fpkg::ResolveError::Internal)
-    );
+    let (resolved_subpackage, _) =
+        env.resolve_with_context("my-subpackage", context).await.unwrap();
+
+    subpackage.verify_contents(&resolved_subpackage).await.unwrap();
 
     env.stop().await;
 }

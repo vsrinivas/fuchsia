@@ -14,7 +14,7 @@ import("//build/components.gni")
 #
 #   deps
 template("ctf_test_realm") {
-  fuchsia_package_with_single_component(target_name) {
+  fuchsia_package_with_default_component(target_name) {
     forward_variables_from(invoker,
                            "*",
                            [

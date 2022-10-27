@@ -76,7 +76,8 @@ template("ctf_fuchsia_test_package") {
       # Don't include test realm subpackages if we're building for release,
       # otherwise the test's deps would be bundled with the test in CIPD.
       if (cts_version == "" && invoker.enable_ctf_test_realms) {
-        import("//sdk/ctf/build/internal/define_ctf_test_realm_subpackages.gni")
+        import("//sdk/ctf/build/ctf_test_realms.gni")
+        subpackages = ctf_test_realms
       }
 
       if (cts_version != "") {

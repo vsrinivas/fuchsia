@@ -13,48 +13,41 @@ If these components are not present in your build, they can be added by
 appending `--with //examples` to your `fx set` command. For example:
 
 <!--
-TODO(fxbug.dev/102652): Use the following more common example, instead of the
-one below, when the feature flag is no longer needed:
-
-$ fx set core.x64 --with //examples --with //examples:tests
+TODO(fxbug.dev/102652): Remove --args='full_resolver_enable_subpackages=true'
+when the feature flag is no longer needed:
 -->
 
 ```bash
-$ fx set core.x64 --args='full_resolver_enable_subpackages=true' \
-    --with //examples/components/routing/with_subpackages
-    --with //examples/components/routing/with_subpackages:tests
+$ fx set core.x64 --with //examples --with //examples:tests \
+  --args='full_resolver_enable_subpackages=true'
 $ fx build
 ```
 
 ## Running
 
-Use `ffx component create` to create the component instances inside a restricted
-realm for development purposes:
+Use `ffx component run` (using either the C++ version or the Rust version) to
+create the component instances inside a restricted realm (for development
+purposes). The `run` command will also resolve and start the
+`subpackaged_echo_realm` component automatically:
 
 -   **C++**
 
 ```bash
-$ ffx component create /core/ffx-laboratory:subpackaged_echo_realm fuchsia-pkg://fuchsia.com/subpackaged-echo-cpp#meta/subpackaged_echo_realm.cm
+$ ffx component run /core/ffx-laboratory:subpackaged_echo_realm fuchsia-pkg://fuchsia.com/subpackaged_echo_realm_cpp#meta/default.cm
 ```
 
 -   **Rust**
 
 ```bash
-$ ffx component create /core/ffx-laboratory:subpackaged_echo_realm fuchsia-pkg://fuchsia.com/subpackaged-echo-rust#meta/subpackaged_echo_realm.cm
+$ ffx component run /core/ffx-laboratory:subpackaged_echo_realm fuchsia-pkg://fuchsia.com/subpackaged_echo_realm_rust#meta/default.cm
 ```
 
 Start the client component instance by passing its moniker to
 `ffx component start`:
 
 ```bash
-$ ffx component start /core/ffx-laboratory:subpackaged_echo_realm
+$ ffx component start /core/ffx-laboratory:subpackaged_echo_realm/echo_client
 ```
-
-This will start the `subpackaged_echo_realm` component, according to its CML
-declarations in [meta/subpackaged_echo_realm.cml]. Since the CML declares the
-`echo_client` child with `startup: "eager"`, the echo_client component will
-start automatically, and invoke the `echo_server`, launching that component as
-well.
 
 When the above command is run, you can see the following output with `fx log`:
 
@@ -77,21 +70,21 @@ command to run the tests on a target device:
 -   **C++**
 
     ```bash
-    $ ffx test run fuchsia-pkg://fuchsia.com/subpackaged_echo_integration_test_cpp#meta/subpackaged_echo_integration_test.cm
+    $ ffx test run fuchsia-pkg://fuchsia.com/subpackaged_echo_integration_test_cpp#meta/default.cm
     ```
 
 -   **Rust**
 
     ```bash
-    $ ffx test run fuchsia-pkg://fuchsia.com/subpackaged_echo_integration_test_rust#meta/subpackaged_echo_integration_test.cm
+    $ ffx test run fuchsia-pkg://fuchsia.com/subpackaged_echo_integration_test_rust#meta/default.cm
     ```
 
 You should see the integration tests execute and pass:
 
 ```
 Running test 'fuchsia-pkg://fuchsia.com/subpackaged_echo_integration_test#meta/echo_integration_test_rust.cm'
-[RUNNING]	subpackaged_echo_integration_test
-[PASSED]	subpackaged_echo_integration_test
+[RUNNING]	echo_integration_test
+[PASSED]	echo_integration_test
 
 1 out of 1 tests passed...
 ```

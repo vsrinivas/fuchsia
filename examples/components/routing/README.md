@@ -16,21 +16,22 @@ $ fx build
 
 ## Running
 
-Use `ffx component create` to create the component instances inside a restricted
-realm for development purposes:
+Use `ffx component run` (using either the C++ version or the Rust version) to
+create the component instances inside a restricted realm (for development
+purposes). The `run` command will also resolve and start the
+`echo_realm` component automatically:
 
 -   **C++**
 
     ```bash
-    $ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example-cpp#meta/echo_realm.cm
+    $ ffx component run /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example-cpp#meta/echo_realm.cm
     ```
 
 -   **Rust**
 
     ```bash
-    $ ffx component create /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example-rust#meta/echo_realm.cm
+    $ ffx component run /core/ffx-laboratory:echo_realm fuchsia-pkg://fuchsia.com/components-routing-example-rust#meta/echo_realm.cm
     ```
-
 
 Start the client component instance by passing its moniker to
 `ffx component start`:

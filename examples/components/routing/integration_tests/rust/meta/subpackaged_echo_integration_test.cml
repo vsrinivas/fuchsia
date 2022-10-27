@@ -22,12 +22,7 @@
     children: [
         {
             name: "echo_server",
-
-            // TODO(fxbug.dev/100060): When subpackages can be renamed,
-            // simplify this example by renaming the `echo_server_package_rust`
-            // target to subpackage name `echo_server_package`, and remove the
-            // the `_rust` suffix here.
-            url: "echo_server_package_rust#meta/echo_server.cm",
+            url: "echo_server#meta/default.cm",
         },
     ],
 

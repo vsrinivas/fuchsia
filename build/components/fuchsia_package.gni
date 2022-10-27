@@ -44,21 +44,39 @@ import("//tools/configc/build/config.gni")
 # See: https://fuchsia.dev/fuchsia-src/concepts/packages/package_url#package-name
 #
 # It's recommended for a package to depend on one or more `fuchsia_component()`
-# targets, and zero or more `subpackages`. Typically no other dependencies are
-# required.
+# targets, and zero or more `subpackages` and/or `renameable_subpackages`.
 #
-# Example:
+# Examples:
 # ```
 # fuchsia_package("my-package") {
+#   deps = [
+#     ":main_component",
+#   ]
 #   subpackages = [
+#     ":second_package",
+#   ]
+# }
+# ```
+#
+# ```
+# fuchsia_package("my-package") {
+#   deps = [
+#     ":main_component",
+#   ]
+#   renameable_subpackages = [
 #     {
-#       package = ":some_package"
+#       package = ":second_package"
 #     },
 #     {
 #       name = "renamed-subpackage"
-#       package = ":another_package"
+#       package = ":third_package"
 #     }
 #   ]
+# }
+# ```
+#
+# ```
+# fuchsia_package("my-package") {
 #   deps = [
 #     ":first_component",
 #     ":second_component",
@@ -112,6 +130,17 @@ import("//tools/configc/build/config.gni")
 #     Default: fuchsia.com
 #
 #   subpackages (optional)
+#     A list of `fuchsia_package` targets. Each target is converted into the
+#     equivalent of a `renameable_targets` entry with its `package` property set
+#     to the target, and no `name` override. All included `package` entries will
+#     be added as `deps` of the generated meta file, and do not need to be
+#     listed as additional `deps` of the `fuchsia_package` target.
+#     Subpackage names must be unique (relative to the containing package), but
+#     both `renameable_subpackages` and `subpackages` may be included,
+#     additively.
+#     Type: list of targets
+#
+#   renameable_subpackages (optional)
 #     A list of subpackages defined by scoped variables `package` and an
 #     optional `name`. If `name` is omitted, the subpackage target's package
 #     name is used by default. The generated package will include a
@@ -119,6 +148,9 @@ import("//tools/configc/build/config.gni")
 #     using the current package hash of each package. All included `package`
 #     entries will be added as `deps` of the generated meta file, and do not
 #     need to be listed as additional `deps` of the `fuchsia_package` target.
+#     Subpackage names must be unique (relative to the containing package), but
+#     both `renameable_subpackages` and `subpackages` may be included,
+#     additively.
 #     Type: list of scopes
 #
 #   shell_commands (optional)
@@ -164,13 +196,30 @@ template("fuchsia_package") {
       package_name = package_name
     }
 
-    if (defined(invoker.subpackages)) {
+    if (defined(invoker.subpackages) ||
+        defined(invoker.renameable_subpackages)) {
+      if (defined(invoker.renameable_subpackages)) {
+        subpackages_list = invoker.renameable_subpackages
+      } else {
+        subpackages_list = []
+      }
+
+      if (defined(invoker.subpackages)) {
+        foreach(subpackage, invoker.subpackages) {
+          subpackages_list += [
+            {
+              package = subpackage
+            },
+          ]
+        }
+      }
+
       # Generate the "meta/fuchsia.pkg/subpackages" file
       meta_subpackages_target = "${target_name}_meta_subpackages"
       generate_meta_subpackages(meta_subpackages_target) {
         forward_variables_from(invoker, [ "testonly" ])
         visibility = [ ":*" ]
-        subpackages = invoker.subpackages
+        subpackages = subpackages_list
       }
     }
 
@@ -283,6 +332,11 @@ template("fuchsia_package") {
         meta_subpackages = ":$meta_subpackages_target"
       }
       metadata = {
+        # TODO(fxbug.dev/113190): There should be a metadata barrier on
+        # package_manifests, to stop the subpackages from being published as
+        # "real" packages, but to do so requires adding the packages to the
+        # build output (and/or product image) based on the parent package's
+        # metadata.
         if (defined(invoker.metadata)) {
           forward_variables_from(invoker.metadata, "*")
         }

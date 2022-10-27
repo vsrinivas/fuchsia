@@ -54,17 +54,10 @@ fuchsia_test_package("package-with-subs") {
   package_name = "subpackage-examples"
   test_components = [ ":parent-component" ]
 
-  subpackages = [
+  subpackages = [ ":echo_client" ]
+  renameable_subpackages = [
     {
-      package = ":echo_client"
-    },
-    {
-      # TODO(fxbug.dev/100060): It should be possible to rename the subpackage, by
-      # uncommenting the next line, but full-resolver needs to be updated first,
-      # to resolve packages only by package hash (blob id). Until then, the subpackage
-      # name is used to fill in the package name, so they must match.
-      #
-      #     name = "my-echo-server"
+      name = "my-echo-server"
       package = ":echo_server"
     },
   ]

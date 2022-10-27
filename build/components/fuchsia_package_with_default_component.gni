@@ -75,6 +75,17 @@ import("fuchsia_package_with_single_component.gni")
 #     Type: list of strings
 #     Default: []
 #
+#   renameable_subpackages (optional)
+#      A list of subpackages defined by scoped variables `package` (a
+#     `fuchsia_package()` target) and an optional `name`. See
+#     `fuchsia_package()` for more details.
+#     Type: list of scopes
+#
+#   subpackages (optional)
+#     A list of `fuchsia_package` targets. See `fuchsia_package()` for more
+#     details.
+#     Type: list of targets
+#
 #   data_deps
 #   deps
 #   testonly
@@ -95,6 +106,8 @@ template("fuchsia_package_with_default_component") {
                              "package_name",
                              "restricted_features",
                              "shell_commands",
+                             "renameable_subpackages",
+                             "subpackages",
                              "testonly",
                              "visibility",
                            ])

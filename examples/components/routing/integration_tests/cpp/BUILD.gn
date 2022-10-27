@@ -35,19 +35,20 @@ fuchsia_test_package("echo_integration_test_cpp") {
 
 # [END example_snippet]
 
-fuchsia_component("subpackaged_echo_integration_test_component") {
-  testonly = true
-  component_name = "echo_integration_test"
+fuchsia_test_package_with_default_component(
+    "subpackaged_echo_integration_test_cpp") {
   manifest = "meta/subpackaged_echo_integration_test.cml"
   deps = [ ":bin" ]
-}
-
-fuchsia_test_package("subpackaged_echo_integration_test_cpp") {
-  test_components = [ ":subpackaged_echo_integration_test_component" ]
-  subpackages = [
+  renameable_subpackages = [
+    # TODO(fxbug.dev/113190): When packages included only as subpackages can
+    # have names that are not required to be globally unique, rename the
+    # `package_name` of the `:echo_server_package` to `"echo_server"` and change
+    # this `renameable_subpackages` list to the simpler form:
+    # `subpackages = [ "...:echo_server_package" ]`.
     {
       package =
           "//examples/components/routing/cpp/echo_server:echo_server_package"
+      name = "echo_server"
     },
   ]
 }

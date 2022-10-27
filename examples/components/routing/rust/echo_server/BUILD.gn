@@ -26,7 +26,9 @@ fuchsia_component("echo_server_component") {
   deps = [ ":echo_server" ]
 }
 
-fuchsia_package("echo_server_package") {
-  package_name = "echo_server_package_rust"
-  deps = [ ":echo_server_component" ]
+# Subpackagable
+fuchsia_package_with_default_component("echo_server_package") {
+  package_name = "echo_server_rust"
+  manifest = "meta/echo_server.cml"
+  deps = [ ":echo_server" ]
 }

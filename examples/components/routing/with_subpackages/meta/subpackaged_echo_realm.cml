@@ -8,12 +8,11 @@
     children: [
         {
             name: "echo_server",
-            url: "echo_server_package_cpp#meta/echo_server.cm",
+            url: "echo_server#meta/default.cm",
         },
         {
             name: "echo_client",
-            url: "echo_client_package_cpp#meta/echo_client.cm",
-            startup: "eager",
+            url: "echo_client#meta/default.cm",
         },
     ],
     offer: [

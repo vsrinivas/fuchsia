@@ -23,7 +23,9 @@ fuchsia_component("echo_server_component") {
   deps = [ ":bin" ]
 }
 
-fuchsia_package("echo_server_package") {
-  package_name = "echo_server_package_cpp"
-  deps = [ ":echo_server_component" ]
+# Subpackagable
+fuchsia_package_with_default_component("echo_server_package") {
+  package_name = "echo_server_cpp"
+  manifest = "meta/echo_server.cml"
+  deps = [ ":bin" ]
 }

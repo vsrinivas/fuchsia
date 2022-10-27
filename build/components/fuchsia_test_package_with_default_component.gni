@@ -2,38 +2,48 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("fuchsia_component.gni")
-import("fuchsia_package.gni")
+import("fuchsia_test_package.gni")
 
-# Defines a package that contains a single component.
-# See: https://fuchsia.dev/fuchsia-src/development/components/build
+# Defines a package that contains a single component with the default component
+# manifest path: `default.cm`. See:
+# https://fuchsia.dev/fuchsia-src/development/components/build
 #
-# Developers often define a package that contains a single component.
-# This template fuses together fuchsia_package() and fuchsia_component() as a
-# convenience.
+# Developers often define a test package that contains a single component. As
+# a convenience, this
+# template fuses together fuchsia_test_package() and fuchsia_component(),
+# automatically declaring both the package and component as `testonly`.
+# Since the package contains only a single component, the component is given the
+# default name `"default.cm"`, by convention. To run the test, for example:
 #
-# Packages are units of distribution. It is beneficial to define multiple
-# components in the same package if you need to guarantee that several
-# components are always co-present, or if you'd like to be able to update
-# several components at once (by updating a single package).
-# This pattern is also commonly used to create hermetic integration tests.
-# For instance an integration test between two components where one is a client
-# of a service implemented in another component would include both the client
-# and server components.
-# However for the sake of simplicity, if you're developing a package with just
-# a single component then this template will save you some boilerplate.
+# ```
+# $ ffx test run fuchsia-pkg://fuchsia.com/my_test#meta/default.cm
+# ```
+#
+# This template encourage using subpackages to bundle additional component
+# dependencies, which can be declared using `subpackages` (or optionally,
+# `renameable_subpackages`).
 #
 # Example:
 # ```
-# executable("rot13_encoder_decoder") {
-#   sources = [ "rot13_encoder_decoder.cc" ]
+# fuchsia_package_with_single_component("fonts-service") { ... }
+#
+# fuchsia_test_package_with_single_component("fonts-service-test") {
+#   manifest = "meta/fonts-service-test.cm"
+#   subpackages = [ ":fonts-service" ]
 # }
 #
-# fuchsia_package_with_single_component("rot13") {
-#   manifest = "meta/rot13.cmx"
-#   deps = [ ":rot13_encoder_decoder" ]
+# fuchsia_package_with_single_component("fonts-ui") { ... }
+#
+# fuchsia_test_package_with_single_component("fonts-ui-test") {
+#   manifest = "meta/fonts-ui-test.cm"
+#   deps = [ ":fonts-ui" ],
+#   test_specs = {
+#     environments = [
+#       astro_env,
+#       sherlock_env,
+#     ]
+#   }
 # }
-# ```
 #
 # Parameters
 #
@@ -41,11 +51,6 @@ import("fuchsia_package.gni")
 #     The name of the package.
 #     Type: string
 #     Default: target_name
-#
-#   component_name (optional)
-#     The name of the component.
-#     Type: string
-#     Default: package_name
 #
 #   manifest (required)
 #     The component manifest.
@@ -71,24 +76,20 @@ import("fuchsia_package.gni")
 #
 #   data_deps
 #   deps
-#   testonly
 #   visibility
-template("fuchsia_package_with_single_component") {
+template("fuchsia_test_package_with_default_component") {
   assert(
       defined(invoker.manifest),
-      "A `manifest` argument was missing when calling fuchsia_package_with_single_component($target_name)")
+      "A `manifest` argument was missing when calling fuchsia_test_package_with_default_component($target_name)")
 
   package_name = target_name
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
-  component_name = package_name
-  if (defined(invoker.component_name)) {
-    component_name = invoker.component_name
-  }
+  component_name = "default"
 
-  component_target = "${target_name}_component"
-  fuchsia_component(component_target) {
+  component_target = "${target_name}_test_component"
+  fuchsia_test_component(component_target) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -96,7 +97,6 @@ template("fuchsia_package_with_single_component") {
                              "manifest",
                              "manifest_deps",
                              "restricted_features",
-                             "testonly",
                            ])
     if (!defined(deps)) {
       deps = []
@@ -110,7 +110,7 @@ template("fuchsia_package_with_single_component") {
     visibility = [ ":*" ]
   }
 
-  fuchsia_package(target_name) {
+  fuchsia_test_package(target_name) {
     forward_variables_from(invoker,
                            [
                              "is_shell_package",
@@ -118,10 +118,10 @@ template("fuchsia_package_with_single_component") {
                              "disable_elf_binaries_checks",
                              "renameable_subpackages",
                              "subpackages",
-                             "testonly",
+                             "test_specs",
                              "visibility",
                            ])
     package_name = package_name
-    deps = [ ":$component_target" ]
+    test_components = [ ":$component_target" ]
   }
 }

@@ -13,7 +13,7 @@
     children: [
         {
             name: "test_realm",
-            url: "fuchsia.driver.test_test_realm#meta/fuchsia.driver.test_test_realm.cm",
+            url: "fuchsia.driver.test_test_realm#meta/default.cm",
         },
     ],
     use: [

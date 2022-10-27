@@ -39,6 +39,22 @@ import("fuchsia_test_component_manifest.gni")
 #     ]
 #   }
 # }
+#
+# fuchsia_package("fonts-ui-package") {
+#   deps = [ ":fonts-ui" ],
+# }
+#
+# # Defining dependencies via subpackages:
+# fuchsia_test_package("fonts-ui-test-with-subpackage") {
+#   test_components = [ ":fonts-ui-test" ]
+#   subpackages = [ ":fonts-ui-package" ],
+#   test_specs = {
+#     environments = [
+#       astro_env,
+#       sherlock_env,
+#     ]
+#   }
+# }
 # ```
 #
 # Parameters
@@ -70,11 +86,16 @@ import("fuchsia_test_component_manifest.gni")
 #     Type: bool
 #     Default: true
 #
-#   subpackages (optional)
+#   renameable_subpackages (optional)
 #      A list of subpackages defined by scoped variables `package` (a
 #     `fuchsia_package()` target) and an optional `name`. See
-#     `fuchsia_package()` for more details and an example.
+#     `fuchsia_package()` for more details.
 #     Type: list of scopes
+#
+#   subpackages (optional)
+#     A list of `fuchsia_package` targets. See `fuchsia_package()` for more
+#     details.
+#     Type: list of targets
 #
 #   data_deps
 #   deps
@@ -177,6 +198,7 @@ template("fuchsia_test_package") {
                                "deps",
                                "disable_elf_binaries_checks",
                                "metadata",
+                               "renameable_subpackages",
                                "subpackages",
                                "visibility",
                              ])

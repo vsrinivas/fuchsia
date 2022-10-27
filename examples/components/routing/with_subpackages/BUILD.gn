@@ -7,84 +7,32 @@ import("//build/security.gni")
 
 # TODO(fxbug.dev/102652): Remove security.gni when Subpackages are generally available
 
-group("with_subpackages") {
+group("subpackaged-echo-realm") {
   testonly = true
 
   # This Subpackages example will only work if subpackage resolution is enabled
   # in the full-resolver.
   if (full_resolver_enable_subpackages) {
     deps = [
-      ":subpackaged-echo-cpp",
-      ":subpackaged-echo-rust",
+      ":subpackaged_echo_realm_cpp",
+      ":subpackaged_echo_realm_rust",
     ]
   }
 }
 
-# TODO(fxbug.dev/100060): It will soon be possible to rename a subpackage, but
-# for now, subpackages inherit their name from the package. Since two packages
-# must have unique names, the manifest for "subpackaged_echo_realm*" has to
-# refer to the client and server components using unique names, which means
-# adding the suffix "_rust" or "_cpp".
-#
-# This means, for now, there are two versions of the CML, and two versions of
-# the component.
-#
-# Once the referenced TODO bug is resolved, remove the suffixes, so there is
-# only one .cml file at `meta/subpackaged_echo_realm.cml`, and only one
-# corresponding target component:
-#
-# fuchsia_component("subpackaged_echo_realm") {
-#   manifest = "meta/subpackaged_echo_realm.cml"
-# }
-#
-# Then update the `fuchsia_package` targets below, as indicated.
-fuchsia_component("subpackaged_echo_realm_cpp") {
-  component_name = "subpackaged_echo_realm"
-  manifest = "meta/subpackaged_echo_realm_cpp.cml"
-}
-
-fuchsia_component("subpackaged_echo_realm_rust") {
-  component_name = "subpackaged_echo_realm"
-  manifest = "meta/subpackaged_echo_realm_rust.cml"
-}
-
-fuchsia_package("subpackaged-echo-cpp") {
-  # TODO(fxbug.dev/100060): When subpackages can be renamed, drop the "_cpp"
-  # suffix:
-  deps = [ ":subpackaged_echo_realm_cpp" ]
+fuchsia_package_with_default_component("subpackaged_echo_realm_rust") {
+  manifest = "meta/subpackaged_echo_realm.cml"
   subpackages = [
-    {
-      # TODO(fxbug.dev/100060): Note this target's package name is
-      # `echo_client_package_cpp`. When subpackages can be renamed, add:
-      #     name = "echo_client_package"
-      package = "../cpp/echo_client:echo_client_package"
-    },
-    {
-      # TODO(fxbug.dev/100060): Note this target's package name is
-      # `echo_server_package_cpp`. When subpackages can be renamed, add:
-      #     name = "echo_server_package"
-      package = "../cpp/echo_server:echo_server_package"
-    },
+    "../rust/echo_client:echo_client_package",
+    "../rust/echo_server:echo_server_package",
   ]
 }
 
-fuchsia_package("subpackaged-echo-rust") {
-  # TODO(fxbug.dev/100060): When subpackages can be renamed, drop the "_rust"
-  # suffix:
-  deps = [ ":subpackaged_echo_realm_rust" ]
+fuchsia_package_with_default_component("subpackaged_echo_realm_cpp") {
+  manifest = "meta/subpackaged_echo_realm.cml"
   subpackages = [
-    {
-      # TODO(fxbug.dev/100060): Note this target's package name is
-      # `echo_client_package_rust`. When subpackages can be renamed, add:
-      #     name = "echo_client_package"
-      package = "../rust/echo_client:echo_client_package"
-    },
-    {
-      # TODO(fxbug.dev/100060): Note this target's package name is
-      # `echo_server_package_cpp`. When subpackages can be renamed, add:
-      #     name = "echo_server_package"
-      package = "../rust/echo_server:echo_server_package"
-    },
+    "../cpp/echo_client:echo_client_package",
+    "../cpp/echo_server:echo_server_package",
   ]
 }
 

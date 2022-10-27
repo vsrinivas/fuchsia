@@ -89,17 +89,26 @@ async fn resolve_relative_impl(
     } else {
         return Err(ResolveWithContextError::NotASubpackage);
     };
+
+    // Look up the subpackage and return a `MissingSubpackage` error if not
+    // found (regardless of whether it is in base or not).
+    let pkg_dir = pkg_cache
+        .get_already_cached(subpackage)
+        .await
+        .map_err(ResolveWithContextError::MissingSubpackage)?;
+
+    // If the superpackage is in base, the subpackage must also be in base.
+    // Note that if the superpackage is _not_ in base, it may still depend on
+    // a subpackage in base. For example, if two superpackages include the same
+    // subpackage, but one superpackage is in base, and the other is not, the
+    // subpackage must be added to base, so it can be resolved from either
+    // superpackage.
     if base_package_index.contains_package(super_blob)
-        != base_package_index.contains_package(&subpackage)
+        && !base_package_index.contains_package(&subpackage)
     {
         return Err(ResolveWithContextError::PackageSetMismatch);
     }
-    let () = pkg_cache
-        .get_already_cached(subpackage)
-        .await
-        .map_err(ResolveWithContextError::MissingSubpackage)?
-        .reopen(dir)
-        .map_err(ResolveWithContextError::Reopen)?;
+    let () = pkg_dir.reopen(dir).map_err(ResolveWithContextError::Reopen)?;
     Ok(subpackage.into())
 }
 

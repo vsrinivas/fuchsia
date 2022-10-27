@@ -62,7 +62,8 @@ template("ctf_prebuilt_test") {
   fuchsia_package_target = "${target_name}_package"
   fuchsia_package(fuchsia_package_target) {
     if (test.enable_ctf_test_realms) {
-      import("//sdk/ctf/build/internal/define_ctf_test_realm_subpackages.gni")
+      import("//sdk/ctf/build/ctf_test_realms.gni")
+      subpackages = ctf_test_realms
     }
     deps = [ ":$prebuilt_test_package_target" ]
     testonly = true
