@@ -103,6 +103,8 @@ template("go_library") {
     }
 
     args = name_args + [
+             "--root-build-dir",
+             rebase_path(root_build_dir, root_build_dir),
              "--source-dir",
              rebase_path(source_dir, root_build_dir),
              "--output",

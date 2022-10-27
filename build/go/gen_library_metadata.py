@@ -8,6 +8,8 @@ import json
 import os
 import sys
 
+FUCHSIA_MODULE = 'go.fuchsia.dev/fuchsia'
+
 
 class Source(object):
 
@@ -59,6 +61,10 @@ def main():
         '--name-file',
         help='Path to a file containing the name of the current library')
     parser.add_argument(
+        '--root-build-dir',
+        help='Path to the root build directory',
+        required=True)
+    parser.add_argument(
         '--source-dir',
         help='Path to the library\'s source directory',
         required=True)
@@ -79,6 +85,25 @@ def main():
     elif args.name_file:
         with open(args.name_file, 'r') as name_file:
             name = name_file.read()
+
+    build_dir = os.path.abspath(args.root_build_dir)
+    source_root = os.path.dirname(os.path.dirname(build_dir))
+    third_party_dir = os.path.join(source_root, 'third_party')
+
+    # For Fuchsia sources, the declared package name must correspond to the
+    # source directory so that raw `go` commands (e.g., as an IDE would use) can
+    # resolve the source path based on the package name.
+    # TODO(olivernewman): Stop exempting package names that don't start with
+    # `FUCHSIA_MODULE`; all packages should use absolute names that start with
+    # the module name.
+    if name.startswith(FUCHSIA_MODULE) and not os.path.abspath(
+            args.source_dir).startswith((build_dir, third_party_dir)):
+        expected_name = FUCHSIA_MODULE + '/' + os.path.relpath(
+            args.source_dir, source_root).replace(os.path.sep, '/')
+        if name not in (expected_name, expected_name + '/...'):
+            raise ValueError(
+                f'go_library name must correspond to the source dir: '
+                f'got {name!r}, expected {expected_name!r}')
 
     current_sources = []
     if args.sources:

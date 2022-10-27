@@ -59,18 +59,16 @@ if (is_host && is_linux) {
     deps = [ ":uart-input-zbi-test($phys_toolchain)" ]
   }
 
-  # Go does not support '-' in package names, which is present in our current path
-  package_name = "go.fuchsia.dev/fuchsia/src/zircon/system/ulib/uart/test/polling_input_test"
-
   go_library("lib") {
     testonly = true
-    name = package_name
     sources = [ "uart_input_host_test.go" ]
     deps = [ "//tools/emulator/emulatortest" ]
   }
 
   go_test("uart-input-host-test") {
-    gopackages = [ package_name ]
+    gopackages = [
+      "go.fuchsia.dev/fuchsia/zircon/system/ulib/uart/test/polling-input-test",
+    ]
     deps = [ ":lib" ]
     non_go_deps = [ ":uart-host-test-zbi" ]
   }

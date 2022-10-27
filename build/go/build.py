@@ -7,15 +7,12 @@
 
 import argparse
 import errno
-import json
 import os
 import shutil
 import subprocess
 import sys
 
-from gen_library_metadata import get_sources
-
-FUCHSIA_MODULE = 'go.fuchsia.dev/fuchsia'
+from gen_library_metadata import FUCHSIA_MODULE, get_sources
 
 # rmtree manually removes all subdirectories and files instead of using
 # shutil.rmtree, to avoid registering spurious reads on stale
