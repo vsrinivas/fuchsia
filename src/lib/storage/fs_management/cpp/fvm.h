@@ -6,7 +6,6 @@
 #define SRC_LIB_STORAGE_FS_MANAGEMENT_CPP_FVM_H_
 
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/zx/result.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -49,7 +48,7 @@ zx::result<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int 
                                                          const alloc_req_t* request);
 
 // Query the volume manager for info.
-zx::result<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd);
+zx::result<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> FvmQuery(int fvm_fd);
 
 // A set of optional matchers for |open_partition| and friends.
 // At least one must be specified.

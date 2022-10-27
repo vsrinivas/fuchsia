@@ -9,10 +9,10 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fidl/cpp/wire/sync_call.h>
 #include <lib/fidl/cpp/wire/vector_view.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -21,6 +21,7 @@
 #include <cstring>
 #include <string>
 
+#include <fbl/unique_fd.h>
 #include <sdk/lib/device-watcher/cpp/device-watcher.h>
 #include <zxtest/zxtest.h>
 
@@ -32,33 +33,48 @@ namespace {
 constexpr char kRamdiskCtlPath[] = "sys/platform/00:00:2d/ramctl";
 constexpr zx::duration kDeviceWaitTime = zx::sec(30);
 
+template <typename Protocol>
+zx::result<fidl::ClientEnd<Protocol>> GetChannel(DeviceRef* device) {
+  fdio_cpp::UnownedFdioCaller caller(device->devfs_root_fd());
+  return component::ConnectAt<Protocol>(caller.directory(), device->path());
+}
+
+template <typename Protocol>
+fidl::UnownedClientEnd<Protocol> GetChannel(VPartitionAdapter* device) {
+  fdio_cpp::UnownedFdioCaller caller(device->fd());
+  return caller.borrow_as<Protocol>();
+}
+
 zx_status_t RebindBlockDevice(DeviceRef* device) {
   // We need to create a DirWatcher to wait for the block device's child to disappear.
   std::unique_ptr<device_watcher::DirWatcher> watcher;
-  fbl::unique_fd dir_fd(openat(device->devfs_root_fd(), device->path(), O_RDONLY | O_DIRECTORY));
-  zx_status_t status = device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher);
-  if (status != ZX_OK) {
-    ADD_FAILURE("DirWatcher create failed. Path: %s", device->path());
+  fbl::unique_fd dir_fd(
+      openat(device->devfs_root_fd().get(), device->path(), O_RDONLY | O_DIRECTORY));
+  if (zx_status_t status = device_watcher::DirWatcher::Create(std::move(dir_fd), &watcher);
+      status != ZX_OK) {
+    ADD_FAILURE("DirWatcher::Create('%s'): %s", device->path(), zx_status_get_string(status));
     return status;
   }
 
-  zx_status_t fidl_status =
-      fuchsia_hardware_block_BlockRebindDevice(device->channel()->get(), &status);
-
-  if (fidl_status != ZX_OK || status != ZX_OK) {
-    ADD_FAILURE("Block device rebind failed. Path: %s", device->path());
-    if (status != ZX_OK) {
-      return status;
-    }
-    return fidl_status;
+  zx::result channel = GetChannel<fuchsia_hardware_block::Block>(device);
+  if (channel.is_error()) {
+    return channel.status_value();
   }
-  status = watcher->WaitForRemoval(fbl::String() /* any file */, kDeviceWaitTime);
-  if (status != ZX_OK) {
-    ADD_FAILURE("Wait for removal failed.Path: %s", device->path());
+  const fidl::WireResult result = fidl::WireCall(channel.value())->RebindDevice();
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    ADD_FAILURE("('%s').Rebind(): %s", device->path(), zx_status_get_string(status));
     return status;
   }
-  device->Reconnect();
-  return status;
+  if (zx_status_t status = watcher->WaitForRemoval(fbl::String() /* any file */, kDeviceWaitTime);
+      status != ZX_OK) {
+    ADD_FAILURE("Watcher('%s').WaitForRemoval: %s", device->path(), zx_status_get_string(status));
+    return status;
+  }
+  return ZX_OK;
 }
 
 fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
@@ -67,40 +83,18 @@ fidl::VectorView<uint8_t> ToFidlVector(const fbl::Array<uint8_t>& data) {
 
 using FidlGuid = fuchsia_hardware_block_partition::wire::Guid;
 
-zx::unowned_channel GetChannel(int fd) {
-  if (fd < 0) {
-    return zx::unowned_channel();
-  }
-  fdio_cpp::UnownedFdioCaller caller(fd);
-  return zx::unowned_channel(caller.borrow_channel());
-}
-
 }  // namespace
 
 // namespace
 
-DeviceRef::DeviceRef(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd)
-    : devfs_root_(devfs_root.get()), fd_(std::move(fd)), channel_(GetChannel(fd_.get())) {
-  path_.append(path.c_str());
-}
-
-void DeviceRef::Reconnect() {
-  ASSERT_FALSE(path_.empty(), "Attempt to reconnect device with unset path.");
-  fd_.reset(openat(devfs_root_, path_.c_str(), O_RDWR));
-  ASSERT_TRUE(fd_.is_valid(), "Failed to reconnect to device.");
-  channel_ = GetChannel(fd_.get());
+DeviceRef::DeviceRef(const fbl::unique_fd& devfs_root, const std::string& path)
+    : devfs_root_(devfs_root) {
+  path_.append(path);
 }
 
 std::unique_ptr<DeviceRef> DeviceRef::Create(const fbl::unique_fd& devfs_root,
                                              const std::string& device_path) {
-  fbl::unique_fd device_fd(openat(devfs_root.get(), device_path.c_str(), O_RDWR));
-  if (!device_fd.is_valid()) {
-    ADD_FAILURE("Unable to obtain handle to block_device at %s. Reason: %s", device_path.c_str(),
-                strerror(errno));
-    return nullptr;
-  }
-
-  return std::make_unique<DeviceRef>(devfs_root, device_path, std::move(device_fd));
+  return std::make_unique<DeviceRef>(devfs_root, device_path);
 }
 
 std::unique_ptr<RamdiskRef> RamdiskRef::Create(const fbl::unique_fd& devfs_root,
@@ -115,26 +109,21 @@ std::unique_ptr<RamdiskRef> RamdiskRef::Create(const fbl::unique_fd& devfs_root,
     return nullptr;
   }
 
-  zx_status_t status = wait_for_device_at(devfs_root.get(), kRamdiskCtlPath, kDeviceWaitTime.get());
-  if (status != ZX_OK) {
+  if (zx_status_t status =
+          wait_for_device_at(devfs_root.get(), kRamdiskCtlPath, kDeviceWaitTime.get());
+      status != ZX_OK) {
     ADD_FAILURE("Failed to wait for RamCtl. Reason: %s", zx_status_get_string(status));
     return nullptr;
   }
 
   RamdiskClient* client;
-  if ((status = ramdisk_create_at(devfs_root.get(), block_size, block_count, &client)) != ZX_OK) {
+  if (zx_status_t status = ramdisk_create_at(devfs_root.get(), block_size, block_count, &client);
+      status != ZX_OK) {
     ADD_FAILURE("Failed to create ramdisk. Reason: %s", zx_status_get_string(status));
     return nullptr;
   }
   const char* path = ramdisk_get_path(client);
-  fbl::unique_fd device_fd(openat(devfs_root.get(), path, O_RDWR));
-  if (!device_fd.is_valid()) {
-    ADD_FAILURE("Error: Unable to obtain handle to block_device at %s. Reason: %s", path,
-                strerror(errno));
-    return nullptr;
-  }
-
-  return std::make_unique<RamdiskRef>(devfs_root, path, std::move(device_fd), client);
+  return std::make_unique<RamdiskRef>(devfs_root, path, client);
 }
 
 RamdiskRef::~RamdiskRef() { ramdisk_destroy(ramdisk_client_); }
@@ -144,8 +133,10 @@ zx_status_t RamdiskRef::Grow(uint64_t target_size) {
 }
 
 void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset) {
+  zx::result channel = GetChannel<fuchsia_io::File>(device());
+  ASSERT_OK(channel.status_value());
   const fidl::WireResult result =
-      fidl::WireCall<fuchsia_io::File>(device()->channel())->WriteAt(ToFidlVector(data), offset);
+      fidl::WireCall(channel.value())->WriteAt(ToFidlVector(data), offset);
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
@@ -153,8 +144,9 @@ void BlockDeviceAdapter::WriteAt(const fbl::Array<uint8_t>& data, uint64_t offse
 }
 
 void BlockDeviceAdapter::ReadAt(uint64_t offset, fbl::Array<uint8_t>* out_data) {
-  const fidl::WireResult result =
-      fidl::WireCall<fuchsia_io::File>(device()->channel())->ReadAt(out_data->size(), offset);
+  zx::result channel = GetChannel<fuchsia_io::File>(device());
+  ASSERT_OK(channel.status_value());
+  const fidl::WireResult result = fidl::WireCall(channel.value())->ReadAt(out_data->size(), offset);
   ASSERT_OK(result.status(), "Failed to communicate with block device.");
   const fit::result response = result.value();
   ASSERT_TRUE(response.is_ok(), "%s", zx_status_get_string(response.error_value()));
@@ -170,7 +162,8 @@ void BlockDeviceAdapter::CheckContentsAt(const fbl::Array<uint8_t>& data, uint64
 }
 
 zx_status_t BlockDeviceAdapter::WaitUntilVisible() const {
-  zx_status_t status = wait_for_device_at(devfs_root_, device()->path(), kDeviceWaitTime.get());
+  zx_status_t status =
+      wait_for_device_at(devfs_root_.get(), device()->path(), kDeviceWaitTime.get());
 
   if (status != ZX_OK) {
     ADD_FAILURE("Block device did not become visible at: %s", device()->path());
@@ -179,14 +172,12 @@ zx_status_t BlockDeviceAdapter::WaitUntilVisible() const {
 }
 
 zx_status_t BlockDeviceAdapter::Rebind() {
-  zx_status_t status;
-
-  if ((status = RebindBlockDevice(device())) != ZX_OK) {
+  if (zx_status_t status = RebindBlockDevice(device()); status != ZX_OK) {
     return status;
   }
 
   // Block device is visible again.
-  if ((status = WaitUntilVisible()) != ZX_OK) {
+  if (zx_status_t status = WaitUntilVisible(); status != ZX_OK) {
     return status;
   }
 
@@ -215,41 +206,42 @@ std::unique_ptr<VPartitionAdapter> VPartitionAdapter::Create(const fbl::unique_f
       .type_guid = type.data(),
       .instance_guid = guid.data(),
   };
-  auto device_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher,
-                                                            kDeviceWaitTime.get(), &out_path);
+  zx::result device_fd_or = fs_management::OpenPartitionWithDevfs(devfs_root.get(), &matcher,
+                                                                  kDeviceWaitTime.get(), &out_path);
   if (device_fd_or.is_error()) {
     ADD_FAILURE("Unable to obtain handle for partition.");
     return nullptr;
   }
-  auto channel = GetChannel(device_fd_or->get());
-  return std::make_unique<VPartitionAdapter>(devfs_root, std::move(channel), out_path.c_str(),
-                                             *std::move(device_fd_or), name, guid, type);
+  return std::make_unique<VPartitionAdapter>(devfs_root, out_path.c_str(),
+                                             std::move(device_fd_or.value()), name, guid, type);
 }
 
 VPartitionAdapter::~VPartitionAdapter() {
-  fs_management::DestroyPartitionWithDevfs(devfs_root_, guid_.data(), type_.data());
+  fs_management::DestroyPartitionWithDevfs(devfs_root_.get(), guid_.data(), type_.data());
 }
 
 zx_status_t VPartitionAdapter::Extend(uint64_t offset, uint64_t length) {
-  zx_status_t status;
-  zx_status_t fidl_status =
-      fuchsia_hardware_block_volume_VolumeExtend(channel_->get(), offset, length, &status);
-  if (fidl_status != ZX_OK) {
-    return fidl_status;
+  fidl::UnownedClientEnd channel = GetChannel<fuchsia_hardware_block_volume::Volume>(this);
+  const fidl::WireResult result = fidl::WireCall(channel)->Extend(offset, length);
+  if (!result.ok()) {
+    return result.status();
   }
-  return status;
+  const fidl::WireResponse response = result.value();
+  return response.status;
 }
 
-void VPartitionAdapter::Reconnect() {
+zx_status_t VPartitionAdapter::Reconnect() {
   fs_management::PartitionMatcher matcher{
       .type_guid = type_.data(),
       .instance_guid = guid_.data(),
   };
-  auto fd_or = fs_management::OpenPartitionWithDevfs(devfs_root_, &matcher,
-                                                     zx::duration::infinite().get(), &path_);
-  ASSERT_EQ(fd_or.status_value(), ZX_OK);
-  fd_ = *std::move(fd_or);
-  channel_ = GetChannel(fd_.get());
+  zx::result fd = fs_management::OpenPartitionWithDevfs(devfs_root_.get(), &matcher,
+                                                        zx::duration::infinite().get(), &path_);
+  if (fd.is_error()) {
+    return fd.status_value();
+  }
+  fd_ = std::move(fd.value());
+  return ZX_OK;
 }
 
 std::unique_ptr<FvmAdapter> FvmAdapter::Create(const fbl::unique_fd& devfs_root,
@@ -268,28 +260,27 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
     return nullptr;
   }
 
-  if (!device->channel()->is_valid()) {
-    ADD_FAILURE("Invalid device handle.");
+  fbl::unique_fd fd(openat(device->devfs_root_fd().get(), device->path(), O_RDWR));
+  if (!fd.is_valid()) {
+    ADD_FAILURE("openat(_, %s): %s", device->path(), strerror(errno));
     return nullptr;
   }
 
-  if (fs_management::FvmInitPreallocated(device->fd(), initial_block_count * block_size,
+  if (fs_management::FvmInitPreallocated(fd.get(), initial_block_count * block_size,
                                          maximum_block_count * block_size, slice_size) != ZX_OK) {
     return nullptr;
   }
 
-  zx_status_t status = ZX_OK;
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(device->channel()->get()))
-          ->Bind(::fidl::StringView(kFvmDriverLib));
-  zx_status_t fidl_status = resp.status();
-  if (resp->is_error()) {
-    status = resp->error_value();
+  fdio_cpp::FdioCaller caller(std::move(fd));
+  const fidl::WireResult result = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                                      ->Bind(fidl::StringView(kFvmDriverLib));
+  if (!result.ok()) {
+    ADD_FAILURE("Binding FVM driver failed: %s", result.FormatDescription().c_str());
+    return nullptr;
   }
-
-  if (fidl_status != ZX_OK || status != ZX_OK) {
-    ADD_FAILURE("Binding FVM driver failed. Reason: %s",
-                zx_status_get_string((fidl_status != ZX_OK) ? fidl_status : status));
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    ADD_FAILURE("Binding FVM driver failed: %s", zx_status_get_string(response.error_value()));
     return nullptr;
   }
 
@@ -300,37 +291,33 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
     ADD_FAILURE("Loading FVM driver timeout.");
     return nullptr;
   }
-
-  fbl::unique_fd device_fd(openat(devfs_root.get(), fvm_path.c_str(), O_RDWR));
-  if (!device_fd.is_valid()) {
-    ADD_FAILURE("Failed to acquire handle for fvm.");
-    return nullptr;
-  }
-
-  return std::make_unique<FvmAdapter>(devfs_root, fvm_path.c_str(), std::move(device_fd), device);
+  return std::make_unique<FvmAdapter>(devfs_root, fvm_path.c_str(), device);
 }
 
 FvmAdapter::~FvmAdapter() {
-  fs_management::FvmDestroyWithDevfs(devfs_root_, block_device_->path());
+  fs_management::FvmDestroyWithDevfs(devfs_root_.get(), block_device_->path());
 }
 
 zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std::string& name,
                                      const Guid& guid, const Guid& type, uint64_t slice_count,
-                                     std::unique_ptr<VPartitionAdapter>* out_partition) {
+                                     std::unique_ptr<VPartitionAdapter>* out_vpartition) {
   FidlGuid fidl_guid, fidl_type;
   memcpy(fidl_guid.value.data(), guid.data(), guid.size());
   memcpy(fidl_type.value.data(), type.data(), type.size());
 
-  auto response =
-      fidl::WireCall(fidl::UnownedClientEnd<fuchsia_hardware_block_volume::VolumeManager>(channel_))
-          ->AllocatePartition(slice_count, fidl_type, fidl_guid,
-                              fidl::StringView::FromExternal(name), 0u);
-  if (response.status() != ZX_OK) {
-    return response.status();
+  zx::result channel = GetChannel<fuchsia_hardware_block_volume::VolumeManager>(this);
+  if (channel.is_error()) {
+    return channel.status_value();
   }
-
-  if (response.value().status != ZX_OK) {
-    return response.value().status;
+  const fidl::WireResult result = fidl::WireCall(channel.value())
+                                      ->AllocatePartition(slice_count, fidl_type, fidl_guid,
+                                                          fidl::StringView::FromExternal(name), 0u);
+  if (!result.ok()) {
+    return result.status();
+  }
+  const fidl::WireResponse response = result.value();
+  if (zx_status_t status = response.status; status != ZX_OK) {
+    return status;
   }
 
   auto vpartition = VPartitionAdapter::Create(devfs_root, name, guid, type);
@@ -341,63 +328,61 @@ zx_status_t FvmAdapter::AddPartition(const fbl::unique_fd& devfs_root, const std
     return status;
   }
 
-  if (out_partition != nullptr) {
-    *out_partition = std::move(vpartition);
+  if (out_vpartition != nullptr) {
+    *out_vpartition = std::move(vpartition);
   }
 
   return ZX_OK;
 }
 
 zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
-  zx_status_t status = RebindBlockDevice(block_device_);
-
-  if (status != ZX_OK) {
+  if (zx_status_t status = RebindBlockDevice(block_device_); status != ZX_OK) {
     ADD_FAILURE("FvmAdapter block device rebind failed.");
     return status;
   }
 
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(
-                  zx::unowned_channel(block_device_->channel()->get()))
-                  ->Bind(::fidl::StringView(kFvmDriverLib));
-  zx_status_t fidl_status = resp.status();
-  status = ZX_OK;
-  if (resp->is_error()) {
-    status = resp->error_value();
-  }
-
   // Bind the FVM to the block device.
-  if (fidl_status != ZX_OK || status != ZX_OK) {
-    ADD_FAILURE("Rebinding FVM driver failed.");
-    if (status != ZX_OK) {
-      return status;
-    }
-    return fidl_status;
+  zx::result channel = GetChannel<fuchsia_device::Controller>(block_device_);
+  if (channel.is_error()) {
+    return channel.status_value();
+  }
+  const fidl::WireResult result =
+      fidl::WireCall(channel.value())->Bind(fidl::StringView(kFvmDriverLib));
+  if (!result.ok()) {
+    ADD_FAILURE("Rebinding FVM driver failed: %s", result.FormatDescription().c_str());
+    return result.status();
+  }
+  const fit::result response = result.value();
+  if (response.is_error()) {
+    ADD_FAILURE("Rebinding FVM driver failed: %s", zx_status_get_string(response.error_value()));
+    return response.error_value();
   }
 
   // Wait for FVM driver to become visible.
-  if ((status = wait_for_device_at(devfs_root_, path(), kDeviceWaitTime.get())) != ZX_OK) {
+  if (zx_status_t status = wait_for_device_at(devfs_root_.get(), path(), kDeviceWaitTime.get());
+      status != ZX_OK) {
     ADD_FAILURE("Loading FVM driver timeout.");
     return status;
   }
 
-  // Acquire new FD for the FVM driver.
-  Reconnect();
-
   for (auto* vpartition : vpartitions) {
-    // Reopen them, since all the channels have been closed.
-    vpartition->Reconnect();
-    if ((status = vpartition->WaitUntilVisible()) != ZX_OK) {
+    if (zx_status_t status = vpartition->Reconnect(); status != ZX_OK) {
+      return status;
+    }
+    if (zx_status_t status = vpartition->WaitUntilVisible(); status != ZX_OK) {
       return status;
     }
   }
   return ZX_OK;
 }
 
-zx_status_t FvmAdapter::Query(VolumeManagerInfo* info) const {
-  if (auto info_or = fs_management::FvmQuery(fd()); info_or.is_error())
-    return info_or.error_value();
-  else
-    *info = *std::move(info_or);
+zx_status_t FvmAdapter::Query(VolumeManagerInfo* out_info) const {
+  fbl::unique_fd fd(openat(devfs_root_.get(), path(), O_RDWR));
+  zx::result info = fs_management::FvmQuery(fd.get());
+  if (info.is_error()) {
+    return info.error_value();
+  }
+  *out_info = info.value();
   return ZX_OK;
 }
 

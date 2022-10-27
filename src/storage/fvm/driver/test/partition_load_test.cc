@@ -16,7 +16,6 @@
 #include <fbl/string_buffer.h>
 #include <zxtest/zxtest.h>
 
-#include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/test_support.h"
 
@@ -63,8 +62,9 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
                               static_cast<fvm::Guid>(fvm::kPlaceHolderInstanceGuid.data()), 1,
                               &vpartition));
   // Get the device topological path
+  fdio_cpp::UnownedFdioCaller caller(vpartition->fd());
   auto topo_result =
-      fidl::WireCall<fuchsia_device::Controller>(vpartition->channel())->GetTopologicalPath();
+      fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())->GetTopologicalPath();
   ASSERT_TRUE(topo_result.ok());
   ASSERT_TRUE(topo_result->is_ok());
   auto partition_path = std::string(topo_result->value()->path.begin() + strlen("/dev/"),
@@ -78,9 +78,8 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), partition_path.c_str(), &fvmfd);
 
     fdio_cpp::UnownedFdioCaller caller(fvmfd.get());
-    auto result =
-        fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
-            ->GetInstanceGuid();
+    auto result = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_partition::Partition>())
+                      ->GetInstanceGuid();
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     EXPECT_FALSE(memcmp(result.value().guid.get(), kPlaceHolderInstanceGuid.data(),
@@ -95,9 +94,8 @@ TEST_F(FvmVPartitionLoadTest, LoadPartitionWithPlaceHolderGuidIsUpdated) {
     device_watcher::RecursiveWaitForFile(devmgr_->devfs_root(), partition_path.c_str(), &fvmfd);
 
     fdio_cpp::UnownedFdioCaller caller(fvmfd.get());
-    auto result =
-        fidl::WireCall<fuchsia_hardware_block_partition::Partition>(caller.channel()->borrow())
-            ->GetInstanceGuid();
+    auto result = fidl::WireCall(caller.borrow_as<fuchsia_hardware_block_partition::Partition>())
+                      ->GetInstanceGuid();
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     EXPECT_TRUE(memcmp(result.value().guid.get(), partition_guid.data(),

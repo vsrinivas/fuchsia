@@ -7,11 +7,8 @@
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.partition/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
+#include <fidl/fuchsia.hardware.block/cpp/wire.h>
 #include <fidl/fuchsia.io/cpp/wire.h>
-#include <fuchsia/device/c/fidl.h>
-#include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/hardware/block/partition/c/fidl.h>
-#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver-integration-test/fixture.h>
@@ -70,8 +67,6 @@
 #define STRLEN(s) (sizeof(s) / sizeof((s)[0]))
 
 namespace {
-
-namespace fio = fuchsia_io;
 
 using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
 using BlockGuid = std::array<uint8_t, BLOCK_GUID_LEN>;
@@ -190,14 +185,11 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
   ASSERT_OK(fs_management::FvmInitPreallocated(fd.get(), block_count * block_size,
                                                block_count * block_size, slice_size));
 
-  zx::channel fvm_channel;
-  ASSERT_OK(fdio_get_service_handle(fd.get(), fvm_channel.reset_and_get_address()));
-
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
-                  ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
+  fdio_cpp::UnownedFdioCaller caller(fd);
+  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                  ->Bind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_ok());
-  fvm_channel.reset();
 
   snprintf(fvm_driver_path_, PATH_MAX, "%s/fvm", ramdisk_path_);
   ASSERT_OK(wait_for_device(fvm_driver_path_, zx::duration::infinite().get()));
@@ -206,9 +198,8 @@ void FvmTest::CreateFVM(uint64_t block_size, uint64_t block_count, uint64_t slic
 void FvmTest::FVMRebind() {
   fdio_cpp::UnownedFdioCaller disk_caller(ramdisk_get_block_fd(ramdisk_));
 
-  auto resp =
-      fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(disk_caller.borrow_channel()))
-          ->Rebind(::fidl::StringView(FVM_DRIVER_LIB));
+  auto resp = fidl::WireCall(disk_caller.borrow_as<fuchsia_device::Controller>())
+                  ->Rebind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_ok());
 
@@ -548,17 +539,18 @@ TEST_F(FvmTest, TestLarge) {
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
 
   fdio_cpp::UnownedFdioCaller disk_connection(fd.get());
-  zx::unowned_channel channel(disk_connection.borrow_channel());
-  zx_status_t status;
-  fuchsia_hardware_block_BlockInfo block_info;
-  ASSERT_EQ(fuchsia_hardware_block_BlockGetInfo(channel->get(), &status, &block_info), ZX_OK);
-  ASSERT_EQ(status, ZX_OK);
+  const fidl::WireResult result =
+      fidl::WireCall(disk_connection.borrow_as<fuchsia_hardware_block::Block>())->GetInfo();
+  ASSERT_OK(result.status());
+  const fidl::WireResponse response = result.value();
+  ASSERT_OK(response.status);
+  const fuchsia_hardware_block::wire::BlockInfo& block_info = *response.info;
   ASSERT_LT(block_info.max_transfer_size, fvm_header.GetMetadataAllocatedBytes());
 
   ASSERT_EQ(fs_management::FvmInit(fd.get(), kSliceSize), ZX_OK);
 
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(channel->get()))
-                  ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
+  auto resp = fidl::WireCall(disk_connection.borrow_as<fuchsia_device::Controller>())
+                  ->Bind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_TRUE(resp->is_ok());
 
@@ -2594,13 +2586,12 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // Init fvm with a partition bigger than the underlying disk.
   fs_management::FvmInitWithSize(ramdisk_fd.get(), kFvmPartitionSize, kSliceSize);
 
-  zx::channel fvm_channel;
   // Try to bind an fvm to the disk.
-  ASSERT_OK(fdio_get_service_handle(ramdisk_fd.get(), fvm_channel.reset_and_get_address()));
+  fdio_cpp::UnownedFdioCaller caller(ramdisk_fd);
 
   // Bind should return ZX_ERR_IO when the load of a driver fails.
-  auto resp = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
-                  ->Bind(::fidl::StringView(FVM_DRIVER_LIB));
+  auto resp = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                  ->Bind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp.status());
   ASSERT_FALSE(resp->is_ok());
   ASSERT_EQ(resp->error_value(), ZX_ERR_INTERNAL);
@@ -2612,8 +2603,8 @@ TEST_F(FvmTest, TestAbortDriverLoadSmallDevice) {
   // unloaded but Controller::Bind above does not wait until
   // the device is removed. Controller::Rebind ensures nothing is
   // bound to the device, before it tries to bind the driver again.
-  auto resp2 = fidl::WireCall<fuchsia_device::Controller>(zx::unowned_channel(fvm_channel.get()))
-                   ->Rebind(::fidl::StringView(FVM_DRIVER_LIB));
+  auto resp2 = fidl::WireCall(caller.borrow_as<fuchsia_device::Controller>())
+                   ->Rebind(fidl::StringView(FVM_DRIVER_LIB));
   ASSERT_OK(resp2.status());
   ASSERT_TRUE(resp2->is_ok());
   char fvm_path[PATH_MAX];

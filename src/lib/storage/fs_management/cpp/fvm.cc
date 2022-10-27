@@ -482,7 +482,7 @@ zx::result<fbl::unique_fd> FvmAllocatePartitionWithDevfs(int devfs_root_fd, int 
 }
 
 __EXPORT
-zx::result<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd) {
+zx::result<fuchsia_hardware_block_volume::wire::VolumeManagerInfo> FvmQuery(int fvm_fd) {
   fdio_cpp::UnownedFdioCaller caller(fvm_fd);
 
   auto response =
@@ -495,8 +495,7 @@ zx::result<fuchsia_hardware_block_volume_VolumeManagerInfo> FvmQuery(int fvm_fd)
   if (response.value().status != ZX_OK)
     return zx::error(response.value().status);
 
-  return zx::ok(
-      reinterpret_cast<fuchsia_hardware_block_volume_VolumeManagerInfo&>(*response.value().info));
+  return zx::ok(*response.value().info);
 }
 
 __EXPORT

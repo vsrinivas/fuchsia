@@ -48,12 +48,10 @@
 #include <gpt/gpt.h>
 #include <gpt/guid.h>
 
-#include "block-watcher.h"
 #include "constants.h"
 #include "encrypted-volume.h"
 #include "extract-metadata.h"
 #include "src/devices/block/drivers/block-verity/verified-volume-client.h"
-#include "src/lib/files/file.h"
 #include "src/lib/storage/fs_management/cpp/admin.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/mount.h"
@@ -63,7 +61,6 @@
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/fxfs.h"
 #include "src/storage/fshost/utils.h"
-#include "src/storage/fvm/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
 
@@ -95,9 +92,10 @@ int OpenVerityDeviceThread(void* arg) {
   std::unique_ptr<VerityDeviceThreadState> state(static_cast<VerityDeviceThreadState*>(arg));
   fbl::unique_fd devfs_root(open("/dev", O_RDONLY));
 
+  fdio_cpp::UnownedFdioCaller caller(state->fd);
   std::unique_ptr<block_verity::VerifiedVolumeClient> vvc;
   zx_status_t status = block_verity::VerifiedVolumeClient::CreateFromBlockDevice(
-      state->fd.get(), std::move(devfs_root),
+      caller.borrow_as<fuchsia_device::Controller>(), std::move(devfs_root),
       block_verity::VerifiedVolumeClient::Disposition::kDriverAlreadyBound, zx::sec(5), &vvc);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Couldn't create VerifiedVolumeClient: " << zx_status_get_string(status);
@@ -877,7 +875,8 @@ zx_status_t BlockDeviceInterface::Add(bool format_on_corruption) {
           FX_LOGS(ERROR) << "formatting minfs on this target is disabled";
           return status;
         }
-        if ((status = FormatFilesystem()) != ZX_OK) {
+        status = FormatFilesystem();
+        if (status != ZX_OK) {
           return status;
         }
         return MountFilesystem();
@@ -964,15 +963,13 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
   }
 
   FX_LOGS(INFO) << "Formatting " << DiskFormatString(format);
-  fidl::ClientEnd<fuchsia_io::Node> device;
-  if (auto device_or = GetDeviceEndPoint(); device_or.is_error()) {
-    return device_or.error_value();
-  } else {
-    device = std::move(device_or).value();
+  zx::result device = GetDeviceEndPoint();
+  if (device.is_error()) {
+    return device.error_value();
   }
 
   fidl::UnownedClientEnd<fuchsia_hardware_block_volume::Volume> volume_client(
-      device.channel().borrow());
+      device.value().channel().borrow());
   uint64_t target_bytes = device_config_->data_max_bytes();
   const bool inside_zxcrypt = (topological_path_.find("zxcrypt") != std::string::npos);
   if (format == fs_management::kDiskFormatF2fs) {
@@ -1005,7 +1002,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
     FX_LOGS(ERROR) << "Only allocated " << *actual_size << " bytes but needed "
                    << kDefaultF2fsMinBytes;
     return ZX_ERR_NO_SPACE;
-  } else if (*actual_size < target_bytes) {
+  }
+  if (*actual_size < target_bytes) {
     FX_LOGS(WARNING) << "Only allocated " << *actual_size << " bytes";
   }
 
@@ -1029,7 +1027,8 @@ zx_status_t BlockDevice::FormatCustomFilesystem(fs_management::DiskFormat format
       return ZX_ERR_INVALID_ARGS;
     }
 
-    if (zx_status_t status = RunBinary({binary_path.c_str(), "mkfs", nullptr}, std::move(device));
+    if (zx_status_t status =
+            RunBinary({binary_path.c_str(), "mkfs", nullptr}, std::move(device.value()));
         status != ZX_OK) {
       return status;
     }

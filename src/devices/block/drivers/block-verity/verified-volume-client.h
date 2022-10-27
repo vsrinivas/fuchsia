@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_VERIFIED_VOLUME_CLIENT_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_BLOCK_VERITY_VERIFIED_VOLUME_CLIENT_H_
 
+#include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.verified/cpp/wire.h>
 #include <lib/zx/channel.h>
 
@@ -36,9 +37,10 @@ class VerifiedVolumeClient {
   // the the devfs root (`devfs_root_fd`), prepare a `VerifiedVolumeClient` by
   // possibly binding the driver according to `disposition` and waiting up to
   // `timeout` for the `verity` child of `block_dev_fd` to appear.
-  static zx_status_t CreateFromBlockDevice(int block_dev_fd, fbl::unique_fd devfs_root_fd,
-                                           Disposition disposition, const zx::duration& timeout,
-                                           std::unique_ptr<VerifiedVolumeClient>* out);
+  static zx_status_t CreateFromBlockDevice(
+      fidl::UnownedClientEnd<fuchsia_device::Controller> device, fbl::unique_fd devfs_root_fd,
+      Disposition disposition, const zx::duration& timeout,
+      std::unique_ptr<VerifiedVolumeClient>* out);
 
   // Requests that the volume be opened for authoring.  If successful,
   // `mutable_block_fd_out` will contain an open handle to the mutable block

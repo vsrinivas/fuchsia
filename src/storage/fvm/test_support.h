@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FVM_TEST_SUPPORT_H_
 #define SRC_STORAGE_FVM_TEST_SUPPORT_H_
 
-#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/zx/channel.h>
 #include <limits.h>
 
@@ -20,14 +20,14 @@
 #include <fbl/vector.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/storage/fvm/fvm.h"
+#include "src/storage/fvm/format.h"
 
 // This utility library introduces objects wrapping the devices we interact with, to make it clear
 // what we are interacting with, and avoid references to global variables.
 namespace fvm {
 
 // Alias for simplicity in testing.
-using VolumeManagerInfo = fuchsia_hardware_block_volume_VolumeManagerInfo;
+using VolumeManagerInfo = fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
 using RamdiskClient = ramdisk_client_t;
 
 constexpr uint64_t kPathMax = PATH_MAX;
@@ -84,46 +84,34 @@ class DeviceRef {
   static std::unique_ptr<DeviceRef> Create(const fbl::unique_fd& devfs_root,
                                            const std::string& path);
 
-  DeviceRef() = default;
-  DeviceRef(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd);
+  DeviceRef(const fbl::unique_fd& devfs_root, const std::string& path);
   DeviceRef(const DeviceRef&) = delete;
   DeviceRef(DeviceRef&&) = delete;
   DeviceRef& operator=(const DeviceRef&) = delete;
   DeviceRef& operator=(DeviceRef&&) = delete;
   virtual ~DeviceRef() = default;
 
-  // Channel to communicate with the device.
-  zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
-
   // Topological path to the device.
   const char* path() const { return path_.c_str(); }
 
-  // File descriptor used to communicate with the device.
-  int fd() const { return fd_.get(); }
-
-  int devfs_root_fd() const { return devfs_root_; }
-
-  // Closes the current connection to |device_| and opens a new one based on the path.
-  virtual void Reconnect();
+  const fbl::unique_fd& devfs_root_fd() const { return devfs_root_; }
 
  protected:
   // Borrowed FD to the root of devfs.
-  int devfs_root_;
+  const fbl::unique_fd& devfs_root_;
   std::string path_;
-  fbl::unique_fd fd_;
-  mutable zx::unowned_channel channel_;
 };
 
 // Provides a Base class for other classes that wish to expose helper methods to a block device.
 class BlockDeviceAdapter : public DeviceRef {
  public:
-  BlockDeviceAdapter(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd)
-      : DeviceRef(devfs_root, path, std::move(fd)) {}
+  BlockDeviceAdapter(const fbl::unique_fd& devfs_root, const std::string& path)
+      : DeviceRef(devfs_root, path) {}
   BlockDeviceAdapter(const BlockDeviceAdapter&) = delete;
   BlockDeviceAdapter(BlockDeviceAdapter&&) = delete;
   BlockDeviceAdapter& operator=(const BlockDeviceAdapter&) = delete;
   BlockDeviceAdapter& operator=(BlockDeviceAdapter&&) = delete;
-  virtual ~BlockDeviceAdapter() = default;
+  ~BlockDeviceAdapter() override = default;
 
   // Write |data| into the underlying block device at |offset|.
   void WriteAt(const fbl::Array<uint8_t>& data, uint64_t offset);
@@ -142,9 +130,6 @@ class BlockDeviceAdapter : public DeviceRef {
 
   virtual const DeviceRef* device() const { return this; }
   virtual DeviceRef* device() { return this; }
-
- protected:
-  BlockDeviceAdapter() = default;
 };
 
 // Provides a Ramdisk device that is destroyed upon leaving the scope.
@@ -152,12 +137,11 @@ class RamdiskRef final : public BlockDeviceAdapter {
  public:
   // Creates a block device with the respective block count and size.
   // Returns nullptr on failure.
-  static std::unique_ptr<RamdiskRef> Create(const fbl::unique_fd& devfs_root, uint64_t block_count,
-                                            uint64_t block_size);
+  static std::unique_ptr<RamdiskRef> Create(const fbl::unique_fd& devfs_root, uint64_t block_size,
+                                            uint64_t block_count);
 
-  RamdiskRef(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd,
-             RamdiskClient* client)
-      : BlockDeviceAdapter(devfs_root, path, std::move(fd)), ramdisk_client_(client) {}
+  RamdiskRef(const fbl::unique_fd& devfs_root, const std::string& path, RamdiskClient* client)
+      : BlockDeviceAdapter(devfs_root, path), ramdisk_client_(client) {}
   RamdiskRef(const RamdiskRef&) = delete;
   RamdiskRef(RamdiskRef&&) = delete;
   RamdiskRef& operator=(const RamdiskRef&) = delete;
@@ -168,8 +152,6 @@ class RamdiskRef final : public BlockDeviceAdapter {
   zx_status_t Grow(uint64_t target_size);
 
  private:
-  RamdiskRef() = default;
-
   // Only set when a ramdisk is created.
   RamdiskClient* ramdisk_client_ = nullptr;
 };
@@ -182,10 +164,11 @@ class VPartitionAdapter final : public BlockDeviceAdapter {
                                                    const std::string& name, const Guid& guid,
                                                    const Guid& type);
 
-  VPartitionAdapter(const fbl::unique_fd& devfs_root, zx::unowned_channel channel,
-                    const std::string& path, fbl::unique_fd fd, const std::string name,
-                    const Guid& guid, const Guid& type)
-      : BlockDeviceAdapter(devfs_root, path, std::move(fd)), guid_(guid), type_(type) {
+  const fbl::unique_fd& fd() const { return fd_; }
+
+  VPartitionAdapter(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd,
+                    const std::string& name, const Guid& guid, const Guid& type)
+      : BlockDeviceAdapter(devfs_root, path), fd_(std::move(fd)), guid_(guid), type_(type) {
     name_.Append(name.c_str());
   }
   VPartitionAdapter(const VPartitionAdapter&) = delete;
@@ -197,11 +180,10 @@ class VPartitionAdapter final : public BlockDeviceAdapter {
   // Adds |length| slices  at |offset| to the partition.
   zx_status_t Extend(uint64_t offset, uint64_t length);
 
-  void Reconnect() final;
+  zx_status_t Reconnect();
 
  private:
-  VPartitionAdapter() = default;
-
+  fbl::unique_fd fd_;
   fbl::StringBuffer<fvm::kMaxVPartitionNameLength> name_;
   Guid guid_;
   Guid type_;
@@ -217,17 +199,16 @@ class FvmAdapter : public DeviceRef {
   static std::unique_ptr<FvmAdapter> CreateGrowable(const fbl::unique_fd& devfs_root,
                                                     uint64_t block_size,
                                                     uint64_t initial_block_count,
-                                                    uint64_t total_block_count, uint64_t slice_size,
-                                                    DeviceRef* device);
+                                                    uint64_t maximum_block_count,
+                                                    uint64_t slice_size, DeviceRef* device);
 
-  FvmAdapter(const fbl::unique_fd& devfs_root, const std::string& path, fbl::unique_fd fd,
-             DeviceRef* block_device)
-      : DeviceRef(devfs_root, path, std::move(fd)), block_device_(block_device) {}
+  FvmAdapter(const fbl::unique_fd& devfs_root, const std::string& path, DeviceRef* block_device)
+      : DeviceRef(devfs_root, path), block_device_(block_device) {}
   FvmAdapter(const FvmAdapter&) = delete;
   FvmAdapter(FvmAdapter&&) = delete;
   FvmAdapter& operator=(const FvmAdapter&) = delete;
   FvmAdapter& operator=(FvmAdapter&&) = delete;
-  ~FvmAdapter();
+  ~FvmAdapter() override;
 
   zx_status_t AddPartition(const fbl::unique_fd& devfs_root, const std::string& name,
                            const Guid& guid, const Guid& type, uint64_t slice_count,
@@ -244,8 +225,6 @@ class FvmAdapter : public DeviceRef {
   DeviceRef* device() { return this; }
 
  private:
-  FvmAdapter() = default;
-
   // Used for rebinding.
   fbl::StringBuffer<kPathMax> driver_path_;
 

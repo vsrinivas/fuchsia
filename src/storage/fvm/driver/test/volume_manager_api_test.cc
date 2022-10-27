@@ -5,6 +5,7 @@
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/cpp/caller.h>
+#include <lib/sys/component/cpp/service_client.h>
 #include <sys/types.h>
 
 #include <algorithm>
@@ -61,8 +62,12 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoNonPreallocatedMetadata) {
   const fvm::Header kExpectedFormat =
       fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kSliceSize);
 
-  fidl::WireResult<VolumeManager::GetInfo> result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetInfo();
+  fdio_cpp::UnownedFdioCaller caller(fvm->device()->devfs_root_fd());
+  zx::result channel =
+      component::ConnectAt<VolumeManager>(caller.directory(), fvm->device()->path());
+  ASSERT_OK(channel.status_value());
+
+  fidl::WireResult result = fidl::WireCall(channel.value())->GetInfo();
 
   ASSERT_OK(result.status(), "Transport layer error");
   ASSERT_OK(result.value().status, "Service returned error.");
@@ -92,8 +97,12 @@ TEST_F(FvmVolumeManagerApiTest, GetInfoWithPreallocatedMetadata) {
   const fvm::Header kExpectedFormat = fvm::Header::FromGrowableDiskSize(
       fvm::kMaxUsablePartitions, kBlockSize * kBlockCount, kBlockSize * kMaxBlockCount, kSliceSize);
 
-  fidl::WireResult<VolumeManager::GetInfo> result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetInfo();
+  fdio_cpp::UnownedFdioCaller caller(fvm->device()->devfs_root_fd());
+  zx::result channel =
+      component::ConnectAt<VolumeManager>(caller.directory(), fvm->device()->path());
+  ASSERT_OK(channel.status_value());
+
+  fidl::WireResult result = fidl::WireCall(channel.value())->GetInfo();
 
   ASSERT_OK(result.status(), "Transport layer error");
   ASSERT_OK(result.value().status, "Service returned error.");
@@ -133,17 +142,21 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   fuchsia_hardware_block_partition::wire::Guid guid;
   std::fill(std::begin(guid.value), std::end(guid.value), 0x12);
 
+  fdio_cpp::UnownedFdioCaller caller(fvm->device()->devfs_root_fd());
+  zx::result channel =
+      component::ConnectAt<VolumeManager>(caller.directory(), fvm->device()->path());
+  ASSERT_OK(channel.status_value());
+
   // The partition hasn't been created yet, the result should be "not found".
   fidl::WireResult<VolumeManager::GetPartitionLimit> unfound_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
+      fidl::WireCall(channel.value())->GetPartitionLimit(guid);
   ASSERT_OK(unfound_result.status(), "Transport layer error");
   ASSERT_EQ(unfound_result.value().status, ZX_ERR_NOT_FOUND);
 
   // Create the partition inside FVM with one slice.
   const char kPartitionName[] = "mypart";
   fidl::WireResult<VolumeManager::AllocatePartition> alloc_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())
-          ->AllocatePartition(1, type_guid, guid, kPartitionName, 0);
+      fidl::WireCall(channel.value())->AllocatePartition(1, type_guid, guid, kPartitionName, 0);
   ASSERT_OK(alloc_result.status(), "Transport layer error");
   ASSERT_OK(alloc_result.value().status, "Service returned error.");
 
@@ -159,7 +172,7 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
 
   // Query the volume to check its information.
   fidl::WireResult<Volume::GetVolumeInfo> get_info =
-      fidl::WireCall<Volume>(volume.channel()->borrow())->GetVolumeInfo();
+      fidl::WireCall(volume.borrow_as<Volume>())->GetVolumeInfo();
   ASSERT_OK(get_info.status(), "Transport error");
   ASSERT_OK(get_info.value().status, "Expected GetVolumeInfo() call to succeed.");
   EXPECT_EQ(kSliceSize, get_info.value().manager->slice_size);
@@ -170,19 +183,19 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
 
   // That partition's initial limit should be 0 (no limit).
   fidl::WireResult<VolumeManager::GetPartitionLimit> get_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
+      fidl::WireCall(channel.value())->GetPartitionLimit(guid);
   ASSERT_OK(get_result.status(), "Transport layer error");
   ASSERT_OK(get_result.value().status, "Service returned error.");
   EXPECT_EQ(get_result.value().slice_count, 0, "Expected 0 limit on init.");
 
   // Set the limit to two slices.
   fidl::WireResult<VolumeManager::SetPartitionLimit> set_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->SetPartitionLimit(guid, 2);
+      fidl::WireCall(channel.value())->SetPartitionLimit(guid, 2);
   ASSERT_OK(set_result.status(), "Transport layer error");
 
   // Validate the new value can be retrieved.
   fidl::WireResult<VolumeManager::GetPartitionLimit> get_result2 =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
+      fidl::WireCall(channel.value())->GetPartitionLimit(guid);
   ASSERT_OK(get_result2.status(), "Transport layer error");
   ASSERT_OK(get_result2.value().status, "Service returned error.");
   EXPECT_EQ(get_result2.value().slice_count, 2, "Expected the limit we set.");
@@ -190,13 +203,13 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
   // Try to expand it by one slice. Since the initial size was one slice and the limit is two, this
   // should succeed.
   fidl::WireResult<Volume::Extend> good_extend =
-      fidl::WireCall<Volume>(volume.channel()->borrow())->Extend(100, 1);
+      fidl::WireCall(volume.borrow_as<Volume>())->Extend(100, 1);
   ASSERT_OK(good_extend.status(), "Transport error");
   ASSERT_OK(good_extend.value().status, "Expected Expand() call to succeed.");
 
   // Query the volume to check its information.
   fidl::WireResult<Volume::GetVolumeInfo> get_info2 =
-      fidl::WireCall<Volume>(volume.channel()->borrow())->GetVolumeInfo();
+      fidl::WireCall(volume.borrow_as<Volume>())->GetVolumeInfo();
   ASSERT_OK(get_info2.status(), "Transport error");
   ASSERT_OK(get_info2.value().status, "Expected GetVolumeInfo() call to succeed.");
   EXPECT_EQ(kSliceSize, get_info2.value().manager->slice_size);
@@ -207,19 +220,19 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
 
   // Adding a third slice should fail since it's already at the max size.
   fidl::WireResult<Volume::Extend> bad_extend =
-      fidl::WireCall<Volume>(volume.channel()->borrow())->Extend(200, 1);
+      fidl::WireCall(volume.borrow_as<Volume>())->Extend(200, 1);
   ASSERT_OK(bad_extend.status(), "Transport error");
   ASSERT_EQ(bad_extend.value().status, ZX_ERR_NO_SPACE, "Expected Expand() call to fail.");
 
   // Delete and re-create the partition. It should have no limit.
   fidl::WireResult<Volume::Destroy> destroy_result =
-      fidl::WireCall<Volume>(volume.channel()->borrow())->Destroy();
+      fidl::WireCall(volume.borrow_as<Volume>())->Destroy();
   ASSERT_OK(destroy_result.status(), "Transport layer error");
   ASSERT_OK(destroy_result.value().status, "Can't destroy partition.");
   volume_fd.reset();
 
   fidl::WireResult<VolumeManager::AllocatePartition> alloc2_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())
+      fidl::WireCall(channel.value())
           ->AllocatePartition(1, type_guid, guid,
                               /*kPartitionName*/ "thepart", 0);
   ASSERT_OK(alloc2_result.status(), "Transport layer error");
@@ -227,7 +240,7 @@ TEST_F(FvmVolumeManagerApiTest, PartitionLimit) {
 
   // That partition's initial limit should be 0 (no limit).
   fidl::WireResult<VolumeManager::GetPartitionLimit> last_get_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())->GetPartitionLimit(guid);
+      fidl::WireCall(channel.value())->GetPartitionLimit(guid);
   ASSERT_OK(last_get_result.status(), "Transport layer error");
   ASSERT_OK(last_get_result.value().status, "Service returned error.");
   EXPECT_EQ(last_get_result.value().slice_count, 0, "Expected 0 limit on new partition.");
@@ -253,16 +266,21 @@ TEST_F(FvmVolumeManagerApiTest, SetPartitionName) {
   fuchsia_hardware_block_partition::wire::Guid guid;
   std::fill(std::begin(guid.value), std::end(guid.value), 0x12);
 
+  fdio_cpp::UnownedFdioCaller caller(fvm->device()->devfs_root_fd());
+  zx::result channel =
+      component::ConnectAt<VolumeManager>(caller.directory(), fvm->device()->path());
+  ASSERT_OK(channel.status_value());
+
   // Create the partition inside FVM with one slice.
   const char kPartitionName[] = "mypart";
-  auto alloc_result = fidl::WireCall<VolumeManager>(fvm->device()->channel())
-                          ->AllocatePartition(1, type_guid, guid, kPartitionName, 0);
+  auto alloc_result =
+      fidl::WireCall(channel.value())->AllocatePartition(1, type_guid, guid, kPartitionName, 0);
   ASSERT_OK(alloc_result.status(), "Transport layer error");
   ASSERT_OK(alloc_result.value().status, "Service returned error.");
 
   constexpr std::string_view kNewPartitionName = "new-name";
   auto set_partition_name_result =
-      fidl::WireCall<VolumeManager>(fvm->device()->channel())
+      fidl::WireCall(channel.value())
           ->SetPartitionName(guid, fidl::StringView::FromExternal(kNewPartitionName));
   ASSERT_OK(set_partition_name_result.status(), "Transport layer error");
   ASSERT_FALSE(set_partition_name_result->is_error(), "Service returned error.");

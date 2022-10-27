@@ -49,7 +49,7 @@ static_library("fvm") {
     ]
 
     deps += [
-      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+      "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
       "//src/lib/storage/block_client/cpp",
       "//src/storage/gpt",
       "//zircon/system/ulib/fzl",
@@ -60,10 +60,6 @@ static_library("fvm") {
     # fvm-check.cpp has #include <zircon/status.h> even when built for host.
     public_deps += [ "//src/zircon/lib/zircon:zircon-headers" ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 static_library("test_support") {
@@ -75,7 +71,7 @@ static_library("test_support") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
+    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/fvm",
     "//zircon/system/ulib/fbl",
@@ -84,15 +80,13 @@ static_library("test_support") {
 
   deps = [
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_c",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_cpp_wire",
-    "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_c",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
     "//sdk/fidl/fuchsia.io:fuchsia.io_cpp_wire",
     "//sdk/lib/device-watcher/cpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl",
-    "//sdk/lib/fidl",
+    "//sdk/lib/sys/component/cpp",
     "//src/lib/storage/fs_management",
     "//src/lib/storage/ramdevice_client/cpp",
     "//src/storage/fvm",
@@ -102,15 +96,6 @@ static_library("test_support") {
     "//zircon/system/ulib/zx",
     "//zircon/system/ulib/zxtest",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 test("fvm_unit") {
@@ -138,10 +123,6 @@ test("fvm_unit") {
       "//zircon/system/ulib/zx",
     ]
   }
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_unittest_package("fvm-tests") {
@@ -155,14 +136,8 @@ test("fvm-integration") {
     "resize_integration_test.cc",
   ]
 
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
-
   deps = [
     ":test_support",
-    "//sdk/fidl/fuchsia.device:fuchsia.device_c",
     "//sdk/fidl/fuchsia.device:fuchsia.device_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.partition:fuchsia.hardware.block.partition_cpp_wire",
     "//sdk/fidl/fuchsia.hardware.block.volume:fuchsia.hardware.block.volume_cpp_wire",
@@ -193,10 +168,6 @@ test("fvm-integration") {
   ]
 
   data_deps = [ "//src/storage/bin/minfs" ]
-
-  # TODO(fxbug.dev/95833): This target uses the deprecated C bindings.
-  # Consider switching to the C++ bindings. See linked bug for details.
-  configs += [ "//build/c:fidl-deprecated-c-bindings" ]
 }
 
 fuchsia_test_component("test-component") {

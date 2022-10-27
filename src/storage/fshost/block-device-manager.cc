@@ -6,7 +6,6 @@
 
 #include <dirent.h>
 #include <fcntl.h>
-#include <fidl/fuchsia.device/cpp/markers.h>
 #include <fidl/fuchsia.device/cpp/wire.h>
 #include <fidl/fuchsia.hardware.block.volume/cpp/wire.h>
 #include <inttypes.h>
@@ -23,17 +22,13 @@
 #include <set>
 #include <utility>
 
-#include "fidl/fuchsia.hardware.block.volume/cpp/markers.h"
-#include "lib/fdio/directory.h"
 #include "src/lib/storage/fs_management/cpp/format.h"
 #include "src/lib/storage/fs_management/cpp/fvm.h"
 #include "src/lib/uuid/uuid.h"
 #include "src/storage/fshost/block-device-interface.h"
-#include "src/storage/fshost/block-device.h"
 #include "src/storage/fshost/constants.h"
 #include "src/storage/fshost/copier.h"
 #include "src/storage/fshost/inspect-manager.h"
-#include "zircon/errors.h"
 
 namespace fshost {
 namespace {
@@ -327,7 +322,7 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
     memcpy(alloc_req.name, kDataPartitionLabel.data(), kDataPartitionLabel.size());
     const auto kGuidDataType = std::array<uint8_t, BLOCK_GUID_LEN>(GUID_DATA_VALUE);
     memcpy(alloc_req.type, kGuidDataType.data(), kGuidDataType.size());
-    alloc_req.flags = fuchsia_hardware_block_volume_ALLOCATE_PARTITION_FLAG_INACTIVE;
+    alloc_req.flags = fuchsia_hardware_block_volume::wire::kAllocatePartitionFlagInactive;
     auto vp_fd = fs_management::FvmAllocatePartition(fvm_caller.fd().get(), &alloc_req);
     if (vp_fd.status_value() != ZX_OK) {
       FX_PLOGS(WARNING, vp_fd.status_value())
@@ -411,40 +406,38 @@ class FxfsMatcher : public BlockDeviceManager::Matcher {
         return device.Add(format_on_corruption_);
       }
       return ZX_OK;
-    } else {
-      // RAM backed partition rewrite.
-      //
-      // Once we have copied the data, tear down the zxcrypt device so that we can use it for
-      // Fxfs.
-      FX_LOGS(INFO) << "Shutting down zxcrypt...";
-      auto controller =
-          component::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
-      if (controller.is_error()) {
-        FX_LOGS(ERROR) << "Failed to connect to zcxrypt: " << controller.status_string();
-        return ZX_ERR_BAD_STATE;
-      }
-      auto resp = fidl::WireCall(*controller)->UnbindChildren();
-      zx_status_t status = resp.status();
-      if (status != ZX_OK) {
-        FX_LOGS(WARNING) << "Failed to send UnbindChildren: " << zx_status_get_string(status);
-        return ZX_ERR_BAD_STATE;
-      }
-      if (resp->is_error()) {
-        FX_LOGS(WARNING) << "UnbindChildren failed: " << zx_status_get_string(resp->error_value());
-        return ZX_ERR_BAD_STATE;
-      }
-
-      FX_LOGS(INFO) << "Shut down zxcrypt.  Re-adding device " << zxcrypt_parent_path_;
-      auto parent = device.OpenBlockDevice(zxcrypt_parent_path_.c_str());
-      if (parent.is_error()) {
-        FX_LOGS(WARNING) << "Failed to open parent: " << parent.status_string();
-        return ZX_ERR_BAD_STATE;
-      }
-      zxcrypt_parent_path_.clear();
-      parent->AddData(std::move(copied_data));
-      parent->SetFormat(fs_management::DiskFormat::kDiskFormatFxfs);
-      return parent->Add();
     }
+    // RAM backed partition rewrite.
+    //
+    // Once we have copied the data, tear down the zxcrypt device so that we can use it for
+    // Fxfs.
+    FX_LOGS(INFO) << "Shutting down zxcrypt...";
+    auto controller = component::Connect<fuchsia_device::Controller>(zxcrypt_parent_path_.c_str());
+    if (controller.is_error()) {
+      FX_LOGS(ERROR) << "Failed to connect to zcxrypt: " << controller.status_string();
+      return ZX_ERR_BAD_STATE;
+    }
+    auto resp = fidl::WireCall(*controller)->UnbindChildren();
+    zx_status_t status = resp.status();
+    if (status != ZX_OK) {
+      FX_LOGS(WARNING) << "Failed to send UnbindChildren: " << zx_status_get_string(status);
+      return ZX_ERR_BAD_STATE;
+    }
+    if (resp->is_error()) {
+      FX_LOGS(WARNING) << "UnbindChildren failed: " << zx_status_get_string(resp->error_value());
+      return ZX_ERR_BAD_STATE;
+    }
+
+    FX_LOGS(INFO) << "Shut down zxcrypt.  Re-adding device " << zxcrypt_parent_path_;
+    auto parent = device.OpenBlockDevice(zxcrypt_parent_path_.c_str());
+    if (parent.is_error()) {
+      FX_LOGS(WARNING) << "Failed to open parent: " << parent.status_string();
+      return ZX_ERR_BAD_STATE;
+    }
+    zxcrypt_parent_path_.clear();
+    parent->AddData(std::move(copied_data));
+    parent->SetFormat(fs_management::DiskFormat::kDiskFormatFxfs);
+    return parent->Add();
   }
 
  private:

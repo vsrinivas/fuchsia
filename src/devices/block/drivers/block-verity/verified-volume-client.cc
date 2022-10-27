@@ -64,14 +64,12 @@ VerifiedVolumeClient::VerifiedVolumeClient(
     : verity_chan_(std::move(verity_chan)), devfs_root_fd_(std::move(devfs_root_fd)) {}
 
 zx_status_t VerifiedVolumeClient::CreateFromBlockDevice(
-    int block_dev_fd, fbl::unique_fd devfs_root_fd, Disposition disposition,
-    const zx::duration& timeout, std::unique_ptr<VerifiedVolumeClient>* out) {
+    fidl::UnownedClientEnd<fuchsia_device::Controller> device, fbl::unique_fd devfs_root_fd,
+    Disposition disposition, const zx::duration& timeout,
+    std::unique_ptr<VerifiedVolumeClient>* out) {
   // Bind the driver if called for by `disposition`.
-  fdio_cpp::UnownedFdioCaller block_dev_caller(block_dev_fd);
   if (disposition == kDriverNeedsBinding) {
-    if (zx_status_t status =
-            BindVerityDriver(block_dev_caller.borrow_as<fuchsia_device::Controller>());
-        status != ZX_OK) {
+    if (zx_status_t status = BindVerityDriver(device); status != ZX_OK) {
       printf("VerifiedVolumeClient: couldn't bind driver: %s", zx_status_get_string(status));
       return status;
     }
@@ -79,9 +77,7 @@ zx_status_t VerifiedVolumeClient::CreateFromBlockDevice(
 
   // Compute the path at which we expect to see the verity child device appear.
   fbl::String block_dev_path;
-  if (zx_status_t status = RelativeTopologicalPath(
-          block_dev_caller.borrow_as<fuchsia_device::Controller>(), &block_dev_path);
-      status != ZX_OK) {
+  if (zx_status_t status = RelativeTopologicalPath(device, &block_dev_path); status != ZX_OK) {
     printf("VerifiedVolumeClient: could not compute relative path: %s\n",
            zx_status_get_string(status));
     return status;
