@@ -25,8 +25,6 @@ use {
     std::rc::Rc,
 };
 
-mod input_handlers;
-
 const IGNORE_REAL_DEVICES_CONFIG_PATH: &'static str = "/config/data/ignore_real_devices";
 
 enum ExposedServices {
@@ -60,8 +58,11 @@ async fn main() -> Result<(), Error> {
     // Create a new input pipeline.
     let factory_reset_handler = FactoryResetHandler::new();
     let media_buttons_handler = MediaButtonsHandler::new();
-    let input_handlers =
-        input_handlers::create(factory_reset_handler.clone(), media_buttons_handler.clone()).await;
+    let input_handlers: Vec<Rc<dyn input_pipeline_lib::input_handler::InputHandler>> = vec![
+        factory_reset_handler.clone(),
+        media_buttons_handler.clone(),
+        make_touch_injector_handler().await,
+    ];
 
     let input_pipeline = if std::path::Path::new(IGNORE_REAL_DEVICES_CONFIG_PATH).exists() {
         input_pipeline_lib::input_pipeline::InputPipeline::new_for_test(
@@ -235,4 +236,23 @@ async fn handle_interaction_notifier_request_stream(
             error
         );
     }
+}
+
+async fn make_touch_injector_handler(
+) -> Rc<input_pipeline_lib::touch_injector_handler::TouchInjectorHandler> {
+    let scenic =
+        fuchsia_component::client::connect_to_protocol::<fidl_fuchsia_ui_scenic::ScenicMarker>()
+            .expect("Failed to connect to Scenic.");
+    let display_info = scenic.get_display_info().await.expect("Failed to get display info.");
+    let display_size = input_pipeline_lib::Size {
+        width: display_info.width_in_px as f32,
+        height: display_info.height_in_px as f32,
+    };
+
+    let touch_handler =
+        input_pipeline_lib::touch_injector_handler::TouchInjectorHandler::new(display_size)
+            .await
+            .expect("Failed to create TouchInjectorHandler.");
+    fuchsia_async::Task::local(touch_handler.clone().watch_viewport()).detach();
+    touch_handler
 }

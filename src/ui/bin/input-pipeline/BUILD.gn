@@ -34,10 +34,7 @@ rustc_binary("input-pipeline-bin") {
     "//third_party/rust_crates:futures",
   ]
 
-  sources = [
-    "src/input_handlers.rs",
-    "src/main.rs",
-  ]
+  sources = [ "src/main.rs" ]
 }
 
 fuchsia_component_manifest("manifest") {
