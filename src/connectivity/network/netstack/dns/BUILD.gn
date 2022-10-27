@@ -8,8 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 go_library("dns") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/dns"
-
   deps = [
     "//sdk/fidl/fuchsia.net.name:fuchsia.net.name_go($go_toolchain)",
     "//src/connectivity/network/netstack/sync",

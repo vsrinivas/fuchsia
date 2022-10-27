@@ -8,8 +8,6 @@ import("//build/go/go_library.gni")
 import("//build/go/toolchain.gni")
 
 go_library("validator") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/validator"
-
   deps = [
     "//src/connectivity/network/netstack/inspect",
     "//src/connectivity/network/netstack/inspect/vmobuffer",

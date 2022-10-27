@@ -5,8 +5,6 @@
 import("//build/go/go_library.gni")
 
 go_library("inspect") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect"
-
   sources = [ "writer.go" ]
 }
 

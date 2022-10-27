@@ -5,8 +5,6 @@
 import("//build/go/go_library.gni")
 
 go_library("sync") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/sync"
-
   deps = [ "//third_party/golibs:github.com/sasha-s/go-deadlock" ]
 
   sources = [

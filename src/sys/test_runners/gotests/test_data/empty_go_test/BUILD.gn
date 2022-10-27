@@ -14,7 +14,6 @@ fuchsia_component("empty-go-test") {
 }
 
 go_library("empty_go_test_lib") {
-  name = "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/empty_go_test"
   sources = [ "empty_go_test.go" ]
 }
 

@@ -7,8 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("routes") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
-
   deps = [
     "//src/connectivity/network/netstack/sync",
     "//src/connectivity/network/netstack/util",

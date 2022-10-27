@@ -14,7 +14,6 @@ fuchsia_component("sample-go-test") {
 }
 
 go_library("sample_go_test_lib") {
-  name = "go.fuchsia.dev/fuchsia/src/sys/test_runners/gotests/test_data/sample_go_test"
   sources = [ "sample_go_test.go" ]
 }
 

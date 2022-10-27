@@ -5,8 +5,6 @@
 import("//build/go/go_library.gni")
 
 go_library("testutil") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/testutil"
-
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:gvisor.dev/gvisor",

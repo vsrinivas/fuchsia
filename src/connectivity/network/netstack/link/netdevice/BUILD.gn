@@ -8,9 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 go_library("netdevice") {
-  name =
-      "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
-
   deps = [
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_go($go_toolchain)",
     "//sdk/fidl/fuchsia.net:fuchsia.net_go($go_toolchain)",

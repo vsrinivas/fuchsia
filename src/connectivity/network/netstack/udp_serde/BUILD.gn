@@ -73,8 +73,6 @@ fuchsia_unittest_package("udp_serde_c_compilation-unittest") {
 }
 
 go_library("golib") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/udp_serde"
-
   non_go_deps = [ ":udp_serde_for_cgo" ]
   deps = [ "//src/connectivity/network/netstack/fidlconv" ]
 

@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 go_library("c") {
   visibility = [ "../*" ]
 
-  name = "go.fuchsia.dev/fuchsia/zircon/tools/zither/c"
   sources = [
     "c.go",
     "templates/alias.tmpl",

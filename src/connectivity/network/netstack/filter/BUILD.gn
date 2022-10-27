@@ -8,8 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 go_library("filter") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/filter"
-
   deps = [
     "//sdk/fidl/fuchsia.net.filter:fuchsia.net.filter_go($go_toolchain)",
     "//src/connectivity/network/netstack/fidlconv",

@@ -54,7 +54,6 @@ sdk_documentation("meta") {
 }
 
 go_library("go_meta") {
-  name = "go.fuchsia.dev/fuchsia/build/sdk/meta"
   deps = [
     "//third_party/golibs:github.com/xeipuuv/gojsonschema",
     "//third_party/golibs:go.uber.org/multierr",

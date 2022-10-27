@@ -7,8 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("bench") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/bench"
-
   deps = [ "//src/connectivity/network/netstack/util" ]
 
   sources = [ "bench_test.go" ]

@@ -8,7 +8,6 @@ import("//build/go/go_test.gni")
 assert(is_host)
 
 go_library("docgen") {
-  name = "go.fuchsia.dev/fuchsia/tools/cppdocgen/docgen"
   sources = [
     "index.go",
     "read_header.go",

@@ -7,8 +7,6 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("time") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/time"
-
   deps = [ "//third_party/golibs:gvisor.dev/gvisor" ]
 
   sources = [

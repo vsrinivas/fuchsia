@@ -8,8 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 go_library("eth") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
-
   deps = [
     "testutil",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet_go($go_toolchain)",

@@ -99,7 +99,6 @@ generated_go("gen/netstack/link/netdevice") {
 }
 
 go_library("pprof") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/pprof"
   source_dir = "pprof"
   sources = [
     "export.go",
@@ -120,8 +119,6 @@ go_test("pprof_test") {
 }
 
 go_library("lib") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack"
-
   deps = [
     ":pprof",
     "dhcp",

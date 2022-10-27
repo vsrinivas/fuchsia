@@ -57,7 +57,6 @@ if (is_host) {
 
   go_library("common") {
     visibility = [ "./*" ]
-    name = "go.fuchsia.dev/fuchsia/zircon/tools/zither"
     deps = [
       "//tools/fidl/lib/fidlgen",
       "//tools/fidl/lib/fidlgen_cpp",

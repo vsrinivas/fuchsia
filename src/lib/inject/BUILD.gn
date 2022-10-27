@@ -8,7 +8,6 @@ import("//build/host.gni")
 
 if (is_host) {
   go_library("inject") {
-    name = "go.fuchsia.dev/fuchsia/src/lib/inject"
     sources = [
       "inject.go",
       "inject_test.go",

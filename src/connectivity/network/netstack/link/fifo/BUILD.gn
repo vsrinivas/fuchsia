@@ -17,15 +17,11 @@ generated_go("entries_gen_test/entries") {
 }
 
 go_library("fifo_gen") {
-  name =
-      "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo/gen"
   source_dir = "gen"
   sources = [ "fifo_entry.go" ]
 }
 
 go_library("fifo") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
-
   deps = [
     ":fifo_gen",
     "//third_party/golibs:go.uber.org/multierr",

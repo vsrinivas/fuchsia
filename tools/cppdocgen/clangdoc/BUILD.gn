@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 assert(is_host)
 
 go_library("clangdoc") {
-  name = "go.fuchsia.dev/fuchsia/tools/cppdocgen/clangdoc"
   sources = [ "clangdoc.go" ]
   deps = [ "//third_party/golibs:gopkg.in/yaml.v2" ]
 }

@@ -46,6 +46,8 @@ template("go_library") {
     source_dir = invoker.source_dir
   }
 
+  # TODO(fxbug.dev/58755): Fail if a go_library sets `name` to the default
+  # value, as it's redundant.
   if (defined(invoker.name)) {
     name_args = [
       "--name",

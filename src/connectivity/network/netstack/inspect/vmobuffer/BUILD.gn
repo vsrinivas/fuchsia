@@ -6,12 +6,7 @@ import("//build/components.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
-_vmobuffer_go_pkg =
-    "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/inspect/vmobuffer"
-
 go_library("vmobuffer") {
-  name = _vmobuffer_go_pkg
-
   sources = [
     "vmobuffer.go",
     "vmobuffer_test.go",

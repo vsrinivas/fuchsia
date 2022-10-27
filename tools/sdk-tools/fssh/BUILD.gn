@@ -42,7 +42,6 @@ install_host_tools("fssh-host") {
 }
 
 go_library("synckeys") {
-  name = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/synckeys"
   source_dir = "synckeys"
   deps = [
     "//third_party/golibs:github.com/google/go-cmp",
@@ -59,7 +58,6 @@ go_test("synckeys-tests") {
 }
 
 go_library("tunnel") {
-  name = "go.fuchsia.dev/fuchsia/tools/sdk-tools/fssh/tunnel"
   source_dir = "tunnel"
   deps = [ "//tools/lib/logger" ]
   sources = [

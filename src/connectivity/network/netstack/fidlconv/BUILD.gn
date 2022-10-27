@@ -8,8 +8,6 @@ import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 
 go_library("fidlconv") {
-  name = "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlconv"
-
   deps = [
     "//sdk/fidl/fuchsia.net:fuchsia.net_go($go_toolchain)",
     "//sdk/fidl/fuchsia.net.multicast.admin:fuchsia.net.multicast.admin_go($go_toolchain)",

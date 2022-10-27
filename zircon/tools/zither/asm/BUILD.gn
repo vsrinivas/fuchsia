@@ -7,7 +7,6 @@ import("//build/go/go_library.gni")
 go_library("asm") {
   visibility = [ "../*" ]
 
-  name = "go.fuchsia.dev/fuchsia/zircon/tools/zither/asm"
   sources = [
     "asm.go",
     "templates/bits.tmpl",
